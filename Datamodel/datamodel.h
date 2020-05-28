@@ -36,20 +36,19 @@ class DataModel : public QStandardItemModel
     Q_OBJECT
 public:
     DataModel(QWidget *parent,
-              Metadata *getMetadata,
+              Metadata *metadata,
               ProgressBar *progressBar,
               Filters *filters,
               bool &combineRawJpg);
 
     bool load(QString &dir, bool includeSubfoldersFlag);
-    void clear();
+    bool readMetadataForItem(int row);
+    void clearDataModel();
     bool hasFolderChanged();
     void find(QString text);
-    ImageMetadata getMetadata(QString fPath);
-    void updateImageList();
+    ImageMetadata imMetadata(QString fPath);
     void clearPicks();
     void remove(QString fPath);
-//    void sortThumbs(int sortColumn, bool isReverse);
     QModelIndex proxyIndexFromPath(QString fPath);
     QString diagnostics();
     bool updateFileData(QFileInfo fileInfo);

@@ -48,6 +48,7 @@ OBJECTS_DIR   = release
 ####### Files
 
 SOURCES       = Cache\imagecache.cpp \
+		Metadata\gps.cpp \
 		Utilities\bit.cpp \
 		Cache\mdcache.cpp \
 		Datamodel\datamodel.cpp \
@@ -160,6 +161,7 @@ SOURCES       = Cache\imagecache.cpp \
 		release\moc_infoview.cpp \
 		release\moc_tableview.cpp
 OBJECTS       = release\imagecache.obj \
+		release\gps.obj \
 		release\bit.obj \
 		release\mdcache.obj \
 		release\datamodel.obj \
@@ -292,6 +294,7 @@ DIST          = Docs/ingestautopath \
 		notes/Shortcuts.txt \
 		notes/snippets.txt \
 		notes/xmp.txt Cache\imagecache.h \
+		Metadata\gps.h \
 		Utilities\bit.h \
 		Cache\mdcache.h \
 		Cache\tshash.h \
@@ -355,6 +358,7 @@ DIST          = Docs/ingestautopath \
 		Views\infostring.h \
 		Views\infoview.h \
 		Views\tableview.h Cache\imagecache.cpp \
+		Metadata\gps.cpp \
 		Utilities\bit.cpp \
 		Cache\mdcache.cpp \
 		Datamodel\datamodel.cpp \
@@ -426,465 +430,17 @@ DESTDIR_TARGET = release\Winnow.exe
 
 .SUFFIXES: .c .cpp .cc .cxx
 
-{ImageFormats\Olympus}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
+.cpp.obj:
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Fo$@ $<
 
-{ImageFormats\Olympus}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
+.cc.obj:
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Fo$@ $<
 
-{ImageFormats\Olympus}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
+.cxx.obj:
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Fo$@ $<
 
-{ImageFormats\Olympus}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Dialogs}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Dialogs}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Dialogs}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Dialogs}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Image}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Image}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Image}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Image}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Fuji}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Fuji}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Fuji}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Fuji}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Sony}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Sony}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Sony}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Sony}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Canon}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Canon}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Canon}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Canon}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Utilities}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Utilities}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Utilities}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Utilities}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{.}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{.}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{.}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{.}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Tiff}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Tiff}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Tiff}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Tiff}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Views}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Views}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Views}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Views}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Datamodel}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Datamodel}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Datamodel}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Datamodel}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{"D:/My Projects/Winnow Project/Winnow64"}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{"D:/My Projects/Winnow Project/Winnow64"}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{"D:/My Projects/Winnow Project/Winnow64"}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{"D:/My Projects/Winnow Project/Winnow64"}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{PropertyEditor}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{PropertyEditor}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{PropertyEditor}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{PropertyEditor}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Dng}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Dng}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Dng}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Dng}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Cache}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Cache}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Cache}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Cache}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{File}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{File}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{File}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{File}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Metadata}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Metadata}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Metadata}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Metadata}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Panasonic}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Panasonic}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Panasonic}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Panasonic}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{release}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{release}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{release}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{release}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Main}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Main}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Main}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Main}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\jpeg}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\jpeg}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\jpeg}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\jpeg}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Nikon}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Nikon}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Nikon}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Nikon}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Heic}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Heic}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Heic}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Heic}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
+.c.obj:
+	$(CC) -c $(CFLAGS) $(INCPATH) -Fo$@ $<
 
 ####### Build rules
 
@@ -893,7 +449,7 @@ all: Makefile.Release  release\Winnow.exe
 
 release\Winnow.exe: C:\Qt\5.13.1\msvc2015_64\lib\Qt5Widgets.lib C:\Qt\5.13.1\msvc2015_64\lib\Qt5Gui.lib C:\Qt\5.13.1\msvc2015_64\lib\Qt5Concurrent.lib C:\Qt\5.13.1\msvc2015_64\lib\Qt5XmlPatterns.lib C:\Qt\5.13.1\msvc2015_64\lib\Qt5Network.lib C:\Qt\5.13.1\msvc2015_64\lib\Qt5Core.lib C:\Qt\5.13.1\msvc2015_64\lib\qtmain.lib ui_aboutdlg.h ui_ingestdlg_copy.h ui_saveasdlg.h ui_test12.h ui_aligndlg.h ui_appdlg.h ui_ingestdlg.h ui_loadusbdlg.h ui_renamedlg.h ui_testaligndlg.h ui_testdlg.h ui_test1.h ui_tokendlg.h ui_updateapp.h ui_workspacedlg.h ui_zoomdlg.h ui_helpform.h ui_helpingest.h ui_ingestautopath.h ui_introduction.h ui_message.h ui_shortcutsform.h ui_welcome.h ui_metadatareport.h $(OBJECTS) release\Winnow_resource.res
 	$(LINKER) $(LFLAGS) /MANIFEST:embed /OUT:$(DESTDIR_TARGET) @<<
-release\imagecache.obj release\bit.obj release\mdcache.obj release\datamodel.obj release\filters.obj release\aboutdlg.obj release\appdlg.obj release\ingestdlg.obj release\loadusbdlg.obj release\preferencesdlg.obj release\renamedlg.obj release\saveasdlg.obj release\testaligndlg.obj release\tokendlg.obj release\updateapp.obj release\workspacedlg.obj release\zoomdlg.obj release\bookmarks.obj release\fstree.obj release\imagealign.obj release\pixmap.obj release\thumb.obj release\canon.obj release\dng.obj release\fuji.obj release\Heic.obj release\jpeg.obj release\nikon.obj release\olympus.obj release\panasonic.obj release\sony.obj release\tiff.obj release\dockwidget.obj release\global.obj release\main.obj release\mainwindow.obj release\widgetcss.obj release\exif.obj release\ifd.obj release\iptc.obj release\metadata.obj release\metareport.obj release\xmp.obj release\preferences.obj release\propertyeditor.obj release\propertydelegate.obj release\propertywidgets.obj
+release\imagecache.obj release\gps.obj release\bit.obj release\mdcache.obj release\datamodel.obj release\filters.obj release\aboutdlg.obj release\appdlg.obj release\ingestdlg.obj release\loadusbdlg.obj release\preferencesdlg.obj release\renamedlg.obj release\saveasdlg.obj release\testaligndlg.obj release\tokendlg.obj release\updateapp.obj release\workspacedlg.obj release\zoomdlg.obj release\bookmarks.obj release\fstree.obj release\imagealign.obj release\pixmap.obj release\thumb.obj release\canon.obj release\dng.obj release\fuji.obj release\Heic.obj release\jpeg.obj release\nikon.obj release\olympus.obj release\panasonic.obj release\sony.obj release\tiff.obj release\dockwidget.obj release\global.obj release\main.obj release\mainwindow.obj release\widgetcss.obj release\exif.obj release\ifd.obj release\iptc.obj release\metadata.obj release\metareport.obj release\xmp.obj release\preferences.obj release\propertyeditor.obj release\propertydelegate.obj release\propertywidgets.obj
 release\classificationlabel.obj release\dropshadowlabel.obj release\icc.obj release\popup.obj release\progressbar.obj release\usb.obj release\utilities.obj release\win.obj release\compareImages.obj release\compareview.obj release\iconview.obj release\iconviewdelegate.obj release\imageview.obj release\infoview.obj release\tableview.obj release\infostring.obj release\qrc_winnow.obj release\moc_imagecache.obj release\moc_mdcache.obj release\moc_datamodel.obj release\moc_filters.obj release\moc_aboutdlg.obj release\moc_appdlg.obj release\moc_ingestdlg.obj release\moc_loadusbdlg.obj release\moc_preferencesdlg.obj release\moc_renamedlg.obj release\moc_saveasdlg.obj release\moc_testaligndlg.obj release\moc_workspacedlg.obj release\moc_tokendlg.obj release\moc_updateapp.obj release\moc_zoomdlg.obj release\moc_bookmarks.obj release\moc_fstree.obj release\moc_imagealign.obj release\moc_pixmap.obj release\moc_thumb.obj release\moc_canon.obj release\moc_Heic.obj release\moc_jpeg.obj
 release\moc_nikon.obj release\moc_olympus.obj release\moc_panasonic.obj release\moc_sony.obj release\moc_tiff.obj release\moc_dockwidget.obj release\moc_mainwindow.obj release\moc_metadata.obj release\moc_xmp.obj release\moc_preferences.obj release\moc_propertyeditor.obj release\moc_propertydelegate.obj release\moc_propertywidgets.obj release\moc_classificationlabel.obj release\moc_dropshadowlabel.obj release\moc_popup.obj release\moc_progressbar.obj release\moc_compareImages.obj release\moc_compareview.obj release\moc_iconview.obj release\moc_iconviewdelegate.obj release\moc_imageview.obj release\moc_infostring.obj release\moc_infoview.obj release\moc_tableview.obj
 $(LIBS)
@@ -908,11 +464,11 @@ qmake: FORCE
 qmake_all: FORCE
 
 dist:
-	$(ZIP) Winnow.zip $(SOURCES) $(DIST) winnow64.pro C:\Qt\5.13.1\msvc2015_64\mkspecs\features\spec_pre.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\common\angle.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\common\windows-desktop.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\win32\windows_vulkan_sdk.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\common\windows-vulkan.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\common\msvc-desktop.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\qconfig.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3danimation.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3danimation_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dcore.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dcore_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dextras.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dextras_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dinput.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dinput_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dlogic.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dlogic_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquick.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquick_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickanimation.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickanimation_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickextras.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickextras_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickinput.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickinput_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickrender.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickrender_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickscene2d.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickscene2d_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3drender.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3drender_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_accessibility_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axbase.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axbase_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axcontainer.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axcontainer_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axserver.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axserver_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_bluetooth.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_bluetooth_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_bootstrap_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_concurrent.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_concurrent_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_core.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_core_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_dbus.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_dbus_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_designer.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_designer_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_designercomponents_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_devicediscovery_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_edid_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_egl_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_eventdispatcher_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_fb_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_fontdatabase_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_gamepad.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_gamepad_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_gui.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_gui_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_help.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_help_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_location.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_location_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_multimedia.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_multimedia_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_multimediawidgets.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_multimediawidgets_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_network.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_network_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_nfc.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_nfc_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_opengl.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_opengl_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_openglextensions.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_openglextensions_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_packetprotocol_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_platformcompositor_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_positioning.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_positioning_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_positioningquick.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_positioningquick_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_printsupport.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_printsupport_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qml.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qml_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qmldebug_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qmldevtools_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qmltest.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qmltest_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qtmultimediaquicktools_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quick.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quick_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickcontrols2.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickcontrols2_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickparticles_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickshapes_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quicktemplates2.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quicktemplates2_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickwidgets.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickwidgets_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_remoteobjects.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_remoteobjects_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_repparser.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_repparser_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_scxml.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_scxml_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_sensors.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_sensors_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_serialbus.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_serialbus_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_serialport.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_serialport_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_sql.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_sql_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_svg.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_svg_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_testlib.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_testlib_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_texttospeech.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_texttospeech_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_theme_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_uiplugin.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_uitools.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_uitools_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_vulkan_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_webchannel.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_webchannel_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_websockets.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_websockets_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_webview.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_webview_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_widgets.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_widgets_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_windowsuiautomation_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_winextras.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_winextras_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_xml.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_xml_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_xmlpatterns.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_xmlpatterns_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_zlib_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\features\qt_functions.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\qt_config.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\win32-msvc\qmake.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\spec_post.prf .qmake.stash C:\Qt\5.13.1\msvc2015_64\mkspecs\features\exclusive_builds.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\common\msvc-version.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\toolchain.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\default_pre.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\win32\default_pre.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\resolve_config.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\exclusive_builds_post.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\default_post.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\build_pass.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\resources.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\qtquickcompiler.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\precompile_header.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\warn_on.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\qt.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\moc.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\win32\opengl.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\uic.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\qmake_use.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\file_copies.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\win32\windows.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\testcase_targets.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\exceptions.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\yacc.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\lex.prf winnow64.pro winnow.qrc C:\Qt\5.13.1\msvc2015_64\lib\Qt5Widgets.prl C:\Qt\5.13.1\msvc2015_64\lib\Qt5Gui.prl C:\Qt\5.13.1\msvc2015_64\lib\Qt5Concurrent.prl C:\Qt\5.13.1\msvc2015_64\lib\Qt5XmlPatterns.prl C:\Qt\5.13.1\msvc2015_64\lib\Qt5Network.prl C:\Qt\5.13.1\msvc2015_64\lib\Qt5Core.prl C:\Qt\5.13.1\msvc2015_64\lib\qtmain.prl  winnow.qrc    C:\Qt\5.13.1\msvc2015_64\mkspecs\features\data\dummy.cpp Cache\imagecache.h Utilities\bit.h Cache\mdcache.h Cache\tshash.h Datamodel\datamodel.h Datamodel\filters.h Dialogs\aboutdlg.h Dialogs\appdlg.h Dialogs\ingestdlg.h Dialogs\loadusbdlg.h Dialogs\preferencesdlg.h Dialogs\renamedlg.h Dialogs\saveasdlg.h Dialogs\testaligndlg.h Dialogs\workspacedlg.h Dialogs\tokendlg.h Dialogs\updateapp.h Dialogs\zoomdlg.h File\bookmarks.h File\fstree.h Image\imagealign.h Image\pixmap.h Image\thumb.h ImageFormats\Canon\canon.h ImageFormats\Dng\dng.h ImageFormats\Fuji\fuji.h ImageFormats\Heic\Heic.h ImageFormats\Jpeg\jpeg.h ImageFormats\Nikon\nikon.h ImageFormats\Olympus\olympus.h ImageFormats\Panasonic\panasonic.h ImageFormats\Sony\sony.h ImageFormats\Tiff\tiff.h Main\dockwidget.h Main\global.h Main\mainwindow.h Main\widgetcss.h Metadata\exif.h Metadata\ifd.h Metadata\iptc.h Metadata\imagemetadata.h Metadata\metadata.h Metadata\metareport.h Metadata\xmp.h PropertyEditor\preferences.h PropertyEditor\propertyeditor.h PropertyEditor\propertydelegate.h PropertyEditor\propertywidgets.h Utilities\classificationlabel.h Utilities\dropshadowlabel.h Utilities\icc.h Utilities\popup.h Utilities\progressbar.h Utilities\usb.h Utilities\utilities.h Utilities\win.h Views\compareImages.h Views\compareview.h Views\iconview.h Views\iconviewdelegate.h Views\imageview.h Views\infostring.h Views\infoview.h Views\tableview.h  Cache\imagecache.cpp Utilities\bit.cpp Cache\mdcache.cpp Datamodel\datamodel.cpp Datamodel\filters.cpp Dialogs\aboutdlg.cpp Dialogs\appdlg.cpp Dialogs\ingestdlg.cpp Dialogs\loadusbdlg.cpp Dialogs\preferencesdlg.cpp Dialogs\renamedlg.cpp Dialogs\saveasdlg.cpp Dialogs\testaligndlg.cpp Dialogs\tokendlg.cpp Dialogs\updateapp.cpp Dialogs\workspacedlg.cpp Dialogs\zoomdlg.cpp File\bookmarks.cpp File\fstree.cpp Image\imagealign.cpp Image\pixmap.cpp Image\thumb.cpp ImageFormats\Canon\canon.cpp ImageFormats\Dng\dng.cpp ImageFormats\Fuji\fuji.cpp ImageFormats\Heic\Heic.cpp ImageFormats\jpeg\jpeg.cpp ImageFormats\Nikon\nikon.cpp ImageFormats\Olympus\olympus.cpp ImageFormats\Panasonic\panasonic.cpp ImageFormats\Sony\sony.cpp ImageFormats\Tiff\tiff.cpp Main\dockwidget.cpp Main\global.cpp Main\main.cpp Main\mainwindow.cpp Main\widgetcss.cpp Metadata\exif.cpp Metadata\ifd.cpp Metadata\iptc.cpp Metadata\metadata.cpp Metadata\metareport.cpp Metadata\xmp.cpp PropertyEditor\preferences.cpp PropertyEditor\propertyeditor.cpp PropertyEditor\propertydelegate.cpp PropertyEditor\propertywidgets.cpp Utilities\classificationlabel.cpp Utilities\dropshadowlabel.cpp Utilities\icc.cpp Utilities\popup.cpp Utilities\progressbar.cpp Utilities\usb.cpp Utilities\utilities.cpp Utilities\win.cpp Views\compareImages.cpp Views\compareview.cpp Views\iconview.cpp Views\iconviewdelegate.cpp Views\imageview.cpp Views\infoview.cpp Views\tableview.cpp Views\infostring.cpp Dialogs\aboutdlg.ui Dialogs\ingestdlg_copy.ui Dialogs\saveasdlg.ui Dialogs\test12.ui Dialogs\aligndlg.ui Dialogs\appdlg.ui Dialogs\ingestdlg.ui Dialogs\loadusbdlg.ui Dialogs\renamedlg.ui Dialogs\testaligndlg.ui Dialogs\testdlg.ui Dialogs\test1.ui Dialogs\test12.ui Dialogs\tokendlg.ui Dialogs\updateapp.ui Dialogs\workspacedlg.ui Dialogs\zoomdlg.ui Help\helpform.ui Help\helpingest.ui Help\ingestautopath.ui Help\introduction.ui Help\message.ui Help\shortcutsform.ui Help\welcome.ui Metadata\metadatareport.ui    
+	$(ZIP) Winnow.zip $(SOURCES) $(DIST) winnow64.pro C:\Qt\5.13.1\msvc2015_64\mkspecs\features\spec_pre.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\common\angle.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\common\windows-desktop.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\win32\windows_vulkan_sdk.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\common\windows-vulkan.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\common\msvc-desktop.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\qconfig.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3danimation.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3danimation_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dcore.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dcore_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dextras.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dextras_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dinput.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dinput_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dlogic.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dlogic_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquick.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquick_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickanimation.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickanimation_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickextras.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickextras_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickinput.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickinput_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickrender.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickrender_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickscene2d.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3dquickscene2d_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3drender.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_3drender_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_accessibility_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axbase.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axbase_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axcontainer.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axcontainer_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axserver.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_axserver_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_bluetooth.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_bluetooth_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_bootstrap_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_concurrent.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_concurrent_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_core.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_core_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_dbus.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_dbus_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_designer.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_designer_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_designercomponents_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_devicediscovery_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_edid_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_egl_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_eventdispatcher_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_fb_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_fontdatabase_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_gamepad.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_gamepad_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_gui.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_gui_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_help.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_help_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_location.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_location_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_multimedia.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_multimedia_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_multimediawidgets.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_multimediawidgets_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_network.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_network_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_nfc.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_nfc_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_opengl.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_opengl_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_openglextensions.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_openglextensions_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_packetprotocol_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_platformcompositor_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_positioning.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_positioning_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_positioningquick.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_positioningquick_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_printsupport.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_printsupport_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qml.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qml_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qmldebug_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qmldevtools_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qmltest.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qmltest_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_qtmultimediaquicktools_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quick.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quick_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickcontrols2.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickcontrols2_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickparticles_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickshapes_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quicktemplates2.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quicktemplates2_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickwidgets.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_quickwidgets_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_remoteobjects.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_remoteobjects_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_repparser.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_repparser_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_scxml.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_scxml_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_sensors.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_sensors_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_serialbus.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_serialbus_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_serialport.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_serialport_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_sql.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_sql_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_svg.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_svg_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_testlib.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_testlib_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_texttospeech.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_texttospeech_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_theme_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_uiplugin.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_uitools.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_uitools_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_vulkan_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_webchannel.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_webchannel_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_websockets.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_websockets_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_webview.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_webview_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_widgets.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_widgets_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_windowsuiautomation_support_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_winextras.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_winextras_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_xml.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_xml_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_xmlpatterns.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_xmlpatterns_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\modules\qt_lib_zlib_private.pri C:\Qt\5.13.1\msvc2015_64\mkspecs\features\qt_functions.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\qt_config.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\win32-msvc\qmake.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\spec_post.prf .qmake.stash C:\Qt\5.13.1\msvc2015_64\mkspecs\features\exclusive_builds.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\common\msvc-version.conf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\toolchain.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\default_pre.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\win32\default_pre.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\resolve_config.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\exclusive_builds_post.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\default_post.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\build_pass.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\resources.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\qtquickcompiler.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\precompile_header.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\warn_on.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\qt.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\moc.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\win32\opengl.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\uic.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\qmake_use.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\file_copies.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\win32\windows.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\testcase_targets.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\exceptions.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\yacc.prf C:\Qt\5.13.1\msvc2015_64\mkspecs\features\lex.prf winnow64.pro winnow.qrc C:\Qt\5.13.1\msvc2015_64\lib\Qt5Widgets.prl C:\Qt\5.13.1\msvc2015_64\lib\Qt5Gui.prl C:\Qt\5.13.1\msvc2015_64\lib\Qt5Concurrent.prl C:\Qt\5.13.1\msvc2015_64\lib\Qt5XmlPatterns.prl C:\Qt\5.13.1\msvc2015_64\lib\Qt5Network.prl C:\Qt\5.13.1\msvc2015_64\lib\Qt5Core.prl C:\Qt\5.13.1\msvc2015_64\lib\qtmain.prl  winnow.qrc    C:\Qt\5.13.1\msvc2015_64\mkspecs\features\data\dummy.cpp Cache\imagecache.h Metadata\gps.h Utilities\bit.h Cache\mdcache.h Cache\tshash.h Datamodel\datamodel.h Datamodel\filters.h Dialogs\aboutdlg.h Dialogs\appdlg.h Dialogs\ingestdlg.h Dialogs\loadusbdlg.h Dialogs\preferencesdlg.h Dialogs\renamedlg.h Dialogs\saveasdlg.h Dialogs\testaligndlg.h Dialogs\workspacedlg.h Dialogs\tokendlg.h Dialogs\updateapp.h Dialogs\zoomdlg.h File\bookmarks.h File\fstree.h Image\imagealign.h Image\pixmap.h Image\thumb.h ImageFormats\Canon\canon.h ImageFormats\Dng\dng.h ImageFormats\Fuji\fuji.h ImageFormats\Heic\Heic.h ImageFormats\Jpeg\jpeg.h ImageFormats\Nikon\nikon.h ImageFormats\Olympus\olympus.h ImageFormats\Panasonic\panasonic.h ImageFormats\Sony\sony.h ImageFormats\Tiff\tiff.h Main\dockwidget.h Main\global.h Main\mainwindow.h Main\widgetcss.h Metadata\exif.h Metadata\ifd.h Metadata\iptc.h Metadata\imagemetadata.h Metadata\metadata.h Metadata\metareport.h Metadata\xmp.h PropertyEditor\preferences.h PropertyEditor\propertyeditor.h PropertyEditor\propertydelegate.h PropertyEditor\propertywidgets.h Utilities\classificationlabel.h Utilities\dropshadowlabel.h Utilities\icc.h Utilities\popup.h Utilities\progressbar.h Utilities\usb.h Utilities\utilities.h Utilities\win.h Views\compareImages.h Views\compareview.h Views\iconview.h Views\iconviewdelegate.h Views\imageview.h Views\infostring.h Views\infoview.h Views\tableview.h  Cache\imagecache.cpp Metadata\gps.cpp Utilities\bit.cpp Cache\mdcache.cpp Datamodel\datamodel.cpp Datamodel\filters.cpp Dialogs\aboutdlg.cpp Dialogs\appdlg.cpp Dialogs\ingestdlg.cpp Dialogs\loadusbdlg.cpp Dialogs\preferencesdlg.cpp Dialogs\renamedlg.cpp Dialogs\saveasdlg.cpp Dialogs\testaligndlg.cpp Dialogs\tokendlg.cpp Dialogs\updateapp.cpp Dialogs\workspacedlg.cpp Dialogs\zoomdlg.cpp File\bookmarks.cpp File\fstree.cpp Image\imagealign.cpp Image\pixmap.cpp Image\thumb.cpp ImageFormats\Canon\canon.cpp ImageFormats\Dng\dng.cpp ImageFormats\Fuji\fuji.cpp ImageFormats\Heic\Heic.cpp ImageFormats\jpeg\jpeg.cpp ImageFormats\Nikon\nikon.cpp ImageFormats\Olympus\olympus.cpp ImageFormats\Panasonic\panasonic.cpp ImageFormats\Sony\sony.cpp ImageFormats\Tiff\tiff.cpp Main\dockwidget.cpp Main\global.cpp Main\main.cpp Main\mainwindow.cpp Main\widgetcss.cpp Metadata\exif.cpp Metadata\ifd.cpp Metadata\iptc.cpp Metadata\metadata.cpp Metadata\metareport.cpp Metadata\xmp.cpp PropertyEditor\preferences.cpp PropertyEditor\propertyeditor.cpp PropertyEditor\propertydelegate.cpp PropertyEditor\propertywidgets.cpp Utilities\classificationlabel.cpp Utilities\dropshadowlabel.cpp Utilities\icc.cpp Utilities\popup.cpp Utilities\progressbar.cpp Utilities\usb.cpp Utilities\utilities.cpp Utilities\win.cpp Views\compareImages.cpp Views\compareview.cpp Views\iconview.cpp Views\iconviewdelegate.cpp Views\imageview.cpp Views\infoview.cpp Views\tableview.cpp Views\infostring.cpp Dialogs\aboutdlg.ui Dialogs\ingestdlg_copy.ui Dialogs\saveasdlg.ui Dialogs\test12.ui Dialogs\aligndlg.ui Dialogs\appdlg.ui Dialogs\ingestdlg.ui Dialogs\loadusbdlg.ui Dialogs\renamedlg.ui Dialogs\testaligndlg.ui Dialogs\testdlg.ui Dialogs\test1.ui Dialogs\test12.ui Dialogs\tokendlg.ui Dialogs\updateapp.ui Dialogs\workspacedlg.ui Dialogs\zoomdlg.ui Help\helpform.ui Help\helpingest.ui Help\ingestautopath.ui Help\introduction.ui Help\message.ui Help\shortcutsform.ui Help\welcome.ui Metadata\metadatareport.ui    
 
 clean: compiler_clean 
-	-$(DEL_FILE) release\imagecache.obj release\bit.obj release\mdcache.obj release\datamodel.obj release\filters.obj release\aboutdlg.obj release\appdlg.obj release\ingestdlg.obj release\loadusbdlg.obj release\preferencesdlg.obj release\renamedlg.obj release\saveasdlg.obj release\testaligndlg.obj release\tokendlg.obj release\updateapp.obj release\workspacedlg.obj release\zoomdlg.obj release\bookmarks.obj release\fstree.obj release\imagealign.obj release\pixmap.obj release\thumb.obj release\canon.obj release\dng.obj release\fuji.obj release\Heic.obj release\jpeg.obj release\nikon.obj release\olympus.obj release\panasonic.obj release\sony.obj release\tiff.obj release\dockwidget.obj release\global.obj release\main.obj release\mainwindow.obj release\widgetcss.obj release\exif.obj release\ifd.obj release\iptc.obj release\metadata.obj release\metareport.obj release\xmp.obj release\preferences.obj release\propertyeditor.obj release\propertydelegate.obj release\propertywidgets.obj release\classificationlabel.obj release\dropshadowlabel.obj release\icc.obj release\popup.obj release\progressbar.obj release\usb.obj release\utilities.obj release\win.obj release\compareImages.obj release\compareview.obj release\iconview.obj release\iconviewdelegate.obj release\imageview.obj release\infoview.obj release\tableview.obj release\infostring.obj release\qrc_winnow.obj release\moc_imagecache.obj release\moc_mdcache.obj release\moc_datamodel.obj release\moc_filters.obj release\moc_aboutdlg.obj release\moc_appdlg.obj release\moc_ingestdlg.obj release\moc_loadusbdlg.obj release\moc_preferencesdlg.obj release\moc_renamedlg.obj release\moc_saveasdlg.obj release\moc_testaligndlg.obj release\moc_workspacedlg.obj release\moc_tokendlg.obj release\moc_updateapp.obj release\moc_zoomdlg.obj release\moc_bookmarks.obj release\moc_fstree.obj release\moc_imagealign.obj release\moc_pixmap.obj release\moc_thumb.obj release\moc_canon.obj release\moc_Heic.obj release\moc_jpeg.obj release\moc_nikon.obj release\moc_olympus.obj release\moc_panasonic.obj
-	-$(DEL_FILE) release\moc_sony.obj release\moc_tiff.obj release\moc_dockwidget.obj release\moc_mainwindow.obj release\moc_metadata.obj release\moc_xmp.obj release\moc_preferences.obj release\moc_propertyeditor.obj release\moc_propertydelegate.obj release\moc_propertywidgets.obj release\moc_classificationlabel.obj release\moc_dropshadowlabel.obj release\moc_popup.obj release\moc_progressbar.obj release\moc_compareImages.obj release\moc_compareview.obj release\moc_iconview.obj release\moc_iconviewdelegate.obj release\moc_imageview.obj release\moc_infostring.obj release\moc_infoview.obj release\moc_tableview.obj
+	-$(DEL_FILE) release\imagecache.obj release\gps.obj release\bit.obj release\mdcache.obj release\datamodel.obj release\filters.obj release\aboutdlg.obj release\appdlg.obj release\ingestdlg.obj release\loadusbdlg.obj release\preferencesdlg.obj release\renamedlg.obj release\saveasdlg.obj release\testaligndlg.obj release\tokendlg.obj release\updateapp.obj release\workspacedlg.obj release\zoomdlg.obj release\bookmarks.obj release\fstree.obj release\imagealign.obj release\pixmap.obj release\thumb.obj release\canon.obj release\dng.obj release\fuji.obj release\Heic.obj release\jpeg.obj release\nikon.obj release\olympus.obj release\panasonic.obj release\sony.obj release\tiff.obj release\dockwidget.obj release\global.obj release\main.obj release\mainwindow.obj release\widgetcss.obj release\exif.obj release\ifd.obj release\iptc.obj release\metadata.obj release\metareport.obj release\xmp.obj release\preferences.obj release\propertyeditor.obj release\propertydelegate.obj release\propertywidgets.obj release\classificationlabel.obj release\dropshadowlabel.obj release\icc.obj release\popup.obj release\progressbar.obj release\usb.obj release\utilities.obj release\win.obj release\compareImages.obj release\compareview.obj release\iconview.obj release\iconviewdelegate.obj release\imageview.obj release\infoview.obj release\tableview.obj release\infostring.obj release\qrc_winnow.obj release\moc_imagecache.obj release\moc_mdcache.obj release\moc_datamodel.obj release\moc_filters.obj release\moc_aboutdlg.obj release\moc_appdlg.obj release\moc_ingestdlg.obj release\moc_loadusbdlg.obj release\moc_preferencesdlg.obj release\moc_renamedlg.obj release\moc_saveasdlg.obj release\moc_testaligndlg.obj release\moc_workspacedlg.obj release\moc_tokendlg.obj release\moc_updateapp.obj release\moc_zoomdlg.obj release\moc_bookmarks.obj release\moc_fstree.obj release\moc_imagealign.obj release\moc_pixmap.obj release\moc_thumb.obj release\moc_canon.obj release\moc_Heic.obj release\moc_jpeg.obj release\moc_nikon.obj release\moc_olympus.obj
+	-$(DEL_FILE) release\moc_panasonic.obj release\moc_sony.obj release\moc_tiff.obj release\moc_dockwidget.obj release\moc_mainwindow.obj release\moc_metadata.obj release\moc_xmp.obj release\moc_preferences.obj release\moc_propertyeditor.obj release\moc_propertydelegate.obj release\moc_propertywidgets.obj release\moc_classificationlabel.obj release\moc_dropshadowlabel.obj release\moc_popup.obj release\moc_progressbar.obj release\moc_compareImages.obj release\moc_compareview.obj release\moc_iconview.obj release\moc_iconviewdelegate.obj release\moc_imageview.obj release\moc_infostring.obj release\moc_infoview.obj release\moc_tableview.obj
 	-$(DEL_FILE) release\Winnow_resource.res
 
 distclean: clean 
@@ -1649,18 +1205,16 @@ release\moc_imagecache.cpp: Cache\imagecache.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -2260,18 +1814,16 @@ release\moc_mdcache.cpp: Cache\mdcache.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -2868,18 +2420,16 @@ release\moc_datamodel.cpp: Datamodel\datamodel.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -3378,6 +2928,7 @@ release\moc_filters.cpp: Datamodel\filters.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
+		Utilities\utilities.h \
 		release\moc_predefs.h \
 		C:\Qt\5.13.1\msvc2015_64\bin\moc.exe
 	C:\Qt\5.13.1\msvc2015_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/moc_predefs.h" -IC:/Qt/5.13.1/msvc2015_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -IC:/Qt/5.13.1/msvc2015_64/include -IC:/Qt/5.13.1/msvc2015_64/include/QtWidgets -IC:/Qt/5.13.1/msvc2015_64/include/QtGui -IC:/Qt/5.13.1/msvc2015_64/include/QtANGLE -IC:/Qt/5.13.1/msvc2015_64/include/QtConcurrent -IC:/Qt/5.13.1/msvc2015_64/include/QtXmlPatterns -IC:/Qt/5.13.1/msvc2015_64/include/QtNetwork -IC:/Qt/5.13.1/msvc2015_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Datamodel\filters.h -o release\moc_filters.cpp
@@ -4918,18 +4469,16 @@ release\moc_ingestdlg.cpp: Dialogs\ingestdlg.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -4955,6 +4504,7 @@ release\moc_ingestdlg.cpp: Dialogs\ingestdlg.h \
 		Dialogs\tokendlg.h \
 		Dialogs\renamedlg.h \
 		ui_ingestautopath.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
 		release\moc_predefs.h \
 		C:\Qt\5.13.1\msvc2015_64\bin\moc.exe
 	C:\Qt\5.13.1\msvc2015_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/moc_predefs.h" -IC:/Qt/5.13.1/msvc2015_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -IC:/Qt/5.13.1/msvc2015_64/include -IC:/Qt/5.13.1/msvc2015_64/include/QtWidgets -IC:/Qt/5.13.1/msvc2015_64/include/QtGui -IC:/Qt/5.13.1/msvc2015_64/include/QtANGLE -IC:/Qt/5.13.1/msvc2015_64/include/QtConcurrent -IC:/Qt/5.13.1/msvc2015_64/include/QtXmlPatterns -IC:/Qt/5.13.1/msvc2015_64/include/QtNetwork -IC:/Qt/5.13.1/msvc2015_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Dialogs\ingestdlg.h -o release\moc_ingestdlg.cpp
@@ -6970,17 +6520,15 @@ release\moc_saveasdlg.cpp: Dialogs\saveasdlg.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -9233,18 +8781,16 @@ release\moc_bookmarks.cpp: File\bookmarks.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -9831,18 +9377,16 @@ release\moc_fstree.cpp: File\fstree.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -10542,18 +10086,16 @@ release\moc_pixmap.cpp: Image\pixmap.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -11147,18 +10689,16 @@ release\moc_thumb.cpp: Image\thumb.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -12804,6 +12344,7 @@ release\moc_jpeg.cpp: ImageFormats\Jpeg\jpeg.h \
 		Metadata\ifd.h \
 		Metadata\metareport.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Metadata\xmp.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -14037,6 +13578,7 @@ release\moc_olympus.cpp: ImageFormats\Olympus\olympus.h \
 		ImageFormats\Jpeg\jpeg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QRgb \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		release\moc_predefs.h \
 		C:\Qt\5.13.1\msvc2015_64\bin\moc.exe
 	C:\Qt\5.13.1\msvc2015_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/moc_predefs.h" -IC:/Qt/5.13.1/msvc2015_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -IC:/Qt/5.13.1/msvc2015_64/include -IC:/Qt/5.13.1/msvc2015_64/include/QtWidgets -IC:/Qt/5.13.1/msvc2015_64/include/QtGui -IC:/Qt/5.13.1/msvc2015_64/include/QtANGLE -IC:/Qt/5.13.1/msvc2015_64/include/QtConcurrent -IC:/Qt/5.13.1/msvc2015_64/include/QtXmlPatterns -IC:/Qt/5.13.1/msvc2015_64/include/QtNetwork -IC:/Qt/5.13.1/msvc2015_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" ImageFormats\Olympus\olympus.h -o release\moc_olympus.cpp
@@ -14612,6 +14154,7 @@ release\moc_panasonic.cpp: ImageFormats\Panasonic\panasonic.h \
 		ImageFormats\Jpeg\jpeg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QRgb \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		release\moc_predefs.h \
 		C:\Qt\5.13.1\msvc2015_64\bin\moc.exe
 	C:\Qt\5.13.1\msvc2015_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/moc_predefs.h" -IC:/Qt/5.13.1/msvc2015_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -IC:/Qt/5.13.1/msvc2015_64/include -IC:/Qt/5.13.1/msvc2015_64/include/QtWidgets -IC:/Qt/5.13.1/msvc2015_64/include/QtGui -IC:/Qt/5.13.1/msvc2015_64/include/QtANGLE -IC:/Qt/5.13.1/msvc2015_64/include/QtConcurrent -IC:/Qt/5.13.1/msvc2015_64/include/QtXmlPatterns -IC:/Qt/5.13.1/msvc2015_64/include/QtNetwork -IC:/Qt/5.13.1/msvc2015_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" ImageFormats\Panasonic\panasonic.h -o release\moc_panasonic.cpp
@@ -15759,6 +15302,7 @@ release\moc_tiff.cpp: ImageFormats\Tiff\tiff.h \
 		ImageFormats\Jpeg\jpeg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QRgb \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		release\moc_predefs.h \
 		C:\Qt\5.13.1\msvc2015_64\bin\moc.exe
 	C:\Qt\5.13.1\msvc2015_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/moc_predefs.h" -IC:/Qt/5.13.1/msvc2015_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -IC:/Qt/5.13.1/msvc2015_64/include -IC:/Qt/5.13.1/msvc2015_64/include/QtWidgets -IC:/Qt/5.13.1/msvc2015_64/include/QtGui -IC:/Qt/5.13.1/msvc2015_64/include/QtANGLE -IC:/Qt/5.13.1/msvc2015_64/include/QtConcurrent -IC:/Qt/5.13.1/msvc2015_64/include/QtXmlPatterns -IC:/Qt/5.13.1/msvc2015_64/include/QtNetwork -IC:/Qt/5.13.1/msvc2015_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" ImageFormats\Tiff\tiff.h -o release\moc_tiff.cpp
@@ -16819,17 +16363,15 @@ release\moc_mainwindow.cpp: Main\mainwindow.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -16884,6 +16426,7 @@ release\moc_mainwindow.cpp: Main\mainwindow.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		ui_ingestautopath.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QDesktopServices \
@@ -16894,16 +16437,19 @@ release\moc_mainwindow.cpp: Main\mainwindow.h \
 		Dialogs\zoomdlg.h \
 		Dialogs\loadusbdlg.h \
 		Utilities\usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
+		ui_welcome.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h \
+		ui_message.h \
 		ui_test12.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextEdit \
 		Utilities\win.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -17479,18 +17025,16 @@ release\moc_metadata.cpp: Metadata\metadata.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -21413,18 +20957,16 @@ release\moc_compareImages.cpp: Views\compareImages.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -22033,18 +21575,16 @@ release\moc_compareview.cpp: Views\compareview.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -22651,18 +22191,16 @@ release\moc_iconview.cpp: Views\iconview.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -23742,18 +23280,16 @@ release\moc_imageview.cpp: Views\imageview.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -24362,18 +23898,16 @@ release\moc_infostring.cpp: Views\infostring.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -24967,18 +24501,16 @@ release\moc_infoview.cpp: Views\infoview.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -25571,18 +25103,16 @@ release\moc_tableview.cpp: Views\tableview.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -27733,18 +27263,16 @@ release\imagecache.obj: Cache\imagecache.cpp Cache\imagecache.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -27768,6 +27296,205 @@ release\imagecache.obj: Cache\imagecache.cpp Cache\imagecache.h \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\imagecache.obj Cache\imagecache.cpp
+
+release\gps.obj: Metadata\gps.cpp Metadata\gps.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QtCore \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QtCoreDepends \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qglobal.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qconfig-bootstrapped.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qconfig.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtcore-config.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsystemdetection.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qprocessordetection.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcompilerdetection.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtypeinfo.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsysinfo.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qlogging.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qflags.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qatomic.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qbasicatomic.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qatomic_bootstrap.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qgenericatomic.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qatomic_cxx11.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qatomic_msvc.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qglobalstatic.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qmutex.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qnumeric.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qversiontagging.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qabstractanimation.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qobject.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qobjectdefs.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qnamespace.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qobjectdefs_impl.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstring.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qchar.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qbytearray.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qrefcount.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qarraydata.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstringliteral.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstringalgorithms.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstringview.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstringbuilder.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qlist.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qalgorithms.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qiterator.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qhashfunctions.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qpair.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qvector.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qpoint.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qbytearraylist.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstringlist.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qregexp.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstringmatcher.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcoreevent.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qscopedpointer.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qmetatype.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qvarlengtharray.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcontainerfwd.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qobject_impl.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qabstracteventdispatcher.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qeventloop.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qabstractitemmodel.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qvariant.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qmap.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qdebug.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qhash.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtextstream.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qiodevice.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qlocale.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qshareddata.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qset.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcontiguouscache.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsharedpointer.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsharedpointer_impl.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qabstractnativeeventfilter.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qabstractproxymodel.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qabstractstate.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qabstracttransition.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qanimationgroup.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qarraydataops.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qarraydatapointer.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qbasictimer.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qbitarray.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qbuffer.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qbytearraymatcher.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcache.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcborarray.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcborvalue.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qdatetime.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcborcommon.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qregularexpression.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qurl.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qurlquery.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\quuid.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcbormap.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcborstream.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfloat16.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcollator.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcommandlineoption.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcommandlineparser.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcoreapplication.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qconcatenatetablesproxymodel.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcryptographichash.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qdatastream.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qdeadlinetimer.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qelapsedtimer.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qdir.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfileinfo.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfile.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfiledevice.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qdiriterator.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qeasingcurve.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qendian.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qeventtransition.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qexception.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfactoryinterface.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfileselector.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QObject \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QStringList \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfilesystemwatcher.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfinalstate.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfuture.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfutureinterface.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qrunnable.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qresultstore.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfuturesynchronizer.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfuturewatcher.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qhistorystate.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qidentityproxymodel.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qisenum.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qitemselectionmodel.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qjsonarray.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qjsonvalue.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qjsondocument.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qjsonobject.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qlibrary.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qlibraryinfo.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qversionnumber.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qline.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qlinkedlist.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qlockfile.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qloggingcategory.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qmargins.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qmath.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qmessageauthenticationcode.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qmetaobject.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qmimedata.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qmimedatabase.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qmimetype.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qobjectcleanuphandler.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qoperatingsystemversion.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qparallelanimationgroup.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qpauseanimation.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qplugin.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qpointer.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qpluginloader.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qprocess.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qpropertyanimation.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qvariantanimation.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qqueue.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qrandom.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qreadwritelock.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qrect.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsize.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qresource.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsavefile.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qscopedvaluerollback.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qscopeguard.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsemaphore.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsequentialanimationgroup.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsettings.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsharedmemory.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsignalmapper.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsignaltransition.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsocketnotifier.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsortfilterproxymodel.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstack.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstandardpaths.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstate.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstatemachine.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstorageinfo.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qstringlistmodel.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qsystemsemaphore.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtemporarydir.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtemporaryfile.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtextboundaryfinder.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtextcodec.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qthread.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qthreadpool.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qthreadstorage.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtimeline.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtimer.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtimezone.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtranslator.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtransposeproxymodel.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtypetraits.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qwaitcondition.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qwineventnotifier.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qxmlstream.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtcoreversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\gps.obj Metadata\gps.cpp
 
 release\bit.obj: Utilities\bit.cpp Utilities\bit.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QCoreApplication \
@@ -27824,6 +27551,7 @@ release\bit.obj: Utilities\bit.cpp Utilities\bit.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcontainerfwd.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qobject_impl.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qeventloop.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\bit.obj Utilities\bit.cpp
 
 release\mdcache.obj: Cache\mdcache.cpp Main\global.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -28397,18 +28125,16 @@ release\mdcache.obj: Cache\mdcache.cpp Main\global.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -28432,6 +28158,7 @@ release\mdcache.obj: Cache\mdcache.cpp Main\global.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
 		Image\thumb.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\mdcache.obj Cache\mdcache.cpp
 
 release\datamodel.obj: Datamodel\datamodel.cpp Datamodel\datamodel.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -29002,18 +28729,16 @@ release\datamodel.obj: Datamodel\datamodel.cpp Datamodel\datamodel.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -29031,6 +28756,7 @@ release\datamodel.obj: Datamodel\datamodel.cpp Datamodel\datamodel.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QPainter
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\datamodel.obj Datamodel\datamodel.cpp
 
 release\filters.obj: Datamodel\filters.cpp Datamodel\filters.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -29508,7 +29234,9 @@ release\filters.obj: Datamodel\filters.cpp Datamodel\filters.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QLabel \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
-		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
+		Utilities\utilities.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\filters.obj Datamodel\filters.cpp
 
 release\aboutdlg.obj: Dialogs\aboutdlg.cpp Dialogs\aboutdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
@@ -29989,7 +29717,14 @@ release\aboutdlg.obj: Dialogs\aboutdlg.cpp Dialogs\aboutdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
-		ui_aboutdlg.h
+		ui_aboutdlg.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\aboutdlg.obj Dialogs\aboutdlg.cpp
 
 release\appdlg.obj: Dialogs\appdlg.cpp Dialogs\appdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
@@ -30469,15 +30204,16 @@ release\appdlg.obj: Dialogs\appdlg.cpp Dialogs\appdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
-		release\ui_appdlg.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_appdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpacerItem \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTableWidget \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\appdlg.obj Dialogs\appdlg.cpp
 
 release\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs\ingestdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -31050,18 +30786,16 @@ release\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs\ingestdlg.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -31087,8 +30821,20 @@ release\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs\ingestdlg.h \
 		Dialogs\tokendlg.h \
 		Dialogs\renamedlg.h \
 		ui_ingestautopath.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
 		ui_ingestdlg.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QCheckBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QLineEdit \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QProgressBar \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QRadioButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpinBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTabWidget \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ingestdlg.obj Dialogs\ingestdlg.cpp
 
 release\loadusbdlg.obj: Dialogs\loadusbdlg.cpp Dialogs\loadusbdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
@@ -31559,7 +31305,12 @@ release\loadusbdlg.obj: Dialogs\loadusbdlg.cpp Dialogs\loadusbdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtwidgetsversion.h \
 		ui_loadusbdlg.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QLabel \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QListWidget \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\loadusbdlg.obj Dialogs\loadusbdlg.cpp
 
 release\preferencesdlg.obj: Dialogs\preferencesdlg.cpp Dialogs\preferencesdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
@@ -32045,6 +31796,7 @@ release\preferencesdlg.obj: Dialogs\preferencesdlg.cpp Dialogs\preferencesdlg.h 
 		PropertyEditor\propertywidgets.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QStyledItemDelegate \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\preferencesdlg.obj Dialogs\preferencesdlg.cpp
 
 release\renamedlg.obj: Dialogs\renamedlg.cpp Dialogs\renamedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -32523,14 +32275,12 @@ release\renamedlg.obj: Dialogs\renamedlg.cpp Dialogs\renamedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
-		release\ui_renamedlg.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_renamedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\renamedlg.obj Dialogs\renamedlg.cpp
 
 release\saveasdlg.obj: Dialogs\saveasdlg.cpp Dialogs\saveasdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
@@ -33103,17 +32853,15 @@ release\saveasdlg.obj: Dialogs\saveasdlg.cpp Dialogs\saveasdlg.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -33135,7 +32883,14 @@ release\saveasdlg.obj: Dialogs\saveasdlg.cpp Dialogs\saveasdlg.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
 		ui_saveasdlg.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QProgressBar \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpinBox \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\saveasdlg.obj Dialogs\saveasdlg.cpp
 
 release\testaligndlg.obj: Dialogs\testaligndlg.cpp Dialogs\testaligndlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
@@ -33242,12 +32997,8 @@ release\testaligndlg.obj: Dialogs\testaligndlg.cpp Dialogs\testaligndlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qfiledevice.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qvector2d.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qtouchdevice.h \
-		release\ui_testaligndlg.h \
+		ui_testaligndlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QVariant \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qaction.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qicon.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qactiongroup.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qapplication.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcoreapplication.h \
@@ -33255,30 +33006,12 @@ release\testaligndlg.obj: Dialogs\testaligndlg.cpp Dialogs\testaligndlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qdesktopwidget.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qguiapplication.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qinputmethod.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qbuttongroup.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialogButtonBox \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qdialogbuttonbox.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qheaderview.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qabstractitemview.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qabstractscrollarea.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qframe.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qabstractitemmodel.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qitemselectionmodel.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qabstractitemdelegate.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qstyleoption.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qabstractspinbox.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qvalidator.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qregularexpression.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qslider.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qabstractslider.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qstyle.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtabbar.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtabwidget.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qrubberband.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QLabel \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qlabel.h
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qlabel.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qframe.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\testaligndlg.obj Dialogs\testaligndlg.cpp
 
 release\tokendlg.obj: Dialogs\tokendlg.cpp Dialogs\tokendlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -33758,18 +33491,18 @@ release\tokendlg.obj: Dialogs\tokendlg.cpp Dialogs\tokendlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
-		release\ui_tokendlg.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_tokendlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QComboBox \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpacerItem \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\tokendlg.obj Dialogs\tokendlg.cpp
 
 release\updateapp.obj: Dialogs\updateapp.cpp Dialogs\updateapp.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
@@ -34239,7 +33972,11 @@ release\updateapp.obj: Dialogs\updateapp.cpp Dialogs\updateapp.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtwidgetsversion.h \
-		ui_updateapp.h
+		ui_updateapp.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QLabel \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\updateapp.obj Dialogs\updateapp.cpp
 
 release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
@@ -34351,9 +34088,8 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qicon.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qaction.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qactiongroup.h \
-		release\ui_workspacedlg.h \
+		ui_workspacedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QVariant \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qapplication.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qcoreapplication.h \
@@ -34361,8 +34097,6 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qdesktopwidget.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qguiapplication.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qinputmethod.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qbuttongroup.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QComboBox \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qcombobox.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qabstractitemdelegate.h \
@@ -34383,11 +34117,6 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qlayout.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qlayoutitem.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qgridlayout.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qheaderview.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qabstractitemview.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qabstractscrollarea.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qitemselectionmodel.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QLabel \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qlabel.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
@@ -34450,6 +34179,7 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qhistorystate.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qidentityproxymodel.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qisenum.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qitemselectionmodel.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qjsonarray.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qjsonvalue.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qjsondocument.h \
@@ -34617,7 +34347,10 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qtextlist.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qtexttable.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qtguiversion.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qabstractitemview.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qabstractscrollarea.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qaccessiblewidget.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qbuttongroup.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qcalendarwidget.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qcolordialog.h \
@@ -34661,6 +34394,7 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qgraphicsview.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qscrollarea.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qgroupbox.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qheaderview.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qinputdialog.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qlineedit.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qitemdelegate.h \
@@ -34729,6 +34463,7 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\workspacedlg.obj Dialogs\workspacedlg.cpp
 
 release\zoomdlg.obj: Dialogs\zoomdlg.cpp Dialogs\zoomdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -35208,13 +34943,10 @@ release\zoomdlg.obj: Dialogs\zoomdlg.cpp Dialogs\zoomdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
-		release\ui_zoomdlg.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_zoomdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QRadioButton \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSlider \
@@ -35222,6 +34954,7 @@ release\zoomdlg.obj: Dialogs\zoomdlg.cpp Dialogs\zoomdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpinBox \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\zoomdlg.obj Dialogs\zoomdlg.cpp
 
 release\bookmarks.obj: File\bookmarks.cpp File\bookmarks.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -35792,18 +35525,16 @@ release\bookmarks.obj: File\bookmarks.cpp File\bookmarks.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -35817,6 +35548,7 @@ release\bookmarks.obj: File\bookmarks.cpp File\bookmarks.h \
 		ImageFormats\Panasonic\panasonic.h \
 		ImageFormats\Sony\sony.h \
 		ImageFormats\Tiff\tiff.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\bookmarks.obj File\bookmarks.cpp
 
 release\fstree.obj: File\fstree.cpp File\fstree.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -36387,18 +36119,16 @@ release\fstree.obj: File\fstree.cpp File\fstree.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -36412,6 +36142,7 @@ release\fstree.obj: File\fstree.cpp File\fstree.h \
 		ImageFormats\Panasonic\panasonic.h \
 		ImageFormats\Sony\sony.h \
 		ImageFormats\Tiff\tiff.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\fstree.obj File\fstree.cpp
 
 release\imagealign.obj: Image\imagealign.cpp Image\imagealign.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QObject \
@@ -36893,6 +36624,7 @@ release\imagealign.obj: Image\imagealign.cpp Image\imagealign.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\imagealign.obj Image\imagealign.cpp
 
 release\pixmap.obj: Image\pixmap.cpp Image\pixmap.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QObject \
@@ -37463,18 +37195,16 @@ release\pixmap.obj: Image\pixmap.cpp Image\pixmap.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -37495,6 +37225,7 @@ release\pixmap.obj: Image\pixmap.cpp Image\pixmap.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QPainter \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\pixmap.obj Image\pixmap.cpp
 
 release\thumb.obj: Image\thumb.cpp Image\thumb.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QObject \
@@ -38065,18 +37796,16 @@ release\thumb.obj: Image\thumb.cpp Image\thumb.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -38095,6 +37824,7 @@ release\thumb.obj: Image\thumb.cpp Image\thumb.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QPainter
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\thumb.obj Image\thumb.cpp
 
 release\canon.obj: ImageFormats\Canon\canon.cpp ImageFormats\Canon\canon.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -38664,6 +38394,7 @@ release\canon.obj: ImageFormats\Canon\canon.cpp ImageFormats\Canon\canon.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlschema.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\canon.obj ImageFormats\Canon\canon.cpp
 
 release\dng.obj: ImageFormats\Dng\dng.cpp ImageFormats\Dng\dng.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -39235,7 +38966,9 @@ release\dng.obj: ImageFormats\Dng\dng.cpp ImageFormats\Dng\dng.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		ImageFormats\Jpeg\jpeg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QRgb \
-		Metadata\iptc.h
+		Metadata\iptc.h \
+		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\dng.obj ImageFormats\Dng\dng.cpp
 
 release\fuji.obj: ImageFormats\Fuji\fuji.cpp ImageFormats\Fuji\fuji.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -39807,7 +39540,9 @@ release\fuji.obj: ImageFormats\Fuji\fuji.cpp ImageFormats\Fuji\fuji.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		ImageFormats\Jpeg\jpeg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QRgb \
-		Metadata\iptc.h
+		Metadata\iptc.h \
+		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\fuji.obj ImageFormats\Fuji\fuji.cpp
 
 release\Heic.obj: ImageFormats\Heic\Heic.cpp ImageFormats\Heic\heic.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -40372,6 +40107,7 @@ release\Heic.obj: ImageFormats\Heic\Heic.cpp ImageFormats\Heic\heic.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
 		Utilities\utilities.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\Heic.obj ImageFormats\Heic\Heic.cpp
 
 release\jpeg.obj: ImageFormats\jpeg\jpeg.cpp ImageFormats\jpeg\jpeg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -40857,6 +40593,7 @@ release\jpeg.obj: ImageFormats\jpeg\jpeg.cpp ImageFormats\jpeg\jpeg.h \
 		Metadata\ifd.h \
 		Metadata\metareport.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Metadata\xmp.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -40944,6 +40681,7 @@ release\jpeg.obj: ImageFormats\jpeg\jpeg.cpp ImageFormats\jpeg\jpeg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\jpeg.obj ImageFormats\jpeg\jpeg.cpp
 
 release\nikon.obj: ImageFormats\Nikon\nikon.cpp ImageFormats\Nikon\nikon.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -41513,6 +41251,7 @@ release\nikon.obj: ImageFormats\Nikon\nikon.cpp ImageFormats\Nikon\nikon.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlschema.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\nikon.obj ImageFormats\Nikon\nikon.cpp
 
 release\olympus.obj: ImageFormats\Olympus\olympus.cpp ImageFormats\Olympus\olympus.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -42084,7 +41823,9 @@ release\olympus.obj: ImageFormats\Olympus\olympus.cpp ImageFormats\Olympus\olymp
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		ImageFormats\Jpeg\jpeg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QRgb \
-		Metadata\iptc.h
+		Metadata\iptc.h \
+		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\olympus.obj ImageFormats\Olympus\olympus.cpp
 
 release\panasonic.obj: ImageFormats\Panasonic\panasonic.cpp ImageFormats\Panasonic\panasonic.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -42656,7 +42397,9 @@ release\panasonic.obj: ImageFormats\Panasonic\panasonic.cpp ImageFormats\Panason
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		ImageFormats\Jpeg\jpeg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QRgb \
-		Metadata\iptc.h
+		Metadata\iptc.h \
+		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\panasonic.obj ImageFormats\Panasonic\panasonic.cpp
 
 release\sony.obj: ImageFormats\Sony\sony.cpp ImageFormats\Sony\sony.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -43226,6 +42969,7 @@ release\sony.obj: ImageFormats\Sony\sony.cpp ImageFormats\Sony\sony.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlschema.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\sony.obj ImageFormats\Sony\sony.cpp
 
 release\tiff.obj: ImageFormats\Tiff\tiff.cpp ImageFormats\Tiff\tiff.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -43797,7 +43541,9 @@ release\tiff.obj: ImageFormats\Tiff\tiff.cpp ImageFormats\Tiff\tiff.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		ImageFormats\Jpeg\jpeg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QRgb \
-		Metadata\iptc.h
+		Metadata\iptc.h \
+		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\tiff.obj ImageFormats\Tiff\tiff.cpp
 
 release\dockwidget.obj: Main\dockwidget.cpp Main\dockwidget.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDockWidget \
@@ -44277,6 +44023,7 @@ release\dockwidget.obj: Main\dockwidget.cpp Main\dockwidget.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\dockwidget.obj Main\dockwidget.cpp
 
 release\global.obj: Main\global.cpp Main\global.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -44754,6 +44501,7 @@ release\global.obj: Main\global.cpp Main\global.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\global.obj Main\global.cpp
 
 release\main.obj: Main\main.cpp Main\mainwindow.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -45329,17 +45077,15 @@ release\main.obj: Main\main.cpp Main\mainwindow.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -45394,6 +45140,7 @@ release\main.obj: Main\main.cpp Main\mainwindow.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		ui_ingestautopath.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QDesktopServices \
@@ -45404,19 +45151,23 @@ release\main.obj: Main\main.cpp Main\mainwindow.h \
 		Dialogs\zoomdlg.h \
 		Dialogs\loadusbdlg.h \
 		Utilities\usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
+		ui_welcome.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h \
+		ui_message.h \
 		ui_test12.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextEdit \
 		Utilities\win.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug \
 		Utilities\mac.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\main.obj Main\main.cpp
 
 release\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -45992,17 +45743,15 @@ release\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -46057,6 +45806,7 @@ release\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		ui_ingestautopath.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QDesktopServices \
@@ -46067,19 +45817,23 @@ release\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		Dialogs\zoomdlg.h \
 		Dialogs\loadusbdlg.h \
 		Utilities\usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
+		ui_welcome.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h \
+		ui_message.h \
 		ui_test12.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextEdit \
 		Utilities\win.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug \
 		Utilities\mac.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\mainwindow.obj Main\mainwindow.cpp
 
 release\widgetcss.obj: Main\widgetcss.cpp Main\widgetcss.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -46558,6 +46312,7 @@ release\widgetcss.obj: Main\widgetcss.cpp Main\widgetcss.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\widgetcss.obj Main\widgetcss.cpp
 
 release\exif.obj: Metadata\exif.cpp Metadata\exif.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QtCore \
@@ -46755,6 +46510,7 @@ release\exif.obj: Metadata\exif.cpp Metadata\exif.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qwineventnotifier.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qxmlstream.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\qtcoreversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\exif.obj Metadata\exif.cpp
 
 release\ifd.obj: Metadata\ifd.cpp Metadata\ifd.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QtCore \
@@ -47227,6 +46983,7 @@ release\ifd.obj: Metadata\ifd.cpp Metadata\ifd.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ifd.obj Metadata\ifd.cpp
 
 release\iptc.obj: Metadata\iptc.cpp Metadata\iptc.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QtCore \
@@ -47697,6 +47454,7 @@ release\iptc.obj: Metadata\iptc.cpp Metadata\iptc.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtwidgetsversion.h \
 		Metadata\imagemetadata.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\iptc.obj Metadata\iptc.cpp
 
 release\metadata.obj: Metadata\metadata.cpp Metadata\metadata.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -48266,18 +48024,16 @@ release\metadata.obj: Metadata\metadata.cpp Metadata\metadata.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -48292,6 +48048,7 @@ release\metadata.obj: Metadata\metadata.cpp Metadata\metadata.h \
 		ImageFormats\Sony\sony.h \
 		ImageFormats\Tiff\tiff.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\metadata.obj Metadata\metadata.cpp
 
 release\metareport.obj: Metadata\metareport.cpp Metadata\metareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -48760,6 +48517,7 @@ release\metareport.obj: Metadata\metareport.cpp Metadata\metareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtwidgetsversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\metareport.obj Metadata\metareport.cpp
 
 release\xmp.obj: Metadata\xmp.cpp Metadata\xmp.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QObject \
@@ -49324,6 +49082,7 @@ release\xmp.obj: Metadata\xmp.cpp Metadata\xmp.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
 		Utilities\utilities.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\xmp.obj Metadata\xmp.cpp
 
 release\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\preferences.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -49904,17 +49663,15 @@ release\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\preferenc
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -49964,6 +49721,7 @@ release\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\preferenc
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		ui_ingestautopath.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QDesktopServices \
@@ -49974,19 +49732,23 @@ release\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\preferenc
 		Dialogs\zoomdlg.h \
 		Dialogs\loadusbdlg.h \
 		Utilities\usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
+		ui_welcome.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h \
+		ui_message.h \
 		ui_test12.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextEdit \
 		Utilities\win.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug \
 		Utilities\mac.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\preferences.obj PropertyEditor\preferences.cpp
 
 release\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEditor\propertyeditor.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -50566,17 +50328,15 @@ release\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEditor\pro
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -50627,6 +50387,7 @@ release\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEditor\pro
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		ui_ingestautopath.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QDesktopServices \
@@ -50637,19 +50398,23 @@ release\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEditor\pro
 		Dialogs\zoomdlg.h \
 		Dialogs\loadusbdlg.h \
 		Utilities\usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
+		ui_welcome.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h \
+		ui_message.h \
 		ui_test12.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextEdit \
 		Utilities\win.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug \
 		Utilities\mac.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\propertyeditor.obj PropertyEditor\propertyeditor.cpp
 
 release\propertydelegate.obj: PropertyEditor\propertydelegate.cpp PropertyEditor\propertydelegate.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -51130,6 +50895,7 @@ release\propertydelegate.obj: PropertyEditor\propertydelegate.cpp PropertyEditor
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
 		PropertyEditor\propertywidgets.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QStyledItemDelegate
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\propertydelegate.obj PropertyEditor\propertydelegate.cpp
 
 release\propertywidgets.obj: PropertyEditor\propertywidgets.cpp PropertyEditor\propertywidgets.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -51608,6 +51374,7 @@ release\propertywidgets.obj: PropertyEditor\propertywidgets.cpp PropertyEditor\p
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\propertywidgets.obj PropertyEditor\propertywidgets.cpp
 
 release\classificationlabel.obj: Utilities\classificationlabel.cpp Utilities\classificationlabel.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -52088,6 +51855,7 @@ release\classificationlabel.obj: Utilities\classificationlabel.cpp Utilities\cla
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QPainter \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\classificationlabel.obj Utilities\classificationlabel.cpp
 
 release\dropshadowlabel.obj: Utilities\dropshadowlabel.cpp Utilities\dropshadowlabel.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QObject \
@@ -52202,6 +51970,7 @@ release\dropshadowlabel.obj: Utilities\dropshadowlabel.cpp Utilities\dropshadowl
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qtextoption.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qpen.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\dropshadowlabel.obj Utilities\dropshadowlabel.cpp
 
 release\icc.obj: Utilities\icc.cpp Utilities\icc.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -52681,6 +52450,7 @@ release\icc.obj: Utilities\icc.cpp Utilities\icc.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
 		Lib\lcms2-2.9\include\lcms2.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\icc.obj Utilities\icc.cpp
 
 release\popup.obj: Utilities\popup.cpp Utilities\popup.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QWidget \
@@ -52815,6 +52585,7 @@ release\popup.obj: Utilities\popup.cpp Utilities\popup.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\qinputmethod.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDesktopWidget \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\popup.obj Utilities\popup.cpp
 
 release\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QWidget \
@@ -53394,17 +53165,15 @@ release\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -53456,6 +53225,7 @@ release\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		ui_ingestautopath.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QDesktopServices \
@@ -53466,18 +53236,22 @@ release\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h \
 		Dialogs\zoomdlg.h \
 		Dialogs\loadusbdlg.h \
 		Utilities\usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
+		ui_welcome.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h \
+		ui_message.h \
 		ui_test12.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextEdit \
 		Utilities\win.h \
 		Utilities\mac.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\progressbar.obj Utilities\progressbar.cpp
 
 release\usb.obj: Utilities\usb.cpp Utilities\usb.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -53946,6 +53720,7 @@ release\usb.obj: Utilities\usb.cpp Utilities\usb.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtwidgetsversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\usb.obj Utilities\usb.cpp
 
 release\utilities.obj: Utilities\utilities.cpp Utilities\utilities.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -54414,6 +54189,7 @@ release\utilities.obj: Utilities\utilities.cpp Utilities\utilities.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtwidgetsversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\utilities.obj Utilities\utilities.cpp
 
 release\win.obj: Utilities\win.cpp Utilities\win.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug \
@@ -54893,6 +54669,7 @@ release\win.obj: Utilities\win.cpp Utilities\win.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\win.obj Utilities\win.cpp
 
 release\compareImages.obj: Views\compareImages.cpp Views\compareImages.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -55463,18 +55240,16 @@ release\compareImages.obj: Views\compareImages.cpp Views\compareImages.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -55510,6 +55285,7 @@ release\compareImages.obj: Views\compareImages.cpp Views\compareImages.h \
 		Utilities\classificationlabel.h \
 		Image\imagealign.h \
 		Dialogs\testaligndlg.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\compareImages.obj Views\compareImages.cpp
 
 release\compareview.obj: Views\compareview.cpp Views\compareview.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -56080,18 +55856,16 @@ release\compareview.obj: Views\compareview.cpp Views\compareview.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -56124,6 +55898,7 @@ release\compareview.obj: Views\compareview.cpp Views\compareview.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QFont \
 		Cache\threadsafehash.h \
 		Utilities\classificationlabel.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\compareview.obj Views\compareview.cpp
 
 release\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -56695,18 +56470,16 @@ release\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -56764,6 +56537,7 @@ release\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		ui_ingestautopath.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QDesktopServices \
@@ -56774,19 +56548,23 @@ release\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		Dialogs\zoomdlg.h \
 		Dialogs\loadusbdlg.h \
 		Utilities\usb.h \
-		release\ui_helpform.h \
-		release\ui_shortcutsform.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QScrollArea \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTreeWidget \
-		release\ui_welcome.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QFrame \
+		ui_welcome.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QSpacerItem \
-		release\ui_message.h \
+		ui_message.h \
 		ui_test12.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextEdit \
 		Utilities\win.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QDebug \
 		Utilities\mac.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\iconview.obj Views\iconview.cpp
 
 release\iconviewdelegate.obj: Views\iconviewdelegate.cpp Views\iconviewdelegate.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QtGui \
@@ -57267,6 +57045,7 @@ release\iconviewdelegate.obj: Views\iconviewdelegate.cpp Views\iconviewdelegate.
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\iconviewdelegate.obj Views\iconviewdelegate.cpp
 
 release\imageview.obj: Views\imageview.cpp C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsDropShadowEffect \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qgraphicseffect.h \
@@ -57839,18 +57618,16 @@ release\imageview.obj: Views\imageview.cpp C:\Qt\5.13.1\msvc2015_64\include\QtWi
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -57886,6 +57663,7 @@ release\imageview.obj: Views\imageview.cpp C:\Qt\5.13.1\msvc2015_64\include\QtWi
 		Dialogs\renamedlg.h \
 		Utilities\dropshadowlabel.h \
 		Utilities\classificationlabel.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\imageview.obj Views\imageview.cpp
 
 release\infoview.obj: Views\infoview.cpp Views\infoview.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -58456,18 +58234,16 @@ release\infoview.obj: Views\infoview.cpp Views\infoview.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -58486,6 +58262,7 @@ release\infoview.obj: Views\infoview.cpp Views\infoview.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QPainter
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\infoview.obj Views\infoview.cpp
 
 release\tableview.obj: Views\tableview.cpp Views\tableview.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -59057,18 +58834,16 @@ release\tableview.obj: Views\tableview.cpp Views\tableview.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -59093,6 +58868,7 @@ release\tableview.obj: Views\tableview.cpp Views\tableview.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QFont \
 		Cache\threadsafehash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QStyledItemDelegate
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\tableview.obj Views\tableview.cpp
 
 release\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QtWidgets \
@@ -59663,18 +59439,16 @@ release\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		Utilities\utilities.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
+		Metadata\gps.h \
 		Cache\tshash.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadWriteLock \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QReadLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMultiHash \
 		Metadata\xmp.h \
-		release\ui_metadatareport.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QAction \
+		ui_metadatareport.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QButtonGroup \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QHeaderView \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -59695,106 +59469,157 @@ release\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QPainter \
 		Dialogs\tokendlg.h \
 		Dialogs\renamedlg.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\infostring.obj Views\infostring.cpp
 
 release\qrc_winnow.obj: release\qrc_winnow.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\qrc_winnow.obj release\qrc_winnow.cpp
 
 release\moc_imagecache.obj: release\moc_imagecache.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_imagecache.obj release\moc_imagecache.cpp
 
 release\moc_mdcache.obj: release\moc_mdcache.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_mdcache.obj release\moc_mdcache.cpp
 
 release\moc_datamodel.obj: release\moc_datamodel.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_datamodel.obj release\moc_datamodel.cpp
 
 release\moc_filters.obj: release\moc_filters.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_filters.obj release\moc_filters.cpp
 
 release\moc_aboutdlg.obj: release\moc_aboutdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_aboutdlg.obj release\moc_aboutdlg.cpp
 
 release\moc_appdlg.obj: release\moc_appdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_appdlg.obj release\moc_appdlg.cpp
 
 release\moc_ingestdlg.obj: release\moc_ingestdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_ingestdlg.obj release\moc_ingestdlg.cpp
 
 release\moc_loadusbdlg.obj: release\moc_loadusbdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_loadusbdlg.obj release\moc_loadusbdlg.cpp
 
 release\moc_preferencesdlg.obj: release\moc_preferencesdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_preferencesdlg.obj release\moc_preferencesdlg.cpp
 
 release\moc_renamedlg.obj: release\moc_renamedlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_renamedlg.obj release\moc_renamedlg.cpp
 
 release\moc_saveasdlg.obj: release\moc_saveasdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_saveasdlg.obj release\moc_saveasdlg.cpp
 
 release\moc_testaligndlg.obj: release\moc_testaligndlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_testaligndlg.obj release\moc_testaligndlg.cpp
 
 release\moc_workspacedlg.obj: release\moc_workspacedlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_workspacedlg.obj release\moc_workspacedlg.cpp
 
 release\moc_tokendlg.obj: release\moc_tokendlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_tokendlg.obj release\moc_tokendlg.cpp
 
 release\moc_updateapp.obj: release\moc_updateapp.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_updateapp.obj release\moc_updateapp.cpp
 
 release\moc_zoomdlg.obj: release\moc_zoomdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_zoomdlg.obj release\moc_zoomdlg.cpp
 
 release\moc_bookmarks.obj: release\moc_bookmarks.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_bookmarks.obj release\moc_bookmarks.cpp
 
 release\moc_fstree.obj: release\moc_fstree.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_fstree.obj release\moc_fstree.cpp
 
 release\moc_imagealign.obj: release\moc_imagealign.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_imagealign.obj release\moc_imagealign.cpp
 
 release\moc_pixmap.obj: release\moc_pixmap.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_pixmap.obj release\moc_pixmap.cpp
 
 release\moc_thumb.obj: release\moc_thumb.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_thumb.obj release\moc_thumb.cpp
 
 release\moc_canon.obj: release\moc_canon.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_canon.obj release\moc_canon.cpp
 
 release\moc_Heic.obj: release\moc_Heic.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_Heic.obj release\moc_Heic.cpp
 
 release\moc_jpeg.obj: release\moc_jpeg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_jpeg.obj release\moc_jpeg.cpp
 
 release\moc_nikon.obj: release\moc_nikon.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_nikon.obj release\moc_nikon.cpp
 
 release\moc_olympus.obj: release\moc_olympus.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_olympus.obj release\moc_olympus.cpp
 
 release\moc_panasonic.obj: release\moc_panasonic.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_panasonic.obj release\moc_panasonic.cpp
 
 release\moc_sony.obj: release\moc_sony.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_sony.obj release\moc_sony.cpp
 
 release\moc_tiff.obj: release\moc_tiff.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_tiff.obj release\moc_tiff.cpp
 
 release\moc_dockwidget.obj: release\moc_dockwidget.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_dockwidget.obj release\moc_dockwidget.cpp
 
 release\moc_mainwindow.obj: release\moc_mainwindow.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_mainwindow.obj release\moc_mainwindow.cpp
 
 release\moc_metadata.obj: release\moc_metadata.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_metadata.obj release\moc_metadata.cpp
 
 release\moc_xmp.obj: release\moc_xmp.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_xmp.obj release\moc_xmp.cpp
 
 release\moc_preferences.obj: release\moc_preferences.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_preferences.obj release\moc_preferences.cpp
 
 release\moc_propertyeditor.obj: release\moc_propertyeditor.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_propertyeditor.obj release\moc_propertyeditor.cpp
 
 release\moc_propertydelegate.obj: release\moc_propertydelegate.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_propertydelegate.obj release\moc_propertydelegate.cpp
 
 release\moc_propertywidgets.obj: release\moc_propertywidgets.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_propertywidgets.obj release\moc_propertywidgets.cpp
 
 release\moc_classificationlabel.obj: release\moc_classificationlabel.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_classificationlabel.obj release\moc_classificationlabel.cpp
 
 release\moc_dropshadowlabel.obj: release\moc_dropshadowlabel.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_dropshadowlabel.obj release\moc_dropshadowlabel.cpp
 
 release\moc_popup.obj: release\moc_popup.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_popup.obj release\moc_popup.cpp
 
 release\moc_progressbar.obj: release\moc_progressbar.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_progressbar.obj release\moc_progressbar.cpp
 
 release\moc_compareImages.obj: release\moc_compareImages.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_compareImages.obj release\moc_compareImages.cpp
 
 release\moc_compareview.obj: release\moc_compareview.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_compareview.obj release\moc_compareview.cpp
 
 release\moc_iconview.obj: release\moc_iconview.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_iconview.obj release\moc_iconview.cpp
 
 release\moc_iconviewdelegate.obj: release\moc_iconviewdelegate.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_iconviewdelegate.obj release\moc_iconviewdelegate.cpp
 
 release\moc_imageview.obj: release\moc_imageview.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_imageview.obj release\moc_imageview.cpp
 
 release\moc_infostring.obj: release\moc_infostring.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_infostring.obj release\moc_infostring.cpp
 
 release\moc_infoview.obj: release\moc_infoview.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_infoview.obj release\moc_infoview.cpp
 
 release\moc_tableview.obj: release\moc_tableview.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_tableview.obj release\moc_tableview.cpp
 
 ####### Install
 

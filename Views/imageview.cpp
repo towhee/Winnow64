@@ -140,6 +140,7 @@ to prevent jarring changes in perceived scale by the user.
     }
     // No folder selected yet
     if (!fPath.length()) return false;
+    if (G::memTest) return false;
 
     /* important to keep currentImagePath.  It is used to check if there isn't
     an image (when currentImagePath.isEmpty() == true) - for example when
@@ -229,6 +230,8 @@ to prevent jarring changes in perceived scale by the user.
         }
         scale();
     }
+    QImage im = pmItem->pixmap().toImage();
+//    qDebug() << __FUNCTION__ << fPath << "im.pixelColor(0,0) =" << im.pixelColor(0,0);
     return isLoaded;
 }
 
@@ -1173,11 +1176,8 @@ void ImageView::copyImage()
     #endif
     }
     QApplication::clipboard()->setPixmap(pmItem->pixmap(), QClipboard::Clipboard);
-//    QClipboard *clipboard = QApplication::clipboard();
-//    clipboard->setPixmap(pmItem->pixmap(), QClipboard::Clipboard);
-//    QMimeData *data = new QMimeData;
-//    data->setImageData(displayImage);
-//    QApplication::clipboard()->setMimeData(data, QClipboard::Clipboard);
+    QString msg = "Copied current image to the clipboard";
+    G::popUp->showPopup(msg, 1500);
 }
 
 // not being used, but maybe in the future

@@ -93,10 +93,6 @@ void BookMarks::addBookmark(QString itemPath)
     int count = dir->entryInfoList().size();
     item->setText(1, QString::number(count));
     item->setToolTip(1, itemPath);
-//    QFont font = item->font(0);
-//    font.setPixelSize(G::fontSize.toInt());
-//    item->setFont(0, font);
-//    item->setFont(1, font);
     item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
 }
 
@@ -185,7 +181,14 @@ void BookMarks::resizeEvent(QResizeEvent *event)
 void BookMarks::mousePressEvent(QMouseEvent *event)
 {
     // ignore right mouse clicks (context menu)
-    if (event->button() == Qt::RightButton) return;
+    if (event->button() == Qt::RightButton) {
+//        QTreeWidgetItem *item = itemAt(event->pos());
+//        if (item) {
+//            qDebug() << __FUNCTION__ << item->toolTip(0);
+//        }
+        return;
+    }
+
     QTreeWidget::mousePressEvent(event);
 }
 
@@ -201,22 +204,6 @@ void BookMarks::removeBookmark()
 		reloadBookmarks();
 	}
 }
-
-void BookMarks::paintEvent(QPaintEvent *event)
-{
-    resizeColumns();
-    QTreeWidget::paintEvent(event);
-}
-
-//void BookMarks::mousePressEvent(QMouseEvent *event)
-//{
-//    QTreeView::mousePressEvent(event);
-//}
-
-//void BookMarks::mouseReleaseEvent(QMouseEvent *event)
-//{
-//    QTreeView::mouseReleaseEvent(event);
-//}
 
 void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 {

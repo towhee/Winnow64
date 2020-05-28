@@ -18,6 +18,7 @@ public:
     QSet<QString> bookmarkPaths;
     bool showImageCount;
     bool &combineRawJpg;
+    QString rightMouseClickPath;
 
 public slots:
 	void removeBookmark();
@@ -37,9 +38,7 @@ private slots:
 
 protected:
     void mousePressEvent(QMouseEvent *event);
-//    void mouseReleaseEvent(QMouseEvent *event);     // debugging
     void resizeEvent(QResizeEvent *event);
-    void paintEvent(QPaintEvent *event);
 	void dragEnterEvent(QDragEnterEvent *event);
 	void dragMoveEvent(QDragMoveEvent *event);
 	void dropEvent(QDropEvent *event);

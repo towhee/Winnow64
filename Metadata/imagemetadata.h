@@ -11,14 +11,25 @@ into the datamodel dm->addMetadataForItem(ImageMetadata m).
 */
 public:
     int row = 0;                            // datamodel row
+    bool isBigEnd = false;
     bool isPicked = false;                  //rgh required?
     bool isSearch = false;
-    quint32 offsetFullJPG = 0;
-    quint32 lengthFullJPG = 0;
-    quint32 offsetThumbJPG = 0;
-    quint32 lengthThumbJPG = 0;
-    quint32 offsetSmallJPG = 0;
-    quint32 lengthSmallJPG = 0;
+    quint32 offsetFull = 0;
+    quint32 lengthFull = 0;
+    quint32 offsetThumb = 0;
+    quint32 lengthThumb = 0;
+//    quint32 offsetSmall = 0;
+//    quint32 lengthSmall = 0;
+
+    // need for TIFF
+//    int bitsPerSample = 0;
+//    int photoInterp = 0;
+    int samplesPerPixel = 0;
+//    int compression = 0;
+//    quint32 stripByteCounts = 0;
+//    int planarConfiguration = 1;
+
+    quint32 ifd0Offset = 0;
     quint32 xmpSegmentOffset = 0;
     quint32 xmpNextSegmentOffset = 0;
     bool isXmp = false;
@@ -29,18 +40,21 @@ public:
     quint32 orientationOffset = 0;
     int orientation = 0;
     int rotationDegrees = 0;                // additional rotation from edit
-    uint width = 0;
-    uint height = 0;
+    int width = 0;
+    int height = 0;
+
     QString dimensions = "";
     QDateTime createdDate;
     QString make = "";
     QString model = "";
     QString exposureTime = "";
-    float exposureTimeNum = 0.0;
+    double exposureTimeNum = 0.0;
     QString aperture = "";
-    float apertureNum = 0.0;
+    double apertureNum = 0.0;
     QString ISO = "";
     int ISONum = 0;
+    double exposureCompensationNum = 0.0;
+    QString exposureCompensation = "0";
     QString focalLength = "";
     int focalLengthNum = 0;
     QString shootingInfo = "";
@@ -72,6 +86,7 @@ public:
     bool imageUnavailable = false;          // no embedded preview
     QString err = "";
     QString searchStr = "";
+    QByteArray nikonLensCode = nullptr;
 };
 Q_DECLARE_METATYPE(ImageMetadata)
 

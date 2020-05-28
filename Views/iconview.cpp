@@ -1715,7 +1715,7 @@ int IconView::getVerticalScrollBarMax()
     if (thumbsPerPage == 0) return 0;
     int n = dm->sf->rowCount();
     float pages = float(n) / thumbsPerPage - 1;
-    int vMax = pages * pageHeight;
+    int vMax = static_cast<int>(pages * pageHeight);
     /*
     qDebug() << G::t.restart() << "\t" << objectName()
              << "Row =" << m2->currentRow
@@ -1756,19 +1756,16 @@ different position than the current image.
     else G::fileSelectionChangeSource =  "ThumbMouseClick";
 
     // forward and back buttons
-    if (event->button() == Qt::BackButton) {
-//        thumbView->selectPrev();
-        m2->togglePick();
-        return;
-    }
-    if (event->button() == Qt::ForwardButton) {
-//        thumbView->selectNext();
-        m2->togglePick();
+    if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) {
+        QModelIndex idx = indexAt(event->pos());
+        if (idx.isValid()) {
+             m2->togglePickMouseOverItem(idx);
+        }
         return;
     }
 
-    // must finish event to update current index in iconView
-    QListView::mousePressEvent(event);
+    // must finish event to update current index in iconView if mouse press on an icon
+    if (indexAt(event->pos()).isValid()) QListView::mousePressEvent(event);
 
     // capture mouse click position for imageView zoom/pan
     if (event->modifiers() == Qt::NoModifier) {
@@ -1781,10 +1778,11 @@ different position than the current image.
         QRect iconRect = idx.data(G::ThumbRectRole).toRect();
         QPoint mousePt = event->pos();
         QPoint iconPt = mousePt - iconRect.topLeft();
-        float xPct = (float)iconPt.x() / iconRect.width();
-        float yPct = (float)iconPt.y() / iconRect.height();
+        float xPct = static_cast<float>(iconPt.x()) / iconRect.width();
+        float yPct = static_cast<float>(iconPt.y()) / iconRect.height();
         /*
-        qDebug() << __FUNCTION__ << iconRect << mousePt << iconPt << xPct << yPct;*/
+        qDebug() << __FUNCTION__ << idx << iconRect << mousePt << iconPt << xPct << yPct;
+//        */
         if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
             //signal sent to ImageView
             emit thumbClick(xPct, yPct);

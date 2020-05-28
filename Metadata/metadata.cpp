@@ -95,22 +95,12 @@ void Metadata::initSupportedFiles()
                         << "nef"
                         << "orf"
                         << "raf"
-                        << "sr2"
                         << "rw2"
+                        << "sr2"
                         << "jpg"
                         << "jpeg";
 
-    internalXmpFormats << "notyetjpg";
-
-    xmpWriteFormats     << "jpg"
-                        << "jpeg"
-                        << "arw"
-                        << "cr2"
-                        << "nef"
-                        << "orf"
-                        << "raf"
-                        << "sr2"
-                        << "rw2";
+    internalXmpFormats  << "notyetjpg";
 
     iccFormats          << "jpg"
                         << "jpeg"
@@ -192,12 +182,14 @@ void Metadata::reportMetadata()
     p.rpt.reset();
     p.rpt.setFieldAlignment(QTextStream::AlignLeft);
 
-    p.rpt.setFieldWidth(25); p.rpt << "offsetFullJPG"       << imageMetadata.offsetFullJPG;       p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "lengthFullJPG"       << imageMetadata.lengthFullJPG;       p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "offsetThumbJPG"      << imageMetadata.offsetThumbJPG;      p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "lengthThumbJPG"      << imageMetadata.lengthThumbJPG;      p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "offsetSmallJPG"      << imageMetadata.offsetSmallJPG;      p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "lengthSmallJPG"      << imageMetadata.lengthSmallJPG;      p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetFull"          << imageMetadata.offsetFull;          p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "lengthFull"          << imageMetadata.lengthFull;          p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetThumb"         << imageMetadata.offsetThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "lengthThumb"         << imageMetadata.lengthThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+//    p.rpt.setFieldWidth(25); p.rpt << "offsetSmall"         << imageMetadata.offsetSmall;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+//    p.rpt.setFieldWidth(25); p.rpt << "lengthSmall"         << imageMetadata.lengthSmall;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "isBigEndian"         << imageMetadata.isBigEnd;            p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetifd0Seg"       << imageMetadata.ifd0Offset;          p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetXMPSeg"        << imageMetadata.xmpSegmentOffset;    p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetNextXMPSegment"<< imageMetadata.xmpNextSegmentOffset;p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "orientation"         << imageMetadata.orientation;         p.rpt.setFieldWidth(0); p.rpt << "\n";
@@ -209,6 +201,7 @@ void Metadata::reportMetadata()
     p.rpt.setFieldWidth(25); p.rpt << "exposureTime"        << imageMetadata.exposureTime;        p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "aperture"            << imageMetadata.aperture;            p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "ISO"                 << imageMetadata.ISO;                 p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "exposureCompensation"<< imageMetadata.exposureCompensation;p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "focalLength"         << imageMetadata.focalLength;         p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "title"               << imageMetadata.title;               p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "lens"                << imageMetadata.lens;                p.rpt.setFieldWidth(0); p.rpt << "\n";
@@ -221,7 +214,7 @@ void Metadata::reportMetadata()
     p.rpt.setFieldWidth(25); p.rpt << "cameraSN"            << imageMetadata.cameraSN;            p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "lensSN"              << imageMetadata.lensSN;              p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "shutterCount"        << imageMetadata.shutterCount;        p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "nikonLensCode"       << nikonLensCode;       p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "nikonLensCode"       << imageMetadata.nikonLensCode;       p.rpt.setFieldWidth(0); p.rpt << "\n";
 
     if (isXmp && p.xmpString.length() > 0) {
         p.rpt << "\nXMP Extract:\n\n";
@@ -281,8 +274,8 @@ metadata is written to buffer and the original image file is copied unchanged.
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
-    if (!xmpWriteFormats.contains(suffix)) {
-        qDebug() << __FUNCTION__ << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
+    if (!sidecarFormats.contains(suffix)) {
+//        qDebug() << __FUNCTION__ << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
         return false;
     }
 
@@ -292,8 +285,8 @@ metadata is written to buffer and the original image file is copied unchanged.
     int newOrientation = getNewOrientation(m.orientation, m.rotationDegrees);
 
     // has metadata been edited? ( _ is original data)
-    bool ratingChanged = m.rating != ""; //_rating;
-    bool labelChanged = m.label != "";  //_label;
+    bool ratingChanged = m.rating != m._rating;
+    bool labelChanged = m.label != m._label;
     bool titleChanged = m.title != m._title;
     bool creatorChanged = m.creator != m._creator;
     bool copyrightChanged = m.copyright != m._copyright;
@@ -430,8 +423,8 @@ the embedded jpg preview is found (irbID == 1036)
 
     // found the thumb, collect offsets and return
     if (foundTifThumb) {
-        offsetThumbJPG = static_cast<quint32>(p.file.pos()) + 28;
-        lengthThumbJPG = dataBlockLength - 28;
+        offsetThumb = static_cast<quint32>(p.file.pos()) + 28;
+        lengthThumb = dataBlockLength - 28;
         return foundTifThumb;
     }
 
@@ -627,12 +620,14 @@ void Metadata::clearMetadata()
     #endif
     #endif
     }
-    imageMetadata.offsetFullJPG = 0;
-    imageMetadata.lengthFullJPG = 0;
-    imageMetadata.offsetThumbJPG = 0;
-    imageMetadata.lengthThumbJPG = 0;
-    imageMetadata.offsetSmallJPG = 0;
-    imageMetadata.lengthSmallJPG = 0;
+    imageMetadata.offsetFull = 0;
+    imageMetadata.lengthFull = 0;
+    imageMetadata.offsetThumb = 0;
+    imageMetadata.lengthThumb = 0;
+//    imageMetadata.offsetSmall = 0;
+//    imageMetadata.lengthSmall = 0;
+    imageMetadata.isBigEnd = false;
+    imageMetadata.ifd0Offset = 0;
     imageMetadata.xmpSegmentOffset = 0;
     imageMetadata.orientationOffset = 0;
     imageMetadata.iccSegmentOffset = 0;
@@ -650,6 +645,8 @@ void Metadata::clearMetadata()
     imageMetadata.apertureNum = 0;
     imageMetadata.ISO = "";
     imageMetadata.ISONum = 0;
+    imageMetadata.exposureCompensation = "";
+    imageMetadata.exposureCompensationNum = 0;
     imageMetadata.focalLength = "";
     imageMetadata.focalLengthNum = 0;
     imageMetadata.title = "";
@@ -757,30 +754,30 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     }
 
     // not all files have thumb or small jpg embedded
-    if (offsetFullJPG == 0 && ext != "jpg" && fileOpened) {
+    if (offsetFull == 0 && ext != "jpg" && fileOpened) {
         err = "No embedded JPG found";
     }
 
-    if (lengthFullJPG == 0) {
-        offsetFullJPG = offsetSmallJPG;
-        lengthFullJPG = lengthSmallJPG;
+    if (lengthFull == 0 && lengthThumb > 0) {
+        offsetFull = offsetThumb;
+        lengthFull = lengthThumb;
     }
-    if (lengthSmallJPG == 0) {
-        offsetSmallJPG = offsetFullJPG;
-        lengthSmallJPG = lengthFullJPG;
-    }
-    if (lengthThumbJPG == 0) {
-        offsetThumbJPG = offsetSmallJPG;
-        lengthThumbJPG = lengthSmallJPG;
+//    if (lengthSmall == 0) {
+//        offsetSmall = offsetFull;
+//        lengthSmall = lengthFull;
+//    }
+    if (lengthThumb == 0) {
+        offsetThumb = offsetFull;
+        lengthThumb = lengthFull;
     }
 
     // error flags
     thumbUnavailable = imageUnavailable = false;
-    if (lengthFullJPG == 0) {
+    if (lengthFull == 0) {
         imageUnavailable = true;
         err = "No embedded preview found";
     }
-    if (lengthThumbJPG == 0) {
+    if (lengthThumb == 0) {
         thumbUnavailable = true;
         err = "No embedded thumbnail or preview found";
     }
