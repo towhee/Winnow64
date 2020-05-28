@@ -1,4 +1,5 @@
-CONFIG +=sdk_no_version_check
+#CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
+CONFIG += sdk_no_version_check
 TEMPLATE = app
 TARGET = Winnow
 INCLUDEPATH += .
@@ -14,9 +15,7 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h \
-   Metadata/gps.h \
-   Utilities/bit.h
+HEADERS += Cache/imagecache.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/datamodel.h
@@ -54,6 +53,7 @@ HEADERS += Main/global.h
 HEADERS += Main/mainwindow.h
 HEADERS += Main/widgetcss.h
 HEADERS += Metadata/exif.h
+HEADERS += Metadata/gps.h
 HEADERS += Metadata/ifd.h
 HEADERS += Metadata/iptc.h
 HEADERS += Metadata/imagemetadata.h
@@ -66,6 +66,7 @@ HEADERS += PropertyEditor/propertydelegate.h
 HEADERS += PropertyEditor/propertywidgets.h
 HEADERS += Utilities/classificationlabel.h
 HEADERS += Utilities/dropshadowlabel.h
+HEADERS += Utilities/bit.h
 win32:HEADERS += Utilities/icc.h
 mac:HEADERS += Utilities/mac.h
 HEADERS += Utilities/popup.h
@@ -82,9 +83,7 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/imagecache.cpp \
-   Metadata/gps.cpp \
-   Utilities/bit.cpp
+SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
@@ -122,6 +121,7 @@ SOURCES += Main/main.cpp
 SOURCES += Main/mainwindow.cpp
 SOURCES += Main/widgetcss.cpp
 SOURCES += Metadata/exif.cpp
+SOURCES += Metadata/gps.cpp
 SOURCES += Metadata/ifd.cpp
 SOURCES += Metadata/iptc.cpp
 SOURCES += Metadata/metadata.cpp
@@ -133,6 +133,7 @@ SOURCES += PropertyEditor/propertydelegate.cpp
 SOURCES += PropertyEditor/propertywidgets.cpp
 SOURCES += Utilities/classificationlabel.cpp
 SOURCES += Utilities/dropshadowlabel.cpp
+SOURCES += Utilities/bit.cpp
 win32:SOURCES += Utilities/icc.cpp
 mac:SOURCES += Utilities/mac.cpp
 SOURCES += Utilities/popup.cpp

@@ -113,10 +113,9 @@ bool Fuji::parse(MetadataParameters &p,
 
     // seek JPEG image offset
     p.file.seek(84);
-    m.offsetFullJPG = Utilities::get32(p.file.read(4));
-    m.lengthFullJPG = Utilities::get32(p.file.read(4));
-//    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
-    p.file.seek(m.offsetFullJPG);
+    m.offsetFull = Utilities::get32(p.file.read(4));
+    m.lengthFull = Utilities::get32(p.file.read(4));
+    p.file.seek(m.offsetFull);
 
     // start on embedded JPEG
     if (Utilities::get16(p.file.read(2)) != 0xFFD8) return false;
@@ -177,8 +176,8 @@ bool Fuji::parse(MetadataParameters &p,
         p.offset = nextIFDOffset;
         nextIFDOffset = ifd->readIFD(p, m);
     }
-    m.offsetThumbJPG = ifd->ifdDataHash.value(513).tagValue + startOffset;
-    m.lengthThumbJPG = ifd->ifdDataHash.value(514).tagValue + startOffset;
+    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + startOffset;
+    m.lengthThumb = ifd->ifdDataHash.value(514).tagValue + startOffset;
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     // read EXIF IFD
@@ -188,7 +187,7 @@ bool Fuji::parse(MetadataParameters &p,
 
     m.width = ifd->ifdDataHash.value(40962).tagValue;
     m.height = ifd->ifdDataHash.value(40963).tagValue;
-    p.offset = m.offsetFullJPG;
+    p.offset = m.offsetFull;
     if (!m.width || !m.height) jpeg->getDimensions(p, m);
 
     // EXIF: shutter speed

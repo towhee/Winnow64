@@ -56,6 +56,7 @@ public:
         ShutterSpeedRow,
         ApertureRow,
         ISORow,
+        ExposureCompensationRow,
         FocalLengthRow,
         imageInfoRowsEnd    // insert additional items before this
     };

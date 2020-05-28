@@ -15,3 +15,10 @@ main (dec265.cc)
 
 Steps to decode hevc:
 CABAC
+
+
+Seconds  Method
+ 0.38    Qt (libTiff)
+11.50    ba += file.read(6) + a16
+ 0.48    ba = file.read(bytesPerLine)                                      // missing alpha
+ 0.53    ba = file.read(bytesPerLine) and fix RGB48 for alpha              // include alpha

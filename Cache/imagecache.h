@@ -14,6 +14,14 @@
 #include <QGradient>
 #include "Image/pixmap.h"
 
+#ifdef Q_OS_WIN
+#include "Utilities/win.h"
+#endif
+
+#ifdef Q_OS_MAC
+#include "Utilities/mac.h"
+#endif
+
 class ImageCache : public QThread
 {
     Q_OBJECT
@@ -106,10 +114,12 @@ private:
     bool nextToCache();             // find highest priority not cached
     bool nextToDecache();           // find lowest priority cached - return -1 if none cached
     void checkForOrphans();         // check no strays in imageCache from jumping around
+    void makeRoom(int room, int roomRqd); // remove images from cache until there is roomRqd
+    void memChk();                  // still room in system memory for cache?
     static bool prioritySort(const CacheItem &p1, const CacheItem &p2);
     static bool keySort(const CacheItem &k1, const CacheItem &k2);
-    void buildImageCacheList(); //
-    void updateImageCacheList(); //
+    void buildImageCacheList();     //
+    void updateImageCacheList();    //
     QSize scalePreview(int w, int h);
     QString reportCacheProgress(QString action);
 };

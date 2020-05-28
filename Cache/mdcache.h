@@ -44,6 +44,7 @@ public:
     bool isAllIconLoaded();
     void setRange();
     void iconMax(QPixmap &thumb);
+    qint32 memRequired();
 
     int metadataChunkSize = 250;
     int defaultMetadataChunkSize = 250;

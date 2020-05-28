@@ -21,6 +21,7 @@ public:
     static quint64 get48(QByteArray c, bool isBigEnd = true);
     static quint64 get64(QByteArray c, bool isBigEnd = true);
     static double getReal(QFile &file, quint32 offset, bool isBigEnd = true);
+    static double getReal_s(QFile &file, quint32 offset, bool isBigEnd = true);
     static QString getCString(QFile &file);
     static QString getString(QFile &file, quint32 offset, quint32 length);
     static QByteArray getByteArray(QFile &file, quint32 offset, quint32 length);
