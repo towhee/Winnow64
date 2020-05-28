@@ -95,22 +95,12 @@ void Metadata::initSupportedFiles()
                         << "nef"
                         << "orf"
                         << "raf"
-                        << "sr2"
                         << "rw2"
+                        << "sr2"
                         << "jpg"
                         << "jpeg";
 
-    internalXmpFormats << "notyetjpg";
-
-    xmpWriteFormats     << "jpg"
-                        << "jpeg"
-                        << "arw"
-                        << "cr2"
-                        << "nef"
-                        << "orf"
-                        << "raf"
-                        << "sr2"
-                        << "rw2";
+    internalXmpFormats  << "notyetjpg";
 
     iccFormats          << "jpg"
                         << "jpeg"
@@ -196,8 +186,8 @@ void Metadata::reportMetadata()
     p.rpt.setFieldWidth(25); p.rpt << "lengthFull"          << imageMetadata.lengthFull;          p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetThumb"         << imageMetadata.offsetThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "lengthThumb"         << imageMetadata.lengthThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "offsetSmall"         << imageMetadata.offsetSmall;         p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "lengthSmall"         << imageMetadata.lengthSmall;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+//    p.rpt.setFieldWidth(25); p.rpt << "offsetSmall"         << imageMetadata.offsetSmall;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+//    p.rpt.setFieldWidth(25); p.rpt << "lengthSmall"         << imageMetadata.lengthSmall;         p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "isBigEndian"         << imageMetadata.isBigEnd;            p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetifd0Seg"       << imageMetadata.ifd0Offset;          p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetXMPSeg"        << imageMetadata.xmpSegmentOffset;    p.rpt.setFieldWidth(0); p.rpt << "\n";
@@ -284,8 +274,8 @@ metadata is written to buffer and the original image file is copied unchanged.
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
-    if (!xmpWriteFormats.contains(suffix)) {
-        qDebug() << __FUNCTION__ << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
+    if (!sidecarFormats.contains(suffix)) {
+//        qDebug() << __FUNCTION__ << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
         return false;
     }
 
@@ -295,8 +285,8 @@ metadata is written to buffer and the original image file is copied unchanged.
     int newOrientation = getNewOrientation(m.orientation, m.rotationDegrees);
 
     // has metadata been edited? ( _ is original data)
-    bool ratingChanged = m.rating != ""; //_rating;
-    bool labelChanged = m.label != "";  //_label;
+    bool ratingChanged = m.rating != m._rating;
+    bool labelChanged = m.label != m._label;
     bool titleChanged = m.title != m._title;
     bool creatorChanged = m.creator != m._creator;
     bool copyrightChanged = m.copyright != m._copyright;
@@ -634,8 +624,8 @@ void Metadata::clearMetadata()
     imageMetadata.lengthFull = 0;
     imageMetadata.offsetThumb = 0;
     imageMetadata.lengthThumb = 0;
-    imageMetadata.offsetSmall = 0;
-    imageMetadata.lengthSmall = 0;
+//    imageMetadata.offsetSmall = 0;
+//    imageMetadata.lengthSmall = 0;
     imageMetadata.isBigEnd = false;
     imageMetadata.ifd0Offset = 0;
     imageMetadata.xmpSegmentOffset = 0;
@@ -768,17 +758,17 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         err = "No embedded JPG found";
     }
 
-    if (lengthFull == 0) {
-        offsetFull = offsetSmall;
-        lengthFull = lengthSmall;
+    if (lengthFull == 0 && lengthThumb > 0) {
+        offsetFull = offsetThumb;
+        lengthFull = lengthThumb;
     }
-    if (lengthSmall == 0) {
-        offsetSmall = offsetFull;
-        lengthSmall = lengthFull;
-    }
+//    if (lengthSmall == 0) {
+//        offsetSmall = offsetFull;
+//        lengthSmall = lengthFull;
+//    }
     if (lengthThumb == 0) {
-        offsetThumb = offsetSmall;
-        lengthThumb = lengthSmall;
+        offsetThumb = offsetFull;
+        lengthThumb = lengthFull;
     }
 
     // error flags

@@ -45,8 +45,8 @@ The data is structured in columns:
     ● LengthFullJPG:    from metadata       EditRole
     ● OffsetThumbJPG:   from metadata       EditRole
     ● LengthThumbJPG:   from metadata       EditRole
-    ● OffsetSmallJPG:   from metadata       EditRole
-    ● LengthSmallJPG:   from metadata       EditRole
+//    ● OffsetSmallJPG:   from metadata       EditRole
+//    ● LengthSmallJPG:   from metadata       EditRole
     ● XmpSegmentOffset: from metadata       EditRole
     ● XmpNextSegmentOffset:  metadata       EditRole
     ● IsXmp:            from metadata       EditRole
@@ -196,8 +196,8 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::LengthFullColumn, new QStandardItem("LengthFull")); horizontalHeaderItem(G::LengthFullColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OffsetThumbColumn, new QStandardItem("OffsetThumb")); horizontalHeaderItem(G::OffsetThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::LengthThumbColumn, new QStandardItem("LengthThumb")); horizontalHeaderItem(G::LengthThumbColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::OffsetSmallColumn, new QStandardItem("OffsetSmall")); horizontalHeaderItem(G::OffsetSmallColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::LengthSmallColumn, new QStandardItem("LengthSmall")); horizontalHeaderItem(G::LengthSmallColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::OffsetSmallColumn, new QStandardItem("OffsetSmall")); horizontalHeaderItem(G::OffsetSmallColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::LengthSmallColumn, new QStandardItem("LengthSmall")); horizontalHeaderItem(G::LengthSmallColumn)->setData(true, G::GeekRole);
 
 //    setHorizontalHeaderItem(G::bitsPerSampleColumn, new QStandardItem("bitsPerSampleFull")); horizontalHeaderItem(G::bitsPerSampleColumn)->setData(true, G::GeekRole);
 //    setHorizontalHeaderItem(G::photoInterpColumn, new QStandardItem("photoInterpFull")); horizontalHeaderItem(G::photoInterpColumn)->setData(true, G::GeekRole);
@@ -466,15 +466,12 @@ Load the information from the operating system contained in QFileInfo first
         // string to hold aggregated text for searching
         QString search = fPath;
 
-        setData(index(row, G::PathColumn), fileInfo.fileName(), Qt::DisplayRole);
         setData(index(row, G::PathColumn), fPath, G::PathRole);
         QString tip = QString::number(row) + ": " + fileInfo.absoluteFilePath();
         setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
         setData(index(row, G::PathColumn), QRect(), G::ThumbRectRole);
         setData(index(row, G::PathColumn), false, G::CachedRole);
         setData(index(row, G::PathColumn), false, G::DupHideRawRole);
-        setData(index(row, G::PathColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-
 
         setData(index(row, G::NameColumn), fileInfo.fileName());
         setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
@@ -503,13 +500,13 @@ Load the information from the operating system contained in QFileInfo first
         /* Save info for duplicated raw and jpg files, which generally are the result of
         setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
         with the same path precede jpg files with duplicate names. Two roles track duplicates:
-        G::DupHideRawRole flags jpg files with duplicate raws and G::DupRawIdxRole points to
-        the duplicate raw file from the jpg data row. For example:
+        G::DupHideRawRole flags jpg files with duplicate raws and G::DupOtherIdxRole points to
+        the duplicate other file of the pair. For example:
 
-        Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF"  DupHideRawRole = true 	 DupRawIdxRole = (Invalid)
-        Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG"  DupHideRawRole = false  DupRawIdxRole = QModelIndex(0,0)) DupRawTypeRole = "ORF"
-        Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF"  DupHideRawRole = true 	 DupRawIdxRole = (Invalid)
-        Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG"  DupHideRawRole = false  DupRawIdxRole = QModelIndex(2,0)  DupRawTypeRole = "ORF"
+        Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(1,0)
+        Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(0,0)  DupRawTypeRole = "ORF"
+        Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(3,0)
+        Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(2,0)  DupRawTypeRole = "ORF"
         */
 
         suffix = fileInfoList.at(row).suffix().toLower();
@@ -520,11 +517,14 @@ Load the information from the operating system contained in QFileInfo first
             prevRawIdx = index(row, 0);
         }
 
+        // if row/jpg pair
         if (suffix == "jpg" && baseName == prevRawBaseName) {
             // hide raw version
             setData(prevRawIdx, true, G::DupHideRawRole);
+            // set raw version other index to jpg pair
+            setData(prevRawIdx, index(row, 0), G::DupOtherIdxRole);
             // point to raw version
-            setData(index(row, 0), prevRawIdx, G::DupRawIdxRole);
+            setData(index(row, 0), prevRawIdx, G::DupOtherIdxRole);
             // set flag to show combined JPG file for filtering when ingesting
             setData(index(row, 0), true, G::DupIsJpgRole);
             // build combined suffix to show in type column
@@ -605,7 +605,7 @@ Used by InfoString and IngestDlg
     m._rating = index(row, G::_RatingColumn).data().toString();
     m.createdDate = index(row, G::CreatedColumn).data().toDateTime();
     m.width = index(row, G::WidthColumn).data().toUInt();
-    m.height= index(row, G::HeightColumn).data().toUInt();
+    m.height = index(row, G::HeightColumn).data().toUInt();
     m.dimensions = index(row, G::DimensionsColumn).data().toString();
     m.orientation = index(row, G::OrientationColumn).data().toInt();
     m.rotationDegrees = index(row, G::RotationColumn).data().toInt();
@@ -648,8 +648,8 @@ Used by InfoString and IngestDlg
     m.lengthFull = index(row, G::LengthFullColumn).data().toUInt();
     m.offsetThumb = index(row, G::OffsetThumbColumn).data().toUInt();
     m.lengthThumb = index(row, G::LengthThumbColumn).data().toUInt();
-    m.offsetSmall = index(row, G::OffsetSmallColumn).data().toUInt();
-    m.lengthSmall = index(row, G::LengthSmallColumn).data().toUInt();
+//    m.offsetSmall = index(row, G::OffsetSmallColumn).data().toUInt();
+//    m.lengthSmall = index(row, G::LengthSmallColumn).data().toUInt();
 
     // update only for tiffs
 //    if (index(row, G::TypeColumn).data().toString() == "tif") {
@@ -849,8 +849,8 @@ the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
     setData(index(row, G::LengthFullColumn), m.lengthFull);
     setData(index(row, G::OffsetThumbColumn), m.offsetThumb);
     setData(index(row, G::LengthThumbColumn), m.lengthThumb);
-    setData(index(row, G::OffsetSmallColumn), m.offsetSmall);
-    setData(index(row, G::LengthSmallColumn), m.lengthSmall);
+//    setData(index(row, G::OffsetSmallColumn), m.offsetSmall);
+//    setData(index(row, G::LengthSmallColumn), m.lengthSmall);
 
 //    setData(index(row, G::bitsPerSampleColumn), m.bitsPerSample);
 //    setData(index(row, G::photoInterpColumn), m.photoInterp);
@@ -1153,7 +1153,7 @@ QString DataModel::diagnostics()
         rpt << "\n  " << "File Name = " << G::s(index(row, G::NameColumn).data());
         rpt << "\n  " << "File Path = " << G::s(index(row, 0).data(G::PathRole));
         rpt << "\n  " << "dupHideRaw = " << G::s(index(row, 0).data(G::DupHideRawRole));
-        rpt << "\n  " << "dupRawRow = " << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupRawIdxRole)).row());
+        rpt << "\n  " << "dupRawRow = " << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
         rpt << "\n  " << "dupIsJpg = " << G::s(index(row, 0).data(G::DupIsJpgRole));
         rpt << "\n  " << "dupRawType = " << G::s(index(row, 0).data(G::DupRawTypeRole));
         rpt << "\n  " << "type = " << G::s(index(row, G::TypeColumn).data());
@@ -1197,8 +1197,8 @@ QString DataModel::diagnostics()
         rpt << "\n  " << "lengthFull = " << G::s(index(row, G::LengthFullColumn).data());
         rpt << "\n  " << "offsetThumb = " << G::s(index(row, G::OffsetThumbColumn).data());
         rpt << "\n  " << "lengthThumb = " << G::s(index(row, G::LengthThumbColumn).data());
-        rpt << "\n  " << "offsetSmall = " << G::s(index(row, G::OffsetSmallColumn).data());
-        rpt << "\n  " << "lengthSmall = " << G::s(index(row, G::LengthSmallColumn).data());
+//        rpt << "\n  " << "offsetSmall = " << G::s(index(row, G::OffsetSmallColumn).data());
+//        rpt << "\n  " << "lengthSmall = " << G::s(index(row, G::LengthSmallColumn).data());
         rpt << "\n  " << "isBigEndian = " << G::s(index(row, G::isBigEndianColumn).data());
         rpt << "\n  " << "ifd0Offset = " << G::s(index(row, G::ifd0OffsetColumn).data());
         rpt << "\n  " << "xmpSegmentOffset = " << G::s(index(row, G::XmpSegmentOffsetColumn).data());

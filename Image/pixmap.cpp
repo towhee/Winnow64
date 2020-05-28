@@ -91,7 +91,9 @@ bool Pixmap::load(QString &fPath, QImage &image)
                         if (image.loadFromData(buf, "JPEG")) {
                             imFile.close();
                             #ifdef Q_OS_WIN
-                            if (buf.length() > 0 && G::colorManage) ICC::transform(image);
+                            if (buf.length() > 0 && G::colorManage)
+                                ICC::setInProfile(dm->index(dmRow, G::ICCBufColumn).data().toByteArray());
+                                ICC::transform(image);
                             #endif
                             success = true;
                             break;
@@ -123,7 +125,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
             QThread::msleep(msInc);
             msDelay += msInc;
-//            break;
+            break;
         }
         while (msDelay < totDelay && !success);
     }

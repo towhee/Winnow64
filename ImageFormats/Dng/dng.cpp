@@ -175,8 +175,8 @@ bool DNG::parse(MetadataParameters &p,
             m.height = static_cast<uint>(jpgs.at(largeJpg).height);
             m.offsetFull = static_cast<uint>(jpgs.at(largeJpg).offset);
             m.lengthFull = static_cast<uint>(jpgs.at(largeJpg).length);
-            m.offsetSmall = static_cast<uint>(jpgs.at(smallJpg).offset);
-            m.lengthSmall = static_cast<uint>(jpgs.at(smallJpg).length);
+//            m.offsetSmall = static_cast<uint>(jpgs.at(smallJpg).offset);
+//            m.lengthSmall = static_cast<uint>(jpgs.at(smallJpg).length);
             m.offsetThumb = static_cast<uint>(jpgs.at(smallJpg).offset);
             m.lengthThumb = static_cast<uint>(jpgs.at(smallJpg).length);
         }

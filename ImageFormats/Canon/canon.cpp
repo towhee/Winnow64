@@ -137,8 +137,8 @@ bool Canon::parse(MetadataParameters &p,
     }
 
     // pull small size jpg from IFD2
-    m.offsetSmall = ifd->ifdDataHash.value(273).tagValue;
-    m.lengthSmall = ifd->ifdDataHash.value(279).tagValue;
+//    m.offsetSmall = ifd->ifdDataHash.value(273).tagValue;
+//    m.lengthSmall = ifd->ifdDataHash.value(279).tagValue;
 
     // IFD3 not used at present, but does contain details on embedded jpg
     if (nextIFDOffset && p.report) {

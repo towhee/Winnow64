@@ -622,6 +622,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     if (event->type() == QEvent::ContextMenu) {
         addBookmarkAction->setEnabled(true);
         revealFileActionFromContext->setEnabled(true);
+        copyPathActionFromContext->setEnabled(true);
         if(obj == fsTree->viewport()) {
             QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
             QModelIndex idx = fsTree->indexAt(e->pos());
@@ -630,8 +631,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             // in folders or bookmarks but not on folder item
             if(mouseOverFolder == "") {
                 addBookmarkAction->setEnabled(false);
-//                revealFileAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
+                copyPathActionFromContext->setEnabled(false);
             }
         }
         else if(obj == bookmarks->viewport()) {
@@ -642,16 +643,16 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             // in folders or bookmarks but not on folder item
             if(mouseOverFolder == "") {
                 addBookmarkAction->setEnabled(false);
-//                revealFileAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
+                copyPathActionFromContext->setEnabled(false);
             }
         }
         else {
             enableEjectUsbMenu(currentViewDir);
             if(currentViewDir == "") {
                 addBookmarkAction->setEnabled(false);
-//                revealFileAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
+                copyPathActionFromContext->setEnabled(false);
             }
         }
     }
@@ -1974,6 +1975,12 @@ void MW::createActions()
     addAction(revealFileActionFromContext);
     connect(revealFileActionFromContext, &QAction::triggered, this, &MW::revealFileFromContext);
 
+    copyPathActionFromContext = new QAction("Copy folder path", this);
+    copyPathActionFromContext->setObjectName("copyPathFromContext");
+    copyPathActionFromContext->setShortcutVisibleInContextMenu(true);
+    addAction(copyPathActionFromContext);
+    connect(copyPathActionFromContext, &QAction::triggered, this, &MW::copyFolderPathFromContext);
+
     subFoldersAction = new QAction(tr("Include Sub-folders"), this);
     subFoldersAction->setObjectName("subFolders");
     subFoldersAction->setShortcutVisibleInContextMenu(true);
@@ -2170,18 +2177,25 @@ void MW::createActions()
 
     // Copy, Cut
     deleteAction = new QAction(tr("Delete"), this);
-    deleteAction->setObjectName("deleteImages");
+    deleteAction->setObjectName("deleteFiles");
     deleteAction->setShortcutVisibleInContextMenu(true);
     deleteAction->setShortcut(QKeySequence("Delete"));
     addAction(deleteAction);
     connect(deleteAction, &QAction::triggered, this, &MW::deleteFiles);
 
-    copyAction = new QAction(tr("Copy"), this);
-    copyAction->setObjectName("copyImages");
+    copyAction = new QAction(tr("Copy file(s)"), this);
+    copyAction->setObjectName("copyFiles");
     copyAction->setShortcutVisibleInContextMenu(true);
     copyAction->setShortcut(QKeySequence("Ctrl+C"));
     addAction(copyAction);
     connect(copyAction, &QAction::triggered, this, &MW::copy);
+
+    copyImageAction = new QAction(tr("Copy image"), this);
+    copyImageAction->setObjectName("copyImage");
+    copyImageAction->setShortcutVisibleInContextMenu(true);
+    copyImageAction->setShortcut(QKeySequence("Ctrl+Shift+C"));
+    addAction(copyImageAction);
+    connect(copyImageAction, &QAction::triggered, imageView, &ImageView::copyImage);
 
     searchTextEditAction = new QAction(tr("Edit search text"), this);
     searchTextEditAction->setObjectName("searchTextEdit");
@@ -3214,6 +3228,7 @@ void MW::createMenus()
     editMenu->addAction(selectAllAction);
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
+    editMenu->addAction(copyImageAction);
     editMenu->addAction(copyAction);
     editMenu->addAction(deleteAction);
     editMenu->addSeparator();
@@ -3427,6 +3442,7 @@ void MW::createMenus()
     fsTreeActions->append(separatorAction);
 //    fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileActionFromContext);
+    fsTreeActions->append(copyPathActionFromContext);
     fsTreeActions->append(separatorAction1);
     fsTreeActions->append(pasteAction);
     fsTreeActions->append(separatorAction2);
@@ -3438,6 +3454,7 @@ void MW::createMenus()
     QList<QAction *> *favActions = new QList<QAction *>;
     favActions->append(refreshBookmarkAction);
     favActions->append(revealFileActionFromContext);
+    favActions->append(copyPathActionFromContext);
 //    favActions->append(pasteAction);
     favActions->append(separatorAction);
     favActions->append(removeBookmarkAction);
@@ -3487,6 +3504,7 @@ void MW::createMenus()
     thumbViewActions->append(separatorAction3);
     thumbViewActions->append(sortReverseAction);
     thumbViewActions->append(separatorAction4);
+    thumbViewActions->append(copyImageAction);
     thumbViewActions->append(saveAsFileAction);
     thumbViewActions->append(deleteAction);
     thumbViewActions->append(separatorAction5);
@@ -8955,6 +8973,33 @@ void MW::togglePickUnlessRejected()
         dm->filteredItemCount();
 }
 
+void MW::togglePickMouseOverItem(QModelIndex idx)
+{
+/*
+This is called from IconView forward or back mouse click. The pick status item the mouse is
+over is toggled, but the selection is not changed.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+    QString pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
+    pickStatus == "false" ? pickStatus = "true" : pickStatus = "false";
+    dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
+
+    updateClassification();
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+
+    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updateStatus(true, "");
+
+    // update filter counts
+    dm->filteredItemCount();
+}
+
 void MW::togglePick()
 {
 /*
@@ -8963,14 +9008,11 @@ If the entire selection was already picked then unpick them all.
 If the entire selection is unpicked then pick them all.
 Push the changes onto the pick history stack.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
     QModelIndex idx;
     QModelIndexList idxList = selectionModel->selectedRows();
     QString pickStatus;
+
+    qDebug() << __FUNCTION__;
 
     bool foundFalse = false;
     // check if any images are not picked in the selection
@@ -9414,7 +9456,7 @@ the rating for all the selected thumbs.
             // is this part of a raw+jpg pair
             if(idx.data(G::DupIsJpgRole).toBool()) {
                 // set rating for raw file row as well
-                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
+                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 ratingIdx = dm->index(rawIdx.row(), G::RatingColumn);
                 dm->setData(ratingIdx, rating, Qt::EditRole);
             }
@@ -9486,7 +9528,7 @@ set the color class for all the selected thumbs.
             // is this part of a raw+jpg pair
             if(idx.data(G::DupIsJpgRole).toBool()) {
                 // set color class (label) for raw file row as well
-                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
+                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 labelIdx = dm->index(rawIdx.row(), G::LabelColumn);
                 dm->setData(labelIdx, colorClass, Qt::EditRole);
             }
@@ -9555,7 +9597,7 @@ also updated in the data model.
             // is this part of a raw+jpg pair
             if(idx.data(G::DupIsJpgRole).toBool()) {
                 // set tag item for raw file row as well
-                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
+                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 idx = dm->index(rawIdx.row(), col[tagName]);
                 dm->setData(idx, tagValue, Qt::EditRole);
             }
@@ -10391,6 +10433,18 @@ void MW::openUsbFolder()
     }
 }
 
+void MW::copyFolderPathFromContext()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QApplication::clipboard()->setText(mouseOverFolder);
+    QString msg = "Copied " + mouseOverFolder + " to the clipboard";
+    G::popUp->showPopup(msg, 1500);
+}
+
 void MW::revealFile()
 {
     {
@@ -10624,11 +10678,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    for (int row = 0; row < dm->rowCount(); ++row) {
-        int offset = dm->index(row, G::OffsetFullColumn).data().toInt();
-        qDebug() << row
-                 << dm->index(row, G::MetadataLoadedColumn).data().toBool()
-                 << offset;
-    }
+    imageView->copyImage();
+
 }
 // End MW
