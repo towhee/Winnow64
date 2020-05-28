@@ -1,36 +1,39 @@
 BUGS
+- test
 - Navigating thumbs in large folders while still opening can crash
-- Not ingesting all jpgs with raws
 - Ingest if image does not have metadata req'd
-- is mouseMovementTimer in imageView req'd
 - Mac check for updates not done yet
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
 PERFORMANCE
-- Very large folders loading slowly - add files in chunks
-- filteredItemCount and unfilteredItemCount slow - try treeView instead of treeWidget
-- Tif load slowly
 CODE IMPROVEMENTS
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
-- Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Add exposure compensation to metadata
+- Read HEIF files
 - Reset to defaults
-- Copy image/pixmap to clipboard
+- Remove Windows Registry settings during uninstall
 - TableView freeze columns https://doc.qt.io/qt-5/qtwidgets-itemviews-frozencolumn-example.html
 - Read keywords
-- Remove Windows Registry settings during uninstall
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
-- Check for updates on Mac
 - When ingesting confirm all files copied correctly (option)
 - Add completer for title in metadata
-- Get Sony image count, camera SN
-- Add zoom increment amount to preferences
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Pick/unpick mouseover thumbnail with mouse forward/back
+- Copy image/pixmap to clipboard
+- Copy path in Folders and Bookmarks context menu
+- Ingest not including ratings or color labels when combineRawJpg
+- Crash when tif has 5 samplesPerPixel (libTiff)
+- Tif load slowly
+- DataModel memory + better mem management
+- cache progress bar width not being recalled
+- Include subfolders not working if root folder has no files
+- Lose currentIndex and selection if click in IconView or TableView in empty area
+- Add exposure compensation to metadata
+- Very large folders loading slowly - add files in chunks
 - Release 1.09
 - Update datamodel and image cache after delete file
 - Default workspace not showing dock tabs
