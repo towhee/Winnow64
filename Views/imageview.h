@@ -51,7 +51,6 @@ public:
     QString shootingInfo;
     int infoOverlayFontSize;
     ClassificationLabel *classificationLabel;
-    QPixmap *pickPixmap;
     bool isFirstImageNewFolder;              // new folder, first image, set zoom = fit
     bool limitFit100Pct = true;
 

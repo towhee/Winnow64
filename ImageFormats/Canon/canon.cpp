@@ -99,9 +99,8 @@ bool Canon::parse(MetadataParameters &p,
     quint32 nextIFDOffset = ifd->readIFD(p, m) + startOffset;
 
     // pull data reqd from IFD0
-    m.offsetFullJPG = ifd->ifdDataHash.value(273).tagValue;
-    m.lengthFullJPG = ifd->ifdDataHash.value(279).tagValue;
-//    if (lengthFullJPG) verifyEmbeddedJpg(offsetFullJPG, lengthFullJPG);
+    m.offsetFull = ifd->ifdDataHash.value(273).tagValue;
+    m.lengthFull = ifd->ifdDataHash.value(279).tagValue;
 
     m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
     m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
@@ -127,8 +126,8 @@ bool Canon::parse(MetadataParameters &p,
     }
 
     // pull data reqd from IFD1
-    m.offsetThumbJPG = ifd->ifdDataHash.value(513).tagValue;
-    m.lengthThumbJPG = ifd->ifdDataHash.value(514).tagValue;
+    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue;
+    m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
     if (nextIFDOffset) {
@@ -138,8 +137,8 @@ bool Canon::parse(MetadataParameters &p,
     }
 
     // pull small size jpg from IFD2
-    m.offsetSmallJPG = ifd->ifdDataHash.value(273).tagValue;
-    m.lengthSmallJPG = ifd->ifdDataHash.value(279).tagValue;
+//    m.offsetSmall = ifd->ifdDataHash.value(273).tagValue;
+//    m.lengthSmall = ifd->ifdDataHash.value(279).tagValue;
 
     // IFD3 not used at present, but does contain details on embedded jpg
     if (nextIFDOffset && p.report) {
@@ -167,7 +166,7 @@ bool Canon::parse(MetadataParameters &p,
         if (x < 1 ) {
             int t = qRound(1/x);
             m.exposureTime = "1/" + QString::number(t);
-            m.exposureTimeNum = static_cast<float>(x);
+            m.exposureTimeNum = x;
         } else {
             uint t = static_cast<uint>(x);
             m.exposureTime = QString::number(t);
@@ -190,7 +189,7 @@ bool Canon::parse(MetadataParameters &p,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
-        m.apertureNum = static_cast<float>(qRound(x * 10) / 10.0);
+        m.apertureNum = (qRound(x * 10) / 10.0);
     } else {
         m.aperture = "";
         m.apertureNum = 0;
@@ -204,6 +203,18 @@ bool Canon::parse(MetadataParameters &p,
     } else {
         m.ISO = "";
         m.ISONum = 0;
+    }
+    // Exposure compensation
+    if (ifd->ifdDataHash.contains(37380)) {
+        // tagType = 10 signed rational
+        double x = Utilities::getReal_s(p.file,
+                                      ifd->ifdDataHash.value(37380).tagValue + startOffset,
+                                      isBigEnd);
+        m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
+        m.exposureCompensationNum = x;
+    } else {
+        m.exposureCompensation = "";
+        m.exposureCompensationNum = 0;
     }
     // focal length
     if (ifd->ifdDataHash.contains(37386)) {

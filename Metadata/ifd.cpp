@@ -40,7 +40,16 @@ quint32 IFD::readIFD(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
         tagCount = Utilities::get32(p.file.read(4), isBigEnd);
         // check for orientation and save offset for subsequent writing
         if (p.hdr == "IFD0" && tagId == 274) m.orientationOffset = static_cast<uint>(p.file.pos());
-        if (tagType == 3) tagValue = Utilities::get16(p.file.read(4), isBigEnd);
+        if (tagType == 3) {
+            if (isBigEnd && tagCount > 1){
+                p.file.read(2);
+                tagValue = Utilities::get16(p.file.read(2), isBigEnd);
+            }
+            else {
+                tagValue = Utilities::get16(p.file.read(2), isBigEnd);
+                p.file.read(2);
+            }
+        }
         else tagValue = Utilities::get32(p.file.read(4), isBigEnd);
 
         ifdData.tagType = tagType;

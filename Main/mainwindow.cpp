@@ -212,15 +212,17 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
         qDebug() << __FUNCTION__ << "isShift == true";
     }
 
-    /* testing/debugging
+    /* TESTING / DEBUGGING FLAGS
        Note ISDEBUG is in globals.h
        Deactivate debug reporting by commenting ISDEBUG  */
     G::showAllTableColumns = false;     // show all table fields for debugging
     simulateJustInstalled = false;
     isStressTest = false;
     G::isTimer = true;                  // Global timer
+    G::memTest = false;                 // will not load images
+    G::isTest = false;                  // use RGH JPG reader
 
-    // Initialize some variables etc
+    // Initialize some variables
     initialize();
 
     // platform specific settings
@@ -553,6 +555,8 @@ bool MW::event(QEvent *event)
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
+//    qDebug() << __FUNCTION__ << obj->objectName() << event->type();
+//    return QWidget::eventFilter(obj, event);
 
 // use to show all events being filtered - handy to figure out which to intercept
     if (event->type()        != QEvent::Paint
@@ -604,82 +608,6 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
-    /* ICONVIEW SCROLLING ****************************************************************
-
-    IconView is ready-to-go and can scroll to wherever we want:
-
-    When the user changes modes in MW (ie from Grid to Loupe) a IconView instance (either
-    thumbView or gridView) can change state from hidden to visible. Since hidden widgets
-    cannot be accessed we need to wait until the IconView becomes visible and fully repainted
-    before attempting to scroll to the current index. The IconView scrollBar paint events are
-    monitored and when the last paint event occurs the scrollToCurrent function is called. The
-    last paint event is identified by calculating the maximum of the scrollbar range and
-    comparing it to the paint event, which updates the range each time. With larger datasets
-    (ie 1500+ thumbs) it can take a number of paint events and 100s of ms to complete. A flag
-    is assigned (scrollWhenReady) to show when we need to monitor so not checking needlessly.
-    Unfortunately there does not appear to be any signal or event when ListView is finished
-    hence this cludge.
-    */
-
-//    if(event->type() == QEvent::Paint
-//            && thumbView->scrollWhenReady
-//            && (obj->objectName() == "IconViewVerticalScrollBar"
-//            || obj->objectName() == "IconViewHorizontalScrollBar"))
-//    {
-//        if (obj->objectName() == "IconViewHorizontalScrollBar") {
-//            /*
-//            qDebug() << G::t.restart() << "\t" << objectName() << "HorScrollCurrentMax / FinalMax:"
-//                     << thumbView->horizontalScrollBar()->maximum()
-//                     << thumbView->getHorizontalScrollBarMax();*/
-//            if (thumbView->horizontalScrollBar()->maximum() > 0.95 * thumbView->getHorizontalScrollBarMax()) {
-//                /*
-//                qDebug() << objectName()
-//                 << ": Event Filter sending row =" << currentRow
-//                 << "horizontalScrollBarMax Qt vs Me"
-//                 << thumbView->horizontalScrollBar()->maximum()
-//                 << thumbView->getHorizontalScrollBarMax();*/
-//                thumbView->scrollWhenReady = false;
-//                thumbView->scrollToRow(scrollRow, __FUNCTION__);
-//            }
-//        }
-//        if (obj->objectName() == "IconViewVerticalScrollBar") {
-//             /*
-//             qDebug() << G::t.restart() << "\t" << objectName() << "VerScrollCurrentMax / FinalMax:"
-//                      << thumbView->verticalScrollBar()->maximum()
-//                      << thumbView->getVerticalScrollBarMax();*/
-//             if (thumbView->verticalScrollBar()->maximum() > 0.95 * thumbView->getVerticalScrollBarMax()){
-//                /*
-//                 qDebug() << G::t.restart() << "\t" << objectName()
-//                          << ": Event Filter sending row =" << currentRow
-//                          << "verticalScrollBarMax Qt vs Me"
-//                          << thumbView->verticalScrollBar()->maximum()
-//                          << thumbView->getVerticalScrollBarMax();*/
-//                 thumbView->scrollWhenReady = false;
-//                 thumbView->scrollToRow(scrollRow, __FUNCTION__);
-//             }
-//         }
-//        if (obj->objectName() == "TableViewHorizontalScrollBar") {
-//            qDebug() << "TableViewHorizontalScrollBar";
-//        }
-//    }
-
-//    if(event->type() == QEvent::Paint
-//            && gridView->scrollWhenReady
-//            && (obj->objectName() == "IconViewVerticalScrollBar"))
-//    {
-//         if (gridView->verticalScrollBar()->maximum() > 0.95 * gridView->getVerticalScrollBarMax()){
-//             /*
-//             qDebug() << "XXXXXXXXXXXXXXX      " << objectName()
-//                      << ": Event Filter sending row =" << currentRow
-//                      << "verticalScrollBarMax Qt vs Me"
-//                      << gridView->verticalScrollBar()->maximum()
-//                      << gridView->getVerticalScrollBarMax();
-//             */
-//             gridView->scrollWhenReady = false;
-//             gridView->scrollToRow(scrollRow, __FUNCTION__);
-//         }
-//    }
-
     /* CONTEXT MENU **********************************************************************
 
     Intercept context menu
@@ -694,6 +622,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     if (event->type() == QEvent::ContextMenu) {
         addBookmarkAction->setEnabled(true);
         revealFileActionFromContext->setEnabled(true);
+        copyPathActionFromContext->setEnabled(true);
         if(obj == fsTree->viewport()) {
             QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
             QModelIndex idx = fsTree->indexAt(e->pos());
@@ -702,8 +631,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             // in folders or bookmarks but not on folder item
             if(mouseOverFolder == "") {
                 addBookmarkAction->setEnabled(false);
-//                revealFileAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
+                copyPathActionFromContext->setEnabled(false);
             }
         }
         else if(obj == bookmarks->viewport()) {
@@ -714,16 +643,16 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             // in folders or bookmarks but not on folder item
             if(mouseOverFolder == "") {
                 addBookmarkAction->setEnabled(false);
-//                revealFileAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
+                copyPathActionFromContext->setEnabled(false);
             }
         }
         else {
             enableEjectUsbMenu(currentViewDir);
             if(currentViewDir == "") {
                 addBookmarkAction->setEnabled(false);
-//                revealFileAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
+                copyPathActionFromContext->setEnabled(false);
             }
         }
     }
@@ -941,7 +870,6 @@ void MW::folderSelectionChange()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
      // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
@@ -1026,6 +954,8 @@ void MW::folderSelectionChange()
 
     uncheckAllFilters();
 
+//    if (G::memTest) return;
+
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         qDebug() << "Datamodel Failed To Load for" << currentViewDir;
         clearAll();
@@ -1047,6 +977,7 @@ void MW::folderSelectionChange()
         G::isInitializing = false;
         return;
     }
+
     centralLayout->setCurrentIndex(prevCentralView);    // rgh req'd?
 
     // made it this far, folder must have eligible images and is good-to-go
@@ -1081,6 +1012,7 @@ void MW::folderSelectionChange()
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
 
+//    if (!G::memTest)
     metadataCacheThread->loadNewFolder(isRefreshingDM);
 
     // format pickMemSize as bytes, KB, MB or GB
@@ -1117,7 +1049,7 @@ delegate use of the current index must check the column.
              << "isFilterChange =" << isFilterChange
              << "current =" << current;
 //    */
-
+    if (G::memTest) return;
     bool isStart = false;
     if(!isCurrentFolderOkay || G::isInitializing || isFilterChange) return;
 
@@ -1268,11 +1200,12 @@ a bookmark or ejects a drive and the resulting folder does not have any eligible
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
     G::allMetadataLoaded = false;
-    dm->clear();
+    dm->clearDataModel();
     currentRow = 0;
     infoView->clearInfo();
     metadata->clear();
@@ -1480,21 +1413,19 @@ within the cache range.
     #endif
     }
     /*
-       Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
+    Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
     to call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread.
     This was to prevent many scroll calls from bunching up.  The new approach just aborts an
     existing thread and starts over.  It is simpler and faster.  Keeping the old process until
     the new one is proven to work all the time.
       */
-
-//    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconsVisible(false);
 //        if (thumbView->isVisible())
-            thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
+        thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
         metadataCacheThread->scrollChange();
     }
     G::ignoreScrollSignal = false;
@@ -1813,7 +1744,8 @@ memory has been consumed or all the images are cached.
     if (fPath == "") return;
 
     // set image cache parameters and build image cacheItemList
-    imageCacheThread->initImageCache(cacheSizeMB,
+    int netCacheMBSize = cacheSizeMB - G::metaCacheMB;
+    imageCacheThread->initImageCache(netCacheMBSize,
         isShowCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
 
@@ -2043,6 +1975,12 @@ void MW::createActions()
     addAction(revealFileActionFromContext);
     connect(revealFileActionFromContext, &QAction::triggered, this, &MW::revealFileFromContext);
 
+    copyPathActionFromContext = new QAction("Copy folder path", this);
+    copyPathActionFromContext->setObjectName("copyPathFromContext");
+    copyPathActionFromContext->setShortcutVisibleInContextMenu(true);
+    addAction(copyPathActionFromContext);
+    connect(copyPathActionFromContext, &QAction::triggered, this, &MW::copyFolderPathFromContext);
+
     subFoldersAction = new QAction(tr("Include Sub-folders"), this);
     subFoldersAction->setObjectName("subFolders");
     subFoldersAction->setShortcutVisibleInContextMenu(true);
@@ -2239,18 +2177,25 @@ void MW::createActions()
 
     // Copy, Cut
     deleteAction = new QAction(tr("Delete"), this);
-    deleteAction->setObjectName("deleteImages");
+    deleteAction->setObjectName("deleteFiles");
     deleteAction->setShortcutVisibleInContextMenu(true);
     deleteAction->setShortcut(QKeySequence("Delete"));
     addAction(deleteAction);
     connect(deleteAction, &QAction::triggered, this, &MW::deleteFiles);
 
-    copyAction = new QAction(tr("Copy"), this);
-    copyAction->setObjectName("copyImages");
+    copyAction = new QAction(tr("Copy file(s)"), this);
+    copyAction->setObjectName("copyFiles");
     copyAction->setShortcutVisibleInContextMenu(true);
     copyAction->setShortcut(QKeySequence("Ctrl+C"));
     addAction(copyAction);
     connect(copyAction, &QAction::triggered, this, &MW::copy);
+
+    copyImageAction = new QAction(tr("Copy image"), this);
+    copyImageAction->setObjectName("copyImage");
+    copyImageAction->setShortcutVisibleInContextMenu(true);
+    copyImageAction->setShortcut(QKeySequence("Ctrl+Shift+C"));
+    addAction(copyImageAction);
+    connect(copyImageAction, &QAction::triggered, imageView, &ImageView::copyImage);
 
     searchTextEditAction = new QAction(tr("Edit search text"), this);
     searchTextEditAction->setObjectName("searchTextEdit");
@@ -3283,6 +3228,7 @@ void MW::createMenus()
     editMenu->addAction(selectAllAction);
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
+    editMenu->addAction(copyImageAction);
     editMenu->addAction(copyAction);
     editMenu->addAction(deleteAction);
     editMenu->addSeparator();
@@ -3496,6 +3442,7 @@ void MW::createMenus()
     fsTreeActions->append(separatorAction);
 //    fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileActionFromContext);
+    fsTreeActions->append(copyPathActionFromContext);
     fsTreeActions->append(separatorAction1);
     fsTreeActions->append(pasteAction);
     fsTreeActions->append(separatorAction2);
@@ -3507,6 +3454,7 @@ void MW::createMenus()
     QList<QAction *> *favActions = new QList<QAction *>;
     favActions->append(refreshBookmarkAction);
     favActions->append(revealFileActionFromContext);
+    favActions->append(copyPathActionFromContext);
 //    favActions->append(pasteAction);
     favActions->append(separatorAction);
     favActions->append(removeBookmarkAction);
@@ -3556,6 +3504,7 @@ void MW::createMenus()
     thumbViewActions->append(separatorAction3);
     thumbViewActions->append(sortReverseAction);
     thumbViewActions->append(separatorAction4);
+    thumbViewActions->append(copyImageAction);
     thumbViewActions->append(saveAsFileAction);
     thumbViewActions->append(deleteAction);
     thumbViewActions->append(separatorAction5);
@@ -4541,18 +4490,10 @@ void MW::createBookmarks()
     }
 
     bookmarks->setMaximumWidth(folderMaxWidth);
-//    refreshBookmarks();
 
     // this does work for touchpad tap
     connect(bookmarks, SIGNAL(itemPressed(QTreeWidgetItem *, int)),
             this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
-
-   // this not working for touchpad tap
-//    connect(bookmarks, SIGNAL(itemClicked(QTreeWidgetItem *, int)),
-//            this, SLOT(bookmarkClicked(QTreeWidgetItem *, int)));
-
-//    connect(removeBookmarkAction, SIGNAL(triggered()),
-//            bookmarks, SLOT(removeBookmark()));
 
     connect(bookmarks, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
             this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
@@ -4782,10 +4723,12 @@ void MW::updateProgressBarWidth()
     G::track(__FUNCTION__);
     #endif
     }
-    int availableSpace = availableSpaceForProgressBar();
-    if (availableSpace < progressWidth) progressWidth = availableSpace;
-    progressLabel->setFixedWidth(progressWidth);
-    progressPixmap->scaled(progressWidth, 25);
+    if (dm->rowCount() && progressLabel->isVisible()) {
+        int availableSpace = availableSpaceForProgressBar();
+        if (availableSpace < progressWidth) progressWidth = availableSpace;
+        progressLabel->setFixedWidth(progressWidth);
+        progressPixmap->scaled(progressWidth, 25);
+    }
 }
 
 void MW::setCacheParameters()
@@ -4799,9 +4742,10 @@ parameters.  Any visibility changes are executed.
     G::track(__FUNCTION__);
     #endif
     }
-
-    imageCacheThread->updateImageCacheParam(cacheSizeMB, isShowCacheStatus, cacheWtAhead,
-             isCachePreview, displayHorizontalPixels, displayVerticalPixels);
+    int netCacheMBSize = cacheSizeMB - static_cast<int>( G::metaCacheMB);
+    imageCacheThread->updateImageCacheParam(netCacheMBSize,
+             isShowCacheStatus, cacheWtAhead, isCachePreview,
+             displayHorizontalPixels, displayVerticalPixels);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     if (fPath.length())
@@ -4902,8 +4846,8 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
     // check for file error first
     QString fPath = thumbView->getCurrentFilePath();
     int row = dm->fPathRow[fPath];
-    bool imageUnavailable = dm->index(row, G::LengthFullJPGColumn).data() == 0;
-    bool thumbUnavailable = dm->index(row, G::LengthThumbJPGColumn).data() == 0;
+    bool imageUnavailable = dm->index(row, G::LengthFullColumn).data() == 0;
+    bool thumbUnavailable = dm->index(row, G::LengthThumbColumn).data() == 0;
     if (imageUnavailable || thumbUnavailable) {
         // rgh may want to set the error here as well as report
 //        QString err = dm->index(row, G::ErrColumn).data().toString();
@@ -4928,8 +4872,14 @@ QString fileSym = "📁";
 QString fileSym = "📷";
 */
 
+    // update G::availableMemory
+    Win::availableMemory();
+    double availMemGB = static_cast<double>(G::availableMemoryMB) / 1024;
+    QString mem = QString::number(availMemGB, 'f', 1) + " GB";
+
     // image of total: fileCount
     if (keepBase && isCurrentFolderOkay) {
+        base += "Mem: " + mem + spacer;
         if (G::mode == "Loupe" || G::mode == "Compare")
             base += "Zoom: " + getZoom();
         base += spacer + "Pos: " + getPosition();
@@ -9023,6 +8973,33 @@ void MW::togglePickUnlessRejected()
         dm->filteredItemCount();
 }
 
+void MW::togglePickMouseOverItem(QModelIndex idx)
+{
+/*
+This is called from IconView forward or back mouse click. The pick status item the mouse is
+over is toggled, but the selection is not changed.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+    QString pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
+    pickStatus == "false" ? pickStatus = "true" : pickStatus = "false";
+    dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
+
+    updateClassification();
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+
+    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updateStatus(true, "");
+
+    // update filter counts
+    dm->filteredItemCount();
+}
+
 void MW::togglePick()
 {
 /*
@@ -9031,14 +9008,11 @@ If the entire selection was already picked then unpick them all.
 If the entire selection is unpicked then pick them all.
 Push the changes onto the pick history stack.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
     QModelIndex idx;
     QModelIndexList idxList = selectionModel->selectedRows();
     QString pickStatus;
+
+    qDebug() << __FUNCTION__;
 
     bool foundFalse = false;
     // check if any images are not picked in the selection
@@ -9288,8 +9262,21 @@ void MW::setCombineRawJpg()
     G::track(__FUNCTION__);
     #endif
     }
+    if (!G::isNewFolderLoaded) {
+        QString msg = "Folder is still loading.  Try again when the folder has loaded.";
+        G::popUp->showPopup(msg, 1000);
+        return;
+    }
+
+    QString msg;
+
     // flag used in MW, dm and sf, fsTree, bookmarks
     combineRawJpg = combineRawJpgAction->isChecked();
+
+    if (combineRawJpg) msg = "Combining Raw + Jpg pairs.  This could take a moment.";
+    else msg = "Separating Raw + Jpg pairs.  This could take a moment.";
+    G::popUp->showPopup(msg);
+
     fsTree->combineRawJpg = combineRawJpg;
     bookmarks->combineRawJpg = combineRawJpg;
     refreshBookmarks();
@@ -9320,6 +9307,8 @@ void MW::setCombineRawJpg()
     dm->rebuildTypeFilter();
     filterChange(__FUNCTION__);
     updateStatusBar();
+
+    G::popUp->close();
 }
 
 void MW::setCachedStatus(QString fPath, bool isCached)
@@ -9467,7 +9456,7 @@ the rating for all the selected thumbs.
             // is this part of a raw+jpg pair
             if(idx.data(G::DupIsJpgRole).toBool()) {
                 // set rating for raw file row as well
-                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
+                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 ratingIdx = dm->index(rawIdx.row(), G::RatingColumn);
                 dm->setData(ratingIdx, rating, Qt::EditRole);
             }
@@ -9539,7 +9528,7 @@ set the color class for all the selected thumbs.
             // is this part of a raw+jpg pair
             if(idx.data(G::DupIsJpgRole).toBool()) {
                 // set color class (label) for raw file row as well
-                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
+                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 labelIdx = dm->index(rawIdx.row(), G::LabelColumn);
                 dm->setData(labelIdx, colorClass, Qt::EditRole);
             }
@@ -9608,7 +9597,7 @@ also updated in the data model.
             // is this part of a raw+jpg pair
             if(idx.data(G::DupIsJpgRole).toBool()) {
                 // set tag item for raw file row as well
-                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupRawIdxRole));
+                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 idx = dm->index(rawIdx.row(), col[tagName]);
                 dm->setData(idx, tagValue, Qt::EditRole);
             }
@@ -10444,6 +10433,18 @@ void MW::openUsbFolder()
     }
 }
 
+void MW::copyFolderPathFromContext()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QApplication::clipboard()->setText(mouseOverFolder);
+    QString msg = "Copied " + mouseOverFolder + " to the clipboard";
+    G::popUp->showPopup(msg, 1500);
+}
+
 void MW::revealFile()
 {
     {
@@ -10664,6 +10665,12 @@ void MW::test2()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+    qDebug() << __FUNCTION__;
+    QString s = "D:/Pictures/Zenfolio/pbase2048";
+    dm->load(s, false);
+    G::isInitializing = false;
+
+    return;
 
     QString fPath = "D:/Pictures/_DNG/DngNikonD850FromLightroom.dng";
     metadata->testNewFileFormat(fPath);
@@ -10671,30 +10678,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
-    if (selection.isEmpty()) return;
-
-    // convert selection to stringlist
-    QStringList sl;
-    for (int i = 0; i < selection.count(); ++i) {
-        QString fPath = selection.at(i).data(G::PathRole).toString();
-        sl.append(fPath);
-    }
-
-    // remove fPath from datamodel dm
-    for (int i = 0; i < sl.count(); ++i) {
-        QString fPath = sl.at(i);
-        qDebug() << __FUNCTION__ << "removing" << fPath;
-        dm->remove(fPath);
-    }
-
-    // remove selected from imageCache
-    imageCacheThread->removeFromCache(sl);
-    // update cursor position on progressBar
-    updateImageCacheStatus("Update all rows", currentRow, __FUNCTION__);
-
-    thumbView->selectThumb(thumbView->currentIndex());
-
+    imageView->copyImage();
 
 }
 // End MW

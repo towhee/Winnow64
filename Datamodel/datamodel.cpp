@@ -45,8 +45,8 @@ The data is structured in columns:
     ● LengthFullJPG:    from metadata       EditRole
     ● OffsetThumbJPG:   from metadata       EditRole
     ● LengthThumbJPG:   from metadata       EditRole
-    ● OffsetSmallJPG:   from metadata       EditRole
-    ● LengthSmallJPG:   from metadata       EditRole
+//    ● OffsetSmallJPG:   from metadata       EditRole
+//    ● LengthSmallJPG:   from metadata       EditRole
     ● XmpSegmentOffset: from metadata       EditRole
     ● XmpNextSegmentOffset:  metadata       EditRole
     ● IsXmp:            from metadata       EditRole
@@ -173,6 +173,7 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::ApertureColumn, new QStandardItem("Aperture")); horizontalHeaderItem(G::ApertureColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ShutterspeedColumn, new QStandardItem("Shutter")); horizontalHeaderItem(G::ShutterspeedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ISOColumn, new QStandardItem("ISO")); horizontalHeaderItem(G::ISOColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::ExposureCompensationColumn, new QStandardItem("  EC  ")); horizontalHeaderItem(G::ExposureCompensationColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::CameraMakeColumn, new QStandardItem("Make")); horizontalHeaderItem(G::CameraMakeColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::CameraModelColumn, new QStandardItem("Model")); horizontalHeaderItem(G::CameraModelColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::LensColumn, new QStandardItem("Lens")); horizontalHeaderItem(G::LensColumn)->setData(false, G::GeekRole);
@@ -191,13 +192,22 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::_EmailColumn, new QStandardItem("_Email")); horizontalHeaderItem(G::_EmailColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_UrlColumn, new QStandardItem("_Url")); horizontalHeaderItem(G::_UrlColumn)->setData(true, G::GeekRole);
 
-    setHorizontalHeaderItem(G::OffsetFullJPGColumn, new QStandardItem("OffsetFullJPG")); horizontalHeaderItem(G::OffsetFullJPGColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::LengthFullJPGColumn, new QStandardItem("LengthFullJPG")); horizontalHeaderItem(G::LengthFullJPGColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::OffsetThumbJPGColumn, new QStandardItem("OffsetThumbJPG")); horizontalHeaderItem(G::OffsetThumbJPGColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::LengthThumbJPGColumn, new QStandardItem("LengthThumbJPF")); horizontalHeaderItem(G::LengthThumbJPGColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::OffsetSmallJPGColumn, new QStandardItem("OffsetSmallJPG")); horizontalHeaderItem(G::OffsetSmallJPGColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::LengthSmallJPGColumn, new QStandardItem("LengthSmallJPG")); horizontalHeaderItem(G::LengthSmallJPGColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::OffsetFullColumn, new QStandardItem("OffsetFull")); horizontalHeaderItem(G::OffsetFullColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::LengthFullColumn, new QStandardItem("LengthFull")); horizontalHeaderItem(G::LengthFullColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::OffsetThumbColumn, new QStandardItem("OffsetThumb")); horizontalHeaderItem(G::OffsetThumbColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::LengthThumbColumn, new QStandardItem("LengthThumb")); horizontalHeaderItem(G::LengthThumbColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::OffsetSmallColumn, new QStandardItem("OffsetSmall")); horizontalHeaderItem(G::OffsetSmallColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::LengthSmallColumn, new QStandardItem("LengthSmall")); horizontalHeaderItem(G::LengthSmallColumn)->setData(true, G::GeekRole);
 
+//    setHorizontalHeaderItem(G::bitsPerSampleColumn, new QStandardItem("bitsPerSampleFull")); horizontalHeaderItem(G::bitsPerSampleColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::photoInterpColumn, new QStandardItem("photoInterpFull")); horizontalHeaderItem(G::photoInterpColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::samplesPerPixelColumn, new QStandardItem("samplesPerPixelFull")); horizontalHeaderItem(G::samplesPerPixelColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::compressionColumn, new QStandardItem("compressionFull")); horizontalHeaderItem(G::compressionColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::stripByteCountsColumn, new QStandardItem("stripByteCountsFull")); horizontalHeaderItem(G::stripByteCountsColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::planarConfigurationFullColumn, new QStandardItem("planarConfigurationFull")); horizontalHeaderItem(G::planarConfigurationFullColumn)->setData(true, G::GeekRole);
+
+    setHorizontalHeaderItem(G::isBigEndianColumn, new QStandardItem("isBigEndian")); horizontalHeaderItem(G::isBigEndianColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ifd0OffsetColumn, new QStandardItem("ifd0Offset")); horizontalHeaderItem(G::ifd0OffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::XmpSegmentOffsetColumn, new QStandardItem("XmpSegmentOffset")); horizontalHeaderItem(G::XmpSegmentOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::XmpNextSegmentOffsetColumn, new QStandardItem("XmpNextSegmentOffset")); horizontalHeaderItem(G::XmpNextSegmentOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IsXMPColumn, new QStandardItem("IsXMP")); horizontalHeaderItem(G::IsXMPColumn)->setData(true, G::GeekRole);
@@ -223,21 +233,25 @@ DataModel::DataModel(QWidget *parent,
     emptyImg.load(":/images/no_image.png");
 }
 
-void DataModel::clear()
+void DataModel::clearDataModel()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
-    }
+    }    
     // clear the model
     removeRows(0, rowCount());
+    setRowCount(0);
+//    setColumnCount(0);
     // clear the fPath index of datamodel rows
     fPathRow.clear();
     // clear all items for filters based on data content ie file types, camera model
     filters->removeChildrenDynamicFilters();
     // reset remaining criteria without signalling filter change as no new data yet
     filters->clearAll();
+    // clear list of fileInfo
+    fileInfoList.clear();
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -331,7 +345,7 @@ Steps:
     filtersBuilt = false;
 
     //  clear the model
-    clear();
+    clearDataModel();
 
     // do some initializing
     fileFilters->clear();
@@ -341,13 +355,11 @@ Steps:
     dir->setFilter(QDir::Files);
     dir->setPath(currentFolderPath);
 
-    fileInfoList.clear();
-
     timeToQuit = false;
     imageCount = 0;
     countInterval = 1000;
-    QString escapeClause = "Press \"Esc\" to stop.\n\n";
-    QString scanning = "Searching for eligible images.  ";
+    QString step = "Step 1 0f 2: Searching for eligible images.\n\n";
+    QString escapeClause = "\n\nPress \"Esc\" to stop.";
     QString root;
     if (dir->isRoot()) root = "Drive ";
     else root = "Folder ";
@@ -356,22 +368,25 @@ Steps:
     int folderImageCount = dir->entryInfoList().size();
 
     // bail if no images and not including subfolders
-    if (!folderImageCount && !includeSubfolders) return false;
+    if (!folderImageCount && !includeSubfoldersFlag) return false;
 
     int folderCount = 1;
     // add supported images in folder to image list
+
     for (int i = 0; i < folderImageCount; ++i) {
         fileInfoList.append(dir->entryInfoList().at(i));
         imageCount++;
         if (imageCount % countInterval == 0 && imageCount > 0) {
-            QString s = escapeClause + scanning +
+            QString s = step +
                         QString::number(imageCount) + " found so far in " +
-                        QString::number(folderCount) + " folders";
+                        QString::number(folderCount) + " folders" +
+                        escapeClause;
             emit msg(s);
             qApp->processEvents();
         }
         if (timeToQuit) return false;
     }
+
     if (!includeSubfoldersFlag) {
         includeSubfolders = false;
         return addFileData();
@@ -383,6 +398,7 @@ Steps:
     while (it.hasNext()) {
         if (timeToQuit) return false;
         it.next();
+//        qDebug() << __FUNCTION__ << "Scanning" << it.filePath();
         if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
             folderCount++;
             dir->setPath(it.filePath());
@@ -395,9 +411,10 @@ Steps:
                 imageCount++;
                 // report file progress within folder
                 if (imageCount % countInterval == 0 && imageCount > 0) {
-                    QString s = escapeClause + scanning +
-                            QString::number(imageCount) + " found so far in " +
-                            QString::number(folderCount) + " folders";
+                    QString s = step +
+                                QString::number(imageCount) + " found so far in " +
+                                QString::number(folderCount) + " folders" +
+                                escapeClause;
                     emit msg(s);
                     qApp->processEvents();
                 }
@@ -411,27 +428,19 @@ Steps:
 
 bool DataModel::addFileData()
 {
+/*
+Load the information from the operating system contained in QFileInfo first
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QElapsedTimer t;
-    t.start();
-
-    progressBar->clearProgress();
-
     // make sure if raw+jpg pair that raw file is first to make combining easier
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 
-    static QStandardItem *item;
-    static int i;
-    static QPixmap emptyPixMap;
-
-    imageFilePathList.clear();
-
-    // rgh not working
-    emptyPixMap = QPixmap::fromImage(emptyImg).scaled(G::maxIconSize, G::maxIconSize);
+    QString step = "Step 2 0f 2: Loading eligible images.\n\n";
+    QString escapeClause = "\n\nPress \"Esc\" to stop.";
 
     // test if raw file to match jpg when same file names and one is a jpg
     QString suffix;
@@ -440,51 +449,29 @@ bool DataModel::addFileData()
     QString baseName = "";
     QModelIndex prevRawIdx;
 
-    for (i = 0; i < fileInfoList.count(); ++i) {
+    setRowCount(fileInfoList.count());
+    setColumnCount(G::TotalColumns);
 
+    for (int row = 0; row < fileInfoList.count(); ++row) {
         if (timeToQuit) return false;
-
         // get file info
-        fileInfo = fileInfoList.at(i);
+        fileInfo = fileInfoList.at(row);
+//        addFileDataForRow(row, fileInfo);
 
         // append hash index of datamodel row for fPath for fast lookups
         QString fPath = fileInfo.filePath();
-
-        // build hash to quickly get row from f(row, Path (ie pixmap.cpp, imageCache...)
-        fPathRow[fPath] = i;
+        // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
+        fPathRow[fPath] = row;
 
         // string to hold aggregated text for searching
         QString search = fPath;
 
-        /* add icon as first column in new row
-
-        This can be done two ways:
-
-        // this way is slow
-        item = new QStandardItem();
-        appendRow(item);
-        int row = item->index().row();
-        setData(index(row, G::PathColumn), fileInfo.filePath(), G::PathRole);
-
-        // this way is faster
-        item = new QStandardItem();
-        item->setData("", Qt::DisplayRole);
-        appendRow(item);
-        */
-
-        item = new QStandardItem();
-        item->setData("", Qt::DisplayRole);             // column 0 just displays icon
-        item->setData(fPath, G::PathRole);
-        QString tip = QString::number(i) + ": " + fileInfo.absoluteFilePath();
-        item->setData(tip, Qt::ToolTipRole);
-        item->setData(QRect(), G::ThumbRectRole);     // define later when read
-        item->setData(false, G::CachedRole);
-        item->setData(false, G::DupHideRawRole);      // default - overwrite if matching jpg
-        item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
-        appendRow(item);
-
-        // add columns that do not require metadata read from image files
-        int row = item->index().row();
+        setData(index(row, G::PathColumn), fPath, G::PathRole);
+        QString tip = QString::number(row) + ": " + fileInfo.absoluteFilePath();
+        setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
+        setData(index(row, G::PathColumn), QRect(), G::ThumbRectRole);
+        setData(index(row, G::PathColumn), false, G::CachedRole);
+        setData(index(row, G::PathColumn), false, G::DupHideRawRole);
 
         setData(index(row, G::NameColumn), fileInfo.fileName());
         setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
@@ -513,28 +500,31 @@ bool DataModel::addFileData()
         /* Save info for duplicated raw and jpg files, which generally are the result of
         setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
         with the same path precede jpg files with duplicate names. Two roles track duplicates:
-        G::DupHideRawRole flags jpg files with duplicate raws and G::DupRawIdxRole points to
-        the duplicate raw file from the jpg data row. For example:
+        G::DupHideRawRole flags jpg files with duplicate raws and G::DupOtherIdxRole points to
+        the duplicate other file of the pair. For example:
 
-        Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF"  DupHideRawRole = true 	 DupRawIdxRole = (Invalid)
-        Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG"  DupHideRawRole = false  DupRawIdxRole = QModelIndex(0,0)) DupRawTypeRole = "ORF"
-        Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF"  DupHideRawRole = true 	 DupRawIdxRole = (Invalid)
-        Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG"  DupHideRawRole = false  DupRawIdxRole = QModelIndex(2,0)  DupRawTypeRole = "ORF"
+        Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(1,0)
+        Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(0,0)  DupRawTypeRole = "ORF"
+        Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF"  DupHideRawRole = true 	 DupOtherIdxRole = QModelIndex(3,0)
+        Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG"  DupHideRawRole = false  DupOtherIdxRole = QModelIndex(2,0)  DupRawTypeRole = "ORF"
         */
 
-        suffix = fileInfoList.at(i).suffix().toLower();
-        baseName = fileInfoList.at(i).completeBaseName();
+        suffix = fileInfoList.at(row).suffix().toLower();
+        baseName = fileInfoList.at(row).completeBaseName();
         if (metadata->rawFormats.contains(suffix)) {
             prevRawSuffix = suffix;
-            prevRawBaseName = fileInfoList.at(i).completeBaseName();
-            prevRawIdx = index(i, 0);
+            prevRawBaseName = fileInfoList.at(row).completeBaseName();
+            prevRawIdx = index(row, 0);
         }
 
+        // if row/jpg pair
         if (suffix == "jpg" && baseName == prevRawBaseName) {
             // hide raw version
             setData(prevRawIdx, true, G::DupHideRawRole);
+            // set raw version other index to jpg pair
+            setData(prevRawIdx, index(row, 0), G::DupOtherIdxRole);
             // point to raw version
-            setData(index(row, 0), prevRawIdx, G::DupRawIdxRole);
+            setData(index(row, 0), prevRawIdx, G::DupOtherIdxRole);
             // set flag to show combined JPG file for filtering when ingesting
             setData(index(row, 0), true, G::DupIsJpgRole);
             // build combined suffix to show in type column
@@ -543,27 +533,19 @@ bool DataModel::addFileData()
                 setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
             else
                 setData(index(row, G::TypeColumn), "JPG");
+
         }
 
-        progressBar->updateProgress(row, row + 1, fileInfoList.count(),
-                                    G::progressAddFileInfoColor,
-                                    "Reading the basic file information for each image");
-        if (row % 100 == 0) qApp->processEvents();
-
-        if (row % countInterval == 0 || row == 0) {
-            s = "Adding " + QString::number(row) + " of " +
-                QString::number(fileInfoList.count()) + " images";
+        if (row % 1000 == 0) {
+            QString s = step +
+                        QString::number(row) + " of " + QString::number(rowCount()) +
+                        " loaded." +
+                        escapeClause;
             emit msg(s);
-            /*
-            qApp->processEvents();        // causes thumb dock to flicker  */
+            qApp->processEvents();
         }
 
-        /* the rest of the data model columns are added when the metadata
-        has been loaded on demand.  see addMetadataItem and mdCache    */
     }
-
-    // resort if previous sort was not based of the path (default sort)
-
     return true;
 }
 
@@ -584,7 +566,7 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     return true;
 }
 
-ImageMetadata DataModel::getMetadata(QString fPath)
+ImageMetadata DataModel::imMetadata(QString fPath)
 {
 /*
 Used by InfoString and IngestDlg
@@ -623,24 +605,28 @@ Used by InfoString and IngestDlg
     m._rating = index(row, G::_RatingColumn).data().toString();
     m.createdDate = index(row, G::CreatedColumn).data().toDateTime();
     m.width = index(row, G::WidthColumn).data().toUInt();
-    m.height= index(row, G::HeightColumn).data().toUInt();
+    m.height = index(row, G::HeightColumn).data().toUInt();
     m.dimensions = index(row, G::DimensionsColumn).data().toString();
     m.orientation = index(row, G::OrientationColumn).data().toInt();
     m.rotationDegrees = index(row, G::RotationColumn).data().toInt();
-    m.apertureNum = index(row, G::ApertureColumn).data().toFloat();
+    m.apertureNum = index(row, G::ApertureColumn).data().toDouble();
     m.aperture = "f/" + QString::number(m.apertureNum, 'f', 1);
-    m.exposureTimeNum = index(row, G::ShutterspeedColumn).data().toFloat();
+    m.exposureTimeNum = index(row, G::ShutterspeedColumn).data().toDouble();
 
     if (m.exposureTimeNum < 1.0) {
-        uint t = qRound(1 / m.exposureTimeNum);
-        m.exposureTime = "1/" + QString::number(t);
-    } else {
+        double recip = 1 / m.exposureTimeNum;
+        if (recip >= 2) m.exposureTime = "1/" + QString::number(qRound(recip));
+        else m.exposureTime = QString::number(m.exposureTimeNum, 'g', 2);
+    }
+    else {
         m.exposureTime = QString::number(m.exposureTimeNum);
     }
     m.exposureTime += " sec";
 
-    m.ISONum = index(row, G::ISOColumn).data().toFloat();
+    m.ISONum = index(row, G::ISOColumn).data().toInt();
     m.ISO = QString::number(m.ISONum);
+    m.exposureCompensationNum = index(row, G::ExposureCompensationColumn).data().toDouble();
+    m.exposureCompensation = QString::number(m.exposureCompensationNum, 'f', 1);
     m.make = index(row, G::CameraMakeColumn).data().toString();
     m.model = index(row, G::CameraModelColumn).data().toString();
     m.lens = index(row, G::LensColumn).data().toString();
@@ -658,12 +644,26 @@ Used by InfoString and IngestDlg
     m._url = index(row, G::_UrlColumn).data().toString();
     m.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
 
-    m.offsetFullJPG = index(row, G::OffsetFullJPGColumn).data().toUInt();
-    m.lengthFullJPG = index(row, G::LengthFullJPGColumn).data().toUInt();
-    m.offsetThumbJPG = index(row, G::OffsetThumbJPGColumn).data().toUInt();
-    m.lengthThumbJPG = index(row, G::LengthThumbJPGColumn).data().toUInt();
-    m.offsetSmallJPG = index(row, G::OffsetSmallJPGColumn).data().toUInt();
-    m.lengthSmallJPG = index(row, G::LengthSmallJPGColumn).data().toUInt();
+    m.offsetFull = index(row, G::OffsetFullColumn).data().toUInt();
+    m.lengthFull = index(row, G::LengthFullColumn).data().toUInt();
+    m.offsetThumb = index(row, G::OffsetThumbColumn).data().toUInt();
+    m.lengthThumb = index(row, G::LengthThumbColumn).data().toUInt();
+//    m.offsetSmall = index(row, G::OffsetSmallColumn).data().toUInt();
+//    m.lengthSmall = index(row, G::LengthSmallColumn).data().toUInt();
+
+    // update only for tiffs
+//    if (index(row, G::TypeColumn).data().toString() == "tif") {
+//        m.bitsPerSample = index(row, G::bitsPerSampleColumn).data().toInt();
+//        m.photoInterp = index(row, G::photoInterpColumn).data().toInt();
+        m.samplesPerPixel = index(row, G::samplesPerPixelColumn).data().toInt();
+//        m.compression = index(row, G::compressionColumn).data().toInt();
+//        m.stripByteCounts = index(row, G::stripByteCountsColumn).data().toUInt();
+//        m.planarConfiguration = index(row, G::stripByteCountsColumn).data().toUInt();
+
+//    }
+
+    m.isBigEnd = index(row, G::isBigEndianColumn).data().toBool();
+    m.ifd0Offset = index(row, G::ifd0OffsetColumn).data().toUInt();
     m.xmpSegmentOffset = index(row, G::XmpSegmentOffsetColumn).data().toUInt();
     m.xmpNextSegmentOffset = index(row, G::XmpNextSegmentOffsetColumn).data().toUInt();
     m.orientationOffset = index(row, G::OrientationOffsetColumn).data().toUInt();
@@ -716,18 +716,56 @@ to run as a separate thread and can be executed directly.
              << currentFolderPath;
 }
 
+bool DataModel::readMetadataForItem(int row)
+{
+/*
+Reads the image metadata into the datamodel for the row.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString fPath = index(row, 0).data(G::PathRole).toString();
+
+    // load metadata
+    if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
+        QFileInfo fileInfo(fPath);
+
+        // only read metadata from files that we know how to
+        QString ext = fileInfo.suffix().toLower();
+        if (metadata->getMetadataFormats.contains(ext)) {
+//                qDebug() << __FUNCTION__ << fPath << ext;
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+                metadata->imageMetadata.row = row;
+                addMetadataForItem(metadata->imageMetadata);
+            }
+            else {
+                qDebug() << __FUNCTION__ << "Failed to load metadata for" << fPath;
+                return false;
+            }
+        }
+        // cannot read this file type, load empty metadata
+        else {
+            metadata->clearMetadata();
+            metadata->imageMetadata.row = row;
+            addMetadataForItem(metadata->imageMetadata);
+        }
+    }
+    return true;
+}
+
 bool DataModel:: addMetadataForItem(ImageMetadata m)
 {
-    /*
-    This function is called after the metadata for each eligible image in the selected
-    folder(s) is being cached or when addAllMetadata is called prior of filtering or
-    sorting. The metadata is displayed in tableView, which is created in MW, and in
-    InfoView.
+/*
+This function is called after the metadata for each eligible image in the selected folder(s)
+is being cached or when addAllMetadata is called prior of filtering or sorting. The metadata
+is displayed in tableView, which is created in MW, and in InfoView.
 
-    If a folder is opened with combineRawJpg all the metadata for the raw file may not have
-    been loaded, but editable data, (such as rating, label, title, email, url) may have been
-    edited in the jpg file of the raw+jpg pair.  If so, we do not want to overwrite this data.
-    */
+If a folder is opened with combineRawJpg all the metadata for the raw file may not have been
+loaded, but editable data, (such as rating, label, title, email, url) may have been edited in
+the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -770,6 +808,8 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::ShutterspeedColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::ISOColumn), m.ISONum);
     setData(index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+    setData(index(row, G::ExposureCompensationColumn), m.exposureCompensationNum);
+    setData(index(row, G::ExposureCompensationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::CameraMakeColumn), m.make);
     setData(index(row, G::CameraMakeColumn), m.make, Qt::ToolTipRole);
     search += m.make;
@@ -805,12 +845,22 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::UrlColumn), m.url);
     search += m.url;
     setData(index(row, G::_UrlColumn), m._url);
-    setData(index(row, G::OffsetFullJPGColumn), m.offsetFullJPG);
-    setData(index(row, G::LengthFullJPGColumn), m.lengthFullJPG);
-    setData(index(row, G::OffsetThumbJPGColumn), m.offsetThumbJPG);
-    setData(index(row, G::LengthThumbJPGColumn), m.lengthThumbJPG);
-    setData(index(row, G::OffsetSmallJPGColumn), m.offsetSmallJPG);
-    setData(index(row, G::LengthSmallJPGColumn), m.lengthSmallJPG);
+    setData(index(row, G::OffsetFullColumn), m.offsetFull);
+    setData(index(row, G::LengthFullColumn), m.lengthFull);
+    setData(index(row, G::OffsetThumbColumn), m.offsetThumb);
+    setData(index(row, G::LengthThumbColumn), m.lengthThumb);
+//    setData(index(row, G::OffsetSmallColumn), m.offsetSmall);
+//    setData(index(row, G::LengthSmallColumn), m.lengthSmall);
+
+//    setData(index(row, G::bitsPerSampleColumn), m.bitsPerSample);
+//    setData(index(row, G::photoInterpColumn), m.photoInterp);
+    setData(index(row, G::samplesPerPixelColumn), m.samplesPerPixel); // reqd for err trapping
+//    setData(index(row, G::compressionColumn), m.compression);
+//    setData(index(row, G::stripByteCountsColumn), m.stripByteCounts);
+//    setData(index(row, G::planarConfigurationFullColumn), m.stripByteCounts);
+
+    setData(index(row, G::isBigEndianColumn), m.isBigEnd);
+    setData(index(row, G::ifd0OffsetColumn), m.ifd0Offset);
     setData(index(row, G::XmpSegmentOffsetColumn), m.xmpSegmentOffset);
     setData(index(row, G::XmpNextSegmentOffsetColumn), m.xmpNextSegmentOffset);
     setData(index(row, G::IsXMPColumn), m.isXmp);
@@ -826,7 +876,7 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo, Qt::ToolTipRole);
     search += m.shootingInfo;
-    setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
+    setData(index(row, G::MetadataLoadedColumn), true);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
 
@@ -1013,7 +1063,6 @@ When Raw+Jpg is toggled in the main program MW the file type filter must be rebu
         QString type = sf->index(row, G::TypeColumn).data().toString();
         if (!typesMap.contains(type)) {
             typesMap[type] = type;
-            qDebug() << __FUNCTION__ << "Adding" << type;
         }
     }
     filters->addCategoryFromData(typesMap, filters->types);
@@ -1045,24 +1094,24 @@ quick lookup to get the datamodel row from an image path.
     */
 }
 
-void DataModel::updateImageList()
-{
-/* The image list of file paths replicates the current sort order and
-filtration of SortFilter (sf). It is used to keep the image cache in sync with
-the current state of SortFilter. This function is called when the user changes
-the sort or filter or toggles raw+jpg.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    imageFilePathList.clear();
-    for(int row = 0; row < sf->rowCount(); row++) {
-        QString fPath = sf->index(row, 0).data(G::PathRole).toString();
-        imageFilePathList.append(fPath);
-    }
-}
+//void DataModel::updateImageList()
+//{
+///* The image list of file paths replicates the current sort order and
+//filtration of SortFilter (sf). It is used to keep the image cache in sync with
+//the current state of SortFilter. This function is called when the user changes
+//the sort or filter or toggles raw+jpg.
+//*/
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    imageFilePathList.clear();
+//    for(int row = 0; row < sf->rowCount(); row++) {
+//        QString fPath = sf->index(row, 0).data(G::PathRole).toString();
+//        imageFilePathList.append(fPath);
+//    }
+//}
 
 void DataModel::clearPicks()
 {
@@ -1104,7 +1153,7 @@ QString DataModel::diagnostics()
         rpt << "\n  " << "File Name = " << G::s(index(row, G::NameColumn).data());
         rpt << "\n  " << "File Path = " << G::s(index(row, 0).data(G::PathRole));
         rpt << "\n  " << "dupHideRaw = " << G::s(index(row, 0).data(G::DupHideRawRole));
-        rpt << "\n  " << "dupRawRow = " << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupRawIdxRole)).row());
+        rpt << "\n  " << "dupRawRow = " << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
         rpt << "\n  " << "dupIsJpg = " << G::s(index(row, 0).data(G::DupIsJpgRole));
         rpt << "\n  " << "dupRawType = " << G::s(index(row, 0).data(G::DupRawTypeRole));
         rpt << "\n  " << "type = " << G::s(index(row, G::TypeColumn).data());
@@ -1129,6 +1178,7 @@ QString DataModel::diagnostics()
         rpt << "\n  " << "apertureNum = " << G::s(index(row, G::ApertureColumn).data());
         rpt << "\n  " << "exposureTimeNum = " << G::s(index(row, G::ShutterspeedColumn).data());
         rpt << "\n  " << "iso = " << G::s(index(row, G::ISOColumn).data());
+        rpt << "\n  " << "exposureCompensationNum = " << G::s(index(row, G::ExposureCompensationColumn).data());
         rpt << "\n  " << "make = " << G::s(index(row, G::CameraMakeColumn).data());
         rpt << "\n  " << "model = " << G::s(index(row, G::CameraModelColumn).data());
         rpt << "\n  " << "lens = " << G::s(index(row, G::LensColumn).data());
@@ -1143,12 +1193,14 @@ QString DataModel::diagnostics()
         rpt << "\n  " << "_email = " << G::s(index(row, G::_EmailColumn).data());
         rpt << "\n  " << "url = " << G::s(index(row, G::UrlColumn).data());
         rpt << "\n  " << "_url = " << G::s(index(row, G::_UrlColumn).data());
-        rpt << "\n  " << "offsetFullJPG = " << G::s(index(row, G::OffsetFullJPGColumn).data());
-        rpt << "\n  " << "lengthFullJPG = " << G::s(index(row, G::LengthFullJPGColumn).data());
-        rpt << "\n  " << "offsetThumbJPG = " << G::s(index(row, G::OffsetThumbJPGColumn).data());
-        rpt << "\n  " << "lengthThumbJPG = " << G::s(index(row, G::LengthThumbJPGColumn).data());
-        rpt << "\n  " << "offsetSmallJPG = " << G::s(index(row, G::OffsetSmallJPGColumn).data());
-        rpt << "\n  " << "lengthSmallJPG = " << G::s(index(row, G::LengthSmallJPGColumn).data());
+        rpt << "\n  " << "offsetFull = " << G::s(index(row, G::OffsetFullColumn).data());
+        rpt << "\n  " << "lengthFull = " << G::s(index(row, G::LengthFullColumn).data());
+        rpt << "\n  " << "offsetThumb = " << G::s(index(row, G::OffsetThumbColumn).data());
+        rpt << "\n  " << "lengthThumb = " << G::s(index(row, G::LengthThumbColumn).data());
+//        rpt << "\n  " << "offsetSmall = " << G::s(index(row, G::OffsetSmallColumn).data());
+//        rpt << "\n  " << "lengthSmall = " << G::s(index(row, G::LengthSmallColumn).data());
+        rpt << "\n  " << "isBigEndian = " << G::s(index(row, G::isBigEndianColumn).data());
+        rpt << "\n  " << "ifd0Offset = " << G::s(index(row, G::ifd0OffsetColumn).data());
         rpt << "\n  " << "xmpSegmentOffset = " << G::s(index(row, G::XmpSegmentOffsetColumn).data());
         rpt << "\n  " << "xmpNextSegmentOffset = " << G::s(index(row, G::XmpNextSegmentOffsetColumn).data());
 

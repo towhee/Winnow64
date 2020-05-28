@@ -86,7 +86,6 @@ private:
     QMatrix matrix;
 
     QPixmap displayPixmap;
-    QPixmap *pickPixmap;
     QImage thumbsUp;
 
     struct intSize

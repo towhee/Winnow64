@@ -148,3 +148,9 @@ newImage(newImageBlob,Geometry(pixmapGraphic.width(),pixmapGraphic.height()),"jp
 
 image = newImage;
 }
+
+// working with char and uchar examples
+char *buffer;
+buffer = new char[length];
+
+const char *buf = ba.data();

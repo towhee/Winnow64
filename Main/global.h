@@ -23,7 +23,7 @@ namespace G
         ThumbRectRole,
         CachedRole,
         DupIsJpgRole,
-        DupRawIdxRole,
+        DupOtherIdxRole,
         DupHideRawRole,
         DupRawTypeRole,
         ColumnRole,
@@ -61,6 +61,7 @@ namespace G
         ApertureColumn,
         ShutterspeedColumn,
         ISOColumn,
+        ExposureCompensationColumn,
         CameraMakeColumn,
         CameraModelColumn,
         LensColumn,
@@ -80,12 +81,22 @@ namespace G
         _UrlColumn,
 
         // binary helpers
-        OffsetFullJPGColumn,
-        LengthFullJPGColumn,
-        OffsetThumbJPGColumn,
-        LengthThumbJPGColumn,
-        OffsetSmallJPGColumn,
-        LengthSmallJPGColumn,
+        OffsetFullColumn,
+        LengthFullColumn,
+        OffsetThumbColumn,
+        LengthThumbColumn,
+//        OffsetSmallColumn,
+//        LengthSmallColumn,
+
+//        bitsPerSampleColumn,
+//        photoInterpColumn,
+        samplesPerPixelColumn,
+//        compressionColumn,
+//        stripByteCountsColumn,
+//        planarConfigurationFullColumn,
+
+        isBigEndianColumn,
+        ifd0OffsetColumn,
         XmpSegmentOffsetColumn,
         XmpNextSegmentOffsetColumn,
         IsXMPColumn,
@@ -112,8 +123,10 @@ namespace G
         QImage image;
     };
 
-    extern quint32 availableMemoryMB;
-    extern quint32 winnowMemoryBeforeCacheMB;
+    extern int availableMemoryMB;
+    extern int winnowMemoryBeforeCacheMB;
+    extern int metaCacheMB;
+    extern bool memTest;
 
     struct WinScreen {
         QString adaptor;
