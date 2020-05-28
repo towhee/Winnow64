@@ -1,9 +1,6 @@
 BUGS
-- get rid of OffsetSmall, LengthSmall??
-- Nikon lens SN
 - Navigating thumbs in large folders while still opening can crash
 - Ingest if image does not have metadata req'd
-- is mouseMovementTimer in imageView req'd
 - Mac check for updates not done yet
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
@@ -13,11 +10,9 @@ CODE IMPROVEMENTS
 - Possibly combine workspaces into an actionGroup so can check active workspace
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Copy path in Folders and Bookmarks context menu
 - Read HEIF files
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
-- Copy image/pixmap to clipboard
 - TableView freeze columns https://doc.qt.io/qt-5/qtwidgets-itemviews-frozencolumn-example.html
 - Read keywords
 - Write xmp into eligible files ???
@@ -29,6 +24,10 @@ ENHANCEMENTS
 - Zoom rect in thumbnail to show zoom and pan in imageView
 
 DONE/FIXED
+- Pick/unpick mouseover thumbnail with mouse forward/back
+- Copy image/pixmap to clipboard
+- Copy path in Folders and Bookmarks context menu
+- Ingest not including ratings or color labels when combineRawJpg
 - Crash when tif has 5 samplesPerPixel (libTiff)
 - Tif load slowly
 - DataModel memory + better mem management

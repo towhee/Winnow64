@@ -1306,11 +1306,18 @@ bool Nikon::parse(MetadataParameters &p,
             p.offset = ifdOffsets[0];
             ifd->readIFD(p, m, isBigEnd);
             // pull data reqd from SubIFD1
-            m.offsetFull = ifd->ifdDataHash.value(513).tagValue;
-            m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
+            if (ifd->ifdDataHash.contains(513)) {
+                // newer models
+                m.offsetFull = ifd->ifdDataHash.value(513).tagValue;
+                m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
+            }
+            else {
             // D2H and older
-            m.width = ifd->ifdDataHash.value(256).tagValue;
-            m.height = ifd->ifdDataHash.value(257).tagValue;
+                m.width = ifd->ifdDataHash.value(256).tagValue;
+                m.height = ifd->ifdDataHash.value(257).tagValue;
+//                m.offsetFull = ifd->ifdDataHash.value(273).tagValue;
+//                m.lengthFull = ifd->ifdDataHash.value(279).tagValue;
+            }
         }
 
         // pull data reqd from SubIFD2
@@ -1325,15 +1332,15 @@ bool Nikon::parse(MetadataParameters &p,
         }
 
         // SubIFD3 contains small size jpg offset and length
-        if (ifdOffsets.count() > 2) {
-            hdr = "SubIFD3";
-            p.hdr = "SubIFD3";
-            p.offset = ifdOffsets[2];
-            ifd->readIFD(p, m, isBigEnd);
-            m.offsetSmall = ifd->ifdDataHash.value(513).tagValue;
-            m.lengthSmall = ifd->ifdDataHash.value(514).tagValue;
-//            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
-        }
+//        if (ifdOffsets.count() > 2) {
+//            hdr = "SubIFD3";
+//            p.hdr = "SubIFD3";
+//            p.offset = ifdOffsets[2];
+//            ifd->readIFD(p, m, isBigEnd);
+//            m.offsetSmall = ifd->ifdDataHash.value(513).tagValue;
+//            m.lengthSmall = ifd->ifdDataHash.value(514).tagValue;
+////            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
+//        }
     }
 
     // read ExifIFD
@@ -1488,7 +1495,12 @@ bool Nikon::parse(MetadataParameters &p,
             ifd->readIFD(p, m, isBigEnd);
 
             m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + makerOffsetBase;
-            m.lengthThumb = ifd->ifdDataHash.value(514).tagValue; // + makerOffsetBase;
+            m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
+            // older nikons like D2h and D100
+            if (m.lengthFull == 0 && m.lengthThumb > 0) {
+                m.offsetFull = m.offsetThumb;
+                m.lengthFull = m.lengthThumb;
+            }
 //            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
         }
     }

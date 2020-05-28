@@ -18,8 +18,8 @@ public:
     quint32 lengthFull = 0;
     quint32 offsetThumb = 0;
     quint32 lengthThumb = 0;
-    quint32 offsetSmall = 0;
-    quint32 lengthSmall = 0;
+//    quint32 offsetSmall = 0;
+//    quint32 lengthSmall = 0;
 
     // need for TIFF
 //    int bitsPerSample = 0;

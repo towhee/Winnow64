@@ -1715,7 +1715,7 @@ int IconView::getVerticalScrollBarMax()
     if (thumbsPerPage == 0) return 0;
     int n = dm->sf->rowCount();
     float pages = float(n) / thumbsPerPage - 1;
-    int vMax = pages * pageHeight;
+    int vMax = static_cast<int>(pages * pageHeight);
     /*
     qDebug() << G::t.restart() << "\t" << objectName()
              << "Row =" << m2->currentRow
@@ -1756,14 +1756,11 @@ different position than the current image.
     else G::fileSelectionChangeSource =  "ThumbMouseClick";
 
     // forward and back buttons
-    if (event->button() == Qt::BackButton) {
-//        thumbView->selectPrev();
-        m2->togglePick();
-        return;
-    }
-    if (event->button() == Qt::ForwardButton) {
-//        thumbView->selectNext();
-        m2->togglePick();
+    if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) {
+        QModelIndex idx = indexAt(event->pos());
+        if (idx.isValid()) {
+             m2->togglePickMouseOverItem(idx);
+        }
         return;
     }
 

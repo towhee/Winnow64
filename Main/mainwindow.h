@@ -418,6 +418,7 @@ private slots:
 //    void toggleThumbWrap();
     void setIngested();
     void togglePick();
+    void togglePickMouseOverItem(QModelIndex idx);
     void togglePickUnlessRejected();
     void pushPick(QString fPath, QString status = "true");
     void popPick();
@@ -488,6 +489,7 @@ private slots:
     void refreshCurrentFolder();
     void openUsbFolder();
     void saveAsFile();
+    void copyFolderPathFromContext();
     void revealFile();
     void revealFileFromContext();
     void revealInFileBrowser(QString path);
@@ -555,6 +557,7 @@ private:
     QAction *revealFileAction;
     QAction *saveAsFileAction;
     QAction *revealFileActionFromContext;
+    QAction *copyPathActionFromContext;
     QAction *openWithMenuAction;
         QAction *manageAppAction;
         QList<QAction *> appActions;
@@ -585,6 +588,7 @@ private:
     QAction *selectAllAction;
     QAction *invertSelectionAction;
     QAction *copyAction;
+    QAction *copyImageAction;
     QAction *deleteAction;
     QAction *rejectAction;
     QAction *refineAction;

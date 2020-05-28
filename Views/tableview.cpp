@@ -162,8 +162,8 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::LengthFullColumn) return fm.boundingRect("=LengthFullColumn=").width();
     if (column == G::OffsetThumbColumn) return fm.boundingRect("=OffsetThumbColumn=").width();
     if (column == G::LengthThumbColumn) return fm.boundingRect("=LengthThumbColumn=").width();
-    if (column == G::OffsetSmallColumn) return fm.boundingRect("=OffsetSmallColumn=").width();
-    if (column == G::LengthSmallColumn) return fm.boundingRect("=LengthSmallColumn=").width();
+//    if (column == G::OffsetSmallColumn) return fm.boundingRect("=OffsetSmallColumn=").width();
+//    if (column == G::LengthSmallColumn) return fm.boundingRect("=LengthSmallColumn=").width();
 
 //    if (column == G::bitsPerSampleColumn) return fm.boundingRect("=bitsPerSampleFullColumn=").width();
 //    if (column == G::photoInterpColumn) return fm.boundingRect("=photoInterpFullColumn=").width();

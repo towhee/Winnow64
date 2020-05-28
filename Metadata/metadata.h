@@ -61,8 +61,8 @@ public:
     quint32 lengthFull;
     quint32 offsetThumb;
     quint32 lengthThumb;
-    quint32 offsetSmall;
-    quint32 lengthSmall;
+//    quint32 offsetSmall;
+//    quint32 lengthSmall;
     quint32 xmpSegmentOffset;
     quint32 xmpNextSegmentOffset;
     bool isXmp;

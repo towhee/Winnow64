@@ -1176,11 +1176,8 @@ void ImageView::copyImage()
     #endif
     }
     QApplication::clipboard()->setPixmap(pmItem->pixmap(), QClipboard::Clipboard);
-//    QClipboard *clipboard = QApplication::clipboard();
-//    clipboard->setPixmap(pmItem->pixmap(), QClipboard::Clipboard);
-//    QMimeData *data = new QMimeData;
-//    data->setImageData(displayImage);
-//    QApplication::clipboard()->setMimeData(data, QClipboard::Clipboard);
+    QString msg = "Copied current image to the clipboard";
+    G::popUp->showPopup(msg, 1500);
 }
 
 // not being used, but maybe in the future

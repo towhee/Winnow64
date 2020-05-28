@@ -181,7 +181,14 @@ void BookMarks::resizeEvent(QResizeEvent *event)
 void BookMarks::mousePressEvent(QMouseEvent *event)
 {
     // ignore right mouse clicks (context menu)
-    if (event->button() == Qt::RightButton) return;
+    if (event->button() == Qt::RightButton) {
+//        QTreeWidgetItem *item = itemAt(event->pos());
+//        if (item) {
+//            qDebug() << __FUNCTION__ << item->toolTip(0);
+//        }
+        return;
+    }
+
     QTreeWidget::mousePressEvent(event);
 }
 

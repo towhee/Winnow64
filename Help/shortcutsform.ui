@@ -209,6 +209,39 @@
        </item>
        <item>
         <property name="text">
+         <string>Copy image</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Shift + C</string>
+        </property>
+        <property name="text">
+         <string>Copy the current image bitmap to the clipboard</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Copy files</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + C</string>
+        </property>
+        <property name="text">
+         <string>Copy selected files to the clipboard</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Delete files</string>
+        </property>
+        <property name="text">
+         <string>Delete</string>
+        </property>
+        <property name="text">
+         <string>Delete selected files (confirmation dialog)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Report metadata</string>
         </property>
         <property name="text">

@@ -18,6 +18,7 @@ public:
     QSet<QString> bookmarkPaths;
     bool showImageCount;
     bool &combineRawJpg;
+    QString rightMouseClickPath;
 
 public slots:
 	void removeBookmark();

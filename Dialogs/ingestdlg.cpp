@@ -236,7 +236,7 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
             if (dm->sf->mapFromSource(idx).isValid()) {
                 // if raw+jpg files have been combined
                 if (combineRawJpg) {
-                    // append if combined jpg and include combined jpgs
+                    // append the jpg if combineRawJpg and include combined jpgs
                     if (inclDupJpg && idx.data(G::DupIsJpgRole).toBool()) {
                         fPath = idx.data(G::PathRole).toString();
                         QFileInfo fileInfo(fPath);
@@ -245,7 +245,7 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
                     }
                     // append combined raw file
                     if (idx.data(G::DupIsJpgRole).toBool()) {
-                        idx = qvariant_cast<QModelIndex>(dm->index(row, 0).data(G::DupRawIdxRole));
+                        idx = qvariant_cast<QModelIndex>(dm->index(row, 0).data(G::DupOtherIdxRole));
                     }
                 }
                 fPath = idx.data(G::PathRole).toString();
@@ -261,7 +261,7 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
     fileMB = 0;
 
     qulonglong bytes = 0;
-    foreach(QFileInfo info, pickList) bytes += (float)info.size();
+    foreach(QFileInfo info, pickList) bytes += static_cast<qulonglong>(info.size());
     QString s1 = QString::number(fileCount);
     QString s2 = fileCount == 1 ? " file using " : " files using ";
     QString s3 = Utilities::formatMemory(bytes);
@@ -301,8 +301,6 @@ Each picked image is copied from the source to the destination.
     G::track(__FUNCTION__);
     #endif
     }
-//    bool backup = ui->backupChk->isChecked();
-
     // get rid of "/" at end of path for history (in file menu)
     QString historyPath = folderPath.left(folderPath.length() - 1);
     emit updateIngestHistory(historyPath);
@@ -357,11 +355,31 @@ Each picked image is copied from the source to the destination.
         // rename destination and fileName if already exists
         renameIfExists(destinationPath, destBaseName, dotSuffix);
 
-        /* If there is edited xmp data in an eligible file format copy it
-           into a buffer.  This routine is also used in MW::runExternalApp()
+        /* If there is edited xmp data in an eligible file format, copy it into a buffer. This
+        routine is also used in MW::runExternalApp().  If combinedRawJpg then use the jpg from
+        the datamodel as that is where changes to ratings and labels etc will have occurred.
         */
-        if (metadata->writeMetadata(sourcePath, dm->imMetadata(sourcePath), buffer)
-        && metadata->sidecarFormats.contains(suffix) && ingestIncludeXmpSidecar) {
+
+        // set the metadataChangedSourcePath depending on combineRawJpg
+        QString metadataChangedSourcePath = sourcePath;
+        if (combineRawJpg) {
+            // only raw files included if combineRawJpg and there is a rawjpg pair
+            int dmRow = dm->fPathRow[sourcePath];
+            QModelIndex idx = dm->index(dmRow, 0);
+            if (idx.isValid()) {
+                // check if raw/jpg pair
+                if (idx.data(G::DupHideRawRole).toBool()) {
+                    QModelIndex jpgIdx = idx.data(G::DupOtherIdxRole).toModelIndex();
+                    if (jpgIdx.isValid()) {
+                        metadataChangedSourcePath = jpgIdx.data(G::PathRole).toString();
+                    }
+                }
+            }
+        }
+        ImageMetadata m = dm->imMetadata(metadataChangedSourcePath);
+        qDebug() << __FUNCTION__ << m.label;
+        if (ingestIncludeXmpSidecar &&
+        metadata->writeMetadata(sourcePath, m, buffer) ) {
             // copy image file
             QFile::copy(sourcePath, destinationPath);
             if(isBackup) QFile::copy(sourcePath, backupPath);
@@ -393,7 +411,6 @@ Each picked image is copied from the source to the destination.
             if(isBackup) QFile::copy(sourcePath, backupPath);
         }
     }
-//    emit revealIngestLocation(folderPath);
     QDialog::accept();
 }
 
