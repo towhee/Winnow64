@@ -756,6 +756,33 @@ void ImageView::transform()
     rotateByExifRotation(displayImage, currentImagePath);
 }
 
+void ImageView::sceneGeometry(QPoint &sceneOrigin, QRectF &scene_Rect, QRect &cwRect)
+{
+/*
+Return the top left corner of the image showing in the central widget in percent.  This is
+used to determine the zoomCursor aspect in ThumbView.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    sceneOrigin = mapFromScene(0.0, 0.0);
+    scene_Rect = sceneRect();
+    cwRect = centralWidget->rect();
+////    qreal xOff = static_cast<qreal>(sceneOrigin.x());
+////    qreal yOff = static_cast<qreal>(sceneOrigin.y());
+////    xOff < 0 ? xOff = 0 : xOff = xOff;
+////    yOff < 0 ? yOff = 0 : yOff = yOff;
+//    qreal xPct = xOff / centralWidget->rect().width();
+//    qreal yPct = yOff / centralWidget->rect().height();
+//    qDebug() << __FUNCTION__
+//             << "sceneOrigin =" << sceneOrigin
+//             << "sceneRect() =" << sceneRect()
+//             << "centralWidget->rect() =" << centralWidget->rect();
+//    return QSizeF(xPct, yPct);
+}
+
 void ImageView::moveShootingInfo(QString infoString)
 {
 /* Locate and format the info label, which currently displays the shooting

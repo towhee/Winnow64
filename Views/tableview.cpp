@@ -160,6 +160,8 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::_UrlColumn) return fm.boundingRect("=Url=======================").width();
     if (column == G::OffsetFullColumn) return fm.boundingRect("=OffsetFullColumn=").width();
     if (column == G::LengthFullColumn) return fm.boundingRect("=LengthFullColumn=").width();
+    if (column == G::WidthFullColumn) return fm.boundingRect("=WidthFull=").width();
+    if (column == G::HeightFullColumn) return fm.boundingRect("=HeightFull=").width();
     if (column == G::OffsetThumbColumn) return fm.boundingRect("=OffsetThumbColumn=").width();
     if (column == G::LengthThumbColumn) return fm.boundingRect("=LengthThumbColumn=").width();
 //    if (column == G::OffsetSmallColumn) return fm.boundingRect("=OffsetSmallColumn=").width();

@@ -44,7 +44,7 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     }
 }
 
-bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
+bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 {
     {
     #ifdef ISDEBUG
@@ -63,6 +63,11 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image)
         // let thumbReader do its thing
         thumbReader.setFileName(fPath);
         QSize size = thumbReader.size();
+
+        dm->setData(dm->index(row, G::WidthColumn), size.width());
+        dm->setData(dm->index(row, G::WidthFullColumn), size.width());
+        dm->setData(dm->index(row, G::HeightColumn), size.height());
+        dm->setData(dm->index(row, G::HeightFullColumn), size.height());
 
         size.scale(thumbMax, Qt::KeepAspectRatio);
         thumbReader.setScaledSize(size);
@@ -178,7 +183,7 @@ that is faster than loading the entire full resolution image just to get a thumb
 
     // The image type might not have metadata we can read, so load entire image and resize
     if (!metadata->getMetadataFormats.contains(ext)) {
-        return loadFromEntireFile(fPath, image);
+        return loadFromEntireFile(fPath, image, row);
     }
 
     // Check if metadata has been cached for this image
@@ -195,7 +200,7 @@ that is faster than loading the entire full resolution image just to get a thumb
     /* A raw file may not have any embedded jpg or be corrupted.  */
     if (metadata->rawFormats.contains(ext) && !thumbFound) {
         QString path = ":/images/badImage1.png";
-        loadFromEntireFile(path, image);
+        loadFromEntireFile(path, image, row);
         return false;
     }
 
@@ -218,7 +223,7 @@ that is faster than loading the entire full resolution image just to get a thumb
                 success = loadFromTiffData(fPath, image);
                 if (!success) {
                     qDebug() << __FUNCTION__ << "loadFromTiffData Failed, trying loadFromEntireFile" << fPath;
-                    success = loadFromEntireFile(fPath, image);
+                    success = loadFromEntireFile(fPath, image, row);
                     if (!success) {
                         err = "Failed to load thumb";
                     }
@@ -231,7 +236,7 @@ that is faster than loading the entire full resolution image just to get a thumb
         }
         else  {
             // read the image file (supported by Qt), scaling to thumbnail size
-            if(loadFromEntireFile(fPath, image)) {
+            if(loadFromEntireFile(fPath, image, row)) {
                   success = true;
                   if (success) image.convertTo(QImage::Format_RGB32);
             }
@@ -240,6 +245,12 @@ that is faster than loading the entire full resolution image just to get a thumb
                 err = "Could not open file";    // try again
             }
         }
+//        if (success && metadata->noMetadataFormats.contains(ext)) {
+//            dm->setData(dm->index(row, G::WidthColumn), image.width());
+//            dm->setData(dm->index(row, G::WidthFullColumn), image.width());
+//            dm->setData(dm->index(row, G::HeightColumn), image.height());
+//            dm->setData(dm->index(row, G::HeightFullColumn), image.height());
+//        }
     } while(moreThanOnce);
 
     if (err != "") {

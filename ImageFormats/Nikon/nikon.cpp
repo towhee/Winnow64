@@ -1240,7 +1240,8 @@ QByteArray Nikon::nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial
 bool Nikon::parse(MetadataParameters &p,
                   ImageMetadata &m,
                   IFD *ifd,
-                  Exif *exif)
+                  Exif *exif,
+                  Jpeg *jpeg)
 {
     {
     #ifdef ISDEBUG
@@ -1310,6 +1311,8 @@ bool Nikon::parse(MetadataParameters &p,
                 // newer models
                 m.offsetFull = ifd->ifdDataHash.value(513).tagValue;
                 m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
+                p.offset = m.offsetFull;
+                jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
             }
             else {
             // D2H and older
@@ -1500,6 +1503,8 @@ bool Nikon::parse(MetadataParameters &p,
             if (m.lengthFull == 0 && m.lengthThumb > 0) {
                 m.offsetFull = m.offsetThumb;
                 m.lengthFull = m.lengthThumb;
+                p.offset = m.offsetFull;
+                jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
             }
 //            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
         }

@@ -156,6 +156,8 @@ bool Panasonic::parse(MetadataParameters &p,
     m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
     m.offsetFull = ifd->ifdDataHash.value(46).tagValue;
     m.lengthFull = ifd->ifdDataHash.value(46).tagCount;
+    p.offset = m.offsetFull;
+    jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
     m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
     m.xmpNextSegmentOffset = ifd->ifdDataHash.value(700).tagCount + m.xmpSegmentOffset;
     m.height = ifd->ifdDataHash.value(49).tagValue;

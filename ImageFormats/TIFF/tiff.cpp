@@ -94,6 +94,8 @@ bool Tiff::parse(MetadataParameters &p,
     (ifd->ifdDataHash.contains(257))
         ? m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue)
         : m.height = 0;
+    m.widthFull = m.width;
+    m.heightFull = m.height;
 
 //    // IFD0: bitsPerSampleFull
 //    m.bitsPerSample = 0;

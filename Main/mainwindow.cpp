@@ -558,20 +558,20 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 //    qDebug() << __FUNCTION__ << obj->objectName() << event->type();
 //    return QWidget::eventFilter(obj, event);
 
-// use to show all events being filtered - handy to figure out which to intercept
-    if (event->type()        != QEvent::Paint
-            && event->type() != QEvent::UpdateRequest
-            && event->type() != QEvent::ZeroTimerEvent
-            && event->type() != QEvent::Timer
-            && event->type() == QEvent::MouseButtonPress
-            )
-    {
-//        qDebug() << __FUNCTION__
-//                 << event << "\t"
-//                 << event->type() << "\t"
-//                 << obj << "\t"
-//                 << obj->objectName();
-    }
+//// use to show all events being filtered - handy to figure out which to intercept
+//    if (event->type()        != QEvent::Paint
+//            && event->type() != QEvent::UpdateRequest
+//            && event->type() != QEvent::ZeroTimerEvent
+//            && event->type() != QEvent::Timer
+//            && event->type() == QEvent::MouseButtonPress
+//            )
+//    {
+////        qDebug() << __FUNCTION__
+////                 << event << "\t"
+////                 << event->type() << "\t"
+////                 << obj << "\t"
+////                 << obj->objectName();
+//    }
 
 
     // figure out key presses
@@ -657,6 +657,15 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* THUMBVIEW ZOOMCURSOR **************************************************************
+    Turn the cursor into a frame showing the ImageView zoom amount in the thumbnail.
+    */
+    if (obj == thumbView->viewport() && event->type() == QEvent::MouseMove) {
+        QMouseEvent *e = static_cast<QMouseEvent *>(event);
+//        const QModelIndex idx = thumbView->indexAt(e->pos());
+        thumbView->zoomCursor(e);
+    }
+
     /* THUMBDOCK SPLITTER ****************************************************************
 
     A splitter resize of top/bottom thumbDock is happening:
@@ -683,7 +692,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 
     if (event->type() == QEvent::MouseMove) {
-        if (isLeftMouseBtnPressed) isMouseDrag = true;
+        if (isLeftMouseBtnPressed) isMouseDrag = true;        
     }
 
     if (event->type() == QEvent::MouseButtonDblClick) {
@@ -10679,7 +10688,18 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    imageView->copyImage();
-
+//    qDebug() << __FUNCTION__ << imageView->sceneGeometry();
 }
 // End MW
+
+
+
+
+
+
+
+
+
+
+
+

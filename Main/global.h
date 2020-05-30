@@ -83,6 +83,8 @@ namespace G
         // binary helpers
         OffsetFullColumn,
         LengthFullColumn,
+        WidthFullColumn,
+        HeightFullColumn,
         OffsetThumbColumn,
         LengthThumbColumn,
 //        OffsetSmallColumn,

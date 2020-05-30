@@ -329,6 +329,7 @@ bool Olympus::parse(MetadataParameters &p,
             m.offsetFull = ifd->ifdDataHash.value(257).tagValue + makerOffset;
             m.lengthFull = ifd->ifdDataHash.value(258).tagValue;
             p.offset = m.offsetFull;
+            jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
             jpeg->getDimensions(p, m);
         }
     }

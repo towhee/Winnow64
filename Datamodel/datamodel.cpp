@@ -43,6 +43,8 @@ The data is structured in columns:
     ● Url:              from metadata       EditRole
     ● OffsetFullJPG:    from metadata       EditRole
     ● LengthFullJPG:    from metadata       EditRole
+    ● WidthFullJPG:     from metadata       EditRole
+    ● HeightFullJPG:    from metadata       EditRole
     ● OffsetThumbJPG:   from metadata       EditRole
     ● LengthThumbJPG:   from metadata       EditRole
 //    ● OffsetSmallJPG:   from metadata       EditRole
@@ -194,6 +196,8 @@ DataModel::DataModel(QWidget *parent,
 
     setHorizontalHeaderItem(G::OffsetFullColumn, new QStandardItem("OffsetFull")); horizontalHeaderItem(G::OffsetFullColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::LengthFullColumn, new QStandardItem("LengthFull")); horizontalHeaderItem(G::LengthFullColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::WidthFullColumn, new QStandardItem("WidthFull")); horizontalHeaderItem(G::WidthFullColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::HeightFullColumn, new QStandardItem("HeightFull")); horizontalHeaderItem(G::HeightFullColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OffsetThumbColumn, new QStandardItem("OffsetThumb")); horizontalHeaderItem(G::OffsetThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::LengthThumbColumn, new QStandardItem("LengthThumb")); horizontalHeaderItem(G::LengthThumbColumn)->setData(true, G::GeekRole);
 //    setHorizontalHeaderItem(G::OffsetSmallColumn, new QStandardItem("OffsetSmall")); horizontalHeaderItem(G::OffsetSmallColumn)->setData(true, G::GeekRole);
@@ -847,6 +851,8 @@ the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
     setData(index(row, G::_UrlColumn), m._url);
     setData(index(row, G::OffsetFullColumn), m.offsetFull);
     setData(index(row, G::LengthFullColumn), m.lengthFull);
+    setData(index(row, G::WidthFullColumn), m.widthFull);
+    setData(index(row, G::HeightFullColumn), m.heightFull);
     setData(index(row, G::OffsetThumbColumn), m.offsetThumb);
     setData(index(row, G::LengthThumbColumn), m.lengthThumb);
 //    setData(index(row, G::OffsetSmallColumn), m.offsetSmall);
@@ -1195,6 +1201,8 @@ QString DataModel::diagnostics()
         rpt << "\n  " << "_url = " << G::s(index(row, G::_UrlColumn).data());
         rpt << "\n  " << "offsetFull = " << G::s(index(row, G::OffsetFullColumn).data());
         rpt << "\n  " << "lengthFull = " << G::s(index(row, G::LengthFullColumn).data());
+        rpt << "\n  " << "widthFull = " << G::s(index(row, G::WidthFullColumn).data());
+        rpt << "\n  " << "heightFull = " << G::s(index(row, G::HeightFullColumn).data());
         rpt << "\n  " << "offsetThumb = " << G::s(index(row, G::OffsetThumbColumn).data());
         rpt << "\n  " << "lengthThumb = " << G::s(index(row, G::LengthThumbColumn).data());
 //        rpt << "\n  " << "offsetSmall = " << G::s(index(row, G::OffsetSmallColumn).data());
