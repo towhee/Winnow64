@@ -34,6 +34,7 @@ public:
 
     qreal zoom;
     qreal zoomFit;
+    bool isFit;
     qreal refZoom;                      // adjusted to real screen pixels
     qreal toggleZoom;
 
@@ -184,7 +185,6 @@ private:
     bool moveImageLocked;       // control when con drag image around
     bool isZoomToggled;
     bool isScrollable;
-    bool isFit;
     bool isMouseDrag;
     bool isTrackpadScroll;
     bool isLeftMouseBtnPressed;
