@@ -1864,13 +1864,20 @@ center.
 
 void IconView::zoomCursor(QMouseEvent *event)
 {
+    if (!showZoomFrame) return;
     const QModelIndex idx = indexAt(event->pos());
-    if (!idx.isValid() || idx == prevIdx) return;
+    if (!idx.isValid()) return;
+    if (m2->imageView->isFit) return;
+    int vpBottom = viewport()->rect().bottom() - G::scrollBarThickness;
+    if (event->pos().y() > vpBottom) {
+        setCursor(Qt::ArrowCursor);
+        prevIdx = model()->index(-1, -1);
+        return;
+    }
 
     // preview dimensions
     int imW = dm->sf->index(idx.row(), G::WidthFullColumn).data().toInt();
     int imH = dm->sf->index(idx.row(), G::HeightFullColumn).data().toInt();
-    QRect imageRect = QRect(0, 0, imW-1, imH-1);
 
     QRect centralRect = m2->centralWidget->rect();
     int cW = centralRect.width();
@@ -1889,16 +1896,14 @@ void IconView::zoomCursor(QMouseEvent *event)
 
     prevIdx = idx;
 
-    QRect iconRect = idx.data(G::ThumbRectRole).toRect();
-    qDebug() << __FUNCTION__ << iconRect << event->pos();
+    iconRect = idx.data(G::ThumbRectRole).toRect();
+//    qDebug() << __FUNCTION__ << iconRect << event->pos();
 
     // image visible width in centralRect - the ImageView viewport
     int zoomedImW = imW * zoom;
     int zoomedImH = imH * zoom;
     int ivW = (zoomedImW > cW) ? cW : zoomedImW;
     int ivH = (zoomedImH > cH) ? cH : zoomedImH;
-//    int ivW = cW - 2 * soX;
-//    int ivH = cH - 2 * soY;
     qreal ivA = static_cast<qreal>(ivW) / ivH;
     qreal imA = static_cast<qreal>(imW) / imH;
 
@@ -1914,6 +1919,10 @@ void IconView::zoomCursor(QMouseEvent *event)
         iconH = iconRect.height();
     }
 
+    int dx = (iconRect.width() - iconW) / 2;
+    int dy = (iconRect.height() - iconH) / 2;
+    iconRect.adjust(dx, dy, iconW, iconH);
+
     int w, h;       // zoom frame width and height in pixels
     if (hScale < vScale) {
         w = static_cast<int>(iconW * scale);
@@ -1924,20 +1933,18 @@ void IconView::zoomCursor(QMouseEvent *event)
         w = static_cast<int>(h * ivA);
     }
 
+    /*
     qDebug() << __FUNCTION__
+             << "zoom =" << zoom
              << "zoomFit =" << zoomFit
              << "iconRect =" << iconRect
              << "imW =" << imW
              << "imH =" << imH
              << "imA =" << imA
-//             << "sW =" << sW
-//             << "sH =" << sH
-//             << "sA =" << sA
              << "ivW =" << ivW
              << "ivH =" << ivH
              << "cW =" << cW
              << "cH =" << cH
-//             << "cA =" << cA
              << "hScale =" << hScale
              << "vScale =" << vScale
              << "scale =" << scale
@@ -1946,15 +1953,13 @@ void IconView::zoomCursor(QMouseEvent *event)
              << "w =" << w
              << "h =" << h
              << "ivA =" << ivA;
+//            */
 
-//    int iconWidth = iconRect.width();
-//    int iconHeight = iconRect.height();
-//    int w = static_cast<int>(iconRect.width() * zoomFit / zoom);
-//    int h = static_cast<int>(iconRect.height() * zoomFit / zoom);
     // make room for border
     int pw = 1;                                     // pen width
     w += (pw * 4);                                  // 2 pens / 2 sides
     h += (pw * 4);
+    cursorRect = QRect(0, 0, w, h);
     auto frame = new QImage(w, h, QImage::Format_ARGB32);
     int opacity = 0;                                // Set this between 0 and 255
     frame->fill(QColor(0,0,0,opacity));
@@ -1971,7 +1976,6 @@ void IconView::zoomCursor(QMouseEvent *event)
     p.setPen(iPen);
     p.drawRect(iBorder);
     setCursor(QCursor(QPixmap::fromImage(*frame)));
-//    qApp->setOverrideCursor(QCursor(QPixmap::fromImage(*frame)));
 }
 
 void IconView::invertSelection()

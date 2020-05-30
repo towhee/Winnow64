@@ -52,6 +52,7 @@ public:
     int iconHeight;
     int labelFontSize;
     bool showIconLabels;
+    bool showZoomFrame;
     int badgeSize;
     QSize cellSize;
 
@@ -191,6 +192,9 @@ private:
     bool isLeftMouseBtnPressed;
     bool isMouseDrag;
     bool isFitTopOrBottom = false;
+
+    QRect cursorRect;
+    QRect iconRect;
 
     // used during gridView resize to keep close to beginning thumb size
     int assignedIconWidth;

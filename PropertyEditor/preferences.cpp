@@ -120,6 +120,10 @@ void Preferences::itemChange(QModelIndex idx)
         mw->thumbView->setThumbParameters();
     }
 
+    if (source == "showZoomFrame") {
+        mw->thumbView->showZoomFrame = v.toBool();
+    }
+
     if (source == "thumbViewLabelSize") {
         mw->thumbView->labelFontSize = v.toInt();
         mw->thumbView->setThumbParameters();
@@ -633,6 +637,25 @@ void Preferences::addItems()
             thumbnailFilmStripCatItem->setChild(thirdGenerationCount, 0, thumbViewShowLabelCaption);
             thumbnailFilmStripCatItem->setChild(thirdGenerationCount, 1, thumbViewShowLabelValue);
             valIdx = thumbViewShowLabelValue->index();
+            propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+
+            thirdGenerationCount++;
+            // Type = CHECKBOX
+            // name = showZoomFrame
+            tooltip = "Show the zoom frame in thumbnails when zoomed in loupe view.";
+            QStandardItem *showZoomFrameCaption = new QStandardItem;
+            showZoomFrameCaption->setToolTip(tooltip);
+            showZoomFrameCaption->setText("Show zoom frame");
+            showZoomFrameCaption->setEditable(false);
+            QStandardItem *showZoomFrameValue = new QStandardItem;
+            showZoomFrameValue->setToolTip(tooltip);
+            showZoomFrameValue->setData(mw->thumbView->showZoomFrame, Qt::EditRole);
+            showZoomFrameValue->setData(DT_Checkbox, UR_DelegateType);
+            showZoomFrameValue->setData("showZoomFrame", UR_Source);
+            showZoomFrameValue->setData("bool", UR_Type);
+            thumbnailFilmStripCatItem->setChild(thirdGenerationCount, 0, showZoomFrameCaption);
+            thumbnailFilmStripCatItem->setChild(thirdGenerationCount, 1, showZoomFrameValue);
+            valIdx = showZoomFrameValue->index();
             propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 
             // HEADER

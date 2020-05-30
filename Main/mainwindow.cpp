@@ -3972,6 +3972,7 @@ void MW::createThumbView()
         if (setting->contains("thumbHeight")) thumbView->iconHeight = setting->value("thumbHeight").toInt();
         if (setting->contains("labelFontSize")) thumbView->labelFontSize = setting->value("labelFontSize").toInt();
         if (setting->contains("showThumbLabels")) thumbView->showIconLabels = setting->value("showThumbLabels").toBool();
+        if (setting->contains("showZoomFrame")) thumbView->showZoomFrame = setting->value("showZoomFrame").toBool();
         if (setting->contains("classificationBadgeInThumbDiameter")) thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
         if (setting->contains("thumbsPerPage")) thumbView->visibleCells = setting->value("thumbsPerPage").toInt();
     }
@@ -3980,6 +3981,7 @@ void MW::createThumbView()
         thumbView->iconHeight = 100;
         thumbView->labelFontSize = 12;
         thumbView->showIconLabels = true;
+        thumbView->showZoomFrame = true;
         thumbView->badgeSize = classificationBadgeInThumbDiameter;
         thumbView->visibleCells = width() / thumbView->iconWidth;
     }
@@ -5945,6 +5947,7 @@ app is "stranded" on secondary monitors that are not attached.
     thumbView->iconHeight = 100;
     thumbView->labelFontSize = 10;
     thumbView->showIconLabels = true;
+    thumbView->showZoomFrame = true;
 
 //    gridView->iconPadding = 0;
     gridView->iconWidth = 160;
@@ -7215,6 +7218,7 @@ re-established when the application is re-opened.
     setting->setValue("thumbHeight", thumbView->iconHeight);
     setting->setValue("labelFontSize", thumbView->labelFontSize);
     setting->setValue("showThumbLabels", thumbView->showIconLabels);
+    setting->setValue("showZoomFrame", thumbView->showZoomFrame);
 
     // grid
     setting->setValue("thumbWidthGrid", gridView->iconWidth);
@@ -10688,7 +10692,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    qDebug() << __FUNCTION__ << imageView->sceneGeometry();
+    qDebug() << __FUNCTION__ << thumbView->showZoomFrame;
 }
 // End MW
 
