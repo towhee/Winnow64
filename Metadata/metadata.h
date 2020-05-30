@@ -128,6 +128,7 @@ public:
     QStringList internalXmpFormats;
     QStringList xmpWriteFormats;
     QStringList iccFormats;
+    QStringList noMetadataFormats;
     QStringList supportedFormats;
 
     QStringList ratings;

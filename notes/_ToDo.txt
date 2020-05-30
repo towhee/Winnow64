@@ -1,7 +1,4 @@
 BUGS
-- test
-- Navigating thumbs in large folders while still opening can crash
-- Ingest if image does not have metadata req'd
 - Mac check for updates not done yet
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)

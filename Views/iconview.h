@@ -63,7 +63,10 @@ public:
     int lastVisibleCell;
     int visibleCells;
 
+    QModelIndex prevIdx;        // for zoomCursor
+
     bool calcViewportRange(int row);
+    void zoomCursor(QMouseEvent *event);
 
     void updateLayout();
     bool waitUntilOkToScroll();
@@ -162,6 +165,8 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
     void resizeEvent(QResizeEvent* event);
+    void enterEvent(QEvent *event);
+    void leaveEvent(QEvent *event);
 //    QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction,
 //                           Qt::KeyboardModifiers modifiers);
 //    bool event(QEvent* event);      // key capture

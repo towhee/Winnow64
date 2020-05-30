@@ -33,6 +33,7 @@ public:
               int classificationBadgeDiam);
 
     qreal zoom;
+    qreal zoomFit;
     qreal refZoom;                      // adjusted to real screen pixels
     qreal toggleZoom;
 
@@ -40,6 +41,7 @@ public:
     DropShadowLabel *titleDropShadow;
 
     bool loadImage(QString imageFileName);
+    qreal getFitScaleFactor(QRectF container, QRectF content);
     void clear();
     void setCursorHiding(bool hide);
     bool isBusy;
@@ -48,6 +50,7 @@ public:
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void rotate(int degrees);
     void moveShootingInfo(QString infoString);
+    void sceneGeometry(QPoint &sceneOrigin, QRectF &sceneR, QRect &centralWidgetRect);
     QString shootingInfo;
     int infoOverlayFontSize;
     ClassificationLabel *classificationLabel;
@@ -97,7 +100,6 @@ protected:
 
 private:
     void noJpgAvailable();
-    qreal getFitScaleFactor(QRectF container, QRectF content);
     void scale();
     qreal getZoom();
 
@@ -191,7 +193,6 @@ private:
 
     int scrollCount;
 
-    qreal zoomFit;
 //    qreal previewScaleMax;
     qreal zoomInc = 0.1;    // 10% delta
     qreal zoomMin = 0.05;   // 5% of original  rgh add to pref

@@ -73,6 +73,25 @@ void Jpeg::initSegCodeHash()
     segCodeHash[0xFFFE] = "JPG15";
 }
 
+bool Jpeg::getWidthHeight(MetadataParameters &p, int &w, int &h)
+{
+    bool isBigEnd = true;                  // only IFD/EXIF can be little endian
+    quint32 marker = 0;
+    p.offset += 2;
+    while (marker != 0xFFC0) {
+        p.file.seek(p.offset);                  // APP1 FFE*
+        marker = Utilities::get16(p.file.read(2), isBigEnd);
+        if (marker < 0xFF01) {
+            return false;
+        }
+        p.offset = Utilities::get16(p.file.peek(2), isBigEnd) + static_cast<quint32>(p.file.pos());
+    }
+    p.file.seek(p.file.pos()+3);
+    h = Utilities::get16(p.file.read(2), isBigEnd);
+    w = Utilities::get16(p.file.read(2), isBigEnd);
+    return true;
+}
+
 bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
 {
     bool isBigEnd = true;                  // only IFD/EXIF can be little endian
@@ -207,6 +226,8 @@ bool Jpeg::parse(MetadataParameters &p,
     m.height = ifd->ifdDataHash.value(40963).tagValue;
     p.offset = 0;
     if (!m.width || !m.height) getDimensions(p, m);
+    m.widthFull = m.width;
+    m.heightFull = m.height;
 
     // EXIF: created datetime
     QString createdExif;

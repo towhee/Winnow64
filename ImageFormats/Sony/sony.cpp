@@ -62,7 +62,8 @@ Sony::Sony()
 bool Sony::parse(MetadataParameters &p,
                  ImageMetadata &m,
                  IFD *ifd,
-                 Exif *exif)
+                 Exif *exif,
+                 Jpeg *jpeg)
 {
     //file.open in Metadata::readMetadata
     // first two bytes is the endian order (skip next 2 bytes)
@@ -81,9 +82,13 @@ bool Sony::parse(MetadataParameters &p,
     // pull data reqd from IFD0
     m.offsetFull = ifd->ifdDataHash.value(513).tagValue;
     m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
+    // get jpeg full size preview dimensions
+    p.offset = m.offsetFull;
+    jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
 //    if (lengthFullJPG) verifyEmbeddedJpg(offsetFull, lengthFull);
     m.offsetThumb = ifd->ifdDataHash.value(273).tagValue;
     m.lengthThumb = ifd->ifdDataHash.value(279).tagValue;
+
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumb, lengthThumb);
     m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
@@ -93,10 +98,14 @@ bool Sony::parse(MetadataParameters &p,
 
     /* Sony provides an offset in IFD0 to subIFDs, but there is only one, which is
        at the offset ifd->ifdDataHash.value(330).tagValue */
+
+    // SubIFD0
     quint32 offset = ifd->ifdDataHash.value(330).tagValue;
     p.hdr = "SubIFD0";
     p.offset = offset;
-    ifd->readIFD(p, m);                 // req'd??
+    ifd->readIFD(p, m);
+    m.width = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
+    m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
 
     // IFD 1:
     p.hdr = "IFD1";
@@ -113,8 +122,8 @@ bool Sony::parse(MetadataParameters &p,
     ifd->readIFD(p, m);
 
     // IFD EXIF: dimensions
-    m.width = ifd->ifdDataHash.value(40962).tagValue;
-    m.height = ifd->ifdDataHash.value(40963).tagValue;
+//    m.width = ifd->ifdDataHash.value(40962).tagValue;
+//    m.height = ifd->ifdDataHash.value(40963).tagValue;
 
     // EXIF: created datetime
     QString createdExif;

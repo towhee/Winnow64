@@ -16,6 +16,8 @@ public:
     bool isSearch = false;
     quint32 offsetFull = 0;
     quint32 lengthFull = 0;
+    int widthFull = 0;
+    int heightFull = 0;
     quint32 offsetThumb = 0;
     quint32 lengthThumb = 0;
 //    quint32 offsetSmall = 0;

@@ -8,7 +8,7 @@
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
 #include "Metadata/xmp.h"
-//#include "ImageFormats/Jpeg/jpeg.h"
+#include "ImageFormats/Jpeg/jpeg.h"
 #include "Metadata/metareport.h"
 
 class Sony : public QObject
@@ -20,7 +20,8 @@ public:
     bool parse(MetadataParameters &p,
                ImageMetadata &m,
                IFD *ifd,
-               Exif *exif);
+               Exif *exif,
+               Jpeg *jpeg);
 private:
     QHash<quint32, QString> sonyMakerHash;
 };

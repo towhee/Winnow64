@@ -113,6 +113,27 @@ void Metadata::initSupportedFiles()
                         << "sr2"
                         << "tif";
 
+    noMetadataFormats   << "bmp"
+                        << "cur"
+                        << "dds"
+                        << "gif"
+                        << "heic"
+                        << "icns"
+                        << "ico"
+                        << "jp2"
+                        << "jpe"
+                        << "mng"
+                        << "pbm"
+                        << "pgm"
+                        << "png"
+                        << "ppm"
+                        << "svg"
+                        << "svgz"
+                        << "tga"
+                        << "wbmp"
+                        << "webp"
+                        << "xbm"
+                        << "xpm";
 
     supportedFormats    << "arw"
                         << "bmp"
@@ -475,7 +496,8 @@ bool Metadata::parseNikon()
     if (nikon == nullptr) nikon = new Nikon;
     if (ifd == nullptr) ifd = new IFD;
     if (exif == nullptr) exif = new Exif;
-    nikon->parse(p, imageMetadata, ifd, exif);
+    if (jpeg == nullptr) jpeg = new Jpeg;
+    nikon->parse(p, imageMetadata, ifd, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
@@ -490,7 +512,8 @@ bool Metadata::parseCanon()
     if (canon == nullptr) canon = new Canon;
     if (ifd == nullptr) ifd = new IFD;
     if (exif == nullptr) exif = new Exif;
-    canon->parse(p, imageMetadata, ifd, exif);
+    if (jpeg == nullptr) jpeg = new Jpeg;
+    canon->parse(p, imageMetadata, ifd, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
@@ -522,7 +545,7 @@ bool Metadata::parseSony()
     if (ifd == nullptr) ifd = new IFD;
     if (exif == nullptr) exif = new Exif;
     if (jpeg == nullptr) jpeg = new Jpeg;
-    sony->parse(p, imageMetadata, ifd, exif);
+    sony->parse(p, imageMetadata, ifd, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
@@ -622,6 +645,8 @@ void Metadata::clearMetadata()
     }
     imageMetadata.offsetFull = 0;
     imageMetadata.lengthFull = 0;
+    imageMetadata.widthFull = 0;
+    imageMetadata.heightFull = 0;
     imageMetadata.offsetThumb = 0;
     imageMetadata.lengthThumb = 0;
 //    imageMetadata.offsetSmall = 0;
