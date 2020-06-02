@@ -5546,6 +5546,12 @@ void MW::thumbsEnlarge()
     scrollToCurrentRow();
     // may be less icons to cache
     numberIconsVisibleChange();
+
+    // if thumbView visible and zoomed in imageView then may need to redo the zoomFrame
+    QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
+    if (idx.isValid()) {
+        thumbView->zoomCursor(idx, /*forceUpdate=*/true);
+    }
 }
 
 void MW::thumbsShrink()
@@ -5564,6 +5570,12 @@ void MW::thumbsShrink()
     // may be more icons to cache
     numberIconsVisibleChange();
 //    loadMetadataCacheAfterDelay();
+
+    // if thumbView visible and zoomed in imageView then may need to redo the zoomFrame
+    QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
+    if (idx.isValid()) {
+        thumbView->zoomCursor(idx, /*forceUpdate=*/true);
+    }
 }
 
 void MW::addRecentFolder(QString fPath)

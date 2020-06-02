@@ -1871,41 +1871,38 @@ center.
 void IconView::zoomCursor(const QModelIndex &idx, bool forceUpdate, QPoint mousePos)
 {
 /*
-Turn the cursor into a frame showing the ImageView zoom window in the thumbnail. This is handy
-for the user to see where a click on thumbnail will to scroll to in the imageView zoomed
-window.
+Turns the cursor into a frame showing the cropped ImageView zoom window in the thumbnail. This
+is handy for the user to see where a click on thumbnail to instantly pan to in same spot in
+the imageView zoomed window.
 
 This is predicated on the zoom > zoomFit and the mouse position pointing to a valid thumbnail.
 This function is called from MW::eventFilter when there is mouse movement in the thumbView
 viewport. It is also called from MW::thumbHasScrolled as the mouse pointer might be on a
-different thumbnail after the thumbnails scroll.
+different thumbnail after the thumbnails scroll.  Finally it is called when there is a window
+resize MW::resizeEvent that will change the centralWidget geometry.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    if (!showZoomFrame) return;
-//    qDebug() << __FUNCTION__ << "event->pos() =" << mousePos;
-//    qDebug() << __FUNCTION__ << "1";
-    if (!idx.isValid()) return;
-//    qDebug() << __FUNCTION__ << "2";
-    if (m2->imageView->isFit) return;
-//    qDebug() << __FUNCTION__ << "3";
-    int vpBottom = viewport()->rect().bottom() - G::scrollBarThickness;
-    if (mousePos.y() > vpBottom) {
+    if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
         setCursor(Qt::ArrowCursor);
         prevIdx = model()->index(-1, -1);
         return;
     }
-//    qDebug() << __FUNCTION__ << "4";
+    if (idx == prevIdx && !forceUpdate) return;
+    if (!showZoomFrame) return;
+    if (!idx.isValid()) return;
+    if (m2->imageView->isFit) return;
 
     // preview dimensions
     int imW = dm->sf->index(idx.row(), G::WidthFullColumn).data().toInt();
     int imH = dm->sf->index(idx.row(), G::HeightFullColumn).data().toInt();
     qreal zoom = m2->imageView->zoom;
-    imW *= zoom;
-    imH *= zoom;
+    imW = static_cast<int>(imW * zoom);
+    imH = static_cast<int>(imH + zoom);
+    qreal imA = static_cast<qreal>(imW) / imH;
 
     QRect centralRect = m2->centralWidget->rect();
     int cW = centralRect.width();
@@ -1913,11 +1910,6 @@ different thumbnail after the thumbnails scroll.
 
     qreal hScale = static_cast<qreal>(cW) / imW;
     qreal vScale = static_cast<qreal>(cH) / imH;
-
-//    if (hScale >= 1 && vScale >= 1 ) {
-//        setCursor(Qt::ArrowCursor);
-//        return;
-//    }
 
     iconRect = idx.data(G::ThumbRectRole).toRect();
     int w, h;       // zoom frame width and height in pixels
@@ -1927,29 +1919,23 @@ different thumbnail after the thumbnails scroll.
         qreal scale = zoomFit / zoom;
         qDebug() << __FUNCTION__ << centralRect << zoom << zoomFit;
 
-    //    if (zoom <= zoomFit ) {
-    //        setCursor(Qt::ArrowCursor);
-    //        return;
-    //    }
-    //    qDebug() << __FUNCTION__ << "5";
-
         prevIdx = idx;
 
 
         // image visible width in centralRect - the ImageView viewport
-        int zoomedImW = imW * zoom;
-        int zoomedImH = imH * zoom;
-        int ivW = (zoomedImW > cW) ? cW : zoomedImW;
-        int ivH = (zoomedImH > cH) ? cH : zoomedImH;
+        int ivW = (imW > cW) ? cW : imW;
+        int ivH = (imH > cH) ? cH : imH;
         qreal ivA = static_cast<qreal>(ivW) / ivH;
-        qreal imA = static_cast<qreal>(imW) / imH;
+        /*
         qDebug() << __FUNCTION__ << "cW =" << cW << "cH =" << cH
                                  << "ivW =" << ivW << "ivH =" << ivH << "ivA =" << ivA
                                  << "hScale =" << hScale << "vScale =" << vScale;
+//        */
 
-
-        // some brands create thumbnails with black borders, which are not part of the image
-        // the wider or taller edges will not have a border
+        /* some brands create thumbnails with black borders, which are not part of the image,
+        and should be excluded. The long side (ie width if landscape, height if portrait, will
+        not have a black border.  Using that side and the aspect of the original image can give
+        the correct length for the other side of the thumbnail.  */
         int iconW, iconH;
         if (imA > 1) {
             iconW = iconRect.width();
@@ -1985,11 +1971,11 @@ different thumbnail after the thumbnails scroll.
         if (w > iconRect.width()) w = iconRect.width();
         if (h > iconRect.height()) h = iconRect.height();
     }
+    // loupe image smaller than central widget so no cropping
     else {
         w = iconRect.width();
         h = iconRect.height();
     }
-
     /*
     qDebug() << __FUNCTION__
              << "zoom =" << zoom
@@ -2012,9 +1998,10 @@ different thumbnail after the thumbnails scroll.
              << "ivA =" << ivA;
 //            */
 
+    // draw the new cursor as a frame
     // make room for border
     int pw = 1;                                     // pen width
-    w += (pw * 8);                                  // 2 pens / 2 sides
+    w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
     h += (pw * 8);
     cursorRect = QRect(0, 0, w, h);
     auto frame = new QImage(w, h, QImage::Format_ARGB32);
