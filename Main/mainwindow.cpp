@@ -660,10 +660,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     /* THUMBVIEW ZOOMCURSOR **************************************************************
     Turn the cursor into a frame showing the ImageView zoom amount in the thumbnail.
     */
+
     if (obj == thumbView->viewport() && event->type() == QEvent::MouseMove) {
         QMouseEvent *e = static_cast<QMouseEvent *>(event);
-//        const QModelIndex idx = thumbView->indexAt(e->pos());
-        thumbView->zoomCursor(e);
+        const QModelIndex idx = thumbView->indexAt(e->pos());
+        if (idx.isValid()) {
+            thumbView->zoomCursor(idx, /*forceUpdate=*/false, e->pos());
+        }
     }
 
     /* THUMBDOCK SPLITTER ****************************************************************
@@ -1375,13 +1378,13 @@ within the cache range.
     G::track(__FUNCTION__);
     #endif
     }
-    /*
-       Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
-    to call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread.
-    This was to prevent many scroll calls from bunching up.  The new approach just aborts an
-    existing thread and starts over.  It is simpler and faster.  Keeping the old process until
-    the new one is proven to work all the time.
-      */
+/*
+Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay to call
+MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread. This was to
+prevent many scroll calls from bunching up. The new approach just aborts an existing thread
+and starts over. It is simpler and faster. Keeping the old process until the new one is proven
+to work all the time.
+*/
 
 //    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
@@ -1394,6 +1397,11 @@ within the cache range.
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         metadataCacheThread->scrollChange();
+        // update thumbnail zoom frame cursor
+        QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
+        if (idx.isValid()) {
+            thumbView->zoomCursor(idx);
+        }
     }
     G::ignoreScrollSignal = false;
 }
@@ -1463,10 +1471,10 @@ within the cache range.
     #endif
     }
     /*
-       Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
-    to call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread.
-    This was to prevent many scroll calls from bunching up.  The new approach just aborts an
-    existing thread and starts over.  It is simpler and faster.  Keeping the old process until
+    Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay to
+    call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread. This
+    was to prevent many scroll calls from bunching up. The new approach just aborts an
+    existing thread and starts over. It is simpler and faster. Keeping the old process until
     the new one is proven to work all the time.
       */
 
@@ -10692,7 +10700,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << thumbView->showZoomFrame;
+    // update thumbnail zoom frame cursor
+    QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
+    if (idx.isValid()) {
+        thumbView->zoomCursor(idx, /*forceUpdate=*/false);
+    }
 }
 // End MW
 

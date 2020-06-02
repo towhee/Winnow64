@@ -638,6 +638,7 @@ on to ImageView::scale(), which in turn makes the proper scale change.
     #endif
     }
     zoom = zoomTo;
+    isFit = false;
     scale();
 }
 

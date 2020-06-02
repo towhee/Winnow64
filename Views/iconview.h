@@ -67,7 +67,9 @@ public:
     QModelIndex prevIdx;        // for zoomCursor
 
     bool calcViewportRange(int row);
-    void zoomCursor(QMouseEvent *event);
+    void zoomCursor(const QModelIndex &idx,
+                    bool forceUpdate = false,
+                    QPoint mousePos = QPoint(-1, -1));
 
     void updateLayout();
     bool waitUntilOkToScroll();

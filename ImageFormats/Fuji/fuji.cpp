@@ -189,6 +189,7 @@ bool Fuji::parse(MetadataParameters &p,
     m.height = ifd->ifdDataHash.value(40963).tagValue;
     p.offset = m.offsetFull;
     if (!m.width || !m.height) jpeg->getDimensions(p, m);
+    jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {

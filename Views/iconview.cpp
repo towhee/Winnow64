@@ -1527,10 +1527,10 @@ source is the calling function and is used for debugging.
     G::track(__FUNCTION__);
     #endif
     }
-
-//    qDebug() << __FUNCTION__ << objectName() << "row =" << row
-//             << "requested by" << source;
-
+    /*
+    qDebug() << __FUNCTION__ << objectName() << "row =" << row
+             << "requested by" << source;
+    */
     source = "";    // suppress compiler warning
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
@@ -1729,16 +1729,22 @@ int IconView::getVerticalScrollBarMax()
 
 void IconView::enterEvent(QEvent *event)
 {
-//    QApplication::restoreOverrideCursor();
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     setFocus();
-    qDebug() << __FUNCTION__ << event;
     QListView::enterEvent(event);
 }
 
 void IconView::leaveEvent(QEvent *event)
 {
-    qDebug() << __FUNCTION__ << event;
-//    QApplication::restoreOverrideCursor();
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     setCursor(Qt::ArrowCursor);
     prevIdx = model()->index(-1, -1);
     QListView::leaveEvent(event);
@@ -1862,75 +1868,126 @@ center.
     scrollToRow(currentIndex().row(), __FUNCTION__);
 }
 
-void IconView::zoomCursor(QMouseEvent *event)
+void IconView::zoomCursor(const QModelIndex &idx, bool forceUpdate, QPoint mousePos)
 {
+/*
+Turn the cursor into a frame showing the ImageView zoom window in the thumbnail. This is handy
+for the user to see where a click on thumbnail will to scroll to in the imageView zoomed
+window.
+
+This is predicated on the zoom > zoomFit and the mouse position pointing to a valid thumbnail.
+This function is called from MW::eventFilter when there is mouse movement in the thumbView
+viewport. It is also called from MW::thumbHasScrolled as the mouse pointer might be on a
+different thumbnail after the thumbnails scroll.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (!showZoomFrame) return;
-    const QModelIndex idx = indexAt(event->pos());
+//    qDebug() << __FUNCTION__ << "event->pos() =" << mousePos;
+//    qDebug() << __FUNCTION__ << "1";
     if (!idx.isValid()) return;
+//    qDebug() << __FUNCTION__ << "2";
     if (m2->imageView->isFit) return;
+//    qDebug() << __FUNCTION__ << "3";
     int vpBottom = viewport()->rect().bottom() - G::scrollBarThickness;
-    if (event->pos().y() > vpBottom) {
+    if (mousePos.y() > vpBottom) {
         setCursor(Qt::ArrowCursor);
         prevIdx = model()->index(-1, -1);
         return;
     }
+//    qDebug() << __FUNCTION__ << "4";
 
     // preview dimensions
     int imW = dm->sf->index(idx.row(), G::WidthFullColumn).data().toInt();
     int imH = dm->sf->index(idx.row(), G::HeightFullColumn).data().toInt();
+    qreal zoom = m2->imageView->zoom;
+    imW *= zoom;
+    imH *= zoom;
 
     QRect centralRect = m2->centralWidget->rect();
     int cW = centralRect.width();
     int cH = centralRect.height();
 
-    qreal hScale = ((qreal)cW/* - 2*/) / imW;
-    qreal vScale = ((qreal)cH/* - 2*/) / imH;
-    const qreal zoomFit = (hScale < vScale) ? hScale : vScale;
-    const qreal zoom = m2->imageView->zoom;
-    qreal scale = zoomFit / zoom;
+    qreal hScale = static_cast<qreal>(cW) / imW;
+    qreal vScale = static_cast<qreal>(cH) / imH;
 
-    if (zoom <= zoomFit) {
-        setCursor(Qt::ArrowCursor);
-        return;
-    }
-
-    prevIdx = idx;
+//    if (hScale >= 1 && vScale >= 1 ) {
+//        setCursor(Qt::ArrowCursor);
+//        return;
+//    }
 
     iconRect = idx.data(G::ThumbRectRole).toRect();
-//    qDebug() << __FUNCTION__ << iconRect << event->pos();
-
-    // image visible width in centralRect - the ImageView viewport
-    int zoomedImW = imW * zoom;
-    int zoomedImH = imH * zoom;
-    int ivW = (zoomedImW > cW) ? cW : zoomedImW;
-    int ivH = (zoomedImH > cH) ? cH : zoomedImH;
-    qreal ivA = static_cast<qreal>(ivW) / ivH;
-    qreal imA = static_cast<qreal>(imW) / imH;
-
-    // some brands create thumbnails with black borders, which are not part of the image
-    // the wider or taller edges will not have a border
-    int iconW, iconH;
-    if (imA > 1) {
-        iconW = iconRect.width();
-        iconH = iconRect.width() / imA;
-    }
-    else {
-        iconW = static_cast<qreal>(iconRect.height()) * imA;
-        iconH = iconRect.height();
-    }
-
-    int dx = (iconRect.width() - iconW) / 2;
-    int dy = (iconRect.height() - iconH) / 2;
-    iconRect.adjust(dx, dy, iconW, iconH);
-
     int w, h;       // zoom frame width and height in pixels
-    if (hScale < vScale) {
-        w = static_cast<int>(iconW * scale);
-        h = static_cast<int>(w * ivA);
+
+    if (hScale < 1 || vScale <= 1 ) {
+        qreal zoomFit = (hScale < vScale) ? hScale : vScale;
+        qreal scale = zoomFit / zoom;
+        qDebug() << __FUNCTION__ << centralRect << zoom << zoomFit;
+
+    //    if (zoom <= zoomFit ) {
+    //        setCursor(Qt::ArrowCursor);
+    //        return;
+    //    }
+    //    qDebug() << __FUNCTION__ << "5";
+
+        prevIdx = idx;
+
+
+        // image visible width in centralRect - the ImageView viewport
+        int zoomedImW = imW * zoom;
+        int zoomedImH = imH * zoom;
+        int ivW = (zoomedImW > cW) ? cW : zoomedImW;
+        int ivH = (zoomedImH > cH) ? cH : zoomedImH;
+        qreal ivA = static_cast<qreal>(ivW) / ivH;
+        qreal imA = static_cast<qreal>(imW) / imH;
+        qDebug() << __FUNCTION__ << "cW =" << cW << "cH =" << cH
+                                 << "ivW =" << ivW << "ivH =" << ivH << "ivA =" << ivA
+                                 << "hScale =" << hScale << "vScale =" << vScale;
+
+
+        // some brands create thumbnails with black borders, which are not part of the image
+        // the wider or taller edges will not have a border
+        int iconW, iconH;
+        if (imA > 1) {
+            iconW = iconRect.width();
+            iconH = static_cast<int>(iconW / imA);
+        }
+        else {
+            iconH = iconRect.height();
+            iconW = static_cast<int>(iconH * imA);
+        }
+
+        int dx = (iconRect.width() - iconW) / 2;
+        int dy = (iconRect.height() - iconH) / 2;
+        iconRect.adjust(dx, dy, iconW, iconH);
+
+        if (hScale < vScale) {
+            w = static_cast<int>(iconW * scale);
+            if (ivA > 1) {
+                h = static_cast<int>(w * ivA);
+            }
+            else {
+                h = static_cast<int>(w / ivA);
+            }
+        }
+        else {
+            h = static_cast<int>(iconH * scale);
+            if (ivA > 1) {
+                w = static_cast<int>(h * ivA);
+            }
+            else {
+                w = static_cast<int>(h / ivA);
+            }
+        }
+        if (w > iconRect.width()) w = iconRect.width();
+        if (h > iconRect.height()) h = iconRect.height();
     }
     else {
-        h = static_cast<int>(iconH * scale);
-        w = static_cast<int>(h * ivA);
+        w = iconRect.width();
+        h = iconRect.height();
     }
 
     /*
@@ -1957,8 +2014,8 @@ void IconView::zoomCursor(QMouseEvent *event)
 
     // make room for border
     int pw = 1;                                     // pen width
-    w += (pw * 4);                                  // 2 pens / 2 sides
-    h += (pw * 4);
+    w += (pw * 8);                                  // 2 pens / 2 sides
+    h += (pw * 8);
     cursorRect = QRect(0, 0, w, h);
     auto frame = new QImage(w, h, QImage::Format_ARGB32);
     int opacity = 0;                                // Set this between 0 and 255

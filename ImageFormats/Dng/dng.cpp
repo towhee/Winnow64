@@ -124,7 +124,6 @@ bool DNG::parse(MetadataParameters &p,
             ifdOffsets = ifd->getSubIfdOffsets(p.file, addr, count);
         }
         else ifdOffsets.append(ifd->ifdDataHash.value(330).tagValue);
-        qDebug() << __FUNCTION__ << "ifdOffsets" << ifdOffsets;
 
         QString hdr;
         count = 0;
@@ -139,9 +138,7 @@ bool DNG::parse(MetadataParameters &p,
             p.offset = ifdOffsets[i];
             p.hash = &exif->hash;
             ifd->readIFD(p, m);
-            qDebug() << __FUNCTION__ << "i =" << i+1 << "before checking if contains tagID 273";
             if (ifd->ifdDataHash.contains(273)) {
-                qDebug() << __FUNCTION__ << "i =" << i+1 << "contains tagID 273";
                 // is it a JPG
                 quint32 offset = ifd->ifdDataHash.value(273).tagValue;
                 p.file.seek(offset);
@@ -152,11 +149,13 @@ bool DNG::parse(MetadataParameters &p,
                 jpgInfo.length = ifd->ifdDataHash.value(279).tagValue;
                 jpgInfo.width = ifd->ifdDataHash.value(256).tagValue;
                 jpgInfo.height = ifd->ifdDataHash.value(257).tagValue;
+                /*
                 qDebug() << __FUNCTION__ << "i =" << i
                          << "jpgInfo.offset =" << jpgInfo.offset
                          << "jpgInfo.length" << jpgInfo.length
                          << "jpgInfo.width" << jpgInfo.width
                          << "jpgInfo.height" << jpgInfo.height;
+//                */
                 jpgs.append(jpgInfo);
                 // find smallest and largest
                 if (jpgInfo.width < smallest) {
