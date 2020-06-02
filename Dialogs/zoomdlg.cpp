@@ -86,7 +86,7 @@ controls are updated to the current scale.
 void ZoomDlg::on_zoomSB_valueChanged(int value)
 {
 /*
-When the zoom spinbox value changes a signal is emited to the slots in imageView
+When the zoom spinbox value changes a signal is emitted to the slots in imageView
 and compareView.
 
 Check for circular messaging where an external change of scale was signalled

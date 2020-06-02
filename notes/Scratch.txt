@@ -22,3 +22,12 @@ Seconds  Method
 11.50    ba += file.read(6) + a16
  0.48    ba = file.read(bytesPerLine)                                      // missing alpha
  0.53    ba = file.read(bytesPerLine) and fix RGB48 for alpha              // include alpha
+
+Pixmap::load "D:/Pictures/_ThumbTest/C001.heic" "Could not read image D:/Pictures/_ThumbTest/C001.heic"
+QPainter::begin: Paint device returned engine == 0, type: 3
+QPainter::setPen: Painter not active
+QPainter::drawRects: Painter not active
+QPainter::setPen: Painter not active
+QPainter::drawRects: Painter not active
+QCursor: Cannot create bitmap cursor; invalid bitmap(s)
+QPainter::begin: Paint device returned engine == 0, type: 3
