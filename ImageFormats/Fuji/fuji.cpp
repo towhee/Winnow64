@@ -185,8 +185,8 @@ bool Fuji::parse(MetadataParameters &p,
     p.offset = offsetEXIF;
     ifd->readIFD(p, m);
 
-    m.width = ifd->ifdDataHash.value(40962).tagValue;
-    m.height = ifd->ifdDataHash.value(40963).tagValue;
+    m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
+    m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
     p.offset = m.offsetFull;
     if (!m.width || !m.height) jpeg->getDimensions(p, m);
     jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
@@ -199,7 +199,7 @@ bool Fuji::parse(MetadataParameters &p,
         if (x < 1 ) {
             int t = qRound(1 / x);
             m.exposureTime = "1/" + QString::number(t);
-            m.exposureTimeNum = static_cast<float>(x);
+            m.exposureTimeNum = static_cast<double>(x);
         } else {
             uint t = static_cast<uint>(x);
             m.exposureTime = QString::number(t);
