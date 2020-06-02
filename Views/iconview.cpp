@@ -1917,7 +1917,6 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     if (hScale < 1 || vScale <= 1 ) {
         qreal zoomFit = (hScale < vScale) ? hScale : vScale;
         qreal scale = zoomFit / zoom;
-        qDebug() << __FUNCTION__ << centralRect << zoom << zoomFit;
 
         prevIdx = idx;
 
@@ -1953,10 +1952,10 @@ resize MW::resizeEvent that will change the centralWidget geometry.
         if (hScale < vScale) {
             w = static_cast<int>(iconW * scale);
             if (ivA > 1) {
-                h = static_cast<int>(w * ivA);
+                h = static_cast<int>(w / ivA);
             }
             else {
-                h = static_cast<int>(w / ivA);
+                h = static_cast<int>(w * ivA);
             }
         }
         else {
@@ -1970,33 +1969,33 @@ resize MW::resizeEvent that will change the centralWidget geometry.
         }
         if (w > iconRect.width()) w = iconRect.width();
         if (h > iconRect.height()) h = iconRect.height();
+            /*
+            qDebug() << __FUNCTION__
+                     << "zoom =" << zoom
+                     << "zoomFit =" << zoomFit
+                     << "iconRect =" << iconRect
+                     << "imW =" << imW
+                     << "imH =" << imH
+                     << "imA =" << imA
+                     << "ivW =" << ivW
+                     << "ivH =" << ivH
+                     << "ivA =" << ivA
+                     << "cW =" << cW
+                     << "cH =" << cH
+                     << "hScale =" << hScale
+                     << "vScale =" << vScale
+                     << "scale =" << scale
+                     << "iconW =" << iconW
+                     << "iconH =" << iconH
+                     << "w =" << w
+                     << "h =" << h;
+        //            */
     }
     // loupe image smaller than central widget so no cropping
     else {
         w = iconRect.width();
         h = iconRect.height();
     }
-    /*
-    qDebug() << __FUNCTION__
-             << "zoom =" << zoom
-             << "zoomFit =" << zoomFit
-             << "iconRect =" << iconRect
-             << "imW =" << imW
-             << "imH =" << imH
-             << "imA =" << imA
-             << "ivW =" << ivW
-             << "ivH =" << ivH
-             << "cW =" << cW
-             << "cH =" << cH
-             << "hScale =" << hScale
-             << "vScale =" << vScale
-             << "scale =" << scale
-             << "iconW =" << iconW
-             << "iconH =" << iconH
-             << "w =" << w
-             << "h =" << h
-             << "ivA =" << ivA;
-//            */
 
     // draw the new cursor as a frame
     // make room for border
