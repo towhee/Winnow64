@@ -1,6 +1,5 @@
 BUGS
-- When fit to loupe clicking on the infoLabel does not toggle zoom
-- cannot make thumbs bigger than 256px
+- touch to click not working on mac in Folders or Bookmarks
 - Mac check for updates not done yet
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
@@ -20,6 +19,8 @@ ENHANCEMENTS
 - Add completer for title in metadata
 
 DONE/FIXED
+- cannot make thumbs bigger than 256px
+- When fit to loupe clicking on the infoLabel does not toggle zoom
 - Zoom tool not working when isFit = true
 - Zoom rect in thumbnail to show zoom and pan in imageView
 - Pick/unpick mouseover thumbnail with mouse forward/back
