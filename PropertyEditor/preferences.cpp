@@ -144,7 +144,7 @@ void Preferences::itemChange(QModelIndex idx)
         mw->metadataCacheThread->metadataChunkSize = v.toInt();
     }
 
-    if (source == "maximumIconSize") {
+    if (source == "maxIconSize") {
         G::maxIconSize = v.toInt();
     }
 
@@ -901,7 +901,7 @@ void Preferences::addItems()
                       "default size is 256 pixels to a side.";
             QStandardItem *maximumIconSizeCaption = new QStandardItem;
             maximumIconSizeCaption->setToolTip(tooltip);
-            maximumIconSizeCaption->setText("Maximum icon size");
+            maximumIconSizeCaption->setText("Maximum Icon Size");
             maximumIconSizeCaption->setEditable(false);
             QStandardItem *maximumIconSizeValue = new QStandardItem;
             maximumIconSizeValue->setToolTip(tooltip);

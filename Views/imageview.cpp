@@ -823,6 +823,13 @@ to help make it visible against different coloured backgrounds. */
     // make a little wider to account for the drop shadow
     infoOverlay->resize(infoOverlay->width()+10, infoOverlay->height()+10);
     infoOverlay->move(x, y);
+
+    infoOverlay->setAttribute( Qt::WA_TransparentForMouseEvents );
+    /*
+    QRegion reg(frameGeometry());
+    reg -= QRegion(geometry());
+    reg += childrenRegion();
+    setMask(reg);*/
 }
 
 void ImageView::monitorCursorState()

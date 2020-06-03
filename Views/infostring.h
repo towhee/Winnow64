@@ -19,9 +19,7 @@ public:
     QMap<QString, QString> infoTemplates;
     QString currentInfoTemplate;
 
-signals:
-
-public slots:
+protected:
 
 private:
     ImageMetadata m;

@@ -1886,11 +1886,15 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     G::track(__FUNCTION__);
     #endif
     }
+//    int yMouse = mousePos.y();
+//    int vpBottom = viewport()->rect().bottom() - G::scrollBarThickness;
+//    qDebug() << __FUNCTION__ << yMouse << vpBottom;
     if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
         setCursor(Qt::ArrowCursor);
         prevIdx = model()->index(-1, -1);
         return;
     }
+//    qDebug() << __FUNCTION__ << "2";
     if (idx == prevIdx && !forceUpdate) return;
     if (!showZoomFrame) return;
     if (!idx.isValid()) return;
@@ -1953,10 +1957,10 @@ resize MW::resizeEvent that will change the centralWidget geometry.
         if (hScale < vScale) {
             w = static_cast<int>(iconW * scale);
             if (ivA > 1) {
-                h = static_cast<int>(w * ivA);
+                h = static_cast<int>(w / ivA);
             }
             else {
-                h = static_cast<int>(w / ivA);
+                h = static_cast<int>(w * ivA);
             }
         }
         else {
@@ -1970,33 +1974,33 @@ resize MW::resizeEvent that will change the centralWidget geometry.
         }
         if (w > iconRect.width()) w = iconRect.width();
         if (h > iconRect.height()) h = iconRect.height();
+            /*
+            qDebug() << __FUNCTION__
+                     << "zoom =" << zoom
+                     << "zoomFit =" << zoomFit
+                     << "iconRect =" << iconRect
+                     << "imW =" << imW
+                     << "imH =" << imH
+                     << "imA =" << imA
+                     << "ivW =" << ivW
+                     << "ivH =" << ivH
+                     << "cW =" << cW
+                     << "cH =" << cH
+                     << "hScale =" << hScale
+                     << "vScale =" << vScale
+                     << "scale =" << scale
+                     << "iconW =" << iconW
+                     << "iconH =" << iconH
+                     << "w =" << w
+                     << "h =" << h
+                     << "ivA =" << ivA;
+        //            */
     }
     // loupe image smaller than central widget so no cropping
     else {
         w = iconRect.width();
         h = iconRect.height();
     }
-    /*
-    qDebug() << __FUNCTION__
-             << "zoom =" << zoom
-             << "zoomFit =" << zoomFit
-             << "iconRect =" << iconRect
-             << "imW =" << imW
-             << "imH =" << imH
-             << "imA =" << imA
-             << "ivW =" << ivW
-             << "ivH =" << ivH
-             << "cW =" << cW
-             << "cH =" << cH
-             << "hScale =" << hScale
-             << "vScale =" << vScale
-             << "scale =" << scale
-             << "iconW =" << iconW
-             << "iconH =" << iconH
-             << "w =" << w
-             << "h =" << h
-             << "ivA =" << ivA;
-//            */
 
     // draw the new cursor as a frame
     // make room for border
