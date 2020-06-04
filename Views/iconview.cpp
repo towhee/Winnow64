@@ -1886,15 +1886,11 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     G::track(__FUNCTION__);
     #endif
     }
-//    int yMouse = mousePos.y();
-//    int vpBottom = viewport()->rect().bottom() - G::scrollBarThickness;
-//    qDebug() << __FUNCTION__ << yMouse << vpBottom;
     if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
         setCursor(Qt::ArrowCursor);
         prevIdx = model()->index(-1, -1);
         return;
     }
-//    qDebug() << __FUNCTION__ << "2";
     if (idx == prevIdx && !forceUpdate) return;
     if (!showZoomFrame) return;
     if (!idx.isValid()) return;
@@ -1919,16 +1915,17 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     int w, h;       // zoom frame width and height in pixels
 
     if (hScale < 1 || vScale <= 1 ) {
-        qreal zoomFit = (hScale < vScale) ? hScale : vScale;
-        qreal scale = zoomFit / zoom;
-        qDebug() << __FUNCTION__ << centralRect << zoom << zoomFit;
-
+        // imageView is zoomed in at least one axis
         prevIdx = idx;
 
+        // scale is for the side that needs to be reduced the most to fit
+        qreal zoomFit = (hScale < vScale) ? hScale : vScale;
+        qreal scale = zoomFit / zoom;
 
-        // image visible width in centralRect - the ImageView viewport
+        // iv = the cropped image visible in centralRect - the ImageView viewport
         int ivW = (imW > cW) ? cW : imW;
         int ivH = (imH > cH) ? cH : imH;
+        // aspect of iv
         qreal ivA = static_cast<qreal>(ivW) / ivH;
         /*
         qDebug() << __FUNCTION__ << "cW =" << cW << "cH =" << cH
@@ -1950,17 +1947,23 @@ resize MW::resizeEvent that will change the centralWidget geometry.
             iconW = static_cast<int>(iconH * imA);
         }
 
-        int dx = (iconRect.width() - iconW) / 2;
-        int dy = (iconRect.height() - iconH) / 2;
-        iconRect.adjust(dx, dy, iconW, iconH);
-
+        // determine cursor frame dimensions : w, h
         if (hScale < vScale) {
+            w = static_cast<int>(iconW * scale);
+            h = static_cast<int>(w / ivA);
+            }
+        else {
+            h = static_cast<int>(iconH * scale);
+            w = static_cast<int>(h * ivA);
+        }
+
+/*        if (hScale < vScale) {
             w = static_cast<int>(iconW * scale);
             if (ivA > 1) {
                 h = static_cast<int>(w / ivA);
             }
             else {
-                h = static_cast<int>(w * ivA);
+                h = static_cast<int>(w / ivA);
             }
         }
         else {
@@ -1969,12 +1972,23 @@ resize MW::resizeEvent that will change the centralWidget geometry.
                 w = static_cast<int>(h * ivA);
             }
             else {
-                w = static_cast<int>(h / ivA);
+                w = static_cast<int>(h * ivA);
             }
-        }
+        }*/
         if (w > iconRect.width()) w = iconRect.width();
         if (h > iconRect.height()) h = iconRect.height();
-            /*
+
+        QString whichScale = hScale < vScale ? "hScale" : "vScale";
+        /*
+        qDebug() << __FUNCTION__
+                 << whichScale
+                 << "ivW =" << ivW
+                 << "ivH =" << ivH
+                 << "w =" << w
+                 << "h =" << h
+                 << "ivA =" << ivA;
+            */
+        /*
             qDebug() << __FUNCTION__
                      << "zoom =" << zoom
                      << "zoomFit =" << zoomFit
@@ -1996,8 +2010,8 @@ resize MW::resizeEvent that will change the centralWidget geometry.
                      << "ivA =" << ivA;
         //            */
     }
-    // loupe image smaller than central widget so no cropping
     else {
+    // imageView smaller than central widget so no cropping
         w = iconRect.width();
         h = iconRect.height();
     }

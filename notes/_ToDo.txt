@@ -1,5 +1,4 @@
 BUGS
-- touch to click not working on mac in Folders or Bookmarks
 - Mac check for updates not done yet
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
@@ -16,7 +15,6 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 - When ingesting confirm all files copied correctly (option)
-- Add completer for title in metadata
 
 DONE/FIXED
 - cannot make thumbs bigger than 256px
