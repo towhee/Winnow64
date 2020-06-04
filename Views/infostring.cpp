@@ -24,6 +24,11 @@ InfoString::InfoString(QWidget *parent, DataModel *dm) :
     initTokenList();
     initExampleMap();
     infoTemplates["Default"] = "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}";
+//    setAttribute( Qt::WA_TransparentForMouseEvents );
+//    QRegion reg(frameGeometry());
+//    reg -= QRegion(geometry());
+//    reg += childrenRegion();
+//    setMask(reg);
 }
 
 void InfoString::editTemplates()
