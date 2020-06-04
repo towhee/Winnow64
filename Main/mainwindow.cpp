@@ -3973,7 +3973,7 @@ void MW::createThumbView()
     thumbView->setAutoScroll(false);
 //    thumbView->setWrapping(false);
     thumbView->firstVisibleCell = 0;
-
+    thumbView->showZoomFrame = true;            // may have settings but not showZoomFrame yet
     if (isSettings) {
         // loadSettings has not run yet (dependencies, but QSettings has been opened
         if (setting->contains("thumbWidth")) thumbView->iconWidth = setting->value("thumbWidth").toInt();

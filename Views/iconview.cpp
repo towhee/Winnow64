@@ -157,6 +157,8 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
         labelFontSize, showIconLabels, badgeSize);
     setItemDelegate(iconViewDelegate);
 
+    zoomFrame = new QLabel;
+
     assignedIconWidth = iconWidth;
     prevIdx = model()->index(-1, -1);
 
@@ -1896,9 +1898,13 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     if (!idx.isValid()) return;
     if (m2->imageView->isFit) return;
 
+    prevIdx = idx;
+
     // preview dimensions
     int imW = dm->sf->index(idx.row(), G::WidthFullColumn).data().toInt();
     int imH = dm->sf->index(idx.row(), G::HeightFullColumn).data().toInt();
+    if (!imW || !imH) return;
+
     qreal zoom = m2->imageView->zoom;
     imW = static_cast<int>(imW * zoom);
     imH = static_cast<int>(imH + zoom);
@@ -1916,7 +1922,6 @@ resize MW::resizeEvent that will change the centralWidget geometry.
 
     if (hScale < 1 || vScale <= 1 ) {
         // imageView is zoomed in at least one axis
-        prevIdx = idx;
 
         // scale is for the side that needs to be reduced the most to fit
         qreal zoomFit = (hScale < vScale) ? hScale : vScale;
