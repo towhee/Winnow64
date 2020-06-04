@@ -75,8 +75,10 @@ ImageView::ImageView(QWidget *parent,
     moveImageLocked = false;
 
     infoOverlay = new DropShadowLabel(this);
+    infoOverlay->setStyleSheet("font-size: " + QString::number(infoOverlayFontSize) + "pt;");
     infoOverlay->setVisible(isShootingInfoVisible);
-    infoOverlay->setAttribute(Qt::WA_TranslucentBackground);
+    infoOverlay->setAttribute(Qt::WA_TranslucentBackground, true);
+    infoOverlay->setAttribute(Qt::WA_TransparentForMouseEvents, true);
 
     // title included in infoLabel, but might want to separate
     titleDropShadow = new DropShadowLabel(this);
@@ -814,17 +816,13 @@ to help make it visible against different coloured backgrounds. */
 
     QFont font("Tahoma", infoOverlayFontSize);
     font.setKerning(true);
-
     infoOverlay->setFont(font);      // not working
-
     infoOverlay->setStyleSheet("font-size: " + QString::number(infoOverlayFontSize) + "pt;");
     infoOverlay->setText(infoString);
     infoOverlay->adjustSize();
     // make a little wider to account for the drop shadow
     infoOverlay->resize(infoOverlay->width()+10, infoOverlay->height()+10);
     infoOverlay->move(x, y);
-
-    infoOverlay->setAttribute( Qt::WA_TransparentForMouseEvents );
     /*
     QRegion reg(frameGeometry());
     reg -= QRegion(geometry());
