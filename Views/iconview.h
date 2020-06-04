@@ -197,6 +197,7 @@ private:
 
     QRect cursorRect;
     QRect iconRect;
+    QLabel *zoomFrame;
 
     // used during gridView resize to keep close to beginning thumb size
     int assignedIconWidth;
