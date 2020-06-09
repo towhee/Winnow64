@@ -4840,6 +4840,21 @@ Returns a string like "16 (38MB)"
     return QString::number(count) + " ("  + pickMemSize + ")";
 }
 
+QString MW::getSelectedFileSize()
+{
+/*
+Returns a string like "12 (165 MB)"
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString selected = QString::number(selectionModel->selectedRows().count());
+    QString selMemSize = Utilities::formatMemory(memoryReqdForSelection());
+    return selected + " (" + selMemSize + ")";
+}
+
 void MW::updateStatus(bool keepBase, QString s)
 {
 /*
@@ -4857,6 +4872,7 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
         QStandardItemModel *k = infoView->ok;
         k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
         k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
+        k->setData(k->index(infoView->SelectedRow, 1, infoView->statusInfoIdx), "");
         k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
         updateStatusBar();
         return;
@@ -4929,11 +4945,13 @@ QString fileSym = "📷";
     if (keepBase) {
         k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), getPosition());
         k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), getZoom());
+        k->setData(k->index(infoView->SelectedRow, 1, infoView->statusInfoIdx), getSelectedFileSize());
         k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), getPicked());
     }
     else {
         k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
         k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
+        k->setData(k->index(infoView->SelectedRow, 1, infoView->statusInfoIdx), "");
         k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
     }
     infoView->isNewImageDataChange = false;
@@ -9167,6 +9185,22 @@ qulonglong MW::memoryReqdForPicks()
     return memTot;
 }
 
+qulonglong MW::memoryReqdForSelection()
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    qulonglong memTot = 0;
+    QModelIndexList selection = selectionModel->selectedRows();
+    for(int row = 0; row < selection.count(); row++) {
+        QModelIndex idx = dm->sf->index(row, G::SizeColumn);
+        memTot += idx.data(Qt::EditRole).toULongLong();
+    }
+    return memTot;
+}
+
 void MW::ingest()
 {
 /*
@@ -10710,13 +10744,70 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
     metadata->testNewFileFormat(fPath);
 }
 
+//namespace {
+
+//static_assert(heif_error_Ok == 0, "heif_error_Ok assumed to be 0");
+
+//template<class T, class D>
+//std::unique_ptr<T, D> wrapPointer(T* ptr, D deleter)
+//{
+//    return std::unique_ptr<T, D>(ptr, deleter);
+//}
+
+//template<class... As>
+//heif_error readContext(As... as)
+//{
+//#if LIBHEIF_NUMERIC_VERSION >= 0x01030000
+//    return heif_context_read_from_memory_without_copy(as...);
+//#else
+//    return heif_context_read_from_memory(as...);
+//#endif
+//}
+
+//}  // namespace
+
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    // update thumbnail zoom frame cursor
-    QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
-    if (idx.isValid()) {
-        thumbView->zoomCursor(idx, /*forceUpdate=*/false);
-    }
+//    QImage *destImage;
+
+//    heif_context* ctx = heif_context_alloc();
+//    heif_context_read_from_file(ctx, "D:/Pictures/_ThumbTest/C001.heic", nullptr);
+
+//    // get a handle to the primary image
+//    heif_image_handle* handle = nullptr;
+//    heif_context_get_primary_image_handle(ctx, &handle);
+
+//    // decode the image and convert colorspace to RGB, saved as 24bit interleaved
+//    heif_image* srcImagePtr = nullptr;
+//    heif_decode_image(handle,
+//                      &srcImagePtr,
+//                      heif_colorspace_RGB,
+//                      heif_chroma_interleaved_RGB,
+//                      nullptr);
+
+//    auto srcImage = wrapPointer(srcImagePtr, heif_image_release);
+//    auto channel = heif_channel_interleaved;
+//    int w = heif_image_get_width(srcImage.get(), channel);
+//    int h = heif_image_get_height(srcImage.get(), channel);
+////    int w = heif_image_get_width(img, channel);
+////    int h = heif_image_get_height(img, channel);
+//    QSize imgSize(w, h);
+
+//    qDebug() << __FUNCTION__ << "imgSize =" << imgSize;
+
+//    int stride;
+//    const uint8_t* data = heif_image_get_plane_readonly(srcImage.get(), heif_channel_interleaved, &stride);
+
+//    // move data ownership to QImage
+//    heif_image* dataImage = srcImage.release();
+
+//    *destImage = QImage(
+//        data, imgSize.width(), imgSize.height(),
+//        stride, QImage::Format_RGBA8888,
+//        [](void* img) { heif_image_release(static_cast<heif_image*>(img)); },
+//        dataImage
+//    );
+
 }
 // End MW
 

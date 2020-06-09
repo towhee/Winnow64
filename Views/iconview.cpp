@@ -1898,12 +1898,10 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     if (!idx.isValid()) return;
     if (m2->imageView->isFit) return;
 
-    prevIdx = idx;
-
     // preview dimensions
     int imW = dm->sf->index(idx.row(), G::WidthFullColumn).data().toInt();
     int imH = dm->sf->index(idx.row(), G::HeightFullColumn).data().toInt();
-    if (!imW || !imH) return;
+    if (imW == 0 || imH == 0) return;
 
     qreal zoom = m2->imageView->zoom;
     imW = static_cast<int>(imW * zoom);
@@ -1913,6 +1911,18 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     QRect centralRect = m2->centralWidget->rect();
     int cW = centralRect.width();
     int cH = centralRect.height();
+    /*
+    qDebug() << __FUNCTION__ << idx
+             << "cW =" << cW << "cH =" << cH
+             << "imW =" << imW << "imH =" << imH;
+//        */
+    if (imW < cW && imH < cH) {
+        setCursor(Qt::ArrowCursor);
+        prevIdx = model()->index(-1, -1);
+        return;
+    }
+
+    prevIdx = idx;
 
     qreal hScale = static_cast<qreal>(cW) / imW;
     qreal vScale = static_cast<qreal>(cH) / imH;

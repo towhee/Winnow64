@@ -1,7 +1,8 @@
 #include "heic.h"
 
-Heic::Heic(QFile &file) : file(file)
+Heic::Heic(/*QFile &file*/) /*: file(file)*/
 {
+    return;
     quint32 offset = 0;
     quint32 length;
     QString type;
@@ -18,6 +19,102 @@ Heic::Heic(QFile &file) : file(file)
         getHeifBox(type, offset, length);
     }
 
+}
+
+namespace {
+
+static_assert(heif_error_Ok == 0, "heif_error_Ok assumed to be 0");
+
+template<class T, class D>
+std::unique_ptr<T, D> wrapPointer(T* ptr, D deleter)
+{
+    return std::unique_ptr<T, D>(ptr, deleter);
+}
+
+template<class... As>
+heif_error readContext(As... as)
+{
+#if LIBHEIF_NUMERIC_VERSION >= 0x01030000
+    return heif_context_read_from_memory_without_copy(as...);
+#else
+    return heif_context_read_from_memory(as...);
+#endif
+}
+
+}  // namespace
+
+bool Heic::decode(ImageMetadata &m, QString &fPath, QImage &image)
+{
+    heif_context* ctx = heif_context_alloc();
+    heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
+
+    // get a handle to the primary image
+    heif_image_handle* handle = nullptr;
+    heif_context_get_primary_image_handle(ctx, &handle);
+
+    // decode the image and convert colorspace to RGB, saved as 24bit interleaved
+    heif_image* img = nullptr;
+    heif_decode_image(handle,
+                      &img,
+                      heif_colorspace_RGB,
+                      heif_chroma_interleaved_RGB,
+                      nullptr);
+
+    auto channel = heif_channel_interleaved;
+    int w = heif_image_get_width(img, heif_channel_interleaved);
+    int h = heif_image_get_height(img, heif_channel_interleaved);
+    m.width = w;
+    m.height = h;
+    m.widthFull = w;
+    m.heightFull = h;
+    int stride;
+    const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
+
+    qDebug() << __FUNCTION__ << fPath
+             << "w =" << w << "h =" << h
+             << "stride =" << stride;
+    image = QImage(data, w, h, stride, QImage::Format_RGB888);
+    return true;
+
+//    heif_image* srcImagePtr = nullptr;
+//    heif_decode_image(handle,
+//                      &srcImagePtr,
+//                      heif_colorspace_RGB,
+//                      heif_chroma_interleaved_RGB,
+//                      nullptr);
+
+//    auto srcImage = wrapPointer(srcImagePtr, heif_image_release);
+//    auto channel = heif_channel_interleaved;
+//    int w = heif_image_get_width(srcImage.get(), channel);
+//    int h = heif_image_get_height(srcImage.get(), channel);
+//    m.width = w;
+//    m.height = h;
+//    m.widthFull = w;
+//    m.heightFull = h;
+//    //    int w = heif_image_get_width(img, channel);
+//    //    int h = heif_image_get_height(img, channel);
+//    QSize imgSize(w, h);
+
+
+//    int stride;
+//    const uint8_t* data = heif_image_get_plane_readonly(srcImage.get(),
+//                                                        heif_channel_interleaved,
+//                                                        &stride);
+
+//    qDebug() << __FUNCTION__ << fPath
+//             << "imgSize =" << imgSize
+//             << "stride =" << stride;
+
+//    // move data ownership to QImage
+//    heif_image* dataImage = srcImage.release();
+
+//    image = QImage(
+//                data, imgSize.width(), imgSize.height(),
+//                stride, QImage::Format_RGBA8888,
+//                [](void* img) { heif_image_release(static_cast<heif_image*>(img)); },
+//    dataImage
+//    );
+//    return true;
 }
 
 bool Heic::nextHeifBox(quint32 &length, QString &type)

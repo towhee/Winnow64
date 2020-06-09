@@ -627,7 +627,7 @@ bool Metadata::parseHEIF()
     p.file.setFileName("D:/Pictures/_HEIC/iphone.HEIC");
 //    p.file.setFileName("D:/Pictures/_HEIC/example.HEIC");
     p.file.open(QIODevice::ReadOnly);
-    Heic *heic = new Heic(p.file);
+    Heic *heic = new Heic(/*p.file*/);
     // do some stuff
     delete heic;
     return true;

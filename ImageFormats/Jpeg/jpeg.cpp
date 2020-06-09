@@ -222,10 +222,9 @@ bool Jpeg::parse(MetadataParameters &p,
     p.offset = offsetEXIF;
     ifd->readIFD(p, m, isBigEnd);
 
-    m.width = ifd->ifdDataHash.value(40962).tagValue;
-    m.height = ifd->ifdDataHash.value(40963).tagValue;
+    m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
+    m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
     p.offset = 0;
-    qDebug() << __FUNCTION__ << m.width << m.height;
     if (!m.width || !m.height) getDimensions(p, m);
     m.widthFull = m.width;
     m.heightFull = m.height;

@@ -160,8 +160,8 @@ bool Panasonic::parse(MetadataParameters &p,
     jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
     m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
     m.xmpNextSegmentOffset = ifd->ifdDataHash.value(700).tagCount + m.xmpSegmentOffset;
-    m.height = ifd->ifdDataHash.value(49).tagValue;
-    m.width = ifd->ifdDataHash.value(50).tagValue;
+    m.height = static_cast<int>(ifd->ifdDataHash.value(49).tagValue);
+    m.width = static_cast<int>(ifd->ifdDataHash.value(50).tagValue);
     if (ifd->ifdDataHash.contains(23)) {
         quint32 x = ifd->ifdDataHash.value(23).tagValue;
         m.ISONum = static_cast<int>(x);

@@ -15,6 +15,21 @@ bool Pixmap::load(QString &fPath, QPixmap &pm)
     return success;
 }
 
+bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
+{
+    QFile imFile(fPath);
+    // check if file is locked by another process
+     if (imFile.open(QIODevice::ReadOnly)) {
+        // close it to allow qt load to work
+        imFile.close();
+     }
+
+     // Attempt to decode heic image
+     ImageMetadata m = dm->imMetadata(fPath);
+     Heic heic;
+     return heic.decode(m, fPath, image);
+}
+
 bool Pixmap::load(QString &fPath, QImage &image)
 {
 /*  Reads the embedded jpg (known offset and length) and converts it into a
@@ -148,6 +163,11 @@ bool Pixmap::load(QString &fPath, QImage &image)
                     ImageMetadata m = dm->imMetadata(fPath);
                     Tiff tiff;
                     success = tiff.decode(m, fPath, image);
+                }
+                else if (ext == "heic") {
+                    ImageMetadata m = dm->imMetadata(fPath);
+                    Heic heic;
+                    success = heic.decode(m, fPath, image);
                 }
                 else {
                     success = image.load(fPath);

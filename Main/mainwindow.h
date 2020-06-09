@@ -60,7 +60,7 @@
 
 //#include "Image/tiffhandler.h";
 //#include "Lib/zlib/zlib.h"
-//#include "lcms2.h"
+
 
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
@@ -964,11 +964,13 @@ private:
     QString getPosition();
     QString getZoom();
     QString getPicked();
+    QString getSelectedFileSize();
     void setActualDevicePixelRatio();
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
     void addRecentFolder(QString fPath);
 
     qulonglong memoryReqdForPicks();
+    qulonglong memoryReqdForSelection();
     QString enquote(QString &s);
 
     void diagnosticsAll();
