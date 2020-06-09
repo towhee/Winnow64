@@ -150,15 +150,14 @@ SOURCES += Views/infoview.cpp
 SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
 
-FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/ingestdlg_copy.ui \
-    Dialogs/saveasdlg.ui \
-    Dialogs/test12.ui
+FORMS += Dialogs/aboutdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/ingestdlg.ui
+FORMS += Dialogs/ingestdlg_copy.ui
 FORMS += Dialogs/loadusbdlg.ui
 FORMS += Dialogs/renamedlg.ui
+FORMS += Dialogs/saveasdlg.ui
 FORMS += Dialogs/testaligndlg.ui
 FORMS += Dialogs/testdlg.ui
 FORMS += Dialogs/test1.ui
@@ -180,8 +179,7 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/ingestautopath \
-   notes/hevcinfo
+DISTFILES += Docs/ingestautopath
 DISTFILES += Docs/ingestautopath.html
 DISTFILES += Docs/versions
 DISTFILES += Docs/test.html
@@ -192,6 +190,7 @@ DISTFILES += notes/ExiftoolCommands.txt
 DISTFILES += notes/git.txt
 DISTFILES += notes/help_videos_on_mac.txt
 DISTFILES += notes/HelpDocCreation.txt
+DISTFILES += notes/hevcinfo
 DISTFILES += notes/Menu.txt
 DISTFILES += notes/scratch.css
 DISTFILES += notes/scratch.html
@@ -209,18 +208,44 @@ mac:LIBS += -framework AppKit
 win32:QMAKE_CXXFLAGS += /MDd
 #win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../LIBRARYNAME/Lib/ -lLIBRARY /NODEFAULTLIB:library
 
+# zLib
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib
-
 win32:INCLUDEPATH += $$PWD/Lib/zlib
 win32:DEPENDPATH += $$PWD/Lib/zlib
 
+# lcms
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -lCORE_RL_lcms_
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
+win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
+win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
+
+# libde265 (frame parallel)
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
+
+# use imagemagic libs
+#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -lCORE_RL_libde265_
+#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -lCORE_DB_libde265_
+
+##else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ libde265.lib
+win32:INCLUDEPATH += $$PWD/Lib/libde265/include
+#win32:DEPENDPATH += $$PWD/Lib/libde265/debug
+#win32:DEPENDPATH += $$PWD/Lib/libde265/release
+
+# libheif
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
+
+# use imagemagic libs
+#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -lCORE_RL_libheif_
+#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -lCORE_DB_libheif_
+
+#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ libheif.lib
+win32:INCLUDEPATH += $$PWD/Lib/libheif/include
+#win32:DEPENDPATH += $$PWD/Lib/libheif
 
 # attempt to use dll
 #win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/bin/ -llcms2
 #else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/bin/ -llcms2d
 
-win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
-win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
 #DEPENDPATH += $$PWD/Lib/lcms2-2.9/bin

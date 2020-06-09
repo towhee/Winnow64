@@ -73,6 +73,7 @@ public:
     enum statusInfoRows {
         PositionRow,
         ZoomRow,
+        SelectedRow,
         PickedRow,
         CacheRow,
         MonitorRow,

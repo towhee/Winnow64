@@ -9,6 +9,9 @@
 
 #include "Main/global.h"
 #include "Utilities/utilities.h"
+#include "Metadata/imagemetadata.h"
+#include "Lib/libde265/include/de265.h"
+#include "Lib/libheif/include/heif.h"
 //#include "Metadata/metadata.h"
 
 class Heic : public QObject
@@ -16,7 +19,8 @@ class Heic : public QObject
     Q_OBJECT
 
 public:
-    Heic(QFile &file);
+    Heic();
+    bool decode(ImageMetadata &m, QString &fPath, QImage &image);
 
     // the numeric values map directly to the values of chroma_format_idc in the h.265 bitstream
     enum de265_chroma {
@@ -80,7 +84,8 @@ private:
     bool irotBox(quint32 &offset, quint32 &length);  // Color Information Box
     bool pixiBox(quint32 &offset, quint32 &length);  // Color Information Box
 
-    QFile &file;
+//    QFile &file;      // used in constructor before managed to compile libheif
+    QFile file;         // temp until decide what to do with constructor
     qint64 eof;
 };
 

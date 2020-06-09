@@ -17,6 +17,9 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Added Selection to InfoView ie Selection  8 (490.8 MB)
+- If fit at 100% then do not show zoom frame.
+- Release 1.10
 - cannot make thumbs bigger than 256px
 - When fit to loupe clicking on the infoLabel does not toggle zoom
 - Zoom tool not working when isFit = true

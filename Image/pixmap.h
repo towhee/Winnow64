@@ -11,6 +11,7 @@
 #include "Utilities/icc.h"
 #endif
 #include "ImageFormats/Jpeg/jpeg.h"
+#include "ImageFormats/Heic/heic.h"
 
 class Pixmap : public QObject
 {
@@ -23,6 +24,8 @@ public:
 private:
     DataModel *dm;
     Metadata *metadata;
+
+    bool loadFromHeic(QString &fPath, QImage &image);
 };
 
 #endif // PIXMAP_H

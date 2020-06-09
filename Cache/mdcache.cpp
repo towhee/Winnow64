@@ -436,9 +436,9 @@ Define the range of icons to cache: prev + current + next viewports/pages of ico
     /*
     qDebug()  <<  __FUNCTION__
               << "source =" << actionList.at(action)
-              << "first =" << firstIconVisible
-              << "mid =" << midIconVisible
-              << "last =" << lastIconVisible
+              << "firstIconVisible =" << firstIconVisible
+              << "midIconVisible =" << midIconVisible
+              << "lastIconVisible =" << lastIconVisible
               << "visibleIcons =" << visibleIcons
               << "tpp =" << tpp
               << "metadataChunkSize =" << metadataChunkSize
@@ -649,7 +649,7 @@ sort/filter change and all metadata has been loaded, but the icons visible have 
             iconsCached.append(dmRow);
         }
         mutex.unlock();
-//        qApp->processEvents();
+        if (row == lastIconVisible) qApp->processEvents();
     }
     // reset after a filter change
 //    emit updateIconBestFit();
@@ -734,74 +734,44 @@ startRow and endRow.
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-    int count = 0;
-    bool allRead = false;
-    while (!allRead && count < 1) {
-        allRead = true;
-        if (cacheAllMetadata) endRow = dm->sf->rowCount();
-        for (int row = startRow; row < endRow; ++row) {
-            if (abort) {
-                emit updateIsRunning(false, true, __FUNCTION__);
-                return;
-            }
-
-            // file path and dm source row in case filtered or sorted
-            mutex.lock();
-            QModelIndex idx = dm->sf->index(row, 0);
-            int dmRow = dm->sf->mapToSource(idx).row();
-            QString fPath = idx.data(G::PathRole).toString();
-
-            // load metadata
-            if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
-                QFileInfo fileInfo(fPath);
-                /*
-                   tried emit signal to metadata but really slow
-                   emit loadImageMetadata(fileInfo, true, true, false);  */
-                if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-                    metadata->imageMetadata.row = dmRow;
-                    dm->addMetadataForItem(metadata->imageMetadata);
-                }
-                else {
-                    allRead = false;
-//                    qDebug() << "XXX " << __FUNCTION__ << "Failed to load metadata for " << fPath;
-                }
-            }
-
-//            if (!cacheAllIcons && row > metadataChunkSize) continue;
-
-            // load icon
-            if (idx.data(Qt::DecorationRole).isNull()) {
-                QImage image;
-//                qDebug() << __FUNCTION__ << "row =" << row << fPath;
-                bool thumbLoaded = thumb->loadThumb(fPath, image);
-                if (thumbLoaded) {
-                    QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                    dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
-                    iconMax(pm);
-                    iconsCached.append(dmRow);
-                }
-                else {
-                    allRead = false;
-//                    qDebug() << "XXX " << __FUNCTION__ << "Failed to load icon for " << fPath;
-                }
-            }
-            mutex.unlock();
+    if (cacheAllMetadata) endRow = dm->sf->rowCount();
+    for (int row = startRow; row < endRow; ++row) {
+        if (abort) {
+            emit updateIsRunning(false, true, __FUNCTION__);
+            return;
         }
-        count++;
 
-        // confirm all metadata and icons read.  If not try again
-/*        allRead = true;
-        for (int row = startRow; row < endRow; ++row) {
-            if (dm->sf->index(row, G::CreatedColumn).data().isNull()) allRead = false;
-            if (dm->sf->index(row, 0).data(Qt::DecorationRole).isNull()) allRead = false;
-        }*/
+        // file path and dm source row in case filtered or sorted
+        mutex.lock();
+        QModelIndex idx = dm->sf->index(row, 0);
+        int dmRow = dm->sf->mapToSource(idx).row();
+        QString fPath = idx.data(G::PathRole).toString();
+
+        // load metadata
+        if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
+            QFileInfo fileInfo(fPath);
+            /*
+               tried emit signal to metadata but really slow
+               emit loadImageMetadata(fileInfo, true, true, false);  */
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+                metadata->imageMetadata.row = dmRow;
+                dm->addMetadataForItem(metadata->imageMetadata);
+            }
+        }
+
+        // load icon
+        if (idx.data(Qt::DecorationRole).isNull()) {
+            QImage image;
+            bool thumbLoaded = thumb->loadThumb(fPath, image);
+            if (thumbLoaded) {
+                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+                iconMax(pm);
+                iconsCached.append(dmRow);
+            }
+        }
+        mutex.unlock();
     }
-    /*
-    qint64 ms = t.elapsed();
-    qreal msperfile = (float)ms / count;
-    qDebug() << "MetadataCache::loadMetadataIconChunk for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
-    */
-    return;
 }
 
 void MetadataCache::run()
