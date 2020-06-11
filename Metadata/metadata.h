@@ -184,6 +184,7 @@ private:
     Panasonic *panasonic = nullptr;
     Sony *sony = nullptr;
     Tiff *tiff = nullptr;
+    Heic *heic = nullptr;
 
     // hash
     QHash<uint, IFDData> ifdDataHash;

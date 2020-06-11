@@ -27,7 +27,7 @@ bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
      // Attempt to decode heic image
      ImageMetadata m = dm->imMetadata(fPath);
      Heic heic;
-     return heic.decode(m, fPath, image);
+     return heic.decodePrimaryImage(m, fPath, image);
 }
 
 bool Pixmap::load(QString &fPath, QImage &image)
@@ -167,7 +167,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 else if (ext == "heic") {
                     ImageMetadata m = dm->imMetadata(fPath);
                     Heic heic;
-                    success = heic.decode(m, fPath, image);
+                    success = heic.decodePrimaryImage(m, fPath, image);
                 }
                 else {
                     success = image.load(fPath);

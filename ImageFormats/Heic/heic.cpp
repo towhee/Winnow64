@@ -21,6 +21,27 @@ Heic::Heic(/*QFile &file*/) /*: file(file)*/
 
 }
 
+bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif)
+{
+    heif_context* ctx = heif_context_alloc();
+    QFileInfo info(p.file);
+    QString fPath = info.filePath();
+    heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
+
+    // get a handle to the primary image
+    heif_image_handle* handle = nullptr;
+    heif_context_get_primary_image_handle(ctx, &handle);
+
+    heif_item_id id = 0;
+    int n = heif_image_handle_get_list_of_metadata_block_IDs(handle, "Exif", &id, 1);
+    if (n > 0) {
+        const int length = static_cast<int>(heif_image_handle_get_metadata_size(handle, id));
+        QByteArray exifData(length, 0);
+        heif_image_handle_get_metadata(handle, id, exifData.data());
+    }
+    return true;
+}
+
 namespace {
 
 static_assert(heif_error_Ok == 0, "heif_error_Ok assumed to be 0");
@@ -43,7 +64,7 @@ heif_error readContext(As... as)
 
 }  // namespace
 
-bool Heic::decode(ImageMetadata &m, QString &fPath, QImage &image)
+bool Heic::decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image)
 {
     heif_context* ctx = heif_context_alloc();
     heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
@@ -60,7 +81,6 @@ bool Heic::decode(ImageMetadata &m, QString &fPath, QImage &image)
                       heif_chroma_interleaved_RGB,
                       nullptr);
 
-    auto channel = heif_channel_interleaved;
     int w = heif_image_get_width(img, heif_channel_interleaved);
     int h = heif_image_get_height(img, heif_channel_interleaved);
     m.width = w;
@@ -69,52 +89,92 @@ bool Heic::decode(ImageMetadata &m, QString &fPath, QImage &image)
     m.heightFull = h;
     int stride;
     const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
-
+    /*
     qDebug() << __FUNCTION__ << fPath
              << "w =" << w << "h =" << h
              << "stride =" << stride;
+//             */
     image = QImage(data, w, h, stride, QImage::Format_RGB888);
     return true;
+    /*
+    heif_image* srcImagePtr = nullptr;
+    heif_decode_image(handle,
+                      &srcImagePtr,
+                      heif_colorspace_RGB,
+                      heif_chroma_interleaved_RGB,
+                      nullptr);
 
-//    heif_image* srcImagePtr = nullptr;
-//    heif_decode_image(handle,
-//                      &srcImagePtr,
-//                      heif_colorspace_RGB,
-//                      heif_chroma_interleaved_RGB,
-//                      nullptr);
-
-//    auto srcImage = wrapPointer(srcImagePtr, heif_image_release);
-//    auto channel = heif_channel_interleaved;
-//    int w = heif_image_get_width(srcImage.get(), channel);
-//    int h = heif_image_get_height(srcImage.get(), channel);
-//    m.width = w;
-//    m.height = h;
-//    m.widthFull = w;
-//    m.heightFull = h;
-//    //    int w = heif_image_get_width(img, channel);
-//    //    int h = heif_image_get_height(img, channel);
-//    QSize imgSize(w, h);
+    auto srcImage = wrapPointer(srcImagePtr, heif_image_release);
+    auto channel = heif_channel_interleaved;
+    int w = heif_image_get_width(srcImage.get(), channel);
+    int h = heif_image_get_height(srcImage.get(), channel);
+    m.width = w;
+    m.height = h;
+    m.widthFull = w;
+    m.heightFull = h;
+    QSize imgSize(w, h);
 
 
-//    int stride;
-//    const uint8_t* data = heif_image_get_plane_readonly(srcImage.get(),
-//                                                        heif_channel_interleaved,
-//                                                        &stride);
+    int stride;
+    const uint8_t* data = heif_image_get_plane_readonly(srcImage.get(),
+                                                        heif_channel_interleaved,
+                                                        &stride);
 
-//    qDebug() << __FUNCTION__ << fPath
-//             << "imgSize =" << imgSize
-//             << "stride =" << stride;
+    qDebug() << __FUNCTION__ << fPath
+             << "imgSize =" << imgSize
+             << "stride =" << stride;
 
-//    // move data ownership to QImage
-//    heif_image* dataImage = srcImage.release();
+    // move data ownership to QImage
+    heif_image* dataImage = srcImage.release();
 
-//    image = QImage(
-//                data, imgSize.width(), imgSize.height(),
-//                stride, QImage::Format_RGBA8888,
-//                [](void* img) { heif_image_release(static_cast<heif_image*>(img)); },
-//    dataImage
-//    );
-//    return true;
+    image = QImage(
+                data, imgSize.width(), imgSize.height(),
+                stride, QImage::Format_RGBA8888,
+                [](void* img) { heif_image_release(static_cast<heif_image*>(img)); },
+    dataImage
+    );
+    return true;
+    */
+}
+
+bool Heic::decodeThumbnail(ImageMetadata &m, QString &fPath, QImage &image)
+{
+    heif_context* ctx = heif_context_alloc();
+    heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
+
+    // get a handle to the primary image
+    heif_image_handle* handle = nullptr;
+    heif_context_get_primary_image_handle(ctx, &handle);
+
+    // get a handle to the primary image thumbnail
+    heif_image_handle* thumbHandle = nullptr;
+    int count = heif_image_handle_get_number_of_thumbnails(handle);
+    if (count > 0) {
+        heif_item_id ids[1];
+        heif_image_handle_get_list_of_thumbnail_IDs(handle, ids, count);
+//        qDebug() << __FUNCTION__ << ids[0];
+        heif_image_handle_get_thumbnail(handle, ids[0], &thumbHandle);
+        handle = thumbHandle;
+    }
+
+    // decode the image and convert colorspace to RGB, saved as 24bit interleaved
+    heif_image* img = nullptr;
+    heif_decode_image(handle,
+                      &img,
+                      heif_colorspace_RGB,
+                      heif_chroma_interleaved_RGB,
+                      nullptr);
+
+    int w = heif_image_get_width(img, heif_channel_interleaved);
+    int h = heif_image_get_height(img, heif_channel_interleaved);
+    int stride;
+    const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
+//    /*
+    qDebug() << __FUNCTION__ << fPath
+             << "w =" << w << "h =" << h
+             << "stride =" << stride;   //*/
+    image = QImage(data, w, h, stride, QImage::Format_RGB888);
+    return true;
 }
 
 bool Heic::nextHeifBox(quint32 &length, QString &type)

@@ -10744,70 +10744,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
     metadata->testNewFileFormat(fPath);
 }
 
-//namespace {
-
-//static_assert(heif_error_Ok == 0, "heif_error_Ok assumed to be 0");
-
-//template<class T, class D>
-//std::unique_ptr<T, D> wrapPointer(T* ptr, D deleter)
-//{
-//    return std::unique_ptr<T, D>(ptr, deleter);
-//}
-
-//template<class... As>
-//heif_error readContext(As... as)
-//{
-//#if LIBHEIF_NUMERIC_VERSION >= 0x01030000
-//    return heif_context_read_from_memory_without_copy(as...);
-//#else
-//    return heif_context_read_from_memory(as...);
-//#endif
-//}
-
-//}  // namespace
-
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    QImage *destImage;
-
-//    heif_context* ctx = heif_context_alloc();
-//    heif_context_read_from_file(ctx, "D:/Pictures/_ThumbTest/C001.heic", nullptr);
-
-//    // get a handle to the primary image
-//    heif_image_handle* handle = nullptr;
-//    heif_context_get_primary_image_handle(ctx, &handle);
-
-//    // decode the image and convert colorspace to RGB, saved as 24bit interleaved
-//    heif_image* srcImagePtr = nullptr;
-//    heif_decode_image(handle,
-//                      &srcImagePtr,
-//                      heif_colorspace_RGB,
-//                      heif_chroma_interleaved_RGB,
-//                      nullptr);
-
-//    auto srcImage = wrapPointer(srcImagePtr, heif_image_release);
-//    auto channel = heif_channel_interleaved;
-//    int w = heif_image_get_width(srcImage.get(), channel);
-//    int h = heif_image_get_height(srcImage.get(), channel);
-////    int w = heif_image_get_width(img, channel);
-////    int h = heif_image_get_height(img, channel);
-//    QSize imgSize(w, h);
-
-//    qDebug() << __FUNCTION__ << "imgSize =" << imgSize;
-
-//    int stride;
-//    const uint8_t* data = heif_image_get_plane_readonly(srcImage.get(), heif_channel_interleaved, &stride);
-
-//    // move data ownership to QImage
-//    heif_image* dataImage = srcImage.release();
-
-//    *destImage = QImage(
-//        data, imgSize.width(), imgSize.height(),
-//        stride, QImage::Format_RGBA8888,
-//        [](void* img) { heif_image_release(static_cast<heif_image*>(img)); },
-//        dataImage
-//    );
-
+    QByteArray ba("abcdef");
+    QBuffer buf(&ba);
 }
 // End MW
 

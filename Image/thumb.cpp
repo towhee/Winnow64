@@ -195,9 +195,9 @@ that is faster than loading the entire full resolution image just to get a thumb
     // Is there an embedded thumbnail?
     uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
     uint lengthThumb = dm->index(row, G::LengthThumbColumn).data().toUInt();
-    bool thumbFound = offsetThumb && lengthThumb;
+    bool thumbFound = (offsetThumb && lengthThumb) || ext == "heic";
 
-    /* A raw file may not have any embedded jpg or be corrupted.  */
+    // A raw file may not have any embedded jpg or be corrupted.
     if (metadata->rawFormats.contains(ext) && !thumbFound) {
         QString path = ":/images/badImage1.png";
         loadFromEntireFile(path, image, row);
@@ -228,6 +228,11 @@ that is faster than loading the entire full resolution image just to get a thumb
                         err = "Failed to load thumb";
                     }
                 }
+            }
+            else if (ext == "heic") {
+                ImageMetadata m = dm->imMetadata(fPath);
+                Heic heic;
+                success = heic.decodeThumbnail(m, fPath, image);
             }
             else success = loadFromJpgData(fPath, image);
             if (!success) {

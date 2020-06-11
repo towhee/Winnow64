@@ -78,6 +78,7 @@ void Metadata::initSupportedFiles()
     getMetadataFormats  << "arw"
                         << "cr2"
                         << "dng"
+                        << "heic"
                         << "nef"
                         << "orf"
                         << "raf"
@@ -624,13 +625,16 @@ bool Metadata::parseJPG(quint32 startOffset)
 
 bool Metadata::parseHEIF()
 {
-    p.file.setFileName("D:/Pictures/_HEIC/iphone.HEIC");
+//    p.file.setFileName("D:/Pictures/_HEIC/iphone.HEIC");
 //    p.file.setFileName("D:/Pictures/_HEIC/example.HEIC");
-    p.file.open(QIODevice::ReadOnly);
-    Heic *heic = new Heic(/*p.file*/);
-    // do some stuff
-    delete heic;
-    return true;
+//    p.file.open(QIODevice::ReadOnly);
+    if (heic == nullptr) heic = new Heic;
+    if (ifd == nullptr) ifd = new IFD;
+    if (exif == nullptr) exif = new Exif;
+    if (gps == nullptr) gps = new GPS;
+    bool ok = heic->parse(p, imageMetadata, ifd, exif);
+    if (ok && p.report) reportMetadata();
+    return ok;
 }
 
 void Metadata::clearMetadata()
@@ -748,15 +752,16 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     bool fileOpened = false;
 //    do {
         if (p.file.open(QIODevice::ReadOnly)) {
-            if (ext == "cr2") fileOpened = parseCanon();
-            if (ext == "dng") fileOpened = parseDNG();
-            if (ext == "raf") fileOpened = parseFuji();
-            if (ext == "jpg") fileOpened = parseJPG(0);
-            if (ext == "nef") fileOpened = parseNikon();
-            if (ext == "orf") fileOpened = parseOlympus();
-            if (ext == "rw2") fileOpened = parsePanasonic();
-            if (ext == "arw") fileOpened = parseSony();
-            if (ext == "tif") fileOpened = parseTIF();
+            if (ext == "cr2")  fileOpened = parseCanon();
+            if (ext == "dng")  fileOpened = parseDNG();
+            if (ext == "raf")  fileOpened = parseFuji();
+            if (ext == "jpg")  fileOpened = parseJPG(0);
+            if (ext == "nef")  fileOpened = parseNikon();
+            if (ext == "orf")  fileOpened = parseOlympus();
+            if (ext == "rw2")  fileOpened = parsePanasonic();
+            if (ext == "arw")  fileOpened = parseSony();
+            if (ext == "tif")  fileOpened = parseTIF();
+            if (ext == "heic") fileOpened = parseHEIF();
             p.file.close();
 //            qDebug() << __FUNCTION__ << "fileOpened = " << fileOpened << path;
             if (fileOpened) success = true;

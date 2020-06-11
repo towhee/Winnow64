@@ -10,9 +10,11 @@
 #include "Main/global.h"
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
+#include "Metadata/exif.h"
+#include "Metadata/ifd.h"
+#include "Metadata/xmp.h"
 #include "Lib/libde265/include/de265.h"
 #include "Lib/libheif/include/heif.h"
-//#include "Metadata/metadata.h"
 
 class Heic : public QObject
 {
@@ -20,7 +22,9 @@ class Heic : public QObject
 
 public:
     Heic();
-    bool decode(ImageMetadata &m, QString &fPath, QImage &image);
+    bool parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif);
+    bool decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image);
+    bool decodeThumbnail(ImageMetadata &m, QString &fPath, QImage &image);
 
     // the numeric values map directly to the values of chroma_format_idc in the h.265 bitstream
     enum de265_chroma {
