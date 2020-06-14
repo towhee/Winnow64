@@ -12,6 +12,7 @@
 #include "Metadata/imagemetadata.h"
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
+#include "Metadata/gps.h"
 #include "Metadata/xmp.h"
 #include "Lib/libde265/include/de265.h"
 #include "Lib/libheif/include/heif.h"
@@ -22,7 +23,7 @@ class Heic : public QObject
 
 public:
     Heic();
-    bool parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif);
+    bool parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps);
     bool decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image);
     bool decodeThumbnail(ImageMetadata &m, QString &fPath, QImage &image);
 

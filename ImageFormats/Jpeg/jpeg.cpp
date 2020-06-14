@@ -136,13 +136,13 @@ bool Jpeg::parse(MetadataParameters &p,
     getJpgSegments(p, m);
 
     // check if JFIF
-    if (segmentHash.contains("JFIF")) {
-        // it's a jpg so the whole thing is the full length jpg and no other
-        // metadata available
-        m.offsetFull = 0;
-        m.lengthFull = static_cast<uint>(p.file.size());
-        return true;
-    }
+//    if (segmentHash.contains("JFIF")) {
+//        // it's a jpg so the whole thing is the full length jpg and no other
+//        // metadata available
+//        m.offsetFull = 0;
+//        m.lengthFull = static_cast<uint>(p.file.size());
+//        return true;
+//    }
 
     // read the EXIF data
     if (segmentHash.contains("EXIF")) p.file.seek(segmentHash["EXIF"]);
@@ -180,6 +180,7 @@ bool Jpeg::parse(MetadataParameters &p,
     quint32 a = Utilities::get16(p.file.read(2), isBigEnd);  // magic 42
     a = Utilities::get32(p.file.read(4), isBigEnd);
     quint32 offsetIfd0 = a + startOffset;
+    qDebug() << __FUNCTION__ << "IFDOffset IFD0 =" << offsetIfd0 << p.file.fileName();
 
     // it's a jpg so the whole thing is the full length jpg
     m.offsetFull = 0;
@@ -189,15 +190,14 @@ bool Jpeg::parse(MetadataParameters &p,
     p.hdr = "IFD0";
     p.offset = offsetIfd0;
     p.hash = &exif->hash;
-    quint32 nextIFDOffset = ifd->readIFD(p, m, isBigEnd) + startOffset;
+    quint32 nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
+    if (nextIFDOffset) nextIFDOffset += startOffset;
     quint32 offsetEXIF;
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
     quint32 offsetGPS;
     offsetGPS = ifd->ifdDataHash.value(34853).tagValue + startOffset;
-//    qDebug() << __FUNCTION__ << p.file.fileName()
-//             << "offsetGPS =" << offsetGPS;
-    m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
 
+    m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
                      ifd->ifdDataHash.value(271).tagCount);
     m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset,
@@ -208,6 +208,7 @@ bool Jpeg::parse(MetadataParameters &p,
                           ifd->ifdDataHash.value(33432).tagCount);
 
     // read IFD1
+    qDebug() << __FUNCTION__ << "nextIFDOffset IFD1 =" << nextIFDOffset << p.file.fileName();
     if (nextIFDOffset) {
         p.hdr = "IFD1";
         p.offset = nextIFDOffset;

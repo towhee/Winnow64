@@ -21,7 +21,7 @@ Heic::Heic(/*QFile &file*/) /*: file(file)*/
 
 }
 
-bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif)
+bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps)
 {
     heif_context* ctx = heif_context_alloc();
     QFileInfo info(p.file);
@@ -32,13 +32,217 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif)
     heif_image_handle* handle = nullptr;
     heif_context_get_primary_image_handle(ctx, &handle);
 
+    // get exif in QByteArray
     heif_item_id id = 0;
     int n = heif_image_handle_get_list_of_metadata_block_IDs(handle, "Exif", &id, 1);
-    if (n > 0) {
-        const int length = static_cast<int>(heif_image_handle_get_metadata_size(handle, id));
-        QByteArray exifData(length, 0);
-        heif_image_handle_get_metadata(handle, id, exifData.data());
+    if (n == 0) return false;
+    const int length = static_cast<int>(heif_image_handle_get_metadata_size(handle, id));
+    QByteArray exifData(length, 0);
+    heif_image_handle_get_metadata(handle, id, exifData.data());
+    p.buf.setBuffer(&exifData);
+    p.buf.open(QIODevice::ReadOnly);
+
+    // get endian
+    bool isBigEnd = true;
+    bool foundEndian = false;
+    quint32 startOffset = 0;
+    int count = 0;
+    while (!foundEndian) {
+        quint32 order = Utilities::get16(p.buf.read(2));
+        if (order == 0x4949 || order == 0x4D4D) {
+            order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
+            foundEndian = true;
+            startOffset = static_cast<quint32>(p.buf.pos()) - 2;
+            qDebug() << __FUNCTION__ << QString::number(order, 16);
+        }
+        // add condition to check for EOF
+        count++;
+        if (count > 100) {
+            // err endian order not found
+            return false;
+        }
     }
+
+    //
+    quint32 magic42 = Utilities::get16(p.buf.read(2), isBigEnd);
+    qDebug() << __FUNCTION__ << magic42;
+    quint32 a = Utilities::get32(p.buf.read(4), isBigEnd);
+    quint32 offsetIfd0 = a + startOffset;
+    p.offset = offsetIfd0;
+//    p.offset = static_cast<quint32>(p.buf.pos()) + 4;
+    p.hdr = "IFD0";
+    p.hash = &exif->hash;
+    quint32 nextIFDOffset = ifd->readIFD_B(p, m, isBigEnd);
+    if (nextIFDOffset) nextIFDOffset += startOffset;
+
+    quint32 offsetEXIF;
+    offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
+    quint32 offsetGPS;
+    offsetGPS = ifd->ifdDataHash.value(34853).tagValue + startOffset;
+
+    m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
+    m.make = Utilities::getString(p.buf, ifd->ifdDataHash.value(271).tagValue + startOffset,
+                     ifd->ifdDataHash.value(271).tagCount);
+    m.model = Utilities::getString(p.buf, ifd->ifdDataHash.value(272).tagValue + startOffset,
+                      ifd->ifdDataHash.value(272).tagCount);
+    m.creator = Utilities::getString(p.buf, ifd->ifdDataHash.value(315).tagValue + startOffset,
+                        ifd->ifdDataHash.value(315).tagCount);
+    m.copyright = Utilities::getString(p.buf, ifd->ifdDataHash.value(33432).tagValue + startOffset,
+                          ifd->ifdDataHash.value(33432).tagCount);
+
+    // read IFD1
+    qDebug() << __FUNCTION__ << "nextIFDOffset IFD1 =" << nextIFDOffset;
+    if (nextIFDOffset) {
+        p.hdr = "IFD1";
+        p.offset = nextIFDOffset;
+        nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
+    }
+    // IFD1: thumbnail offset and length
+    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + 12;
+    m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
+
+    // read EXIF
+    p.hdr = "IFD Exif";
+    p.offset = offsetEXIF;
+    ifd->readIFD(p, m, isBigEnd);
+
+    m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
+    m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
+    p.offset = 0;
+//    if (!m.width || !m.height) getDimensions(p, m);
+    m.widthFull = m.width;
+    m.heightFull = m.height;
+
+    // EXIF: created datetime
+    QString createdExif;
+    createdExif = Utilities::getString(p.buf, ifd->ifdDataHash.value(36868).tagValue + startOffset,
+        ifd->ifdDataHash.value(36868).tagCount);
+    if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+    // try DateTimeOriginal
+    if (createdExif.length() == 0) {
+        createdExif = Utilities::getString(p.buf, ifd->ifdDataHash.value(36867).tagValue + startOffset,
+            ifd->ifdDataHash.value(36867).tagCount);
+        if (createdExif.length() > 0) {
+            m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
+        }
+//            if(!createdDate.isValid())
+//                createdDate = QDateTime::fromString("2017:10:10 17:26:08", "yyyy:MM:dd hh:mm:ss");
+    }
+
+    // EXIF: shutter speed
+    if (ifd->ifdDataHash.contains(33434)) {
+        double x = Utilities::getReal(p.buf,
+                                      ifd->ifdDataHash.value(33434).tagValue + startOffset,
+                                      isBigEnd);
+        if (x < 1) {
+            double recip = static_cast<double>(1 / x);
+            if (recip >= 2) m.exposureTime = "1/" + QString::number(qRound(recip));
+            else m.exposureTime = "1/" + QString::number(recip, 'g', 2);
+            m.exposureTimeNum = x;
+        } else {
+            uint t = static_cast<uint>(x);
+            m.exposureTime = QString::number(t);
+            m.exposureTimeNum = t;
+        }
+        m.exposureTime += " sec";
+    } else {
+        m.exposureTime = "";
+    }
+
+    // EXIF: aperture
+    if (ifd->ifdDataHash.contains(33437)) {
+        double x = Utilities::getReal(p.buf,
+                                      ifd->ifdDataHash.value(33437).tagValue + startOffset,
+                                      isBigEnd);
+        m.aperture = "f/" + QString::number(x, 'f', 1);
+        m.apertureNum = (qRound(x * 10) / 10.0);
+    } else {
+        m.aperture = "";
+        m.apertureNum = 0;
+    }
+
+    // EXIF: ISO
+    if (ifd->ifdDataHash.contains(34855)) {
+        quint32 x = ifd->ifdDataHash.value(34855).tagValue;
+        m.ISONum = static_cast<int>(x);
+        m.ISO = QString::number(m.ISONum);
+    } else {
+        m.ISO = "";
+        m.ISONum = 0;
+    }
+
+    // EXIF: Exposure compensation
+    if (ifd->ifdDataHash.contains(37380)) {
+        // tagType = 10 signed rational
+        double x = Utilities::getReal_s(p.buf,
+                                      ifd->ifdDataHash.value(37380).tagValue + startOffset,
+                                      isBigEnd);
+        m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
+        m.exposureCompensationNum = x;
+    } else {
+        m.exposureCompensation = "";
+        m.exposureCompensationNum = 0;
+    }
+
+    // EXIF: focal length
+    if (ifd->ifdDataHash.contains(37386)) {
+        double x = Utilities::getReal(p.buf,
+                                      ifd->ifdDataHash.value(37386).tagValue + startOffset,
+                                      isBigEnd);
+        m.focalLengthNum = static_cast<int>(x);
+        m.focalLength = QString::number(x, 'f', 0) + "mm";
+    } else {
+        m.focalLength = "";
+        m.focalLengthNum = 0;
+    }
+
+    // EXIF: lens model
+    m.lens = Utilities::getString(p.buf, ifd->ifdDataHash.value(42036).tagValue + startOffset,
+                     ifd->ifdDataHash.value(42036).tagCount);
+
+    /* Read embedded ICC. The default color space is sRGB. If there is an embedded icc profile
+    and it is sRGB then no point in saving the byte array of the profile since we already have
+    it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
+//    if (segmentHash.contains("ICC")) {
+//        if (m.iccSegmentOffset && m.iccSegmentLength) {
+//            m.iccSpace = Utilities::getString_B(p.buf, m.iccSegmentOffset + 52, 4);
+//            if (m.iccSpace != "sRGB") {
+//                p.buf.seek(m.iccSegmentOffset);
+//                m.iccBuf = p.buf.read(m.iccSegmentLength);
+//            }
+//        }
+//    }
+
+    // read GPS
+    p.hdr = "IFD GPS";
+    p.offset = offsetGPS;
+    p.hash = &gps->hash;
+    ifd->readIFD(p, m, isBigEnd);
+
+    // read XMP
+//    bool okToReadXmp = true;
+//    if (m.isXmp && okToReadXmp) {
+//        Xmp xmp(p.buf, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+//        m.rating = xmp.getItem("Rating");     // case is important "Rating"
+//        m.label = xmp.getItem("Label");       // case is important "Label"
+//        m.title = xmp.getItem("title");       // case is important "title"
+//        m.cameraSN = xmp.getItem("SerialNumber");
+//        if (m.lens.isEmpty()) m.lens = xmp.getItem("Lens");
+//        m.lensSN = xmp.getItem("LensSerialNumber");
+//        if (m.creator.isEmpty()) m.creator = xmp.getItem("creator");
+//        m.copyright = xmp.getItem("rights");
+//        m.email = xmp.getItem("CiEmailWork");
+//        m.url = xmp.getItem("CiUrlWork");
+
+//        // save original values so can determine if edited when writing changes
+//        m._title = m.title;
+//        m._rating = m.rating;
+//        m._label = m.label;
+
+//        if (p.report) p.xmpString = xmp.metaAsString();
+//    }
+
+    p.buf.close();
     return true;
 }
 
