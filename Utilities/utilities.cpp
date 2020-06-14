@@ -197,30 +197,73 @@ quint64 Utilities::get64(QByteArray c, bool isBigEnd)
     }
 }
 
-double Utilities::getReal(QFile &file, quint32 offset, bool isBigEnd)
+template<typename T>    // QFile or QBuffer
+double Utilities::getReal(T &io, quint32 offset, bool isBigEnd)
 {
     /*
     In IFD type 5 = rational unsigned = real/float
     */
-        file.seek(offset);
-        quint32 a = get32(file.read(4), isBigEnd);
-        quint32 b = get32(file.read(4), isBigEnd);
+        io.seek(offset);
+        quint32 a = get32(io.read(4), isBigEnd);
+        quint32 b = get32(io.read(4), isBigEnd);
         if (b == 0) return 0;
         return static_cast<double>(a) / b;
 }
+template double Utilities::getReal<QFile>(QFile&, quint32 offset, bool isBigEnd);
+template double Utilities::getReal<QBuffer>(QBuffer&, quint32 offset, bool isBigEnd);
 
-double Utilities::getReal_s(QFile &file, quint32 offset, bool isBigEnd)
+//double Utilities::getReal(QFile &file, quint32 offset, bool isBigEnd)
+//{
+//    /*
+//    In IFD type 5 = rational unsigned = real/float
+//    */
+//    file.seek(offset);
+//    quint32 a = get32(file.read(4), isBigEnd);
+//    quint32 b = get32(file.read(4), isBigEnd);
+//    if (b == 0) return 0;
+//    return static_cast<double>(a) / b;
+//}
+
+//double Utilities::getReal_B(QBuffer &buf, quint32 offset, bool isBigEnd)
+//{
+//    /*
+//    In IFD type 5 = rational unsigned = real/float
+//    */
+//    buf.seek(offset);
+//    quint32 a = get32(buf.read(4), isBigEnd);
+//    quint32 b = get32(buf.read(4), isBigEnd);
+//    if (b == 0) return 0;
+//    return static_cast<double>(a) / b;
+//}
+
+template<typename T>    // QFile or QBuffer
+double Utilities::getReal_s(T &io, quint32 offset, bool isBigEnd)
 {
     /*
     In IFD type 10 = rational signed = real/float
     */
-    file.seek(offset);
+    io.seek(offset);
     // read first 32 bits and convert to unsigned int
-    qint32 a = static_cast<int>(get32(file.read(4), isBigEnd));
-    quint32 b = get32(file.read(4), isBigEnd);
+    qint32 a = static_cast<int>(get32(io.read(4), isBigEnd));
+    quint32 b = get32(io.read(4), isBigEnd);
     if (b == 0) return 0;
     return static_cast<double>(a) / b;
 }
+template double Utilities::getReal_s<QFile>(QFile&, quint32 offset, bool isBigEnd);
+template double Utilities::getReal_s<QBuffer>(QBuffer&, quint32 offset, bool isBigEnd);
+
+//double Utilities::getReal_sB(QBuffer &buf, quint32 offset, bool isBigEnd)
+//{
+//    /*
+//    In IFD type 10 = rational signed = real/float
+//    */
+//    buf.seek(offset);
+//    // read first 32 bits and convert to unsigned int
+//    qint32 a = static_cast<int>(get32(buf.read(4), isBigEnd));
+//    quint32 b = get32(buf.read(4), isBigEnd);
+//    if (b == 0) return 0;
+//    return static_cast<double>(a) / b;
+//}
 
 QString Utilities::getCString(QFile &file)
 {
@@ -241,14 +284,17 @@ QString Utilities::getCString(QFile &file)
     }
 }
 
-QString Utilities::getString(QFile &file, quint32 offset, quint32 length)
+template<typename T>    // QFile or QBuffer
+QString Utilities::getString(T &io, quint32 offset, quint32 length)
 {
     /*
     In IFD type 2 = string
     */
-        file.seek(offset);
-        return(file.read(length));
+        io.seek(offset);
+        return(io.read(length));
 }
+template QString Utilities::getString<QFile>(QFile&, quint32 offset, quint32 length);
+template QString Utilities::getString<QBuffer>(QBuffer&, quint32 offset, quint32 length);
 
 QByteArray Utilities::getByteArray(QFile &file, quint32 offset, quint32 length)
 {

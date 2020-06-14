@@ -20,10 +20,19 @@ public:
     static quint64 get40(QByteArray c, bool isBigEnd = true);
     static quint64 get48(QByteArray c, bool isBigEnd = true);
     static quint64 get64(QByteArray c, bool isBigEnd = true);
-    static double getReal(QFile &file, quint32 offset, bool isBigEnd = true);
-    static double getReal_s(QFile &file, quint32 offset, bool isBigEnd = true);
+    template<typename T>
+    static double getReal(T &io, quint32 offset, bool isBigEnd = true);
+//    static double getReal(QFile &file, quint32 offset, bool isBigEnd = true);
+//    static double getReal_B(QBuffer &buf, quint32 offset, bool isBigEnd = true);
+    template<typename T>
+    static double getReal_s(T &io, quint32 offset, bool isBigEnd = true);
+//    static double getReal_s(QFile &file, quint32 offset, bool isBigEnd = true);
+//    static double getReal_sB(QBuffer &buf, quint32 offset, bool isBigEnd = true);
     static QString getCString(QFile &file);
-    static QString getString(QFile &file, quint32 offset, quint32 length);
+    template<typename T>
+    static QString getString(T &io, quint32 offset, quint32 length);
+//    static QString getString(QFile &file, quint32 offset, quint32 length);
+//    static QString getString(QBuffer &buf, quint32 offset, quint32 length);
     static QByteArray getByteArray(QFile &file, quint32 offset, quint32 length);
     static QBitArray bytes2Bits(QByteArray bytes);
 //    static void bytes2Bitset32(QByteArray bytes, std::bitset<32> &bits);

@@ -20,8 +20,9 @@ class IFD
 public:
     IFD();
     quint32 readIFD(MetadataParameters &p, ImageMetadata &m, bool isBigEnd = false);
-    QList<quint32> getSubIfdOffsets(QFile &file, quint32 subIFDaddr,
-                                    int count, bool isBigEnd = false);
+    QList<quint32> getSubIfdOffsets(QFile &file, quint32 subIFDaddr, int count, bool isBigEnd = false);
+    quint32 readIFD_B(MetadataParameters &p, ImageMetadata &m, bool isBigEnd = false);
+    QList<quint32> getSubIfdOffsets_B(QFile &file, quint32 subIFDaddr, int count, bool isBigEnd = false);
     QHash<uint, IFDData> ifdDataHash;
 };
 

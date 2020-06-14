@@ -632,7 +632,7 @@ bool Metadata::parseHEIF()
     if (ifd == nullptr) ifd = new IFD;
     if (exif == nullptr) exif = new Exif;
     if (gps == nullptr) gps = new GPS;
-    bool ok = heic->parse(p, imageMetadata, ifd, exif);
+    bool ok = heic->parse(p, imageMetadata, ifd, exif, gps);
     if (ok && p.report) reportMetadata();
     return ok;
 }

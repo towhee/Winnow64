@@ -100,6 +100,7 @@ image file parsing classes ie parseSony.
 */
 public:
     QFile file;
+    QBuffer buf;
     quint32 offset;
     QHash<quint32, QString> *hash;
     bool report;

@@ -314,9 +314,6 @@ public slots:
     void slideShowResetSequence();
     void slideshowHelpMsg();
 
-    void test();                    // for debugging
-    void test2();
-    void testNewFileFormat();       // for debugging
 
 signals:
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
@@ -997,6 +994,9 @@ private:
     void diagnosticsReport(QString reportString);
 
     void stressTest();
+    void test();                    // for debugging
+    template<typename T> void test2(T& io, int x);
+    void testNewFileFormat();       // for debugging
 
     //    void setCopyCutActions(bool setEnabled);
     //    void setDeleteAction(bool setEnabled);

@@ -10725,11 +10725,15 @@ void MW::helpWelcome()
     centralLayout->setCurrentIndex(StartTab);
 }
 
-void MW::test2()
+template <typename T>
+void MW::test2(T &io, int x)
 {
-    qDebug() << "Watcher reports finished";
-    loadImageCacheForNewFolder();
+    io.seek(2);
+    QString s = io.read(2);
+    qDebug() << __FUNCTION__ << s << x;
 }
+template void MW::test2<QFile>(QFile&, int x);
+template void MW::test2<QBuffer>(QBuffer&, int x);
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
@@ -10748,6 +10752,14 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     QByteArray ba("abcdef");
     QBuffer buf(&ba);
+    buf.open(QIODevice::ReadOnly);
+    test2(buf, 5);
+    buf.close();
+    QFile f("D:/Pictures/_HEIC/test.txt");
+    f.open(QIODevice::ReadOnly | QIODevice::Text);
+//    qDebug() << __FUNCTION__ << f.read(4);
+    test2(f, 7);
+    f.close();
 }
 // End MW
 
