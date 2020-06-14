@@ -11,6 +11,7 @@ public:
     static QString formatMemory(qulonglong bytes, int precision = 1);
     static QString enquote(QString &s);
     static QString centeredRptHdr(QChar padChar, QString title);
+    static void saveByteArrayAsFile(QString fPath, QByteArray &ba);
     static int get4_1st(QByteArray c);
     static int get4_2nd(QByteArray c);
     static quint8 get8(QByteArray c);
@@ -22,17 +23,11 @@ public:
     static quint64 get64(QByteArray c, bool isBigEnd = true);
     template<typename T>
     static double getReal(T &io, quint32 offset, bool isBigEnd = true);
-//    static double getReal(QFile &file, quint32 offset, bool isBigEnd = true);
-//    static double getReal_B(QBuffer &buf, quint32 offset, bool isBigEnd = true);
     template<typename T>
     static double getReal_s(T &io, quint32 offset, bool isBigEnd = true);
-//    static double getReal_s(QFile &file, quint32 offset, bool isBigEnd = true);
-//    static double getReal_sB(QBuffer &buf, quint32 offset, bool isBigEnd = true);
     static QString getCString(QFile &file);
     template<typename T>
     static QString getString(T &io, quint32 offset, quint32 length);
-//    static QString getString(QFile &file, quint32 offset, quint32 length);
-//    static QString getString(QBuffer &buf, quint32 offset, quint32 length);
     static QByteArray getByteArray(QFile &file, quint32 offset, quint32 length);
     static QBitArray bytes2Bits(QByteArray bytes);
 //    static void bytes2Bitset32(QByteArray bytes, std::bitset<32> &bits);
