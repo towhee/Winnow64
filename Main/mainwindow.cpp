@@ -10753,12 +10753,16 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     QByteArray ba("abcdef");
     QBuffer buf(&ba);
     buf.open(QIODevice::ReadOnly);
+    QDataStream dat(&buf);
+    QFile f("D:/Pictures/_HEIC/test.dat");
+    f.open(QIODevice::WriteOnly);
+
     test2(buf, 5);
     buf.close();
-    QFile f("D:/Pictures/_HEIC/test.txt");
-    f.open(QIODevice::ReadOnly | QIODevice::Text);
-//    qDebug() << __FUNCTION__ << f.read(4);
-    test2(f, 7);
+//    QFile f("D:/Pictures/_HEIC/test.txt");
+//    f.open(QIODevice::ReadOnly | QIODevice::Text);
+////    qDebug() << __FUNCTION__ << f.read(4);
+//    test2(f, 7);
     f.close();
 }
 // End MW

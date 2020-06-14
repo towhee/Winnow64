@@ -26,7 +26,13 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, 
     heif_context* ctx = heif_context_alloc();
     QFileInfo info(p.file);
     QString fPath = info.filePath();
+    QElapsedTimer t; t.restart();
     heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
+    qDebug() << __FUNCTION__
+             << "heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr)  t.nsecsElapsed() ="
+             << t.nsecsElapsed();
+    qDebug() << __FUNCTION__
+             << "sizeof(ctx) =" << sizeof(ctx);
 
     // get a handle to the primary image
     heif_image_handle* handle = nullptr;
@@ -41,6 +47,8 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, 
     heif_image_handle_get_metadata(handle, id, exifData.data());
     p.buf.setBuffer(&exifData);
     p.buf.open(QIODevice::ReadOnly);
+
+//    Utilities::saveByteArrayAsFile("D:/Pictures/_HEIC/test.dat", exifData);
 
     // get endian
     bool isBigEnd = true;
@@ -68,17 +76,16 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, 
     qDebug() << __FUNCTION__ << magic42;
     quint32 a = Utilities::get32(p.buf.read(4), isBigEnd);
     quint32 offsetIfd0 = a + startOffset;
+
+    // read IFD0
     p.offset = offsetIfd0;
-//    p.offset = static_cast<quint32>(p.buf.pos()) + 4;
     p.hdr = "IFD0";
     p.hash = &exif->hash;
     quint32 nextIFDOffset = ifd->readIFD_B(p, m, isBigEnd);
     if (nextIFDOffset) nextIFDOffset += startOffset;
 
-    quint32 offsetEXIF;
-    offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
-    quint32 offsetGPS;
-    offsetGPS = ifd->ifdDataHash.value(34853).tagValue + startOffset;
+    quint32 offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
+    quint32 offsetGPS = ifd->ifdDataHash.value(34853).tagValue + startOffset;
 
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.make = Utilities::getString(p.buf, ifd->ifdDataHash.value(271).tagValue + startOffset,
@@ -90,21 +97,21 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, 
     m.copyright = Utilities::getString(p.buf, ifd->ifdDataHash.value(33432).tagValue + startOffset,
                           ifd->ifdDataHash.value(33432).tagCount);
 
-    // read IFD1
-    qDebug() << __FUNCTION__ << "nextIFDOffset IFD1 =" << nextIFDOffset;
-    if (nextIFDOffset) {
-        p.hdr = "IFD1";
-        p.offset = nextIFDOffset;
-        nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
-    }
-    // IFD1: thumbnail offset and length
-    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + 12;
-    m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
+//    // read IFD1
+//    qDebug() << __FUNCTION__ << "nextIFDOffset IFD1 =" << nextIFDOffset;
+//    if (nextIFDOffset) {
+//        p.hdr = "IFD1";
+//        p.offset = nextIFDOffset + startOffset;
+//        nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
+//    }
+//    // IFD1: thumbnail offset and length
+//    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + 12;
+//    m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
 
     // read EXIF
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
-    ifd->readIFD(p, m, isBigEnd);
+    ifd->readIFD_B(p, m, isBigEnd);
 
     m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
@@ -217,7 +224,7 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, 
     p.hdr = "IFD GPS";
     p.offset = offsetGPS;
     p.hash = &gps->hash;
-    ifd->readIFD(p, m, isBigEnd);
+    ifd->readIFD_B(p, m, isBigEnd);
 
     // read XMP
 //    bool okToReadXmp = true;

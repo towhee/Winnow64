@@ -61,6 +61,17 @@ QString Utilities::centeredRptHdr(QChar padChar, QString title)
     return hdr;
 }
 
+void Utilities::saveByteArrayAsFile(QString fPath, QByteArray &ba)
+{
+/*
+This is useful to save a bytearray and then examine using HxD hex editor or Qt Creator
+*/
+    QFile f(fPath);
+    f.open(QIODevice::WriteOnly);
+    f.write(ba);
+    f.close();
+}
+
 // numbers: big endian = "MM" = 0x4D4D   little endian = "II" = 0x4949
 
 int Utilities::get4_1st(QByteArray c)
@@ -212,30 +223,6 @@ double Utilities::getReal(T &io, quint32 offset, bool isBigEnd)
 template double Utilities::getReal<QFile>(QFile&, quint32 offset, bool isBigEnd);
 template double Utilities::getReal<QBuffer>(QBuffer&, quint32 offset, bool isBigEnd);
 
-//double Utilities::getReal(QFile &file, quint32 offset, bool isBigEnd)
-//{
-//    /*
-//    In IFD type 5 = rational unsigned = real/float
-//    */
-//    file.seek(offset);
-//    quint32 a = get32(file.read(4), isBigEnd);
-//    quint32 b = get32(file.read(4), isBigEnd);
-//    if (b == 0) return 0;
-//    return static_cast<double>(a) / b;
-//}
-
-//double Utilities::getReal_B(QBuffer &buf, quint32 offset, bool isBigEnd)
-//{
-//    /*
-//    In IFD type 5 = rational unsigned = real/float
-//    */
-//    buf.seek(offset);
-//    quint32 a = get32(buf.read(4), isBigEnd);
-//    quint32 b = get32(buf.read(4), isBigEnd);
-//    if (b == 0) return 0;
-//    return static_cast<double>(a) / b;
-//}
-
 template<typename T>    // QFile or QBuffer
 double Utilities::getReal_s(T &io, quint32 offset, bool isBigEnd)
 {
@@ -251,19 +238,6 @@ double Utilities::getReal_s(T &io, quint32 offset, bool isBigEnd)
 }
 template double Utilities::getReal_s<QFile>(QFile&, quint32 offset, bool isBigEnd);
 template double Utilities::getReal_s<QBuffer>(QBuffer&, quint32 offset, bool isBigEnd);
-
-//double Utilities::getReal_sB(QBuffer &buf, quint32 offset, bool isBigEnd)
-//{
-//    /*
-//    In IFD type 10 = rational signed = real/float
-//    */
-//    buf.seek(offset);
-//    // read first 32 bits and convert to unsigned int
-//    qint32 a = static_cast<int>(get32(buf.read(4), isBigEnd));
-//    quint32 b = get32(buf.read(4), isBigEnd);
-//    if (b == 0) return 0;
-//    return static_cast<double>(a) / b;
-//}
 
 QString Utilities::getCString(QFile &file)
 {
