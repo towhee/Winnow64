@@ -208,8 +208,6 @@ void Metadata::reportMetadata()
     p.rpt.setFieldWidth(25); p.rpt << "lengthFull"          << imageMetadata.lengthFull;          p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetThumb"         << imageMetadata.offsetThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "lengthThumb"         << imageMetadata.lengthThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
-//    p.rpt.setFieldWidth(25); p.rpt << "offsetSmall"         << imageMetadata.offsetSmall;         p.rpt.setFieldWidth(0); p.rpt << "\n";
-//    p.rpt.setFieldWidth(25); p.rpt << "lengthSmall"         << imageMetadata.lengthSmall;         p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "isBigEndian"         << imageMetadata.isBigEnd;            p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetifd0Seg"       << imageMetadata.ifd0Offset;          p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetXMPSeg"        << imageMetadata.xmpSegmentOffset;    p.rpt.setFieldWidth(0); p.rpt << "\n";
@@ -784,30 +782,27 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     }
 
     // not all files have thumb or small jpg embedded
-    if (offsetFull == 0 && ext != "jpg" && fileOpened) {
+    if (imageMetadata.offsetFull == 0 && ext != "jpg" && fileOpened) {
         err = "No embedded JPG found";
     }
 
-    if (lengthFull == 0 && lengthThumb > 0) {
-        offsetFull = offsetThumb;
-        lengthFull = lengthThumb;
+    if (imageMetadata.lengthFull == 0 && imageMetadata.lengthThumb > 0) {
+        imageMetadata.offsetFull = imageMetadata.offsetThumb;
+        imageMetadata.lengthFull = imageMetadata.lengthThumb;
     }
-//    if (lengthSmall == 0) {
-//        offsetSmall = offsetFull;
-//        lengthSmall = lengthFull;
-//    }
-    if (lengthThumb == 0) {
-        offsetThumb = offsetFull;
-        lengthThumb = lengthFull;
+
+    if (imageMetadata.lengthThumb == 0) {
+        imageMetadata.offsetThumb = imageMetadata.offsetFull;
+        imageMetadata.lengthThumb = imageMetadata.lengthFull;
     }
 
     // error flags
     thumbUnavailable = imageUnavailable = false;
-    if (lengthFull == 0) {
+    if (imageMetadata.lengthFull == 0) {
         imageUnavailable = true;
         err = "No embedded preview found";
     }
-    if (lengthThumb == 0) {
+    if (imageMetadata.lengthThumb == 0) {
         thumbUnavailable = true;
         err = "No embedded thumbnail or preview found";
     }

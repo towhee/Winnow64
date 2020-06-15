@@ -26,13 +26,10 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, 
     heif_context* ctx = heif_context_alloc();
     QFileInfo info(p.file);
     QString fPath = info.filePath();
+
     QElapsedTimer t; t.restart();
     heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
-    qDebug() << __FUNCTION__
-             << "heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr)  t.nsecsElapsed() ="
-             << t.nsecsElapsed();
-    qDebug() << __FUNCTION__
-             << "sizeof(ctx) =" << sizeof(ctx);
+    qDebug() << __FUNCTION__ << "Read heif context =" << t.nsecsElapsed() << fPath;
 
     // get a handle to the primary image
     heif_image_handle* handle = nullptr;
@@ -61,7 +58,6 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, 
             order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
             foundEndian = true;
             startOffset = static_cast<quint32>(p.buf.pos()) - 2;
-            qDebug() << __FUNCTION__ << QString::number(order, 16);
         }
         // add condition to check for EOF
         count++;
@@ -73,7 +69,6 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, 
 
     //
     quint32 magic42 = Utilities::get16(p.buf.read(2), isBigEnd);
-    qDebug() << __FUNCTION__ << magic42;
     quint32 a = Utilities::get32(p.buf.read(4), isBigEnd);
     quint32 offsetIfd0 = a + startOffset;
 
@@ -380,7 +375,7 @@ bool Heic::decodeThumbnail(ImageMetadata &m, QString &fPath, QImage &image)
     int h = heif_image_get_height(img, heif_channel_interleaved);
     int stride;
     const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
-//    /*
+    /*
     qDebug() << __FUNCTION__ << fPath
              << "w =" << w << "h =" << h
              << "stride =" << stride;   //*/

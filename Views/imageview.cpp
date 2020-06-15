@@ -193,7 +193,11 @@ to prevent jarring changes in perceived scale by the user.
             }
         }
         QPixmap  displayPixmap;
+
+        QElapsedTimer t; t.restart();
         isLoaded = pixmap->load(fPath, displayPixmap);
+        qDebug() << __FUNCTION__ << "Load image =" << t.nsecsElapsed() << fPath;
+
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
             isPreview = false;

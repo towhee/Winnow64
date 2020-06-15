@@ -164,13 +164,13 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size")); horizontalHeaderItem(G::SizeColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::WidthColumn, new QStandardItem("Width")); horizontalHeaderItem(G::WidthColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::HeightColumn, new QStandardItem("Height")); horizontalHeaderItem(G::HeightColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions")); horizontalHeaderItem(G::DimensionsColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::CreatedColumn, new QStandardItem("Created")); horizontalHeaderItem(G::CreatedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified")); horizontalHeaderItem(G::ModifiedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::YearColumn, new QStandardItem("Year")); horizontalHeaderItem(G::YearColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::DayColumn, new QStandardItem("Day")); horizontalHeaderItem(G::DayColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::CreatorColumn, new QStandardItem("Creator")); horizontalHeaderItem(G::CreatorColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::MegaPixelsColumn, new QStandardItem("MPix")); horizontalHeaderItem(G::MegaPixelsColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions")); horizontalHeaderItem(G::DimensionsColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::RotationColumn, new QStandardItem("Rot")); horizontalHeaderItem(G::RotationColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ApertureColumn, new QStandardItem("Aperture")); horizontalHeaderItem(G::ApertureColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ShutterspeedColumn, new QStandardItem("Shutter")); horizontalHeaderItem(G::ShutterspeedColumn)->setData(false, G::GeekRole);
@@ -200,15 +200,7 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::HeightFullColumn, new QStandardItem("HeightFull")); horizontalHeaderItem(G::HeightFullColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OffsetThumbColumn, new QStandardItem("OffsetThumb")); horizontalHeaderItem(G::OffsetThumbColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::LengthThumbColumn, new QStandardItem("LengthThumb")); horizontalHeaderItem(G::LengthThumbColumn)->setData(true, G::GeekRole);
-//    setHorizontalHeaderItem(G::OffsetSmallColumn, new QStandardItem("OffsetSmall")); horizontalHeaderItem(G::OffsetSmallColumn)->setData(true, G::GeekRole);
-//    setHorizontalHeaderItem(G::LengthSmallColumn, new QStandardItem("LengthSmall")); horizontalHeaderItem(G::LengthSmallColumn)->setData(true, G::GeekRole);
-
-//    setHorizontalHeaderItem(G::bitsPerSampleColumn, new QStandardItem("bitsPerSampleFull")); horizontalHeaderItem(G::bitsPerSampleColumn)->setData(true, G::GeekRole);
-//    setHorizontalHeaderItem(G::photoInterpColumn, new QStandardItem("photoInterpFull")); horizontalHeaderItem(G::photoInterpColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::samplesPerPixelColumn, new QStandardItem("samplesPerPixelFull")); horizontalHeaderItem(G::samplesPerPixelColumn)->setData(true, G::GeekRole);
-//    setHorizontalHeaderItem(G::compressionColumn, new QStandardItem("compressionFull")); horizontalHeaderItem(G::compressionColumn)->setData(true, G::GeekRole);
-//    setHorizontalHeaderItem(G::stripByteCountsColumn, new QStandardItem("stripByteCountsFull")); horizontalHeaderItem(G::stripByteCountsColumn)->setData(true, G::GeekRole);
-//    setHorizontalHeaderItem(G::planarConfigurationFullColumn, new QStandardItem("planarConfigurationFull")); horizontalHeaderItem(G::planarConfigurationFullColumn)->setData(true, G::GeekRole);
 
     setHorizontalHeaderItem(G::isBigEndianColumn, new QStandardItem("isBigEndian")); horizontalHeaderItem(G::isBigEndianColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ifd0OffsetColumn, new QStandardItem("ifd0Offset")); horizontalHeaderItem(G::ifd0OffsetColumn)->setData(true, G::GeekRole);
@@ -603,13 +595,15 @@ Used by InfoString and IngestDlg
     }
 
     m.row = row;
+    m.size = index(row, G::SizeColumn).data().toInt();
+
     m.label = index(row, G::LabelColumn).data().toString();
     m._label = index(row, G::_LabelColumn).data().toString();
     m.rating = index(row, G::RatingColumn).data().toString();
     m._rating = index(row, G::_RatingColumn).data().toString();
     m.createdDate = index(row, G::CreatedColumn).data().toDateTime();
-    m.width = index(row, G::WidthColumn).data().toUInt();
-    m.height = index(row, G::HeightColumn).data().toUInt();
+    m.width = index(row, G::WidthColumn).data().toInt();
+    m.height = index(row, G::HeightColumn).data().toInt();
     m.dimensions = index(row, G::DimensionsColumn).data().toString();
     m.orientation = index(row, G::OrientationColumn).data().toInt();
     m.rotationDegrees = index(row, G::RotationColumn).data().toInt();
@@ -647,25 +641,15 @@ Used by InfoString and IngestDlg
     m.url = index(row, G::UrlColumn).data().toString();
     m._url = index(row, G::_UrlColumn).data().toString();
     m.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
+    m.metadataLoaded  = index(row, G::MetadataLoadedColumn).data().toBool();
 
     m.offsetFull = index(row, G::OffsetFullColumn).data().toUInt();
     m.lengthFull = index(row, G::LengthFullColumn).data().toUInt();
+    m.widthFull = index(row, G::WidthFullColumn).data().toInt();
+    m.heightFull = index(row, G::HeightFullColumn).data().toInt();
     m.offsetThumb = index(row, G::OffsetThumbColumn).data().toUInt();
     m.lengthThumb = index(row, G::LengthThumbColumn).data().toUInt();
-//    m.offsetSmall = index(row, G::OffsetSmallColumn).data().toUInt();
-//    m.lengthSmall = index(row, G::LengthSmallColumn).data().toUInt();
-
-    // update only for tiffs
-//    if (index(row, G::TypeColumn).data().toString() == "tif") {
-//        m.bitsPerSample = index(row, G::bitsPerSampleColumn).data().toInt();
-//        m.photoInterp = index(row, G::photoInterpColumn).data().toInt();
-        m.samplesPerPixel = index(row, G::samplesPerPixelColumn).data().toInt();
-//        m.compression = index(row, G::compressionColumn).data().toInt();
-//        m.stripByteCounts = index(row, G::stripByteCountsColumn).data().toUInt();
-//        m.planarConfiguration = index(row, G::stripByteCountsColumn).data().toUInt();
-
-//    }
-
+    m.samplesPerPixel = index(row, G::samplesPerPixelColumn).data().toInt();
     m.isBigEnd = index(row, G::isBigEndianColumn).data().toBool();
     m.ifd0Offset = index(row, G::ifd0OffsetColumn).data().toUInt();
     m.xmpSegmentOffset = index(row, G::XmpSegmentOffsetColumn).data().toUInt();
@@ -677,7 +661,6 @@ Used by InfoString and IngestDlg
     m.iccBuf = index(row, G::ICCBufColumn).data().toByteArray();
     m.iccSpace = index(row, G::ICCSegmentOffsetColumn).data().toString();
 //     = index(row, G::RotationDegreesColumn), m.rotationDegrees
-    m.metadataLoaded  = index(row, G::MetadataLoadedColumn).data().toBool();
     return m;
 }
 
@@ -1146,82 +1129,116 @@ QString DataModel::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', "DataModel Diagnostics");
     rpt << "\n";
-    rpt << "\n" << "currentFolderPath = " << G::s(currentFolderPath);
-    rpt << "\n" << "currentFilePath = " << G::s(currentFilePath);
-    rpt << "\n" << "currentRow = " << G::s(currentRow);
-    rpt << "\n" << "hasDupRawJpg = " << G::s(hasDupRawJpg);
-    rpt << "\n" << "filtersBuilt = " << G::s(filtersBuilt);
-    rpt << "\n" << "timeToQuit = " << G::s(timeToQuit);
-    rpt << "\n" << "imageCount = " << G::s(imageCount);
-    rpt << "\n" << "countInterval = " << G::s(countInterval);
+    rpt << "\n" << G::sj("currentFolderPath", 27) << G::s(currentFolderPath);
+    rpt << "\n" << G::sj("currentFilePath", 27) << G::s(currentFilePath);
+    rpt << "\n" << G::sj("currentRow", 27) << G::s(currentRow);
+    rpt << "\n" << G::sj("hasDupRawJpg", 27) << G::s(hasDupRawJpg);
+    rpt << "\n" << G::sj("filtersBuilt", 27) << G::s(filtersBuilt);
+    rpt << "\n" << G::sj("timeToQuit", 27) << G::s(timeToQuit);
+    rpt << "\n" << G::sj("imageCount", 27) << G::s(imageCount);
+    rpt << "\n" << G::sj("countInterval", 27) << G::s(countInterval);
     for(int row = 0; row < rowCount(); row++) {
-        rpt << "\n" << "DataModel row = " << G::s(row);
-        rpt << "\n  " << "File Name = " << G::s(index(row, G::NameColumn).data());
-        rpt << "\n  " << "File Path = " << G::s(index(row, 0).data(G::PathRole));
-        rpt << "\n  " << "dupHideRaw = " << G::s(index(row, 0).data(G::DupHideRawRole));
-        rpt << "\n  " << "dupRawRow = " << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
-        rpt << "\n  " << "dupIsJpg = " << G::s(index(row, 0).data(G::DupIsJpgRole));
-        rpt << "\n  " << "dupRawType = " << G::s(index(row, 0).data(G::DupRawTypeRole));
-        rpt << "\n  " << "type = " << G::s(index(row, G::TypeColumn).data());
-        rpt << "\n  " << "bytes = " << G::s(index(row, G::SizeColumn).data());
-        rpt << "\n  " << "refine = " << G::s(index(row, G::RefineColumn).data());
-        rpt << "\n  " << "pick = " << G::s(index(row, G::PickColumn).data());
-        rpt << "\n  " << "ingested = " << G::s(index(row, G::IngestedColumn).data());
-        rpt << "\n  " << "label = " << G::s(index(row, G::LabelColumn).data());
-        rpt << "\n  " << "_label = " << G::s(index(row, G::_LabelColumn).data());
-        rpt << "\n  " << "rating = " << G::s(index(row, G::RatingColumn).data());
-        rpt << "\n  " << "_rating = " << G::s(index(row, G::_RatingColumn).data());
-        rpt << "\n  " << "search = " << G::s(index(row, G::SearchColumn).data());
-        rpt << "\n  " << "modifiedDate = " << G::s(index(row, G::ModifiedColumn).data());
-        rpt << "\n  " << "createdDate = " << G::s(index(row, G::CreatedColumn).data());
-        rpt << "\n  " << "year = " << G::s(index(row, G::YearColumn).data());
-        rpt << "\n  " << "day = " << G::s(index(row, G::DayColumn).data());
-        rpt << "\n  " << "megapixels = " << G::s(index(row, G::MegaPixelsColumn).data());
-        rpt << "\n  " << "width = " << G::s(index(row, G::WidthColumn).data());
-        rpt << "\n  " << "height = " << G::s(index(row, G::HeightColumn).data());
-        rpt << "\n  " << "dimensions = " << G::s(index(row, G::DimensionsColumn).data());
-        rpt << "\n  " << "rotation = " << G::s(index(row, G::RotationColumn).data());
-        rpt << "\n  " << "apertureNum = " << G::s(index(row, G::ApertureColumn).data());
-        rpt << "\n  " << "exposureTimeNum = " << G::s(index(row, G::ShutterspeedColumn).data());
-        rpt << "\n  " << "iso = " << G::s(index(row, G::ISOColumn).data());
-        rpt << "\n  " << "exposureCompensationNum = " << G::s(index(row, G::ExposureCompensationColumn).data());
-        rpt << "\n  " << "make = " << G::s(index(row, G::CameraMakeColumn).data());
-        rpt << "\n  " << "model = " << G::s(index(row, G::CameraModelColumn).data());
-        rpt << "\n  " << "lens = " << G::s(index(row, G::LensColumn).data());
-        rpt << "\n  " << "focalLengthNum = " << G::s(index(row, G::FocalLengthColumn).data());
-        rpt << "\n  " << "title = " << G::s(index(row, G::TitleColumn).data());
-        rpt << "\n  " << "_title = " << G::s(index(row, G::_TitleColumn).data());
-        rpt << "\n  " << "creator = " << G::s(index(row, G::CreatorColumn).data());
-        rpt << "\n  " << "_creator = " << G::s(index(row, G::_CreatorColumn).data());
-        rpt << "\n  " << "copyright = " << G::s(index(row, G::CopyrightColumn).data());
-        rpt << "\n  " << "_copyright = " << G::s(index(row, G::_CopyrightColumn).data());
-        rpt << "\n  " << "email = " << G::s(index(row, G::EmailColumn).data());
-        rpt << "\n  " << "_email = " << G::s(index(row, G::_EmailColumn).data());
-        rpt << "\n  " << "url = " << G::s(index(row, G::UrlColumn).data());
-        rpt << "\n  " << "_url = " << G::s(index(row, G::_UrlColumn).data());
-        rpt << "\n  " << "offsetFull = " << G::s(index(row, G::OffsetFullColumn).data());
-        rpt << "\n  " << "lengthFull = " << G::s(index(row, G::LengthFullColumn).data());
-        rpt << "\n  " << "widthFull = " << G::s(index(row, G::WidthFullColumn).data());
-        rpt << "\n  " << "heightFull = " << G::s(index(row, G::HeightFullColumn).data());
-        rpt << "\n  " << "offsetThumb = " << G::s(index(row, G::OffsetThumbColumn).data());
-        rpt << "\n  " << "lengthThumb = " << G::s(index(row, G::LengthThumbColumn).data());
-//        rpt << "\n  " << "offsetSmall = " << G::s(index(row, G::OffsetSmallColumn).data());
-//        rpt << "\n  " << "lengthSmall = " << G::s(index(row, G::LengthSmallColumn).data());
-        rpt << "\n  " << "isBigEndian = " << G::s(index(row, G::isBigEndianColumn).data());
-        rpt << "\n  " << "ifd0Offset = " << G::s(index(row, G::ifd0OffsetColumn).data());
-        rpt << "\n  " << "xmpSegmentOffset = " << G::s(index(row, G::XmpSegmentOffsetColumn).data());
-        rpt << "\n  " << "xmpNextSegmentOffset = " << G::s(index(row, G::XmpNextSegmentOffsetColumn).data());
-
-        rpt << "\n  " << "isXmp = " << G::s(index(row, G::IsXMPColumn).data());
-        rpt << "\n  " << "orientationOffset = " << G::s(index(row, G::OrientationOffsetColumn).data());
-        rpt << "\n  " << "orientation = " << G::s(index(row, G::OrientationColumn).data());
-        rpt << "\n  " << "rotationDegrees = " << G::s(index(row, G::RotationDegreesColumn).data());
-        rpt << "\n  " << "err = " << G::s(index(row, G::ErrColumn).data());
-        rpt << "\n  " << "shootingInfo = " << G::s(index(row, G::ShootingInfoColumn).data());
-        rpt << "\n  " << "searchText = " << G::s(index(row, G::SearchTextColumn).data());
+        getDiagnosticsForRow(row, rpt);
     }
     rpt << "\n\n" ;
     return reportString;
+}
+
+QString DataModel::diagnosticsForCurrentRow()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "DataModel Diagnostics");
+    rpt << "\n";
+//    rpt << "\n" << G::sj("", 25)"currentFolderPath = " << G::s(currentFolderPath);
+//    rpt << "\n" << G::sj("", 25)"currentFilePath = " << G::s(currentFilePath);
+//    rpt << "\n" << G::sj("", 25)"currentRow = " << G::s(currentRow);
+    rpt << "\n" << G::sj("hasDupRawJpg", 27) << G::s(hasDupRawJpg);
+//    rpt << "\n" << G::sj("", 25)"filtersBuilt = " << G::s(filtersBuilt);
+//    rpt << "\n" << G::sj("", 25)"timeToQuit = " << G::s(timeToQuit);
+//    rpt << "\n" << G::sj("", 25)"imageCount = " << G::s(imageCount);
+//    rpt << "\n" << G::sj("", 25)"countInterval = " << G::s(countInterval);
+    getDiagnosticsForRow(currentRow, rpt);
+    rpt << "\n\n" ;
+    return reportString;
+}
+
+void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString s = "";
+    rpt << "\n"   << G::sj("DataModel row", 27) << G::s(row);
+    rpt << "\n  " << G::sj("FileName", 25) << G::s(index(row, G::NameColumn).data());
+    rpt << "\n  " << G::sj("FilePath", 25) << G::s(index(row, 0).data(G::PathRole));
+    rpt << "\n  " << G::sj("dupHideRaw", 25) << G::s(index(row, 0).data(G::DupHideRawRole));
+    rpt << "\n  " << G::sj("dupRawRow", 25) << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
+    rpt << "\n  " << G::sj("dupIsJpg", 25) << G::s(index(row, 0).data(G::DupIsJpgRole));
+    rpt << "\n  " << G::sj("dupRawType", 25) << G::s(index(row, 0).data(G::DupRawTypeRole));
+    rpt << "\n  " << G::sj("type", 25) << G::s(index(row, G::TypeColumn).data());
+    rpt << "\n  " << G::sj("bytes", 25) << G::s(index(row, G::SizeColumn).data());
+    rpt << "\n  " << G::sj("refine", 25) << G::s(index(row, G::RefineColumn).data());
+    rpt << "\n  " << G::sj("pick", 25) << G::s(index(row, G::PickColumn).data());
+    rpt << "\n  " << G::sj("ingested", 25) << G::s(index(row, G::IngestedColumn).data());
+    rpt << "\n  " << G::sj("label", 25) << G::s(index(row, G::LabelColumn).data());
+    rpt << "\n  " << G::sj("_label", 25) << G::s(index(row, G::_LabelColumn).data());
+    rpt << "\n  " << G::sj("rating", 25) << G::s(index(row, G::RatingColumn).data());
+    rpt << "\n  " << G::sj("_rating", 25) << G::s(index(row, G::_RatingColumn).data());
+    rpt << "\n  " << G::sj("search", 25) << G::s(index(row, G::SearchColumn).data());
+    rpt << "\n  " << G::sj("modifiedDate", 25) << G::s(index(row, G::ModifiedColumn).data());
+    rpt << "\n  " << G::sj("createdDate", 25) << G::s(index(row, G::CreatedColumn).data());
+    rpt << "\n  " << G::sj("year", 25) << G::s(index(row, G::YearColumn).data());
+    rpt << "\n  " << G::sj("day", 25) << G::s(index(row, G::DayColumn).data());
+    rpt << "\n  " << G::sj("megapixels", 25) << G::s(index(row, G::MegaPixelsColumn).data());
+    rpt << "\n  " << G::sj("width", 25) << G::s(index(row, G::WidthColumn).data());
+    rpt << "\n  " << G::sj("height", 25) << G::s(index(row, G::HeightColumn).data());
+    rpt << "\n  " << G::sj("dimensions", 25) << G::s(index(row, G::DimensionsColumn).data());
+    rpt << "\n  " << G::sj("rotation", 25) << G::s(index(row, G::RotationColumn).data());
+    rpt << "\n  " << G::sj("apertureNum", 25) << G::s(index(row, G::ApertureColumn).data());
+    rpt << "\n  " << G::sj("exposureTimeNum", 25) << G::s(index(row, G::ShutterspeedColumn).data());
+    rpt << "\n  " << G::sj("iso", 25) << G::s(index(row, G::ISOColumn).data());
+    rpt << "\n  " << G::sj("exposureCompensationNum", 25) << G::s(index(row, G::ExposureCompensationColumn).data());
+    rpt << "\n  " << G::sj("make", 25) << G::s(index(row, G::CameraMakeColumn).data());
+    rpt << "\n  " << G::sj("model", 25) << G::s(index(row, G::CameraModelColumn).data());
+    rpt << "\n  " << G::sj("lens", 25) << G::s(index(row, G::LensColumn).data());
+    rpt << "\n  " << G::sj("focalLengthNum", 25) << G::s(index(row, G::FocalLengthColumn).data());
+    rpt << "\n  " << G::sj("title", 25) << G::s(index(row, G::TitleColumn).data());
+    rpt << "\n  " << G::sj("_title", 25) << G::s(index(row, G::_TitleColumn).data());
+    rpt << "\n  " << G::sj("creator", 25) << G::s(index(row, G::CreatorColumn).data());
+    rpt << "\n  " << G::sj("_creator", 25) << G::s(index(row, G::_CreatorColumn).data());
+    rpt << "\n  " << G::sj("copyright", 25) << G::s(index(row, G::CopyrightColumn).data());
+    rpt << "\n  " << G::sj("_copyright", 25) << G::s(index(row, G::_CopyrightColumn).data());
+    rpt << "\n  " << G::sj("email", 25) << G::s(index(row, G::EmailColumn).data());
+    rpt << "\n  " << G::sj("_email", 25) << G::s(index(row, G::_EmailColumn).data());
+    rpt << "\n  " << G::sj("url", 25) << G::s(index(row, G::UrlColumn).data());
+    rpt << "\n  " << G::sj("_url", 25) << G::s(index(row, G::_UrlColumn).data());
+    rpt << "\n  " << G::sj("offsetFull", 25) << G::s(index(row, G::OffsetFullColumn).data());
+    rpt << "\n  " << G::sj("lengthFull", 25) << G::s(index(row, G::LengthFullColumn).data());
+    rpt << "\n  " << G::sj("widthFull", 25) << G::s(index(row, G::WidthFullColumn).data());
+    rpt << "\n  " << G::sj("heightFull", 25) << G::s(index(row, G::HeightFullColumn).data());
+    rpt << "\n  " << G::sj("offsetThumb", 25) << G::s(index(row, G::OffsetThumbColumn).data());
+    rpt << "\n  " << G::sj("lengthThumb", 25) << G::s(index(row, G::LengthThumbColumn).data());
+    rpt << "\n  " << G::sj("isBigEndian", 25) << G::s(index(row, G::isBigEndianColumn).data());
+    rpt << "\n  " << G::sj("ifd0Offset", 25) << G::s(index(row, G::ifd0OffsetColumn).data());
+    rpt << "\n  " << G::sj("xmpSegmentOffset", 25) << G::s(index(row, G::XmpSegmentOffsetColumn).data());
+    rpt << "\n  " << G::sj("xmpNextSegmentOffset", 25) << G::s(index(row, G::XmpNextSegmentOffsetColumn).data());
+
+    rpt << "\n  " << G::sj("isXmp", 25) << G::s(index(row, G::IsXMPColumn).data());
+    rpt << "\n  " << G::sj("orientationOffset", 25) << G::s(index(row, G::OrientationOffsetColumn).data());
+    rpt << "\n  " << G::sj("orientation", 25) << G::s(index(row, G::OrientationColumn).data());
+    rpt << "\n  " << G::sj("rotationDegrees", 25) << G::s(index(row, G::RotationDegreesColumn).data());
+    rpt << "\n  " << G::sj("err", 25) << G::s(index(row, G::ErrColumn).data());
+    rpt << "\n  " << G::sj("shootingInfo", 25) << G::s(index(row, G::ShootingInfoColumn).data());
+    rpt << "\n  " << G::sj("searchText", 25) << G::s(index(row, G::SearchTextColumn).data());
 }
 
 void DataModel::filteredItemCount()
@@ -1440,7 +1457,7 @@ map to columns in the data model ie Picked, Rating, Label ...
             // top level item = category
             // check results of category items filter match
             if (isCategoryUnchecked) isMatch = true;
-//            qDebug() << G::t.restart() << "\t" << "Category" << itemCategory << isMatch;
+//            qDebug() << G::t.restart() << "\t" << G::sj("", 25)"Category" << itemCategory << isMatch;
             if (!isMatch) return false;   // no match in category
 
             /* prepare for category items filter match.  If no item is checked

@@ -991,7 +991,11 @@ void ImageCache::run()
         if (fPath == prevFileName) return;
 
         QImage im;
+
+        QElapsedTimer tt; tt.restart();
         if (getImage->load(fPath, im)) {
+            qDebug() << __FUNCTION__ << "Load image =" << tt.nsecsElapsed() << fPath;
+
 //          is there room in cache?
             int room = cache.maxMB - cache.currMB;
             int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
@@ -1004,19 +1008,6 @@ void ImageCache::run()
                      << "roomRqd =" << roomRqd;
 //                */
             makeRoom(room, roomRqd);
-            //            while (room < roomRqd) {
-//                // make some room by removing lowest priority cached image
-//                if (nextToDecache()) {
-//                    QString s = cacheItemList[cache.toDecacheKey].fPath;
-//                    imCache.remove(s);
-//                    emit updateCacheOnThumbs(s, false);
-//                    if (!toDecache.isEmpty()) toDecache.removeFirst();
-//                    cacheItemList[cache.toDecacheKey].isCached = false;
-//                    cache.currMB -= cacheItemList[cache.toDecacheKey].sizeMB;
-//                    room = cache.maxMB - cache.currMB;
-//                }
-//                else break;
-//            }
             imCache.insert(fPath, im);
             emit updateCacheOnThumbs(fPath, true);
 /*            if (cache.usePreview) {

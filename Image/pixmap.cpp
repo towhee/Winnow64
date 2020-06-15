@@ -80,7 +80,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
     // is metadata loaded
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
         if (!dm->readMetadataForItem(dmRow)) {
-            err = "Could not load metadata" + fPath;
+            err += "Could not load metadata" + fPath + ". ";
             dm->setData(dm->index(dmRow, G::ErrColumn), err);
             qDebug() << __FUNCTION__ << err << fPath;
             return false;
@@ -95,7 +95,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
             // try to read the file
             if (offsetFullJpg > 0 && lengthFullJpg > 0) {
                 if (imFile.isOpen()) {
-                    err = "File already open" + fPath;
+                    err += "File already open" + fPath + ". ";
                     qDebug() << __FUNCTION__ << err;
                     break;
                 }
@@ -114,26 +114,26 @@ bool Pixmap::load(QString &fPath, QImage &image)
                             break;
                         }
                         else {
-                            err = "Could not read image from buffer" + fPath;
+                            err += "Could not read image from buffer" + fPath + ". ";
                             qDebug() << __FUNCTION__ << err;
                             imFile.close();
                             break;
                         }
                     }
                     else {
-                        err = "Illegal offset to image" + fPath;
+                        err += "Illegal offset to image" + fPath + ". ";
                         qDebug() << __FUNCTION__ << err;
                         imFile.close();
                         break;
                     }
                 }
                 else {
-                    err = "Could not open file for image" + fPath;    // try again
+                    err += "Could not open file for image" + fPath + ". ";    // try again
                     qDebug() << __FUNCTION__ << err;
                 }
             }
             else {
-                err = "Illegal offset to image or no length available" + fPath;
+                err += "Illegal offset to image or no length available" + fPath + ". ";
                 qDebug() << __FUNCTION__ << err;
                 break;
             }
@@ -154,8 +154,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 if (ext == "tif") {
                     int samplesPerPixel = dm->index(dmRow, G::samplesPerPixelColumn).data().toInt();
                     if (samplesPerPixel > 3) {
-                        err = "Could not read tiff because " + QString::number(samplesPerPixel)
-                              + " samplesPerPixel > 3";
+                        err += "Could not read tiff because " + QString::number(samplesPerPixel)
+                              + " samplesPerPixel > 3. ";
                         break;
                     }
                 }
@@ -174,7 +174,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
                     if (success) image.convertTo(QImage::Format_RGB32);
                 }
                 if (!success) {
-                    err = "Could not read image " + fPath;
+                    err += "Could not read image " + fPath + ". ";
 //                    qDebug() << __FUNCTION__ << err;
                     break;
                 }
@@ -187,7 +187,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 #endif
             }
             else {
-                err = "Could not open file for image";    // try again
+                err += "Could not open file for image. ";    // try again
                 QThread::msleep(msInc);
                 msDelay += msInc;
             }

@@ -119,6 +119,7 @@ bool Jpeg::parse(MetadataParameters &p,
                  GPS *gps)
 {
     // init
+    err = "";
     initSegCodeHash();
     m.iccSegmentOffset = 0;
 
@@ -126,7 +127,7 @@ bool Jpeg::parse(MetadataParameters &p,
     bool isBigEnd = true;
 
     if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-        err = "JPG does not start with 0xFFD8";
+        err += "JPG does not start with 0xFFD8. ";
         qDebug() << __FUNCTION__ << err;
         return false;
     }
@@ -135,19 +136,19 @@ bool Jpeg::parse(MetadataParameters &p,
     p.offset = static_cast<quint32>(p.file.pos());
     getJpgSegments(p, m);
 
-    // check if JFIF
-//    if (segmentHash.contains("JFIF")) {
-//        // it's a jpg so the whole thing is the full length jpg and no other
-//        // metadata available
-//        m.offsetFull = 0;
-//        m.lengthFull = static_cast<uint>(p.file.size());
-//        return true;
-//    }
 
     // read the EXIF data
     if (segmentHash.contains("EXIF")) p.file.seek(segmentHash["EXIF"]);
+    // check if JFIF
+    else if (segmentHash.contains("JFIF")) {
+        // it's a jpg so the whole thing is the full length jpg and no other
+        // metadata available
+        m.offsetFull = 0;
+        m.lengthFull = static_cast<uint>(p.file.size());
+        return true;
+    }
     else {
-        err = "JPG does not contain EXIF information";
+        err += "JPG does not contain EXIF information. ";
         qDebug() << __FUNCTION__ << err;
         return false;
     }
@@ -159,7 +160,7 @@ bool Jpeg::parse(MetadataParameters &p,
         quint32 order = Utilities::get16(p.file.read(2));
         if (order == 0x4949 || order == 0x4D4D) {
             order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
-            // offsets are from the endian position in JPEGs
+            // offsets are from the start of endian position in JPEGs
             // therefore must adjust all offsets found in tagValue
             startOffset = static_cast<quint32>(p.file.pos()) - 2;
             foundEndian = true;
@@ -171,6 +172,7 @@ bool Jpeg::parse(MetadataParameters &p,
         count++;
         if (count > 100) {
             // err endian order not found
+            err += "Endian order not found. ";
             return false;
         }
     }
@@ -180,7 +182,6 @@ bool Jpeg::parse(MetadataParameters &p,
     quint32 a = Utilities::get16(p.file.read(2), isBigEnd);  // magic 42
     a = Utilities::get32(p.file.read(4), isBigEnd);
     quint32 offsetIfd0 = a + startOffset;
-    qDebug() << __FUNCTION__ << "IFDOffset IFD0 =" << offsetIfd0 << p.file.fileName();
 
     // it's a jpg so the whole thing is the full length jpg
     m.offsetFull = 0;
@@ -192,10 +193,11 @@ bool Jpeg::parse(MetadataParameters &p,
     p.hash = &exif->hash;
     quint32 nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
     if (nextIFDOffset) nextIFDOffset += startOffset;
-    quint32 offsetEXIF;
+    quint32 offsetEXIF = 0;
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
-    quint32 offsetGPS;
-    offsetGPS = ifd->ifdDataHash.value(34853).tagValue + startOffset;
+    quint32 offsetGPS = 0;
+    if (ifd->ifdDataHash.contains(34853))
+        offsetGPS = ifd->ifdDataHash.value(34853).tagValue + startOffset;
 
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
@@ -208,14 +210,13 @@ bool Jpeg::parse(MetadataParameters &p,
                           ifd->ifdDataHash.value(33432).tagCount);
 
     // read IFD1
-    qDebug() << __FUNCTION__ << "nextIFDOffset IFD1 =" << nextIFDOffset << p.file.fileName();
     if (nextIFDOffset) {
         p.hdr = "IFD1";
         p.offset = nextIFDOffset;
         nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
     }
     // IFD1: thumbnail offset and length
-    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + 12;
+    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + startOffset/*12*/;
     m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
 
     // read EXIF
@@ -331,10 +332,12 @@ bool Jpeg::parse(MetadataParameters &p,
     }
 
     // read GPS
-    p.hdr = "IFD GPS";
-    p.offset = offsetGPS;
-    p.hash = &gps->hash;
-    ifd->readIFD(p, m, isBigEnd);
+    if (offsetGPS) {
+        p.hdr = "IFD GPS";
+        p.offset = offsetGPS;
+        p.hash = &gps->hash;
+        ifd->readIFD(p, m, isBigEnd);
+    }
 
     // read IPTC
     if (segmentHash.contains("IPTC")) iptc->read(p.file, segmentHash["IPTC"], m);

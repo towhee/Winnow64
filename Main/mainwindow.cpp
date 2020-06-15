@@ -882,6 +882,8 @@ void MW::folderSelectionChange()
     G::track(__FUNCTION__);
     #endif
     }
+    testTime.restart(); // rgh remove after performance profiling
+
      // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
@@ -3107,6 +3109,12 @@ void MW::createActions()
     addAction(diagnosticsAllAction);
     connect(diagnosticsAllAction, &QAction::triggered, this, &MW::diagnosticsAll);
 
+    diagnosticsCurrentAction = new QAction(tr("Current Row Diagnostics"), this);
+    diagnosticsCurrentAction->setObjectName("diagnosticsCurrent");
+    diagnosticsCurrentAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsCurrentAction);
+    connect(diagnosticsCurrentAction, &QAction::triggered, this, &MW::diagnosticsCurrent);
+
     diagnosticsMainAction = new QAction(tr("Main"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
     diagnosticsMainAction->setShortcutVisibleInContextMenu(true);
@@ -3428,6 +3436,7 @@ void MW::createMenus()
 
     helpDiagnosticsMenu = helpMenu->addMenu(tr("&Diagnostics"));
     helpDiagnosticsMenu->addAction(diagnosticsAllAction);
+    helpDiagnosticsMenu->addAction(diagnosticsCurrentAction);
     helpDiagnosticsMenu->addAction(diagnosticsMainAction);
     helpDiagnosticsMenu->addAction(diagnosticsGridViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsThumbViewAction);
@@ -3526,6 +3535,7 @@ void MW::createMenus()
     thumbViewActions->append(deleteAction);
     thumbViewActions->append(separatorAction5);
     thumbViewActions->append(reportMetadataAction);
+    thumbViewActions->append(diagnosticsCurrentAction);
 
 //    // imageview/tableview/gridview/compareview context menu
 //    imageView->addAction(pickAction);
@@ -4608,7 +4618,7 @@ void MW::createStatusBar()
     QString itrl = "Turns red when image caching in progress";
     imageThreadRunningLabel->setToolTip(itrl);
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
-    updateImageCachingThreadRunStatus(false, true);
+//    updateImageCachingThreadRunStatus(false, true);  // rgh temp while performance testing
 
     // labels to show various status
     sortAZStatusLabel->setPixmap(QPixmap(":/images/icon16/A-Z.png"));
@@ -5020,6 +5030,7 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
         #endif
     }
     else {
+        qDebug() << __FUNCTION__ << "Total time to cache folder =" << testTime.elapsed();
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
         #ifdef Q_OS_WIN
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;font-size: 24px;}");
@@ -6235,6 +6246,20 @@ void MW::diagnosticsAll()
     rpt << imageView->diagnostics();
     rpt << metadata->diagnostics(dm->currentFilePath);
     rpt << dm->diagnostics();
+    diagnosticsReport(reportString);
+}
+
+void MW::diagnosticsCurrent()
+{
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+//    rpt << this->diagnostics();
+//    rpt << gridView->diagnostics();
+//    rpt << thumbView->diagnostics();
+//    rpt << imageView->diagnostics();
+    rpt << dm->diagnosticsForCurrentRow();
+    rpt << metadata->diagnostics(dm->currentFilePath);
     diagnosticsReport(reportString);
 }
 
@@ -7836,6 +7861,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         refreshFoldersAction->setShortcut(QKeySequence("F5"));
         collapseFoldersAction->setShortcut(QKeySequence("Alt+C"));
         reportMetadataAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+M"));
+        diagnosticsCurrentAction->setShortcut(QKeySequence("Ctrl+Shift+Alt+D"));
         exitAction->setShortcut(QKeySequence("Ctrl+Q"));
 
         // Edit
@@ -10750,20 +10776,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QByteArray ba("abcdef");
-    QBuffer buf(&ba);
-    buf.open(QIODevice::ReadOnly);
-    QDataStream dat(&buf);
-    QFile f("D:/Pictures/_HEIC/test.dat");
-    f.open(QIODevice::WriteOnly);
-
-    test2(buf, 5);
-    buf.close();
-//    QFile f("D:/Pictures/_HEIC/test.txt");
-//    f.open(QIODevice::ReadOnly | QIODevice::Text);
-////    qDebug() << __FUNCTION__ << f.read(4);
-//    test2(f, 7);
-    f.close();
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << this->diagnostics();
+//    rpt << gridView->diagnostics();
+//    rpt << thumbView->diagnostics();
+//    rpt << imageView->diagnostics();
+//    rpt << metadata->diagnostics(dm->currentFilePath);
+    rpt << dm->diagnosticsForCurrentRow();
+    diagnosticsReport(reportString);
 }
 // End MW
 
