@@ -740,6 +740,7 @@ private:
 
     // Help Diagnostics Menu
     QAction *diagnosticsAllAction;
+    QAction *diagnosticsCurrentAction;
     QAction *diagnosticsMainAction;
     QAction *diagnosticsGridViewAction;
     QAction *diagnosticsThumbViewAction;
@@ -971,6 +972,7 @@ private:
     QString enquote(QString &s);
 
     void diagnosticsAll();
+    void diagnosticsCurrent();
     QString diagnostics();
     void diagnosticsMain();
     void diagnosticsGridView();
@@ -997,6 +999,7 @@ private:
     void test();                    // for debugging
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging
+    QTime testTime;
 
     //    void setCopyCutActions(bool setEnabled);
     //    void setDeleteAction(bool setEnabled);

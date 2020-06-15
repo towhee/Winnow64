@@ -633,7 +633,11 @@ sort/filter change and all metadata has been loaded, but the icons visible have 
             int dmRow = dm->sf->mapToSource(idx).row();
             QImage image;
             QString fPath = idx.data(G::PathRole).toString();
+
+            QElapsedTimer t; t.restart();
             bool thumbLoaded = thumb->loadThumb(fPath, image);
+            qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
+
             QPixmap pm;
             if (thumbLoaded) {
                 pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));

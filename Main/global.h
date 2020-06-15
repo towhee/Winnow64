@@ -87,16 +87,7 @@ namespace G
         HeightFullColumn,
         OffsetThumbColumn,
         LengthThumbColumn,
-//        OffsetSmallColumn,
-//        LengthSmallColumn,
-
-//        bitsPerSampleColumn,
-//        photoInterpColumn,
         samplesPerPixelColumn,
-//        compressionColumn,
-//        stripByteCountsColumn,
-//        planarConfigurationFullColumn,
-
         isBigEndianColumn,
         ifd0OffsetColumn,
         XmpSegmentOffsetColumn,
@@ -199,6 +190,7 @@ namespace G
     extern void track(QString functionName = "", QString comment = "");
     extern void wait(int ms);
     extern QString s(QVariant x);
+    extern QString sj(QString s, int x);
 
     extern PopUp *popUp;
     extern void newPopUp(QWidget *widget);

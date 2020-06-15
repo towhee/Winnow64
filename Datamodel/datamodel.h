@@ -51,6 +51,8 @@ public:
     void remove(QString fPath);
     QModelIndex proxyIndexFromPath(QString fPath);
     QString diagnostics();
+    QString diagnosticsForCurrentRow();
+    void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
 
     SortFilter *sf;

@@ -73,6 +73,13 @@ namespace G
         return QVariant(x).toString();
     }
 
+    QString sj(QString s, int x)
+    // helper function to justify a string with ....... for reporting
+    {
+        s += " ";
+        return s.leftJustified(x, '.') + " ";
+    }
+
     void wait(int ms)
     {
         QTime t = QTime::currentTime().addMSecs(ms);

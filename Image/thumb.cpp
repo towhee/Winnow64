@@ -74,11 +74,11 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         image = thumbReader.read();
         success = !image.isNull();
         if (!success) {
-            err = "Could not read thumb using thumbReader:" + fPath;
+            err += "Could not read thumb using thumbReader:" + fPath + ". ";
             if (G::isThreadTrackingOn) track(fPath, err);
         }
     }
-    else err = "Unable to open " + fPath;
+    else err += "Unable to open " + fPath + ". ";
     if (err != "") qDebug() << __FUNCTION__ << err;
     return success;
 }
@@ -123,7 +123,7 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
             if (image.loadFromData(buf, "JPEG")) {
                 imFile.close();
                 if (image.isNull())
-                    err = "Empty thumb " + fPath;
+                    err += "Empty thumb " + fPath + ". ";
                 image = image.scaled(thumbMax, Qt::KeepAspectRatio);
                 success = true;
             }
@@ -133,12 +133,12 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
         }
         else {
             imFile.close();
-            err = "Illegal offset to thumb " + fPath;
+            err += "Illegal offset to thumb " + fPath + ". ";
         }
     }
     else {
         // file busy, wait a bit and try again
-        err = "Could not open file for thumb " + fPath;
+        err += "Could not open file for thumb " + fPath + ". ";
     }
     if (err != "") qDebug() << __FUNCTION__ << err;
     return success;
@@ -214,8 +214,8 @@ that is faster than loading the entire full resolution image just to get a thumb
                 // test for too many samples which causes libTiff to crash
                 int samplesPerPixel = dm->index(row, G::samplesPerPixelColumn).data().toInt();
                 if (samplesPerPixel > 3) {
-                    err = "Could not read tiff because " + QString::number(samplesPerPixel)
-                          + " samplesPerPixel > 3";
+                    err += "Could not read tiff because " + QString::number(samplesPerPixel)
+                          + " samplesPerPixel > 3. ";
                     success = false;
                     break;
                 }
@@ -225,7 +225,7 @@ that is faster than loading the entire full resolution image just to get a thumb
                     qDebug() << __FUNCTION__ << "loadFromTiffData Failed, trying loadFromEntireFile" << fPath;
                     success = loadFromEntireFile(fPath, image, row);
                     if (!success) {
-                        err = "Failed to load thumb";
+                        err += "Failed to load thumb. ";
                     }
                 }
             }
@@ -236,7 +236,7 @@ that is faster than loading the entire full resolution image just to get a thumb
             }
             else success = loadFromJpgData(fPath, image);
             if (!success) {
-                err = "Failed to load thumb";
+                err += "Failed to load thumb. ";
             }
         }
         else  {
@@ -247,7 +247,7 @@ that is faster than loading the entire full resolution image just to get a thumb
             }
             // check if file is locked by another process
             else {
-                err = "Could not open file";    // try again
+                err += "Could not open file. ";    // try again
             }
         }
 //        if (success && metadata->noMetadataFormats.contains(ext)) {
