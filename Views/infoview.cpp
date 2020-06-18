@@ -324,8 +324,8 @@ void InfoView::updateInfo(const int &row)
     // make sure there is metadata for this image
     if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
         metadata->loadImageMetadata(fPath, true, true, false, true, __FUNCTION__);
-        metadata->imageMetadata.row = dm->fPathRow[fPath];
-        dm->addMetadataForItem(metadata->imageMetadata);
+        metadata->m.row = dm->fPathRow[fPath];
+        dm->addMetadataForItem(metadata->m);
     }
 
     QString s;

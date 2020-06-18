@@ -188,7 +188,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 //        }
         return;
     }
-
+//    QApplication::setOverrideCursor(Qt::WaitCursor);
     QTreeWidget::mousePressEvent(event);
 }
 

@@ -11,7 +11,9 @@
 #include "Utilities/icc.h"
 #endif
 #include "ImageFormats/Jpeg/jpeg.h"
+#ifdef Q_OS_WIN
 #include "ImageFormats/Heic/heic.h"
+#endif
 
 class Pixmap : public QObject
 {

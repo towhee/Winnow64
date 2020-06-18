@@ -188,15 +188,15 @@ to prevent jarring changes in perceived scale by the user.
         if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-                metadata->imageMetadata.row = dmRow;
-                dm->addMetadataForItem(metadata->imageMetadata);
+                metadata->m.row = dmRow;
+                dm->addMetadataForItem(metadata->m);
             }
         }
         QPixmap  displayPixmap;
 
-        QElapsedTimer t; t.restart();
+        if (G::isTest) {QElapsedTimer t; t.restart();}
         isLoaded = pixmap->load(fPath, displayPixmap);
-        qDebug() << __FUNCTION__ << "Load image =" << t.nsecsElapsed() << fPath;
+        if (G::isTest) qDebug() << __FUNCTION__ << "Load image =" << t.nsecsElapsed() << fPath;
 
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);

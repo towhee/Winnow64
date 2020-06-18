@@ -377,6 +377,10 @@ void MW::showEvent(QShowEvent *event)
         restoreGeometry(setting->value("Geometry").toByteArray());
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
+        // if previously in filter mode start in folder panel (prevent possible long delay)
+        if (filterDock->isVisible() && !filterDock->visibleRegion().isEmpty()) {
+            folderDock->raise();
+        }
         updateState();
     }
     else {
@@ -730,6 +734,7 @@ void MW::focusChange(QWidget *previous, QWidget *current)
     #endif
     }
     if (current == nullptr) return;
+    qDebug() << __FUNCTION__ << current->objectName();
     if (current->objectName() == "DisableGoActions") enableGoKeyActions(false);
     else enableGoKeyActions(true);
     if (previous == nullptr) return;    // suppress compiler warning
@@ -882,12 +887,15 @@ void MW::folderSelectionChange()
     G::track(__FUNCTION__);
     #endif
     }
-    testTime.restart(); // rgh remove after performance profiling
+//    QApplication::setOverrideCursor(Qt::WaitCursor);
+    if (G::isTest) testTime.restart(); // rgh remove after performance profiling
+    G::track(__FUNCTION__, "Commence");
 
      // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
     G::allMetadataLoaded = false;
+    G::track(__FUNCTION__, "0");
 
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
     qApp->processEvents();
@@ -968,7 +976,7 @@ void MW::folderSelectionChange()
 
     uncheckAllFilters();
 
-//    if (G::memTest) return;
+    if (G::isTest) testTime.restart();
 
     if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
         qDebug() << "Datamodel Failed To Load for" << currentViewDir;
@@ -991,7 +999,6 @@ void MW::folderSelectionChange()
         G::isInitializing = false;
         return;
     }
-
     centralLayout->setCurrentIndex(prevCentralView);    // rgh req'd?
 
     // made it this far, folder must have eligible images and is good-to-go
@@ -1026,7 +1033,6 @@ void MW::folderSelectionChange()
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
 
-//    if (!G::memTest)
     metadataCacheThread->loadNewFolder(isRefreshingDM);
 
     // format pickMemSize as bytes, KB, MB or GB
@@ -1148,8 +1154,8 @@ delegate use of the current index must check the column.
         QString ext = fileInfo.suffix().toLower();
         if (metadata->getMetadataFormats.contains(ext)) {
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-                metadata->imageMetadata.row = dmRow;
-                dm->addMetadataForItem(metadata->imageMetadata);
+                metadata->m.row = dmRow;
+                dm->addMetadataForItem(metadata->m);
             }
         }
     }
@@ -1222,7 +1228,7 @@ a bookmark or ejects a drive and the resulting folder does not have any eligible
     dm->clearDataModel();
     currentRow = 0;
     infoView->clearInfo();
-    metadata->clear();
+//    metadata->clear();
     imageView->clear();
 //    progressLabel->setVisible(false);
     setThreadRunStatusInactive();                      // turn thread activity buttons gray
@@ -1238,10 +1244,8 @@ void MW::nullFiltration()
     updateStatus(false, "No images match the filtration");
     setCentralMessage("No images match the filtration");
     infoView->clearInfo();
-    metadata->clear();
     imageView->clear();
     progressLabel->setVisible(false);
-//    G::isInitializing = false;
     isDragDrop = false;
 }
 
@@ -3320,6 +3324,7 @@ void MW::createMenus()
     QMenu *filterMenu = new QMenu(this);
     QAction *filterGroupAct = new QAction("Filter", this);
     filterGroupAct->setMenu(filterMenu);
+    filterMenu->addAction(filterUpdateAction);
     filterMenu->addAction(clearAllFiltersAction);
     filterMenu->addSeparator();
     filterMenu->addAction(filterPickAction);
@@ -3490,6 +3495,7 @@ void MW::createMenus()
     // filters context menu
     filterActions = new QList<QAction *>;
 //    QList<QAction *> *filterActions = new QList<QAction *>;
+    filterActions->append(filterUpdateAction);
     filterActions->append(clearAllFiltersAction);
     filterActions->append(searchTextEditAction);
 //    filterActions->append(filterInvertAction);
@@ -4467,7 +4473,6 @@ void MW::createFSTree()
     fsTree->setMaximumWidth(folderMaxWidth);
     fsTree->setShowImageCount(true);
     fsTree->combineRawJpg = combineRawJpg;
-//    fsTree->setShowImageCount(setting->value("showImageCount").toBool());
 
     // this works for touchpad tap
     connect(fsTree, SIGNAL(pressed(const QModelIndex&)), this, SLOT(folderSelectionChange()));
@@ -5030,7 +5035,7 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
         #endif
     }
     else {
-        qDebug() << __FUNCTION__ << "Total time to cache folder =" << testTime.elapsed();
+        if (G::isTest) qDebug() << __FUNCTION__ << "Total time to cache folder =" << testTime.elapsed();
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
         #ifdef Q_OS_WIN
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;font-size: 24px;}");
@@ -5168,8 +5173,12 @@ void MW::buildFilters()
     G::track(__FUNCTION__);
     #endif
     }
-    // check if filters have already been build
-    if (filters->days->childCount()) return;
+qDebug() << __FUNCTION__;    // check if filters have already been build
+    // rgh need more robust check
+//    if (filters->days->childCount()) return;
+    qDebug() << __FUNCTION__ << "dm->loadingModel =" << dm->loadingModel;
+    if (dm->loadingModel) return;
+//    if (!G::allMetadataLoaded || filters->days->childCount() == 0) return;
 
     G::buildingFilters = true;      // req'd for user messaging in load all metadata
     G::popUp->setPopUpSize(800, 100);
@@ -10325,8 +10334,8 @@ folder images have changed.
             QString ext = dm->modifiedFiles.at(i).suffix().toLower();
             if (metadata->getMetadataFormats.contains(ext)) {
                 if (metadata->loadImageMetadata(dm->modifiedFiles.at(i), true, true, false, true, __FUNCTION__)) {
-                    metadata->imageMetadata.row = dmRow;
-                    dm->addMetadataForItem(metadata->imageMetadata);
+                    metadata->m.row = dmRow;
+                    dm->addMetadataForItem(metadata->m);
                 }
             }
 
@@ -10776,16 +10785,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString reportString;
-    QTextStream rpt;
-    rpt.setString(&reportString);
-    rpt << this->diagnostics();
-//    rpt << gridView->diagnostics();
-//    rpt << thumbView->diagnostics();
-//    rpt << imageView->diagnostics();
-//    rpt << metadata->diagnostics(dm->currentFilePath);
-    rpt << dm->diagnosticsForCurrentRow();
-    diagnosticsReport(reportString);
+//    filterChange();
+    qDebug() << __FUNCTION__;
+    buildFilters();
+
 }
 // End MW
 

@@ -339,6 +339,7 @@ Steps:
     }
     currentFolderPath = folderPath;
     filtersBuilt = false;
+    loadingModel = true;
 
     //  clear the model
     clearDataModel();
@@ -542,6 +543,7 @@ Load the information from the operating system contained in QFileInfo first
         }
 
     }
+    loadingModel = false;
     return true;
 }
 
@@ -582,8 +584,8 @@ Used by InfoString and IngestDlg
     else {
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-            metadata->imageMetadata.row = row;
-            addMetadataForItem(metadata->imageMetadata);
+            metadata->m.row = row;
+            addMetadataForItem(metadata->m);
             success = true;
         }
     }
@@ -687,8 +689,8 @@ to run as a separate thread and can be executed directly.
         QString fPath = index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-            metadata->imageMetadata.row = row;
-            addMetadataForItem(metadata->imageMetadata);
+            metadata->m.row = row;
+            addMetadataForItem(metadata->m);
             count++;
         }
         else {
@@ -696,11 +698,13 @@ to run as a separate thread and can be executed directly.
         }
     }
     G::allMetadataLoaded = true;
+    loadingModel = false;
     qint64 ms = G::t.elapsed();
     qreal msperfile = static_cast<double>(ms) / count;
     qDebug() << "DataModel::addAllMetadata for" << count << "files"
              << ms << "ms" << msperfile << "ms per file;"
              << currentFolderPath;
+    buildFilters();
 }
 
 bool DataModel::readMetadataForItem(int row)
@@ -724,8 +728,8 @@ Reads the image metadata into the datamodel for the row.
         if (metadata->getMetadataFormats.contains(ext)) {
 //                qDebug() << __FUNCTION__ << fPath << ext;
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-                metadata->imageMetadata.row = row;
-                addMetadataForItem(metadata->imageMetadata);
+                metadata->m.row = row;
+                addMetadataForItem(metadata->m);
             }
             else {
                 qDebug() << __FUNCTION__ << "Failed to load metadata for" << fPath;
@@ -735,8 +739,8 @@ Reads the image metadata into the datamodel for the row.
         // cannot read this file type, load empty metadata
         else {
             metadata->clearMetadata();
-            metadata->imageMetadata.row = row;
-            addMetadataForItem(metadata->imageMetadata);
+            metadata->m.row = row;
+            addMetadataForItem(metadata->m);
         }
     }
     return true;

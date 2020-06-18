@@ -992,9 +992,9 @@ void ImageCache::run()
 
         QImage im;
 
-        QElapsedTimer tt; tt.restart();
+        QElapsedTimer tt; if (G::isTest) tt.restart();
         if (getImage->load(fPath, im)) {
-            qDebug() << __FUNCTION__ << "Load image =" << tt.nsecsElapsed() << fPath;
+            if (G::isTest) qDebug() << __FUNCTION__ << "Load image =" << tt.nsecsElapsed() << fPath;
 
 //          is there room in cache?
             int room = cache.maxMB - cache.currMB;
