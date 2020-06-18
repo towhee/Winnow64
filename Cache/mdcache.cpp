@@ -798,6 +798,7 @@ If there has been a file selection change and not a new folder then update image
 
         mutex.lock();
         int rowCount = dm->rowCount();
+        dm->loadingModel = true;
         mutex.unlock();
 
         // pause image caching if it was running
@@ -865,6 +866,11 @@ If there has been a file selection change and not a new folder then update image
 
         // resume image caching if it was interrupted
         if (imageCachePaused) imageCacheThread->resumeImageCache();
+
+        mutex.lock();
+        dm->loadingModel = false;
+        mutex.unlock();
+
     }
     /*
     qDebug() << "action =" << action
@@ -892,4 +898,5 @@ If there has been a file selection change and not a new folder then update image
             emit updateImageCachePositionAfterDelay();
         }
     }
+
 }

@@ -166,7 +166,7 @@ namespace G
 
     extern int actualDevicePixelRatio;
     extern bool allMetadataLoaded;
-    extern bool buildingFilters;
+//    extern bool buildingFilters;
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;
 

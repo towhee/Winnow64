@@ -378,9 +378,9 @@ void MW::showEvent(QShowEvent *event)
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
         // if previously in filter mode start in folder panel (prevent possible long delay)
-        if (filterDock->isVisible() && !filterDock->visibleRegion().isEmpty()) {
-            folderDock->raise();
-        }
+//        if (filterDock->isVisible() && !filterDock->visibleRegion().isEmpty()) {
+//            folderDock->raise();
+//        }
         updateState();
     }
     else {
@@ -490,7 +490,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         }
         // hide preferences
         if (preferencesHasFocus) {
-            propertiesDock->setVisible(false);
+            propertiesDock->setVisible(false);  // rgh not using propertiesDock?
         }
     }
 
@@ -534,6 +534,10 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             slideShowDelay = n;
             slideShowResetDelay();
         }
+    }
+
+    if (filters->buildingFilters) {
+        filters->quitBuildingFilters = true;
     }
 
     QMainWindow::keyReleaseEvent(event);
@@ -598,19 +602,21 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
        - the ChildRemoved event fires for the filters widget
     */
 
-    if (!dm->filtersBuilt && !G::buildingFilters && !G::isInitializing) {
-        if (!filterDock->visibleRegion().isNull()) {
-            if(obj->objectName() == "Filters") {
-                if (event->type() == QEvent::ChildRemoved) {
-                    /*
-                    qDebug() << "building filters from event filter"
-                             << "G::isInitializing" << G::isInitializing;
-                    */
-                    buildFilters();
-                }
-            }
-        }
-    }
+//    if (!filters->filtersBuilt && !filters->buildingFilters && !G::isInitializing) {
+//        if (!filterDock->visibleRegion().isNull()) {
+//            if(obj->objectName() == "Filters") {
+//                qDebug() << __FUNCTION__ << event;
+//                if (event->type() == QEvent::ChildRemoved) {
+//                    /*
+//                    qDebug() << "building filters from event filter"
+//                             << "G::isInitializing" << G::isInitializing;
+////                    */
+//                    qDebug() << __FUNCTION__ << "force =" << false;
+//                    buildFilters(/*force*/false);
+//                }
+//            }
+//        }
+//    }
 
     /* CONTEXT MENU **********************************************************************
 
@@ -734,7 +740,6 @@ void MW::focusChange(QWidget *previous, QWidget *current)
     #endif
     }
     if (current == nullptr) return;
-    qDebug() << __FUNCTION__ << current->objectName();
     if (current->objectName() == "DisableGoActions") enableGoKeyActions(false);
     else enableGoKeyActions(true);
     if (previous == nullptr) return;    // suppress compiler warning
@@ -888,14 +893,14 @@ void MW::folderSelectionChange()
     #endif
     }
 //    QApplication::setOverrideCursor(Qt::WaitCursor);
-    if (G::isTest) testTime.restart(); // rgh remove after performance profiling
-    G::track(__FUNCTION__, "Commence");
+//    if (G::isTest) testTime.restart(); // rgh remove after performance profiling
+//    G::track(__FUNCTION__, "Commence");
 
      // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
     G::allMetadataLoaded = false;
-    G::track(__FUNCTION__, "0");
+//    G::track(__FUNCTION__, "0");
 
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
     qApp->processEvents();
@@ -1566,7 +1571,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     metadataCacheThread->scrollChange();
 }
 
-void MW::loadEntireMetadataCache()
+void MW::loadEntireMetadataCache(bool force)
 {
 /*
 This is called before a filter or sort operation, which only makes sense if all the metadata
@@ -1580,6 +1585,7 @@ the filter and sort operations cannot commence until all the metadata has been l
     }
     if (G::isInitializing) return;
     if (metadataCacheThread->isAllMetadataLoaded()) return;
+    qDebug() << __FUNCTION__ << "force =" << force;
 
     updateIconsVisible(true);
 
@@ -1588,10 +1594,12 @@ the filter and sort operations cannot commence until all the metadata has been l
         imageCacheThread->pauseImageCache();
         resumeImageCaching = true;
     }
-//    popup("It may take a moment to load all the metadata...\n"
-//          "This is required before any filtering or sorting of metadata can be done.",
-//          0, 0.75, true);
-//    updateStatus(false, "Loading metadata for all images");
+    /*
+    popup("It may take a moment to load all the metadata...\n"
+          "This is required before any filtering or sorting of metadata can be done.",
+          0, 0.75, true);
+    updateStatus(false, "Loading metadata for all images");
+//    */
     QApplication::setOverrideCursor(Qt::WaitCursor);
     progressBar->saveProgressState();
     progressBar->clearProgress();
@@ -1605,20 +1613,25 @@ the filter and sort operations cannot commence until all the metadata has been l
     }
     QApplication::processEvents();
 
+    if (dm->forceTimer.elapsed() > 100) {
+        QApplication::restoreOverrideCursor();
+        return;
+    }
+
     /* adding all metadata in dm slightly slower than using metadataCacheThread but progress
        bar does not update from separate thread
     */
-    dm->addAllMetadata(true);
+    dm->addAllMetadata(/*isShowCacheStatus*/true);
     // metadataCacheThread->loadAllMetadata();
     // metadataCacheThread->wait();
-
-//    dm->buildFilters();
 
     progressBar->recoverProgressState();
     if (resumeImageCaching) imageCacheThread->resumeImageCache();
     QApplication::restoreOverrideCursor();
-//    popup("Metadata loaded.", 500, 0.75, true);
-//    QApplication::processEvents();
+    /*
+    popup("Metadata loaded.", 500, 0.75, true);
+    QApplication::processEvents();
+//*/
 }
 
 void MW::updateMetadataCacheStatus(int row, bool clear)
@@ -2538,10 +2551,11 @@ void MW::createActions()
     addAction(filterLastDayAction);
     connect(filterLastDayAction,  &QAction::triggered, this, &MW::filterLastDay);
 
-    filterUpdateAction = new QAction(tr("Update all filters"), this);
+    filterUpdateAction = new QAction(tr("Force update all filters"), this);
     filterUpdateAction->setShortcutVisibleInContextMenu(true);
     addAction(filterUpdateAction);
-    connect(filterUpdateAction,  &QAction::triggered, this, &MW::buildFilters);
+    connect(filterUpdateAction,  &QAction::triggered, this, &MW::forceBuildFilters);
+//    connect(filterUpdateAction, SIGNAL(triggered()), this, SLOT(buildFilters(true)));
 
     // Sort Menu
 
@@ -5093,7 +5107,7 @@ triggers a sort, which needs to be suppressed while syncing the menu actions wit
     }
 //    QString columnName = tableView->model()->headerData(column, Qt::Horizontal).toString();
 //    qDebug() << __FUNCTION__ << column << columnName << sortOrder << sortColumn;
-    if (!G::allMetadataLoaded) loadEntireMetadataCache();
+    if (!G::allMetadataLoaded && column > G::DimensionsColumn) loadEntireMetadataCache();
 
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
     switch (column) {
@@ -5166,21 +5180,30 @@ Type 2 Filtration steps:
     * Filter based on criteria selected
 */
 
-void MW::buildFilters()
+void MW::forceBuildFilters()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-qDebug() << __FUNCTION__;    // check if filters have already been build
-    // rgh need more robust check
-//    if (filters->days->childCount()) return;
-    qDebug() << __FUNCTION__ << "dm->loadingModel =" << dm->loadingModel;
+    buildFilters(true);
+}
+
+void MW::buildFilters(bool force)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__ << "force =" << force;    // check if filters have already been build
+    if (!force) dm->forceTimer.restart();
+    if (filters->days->childCount()) return;
     if (dm->loadingModel) return;
 //    if (!G::allMetadataLoaded || filters->days->childCount() == 0) return;
 
-    G::buildingFilters = true;      // req'd for user messaging in load all metadata
+    filters->buildingFilters = true;      // req'd for user messaging in load all metadata
     G::popUp->setPopUpSize(800, 100);
     QString msg = "Building filters.  This could take a while to complete.\n";
     G::popUp->showPopup(msg, 0);
@@ -5189,11 +5212,9 @@ qDebug() << __FUNCTION__;    // check if filters have already been build
         loadEntireMetadataCache();
     }
 //    qApp->processEvents();
-    dm->buildFilters();
-//    progressBar->recoverProgressState();
-//    imageCacheThread->filterImageCache(dm->currentFilePath);
+    dm->buildFilters(force);
     updateStatus(true);
-    G::buildingFilters = false;
+    filters->buildingFilters = false;
     G::popUp->showPopup("Filters completed");
 }
 
@@ -5363,7 +5384,7 @@ void MW::clearAllFilters()
     #endif
     }
 
-    if (!G::allMetadataLoaded) loadEntireMetadataCache();
+    if (!G::allMetadataLoaded) loadEntireMetadataCache();   // rgh is this reqd
     uncheckAllFilters();
     filters->searchString = "";
     dm->searchStringChange("");
@@ -10785,9 +10806,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    filterChange();
-    qDebug() << __FUNCTION__;
-    buildFilters();
+    qDebug() << __FUNCTION__ << combineRawJpg;
+//    buildFilters();
 
 }
 // End MW

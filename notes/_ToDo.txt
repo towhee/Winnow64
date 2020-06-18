@@ -17,7 +17,8 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
-- Do not allow start in filter mode
+- Bookmark count wrong at cration if combineRawJpg = true
+- Filter panel crashes if visible when change folders
 - Cleanup Metadata class
 - Added Selection to InfoView ie Selection  8 (490.8 MB)
 - If fit at 100% then do not show zoom frame.

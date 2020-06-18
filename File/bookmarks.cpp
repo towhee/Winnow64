@@ -80,6 +80,7 @@ void BookMarks::reloadBookmarks()
 		QString itemPath = it.next();
         addBookmark(itemPath);
     }
+    count();
 }
 
 void BookMarks::addBookmark(QString itemPath)
@@ -90,8 +91,6 @@ void BookMarks::addBookmark(QString itemPath)
     item->setToolTip(0, itemPath);
     insertTopLevelItem(0, item);
     dir->setPath(itemPath);
-    int count = dir->entryInfoList().size();
-    item->setText(1, QString::number(count));
     item->setToolTip(1, itemPath);
     item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
 }
@@ -119,7 +118,6 @@ void BookMarks::count()
          }
          else count = dir->entryInfoList().size();
          (*it)->setText(1, QString::number(count));
-//         qDebug() << path << count;
          ++it;
      }
 

@@ -55,6 +55,10 @@ public:
     void setDisabled(bool disable);
     void setSearchTextColor();
 
+    bool buildingFilters = false;
+    bool filtersBuilt = false;
+    bool quitBuildingFilters = false;
+
     QString searchString = "";
     QStringList ignoreSearchStrings;
     QString enterSearchString;

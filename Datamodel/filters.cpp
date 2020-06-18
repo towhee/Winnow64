@@ -99,6 +99,8 @@ datamodel.
     filterCategoryToDmColumn["Title"] = G::TitleColumn;
     filterCategoryToDmColumn["Creators"] = G::CreatorColumn;
 
+    expandAll();
+
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
 }
 
@@ -625,6 +627,7 @@ createDynamicFilters;
       if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
     }
     for (auto key : uniqueItems.keys()) {
+        if (quitBuildingFilters) return;
         item = new QTreeWidgetItem(category);
         item->setText(0, uniqueItems.value(key));
         item->setCheckState(0, Qt::Unchecked);
@@ -732,7 +735,7 @@ updated.
         column > 0 ||
         !item->parent() ||
         !G::isNewFolderLoaded ||
-        G::buildingFilters)
+        buildingFilters)
     {
         return;
     }
