@@ -3,11 +3,10 @@
 
 #include <QtWidgets>
 #include <QtCore>
-#include <QtXmlPatterns>
-#include <iostream>
-#include <iomanip>
-//#include <QElapsedTimer>
-//#include <QThread>
+//#include <QtXmlPatterns>
+//#include <iostream>
+//#include <iomanip>
+//#include "Cache/tshash.h"
 #include "Main/global.h"
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
@@ -15,12 +14,13 @@
 #include "Metadata/gps.h"
 #include "Metadata/metareport.h"
 #include "Utilities/utilities.h"
-#include "Cache/tshash.h"
 #include "Metadata/imagemetadata.h"
 #include "xmp.h"
 #include "ui_metadatareport.h"
 
+#ifdef Q_OS_WIN
 #include "ImageFormats/Heic/heic.h"
+#endif
 
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "ImageFormats/Canon/canon.h"
@@ -32,18 +32,6 @@
 #include "ImageFormats/Sony/sony.h"
 #include "ImageFormats/Tiff/tiff.h"
 
-//class IFDData
-//{
-//public:
-//    quint32 tagType;
-//    quint32 tagCount;
-//    quint32 tagValue;
-//    short tagReal;
-//};
-
-//Q_DECLARE_METATYPE(ImageMetadata)
-typedef TSHash<int, ImageMetadata> MetaHash;
-
 class Metadata : public QObject
 {
     Q_OBJECT
@@ -54,72 +42,24 @@ public:
     void reportMetadata();
     void testNewFileFormat(const QString &path);
 
-    // variables used to hold data before insertion into QMap metaCache
-    int row;                // datamodel row
-    bool isPicked;
-    quint32 offsetFull;
-    quint32 lengthFull;
-    quint32 offsetThumb;
-    quint32 lengthThumb;
-//    quint32 offsetSmall;
-//    quint32 lengthSmall;
-    quint32 xmpSegmentOffset;
-    quint32 xmpNextSegmentOffset;
-    bool isXmp;
-    quint32 iccSegmentOffset;
-    quint32 iccSegmentLength;
-    QByteArray iccBuf;
-    QString iccSpace;
-    quint32 orientationOffset;
-    int orientation;
-    int rotationDegrees;            // additional rotation from edit
-    uint width;
-    uint height;
-    QString dimensions;
-//    QString created;
-    QDateTime createdDate;
-    QString make;
-    QString model;
-    QString exposureTime;
-    float exposureTimeNum;
-    QString aperture;
-    float apertureNum;
-    QString ISO;
-    int ISONum;
-    QString focalLength;
-    int focalLengthNum;
-    QString shootingInfo;
-    QString title;
-    QString _title;                         // original value
-    QString rating;
-    QString _rating;                        // original value
-    QString label;
-    QString _label;                         // original value
-    QString lens;
-    QString creator;
-    QString _creator;                       // original value
-    QString copyright;
-    QString _copyright;                     // original value
-    QString email;
-    QString _email;                         // original value
-    QString url;
-    QString _url;                           // original value
-    QString cameraSN;
-    QString lensSN;
-    uint shutterCount;
-    bool metadataLoaded;
+    /* The ImageMetadata class struct has all the fields that are stored in the
+       datamodel.  The various file parse routines populate ImageMetadata.
+       ie: m.aperture = (a value from the raw file).  The DataModel class adds this
+       information from each file to the model.  The ImageMetadata struct is defined
+       in imagemetadata.h.
+    */
+    ImageMetadata m;
 
-    ImageMetadata imageMetadata;            // agregate for image metadata
-    // end variables used to hold data
-
+    /* The MetadataParameters class struct has the information that is passed from this
+       function to the parsing class for the file type: file, buffer, offset, lookup hash,
+       report, hdr, xmpString, inclNonEssential.  This condenses all this info so the
+       funcion pass param is neater.  The MetadataParameters class struct is defined
+       in imagemetadata.h.
+    */
     MetadataParameters p;
 
-    QString fPath;
-    QString err;
     bool thumbUnavailable;                  // no embedded thumb
     bool imageUnavailable;                  // no embedded preview
-
-//    QMap<QString, QString> exampleMap;
 
     QStringList rawFormats;
     QStringList sidecarFormats;
@@ -150,11 +90,7 @@ public:
         "float8"
     }  */
 
-    void removeImage(QString &imageFileName);
-    void setPick(const QString &imageFileName, bool choice);
-    void clear();
     void clearMetadata();
-
     bool writeMetadata(const QString &imageFileName, ImageMetadata m, QByteArray &buffer);
 
 
@@ -174,7 +110,6 @@ private:
     IPTC *iptc = nullptr;
 
     // formats
-//    Heic *heic = nullptr;
     Jpeg *jpeg = nullptr;
     Canon *canon = nullptr;
     DNG *dng = nullptr;
@@ -184,7 +119,9 @@ private:
     Panasonic *panasonic = nullptr;
     Sony *sony = nullptr;
     Tiff *tiff = nullptr;
+#ifdef Q_OS_WIN
     Heic *heic = nullptr;
+#endif
 
     // hash
     QHash<uint, IFDData> ifdDataHash;
@@ -199,14 +136,7 @@ private:
     QHash<int,int> orientationToDegrees;
     QHash<int,int> orientationFromDegrees;
 
-    // metadata cache
-    QMap<QString, ImageMetadata> metaCache;
-
-//    bool report;
-    QString xmpString;
-    quint32 xmpmetaRoom;
     QString reportString;
-//    QTextStream rpt;
     quint32 order;
 
     void initSupportedLabelsRatings();
@@ -231,7 +161,7 @@ private:
     bool parseCanon();
     bool parseDNG();
     bool parseFuji();
-//    bool parseHEIF();
+    bool parseHEIF();
     bool parseJPG(quint32 startOffset);
     bool parseNikon();
     bool parseOlympus();
@@ -242,8 +172,6 @@ private:
 signals:
 
 public slots:
-    bool parseHEIF();
-    void loadFromThread(QFileInfo &fileInfo);
     bool loadImageMetadata(const QFileInfo &fileInfo,
                            bool essential = true,
                            bool nonEssential = true,
@@ -251,8 +179,6 @@ public slots:
                            bool isLoadXmp = false,
                            QString source = "");
 
-private:
-    void track(QString fPath, QString msg);
 };
 
 #endif // METADATA_H

@@ -91,10 +91,10 @@ namespace G
         QString time = QString("%L1").arg(t.nsecsElapsed());
         t.restart();
 
+//        qApp->processEvents();
         qDebug() << time.rightJustified(15, ' ') << " "
                  << functionName.leftJustified(50, '.') << " "
                  << comment;
-        qApp->processEvents();
     }
 
     PopUp *popUp;

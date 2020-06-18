@@ -100,7 +100,7 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     // Check if metadata has been cached for this image
     if (dm->index(row, G::OffsetThumbColumn).data().isNull()) {
         metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__);
-        dm->addMetadataForItem(metadata->imageMetadata);
+        dm->addMetadataForItem(metadata->m);
     }
     uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
     uint lengthThumb = dm->index(row, G::LengthThumbColumn).data().toUInt();
@@ -189,7 +189,7 @@ that is faster than loading the entire full resolution image just to get a thumb
     // Check if metadata has been cached for this image
     if (dm->index(row, G::MetadataLoadedColumn).data().isNull()) {
         metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__);
-        dm->addMetadataForItem(metadata->imageMetadata);
+        dm->addMetadataForItem(metadata->m);
     }
 
     // Is there an embedded thumbnail?
@@ -231,8 +231,10 @@ that is faster than loading the entire full resolution image just to get a thumb
             }
             else if (ext == "heic") {
                 ImageMetadata m = dm->imMetadata(fPath);
+                #ifdef Q_OS_WIN
                 Heic heic;
                 success = heic.decodeThumbnail(m, fPath, image);
+                #endif
             }
             else success = loadFromJpgData(fPath, image);
             if (!success) {

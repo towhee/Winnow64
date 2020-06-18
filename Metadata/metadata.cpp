@@ -172,6 +172,11 @@ void Metadata::initSupportedFiles()
 
 void Metadata::initOrientationHash()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     orientationDescription[1] = "Horizontal";
     orientationDescription[2] = "Mirrow horizontal";
     orientationDescription[3] = "Rotate 180";
@@ -199,44 +204,44 @@ void Metadata::reportMetadata()
     G::track(__FUNCTION__);
     #endif
     }
-    QString createdExif = imageMetadata.createdDate.toString("yyyy-MM-dd hh:mm:ss");
+    QString createdExif = m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
     p.rpt << "\n";
     p.rpt.reset();
     p.rpt.setFieldAlignment(QTextStream::AlignLeft);
 
-    p.rpt.setFieldWidth(25); p.rpt << "offsetFull"          << imageMetadata.offsetFull;          p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "lengthFull"          << imageMetadata.lengthFull;          p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "offsetThumb"         << imageMetadata.offsetThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "lengthThumb"         << imageMetadata.lengthThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "isBigEndian"         << imageMetadata.isBigEnd;            p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "offsetifd0Seg"       << imageMetadata.ifd0Offset;          p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "offsetXMPSeg"        << imageMetadata.xmpSegmentOffset;    p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "offsetNextXMPSegment"<< imageMetadata.xmpNextSegmentOffset;p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "orientation"         << imageMetadata.orientation;         p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "width"               << imageMetadata.width;               p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "height"              << imageMetadata.height;              p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetFull"          << m.offsetFull;          p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "lengthFull"          << m.lengthFull;          p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetThumb"         << m.offsetThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "lengthThumb"         << m.lengthThumb;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "isBigEndian"         << m.isBigEnd;            p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetifd0Seg"       << m.ifd0Offset;          p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetXMPSeg"        << m.xmpSegmentOffset;    p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetNextXMPSegment"<< m.xmpNextSegmentOffset;p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "orientation"         << m.orientation;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "width"               << m.width;               p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "height"              << m.height;              p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "created"             << createdExif;                       p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "make"                << imageMetadata.make;                p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "model"               << imageMetadata.model;               p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "exposureTime"        << imageMetadata.exposureTime;        p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "aperture"            << imageMetadata.aperture;            p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "ISO"                 << imageMetadata.ISO;                 p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "exposureCompensation"<< imageMetadata.exposureCompensation;p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "focalLength"         << imageMetadata.focalLength;         p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "title"               << imageMetadata.title;               p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "lens"                << imageMetadata.lens;                p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "creator"             << imageMetadata.creator;             p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "copyright"           << imageMetadata.copyright;           p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "email"               << imageMetadata.email;               p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "url"                 << imageMetadata.url;                 p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "rating"              << imageMetadata.rating;              p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "label"               << imageMetadata.label;               p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "cameraSN"            << imageMetadata.cameraSN;            p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "lensSN"              << imageMetadata.lensSN;              p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "shutterCount"        << imageMetadata.shutterCount;        p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "nikonLensCode"       << imageMetadata.nikonLensCode;       p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "make"                << m.make;                p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "model"               << m.model;               p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "exposureTime"        << m.exposureTime;        p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "aperture"            << m.aperture;            p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "ISO"                 << m.ISO;                 p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "exposureCompensation"<< m.exposureCompensation;p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "focalLength"         << m.focalLength;         p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "title"               << m.title;               p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "lens"                << m.lens;                p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "creator"             << m.creator;             p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "copyright"           << m.copyright;           p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "email"               << m.email;               p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "url"                 << m.url;                 p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "rating"              << m.rating;              p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "label"               << m.label;               p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "cameraSN"            << m.cameraSN;            p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "lensSN"              << m.lensSN;              p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "shutterCount"        << m.shutterCount;        p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "nikonLensCode"       << m.nikonLensCode;       p.rpt.setFieldWidth(0); p.rpt << "\n";
 
-    if (isXmp && p.xmpString.length() > 0) {
+    if (m.isXmp && p.xmpString.length() > 0) {
         p.rpt << "\nXMP Extract:\n\n";
         QXmlQuery query;
         query.setQuery(p.xmpString);
@@ -253,15 +258,6 @@ void Metadata::reportMetadata()
         QString xmpStr = QTextCodec::codecForMib(106)->toUnicode(outArray);
         p.rpt << xmpStr;
     }
-
-    // moved to diagnostics()
-//    QDialog *dlg = new QDialog;
-//    Ui::metadataReporttDlg md;
-//    md.setupUi(dlg);
-//    md.textBrowser->setText(reportString);
-//    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-//    dlg->show();
-//    std::cout << reportString.toStdString() << std::flush;
 }
 
 QString Metadata::diagnostics(QString fPath)
@@ -270,13 +266,13 @@ QString Metadata::diagnostics(QString fPath)
     return reportString;
 }
 
-void Metadata::track(QString fPath, QString msg)
-{
-    if (G::isThreadTrackingOn) qDebug() << G::t.restart() << "\t" << "• Metadata Caching" << fPath << msg;
-}
-
 int Metadata::getNewOrientation(int orientation, int rotation)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int degrees = orientationToDegrees[orientation];
     degrees += rotation;
     if (degrees > 270) degrees -= 360;
@@ -286,11 +282,16 @@ int Metadata::getNewOrientation(int orientation, int rotation)
 bool Metadata::writeMetadata(const QString &fPath, ImageMetadata m, QByteArray &buffer)
 {
 /*
-Called from ingest (Ingestdlg).  If it is a supported image type a copy of the
-image file is made and any metadata changes are updated in buffer.  If it is a
-raw file in the sidecarFormats hash then the xmp data for existing and changed
-metadata is written to buffer and the original image file is copied unchanged.
+Called from ingest (Ingestdlg). If it is a supported image type a copy of the image file
+is made and any metadata changes are updated in buffer. If it is a raw file in the
+sidecarFormats hash then the xmp data for existing and changed metadata is written to
+buffer and the original image file is copied unchanged.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__, fPath);
+    #endif
+    }
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
@@ -331,7 +332,7 @@ metadata is written to buffer and the original image file is copied unchanged.
     p.file.open(QIODevice::ReadOnly);
 
     // update xmp data
-    Xmp xmp(p.file, xmpSegmentOffset, xmpNextSegmentOffset, useSidecar);
+    Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset, useSidecar);
 
     // orientation is written to xmp sidecars only
     if (orientationChanged && useSidecar) {
@@ -358,7 +359,7 @@ metadata is written to buffer and the original image file is copied unchanged.
         XMP, for known formats. Writing subsequent xmp could change file length
         and make the orientationOffset incorrect.
         */
-        if (orientationChanged && orientationOffset > 0) {
+        if (orientationChanged && m.orientationOffset > 0) {
             QChar c = newOrientation & 0xFF;
             QByteArray ba;
             ba.append(c);
@@ -376,10 +377,15 @@ quint32 Metadata::findInFile(QString s, quint32 offset, quint32 range)
 {
 /*
 Returns the file offset to the start of the search string. If not
-found returns -1.
+found returns 0.
 
 QFile p.file must be assigned and open.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     uint firstCharCode = static_cast<unsigned int>(s[0].unicode());
     p.file.seek(offset);
     for (quint32 i = offset; i < offset + range; i++) {
@@ -397,6 +403,7 @@ QFile p.file must be assigned and open.
     return 0;
 }
 
+// rgh where is this used?  Should it be a separate class like ifd and iptc?
 bool Metadata::readIRB(quint32 offset)
 {
 /*
@@ -406,9 +413,9 @@ This is a recursive function, iterating through consecutive resource blocks unti
 the embedded jpg preview is found (irbID == 1036)
 */
     {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
     }
 
     // Photoshop IRBs use big endian
@@ -443,8 +450,8 @@ the embedded jpg preview is found (irbID == 1036)
 
     // found the thumb, collect offsets and return
     if (foundTifThumb) {
-        offsetThumb = static_cast<quint32>(p.file.pos()) + 28;
-        lengthThumb = dataBlockLength - 28;
+        m.offsetThumb = static_cast<quint32>(p.file.pos()) + 28;
+        m.lengthThumb = dataBlockLength - 28;
         return foundTifThumb;
     }
 
@@ -493,10 +500,7 @@ bool Metadata::parseNikon()
     #endif
     }
     if (nikon == nullptr) nikon = new Nikon;
-    if (ifd == nullptr) ifd = new IFD;
-    if (exif == nullptr) exif = new Exif;
-    if (jpeg == nullptr) jpeg = new Jpeg;
-    nikon->parse(p, imageMetadata, ifd, exif, jpeg);
+    nikon->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
@@ -509,10 +513,7 @@ bool Metadata::parseCanon()
     #endif
     }
     if (canon == nullptr) canon = new Canon;
-    if (ifd == nullptr) ifd = new IFD;
-    if (exif == nullptr) exif = new Exif;
-    if (jpeg == nullptr) jpeg = new Jpeg;
-    canon->parse(p, imageMetadata, ifd, exif, jpeg);
+    canon->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
@@ -525,10 +526,7 @@ bool Metadata::parseOlympus()
     #endif
     }
     if (olympus == nullptr) olympus = new Olympus;
-    if (ifd == nullptr) ifd = new IFD;
-    if (exif == nullptr) exif = new Exif;
-    if (jpeg == nullptr) jpeg = new Jpeg;
-    olympus->parse(p, imageMetadata, ifd, exif, jpeg);
+    olympus->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
@@ -541,10 +539,7 @@ bool Metadata::parseSony()
     #endif
     }
     if (sony == nullptr) sony = new Sony;
-    if (ifd == nullptr) ifd = new IFD;
-    if (exif == nullptr) exif = new Exif;
-    if (jpeg == nullptr) jpeg = new Jpeg;
-    sony->parse(p, imageMetadata, ifd, exif, jpeg);
+    sony->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
@@ -557,33 +552,34 @@ bool Metadata::parseFuji()
     #endif
     }
     if (fuji == nullptr) fuji = new Fuji;
-    if (jpeg == nullptr) jpeg = new Jpeg;
-    if (exif == nullptr) exif = new Exif;
-    if (ifd == nullptr) ifd = new IFD;
-    fuji->parse(p, imageMetadata, ifd, exif, jpeg);
+    fuji->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
 
 bool Metadata::parseDNG()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (dng == nullptr) dng = new DNG;
-    if (jpeg == nullptr) jpeg = new Jpeg;
-    if (exif == nullptr) exif = new Exif;
     if (iptc == nullptr) iptc = new IPTC;
-    if (ifd == nullptr) ifd = new IFD;
-    dng->parse(p, imageMetadata, ifd, iptc, exif, jpeg);
+    dng->parse(p, m, ifd, iptc, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
 
 bool Metadata::parseTIF()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (tiff == nullptr) tiff = new Tiff;
-    if (ifd == nullptr) ifd = new IFD;
-    if (exif == nullptr) exif = new Exif;
-    if (jpeg == nullptr) jpeg = new Jpeg;
-    tiff->parse(p, imageMetadata, ifd, iptc, exif, jpeg);
+    tiff->parse(p, m, ifd, iptc, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
@@ -596,10 +592,7 @@ bool Metadata::parsePanasonic()
     #endif
     }
     if (panasonic == nullptr) panasonic = new Panasonic;
-    if (ifd == nullptr) ifd = new IFD;
-    if (exif == nullptr) exif = new Exif;
-    if (jpeg == nullptr) jpeg = new Jpeg;
-    panasonic->parse(p, imageMetadata, ifd, exif, jpeg);
+    panasonic->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
@@ -616,23 +609,24 @@ bool Metadata::parseJPG(quint32 startOffset)
     if (exif == nullptr) exif = new Exif;
     if (gps == nullptr) gps = new GPS;
     p.offset = startOffset;
-    bool ok = jpeg->parse(p, imageMetadata, ifd, iptc, exif, gps);
+    bool ok = jpeg->parse(p, m, ifd, iptc, exif, gps);
     if (ok && p.report) reportMetadata();
     return ok;
 }
 
 bool Metadata::parseHEIF()
 {
-//    p.file.setFileName("D:/Pictures/_HEIC/iphone.HEIC");
-//    p.file.setFileName("D:/Pictures/_HEIC/example.HEIC");
-//    p.file.open(QIODevice::ReadOnly);
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+#ifdef Q_OS_WIN
     if (heic == nullptr) heic = new Heic;
-    if (ifd == nullptr) ifd = new IFD;
-    if (exif == nullptr) exif = new Exif;
-    if (gps == nullptr) gps = new GPS;
     bool ok = heic->parse(p, imageMetadata, ifd, exif, gps);
     if (ok && p.report) reportMetadata();
     return ok;
+#endif
 }
 
 void Metadata::clearMetadata()
@@ -640,57 +634,50 @@ void Metadata::clearMetadata()
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__);
-    #endif
     #endif
     }
-    imageMetadata.offsetFull = 0;
-    imageMetadata.lengthFull = 0;
-    imageMetadata.widthFull = 0;
-    imageMetadata.heightFull = 0;
-    imageMetadata.offsetThumb = 0;
-    imageMetadata.lengthThumb = 0;
-//    imageMetadata.offsetSmall = 0;
-//    imageMetadata.lengthSmall = 0;
-    imageMetadata.isBigEnd = false;
-    imageMetadata.ifd0Offset = 0;
-    imageMetadata.xmpSegmentOffset = 0;
-    imageMetadata.orientationOffset = 0;
-    imageMetadata.iccSegmentOffset = 0;
-    imageMetadata.iccSegmentLength = 0;
-    imageMetadata.iccBuf.clear();
-    imageMetadata.width = 0;
-    imageMetadata.height = 0;
-    imageMetadata.orientation = 1;
-//    created = "";
-    imageMetadata.make = "";
-    imageMetadata.model = "";
-    imageMetadata.exposureTime = "";
-    imageMetadata.exposureTimeNum = 0;
-    imageMetadata.aperture = "";
-    imageMetadata.apertureNum = 0;
-    imageMetadata.ISO = "";
-    imageMetadata.ISONum = 0;
-    imageMetadata.exposureCompensation = "";
-    imageMetadata.exposureCompensationNum = 0;
-    imageMetadata.focalLength = "";
-    imageMetadata.focalLengthNum = 0;
-    imageMetadata.title = "";
-    imageMetadata.lens = "";
-    imageMetadata.creator = "";
-    imageMetadata.copyright = "";
-    imageMetadata.email = "";
-    imageMetadata.url = "";
-    imageMetadata.err = "";
-    imageMetadata.shutterCount = 0;
-    imageMetadata.cameraSN = "";
-    imageMetadata.lensSN = "";
-    imageMetadata.rating = "";
-    imageMetadata.label = "";
-
-//    ifd->ifdDataHash.clear();
-    nikonLensCode = "";     // rgh how to handle?
+    m.offsetFull = 0;
+    m.lengthFull = 0;
+    m.widthFull = 0;
+    m.heightFull = 0;
+    m.offsetThumb = 0;
+    m.lengthThumb = 0;
+    m.isBigEnd = false;
+    m.ifd0Offset = 0;
+    m.xmpSegmentOffset = 0;
+    m.orientationOffset = 0;
+    m.iccSegmentOffset = 0;
+    m.iccSegmentLength = 0;
+    m.iccBuf.clear();
+    m.width = 0;
+    m.height = 0;
+    m.orientation = 1;
+    m.rotationDegrees = 0;
+    m.make = "";
+    m.model = "";
+    m.exposureTime = "";
+    m.exposureTimeNum = 0;
+    m.aperture = "";
+    m.apertureNum = 0;
+    m.ISO = "";
+    m.ISONum = 0;
+    m.exposureCompensation = "";
+    m.exposureCompensationNum = 0;
+    m.focalLength = "";
+    m.focalLengthNum = 0;
+    m.title = "";
+    m.lens = "";
+    m.creator = "";
+    m.copyright = "";
+    m.email = "";
+    m.url = "";
+    m.err = "";
+    m.shutterCount = 0;
+    m.cameraSN = "";
+    m.lensSN = "";
+    m.rating = "";
+    m.label = "";
+    nikonLensCode = "";
 }
 
 void Metadata::testNewFileFormat(const QString &path)
@@ -719,8 +706,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     G::track(__FUNCTION__, path);
     #endif
     }
-//    qDebug() << __FUNCTION__ << "path =" << path;
-
     p.report = isReport;
 
     if (p.report) {
@@ -734,8 +719,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
 
     p.file.setFileName(path);
     if (p.file.isOpen()) {
-        err = "File is already open";
-        qDebug() << __FUNCTION__ << err;
+        m.err += "File is already open";
+        qDebug() << __FUNCTION__ << m.err;
         return false;
     }
     if (p.report) {
@@ -743,114 +728,62 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     }
     QFileInfo fileInfo(path);
     QString ext = fileInfo.suffix().toLower();
-    bool success = false;
-//    int totDelay = 50;
-    int msDelay = 0;
-    uint msInc = 10;
     bool fileOpened = false;
-//    do {
-        if (p.file.open(QIODevice::ReadOnly)) {
-            if (ext == "cr2")  fileOpened = parseCanon();
-            if (ext == "dng")  fileOpened = parseDNG();
-            if (ext == "raf")  fileOpened = parseFuji();
-            if (ext == "jpg")  fileOpened = parseJPG(0);
-            if (ext == "nef")  fileOpened = parseNikon();
-            if (ext == "orf")  fileOpened = parseOlympus();
-            if (ext == "rw2")  fileOpened = parsePanasonic();
-            if (ext == "arw")  fileOpened = parseSony();
-            if (ext == "tif")  fileOpened = parseTIF();
-            if (ext == "heic") fileOpened = parseHEIF();
-            p.file.close();
-//            qDebug() << __FUNCTION__ << "fileOpened = " << fileOpened << path;
-            if (fileOpened) success = true;
-            else {
-                err = "Unable to read format for " + path;
-                qDebug() << __FUNCTION__ << err;
-            }
+    if (p.file.open(QIODevice::ReadOnly)) {
+        if (jpeg == nullptr) jpeg = new Jpeg;
+        if (ifd == nullptr) ifd = new IFD;
+        if (exif == nullptr) exif = new Exif;
+        if (gps == nullptr) gps = new GPS;
+        if (ext == "cr2")  fileOpened = parseCanon();
+        if (ext == "dng")  fileOpened = parseDNG();
+        if (ext == "raf")  fileOpened = parseFuji();
+        if (ext == "jpg")  fileOpened = parseJPG(0);
+        if (ext == "nef")  fileOpened = parseNikon();
+        if (ext == "orf")  fileOpened = parseOlympus();
+        if (ext == "rw2")  fileOpened = parsePanasonic();
+        if (ext == "arw")  fileOpened = parseSony();
+        if (ext == "tif")  fileOpened = parseTIF();
+        if (ext == "heic") fileOpened = parseHEIF();
+        p.file.close();
+        if (!fileOpened) {
+            m.err += "Unable to read format for " + path + ". ";
+            qDebug() << __FUNCTION__ << m.err;
+            return false;
         }
-        else {
-            qDebug() << __FUNCTION__ << "Could not open " << path;
-            err = "Could not open p.file to read metadata";    // try again
-            QThread::msleep(msInc);
-        }
-        msDelay += msInc;
-//    }
-//    while ((msDelay < totDelay) && !success);
-
-    if (!success) {
+    }
+    else {
+        qDebug() << __FUNCTION__ << "Could not open " << path;
+        m.err += "Could not open p.file to read metadata. ";
         return false;
     }
 
     // not all files have thumb or small jpg embedded
-    if (imageMetadata.offsetFull == 0 && ext != "jpg" && fileOpened) {
-        err = "No embedded JPG found";
+    if (m.offsetFull == 0 && ext != "jpg" && fileOpened) {
+        m.err += "No embedded JPG found. ";
     }
 
-    if (imageMetadata.lengthFull == 0 && imageMetadata.lengthThumb > 0) {
-        imageMetadata.offsetFull = imageMetadata.offsetThumb;
-        imageMetadata.lengthFull = imageMetadata.lengthThumb;
+    if (m.lengthFull == 0 && m.lengthThumb > 0) {
+        m.offsetFull = m.offsetThumb;
+        m.lengthFull = m.lengthThumb;
     }
 
-    if (imageMetadata.lengthThumb == 0) {
-        imageMetadata.offsetThumb = imageMetadata.offsetFull;
-        imageMetadata.lengthThumb = imageMetadata.lengthFull;
+    if (m.lengthThumb == 0 && m.lengthFull > 0) {
+        m.offsetThumb = m.offsetFull;
+        m.lengthThumb = m.lengthFull;
     }
 
     // error flags
     thumbUnavailable = imageUnavailable = false;
-    if (imageMetadata.lengthFull == 0) {
+    if (m.lengthFull == 0) {
         imageUnavailable = true;
-        err = "No embedded preview found";
+        m.err += "No embedded preview found. ";
     }
-    if (imageMetadata.lengthThumb == 0) {
+    if (m.lengthThumb == 0) {
         thumbUnavailable = true;
-        err = "No embedded thumbnail or preview found";
+        m.err += "No embedded thumbnail or preview found. ";
     }
 
-    // initialize edited rotation
-    rotationDegrees = 0;
-
-    return success;
-}
-
-void Metadata::removeImage(QString &imageFileName)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    metaCache.remove(imageFileName);
-}
-
-void Metadata::setPick(const QString &imageFileName, bool choice)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    metaCache[imageFileName].isPicked = choice;
-}
-
-void Metadata::clear()
-{
-    /*  Clears the QMap that holds the ImageMetadata for each image in the
-       datamodel.
-
-       rgh - Look at eliminating this structure and just use datamodel.
-    */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    metaCache.clear();
-}
-
-void Metadata::loadFromThread(QFileInfo &fileInfo)
-{
-    loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__);
+    return true;
 }
 
 bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
@@ -863,7 +796,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     #endif
     }
     // check if already loaded
-    fPath = fileInfo.filePath();
+    QString fPath = fileInfo.filePath();
     if (fPath == "") {
         qDebug() << __FUNCTION__ << "NULL FILE REQUESTED FROM "
                  << source;
@@ -879,28 +812,26 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     // read metadata
     bool result = readMetadata(isReport, fPath);
     if (!result) {
-        qDebug() << __FUNCTION__ << err << source;
-        imageMetadata.metadataLoaded = result;
-        imageMetadata.err = err;
+        qDebug() << __FUNCTION__ << m.err << source;
+        m.metadataLoaded = result;
         return false;
     }
 
-    imageMetadata.isPicked = false;
+    m.isPicked = false;
 
-    imageMetadata.copyFileNamePrefix = createdDate.toString("yyyy-MM-dd");
+    m.copyFileNamePrefix = m.createdDate.toString("yyyy-MM-dd");
 
-    QString s = imageMetadata.model;
-    s += "  " + imageMetadata.focalLength;
-    s += "  " + imageMetadata.exposureTime;
-    s += (imageMetadata.aperture == "") ? "" : " at " + imageMetadata.aperture;
-    s += (imageMetadata.ISO == "") ? "" : ", ISO " + imageMetadata.ISO;
-    imageMetadata.shootingInfo = s;
+    QString s = m.model;
+    s += "  " + m.focalLength;
+    s += "  " + m.exposureTime;
+    s += (m.aperture == "") ? "" : " at " + m.aperture;
+    s += (m.ISO == "") ? "" : ", ISO " + m.ISO;
+    m.shootingInfo = s;
 
-    imageMetadata.thumbUnavailable = thumbUnavailable;
-    imageMetadata.imageUnavailable = imageUnavailable;
-    imageMetadata.err = err;
+    m.thumbUnavailable = thumbUnavailable;
+    m.imageUnavailable = imageUnavailable;
 
-    imageMetadata.metadataLoaded = result;
+    m.metadataLoaded = result;
     return result;
 }
 

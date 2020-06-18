@@ -63,6 +63,7 @@ public:
     QString currentFilePath;            // used in caching to update image cache
     int currentRow;                     // used in caching to check if new image selected
     bool hasDupRawJpg;
+    bool loadingModel = false;       // do not filter while loading datamodel
     bool filtersBuilt;
     QList<QFileInfo> modifiedFiles;
 

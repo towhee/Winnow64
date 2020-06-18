@@ -551,8 +551,8 @@ Load the thumb (icon) for all the image files in the folder(s).
         QString fPath = dm->index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-            metadata->imageMetadata.row = row;
-            dm->addMetadataForItem(metadata->imageMetadata);
+            metadata->m.row = row;
+            dm->addMetadataForItem(metadata->m);
             count++;
         }
     }
@@ -577,8 +577,8 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
     if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-            metadata->imageMetadata.row = dmRow;
-            dm->addMetadataForItem(metadata->imageMetadata);
+            metadata->m.row = dmRow;
+            dm->addMetadataForItem(metadata->m);
         }
     }
 
@@ -634,9 +634,9 @@ sort/filter change and all metadata has been loaded, but the icons visible have 
             QImage image;
             QString fPath = idx.data(G::PathRole).toString();
 
-            QElapsedTimer t; t.restart();
+            if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
             bool thumbLoaded = thumb->loadThumb(fPath, image);
-            qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
+            if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
 
             QPixmap pm;
             if (thumbLoaded) {
@@ -758,8 +758,8 @@ startRow and endRow.
                tried emit signal to metadata but really slow
                emit loadImageMetadata(fileInfo, true, true, false);  */
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-                metadata->imageMetadata.row = dmRow;
-                dm->addMetadataForItem(metadata->imageMetadata);
+                metadata->m.row = dmRow;
+                dm->addMetadataForItem(metadata->m);
             }
         }
 
