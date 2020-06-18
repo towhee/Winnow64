@@ -338,7 +338,7 @@ Steps:
     #endif
     }
     currentFolderPath = folderPath;
-    filtersBuilt = false;
+    filters->filtersBuilt = false;
     loadingModel = true;
 
     //  clear the model
@@ -704,7 +704,8 @@ to run as a separate thread and can be executed directly.
     qDebug() << "DataModel::addAllMetadata for" << count << "files"
              << ms << "ms" << msperfile << "ms per file;"
              << currentFolderPath;
-    buildFilters();
+    qDebug() << __FUNCTION__ << "force =" << false;
+    buildFilters(/*force =*/ false);
 }
 
 bool DataModel::readMetadataForItem(int row)
@@ -873,7 +874,7 @@ the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
 
-    if (G::buildingFilters) {
+    if (filters->buildingFilters) {
         if (row % 1000 == 0 || row == 0) {
             lastProgressRow = row;
             QString s = "Step 1 0f " + buildSteps + ":  Reading metadata row ";
@@ -970,15 +971,15 @@ unfiltered counts.
     }
 }
 
-void DataModel::buildFilters()
+void DataModel::buildFilters(bool force)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    if (filtersBuilt) return;
-
+    qDebug() << __FUNCTION__ << "force =" << force;
+    if (filters->filtersBuilt) return;
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> typesMap;
     QMap<QVariant, QString> modelMap;
@@ -1015,6 +1016,14 @@ void DataModel::buildFilters()
 
         QString day = sf->index(row, G::DayColumn).data().toString();
         if (!dayMap.contains(day)) dayMap[day] = day;
+
+        if (filters->quitBuildingFilters) return;
+
+        if (!force && forceTimer.elapsed() > 100) {
+            qDebug() << __FUNCTION__ << currentFolderPath
+                     << "row =" << row << "Quit because taking ms" << forceTimer.elapsed();
+            return;
+        }
     }
 
     // build filter items
@@ -1036,7 +1045,7 @@ void DataModel::buildFilters()
     filteredItemCount();
     unfilteredItemCount();
 
-    filtersBuilt = true;
+    filters->filtersBuilt = true;
 }
 
 void DataModel::rebuildTypeFilter()
@@ -1137,7 +1146,7 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("currentFilePath", 27) << G::s(currentFilePath);
     rpt << "\n" << G::sj("currentRow", 27) << G::s(currentRow);
     rpt << "\n" << G::sj("hasDupRawJpg", 27) << G::s(hasDupRawJpg);
-    rpt << "\n" << G::sj("filtersBuilt", 27) << G::s(filtersBuilt);
+    rpt << "\n" << G::sj("filtersBuilt", 27) << G::s(filters->filtersBuilt);
     rpt << "\n" << G::sj("timeToQuit", 27) << G::s(timeToQuit);
     rpt << "\n" << G::sj("imageCount", 27) << G::s(imageCount);
     rpt << "\n" << G::sj("countInterval", 27) << G::s(countInterval);
@@ -1287,7 +1296,9 @@ change.
     G::track(__FUNCTION__);
     #endif
     }
+    /*
     qDebug() << __FUNCTION__ << "filters->searchString" << filters->searchString;
+//*/
     QTreeWidgetItemIterator it(filters);
     while (*it) {
         if ((*it)->parent()) {
@@ -1297,26 +1308,6 @@ change.
             int totRawJpgCombined = 0;
             for (int row = 0; row < rowCount(); ++row) {
                 bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
-//                bool found = false;
-//                // always count all for search
-//                if ((*it) == filters->searchTrue) {
-//                    if (filters->searchString == "") {
-//                        found = false;
-//                    }
-//                    else {
-//                        found = index(row, G::SearchTextColumn).data().toString().contains(filters->searchString);
-////                        qDebug() << __FUNCTION__ << row << filters->searchString
-////                                 << index(row, G::SearchTextColumn).data().toString()
-////                                 << found;
-//                    }
-//                }
-//                else {
-//                    found = index(row, col).data().toString() == searchValue;
-//                }
-//                if (found) {
-//                    tot++;
-//                    if (combineRawJpg && !hideRaw) totRawJpgCombined++;
-//                }
                 if (index(row, col).data().toString() == searchValue) {
                     tot++;
                     if (combineRawJpg && !hideRaw) totRawJpgCombined++;
@@ -1334,9 +1325,11 @@ change.
             (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
             (*it)->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
 
+            /*
             if ((*it) == filters->searchTrue) {
-//                qDebug() << __FUNCTION__ << filters->searchString << tot << totRawJpgCombined;
+                qDebug() << __FUNCTION__ << filters->searchString << tot << totRawJpgCombined;
             }
+//            */
         }
         ++it;
     }

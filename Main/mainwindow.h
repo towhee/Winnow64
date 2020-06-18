@@ -400,9 +400,10 @@ private slots:
     void tableHasScrolled();
     void loadMetadataCacheAfterDelay();
 //    void loadMetadataCache(int startRow = 0);
-    void loadEntireMetadataCache();
+    void loadEntireMetadataCache(bool force = true);
     void loadImageCacheForNewFolder();
-    void buildFilters();
+    void forceBuildFilters();
+    void buildFilters(bool force = false);
 //    void loadFilteredImageCache();
     void addNewBookmark();
     void addNewBookmarkFromContext();

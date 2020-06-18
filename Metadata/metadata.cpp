@@ -623,7 +623,7 @@ bool Metadata::parseHEIF()
     }
 #ifdef Q_OS_WIN
     if (heic == nullptr) heic = new Heic;
-    bool ok = heic->parse(p, imageMetadata, ifd, exif, gps);
+    bool ok = heic->parse(p, m, ifd, exif, gps);
     if (ok && p.report) reportMetadata();
     return ok;
 #endif
