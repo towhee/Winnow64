@@ -494,7 +494,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         }
         // stop building filters
         if (filters->buildingFilters) {
-            bf->stop();
+            buildFilters->stop();
         }
     }
 
@@ -871,7 +871,7 @@ void MW::folderSelectionChange()
      // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
-    bf->stop();
+    buildFilters->stop();
     G::allMetadataLoaded = false;
 //    G::track(__FUNCTION__, "0");
 
@@ -1588,10 +1588,10 @@ the filter and sort operations cannot commence until all the metadata has been l
     }
     QApplication::processEvents();
 
-    if (dm->buildFiltersTimer.elapsed() > dm->buildFiltersMaxDelay) {
-        QApplication::restoreOverrideCursor();
-        return;
-    }
+//    if (dm->buildFiltersTimer.elapsed() > dm->buildFiltersMaxDelay) {
+//        QApplication::restoreOverrideCursor();
+//        return;
+//    }
 
     /* adding all metadata in dm slightly slower than using metadataCacheThread but progress
        bar does not update from separate thread
@@ -2529,7 +2529,7 @@ void MW::createActions()
     filterUpdateAction = new QAction(tr("Force update all filters"), this);
     filterUpdateAction->setShortcutVisibleInContextMenu(true);
     addAction(filterUpdateAction);
-    connect(filterUpdateAction,  &QAction::triggered, this, &MW::buildFilters);
+    connect(filterUpdateAction,  &QAction::triggered, this, &MW::launchBuildFilters);
 
     // Sort Menu
 
@@ -3850,9 +3850,9 @@ void MW::createDataModel()
     connect(dm, &DataModel::msg, this, &MW::setCentralMessage);
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
 
-    bf = new BuildFilters(this, dm, metadata, filters, combineRawJpg);
+    buildFilters = new BuildFilters(this, dm, metadata, filters, combineRawJpg);
 
-    connect(bf, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
+    connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
 }
 
 void MW::createSelectionModel()
@@ -3921,7 +3921,7 @@ void MW::createCaching()
             thumbView, SLOT(selectFirst()));
 
     connect(metadataCacheThread, SIGNAL(finished2ndPass()),
-            this, SLOT(buildFilters()));
+            this, SLOT(launchBuildFilters()));
 
     connect(metadataCacheThread, SIGNAL(refreshCurrentAfterReload()),
             this, SLOT(refreshCurrentAfterReload()));
@@ -5177,10 +5177,10 @@ Type 2 Filtration steps:
 
 void MW::filterDockVisibilityChange(bool isVisible)
 {
-    if (isVisible && !G::isInitializing) buildFilters();
+    if (isVisible && !G::isInitializing) launchBuildFilters();
 }
 
-void MW::buildFilters()
+void MW::launchBuildFilters()
 {
     {
     #ifdef ISDEBUG
@@ -5193,10 +5193,8 @@ void MW::buildFilters()
     if (filters->filtersBuilt) return;
     if (dm->loadingModel) return;
 
-    bf->build();
+    buildFilters->build();
 }
-
-
 
 void MW::filterChange(QString source)
 {
@@ -5226,8 +5224,8 @@ and icons are loaded if necessary.
     dm->sf->filterChange();
 
     // update filter panel image count by filter item
-    bf->updateCountFiltered();
-    if (source == "Filters::itemChangedSignal search text change") bf->unfilteredItemSearchCount();
+    buildFilters->updateCountFiltered();
+    if (source == "Filters::itemChangedSignal search text change") buildFilters->unfilteredItemSearchCount();
 
     // recover sort after filtration
     sortChange();
@@ -5387,7 +5385,7 @@ void MW::filterLastDay()
     }
 
     // if the additional filters have not been built then do an update
-    if (!filters->days->childCount()) buildFilters();
+    if (!filters->days->childCount()) launchBuildFilters();
 
     // if there still are no days then tell user and return
     int last = filters->days->childCount();
@@ -7061,6 +7059,11 @@ void MW::zoomIn()
     }
     if (asLoupeAction) imageView->zoomIn();
     if (asCompareAction) compareImages->zoomIn();
+    // if thumbView visible and zoom change in imageView then may need to redo the zoomFrame
+    QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
+    if (idx.isValid()) {
+        thumbView->zoomCursor(idx, /*forceUpdate=*/true);
+    }
 }
 
 void MW::zoomOut()
@@ -7072,6 +7075,11 @@ void MW::zoomOut()
     }
     if (asLoupeAction) imageView->zoomOut();
     if (asCompareAction) compareImages->zoomOut();
+    // if thumbView visible and zoom change in imageView then may need to redo the zoomFrame
+    QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
+    if (idx.isValid()) {
+        thumbView->zoomCursor(idx, /*forceUpdate=*/true);
+    }
 }
 
 void MW::zoomToFit()
@@ -9001,7 +9009,7 @@ void MW::toggleReject()
         updateStatus(true, "", __FUNCTION__);
 
         // update filter counts
-        bf->updateCountFiltered();
+        buildFilters->updateCountFiltered();
 }
 
 void MW::togglePickUnlessRejected()
@@ -9058,7 +9066,7 @@ void MW::togglePickUnlessRejected()
     updateStatus(true, "", __FUNCTION__);
 
     // update filter counts
-    bf->updateCountFiltered();
+    buildFilters->updateCountFiltered();
 }
 
 void MW::togglePickMouseOverItem(QModelIndex idx)
@@ -9085,7 +9093,7 @@ over is toggled, but the selection is not changed.
     updateStatus(true, "", __FUNCTION__);
 
     // update filter counts
-    bf->updateCountFiltered();
+    buildFilters->updateCountFiltered();
 }
 
 void MW::togglePick()
@@ -9135,7 +9143,7 @@ Push the changes onto the pick history stack.
     updateStatus(true, "", __FUNCTION__);
 
     // update filter counts
-    bf->updateCountFiltered();
+    buildFilters->updateCountFiltered();
 }
 
 void MW::pushPick(QString fPath, QString status)
@@ -9199,7 +9207,7 @@ void MW::updatePickFromHistory(QString fPath, QString status)
         updateStatus(true, "", __FUNCTION__);
 
         // update filter counts
-        bf->updateCountFiltered();
+        buildFilters->updateCountFiltered();
     }
 }
 
@@ -9577,7 +9585,7 @@ the rating for all the selected thumbs.
     dm->sf->filterChange();
 
     // update filter counts
-    bf->updateCountFiltered();
+    buildFilters->updateCountFiltered();
 }
 
 void MW::setColorClass()
@@ -9650,7 +9658,7 @@ set the color class for all the selected thumbs.
     dm->sf->filterChange();
 
     // update filter counts
-    bf->updateCountFiltered();
+    buildFilters->updateCountFiltered();
 }
 
 void MW::metadataChanged(QStandardItem* item)

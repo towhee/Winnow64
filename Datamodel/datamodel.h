@@ -64,6 +64,8 @@ public:
     int currentRow;                     // used in caching to check if new image selected
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
+
+    // rgh check if reqd still
     bool forceBuildFilters = false;     // ignore buildFiltersMaxDelay if true
     int buildFiltersMaxDelay = 1000;    // quit if exceed and not forceBuildFilters
     QElapsedTimer buildFiltersTimer;

@@ -330,9 +330,10 @@ If isSlideshow then hide mouse cursor unless is moves.
     if (zoom > 10) return;
     setMatrix(matrix);
     emit zoomChange(zoom);
+
     isScrollable = (zoom > zoomFit);
     if (isScrollable) scrollPct = getScrollPct();
-
+//    thumbView->zoomCursor(idx, /*forceUpdate=*/true);
     if (!G::isSlideShow) {
         if (isScrollable) setCursor(Qt::OpenHandCursor);
         else {

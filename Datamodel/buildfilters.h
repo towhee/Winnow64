@@ -42,11 +42,12 @@ private:
     Metadata *metadata;
     Filters *filters;
     bool &combineRawJpg;
-    QMap <QString, int>instances;
-    int totInstances;
-    int progress = 0;
-    QString buildSteps = "3";
-
+    int sfRows = 0;                         // rows in filtered datamodel (get once at start)
+    int dmRows = 0;                         // rows in datamodel (get once at start)
+    QMap <QString, int>instances;           // total items per category in filters
+    int totInstances;                       // total items in all categories in filters
+    int progress = 0;                       // 0-100 progress for progressBar
+    QElapsedTimer buildFiltersTimer;
 };
 
 #endif // BUILDFILTERS_H

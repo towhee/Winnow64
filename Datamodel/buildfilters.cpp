@@ -65,6 +65,9 @@ void BuildFilters::build()
     filters->collapseAll();
     filters->setEnabled(false);
     progress = 0;
+    dmRows = dm->rowCount();
+    sfRows = dm->sf->rowCount();
+    buildFiltersTimer.restart();
     start(NormalPriority);
 }
 
@@ -82,6 +85,9 @@ void BuildFilters::done()
     filters->disableZeroCountItems(true);
     filters->setEnabled(true);
     filters->expandAll();
+
+    qint64 msec = buildFiltersTimer.elapsed();
+    qDebug() << __FUNCTION__ << QString("%L1").arg(msec) << "msec";
 }
 
 void BuildFilters::unfilteredItemSearchCount()
@@ -105,7 +111,7 @@ This function is run everytime the search string changes.
     int tot = 0;
     int totRawJpgCombined = 0;
     QString matchText = filters->searchTrue->text(1);
-    for (int row = 0; row < dm->rowCount(); ++row) {
+    for (int row = 0; row < dmRows; ++row) {
         bool hideRaw = dm->index(row, 0).data(G::DupHideRawRole).toBool();
         if (dm->index(row, col).data().toString() == matchText) {
             tot++;
@@ -119,13 +125,15 @@ This function is run everytime the search string changes.
     tot = 0;
     totRawJpgCombined = 0;
     matchText = filters->searchFalse->text(1);
-    for (int row = 0; row < dm->rowCount(); ++row) {
+    mutex.lock();
+    for (int row = 0; row < dmRows; ++row) {
         bool hideRaw = dm->index(row, 0).data(G::DupHideRawRole).toBool();
         if (dm->index(row, col).data().toString() == matchText) {
             tot++;
             if (combineRawJpg && !hideRaw) totRawJpgCombined++;
         }
     }
+    mutex.unlock();
     filters->searchFalse->setData(3, Qt::EditRole, QString::number(tot));
     filters->searchFalse->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
 }
@@ -140,7 +148,6 @@ void BuildFilters::updateCountFiltered()
     filters->filtersBuilt = false;
     filters->buildingFilters = true;
     QTreeWidgetItemIterator it(filters);
-    int rows = dm->sf->rowCount();
     QString cat = "";    // category ie Search, Ratings, Labels, etc
     while (*it) {
         if ((*it)->parent()) {
@@ -149,9 +156,11 @@ void BuildFilters::updateCountFiltered()
             int col = filters->filterCategoryToDmColumn[cat];
             QString searchValue = (*it)->text(1);
             int tot = 0;
-            for (int row = 0; row < rows; ++row) {
+            mutex.lock();
+            for (int row = 0; row < sfRows; ++row) {
                 if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
             }
+            mutex.unlock();
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         }
@@ -171,7 +180,6 @@ void BuildFilters::countFiltered()
     }
     // count filtered
     QTreeWidgetItemIterator it(filters);
-    int rows = dm->sf->rowCount();
     QString cat = "";    // category ie Search, Ratings, Labels, etc
     while (*it) {
         if ((*it)->parent()) {
@@ -180,9 +188,11 @@ void BuildFilters::countFiltered()
             int col = filters->filterCategoryToDmColumn[cat];
             QString searchValue = (*it)->text(1);
             int tot = 0;
-            for (int row = 0; row < rows; ++row) {
+            mutex.lock();
+            for (int row = 0; row < sfRows; ++row) {
                 if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
             }
+            mutex.unlock();
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         }
@@ -220,7 +230,6 @@ void BuildFilters::countUnfiltered()
     }
     // count unfiltered
     QTreeWidgetItemIterator it(filters);
-    int rows = dm->rowCount();
     QString cat = "";    // category ie Search, Ratings, Labels, etc
     while (*it) {
         if ((*it)->parent()) {
@@ -230,13 +239,15 @@ void BuildFilters::countUnfiltered()
             QString searchValue = (*it)->text(1);
             int tot = 0;
             int totRawJpgCombined = 0;
-            for (int row = 0; row < rows; ++row) {
+            mutex.lock();
+            for (int row = 0; row < dmRows; ++row) {
                 bool hideRaw = dm->index(row, 0).data(G::DupHideRawRole).toBool();
                 if (dm->index(row, col).data().toString() == searchValue) {
                     tot++;
                     if (combineRawJpg && !hideRaw) totRawJpgCombined++;
                 }
             }
+            mutex.unlock();
             (*it)->setData(3, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
@@ -274,22 +285,22 @@ void BuildFilters::loadAllMetadata()
     #endif
     }
     if (!G::allMetadataLoaded) {
-        for (int row = 0; row < dm->rowCount(); ++row) {
+        for (int row = 0; row < dmRows; ++row) {
             if (abort) return;
             // is metadata already cached
             if (dm->index(row, G::MetadataLoadedColumn).data().toBool()) continue;
             QString fPath = dm->index(row, 0).data(G::PathRole).toString();
             QFileInfo fileInfo(fPath);
-//            mutex.lock();
+            mutex.lock();
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
                 metadata->m.row = row;
                 dm->addMetadataForItem(metadata->m);
                 if (row % 100 == 0 || row == 0) {
-                    progress = static_cast<double>(20 * row) / dm->rowCount();
+                    progress = static_cast<double>(20 * row) / dmRows;
                     emit updateProgress(progress);
                 }
             }
-//            mutex.unlock();
+            mutex.unlock();
         }
         progress = 20;
         G::allMetadataLoaded = true;
@@ -312,8 +323,7 @@ void BuildFilters::mapUniqueInstances()
     QMap<QVariant, QString> creatorMap;
     QMap<QVariant, QString> yearMap;
     QMap<QVariant, QString> dayMap;
-    int rows = dm->sf->rowCount();
-    for(int row = 0; row < rows; row++) {
+    for(int row = 0; row < sfRows; row++) {
         if (abort) return;
         QString type = dm->sf->index(row, G::TypeColumn).data().toString();
         if (!typesMap.contains(type)) typesMap[type] = type;

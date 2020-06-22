@@ -404,7 +404,7 @@ private slots:
 //    void loadMetadataCache(int startRow = 0);
     void loadEntireMetadataCache();
     void loadImageCacheForNewFolder();
-    void buildFilters();
+    void launchBuildFilters();
 //    void loadFilteredImageCache();
     void addNewBookmark();
     void addNewBookmarkFromContext();
@@ -814,7 +814,7 @@ private:
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;
     DataModel *dm;
-    BuildFilters *bf;
+    BuildFilters *buildFilters;
     QItemSelectionModel *selectionModel;
     Metadata *metadata;
     IconView *thumbView;
