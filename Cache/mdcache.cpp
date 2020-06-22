@@ -880,8 +880,8 @@ If there has been a file selection change and not a new folder then update image
 
     // after 2nd pass on new folder initiate the image cache
     if (action == Action::NewFolder2ndPass) {
-        if (!G::memTest)
-        G::metaCacheMB = memRequired();
+        if (!G::memTest) G::metaCacheMB = memRequired();
+        emit finished2ndPass();
         emit loadImageCache();
     }
  

@@ -20,7 +20,6 @@
 #include "appdlg.h"
 #include "Datamodel/datamodel.h"
 #include "Datamodel/filters.h"
-#include "Datamodel/buildfilters.h"
 #include "File/bookmarks.h"
 #include "File/fstree.h"
 #include "PropertyEditor/propertyeditor.h"
@@ -85,9 +84,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = nullptr);
 
-    QString version = "Version: 1.11 beta";
-//    QString version = "Version: 1.10 released 2020-06-04";
-    QString winnowWithVersion = "Winnow 1.11 beta";
+    QString version = "Version: 1.10 released 2020-06-04";
+    QString winnowWithVersion = "Winnow 1.10";
     QString website = "Website: "
             "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"
@@ -376,7 +374,7 @@ private slots:
     void scrollToCurrentRow();
     void zoomToggle();
     // status functions
-    void updateStatus(bool keepBase = true, QString s = "", QString source = "");
+    void updateStatus(bool keepBase = true, QString s = "");
     void clearStatus();
     // caching status functions
     void setThreadRunStatusInactive();
@@ -404,7 +402,8 @@ private slots:
 //    void loadMetadataCache(int startRow = 0);
     void loadEntireMetadataCache();
     void loadImageCacheForNewFolder();
-    void buildFilters();
+    void forceBuildFilters();
+    void buildFilters(bool force = false, QString source = "");
 //    void loadFilteredImageCache();
     void addNewBookmark();
     void addNewBookmarkFromContext();
@@ -814,7 +813,6 @@ private:
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;
     DataModel *dm;
-    BuildFilters *bf;
     QItemSelectionModel *selectionModel;
     Metadata *metadata;
     IconView *thumbView;

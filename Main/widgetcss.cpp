@@ -57,6 +57,7 @@ QString WidgetCSS::css()
             spinBox() +
             textEdit() +
             lineEdit() +
+            progressBar() +
             checkBox()
             ;
 }
@@ -580,6 +581,18 @@ QString WidgetCSS::lineEdit()
 
     "QLineEdit:disabled {"
         "color:gray;"
+    "}";
+}
+
+QString WidgetCSS::progressBar()
+{
+    return
+    "QProgressBar {"
+    "background-color: " + QColor(bg,bg,bg).name() + ";"
+    "}"
+
+    "QProgressBar::chunk {"
+    "background-color: cadetblue;"
     "}";
 }
 

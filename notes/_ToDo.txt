@@ -1,4 +1,5 @@
 BUGS
+- Rotate heic files
 - Mac check for updates not done yet
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
@@ -7,7 +8,6 @@ CODE IMPROVEMENTS
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Read HEIF files
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 - TableView freeze columns https://doc.qt.io/qt-5/qtwidgets-itemviews-frozencolumn-example.html
@@ -17,7 +17,9 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
-- Bookmark count wrong at cration if combineRawJpg = true
+- Read HEIF files
+- Move builtFilters to separate thread
+- Bookmark count wrong at creation if combineRawJpg = true
 - Filter panel crashes if visible when change folders
 - Cleanup Metadata class
 - Added Selection to InfoView ie Selection  8 (490.8 MB)

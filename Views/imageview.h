@@ -77,7 +77,7 @@ public slots:
 
 signals:
     void togglePick();
-    void updateStatus(bool, QString);
+    void updateStatus(bool, QString, QString);
     void killSlideshow();                   // only call when slideshow is active
     void zoomChange(qreal zoomValue);
     void handleDrop(const QMimeData *mimeData);

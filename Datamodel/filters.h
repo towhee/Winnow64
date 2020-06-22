@@ -45,6 +45,8 @@ public:
     QTreeWidgetItem *days;
 
     QMap<QString,int> filterCategoryToDmColumn;
+    QLabel *filterLabel;
+    QProgressBar *bfProgressBar;
 
     void createPredefinedFilters();
     void createDynamicFilters();
@@ -52,12 +54,13 @@ public:
     void addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground(const int &a, const int &b);
     void setSearchNewFolder();
-    void setDisabled(bool disable);
-    void setSearchTextColor();
+    void disableZeroCountItems(bool disable);
+    void disableAllItems(bool disable);
+    void setProgressBarStyle();
 
     bool buildingFilters = false;
     bool filtersBuilt = false;
-    bool quitBuildingFilters = false;
+    QString buildingFiltersMsg = "Press \"Esc\" to stop.";
 
     QString searchString = "";
     QStringList ignoreSearchStrings;
@@ -78,6 +81,7 @@ public slots:
     void expandAllFilters();
     void collapseAllFilters();
     void checkPicks(bool check);
+    void updateProgress(int progress);
 
 private slots:
     void dataChanged(const QModelIndex &topLeft,

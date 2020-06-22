@@ -340,6 +340,7 @@ Steps:
     currentFolderPath = folderPath;
     filters->filtersBuilt = false;
     loadingModel = true;
+    t.restart();            // timer for addFilesMaxDelay
 
     //  clear the model
     clearDataModel();
@@ -533,7 +534,7 @@ Load the information from the operating system contained in QFileInfo first
 
         }
 
-        if (row % 1000 == 0) {
+        if (row % 1000 == 0 && t.elapsed() > addFilesMaxDelay) {
             QString s = step +
                         QString::number(row) + " of " + QString::number(rowCount()) +
                         " loaded." +
@@ -666,7 +667,7 @@ Used by InfoString and IngestDlg
     return m;
 }
 
-void DataModel::addAllMetadata(bool isShowCacheStatus)
+void DataModel::addAllMetadata()
 {
 /*
 This function is intended to load metadata (but not the icon) quickly for the entire
@@ -680,7 +681,6 @@ to run as a separate thread and can be executed directly.
     #endif
     }
     G::t.restart();
-    isShowCacheStatus = true;
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
         // is metadata already cached
@@ -699,13 +699,15 @@ to run as a separate thread and can be executed directly.
     }
     G::allMetadataLoaded = true;
     loadingModel = false;
+    /*
     qint64 ms = G::t.elapsed();
     qreal msperfile = static_cast<double>(ms) / count;
     qDebug() << "DataModel::addAllMetadata for" << count << "files"
              << ms << "ms" << msperfile << "ms per file;"
              << currentFolderPath;
-    qDebug() << __FUNCTION__ << "force =" << false;
-    buildFilters(/*force =*/ false);
+    qDebug() << __FUNCTION__ << "forceBuildFilters =" << forceBuildFilters;
+//    */
+//    buildFilters();
 }
 
 bool DataModel::readMetadataForItem(int row)
@@ -763,7 +765,6 @@ the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
     G::track(__FUNCTION__);
     #endif
     }
-    static int lastProgressRow = 0;
     int row = m.row;
     QString search = index(row, G::SearchTextColumn).data().toString();
     if (!metadata->ratings.contains(m.rating)) m.rating = "";
@@ -874,19 +875,6 @@ the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
 
-    if (filters->buildingFilters) {
-        if (row % 1000 == 0 || row == 0) {
-            lastProgressRow = row;
-            QString s = "Step 1 0f " + buildSteps + ":  Reading metadata row ";
-            s += QString::number(row) + " of " + QString::number(rowCount());
-            G::popUp->setPopupText(buildMsg + s);
-//            emit setPopupText(buildMsg + s);
-
-            qDebug() << buildMsg + s;
-            qApp->processEvents();
-        }
-    }
-
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
 
@@ -969,83 +957,6 @@ unfiltered counts.
             setData(index(row, G::SearchColumn), searchableText.contains(searchString));
         }
     }
-}
-
-void DataModel::buildFilters(bool force)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    qDebug() << __FUNCTION__ << "force =" << force;
-    if (filters->filtersBuilt) return;
-    // collect all unique instances for filtration (use QMap to maintain order)
-    QMap<QVariant, QString> typesMap;
-    QMap<QVariant, QString> modelMap;
-    QMap<QVariant, QString> lensMap;
-    QMap<QVariant, QString> titleMap;
-    QMap<QVariant, QString> flMap;
-    QMap<QVariant, QString> creatorMap;
-    QMap<QVariant, QString> yearMap;
-    QMap<QVariant, QString> dayMap;
-
-    QString s;
-    int rows = sf->rowCount();
-    for(int row = 0; row < rows; row++) {
-        QString type = sf->index(row, G::TypeColumn).data().toString();
-        if (!typesMap.contains(type)) typesMap[type] = type;
-
-        QString model = sf->index(row, G::CameraModelColumn).data().toString();
-        if (!modelMap.contains(model)) modelMap[model] = model;
-
-        QString lens = sf->index(row, G::LensColumn).data().toString();
-        if (!lensMap.contains(lens)) lensMap[lens] = lens;
-
-        QString title = sf->index(row, G::TitleColumn).data().toString();
-        if (!titleMap.contains(title)) titleMap[title] = title;
-
-        QString flNum = sf->index(row, G::FocalLengthColumn).data().toString();
-        if (!flMap.contains(flNum)) flMap[flNum] = flNum;
-
-        QString creator = sf->index(row, G::CreatorColumn).data().toString();
-        if (!creatorMap.contains(creator)) creatorMap[creator] = creator;
-
-        QString year = sf->index(row, G::YearColumn).data().toString();
-        if (!yearMap.contains(year)) yearMap[year] = year;
-
-        QString day = sf->index(row, G::DayColumn).data().toString();
-        if (!dayMap.contains(day)) dayMap[day] = day;
-
-        if (filters->quitBuildingFilters) return;
-
-        if (!force && forceTimer.elapsed() > 100) {
-            qDebug() << __FUNCTION__ << currentFolderPath
-                     << "row =" << row << "Quit because taking ms" << forceTimer.elapsed();
-            return;
-        }
-    }
-
-    // build filter items
-    s = "Step 2 0f " + buildSteps + ":  Mapping filters ";
-    G::popUp->setPopupText(buildMsg + s);
-
-    filters->addCategoryFromData(typesMap, filters->types);
-    filters->addCategoryFromData(modelMap, filters->models);
-    filters->addCategoryFromData(lensMap, filters->lenses);
-    filters->addCategoryFromData(flMap, filters->focalLengths);
-    filters->addCategoryFromData(titleMap, filters->titles);
-    filters->addCategoryFromData(creatorMap, filters->creators);
-    filters->addCategoryFromData(yearMap, filters->years);
-    filters->addCategoryFromData(dayMap, filters->days);
-
-//    s = "Step 4 0f " + buildSteps + ":  Tabulating filtered items ...";
-    G::popUp->setPopupText(buildMsg + s);
-    qApp->processEvents();
-    filteredItemCount();
-    unfilteredItemCount();
-
-    filters->filtersBuilt = true;
 }
 
 void DataModel::rebuildTypeFilter()
@@ -1254,132 +1165,51 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("searchText", 25) << G::s(index(row, G::SearchTextColumn).data());
 }
 
-void DataModel::filteredItemCount()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    qDebug() << __FUNCTION__ << "filters->searchString" << filters->searchString;
-    QTreeWidgetItemIterator it(filters);
-    while (*it) {
-        if ((*it)->parent()) {
-            int col = filters->filterCategoryToDmColumn[(*it)->parent()->text(0)];
-            QString searchValue = (*it)->text(1);
-            int tot = 0;
-            for (int row = 0; row < sf->rowCount(); ++row) {
-                if (sf->index(row, col).data().toString() == searchValue) tot++;
-            }
-            (*it)->setData(2, Qt::EditRole, QString::number(tot));
-            (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
-        }
-        ++it;
-    }
-    filters->setDisabled(true);
-//    filters->setSearchTextColor();
-}
+//void DataModel::unfilteredItemSearchCount()
+//{
+///*
+//This function counts the number of occurences of each unique item in the datamodel, and also
+//if raw+jpg have been combined.  The results as saved in the filters QTreeWidget in columns
+//3 (all) and 4 (raw+jpg).
 
-void DataModel::unfilteredItemCount()
-{
-/*
-This function counts the number of occurences of each unique item in the datamodel, and also
-if raw+jpg have been combined.  The results as saved in the filters QTreeWidget in columns
-3 (all) and 4 (raw+jpg).
-
-It is only necessary to run this function once for a new folder(s) selection when filtration
-has been invoked.  Its counterpart, filteredItemCount, has to be run every time the filters
-change.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    /*
-    qDebug() << __FUNCTION__ << "filters->searchString" << filters->searchString;
+//This function is run everytime the search string changes.
 //*/
-    QTreeWidgetItemIterator it(filters);
-    while (*it) {
-        if ((*it)->parent()) {
-            int col = filters->filterCategoryToDmColumn[(*it)->parent()->text(0)];
-            QString searchValue = (*it)->text(1);
-            int tot = 0;
-            int totRawJpgCombined = 0;
-            for (int row = 0; row < rowCount(); ++row) {
-                bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
-                if (index(row, col).data().toString() == searchValue) {
-                    tot++;
-                    if (combineRawJpg && !hideRaw) totRawJpgCombined++;
-                }
-            }
-            /*
-            qDebug() << __FUNCTION__
-                 << (*it)->parent()->text(0)
-                 << (*it)->text(1)
-                 << "Tot Count = " << QString::number(tot)
-                 << "Combined Count = " << QString::number(totRawJpgCombined);
-//                 */
-            (*it)->setData(3, Qt::EditRole, QString::number(tot));
-            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
-            (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
-            (*it)->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+////    qDebug() << __FUNCTION__;
+//    int col = G::SearchColumn;
 
-            /*
-            if ((*it) == filters->searchTrue) {
-                qDebug() << __FUNCTION__ << filters->searchString << tot << totRawJpgCombined;
-            }
-//            */
-        }
-        ++it;
-    }
-}
+//    // get total matches for searchTrue
+//    int tot = 0;
+//    int totRawJpgCombined = 0;
+//    QString matchText = filters->searchTrue->text(1);
+//    for (int row = 0; row < rowCount(); ++row) {
+//        bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
+//        if (index(row, col).data().toString() == matchText) {
+//            tot++;
+//            if (combineRawJpg && !hideRaw) totRawJpgCombined++;
+//        }
+//    }
+//    filters->searchTrue->setData(3, Qt::EditRole, QString::number(tot));
+//    filters->searchTrue->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
 
-void DataModel::unfilteredItemSearchCount()
-{
-/*
-This function counts the number of occurences of each unique item in the datamodel, and also
-if raw+jpg have been combined.  The results as saved in the filters QTreeWidget in columns
-3 (all) and 4 (raw+jpg).
-
-This function is run everytime the search string changes.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    qDebug() << __FUNCTION__;
-    int col = G::SearchColumn;
-
-    // get total matches for searchTrue
-    int tot = 0;
-    int totRawJpgCombined = 0;
-    QString matchText = filters->searchTrue->text(1);
-    for (int row = 0; row < rowCount(); ++row) {
-        bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
-        if (index(row, col).data().toString() == matchText) {
-            tot++;
-            if (combineRawJpg && !hideRaw) totRawJpgCombined++;
-        }
-    }
-    filters->searchTrue->setData(3, Qt::EditRole, QString::number(tot));
-    filters->searchTrue->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
-
-    // get total matches for searchTrue
-    tot = 0;
-    totRawJpgCombined = 0;
-    matchText = filters->searchFalse->text(1);
-    for (int row = 0; row < rowCount(); ++row) {
-        bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
-        if (index(row, col).data().toString() == matchText) {
-            tot++;
-            if (combineRawJpg && !hideRaw) totRawJpgCombined++;
-        }
-    }
-    filters->searchFalse->setData(3, Qt::EditRole, QString::number(tot));
-    filters->searchFalse->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
-}
+//    // get total matches for searchTrue
+//    tot = 0;
+//    totRawJpgCombined = 0;
+//    matchText = filters->searchFalse->text(1);
+//    for (int row = 0; row < rowCount(); ++row) {
+//        bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
+//        if (index(row, col).data().toString() == matchText) {
+//            tot++;
+//            if (combineRawJpg && !hideRaw) totRawJpgCombined++;
+//        }
+//    }
+//    filters->searchFalse->setData(3, Qt::EditRole, QString::number(tot));
+//    filters->searchFalse->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
+//}
 
 // --------------------------------------------------------------------------------------------
 // SortFilter Class used to filter by row

@@ -506,7 +506,7 @@ CompareView instances.
     // update ZoomDlg
     emit zoomChange(zoomValue);
 
-    emit updateStatus(true, "");
+    emit updateStatus(true, "", __FUNCTION__);
 }
 
 void CompareImages::zoomIn()

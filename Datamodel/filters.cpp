@@ -99,6 +99,22 @@ datamodel.
     filterCategoryToDmColumn["Title"] = G::TitleColumn;
     filterCategoryToDmColumn["Creators"] = G::CreatorColumn;
 
+    /* Sits above the filters QTreeWidget and is used to message that the filters are
+       being rebuilt.  Set invisible at start and rendered visible when building filters */
+    filterLabel = new QLabel;
+    filterLabel->setWordWrap(true);
+    filterLabel->setText(buildingFiltersMsg);
+    filterLabel->setAlignment(Qt::AlignCenter);
+//    filterLabel->setStyleSheet("QLabel {color:lightgray;}");
+    filterLabel->setStyleSheet("QLabel {color:cadetblue;}");
+    filterLabel->setVisible(false);
+
+    bfProgressBar = new QProgressBar;
+    bfProgressBar->setFixedHeight(6);
+    bfProgressBar->setTextVisible(false);
+    setProgressBarStyle();
+    bfProgressBar->setValue(0);
+
     expandAll();
 
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
@@ -415,7 +431,7 @@ void Filters::setSearchNewFolder()
     searchTrue->setCheckState(0, Qt::Checked);
 }
 
-void Filters::setDisabled(bool disable)
+void Filters::disableZeroCountItems(bool disable)
 {
     {
     #ifdef ISDEBUG
@@ -435,21 +451,30 @@ void Filters::setDisabled(bool disable)
     }
 }
 
-void Filters::setSearchTextColor()
+void Filters::disableAllItems(bool disable)
 {
     {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
     }
-//    if (searchTrue->text(0) == defaultSearchString) {
-//        searchTrue->setFont(0, searchDefaultTextFont);
-//        searchTrue->setForeground(0, searchDefaultTextColor);
-//    }
-//    else {
-//        searchTrue->setFont(0, font());
-//        searchTrue->setForeground(0, QColor(G::textShade, G::textShade, G::textShade));
-//    }
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        if ((*it)->parent() && (*it)->parent()->text(0) != "Search") {
+            (*it)->setDisabled(disable);
+         }
+        ++it;
+    }
+}
+
+void Filters::updateProgress(int progress)
+{
+    bfProgressBar->setValue(progress);
+}
+
+void Filters::setProgressBarStyle()
+{
+//    bfProgressBar->setStyleSheet("QProgressBar::chunk{background-color:cadetblue;}");
 }
 
 bool Filters::isAnyFilter()
@@ -481,7 +506,7 @@ void Filters::invertFilters()
     QTreeWidgetItemIterator it(this);
 
     // enable all items
-    setDisabled(false);
+    disableZeroCountItems(false);
 
     // populate catWithCheckedItems list with only categories that have one or more checked items
     while (*it) {
@@ -522,7 +547,7 @@ void Filters::invertFilters()
     }
 
     // disable items with no filter count
-    setDisabled(true);
+    disableZeroCountItems(true);
 
     // emit filterChange();  // this is done im MW::invertFilters - which calls this function
 }
@@ -627,7 +652,7 @@ createDynamicFilters;
       if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
     }
     for (auto key : uniqueItems.keys()) {
-        if (quitBuildingFilters) return;
+//        if (quitBuildingFilters) return;
         item = new QTreeWidgetItem(category);
         item->setText(0, uniqueItems.value(key));
         item->setCheckState(0, Qt::Unchecked);
@@ -773,12 +798,15 @@ void Filters::resizeColumns()
     QFont font = this->font();
 //    font.setPointSize(G::fontSize.toInt());
     QFontMetrics fm(font);
+    int decorationWidth = 25;       // the expand/collapse arrows
     int countColumnWidth = fm.boundingRect("99999").width();
-    int countFilteredColumnWidth = fm.boundingRect("Filter ").width() + 10;
+    int countFilteredColumnWidth = fm.boundingRect("Filter_").width();
+    int col0Width = width() - G::scrollBarThickness - countColumnWidth -
+                    countFilteredColumnWidth - decorationWidth;
     setColumnWidth(4, countColumnWidth);
     setColumnWidth(3, countColumnWidth);
     setColumnWidth(2, countFilteredColumnWidth);
-    setColumnWidth(0, width() - G::scrollBarThickness - countColumnWidth - countFilteredColumnWidth - 10);
+    setColumnWidth(0, col0Width);
 }
 
 void Filters::resizeEvent(QResizeEvent *event)
@@ -813,6 +841,7 @@ Single mouse click on item triggers expand/collapse same as clicking on decorati
     G::track(__FUNCTION__);
     #endif
     }
+    if (buildingFilters) return;
     QPoint p = event->pos();
     QModelIndex idx = indexAt(p);
     if (idx.isValid() && p.x() >= indentation) {

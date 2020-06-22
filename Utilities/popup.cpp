@@ -102,7 +102,7 @@ void PopUp::showPopup(const QString &text,
 //        animation.setEndValue(popupOpacity);    // End - completely opaque widget
 //    }
 //    else setWindowOpacity(popupOpacity);
-    setWindowOpacity(popupOpacity);
+    setWindowOpacity(static_cast<double>(popupOpacity));
 
     int pW = width();
     int pH = height();
@@ -141,10 +141,6 @@ void PopUp::hideAnimation()
 void PopUp::hide()
 {
     QWidget::hide();
-    // If the widget is transparent, then hide it
-//    if (popupOpacity == 0.0) {
-//        QWidget::hide();
-//    }
 }
 
 void PopUp::setPopupAlignment(Qt::Alignment alignment)
@@ -162,7 +158,7 @@ void PopUp::setPopupText(const QString &text)
 void PopUp::setPopupOpacity(float opacity)
 {
     popupOpacity = opacity;
-    setWindowOpacity(opacity);
+    setWindowOpacity(static_cast<double>(opacity));
 }
 
 float PopUp::getPopupOpacity() const

@@ -15,7 +15,8 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h
+HEADERS += Cache/imagecache.h \
+   Datamodel/buildfilters.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/datamodel.h
@@ -86,7 +87,8 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/imagecache.cpp
+SOURCES += Cache/imagecache.cpp \
+   Datamodel/buildfilters.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp

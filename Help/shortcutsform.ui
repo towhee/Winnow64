@@ -406,6 +406,14 @@
        </item>
        <item>
         <property name="text">
+         <string>Update Filters</string>
+        </property>
+        <property name="text">
+         <string>Shift + F</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Clear Filters</string>
         </property>
         <property name="text">
