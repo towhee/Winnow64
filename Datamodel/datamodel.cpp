@@ -1165,52 +1165,6 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("searchText", 25) << G::s(index(row, G::SearchTextColumn).data());
 }
 
-//void DataModel::unfilteredItemSearchCount()
-//{
-///*
-//This function counts the number of occurences of each unique item in the datamodel, and also
-//if raw+jpg have been combined.  The results as saved in the filters QTreeWidget in columns
-//3 (all) and 4 (raw+jpg).
-
-//This function is run everytime the search string changes.
-//*/
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-////    qDebug() << __FUNCTION__;
-//    int col = G::SearchColumn;
-
-//    // get total matches for searchTrue
-//    int tot = 0;
-//    int totRawJpgCombined = 0;
-//    QString matchText = filters->searchTrue->text(1);
-//    for (int row = 0; row < rowCount(); ++row) {
-//        bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
-//        if (index(row, col).data().toString() == matchText) {
-//            tot++;
-//            if (combineRawJpg && !hideRaw) totRawJpgCombined++;
-//        }
-//    }
-//    filters->searchTrue->setData(3, Qt::EditRole, QString::number(tot));
-//    filters->searchTrue->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
-
-//    // get total matches for searchTrue
-//    tot = 0;
-//    totRawJpgCombined = 0;
-//    matchText = filters->searchFalse->text(1);
-//    for (int row = 0; row < rowCount(); ++row) {
-//        bool hideRaw = index(row, 0).data(G::DupHideRawRole).toBool();
-//        if (index(row, col).data().toString() == matchText) {
-//            tot++;
-//            if (combineRawJpg && !hideRaw) totRawJpgCombined++;
-//        }
-//    }
-//    filters->searchFalse->setData(3, Qt::EditRole, QString::number(tot));
-//    filters->searchFalse->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
-//}
-
 // --------------------------------------------------------------------------------------------
 // SortFilter Class used to filter by row
 // --------------------------------------------------------------------------------------------
