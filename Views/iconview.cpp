@@ -843,7 +843,7 @@ after the MD::fileSelectionChange occurs, hence update the status bar from here.
     #endif
     }
     QListView::selectionChanged(selected, deselected);
-    if (!G::isInitializing) emit updateStatus(true, "");
+    if (!G::isInitializing) emit updateStatus(true, "", __FUNCTION__);
 }
 
 int IconView::getSelectedCount()

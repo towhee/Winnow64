@@ -72,5 +72,6 @@ public:
     QString textEdit();
     QString lineEdit();
     QString checkBox();
+    QString progressBar();
 };
 #endif // WIDGETCSS_H

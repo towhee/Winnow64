@@ -343,7 +343,7 @@ If isSlideshow then hide mouse cursor unless is moves.
 
     placeClassificationBadge();
     moveShootingInfo(shootingInfo);
-    emit updateStatus(true, "");
+    emit updateStatus(true, "", __FUNCTION__);
 
     isMouseDoubleClick = false;
 

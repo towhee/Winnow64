@@ -162,7 +162,7 @@ void ProgressBar::updateProgress(int fromItem,
     QRect doneRect(pxStart, htOffset, pxWidth, ht);
     pnt.fillRect(doneRect, doneGradient);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
-    if (comment != "") m1->updateStatus(false, comment);
+    if (comment != "") m1->updateStatus(false, comment, __FUNCTION__);
 }
 
 QLinearGradient ProgressBar::getGradient(QColor c1)

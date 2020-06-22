@@ -20,6 +20,7 @@
 #include "appdlg.h"
 #include "Datamodel/datamodel.h"
 #include "Datamodel/filters.h"
+#include "Datamodel/buildfilters.h"
 #include "File/bookmarks.h"
 #include "File/fstree.h"
 #include "PropertyEditor/propertyeditor.h"
@@ -84,8 +85,9 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = nullptr);
 
-    QString version = "Version: 1.10 released 2020-06-04";
-    QString winnowWithVersion = "Winnow 1.10";
+    QString version = "Version: 1.11 beta";
+//    QString version = "Version: 1.10 released 2020-06-04";
+    QString winnowWithVersion = "Winnow 1.11 beta";
     QString website = "Website: "
             "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"
@@ -314,7 +316,6 @@ public slots:
     void slideShowResetSequence();
     void slideshowHelpMsg();
 
-
 signals:
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     void closeZoomDlg();
@@ -338,6 +339,7 @@ private slots:
     void setRotation(int degrees);
     void metadataChanged(QStandardItem* item);
     void filterLastDay();
+    void filterDockVisibilityChange(bool);
     void filterChange(QString source = "");
     void quickFilter();
     void invertFilters();
@@ -374,7 +376,7 @@ private slots:
     void scrollToCurrentRow();
     void zoomToggle();
     // status functions
-    void updateStatus(bool keepBase = true, QString s = "");
+    void updateStatus(bool keepBase = true, QString s = "", QString source = "");
     void clearStatus();
     // caching status functions
     void setThreadRunStatusInactive();
@@ -400,10 +402,9 @@ private slots:
     void tableHasScrolled();
     void loadMetadataCacheAfterDelay();
 //    void loadMetadataCache(int startRow = 0);
-    void loadEntireMetadataCache(bool force = true);
+    void loadEntireMetadataCache();
     void loadImageCacheForNewFolder();
-    void forceBuildFilters();
-    void buildFilters(bool force = false);
+    void buildFilters();
 //    void loadFilteredImageCache();
     void addNewBookmark();
     void addNewBookmarkFromContext();
@@ -641,6 +642,7 @@ private:
 
     // Filters
 
+    QAction *filterUpdateAction;
     QAction *clearAllFiltersAction;
     QAction *expandAllAction;
     QAction *collapseAllAction;
@@ -657,7 +659,6 @@ private:
     QAction *filterPurpleAction;
     QAction *filterInvertAction;
     QAction *filterLastDayAction;
-    QAction *filterUpdateAction;
 
     // Sort Menu
     QActionGroup *sortGroupAction;
@@ -813,6 +814,7 @@ private:
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;
     DataModel *dm;
+    BuildFilters *bf;
     QItemSelectionModel *selectionModel;
     Metadata *metadata;
     IconView *thumbView;

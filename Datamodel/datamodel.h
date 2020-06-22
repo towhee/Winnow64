@@ -64,23 +64,26 @@ public:
     int currentRow;                     // used in caching to check if new image selected
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
-    QElapsedTimer forceTimer;
+    bool forceBuildFilters = false;     // ignore buildFiltersMaxDelay if true
+    int buildFiltersMaxDelay = 1000;    // quit if exceed and not forceBuildFilters
+    QElapsedTimer buildFiltersTimer;
+
     QList<QFileInfo> modifiedFiles;
 
-    // can be set from keyPressEvent in MW to terminate if recursive folder scan too long
+    /* can be set from keyPressEvent in MW to terminate if recursive folder scan or
+       building filters too long */
     bool timeToQuit;
+    bool alt;
 
 signals:
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void msg(QString message);
+    void updateStatus(bool keepBase, QString s, QString source);
 
 public slots:
-    void filteredItemCount();
-    void unfilteredItemCount();
-    void unfilteredItemSearchCount();
-    void addAllMetadata(bool isShowCacheStatus = false);
+//    void unfilteredItemSearchCount();
+    void addAllMetadata();
     bool addMetadataForItem(ImageMetadata m);
-    void buildFilters(bool force = false);
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
 
@@ -103,11 +106,14 @@ private:
     bool addFileData();
     void rawPlusJpg();
 
+    int addFilesMaxDelay = 1000;    // quit if exceed and not forceBuildFilters
+
     int imageCount;
     int countInterval = 0;
     QElapsedTimer t;
-    QString buildMsg = "Building filters.  This could take a while to complete.<p>";
-    QString buildSteps = "2";
+    QString buildMsg = "Building filters.  This could take a while to complete.<p>"
+                       "Press \"Esc\" to stop<p>";
+    QString buildSteps = "3";
     int step;
 
 };

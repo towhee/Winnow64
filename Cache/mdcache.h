@@ -82,6 +82,7 @@ signals:
     void refreshCurrentAfterReload();
 //    void scrollToCurrent();
     void showCacheStatus(int, bool);            // row, clear progress bar
+    void finished2ndPass();                     // buildFilters
 
 private:
     QMutex mutex;

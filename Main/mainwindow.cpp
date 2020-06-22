@@ -492,6 +492,10 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         if (preferencesHasFocus) {
             propertiesDock->setVisible(false);  // rgh not using propertiesDock?
         }
+        // stop building filters
+        if (filters->buildingFilters) {
+            bf->stop();
+        }
     }
 
     if (G::isSlideShow) {
@@ -536,10 +540,6 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         }
     }
 
-    if (filters->buildingFilters) {
-        filters->quitBuildingFilters = true;
-    }
-
     QMainWindow::keyReleaseEvent(event);
 }
 
@@ -563,60 +563,31 @@ bool MW::event(QEvent *event)
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
-//    qDebug() << __FUNCTION__ << obj->objectName() << event->type();
-//    return QWidget::eventFilter(obj, event);
-
-//// use to show all events being filtered - handy to figure out which to intercept
-//    if (event->type()        != QEvent::Paint
-//            && event->type() != QEvent::UpdateRequest
-//            && event->type() != QEvent::ZeroTimerEvent
-//            && event->type() != QEvent::Timer
+    // use to show all events being filtered - handy to figure out which to intercept
+    /*
+    if (event->type()        != QEvent::Paint
+            && event->type() != QEvent::UpdateRequest
+            && event->type() != QEvent::ZeroTimerEvent
+            && event->type() != QEvent::Timer
 //            && event->type() == QEvent::MouseButtonPress
-//            )
-//    {
-////        qDebug() << __FUNCTION__
-////                 << event << "\t"
-////                 << event->type() << "\t"
-////                 << obj << "\t"
-////                 << obj->objectName();
-//    }
-
+            )
+    {
+        qDebug() << __FUNCTION__
+                 << event << "\t"
+                 << event->type() << "\t"
+                 << obj << "\t"
+                 << obj->objectName();
+        return QWidget::eventFilter(obj, event);
+    }
+//*/
 
     // figure out key presses
-/*    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
+    /*
+    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
         G::track(__FUNCTION__, "Performance profiling");
         qDebug() << event <<  obj;
     };
-    */
-
-    /* FILTERS ***************************************************************************
-
-    Filters are only run on demand as they can take time to generate and the user will
-    not always need to filter.  The triggers to build the filters are:
-
-    - A filter is selected from the Filters menu actions
-
-    - The Filters panel is activated (this is detected here)
-       - they have not been built yet
-       - the filters panel is visible
-       - the ChildRemoved event fires for the filters widget
-    */
-
-//    if (!filters->filtersBuilt && !filters->buildingFilters && !G::isInitializing) {
-//        if (!filterDock->visibleRegion().isNull()) {
-//            if(obj->objectName() == "Filters") {
-//                qDebug() << __FUNCTION__ << event;
-//                if (event->type() == QEvent::ChildRemoved) {
-//                    /*
-//                    qDebug() << "building filters from event filter"
-//                             << "G::isInitializing" << G::isInitializing;
-////                    */
-//                    qDebug() << __FUNCTION__ << "force =" << false;
-//                    buildFilters(/*force*/false);
-//                }
-//            }
-//        }
-//    }
+//    */
 
     /* CONTEXT MENU **********************************************************************
 
@@ -739,6 +710,7 @@ void MW::focusChange(QWidget *previous, QWidget *current)
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << previous << current;
     if (current == nullptr) return;
     if (current->objectName() == "DisableGoActions") enableGoKeyActions(false);
     else enableGoKeyActions(true);
@@ -899,6 +871,7 @@ void MW::folderSelectionChange()
      // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
+    bf->stop();
     G::allMetadataLoaded = false;
 //    G::track(__FUNCTION__, "0");
 
@@ -910,6 +883,9 @@ void MW::folderSelectionChange()
 
     // ImageView set zoom = fit for the first image of a new folder
     imageView->isFirstImageNewFolder = true;
+
+    // Prevent build filter if taking too long
+    dm->forceBuildFilters = false;
 
     // used by updateStatus
     isCurrentFolderOkay = false;
@@ -988,17 +964,17 @@ void MW::folderSelectionChange()
         clearAll();
         enableSelectionDependentMenus();
         if (dm->timeToQuit) {
-            updateStatus(false, "Image loading has been cancelled");
+            updateStatus(false, "Image loading has been cancelled", __FUNCTION__);
             setCentralMessage("Image loading has been cancelled");
             return;
         }
         QDir dir(currentViewDir);
         if (dir.isRoot()) {
-            updateStatus(false, "No supported images in this drive");
+            updateStatus(false, "No supported images in this drive", __FUNCTION__);
             setCentralMessage("The drive \"" + currentViewDir + "\" does not have any eligible images");
         }
         else {
-            updateStatus(false, "No supported images in this folder");
+            updateStatus(false, "No supported images in this folder", __FUNCTION__);
             setCentralMessage("The folder \"" + currentViewDir + "\" does not have any eligible images");
         }
         G::isInitializing = false;
@@ -1026,7 +1002,7 @@ void MW::folderSelectionChange()
         thumbView->selectThumb(0);
     }
 
-    updateStatus(false, "Collecting metadata for all images in folder(s)");
+    updateStatus(false, "Collecting metadata for all images in folder(s)", __FUNCTION__);
 
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
     and full size embedded jpgs and the image width and height, req'd in imageCache to manage
@@ -1042,7 +1018,7 @@ void MW::folderSelectionChange()
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true);
+    updateStatus(true, "", __FUNCTION__);
 
     G::isInitializing = false;
 }
@@ -1239,14 +1215,14 @@ a bookmark or ejects a drive and the resulting folder does not have any eligible
     setThreadRunStatusInactive();                      // turn thread activity buttons gray
     isDragDrop = false;
 
-    updateStatus(false, "");
+    updateStatus(false, "", __FUNCTION__);
     progressLabel->setVisible(false);
     updateClassification();
 }
 
 void MW::nullFiltration()
 {
-    updateStatus(false, "No images match the filtration");
+    updateStatus(false, "No images match the filtration", __FUNCTION__);
     setCentralMessage("No images match the filtration");
     infoView->clearInfo();
     imageView->clear();
@@ -1571,7 +1547,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     metadataCacheThread->scrollChange();
 }
 
-void MW::loadEntireMetadataCache(bool force)
+void MW::loadEntireMetadataCache()
 {
 /*
 This is called before a filter or sort operation, which only makes sense if all the metadata
@@ -1585,7 +1561,6 @@ the filter and sort operations cannot commence until all the metadata has been l
     }
     if (G::isInitializing) return;
     if (metadataCacheThread->isAllMetadataLoaded()) return;
-    qDebug() << __FUNCTION__ << "force =" << force;
 
     updateIconsVisible(true);
 
@@ -1613,7 +1588,7 @@ the filter and sort operations cannot commence until all the metadata has been l
     }
     QApplication::processEvents();
 
-    if (dm->forceTimer.elapsed() > 100) {
+    if (dm->buildFiltersTimer.elapsed() > dm->buildFiltersMaxDelay) {
         QApplication::restoreOverrideCursor();
         return;
     }
@@ -1621,7 +1596,7 @@ the filter and sort operations cannot commence until all the metadata has been l
     /* adding all metadata in dm slightly slower than using metadataCacheThread but progress
        bar does not update from separate thread
     */
-    dm->addAllMetadata(/*isShowCacheStatus*/true);
+    dm->addAllMetadata();
     // metadataCacheThread->loadAllMetadata();
     // metadataCacheThread->wait();
 
@@ -2554,8 +2529,7 @@ void MW::createActions()
     filterUpdateAction = new QAction(tr("Force update all filters"), this);
     filterUpdateAction->setShortcutVisibleInContextMenu(true);
     addAction(filterUpdateAction);
-    connect(filterUpdateAction,  &QAction::triggered, this, &MW::forceBuildFilters);
-//    connect(filterUpdateAction, SIGNAL(triggered()), this, SLOT(buildFilters(true)));
+    connect(filterUpdateAction,  &QAction::triggered, this, &MW::buildFilters);
 
     // Sort Menu
 
@@ -3874,6 +3848,11 @@ void MW::createDataModel()
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::msg, this, &MW::setCentralMessage);
+    connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
+
+    bf = new BuildFilters(this, dm, metadata, filters, combineRawJpg);
+
+    connect(bf, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
 }
 
 void MW::createSelectionModel()
@@ -3940,6 +3919,9 @@ void MW::createCaching()
 
     connect(metadataCacheThread, SIGNAL(selectFirst()),
             thumbView, SLOT(selectFirst()));
+
+    connect(metadataCacheThread, SIGNAL(finished2ndPass()),
+            this, SLOT(buildFilters()));
 
     connect(metadataCacheThread, SIGNAL(refreshCurrentAfterReload()),
             this, SLOT(refreshCurrentAfterReload()));
@@ -4033,8 +4015,7 @@ void MW::createThumbView()
     connect(thumbView, SIGNAL(updateThumbDockHeight()),
             this, SLOT(setThumbDockHeight()));
 
-    connect(thumbView, SIGNAL(updateStatus(bool, QString)),
-            this, SLOT(updateStatus(bool, QString)));
+    connect(thumbView, &IconView::updateStatus, this, &MW::updateStatus);
 
     connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
             this, SLOT(thumbHasScrolled()));
@@ -4210,8 +4191,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
 
     connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
 
-    connect(imageView, SIGNAL(updateStatus(bool, QString)),
-            this, SLOT(updateStatus(bool, QString)));
+    connect(imageView, &ImageView::updateStatus, this, &MW::updateStatus);
 
     connect(thumbView, SIGNAL(thumbClick(float,float)),
             imageView, SLOT(thumbClick(float,float)));
@@ -4243,8 +4223,7 @@ void MW::createCompareView()
         imageView->toggleZoom = 1;
     }
 
-    connect(compareImages, SIGNAL(updateStatus(bool, QString)),
-            this, SLOT(updateStatus(bool, QString)));
+    connect(compareImages, &CompareImages::updateStatus, this, &MW::updateStatus);
 
     connect(compareImages, &CompareImages::togglePick, this, &MW::togglePick);
 }
@@ -4403,7 +4382,22 @@ void MW::createDocks()
 
     filterDock = new DockWidget(tr("  Filters  "), this);
     filterDock->setObjectName("Filters");
-    filterDock->setWidget(filters);
+    QVBoxLayout* msgLayout = new QVBoxLayout(this);
+    msgLayout->setContentsMargins(0, 0, 0, 0);
+    msgLayout->addWidget(filters->filterLabel);
+    msgLayout->addWidget(filters->bfProgressBar);
+    QFrame *msgFrame = new QFrame;
+    msgFrame->setLayout(msgLayout);
+
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(msgFrame);
+    layout->addWidget(filters);
+    QFrame *frame = new QFrame;
+    frame->setLayout(layout);
+    filterDock->setWidget(frame);
+    connect(filterDock, SIGNAL(visibilityChanged(bool)),
+            this, SLOT(filterDockVisibilityChange(bool)));
 
     if (isSettings) {
         setting->beginGroup(("FilterDock"));
@@ -4884,7 +4878,7 @@ Returns a string like "12 (165 MB)"
     return selected + " (" + selMemSize + ")";
 }
 
-void MW::updateStatus(bool keepBase, QString s)
+void MW::updateStatus(bool keepBase, QString s, QString source)
 {
 /*
 Reports status information on the status bar and in InfoView.  If keepBase = true
@@ -4895,6 +4889,7 @@ then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << s << source;
     // check if null filter
     if (dm->sf->rowCount() == 0) {
         statusLabel->setText("");
@@ -5180,42 +5175,25 @@ Type 2 Filtration steps:
     * Filter based on criteria selected
 */
 
-void MW::forceBuildFilters()
+void MW::filterDockVisibilityChange(bool isVisible)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    buildFilters(true);
+    if (isVisible && !G::isInitializing) buildFilters();
 }
 
-void MW::buildFilters(bool force)
+void MW::buildFilters()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << "force =" << force;    // check if filters have already been build
-    if (!force) dm->forceTimer.restart();
+    if (G::isInitializing) return;
     if (filters->days->childCount()) return;
+    if (filterDock->visibleRegion().isNull()) return;
+    if (filters->filtersBuilt) return;
     if (dm->loadingModel) return;
-//    if (!G::allMetadataLoaded || filters->days->childCount() == 0) return;
 
-    filters->buildingFilters = true;      // req'd for user messaging in load all metadata
-    G::popUp->setPopUpSize(800, 100);
-    QString msg = "Building filters.  This could take a while to complete.\n";
-    G::popUp->showPopup(msg, 0);
-    updateStatus(false, "Building filters: loading metadata for all images ...");
-    if (!G::allMetadataLoaded) {
-        loadEntireMetadataCache();
-    }
-//    qApp->processEvents();
-    dm->buildFilters(force);
-    updateStatus(true);
-    filters->buildingFilters = false;
-    G::popUp->showPopup("Filters completed");
+    bf->build();
 }
 
 
@@ -5239,7 +5217,8 @@ and icons are loaded if necessary.
     if (!G::isNewFolderLoaded) return;
 
     // Need all metadata loaded before filtering
-    if (!G::allMetadataLoaded) dm->addAllMetadata(true);
+    dm->forceBuildFilters = true;
+    if (!G::allMetadataLoaded) dm->addAllMetadata();
 
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
@@ -5247,8 +5226,8 @@ and icons are loaded if necessary.
     dm->sf->filterChange();
 
     // update filter panel image count by filter item
-    dm->filteredItemCount();
-    if (source == "Filters::itemChangedSignal search text change") dm->unfilteredItemSearchCount();
+    bf->updateCountFiltered();
+    if (source == "Filters::itemChangedSignal search text change") bf->unfilteredItemSearchCount();
 
     // recover sort after filtration
     sortChange();
@@ -5275,7 +5254,7 @@ and icons are loaded if necessary.
     dm->currentFilePath = fPath;
 
 //    centralLayout->setCurrentIndex(prevCentralView);
-    updateStatus(true);
+    updateStatus(true, "", __FUNCTION__);
 
     // sync image cache with datamodel filtered proxy dm->sf
     imageCacheThread->rebuildImageCacheParameters(fPath);
@@ -5540,7 +5519,7 @@ void MW::sortChange()
     dm->currentFilePath = fPath;
 
     centralLayout->setCurrentIndex(prevCentralView);
-    updateStatus(true);
+    updateStatus(true, "", __FUNCTION__);
 
     // sync image cache with datamodel filtered proxy
 //    resortImageCache();
@@ -7948,6 +7927,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         randomImageAction->setShortcut(QKeySequence("Shift+Ctrl+Right"));
 
         // Filters
+        filterUpdateAction->setShortcut(QKeySequence("Shift+F"));
         clearAllFiltersAction->setShortcut(QKeySequence("Shift+C"));
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
 
@@ -8211,7 +8191,7 @@ around lack of notification when the QListView has finished painting itself.
     #endif
     }
     G::mode = "Loupe";
-    updateStatus(true);
+    updateStatus(true, "", __FUNCTION__);
     updateIconsVisible(false);
 
     // save selection as tableView is hidden and not synced
@@ -8288,7 +8268,7 @@ around lack of notification when the QListView has finished painting itself.
     #endif
     }
     G::mode = "Grid";
-    updateStatus(true);
+    updateStatus(true, "", __FUNCTION__);
     updateIconsVisible(false);
 
     // save selection as gridView is hidden and not synced
@@ -8350,7 +8330,7 @@ void MW::tableDisplay()
     #endif
     }    
     G::mode = "Table";
-    updateStatus(true);
+    updateStatus(true, "", __FUNCTION__);
     updateIconsVisible(false);
 
     // save selection as tableView is hidden and not synced
@@ -8426,7 +8406,7 @@ void MW::compareDisplay()
         G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
     }
-    updateStatus(true);
+    updateStatus(true, "", __FUNCTION__);
     int n = selectionModel->selectedRows().count();
     if (n < 2) {
         G::popUp->showPopup("Select more than one image to compare.");
@@ -9018,10 +8998,10 @@ void MW::toggleReject()
         gridView->refreshThumbs();
 
         pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-        updateStatus(true, "");
+        updateStatus(true, "", __FUNCTION__);
 
         // update filter counts
-        dm->filteredItemCount();
+        bf->updateCountFiltered();
 }
 
 void MW::togglePickUnlessRejected()
@@ -9075,10 +9055,10 @@ void MW::togglePickUnlessRejected()
     gridView->refreshThumbs();
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "");
+    updateStatus(true, "", __FUNCTION__);
 
     // update filter counts
-        dm->filteredItemCount();
+    bf->updateCountFiltered();
 }
 
 void MW::togglePickMouseOverItem(QModelIndex idx)
@@ -9102,10 +9082,10 @@ over is toggled, but the selection is not changed.
     gridView->refreshThumbs();
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "");
+    updateStatus(true, "", __FUNCTION__);
 
     // update filter counts
-    dm->filteredItemCount();
+    bf->updateCountFiltered();
 }
 
 void MW::togglePick()
@@ -9152,10 +9132,10 @@ Push the changes onto the pick history stack.
     gridView->refreshThumbs();
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "");
+    updateStatus(true, "", __FUNCTION__);
 
     // update filter counts
-    dm->filteredItemCount();
+    bf->updateCountFiltered();
 }
 
 void MW::pushPick(QString fPath, QString status)
@@ -9216,10 +9196,10 @@ void MW::updatePickFromHistory(QString fPath, QString status)
         gridView->refreshThumbs();
 
         pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-        updateStatus(true, "");
+        updateStatus(true, "", __FUNCTION__);
 
         // update filter counts
-        dm->filteredItemCount();
+        bf->updateCountFiltered();
     }
 }
 
@@ -9597,7 +9577,7 @@ the rating for all the selected thumbs.
     dm->sf->filterChange();
 
     // update filter counts
-    dm->filteredItemCount();
+    bf->updateCountFiltered();
 }
 
 void MW::setColorClass()
@@ -9670,7 +9650,7 @@ set the color class for all the selected thumbs.
     dm->sf->filterChange();
 
     // update filter counts
-    dm->filteredItemCount();
+    bf->updateCountFiltered();
 }
 
 void MW::metadataChanged(QStandardItem* item)
@@ -9941,7 +9921,7 @@ void MW::slideShow()
         imageView->setCursor(Qt::ArrowCursor);
         slideShowStatusLabel->setText("");
         G::isSlideShow = false;
-        updateStatus(true);
+        updateStatus(true, "", __FUNCTION__);
         updateStatusBar();
         slideShowAction->setText(tr("Slide Show"));
         G::popUp->showPopup("Stopping slideshow");
@@ -10053,7 +10033,7 @@ void MW::nextSlide()
     }
 
     QString msg = "Slide # "+ QString::number(counter) + "     (press H for slideshow shortcuts)";
-    updateStatus(true, msg);
+    updateStatus(true, msg, __FUNCTION__);
 
 }
 
@@ -10066,9 +10046,11 @@ void MW::prevRandomSlide()
     isSlideshowPaused = true;
     QString prevPath = slideshowRandomHistoryStack->pop();
     thumbView->selectThumb(prevPath);
-    updateStatus(false, "Slideshow random history."
-                        "  Press <font color=\"white\"><b>Spacebar</b></font> to continue slideshow, "
-                        "press <font color=\"white\"><b>Esc</b></font> to quit slideshow.");
+    updateStatus(false,
+                 "Slideshow random history."
+                 "  Press <font color=\"white\"><b>Spacebar</b></font> to continue slideshow, "
+                 "press <font color=\"white\"><b>Esc</b></font> to quit slideshow."
+                 , __FUNCTION__);
     // hide popup if showing
     G::popUp->hide();
 }
@@ -10781,16 +10763,6 @@ void MW::helpWelcome()
     centralLayout->setCurrentIndex(StartTab);
 }
 
-template <typename T>
-void MW::test2(T &io, int x)
-{
-    io.seek(2);
-    QString s = io.read(2);
-    qDebug() << __FUNCTION__ << s << x;
-}
-template void MW::test2<QFile>(QFile&, int x);
-template void MW::test2<QBuffer>(QBuffer&, int x);
-
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
     qDebug() << __FUNCTION__;
@@ -10806,20 +10778,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << combineRawJpg;
-//    buildFilters();
-
+    filters->filterLabel->setVisible(true);
 }
 // End MW
-
-
-
-
-
-
-
-
-
-
-
-
