@@ -183,7 +183,7 @@ public:
     // appearance
     bool isImageInfoVisible;
     bool isRatingBadgeVisible;
-    int infoOverlayFontSize;
+    int infoOverlayFontSize = 20;
     int classificationBadgeInImageDiameter;
     int classificationBadgeInThumbDiameter;
 
@@ -348,6 +348,8 @@ private slots:
     void uncheckAllFilters();
     void clearAllFilters();
     void sortChange();
+    void allPreferences();
+    void infoViewPreferences();
     void preferences(QString text = "");
     void externalAppManager();
     void toggleFullScreen();
@@ -743,6 +745,7 @@ private:
     // Help Diagnostics Menu
     QAction *diagnosticsAllAction;
     QAction *diagnosticsCurrentAction;
+    QAction *diagnosticsErrorsAction;
     QAction *diagnosticsMainAction;
     QAction *diagnosticsGridViewAction;
     QAction *diagnosticsThumbViewAction;
@@ -989,6 +992,7 @@ private:
     void diagnosticsMetadataCache();
     void diagnosticsImageCache();
     void diagnosticsDataModel();
+    void diagnosticsErrors();
     void diagnosticsFilters();
     void diagnosticsFileTree();
     void diagnosticsBookmarks();

@@ -47,6 +47,7 @@ public:
     QMap<QString,int> filterCategoryToDmColumn;
     QLabel *filterLabel;
     QProgressBar *bfProgressBar;
+    QFrame *msgFrame;
 
     void createPredefinedFilters();
     void createDynamicFilters();
@@ -80,8 +81,10 @@ public slots:
     void uncheckTypesFilters();
     void expandAllFilters();
     void collapseAllFilters();
+    void toggleExpansion();
     void checkPicks(bool check);
     void updateProgress(int progress);
+    void finishedBuildFilters();
 
 private slots:
     void dataChanged(const QModelIndex &topLeft,

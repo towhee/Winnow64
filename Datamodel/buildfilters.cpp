@@ -36,8 +36,8 @@ void BuildFilters::stop()
         filters->disableZeroCountItems(true);
         filters->setEnabled(true);
         filters->collapseAll();
-        qDebug() << __FUNCTION__;
-        emit updateIsRunning(false);
+        qDebug() << __FUNCTION__ << "filtersBuilt = " << filters->filtersBuilt;
+//        emit updateIsRunning(false);
     }
 }
 
@@ -78,14 +78,7 @@ void BuildFilters::done()
     G::track(__FUNCTION__);
     #endif
     }
-    filters->filtersBuilt = true;
-    filters->buildingFilters = false;
-    filters->filterLabel->setVisible(false);
-    filters->bfProgressBar->setVisible(false);
-    filters->disableZeroCountItems(true);
-    filters->setEnabled(true);
-    filters->expandAll();
-
+    if (!abort) emit finishedBuildFilters();
     qint64 msec = buildFiltersTimer.elapsed();
     qDebug() << __FUNCTION__ << QString("%L1").arg(msec) << "msec";
 }
@@ -169,6 +162,7 @@ void BuildFilters::updateCountFiltered()
     filters->disableZeroCountItems(true);
     filters->filtersBuilt = true;
     filters->buildingFilters = false;
+    qDebug() << __FUNCTION__ << "filtersBuilt = " << filters->filtersBuilt;
 }
 
 void BuildFilters::countFiltered()
@@ -201,6 +195,7 @@ void BuildFilters::countFiltered()
                 int itemProgress = 40 * instances[cat] / totInstances;
                 progress += itemProgress;
                 emit updateProgress(progress);
+                qApp->processEvents();
                 /*
                 qDebug() << __FUNCTION__
                          << cat
@@ -217,6 +212,7 @@ void BuildFilters::countFiltered()
         int itemProgress = 40 * instances[cat] / totInstances;
         progress += itemProgress;
         emit updateProgress(progress);
+        qApp->processEvents();
     }
     filters->disableZeroCountItems(true);
 }
@@ -258,6 +254,7 @@ void BuildFilters::countUnfiltered()
                 int itemProgress = 40 * instances[cat] / totInstances;
                 progress += itemProgress;
                 emit updateProgress(progress);
+                qApp->processEvents();
                 /*
                 qDebug() << __FUNCTION__
                          << cat
@@ -274,6 +271,7 @@ void BuildFilters::countUnfiltered()
         int itemProgress = 40 * instances[cat] / totInstances;
         progress += itemProgress;
         emit updateProgress(progress);
+        qApp->processEvents();
     }
 }
 
@@ -296,8 +294,9 @@ void BuildFilters::loadAllMetadata()
                 metadata->m.row = row;
                 dm->addMetadataForItem(metadata->m);
                 if (row % 100 == 0 || row == 0) {
-                    progress = static_cast<double>(20 * row) / dmRows;
+                    progress = static_cast<int>(static_cast<double>(20 * row) / dmRows);
                     emit updateProgress(progress);
+                    qApp->processEvents();
                 }
             }
             mutex.unlock();

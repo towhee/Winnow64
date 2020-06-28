@@ -1,6 +1,6 @@
 #include "Main/mainwindow.h"
 
-/*
+/* Program notes
 ***********************************************************************************************
 
 INITIALIZATION
@@ -199,7 +199,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, "Start Winnow");
     #endif
     }
 
@@ -253,7 +253,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     createDocks();              // dependent on FSTree, Bookmarks, ThumbView, Metadata, InfoView
     createStatusBar();
     createMessageView();
-
     loadWorkspaces();           // req'd by actions and menu
     createActions();            // dependent on above
     createMenus();              // dependent on createActions and loadSettings
@@ -291,6 +290,9 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
+#ifdef ISDEBUG
+G::track(__FUNCTION__);
+#endif
 }
 
 void MW::initialize()
@@ -2526,7 +2528,7 @@ void MW::createActions()
     addAction(filterLastDayAction);
     connect(filterLastDayAction,  &QAction::triggered, this, &MW::filterLastDay);
 
-    filterUpdateAction = new QAction(tr("Force update all filters"), this);
+    filterUpdateAction = new QAction(tr("Update all filters"), this);
     filterUpdateAction->setShortcutVisibleInContextMenu(true);
     addAction(filterUpdateAction);
     connect(filterUpdateAction,  &QAction::triggered, this, &MW::launchBuildFilters);
@@ -3107,6 +3109,12 @@ void MW::createActions()
     addAction(diagnosticsCurrentAction);
     connect(diagnosticsCurrentAction, &QAction::triggered, this, &MW::diagnosticsCurrent);
 
+    diagnosticsErrorsAction = new QAction(tr("Error Diagnostics"), this);
+    diagnosticsErrorsAction->setObjectName("diagnosticsErrorsAction");
+    diagnosticsErrorsAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsErrorsAction);
+    connect(diagnosticsErrorsAction, &QAction::triggered, this, &MW::diagnosticsErrors);
+
     diagnosticsMainAction = new QAction(tr("Main"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
     diagnosticsMainAction->setShortcutVisibleInContextMenu(true);
@@ -3401,19 +3409,13 @@ void MW::createMenus()
 #endif
     windowMenu->addAction(statusBarVisibleAction);
 //    windowMenu->addSeparator();
-//    windowMenu->addAction(folderDockFocusAction);
-//    windowMenu->addAction(favDockFocusAction);
-//    windowMenu->addAction(filterDockFocusAction);
-//    windowMenu->addAction(metadataDockFocusAction);
-//    windowMenu->addAction(thumbDockFocusAction);
-    windowMenu->addSeparator();
-    windowMenu->addAction(folderDockLockAction);
-    windowMenu->addAction(favDockLockAction);
-    windowMenu->addAction(filterDockLockAction);
-    windowMenu->addAction(metadataDockLockAction);
-    windowMenu->addAction(thumbDockLockAction);
-    windowMenu->addSeparator();
-    windowMenu->addAction(allDocksLockAction);
+//    windowMenu->addAction(folderDockLockAction);
+//    windowMenu->addAction(favDockLockAction);
+//    windowMenu->addAction(filterDockLockAction);
+//    windowMenu->addAction(metadataDockLockAction);
+//    windowMenu->addAction(thumbDockLockAction);
+//    windowMenu->addSeparator();
+//    windowMenu->addAction(allDocksLockAction);
 
     // Help Menu
 
@@ -3430,6 +3432,7 @@ void MW::createMenus()
     helpDiagnosticsMenu = helpMenu->addMenu(tr("&Diagnostics"));
     helpDiagnosticsMenu->addAction(diagnosticsAllAction);
     helpDiagnosticsMenu->addAction(diagnosticsCurrentAction);
+    helpDiagnosticsMenu->addAction(diagnosticsErrorsAction);
     helpDiagnosticsMenu->addAction(diagnosticsMainAction);
     helpDiagnosticsMenu->addAction(diagnosticsGridViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsThumbViewAction);
@@ -3530,6 +3533,7 @@ void MW::createMenus()
     thumbViewActions->append(separatorAction5);
     thumbViewActions->append(reportMetadataAction);
     thumbViewActions->append(diagnosticsCurrentAction);
+    thumbViewActions->append(diagnosticsErrorsAction);
 
 //    // imageview/tableview/gridview/compareview context menu
 //    imageView->addAction(pickAction);
@@ -3853,6 +3857,7 @@ void MW::createDataModel()
     buildFilters = new BuildFilters(this, dm, metadata, filters, combineRawJpg);
 
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
+    connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
 }
 
 void MW::createSelectionModel()
@@ -4158,6 +4163,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
         if (setting->contains("isImageInfoVisible")) isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
         if (setting->contains("isRatingBadgeVisible")) isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
         if (setting->contains("classificationBadgeInImageDiameter")) classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
+        if (setting->contains("infoOverlayFontSize")) infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
     }
     else {
         // parameters already defined in loadSettings
@@ -4172,7 +4178,8 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
                               infoString,
                               setting->value("isImageInfoVisible").toBool(),
                               setting->value("isRatingBadgeVisible").toBool(),
-                              setting->value("classificationBadgeInImageDiameter").toInt());
+                              setting->value("classificationBadgeInImageDiameter").toInt(),
+                              setting->value("infoOverlayFontSize").toInt());
 
     if (isSettings) {
         if (setting->contains("limitFit100Pct")) imageView->limitFit100Pct = setting->value("limitFit100Pct").toBool();
@@ -4356,9 +4363,36 @@ void MW::createDocks()
     G::track(__FUNCTION__);
     #endif
     }
+    /* FOLDERS ------------------------------------------------------------------------------*/
     folderDock = new DockWidget(tr(" Folders "), this);
     folderDock->setObjectName("File System");
     folderDock->setWidget(fsTree);
+
+    // customize the folderDock titlebar
+    QHBoxLayout *folderTitleLayout = new QHBoxLayout();
+    folderTitleLayout->setContentsMargins(0, 0, 0, 0);
+    folderTitleLayout->setSpacing(0);
+    DockTitleBar *folderTitleBar = new DockTitleBar("Folders", folderTitleLayout);
+    folderDock->setTitleBarWidget(folderTitleBar);
+    // add widgets to the right side of the title bar layout
+    // toggle expansion button
+    DockTitleBtn *folderRefreshBtn = new DockTitleBtn();
+    folderRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
+    folderRefreshBtn->setToolTip("Refresh");
+    connect(folderRefreshBtn, &DockTitleBtn::clicked, this, &MW::refreshFolders);
+    folderTitleLayout->addWidget(folderRefreshBtn);
+    // preferences button
+    DockTitleBtn *folderGearBtn = new DockTitleBtn();
+    folderGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    folderGearBtn->setToolTip("Preferences");
+    connect(folderGearBtn, &DockTitleBtn::clicked, this, &MW::allPreferences);
+    folderTitleLayout->addWidget(folderGearBtn);
+    // close button
+    DockTitleBtn *folderCloseBtn = new DockTitleBtn();
+    folderCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    folderCloseBtn->setToolTip("Hide the Folders Panel");
+    connect(folderCloseBtn, &DockTitleBtn::clicked, this, &MW::toggleFolderDockVisibility);
+    folderTitleLayout->addWidget(folderCloseBtn);
 
     if (isSettings) {
         setting->beginGroup(("FolderDock"));
@@ -4368,9 +4402,36 @@ void MW::createDocks()
         setting->endGroup();
     }
 
+    /* BOOKMARKS-----------------------------------------------------------------------------*/
     favDock = new DockWidget(tr(" Bookmarks  "), this);
     favDock->setObjectName("Bookmarks");
     favDock->setWidget(bookmarks);
+
+    // customize the favDock titlebar
+    QHBoxLayout *favTitleLayout = new QHBoxLayout();
+    favTitleLayout->setContentsMargins(0, 0, 0, 0);
+    favTitleLayout->setSpacing(0);
+    DockTitleBar *favTitleBar = new DockTitleBar("Bookmarks", favTitleLayout);
+    favDock->setTitleBarWidget(favTitleBar);
+    // add widgets to the right side of the title bar layout
+    // refresh button
+    DockTitleBtn *favRefreshBtn = new DockTitleBtn();
+    favRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
+    favRefreshBtn->setToolTip("Refresh");
+    connect(favRefreshBtn, &DockTitleBtn::clicked, this, &MW::refreshFolders);
+    favTitleLayout->addWidget(favRefreshBtn);
+    // preferences button
+    DockTitleBtn *favGearBtn = new DockTitleBtn();
+    favGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    favGearBtn->setToolTip("Preferences");
+    connect(favGearBtn, &DockTitleBtn::clicked, this, &MW::allPreferences);
+    favTitleLayout->addWidget(favGearBtn);
+    // close button
+    DockTitleBtn *favCloseBtn = new DockTitleBtn();
+    favCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    favCloseBtn->setToolTip("Hide the Bookmarks Panel");
+    connect(favCloseBtn, &DockTitleBtn::clicked, this, &MW::toggleFavDockVisibility);
+    favTitleLayout->addWidget(favCloseBtn);
 
     if (isSettings) {
         setting->beginGroup(("FavDock"));
@@ -4380,24 +4441,58 @@ void MW::createDocks()
         setting->endGroup();
     }
 
+    /* FILTERS ------------------------------------------------------------------------------*/
     filterDock = new DockWidget(tr("  Filters  "), this);
     filterDock->setObjectName("Filters");
-    QVBoxLayout* msgLayout = new QVBoxLayout(this);
+//    filterDock->setWidget(filters);
+
+    // customize the filterDock titlebar
+    QHBoxLayout *filterTitleLayout = new QHBoxLayout();
+    filterTitleLayout->setContentsMargins(0, 0, 0, 0);
+    filterTitleLayout->setSpacing(0);
+    DockTitleBar *filterTitleBar = new DockTitleBar("Filters", filterTitleLayout);
+    filterDock->setTitleBarWidget(filterTitleBar);
+    // add widgets to the right side of the title bar layout
+    // toggle expansion button
+    DockTitleBtn *toggleExpansionBtn = new DockTitleBtn();
+    toggleExpansionBtn->setIcon(QIcon(":/images/icon16/swap.png"));
+    toggleExpansionBtn->setToolTip("Toggle expand all / collapse all");
+    connect(toggleExpansionBtn, &DockTitleBtn::clicked, filters, &Filters::toggleExpansion);
+    filterTitleLayout->addWidget(toggleExpansionBtn);
+    // preferences button
+    DockTitleBtn *filterGearBtn = new DockTitleBtn();
+    filterGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    filterGearBtn->setToolTip("Preferences");
+    connect(filterGearBtn, &DockTitleBtn::clicked, this, &MW::allPreferences);
+    filterTitleLayout->addWidget(filterGearBtn);
+    // close button
+    DockTitleBtn *filterCloseBtn = new DockTitleBtn();
+    filterCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    filterCloseBtn->setToolTip("Hide the Filters Panel");
+    connect(filterCloseBtn, &DockTitleBtn::clicked, this, &MW::toggleFilterDockVisibility);
+    filterTitleLayout->addWidget(filterCloseBtn);
+
+    // Inside dock set layout for a text label, a progress bar and the filters tree
+    QVBoxLayout *msgLayout = new QVBoxLayout();
     msgLayout->setContentsMargins(0, 0, 0, 0);
+    msgLayout->setSpacing(0);
     msgLayout->addWidget(filters->filterLabel);
     msgLayout->addWidget(filters->bfProgressBar);
-    QFrame *msgFrame = new QFrame;
-    msgFrame->setLayout(msgLayout);
+    filters->msgFrame = new QFrame;
+    filters->msgFrame->setLayout(msgLayout);
+    filters->msgFrame->setVisible(false);
 
-    QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(msgFrame);
-    layout->addWidget(filters);
+    QVBoxLayout *filterLayout = new QVBoxLayout();
+    filterLayout->setContentsMargins(0, 0, 0, 0);
+    filterLayout->addWidget(filters->msgFrame);
+    filterLayout->addWidget(filters);
     QFrame *frame = new QFrame;
-    frame->setLayout(layout);
+    frame->setLayout(filterLayout);
     filterDock->setWidget(frame);
+
     connect(filterDock, SIGNAL(visibilityChanged(bool)),
             this, SLOT(filterDockVisibilityChange(bool)));
+//    connect(filterDock, &QDockWidget::visibilityChanged, this, &MW::filterDockVisibilityChange);
 
     if (isSettings) {
         setting->beginGroup(("FilterDock"));
@@ -4407,9 +4502,30 @@ void MW::createDocks()
         setting->endGroup();
     }
 
+    /* INFOVIEW -----------------------------------------------------------------------------*/
     metadataDock = new DockWidget(tr("  Metadata  "), this);
     metadataDock->setObjectName("Image Info");
     metadataDock->setWidget(infoView);
+
+    // customize the metadataDock titlebar
+    QHBoxLayout *metaTitleLayout = new QHBoxLayout();
+    metaTitleLayout->setContentsMargins(0, 0, 0, 0);
+    metaTitleLayout->setSpacing(0);
+    DockTitleBar *metaTitleBar = new DockTitleBar("Metadata", metaTitleLayout);
+    metadataDock->setTitleBarWidget(metaTitleBar);
+    // add widgets to the right side of the title bar layout
+    // preferences button
+    DockTitleBtn *metaGearBtn = new DockTitleBtn();
+    metaGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
+    metaGearBtn->setToolTip("Edit preferences including which items to show in this panel");
+    connect(metaGearBtn, &DockTitleBtn::clicked, this, &MW::infoViewPreferences);
+    metaTitleLayout->addWidget(metaGearBtn);
+    // close button
+    DockTitleBtn *metaCloseBtn = new DockTitleBtn();
+    metaCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    metaCloseBtn->setToolTip("Hide the Metadata Panel");
+    connect(metaCloseBtn, &DockTitleBtn::clicked, this, &MW::toggleMetadataDockVisibility);
+    metaTitleLayout->addWidget(metaCloseBtn);
 
     if (isSettings) {
         setting->beginGroup(("MetadataDock"));
@@ -4419,6 +4535,7 @@ void MW::createDocks()
         setting->endGroup();
     }
 
+    /* THUMBNAILS ---------------------------------------------------------------------------*/
     thumbDock = new DockWidget(tr("Thumbnails"), this);
     thumbDock->setObjectName("thumbDock");
     thumbDock->setWidget(thumbView);
@@ -4554,24 +4671,6 @@ void MW::createAppStyle()
     css = widgetCSS.css();
     this->setStyleSheet(css);
     return;
-/*
-   All the stylesheet text is saved in "/qss/winnow.css" except parameters we want
-   to change programmatically, which is formulated in css1.
- */
-    // add error trapping for file io  rgh todo
-    QFile fStyle(":/qss/winnow.css");
-    fStyle.open(QIODevice::ReadOnly);
-    cssBase += fStyle.readAll();
-
-    if (isSettings) {
-        if (setting->contains("fontSize")) G::fontSize = setting->value("fontSize").toString();
-    }
-    else {
-        // set in defaults in loadSettings  G::fontSize = "14";
-    }
-    css1 = "QWidget {font-size: " + G::fontSize + "px;}";       // rgh px or pt
-    css = css1 + cssBase;
-    this->setStyleSheet(css);
 }
 
 void MW::createStatusBar()
@@ -5188,11 +5287,20 @@ void MW::launchBuildFilters()
     #endif
     }
     if (G::isInitializing) return;
-    if (filters->days->childCount()) return;
-    if (filterDock->visibleRegion().isNull()) return;
-    if (filters->filtersBuilt) return;
-    if (dm->loadingModel) return;
+    if (filterDock->visibleRegion().isNull()) {
+        G::popUp->showPopup("Filters will only be updated when the filters panel is visible.");
+        return;
+    }
+    if (filters->filtersBuilt) {
+        G::popUp->showPopup("Filters are up-to-date.");
+        return;
+    }
+    if (dm->loadingModel) {
+        G::popUp->showPopup("Not all data required for filtering has been loaded yet.");
+        return;
+    }
 
+    filters->msgFrame->setVisible(true);
     buildFilters->build();
 }
 
@@ -6261,10 +6369,6 @@ void MW::diagnosticsCurrent()
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
-//    rpt << this->diagnostics();
-//    rpt << gridView->diagnostics();
-//    rpt << thumbView->diagnostics();
-//    rpt << imageView->diagnostics();
     rpt << dm->diagnosticsForCurrentRow();
     rpt << metadata->diagnostics(dm->currentFilePath);
     diagnosticsReport(reportString);
@@ -6388,6 +6492,7 @@ void MW::diagnosticsXMP() {}
 void MW::diagnosticsMetadataCache() {}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
+void MW::diagnosticsErrors() {diagnosticsReport(dm->diagnosticsErrors());}
 void MW::diagnosticsFilters() {}
 void MW::diagnosticsFileTree() {}
 void MW::diagnosticsBookmarks() {}
@@ -6609,6 +6714,16 @@ void MW::runExternalApp()
 
     //this works in terminal"
     // open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
+}
+
+void MW::allPreferences()
+{
+    preferences();
+}
+
+void MW::infoViewPreferences()
+{
+    preferences("Metadata panel items");
 }
 
 void MW::preferences(QString text)
@@ -8614,9 +8729,12 @@ void MW::toggleFolderDockVisibility()
     }
     if (G::isInitializing) return;
 
-    if (folderDock->isVisible() && folderDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
-    if (folderDock->isVisible() && !folderDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
-    if (!folderDock->isVisible()) dockToggle = SetVisible;
+//    if (folderDock->isVisible() && folderDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
+//    if (folderDock->isVisible() && !folderDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
+//    if (!folderDock->isVisible()) dockToggle = SetVisible;
+
+    if (folderDock->isVisible()) dockToggle = SetInvisible;
+    else dockToggle = SetVisible;
 
     switch (dockToggle) {
     case SetFocus:
@@ -8643,9 +8761,12 @@ void MW::toggleFavDockVisibility() {
     G::track(__FUNCTION__);
     if (G::isInitializing) return;
 
-    if (favDock->isVisible() && favDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
-    if (favDock->isVisible() && !favDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
-    if (!favDock->isVisible()) dockToggle = SetVisible;
+//    if (favDock->isVisible() && favDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
+//    if (favDock->isVisible() && !favDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
+//    if (!favDock->isVisible()) dockToggle = SetVisible;
+
+    if (favDock->isVisible()) dockToggle = SetInvisible;
+    else dockToggle = SetVisible;
 
     switch (dockToggle) {
     case SetFocus:
@@ -8671,9 +8792,12 @@ void MW::toggleFilterDockVisibility() {
     }
     if (G::isInitializing) return;
 
-    if (filterDock->isVisible() && filterDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
-    if (filterDock->isVisible() && !filterDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
-    if (!filterDock->isVisible()) dockToggle = SetVisible;
+//    if (filterDock->isVisible() && filterDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
+//    if (filterDock->isVisible() && !filterDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
+//    if (!filterDock->isVisible()) dockToggle = SetVisible;
+
+    if (filterDock->isVisible()) dockToggle = SetInvisible;
+    else dockToggle = SetVisible;
 
     switch (dockToggle) {
     case SetFocus:
@@ -8699,9 +8823,12 @@ void MW::toggleMetadataDockVisibility() {
     }
     if (G::isInitializing) return;
 
-    if (metadataDock->isVisible() && metadataDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
-    if (metadataDock->isVisible() && !metadataDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
-    if (!metadataDock->isVisible()) dockToggle = SetVisible;
+//    if (metadataDock->isVisible() && metadataDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
+//    if (metadataDock->isVisible() && !metadataDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
+//    if (!metadataDock->isVisible()) dockToggle = SetVisible;
+
+    if (metadataDock->isVisible()) dockToggle = SetInvisible;
+    else dockToggle = SetVisible;
 
     switch (dockToggle) {
     case SetFocus:
@@ -8727,9 +8854,12 @@ void MW::toggleThumbDockVisibity()
     #endif
     }
     if (G::isInitializing) return;
-    if (thumbDock->isVisible() && thumbDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
-    if (thumbDock->isVisible() && !thumbDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
-    if (!thumbDock->isVisible()) dockToggle = SetVisible;
+//    if (thumbDock->isVisible() && thumbDock->visibleRegion().isEmpty()) dockToggle = SetFocus;
+//    if (thumbDock->isVisible() && !thumbDock->visibleRegion().isEmpty()) dockToggle = SetInvisible;
+//    if (!thumbDock->isVisible()) dockToggle = SetVisible;
+
+    if (thumbDock->isVisible()) dockToggle = SetInvisible;
+    else dockToggle = SetVisible;
 
     switch (dockToggle) {
     case SetFocus:
@@ -10786,6 +10916,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    filters->filterLabel->setVisible(true);
+    filters->toggleExpansion();
 }
 // End MW

@@ -1,4 +1,6 @@
 BUGS
+- Add hif file format
+- Add cr3 file format
 - Rotate heic files
 - Mac check for updates not done yet
 - Dmg app missing logo

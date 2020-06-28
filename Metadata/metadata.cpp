@@ -66,19 +66,27 @@ void Metadata::initSupportedFiles()
     #endif
     }
     // add raw file types here as they are supported
-    rawFormats          << "arw"
+    hasJpg              << "arw"
                         << "cr2"
                         << "dng"
                         << "nef"
                         << "orf"
                         << "raf"
                         << "sr2"
-                        << "rw2";
+                        << "rw2"
+                           ;
+
+    hasHeic             << "cr3"
+                        << "heic"
+                        << "hif"
+                           ;
 
     getMetadataFormats  << "arw"
                         << "cr2"
+                        << "cr3"
                         << "dng"
                         << "heic"
+                        << "hif"
                         << "nef"
                         << "orf"
                         << "raf"
@@ -86,20 +94,24 @@ void Metadata::initSupportedFiles()
                         << "rw2"
                         << "jpg"
                         << "jpeg"
-                        << "tif";
+                        << "tif"
+                           ;
 
     embeddedICCFormats  << "jpg"
-                        << "jpeg";
+                        << "jpeg"
+                           ;
 
     sidecarFormats      << "arw"
                         << "cr2"
+                        << "cr3"
                         << "nef"
                         << "orf"
                         << "raf"
                         << "rw2"
                         << "sr2"
                         << "jpg"
-                        << "jpeg";
+                        << "jpeg"
+                           ;
 
     internalXmpFormats  << "notyetjpg";
 
@@ -107,17 +119,20 @@ void Metadata::initSupportedFiles()
                         << "jpeg"
                         << "arw"
                         << "cr2"
+                        << "cr3"
                         << "nef"
                         << "orf"
                         << "raf"
                         << "rw2"
                         << "sr2"
-                        << "tif";
+                        << "tif"
+                           ;
 
     noMetadataFormats   << "bmp"
                         << "cur"
                         << "dds"
                         << "gif"
+                        << "hif"
                         << "heic"
                         << "icns"
                         << "ico"
@@ -134,15 +149,18 @@ void Metadata::initSupportedFiles()
                         << "wbmp"
                         << "webp"
                         << "xbm"
-                        << "xpm";
+                        << "xpm"
+                           ;
 
     supportedFormats    << "arw"
                         << "bmp"
                         << "cr2"
+                        << "cr3"
                         << "cur"
                         << "dds"
                         << "dng"
                         << "gif"
+                        << "hif"
                         << "heic"
                         << "icns"
                         << "ico"
@@ -167,7 +185,8 @@ void Metadata::initSupportedFiles()
                         << "wbmp"
                         << "webp"
                         << "xbm"
-                        << "xpm";
+                        << "xpm"
+                           ;
 }
 
 void Metadata::initOrientationHash()
@@ -622,10 +641,12 @@ bool Metadata::parseHEIF()
     #endif
     }
 #ifdef Q_OS_WIN
-    if (heic == nullptr) heic = new Heic;
-    bool ok = heic->parse(p, m, ifd, exif, gps);
-    if (ok && p.report) reportMetadata();
-    return ok;
+    // rgh remove heic
+    return false;
+//    if (heic == nullptr) heic = new Heic;
+//    bool ok = heic->parse(p, m, ifd, exif, gps);
+//    if (ok && p.report) reportMetadata();
+//    return ok;
 #endif
 }
 
@@ -671,7 +692,7 @@ void Metadata::clearMetadata()
     m.copyright = "";
     m.email = "";
     m.url = "";
-    m.err = "";
+    m.err.clear();
     m.shutterCount = 0;
     m.cameraSN = "";
     m.lensSN = "";
@@ -734,16 +755,19 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         if (ifd == nullptr) ifd = new IFD;
         if (exif == nullptr) exif = new Exif;
         if (gps == nullptr) gps = new GPS;
+        if (ext == "arw")  fileOpened = parseSony();
         if (ext == "cr2")  fileOpened = parseCanon();
+        if (ext == "cr3")  fileOpened = parseHEIF();
         if (ext == "dng")  fileOpened = parseDNG();
-        if (ext == "raf")  fileOpened = parseFuji();
+        // rgh remove heic
+//        if (ext == "heic") fileOpened = parseHEIF();
+        if (ext == "hif")  fileOpened = parseHEIF();
         if (ext == "jpg")  fileOpened = parseJPG(0);
         if (ext == "nef")  fileOpened = parseNikon();
         if (ext == "orf")  fileOpened = parseOlympus();
+        if (ext == "raf")  fileOpened = parseFuji();
         if (ext == "rw2")  fileOpened = parsePanasonic();
-        if (ext == "arw")  fileOpened = parseSony();
         if (ext == "tif")  fileOpened = parseTIF();
-        if (ext == "heic") fileOpened = parseHEIF();
         p.file.close();
         if (!fileOpened) {
             m.err += "Unable to read format for " + path + ". ";

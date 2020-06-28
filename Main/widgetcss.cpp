@@ -2,7 +2,7 @@
 
 QString WidgetCSS::css()
 {
-    bg = widgetBackgroundColor.red();
+    bg = widgetBackgroundColor.red();   // desaturate
     mb = bg + 15;
     fm = bg + 35;
     g0 = bg - 10;
@@ -34,31 +34,33 @@ QString WidgetCSS::css()
 
     halfFontSize = fontSize / 2;
 
-    return  widget() +
-            mainWindow() +
-            graphicsView() +
-            statusBar() +
-            menuBar() +
-            menu() +
-            groupBox() +
-            label() +
+    return
+            checkBox() +
+            comboBox() +
             dockWidget() +
-            tabWidget() +
-            stackedWidget() +
+            graphicsView() +
+            groupBox() +
+            headerView() +
+            label() +
+            lineEdit() +
             listView() +
             listWidget() +
-            treeWidget() +
-            treeView() +
-            tableView() +
-            headerView() +
-            scrollBar() +
-            pushButton() +
-            comboBox() +
-            spinBox() +
-            textEdit() +
-            lineEdit() +
+            mainWindow() +
+            menu() +
+            menuBar() +
             progressBar() +
-            checkBox()
+            pushButton() +
+            scrollBar() +
+            spinBox() +
+            stackedWidget() +
+            statusBar() +
+            tableView() +
+            tabWidget() +
+            textEdit() +
+            toolButton() +
+            treeView() +
+            treeWidget() +
+            widget()
             ;
 }
 
@@ -191,6 +193,15 @@ QString WidgetCSS::label()
     "}";
 }
 
+QString WidgetCSS::toolButton()
+{
+    return
+    "QToolButton {"
+        "background:transparent;"
+    "}"
+    ;
+}
+
 QString WidgetCSS::dockWidget()
 {
     return
@@ -206,8 +217,8 @@ QString WidgetCSS::dockWidget()
         "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
             "stop: 0 " + QColor(g1,g1,g1).name() + ", "
             "stop: 1 " + QColor(g0,g0,g0).name() + ");"
-        "padding-left: 2px;"
-        "padding-top: 2px;"
+        "padding-left: -2px;"
+        "padding-bottom: 2px;"
     "}"
 
     "QTabWidget::pane {"                      /* The tab widget frame */

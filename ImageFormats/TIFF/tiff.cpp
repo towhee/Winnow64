@@ -508,7 +508,6 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
             p.file.seek(fOffset);
             std::memcpy(im->scanLine(line),
                         p.file.read(bytesPerLine),
-//                        p.file.map(fOffset, bytesPerLine),
                         static_cast<size_t>(bytesPerLine));
             line++;
         }

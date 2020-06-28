@@ -142,4 +142,11 @@ public:
     virtual QString displayText(const QVariant & value, const QLocale & locale) const;
 };
 
+class ErrItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit ErrItemDelegate(QObject* parent = nullptr);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+};
+
 #endif // TABLEVIEW_H

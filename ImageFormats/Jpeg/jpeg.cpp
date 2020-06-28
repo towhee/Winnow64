@@ -119,7 +119,7 @@ bool Jpeg::parse(MetadataParameters &p,
                  GPS *gps)
 {
     // init
-    err = "";
+    m.parseSource = __FUNCTION__;
     initSegCodeHash();
     m.iccSegmentOffset = 0;
 
@@ -127,7 +127,7 @@ bool Jpeg::parse(MetadataParameters &p,
     bool isBigEnd = true;
 
     if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-        err += "JPG does not start with 0xFFD8. ";
+        m.err << "JPG does not start with 0xFFD8. ";
         qDebug() << __FUNCTION__ << err;
         return false;
     }
@@ -148,7 +148,7 @@ bool Jpeg::parse(MetadataParameters &p,
         return true;
     }
     else {
-        err += "JPG does not contain EXIF information. ";
+        m.err << "JPG does not contain EXIF information. ";
         qDebug() << __FUNCTION__ << err;
         return false;
     }
@@ -172,7 +172,7 @@ bool Jpeg::parse(MetadataParameters &p,
         count++;
         if (count > 100) {
             // err endian order not found
-            err += "Endian order not found. ";
+            m.err << "Endian order not found. ";
             return false;
         }
     }

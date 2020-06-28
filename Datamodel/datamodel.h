@@ -50,10 +50,15 @@ public:
     void clearPicks();
     void remove(QString fPath);
     QModelIndex proxyIndexFromPath(QString fPath);
+    int proxyRowFromModelRow(int dmRow);
+    int modelRowFromProxyRow(int sfRow);
     QString diagnostics();
+    QString diagnosticsErrors();
     QString diagnosticsForCurrentRow();
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
+    void error(int sfRow, const QString &s, const QString src);
+    void errorList(int sfRow, const QStringList &sl, const QString src);
 
     SortFilter *sf;
     QHash<QString, int> fPathRow;

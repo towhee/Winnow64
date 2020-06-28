@@ -118,6 +118,10 @@ Code examples for model:
     // file path for current index (primary selection)
     fPath = thumbView->currentIndex().data(G::PathRole).toString();
 
+    // get current sf (proxy) index from a dm (datamodel) index
+    QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx)
+    int dmRow = sf->mapFromSource(index(sfRow, 0)).row();
+
     // to get a QItem from a filtered or sorted datamodel selection
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     QModelIndexList selection = selectionModel->selectedRows();
@@ -214,9 +218,9 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::OrientationOffsetColumn, new QStandardItem("OrientationOffset")); horizontalHeaderItem(G::OrientationOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::OrientationColumn, new QStandardItem("Orientation")); horizontalHeaderItem(G::OrientationColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees")); horizontalHeaderItem(G::RotationDegreesColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Err")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo")); horizontalHeaderItem(G::ShootingInfoColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Err")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
 
 
 
@@ -342,7 +346,7 @@ Steps:
     loadingModel = true;
     t.restart();            // timer for addFilesMaxDelay
 
-    //  clear the model
+    // clear the model
     clearDataModel();
 
     // do some initializing
@@ -509,7 +513,7 @@ Load the information from the operating system contained in QFileInfo first
 
         suffix = fileInfoList.at(row).suffix().toLower();
         baseName = fileInfoList.at(row).completeBaseName();
-        if (metadata->rawFormats.contains(suffix)) {
+        if (metadata->hasJpg.contains(suffix)) {
             prevRawSuffix = suffix;
             prevRawBaseName = fileInfoList.at(row).completeBaseName();
             prevRawIdx = index(row, 0);
@@ -705,9 +709,7 @@ to run as a separate thread and can be executed directly.
     qDebug() << "DataModel::addAllMetadata for" << count << "files"
              << ms << "ms" << msperfile << "ms per file;"
              << currentFolderPath;
-    qDebug() << __FUNCTION__ << "forceBuildFilters =" << forceBuildFilters;
 //    */
-//    buildFilters();
 }
 
 bool DataModel::readMetadataForItem(int row)
@@ -866,14 +868,14 @@ the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
     setData(index(row, G::OrientationOffsetColumn), m.orientationOffset);
     setData(index(row, G::OrientationColumn), m.orientation);
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);
-    setData(index(row, G::ErrColumn), m.err);
-    setData(index(row, G::ErrColumn), m.err, Qt::ToolTipRole);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo, Qt::ToolTipRole);
     search += m.shootingInfo;
     setData(index(row, G::MetadataLoadedColumn), true);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
+    setData(index(row, G::ErrColumn), m.err);
+//    setData(index(row, G::ErrColumn), m.err, Qt::ToolTipRole);
 
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
@@ -1007,24 +1009,55 @@ quick lookup to get the datamodel row from an image path.
     */
 }
 
-//void DataModel::updateImageList()
-//{
-///* The image list of file paths replicates the current sort order and
-//filtration of SortFilter (sf). It is used to keep the image cache in sync with
-//the current state of SortFilter. This function is called when the user changes
-//the sort or filter or toggles raw+jpg.
-//*/
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    imageFilePathList.clear();
-//    for(int row = 0; row < sf->rowCount(); row++) {
-//        QString fPath = sf->index(row, 0).data(G::PathRole).toString();
-//        imageFilePathList.append(fPath);
-//    }
-//}
+int DataModel::proxyRowFromModelRow(int dmRow) {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    return sf->mapFromSource(index(dmRow, 0)).row();
+}
+
+void DataModel::error(int sfRow, const QString &s, const QString src)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+//    int dmRow = sf->mapToSource(sf->index(sfRow, 0)).row();
+    QStringList err = sf->index(sfRow, G::ErrColumn).data().toStringList();
+    err << QString::number(err.size() + 1) + ". " + src + ": " + s;
+    sf->setData(sf->index(sfRow, G::ErrColumn), err);
+    QString tip = "";
+    for (int i = 0; i < err.size(); ++i) {
+        tip += err.at(i) + "\n";
+    }
+    sf->setData(sf->index(sfRow, G::ErrColumn), tip, Qt::ToolTipRole);
+}
+
+void DataModel::errorList(int sfRow, const QStringList &sl, const QString src)
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    // get current error list for datamodel row
+    QStringList err = sf->index(sfRow, G::ErrColumn).data().toStringList();
+    // append new error items in sl
+    for (int i = 0; i < sl.size(); ++i) {
+        err << QString::number(err.size() + i + 1) + ". " + src + ": " + sl.at(i);
+    }
+    // update datamodel
+    sf->setData(sf->index(sfRow, G::ErrColumn), err);
+    // rebuild the tooltip text
+    QString tip = "";
+    for (int i = 0; i < err.size(); ++i) {
+        tip += sl.at(i) + "\n";
+    }
+    sf->setData(sf->index(sfRow, G::ErrColumn), tip, Qt::ToolTipRole);
+}
 
 void DataModel::clearPicks()
 {
@@ -1039,6 +1072,33 @@ reset all the picks to false.
     for(int row = 0; row < sf->rowCount(); row++) {
         setData(index(row, G::PickColumn), "false");
     }
+}
+
+QString DataModel::diagnosticsErrors()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "DataModel Error Listing");
+    rpt << "\n";
+    QStringList err;
+    for(int row = 0; row < sf->rowCount(); row++) {
+        err.clear();
+        err = sf->index(row, G::ErrColumn).data().toStringList();
+        if (err.size() == 0) continue;
+        QString fPath = sf->index(row, G::PathColumn).data(G::PathRole).toString();
+        rpt << fPath + "\n";
+        for (int i = 0; i < err.size(); ++i) {
+            rpt << "    " << err.at(i) + "\n";
+        }
+    }
+    rpt << "\n\n" ;
+    return reportString;
 }
 
 QString DataModel::diagnostics()
@@ -1160,9 +1220,14 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("orientationOffset", 25) << G::s(index(row, G::OrientationOffsetColumn).data());
     rpt << "\n  " << G::sj("orientation", 25) << G::s(index(row, G::OrientationColumn).data());
     rpt << "\n  " << G::sj("rotationDegrees", 25) << G::s(index(row, G::RotationDegreesColumn).data());
-    rpt << "\n  " << G::sj("err", 25) << G::s(index(row, G::ErrColumn).data());
     rpt << "\n  " << G::sj("shootingInfo", 25) << G::s(index(row, G::ShootingInfoColumn).data());
     rpt << "\n  " << G::sj("searchText", 25) << G::s(index(row, G::SearchTextColumn).data());
+    QStringList sl = index(row, G::ErrColumn).data().toStringList();
+    rpt << "\n  " << G::sj("err", 25) << sl.at(0);
+    QString whitespace = "";
+    for (int i = 1; i < sl.size(); ++i) {
+        rpt << "\n  " << whitespace.leftJustified(26, ' ') << sl.at(i);
+    }
 }
 
 // --------------------------------------------------------------------------------------------
@@ -1184,11 +1249,6 @@ column in data model.  The top level items in the QTreeWidget are referred to
 as categories, and each category has one or more filter items.  Categories
 map to columns in the data model ie Picked, Rating, Label ...
 */
-    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-    }
 
     // Check Raw + Jpg
     if (combineRawJpg) {

@@ -128,5 +128,9 @@
         <file>Docs/ingestautopath.html</file>
         <file>images/icon16/A-Z.png</file>
         <file>images/icon16/Z-A.png</file>
+        <file>images/icon16/swap.png</file>
+        <file>images/icon16/gear.png</file>
+        <file>images/icon16/close.png</file>
+        <file>images/icon16/refresh.png</file>
     </qresource>
 </RCC>

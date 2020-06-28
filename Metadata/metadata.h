@@ -19,7 +19,8 @@
 #include "ui_metadatareport.h"
 
 #ifdef Q_OS_WIN
-#include "ImageFormats/Heic/heic.h"
+// rgh remove heic
+//#include "ImageFormats/Heic/heic.h"
 #endif
 
 #include "ImageFormats/Jpeg/jpeg.h"
@@ -61,7 +62,8 @@ public:
     bool thumbUnavailable;                  // no embedded thumb
     bool imageUnavailable;                  // no embedded preview
 
-    QStringList rawFormats;
+    QStringList hasJpg;
+    QStringList hasHeic;
     QStringList sidecarFormats;
     QStringList getMetadataFormats;
     QStringList embeddedICCFormats;
@@ -120,7 +122,8 @@ private:
     Sony *sony = nullptr;
     Tiff *tiff = nullptr;
 #ifdef Q_OS_WIN
-    Heic *heic = nullptr;
+    // rgh remove heic
+//    Heic *heic = nullptr;
 #endif
 
     // hash

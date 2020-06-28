@@ -1,4 +1,5 @@
 #ifndef GLOBAL_H
+
 #define GLOBAL_H
 
 //#define ISDEBUG        // Uncomment this line to show debugging output
@@ -101,8 +102,8 @@ namespace G
         OrientationColumn,
         RotationDegreesColumn,
         ShootingInfoColumn,
-        ErrColumn,
         SearchTextColumn,
+        ErrColumn,
         TotalColumns    // insert additional columns before this
     };
 

@@ -50,7 +50,7 @@ public:
 
     int iconWidth;
     int iconHeight;
-    int labelFontSize;
+    int labelFontSize = 13;
     bool showIconLabels;
     bool showZoomFrame;
     int badgeSize;

@@ -70,7 +70,7 @@ public:
     bool isThumbLoaded = false;             // refers to thumb only
     bool thumbUnavailable = false;          // no embedded thumb
     bool imageUnavailable = false;          // no embedded preview
-    QString err = "";
+    QStringList err;
     QString searchStr = "";
     QByteArray nikonLensCode = nullptr;
 
@@ -91,7 +91,7 @@ public:
     quint32 iccSegmentLength;
     QByteArray iccBuf;
     QString iccSpace;
-
+    QString parseSource;
 };
 Q_DECLARE_METATYPE(ImageMetadata)
 

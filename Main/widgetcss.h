@@ -43,7 +43,7 @@ public:
     int scrollBarWidth = 14;
     QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
     QColor disabledColor = QColor(G::disabledShade,G::disabledShade,G::disabledShade);
-    QColor widgetBackgroundColor ;
+    QColor widgetBackgroundColor;
     QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
     QColor selectionColor = QColor(68,95,118);
 
@@ -57,6 +57,7 @@ public:
     QString groupBox();
     QString label();
     QString dockWidget();
+    QString toolButton();
     QString tabWidget();
     QString stackedWidget();
     QString listView();
