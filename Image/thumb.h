@@ -25,8 +25,6 @@ private:
     bool loadFromTiffData(QString &fPath, QImage &image);
     bool loadFromEntireFile(QString &fPath, QImage &image, int row);
     void checkOrientation(QString &fPath, QImage &image);
-
-    void track(QString fPath, QString msg);
 };
 
 #endif // THUMB_H

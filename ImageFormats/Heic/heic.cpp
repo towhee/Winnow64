@@ -28,12 +28,27 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, 
     QString fPath = info.filePath();
 
     QElapsedTimer t; t.restart();
-    heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
-    qDebug() << __FUNCTION__ << "Read heif context =" << t.nsecsElapsed() << fPath;
+    auto error = heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
+    if (error.code) {
+        qDebug() << __FUNCTION__ << "heif_context_read_from_file" << error.message;
+        return false;
+    }
+    /*
+    qDebug() << __FUNCTION__ << "Error:"
+             << "code =" << error.code
+             << "subcode =" << error.subcode
+             << "message =" << error.message
+            ;
+//    */
+//    qDebug() << __FUNCTION__ << "Read heif context =" << t.nsecsElapsed() << fPath;
 
     // get a handle to the primary image
     heif_image_handle* handle = nullptr;
-    heif_context_get_primary_image_handle(ctx, &handle);
+    error = heif_context_get_primary_image_handle(ctx, &handle);
+    if (error.code) {
+        qDebug() << __FUNCTION__ << "heif_context_get_primary_image_handle" << error.message;
+        return false;
+    }
 
     // get exif in QByteArray
     heif_item_id id = 0;
@@ -41,7 +56,11 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, 
     if (n == 0) return false;
     const int length = static_cast<int>(heif_image_handle_get_metadata_size(handle, id));
     QByteArray exifData(length, 0);
-    heif_image_handle_get_metadata(handle, id, exifData.data());
+    error = heif_image_handle_get_metadata(handle, id, exifData.data());
+    if (error.code) {
+        qDebug() << __FUNCTION__ << "heif_image_handle_get_metadata" << error.message;
+        return false;
+    }
     p.buf.setBuffer(&exifData);
     p.buf.open(QIODevice::ReadOnly);
 
@@ -68,7 +87,7 @@ bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, 
     }
 
     //
-    quint32 magic42 = Utilities::get16(p.buf.read(2), isBigEnd);
+    /*quint32 magic42 = */Utilities::get16(p.buf.read(2), isBigEnd);
     quint32 a = Utilities::get32(p.buf.read(4), isBigEnd);
     quint32 offsetIfd0 = a + startOffset;
 
@@ -273,19 +292,31 @@ heif_error readContext(As... as)
 bool Heic::decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image)
 {
     heif_context* ctx = heif_context_alloc();
-    heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
+    auto error = heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
+    if (error.code) {
+        qDebug() << __FUNCTION__ << "heif_context_read_from_file" << error.message;
+        return false;
+    }
 
     // get a handle to the primary image
     heif_image_handle* handle = nullptr;
-    heif_context_get_primary_image_handle(ctx, &handle);
+    error = heif_context_get_primary_image_handle(ctx, &handle);
+    if (error.code) {
+        qDebug() << __FUNCTION__ << "heif_context_get_primary_image_handle" << error.message;
+        return false;
+    }
 
     // decode the image and convert colorspace to RGB, saved as 24bit interleaved
     heif_image* img = nullptr;
-    heif_decode_image(handle,
+    error = heif_decode_image(handle,
                       &img,
                       heif_colorspace_RGB,
                       heif_chroma_interleaved_RGB,
                       nullptr);
+    if (error.code || !img) {
+        qDebug() << __FUNCTION__ << "heif_decode_image" << error.message;
+        return false;
+    }
 
     int w = heif_image_get_width(img, heif_channel_interleaved);
     int h = heif_image_get_height(img, heif_channel_interleaved);
@@ -293,8 +324,18 @@ bool Heic::decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image)
     m.height = h;
     m.widthFull = w;
     m.heightFull = h;
-    int stride;
+
+    int stride = 0;
     const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
+    if (!data) {
+        qWarning("QHeifHandler::read() pixel data not found");
+        return false;
+    }
+
+    if (stride <= 0) {
+        qWarning("QHeifHandler::read() invalid stride: %d", stride);
+        return false;
+    }
     /*
     qDebug() << __FUNCTION__ << fPath
              << "w =" << w << "h =" << h

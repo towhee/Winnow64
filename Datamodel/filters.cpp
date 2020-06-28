@@ -47,7 +47,7 @@ datamodel.
     setRootIsDecorated(true);
     setSelectionMode(QAbstractItemView::NoSelection);
     setColumnCount(5);
-    setHeaderHidden(false);
+    setHeaderHidden(true);
     setColumnWidth(0, 250);
     setColumnWidth(1, 50);
     setColumnWidth(2, 50);
@@ -552,6 +552,23 @@ void Filters::invertFilters()
     // emit filterChange();  // this is done im MW::invertFilters - which calls this function
 }
 
+void Filters::finishedBuildFilters()
+{
+    filtersBuilt = true;
+    buildingFilters = false;
+    filterLabel->setVisible(false);
+    bfProgressBar->setValue(0);
+    bfProgressBar->setVisible(false);
+    msgFrame->setVisible(false);
+    disableZeroCountItems(true);
+    setEnabled(true);
+    expandAll();
+    qDebug() << __FUNCTION__ << "filtersBuilt =" << filtersBuilt;
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+}
+
 void Filters::clearAll()
 {
 /*
@@ -630,6 +647,24 @@ void Filters::expandAllFilters()
 void Filters::collapseAllFilters()
 {
     collapseAll();
+}
+
+void Filters::toggleExpansion()
+{
+    bool isExpanded = false;
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        if (!(*it)->parent()) {
+            if ((*it)->isExpanded()) {
+                isExpanded = true;
+                break;
+            }
+        }
+        ++it;
+    }
+    if (isExpanded) collapseAll();
+    else expandAll();
+    qDebug() << __FUNCTION__ << "isExpanded =" << isExpanded;
 }
 
 void Filters::addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category)

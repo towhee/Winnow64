@@ -1,6 +1,46 @@
 #include "dockwidget.h"
 
-/*
+/* DockTitleBtn *******************************************************************************
+*/
+
+DockTitleBtn::DockTitleBtn(/*QWidget *parent*/) : QToolButton()
+{
+    setStyleSheet("background:transparent;");
+    int bg = G::backgroundShade +30;
+    btnHover = QColor(bg,bg,bg);
+}
+
+void DockTitleBtn::enterEvent(QEvent*)
+{
+    setStyleSheet("background:" + btnHover.name() + ";");
+}
+
+void DockTitleBtn::leaveEvent(QEvent*)
+{
+    setStyleSheet("background:transparent;");
+}
+
+/* DockTitleBtn *******************************************************************************
+*/
+
+DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout/*, QWidget *parent*/) : QFrame()
+{
+    int g0 = 40;
+    int g1 = 70;
+    QString s = "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
+                "stop: 0 " + QColor(g1,g1,g1).name() + ", "
+                "stop: 1 " + QColor(g0,g0,g0).name() + ");"
+                "padding-left: 2px;"
+                "padding-bottom: 2px;";
+    setStyleSheet(s);
+    setLayout(titleBarLayout);
+    QLabel *titleLabel = new QLabel;
+    titleLabel->setText(title);
+    titleBarLayout->addWidget(titleLabel);
+    titleBarLayout->addStretch();
+}
+
+/* DockWidget *********************************************************************************
 QDockWidget has a feature where you can double click on the title bar and the dock will toggle
 to a floating window and back to its docked state. The problem is if you move and resize the
 floating window and then toggle back to the dock and then back to floating again, your

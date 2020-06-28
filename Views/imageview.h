@@ -30,7 +30,8 @@ public:
               InfoString *infoString,
               bool isShootingInfoVisible,
               bool isRatingBadgeVisible,
-              int classificationBadgeDiam);
+              int classificationBadgeDiam,
+              int infoOverlayFontSize);
 
     qreal zoom;
     qreal zoomFit;

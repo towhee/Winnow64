@@ -36,6 +36,7 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
 
     QFont fnt = this->font();
     int px = static_cast<int>(G::fontSize.toInt() * G::ptToPx);
+    if (px < 6) px = 6;
     fnt.setPixelSize(px);
     QFontMetrics fm(fnt);
     int w0 = fm.boundingRect("==Incremental amount to load plus more room==").width();
@@ -44,6 +45,7 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     setStyleSheet(css);
     tree->setStyleSheet(css);
+    tree->setHeaderHidden(true);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(pref);

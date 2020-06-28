@@ -71,6 +71,9 @@ TableView::TableView(DataModel *dm)
     FileSizeItemDelegate *fileSizeItemDelegate = new FileSizeItemDelegate;
     setItemDelegateForColumn(G::SizeColumn, fileSizeItemDelegate);
 
+    ErrItemDelegate *errItemDelegate = new ErrItemDelegate;
+    setItemDelegateForColumn(G::ErrColumn, errItemDelegate);
+
     createOkToShow();
 }
 
@@ -478,4 +481,18 @@ FileSizeItemDelegate::FileSizeItemDelegate(QObject* parent): QStyledItemDelegate
 QString FileSizeItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
     return QLocale(QLocale::English).toString(value.toDouble(), 'f', 0);
+}
+
+ErrItemDelegate::ErrItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString ErrItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+    QStringList sl = value.toStringList();
+    QString s = "";
+    for (int i = 0; i < sl.size(); ++i) {
+        s += sl.at(i) + " \n";
+    }
+    return s;
 }

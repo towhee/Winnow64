@@ -15,10 +15,10 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h \
-   Datamodel/buildfilters.h
+HEADERS += Cache/imagecache.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
+HEADERS += Datamodel/buildfilters.h
 HEADERS += Datamodel/datamodel.h
 HEADERS += Datamodel/filters.h
 HEADERS += Dialogs/aboutdlg.h
@@ -42,9 +42,10 @@ HEADERS += Image/thumb.h
 HEADERS += ImageFormats/Canon/canon.h
 HEADERS += ImageFormats/Dng/dng.h
 HEADERS += ImageFormats/Fuji/fuji.h
-win32:HEADERS += ImageFormats/Heic/heic.h
-win32:HEADERS += ImageFormats/Heic/heif.h
-win32:HEADERS += ImageFormats/Heic/de265.h
+#rgh remove heic
+#win32:HEADERS += ImageFormats/Heic/heic.h
+#win32:HEADERS += ImageFormats/Heic/heif.h
+#win32:HEADERS += ImageFormats/Heic/de265.h
 HEADERS += ImageFormats/Jpeg/jpeg.h
 HEADERS += ImageFormats/Nikon/nikon.h
 HEADERS += ImageFormats/Olympus/olympus.h
@@ -87,9 +88,9 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/imagecache.cpp \
-   Datamodel/buildfilters.cpp
+SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/mdcache.cpp
+SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
 SOURCES += Dialogs/aboutdlg.cpp
@@ -113,7 +114,7 @@ SOURCES += Image/thumb.cpp
 SOURCES += ImageFormats/Canon/canon.cpp
 SOURCES += ImageFormats/Dng/dng.cpp
 SOURCES += ImageFormats/Fuji/fuji.cpp
-win32:SOURCES += ImageFormats/Heic/Heic.cpp
+#win32:SOURCES += ImageFormats/Heic/Heic.cpp
 SOURCES += ImageFormats/jpeg/jpeg.cpp
 SOURCES += ImageFormats/Nikon/nikon.cpp
 SOURCES += ImageFormats/Olympus/olympus.cpp
@@ -225,29 +226,33 @@ else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -
 win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
 win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
 
-# libde265 (frame parallel)
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
+## libde265 (frame parallel)
+#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
+#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
+#win32:INCLUDEPATH += $$PWD/Lib/libde265/include
+
+## libheif
+#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
+#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
+#win32:INCLUDEPATH += $$PWD/Lib/libheif/include
+
+# old stuff
 
 # use imagemagic libs
 #win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -lCORE_RL_libde265_
 #else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -lCORE_DB_libde265_
 
 ##else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ libde265.lib
-win32:INCLUDEPATH += $$PWD/Lib/libde265/include
+#win32:INCLUDEPATH += $$PWD/Lib/libde265/include
 #win32:DEPENDPATH += $$PWD/Lib/libde265/debug
 #win32:DEPENDPATH += $$PWD/Lib/libde265/release
-
-# libheif
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
 
 # use imagemagic libs
 #win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -lCORE_RL_libheif_
 #else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -lCORE_DB_libheif_
 
 #else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ libheif.lib
-win32:INCLUDEPATH += $$PWD/Lib/libheif/include
+#win32:INCLUDEPATH += $$PWD/Lib/libheif/include
 #win32:DEPENDPATH += $$PWD/Lib/libheif
 
 # attempt to use dll

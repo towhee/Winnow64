@@ -32,7 +32,7 @@ protected:
 
 signals:
     void updateProgress(int progress);
-    void updateIsRunning(bool isRunning);
+    void finishedBuildFilters();
 
 private:
     QMutex mutex;

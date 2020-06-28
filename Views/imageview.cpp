@@ -30,7 +30,8 @@ ImageView::ImageView(QWidget *parent,
                      InfoString *infoString,
                      bool isShootingInfoVisible,
                      bool isRatingBadgeVisible,
-                     int classificationBadgeDiam):
+                     int classificationBadgeDiam,
+                     int infoOverlayFontSize):
 
                      QGraphicsView(centralWidget)
 {
@@ -57,8 +58,8 @@ ImageView::ImageView(QWidget *parent,
 
     setAcceptDrops(true);
     pmItem->setAcceptDrops(true);
-
-    /* setOptimizationFlags(QGraphicsView::DontSavePainterState);
+    /*
+    setOptimizationFlags(QGraphicsView::DontSavePainterState);
     setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);
     setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     setTransformationAnchor(QGraphicsView::AnchorViewCenter);
@@ -73,7 +74,6 @@ ImageView::ImageView(QWidget *parent,
 
     cursorIsHidden = false;
     moveImageLocked = false;
-
     infoOverlay = new DropShadowLabel(this);
     infoOverlay->setStyleSheet("font-size: " + QString::number(infoOverlayFontSize) + "pt;");
     infoOverlay->setVisible(isShootingInfoVisible);

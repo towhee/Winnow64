@@ -766,6 +766,7 @@ startRow and endRow.
         // load icon
         if (idx.data(Qt::DecorationRole).isNull()) {
             QImage image;
+//            qDebug() << __FUNCTION__ << "row =" << row << fPath;
             bool thumbLoaded = thumb->loadThumb(fPath, image);
             if (thumbLoaded) {
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
