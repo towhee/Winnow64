@@ -37,6 +37,7 @@ QString WidgetCSS::css()
     return
             checkBox() +
             comboBox() +
+//            dockTitleBar() +
             dockWidget() +
             graphicsView() +
             groupBox() +
@@ -228,6 +229,20 @@ QString WidgetCSS::dockWidget()
         "border-radius: 5px;"
     "}";
 }
+
+// Not working
+//QString WidgetCSS::dockTitleBar()
+//{
+//    return
+//    "QWidget#DockTitleBar {"
+//        "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
+//        "stop: 0 " + QColor(bg,bg,bg).name() + ", "
+//        "stop: 1 " + QColor(g0,g0,g0).name() + ");"
+//        "padding-left: 2px;"
+//        "padding-bottom: 2px;"
+//        "font-size:" + G::fontSize + "pt;"
+//    "}";
+//}
 
 QString WidgetCSS::tabWidget()
 {

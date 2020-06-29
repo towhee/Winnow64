@@ -25,20 +25,42 @@ void DockTitleBtn::leaveEvent(QEvent*)
 
 DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout/*, QWidget *parent*/) : QFrame()
 {
-    int g0 = 40;
-    int g1 = 70;
-    QString s = "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
-                "stop: 0 " + QColor(g1,g1,g1).name() + ", "
-                "stop: 1 " + QColor(g0,g0,g0).name() + ");"
-                "padding-left: 2px;"
-                "padding-bottom: 2px;";
-    setStyleSheet(s);
+    setStyle();
     setLayout(titleBarLayout);
     QLabel *titleLabel = new QLabel;
     titleLabel->setText(title);
     titleBarLayout->addWidget(titleLabel);
     titleBarLayout->addStretch();
 }
+
+void DockTitleBar::setStyle()
+{
+    int g1 = G::backgroundShade;
+    int g0 = g1 - 10;
+    if (g0 < 0) g0 = 0;
+    QString s = "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
+                "stop: 0 " + QColor(g1,g1,g1).name() + ", "
+                "stop: 1 " + QColor(g0,g0,g0).name() + ");"
+                "padding-left: 2px;"
+                "padding-bottom: 2px;"
+                "font-size:" + G::fontSize + "pt;";
+    setStyleSheet(s);
+}
+
+// Did not work
+//void DockTitleBar::paintEvent(QPaintEvent *)
+///*
+//Reqd as CSS styles to custom widgets inherited from QWidget requires reimplementing
+//paintEvent().
+// - see https://doc.qt.io/archives/qt-4.8/stylesheet-reference.html#list-of-stylable-widgets
+
+//*/
+//{
+//    QStyleOption opt;
+//    opt.init(this);
+//    QPainter p(this);
+//    style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+//}
 
 /* DockWidget *********************************************************************************
 QDockWidget has a feature where you can double click on the title bar and the dock will toggle

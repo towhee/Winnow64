@@ -247,18 +247,18 @@ that is faster than loading the entire full resolution image just to get a thumb
             }
         }
         // rgh remove heic
-//        else if (ext == "heic") {
-//            ImageMetadata m = dm->imMetadata(fPath);
-//            #ifdef Q_OS_WIN
-//            Heic heic;
-//            // try to read heic thumbnail
-//            if (!heic.decodeThumbnail(m, fPath, image)) {
-//                qDebug() << __FUNCTION__ << "Unable to read heic thumbnail";
-//                dm->error(dmRow, "Unable to read heic thumbnail.", __FUNCTION__);
-//                return false;
-//            }
-//            #endif
-//        }
+        else if (ext == "heic") {
+            ImageMetadata m = dm->imMetadata(fPath);
+            #ifdef Q_OS_WIN
+            Heic heic;
+            // try to read heic thumbnail
+            if (!heic.decodeThumbnail(m, fPath, image)) {
+                qDebug() << __FUNCTION__ << "Unable to read heic thumbnail";
+                dm->error(dmRow, "Unable to read heic thumbnail.", __FUNCTION__);
+                return false;
+            }
+            #endif
+        }
         // all other cases where embedded thumbnail - most raw file formats
         else if (!loadFromJpgData(fPath, image)) {
             dm->error(dmRow, "Failed to load thumb.", __FUNCTION__);

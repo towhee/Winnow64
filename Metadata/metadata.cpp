@@ -642,11 +642,10 @@ bool Metadata::parseHEIF()
     }
 #ifdef Q_OS_WIN
     // rgh remove heic
-    return false;
-//    if (heic == nullptr) heic = new Heic;
-//    bool ok = heic->parse(p, m, ifd, exif, gps);
-//    if (ok && p.report) reportMetadata();
-//    return ok;
+    if (heic == nullptr) heic = new Heic;
+    bool ok = heic->parse(p, m, ifd, exif, gps);
+    if (ok && p.report) reportMetadata();
+    return ok;
 #endif
 }
 
@@ -760,7 +759,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         if (ext == "cr3")  fileOpened = parseHEIF();
         if (ext == "dng")  fileOpened = parseDNG();
         // rgh remove heic
-//        if (ext == "heic") fileOpened = parseHEIF();
+        if (ext == "heic") fileOpened = parseHEIF();
         if (ext == "hif")  fileOpened = parseHEIF();
         if (ext == "jpg")  fileOpened = parseJPG(0);
         if (ext == "nef")  fileOpened = parseNikon();

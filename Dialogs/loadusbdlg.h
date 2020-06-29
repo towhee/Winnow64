@@ -14,10 +14,10 @@ class LoadUsbDlg : public QDialog
 
 public:
     explicit LoadUsbDlg(QWidget *parent, QStringList &usbDrives, QString &selectedDrive);
-    ~LoadUsbDlg();
+    ~LoadUsbDlg() override;
 
 protected:
-    void keyPressEvent(QKeyEvent *event);
+    void keyPressEvent(QKeyEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
 
 private slots:

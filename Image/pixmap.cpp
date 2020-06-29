@@ -28,9 +28,8 @@ bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
      ImageMetadata m = dm->imMetadata(fPath);
      #ifdef Q_OS_WIN
      // rgh remove heic
-     return false;
-//     Heic heic;
-//     return heic.decodePrimaryImage(m, fPath, image);
+     Heic heic;
+     return heic.decodePrimaryImage(m, fPath, image);
      #endif
 }
 
@@ -138,22 +137,22 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     // HEIC format
     // rgh remove heic
-//    else if (metadata->hasHeic.contains(ext)) {
-//        ImageMetadata m = dm->imMetadata(fPath);
-//        #ifdef Q_OS_WIN
-//        Heic heic;
+    else if (metadata->hasHeic.contains(ext)) {
+        ImageMetadata m = dm->imMetadata(fPath);
+        #ifdef Q_OS_WIN
+        Heic heic;
 
-//        // try to decode
-//        if (!heic.decodePrimaryImage(m, fPath, image)) {
-//            imFile.close();
-//            err += "Unable to decode " + fPath + ". ";
-//            qDebug() << __FUNCTION__ << err;
-//            dm->setData(dm->index(dmRow, G::ErrColumn), err);
-//            return false;
-//        }
-//        imFile.close();
-//        #endif
-//    }
+        // try to decode
+        if (!heic.decodePrimaryImage(m, fPath, image)) {
+            imFile.close();
+            err += "Unable to decode " + fPath + ". ";
+            qDebug() << __FUNCTION__ << err;
+            dm->setData(dm->index(dmRow, G::ErrColumn), err);
+            return false;
+        }
+        imFile.close();
+        #endif
+    }
 
     // TIFF format
     else if (ext == "tif") {

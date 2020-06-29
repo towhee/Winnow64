@@ -478,12 +478,12 @@ private slots:
 //    void setMetadataDockFocus();
 //    void setThumbDockFocus();
 
-    void setFolderDockLockMode();
-    void setFavDockLockMode();
-    void setFilterDockLockMode();
-    void setMetadataDockLockMode();
-    void setThumbDockLockMode();
-    void setAllDocksLockMode();
+//    void setFolderDockLockMode();
+//    void setFavDockLockMode();
+//    void setFilterDockLockMode();
+//    void setMetadataDockLockMode();
+//    void setThumbDockLockMode();
+//    void setAllDocksLockMode();
     void reportState();
 
     void openFolder();
@@ -724,13 +724,6 @@ private:
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
 
-    QAction *folderDockLockAction;
-    QAction *favDockLockAction;
-    QAction *filterDockLockAction;
-    QAction *metadataDockLockAction;
-    QAction *thumbDockLockAction;
-    QAction *allDocksLockAction;
-
     QAction *metadataFixedSizeAction;
 
     // Workspace Menu
@@ -810,6 +803,10 @@ private:
     DockWidget *filterDock;
     DockWidget *metadataDock;
     DockWidget *propertiesDock;
+    DockTitleBar *folderTitleBar;
+    DockTitleBar *favTitleBar;
+    DockTitleBar *filterTitleBar;
+    DockTitleBar *metaTitleBar;
     FSTree *fsTree;
     BookMarks *bookmarks;
     Filters *filters;
