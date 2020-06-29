@@ -43,9 +43,9 @@ HEADERS += ImageFormats/Canon/canon.h
 HEADERS += ImageFormats/Dng/dng.h
 HEADERS += ImageFormats/Fuji/fuji.h
 #rgh remove heic
-#win32:HEADERS += ImageFormats/Heic/heic.h
-#win32:HEADERS += ImageFormats/Heic/heif.h
-#win32:HEADERS += ImageFormats/Heic/de265.h
+win32:HEADERS += ImageFormats/Heic/heic.h
+win32:HEADERS += ImageFormats/Heic/heif.h
+win32:HEADERS += ImageFormats/Heic/de265.h
 HEADERS += ImageFormats/Jpeg/jpeg.h
 HEADERS += ImageFormats/Nikon/nikon.h
 HEADERS += ImageFormats/Olympus/olympus.h
@@ -114,7 +114,7 @@ SOURCES += Image/thumb.cpp
 SOURCES += ImageFormats/Canon/canon.cpp
 SOURCES += ImageFormats/Dng/dng.cpp
 SOURCES += ImageFormats/Fuji/fuji.cpp
-#win32:SOURCES += ImageFormats/Heic/Heic.cpp
+win32:SOURCES += ImageFormats/Heic/Heic.cpp
 SOURCES += ImageFormats/jpeg/jpeg.cpp
 SOURCES += ImageFormats/Nikon/nikon.cpp
 SOURCES += ImageFormats/Olympus/olympus.cpp
@@ -226,15 +226,15 @@ else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -
 win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
 win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
 
-## libde265 (frame parallel)
-#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
-#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
-#win32:INCLUDEPATH += $$PWD/Lib/libde265/include
+# libde265 (frame parallel)
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
+win32:INCLUDEPATH += $$PWD/Lib/libde265/include
 
-## libheif
-#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
-#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
-#win32:INCLUDEPATH += $$PWD/Lib/libheif/include
+# libheif
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
+win32:INCLUDEPATH += $$PWD/Lib/libheif/include
 
 # old stuff
 

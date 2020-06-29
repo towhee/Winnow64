@@ -2908,103 +2908,7 @@ void MW::createActions()
     addAction(thumbDockVisibleAction);
     connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::toggleThumbDockVisibity);
 
-/*    Window menu focus actions replaced by three way toggle focus/visibility
-
-    folderDockFocusAction = new QAction(tr("Focus on Folders"), this);
-    folderDockFocusAction->setObjectName("FocusFolders");
-    folderDockFocusAction->setShortcutVisibleInContextMenu(true);
-    addAction(folderDockFocusAction);
-    connect(folderDockFocusAction, &QAction::triggered, this, &MW::setFolderDockFocus);
-
-    favDockFocusAction = new QAction(tr("Focus on Favourites"), this);
-    favDockFocusAction->setObjectName("FocusFavourites");
-    favDockFocusAction->setShortcutVisibleInContextMenu(true);
-    addAction(favDockFocusAction);
-    connect(favDockFocusAction, &QAction::triggered, this, &MW::setFavDockFocus);
-
-    filterDockFocusAction = new QAction(tr("Focus on Filters"), this);
-    filterDockFocusAction->setObjectName("FocusFilters");
-    filterDockFocusAction->setShortcutVisibleInContextMenu(true);
-    addAction(filterDockFocusAction);
-    connect(filterDockFocusAction, &QAction::triggered, this, &MW::setFilterDockFocus);
-
-    metadataDockFocusAction = new QAction(tr("Focus on Metadata"), this);
-    metadataDockFocusAction->setObjectName("FocusMetadata");
-    metadataDockFocusAction->setShortcutVisibleInContextMenu(true);
-    addAction(metadataDockFocusAction);
-    connect(metadataDockFocusAction, &QAction::triggered, this, &MW::setMetadataDockFocus);
-
-    thumbDockFocusAction = new QAction(tr("Focus on Thumbs"), this);
-    thumbDockFocusAction->setObjectName("FocusThumbs");
-    thumbDockFocusAction->setShortcutVisibleInContextMenu(true);
-    addAction(thumbDockFocusAction);
-    connect(thumbDockFocusAction, &QAction::triggered, this, &MW::setThumbDockFocus);
-*/
-
-    // Lock docks (hide titlebar) actions
-    folderDockLockAction = new QAction(tr("Hide Folder Titlebar"), this);
-    folderDockLockAction->setObjectName("lockDockFiles");
-    folderDockLockAction->setShortcutVisibleInContextMenu(true);
-    folderDockLockAction->setCheckable(true);
-    if (isSettings && setting->contains("isFolderDockLocked")) folderDockLockAction->setChecked(setting->value("isFolderDockLocked").toBool());
-    else folderDockLockAction->setChecked(false);
-    addAction(folderDockLockAction);
-    connect(folderDockLockAction, &QAction::triggered, this, &MW::setFolderDockLockMode);
-
-    favDockLockAction = new QAction(tr("Hide Favourite titlebar"), this);
-    favDockLockAction->setObjectName("lockDockFavs");
-    favDockLockAction->setShortcutVisibleInContextMenu(true);
-    favDockLockAction->setCheckable(true);
-    if (isSettings && setting->contains("isFavDockLocked")) favDockLockAction->setChecked(setting->value("isFavDockLocked").toBool());
-    else favDockLockAction->setChecked(false);
-    addAction(favDockLockAction);
-    connect(favDockLockAction, &QAction::triggered, this, &MW::setFavDockLockMode);
-
-    filterDockLockAction = new QAction(tr("Hide Filter titlebars"), this);
-    filterDockLockAction->setObjectName("lockDockFilters");
-    filterDockLockAction->setShortcutVisibleInContextMenu(true);
-    filterDockLockAction->setCheckable(true);
-    if (isSettings && setting->contains("isFilterDockLocked")) filterDockLockAction->setChecked(setting->value("isFilterDockLocked").toBool());
-    else filterDockLockAction->setChecked(false);
-    addAction(filterDockLockAction);
-    connect(filterDockLockAction, &QAction::triggered, this, &MW::setFilterDockLockMode);
-
-    metadataDockLockAction = new QAction(tr("Hide Metadata Titlebar"), this);
-    metadataDockLockAction->setObjectName("lockDockMetadata");
-    metadataDockLockAction->setShortcutVisibleInContextMenu(true);
-    metadataDockLockAction->setCheckable(true);
-    if (isSettings && setting->contains("isMetadataDockLocked")) metadataDockLockAction->setChecked(setting->value("isMetadataDockLocked").toBool());
-    else metadataDockLockAction->setChecked(false);
-    addAction(metadataDockLockAction);
-    connect(metadataDockLockAction, &QAction::triggered, this, &MW::setMetadataDockLockMode);
-
-    thumbDockLockAction = new QAction(tr("Hide Thumbs Titlebar"), this);
-    thumbDockLockAction->setObjectName("lockDockThumbs");
-    thumbDockLockAction->setShortcutVisibleInContextMenu(true);
-    thumbDockLockAction->setCheckable(true);
-    if (isSettings && setting->contains("isThumbDockLocked"))
-        thumbDockLockAction->setChecked(setting->value("isThumbDockLocked").toBool());
-    else thumbDockLockAction->setChecked(true);
-    addAction(thumbDockLockAction);
-    connect(thumbDockLockAction, &QAction::triggered, this, &MW::setThumbDockLockMode);
-
-    allDocksLockAction = new QAction(tr("Hide All Titlebars"), this);
-    allDocksLockAction->setObjectName("lockDocks");
-    allDocksLockAction->setShortcutVisibleInContextMenu(true);
-    allDocksLockAction->setCheckable(true);
-    addAction(allDocksLockAction);
-    connect(allDocksLockAction, &QAction::triggered, this, &MW::setAllDocksLockMode);
-
-    if (folderDockLockAction->isChecked() &&
-        favDockLockAction->isChecked() &&
-        filterDockLockAction->isChecked() &&
-        metadataDockLockAction->isChecked() &&
-        thumbDockLockAction->isChecked())
-        allDocksLockAction->setChecked(true);
-    if (isSettings && setting->contains("wasThumbDockVisible"))
-        wasThumbDockVisible = setting->value("wasThumbDockVisible").toBool();
-    else wasThumbDockVisible = true;
-
+    // rgh delete this
     metadataFixedSizeAction = new QAction(tr("Metadata Panel Fix Size"), this);
     metadataFixedSizeAction->setObjectName("metadataFixedSize");
     metadataFixedSizeAction->setShortcutVisibleInContextMenu(true);
@@ -3408,14 +3312,6 @@ void MW::createMenus()
     windowMenu->addAction(menuBarVisibleAction);
 #endif
     windowMenu->addAction(statusBarVisibleAction);
-//    windowMenu->addSeparator();
-//    windowMenu->addAction(folderDockLockAction);
-//    windowMenu->addAction(favDockLockAction);
-//    windowMenu->addAction(filterDockLockAction);
-//    windowMenu->addAction(metadataDockLockAction);
-//    windowMenu->addAction(thumbDockLockAction);
-//    windowMenu->addSeparator();
-//    windowMenu->addAction(allDocksLockAction);
 
     // Help Menu
 
@@ -3470,7 +3366,6 @@ void MW::createMenus()
     fsTreeActions->append(separatorAction2);
     fsTreeActions->append(addBookmarkActionFromContext);
     fsTreeActions->append(separatorAction3);
-    fsTreeActions->append(folderDockLockAction);
 
     // bookmarks context menu
     QList<QAction *> *favActions = new QList<QAction *>;
@@ -3481,7 +3376,6 @@ void MW::createMenus()
     favActions->append(separatorAction);
     favActions->append(removeBookmarkAction);
     favActions->append(separatorAction1);
-    favActions->append(favDockLockAction);
 
     // filters context menu
     filterActions = new QList<QAction *>;
@@ -3489,13 +3383,10 @@ void MW::createMenus()
     filterActions->append(filterUpdateAction);
     filterActions->append(clearAllFiltersAction);
     filterActions->append(searchTextEditAction);
-//    filterActions->append(filterInvertAction);
-//    filterActions->append(filterUpdateAction);
     filterActions->append(separatorAction);
     filterActions->append(expandAllAction);
     filterActions->append(collapseAllAction);
     filterActions->append(separatorAction1);
-    filterActions->append(filterDockLockAction);
 
     // metadata context menu
     QList<QAction *> *metadataActions = new QList<QAction *>;
@@ -3503,7 +3394,7 @@ void MW::createMenus()
     metadataActions->append(reportMetadataAction);
     metadataActions->append(prefInfoAction);
     metadataActions->append(separatorAction);
-    metadataActions->append(metadataDockLockAction);
+//    metadataActions->append(metadataDockLockAction);
     metadataActions->append(metadataFixedSizeAction);
 
     // Open with Menu (used in thumbview context menu)
@@ -4372,13 +4263,13 @@ void MW::createDocks()
     QHBoxLayout *folderTitleLayout = new QHBoxLayout();
     folderTitleLayout->setContentsMargins(0, 0, 0, 0);
     folderTitleLayout->setSpacing(0);
-    DockTitleBar *folderTitleBar = new DockTitleBar("Folders", folderTitleLayout);
+    folderTitleBar = new DockTitleBar("Folders", folderTitleLayout);
     folderDock->setTitleBarWidget(folderTitleBar);
     // add widgets to the right side of the title bar layout
     // toggle expansion button
     DockTitleBtn *folderRefreshBtn = new DockTitleBtn();
     folderRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
-    folderRefreshBtn->setToolTip("Refresh");
+    folderRefreshBtn->setToolTip("Refresh and collapse");
     connect(folderRefreshBtn, &DockTitleBtn::clicked, this, &MW::refreshFolders);
     folderTitleLayout->addWidget(folderRefreshBtn);
     // preferences button
@@ -4411,7 +4302,7 @@ void MW::createDocks()
     QHBoxLayout *favTitleLayout = new QHBoxLayout();
     favTitleLayout->setContentsMargins(0, 0, 0, 0);
     favTitleLayout->setSpacing(0);
-    DockTitleBar *favTitleBar = new DockTitleBar("Bookmarks", favTitleLayout);
+    favTitleBar = new DockTitleBar("Bookmarks", favTitleLayout);
     favDock->setTitleBarWidget(favTitleBar);
     // add widgets to the right side of the title bar layout
     // refresh button
@@ -4450,12 +4341,11 @@ void MW::createDocks()
     QHBoxLayout *filterTitleLayout = new QHBoxLayout();
     filterTitleLayout->setContentsMargins(0, 0, 0, 0);
     filterTitleLayout->setSpacing(0);
-    DockTitleBar *filterTitleBar = new DockTitleBar("Filters", filterTitleLayout);
+    filterTitleBar = new DockTitleBar("Filters", filterTitleLayout);
     filterDock->setTitleBarWidget(filterTitleBar);
     // add widgets to the right side of the title bar layout
     // toggle expansion button
     DockTitleBtn *toggleExpansionBtn = new DockTitleBtn();
-//    toggleExpansionBtn->setIcon(QIcon(":/images/icon16/swap.png"));
     toggleExpansionBtn->setIcon(QIcon(":/images/icon16/foldertree.png"));
     toggleExpansionBtn->setToolTip("Toggle expand all / collapse all");
     connect(toggleExpansionBtn, &DockTitleBtn::clicked, filters, &Filters::toggleExpansion);
@@ -4512,7 +4402,7 @@ void MW::createDocks()
     QHBoxLayout *metaTitleLayout = new QHBoxLayout();
     metaTitleLayout->setContentsMargins(0, 0, 0, 0);
     metaTitleLayout->setSpacing(0);
-    DockTitleBar *metaTitleBar = new DockTitleBar("Metadata", metaTitleLayout);
+    metaTitleBar = new DockTitleBar("Metadata", metaTitleLayout);
     metadataDock->setTitleBarWidget(metaTitleBar);
     // add widgets to the right side of the title bar layout
     // preferences button
@@ -5918,11 +5808,6 @@ workspace with a matching name to the action is used.
     filterDockVisibleAction->setChecked(w.isFilterDockVisible);
     metadataDockVisibleAction->setChecked(w.isMetadataDockVisible);
     thumbDockVisibleAction->setChecked(w.isThumbDockVisible);
-    folderDockLockAction->setChecked(w.isFolderDockLocked);
-    favDockLockAction->setChecked(w.isFavDockLocked);
-    filterDockLockAction->setChecked(w.isFilterDockLocked);
-    metadataDockLockAction->setChecked(w.isMetadataDockLocked);
-    thumbDockLockAction->setChecked( w.isThumbDockLocked);
     infoVisibleAction->setChecked(w.isImageInfoVisible);
     asLoupeAction->setChecked(w.isLoupeDisplay);
     asGridAction->setChecked(w.isGridDisplay);
@@ -5930,14 +5815,10 @@ workspace with a matching name to the action is used.
     asCompareAction->setChecked(w.isCompareDisplay);
     thumbView->iconWidth = w.thumbWidth;
     thumbView->iconHeight = w.thumbHeight;
-//    thumbView->iconSpacing = w.thumbSpacing;
-//    thumbView->iconPadding = w.thumbPadding;
     thumbView->labelFontSize = w.labelFontSize;
     thumbView->showIconLabels = w.showThumbLabels;
     gridView->iconWidth = w.thumbWidthGrid;
     gridView->iconHeight = w.thumbHeightGrid;
-//    gridView->iconSpacing = w.thumbSpacingGrid;
-//    gridView->iconPadding = w.thumbPaddingGrid;
     gridView->labelFontSize = w.labelFontSizeGrid;
     gridView->showIconLabels = w.showThumbLabelsGrid;
     thumbView->rejustify();
@@ -5966,11 +5847,6 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.isFilterDockVisible = filterDockVisibleAction->isChecked();
     wsd.isMetadataDockVisible = metadataDockVisibleAction->isChecked();
     wsd.isThumbDockVisible = thumbDockVisibleAction->isChecked();
-    wsd.isFolderDockLocked = folderDockLockAction->isChecked();
-    wsd.isFavDockLocked = favDockLockAction->isChecked();
-    wsd.isFilterDockLocked = filterDockLockAction->isChecked();
-    wsd.isMetadataDockLocked = metadataDockLockAction->isChecked();
-    wsd.isThumbDockLocked = thumbDockLockAction->isChecked();
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
 
     wsd.isLoupeDisplay = asLoupeAction->isChecked();
@@ -5978,16 +5854,11 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.isTableDisplay = asTableAction->isChecked();
     wsd.isCompareDisplay = asCompareAction->isChecked();
 
-//    wsd.thumbSpacing = thumbView->iconSpacing;
-//    wsd.thumbPadding = thumbView->iconPadding;
     wsd.thumbWidth = thumbView->iconWidth;
     wsd.thumbHeight = thumbView->iconHeight;
     wsd.labelFontSize = thumbView->labelFontSize;
     wsd.showThumbLabels = thumbView->showIconLabels;
-//    wsd.wrapThumbs = thumbView->wrapThumbs;
 
-//    wsd.thumbSpacingGrid = gridView->iconSpacing;
-//    wsd.thumbPaddingGrid = gridView->iconPadding;
     wsd.thumbWidthGrid = gridView->iconWidth;
     wsd.thumbHeightGrid = gridView->iconHeight;
     wsd.labelFontSizeGrid = gridView->labelFontSize;
@@ -6101,11 +5972,6 @@ app is "stranded" on secondary monitors that are not attached.
     metadataDockVisibleAction->setChecked(true);
     thumbDockVisibleAction->setChecked(true);
 
-    folderDockLockAction->setChecked(true);
-    favDockLockAction->setChecked(true);
-    filterDockLockAction->setChecked(true);
-    metadataDockLockAction->setChecked(true);
-    thumbDockLockAction->setChecked(false);
 
 //    thumbView->iconPadding = 0;
     thumbView->iconWidth = 100;
@@ -6791,6 +6657,10 @@ void MW::setFontSize(int fontPixelSize)
     filters->setStyleSheet(css);
     tableView->setStyleSheet(css);
     statusLabel->setStyleSheet(css);
+    folderTitleBar->setStyle();
+    favTitleBar->setStyle();
+    filterTitleBar->setStyle();
+    metaTitleBar->setStyle();
 }
 
 void MW::setBackgroundShade(int shade)
@@ -6828,6 +6698,10 @@ void MW::setBackgroundShade(int shade)
     messageView->setStyleSheet(css);
     welcome->setStyleSheet(css);
     progressBar->setBackgroundColor(widgetCSS.widgetBackgroundColor);
+    folderTitleBar->setStyle();
+    favTitleBar->setStyle();
+    filterTitleBar->setStyle();
+    metaTitleBar->setStyle();
     statusBar()->setStyleSheet(css);
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
     /*
@@ -7474,12 +7348,6 @@ re-established when the application is re-opened.
     setting->setValue("isFilterDockVisible", filterDockVisibleAction->isChecked());
     setting->setValue("isMetadataDockVisible", metadataDockVisibleAction->isChecked());
     setting->setValue("isThumbDockVisible", thumbDockVisibleAction->isChecked());
-    setting->setValue("isFolderDockLocked", folderDockLockAction->isChecked());
-    setting->setValue("isFavDockLocked", favDockLockAction->isChecked());
-    setting->setValue("isFilterDockLocked", filterDockLockAction->isChecked());
-    setting->setValue("isMetadataDockLocked", metadataDockLockAction->isChecked());
-    setting->setValue("isThumbDockLocked", thumbDockLockAction->isChecked());
-    setting->setValue("wasThumbDockVisible", wasThumbDockVisible);
 
     /* Property Editor */
     setting->setValue("isSoloPrefDlg", isSoloPrefDlg);
@@ -7938,7 +7806,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
     actionKeys[menuBarVisibleAction->objectName()] = menuBarVisibleAction;
     actionKeys[statusBarVisibleAction->objectName()] = statusBarVisibleAction;
 //    actionKeys[toggleIconsListAction->objectName()] = toggleIconsListAction;
-    actionKeys[allDocksLockAction->objectName()] = allDocksLockAction;
+//    actionKeys[allDocksLockAction->objectName()] = allDocksLockAction;
 
     setting->beginGroup("Shortcuts");
     QStringList groupKeys = setting->childKeys();
@@ -8110,12 +7978,12 @@ void MW::loadShortcuts(bool defaultShortcuts)
         menuBarVisibleAction->setShortcut(QKeySequence("Shift+F9"));
         statusBarVisibleAction->setShortcut(QKeySequence("Shift+F10"));
 
-        folderDockLockAction->setShortcut(QKeySequence("Shift+Alt+F3"));
-        favDockLockAction->setShortcut(QKeySequence("Shift+Alt+F4"));
-        filterDockLockAction->setShortcut(QKeySequence("Shift+Alt+F5"));
-        metadataDockLockAction->setShortcut(QKeySequence("Shift+Alt+F6"));
-        thumbDockLockAction->setShortcut(QKeySequence("Shift+Alt+F7"));
-        allDocksLockAction->setShortcut(QKeySequence("Ctrl+L"));
+//        folderDockLockAction->setShortcut(QKeySequence("Shift+Alt+F3"));
+//        favDockLockAction->setShortcut(QKeySequence("Shift+Alt+F4"));
+//        filterDockLockAction->setShortcut(QKeySequence("Shift+Alt+F5"));
+//        metadataDockLockAction->setShortcut(QKeySequence("Shift+Alt+F6"));
+//        thumbDockLockAction->setShortcut(QKeySequence("Shift+Alt+F7"));
+//        allDocksLockAction->setShortcut(QKeySequence("Ctrl+L"));
 
         // Help
         helpAction->setShortcut(QKeySequence("?"));
@@ -8148,11 +8016,11 @@ condition of actions sets the visibility of all window components. */
     setFilterDockVisibility();
     setMetadataDockVisibility();
     setThumbDockVisibity();
-    setFolderDockLockMode();
-    setFavDockLockMode();
-    setFilterDockLockMode();
-    setMetadataDockLockMode();
-    setThumbDockLockMode();
+//    setFolderDockLockMode();
+//    setFavDockLockMode();
+//    setFilterDockLockMode();
+//    setMetadataDockLockMode();
+//    setThumbDockLockMode();
     setShootingInfoVisibility();
     updateStatusBar();
 //    setActualDevicePixelRation();
@@ -8906,138 +8774,6 @@ void MW::setStatusBarVisibility() {
     #endif
     }
     statusBar()->setVisible(statusBarVisibleAction->isChecked());
-//    G::isStatusBarVisible = statusBarVisibleAction->isChecked();
-}
-
-//void MW::setWindowsTitleBarVisibility() {
-
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    G::track(__FUNCTION__);
-//    if(windowTitleBarVisibleAction->isChecked()) {
-//        hide();
-//        setWindowFlags(windowFlags() & ~Qt::FramelessWindowHint);
-//        show();    }
-//    else {
-//        hide();
-//        setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
-//        show();
-//    }
-//}
-
-void MW::setFolderDockLockMode()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    if (folderDockLockAction->isChecked()) {
-        folderDock->setTitleBarWidget(folderDockEmptyWidget);
-    }
-    else {
-        folderDock->setTitleBarWidget(folderDockOrigWidget);
-    }
-}
-
-void MW::setFavDockLockMode()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    if (favDockLockAction->isChecked()) {
-        favDock->setTitleBarWidget(favDockEmptyWidget);
-    }
-    else {
-        favDock->setTitleBarWidget(favDockOrigWidget);
-    }
-}
-
-void MW::setFilterDockLockMode()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    if (filterDockLockAction->isChecked()) {
-        filterDock->setTitleBarWidget(filterDockEmptyWidget);
-    }
-    else {
-        filterDock->setTitleBarWidget(filterDockOrigWidget);
-    }
-}
-
-void MW::setMetadataDockLockMode()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    if (metadataDockLockAction->isChecked()) {
-        metadataDock->setTitleBarWidget(metadataDockEmptyWidget);
-    }
-    else {
-        metadataDock->setTitleBarWidget(metadataDockOrigWidget);
-    }
-}
-
-void MW::setThumbDockLockMode()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    if (thumbDockLockAction->isChecked()) {
-        thumbDock->setTitleBarWidget(thumbDockEmptyWidget);
-    }
-    else {
-        thumbDock->setTitleBarWidget(thumbDockOrigWidget);
-    }
-}
-
-void MW::setAllDocksLockMode()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    if (initComplete)
-//            GData::LockDocks = lockDocksAct->isChecked();
-
-    if (allDocksLockAction->isChecked()) {
-        folderDock->setTitleBarWidget(folderDockEmptyWidget);
-        favDock->setTitleBarWidget(favDockEmptyWidget);
-        filterDock->setTitleBarWidget(filterDockEmptyWidget);
-        metadataDock->setTitleBarWidget(metadataDockEmptyWidget);
-        thumbDock->setTitleBarWidget(thumbDockEmptyWidget);
-        folderDockLockAction->setChecked(true);
-        favDockLockAction->setChecked(true);
-        filterDockLockAction->setChecked(true);
-        metadataDockLockAction->setChecked(true);
-        thumbDockLockAction->setChecked(true);
-//        G::isLockAllDocks = true;
-    } else {
-        folderDock->setTitleBarWidget(folderDockOrigWidget);
-        favDock->setTitleBarWidget(favDockOrigWidget);
-        filterDock->setTitleBarWidget(filterDockOrigWidget);
-        metadataDock->setTitleBarWidget(metadataDockOrigWidget);
-        thumbDock->setTitleBarWidget(thumbDockOrigWidget);
-        folderDockLockAction->setChecked(false);
-        favDockLockAction->setChecked(false);
-        filterDockLockAction->setChecked(false);
-        metadataDockLockAction->setChecked(false);
-        thumbDockLockAction->setChecked(false);
-//        G::isLockAllDocks = false;
-    }
 }
 
 void MW::setCacheStatusVisibility()
@@ -10917,5 +10653,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    folderDock->setTitleBarWidget(folderDockOrigWidget);
+    favDock->setTitleBarWidget(favDockOrigWidget);
+    filterDock->setTitleBarWidget(filterDockOrigWidget);
+    metadataDock->setTitleBarWidget(metadataDockOrigWidget);
+    thumbDock->setTitleBarWidget(thumbDockOrigWidget);
+
 }
 // End MW

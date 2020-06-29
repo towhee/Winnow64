@@ -25,7 +25,10 @@ class DockTitleBar : public QFrame
     Q_OBJECT
 public:
     DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout/*, QWidget *parent = nullptr*/);
-//    QSize sizeHint() const;
+    void setStyle();
+    //    QSize sizeHint() const;
+protected:
+//    void paintEvent(QPaintEvent *) override;
 
 };
 

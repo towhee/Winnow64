@@ -20,7 +20,7 @@
 
 #ifdef Q_OS_WIN
 // rgh remove heic
-//#include "ImageFormats/Heic/heic.h"
+#include "ImageFormats/Heic/heic.h"
 #endif
 
 #include "ImageFormats/Jpeg/jpeg.h"
@@ -123,7 +123,7 @@ private:
     Tiff *tiff = nullptr;
 #ifdef Q_OS_WIN
     // rgh remove heic
-//    Heic *heic = nullptr;
+    Heic *heic = nullptr;
 #endif
 
     // hash

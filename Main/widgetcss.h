@@ -56,6 +56,7 @@ public:
     QString menu();
     QString groupBox();
     QString label();
+//    QString dockTitleBar();
     QString dockWidget();
     QString toolButton();
     QString tabWidget();

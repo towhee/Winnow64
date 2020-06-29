@@ -13,7 +13,7 @@
 #include "ImageFormats/Jpeg/jpeg.h"
 #ifdef Q_OS_WIN
 // rgh remove heic
-//#include "ImageFormats/Heic/heic.h"
+#include "ImageFormats/Heic/heic.h"
 #endif
 
 class Pixmap : public QObject
