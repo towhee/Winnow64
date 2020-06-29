@@ -10,76 +10,31 @@ MW *mw;
 Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
 {
     mw = qobject_cast<MW*>(parent);
-    connect(this->propertyDelegate, &PropertyDelegate::itemChanged,
-            this, &Preferences::itemChange);
 
-    resizeColumns();
+    resizeColumns("======String to fit in captions column======",
+                  "=String to fit in values column=");
     addItems();
-    getParent("General");
-
-}
-
-void Preferences::expandBranch(QString text)
-{
-    /*
-    Expand one preferences tree branch.  This is used to open the preferences for a specific
-    item - for example, in the metadata panel context panel there is an option to show / hide
-    items, which is controlled by the "Metadata panel items" in preferences.
-
-    Note: Even though treeIndex will find any index only root branches work. If the text for a
-    secondary or tertiary branch is sent then all branches expand.
-    */
-    collapseAll();
-    expandRecursively(treeIndex(text));
-}
-
-QModelIndex Preferences::treeIndex(QString text, QModelIndex parent)
-{
-    /*
-    Iterate through the preferences tree looking for the item text, and return the model
-    index for the item.
-    */
-    QModelIndex idx;
-    for (int r = 0; r < model->rowCount(parent); ++r) {
-        idx = model->index(r, 0, parent);
-        if (model->data(idx).toString() == text) {
-           qDebug() << text << idx;
-           return idx;
-        }
-        if( model->hasChildren(idx) ) {
-            treeIndex(text, idx);
-        }
-    }
-    // not found, return invalid index
-    return model->index(-1, -1);
-}
-
-void Preferences::resizeColumns()
-{
-    QFont fnt = this->font();
-    int px = static_cast<int>(G::fontSize.toInt() * G::ptToPx);
-    fnt.setPixelSize(px);
-    QFontMetrics fm(fnt);
-    captionColumnWidth = fm.boundingRect("==Incremental amount to load plus more room==").width();
-    valueColumnWidth = fm.boundingRect("===Next / Previous Image plus===").width();
-    setColumnWidth(0, captionColumnWidth);
-    setColumnWidth(1, valueColumnWidth);
 }
 
 void Preferences::itemChange(QModelIndex idx)
 {
+/*
+When the user changes a value in the editor (the control in the value column of the tree)
+this slot is triggered to update the associated value in the application.  The model index
+of the value is used to recall:
+
+    v      - the value of the property
+    source - the name of the value, which is used to figure out which associated app value
+             to update with v.
+    index  - is used where the associated value is in another model
+
+The connection is defined in the parent PropertyEditor to fire the virtual function
+itemChange, which is subclassed here.
+*/
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
-    QString dataType = idx.data(UR_Type).toString();
-    int delegateType = idx.data(UR_DelegateType).toInt();
+//    QString dataType = idx.data(UR_Type).toString();
     QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
-/*    qDebug() << __FUNCTION__ << idx
-             << "value =" << v
-             << "source =" << source
-             << "dataType =" << dataType
-             << "delegateType =" << delegateType;
-*/
-    delegateType = 0;   // suppress compiler warning
 
     if (source == "gridViewIconSize") {
         if (v == 1) {
@@ -167,32 +122,29 @@ void Preferences::itemChange(QModelIndex idx)
         if (s == "Moderate") mb = static_cast<int>(G::availableMemoryMB * 0.50);
         if (s == "Greedy") mb = static_cast<int>(G::availableMemoryMB * 0.90);
         if (mb > 0 && mb < 1000) mb = 1000;
-//        if (s == "Percent of available") {
-//            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(true);
-//            int pct = static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->value();
-//            mb = static_cast<int>((G::availableMemoryMB * static_cast<uint>(pct)) / 100);
-//        }
-//        else {
-//            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(false);
-//        }
-//        if (s == "MB") {
-//            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(true);
-//            mb = static_cast<SpinBoxEditor*>(cacheSizeMB)->value();
-//        }
-//        else {
-//            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(false);
-//            static_cast<SpinBoxEditor*>(cacheSizeMB)->setValue(mb);
-//        }
+        /*
+        if (s == "Percent of available") {
+            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(true);
+            int pct = static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->value();
+            mb = static_cast<int>((G::availableMemoryMB * static_cast<uint>(pct)) / 100);
+        }
+        else {
+            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(false);
+        }
+        if (s == "MB") {
+            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(true);
+            mb = static_cast<SpinBoxEditor*>(cacheSizeMB)->value();
+        }
+        else {
+            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(false);
+            static_cast<SpinBoxEditor*>(cacheSizeMB)->setValue(mb);
+        }
+        */
         mw->cacheSizeMethod = s;
         mw->cacheSizeMB = mb;
         mw->setCacheParameters();
-    }
-
-    if (source == "cacheSizePercentOfAvailable") {
-        mw->cacheSizePercentOfAvailable = v.toInt();
-        mw->cacheSizeMB = (G::availableMemoryMB * v.toUInt()) / 100;
-        static_cast<SpinBoxEditor*>(cacheSizeMB)->setValue(mw->cacheSizeMB);
-        mw->setCacheParameters();
+        QString availMBMsg = QString::number(mw->cacheSizeMB) + " / " + QString::number(G::availableMemoryMB) + " MB";
+        static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
     }
 
     if (source == "cacheSizeMB") {
@@ -306,28 +258,10 @@ void Preferences::itemChange(QModelIndex idx)
 
 void Preferences::addItems()
 {
-    int firstGenerationCount = -1;        // top items
-    int secondGenerationCount;            // child items
-    int thirdGenerationCount;             // child child items
-    QString tooltip;
-    QString caption;
-
-    // general purpose
-    QString s;
-    int n;
-    bool isShow;
-
-    QModelIndex catIdx;
-    QModelIndex valIdx;
-    QStandardItem *captionItem;
-    QStandardItem *valueItem;
-
-
-
     setColumnWidth(0, captionColumnWidth);
     setColumnWidth(1, valueColumnWidth);
     ItemInfo i;
-    // template
+    /* template of ItemInfo
     i.name = "";
     i.parentName = "";
     i.captionText = "";
@@ -340,6 +274,9 @@ void Preferences::addItems()
     i.max = 0;
     i.fixedWidth = 50;
     i.color = "#AABBCC";
+    i.index = QModelIndex();
+    i.dropList = {"1", "2"};
+    */
 
     // General header (Root)
     i.name = "GeneralHeader";
@@ -718,18 +655,18 @@ void Preferences::addItems()
     addItem(i);
 
     // Available memory for caching
-    i.name = "maxIconSize";
+    i.name = "availableMBToCache";
     i.parentName = "CacheImagesHeader";
-    i.captionText = "Available memory for caching";
+    i.captionText = "Image cache / Available memory";
     i.tooltip = "The total amount of available memory in MB.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = QString::number(G::availableMemoryMB) + " MB";
+    i.value = QString::number(mw->cacheSizeMB) + " / " + QString::number(G::availableMemoryMB) + " MB";
     i.valueName = "availableMBToCache";
     i.delegateType = DT_Label;
     i.type = "QString";
     i.color = "#1b8a83";
-    addItem(i);
+    availMBMsgWidget = addItem(i);
 
     // Image cache size strategy
     i.name = "imageCacheSizeMethod";
@@ -887,7 +824,7 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
-    // Metadata InfoView items to show (Root)
+    // Metadata InfoView Header (Root)
     i.name = "MetadataPanelHeader";
     i.parentName = "";
     i.captionText = "Metadata panel items";
@@ -902,15 +839,17 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     i.captionIsEditable = false;
+    i.valueName = "infoView->ok";
     // iterate through infoView data, adding it to the property editor
     for(int row = 0; row < okInfo->rowCount(); row++) {
         QModelIndex parentIdx = okInfo->index(row, 0);
-        caption = okInfo->index(row, 0).data().toString();
+        QString caption = okInfo->index(row, 0).data().toString();
         i.parentName = "MetadataPanelHeader";
         i.name = caption;
         i.captionText = "Show " + caption;
         i.tooltip = "Show or hide the category " + caption + " in the metadata panel";
         i.value = okInfo->index(row, 2).data().toBool();
+        i.index = okInfo->index(row, 2);
         addItem(i);
         for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
             caption = okInfo->index(childRow, 0, parentIdx).data().toString();
@@ -918,6 +857,7 @@ void Preferences::addItems()
             i.captionText = "Show " + caption;
             i.tooltip = "Show or hide the category " + caption + " in the metadata panel";
             i.value = okInfo->index(childRow, 2, parentIdx).data().toBool();
+            i.index = okInfo->index(childRow, 2, parentIdx);
             addItem(i);
         }
     }
@@ -942,7 +882,7 @@ void Preferences::addItems()
     for (int row = 0; row < tv->rowCount(); row++) {
         // do not show if is a geek column
         if (tv->index(row, 2).data().toBool()) continue;
-        caption = tv->index(row, 0).data().toString();
+        QString caption = tv->index(row, 0).data().toString();
         i.name = caption;
         i.captionText = "Show " + caption;
         i.tooltip = "Show or hide the category " + caption + " in the table view";
@@ -951,7 +891,7 @@ void Preferences::addItems()
         addItem(i);
     }
 
-    // Metadata geek columns to show
+    // TableView geek columns header
     i.name = "TableViewGeekColumnsHeader";
     i.parentName = "TableViewColumnsHeader";
     i.captionText = "Geek columns";
@@ -970,7 +910,7 @@ void Preferences::addItems()
     for(int row = 0; row < tv->rowCount(); row++) {
         // do not show if is a not a geek column
         if (!tv->index(row, 2).data().toBool()) continue;
-        caption = tv->index(row, 0).data().toString();
+        QString caption = tv->index(row, 0).data().toString();
         i.captionText = "Show " + caption;
         i.tooltip = "Show or hide the category " + caption + " in the table view";
         i.value = tv->index(row, 1).data().toBool();
@@ -980,11 +920,13 @@ void Preferences::addItems()
 
     return;
 
+/*  Old code before abstracted addItem
 
-
-
-
-
+    int firstGenerationCount = -1;        // top items
+    int secondGenerationCount;            // child items
+    int thirdGenerationCount;             // child child items
+    QModelIndex catIdx;
+    QModelIndex valIdx;
 
     firstGenerationCount++;
     // HEADER
@@ -1640,7 +1582,7 @@ void Preferences::addItems()
             imageCacheSizeMethodValue->setData("QString", UR_Type);
             QStringList list3 = {"Thrifty",
                                  "Moderate",
-                                 "Greedy"/*, "Percent of available","MB"*/};
+                                 "Greedy"};
             imageCacheSizeMethodValue->setData(list3, UR_StringList);
             imageCatItem->setChild(thirdGenerationCount, 0, imageCacheSizeMethodCaption);
             imageCatItem->setChild(thirdGenerationCount, 1, imageCacheSizeMethodValue);
@@ -1688,7 +1630,7 @@ void Preferences::addItems()
 //            cacheSizeMBCaption->setEditable(false);
 //            QStandardItem *cacheSizeMBValue = new QStandardItem;
 //            cacheSizeMBValue->setToolTip(tooltip);
-//            cacheSizeMBValue->setData(mw->cacheSizeMB /*/ 1024*/, Qt::EditRole);
+//            cacheSizeMBValue->setData(mw->cacheSizeMB , Qt::EditRole);
 //            cacheSizeMBValue->setData(DT_Spinbox, UR_DelegateType);
 //            cacheSizeMBValue->setData("cacheSizeMB", UR_Source);
 //            cacheSizeMBValue->setData("int", UR_Type);
@@ -1967,7 +1909,6 @@ void Preferences::addItems()
     setColumnWidth(1, valueColumnWidth);
     secondGenerationCount = -1;
 
-    /*
         // InfoView fields to show
         QStandardItemModel *okInfo = mw->infoView->ok;
         QStandardItem *okCaption;
@@ -2105,14 +2046,3 @@ void Preferences::addItems()
             }
             */
 }
-
-
-
-
-
-
-
-
-
-
-

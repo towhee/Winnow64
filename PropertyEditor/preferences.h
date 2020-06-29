@@ -11,21 +11,16 @@ class Preferences : public PropertyEditor
     Q_OBJECT
 public:
     Preferences(QWidget *parent);
-    void resizeColumns();
-    QModelIndex treeIndex(QString text, QModelIndex parent = QModelIndex());
-    void expandBranch(QString text);
 
 public slots:
     void itemChange(QModelIndex idx);
 
 private:
     void addItems();
-//    int captionColumnWidth;
-//    int valueColumnWidth;
 
-    // items we will want to modify
-    QWidget *cacheSizePercentOfAvailable;
-    QWidget *cacheSizeMB;
+    /* items we will want to modify dynamically in itemChange (returned from addItem)
+       ie static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);    */
+    QWidget *availMBMsgWidget;
 };
 
 #endif // PREFERENCES_H

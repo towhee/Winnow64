@@ -39,12 +39,13 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     setModel(model);
     // abstract
     model->setColumnCount(2);
-//    model->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
-//    model->setHorizontalHeaderItem(1, new QStandardItem(QString("Value")));
 
     propertyDelegate = new PropertyDelegate(this);
     setItemDelegate(propertyDelegate);
     styleOptionViewItem = new QStyleOptionViewItem;
+
+    connect(this->propertyDelegate, &PropertyDelegate::itemChanged,
+            this, &PropertyEditor::itemChange);
 
     connect(propertyDelegate, &PropertyDelegate::editorWidgetToDisplay,
             this, &PropertyEditor::editorWidgetToDisplay);
@@ -61,52 +62,58 @@ Sets the custom editor widget for the value column (column 1).  The
     emit propertyDelegate->closeEditor(editor);
 }
 
-//QStandardItem* PropertyEditor::getParent(QString caption, QModelIndex parent)
-bool PropertyEditor::getParent(QString caption, QModelIndex parent)
+void PropertyEditor::itemChange(QModelIndex)
 {
+
+}
+
+bool PropertyEditor::getIndex(QString searchName, QModelIndex parent)
+{
+/*
+Searches column 0 of the model for the text searchName in the role UR_Name and returns the
+index.  The role UR_Name is used as the display values could be duplicated in several rows
+in the model.
+*/
+    foundIdx = QModelIndex();
     for(int r = 0; r < model->rowCount(parent); ++r) {
         QModelIndex idx = model->index(r, 0, parent);
-        QString text = model->data(idx, UR_Name).toString();
-        bool isMatch = text == caption;
-        if (isMatch) {
-            parIdx = idx;
+        QString name = model->data(idx, UR_Name).toString();
+        if (name == searchName) {
+            foundIdx = idx;
             return true;
         }
         // iterate children
         if (model->hasChildren(idx)) {
-            getParent(caption, idx);
+            getIndex(searchName, idx);
         }
     }
     return false;
 }
 
-// abstract addItem
-void PropertyEditor::addItem(ItemInfo &i)
+QWidget*  PropertyEditor::addItem(ItemInfo &i)
 {
+/*
+Adds a row to the properties tree (model).  The necessary elements of the ItemInfo struct are
+supplied by the calling function.
+*/
     int row;
     QModelIndex capIdx;
     QModelIndex valIdx;
-    parIdx = QModelIndex();
+    QModelIndex parIdx = QModelIndex();
     QStandardItem *catItem = new QStandardItem;
     QStandardItem *valItem = new QStandardItem;
     QStandardItem *parItem = new QStandardItem;
     parItem = nullptr;
-    /*
-    QList<QStandardItem *>search;
-    if (model->rowCount()) {
-        search = model->findItems(i.parentName);
-        qDebug() << "Item =" << i.captionText
-                 << "Searching for =" << i.parentName
-                 << "search =" << search
-                 << "search length =" << search.length();
-        if (search.length()) {
-            parItem = search.at(0);
-            parIdx = parItem->index();
-        }
-    } */
-    getParent(i.parentName);
-    parItem = model->itemFromIndex(parIdx);
 
+    getIndex(i.parentName);
+    parIdx = foundIdx;
+    parItem = model->itemFromIndex(parIdx);
+    /*
+    qDebug() << "Item =" << i.name
+             << "Searching for =" << i.parentName
+             << "parIdx =" << parIdx
+             << "parIdx name =" << model->data(parIdx, UR_Name).toString();
+//    */
     if (parItem == nullptr) {
         // First item = root
         row = model->rowCount();
@@ -116,7 +123,7 @@ void PropertyEditor::addItem(ItemInfo &i)
         valIdx = model->index(row, 1, QModelIndex());
     }
     else {
-    // row for next child to add
+        // row for next child to add
         row = parItem->rowCount();
         parItem->setChild(row, 0, catItem);
         parItem->setChild(row, 1, valItem);
@@ -132,7 +139,7 @@ void PropertyEditor::addItem(ItemInfo &i)
     model->setData(valIdx, i.tooltip, Qt::ToolTipRole);
 
     // if no value associated (header item or spacer etc) then we are done
-    if (!i.hasValue) return;
+    if (!i.hasValue) return nullptr;
 
     // value
     model->setData(valIdx, i.value, Qt::EditRole);
@@ -146,7 +153,22 @@ void PropertyEditor::addItem(ItemInfo &i)
     model->setData(valIdx, i.dropList, UR_StringList);
     model->setData(valIdx, i.index, UR_QModelIndex);
 
-    propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+    return propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+}
+
+void PropertyEditor::expandBranch(QString text)
+{
+/*
+Expand one preferences tree branch.  This is used to open the preferences for a specific
+item - for example, in the metadata panel context panel there is an option to show / hide
+items, which is controlled by the "Metadata panel items" in preferences.
+
+Note: Even though treeIndex will find any index only root branches work. If the text for a
+secondary or tertiary branch is sent then all branches expand.
+*/
+    collapseAll();
+    getIndex(text);
+    expandRecursively(foundIdx);
 }
 
 void PropertyEditor::mousePressEvent(QMouseEvent *event)
@@ -175,6 +197,17 @@ decoration is clicked.
     }
 }
 
+void PropertyEditor::resizeColumns(QString stringToFitCaptions, QString stringToFitValues)
+{
+    QFont fnt = this->font();
+    int px = static_cast<int>(G::fontSize.toInt() * G::ptToPx);
+    fnt.setPixelSize(px);
+    QFontMetrics fm(fnt);
+    captionColumnWidth = fm.boundingRect(stringToFitCaptions).width();
+    valueColumnWidth = fm.boundingRect(stringToFitValues).width();
+    setColumnWidth(0, captionColumnWidth);
+    setColumnWidth(1, valueColumnWidth);
+}
 
 void PropertyEditor::setSolo(bool isSolo)
 {

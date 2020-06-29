@@ -19,6 +19,8 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Abstracted preferences in PropertyEditor
+- Removed gap in Filters when progress area was hidden
 - In loupe if zoom with plus/minus then zoom cursor should adjust
 - Read HEIC files
 - Move builtFilters to separate thread
