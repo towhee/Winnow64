@@ -37,6 +37,11 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 
     model = new QStandardItemModel;
     setModel(model);
+    // abstract
+    model->setColumnCount(2);
+//    model->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
+//    model->setHorizontalHeaderItem(1, new QStandardItem(QString("Value")));
+
     propertyDelegate = new PropertyDelegate(this);
     setItemDelegate(propertyDelegate);
     styleOptionViewItem = new QStyleOptionViewItem;
@@ -47,7 +52,6 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     connect(propertyDelegate, &PropertyDelegate::drawBranchesAgain, this, &PropertyEditor::drawBranches);
 }
 
-
 void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
 /*
 Sets the custom editor widget for the value column (column 1).  The
@@ -55,6 +59,94 @@ Sets the custom editor widget for the value column (column 1).  The
 {
     setIndexWidget(idx, editor);
     emit propertyDelegate->closeEditor(editor);
+}
+
+//QStandardItem* PropertyEditor::getParent(QString caption, QModelIndex parent)
+bool PropertyEditor::getParent(QString caption, QModelIndex parent)
+{
+    for(int r = 0; r < model->rowCount(parent); ++r) {
+        QModelIndex idx = model->index(r, 0, parent);
+        QString text = model->data(idx, UR_Name).toString();
+        bool isMatch = text == caption;
+        if (isMatch) {
+            parIdx = idx;
+            return true;
+        }
+        // iterate children
+        if (model->hasChildren(idx)) {
+            getParent(caption, idx);
+        }
+    }
+    return false;
+}
+
+// abstract addItem
+void PropertyEditor::addItem(ItemInfo &i)
+{
+    int row;
+    QModelIndex capIdx;
+    QModelIndex valIdx;
+    parIdx = QModelIndex();
+    QStandardItem *catItem = new QStandardItem;
+    QStandardItem *valItem = new QStandardItem;
+    QStandardItem *parItem = new QStandardItem;
+    parItem = nullptr;
+    /*
+    QList<QStandardItem *>search;
+    if (model->rowCount()) {
+        search = model->findItems(i.parentName);
+        qDebug() << "Item =" << i.captionText
+                 << "Searching for =" << i.parentName
+                 << "search =" << search
+                 << "search length =" << search.length();
+        if (search.length()) {
+            parItem = search.at(0);
+            parIdx = parItem->index();
+        }
+    } */
+    getParent(i.parentName);
+    parItem = model->itemFromIndex(parIdx);
+
+    if (parItem == nullptr) {
+        // First item = root
+        row = model->rowCount();
+        if (row == 0) model->insertRow(0, QModelIndex());
+        else model->appendRow(catItem);
+        capIdx = model->index(row, 0, QModelIndex());
+        valIdx = model->index(row, 1, QModelIndex());
+    }
+    else {
+    // row for next child to add
+        row = parItem->rowCount();
+        parItem->setChild(row, 0, catItem);
+        parItem->setChild(row, 1, valItem);
+        capIdx = catItem->index();
+        valIdx = valItem->index();
+    }
+
+    // caption
+    model->setData(capIdx, i.captionText);
+    model->setData(capIdx, i.name, UR_Name);
+    model->setData(capIdx, i.captionText);
+    model->setData(capIdx, i.tooltip, Qt::ToolTipRole);
+    model->setData(valIdx, i.tooltip, Qt::ToolTipRole);
+
+    // if no value associated (header item or spacer etc) then we are done
+    if (!i.hasValue) return;
+
+    // value
+    model->setData(valIdx, i.value, Qt::EditRole);
+    model->setData(valIdx, i.delegateType, UR_DelegateType);
+    model->setData(valIdx, i.valueName, UR_Source);
+    model->setData(valIdx, i.type, UR_Type);
+    model->setData(valIdx, i.min, UR_Min);
+    model->setData(valIdx, i.max, UR_Max);
+    model->setData(valIdx, i.fixedWidth, UR_LabelFixedWidth);
+    model->setData(valIdx, i.color, UR_Color);
+    model->setData(valIdx, i.dropList, UR_StringList);
+    model->setData(valIdx, i.index, UR_QModelIndex);
+
+    propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
 }
 
 void PropertyEditor::mousePressEvent(QMouseEvent *event)
@@ -82,6 +174,7 @@ decoration is clicked.
         }
     }
 }
+
 
 void PropertyEditor::setSolo(bool isSolo)
 {

@@ -4455,7 +4455,8 @@ void MW::createDocks()
     // add widgets to the right side of the title bar layout
     // toggle expansion button
     DockTitleBtn *toggleExpansionBtn = new DockTitleBtn();
-    toggleExpansionBtn->setIcon(QIcon(":/images/icon16/swap.png"));
+//    toggleExpansionBtn->setIcon(QIcon(":/images/icon16/swap.png"));
+    toggleExpansionBtn->setIcon(QIcon(":/images/icon16/foldertree.png"));
     toggleExpansionBtn->setToolTip("Toggle expand all / collapse all");
     connect(toggleExpansionBtn, &DockTitleBtn::clicked, filters, &Filters::toggleExpansion);
     filterTitleLayout->addWidget(toggleExpansionBtn);
@@ -10916,6 +10917,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    filters->toggleExpansion();
+    propertyEditor->getParent("General");
 }
 // End MW

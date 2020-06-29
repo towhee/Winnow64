@@ -72,7 +72,7 @@ This class shows information in a two column table.
 
 Column 0 = Item Description
 Column 1 = Item Value
-Column 2 = Flag to show or hide row
+Column 2 = Flag to show or hide row (hidden)
 
 It is used to show some file, image and application state information.
 */

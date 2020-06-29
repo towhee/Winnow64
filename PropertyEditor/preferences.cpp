@@ -15,6 +15,8 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
 
     resizeColumns();
     addItems();
+    getParent("General");
+
 }
 
 void Preferences::expandBranch(QString text)
@@ -319,6 +321,670 @@ void Preferences::addItems()
     QModelIndex valIdx;
     QStandardItem *captionItem;
     QStandardItem *valueItem;
+
+
+
+    setColumnWidth(0, captionColumnWidth);
+    setColumnWidth(1, valueColumnWidth);
+    ItemInfo i;
+    // template
+    i.name = "";
+    i.parentName = "";
+    i.captionText = "";
+    i.tooltip = "";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "";
+    i.delegateType = DT_None;
+    i.min = 0;
+    i.max = 0;
+    i.fixedWidth = 50;
+    i.color = "#AABBCC";
+
+    // General header (Root)
+    i.name = "GeneralHeader";
+    i.parentName = "???";
+    i.captionText = "General";
+    i.tooltip = "General items";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Manage color
+    i.name = "colorManage";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Color manage";
+    i.tooltip = "Turning on color management will ensure consistent color, especially for\n"
+                "files that have been converted to a color profile other than sRGB.  Color \n"
+                "management has a small impact on image caching performance.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::colorManage;
+    i.valueName = "colorManage";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Remember last folder
+    i.name = "rememberLastDir";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Remember folder";
+    i.tooltip = "Remember the last folder used in Winnow from the previous session.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->rememberLastDir;
+    i.valueName = "rememberLastDir";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Check for app update at startup
+    i.name = "checkIfUpdate";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Check for program update";
+    i.tooltip = "At startup check if there is an update to Winnow.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->checkIfUpdate;
+    i.valueName = "checkIfUpdate";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Limit loupe fit zoom to 100%.
+    i.name = "limitFit100Pct";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Limit loupe fit zoom to 100%.";
+    i.tooltip = "Limit loupe fit zoom to 100%.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->imageView->limitFit100Pct;
+    i.valueName = "limitFit100Pct";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Application background luminousity
+    i.name = "globalBackgroundShade";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Application background luminousity";
+    i.tooltip = "Change the background shade throughout the application.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::backgroundShade;
+    i.valueName = "globalBackgroundShade";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 10;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // Font size header
+    i.name = "FontSizeHeader";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Font size";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+    // Application font size
+    i.name = "globalFontSize";
+    i.parentName = "FontSizeHeader";
+    i.tooltip = "Change the font size throughout the application.";
+    i.captionText = "Global";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::fontSize;
+    i.valueName = "globalFontSize";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 6;
+    i.max = 20;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // Application font size
+    i.name = "infoOverlayFontSize";
+    i.parentName = "FontSizeHeader";
+    i.tooltip = "Change the font size for the info overlay (usually showing the shooting"
+                "info in the top left of the image).";
+    i.captionText = "Info overlay";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->imageView->infoOverlayFontSize;
+    i.valueName = "infoOverlayFontSize";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 6;
+    i.max = 30;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // General category::Badge size subcategory
+    i.name = "BadgeSizeHeader";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Classification badge size";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Classification badge size
+    i.name = "classificationBadgeInImageDiameter";
+    i.parentName = "BadgeSizeHeader";
+    i.tooltip = "The image badge is a circle showing the colour classification, rating and pick\n"
+                "status.  It is located in the lower right corner of the image.  This property \n"
+                "allows you to adjust its size.";
+    i.captionText = "Loupe";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value =mw->classificationBadgeInImageDiameter;
+    i.valueName = "classificationBadgeInImageDiameter";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 10;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // Thumbnail badge size
+    i.name = "thumbnailBadgeInImageDiameter";
+    i.parentName = "BadgeSizeHeader";
+    i.tooltip = "The image badge is a circle showing the colour classification, rating and pick\n"
+                "status.  It is located in the top right corner of the thumbnail in the thumb \n"
+                "and grid views.  This property allows you to adjust its size.";
+    i.captionText = "Thumbnail";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value =mw->classificationBadgeInThumbDiameter;
+    i.valueName = "classificationBadgeInThumbDiameter";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 10;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // Thumbnails Header (Root)
+    i.name = "ThumbnailsHeader";
+    i.parentName = "";
+    i.captionText = "Thumbnails";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Filmstrip Header
+    i.name = "FilmstripHeader";
+    i.parentName = "ThumbnailsHeader";
+    i.captionText = "Film strip";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Thumbnail badge size
+    i.name = "thumbViewIconSize";
+    i.parentName = "FilmstripHeader";
+    i.tooltip = "Change the display size of the thumbnails in the film strip.";
+    i.captionText = "Size";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0; // n/a
+    i.valueName = "thumbViewIconSize";
+    i.delegateType = DT_PlusMinus;
+    i.type = "int";
+    addItem(i);
+
+    // Thumbnail label font size
+    i.name = "thumbViewLabelSize";
+    i.parentName = "FilmstripHeader";
+    i.captionText = "Label size";
+    i.tooltip = "Change the display size of the file name shown at the bottom of each thumbnail.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->thumbView->labelFontSize;
+    i.valueName = "thumbViewLabelSize";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 6;
+    i.max = 16;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // Show thumbnail label
+    i.name = "thumbViewShowLabel";
+    i.parentName = "FilmstripHeader";
+    i.captionText = "Show Label";
+    i.tooltip = "Show or hide the label with the file name at the bottom of each thumbnail.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->thumbView->showIconLabels;
+    i.valueName = "thumbViewShowLabel";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Grid Header
+    i.name = "GridHeader";
+    i.parentName = "ThumbnailsHeader";
+    i.captionText = "Grid";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Grid size
+    i.name = "gridIconSize";
+    i.parentName = "GridHeader";
+    i.tooltip = "Change the display size of the thumbnails in the grid view.";
+    i.captionText = "Size";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0; // n/a
+    i.valueName = "gridViewIconSize";
+    i.delegateType = DT_PlusMinus;
+    i.type = "int";
+    addItem(i);
+
+    // Thumbnail label font size
+    i.name = "gridViewLabelSize";
+    i.parentName = "GridHeader";
+    i.captionText = "Label size";
+    i.tooltip = "Change the display size of the file name shown at the bottom of each thumbnail.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->gridView->labelFontSize;
+    i.valueName = "gridViewLabelSize";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 6;
+    i.max = 16;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // Show grid thumbnail label
+    i.name = "gridViewShowLabel";
+    i.parentName = "GridHeader";
+    i.captionText = "Show Label";
+    i.tooltip = "Show or hide the label with the file name at the bottom of each thumbnail.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->thumbView->showIconLabels;
+    i.valueName = "gridViewShowLabel";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Cache Header (Root)
+    i.name = "CacheHeader";
+    i.parentName = "";
+    i.captionText = "Cache";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Show thumbnail label
+    i.name = "showThreadActivity";
+    i.parentName = "CacheHeader";
+    i.captionText = "Show caching activity";
+    i.tooltip = "Two small indicators on the extreme right side of the status bar turn red\n"
+                "when there is caching activity.  The left indicator is for matadata caching\n"
+                "activity, while the right indicator shows image caching activity.  This\n"
+                "preference shows or hides the indicators.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->isShowCacheThreadActivity;
+    i.valueName = "showThreadActivity";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Set the width of the cache status progress bar
+    i.name = "progressWidthSlider";
+    i.parentName = "CacheHeader";
+    i.captionText = "Cache status bar width";
+    i.tooltip = "Change the width of the cache status in the status bar.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->gridView->labelFontSize;
+    i.valueName = "progressWidthSlider";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 100;
+    i.max = 1000;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // Cache Thumbnail Header
+    i.name = "CacheThumbnailHeader";
+    i.parentName = "CacheHeader";
+    i.captionText = "Thumbnails";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Metadata chunk size (number of thumbnails)
+    i.name = "metadataChunkSize";
+    i.parentName = "CacheThumbnailHeader";
+    i.captionText = "Incremental amount to load";
+    i.tooltip = "Enter the number of minimum thumbnails and metadata you want to cache.  If the\n"
+                "grid is displaying a larger number then the larger number will be used\n"
+                "to make sure they are all shown.  You can experiment to see what works\n"
+                "best.  250 is the default amount.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->metadataCacheThread->metadataChunkSize;
+    i.valueName = "metadataChunkSize";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 1;
+    i.max = 3000;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // Maximum icon size
+    i.name = "maxIconSize";
+    i.parentName = "CacheThumbnailHeader";
+    i.captionText = "Maximum Icon Size";
+    i.tooltip = "Enter the maximum size in pixel width for thumbnails.  Icons will be \nt"
+                "created a this size.  The memory requirements increase at the square of \n"
+                "the size, and folders can contain thousands of images.\n\n"
+                "WARNING: Larger thumbnail sizes can consume huge amounts of memory.  The\n"
+                "default size is 256 pixels to a side.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::maxIconSize;
+    i.valueName = "maxIconSize";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 40;
+    i.max = 640;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // Cache Full Image Header
+    i.name = "CacheImagesHeader";
+    i.parentName = "CacheHeader";
+    i.captionText = "Full size images";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Available memory for caching
+    i.name = "maxIconSize";
+    i.parentName = "CacheImagesHeader";
+    i.captionText = "Available memory for caching";
+    i.tooltip = "The total amount of available memory in MB.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = QString::number(G::availableMemoryMB) + " MB";
+    i.valueName = "availableMBToCache";
+    i.delegateType = DT_Label;
+    i.type = "QString";
+    i.color = "#1b8a83";
+    addItem(i);
+
+    // Image cache size strategy
+    i.name = "imageCacheSizeMethod";
+    i.parentName = "CacheImagesHeader";
+    i.captionText = "Choose cache size method";
+    i.tooltip = "Select method of determining the size of the image cache\n"
+                "Thrifty  = larger of 10% of available memory\n"
+                "Moderate = 50% of available memory\n"
+                "Greedy   = 90% of available memory";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->cacheSizeMethod;
+    i.valueName = "imageCacheSizeMethod";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "Thrifty" << "Moderate" << "Greedy";
+    addItem(i);
+
+    // Slideshow Header (Root)
+    i.name = "SlideshowHeader";
+    i.parentName = "";
+    i.captionText = "Slideshow";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Slideshow delay
+    i.name = "slideshowDelay";
+    i.parentName = "SlideshowHeader";
+    i.captionText = "Slideshow delay (sec)";
+    i.tooltip = "Enter the slideshow delay in seconds.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->slideShowDelay;
+    i.valueName = "slideshowDelay";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 1;
+    i.max = 300;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // Random slideshow toggle
+    i.name = "isSlideShowRandom";
+    i.parentName = "SlideshowHeader";
+    i.captionText = "Random slide selection";
+    i.tooltip = "Selects random slides if checked.  Otherwise the slide selection is \n"
+                "sequential, based on the sort order.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->isSlideShowRandom;
+    i.valueName = "isSlideShowRandom";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Wrap slideshow
+    i.name = "isSlideShowWrap";
+    i.parentName = "SlideshowHeader";
+    i.captionText = "Wrap slide selection";
+    i.tooltip = "Wrap mode goes back to the beginning when the last image has been shown.n";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->isSlideShowWrap;
+    i.valueName = "isSlideShowWrap";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full Screen Header (Root)
+    i.name = "FullScreenHeader";
+    i.parentName = "";
+    i.captionText = "Full screen defaults";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Full screen - show folders
+    i.name = "fullScreenShowFolders";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show folders";
+    i.tooltip = "When you switch to full screen show the folders dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isFolders;
+    i.valueName = "fullScreenShowFolders";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show bookmarks
+    i.name = "fullScreenShowBookmarks";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show bookmarks";
+    i.tooltip = "When you switch to full screen show the bookmarks dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isFavs;
+    i.valueName = "fullScreenShowBookmarks";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show filters
+    i.name = "fullScreenShowFilters";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show filters";
+    i.tooltip = "When you switch to full screen show the filters dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isFilters;
+    i.valueName = "fullScreenShowFilters";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show metadata
+    i.name = "fullScreenShowMetadata";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show metadata";
+    i.tooltip = "When you switch to full screen show the metadata dock.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isMetadata;
+    i.valueName = "fullScreenShowMetadata";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show filmstrip
+    i.name = "fullScreenShowThumbs";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show filmstrip";
+    i.tooltip = "When you switch to full screen show the filmstrip.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isThumbs;
+    i.valueName = "fullScreenShowThumbs";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Full screen - show status bar
+    i.name = "fullScreenShowStatusBar";
+    i.parentName = "FullScreenHeader";
+    i.captionText = "Show status bar";
+    i.tooltip = "When you switch to full screen show the status bar.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->fullScreenDocks.isStatusBar;
+    i.valueName = "fullScreenShowStatusBar";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Metadata InfoView items to show (Root)
+    i.name = "MetadataPanelHeader";
+    i.parentName = "";
+    i.captionText = "Metadata panel items";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // InfoView fields to show
+    QStandardItemModel *okInfo = mw->infoView->ok;
+    i.hasValue = true;
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    i.captionIsEditable = false;
+    // iterate through infoView data, adding it to the property editor
+    for(int row = 0; row < okInfo->rowCount(); row++) {
+        QModelIndex parentIdx = okInfo->index(row, 0);
+        caption = okInfo->index(row, 0).data().toString();
+        i.parentName = "MetadataPanelHeader";
+        i.name = caption;
+        i.captionText = "Show " + caption;
+        i.tooltip = "Show or hide the category " + caption + " in the metadata panel";
+        i.value = okInfo->index(row, 2).data().toBool();
+        addItem(i);
+        for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
+            caption = okInfo->index(childRow, 0, parentIdx).data().toString();
+            i.parentName = i.name;
+            i.captionText = "Show " + caption;
+            i.tooltip = "Show or hide the category " + caption + " in the metadata panel";
+            i.value = okInfo->index(childRow, 2, parentIdx).data().toBool();
+            addItem(i);
+        }
+    }
+
+    // TableView show/hide fields Header (Root)
+    i.name = "TableViewColumnsHeader";
+    i.parentName = "";
+    i.captionText = "TableView columns";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // TableView conventional fields to show
+    i.hasValue = true;
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    i.captionIsEditable = false;
+    i.valueName = "tableView->ok";
+    i.parentName = "TableViewColumnsHeader";
+    QStandardItemModel *tv = mw->tableView->ok;
+    for (int row = 0; row < tv->rowCount(); row++) {
+        // do not show if is a geek column
+        if (tv->index(row, 2).data().toBool()) continue;
+        caption = tv->index(row, 0).data().toString();
+        i.name = caption;
+        i.captionText = "Show " + caption;
+        i.tooltip = "Show or hide the category " + caption + " in the table view";
+        i.value = tv->index(row, 1).data().toBool();
+        i.index = tv->index(row, 1);
+        addItem(i);
+    }
+
+    // Metadata geek columns to show
+    i.name = "TableViewGeekColumnsHeader";
+    i.parentName = "TableViewColumnsHeader";
+    i.captionText = "Geek columns";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // TableView geek fields to show
+    i.hasValue = true;
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    i.captionIsEditable = false;
+    i.valueName = "tableView->ok";
+    i.parentName = "TableViewGeekColumnsHeader";
+    for(int row = 0; row < tv->rowCount(); row++) {
+        // do not show if is a not a geek column
+        if (!tv->index(row, 2).data().toBool()) continue;
+        caption = tv->index(row, 0).data().toString();
+        i.captionText = "Show " + caption;
+        i.tooltip = "Show or hide the category " + caption + " in the table view";
+        i.value = tv->index(row, 1).data().toBool();
+        i.index = tv->index(row, 1);
+        addItem(i);
+    }
+
+    return;
+
+
+
+
+
+
 
     firstGenerationCount++;
     // HEADER
@@ -1301,6 +1967,7 @@ void Preferences::addItems()
     setColumnWidth(1, valueColumnWidth);
     secondGenerationCount = -1;
 
+    /*
         // InfoView fields to show
         QStandardItemModel *okInfo = mw->infoView->ok;
         QStandardItem *okCaption;
@@ -1356,7 +2023,6 @@ void Preferences::addItems()
                 propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
             }
         }
-
     firstGenerationCount++;
     // HEADER
     // Tableview show/hide fields category
@@ -1437,6 +2103,7 @@ void Preferences::addItems()
 //                bool isGeek = tv->index(row, 2).data().toBool();
 //                qDebug() << __FUNCTION__ << caption << "isGeek =" << isGeek;
             }
+            */
 }
 
 
