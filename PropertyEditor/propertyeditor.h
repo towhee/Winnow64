@@ -13,8 +13,30 @@ public:
     QStandardItemModel *model;
     PropertyDelegate *propertyDelegate;
     const QStyleOptionViewItem *styleOptionViewItem;
-    int indentation;
+    bool getParent(QString caption, QModelIndex parent = QModelIndex());
     void setSolo(bool isSolo);
+    int indentation;
+    int captionColumnWidth;
+    int valueColumnWidth;
+    struct ItemInfo {   // abstract addItem
+        QString name;
+        QString parentName;
+        bool hasValue;
+        QString tooltip;
+        QString captionText;
+        bool captionIsEditable;
+        QVariant value;
+        QString valueName;
+        QString type;
+        int delegateType;
+        int min;
+        int max;
+        int fixedWidth;
+        QString color;
+        QStringList dropList;
+        QModelIndex index;
+    };
+    void addItem(ItemInfo &i); // abstract addItem
 
 protected:
     void mousePressEvent(QMouseEvent *event);
@@ -23,8 +45,10 @@ public slots:
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor);
 
 private:
+//    QModelIndex getParent(QString caption, QModelIndex parent);
     QLinearGradient categoryBackground;
     bool isSolo;
+    QModelIndex parIdx;
 };
 
 

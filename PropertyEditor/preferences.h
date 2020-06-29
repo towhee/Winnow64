@@ -20,8 +20,8 @@ public slots:
 
 private:
     void addItems();
-    int captionColumnWidth;
-    int valueColumnWidth;
+//    int captionColumnWidth;
+//    int valueColumnWidth;
 
     // items we will want to modify
     QWidget *cacheSizePercentOfAvailable;

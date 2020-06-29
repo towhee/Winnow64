@@ -18,7 +18,8 @@ enum DelegateType
 
 enum UserRole
 {
-    UR_DelegateType = Qt::UserRole + 1, // the PropertyWidget (custom widget)
+    UR_Name = Qt::UserRole + 1,         // unique name to identify the item
+    UR_DelegateType,                    // the PropertyWidget (custom widget)
     UR_Source,                          // name of property/variable being edited
     UR_QModelIndex,                     // index from another model ie infoView->ok
     UR_Type,                            // the data type required by the delegate
