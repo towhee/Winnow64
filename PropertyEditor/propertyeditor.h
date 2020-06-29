@@ -5,6 +5,11 @@
 #include "Main/global.h"
 #include "propertydelegate.h"
 
+/* PropertyEditor Notes -----------------------------------------------------------------------
+
+
+*/
+
 class PropertyEditor : public QTreeView
 {
     Q_OBJECT
@@ -13,12 +18,13 @@ public:
     QStandardItemModel *model;
     PropertyDelegate *propertyDelegate;
     const QStyleOptionViewItem *styleOptionViewItem;
-    bool getParent(QString caption, QModelIndex parent = QModelIndex());
     void setSolo(bool isSolo);
+    void expandBranch(QString text);
+    void resizeColumns(QString stringToFitCaptions, QString stringToFitValues);
     int indentation;
     int captionColumnWidth;
     int valueColumnWidth;
-    struct ItemInfo {   // abstract addItem
+    struct ItemInfo {
         QString name;
         QString parentName;
         bool hasValue;
@@ -36,19 +42,20 @@ public:
         QStringList dropList;
         QModelIndex index;
     };
-    void addItem(ItemInfo &i); // abstract addItem
+    QWidget* addItem(ItemInfo &i); // abstract addItem
 
 protected:
     void mousePressEvent(QMouseEvent *event);
 
 public slots:
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor);
+    virtual void itemChange(QModelIndex);
 
 private:
-//    QModelIndex getParent(QString caption, QModelIndex parent);
+    bool getIndex(QString caption, QModelIndex parent = QModelIndex());
     QLinearGradient categoryBackground;
     bool isSolo;
-    QModelIndex parIdx;
+    QModelIndex foundIdx;
 };
 
 

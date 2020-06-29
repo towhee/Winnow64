@@ -6724,7 +6724,7 @@ void MW::allPreferences()
 
 void MW::infoViewPreferences()
 {
-    preferences("Metadata panel items");
+    preferences("MetadataPanelHeader");
 }
 
 void MW::preferences(QString text)
@@ -10917,6 +10917,5 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    propertyEditor->getParent("General");
 }
 // End MW
