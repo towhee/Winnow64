@@ -55,6 +55,7 @@ and D:\My Projects\Winnow Project\WinnowInstallLocal\packages\com.rh.prod\data
 Win Installation Update:
 -  Update deploy if new dlls required and when using a new version of Qt!!  (See above)
 -  Update version in mainwindow.h
+-  Set isReleaseVersion = true in mainwindow.h
 -  Update winnow.exe by compiling in release mode without shadow build
 -  Copy in winSCP the prior version in current to an archive folder.  DO NOT DELETE repository in current folder.
 -  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html

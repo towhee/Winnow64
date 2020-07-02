@@ -143,6 +143,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::DayColumn) return fm.boundingRect("=2000-00-00=").width();
     if (column == G::CreatorColumn) return fm.boundingRect("Rory Hill=====").width();
     if (column == G::MegaPixelsColumn) return fm.boundingRect("=999.99=").width();
+    if (column == G::LoadMsecPerMpColumn) return fm.boundingRect("=Msec/Mp=").width();
     if (column == G::DimensionsColumn) return fm.boundingRect("=99999x99999=").width();
     if (column == G::RotationColumn) return fm.boundingRect("=Rot=").width();
     if (column == G::ApertureColumn) return fm.boundingRect("=Aperture=").width();

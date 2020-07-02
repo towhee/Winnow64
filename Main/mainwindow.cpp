@@ -232,7 +232,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     setting = new QSettings("Winnow", "winnow_100");
     if (setting->contains("cacheSizeMB") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
-    loadSettings();    //dependent on bookmarks and actions, infoView
+    loadSettings();             //dependent on bookmarks, actions, infoView
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
@@ -264,7 +264,12 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     setActualDevicePixelRatio();
 
     // recall previous thumbDock state in case last closed in Grid mode
-    thumbDockVisibleAction->setChecked(wasThumbDockVisible);
+//    if (wasThumbDockVisible) {
+//        thumbDock->setVisible(true);
+//        thumbDock->raise();
+//        thumbDockVisibleAction->setChecked(true);
+//    }
+    if (wasThumbDockVisible) thumbDockVisibleAction->setChecked(wasThumbDockVisible);
 
     // intercept events to thumbView to monitor splitter resize of thumbDock
     qApp->installEventFilter(this);
@@ -2908,7 +2913,16 @@ void MW::createActions()
     addAction(thumbDockVisibleAction);
     connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::toggleThumbDockVisibity);
 
-    // rgh delete this
+    embelDockVisibleAction = new QAction(tr("Embellish"), this);
+    embelDockVisibleAction->setObjectName("toggleEmbelDock");
+    embelDockVisibleAction->setShortcutVisibleInContextMenu(true);
+    embelDockVisibleAction->setCheckable(true);
+    if (isSettings && setting->contains("isThumbDockVisible")) embelDockVisibleAction->setChecked(setting->value("isThumbDockVisible").toBool());
+    else embelDockVisibleAction->setChecked(false);
+    addAction(embelDockVisibleAction);
+    connect(embelDockVisibleAction, &QAction::triggered, this, &MW::toggleEmbelDockVisibility);
+
+    // rgh delete this ?
     metadataFixedSizeAction = new QAction(tr("Metadata Panel Fix Size"), this);
     metadataFixedSizeAction->setObjectName("metadataFixedSize");
     metadataFixedSizeAction->setShortcutVisibleInContextMenu(true);
@@ -3306,6 +3320,7 @@ void MW::createMenus()
     windowMenu->addAction(filterDockVisibleAction);
     windowMenu->addAction(metadataDockVisibleAction);
     windowMenu->addAction(thumbDockVisibleAction);
+    if (!isReleaseVersion) windowMenu->addAction(embelDockVisibleAction);
     windowMenu->addSeparator();
 //    windowMenu->addAction(windowTitleBarVisibleAction);
 #ifdef Q_OS_WIN
@@ -4247,14 +4262,13 @@ InfoView shows basic metadata in a dock widget.
 
 }
 
-void MW::createDocks()
+void MW::createFolderDock()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    /* FOLDERS ------------------------------------------------------------------------------*/
     folderDock = new DockWidget(tr(" Folders "), this);
     folderDock->setObjectName("File System");
     folderDock->setWidget(fsTree);
@@ -4292,8 +4306,15 @@ void MW::createDocks()
         if (setting->contains("size")) folderDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
+}
 
-    /* BOOKMARKS-----------------------------------------------------------------------------*/
+void MW::createFavDock()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     favDock = new DockWidget(tr(" Bookmarks  "), this);
     favDock->setObjectName("Bookmarks");
     favDock->setWidget(bookmarks);
@@ -4331,11 +4352,17 @@ void MW::createDocks()
         if (setting->contains("size")) favDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
+}
 
-    /* FILTERS ------------------------------------------------------------------------------*/
+void MW::createFilterDock()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     filterDock = new DockWidget(tr("  Filters  "), this);
     filterDock->setObjectName("Filters");
-//    filterDock->setWidget(filters);
 
     // customize the filterDock titlebar
     QHBoxLayout *filterTitleLayout = new QHBoxLayout();
@@ -4392,8 +4419,15 @@ void MW::createDocks()
         if (setting->contains("size")) filterDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
+}
 
-    /* INFOVIEW -----------------------------------------------------------------------------*/
+void MW::createMetadataDock()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     metadataDock = new DockWidget(tr("  Metadata  "), this);
     metadataDock->setObjectName("Image Info");
     metadataDock->setWidget(infoView);
@@ -4425,8 +4459,15 @@ void MW::createDocks()
         if (setting->contains("size")) metadataDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
+}
 
-    /* THUMBNAILS ---------------------------------------------------------------------------*/
+void MW::createThumbDock()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     thumbDock = new DockWidget(tr("Thumbnails"), this);
     thumbDock->setObjectName("thumbDock");
     thumbDock->setWidget(thumbView);
@@ -4442,17 +4483,85 @@ void MW::createDocks()
     }
 //    else thumbDock->dw.size = QSize(600, 600);
 
-    addDockWidget(Qt::LeftDockWidgetArea, folderDock);
-    addDockWidget(Qt::LeftDockWidgetArea, favDock);
-    addDockWidget(Qt::LeftDockWidgetArea, filterDock);
-    addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
-    addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
-
     connect(thumbDock, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
             this, SLOT(setThumbDockFeatures(Qt::DockWidgetArea)));
 
     connect(thumbDock, SIGNAL(topLevelChanged(bool)),
             this, SLOT(setThumbDockFloatFeatures(bool)));
+}
+
+void MW::createEmbelDock()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    EmbelProperties *embelProperties = new EmbelProperties(this);
+    embelDock = new DockWidget(tr("  Embellish  "), this);
+    embelDock->setObjectName("embelDock");
+    embelDock->setWidget(embelProperties);
+    embelDock->setFloating(false);
+    embelDock->setVisible(true);
+
+    // customize the embelDock titlebar
+    QHBoxLayout *embelTitleLayout = new QHBoxLayout();
+    embelTitleLayout->setContentsMargins(0, 0, 0, 0);
+    embelTitleLayout->setSpacing(0);
+    embelTitleBar = new DockTitleBar("Embellish", embelTitleLayout);
+    embelDock->setTitleBarWidget(embelTitleBar);
+
+    // add widgets to the right side of the title bar layout
+
+    // anchor button
+    DockTitleBtn *embelAnchorBtn = new DockTitleBtn();
+    embelAnchorBtn->setIcon(QIcon(":/images/icon16/anchor.png"));
+    embelAnchorBtn->setToolTip("Add anchors to pin text, rectangles and graphics");
+//    connect(embelAnchorBtn, &DockTitleBtn::clicked, this, &MW::infoViewPreferences);
+    embelTitleLayout->addWidget(embelAnchorBtn);
+
+    // text button
+    DockTitleBtn *embelTextBtn = new DockTitleBtn();
+    embelTextBtn->setIcon(QIcon(":/images/icon16/text.png"));
+    embelTextBtn->setToolTip("Add a Text Item");
+    //    connect(embelTextBtn, &DockTitleBtn::clicked, this, &MW::infoViewPreferences);
+    embelTitleLayout->addWidget(embelTextBtn);
+
+    // rectangle button
+    DockTitleBtn *embelRectangleBtn = new DockTitleBtn();
+    embelRectangleBtn->setIcon(QIcon(":/images/icon16/rectangle.png"));
+    embelRectangleBtn->setToolTip("Add a rectangle");
+    connect(embelRectangleBtn, &DockTitleBtn::clicked, imageView, &ImageView::activateRubberBand);
+    embelTitleLayout->addWidget(embelRectangleBtn);
+
+    // close button
+    DockTitleBtn *embelCloseBtn = new DockTitleBtn();
+    embelCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    embelCloseBtn->setToolTip("Hide the Embellish Panel");
+    connect(embelCloseBtn, &DockTitleBtn::clicked, this, &MW::toggleEmbelDockVisibility);
+    embelTitleLayout->addWidget(embelCloseBtn);
+}
+
+void MW::createDocks()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    createFolderDock();
+    createFavDock();
+    createFilterDock();
+    createMetadataDock();
+    createThumbDock();
+    if (!isReleaseVersion) createEmbelDock();
+
+    addDockWidget(Qt::LeftDockWidgetArea, folderDock);
+    addDockWidget(Qt::LeftDockWidgetArea, favDock);
+    addDockWidget(Qt::LeftDockWidgetArea, filterDock);
+    addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
+    addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
+    if (!isReleaseVersion) addDockWidget(Qt::RightDockWidgetArea, embelDock);
 
     folderDockOrigWidget = folderDock->titleBarWidget();
     favDockOrigWidget = favDock->titleBarWidget();
@@ -4469,12 +4578,6 @@ void MW::createDocks()
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, metadataDock);
     MW::tabifyDockWidget(metadataDock, filterDock);
-
-//    propertiesDock = new DockWidget(tr("  Properties  "), this);
-//    propertiesDock->setObjectName("Properties");
-//    propertiesDock->setWidget(infoView);
-//    propertiesDock->setFloating(true);
-//    propertiesDock->setVisible(false);
 }
 
 void MW::createFSTree()
@@ -6481,6 +6584,7 @@ void MW::runExternalApp()
             break;
         }
     }
+//    qDebug() << __FUNCTION__ << appName << externalApps << appPath;
     if(appPath == "") return;       // add err handling
     QFileInfo appInfo = appPath;
     QString appExecutable = appInfo.fileName();
@@ -6607,6 +6711,7 @@ void MW::preferences(QString text)
     if (text != "") pref->expandBranch(text);
     preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
     preferencesDlg->exec();
+    delete pref;
 
     /* Create a preferences tree as a docking panel:
     propertiesDock = new DockWidget(tr("  Preferencess  "), this);
@@ -7590,7 +7695,6 @@ Preferences are located in the prefdlg class and updated here.
         pathTemplateSelected2 = 0;
         filenameTemplateSelected = 0;
 
-
         // preferences
         isSoloPrefDlg = true;
 
@@ -7630,6 +7734,9 @@ Preferences are located in the prefdlg class and updated here.
         G::fontSize = setting->value("fontSize").toString();
         if (G::fontSize == "") G::fontSize = "12";
     }
+
+    // Thumbdock
+    if (setting->contains("wasThumbDockVisible")) wasThumbDockVisible = setting->value("wasThumbDockVisible").toBool();
 
     // load imageView->infoOverlayFontSize later as imageView has not been created yet
     if (setting->contains("classificationBadgeInImageDiameter")) classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
@@ -8754,6 +8861,33 @@ void MW::toggleThumbDockVisibity()
              << "G::mode =" << G::mode
              << "isNormalScreen =" << isNormalScreen
              << "thumbDock->isVisible() =" << thumbDock->isVisible();*/
+}
+
+void MW::toggleEmbelDockVisibility() {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (G::isInitializing) return;
+
+    if (embelDock->isVisible()) dockToggle = SetInvisible;
+    else dockToggle = SetVisible;
+
+    switch (dockToggle) {
+    case SetFocus:
+        embelDock->raise();
+        embelDockVisibleAction->setChecked(true);
+        break;
+    case SetInvisible:
+        embelDock->setVisible(false);
+        embelDockVisibleAction->setChecked(false);
+        break;
+    case SetVisible:
+        embelDock->setVisible(true);
+        embelDock->raise();
+        embelDockVisibleAction->setChecked(true);
+    }
 }
 
 void MW::setMenuBarVisibility() {
@@ -10653,11 +10787,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    folderDock->setTitleBarWidget(folderDockOrigWidget);
-    favDock->setTitleBarWidget(favDockOrigWidget);
-    filterDock->setTitleBarWidget(filterDockOrigWidget);
-    metadataDock->setTitleBarWidget(metadataDockOrigWidget);
-    thumbDock->setTitleBarWidget(thumbDockOrigWidget);
-
+    bool test = false;
+    test = setting->value("wasThumbDockVisibleddd").toBool();
+    qDebug() << __FUNCTION__ << test;
 }
 // End MW

@@ -18,3 +18,9 @@ Resources
 
 MacOS trackpad single tap click - change the trackpad options setting in accessibility
 to 'enable dragging' with "three finger drag" makes single tap work properly.
+
+Interesting stuff for graphics editing
+- QRubberBand
+- QGraphics... classes
+- QGraphicsLayout Class
+- QGraphicsAnchorLayout Class

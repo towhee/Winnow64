@@ -850,6 +850,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     s += (m.aperture == "") ? "" : " at " + m.aperture;
     s += (m.ISO == "") ? "" : ", ISO " + m.ISO;
     m.shootingInfo = s;
+    m.loadMsecPerMp = 0;
 
     m.thumbUnavailable = thumbUnavailable;
     m.imageUnavailable = imageUnavailable;

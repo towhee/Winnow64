@@ -11,6 +11,9 @@
 #include "Utilities/dropshadowlabel.h"
 #include "Utilities/classificationlabel.h"
 #include "Image/pixmap.h"
+
+#include "Dialogs/patterndlg.h"
+
 //#ifdef Q_OS_WIN
 //#include "Utilities/icc.h"
 //#endif
@@ -41,6 +44,8 @@ public:
 
     DropShadowLabel *infoOverlay;
     DropShadowLabel *titleDropShadow;
+
+    QByteArray tileBa;
 
     bool loadImage(QString imageFileName);
     qreal getFitScaleFactor(QRectF container, QRectF content);
@@ -75,6 +80,7 @@ public slots:
     void hideCursor();
     void refresh();
     void setClassificationBadgeImageDiam(int d);
+    void activateRubberBand();
 
 signals:
     void togglePick();
@@ -90,9 +96,9 @@ protected:
     void resizeEvent(QResizeEvent *event);
     void scrollContentsBy(int dx, int dy);
     void wheelEvent(QWheelEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
     void mousePressEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     void enterEvent(QEvent *event);
     void paintEvent(QPaintEvent *event);
@@ -199,6 +205,10 @@ private:
     qreal zoomMin = 0.05;   // 5% of original  rgh add to pref
     qreal zoomMax = 8.0;    // 800% of original
 //    qreal zoom100Pct;
+
+    bool isRubberBand;
+    QPoint origin;
+    QRubberBand *rubberBand;
 };
 
 #endif // IMAGEVIEW_H
