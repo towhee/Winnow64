@@ -93,6 +93,9 @@ ImageView::ImageView(QWidget *parent,
     infoEffect->setOpacity(0.8);
     infoOverlay->setGraphicsEffect(infoEffect);
 
+    rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
+    isRubberBand = false;
+
     // rgh is this needed or holdover from prev program
     mouseMovementTimer = new QTimer(this);
 //    connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
@@ -507,6 +510,12 @@ size.
     int d = classificationBadgeDiam;    // diameter of the classification label
     classificationLabel->setDiameter(d);
     classificationLabel->move(x - d - o, y - d - o);
+}
+
+void ImageView::activateRubberBand()
+{
+    isRubberBand = true;
+    setCursor(Qt::CrossCursor);
 }
 
 void ImageView::resizeEvent(QResizeEvent *event)
@@ -1036,6 +1045,13 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     isMouseDoubleClick = false;
     isMouseDrag = false;
     if (event->button() == Qt::LeftButton) {
+        if (isRubberBand) {
+            setCursor(Qt::CrossCursor);
+            origin = event->pos();
+            rubberBand->setGeometry(QRect(origin, QSize()));
+            rubberBand->show();
+            return;
+        }
         isLeftMouseBtnPressed = true;
         scrollCount = 0;                // still used?
         mousePressPt.setX(event->x());
@@ -1068,6 +1084,11 @@ Set a delay to hide cursor if in slideshow mode
 //    G::track(__FUNCTION__);
     #endif
     }
+    if (isRubberBand) {
+        rubberBand->setGeometry(QRect(origin, event->pos()).normalized());
+        return;
+    }
+
     static QPoint prevPos = event->pos();
 
     if (isLeftMouseBtnPressed && event->pos() != prevPos) {
@@ -1103,6 +1124,27 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
+
+    // rubberband
+    if (isRubberBand) {
+        setCursor(Qt::ArrowCursor);
+        QRect rb = rubberBand->geometry();
+        rubberBand->hide();
+        QPoint p0 = mapToScene(rb.topLeft()).toPoint();
+        QPoint p1 = mapToScene(rb.bottomRight()).toPoint();
+        QRect r(p0, p1);
+        QPixmap pm = pmItem->pixmap().copy(r);
+        isRubberBand = false;
+        QString name;
+        QPixmap tile;
+        PatternDlg *patternDlg = new PatternDlg(this, pm, tile, name);
+        patternDlg->exec();
+        QBuffer buffer(&tileBa);
+        buffer.open(QIODevice::WriteOnly);
+        tile.save(&buffer, "PNG");
+        return;
+    }
+
     // prevent zooming when right click for context menu
     if (event->button() == Qt::RightButton) {
         return;

@@ -175,6 +175,7 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::DayColumn, new QStandardItem("Day")); horizontalHeaderItem(G::DayColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::CreatorColumn, new QStandardItem("Creator")); horizontalHeaderItem(G::CreatorColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::MegaPixelsColumn, new QStandardItem("MPix")); horizontalHeaderItem(G::MegaPixelsColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::LoadMsecPerMpColumn, new QStandardItem("Msec/Mp")); horizontalHeaderItem(G::LoadMsecPerMpColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::RotationColumn, new QStandardItem("Rot")); horizontalHeaderItem(G::RotationColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ApertureColumn, new QStandardItem("Aperture")); horizontalHeaderItem(G::ApertureColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ShutterspeedColumn, new QStandardItem("Shutter")); horizontalHeaderItem(G::ShutterspeedColumn)->setData(false, G::GeekRole);
@@ -648,6 +649,7 @@ Used by InfoString and IngestDlg
     m.url = index(row, G::UrlColumn).data().toString();
     m._url = index(row, G::_UrlColumn).data().toString();
     m.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
+    m.loadMsecPerMp = index(row, G::LoadMsecPerMpColumn).data().toInt();
     m.metadataLoaded  = index(row, G::MetadataLoadedColumn).data().toBool();
 
     m.offsetFull = index(row, G::OffsetFullColumn).data().toUInt();
@@ -789,6 +791,8 @@ the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
     search += m.createdDate.toString("yyyy-MM-dd");
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
     setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::LoadMsecPerMpColumn), m.loadMsecPerMp);
+    setData(index(row, G::LoadMsecPerMpColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::WidthColumn), QString::number(m.width));
     setData(index(row, G::WidthColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::HeightColumn), QString::number(m.height));
@@ -1221,6 +1225,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("orientation", 25) << G::s(index(row, G::OrientationColumn).data());
     rpt << "\n  " << G::sj("rotationDegrees", 25) << G::s(index(row, G::RotationDegreesColumn).data());
     rpt << "\n  " << G::sj("shootingInfo", 25) << G::s(index(row, G::ShootingInfoColumn).data());
+    rpt << "\n  " << G::sj("loadMsecPerMp", 25) << G::s(index(row, G::LoadMsecPerMpColumn).data());
     rpt << "\n  " << G::sj("searchText", 25) << G::s(index(row, G::SearchTextColumn).data());
     QStringList sl = index(row, G::ErrColumn).data().toStringList();
     rpt << "\n  " << G::sj("err", 25) << sl.at(0);

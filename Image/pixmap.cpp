@@ -64,6 +64,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
     #endif
     }
 //    qDebug() << __FUNCTION__ << "fPath =" << fPath;
+    QElapsedTimer t;
+    t.restart();
 
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
@@ -248,6 +250,12 @@ bool Pixmap::load(QString &fPath, QImage &image)
         ICC::transform(image);
     }
     #endif
+
+    // calc read/decode performance
+    double mp = dm->index(dmRow, G::MegaPixelsColumn).data().toDouble();
+    qint64 msec = t.elapsed();
+    int msecPerMp = static_cast<int>(msec / mp);
+    dm->setData(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, Qt::EditRole);
 
     #ifdef ISDEBUG
     G::track(__FUNCTION__, "Completed load image");

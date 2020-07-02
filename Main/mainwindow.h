@@ -33,6 +33,7 @@
 #include "Views/infostring.h"
 #include "Metadata/metadata.h"
 #include "Main/dockwidget.h"
+#include "Embellish/Properties/embelproperties.h"
 
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
@@ -85,6 +86,7 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = nullptr);
 
+    bool isReleaseVersion = false;
     QString version = "Version: 1.11 beta";
 //    QString version = "Version: 1.10 released 2020-06-04";
     QString winnowWithVersion = "Winnow 1.11 beta";
@@ -111,8 +113,6 @@ public:
     QStringList *recentFolders;
     QStringList *ingestHistoryFolders;
     QStringList ingestDescriptionCompleter;
-
-    DockWidget *thumbDock;
 
     G::Pair externalApp;                  // external application name / executable path
     QList<G::Pair> externalApps;          // list of external apps
@@ -463,6 +463,7 @@ private slots:
     void setMetadataDockFixedSize();
 
     void toggleThumbDockVisibity();
+    void toggleEmbelDockVisibility();
     void toggleFolderDockVisibility();
     void toggleFavDockVisibility();
     void toggleFilterDockVisibility();
@@ -720,6 +721,7 @@ private:
     QAction *filterDockVisibleAction;
     QAction *metadataDockVisibleAction;
     QAction *thumbDockVisibleAction;
+    QAction *embelDockVisibleAction;
 //    QAction *windowTitleBarVisibleAction;
     QAction *menuBarVisibleAction;
     QAction *statusBarVisibleAction;
@@ -802,11 +804,14 @@ private:
     DockWidget *favDock;
     DockWidget *filterDock;
     DockWidget *metadataDock;
+    DockWidget *thumbDock;
     DockWidget *propertiesDock;
+    DockWidget *embelDock;
     DockTitleBar *folderTitleBar;
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
     DockTitleBar *metaTitleBar;
+    DockTitleBar *embelTitleBar;
     FSTree *fsTree;
     BookMarks *bookmarks;
     Filters *filters;
@@ -913,6 +918,12 @@ private:
     bool isReject;
 
     void createDocks();
+    void createFolderDock();
+    void createFavDock();
+    void createFilterDock();
+    void createMetadataDock();
+    void createThumbDock();
+    void createEmbelDock();
     void updateState();
     void clearAll();
     void deleteViewerImage();

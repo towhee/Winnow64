@@ -92,6 +92,7 @@ public:
     QByteArray iccBuf;
     QString iccSpace;
     QString parseSource;
+    int loadMsecPerMp;
 };
 Q_DECLARE_METATYPE(ImageMetadata)
 

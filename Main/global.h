@@ -57,6 +57,7 @@ namespace G
         DayColumn,
         CreatorColumn,
         MegaPixelsColumn,
+        LoadMsecPerMpColumn,
         DimensionsColumn,
         RotationColumn,
         ApertureColumn,

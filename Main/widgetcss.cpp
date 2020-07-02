@@ -35,6 +35,10 @@ QString WidgetCSS::css()
     halfFontSize = fontSize / 2;
 
     return
+            widget() +
+            mainWindow() +
+            menu() +
+            menuBar() +
             checkBox() +
             comboBox() +
 //            dockTitleBar() +
@@ -46,9 +50,6 @@ QString WidgetCSS::css()
             lineEdit() +
             listView() +
             listWidget() +
-            mainWindow() +
-            menu() +
-            menuBar() +
             progressBar() +
             pushButton() +
             scrollBar() +
@@ -60,8 +61,7 @@ QString WidgetCSS::css()
             textEdit() +
             toolButton() +
             treeView() +
-            treeWidget() +
-            widget()
+            treeWidget()
             ;
 }
 

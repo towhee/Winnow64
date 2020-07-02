@@ -258,8 +258,6 @@ itemChange, which is subclassed here.
 
 void Preferences::addItems()
 {
-    setColumnWidth(0, captionColumnWidth);
-    setColumnWidth(1, valueColumnWidth);
     ItemInfo i;
     /* template of ItemInfo
     i.name = "";
