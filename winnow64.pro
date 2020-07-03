@@ -17,7 +17,8 @@ QT += xmlpatterns
 
 HEADERS += Cache/imagecache.h \
    Dialogs/patterndlg.h \
-   Embellish/Properties/embelproperties.h
+   Embellish/Properties/embelproperties.h \
+   Embellish/embelview.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/buildfilters.h
@@ -92,7 +93,8 @@ HEADERS += Views/tableview.h
 
 SOURCES += Cache/imagecache.cpp \
    Dialogs/patterndlg.cpp \
-   Embellish/Properties/embelproperties.cpp
+   Embellish/Properties/embelproperties.cpp \
+   Embellish/embelview.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp

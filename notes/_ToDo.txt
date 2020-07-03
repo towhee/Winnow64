@@ -19,6 +19,8 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Statusbar reverseSortBtn
+- Tile extractor
 - Added LoadMsecPerMpColumn to the datamodel
 - Fixed Heic breakdown
 - Abstracted preferences in PropertyEditor

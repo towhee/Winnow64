@@ -6,11 +6,11 @@
 #include "widgetcss.h"
 
 /*-------------------------------------------------------------------------------------------*/
-class DockTitleBtn : public QToolButton
+class BarBtn : public QToolButton
 {
     Q_OBJECT
 public:
-    DockTitleBtn(/*QWidget *parent = nullptr*/);
+    BarBtn(/*QWidget *parent = nullptr*/);
 protected:
     void enterEvent(QEvent*);
     void leaveEvent(QEvent*);

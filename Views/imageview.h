@@ -4,7 +4,6 @@
 #include <QtWidgets>
 #include <QHash>
 #include "Datamodel/datamodel.h"
-//#include "Metadata/metadata.h"
 #include "Cache/imagecache.h"
 #include "Views/iconview.h"
 #include "Views/infostring.h"
@@ -30,22 +29,24 @@ public:
               DataModel *dm,
               ImageCache *imageCacheThread,
               IconView *thumbView,
-              InfoString *infoString,
-              bool isShootingInfoVisible,
-              bool isRatingBadgeVisible,
-              int classificationBadgeDiam,
-              int infoOverlayFontSize);
+              InfoString *infoString = nullptr,
+              bool isShootingInfoVisible = false,
+              bool isRatingBadgeVisible = false,
+              int classificationBadgeDiam = 0,
+              int infoOverlayFontSize = 0);
 
     qreal zoom;
     qreal zoomFit;
     bool isFit;
     qreal refZoom;                      // adjusted to real screen pixels
     qreal toggleZoom;
+    bool isRubberBand;
 
     DropShadowLabel *infoOverlay;
     DropShadowLabel *titleDropShadow;
 
     QByteArray tileBa;
+    QString tileName;
 
     bool loadImage(QString imageFileName);
     qreal getFitScaleFactor(QRectF container, QRectF content);
@@ -81,6 +82,7 @@ public slots:
     void refresh();
     void setClassificationBadgeImageDiam(int d);
     void activateRubberBand();
+    void quitRubberBand();
 
 signals:
     void togglePick();
@@ -88,6 +90,7 @@ signals:
     void killSlideshow();                   // only call when slideshow is active
     void zoomChange(qreal zoomValue);
     void handleDrop(const QMimeData *mimeData);
+    void newTile();
 
 private slots:
     void upgradeToFullSize();
@@ -118,17 +121,17 @@ private:
     void setPreviewDim();
     void setFullDim();
 
+    QWidget *mainWindow;
+    Metadata *metadata;
+    DataModel *dm;
+    ImageCache *imageCacheThread;
+    IconView *thumbView;
+
     bool sceneBiggerThanView();
     bool resizeIsSmaller();
     void placeClassificationBadge();
     void transform();
 
-    QWidget *mainWindow;
-    QWidget *centralWidget;
-    Metadata *metadata;
-    DataModel *dm;
-    ImageCache *imageCacheThread;
-    IconView *thumbView;
     InfoString *infoString;
     Pixmap *pixmap;
 
@@ -206,7 +209,6 @@ private:
     qreal zoomMax = 8.0;    // 800% of original
 //    qreal zoom100Pct;
 
-    bool isRubberBand;
     QPoint origin;
     QRubberBand *rubberBand;
 };
