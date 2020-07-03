@@ -42,7 +42,7 @@ ImageView::ImageView(QWidget *parent,
     }
 
     this->mainWindow = parent;
-    this->centralWidget = centralWidget;
+//    this->centralWidget = centralWidget;
     this->metadata = metadata;
     this->dm = dm;
     this->imageCacheThread = imageCacheThread;
@@ -216,7 +216,7 @@ to prevent jarring changes in perceived scale by the user.
     is the case, ignore, as the function will be called again.
     Also ignore if the image failed to be loaded into the graphics scene.
     */
-    if (isLoaded && centralWidget->rect().height() > 50) {
+    if (isLoaded && rect().height() > 50) {
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
@@ -228,7 +228,7 @@ to prevent jarring changes in perceived scale by the user.
         /* If this is the first image in a new folder, and the image is smaller than the
         canvas (central widget window) set the scale to fit window, do not scale the
         image beyond 100% to fit the window.  */
-        zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
+        zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
         if (isFirstImageNewFolder) {
 //            qDebug() << __FUNCTION__ << "isFirstImageNewFolder";
             isFit = true;
@@ -262,7 +262,7 @@ are matched:
         setSceneRect(scene->itemsBoundingRect());
         isPreview = false;
         qreal prevZoomFit = zoomFit;
-        zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
+        zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
         zoom *= (zoomFit / prevZoomFit);
         if (isFit) zoom = zoomFit;
         scale();
@@ -328,6 +328,7 @@ If isSlideshow then hide mouse cursor unless is moves.
     }
 
     if (isFit) setFitZoom();
+    qDebug() << __FUNCTION__ << zoom << toggleZoom;
     matrix.scale(zoom, zoom);
     // when resize before first image zoom == inf
     if (zoom > 10) return;
@@ -336,7 +337,7 @@ If isSlideshow then hide mouse cursor unless is moves.
 
     isScrollable = (zoom > zoomFit);
     if (isScrollable) scrollPct = getScrollPct();
-//    thumbView->zoomCursor(idx, /*forceUpdate=*/true);
+
     if (!G::isSlideShow) {
         if (isScrollable) setCursor(Qt::OpenHandCursor);
         else {
@@ -516,6 +517,15 @@ void ImageView::activateRubberBand()
 {
     isRubberBand = true;
     setCursor(Qt::CrossCursor);
+    QString msg = "Rubberband activated.  Make a selection in the ImageView.\n"
+                  "Press Esc to quit rubberbanding";
+    G::popUp->showPopup(msg, 1500);
+}
+
+void ImageView::quitRubberBand()
+{
+    isRubberBand = false;
+    setCursor(Qt::ArrowCursor);
 }
 
 void ImageView::resizeEvent(QResizeEvent *event)
@@ -543,7 +553,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
     //    */
     if (G::isInitializing) return;
     QGraphicsView::resizeEvent(event);
-    zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
+    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
     if (isFit) {
         setFitZoom();
         scale();
@@ -706,7 +716,7 @@ image if the image was not zoomed.
     setSceneRect(scene->itemsBoundingRect());
 
     // recalc zoomFit factor
-    zoomFit = getFitScaleFactor(centralWidget->rect(), pmItem->boundingRect());
+    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
 
     // if in isFit mode then zoom accordingly
     if (isFit) {
@@ -786,17 +796,17 @@ used to determine the zoomCursor aspect in ThumbView.
     }
     sceneOrigin = mapFromScene(0.0, 0.0);
     scene_Rect = sceneRect();
-    cwRect = centralWidget->rect();
+    cwRect = rect();
 ////    qreal xOff = static_cast<qreal>(sceneOrigin.x());
 ////    qreal yOff = static_cast<qreal>(sceneOrigin.y());
 ////    xOff < 0 ? xOff = 0 : xOff = xOff;
 ////    yOff < 0 ? yOff = 0 : yOff = yOff;
-//    qreal xPct = xOff / centralWidget->rect().width();
-//    qreal yPct = yOff / centralWidget->rect().height();
+//    qreal xPct = xOff / rect().width();
+//    qreal yPct = yOff / rect().height();
 //    qDebug() << __FUNCTION__
 //             << "sceneOrigin =" << sceneOrigin
 //             << "sceneRect() =" << sceneRect()
-//             << "centralWidget->rect() =" << centralWidget->rect();
+//             << "rect() =" << rect();
 //    return QSizeF(xPct, yPct);
 }
 
@@ -1135,13 +1145,13 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         QRect r(p0, p1);
         QPixmap pm = pmItem->pixmap().copy(r);
         isRubberBand = false;
-        QString name;
         QPixmap tile;
-        PatternDlg *patternDlg = new PatternDlg(this, pm, tile, name);
+        PatternDlg *patternDlg = new PatternDlg(this, pm, tile, tileName);
         patternDlg->exec();
         QBuffer buffer(&tileBa);
         buffer.open(QIODevice::WriteOnly);
         tile.save(&buffer, "PNG");
+        emit newTile();
         return;
     }
 

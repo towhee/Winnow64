@@ -34,6 +34,7 @@
 #include "Metadata/metadata.h"
 #include "Main/dockwidget.h"
 #include "Embellish/Properties/embelproperties.h"
+#include "Embellish/embelview.h"
 
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
@@ -157,6 +158,7 @@ public:
         bool isGridDisplay;
         bool isTableDisplay;
         bool isCompareDisplay;
+        bool isEmbelDisplay;
     };
     workspaceData ws;   // hold values for workspace n
     workspaceData *w;
@@ -254,7 +256,8 @@ public:
         TableTab,
         GridTab,
         StartTab,
-        MessageTab
+        MessageTab,
+        EmbelTab
     };
 
     // mode change
@@ -332,6 +335,7 @@ private slots:
     void ejectUsb(QString path);
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
+    void writeTile();
     void setCachedStatus(QString fPath, bool isCached);
     void searchTextEdit();
     void setRating();
@@ -348,6 +352,7 @@ private slots:
     void uncheckAllFilters();
     void clearAllFilters();
     void sortChange();
+    void reverseSortDirection();
     void allPreferences();
     void infoViewPreferences();
     void preferences(QString text = "");
@@ -358,6 +363,7 @@ private slots:
     void gridDisplay();
     void tableDisplay();
     void compareDisplay();
+    void embelDisplay();
     void updateZoom();
     void zoomOut();
     void zoomIn();
@@ -471,20 +477,7 @@ private slots:
 
     void setMenuBarVisibility();
     void setStatusBarVisibility();
-//    void setWindowsTitleBarVisibility();
 
-//    void setFolderDockFocus();
-//    void setFavDockFocus();
-//    void setFilterDockFocus();
-//    void setMetadataDockFocus();
-//    void setThumbDockFocus();
-
-//    void setFolderDockLockMode();
-//    void setFavDockLockMode();
-//    void setFilterDockLockMode();
-//    void setMetadataDockLockMode();
-//    void setThumbDockLockMode();
-//    void setAllDocksLockMode();
     void reportState();
 
     void openFolder();
@@ -517,12 +510,6 @@ private slots:
     void help();
     void helpShortcuts();
     void helpWelcome();
-
-//    void delayScroll();
-
-    //    void cutThumbs();
-//    void copyThumbs();
-    //    void pasteThumbs();
 
 private:
 
@@ -697,6 +684,7 @@ private:
     QAction *asTableAction;
     QAction *asLoupeAction;
     QAction *asCompareAction;
+    QAction *asEmbelAction;
     QActionGroup *iconGroupAction;
     QAction *zoomToAction;
     QAction *zoomInAction;
@@ -785,8 +773,7 @@ private:
     Ui::message msg;
     QLineEdit *filterBar;
     QLabel *statusLabel;
-    QLabel *sortAZStatusLabel;
-    QLabel *sortZAStatusLabel;
+    BarBtn *reverseSortBtn;
     QLabel *filterStatusLabel;
     QLabel *subfolderStatusLabel;
     QLabel *rawJpgStatusLabel;
@@ -826,6 +813,8 @@ private:
     IconView *gridView;
     TableView *tableView;
     ImageView *imageView;
+    EmbelView *embelView;
+    QFrame *embelFrame;
     InfoString *infoString;
     PropertyEditor *propertyEditor;
     QHeaderView *headerView;
@@ -939,6 +928,7 @@ private:
     void createFilterView();
     void createFSTree();
     void createImageView();
+    void createEmbelView();
     void createInfoView();
     void createMenus();
     void createTableView();

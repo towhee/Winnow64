@@ -247,6 +247,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     createInfoView();           // dependent on Metadata
     createCaching();            // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
+    createEmbelView();          // dependent on centralWidget, ImageView
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
     createBookmarks();          // dependent on loadSettings
@@ -264,11 +265,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     setActualDevicePixelRatio();
 
     // recall previous thumbDock state in case last closed in Grid mode
-//    if (wasThumbDockVisible) {
-//        thumbDock->setVisible(true);
-//        thumbDock->raise();
-//        thumbDockVisibleAction->setChecked(true);
-//    }
     if (wasThumbDockVisible) thumbDockVisibleAction->setChecked(wasThumbDockVisible);
 
     // intercept events to thumbView to monitor splitter resize of thumbDock
@@ -276,6 +272,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     // if previous sort was not by filename then sort
     sortReverseAction->setChecked(setting->value("sortReverse").toBool());
+    if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
+    else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
     if (sortColumn > 0) sortChange();
 
     // process the persistant folder if available
@@ -308,12 +306,6 @@ void MW::initialize()
     #endif
     }
     this->setWindowTitle("Winnow");
-
-//    qDebug() << "font" << font().family();
-//    QFont f = font();
-//    f.setPointSize(16);
-//    QGuiApplication::setFont(f);
-
     QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 //    QGuiApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTouchEvents);
     G::isInitializing = true;
@@ -326,10 +318,9 @@ void MW::initialize()
     hasGridBeenActivated = true;
     isDragDrop = false;
     setAcceptDrops(true);
-    sortAZStatusLabel = new QLabel;
-    sortAZStatusLabel->setToolTip("Sort from small to large.  Shortcut to toggle: Opt/Alt + S");
-    sortZAStatusLabel = new QLabel;
-    sortZAStatusLabel->setToolTip("Sort from large to small.  Shortcut to toggle: Opt/Alt + S");
+    reverseSortBtn = new BarBtn();
+    reverseSortBtn ->setToolTip("Reverse sort direction.  Shortcut to toggle: Opt/Alt + S");
+    connect(reverseSortBtn, &BarBtn::clicked, this, &MW::reverseSortDirection);
     filterStatusLabel = new QLabel;
     filterStatusLabel->setToolTip("The images have been filtered");
     subfolderStatusLabel = new QLabel;
@@ -347,7 +338,6 @@ void MW::initialize()
     #ifdef Q_OS_WIN
     ICC::setInProfile(nullptr);
     #endif
-//    G::newPopUp();
 }
 
 void MW::setupPlatform()
@@ -462,8 +452,6 @@ void MW::keyPressEvent(QKeyEvent *event)
 //    else isShift = false;
 //    qDebug() << "MW::keyPressEvent" << event << isShift;
 
-//    dm->timeToQuit = true;
-
     QMainWindow::keyPressEvent(event);
 
     if (event->key() == Qt::Key_Return) {
@@ -502,6 +490,10 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // stop building filters
         if (filters->buildingFilters) {
             buildFilters->stop();
+        }
+        // quit rubberbanding
+        if (imageView->isRubberBand) {
+            imageView->quitRubberBand();
         }
     }
 
@@ -552,19 +544,6 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 
 bool MW::event(QEvent *event)
 {
-/*    if (event->type() == QEvent::KeyRelease) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-
-        if (keyEvent->key() == Qt::Key_Escape) {
-            if (G::isSlideShow) slideShow();     // toggles slideshow off
-        }
-        // change delay 1 - 9 seconds
-        if (G::isSlideShow) {
-            int n = keyEvent->key() - 48;
-            if (n > 0 && n <=9) {
-            }
-        }
-    }*/
     return QMainWindow::event(event);
 }
 
@@ -1161,6 +1140,7 @@ delegate use of the current index must check the column.
             updateClassification();
         }
     }
+    if (G::mode == "Embel") embelView->loadImage(fPath);
 
     // update caching when folder has been loaded
     if (G::isNewFolderLoaded) {
@@ -2748,7 +2728,9 @@ void MW::createActions()
     asLoupeAction->setShortcutVisibleInContextMenu(true);
     asLoupeAction->setCheckable(true);
     if (isSettings && setting->contains("isLoupeDisplay"))
-        asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool() || setting->value("isCompareDisplay").toBool());
+        asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool()
+                                  || setting->value("isCompareDisplay").toBool()
+                                  || setting->value("isEmbelDisplay").toBool());
     else asLoupeAction->setChecked(false);
     addAction(asLoupeAction);
     connect(asLoupeAction, &QAction::triggered, this, &MW::loupeDisplay);
@@ -2776,12 +2758,20 @@ void MW::createActions()
     addAction(asCompareAction);
     connect(asCompareAction, &QAction::triggered, this, &MW::compareDisplay);
 
+    asEmbelAction = new QAction(tr("Embellish"), this);
+    asEmbelAction->setShortcutVisibleInContextMenu(true);
+    asEmbelAction->setCheckable(true);
+    asEmbelAction->setChecked(false);
+    addAction(asEmbelAction);
+    connect(asEmbelAction, &QAction::triggered, this, &MW::embelDisplay);
+
     centralGroupAction = new QActionGroup(this);
     centralGroupAction->setExclusive(true);
     centralGroupAction->addAction(asLoupeAction);
     centralGroupAction->addAction(asGridAction);
     centralGroupAction->addAction(asTableAction);
     centralGroupAction->addAction(asCompareAction);
+    centralGroupAction->addAction(asEmbelAction);
 
     zoomToAction = new QAction(tr("Zoom To"), this);
     zoomToAction->setObjectName("zoomTo");
@@ -3725,6 +3715,7 @@ void MW::setupCentralWidget()
     centralLayout->addWidget(gridView);
     centralLayout->addWidget(welcome);     // first time open program tips
     centralLayout->addWidget(messageView);
+    centralLayout->addWidget(embelFrame);
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
 }
@@ -4114,6 +4105,36 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
 
     connect(imageView, SIGNAL(killSlideshow()),
             this, SLOT(slideShow()));
+
+}
+
+void MW::createEmbelView()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    embelView = new EmbelView(this,
+                              centralWidget,
+                              metadata,
+                              dm,
+                              imageCacheThread,
+                              thumbView);
+    // embelView has a margin of 50px inside embelFrame inside the centralWidget
+    int m = embelView->cwMargin;
+    embelFrame = new QFrame;
+    QHBoxLayout *embelLayout = new QHBoxLayout;
+    embelLayout->setContentsMargins(m,m,m,m);
+    embelLayout->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
+    embelLayout->addWidget(embelView);
+    embelFrame->setLayout(embelLayout);
+//    embelFrame->setStyleSheet("background:whitesmoke");
+
+    embelView->toggleZoom = 1;
+
+    connect(embelView, &EmbelView::updateStatus, this, &MW::updateStatus);
+    connect(embelView, &EmbelView::newTile, this, &MW::writeTile);
 }
 
 void MW::createCompareView()
@@ -4281,22 +4302,22 @@ void MW::createFolderDock()
     folderDock->setTitleBarWidget(folderTitleBar);
     // add widgets to the right side of the title bar layout
     // toggle expansion button
-    DockTitleBtn *folderRefreshBtn = new DockTitleBtn();
+    BarBtn *folderRefreshBtn = new BarBtn();
     folderRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
     folderRefreshBtn->setToolTip("Refresh and collapse");
-    connect(folderRefreshBtn, &DockTitleBtn::clicked, this, &MW::refreshFolders);
+    connect(folderRefreshBtn, &BarBtn::clicked, this, &MW::refreshFolders);
     folderTitleLayout->addWidget(folderRefreshBtn);
     // preferences button
-    DockTitleBtn *folderGearBtn = new DockTitleBtn();
+    BarBtn *folderGearBtn = new BarBtn();
     folderGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
     folderGearBtn->setToolTip("Preferences");
-    connect(folderGearBtn, &DockTitleBtn::clicked, this, &MW::allPreferences);
+    connect(folderGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     folderTitleLayout->addWidget(folderGearBtn);
     // close button
-    DockTitleBtn *folderCloseBtn = new DockTitleBtn();
+    BarBtn *folderCloseBtn = new BarBtn();
     folderCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
     folderCloseBtn->setToolTip("Hide the Folders Panel");
-    connect(folderCloseBtn, &DockTitleBtn::clicked, this, &MW::toggleFolderDockVisibility);
+    connect(folderCloseBtn, &BarBtn::clicked, this, &MW::toggleFolderDockVisibility);
     folderTitleLayout->addWidget(folderCloseBtn);
 
     if (isSettings) {
@@ -4327,22 +4348,22 @@ void MW::createFavDock()
     favDock->setTitleBarWidget(favTitleBar);
     // add widgets to the right side of the title bar layout
     // refresh button
-    DockTitleBtn *favRefreshBtn = new DockTitleBtn();
+    BarBtn *favRefreshBtn = new BarBtn();
     favRefreshBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
     favRefreshBtn->setToolTip("Refresh");
-    connect(favRefreshBtn, &DockTitleBtn::clicked, this, &MW::refreshFolders);
+    connect(favRefreshBtn, &BarBtn::clicked, this, &MW::refreshFolders);
     favTitleLayout->addWidget(favRefreshBtn);
     // preferences button
-    DockTitleBtn *favGearBtn = new DockTitleBtn();
+    BarBtn *favGearBtn = new BarBtn();
     favGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
     favGearBtn->setToolTip("Preferences");
-    connect(favGearBtn, &DockTitleBtn::clicked, this, &MW::allPreferences);
+    connect(favGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     favTitleLayout->addWidget(favGearBtn);
     // close button
-    DockTitleBtn *favCloseBtn = new DockTitleBtn();
+    BarBtn *favCloseBtn = new BarBtn();
     favCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
     favCloseBtn->setToolTip("Hide the Bookmarks Panel");
-    connect(favCloseBtn, &DockTitleBtn::clicked, this, &MW::toggleFavDockVisibility);
+    connect(favCloseBtn, &BarBtn::clicked, this, &MW::toggleFavDockVisibility);
     favTitleLayout->addWidget(favCloseBtn);
 
     if (isSettings) {
@@ -4372,22 +4393,22 @@ void MW::createFilterDock()
     filterDock->setTitleBarWidget(filterTitleBar);
     // add widgets to the right side of the title bar layout
     // toggle expansion button
-    DockTitleBtn *toggleExpansionBtn = new DockTitleBtn();
+    BarBtn *toggleExpansionBtn = new BarBtn();
     toggleExpansionBtn->setIcon(QIcon(":/images/icon16/foldertree.png"));
     toggleExpansionBtn->setToolTip("Toggle expand all / collapse all");
-    connect(toggleExpansionBtn, &DockTitleBtn::clicked, filters, &Filters::toggleExpansion);
+    connect(toggleExpansionBtn, &BarBtn::clicked, filters, &Filters::toggleExpansion);
     filterTitleLayout->addWidget(toggleExpansionBtn);
     // preferences button
-    DockTitleBtn *filterGearBtn = new DockTitleBtn();
+    BarBtn *filterGearBtn = new BarBtn();
     filterGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
     filterGearBtn->setToolTip("Preferences");
-    connect(filterGearBtn, &DockTitleBtn::clicked, this, &MW::allPreferences);
+    connect(filterGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     filterTitleLayout->addWidget(filterGearBtn);
     // close button
-    DockTitleBtn *filterCloseBtn = new DockTitleBtn();
+    BarBtn *filterCloseBtn = new BarBtn();
     filterCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
     filterCloseBtn->setToolTip("Hide the Filters Panel");
-    connect(filterCloseBtn, &DockTitleBtn::clicked, this, &MW::toggleFilterDockVisibility);
+    connect(filterCloseBtn, &BarBtn::clicked, this, &MW::toggleFilterDockVisibility);
     filterTitleLayout->addWidget(filterCloseBtn);
 
     // Inside dock set layout for a text label, a progress bar and the filters tree
@@ -4440,16 +4461,16 @@ void MW::createMetadataDock()
     metadataDock->setTitleBarWidget(metaTitleBar);
     // add widgets to the right side of the title bar layout
     // preferences button
-    DockTitleBtn *metaGearBtn = new DockTitleBtn();
+    BarBtn *metaGearBtn = new BarBtn();
     metaGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
     metaGearBtn->setToolTip("Edit preferences including which items to show in this panel");
-    connect(metaGearBtn, &DockTitleBtn::clicked, this, &MW::infoViewPreferences);
+    connect(metaGearBtn, &BarBtn::clicked, this, &MW::infoViewPreferences);
     metaTitleLayout->addWidget(metaGearBtn);
     // close button
-    DockTitleBtn *metaCloseBtn = new DockTitleBtn();
+    BarBtn *metaCloseBtn = new BarBtn();
     metaCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
     metaCloseBtn->setToolTip("Hide the Metadata Panel");
-    connect(metaCloseBtn, &DockTitleBtn::clicked, this, &MW::toggleMetadataDockVisibility);
+    connect(metaCloseBtn, &BarBtn::clicked, this, &MW::toggleMetadataDockVisibility);
     metaTitleLayout->addWidget(metaCloseBtn);
 
     if (isSettings) {
@@ -4513,32 +4534,53 @@ void MW::createEmbelDock()
 
     // add widgets to the right side of the title bar layout
 
+    // new button
+    BarBtn *embelNewBtn = new BarBtn();
+    embelNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    embelNewBtn->setToolTip("Create a new template");
+//    connect(embelNewBtn, &DockTitleBtn::clicked, imageView, &ImageView::activateRubberBand);
+    embelTitleLayout->addWidget(embelNewBtn);
+
+    // tile button
+    BarBtn *embelTileBtn = new BarBtn();
+    embelTileBtn->setIcon(QIcon(":/images/icon16/tile.png"));
+    embelTileBtn->setToolTip("Extract a tile from a pattern that is available in the image view");
+    connect(embelTileBtn, &BarBtn::clicked, imageView, &ImageView::activateRubberBand);
+    embelTitleLayout->addWidget(embelTileBtn);
+
     // anchor button
-    DockTitleBtn *embelAnchorBtn = new DockTitleBtn();
+    BarBtn *embelAnchorBtn = new BarBtn();
     embelAnchorBtn->setIcon(QIcon(":/images/icon16/anchor.png"));
     embelAnchorBtn->setToolTip("Add anchors to pin text, rectangles and graphics");
-//    connect(embelAnchorBtn, &DockTitleBtn::clicked, this, &MW::infoViewPreferences);
+    //    connect(embelAnchorBtn, &DockTitleBtn::clicked, imageView, &ImageView::activateRubberBand);
     embelTitleLayout->addWidget(embelAnchorBtn);
 
     // text button
-    DockTitleBtn *embelTextBtn = new DockTitleBtn();
+    BarBtn *embelTextBtn = new BarBtn();
     embelTextBtn->setIcon(QIcon(":/images/icon16/text.png"));
     embelTextBtn->setToolTip("Add a Text Item");
     //    connect(embelTextBtn, &DockTitleBtn::clicked, this, &MW::infoViewPreferences);
     embelTitleLayout->addWidget(embelTextBtn);
 
     // rectangle button
-    DockTitleBtn *embelRectangleBtn = new DockTitleBtn();
+    BarBtn *embelRectangleBtn = new BarBtn();
     embelRectangleBtn->setIcon(QIcon(":/images/icon16/rectangle.png"));
     embelRectangleBtn->setToolTip("Add a rectangle");
-    connect(embelRectangleBtn, &DockTitleBtn::clicked, imageView, &ImageView::activateRubberBand);
+//    connect(embelRectangleBtn, &DockTitleBtn::clicked, imageView, &ImageView::activateRubberBand);
     embelTitleLayout->addWidget(embelRectangleBtn);
 
+    // graphic button
+    BarBtn *embelGraphicBtn = new BarBtn();
+    embelGraphicBtn->setIcon(QIcon(":/images/icon16/graphic.png"));
+    embelGraphicBtn->setToolTip("Add a graphic like a logo or signature PNG");
+    //    connect(embelGraphicBtn, &DockTitleBtn::clicked, imageView, &ImageView::activateRubberBand);
+    embelTitleLayout->addWidget(embelGraphicBtn);
+
     // close button
-    DockTitleBtn *embelCloseBtn = new DockTitleBtn();
+    BarBtn *embelCloseBtn = new BarBtn();
     embelCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
     embelCloseBtn->setToolTip("Hide the Embellish Panel");
-    connect(embelCloseBtn, &DockTitleBtn::clicked, this, &MW::toggleEmbelDockVisibility);
+    connect(embelCloseBtn, &BarBtn::clicked, this, &MW::toggleEmbelDockVisibility);
     embelTitleLayout->addWidget(embelCloseBtn);
 }
 
@@ -4724,16 +4766,9 @@ void MW::createStatusBar()
     QString itrl = "Turns red when image caching in progress";
     imageThreadRunningLabel->setToolTip(itrl);
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
-//    updateImageCachingThreadRunStatus(false, true);  // rgh temp while performance testing
 
-    // labels to show various status
-    sortAZStatusLabel->setPixmap(QPixmap(":/images/icon16/A-Z.png"));
-    sortAZStatusLabel->setAlignment(Qt::AlignVCenter);
-    statusBar()->addWidget(sortAZStatusLabel);
-
-    sortZAStatusLabel->setPixmap(QPixmap(":/images/icon16/Z-A.png"));
-    sortZAStatusLabel->setAlignment(Qt::AlignVCenter);
-    statusBar()->addWidget(sortZAStatusLabel);
+    // labels/buttons to show various status
+    statusBar()->addWidget(reverseSortBtn);
 
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
     filterStatusLabel->setAlignment(Qt::AlignVCenter);
@@ -4747,12 +4782,9 @@ void MW::createStatusBar()
     slideShowStatusLabel->setPixmap(QPixmap(":/images/icon16/slideshow.png"));
     statusBar()->addWidget(slideShowStatusLabel);
 
-
     setThreadRunStatusInactive();
     statusLabel = new QLabel;
     statusBar()->addWidget(statusLabel);
-
-//    updateStatusBar();
 }
 
 void MW::updateStatusBar()
@@ -4762,9 +4794,9 @@ void MW::updateStatusBar()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     // remove all icons so can add back in proper order // previously used: if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel); // etc
-    if(sortAZStatusLabel->isVisible()) statusBar()->removeWidget(sortAZStatusLabel);
-    if(sortZAStatusLabel->isVisible()) statusBar()->removeWidget(sortZAStatusLabel);
+    if(reverseSortBtn->isVisible()) statusBar()->removeWidget(reverseSortBtn);
     if(rawJpgStatusLabel->isVisible()) statusBar()->removeWidget(rawJpgStatusLabel);
     if(filterStatusLabel->isVisible()) statusBar()->removeWidget(filterStatusLabel);
     if(subfolderStatusLabel->isVisible()) statusBar()->removeWidget(subfolderStatusLabel);
@@ -4777,14 +4809,10 @@ void MW::updateStatusBar()
         filterStatusLabel->show();
     }
 
-    if (sortReverseAction->isChecked()) {
-        statusBar()->addWidget(sortZAStatusLabel);
-        sortZAStatusLabel->show();
-    }
-    else {
-        statusBar()->addWidget(sortAZStatusLabel);
-        sortAZStatusLabel->show();
-    }
+    if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
+    else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
+    statusBar()->addWidget(reverseSortBtn);
+    reverseSortBtn->show();
 
     if (subFoldersAction->isChecked()) {
         statusBar()->addWidget(subfolderStatusLabel);
@@ -4809,7 +4837,7 @@ void MW::updateStatusBar()
     qDebug() << __FUNCTION__
              << "statusBar" << statusBar()->width()
              << "layout spacing" << statusBar()->layout()->spacing()
-             << "sortZAStatusLabel " << sortZAStatusLabel->width()
+             << "reverseSortBtn " << reverseSortBtn->width()
              << "rawJpgStatusLabel " << rawJpgStatusLabel->width()
              << "statusLabel " << statusLabel->width()
              << "progressLabel " << progressLabel->width()
@@ -4837,8 +4865,7 @@ int MW::availableSpaceForProgressBar()
     }
     int w = 0;
     int s = statusBar()->layout()->spacing();
-    if (sortAZStatusLabel->isVisible()) w += s + sortAZStatusLabel->width();
-    if (sortZAStatusLabel->isVisible()) w += s + sortZAStatusLabel->width();
+    if (reverseSortBtn->isVisible()) w += s + reverseSortBtn->width();
     if (rawJpgStatusLabel->isVisible()) w += s + rawJpgStatusLabel->width();
     if (filterStatusLabel->isVisible()) w += s + filterStatusLabel->width();
     if (subfolderStatusLabel->isVisible()) w += s + subfolderStatusLabel->width();
@@ -4928,11 +4955,14 @@ QString MW::getZoom()
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::mode != "Loupe" && G::mode != "Compare") return "N/A";
+    if (G::mode != "Loupe" &&
+        G::mode != "Compare" &&
+        G::mode != "Embel") return "N/A";
     qreal zoom;
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
+    if (G::mode == "Embel") zoom = embelView->zoom;
     else zoom = imageView->zoom;
-    if (zoom <= 0 || zoom > 4) return "";
+    if (zoom <= 0 || zoom > 10) return "";
     zoom *= G::actualDevicePixelRatio;
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
@@ -5622,7 +5652,6 @@ void MW::sortChange()
     updateStatus(true, "", __FUNCTION__);
 
     // sync image cache with datamodel filtered proxy
-//    resortImageCache();
     imageCacheThread->rebuildImageCacheParameters(fPath);
 
     /* if the previous selected image is also part of the filtered datamodel then the
@@ -5631,6 +5660,20 @@ void MW::sortChange()
     fileSelectionChange(idx, idx);
 
     scrollToCurrentRow();
+}
+
+void MW::reverseSortDirection()
+{
+    if (sortReverseAction->isChecked()) {
+        sortReverseAction->setChecked(false);
+        sortChange();
+        reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
+    }
+    else {
+        sortReverseAction->setChecked(true);
+        reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
+        sortChange();
+    }
 }
 
 void MW::scrollToCurrentRow()
@@ -5916,6 +5959,7 @@ workspace with a matching name to the action is used.
     asGridAction->setChecked(w.isGridDisplay);
     asTableAction->setChecked(w.isTableDisplay);
     asCompareAction->setChecked(w.isCompareDisplay);
+    asCompareAction->setChecked(w.isEmbelDisplay);
     thumbView->iconWidth = w.thumbWidth;
     thumbView->iconHeight = w.thumbHeight;
     thumbView->labelFontSize = w.labelFontSize;
@@ -5956,6 +6000,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.isGridDisplay = asGridAction->isChecked();
     wsd.isTableDisplay = asTableAction->isChecked();
     wsd.isCompareDisplay = asCompareAction->isChecked();
+    wsd.isCompareDisplay = asEmbelAction->isChecked();
 
     wsd.thumbWidth = thumbView->iconWidth;
     wsd.thumbHeight = thumbView->iconHeight;
@@ -6202,7 +6247,8 @@ void MW::reportWorkspace(int n)
              << "\nisLoupeDisplay" << ws.isLoupeDisplay
              << "\nisGridDisplay" << ws.isGridDisplay
              << "\nisTableDisplay" << ws.isTableDisplay
-             << "\nisCompareDisplay" << ws.isCompareDisplay;
+             << "\nisCompareDisplay" << ws.isCompareDisplay
+             << "\nisCompareDisplay" << ws.isEmbelDisplay;
 }
 
 void MW::loadWorkspaces()
@@ -6252,6 +6298,7 @@ void MW::loadWorkspaces()
         ws.isGridDisplay = setting->value("isGridDisplay").toBool();
         ws.isTableDisplay = setting->value("isTableDisplay").toBool();
         ws.isCompareDisplay = setting->value("isCompareDisplay").toBool();
+        ws.isEmbelDisplay = setting->value("isEmbelDisplay").toBool();
         workspaces->append(ws);
     }
     setting->endArray();
@@ -6297,7 +6344,8 @@ void MW::reportState()
              << "\nisLoupeDisplay" << w.isLoupeDisplay
              << "\nisGridDisplay" << w.isGridDisplay
              << "\nisTableDisplay" << w.isTableDisplay
-             << "\nisCompareDisplay" << w.isCompareDisplay;
+             << "\nisCompareDisplay" << w.isCompareDisplay
+             << "\nisCompareDisplay" << w.isEmbelDisplay;
 }
 
 void MW::reportMetadata()
@@ -6809,17 +6857,6 @@ void MW::setBackgroundShade(int shade)
     metaTitleBar->setStyle();
     statusBar()->setStyleSheet(css);
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
-    /*
-    statusLabel->setStyleSheet(css);
-    progressLabel->setStyleSheet(css);
-    metadataThreadRunningLabel->setStyleSheet(css);
-    imageThreadRunningLabel->setStyleSheet(css);
-    sortAZStatusLabel->setStyleSheet(css);
-    sortZAStatusLabel->setStyleSheet(css);
-    filterStatusLabel->setStyleSheet(css);
-    subfolderStatusLabel->setStyleSheet(css);
-    rawJpgStatusLabel->setStyleSheet(css);
-    slideShowStatusLabel->setStyleSheet(css);  */
 }
 
 void MW::setInfoFontSize()
@@ -7123,16 +7160,20 @@ are not applicable.
 
     // update the imageView and compareView classes if there is a zoom change
     connect(zoomDlg, SIGNAL(zoom(qreal)), imageView, SLOT(zoomTo(qreal)));
+    connect(zoomDlg, SIGNAL(zoom(qreal)), embelView, SLOT(zoomTo(qreal)));
     connect(zoomDlg, SIGNAL(zoom(qreal)), compareImages, SLOT(zoomTo(qreal)));
 
     // update the imageView and compareView classes if there is a toggleZoomValue change
     connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)),
             imageView, SLOT(updateToggleZoom(qreal)));
     connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)),
+            embelView, SLOT(updateToggleZoom(qreal)));
+    connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)),
             compareImages, SLOT(updateToggleZoom(qreal)));
 
     // if zoom change in parent send it to the zoom dialog
     connect(imageView, SIGNAL(zoomChange(qreal)), zoomDlg, SLOT(zoomChange(qreal)));
+    connect(embelView, SIGNAL(zoomChange(qreal)), zoomDlg, SLOT(zoomChange(qreal)));
     connect(compareImages, SIGNAL(zoomChange(qreal)), zoomDlg, SLOT(zoomChange(qreal)));
 
     // if main window resized then re-position zoom dialog
@@ -7335,6 +7376,20 @@ for each bookmark folder.
  * READ/WRITE PREFERENCES
  * **************************************************************************************/
 
+void MW::writeTile()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__;
+    setting->beginGroup("Tiles");
+    setting->remove("");
+    setting->setValue(imageView->tileName, imageView->tileBa);
+    setting->endGroup();
+}
+
 void MW::writeSettings()
 {
 /*
@@ -7445,6 +7500,7 @@ re-established when the application is re-opened.
     setting->setValue("isGridDisplay", asGridAction->isChecked());
     setting->setValue("isTableDisplay", asTableAction->isChecked());
     setting->setValue("isCompareDisplay", asCompareAction->isChecked());
+    setting->setValue("isEmbelDisplay", asEmbelAction->isChecked());
 
     setting->setValue("isMenuBarVisible", menuBarVisibleAction->isChecked());
     setting->setValue("isStatusBarVisible", statusBarVisibleAction->isChecked());
@@ -7638,6 +7694,7 @@ re-established when the application is re-opened.
         setting->setValue("isGridDisplay", ws.isGridDisplay);
         setting->setValue("isTableDisplay", ws.isTableDisplay);
         setting->setValue("isCompareDisplay", ws.isCompareDisplay);
+        setting->setValue("isEmbelDisplay", ws.isEmbelDisplay);
     }
     setting->endArray();
 }
@@ -8540,6 +8597,75 @@ void MW::compareDisplay()
     hasGridBeenActivated = false;
 }
 
+void MW::embelDisplay()
+{
+    {
+    #ifdef ISDEBUG
+    qDebug() << "\n\n\n";
+    G::track(__FUNCTION__);
+    #endif
+    }
+    G::mode = "Embel";
+    updateStatus(true, "", __FUNCTION__);
+    updateIconsVisible(false);
+
+    // save selection as tableView is hidden and not synced
+    saveSelection();
+
+    /* show imageView in the central widget. This makes thumbView visible, and
+    it updates the index to its previous state.  The index update triggers
+    fileSelectionChange  */
+    centralLayout->setCurrentIndex(EmbelTab);
+    prevCentralView = EmbelTab;
+
+    // recover thumbdock if it was visible before as gridView and full screen can
+    // hide the thumbdock
+    if(isNormalScreen && wasThumbDockVisible) {
+        thumbDock->setVisible(true);
+        thumbView->selectThumb(currentRow);
+    }
+
+    if (thumbView->isVisible()) thumbView->setFocus();
+    else embelView->setFocus();
+
+    QModelIndex idx = dm->sf->index(currentRow, 0);
+    thumbView->setCurrentIndex(idx);
+
+    // update embelView, use cache if image loaded, else read it from file
+    QString fPath = idx.data(G::PathRole).toString();
+    if (embelView->isVisible() && fPath.length() > 0) {
+        embelView->loadImage(fPath);
+    }
+    // do not show classification badge if no folder or nothing selected
+    updateClassification();
+
+    // req'd after compare mode to re-enable extended selection
+    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+    // selection has been lost while tableView and possibly thumbView were hidden
+    recoverSelection();
+
+    // req'd to show thumbs first time
+    thumbView->setThumbParameters();
+
+    // sync scrolling between modes (loupe, grid and table)
+    updateIconsVisible(false);
+    if (prevMode == "Table") {
+        if (tableView->isRowVisible(currentRow)) scrollRow = currentRow;
+        else scrollRow = tableView->midVisibleRow;
+    }
+    if (prevMode == "Grid") {
+        if(gridView->isRowVisible(currentRow)) scrollRow = currentRow;
+        else scrollRow = gridView->midVisibleCell;
+    }
+    G::ignoreScrollSignal = false;
+//    thumbView->waitUntilOkToScroll();
+    thumbView->scrollToRow(scrollRow, __FUNCTION__);
+//    updateIconsVisible(false);
+
+    prevMode = "Embel";
+}
+
 void MW::saveSelection()
 {
 /* This function saves the current selection.  This is required, even though the three
@@ -8582,6 +8708,7 @@ void MW::setCentralView()
     if (asGridAction->isChecked()) gridDisplay();
     if (asTableAction->isChecked()) tableDisplay();
     if (asCompareAction->isChecked()) compareDisplay();
+    if (asEmbelAction->isChecked()) embelDisplay();
     if (currentViewDir == "") {
         QString msg = "Select a folder or bookmark to get started.";
         setCentralMessage(msg);
@@ -10787,8 +10914,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    bool test = false;
-    test = setting->value("wasThumbDockVisibleddd").toBool();
-    qDebug() << __FUNCTION__ << test;
+    qDebug() << __FUNCTION__;
 }
 // End MW

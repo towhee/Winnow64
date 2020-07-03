@@ -3,19 +3,19 @@
 /* DockTitleBtn *******************************************************************************
 */
 
-DockTitleBtn::DockTitleBtn(/*QWidget *parent*/) : QToolButton()
+BarBtn::BarBtn(/*QWidget *parent*/) : QToolButton()
 {
     setStyleSheet("background:transparent;");
     int bg = G::backgroundShade +30;
     btnHover = QColor(bg,bg,bg);
 }
 
-void DockTitleBtn::enterEvent(QEvent*)
+void BarBtn::enterEvent(QEvent*)
 {
     setStyleSheet("background:" + btnHover.name() + ";");
 }
 
-void DockTitleBtn::leaveEvent(QEvent*)
+void BarBtn::leaveEvent(QEvent*)
 {
     setStyleSheet("background:transparent;");
 }

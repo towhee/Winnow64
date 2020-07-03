@@ -151,6 +151,7 @@ supplied by the calling function.
     model->setData(valIdx, i.fixedWidth, UR_LabelFixedWidth);
     model->setData(valIdx, i.color, UR_Color);
     model->setData(valIdx, i.dropList, UR_StringList);
+    i.dropList.clear();
     model->setData(valIdx, i.index, UR_QModelIndex);
 
     return propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
