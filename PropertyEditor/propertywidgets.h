@@ -2,6 +2,7 @@
 #define PROPERTYWIDGETS_H
 
 #include <QtWidgets>
+#include <Main/dockwidget.h>
 #include "Main/global.h"
 
 enum DelegateType
@@ -13,13 +14,16 @@ enum DelegateType
     DT_Checkbox,    // 4
     DT_Combo,       // 5
     DT_Slider,      // 6
-    DT_PlusMinus    // 7
+    DT_PlusMinus,   // 7
+    DT_BarBtns,     // 8
+    DT_Color        // 9
 };
 
 enum UserRole
 {
     UR_Name = Qt::UserRole + 1,         // unique name to identify the item
     UR_DelegateType,                    // the PropertyWidget (custom widget)
+    UR_DecorateGradient,                // make the root rows dark gray gradiant
     UR_Source,                          // name of property/variable being edited
     UR_QModelIndex,                     // index from another model ie infoView->ok
     UR_Type,                            // the data type required by the delegate
@@ -33,8 +37,8 @@ enum UserRole
     UR_Color                            // QColor for text in LineEdit, LabelEdit
 };
 
-//int propertyWidgetMarginLeft = 10;
-//int propertyWidgetMarginRight = 15;
+// reqd as can only pass QVariant convertable type through StandardItemModel
+extern QVector<BarBtn*> btns;
 
 class SliderEditor : public QWidget
 {
@@ -190,6 +194,42 @@ private:
     QPushButton *plusBtn;
     QString source;
     QModelIndex idx;
+};
+
+class BarBtnEditor : public QWidget
+{
+    Q_OBJECT
+public:
+    BarBtnEditor(const QModelIndex, QWidget *parent = nullptr);
+
+protected:
+    void paintEvent(QPaintEvent *event);
+
+private:
+    QModelIndex idx;
+};
+
+class ColorEditor : public QWidget
+{
+    Q_OBJECT
+public:
+    ColorEditor(const QModelIndex &idx, QWidget *parent = nullptr);
+    void setValue();
+    QString value();
+
+protected:
+    void paintEvent(QPaintEvent *event);
+
+signals:
+    void editorValueChanged(QWidget *);
+    void enableGoKeyActions(bool ok);
+
+private:
+    void change(int value);
+    void updateLabelWhenLineEdited(QString value);
+    QLineEdit *lineEdit;
+    QLabel *label;
+    BarBtn *btn;
 };
 
 #endif // PROPERTYWIDGETS_H

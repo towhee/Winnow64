@@ -89,8 +89,8 @@ void SliderEditor::updateSliderWhenLineEdited(QString value)
 
 void SliderEditor::paintEvent(QPaintEvent *event)
 {
-    setStyleSheet("font-size: " + G::fontSize + "pt;");
-    QWidget::paintEvent(event);
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    QWidget::paintEvent(event);
 }
 
 /* LABEL EDITOR ******************************************************************************/
@@ -133,8 +133,8 @@ void LabelEditor::setValue(QVariant value)
 
 void LabelEditor::paintEvent(QPaintEvent *event)
 {
-    setStyleSheet("font-size: " + G::fontSize + "pt;");
-    QWidget::paintEvent(event);
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    QWidget::paintEvent(event);
 }
 
 
@@ -184,8 +184,8 @@ void LineEditor::change(QString value)
 
 void LineEditor::paintEvent(QPaintEvent *event)
 {
-    setStyleSheet("font-size: " + G::fontSize + "pt;");
-    QWidget::paintEvent(event);
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    QWidget::paintEvent(event);
 }
 
 /* SPINBOX EDITOR ****************************************************************************/
@@ -250,8 +250,8 @@ void SpinBoxEditor::change(int value)
 
 void SpinBoxEditor::paintEvent(QPaintEvent *event)
 {
-    setStyleSheet("font-size: " + G::fontSize + "pt;");
-    QWidget::paintEvent(event);
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    QWidget::paintEvent(event);
 }
 
 /* CHECKBOX EDITOR ***************************************************************************/
@@ -294,8 +294,8 @@ void CheckBoxEditor::change()
 
 void CheckBoxEditor::paintEvent(QPaintEvent *event)
 {
-    setStyleSheet("font-size: " + G::fontSize + "pt;");
-    QWidget::paintEvent(event);
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    QWidget::paintEvent(event);
 }
 
 /* COMBOBOX EDITOR ***************************************************************************/
@@ -364,8 +364,8 @@ void ComboBoxEditor::change(int index)
 
 void ComboBoxEditor::paintEvent(QPaintEvent *event)
 {
-    setStyleSheet("font-size: " + G::fontSize + "pt;");
-    QWidget::paintEvent(event);
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    QWidget::paintEvent(event);
 }
 
 /* PLUSMINUS EDITOR **************************************************************************/
@@ -414,7 +414,103 @@ void PlusMinusEditor::plusChange()
 
 void PlusMinusEditor::paintEvent(QPaintEvent *event)
 {
-    setStyleSheet("font-size: " + G::fontSize + "pt;");
-    QWidget::paintEvent(event);
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    QWidget::paintEvent(event);
+}
+
+/* BARBTN EDITOR **************************************************************************/
+QVector<BarBtn*> btns;
+BarBtnEditor::BarBtnEditor(const QModelIndex, QWidget *parent)
+    : QWidget(parent)
+{
+    QHBoxLayout* layout = new QHBoxLayout(this);
+    for (int i = 0; i < btns.size(); ++i) {
+        layout->addWidget(btns.at(i));
+    }
+    layout->setContentsMargins(0,0,0,0);
+    layout->setAlignment(Qt::AlignRight);
+    setLayout(layout);
+    btns.clear();
+}
+
+void BarBtnEditor::paintEvent(QPaintEvent *event)
+{
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    QWidget::paintEvent(event);
+}
+
+/* COLOR EDITOR ******************************************************************************/
+
+ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
+{
+//    this->idx = idx;
+    int lineEditWidth = idx.data(UR_LabelFixedWidth).toInt();
+//    int min = idx.data(UR_Min).toInt();
+//    int max = idx.data(UR_Max).toInt();
+//    source = idx.data(UR_Source).toString();
+
+    lineEdit = new QLineEdit;
+    lineEdit->setObjectName("DisableGoActions");    // used in MW::focusChange
+//    lineEdit->setMaximumWidth(lineEditWidth);
+    lineEdit->setAlignment(Qt::AlignLeft);
+    lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none;}");
+    lineEdit->setWindowFlags(Qt::FramelessWindowHint);
+    lineEdit->setAttribute(Qt::WA_TranslucentBackground);
+//    QValidator *validator = new QIntValidator(min, max, this);
+//    lineEdit->setValidator(validator);
+
+    label = new QLabel;
+    int w = 50;
+    label->setObjectName("DisableGoActions");  // used in MW::focusChange
+    label->setStyleSheet("QLabel {background:gray; border:none;"
+                            "padding:0px; border-radius:0px;}");
+    label->setMaximumWidth(w);
+    label->setMinimumWidth(w);
+    label->setWindowFlags(Qt::FramelessWindowHint);
+//    label->setAttribute(Qt::WA_TranslucentBackground);
+
+    btn = new BarBtn();
+    btn->setIcon(QIcon(":/images/icon16/colorwheel.png"));
+    btn->setToolTip("Click to select a color.");
+
+    connect(btn, &BarBtn::clicked, this, &ColorEditor::setValue);
+    connect(lineEdit, &QLineEdit::textChanged, this, &ColorEditor::updateLabelWhenLineEdited);
+
+    QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->addWidget(lineEdit, Qt::AlignLeft);
+    layout->addWidget(label);
+    layout->addWidget(btn);
+    layout->setContentsMargins(0,0,0,0);
+    setLayout(layout);
+}
+
+QString ColorEditor::value()
+{
+    return lineEdit->text();
+}
+
+void ColorEditor::setValue()
+{
+    QColor color = QColorDialog::getColor();
+    lineEdit->setText(color.name());
+}
+
+void ColorEditor::change(int value)
+{
+    QVariant v = value;
+    emit editorValueChanged(this);
+    lineEdit->setText(QString::number(value));
+}
+
+void ColorEditor::updateLabelWhenLineEdited(QString value)
+{
+    qDebug() << __FUNCTION__ << value;
+    label->setStyleSheet("background:" + value + ";");
+}
+
+void ColorEditor::paintEvent(QPaintEvent *event)
+{
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    QWidget::paintEvent(event);
 }
 

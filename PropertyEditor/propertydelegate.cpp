@@ -27,16 +27,14 @@ PropertyDelegate::PropertyDelegate(QWidget *parent): QStyledItemDelegate(parent)
 }
 
 QWidget *PropertyDelegate::createEditor(QWidget *parent,
-                                              const QStyleOptionViewItem &option,
-                                              const QModelIndex &index ) const
+                                        const QStyleOptionViewItem &option,
+                                        const QModelIndex &index ) const
 {
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0: return nullptr;
         case DT_Label: {
             LabelEditor *label = new LabelEditor(index, parent);
-//            connect(label, &LabelEditor::editorValueChanged,
-//                    this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, label);
             return label;
         }
@@ -75,13 +73,25 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
             emit editorWidgetToDisplay(index, sliderEditor);
             return sliderEditor;
         }
-    case DT_PlusMinus: {
-        PlusMinusEditor *plusMinusEditor = new PlusMinusEditor(index, parent);
-        connect(plusMinusEditor, &PlusMinusEditor::editorValueChanged,
-                this, &PropertyDelegate::commitData);
-        emit editorWidgetToDisplay(index, plusMinusEditor);
-        return plusMinusEditor;
-    }
+        case DT_PlusMinus: {
+            PlusMinusEditor *plusMinusEditor = new PlusMinusEditor(index, parent);
+            connect(plusMinusEditor, &PlusMinusEditor::editorValueChanged,
+                    this, &PropertyDelegate::commitData);
+            emit editorWidgetToDisplay(index, plusMinusEditor);
+            return plusMinusEditor;
+        }
+        case DT_BarBtns: {
+            BarBtnEditor *barBtnEditor = new BarBtnEditor(index, parent);
+            emit editorWidgetToDisplay(index, barBtnEditor);
+            return barBtnEditor;
+        }
+        case DT_Color: {
+            ColorEditor *colorEditor = new ColorEditor(index, parent);
+            connect(colorEditor, &ColorEditor::editorValueChanged,
+                    this, &PropertyDelegate::commitData);
+            emit editorWidgetToDisplay(index, colorEditor);
+            return colorEditor;
+        }
         default:
             return QStyledItemDelegate::createEditor(parent, option, index);
     }
@@ -91,7 +101,7 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 {
     int height = static_cast<int>(G::fontSize.toInt() * 1.7 * G::ptToPx);
     return QSize(option.rect.width(), height);
-
+    /*
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0:
@@ -102,7 +112,7 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
         case DT_Combo: return ComboBoxEditor(index, nullptr).sizeHint();
         case DT_Slider: return SliderEditor(index, nullptr).sizeHint();
         case DT_PlusMinus: return PlusMinusEditor(index, nullptr).sizeHint();
-    }
+    }*/
 }
 
 void PropertyDelegate::setEditorData(QWidget *editor,
@@ -110,8 +120,8 @@ void PropertyDelegate::setEditorData(QWidget *editor,
 {
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
-        case 0:
-    case DT_Label: {
+        case DT_None:
+        case DT_Label: {
             QString value = index.model()->data(index, Qt::EditRole).toString();
             static_cast<LabelEditor*>(editor)->setValue(value);
             break;
@@ -141,6 +151,8 @@ void PropertyDelegate::setEditorData(QWidget *editor,
             static_cast<SliderEditor*>(editor)->setValue(value);
             break;
         }
+        case DT_BarBtns:
+        case DT_Color:
         case DT_PlusMinus: {
             // nothing to set
             break;
@@ -204,6 +216,13 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
             emit itemChanged(index);
             break;
         }
+        case DT_Color: {
+            ColorEditor *colorEditor = static_cast<ColorEditor*>(editor);
+            QString value = colorEditor->value();
+            model->setData(index, value, Qt::EditRole);
+            emit itemChanged(index);
+            break;
+        }
     }
 }
 
@@ -217,6 +236,18 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 {
 
     painter->save();
+
+    /*
+    static int i =0;
+    qDebug() << __FUNCTION__ << i++
+             << index.row()
+             << index.column()
+             << "Value =" << index.data().toString().leftJustified(25)
+             << index.data(UR_Name).toString().leftJustified(25)
+             << "decorateGradient =" << index.data(UR_DecorateGradient).toInt()
+             << "Delegate =" << index.data(UR_DelegateType).toInt()
+                ;
+//                */
 
     /* Root rows are highlighted with a darker gradient and the decoration, which gets covered
     up, is repainted */
@@ -251,7 +282,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QPixmap branchClosed(":/images/branch-closed-small.png");
     QPixmap branchOpen(":/images/branch-open-small.png");
 
-    if (index.parent() == QModelIndex()) {
+    if (index.data(UR_DecorateGradient).toBool()) {
         // root item in caption column
         if (index.column() == 0) {
             // paint the gradient covering the decoration
