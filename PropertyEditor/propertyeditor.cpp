@@ -32,6 +32,7 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     setAlternatingRowColors(true);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setEditTriggers(QAbstractItemView::AllEditTriggers);
+    header()->setSectionResizeMode(QHeaderView::Interactive);
     indentation = 15;
     setIndentation(indentation);  
 
@@ -63,6 +64,7 @@ Sets the custom editor widget for the value column (column 1).  The
 }
 
 void PropertyEditor::itemChange(QModelIndex)
+// virtual function to be subclassed
 {
 
 }
@@ -97,9 +99,9 @@ Adds a row to the properties tree (model).  The necessary elements of the ItemIn
 supplied by the calling function.
 */
     int row;
-    QModelIndex capIdx;
-    QModelIndex valIdx;
-    QModelIndex parIdx = QModelIndex();
+    QModelIndex capIdx;                             // caption field
+    QModelIndex valIdx;                             // value field
+    QModelIndex parIdx = QModelIndex();             // parent caption field
     QStandardItem *catItem = new QStandardItem;
     QStandardItem *valItem = new QStandardItem;
     QStandardItem *parItem = new QStandardItem;
@@ -132,14 +134,18 @@ supplied by the calling function.
     }
 
     // caption
+    model->setData(capIdx, i.decorateGradient, UR_DecorateGradient);
+    model->setData(valIdx, i.decorateGradient, UR_DecorateGradient);
     model->setData(capIdx, i.captionText);
     model->setData(capIdx, i.name, UR_Name);
-    model->setData(capIdx, i.captionText);
     model->setData(capIdx, i.tooltip, Qt::ToolTipRole);
     model->setData(valIdx, i.tooltip, Qt::ToolTipRole);
 
     // if no value associated (header item or spacer etc) then we are done
-    if (!i.hasValue) return nullptr;
+    if (!i.hasValue) {
+        clearItemInfo(i);
+        return nullptr;
+    }
 
     // value
     model->setData(valIdx, i.value, Qt::EditRole);
@@ -151,10 +157,33 @@ supplied by the calling function.
     model->setData(valIdx, i.fixedWidth, UR_LabelFixedWidth);
     model->setData(valIdx, i.color, UR_Color);
     model->setData(valIdx, i.dropList, UR_StringList);
-    i.dropList.clear();
     model->setData(valIdx, i.index, UR_QModelIndex);
 
+    // reset data struct
+    clearItemInfo(i);
+
     return propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+}
+
+void PropertyEditor::clearItemInfo(ItemInfo &i)
+{
+    i.name = "";                    // all
+    i.parentName = "";              // all
+    i.decorateGradient = false;     // Root headers as reqd
+    i.hasValue = true;              // all
+    i.tooltip = "";                 // all
+    i.captionText = "";             // all
+    i.captionIsEditable = false;    // all
+    i.delegateType = DT_None;       // all
+    i.value = 0;                    // except hdr
+    i.valueName = "";               // except hdr
+    i.type = "";                    // except hdr
+    i.min = 0;                      // DT_Spinbox, DT_Slider
+    i.max = 0;                      // DT_Spinbox, DT_Slider
+    i.fixedWidth = 50;              // DT_Slider
+    i.dropList.clear();             // DT_Combo
+    i.index = QModelIndex();        // except hdr if connected to datamodel (ie InfoView fields to show)
+
 }
 
 void PropertyEditor::expandBranch(QString text)

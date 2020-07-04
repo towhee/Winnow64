@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include "Main/global.h"
+#include "Main/dockwidget.h"  // includes BarBtn
 #include "propertydelegate.h"
 
 /* PropertyEditor Notes -----------------------------------------------------------------------
@@ -27,6 +28,7 @@ public:
     struct ItemInfo {
         QString name;
         QString parentName;
+        bool decorateGradient = false;
         bool hasValue;
         QString tooltip;
         QString captionText;
@@ -43,6 +45,7 @@ public:
         QModelIndex index;
     };
     QWidget* addItem(ItemInfo &i); // abstract addItem
+    void clearItemInfo(ItemInfo &i);
 
 protected:
     void mousePressEvent(QMouseEvent *event);

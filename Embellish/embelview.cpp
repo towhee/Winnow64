@@ -14,6 +14,8 @@
 
 The image is an item on the scene and the view is a viewport of the scene.
 
+    rect() = the viewport rectangle = this
+
 The view scaling is controlled by the zoomFactor.  When zoomFactor = 1
 the view is at 100%, the same as the original image.
 

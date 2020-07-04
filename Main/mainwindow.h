@@ -87,7 +87,8 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = nullptr);
 
-    bool isReleaseVersion = false;
+    bool isReleaseVersion = false
+            ;
     QString version = "Version: 1.11 beta";
 //    QString version = "Version: 1.10 released 2020-06-04";
     QString winnowWithVersion = "Winnow 1.11 beta";

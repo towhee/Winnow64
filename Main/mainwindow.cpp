@@ -2771,7 +2771,8 @@ void MW::createActions()
     centralGroupAction->addAction(asGridAction);
     centralGroupAction->addAction(asTableAction);
     centralGroupAction->addAction(asCompareAction);
-    centralGroupAction->addAction(asEmbelAction);
+    if (!isReleaseVersion)
+        centralGroupAction->addAction(asEmbelAction);
 
     zoomToAction = new QAction(tr("Zoom To"), this);
     zoomToAction->setObjectName("zoomTo");
@@ -4534,12 +4535,15 @@ void MW::createEmbelDock()
 
     // add widgets to the right side of the title bar layout
 
-    // new button
-    BarBtn *embelNewBtn = new BarBtn();
-    embelNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
-    embelNewBtn->setToolTip("Create a new template");
-//    connect(embelNewBtn, &DockTitleBtn::clicked, imageView, &ImageView::activateRubberBand);
-    embelTitleLayout->addWidget(embelNewBtn);
+    // run template button
+    BarBtn *embelRunBtn = new BarBtn();
+    embelRunBtn->setIcon(QIcon(":/images/icon16/lightning.png"));
+    embelRunBtn->setToolTip("Run the template on the selected images.");
+    connect(embelRunBtn, &BarBtn::clicked, imageView, &ImageView::activateRubberBand);
+    embelTitleLayout->addWidget(embelRunBtn);
+
+    // Spacer
+    embelTitleLayout->addSpacing(10);
 
     // tile button
     BarBtn *embelTileBtn = new BarBtn();
@@ -4555,6 +4559,7 @@ void MW::createEmbelDock()
     //    connect(embelAnchorBtn, &DockTitleBtn::clicked, imageView, &ImageView::activateRubberBand);
     embelTitleLayout->addWidget(embelAnchorBtn);
 
+    /*
     // text button
     BarBtn *embelTextBtn = new BarBtn();
     embelTextBtn->setIcon(QIcon(":/images/icon16/text.png"));
@@ -4575,6 +4580,10 @@ void MW::createEmbelDock()
     embelGraphicBtn->setToolTip("Add a graphic like a logo or signature PNG");
     //    connect(embelGraphicBtn, &DockTitleBtn::clicked, imageView, &ImageView::activateRubberBand);
     embelTitleLayout->addWidget(embelGraphicBtn);
+    */
+
+    // Spacer
+    embelTitleLayout->addSpacing(10);
 
     // close button
     BarBtn *embelCloseBtn = new BarBtn();

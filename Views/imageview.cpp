@@ -328,7 +328,6 @@ If isSlideshow then hide mouse cursor unless is moves.
     }
 
     if (isFit) setFitZoom();
-    qDebug() << __FUNCTION__ << zoom << toggleZoom;
     matrix.scale(zoom, zoom);
     // when resize before first image zoom == inf
     if (zoom > 10) return;

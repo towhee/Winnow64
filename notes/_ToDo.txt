@@ -19,6 +19,7 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- add color editor to PrepertyEditor
 - Statusbar reverseSortBtn
 - Tile extractor
 - Added LoadMsecPerMpColumn to the datamodel

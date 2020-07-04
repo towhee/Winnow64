@@ -563,7 +563,6 @@ void Filters::finishedBuildFilters()
     disableZeroCountItems(true);
     setEnabled(true);
     expandAll();
-    qDebug() << __FUNCTION__ << "filtersBuilt =" << filtersBuilt;
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif

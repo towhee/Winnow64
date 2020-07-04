@@ -275,16 +275,20 @@ void Preferences::addItems()
     i.index = QModelIndex();
     i.dropList = {"1", "2"};
     */
+    clearItemInfo(i);
 
     // General header (Root)
     i.name = "GeneralHeader";
     i.parentName = "???";
+    i.decorateGradient = true;
     i.captionText = "General";
     i.tooltip = "General items";
     i.hasValue = false;
     i.captionIsEditable = false;
+    i.delegateType = DT_None;
     addItem(i);
 
+    {
     // Manage color
     i.name = "colorManage";
     i.parentName = "GeneralHeader";
@@ -442,16 +446,20 @@ void Preferences::addItems()
     i.max = 100;
     i.fixedWidth = 50;
     addItem(i);
+    }
 
     // Thumbnails Header (Root)
     i.name = "ThumbnailsHeader";
     i.parentName = "";
+    i.decorateGradient = true;
     i.captionText = "Thumbnails";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
+    i.delegateType = DT_None;
     addItem(i);
 
+    {
     // Filmstrip Header
     i.name = "FilmstripHeader";
     i.parentName = "ThumbnailsHeader";
@@ -553,16 +561,20 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
+    }
 
     // Cache Header (Root)
     i.name = "CacheHeader";
     i.parentName = "";
+    i.decorateGradient = true;
     i.captionText = "Cache";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
+    i.delegateType = DT_None;
     addItem(i);
 
+    {
     // Show thumbnail label
     i.name = "showThreadActivity";
     i.parentName = "CacheHeader";
@@ -686,10 +698,12 @@ void Preferences::addItems()
     // Slideshow Header (Root)
     i.name = "SlideshowHeader";
     i.parentName = "";
+    i.decorateGradient = true;
     i.captionText = "Slideshow";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
+    i.delegateType = DT_None;
     addItem(i);
 
     // Slideshow delay
@@ -734,16 +748,20 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
+    }
 
     // Full Screen Header (Root)
     i.name = "FullScreenHeader";
     i.parentName = "";
+    i.decorateGradient = true;
     i.captionText = "Full screen defaults";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
-    addItem(i);
+    i.delegateType = DT_None;
+    addItem(i);//return;
 
+    {
     // Full screen - show folders
     i.name = "fullScreenShowFolders";
     i.parentName = "FullScreenHeader";
@@ -821,23 +839,23 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
+    }
 
     // Metadata InfoView Header (Root)
     i.name = "MetadataPanelHeader";
     i.parentName = "";
+    i.decorateGradient = true;
     i.captionText = "Metadata panel items";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
+    i.delegateType = DT_None;
     addItem(i);
+
+    { // Metadata InfoView items
 
     // InfoView fields to show
     QStandardItemModel *okInfo = mw->infoView->ok;
-    i.hasValue = true;
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    i.captionIsEditable = false;
-    i.valueName = "infoView->ok";
     // iterate through infoView data, adding it to the property editor
     for(int row = 0; row < okInfo->rowCount(); row++) {
         QModelIndex parentIdx = okInfo->index(row, 0);
@@ -846,36 +864,46 @@ void Preferences::addItems()
         i.name = caption;
         i.captionText = "Show " + caption;
         i.tooltip = "Show or hide the category " + caption + " in the metadata panel";
+        i.hasValue = true;
+        i.delegateType = DT_Checkbox;
+        i.type = "bool";
+        i.captionIsEditable = false;
+        i.valueName = "infoView->ok";
         i.value = okInfo->index(row, 2).data().toBool();
         i.index = okInfo->index(row, 2);
         addItem(i);
         for (int childRow = 0; childRow < okInfo->rowCount(parentIdx); childRow++) {
-            caption = okInfo->index(childRow, 0, parentIdx).data().toString();
-            i.parentName = i.name;
-            i.captionText = "Show " + caption;
-            i.tooltip = "Show or hide the category " + caption + " in the metadata panel";
+            QString childCaption = okInfo->index(childRow, 0, parentIdx).data().toString();
+            i.parentName = caption;
+            i.captionText = "Show " + childCaption;
+            i.tooltip = "Show or hide the category " + childCaption + " in the metadata panel";
+            i.hasValue = true;
+            i.delegateType = DT_Checkbox;
+            i.type = "bool";
+            i.captionIsEditable = false;
+            i.valueName = "infoView->ok";
             i.value = okInfo->index(childRow, 2, parentIdx).data().toBool();
             i.index = okInfo->index(childRow, 2, parentIdx);
             addItem(i);
         }
     }
+    // end Metadata InfoView items
+    }
 
     // TableView show/hide fields Header (Root)
     i.name = "TableViewColumnsHeader";
-    i.parentName = "";
+    i.parentName = "???";
+    i.decorateGradient = true;
     i.captionText = "TableView columns";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
+    i.delegateType = DT_None;
     addItem(i);
 
+    { // TableView show/hide fieldsw items
+
     // TableView conventional fields to show
-    i.hasValue = true;
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    i.captionIsEditable = false;
-    i.valueName = "tableView->ok";
-    i.parentName = "TableViewColumnsHeader";
     QStandardItemModel *tv = mw->tableView->ok;
     for (int row = 0; row < tv->rowCount(); row++) {
         // do not show if is a geek column
@@ -884,6 +912,12 @@ void Preferences::addItems()
         i.name = caption;
         i.captionText = "Show " + caption;
         i.tooltip = "Show or hide the category " + caption + " in the table view";
+        i.hasValue = true;
+        i.delegateType = DT_Checkbox;
+        i.type = "bool";
+        i.captionIsEditable = false;
+        i.valueName = "tableView->ok";
+        i.parentName = "TableViewColumnsHeader";
         i.value = tv->index(row, 1).data().toBool();
         i.index = tv->index(row, 1);
         addItem(i);
@@ -899,21 +933,23 @@ void Preferences::addItems()
     addItem(i);
 
     // TableView geek fields to show
-    i.hasValue = true;
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    i.captionIsEditable = false;
-    i.valueName = "tableView->ok";
-    i.parentName = "TableViewGeekColumnsHeader";
     for(int row = 0; row < tv->rowCount(); row++) {
         // do not show if is a not a geek column
         if (!tv->index(row, 2).data().toBool()) continue;
         QString caption = tv->index(row, 0).data().toString();
+        i.parentName = "TableViewGeekColumnsHeader";
         i.captionText = "Show " + caption;
         i.tooltip = "Show or hide the category " + caption + " in the table view";
+        i.hasValue = true;
+        i.delegateType = DT_Checkbox;
+        i.type = "bool";
+        i.captionIsEditable = false;
+        i.valueName = "tableView->ok";
         i.value = tv->index(row, 1).data().toBool();
         i.index = tv->index(row, 1);
         addItem(i);
+    }
+    // end TableView show/hide fieldsw items
     }
 
     return;

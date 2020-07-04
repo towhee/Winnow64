@@ -31,60 +31,78 @@ void EmbelProperties::addItems()
 {
     ItemInfo i;
     /* template of ItemInfo
-    i.name = "";
-    i.parentName = "";
-    i.captionText = "";
-    i.tooltip = "";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "";
-    i.delegateType = DT_None;
-    i.min = 0;
-    i.max = 0;
-    i.fixedWidth = 50;
-    i.color = "#AABBCC";
-    i.index = QModelIndex();
-    i.dropList = {"1", "2"};
+    i.name = "";                    // all
+    i.parentName = "";              // all
+    i.hasValue = true;              // all
+    i.tooltip = "";                 // all
+    i.captionText = "";             // all
+    i.captionIsEditable = false;    // all
+    i.delegateType= DT_None;        // all
+    i.value = 0;                    // except hdr
+    i.valueName = "";               // except hdr
+    i.type = "";                    // except hdr
+    i.min = 0;                      // DT_Spinbox, DT_Slider
+    i.max = 0;                      // DT_Spinbox, DT_Slider
+    i.fixedWidth = 50;              // DT_Slider
+    i.dropList = {}                 // DT_Combo
+    i.index = QModelIndex();        // except hdr if connected to datamodel (ie InfoView fields to show)
     */
 
     // TEMPLATES ============================================================================//
+    {
 
     // Templates header (Root)
     i.name = "TemplatesHeader";
     i.parentName = "???";
+    i.decorateGradient = true;
     i.captionText = "Templates";
     i.tooltip = "";
-    i.hasValue = false;
+    i.hasValue = true;
     i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    BarBtn *templateDeleteBtn = new BarBtn();
+    templateDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    templateDeleteBtn->setToolTip("Delete the selected template");
+    btns.append(templateDeleteBtn);
+    BarBtn *templateNewBtn = new BarBtn();
+    templateNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    templateNewBtn->setToolTip("Create a new template");
+    btns.append(templateNewBtn);
     addItem(i);
 
     // Templates
     i.name = "templateList";
     i.parentName = "TemplatesHeader";
+    i.decorateGradient = false;
     i.captionText = "Select template";
     i.tooltip = "Templates contain all the properties to embellish your images.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = 0;
     i.valueName = "templateList";
-    i.delegateType = DT_Combo;
+    i.delegateType = DT_Combo;      // no parent, delegateType > 0 -> No header, has value
     i.type = "QString";
-    i.dropList.clear();
     i.dropList << "Publish 2048px Gray" << "Gloria title" << "Slideshow title";
     addItem(i);
 
-    // FILES ================================================================================//
+    // end TEMPLATES
+    }
 
-    // File header (Root)
+    // FILES ================================================================================//
+    {
+
+    // FILES File header (Root)
     i.name = "FileHeader";
     i.parentName = "???";
+    i.decorateGradient = true;
     i.captionText = "File";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
+    i.delegateType = DT_None;
     addItem(i);
 
-    // Fit strategy
+    // FILES Fit strategy
     i.name = "fitList";
     i.parentName = "FileHeader";
     i.captionText = "Select fit strategy";
@@ -98,7 +116,7 @@ void EmbelProperties::addItems()
     i.dropList << "Long dimension" << "Horizontal" << "Vertical";
     addItem(i);
 
-    // Horizontal fit
+    // FILES Horizontal fit
     i.name = "horizontalFit";
     i.parentName = "FileHeader";
     i.captionText = "Maximum horizontal pixels";
@@ -114,10 +132,10 @@ void EmbelProperties::addItems()
     i.fixedWidth = 50;
     addItem(i);
 
-    // Vertical fit
+    // FILES Vertical fit
     i.name = "verticalFit";
     i.parentName = "FileHeader";
-    i.captionText = "Maximum horizontal pixels";
+    i.captionText = "Maximum vertical pixels";
     i.tooltip = "The number of pixels in the vertical axis including the borders";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -130,7 +148,7 @@ void EmbelProperties::addItems()
     i.fixedWidth = 50;
     addItem(i);
 
-    // File type
+    // FILES File type
     i.name = "fileList";
     i.parentName = "FileHeader";
     i.captionText = "Select file type";
@@ -144,7 +162,7 @@ void EmbelProperties::addItems()
     i.dropList << "Tiff" << "Jpg" << "Png";
     addItem(i);
 
-    // Save method
+    // FILES Save method
     i.name = "saveLocationOptionsList";
     i.parentName = "FileHeader";
     i.captionText = "Select save method";
@@ -158,7 +176,7 @@ void EmbelProperties::addItems()
     i.dropList << "Same folder" << "Subfolder" << "Template";
     addItem(i);
 
-    // Folder name
+    // FILES Folder name
     i.name = "folderPath";
     i.parentName = "FileHeader";
     i.captionText = "The full folder path";
@@ -172,7 +190,7 @@ void EmbelProperties::addItems()
     i.type = "string";
     addItem(i);
 
-    // Suffix name
+    // FILES Suffix name
     i.name = "suffix";
     i.parentName = "FileHeader";
     i.captionText = "Suffix to add to file names";
@@ -185,7 +203,7 @@ void EmbelProperties::addItems()
     i.type = "string";
     addItem(i);
 
-    // Overwrite existing files
+    // FILES Overwrite existing files
     i.name = "overwriteFiles";
     i.parentName = "FileHeader";
     i.captionText = "Overwrite existing files";
@@ -198,49 +216,271 @@ void EmbelProperties::addItems()
     i.type = "bool";
     addItem(i);
 
-    // Image header (Root)
+    // end FILES
+    }
+
+    // IMAGE ================================================================================//
+    {
+
+    // IMAGE Image header (Root)
     i.name = "ImageHeader";
     i.parentName = "???";
+    i.decorateGradient = true;
     i.captionText = "Image";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
+    i.delegateType = DT_None;
     addItem(i);
 
-    // Borders header (Root)
+    // IMAGE style
+    i.name = "imageStyle";
+    i.parentName = "ImageHeader";
+    i.captionText = "Select style";
+    i.tooltip = "Select style to apply to the image ie a shadow.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0;
+    i.valueName = "imageStyle";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "None" << "Emboss and dropshadow" << "Dropshadow 2";
+    addItem(i);
+
+    // end IMAGE
+    }
+
+    // BORDER ===============================================================================//
+    {
+
+    // BORDER header (Root)
     i.name = "BordersHeader";
     i.parentName = "???";
+    i.decorateGradient = true;
     i.captionText = "Borders";
     i.tooltip = "";
-    i.hasValue = false;
+    i.hasValue = true;
     i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    BarBtn *borderDeleteBtn = new BarBtn();
+    borderDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    borderDeleteBtn->setToolTip("Delete the open border");
+    btns.append(borderDeleteBtn);
+    BarBtn *borderNewBtn = new BarBtn();
+    borderNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    borderNewBtn->setToolTip("Create a new border");
+    btns.append(borderNewBtn);
     addItem(i);
+
+    // BORDER border0 header
+    i.name = "borderHeader0";
+    i.parentName = "BordersHeader";
+    i.captionText = "Border 1";
+    i.tooltip = "";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+    // BORDER Border0 top size
+    i.name = "border0_TopSize";
+    i.parentName = "borderHeader0";
+    i.captionText = "Top amount";
+    i.tooltip = "This is the width of the top part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0;
+    i.valueName = "border0_TopSize";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // BORDER Border0 Left size
+    i.name = "border0_LeftSize";
+    i.parentName = "borderHeader0";
+    i.captionText = "Left amount";
+    i.tooltip = "This is the width of the left part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0;
+    i.valueName = "border0_LeftSize";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // BORDER Border0 right size
+    i.name = "border0_RightSize";
+    i.parentName = "borderHeader0";
+    i.captionText = "Right amount";
+    i.tooltip = "This is the width of the right part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0;
+    i.valueName = "border0_RightSize";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // BORDER Border0 bottom size
+    i.name = "border0_BottomSize";
+    i.parentName = "borderHeader0";
+    i.captionText = "Bottom amount";
+    i.tooltip = "This is the width of the bottom part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0;
+    i.valueName = "border0_BottomSize";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // BORDER Background
+    i.name = "borderBackground";
+    i.parentName = "borderHeader0";
+    i.captionText = "Background to use";
+    i.tooltip = "Select either a tile or a color to use for the background of the border.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0;
+    i.valueName = "borderBackground";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "Tile" << "Color";
+    addItem(i);
+
+    // BORDER Tile
+    i.name = "borderTile";
+    i.parentName = "borderHeader0";
+    i.captionText = "Tile";
+    i.tooltip = "Select a tile that will be used to full the border area.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0;
+    i.valueName = "borderTile";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "Tile 1" << "Tile 2";
+    addItem(i);
+
+    // BORDER Color - needs an editor
+    i.name = "borderColor";
+    i.parentName = "borderHeader0";
+    i.captionText = "Colour (#RRGGBB)";
+    i.tooltip = "Select a color that will be used to full the border area.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0;
+    i.valueName = "borderColor";
+    i.delegateType =
+    i.delegateType = DT_Color;
+    i.type = "QString";
+    addItem(i);
+
+    // BORDER Opacity
+    i.name = "borderOpacityr";
+    i.parentName = "borderHeader0";
+    i.captionText = "Opacity";
+    i.tooltip = "The opacity of the border.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0;
+    i.valueName = "borderOpacityr";
+    i.delegateType =  DT_Slider;
+    i.min = 0;
+    i.max = 100;
+    i.type = "int";
+    addItem(i);
+
+    // BORDER Style
+    i.name = "borderStyle";
+    i.parentName = "borderHeader0";
+    i.captionText = "Style";
+    i.tooltip = "Select a style that will be applied to the border area.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = 0;
+    i.valueName = "borderStyle";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "None" << "Style 1";
+    addItem(i);
+
+    // end BORDER
+    }
+
+    // TEXT =================================================================================//
 
     // Texts header (Root)
     i.name = "TextHeader";
     i.parentName = "???";
+    i.decorateGradient = true;
     i.captionText = "Text Items";
     i.tooltip = "";
-    i.hasValue = false;
+    i.hasValue = true;
     i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    BarBtn *textDeleteBtn = new BarBtn();
+    textDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    textDeleteBtn->setToolTip("Delete the open text item");
+    btns.append(textDeleteBtn);
+    BarBtn *textNewBtn = new BarBtn();
+    textNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    textNewBtn->setToolTip("Create a new border");
+    btns.append(textNewBtn);
     addItem(i);
+
+    // RECTANGLE ============================================================================//
 
     // Rectangles header (Root)
     i.name = "RectanglesHeader";
     i.parentName = "???";
+    i.decorateGradient = true;
     i.captionText = "Rectangles";
     i.tooltip = "";
-    i.hasValue = false;
+    i.hasValue = true;
     i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    BarBtn *rectangleDeleteBtn = new BarBtn();
+    rectangleDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    rectangleDeleteBtn->setToolTip("Delete the open rectangle");
+    btns.append(rectangleDeleteBtn);
+    BarBtn *rectangleNewBtn = new BarBtn();
+    rectangleNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    rectangleNewBtn->setToolTip("Create a new border");
+    btns.append(rectangleNewBtn);
     addItem(i);
+
+    // GRAPHIC ==============================================================================//
 
     // Graphics header (Root)
     i.name = "GraphicsHeader";
     i.parentName = "???";
+    i.decorateGradient = true;
     i.captionText = "Graphics";
     i.tooltip = "";
-    i.hasValue = false;
+    i.hasValue = true;
     i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    BarBtn *graphicDeleteBtn = new BarBtn();
+    graphicDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    graphicDeleteBtn->setToolTip("Delete the open graphic");
+    btns.append(graphicDeleteBtn);
+    BarBtn *graphicNewBtn = new BarBtn();
+    graphicNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    graphicNewBtn->setToolTip("Create a new graphic");
+    btns.append(graphicNewBtn);
     addItem(i);
 
 
