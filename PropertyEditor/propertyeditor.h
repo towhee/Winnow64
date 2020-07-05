@@ -46,6 +46,8 @@ public:
     };
     QWidget* addItem(ItemInfo &i); // abstract addItem
     void clearItemInfo(ItemInfo &i);
+    bool getIndex(QString caption, QModelIndex parent = QModelIndex());
+    QModelIndex foundIdx;
 
 protected:
     void mousePressEvent(QMouseEvent *event);
@@ -55,10 +57,8 @@ public slots:
     virtual void itemChange(QModelIndex);
 
 private:
-    bool getIndex(QString caption, QModelIndex parent = QModelIndex());
     QLinearGradient categoryBackground;
     bool isSolo;
-    QModelIndex foundIdx;
 };
 
 

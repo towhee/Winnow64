@@ -225,7 +225,7 @@ signals:
     void enableGoKeyActions(bool ok);
 
 private:
-    void change(int value);
+//    void change(int value);
     void updateLabelWhenLineEdited(QString value);
     QLineEdit *lineEdit;
     QLabel *label;

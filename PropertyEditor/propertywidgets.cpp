@@ -250,7 +250,7 @@ void SpinBoxEditor::change(int value)
 
 void SpinBoxEditor::paintEvent(QPaintEvent *event)
 {
-//    setStyleSheet("font-size: " + G::fontSize + "pt;");
+    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
 }
 
@@ -443,44 +443,54 @@ void BarBtnEditor::paintEvent(QPaintEvent *event)
 
 ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-//    this->idx = idx;
-    int lineEditWidth = idx.data(UR_LabelFixedWidth).toInt();
-//    int min = idx.data(UR_Min).toInt();
-//    int max = idx.data(UR_Max).toInt();
-//    source = idx.data(UR_Source).toString();
-
     lineEdit = new QLineEdit;
     lineEdit->setObjectName("DisableGoActions");    // used in MW::focusChange
-//    lineEdit->setMaximumWidth(lineEditWidth);
     lineEdit->setAlignment(Qt::AlignLeft);
-    lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none;}");
+    lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none; padding:0px;}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
-//    QValidator *validator = new QIntValidator(min, max, this);
-//    lineEdit->setValidator(validator);
 
     label = new QLabel;
-    int w = 50;
+    int w = 25;
     label->setObjectName("DisableGoActions");  // used in MW::focusChange
     label->setStyleSheet("QLabel {background:gray; border:none;"
-                            "padding:0px; border-radius:0px;}");
+                         "padding:0px;"
+                         "margin-top:2;"
+                         "margin-bottom:2;}");
     label->setMaximumWidth(w);
     label->setMinimumWidth(w);
     label->setWindowFlags(Qt::FramelessWindowHint);
-//    label->setAttribute(Qt::WA_TranslucentBackground);
 
     btn = new BarBtn();
     btn->setIcon(QIcon(":/images/icon16/colorwheel.png"));
     btn->setToolTip("Click to select a color.");
+//    btn->setStyleSheet("padding:0px;");
 
     connect(btn, &BarBtn::clicked, this, &ColorEditor::setValue);
     connect(lineEdit, &QLineEdit::textChanged, this, &ColorEditor::updateLabelWhenLineEdited);
+
+    // not working right
+//    QHBoxLayout* leftLayout = new QHBoxLayout();
+//    leftLayout->addWidget(lineEdit, Qt::AlignLeft);
+//    leftLayout->addWidget(label);
+//    leftLayout->setContentsMargins(0,0,0,0);
+
+//    QHBoxLayout* btnLayout = new QHBoxLayout();
+//    btnLayout->addWidget(btn);
+//    btnLayout->setContentsMargins(6,6,6,4);
+
+//    QHBoxLayout* layout = new QHBoxLayout(this);
+//    layout->addLayout(leftLayout);
+//    layout->addLayout(btnLayout);
+//    layout->setContentsMargins(0,0,0,0);
+//    setLayout(layout);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(lineEdit, Qt::AlignLeft);
     layout->addWidget(label);
     layout->addWidget(btn);
     layout->setContentsMargins(0,0,0,0);
+    layout->setSpacing(1);
     setLayout(layout);
 }
 
@@ -495,22 +505,17 @@ void ColorEditor::setValue()
     lineEdit->setText(color.name());
 }
 
-void ColorEditor::change(int value)
-{
-    QVariant v = value;
-    emit editorValueChanged(this);
-    lineEdit->setText(QString::number(value));
-}
-
 void ColorEditor::updateLabelWhenLineEdited(QString value)
 {
     qDebug() << __FUNCTION__ << value;
-    label->setStyleSheet("background:" + value + ";");
+    label->setStyleSheet("QLabel {background:" + value + ";"
+                         "margin-top:2;"
+                         "margin-bottom:2;}");
 }
 
 void ColorEditor::paintEvent(QPaintEvent *event)
 {
-//    setStyleSheet("font-size: " + G::fontSize + "pt;");
+    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
 }
 
