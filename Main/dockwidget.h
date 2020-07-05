@@ -11,6 +11,7 @@ class BarBtn : public QToolButton
     Q_OBJECT
 public:
     BarBtn(/*QWidget *parent = nullptr*/);
+    QSize sizeHint();
 protected:
     void enterEvent(QEvent*);
     void leaveEvent(QEvent*);

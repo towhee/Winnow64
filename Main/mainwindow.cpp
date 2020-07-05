@@ -4107,6 +4107,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
     connect(imageView, SIGNAL(killSlideshow()),
             this, SLOT(slideShow()));
 
+    connect(imageView, &ImageView::newTile, this, &MW::writeTile);
 }
 
 void MW::createEmbelView()
@@ -4135,7 +4136,7 @@ void MW::createEmbelView()
     embelView->toggleZoom = 1;
 
     connect(embelView, &EmbelView::updateStatus, this, &MW::updateStatus);
-    connect(embelView, &EmbelView::newTile, this, &MW::writeTile);
+//    connect(embelView, &EmbelView::newTile, this, &MW::writeTile);
 }
 
 void MW::createCompareView()
@@ -4519,7 +4520,7 @@ void MW::createEmbelDock()
     G::track(__FUNCTION__);
     #endif
     }
-    EmbelProperties *embelProperties = new EmbelProperties(this);
+    EmbelProperties *embelProperties = new EmbelProperties(this, setting);
     embelDock = new DockWidget(tr("  Embellish  "), this);
     embelDock->setObjectName("embelDock");
     embelDock->setWidget(embelProperties);
@@ -7393,7 +7394,7 @@ void MW::writeTile()
     #endif
     }
     qDebug() << __FUNCTION__;
-    setting->beginGroup("Tiles");
+    setting->beginGroup("Embel/Tiles");
     setting->remove("");
     setting->setValue(imageView->tileName, imageView->tileBa);
     setting->endGroup();

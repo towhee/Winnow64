@@ -6,8 +6,13 @@
 BarBtn::BarBtn(/*QWidget *parent*/) : QToolButton()
 {
     setStyleSheet("background:transparent;");
-    int bg = G::backgroundShade +30;
+    int bg = G::backgroundShade + 30;
     btnHover = QColor(bg,bg,bg);
+}
+
+QSize BarBtn::sizeHint()
+{
+    return QSize(16,16);
 }
 
 void BarBtn::enterEvent(QEvent*)

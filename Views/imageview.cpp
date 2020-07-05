@@ -1150,6 +1150,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         QBuffer buffer(&tileBa);
         buffer.open(QIODevice::WriteOnly);
         tile.save(&buffer, "PNG");
+        qDebug() << __FUNCTION__ << "new tile";
         emit newTile();
         return;
     }

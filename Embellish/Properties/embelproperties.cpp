@@ -1,6 +1,6 @@
 #include "embelproperties.h"
 
-EmbelProperties::EmbelProperties(QWidget *parent): PropertyEditor(parent)
+EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyEditor(parent)
 {
     resizeColumns("======String to fit in captions column======",
                   "=String to fit in values column=");
@@ -27,9 +27,175 @@ itemChange, which is subclassed here.
     QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
 }
 
+void EmbelProperties::addBorders()
+{
+    getIndex("Borders");
+    int borderCount = model->rowCount(foundIdx) + 1;
+
+}
+
+void EmbelProperties::newBorder()
+{
+    getIndex("BordersHeader");
+    int row = model->rowCount(foundIdx);
+    qDebug() << __FUNCTION__ << row << foundIdx << foundIdx.data();
+    border.name = "Border" + QString::number(row + 1);
+    border.caption = "Border " + QString::number(row + 1);
+    border.top = 0;
+    border.left = 0;
+    border.right = 0;
+    border.bottom = 0;
+    border.tile = "";
+    border.color = "";
+    border.opacity = 100;
+    border.style = "";
+    addBorder();
+    // expand only the new border
+    collapseAll();
+    // get the parent of the new border
+    getIndex("BordersHeader");
+    // get the new border
+    QModelIndex idx = model->index(row, 0, foundIdx);
+    setExpanded(foundIdx, true);
+    setExpanded(idx, true);
+}
+
+void EmbelProperties::addBorder()
+{
+    // BORDER border0 header
+    i.name = border.name;
+    i.parentName = "BordersHeader";
+    i.captionText = border.caption;
+    i.tooltip = "";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+    // BORDER Border0 top size
+    i.name = "topSize";
+    i.parentName = border.name;
+    i.captionText = "Top amount";
+    i.tooltip = "This is the width of the top part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = border.top;
+    i.valueName = "topSize";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // BORDER Border0 Left size
+    i.name = "leftSize";
+    i.parentName = border.name;
+    i.captionText = "Left amount";
+    i.tooltip = "This is the width of the left part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = border.left;
+    i.valueName = "leftSize";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // BORDER Border0 right size
+    i.name = "rightSize";
+    i.parentName = border.name;
+    i.captionText = "Right amount";
+    i.tooltip = "This is the width of the right part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = border.right;
+    i.valueName = "rightSize";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // BORDER Border0 bottom size
+    i.name = "bottomSize";
+    i.parentName = border.name;
+    i.captionText = "Bottom amount";
+    i.tooltip = "This is the width of the bottom part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = border.bottom;
+    i.valueName = "bottomSize";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // BORDER Tile
+    i.name = "borderTile";
+    i.parentName = border.name;
+    i.captionText = "Tile";
+    i.tooltip = "Select a tile that will be used to full the border area.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = border.tile;
+    i.valueName = "borderTile";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "Use color" << "Tile 1" << "Tile 2";
+    addItem(i);
+
+    // BORDER Color
+    i.name = "borderColor";
+    i.parentName = border.name;
+    i.captionText = "Colour (#RRGGBB)";
+    i.tooltip = "Select a color that will be used to full the border area.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = border.color;
+    i.valueName = "borderColor";
+    i.delegateType =
+    i.delegateType = DT_Color;
+    i.type = "QString";
+    addItem(i);
+
+    // BORDER Opacity
+    i.name = "borderOpacityr";
+    i.parentName = border.name;
+    i.captionText = "Opacity";
+    i.tooltip = "The opacity of the border.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = border.opacity;
+    i.valueName = "borderOpacityr";
+    i.delegateType =  DT_Slider;
+    i.min = 0;
+    i.max = 100;
+    i.type = "int";
+    addItem(i);
+
+    // BORDER Style
+    i.name = "borderStyle";
+    i.parentName = border.name;
+    i.captionText = "Style";
+    i.tooltip = "Select a style that will be applied to the border area.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = border.style;
+    i.valueName = "borderStyle";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "None" << "Style 1";
+    addItem(i);
+}
+
 void EmbelProperties::addItems()
 {
-    ItemInfo i;
     /* template of ItemInfo
     i.name = "";                    // all
     i.parentName = "";              // all
@@ -270,8 +436,10 @@ void EmbelProperties::addItems()
     borderNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     borderNewBtn->setToolTip("Create a new border");
     btns.append(borderNewBtn);
+    connect(borderNewBtn, &BarBtn::clicked, this, &EmbelProperties::newBorder);
     addItem(i);
 
+    /*
     // BORDER border0 header
     i.name = "borderHeader0";
     i.parentName = "BordersHeader";
@@ -346,20 +514,6 @@ void EmbelProperties::addItems()
     i.fixedWidth = 50;
     addItem(i);
 
-    // BORDER Background
-    i.name = "borderBackground";
-    i.parentName = "borderHeader0";
-    i.captionText = "Background to use";
-    i.tooltip = "Select either a tile or a color to use for the background of the border.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = 0;
-    i.valueName = "borderBackground";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << "Tile" << "Color";
-    addItem(i);
-
     // BORDER Tile
     i.name = "borderTile";
     i.parentName = "borderHeader0";
@@ -371,10 +525,10 @@ void EmbelProperties::addItems()
     i.valueName = "borderTile";
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << "Tile 1" << "Tile 2";
+    i.dropList << "Use color" << "Tile 1" << "Tile 2";
     addItem(i);
 
-    // BORDER Color - needs an editor
+    // BORDER Color
     i.name = "borderColor";
     i.parentName = "borderHeader0";
     i.captionText = "Colour (#RRGGBB)";
@@ -418,6 +572,7 @@ void EmbelProperties::addItems()
     addItem(i);
 
     // end BORDER
+    */
     }
 
     // TEXT =================================================================================//
