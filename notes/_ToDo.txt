@@ -1,4 +1,5 @@
 BUGS
+- Globalize css
 - Add hif file format
 - Add cr3 file format
 - Rotate heic files

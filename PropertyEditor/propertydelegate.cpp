@@ -118,37 +118,30 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 void PropertyDelegate::setEditorData(QWidget *editor,
                                     const QModelIndex &index) const
 {
-    int type = index.data(UR_DelegateType).toInt();
-    switch (type) {
+    switch (index.data(UR_DelegateType).toInt()) {
         case DT_None:
         case DT_Label: {
-            QString value = index.model()->data(index, Qt::EditRole).toString();
-            static_cast<LabelEditor*>(editor)->setValue(value);
+            static_cast<LabelEditor*>(editor)->setValue(index.data(Qt::EditRole));
             break;
         }
         case DT_LineEdit: {
-            QString value = index.model()->data(index, Qt::EditRole).toString();
-            static_cast<LineEditor*>(editor)->setValue(value);
+            static_cast<LineEditor*>(editor)->setValue(index.data(Qt::EditRole));
             break;
         }
         case DT_Checkbox: {
-            int value = index.model()->data(index, Qt::EditRole).toBool();
-            static_cast<CheckBoxEditor*>(editor)->setValue(value);
+            static_cast<CheckBoxEditor*>(editor)->setValue(index.data(Qt::EditRole));
             break;
         }
         case DT_Spinbox: {
-            int value = index.model()->data(index, Qt::EditRole).toBool();
-            static_cast<SpinBoxEditor*>(editor)->setValue(value);
+            static_cast<SpinBoxEditor*>(editor)->setValue(index.data(Qt::EditRole));
             break;
         }
         case DT_Combo: {
-            int value = index.model()->data(index, Qt::EditRole).toInt();
-            static_cast<ComboBoxEditor*>(editor)->setValue(value);
+            static_cast<ComboBoxEditor*>(editor)->setValue(index.data(Qt::EditRole));
             break;
         }
         case DT_Slider: {
-            int value = index.model()->data(index, Qt::EditRole).toInt();
-            static_cast<SliderEditor*>(editor)->setValue(value);
+            static_cast<SliderEditor*>(editor)->setValue(index.data(Qt::EditRole));
             break;
         }
         case DT_BarBtns:

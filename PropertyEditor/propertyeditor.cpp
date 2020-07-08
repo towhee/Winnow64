@@ -52,6 +52,9 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
             this, &PropertyEditor::editorWidgetToDisplay);
 
     connect(propertyDelegate, &PropertyDelegate::drawBranchesAgain, this, &PropertyEditor::drawBranches);
+
+//    connect(model, &QStandardItemModel::dataChanged, this, &PropertyEditor::)
+//    connect(this, &QTreeView::selectionChanged,
 }
 
 void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
@@ -69,6 +72,23 @@ void PropertyEditor::itemChange(QModelIndex)
 
 }
 
+void PropertyEditor::selectionChange(const QItemSelection &selected, const QItemSelection &deselected)
+{
+//    qDebug() << __FUNCTION__ << selected << deselected;
+}
+
+QVariant PropertyEditor::getValue(QString name)
+{
+    getIndex(name);
+    QModelIndex valIdx = model->index(foundCatIdx.row(), 1, foundCatIdx.parent());
+    qDebug() << __FUNCTION__
+             << "name =" << foundCatIdx.data(UR_Name).toString()
+             << "foundCatIdx ="  << foundCatIdx
+             << "foundValIdx ="  << foundValIdx
+             << "value =" << foundValIdx.data().toString();
+    return valIdx.data();
+}
+
 bool PropertyEditor::getIndex(QString searchName, QModelIndex parent)
 {
 /*
@@ -76,17 +96,20 @@ Searches column 0 of the model for the text searchName in the role UR_Name and r
 index.  The role UR_Name is used as the display values could be duplicated in several rows
 in the model.
 */
-    foundIdx = QModelIndex();
+    foundCatIdx = QModelIndex();
     for(int r = 0; r < model->rowCount(parent); ++r) {
-        QModelIndex idx = model->index(r, 0, parent);
-        QString name = model->data(idx, UR_Name).toString();
+        QModelIndex idx0 = model->index(r, 0, parent);
+        QModelIndex idx1 = model->index(r, 1, parent);
+        QString name = model->data(idx0, UR_Name).toString();
+//        qDebug() << __FUNCTION__ << name;
         if (name == searchName) {
-            foundIdx = idx;
+            foundCatIdx = idx0;
+            foundValIdx = idx1;
             return true;
         }
         // iterate children
-        if (model->hasChildren(idx)) {
-            getIndex(searchName, idx);
+        if (model->hasChildren(idx0)) {
+            getIndex(searchName, idx0);
         }
     }
     return false;
@@ -108,7 +131,7 @@ supplied by the calling function.
     parItem = nullptr;
 
     getIndex(i.parentName);
-    parIdx = foundIdx;
+    parIdx = foundCatIdx;
     parItem = model->itemFromIndex(parIdx);
     /*
     qDebug() << "Item =" << i.name
@@ -158,6 +181,7 @@ supplied by the calling function.
     model->setData(valIdx, i.color, UR_Color);
     model->setData(valIdx, i.dropList, UR_StringList);
     model->setData(valIdx, i.index, UR_QModelIndex);
+    sourceIdx[i.valueName] = valIdx;
 
     // reset data struct
     clearItemInfo(i);
@@ -198,7 +222,7 @@ secondary or tertiary branch is sent then all branches expand.
 */
     collapseAll();
     getIndex(text);
-    expandRecursively(foundIdx);
+    expandRecursively(foundCatIdx);
 }
 
 void PropertyEditor::mousePressEvent(QMouseEvent *event)

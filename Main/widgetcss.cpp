@@ -80,13 +80,21 @@ QString WidgetCSS::mainWindow()
 {
     return
     "QMainWindow::separator {"
-    "background: " + QColor(l5,l5,l5).name() + ";"
-    "width: 4px;"
-    "height: 4px;"
+        "background: " + QColor(l5,l5,l5).name() + ";"
+        "width: 4px;"
+        "height: 4px;"
     "}"
 
     "QMainWindow::separator:hover {"
         "background: " + QColor(l40,l40,l40).name() + ";"
+    "}";
+}
+
+QString WidgetCSS::dialog()
+{
+    return
+    "QDialog {"
+        "background: " + QColor(l10,l10,l10).name() + ";"
     "}";
 }
 
@@ -477,7 +485,7 @@ QString WidgetCSS::pushButton()
         "padding-right: 5px;"
         "padding-top: 3px;"
         "padding-bottom: 3px;"
-        /*min-width: 100px;*/
+        "min-width: 100px;"
     "}"
 
     "QPushButton:default {"

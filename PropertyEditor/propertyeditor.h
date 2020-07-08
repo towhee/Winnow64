@@ -47,14 +47,19 @@ public:
     QWidget* addItem(ItemInfo &i); // abstract addItem
     void clearItemInfo(ItemInfo &i);
     bool getIndex(QString caption, QModelIndex parent = QModelIndex());
-    QModelIndex foundIdx;
+    QVariant getValue(QString name);
+    QModelIndex foundCatIdx;
+    QModelIndex foundValIdx;
+
+    QMap<QString, QModelIndex> sourceIdx;
 
 protected:
-    void mousePressEvent(QMouseEvent *event);
+    void mousePressEvent(QMouseEvent *event) override;
 
 public slots:
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor);
     virtual void itemChange(QModelIndex);
+    virtual void selectionChange(const QItemSelection &selected, const QItemSelection &deselected);
 
 private:
     QLinearGradient categoryBackground;

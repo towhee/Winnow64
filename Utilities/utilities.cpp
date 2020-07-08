@@ -1,5 +1,13 @@
 #include "utilities.h"
 
+QString Utilities::inputText(QString title, QString description)
+{
+    QString input;
+    InputDlg d(title, description, input);
+    d.exec();
+    return input;
+}
+
 void Utilities::setOpacity(QWidget *widget, qreal opacity)
 {
     QGraphicsOpacityEffect * effect = new QGraphicsOpacityEffect(widget);

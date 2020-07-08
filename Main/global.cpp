@@ -43,6 +43,7 @@ namespace G
     int textShade = 190;                // text default luminousity
     int disabledShade = textShade - 64; // disabled text default luminousity
     int backgroundShade;                // app background luminousity
+    QString css;                        // app stylesheet;
 
     int actualDevicePixelRatio;
     bool allMetadataLoaded;
