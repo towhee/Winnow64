@@ -53,6 +53,7 @@
 #include "loadusbdlg.h"
 #include "Utilities/utilities.h"
 #include "Utilities/usb.h"
+#include "Utilities/inputdlg.h"
 #include "progressbar.h"
 
 #include "ui_helpform.h"

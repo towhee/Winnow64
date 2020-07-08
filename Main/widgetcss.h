@@ -49,6 +49,7 @@ public:
 
     QString widget();
     QString mainWindow();
+    QString dialog();
     QString frame();
     QString graphicsView();
     QString statusBar();

@@ -165,6 +165,7 @@ namespace G
     extern int textShade;
     extern int backgroundShade;
     extern int disabledShade;
+    extern QString css;
 
     extern int actualDevicePixelRatio;
     extern bool allMetadataLoaded;

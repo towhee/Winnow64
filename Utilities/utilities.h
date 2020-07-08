@@ -2,11 +2,14 @@
 #define UTILITIES_H
 
 #include <QtWidgets>
+
+#include "Utilities/inputdlg.h"
 //#include <bitset>
 
 class Utilities
 {
 public:
+    static QString inputText(QString title, QString description);
     static void setOpacity(QWidget *widget, qreal opacity);
     static QString formatMemory(qulonglong bytes, int precision = 1);
     static QString enquote(QString &s);
