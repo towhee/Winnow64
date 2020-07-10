@@ -35,6 +35,7 @@
 #include "Main/dockwidget.h"
 #include "Embellish/Properties/embelproperties.h"
 #include "Embellish/embelview.h"
+#include "Embellish/embel.h"
 
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
@@ -84,6 +85,7 @@ class MW : public QMainWindow
     friend class PropertyEditor;    // mw;
     friend class ProgressBar;       // mw1
     friend class IconView;          // mw2
+    friend class EmbelProperties;   // mw3
 
 public:
     MW(QWidget *parent = nullptr);
@@ -816,7 +818,9 @@ private:
     TableView *tableView;
     ImageView *imageView;
     EmbelView *embelView;
+    EmbelProperties *embelProperties;
     QFrame *embelFrame;
+    Embel *embel;
     InfoString *infoString;
     PropertyEditor *propertyEditor;
     QHeaderView *headerView;
@@ -908,6 +912,7 @@ private:
     bool isPick;
     bool isReject;
 
+    void createEmbel();
     void createDocks();
     void createFolderDock();
     void createFavDock();
@@ -915,6 +920,8 @@ private:
     void createMetadataDock();
     void createThumbDock();
     void createEmbelDock();
+    void embelDockActivated(QDockWidget *dockWidget);
+    void embelDockVisibilityChange();
     void updateState();
     void clearAll();
     void deleteViewerImage();

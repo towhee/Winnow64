@@ -177,6 +177,8 @@ to prevent jarring changes in perceived scale by the user.
         scale();
     }
     QImage im = pmItem->pixmap().toImage();
+    imAspect = qreal(im.width()) / im.height();
+    qDebug() << __FUNCTION__ << "imAspect =" << imAspect;
     return isLoaded;
 }
 
@@ -220,7 +222,7 @@ Geometry
     G::track(__FUNCTION__);
     #endif
     }
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << "isScrollable =" << isScrollable
              << "isFit =" << isFit

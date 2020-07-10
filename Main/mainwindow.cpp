@@ -252,6 +252,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     createFSTree();             // dependent on Metadata
     createBookmarks();          // dependent on loadSettings
     createDocks();              // dependent on FSTree, Bookmarks, ThumbView, Metadata, InfoView
+    createEmbel();              // dependent on EmbelView, EmbelDock
     createStatusBar();
     createMessageView();
     loadWorkspaces();           // req'd by actions and menu
@@ -379,6 +380,8 @@ void MW::showEvent(QShowEvent *event)
 //            folderDock->raise();
 //        }
         updateState();
+        // if embel dock visible then set view to embelView
+        embelDockVisibilityChange();
     }
     else {
         defaultWorkspace();
@@ -573,8 +576,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         G::track(__FUNCTION__, "Performance profiling");
         qDebug() << event <<  obj;
     };
-//    */
+//
 
+    if (event->type() == QEvent::FocusIn) {
+            qDebug() << event << obj << embelDock->hasFocus();
+    }
+//*/
     /* CONTEXT MENU **********************************************************************
 
     Intercept context menu
@@ -2729,8 +2736,8 @@ void MW::createActions()
     asLoupeAction->setCheckable(true);
     if (isSettings && setting->contains("isLoupeDisplay"))
         asLoupeAction->setChecked(setting->value("isLoupeDisplay").toBool()
-                                  || setting->value("isCompareDisplay").toBool()
-                                  || setting->value("isEmbelDisplay").toBool());
+                                  || setting->value("isCompareDisplay").toBool());
+//                                  || setting->value("isEmbelDisplay").toBool()
     else asLoupeAction->setChecked(false);
     addAction(asLoupeAction);
     connect(asLoupeAction, &QAction::triggered, this, &MW::loupeDisplay);
@@ -4131,7 +4138,6 @@ void MW::createEmbelView()
     embelLayout->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
     embelLayout->addWidget(embelView);
     embelFrame->setLayout(embelLayout);
-//    embelFrame->setStyleSheet("background:whitesmoke");
 
     embelView->toggleZoom = 1;
 
@@ -4431,9 +4437,7 @@ void MW::createFilterDock()
     frame->setLayout(filterLayout);
     filterDock->setWidget(frame);
 
-    connect(filterDock, SIGNAL(visibilityChanged(bool)),
-            this, SLOT(filterDockVisibilityChange(bool)));
-//    connect(filterDock, &QDockWidget::visibilityChanged, this, &MW::filterDockVisibilityChange);
+    connect(filterDock, &QDockWidget::visibilityChanged, this, &MW::filterDockVisibilityChange);
 
     if (isSettings) {
         setting->beginGroup(("FilterDock"));
@@ -4520,18 +4524,21 @@ void MW::createEmbelDock()
     G::track(__FUNCTION__);
     #endif
     }
-    EmbelProperties *embelProperties = new EmbelProperties(this, setting);
+    embelProperties = new EmbelProperties(this, setting);
     embelDock = new DockWidget(tr("  Embellish  "), this);
     embelDock->setObjectName("embelDock");
     embelDock->setWidget(embelProperties);
     embelDock->setFloating(false);
     embelDock->setVisible(true);
 
+    connect(embelDock, &QDockWidget::visibilityChanged, this, &MW::embelDockVisibilityChange);
+
     // customize the embelDock titlebar
     QHBoxLayout *embelTitleLayout = new QHBoxLayout();
     embelTitleLayout->setContentsMargins(0, 0, 0, 0);
     embelTitleLayout->setSpacing(0);
-    embelTitleBar = new DockTitleBar("Embellish", embelTitleLayout);
+    embelTitleBar = new DockTitleBar("", embelTitleLayout);
+//    embelTitleBar = new DockTitleBar("Embellish", embelTitleLayout);
     embelDock->setTitleBarWidget(embelTitleBar);
 
     // add widgets to the right side of the title bar layout
@@ -4586,6 +4593,13 @@ void MW::createEmbelDock()
     // Spacer
     embelTitleLayout->addSpacing(10);
 
+    // question mark button
+    BarBtn *embelQuestionBtn = new BarBtn();
+    embelQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+    embelQuestionBtn->setToolTip("Embel coordinate and container system.");
+    connect(embelQuestionBtn, &BarBtn::clicked, embelProperties, &EmbelProperties::coordHelp);
+    embelTitleLayout->addWidget(embelQuestionBtn);
+
     // close button
     BarBtn *embelCloseBtn = new BarBtn();
     embelCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
@@ -4607,6 +4621,8 @@ void MW::createDocks()
     createMetadataDock();
     createThumbDock();
     if (!isReleaseVersion) createEmbelDock();
+
+    connect(this, &MW::tabifiedDockWidgetActivated, this, &MW::embelDockActivated);
 
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
@@ -4630,6 +4646,38 @@ void MW::createDocks()
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, metadataDock);
     MW::tabifyDockWidget(metadataDock, filterDock);
+}
+
+void MW::embelDockVisibilityChange()
+{
+    qDebug() << __FUNCTION__ << embelDock->isVisible();
+    if (embelDock->isVisible()) embelDisplay();
+}
+
+void MW::embelDockActivated(QDockWidget *dockWidget)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+//    if (dockWidget->objectName() == "embelDock") embelDisplay();
+    // enable the folder dock (first one in tab)
+    QList<QTabBar *> tabList = findChildren<QTabBar *>();
+    QTabBar* widgetTabBar = tabList.at(0);
+    widgetTabBar->setCurrentIndex(4);
+    qDebug() << __FUNCTION__ << dockWidget->objectName() << widgetTabBar->currentIndex();
+
+}
+
+void MW::createEmbel()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    embel = new Embel(embelView, embelProperties);
 }
 
 void MW::createFSTree()
