@@ -27,8 +27,15 @@ public:
               ImageCache *imageCacheThread,
               IconView *thumbView);
 
-    int cwMargin = 50;
+    int cwMargin = 20;
 
+    QGraphicsScene *scene;
+    QGraphicsPixmapItem *pmItem;
+    QGraphicsTextItem *infoItem;
+    QMatrix matrix;
+    Pixmap *pixmap;
+
+    qreal imAspect = 1;
     qreal zoom;
     qreal zoomFit;
     bool isFit;
@@ -111,14 +118,6 @@ private:
     bool resizeIsSmaller();
     void transform();
 
-    Pixmap *pixmap;
-
-    QGraphicsScene *scene;
-    QGraphicsPixmapItem *pmItem;
-    QGraphicsTextItem *infoItem;
-    QMatrix matrix;
-
-//    QRect canvasRect;
 
     QTimer *mouseMovementTimer;
     QTimer *loadFullSizeTimer;

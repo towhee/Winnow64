@@ -37,8 +37,8 @@ public:
         QString valueName;
         QString type;
         int delegateType;
-        int min;
-        int max;
+        QVariant min;
+        QVariant max;
         int fixedWidth;
         QString color;
         QStringList dropList;
@@ -47,9 +47,7 @@ public:
     QWidget* addItem(ItemInfo &i); // abstract addItem
     void clearItemInfo(ItemInfo &i);
     bool getIndex(QString caption, QModelIndex parent = QModelIndex());
-    QVariant getValue(QString name);
-    QModelIndex foundCatIdx;
-    QModelIndex foundValIdx;
+    QModelIndex foundIdx;
 
     QMap<QString, QModelIndex> sourceIdx;
 

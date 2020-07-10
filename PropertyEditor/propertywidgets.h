@@ -7,16 +7,17 @@
 
 enum DelegateType
 {
-    DT_None,        // 0
-    DT_Label,       // 1
-    DT_LineEdit,    // 2
-    DT_Spinbox,     // 3
-    DT_Checkbox,    // 4
-    DT_Combo,       // 5
-    DT_Slider,      // 6
-    DT_PlusMinus,   // 7
-    DT_BarBtns,     // 8
-    DT_Color        // 9
+    DT_None,
+    DT_Label,
+    DT_LineEdit,
+    DT_Spinbox,
+    DT_DoubleSpinbox,
+    DT_Checkbox,
+    DT_Combo,
+    DT_Slider,
+    DT_PlusMinus,
+    DT_BarBtns,
+    DT_Color
 };
 
 enum UserRole
@@ -82,6 +83,28 @@ signals:
 private:
     void change(int value);
     QSpinBox *spinBox;
+    QString source;
+    QModelIndex idx;
+};
+
+class DoubleSpinBoxEditor : public QWidget
+{
+    Q_OBJECT
+public:
+    DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent = nullptr);
+    void setValue(QVariant value);
+    double value();
+
+protected:
+    void paintEvent(QPaintEvent *event);
+
+signals:
+    void editorValueChanged(QWidget *);
+    void enableGoKeyActions(bool ok);
+
+private:
+    void change(double value);
+    QDoubleSpinBox *spinBox;
     QString source;
     QModelIndex idx;
 };
@@ -214,7 +237,8 @@ class ColorEditor : public QWidget
     Q_OBJECT
 public:
     ColorEditor(const QModelIndex &idx, QWidget *parent = nullptr);
-    void setValue();
+    void setValue(QVariant value);
+    void setValueFromColorDlg();
     QString value();
 
 protected:

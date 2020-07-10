@@ -6,12 +6,15 @@
 #include "Utilities/utilities.h"
 #include "PropertyEditor/propertyeditor.h"
 #include "PropertyEditor/propertywidgets.h"
+#include "ui_embelCoord.h"
 
 class EmbelProperties : public PropertyEditor
 {
     Q_OBJECT
 public:
     EmbelProperties(QWidget *parent, QSettings *setting);
+
+    QStringList templateList;
     struct File {
         int horizontalFit;
         int verticalFit;
@@ -26,33 +29,42 @@ public:
         QString name;
         QString caption;
         QString parent;
-        int top;
-        int left;
-        int right;
-        int bottom;
+        double top;
+        double left;
+        double right;
+        double bottom;
         QString tile;
         QString color;
         int opacity;
         QString style;
+        // coord
+        QPoint tl, tc, tr, cl, cc, cr, bl, bc, br;
+        int w, h;
     } border;
-
-    QStringList templateList;
     QVector<Border>b;
 
 public slots:
     void itemChange(QModelIndex idx);
     void diagnostic(QModelIndex parent = QModelIndex());
+    void coordHelp();
 
 private:
     void readTemplateList();
     void renameCurrentTemplate();
     void setCurrentTemplate();
-    void newTemplate();
-    void addBorders();
-    void newBorder();
-    void addBorder();
     void addTemplateHeader();
     void addTemplateItems();
+    void newTemplate();
+    void newBorder();
+    void addBorder(int count);
+
+    void fileItemChange(QVariant v, QString source);
+    void imageItemChange(QVariant v, QString source);
+    void borderItemChange(QVariant v, QString source, QString parent);
+    void textItemChange(QVariant v, QString source, QString parent);
+    void rectangleItemChange(QVariant v, QString source, QString parent);
+    void graphicItemChange(QVariant v, QString source, QString parent);
+
 
     ItemInfo i;
     int templateCount;

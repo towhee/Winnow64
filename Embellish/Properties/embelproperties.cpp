@@ -1,10 +1,22 @@
 #include "embelproperties.h"
+//#include "Embellish/embel.h"
+#include "Main/mainwindow.h"
+
+extern MW *mw3;
+MW *mw3;
+#define e mw3->embel
 
 EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyEditor(parent)
 {
+    mw3 = qobject_cast<MW*>(parent);
+
     this->setting = setting;
+    setIndentation(12);
+    setAlternatingRowColors(false);
+
     resizeColumns("======String to fit in captions column======",
                   "=String to fit in values column=");
+
     // get the list of templates and which one was last active
     readTemplateList();
     // add the template header, which then selects to last active template
@@ -12,6 +24,9 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     // add the File, Image, Borders, Textx, Rectangles and Graphics items for the template
     addTemplateItems();
     expandAll();
+
+    // test connection to Embel
+    f.suffix = "testsuffix";
 }
 
 void EmbelProperties::diagnostic(QModelIndex parent)
@@ -33,11 +48,13 @@ void EmbelProperties::diagnostic(QModelIndex parent)
 
 void EmbelProperties::renameCurrentTemplate()
 {
-//    qDebug() << __FUNCTION__ << sourceIdx;
+    e->test();
+//    mw3->embel->test();
+    return;
+
     QModelIndex idx = sourceIdx["templateList"];
     model->setData(idx, templateName);
     propertyDelegate->setEditorData(templateListEditor, idx);
-//    model->setData(sourceIdx[templateName], templateName);
 }
 
 void EmbelProperties::setCurrentTemplate()
@@ -55,16 +72,12 @@ void EmbelProperties::readTemplateList()
     setting->beginGroup("Embel/Templates");
     templateList = setting->childGroups();
     setting->endGroup();
-    qDebug() << __FUNCTION__ << templateList;
     templateName = "";
     for (int i = 0; i < templateList.size(); ++i) {
         QString t = templateList.at(i);
         QString path = "Embel/Templates/" + t + "/isCurrent";
-        bool isCurrent = setting->value(path).toBool();
-        qDebug() << __FUNCTION__ << t << isCurrent;
         if (setting->value(path).toBool()) {
             templateName = t;
-            qDebug() << __FUNCTION__ << "The template is" << t;
         }
     }
     if (templateName == "") templateName = templateList.at(0);
@@ -77,172 +90,6 @@ void EmbelProperties::newTemplate()
     templateList << templateName;
     QString path = "Embel/Templates/" + templateName + "/isCurrent";
     setting->setValue(path, true);
-}
-
-void EmbelProperties::addBorders()
-{
-    getIndex("Borders");
-    int borderCount = model->rowCount(foundCatIdx) + 1;
-}
-
-void EmbelProperties::newBorder()
-{
-    getIndex("BordersHeader");
-    int row = model->rowCount(foundCatIdx);
-    qDebug() << __FUNCTION__ << row << foundCatIdx << foundCatIdx.data();
-    border.name = "Border" + QString::number(row + 1);
-    border.caption = "Border " + QString::number(row + 1);
-    border.top = 0;
-    border.left = 0;
-    border.right = 0;
-    border.bottom = 0;
-    border.tile = "";
-    border.color = "";
-    border.opacity = 100;
-    border.style = "";
-    addBorder();
-    // expand only the new border
-    collapseAll();
-    // get the parent of the new border
-    getIndex("BordersHeader");
-    // get the new border
-    QModelIndex idx = model->index(row, 0, foundCatIdx);
-    setExpanded(foundCatIdx, true);
-    setExpanded(idx, true);
-}
-
-void EmbelProperties::addBorder()
-{
-    // BORDER border0 header
-    i.name = border.name;
-    i.parentName = "BordersHeader";
-    i.captionText = border.caption;
-    i.tooltip = "";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.delegateType = DT_None;
-    addItem(i);
-
-    // BORDER Border0 top size
-    i.name = "topSize";
-    i.parentName = border.name;
-    i.captionText = "Top amount";
-    i.tooltip = "This is the width of the top part of the border (% of the long side).";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = border.top;
-    i.valueName = "topSize";
-    i.delegateType = DT_Spinbox;
-    i.type = "int";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    addItem(i);
-
-    // BORDER Border0 Left size
-    i.name = "leftSize";
-    i.parentName = border.name;
-    i.captionText = "Left amount";
-    i.tooltip = "This is the width of the left part of the border (% of the long side).";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = border.left;
-    i.valueName = "leftSize";
-    i.delegateType = DT_Spinbox;
-    i.type = "int";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    addItem(i);
-
-    // BORDER Border0 right size
-    i.name = "rightSize";
-    i.parentName = border.name;
-    i.captionText = "Right amount";
-    i.tooltip = "This is the width of the right part of the border (% of the long side).";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = border.right;
-    i.valueName = "rightSize";
-    i.delegateType = DT_Spinbox;
-    i.type = "int";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    addItem(i);
-
-    // BORDER Border0 bottom size
-    i.name = "bottomSize";
-    i.parentName = border.name;
-    i.captionText = "Bottom amount";
-    i.tooltip = "This is the width of the bottom part of the border (% of the long side).";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = border.bottom;
-    i.valueName = "bottomSize";
-    i.delegateType = DT_Spinbox;
-    i.type = "int";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    addItem(i);
-
-    // BORDER Tile
-    i.name = "borderTile";
-    i.parentName = border.name;
-    i.captionText = "Tile";
-    i.tooltip = "Select a tile that will be used to full the border area.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = border.tile;
-    i.valueName = "borderTile";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << "Use color" << "Tile 1" << "Tile 2";
-    addItem(i);
-
-    // BORDER Color
-    i.name = "borderColor";
-    i.parentName = border.name;
-    i.captionText = "Colour (#RRGGBB)";
-    i.tooltip = "Select a color that will be used to full the border area.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = border.color;
-    i.valueName = "borderColor";
-    i.delegateType =
-    i.delegateType = DT_Color;
-    i.type = "QString";
-    addItem(i);
-
-    // BORDER Opacity
-    i.name = "borderOpacityr";
-    i.parentName = border.name;
-    i.captionText = "Opacity";
-    i.tooltip = "The opacity of the border.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = border.opacity;
-    i.valueName = "borderOpacityr";
-    i.delegateType =  DT_Slider;
-    i.min = 0;
-    i.max = 100;
-    i.type = "int";
-    addItem(i);
-
-    // BORDER Style
-    i.name = "borderStyle";
-    i.parentName = border.name;
-    i.captionText = "Style";
-    i.tooltip = "Select a style that will be applied to the border area.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = border.style;
-    i.valueName = "borderStyle";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << "None" << "Style 1";
-    addItem(i);
 }
 
 void EmbelProperties::itemChange(QModelIndex idx)
@@ -263,50 +110,135 @@ itemChange, which is subclassed here.
 
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
+    QString parent = idx.parent().data(UR_Name).toString();
+    QString grandparent = idx.parent().parent().data(UR_Name).toString();
     templatePath = "Embel/Templates/" + templateName + "/";
 //    QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
-//    qDebug() << __FUNCTION__ << v << source << index;
+    qDebug() << __FUNCTION__ << v << source << parent << grandparent;
+
+    if (parent == "FileHeader") fileItemChange(v, source);
+    if (parent == "ImageHeader") imageItemChange(v, source);
+    if (grandparent == "BordersHeader") borderItemChange(v, source, parent);
+    if (grandparent == "TextsHeader") textItemChange(v, source, parent);
+    if (grandparent == "RectanglesHeader") rectangleItemChange(v, source, parent);
+    if (grandparent == "GraphicsHeader") graphicItemChange(v, source, parent);
 
     if (source == "templateList") {
         qDebug() << __FUNCTION__;
         templateName = v.toString();
-        templatePath = "Embel/Templates/" + templateName + "/";
         // save which template is current
         setCurrentTemplate();
         // clear model except for template name
         model->removeRows(1, model->rowCount(QModelIndex()) - 1);
         // add items for this template
         addTemplateItems();
-        return;
     }
+}
+
+void EmbelProperties::fileItemChange(QVariant v, QString source)
+{
+    QString path = templatePath + "File/" + source;
 
     if (source == "horizontalFit") {
-        setting->setValue(templatePath + "File/" + source, v.toInt());
+        setting->setValue(path, v.toInt());
+        f.horizontalFit = v.toInt();
     }
 
     if (source == "verticalFit") {
-        setting->setValue(templatePath + "File/" + source, v.toInt());
+        setting->setValue(path, v.toInt());
+        f.verticalFit = v.toInt();
     }
 
     if (source == "fileType") {
-        setting->setValue(templatePath + "File/" + source, v.toString());
+        setting->setValue(path, v.toString());
+        f.fileType = v.toString();
     }
 
     if (source == "saveMethod") {
-        setting->setValue(templatePath + "File/" + source, v.toString());
+        setting->setValue(path, v.toString());
+        f.saveMethod = v.toString();
     }
 
     if (source == "folderPath") {
-        setting->setValue(templatePath + "File/" + source, v.toString());
+        setting->setValue(path, v.toString());
+        f.folderPath = v.toString();
     }
 
     if (source == "suffix") {
-        setting->setValue(templatePath + "File/" + source, v.toString());
+        setting->setValue(path, v.toString());
+        f.suffix = v.toString();
     }
 
     if (source == "overwriteFiles") {
-        setting->setValue(templatePath + "File/" + source, v.toBool());
+        setting->setValue(path, v.toBool());
+        f.overwriteFiles = v.toBool();
     }
+}
+
+void EmbelProperties::imageItemChange(QVariant v, QString source)
+{
+    QString path = templatePath + "Image/" + source;
+    qDebug() << __FUNCTION__ << path;
+
+    if (source == "style") {
+        setting->setValue(path, v.toString());
+    }
+
+}
+
+void EmbelProperties::borderItemChange(QVariant v, QString source, QString parent)
+{
+    QString path = templatePath + "Borders/" + parent + "/" + source;
+    qDebug() << __FUNCTION__ << path;
+
+    if (source == "topMargin") {
+        setting->setValue(path, v.toDouble());
+        qDebug() << __FUNCTION__ << source << v << v.toDouble();
+    }
+
+    if (source == "leftMargin") {
+        setting->setValue(path, v.toDouble());
+    }
+
+    if (source == "rightMargin") {
+        setting->setValue(path, v.toDouble());
+    }
+
+    if (source == "bottomMargin") {
+        setting->setValue(path, v.toDouble());
+    }
+
+    if (source == "tile") {
+        setting->setValue(path, v.toString());
+    }
+
+    if (source == "color") {
+        setting->setValue(path, v.toString());
+        qDebug() << __FUNCTION__ << "borderColor" << v;
+    }
+
+    if (source == "opacityr") {
+        setting->setValue(path, v.toInt());
+    }
+
+    if (source == "style") {
+        setting->setValue(path, v.toString());
+    }
+
+}
+
+void EmbelProperties::textItemChange(QVariant v, QString source, QString parent)
+{
+
+}
+
+void EmbelProperties::rectangleItemChange(QVariant v, QString source, QString parent)
+{
+
+}
+
+void EmbelProperties::graphicItemChange(QVariant v, QString source, QString parent)
+{
 
 }
 
@@ -483,6 +415,7 @@ void EmbelProperties::addTemplateItems()
     i.min = 1;
     i.max = 10000;
     i.fixedWidth = 50;
+    f.horizontalFit = i.value.toInt();
     addItem(i);
 
     // FILES Vertical fit
@@ -499,6 +432,7 @@ void EmbelProperties::addTemplateItems()
     i.min = 1;
     i.max = 10000;
     i.fixedWidth = 50;
+    f.verticalFit = i.value.toInt();
     addItem(i);
 
     // FILES File type
@@ -513,6 +447,7 @@ void EmbelProperties::addTemplateItems()
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << "Tiff" << "Jpg" << "Png";
+    f.fileType = i.value.toString();
     addItem(i);
 
     // FILES Save method
@@ -527,6 +462,7 @@ void EmbelProperties::addTemplateItems()
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << "Same folder" << "Subfolder" << "Template";
+    f.saveMethod = i.value.toString();
     addItem(i);
 
     // FILES Folder name
@@ -541,6 +477,7 @@ void EmbelProperties::addTemplateItems()
     i.value = setting->value(templatePath + "File/" + i.valueName);
     i.delegateType = DT_LineEdit;
     i.type = "string";
+    f.folderPath = i.value.toString();
     addItem(i);
 
     // FILES Suffix name
@@ -554,6 +491,7 @@ void EmbelProperties::addTemplateItems()
     i.value = setting->value(templatePath + "File/" + i.valueName);
     i.delegateType = DT_LineEdit;
     i.type = "string";
+    f.suffix = i.value.toString();
     addItem(i);
 
     // FILES Overwrite existing files
@@ -567,6 +505,7 @@ void EmbelProperties::addTemplateItems()
     i.value = setting->value(templatePath + "File/" + i.valueName);
     i.delegateType = DT_Checkbox;
     i.type = "bool";
+    f.overwriteFiles = i.value.toBool();
     addItem(i);
 
     // end FILES
@@ -625,10 +564,17 @@ void EmbelProperties::addTemplateItems()
     connect(borderNewBtn, &BarBtn::clicked, this, &EmbelProperties::newBorder);
     addItem(i);
 
+    QString path = templatePath + "/Borders";
+    setting->beginGroup(path);
+    int borderCount = setting->childGroups().size();
+    qDebug() << __FUNCTION__ << path << "borderCount =" << borderCount;
+    setting->endGroup();
+    for (int i = 0; i < borderCount; ++i) newBorder();
+
     // TEXT =================================================================================//
 
     // Texts header (Root)
-    i.name = "TextHeader";
+    i.name = "TextsHeader";
     i.parentName = "???";
     i.decorateGradient = true;
     i.captionText = "Text Items";
@@ -687,4 +633,196 @@ void EmbelProperties::addTemplateItems()
     graphicNewBtn->setToolTip("Create a new graphic");
     btns.append(graphicNewBtn);
     addItem(i);
+}
+
+void EmbelProperties::newBorder()
+{
+    getIndex("BordersHeader");
+    int row = model->rowCount(foundIdx);
+    qDebug() << __FUNCTION__ << row << foundIdx << foundIdx.data();
+/*    border.name = "Border" + QString::number(row + 1);
+    border.caption = "Border " + QString::number(row + 1);
+    border.top = 0;
+    border.left = 0;
+    border.right = 0;
+    border.bottom = 0;
+    border.tile = "";
+    border.color = "";
+    border.opacity = 100;
+    border.style = "";  */
+    addBorder(row);
+    // expand only the new border
+    collapseAll();
+    // get the parent of the new border
+    getIndex("BordersHeader");
+    // get the new border
+    QModelIndex idx = model->index(row, 0, foundIdx);
+    setExpanded(foundIdx, true);
+    setExpanded(idx, true);
+}
+
+void EmbelProperties::addBorder(int count)
+{
+    // Border name (used as node in settings and treeview)
+    QString borderName = "Border" + QString::number(count + 1);
+    QString settingRootPath = templatePath + "Borders/" + borderName + "/";
+
+    // subheader for this border
+    i.name = borderName;
+    i.parentName = "BordersHeader";
+    i.captionText = borderName;
+    i.tooltip = "";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+    i.name = "topMargin";
+    i.parentName = borderName;
+    i.captionText = "Top amount";
+    i.tooltip = "This is the width of the top part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "topMargin";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else i.value = 0;
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    border.top = i.value.toDouble();
+    addItem(i);
+
+    i.name = "leftMargin";
+    i.parentName = borderName;
+    i.captionText = "Left amount";
+    i.tooltip = "This is the width of the left part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "leftMargin";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else i.value = 0;
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    border.left = i.value.toDouble();
+    addItem(i);
+
+    i.name = "rightMargin";
+    i.parentName = borderName;
+    i.captionText = "Right amount";
+    i.tooltip = "This is the width of the right part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "rightMargin";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else i.value = 0;
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    border.right = i.value.toDouble();
+    addItem(i);
+
+    i.name = "bottomMargin";
+    i.parentName = borderName;
+    i.captionText = "Bottom amount";
+    i.tooltip = "This is the width of the bottom part of the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "bottomMargin";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else i.value = 0;
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    border.bottom = i.value.toDouble();
+    addItem(i);
+
+    i.name = "tile";
+    i.parentName = borderName;
+    i.captionText = "Tile";
+    i.tooltip = "Select a tile that will be used to full the border area.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "tile";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else i.value = "";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "Use color" << "Tile 1" << "Tile 2";
+    border.tile = i.value.toString();
+    addItem(i);
+
+    i.name = "color";
+    i.parentName = borderName;
+    i.captionText = "Colour (#RRGGBB)";
+    i.tooltip = "Select a color that will be used to full the border area.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "color";
+    if (setting->contains(settingRootPath + i.valueName)) {
+        i.value = setting->value(settingRootPath + i.valueName);
+    }
+    else i.value = "";
+    i.delegateType = DT_Color;
+    i.type = "QString";
+    border.color = i.value.toString();
+    addItem(i);
+
+    i.name = "opacity";
+    i.parentName = borderName;
+    i.captionText = "Opacity";
+    i.tooltip = "The opacity of the border.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "opacityr";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else i.value = 100;
+    i.delegateType =  DT_Slider;
+    i.min = 0;
+    i.max = 100;
+    i.type = "int";
+    border.opacity = i.value.toInt();
+    addItem(i);
+
+    i.name = "style";
+    i.parentName = borderName;
+    i.captionText = "Style";
+    i.tooltip = "Select a style that will be applied to the border area.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "style";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else i.value = "";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "None" << "Style 1";
+    border.style = i.value.toString();
+    addItem(i);
+
+    // add the border info to the vector of borders
+    b << border;
+}
+
+void EmbelProperties::coordHelp()
+{
+//    QWidget *helpDoc = new QWidget;
+//    Ui::embelCoord ui;
+//    ui.setupUi(helpDoc);
+//    helpDoc->show();
+
 }

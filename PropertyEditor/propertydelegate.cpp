@@ -59,6 +59,13 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
             emit editorWidgetToDisplay(index, spinBoxEditor);
             return spinBoxEditor;
         }
+        case DT_DoubleSpinbox: {
+            DoubleSpinBoxEditor *doubleSpinBoxEditor = new DoubleSpinBoxEditor(index, parent);
+            connect(doubleSpinBoxEditor, &DoubleSpinBoxEditor::editorValueChanged,
+                    this, &PropertyDelegate::commitData);
+            emit editorWidgetToDisplay(index, doubleSpinBoxEditor);
+            return doubleSpinBoxEditor;
+        }
         case DT_Combo: {
             ComboBoxEditor *comboBoxEditor = new ComboBoxEditor(index, parent);
             connect(comboBoxEditor, &ComboBoxEditor::editorValueChanged,
@@ -136,6 +143,10 @@ void PropertyDelegate::setEditorData(QWidget *editor,
             static_cast<SpinBoxEditor*>(editor)->setValue(index.data(Qt::EditRole));
             break;
         }
+        case DT_DoubleSpinbox: {
+            static_cast<DoubleSpinBoxEditor*>(editor)->setValue(index.data(Qt::EditRole));
+            break;
+        }
         case DT_Combo: {
             static_cast<ComboBoxEditor*>(editor)->setValue(index.data(Qt::EditRole));
             break;
@@ -144,8 +155,11 @@ void PropertyDelegate::setEditorData(QWidget *editor,
             static_cast<SliderEditor*>(editor)->setValue(index.data(Qt::EditRole));
             break;
         }
+        case DT_Color: {
+            static_cast<ColorEditor*>(editor)->setValue(index.data(Qt::EditRole));
+            break;
+        }
         case DT_BarBtns:
-        case DT_Color:
         case DT_PlusMinus: {
             // nothing to set
             break;
@@ -186,7 +200,13 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
             model->setData(index, value, Qt::EditRole);
             emit itemChanged(index);
             break;
-
+        }
+        case DT_DoubleSpinbox: {
+            DoubleSpinBoxEditor *doubleSpinBoxEditor = static_cast<DoubleSpinBoxEditor*>(editor);
+            int value = doubleSpinBoxEditor->value();
+            model->setData(index, value, Qt::EditRole);
+            emit itemChanged(index);
+            break;
         }
         case DT_Combo: {
             ComboBoxEditor *comboBoxEditor = static_cast<ComboBoxEditor*>(editor);

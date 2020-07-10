@@ -18,6 +18,7 @@ QT += xmlpatterns
 HEADERS += Cache/imagecache.h \
    Dialogs/patterndlg.h \
    Embellish/Properties/embelproperties.h \
+   Embellish/embel.h \
    Embellish/embelview.h \
    Utilities/inputdlg.h
 HEADERS += Cache/mdcache.h
@@ -95,6 +96,7 @@ HEADERS += Views/tableview.h
 SOURCES += Cache/imagecache.cpp \
    Dialogs/patterndlg.cpp \
    Embellish/Properties/embelproperties.cpp \
+   Embellish/embel.cpp \
    Embellish/embelview.cpp \
    Utilities/inputdlg.cpp
 SOURCES += Cache/mdcache.cpp
@@ -167,6 +169,7 @@ SOURCES += Views/infostring.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
    Dialogs/patterndlg.ui \
+   Embellish/embelCoord.ui \
    Utilities/inputdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
