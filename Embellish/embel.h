@@ -12,26 +12,39 @@ class Embel : public QObject
 
 public:
     Embel(EmbelView *ev, EmbelProperties *p);
+    void build();
     void test();
+    void diagnostic();
 
 private:
     EmbelView *ev;
     EmbelProperties *p;
 
+    // Canvas pixel coordinates
     struct Border {
         int x, y, w, h, l, r, t, b;     //  l, r, t, b = left, right, top, bottom
+        QPoint tl, tc, tr, cl, cc, cr, bl, bc, br;
     };
+    QVector<Border>b;
+    QVector<QGraphicsRectItem*> bItems;
+
+    // Canvas pixel coordinates
     struct Image {
         int x, y, w, h;
-    } image;
+        QPoint tl, tc, tr, cl, cc, cr, bl, bc, br;
+    } ;
+    Image image;
 
-    Border b;
-    QRect sR;
-    QRect bR;
-    QRect iR;
-    int ls;
+//    QRect sR;
+//    QRect bR;
+//    QRect iR;
+    int ls, w, h;
     int shortside;
-    void resizeItems();
+
+    void createBorders();
+    void borderImageCoordinates();
+    void addBordersToScene();
+    void translateImage();
 };
 
 #endif // EMBEL_H

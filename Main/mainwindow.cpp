@@ -4650,7 +4650,7 @@ void MW::createDocks()
 
 void MW::embelDockVisibilityChange()
 {
-    qDebug() << __FUNCTION__ << embelDock->isVisible();
+//    qDebug() << __FUNCTION__ << embelDock->isVisible();
     if (embelDock->isVisible()) embelDisplay();
 }
 
@@ -5014,6 +5014,7 @@ QString MW::getZoom()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << G::mode;
     if (G::mode != "Loupe" &&
         G::mode != "Compare" &&
         G::mode != "Embel") return "N/A";
@@ -5122,7 +5123,7 @@ QString fileSym = "📷";
     // image of total: fileCount
     if (keepBase && isCurrentFolderOkay) {
 //        base += "Mem: " + mem + spacer;
-        if (G::mode == "Loupe" || G::mode == "Compare")
+        if (G::mode == "Loupe" || G::mode == "Compare" || G::mode == "Embel")
             base += "Zoom: " + getZoom();
         base += spacer + "Pos: " + getPosition();
         QString s = QString::number(thumbView->getSelectedCount());
@@ -10975,7 +10976,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-
+    QVariant x = 0.2;
+    qDebug() << __FUNCTION__ << x;
 
 
     QInputDialog d(this);

@@ -47,6 +47,8 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
         }
         case DT_Checkbox: {
             CheckBoxEditor *checkEditor = new CheckBoxEditor(index, parent);
+//            connect(checkEditor, &CheckBoxEditor::editorValueChanged,
+//                    this, &PropertyDelegate::commit);
             connect(checkEditor, &CheckBoxEditor::editorValueChanged,
                     this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, checkEditor);
@@ -61,6 +63,8 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
         }
         case DT_DoubleSpinbox: {
             DoubleSpinBoxEditor *doubleSpinBoxEditor = new DoubleSpinBoxEditor(index, parent);
+//            connect(doubleSpinBoxEditor, &DoubleSpinBoxEditor::editorValueChanged,
+//                    this, &PropertyDelegate::commit);
             connect(doubleSpinBoxEditor, &DoubleSpinBoxEditor::editorValueChanged,
                     this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, doubleSpinBoxEditor);
@@ -167,9 +171,44 @@ void PropertyDelegate::setEditorData(QWidget *editor,
     }
 }
 
+//bool PropertyDelegate::eventFilter(QObject *editorObject, QEvent *event)
+//{
+////    bool ok = QStyledItemDelegate::eventFilter(editor, event);
+////    qDebug() << __FUNCTION__ << editor << event << event->type();
+////    return ok;
+//    if (event->type() == QEvent::KeyPress)
+//    {
+////        const auto key = static_cast<QKeyEvent *>(event)->key();
+////        if (key == Qt::Key_Enter || key == Qt::Key_Return || key == Qt::Key_Tab)
+////            submitted = true;
+////        else
+////            submitted = true;
+
+//        qDebug() << __FUNCTION__ << submitted;
+//        QWidget *editor = qobject_cast<QWidget *>(editorObject);
+//        emit commitData(editor);
+//        return true;
+//    }
+//    else if (event->type() == QEvent::Leave /*&&
+//             static_cast<QFocusEvent*>(event)->reason() == Qt::MouseFocusReason*/)
+//    {
+//        submitted = true;
+//        qDebug() << __FUNCTION__ << submitted;
+//    }
+//    return submitted;
+//}
+
+void PropertyDelegate::commit(QWidget *editor)
+{
+    qDebug() << __FUNCTION__ << submitted;
+    emit commitData(editor);
+}
+
 void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
                                    const QModelIndex &index) const
 {
+//    if (!submitted) return;
+    qDebug() << __FUNCTION__ << index;
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0:
@@ -203,7 +242,7 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
         }
         case DT_DoubleSpinbox: {
             DoubleSpinBoxEditor *doubleSpinBoxEditor = static_cast<DoubleSpinBoxEditor*>(editor);
-            int value = doubleSpinBoxEditor->value();
+            double value = doubleSpinBoxEditor->value();
             model->setData(index, value, Qt::EditRole);
             emit itemChanged(index);
             break;

@@ -71,6 +71,7 @@ public slots:
     void zoomToFit();
     void zoomTo(qreal zoomTo);
     void zoomToggle();
+    void resetFitZoom();
     void setFitZoom();
     void hideCursor();
     void refresh();
@@ -81,6 +82,7 @@ signals:
     void updateStatus(bool, QString, QString);
     void zoomChange(qreal zoomValue);
     void handleDrop(const QMimeData *mimeData);
+    void updateEmbel();
     void newTile();
 
 private slots:

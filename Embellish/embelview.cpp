@@ -161,11 +161,12 @@ to prevent jarring changes in perceived scale by the user.
     if (isLoaded && rect().height() > 100) {
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
-        setSceneRect(scene->itemsBoundingRect());
+//        setSceneRect(scene->itemsBoundingRect());
 
         /* If this is the first image in a new folder, and the image is smaller than the
         canvas (central widget window) set the scale to fit window, do not scale the
         image beyond 100% to fit the window.  */
+        qDebug() << __FUNCTION__ << "zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect())";
         zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
         if (isFirstImageNewFolder) {
             isFit = true;
@@ -178,7 +179,9 @@ to prevent jarring changes in perceived scale by the user.
     }
     QImage im = pmItem->pixmap().toImage();
     imAspect = qreal(im.width()) / im.height();
-    qDebug() << __FUNCTION__ << "imAspect =" << imAspect;
+    qDebug() << __FUNCTION__ << "G::isInitializing" << G::isInitializing;
+//    qDebug() << __FUNCTION__ << "imAspect =" << imAspect;
+//    emit updateEmbel();
     return isLoaded;
 }
 
@@ -239,7 +242,7 @@ Geometry
     }
 
     if (isFit) setFitZoom();
-    qDebug() << __FUNCTION__ << zoom << toggleZoom;
+//    qDebug() << __FUNCTION__ << zoom << toggleZoom;
     matrix.scale(zoom, zoom);
     // when resize before first image zoom == inf
     if (zoom > 10) return;
@@ -386,7 +389,9 @@ void EmbelView::resizeEvent(QResizeEvent *event)
     //    */
     if (G::isInitializing) return;
     QGraphicsView::resizeEvent(event);
-    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+    qDebug() << __FUNCTION__ << "zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect())";
+    zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
+//    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
     if (isFit) {
         setFitZoom();
         scale();
@@ -499,6 +504,19 @@ on to EmbelView::scale(), which in turn makes the proper scale change.
     scale();
 }
 
+void EmbelView::resetFitZoom()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
+    zoom = zoomFit;
+    if (limitFit100Pct  && zoom > 1) zoom = 1;
+    scale();
+}
+
 void EmbelView::setFitZoom()
 {
     {
@@ -508,7 +526,6 @@ void EmbelView::setFitZoom()
     }
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > 1) zoom = 1;
-//    qDebug() << __FUNCTION__ <<
 }
 
 void EmbelView::zoomToggle()
@@ -547,7 +564,8 @@ image if the image was not zoomed.
     setSceneRect(scene->itemsBoundingRect());
 
     // recalc zoomFit factor
-    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+    zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
+//    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
 
     // if in isFit mode then zoom accordingly
     if (isFit) {

@@ -22,11 +22,18 @@ public:
                const QModelIndex &index) const override;
     void updateEditorGeometry(QWidget *editor,
         const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+    bool submitted;
 
 signals:
     void itemChanged(QModelIndex idx) const;
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor) const;
     void drawBranchesAgain(QPainter *painter, QRect rect, QModelIndex index) const;
+
+public slots:
+    void commit(QWidget *editor);
+
+protected:
+//    bool eventFilter(QObject *editor, QEvent *event) override;
 };
 
 
