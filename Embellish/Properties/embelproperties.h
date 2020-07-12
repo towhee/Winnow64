@@ -38,8 +38,8 @@ public:
         int opacity;
         QString style;
         // coord
-        QPoint tl, tc, tr, cl, cc, cr, bl, bc, br;
-        int w, h;
+//        QPointF tl, tc, tr, cl, cc, cr, bl, bc, br;
+//        double w, h;
     } border;
     QVector<Border>b;
 
@@ -64,6 +64,9 @@ private:
     void textItemChange(QVariant v, QString source, QString parent);
     void rectangleItemChange(QVariant v, QString source, QString parent);
     void graphicItemChange(QVariant v, QString source, QString parent);
+
+    void test1();
+    void test2();
 
 
     ItemInfo i;

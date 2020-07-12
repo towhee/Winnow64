@@ -485,7 +485,7 @@ QString WidgetCSS::pushButton()
         "padding-right: 5px;"
         "padding-top: 3px;"
         "padding-bottom: 3px;"
-        "min-width: 100px;"
+//        "min-width: 100px;"
     "}"
 
     "QPushButton:default {"

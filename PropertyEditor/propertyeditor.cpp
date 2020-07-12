@@ -62,7 +62,7 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 
 void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
 /*
-Sets the custom editor widget for the value column (column 1).  The
+Sets the custom editor widget for the value column (column 1).
 */
 {
     setIndexWidget(idx, editor);
@@ -175,6 +175,7 @@ supplied by the calling function.
 
     // value
     model->setData(valIdx, i.value, Qt::EditRole);
+    qDebug() << __FUNCTION__ << valIdx << i.name << i.value << valIdx.data(Qt::EditRole);
     model->setData(valIdx, i.delegateType, UR_DelegateType);
     model->setData(valIdx, i.valueName, UR_Source);
     model->setData(valIdx, i.type, UR_Type);

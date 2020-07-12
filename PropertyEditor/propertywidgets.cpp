@@ -263,16 +263,24 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
     double max = idx.data(UR_Max).toDouble();
     source = idx.data(UR_Source).toString();
 
-    spinBox = new QDoubleSpinBox;
-    spinBox->setObjectName("DisableGoActions");  // used in MW::focusChange
-    spinBox->setAlignment(Qt::AlignLeft);
-    spinBox->setMinimum(min);
-    spinBox->setMaximum(max);
-    spinBox->setStyleSheet("QSpinBox {background:transparent; border:none;"
-                           "padding:0px; border-radius:0px;}"
-                           "QSpinBox:disabled {color:gray}");
-    spinBox->setWindowFlags(Qt::FramelessWindowHint);
-    spinBox->setAttribute(Qt::WA_TranslucentBackground);
+    doubleSpinBox = new QDoubleSpinBox;
+    doubleSpinBox->setObjectName("DisableGoActions");  // used in MW::focusChange
+    doubleSpinBox->setAlignment(Qt::AlignLeft);
+    doubleSpinBox->setMinimum(min);
+    doubleSpinBox->setMaximum(max);
+    // some tricky stuff to keep spinbox controls but our background and match alignment
+    // of the other custom widgets
+    doubleSpinBox->setStyleSheet("QDoubleSpinBox "
+                                 "{"
+                                     "margin-top:-1;"                 // nada
+                                     "margin-bottom:-2;"
+                                     "margin-left:-3;"
+                                 "}"
+                                  "QDoubleSpinBox:disabled {color:gray}"
+                                 );
+    doubleSpinBox->setWindowFlags(Qt::FramelessWindowHint);
+    doubleSpinBox->setAttribute(Qt::WA_TranslucentBackground);
+    doubleSpinBox->installEventFilter(this);
 
     QLabel *label = new QLabel;
     label->setStyleSheet("QLabel {}");
@@ -285,39 +293,57 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
     btn->setText("...");
     btn->setVisible(false);
 
-    connect(spinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), [=](double i){change(i);});
+//    connect(doubleSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), [=](double i){change(i);});
 
     QHBoxLayout* layout = new QHBoxLayout(this);
-    layout->addWidget(spinBox, Qt::AlignLeft);
+    layout->addSpacing(3);
+    layout->addWidget(doubleSpinBox, Qt::AlignLeft);
     layout->addSpacing(20);
     layout->addWidget(label);
     layout->addWidget(btn);
     layout->setContentsMargins(G::propertyWidgetMarginLeft - 2, 0, G::propertyWidgetMarginRight, 0);
     setLayout(layout);
 
-    spinBox->setValue(idx.data(Qt::EditRole).toInt());
+    doubleSpinBox->setValue(idx.data(Qt::EditRole).toDouble());
+    submitted = false;
 }
 
 double DoubleSpinBoxEditor::value()
 {
-    return spinBox->value();
+    return doubleSpinBox->value();
 }
 
 void DoubleSpinBoxEditor::setValue(QVariant value)
 {
-    spinBox->setValue(value.toDouble());
+    qDebug() << __FUNCTION__ << value;
+    doubleSpinBox->setValue(value.toDouble());
 }
 
-void DoubleSpinBoxEditor::change(double value)
-{
-    QVariant v = value;
-    emit editorValueChanged(this);
-}
+//void DoubleSpinBoxEditor::change(double value)
+//{
+//    QVariant v = value;
+//    emit editorValueChanged(this);
+//}
 
 void DoubleSpinBoxEditor::paintEvent(QPaintEvent *event)
 {
     setStyleSheet("font-size: " + G::fontSize + "pt;");
-//    QWidget::paintEvent(event);
+}
+
+// note that *object is reqd to instantiate event filter using "this"
+bool DoubleSpinBoxEditor::eventFilter(QObject *object, QEvent *event)
+{
+    if (event->type() == QEvent::KeyPress) {
+        const auto key = static_cast<QKeyEvent *>(event)->key();
+        if (key == Qt::Key_Enter || key == Qt::Key_Return || key == Qt::Key_Tab)
+            emit editorValueChanged(this);
+    }
+    else if (event->type() == QEvent::FocusAboutToChange &&
+             static_cast<QFocusEvent*>(event)->reason() == Qt::MouseFocusReason)
+    {
+        emit editorValueChanged(this);
+    }
+    return QWidget::eventFilter(object, event);
 }
 
 /* CHECKBOX EDITOR ***************************************************************************/
@@ -512,50 +538,25 @@ ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
     lineEdit = new QLineEdit;
     lineEdit->setObjectName("DisableGoActions");    // used in MW::focusChange
     lineEdit->setAlignment(Qt::AlignLeft);
-    lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none; padding:0px;}");
+    lineEdit->setStyleSheet("QLineEdit"
+                            "{"
+                                "background: transparent;"      // this works
+                                "border:none;"       // nada
+                                "padding:0px;"
+                            "}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
 
-    label = new QLabel;
-    int w = 25;
-    label->setObjectName("DisableGoActions");  // used in MW::focusChange
-    label->setStyleSheet("QLabel {background:gray; border:none;"
-                         "padding:0px;"
-                         "margin-top:2;"
-                         "margin-bottom:2;}");
-    label->setMaximumWidth(w);
-    label->setMinimumWidth(w);
-    label->setWindowFlags(Qt::FramelessWindowHint);
+    btn = new QPushButton;
+    btn->setToolTip("Click here to change the color used to set the border background.");
 
-    btn = new BarBtn();
-    btn->setIcon(QIcon(":/images/icon16/colorwheel.png"));
-    btn->setToolTip("Click to select a color.");
-
-    connect(btn, &BarBtn::clicked, this, &ColorEditor::setValueFromColorDlg);
+    connect(btn, &QPushButton::clicked, this, &ColorEditor::setValueFromColorDlg);
     connect(lineEdit, &QLineEdit::textChanged, this, &ColorEditor::updateLabelWhenLineEdited);
-
- /*    // not working right
-    QHBoxLayout* leftLayout = new QHBoxLayout();
-    leftLayout->addWidget(lineEdit, Qt::AlignLeft);
-    leftLayout->addWidget(label);
-    leftLayout->setContentsMargins(0,0,0,0);
-
-    QHBoxLayout* btnLayout = new QHBoxLayout();
-    btnLayout->addWidget(btn);
-    btnLayout->setContentsMargins(6,6,6,4);
-
-    QHBoxLayout* layout = new QHBoxLayout(this);
-    layout->addLayout(leftLayout);
-    layout->addLayout(btnLayout);
-    layout->setContentsMargins(0,0,0,0);
-    setLayout(layout);  */
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(lineEdit, Qt::AlignLeft);
-    layout->addWidget(label);
     layout->addWidget(btn);
     layout->setContentsMargins(0,0,0,0);
-    layout->setSpacing(1);
     setLayout(layout);
 
     lineEdit->setText(idx.data(Qt::EditRole).toString());
@@ -569,7 +570,6 @@ QString ColorEditor::value()
 void ColorEditor::setValue(QVariant value)
 {
     lineEdit->setText(value.toString());
-    qDebug() << __FUNCTION__ << value;
 }
 
 void ColorEditor::setValueFromColorDlg()
@@ -580,10 +580,13 @@ void ColorEditor::setValueFromColorDlg()
 
 void ColorEditor::updateLabelWhenLineEdited(QString value)
 {
-    qDebug() << __FUNCTION__ << value;
-    label->setStyleSheet("QLabel {background:" + value + ";"
-                         "margin-top:2;"
-                         "margin-bottom:2;}");
+    btn->setStyleSheet("QPushButton, QPushButton:pressed, QPushButton:hover"
+                        "{background-color:" + value + ";"
+                        "margin-top:4;"
+                        "margin-bottom:4;"
+                        "max-width: 50px;"
+                        "}"
+                        );
     emit editorValueChanged(this);
 }
 

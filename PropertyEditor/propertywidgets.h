@@ -96,17 +96,18 @@ public:
     double value();
 
 protected:
-    void paintEvent(QPaintEvent *event);
+    void paintEvent(QPaintEvent *event) override;
+    bool eventFilter(QObject *object, QEvent *event) override;
 
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
 
 private:
-    void change(double value);
-    QDoubleSpinBox *spinBox;
+    QDoubleSpinBox *doubleSpinBox;
     QString source;
     QModelIndex idx;
+    bool submitted;
 };
 
 class LineEditor : public QWidget
@@ -249,11 +250,9 @@ signals:
     void enableGoKeyActions(bool ok);
 
 private:
-//    void change(int value);
     void updateLabelWhenLineEdited(QString value);
     QLineEdit *lineEdit;
-    QLabel *label;
-    BarBtn *btn;
+    QPushButton *btn;
 };
 
 #endif // PROPERTYWIDGETS_H

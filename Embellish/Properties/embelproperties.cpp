@@ -108,10 +108,13 @@ The connection is defined in the parent PropertyEditor to fire the virtual funct
 itemChange, which is subclassed here.
 */
 
+//    if (!propertyDelegate->submitted) return;
+//    propertyDelegate->submitted = false;
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
     QString parent = idx.parent().data(UR_Name).toString();
     QString grandparent = idx.parent().parent().data(UR_Name).toString();
+
     templatePath = "Embel/Templates/" + templateName + "/";
 //    QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
     qDebug() << __FUNCTION__ << v << source << parent << grandparent;
@@ -192,7 +195,7 @@ void EmbelProperties::borderItemChange(QVariant v, QString source, QString paren
     qDebug() << __FUNCTION__ << path;
 
     if (source == "topMargin") {
-        setting->setValue(path, v.toDouble());
+        setting->setValue(path, v);
         qDebug() << __FUNCTION__ << source << v << v.toDouble();
     }
 
@@ -257,11 +260,12 @@ void EmbelProperties::addTemplateHeader()
     templateRenameBtn->setIcon(QIcon(":/images/icon16/delta.png"));
     templateRenameBtn->setToolTip("Rename the selected template");
     btns.append(templateRenameBtn);
-    connect(templateRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentTemplate);
+    connect(templateRenameBtn, &BarBtn::clicked, this, &EmbelProperties::test1);
     BarBtn *templateDeleteBtn = new BarBtn();
     templateDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     templateDeleteBtn->setToolTip("Delete the selected template");
     btns.append(templateDeleteBtn);
+    connect(templateDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::test2);
     BarBtn *templateNewBtn = new BarBtn();
     templateNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     templateNewBtn->setToolTip("Create a new template");
@@ -680,13 +684,14 @@ void EmbelProperties::addBorder(int count)
     i.name = "topMargin";
     i.parentName = borderName;
     i.captionText = "Top amount";
-    i.tooltip = "This is the width of the top part of the border (% of the long side).";
+    i.tooltip = "This is the margin for the top part of the border (% of the long side).";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "topMargin";
     if (setting->contains(settingRootPath + i.valueName))
         i.value = setting->value(settingRootPath + i.valueName);
     else i.value = 0;
+    qDebug() << __FUNCTION__ << i.value;
     i.delegateType = DT_DoubleSpinbox;
     i.type = "double";
     i.min = 0;
@@ -698,7 +703,7 @@ void EmbelProperties::addBorder(int count)
     i.name = "leftMargin";
     i.parentName = borderName;
     i.captionText = "Left amount";
-    i.tooltip = "This is the width of the left part of the border (% of the long side).";
+    i.tooltip = "This is the margin for the left part of the border (% of the long side).";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "leftMargin";
@@ -716,7 +721,7 @@ void EmbelProperties::addBorder(int count)
     i.name = "rightMargin";
     i.parentName = borderName;
     i.captionText = "Right amount";
-    i.tooltip = "This is the width of the right part of the border (% of the long side).";
+    i.tooltip = "This is the margin for the right part of the border (% of the long side).";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "rightMargin";
@@ -734,7 +739,7 @@ void EmbelProperties::addBorder(int count)
     i.name = "bottomMargin";
     i.parentName = borderName;
     i.captionText = "Bottom amount";
-    i.tooltip = "This is the width of the bottom part of the border (% of the long side).";
+    i.tooltip = "This is the margin for the bottom part of the border (% of the long side).";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "bottomMargin";
@@ -816,6 +821,16 @@ void EmbelProperties::addBorder(int count)
 
     // add the border info to the vector of borders
     b << border;
+}
+
+void EmbelProperties::test1()
+{
+    e->build();
+}
+
+void EmbelProperties::test2()
+{
+    e->test();
 }
 
 void EmbelProperties::coordHelp()
