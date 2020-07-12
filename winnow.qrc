@@ -133,5 +133,18 @@
         <file>images/icon16/close.png</file>
         <file>images/icon16/refresh.png</file>
         <file>images/icon16/foldertree.png</file>
+        <file>images/icon16/anchor.png</file>
+        <file>images/icon16/rectangle.png</file>
+        <file>images/icon16/text.png</file>
+        <file>images/icon16/tile.png</file>
+        <file>images/icon16/graphic.png</file>
+        <file>images/icon16/lightning.png</file>
+        <file>images/icon16/colorwheel.png</file>
+        <file>images/icon16/morevertthin.png</file>
+        <file>images/icon16/new.png</file>
+        <file>images/icon16/delta.png</file>
+        <file>images/Embellish container and coord system.png</file>
+        <file>images/icon16/delete.png</file>
+        <file>images/icon16/questionmark.png</file>
     </qresource>
 </RCC>

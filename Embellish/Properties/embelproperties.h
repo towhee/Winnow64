@@ -26,6 +26,7 @@ public:
     } f;
 
     struct Border {
+        int index;
         QString name;
         QString caption;
         QString parent;
@@ -37,6 +38,8 @@ public:
         QString color;
         int opacity;
         QString style;
+        double outlineWidth;
+        QString outlineColor;
         // coord
 //        QPointF tl, tc, tr, cl, cc, cr, bl, bc, br;
 //        double w, h;
@@ -60,11 +63,12 @@ private:
 
     void fileItemChange(QVariant v, QString source);
     void imageItemChange(QVariant v, QString source);
-    void borderItemChange(QVariant v, QString source, QString parent);
+    void borderItemChange(QModelIndex idx);
     void textItemChange(QVariant v, QString source, QString parent);
     void rectangleItemChange(QVariant v, QString source, QString parent);
     void graphicItemChange(QVariant v, QString source, QString parent);
 
+    void diagnostics(QModelIndex idx);
     void test1();
     void test2();
 

@@ -43,6 +43,7 @@ public:
         QString color;
         QStringList dropList;
         QModelIndex index;
+        int itemIndex;
     };
     QWidget* addItem(ItemInfo &i); // abstract addItem
     void clearItemInfo(ItemInfo &i);

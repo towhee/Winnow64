@@ -181,7 +181,7 @@ to prevent jarring changes in perceived scale by the user.
     imAspect = qreal(im.width()) / im.height();
     qDebug() << __FUNCTION__ << "G::isInitializing" << G::isInitializing;
 //    qDebug() << __FUNCTION__ << "imAspect =" << imAspect;
-//    emit updateEmbel();
+    emit updateEmbel();
     return isLoaded;
 }
 
@@ -511,6 +511,10 @@ void EmbelView::resetFitZoom()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__
+             << "rect() =" << rect()
+             << "sceneRect() =" << sceneRect()
+             << "scene->itemsBoundingRect() =" << scene->itemsBoundingRect();
     zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > 1) zoom = 1;

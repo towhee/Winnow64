@@ -166,6 +166,7 @@ supplied by the calling function.
     model->setData(capIdx, i.name, UR_Name);
     model->setData(capIdx, i.tooltip, Qt::ToolTipRole);
     model->setData(valIdx, i.tooltip, Qt::ToolTipRole);
+    model->setData(capIdx, i.itemIndex, UR_ItemIndex);
 
     // if no value associated (header item or spacer etc) then we are done
     if (!i.hasValue) {
@@ -175,8 +176,9 @@ supplied by the calling function.
 
     // value
     model->setData(valIdx, i.value, Qt::EditRole);
-    qDebug() << __FUNCTION__ << valIdx << i.name << i.value << valIdx.data(Qt::EditRole);
     model->setData(valIdx, i.delegateType, UR_DelegateType);
+    model->setData(valIdx, i.itemIndex, UR_ItemIndex);
+    qDebug() << __FUNCTION__ << valIdx << i.name << i.itemIndex << valIdx.data(UR_ItemIndex);
     model->setData(valIdx, i.valueName, UR_Source);
     model->setData(valIdx, i.type, UR_Type);
     model->setData(valIdx, i.min, UR_Min);
@@ -195,6 +197,7 @@ supplied by the calling function.
 
 void PropertyEditor::clearItemInfo(ItemInfo &i)
 {
+    i.itemIndex = 0;                // all
     i.name = "";                    // all
     i.parentName = "";              // all
     i.decorateGradient = false;     // Root headers as reqd
@@ -211,7 +214,6 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.fixedWidth = 50;              // DT_Slider
     i.dropList.clear();             // DT_Combo
     i.index = QModelIndex();        // except hdr if connected to datamodel (ie InfoView fields to show)
-
 }
 
 void PropertyEditor::expandBranch(QString text)
