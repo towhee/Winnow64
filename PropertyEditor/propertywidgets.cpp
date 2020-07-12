@@ -548,6 +548,8 @@ ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
 
     btn = new QPushButton;
+//    btn->setAutoFillBackground(true);
+//    btn->setFlat(true);
     btn->setToolTip("Click here to change the color used to set the border background.");
 
     connect(btn, &QPushButton::clicked, this, &ColorEditor::setValueFromColorDlg);
@@ -580,11 +582,14 @@ void ColorEditor::setValueFromColorDlg()
 
 void ColorEditor::updateLabelWhenLineEdited(QString value)
 {
-    btn->setStyleSheet("QPushButton, QPushButton:pressed, QPushButton:hover"
+    btn->setStyleSheet("QPushButton, QPushButton:pressed, QPushButton:hover, QPushButton:flat"
                         "{background-color:" + value + ";"
-                        "margin-top:4;"
-                        "margin-bottom:4;"
-                        "max-width: 50px;"
+//                        "font-size: 6px"
+//                        "margin-top:4;"
+//                        "margin-bottom:4;"
+//                        "max-width: 50px;"
+                        "max-height: 10px;"
+                        "min-height: 10px;"
                         "}"
                         );
     emit editorValueChanged(this);

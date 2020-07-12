@@ -68,6 +68,9 @@ void EmbelProperties::setCurrentTemplate()
 }
 
 void EmbelProperties::readTemplateList()
+/*
+Read the template list using QSettings
+*/
 {
     setting->beginGroup("Embel/Templates");
     templateList = setting->childGroups();
@@ -121,7 +124,7 @@ itemChange, which is subclassed here.
 
     if (parent == "FileHeader") fileItemChange(v, source);
     if (parent == "ImageHeader") imageItemChange(v, source);
-    if (grandparent == "BordersHeader") borderItemChange(v, source, parent);
+    if (grandparent == "BordersHeader") borderItemChange(idx);
     if (grandparent == "TextsHeader") textItemChange(v, source, parent);
     if (grandparent == "RectanglesHeader") rectangleItemChange(v, source, parent);
     if (grandparent == "GraphicsHeader") graphicItemChange(v, source, parent);
@@ -136,6 +139,7 @@ itemChange, which is subclassed here.
         // add items for this template
         addTemplateItems();
     }
+    e->build();
 }
 
 void EmbelProperties::fileItemChange(QVariant v, QString source)
@@ -189,14 +193,19 @@ void EmbelProperties::imageItemChange(QVariant v, QString source)
 
 }
 
-void EmbelProperties::borderItemChange(QVariant v, QString source, QString parent)
+void EmbelProperties::borderItemChange(QModelIndex idx)
 {
+    QVariant v = idx.data(Qt::EditRole);
+    QString source = idx.data(UR_Source).toString();
+    QString parent = idx.parent().data(UR_Name).toString();
+    int index = idx.parent().data(UR_ItemIndex).toInt();
     QString path = templatePath + "Borders/" + parent + "/" + source;
-    qDebug() << __FUNCTION__ << path;
+    diagnostics(idx);
 
     if (source == "topMargin") {
         setting->setValue(path, v);
-        qDebug() << __FUNCTION__ << source << v << v.toDouble();
+        b[index].top = v.toDouble();
+        qDebug() << __FUNCTION__ << "topMargin" << v << "index =" << index;
     }
 
     if (source == "leftMargin") {
@@ -220,7 +229,15 @@ void EmbelProperties::borderItemChange(QVariant v, QString source, QString paren
         qDebug() << __FUNCTION__ << "borderColor" << v;
     }
 
-    if (source == "opacityr") {
+    if (source == "opacity") {
+        setting->setValue(path, v.toInt());
+    }
+
+    if (source == "outlineWidth") {
+        setting->setValue(path, v.toInt());
+    }
+
+    if (source == "outlineColor") {
         setting->setValue(path, v.toInt());
     }
 
@@ -672,13 +689,15 @@ void EmbelProperties::addBorder(int count)
     QString settingRootPath = templatePath + "Borders/" + borderName + "/";
 
     // subheader for this border
+    qDebug() << __FUNCTION__ << "count =" << count;
+    i.itemIndex = count;
     i.name = borderName;
     i.parentName = "BordersHeader";
     i.captionText = borderName;
     i.tooltip = "";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.delegateType = DT_None;
+    i.delegateType = UR_ItemIndex;
     addItem(i);
 
     i.name = "topMargin";
@@ -772,7 +791,7 @@ void EmbelProperties::addBorder(int count)
 
     i.name = "color";
     i.parentName = borderName;
-    i.captionText = "Colour (#RRGGBB)";
+    i.captionText = "Border color (#RRGGBB)";
     i.tooltip = "Select a color that will be used to full the border area.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -792,7 +811,7 @@ void EmbelProperties::addBorder(int count)
     i.tooltip = "The opacity of the border.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "opacityr";
+    i.valueName = "opacity";
     if (setting->contains(settingRootPath + i.valueName))
         i.value = setting->value(settingRootPath + i.valueName);
     else i.value = 100;
@@ -801,6 +820,40 @@ void EmbelProperties::addBorder(int count)
     i.max = 100;
     i.type = "int";
     border.opacity = i.value.toInt();
+    addItem(i);
+
+    i.name = "outlineWidth";
+    i.parentName = borderName;
+    i.captionText = "Outine width";
+    i.tooltip = "This is the outline for the border (% of the long side).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "outlineWidth";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else i.value = 0;
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    border.outlineWidth = i.value.toDouble();
+    addItem(i);
+
+    i.name = "outlineColor";
+    i.parentName = borderName;
+    i.captionText = "Outline color (#RRGGBB)";
+    i.tooltip = "Select a color that will be used to full the border area.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "outlineColor";
+    if (setting->contains(settingRootPath + i.valueName)) {
+        i.value = setting->value(settingRootPath + i.valueName);
+    }
+    else i.value = "";
+    i.delegateType = DT_Color;
+    i.type = "QString";
+    border.outlineColor = i.value.toString();
     addItem(i);
 
     i.name = "style";
@@ -821,6 +874,21 @@ void EmbelProperties::addBorder(int count)
 
     // add the border info to the vector of borders
     b << border;
+}
+
+void EmbelProperties::diagnostics(QModelIndex idx)
+{
+    qDebug().noquote() << "Diagnostics for index"
+                       << idx.data(UR_Name).toString()
+                       << "row =" << idx.row()
+                       << "col =" << idx.column();
+    qDebug().noquote()
+        << "GParent" << idx.parent().parent().data(UR_Name).toString()
+        << "Parent" << idx.parent().data(UR_Name).toString()
+        << "Index" << idx.parent().data(UR_ItemIndex).toInt()
+        << "Delegate" << idx.data(UR_DelegateType).toString()
+        << "Source" << idx.data(UR_Source).toString();
+
 }
 
 void EmbelProperties::test1()

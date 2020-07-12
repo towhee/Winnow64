@@ -51,7 +51,7 @@ QString WidgetCSS::css()
             listView() +
             listWidget() +
             progressBar() +
-            pushButton() +
+//            pushButton() +
             scrollBar() +
             spinBox() +
             stackedWidget() +

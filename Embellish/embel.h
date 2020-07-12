@@ -20,6 +20,16 @@ private:
     EmbelView *ev;
     EmbelProperties *p;
 
+//    enum ModelHeaders {
+//        MH_Templates,
+//        MH_File,
+//        MH_Image,
+//        MH_Borders,
+//        MH_Texts,
+//        MH_Rectangles,
+//        MH_Graphics
+//    };
+
     // Canvas pixel coordinates
     struct Border {
         int x, y, w, h, l, r, t, b;     //  l, r, t, b = left, right, top, bottom
@@ -35,12 +45,10 @@ private:
     } ;
     Image image;
 
-//    QRect sR;
-//    QRect bR;
-//    QRect iR;
     int ls, w, h;
     int shortside;
 
+//    void readModel();
     void createBorders();
     void borderImageCoordinates();
     void addBordersToScene();

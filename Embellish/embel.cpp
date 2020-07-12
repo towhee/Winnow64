@@ -36,10 +36,22 @@ void Embel::build()
     ev->setSceneRect(0, 0, w, h);
     addBordersToScene();
     translateImage();
-    ev->setFitZoom();
+    ev->resetFitZoom();
 //    ev->setSceneRect(ev->scene->itemsBoundingRect());
     diagnostic();
 }
+
+//void Embel::readModel()
+//{
+//    // Borders
+//    QModelIndex BordersIdx = p->model->index(0, MH_Borders, QModelIndex());
+//    // iterate borders
+//    for (int border = 0; border < p->model->rowCount(BordersIdx), ++border) {
+//        QModelIndex borderIdx = p->model->index(border, 1, BordersIdx);
+//        for (int borderItem = 0)
+//        b[b].t = borderIdx.data
+//    }
+//}
 
 void Embel::borderImageCoordinates()
 {
@@ -117,6 +129,7 @@ void Embel::addBordersToScene()
         bItems[i]->setRect(0, 0, b[i].w, b[i].h);
         QColor color;
         color.setNamedColor(p->b[i].color);
+        qDebug() << __FUNCTION__ << color << p->b[i].color;
         bItems[i]->setBrush(color);
         ev->scene->addItem(bItems[i]);
         bItems[i]->moveBy(b[i].x, b[i].y);
@@ -132,12 +145,18 @@ void Embel::translateImage()
     ev->pmItem->setPixmap(pm);
     // move the image to center in the borders
     qDebug() << __FUNCTION__ << "moveBy" << image.x << image.y;
-    ev->pmItem->moveBy(image.x, image.y);   // 336,232
+//    ev->pmItem->moveBy(image.x, image.y);   // 336,232
+    ev->pmItem->setPos(image.tl);
     ev->pmItem->setZValue(10);
 }
 
 void Embel::diagnostic()
 {
+//    qDebug().noquote()
+//            << "rect() =" << p->rect()
+//            << "sceneRect() =" << p->sceneRect()
+//            << "scene->itemsBoundingRect() =" << p->scene->itemsBoundingRect();
+
     qDebug().noquote()
             << "Canvas                      "
             << "w =" << QString::number(w).leftJustified(5)

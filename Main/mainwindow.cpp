@@ -5014,7 +5014,6 @@ QString MW::getZoom()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << G::mode;
     if (G::mode != "Loupe" &&
         G::mode != "Compare" &&
         G::mode != "Embel") return "N/A";
