@@ -25,6 +25,11 @@ public:
         bool overwriteFiles;
     } f;
 
+    struct Image {
+        QString style;
+    };
+    Image image;
+
     struct Border {
         int index;
         QString name;

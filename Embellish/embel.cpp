@@ -10,15 +10,7 @@ Embel::Embel(EmbelView *ev, EmbelProperties *p)
 
 void Embel::test()
 {
-    ev->setFitZoom();
-//    qDebug() << __FUNCTION__
-//             << "ev->sceneRect() =" << ev->sceneRect()
-//             << "ev->imAspect = " << ev->imAspect;
-//    int n = bItems.size();
-//    if (n) {
-//        ev->scene->removeItem(bItems[n-1]);
-//        bItems.remove(n-1);
-//    }
+    build();
 }
 
 void Embel::build()
@@ -40,18 +32,6 @@ void Embel::build()
 //    ev->setSceneRect(ev->scene->itemsBoundingRect());
     diagnostic();
 }
-
-//void Embel::readModel()
-//{
-//    // Borders
-//    QModelIndex BordersIdx = p->model->index(0, MH_Borders, QModelIndex());
-//    // iterate borders
-//    for (int border = 0; border < p->model->rowCount(BordersIdx), ++border) {
-//        QModelIndex borderIdx = p->model->index(border, 1, BordersIdx);
-//        for (int borderItem = 0)
-//        b[b].t = borderIdx.data
-//    }
-//}
 
 void Embel::borderImageCoordinates()
 {
@@ -128,12 +108,15 @@ void Embel::addBordersToScene()
     for (int i = 0; i < b.size(); ++i) {
         bItems[i]->setRect(0, 0, b[i].w, b[i].h);
         QColor color;
+        QPen pen;
+        pen.setWidth(static_cast<int>(p->b[i].outlineWidth * ls / 100));
+        color.setNamedColor(p->b[i].outlineColor);
+        pen.setColor(color);
+        bItems[i]->setPen(pen);
         color.setNamedColor(p->b[i].color);
-        qDebug() << __FUNCTION__ << color << p->b[i].color;
         bItems[i]->setBrush(color);
         ev->scene->addItem(bItems[i]);
-        bItems[i]->moveBy(b[i].x, b[i].y);
-//            delete item;
+        bItems[i]->setPos(b[i].x, b[i].y);
     }
 }
 
