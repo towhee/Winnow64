@@ -189,6 +189,7 @@ void EmbelProperties::imageItemChange(QVariant v, QString source)
 
     if (source == "style") {
         setting->setValue(path, v.toString());
+        image.style = v.toString();
     }
 
 }
@@ -205,44 +206,51 @@ void EmbelProperties::borderItemChange(QModelIndex idx)
     if (source == "topMargin") {
         setting->setValue(path, v);
         b[index].top = v.toDouble();
-        qDebug() << __FUNCTION__ << "topMargin" << v << "index =" << index;
     }
 
     if (source == "leftMargin") {
         setting->setValue(path, v.toDouble());
+        b[index].left = v.toDouble();
     }
 
     if (source == "rightMargin") {
         setting->setValue(path, v.toDouble());
+        b[index].right = v.toDouble();
     }
 
     if (source == "bottomMargin") {
         setting->setValue(path, v.toDouble());
+        b[index].bottom = v.toDouble();
     }
 
     if (source == "tile") {
         setting->setValue(path, v.toString());
+        b[index].tile = v.toString();
     }
 
     if (source == "color") {
         setting->setValue(path, v.toString());
-        qDebug() << __FUNCTION__ << "borderColor" << v;
+        b[index].color = v.toString();
     }
 
     if (source == "opacity") {
         setting->setValue(path, v.toInt());
+        b[index].opacity = v.toInt();
     }
 
     if (source == "outlineWidth") {
         setting->setValue(path, v.toInt());
+        b[index].outlineWidth = v.toInt();
     }
 
     if (source == "outlineColor") {
         setting->setValue(path, v.toInt());
+        b[index].outlineColor = v.toString();
     }
 
     if (source == "style") {
         setting->setValue(path, v.toString());
+        b[index].style = v.toString();
     }
 
 }

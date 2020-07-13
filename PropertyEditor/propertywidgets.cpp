@@ -265,7 +265,7 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
 
     doubleSpinBox = new QDoubleSpinBox;
     doubleSpinBox->setObjectName("DisableGoActions");  // used in MW::focusChange
-    doubleSpinBox->setAlignment(Qt::AlignLeft);
+//    doubleSpinBox->setAlignment(Qt::AlignLeft);
     doubleSpinBox->setMinimum(min);
     doubleSpinBox->setMaximum(max);
     // some tricky stuff to keep spinbox controls but our background and match alignment
@@ -281,6 +281,7 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
     doubleSpinBox->setWindowFlags(Qt::FramelessWindowHint);
     doubleSpinBox->setAttribute(Qt::WA_TranslucentBackground);
     doubleSpinBox->installEventFilter(this);
+//    doubleSpinBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
 
     QLabel *label = new QLabel;
     label->setStyleSheet("QLabel {}");
@@ -288,6 +289,7 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
     label->setDisabled(true);
     label->setWindowFlags(Qt::FramelessWindowHint);
     label->setAttribute(Qt::WA_TranslucentBackground);
+    label->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 
     QPushButton *btn = new QPushButton;
     btn->setText("...");
@@ -297,10 +299,11 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addSpacing(3);
-    layout->addWidget(doubleSpinBox, Qt::AlignLeft);
-    layout->addSpacing(20);
-    layout->addWidget(label);
-    layout->addWidget(btn);
+    layout->addWidget(doubleSpinBox/*, Qt::AlignLeft*/);
+//    layout->addSpacing(20);
+//    layout->addStretch();
+    layout->addWidget(label/*, Qt::AlignRight*/);
+//    layout->addWidget(btn);
     layout->setContentsMargins(G::propertyWidgetMarginLeft - 2, 0, G::propertyWidgetMarginRight, 0);
     setLayout(layout);
 
