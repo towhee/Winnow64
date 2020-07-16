@@ -7,17 +7,17 @@ IRB::IRB()
 
 bool IRB::read(MetadataParameters &p,  ImageMetadata &m)
 {
-    /*
-    Read a Image Resource Block looking for embedded thumb
-        - see https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/
-    This is a recursive function, iterating through consecutive resource blocks until
-    the embedded jpg preview is found (irbID == 1036)
-    */
-        {
-        #ifdef ISDEBUG
-        G::track(__FUNCTION__, path);
-        #endif
-        }
+/*
+Read a Image Resource Block looking for embedded thumb
+    - see https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/
+This is a recursive function, iterating through consecutive resource blocks until
+the embedded jpg preview is found (irbID == 1036)
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
 
         // Photoshop IRBs use big endian
 //        quint32 oldOrder = order;

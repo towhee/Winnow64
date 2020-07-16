@@ -367,7 +367,7 @@ private slots:
     void gridDisplay();
     void tableDisplay();
     void compareDisplay();
-    void embelDisplay();
+    void embellish();
     void updateZoom();
     void zoomOut();
     void zoomIn();
@@ -530,6 +530,7 @@ private:
     QMenu *filterMenu;
     QMenu *sortMenu;
     QMenu *viewMenu;
+       QMenu *embelMenu;
        QMenu *zoomSubMenu;
     QMenu *windowMenu;
         QMenu *workspaceMenu;
@@ -676,19 +677,23 @@ private:
     QAction *sortTitleAction;
 
     // View Menu
-    QAction *slideShowAction;
-    QAction *randomImageAction; // req'd by slideshow
-    QAction *fullScreenAction;
-    QAction *escapeFullScreenAction;
-    QAction *ratingBadgeVisibleAction;
-    QAction *infoVisibleAction;
-    QAction *infoSelectAction;
     QActionGroup *centralGroupAction;
     QAction *asGridAction;
     QAction *asTableAction;
     QAction *asLoupeAction;
     QAction *asCompareAction;
+    QAction *slideShowAction;
+    QAction *randomImageAction; // req'd by slideshow
+    QAction *fullScreenAction;
+    QAction *escapeFullScreenAction;
     QAction *asEmbelAction;
+    QAction *embellishAction;
+        QAction *embelDoNotAction;
+        QAction *embelNewTemplateAction;
+        QList<QAction *> embelTemplatesActions;
+    QAction *ratingBadgeVisibleAction;
+    QAction *infoVisibleAction;
+    QAction *infoSelectAction;
     QActionGroup *iconGroupAction;
     QAction *zoomToAction;
     QAction *zoomInAction;
@@ -937,7 +942,6 @@ private:
     void createFilterView();
     void createFSTree();
     void createImageView();
-    void createEmbelView();
     void createInfoView();
     void createMenus();
     void createTableView();

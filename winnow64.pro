@@ -19,7 +19,6 @@ HEADERS += Cache/imagecache.h \
    Dialogs/patterndlg.h \
    Embellish/Properties/embelproperties.h \
    Embellish/embel.h \
-   Embellish/embelview.h \
    Utilities/inputdlg.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
@@ -97,7 +96,6 @@ SOURCES += Cache/imagecache.cpp \
    Dialogs/patterndlg.cpp \
    Embellish/Properties/embelproperties.cpp \
    Embellish/embel.cpp \
-   Embellish/embelview.cpp \
    Utilities/inputdlg.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp

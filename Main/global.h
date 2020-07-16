@@ -173,6 +173,8 @@ namespace G
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;
 
+    extern bool isEmbel;
+
     extern bool colorManage;
 
     extern bool isThreadTrackingOn;

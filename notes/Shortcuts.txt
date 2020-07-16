@@ -10,6 +10,7 @@ Set color label              6-0
 Filter color label           6-0     ⇧
 During slideshow interval    0-9
 Invoke workspace             0-9  ⌘
+Use embellish template       0-9  ⌘  ⇧
 Open external program        0-9         ⌥
 Select all                   A    ⌘
 Invert Select all            A    ⌘  ⇧
@@ -20,6 +21,7 @@ Copy image                   C    ⌘  ⇧
 Clear Filters                C        ⇧
 Collapse all folders         C           ⌥
 Loupe view                   E
+Embellish                    E    ⌘
 Full screen                  F
 Reveal folder                F    ⌘
 Force update filters         F        ⇧

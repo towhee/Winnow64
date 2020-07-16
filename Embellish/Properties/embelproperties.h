@@ -15,6 +15,7 @@ public:
     EmbelProperties(QWidget *parent, QSettings *setting);
 
     QStringList templateList;
+
     struct File {
         int horizontalFit;
         int verticalFit;
@@ -51,6 +52,9 @@ public:
     } border;
     QVector<Border>b;
 
+    void test1();
+    void test2();
+
 public slots:
     void itemChange(QModelIndex idx);
     void diagnostic(QModelIndex parent = QModelIndex());
@@ -74,13 +78,12 @@ private:
     void graphicItemChange(QVariant v, QString source, QString parent);
 
     void diagnostics(QModelIndex idx);
-    void test1();
-    void test2();
 
 
     ItemInfo i;
     int templateCount;
     QString templateName;
+    int templateId;                 // 0 == Do not embellish
     QString templatePath;
     QWidget *templateListEditor;
     QSettings *setting;

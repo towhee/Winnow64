@@ -247,7 +247,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     createInfoView();           // dependent on Metadata
     createCaching();            // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
-    createEmbelView();          // dependent on centralWidget, ImageView
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
     createBookmarks();          // dependent on loadSettings
@@ -375,12 +374,8 @@ void MW::showEvent(QShowEvent *event)
         restoreGeometry(setting->value("Geometry").toByteArray());
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
-        // if previously in filter mode start in folder panel (prevent possible long delay)
-//        if (filterDock->isVisible() && !filterDock->visibleRegion().isEmpty()) {
-//            folderDock->raise();
-//        }
         updateState();
-        // if embel dock visible then set view to embelView
+        // if embel dock visible then set mode to embelView
         embelDockVisibilityChange();
     }
     else {
@@ -1147,7 +1142,6 @@ delegate use of the current index must check the column.
             updateClassification();
         }
     }
-    if (G::mode == "Embel") embelView->loadImage(fPath);
 
     // update caching when folder has been loaded
     if (G::isNewFolderLoaded) {
@@ -2707,6 +2701,46 @@ void MW::createActions()
     addAction(escapeFullScreenAction);
     connect(escapeFullScreenAction, &QAction::triggered, this, &MW::escapeFullScreen);
 
+    embelDoNotAction = new QAction(tr("Do not embellish"), this);
+    embelDoNotAction->setObjectName("embelDoNotAct");
+    embelDoNotAction->setShortcutVisibleInContextMenu(true);
+    addAction(embelDoNotAction);
+    connect(embelDoNotAction, &QAction::triggered, embel, &Embel::doNotEmbellish);
+
+    embelNewTemplateAction = new QAction(tr("New template"), this);
+    embelNewTemplateAction->setObjectName("embelNewTemplateAct");
+    embelNewTemplateAction->setShortcutVisibleInContextMenu(true);
+    addAction(embelNewTemplateAction);
+    connect(embelNewTemplateAction, &QAction::triggered, this, &MW::escapeFullScreen);
+
+    // general connection to handle invoking new embellish templates
+    // MacOS will not allow runtime menu insertions.  Cludge workaround
+    // add 10 dummy menu items and then hide until use.
+    n = embelProperties->templateList.count();
+    qDebug() << __FUNCTION__ << "embelProperties->templateList.count() =" << n;
+    for (int i = 0; i < 10; i++) {
+        QString name;
+        QString objName = "";
+        if (i < n) {
+            name = embelProperties->templateList.at(i);
+            objName = "template" + QString::number(i);
+        }
+        else name = "Future Template" + QString::number(i);
+
+        embelTemplatesActions.append(new QAction(name, this));
+        if (i < n) {
+            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Shift+" + QString::number(i)));
+            embelTemplatesActions.at(i)->setObjectName(objName);
+            embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
+            embelTemplatesActions.at(i)->setText(name);
+            embelTemplatesActions.at(i)->setVisible(true);
+            addAction(embelTemplatesActions.at(i));
+        }
+        if (i >= n) embelTemplatesActions.at(i)->setVisible(false);
+        embelTemplatesActions.at(i)->setShortcut(QKeySequence("Shift+" + QString::number(i)));
+    }
+    addActions(embelTemplatesActions);
+
     ratingBadgeVisibleAction = new QAction(tr("Show Rating Badge"), this);
     ratingBadgeVisibleAction->setObjectName("toggleRatingBadge");
     ratingBadgeVisibleAction->setShortcutVisibleInContextMenu(true);
@@ -2770,7 +2804,7 @@ void MW::createActions()
     asEmbelAction->setCheckable(true);
     asEmbelAction->setChecked(false);
     addAction(asEmbelAction);
-    connect(asEmbelAction, &QAction::triggered, this, &MW::embelDisplay);
+    connect(asEmbelAction, &QAction::triggered, this, &MW::embellish);
 
     centralGroupAction = new QActionGroup(this);
     centralGroupAction->setExclusive(true);
@@ -2778,8 +2812,6 @@ void MW::createActions()
     centralGroupAction->addAction(asGridAction);
     centralGroupAction->addAction(asTableAction);
     centralGroupAction->addAction(asCompareAction);
-    if (!isReleaseVersion)
-        centralGroupAction->addAction(asEmbelAction);
 
     zoomToAction = new QAction(tr("Zoom To"), this);
     zoomToAction->setObjectName("zoomTo");
@@ -2911,7 +2943,7 @@ void MW::createActions()
     addAction(thumbDockVisibleAction);
     connect(thumbDockVisibleAction, &QAction::triggered, this, &MW::toggleThumbDockVisibity);
 
-    embelDockVisibleAction = new QAction(tr("Embellish"), this);
+    embelDockVisibleAction = new QAction(tr("Embellish Editor"), this);
     embelDockVisibleAction->setObjectName("toggleEmbelDock");
     embelDockVisibleAction->setShortcutVisibleInContextMenu(true);
     embelDockVisibleAction->setCheckable(true);
@@ -3281,6 +3313,14 @@ void MW::createMenus()
     viewMenu->addAction(fullScreenAction);
     viewMenu->addAction(escapeFullScreenAction);
     viewMenu->addSeparator();
+    embelMenu = viewMenu->addMenu(tr("&Embellish"));
+        embelMenu->addAction(embelDoNotAction);
+        embelMenu->addAction(embelNewTemplateAction);
+        // add 10 dummy menu items for embellish template choice
+        for (int i = 0; i < 10; i++) {
+            embelMenu->addAction(embelTemplatesActions.at(i));
+        }
+    viewMenu->addSeparator();
     viewMenu->addAction(ratingBadgeVisibleAction);
     viewMenu->addAction(infoVisibleAction);
     viewMenu->addAction(infoSelectAction);
@@ -3302,17 +3342,17 @@ void MW::createMenus()
     QAction *windowGroupAct = new QAction("Window", this);
     windowGroupAct->setMenu(windowMenu);
     workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
+        workspaceMenu->addAction(defaultWorkspaceAction);
+        workspaceMenu->addAction(newWorkspaceAction);
+        workspaceMenu->addAction(manageWorkspaceAction);
+        workspaceMenu->addSeparator();
+        // add 10 dummy menu items for custom workspaces
+        for (int i=0; i<10; i++) {
+            workspaceMenu->addAction(workspaceActions.at(i));
+        }
+        connect(workspaceMenu, SIGNAL(triggered(QAction*)),
+                SLOT(invokeWorkspaceFromAction(QAction*)));
     windowMenu->addSeparator();
-    workspaceMenu->addAction(defaultWorkspaceAction);
-    workspaceMenu->addAction(newWorkspaceAction);
-    workspaceMenu->addAction(manageWorkspaceAction);
-    workspaceMenu->addSeparator();
-    // add 10 dummy menu items for custom workspaces
-    for (int i=0; i<10; i++) {
-        workspaceMenu->addAction(workspaceActions.at(i));
-    }
-    connect(workspaceMenu, SIGNAL(triggered(QAction*)),
-            SLOT(invokeWorkspaceFromAction(QAction*)));
     windowMenu->addAction(folderDockVisibleAction);
     windowMenu->addAction(favDockVisibleAction);
     windowMenu->addAction(filterDockVisibleAction);
@@ -3723,7 +3763,7 @@ void MW::setupCentralWidget()
     centralLayout->addWidget(gridView);
     centralLayout->addWidget(welcome);     // first time open program tips
     centralLayout->addWidget(messageView);
-    centralLayout->addWidget(embelFrame);
+//    centralLayout->addWidget(embelFrame);
     centralWidget->setLayout(centralLayout);
     setCentralWidget(centralWidget);
 }
@@ -4115,34 +4155,6 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
             this, SLOT(slideShow()));
 
     connect(imageView, &ImageView::newTile, this, &MW::writeTile);
-}
-
-void MW::createEmbelView()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    embelView = new EmbelView(this,
-                              centralWidget,
-                              metadata,
-                              dm,
-                              imageCacheThread,
-                              thumbView);
-    // embelView has a margin of 50px inside embelFrame inside the centralWidget
-    int m = embelView->cwMargin;
-    embelFrame = new QFrame;
-    QHBoxLayout *embelLayout = new QHBoxLayout;
-    embelLayout->setContentsMargins(m,m,m,m);
-    embelLayout->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
-    embelLayout->addWidget(embelView);
-    embelFrame->setLayout(embelLayout);
-
-    embelView->toggleZoom = 1;
-
-    connect(embelView, &EmbelView::updateStatus, this, &MW::updateStatus);
-//    connect(embelView, &EmbelView::newTile, this, &MW::writeTile);
 }
 
 void MW::createCompareView()
@@ -4650,8 +4662,12 @@ void MW::createDocks()
 
 void MW::embelDockVisibilityChange()
 {
-//    qDebug() << __FUNCTION__ << embelDock->isVisible();
-    if (embelDock->isVisible()) embelDisplay();
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (embelDock->isVisible()) embellish();
 }
 
 void MW::embelDockActivated(QDockWidget *dockWidget)
@@ -4677,7 +4693,7 @@ void MW::createEmbel()
     G::track(__FUNCTION__);
     #endif
     }
-    embel = new Embel(embelView, embelProperties);
+    embel = new Embel(imageView, embelProperties);
 }
 
 void MW::createFSTree()
@@ -5015,11 +5031,9 @@ QString MW::getZoom()
     #endif
     }
     if (G::mode != "Loupe" &&
-        G::mode != "Compare" &&
-        G::mode != "Embel") return "N/A";
+        G::mode != "Compare") return "N/A";
     qreal zoom;
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
-    if (G::mode == "Embel") zoom = embelView->zoom;
     else zoom = imageView->zoom;
     if (zoom <= 0 || zoom > 10) return "";
     zoom *= G::actualDevicePixelRatio;
@@ -6594,7 +6608,6 @@ void MW::diagnosticsReport(QString reportString)
 //    std::cout << reportString.toStdString() << std::flush;
 }
 
-
 void MW::about()
 {
     {
@@ -7221,7 +7234,6 @@ are not applicable.
 
     // update the imageView and compareView classes if there is a zoom change
     connect(zoomDlg, SIGNAL(zoom(qreal)), imageView, SLOT(zoomTo(qreal)));
-    connect(zoomDlg, SIGNAL(zoom(qreal)), embelView, SLOT(zoomTo(qreal)));
     connect(zoomDlg, SIGNAL(zoom(qreal)), compareImages, SLOT(zoomTo(qreal)));
 
     // update the imageView and compareView classes if there is a toggleZoomValue change
@@ -7234,7 +7246,6 @@ are not applicable.
 
     // if zoom change in parent send it to the zoom dialog
     connect(imageView, SIGNAL(zoomChange(qreal)), zoomDlg, SLOT(zoomChange(qreal)));
-    connect(embelView, SIGNAL(zoomChange(qreal)), zoomDlg, SLOT(zoomChange(qreal)));
     connect(compareImages, SIGNAL(zoomChange(qreal)), zoomDlg, SLOT(zoomChange(qreal)));
 
     // if main window resized then re-position zoom dialog
@@ -8173,6 +8184,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         asTableAction->setShortcut(QKeySequence("T"));
         asCompareAction->setShortcut(QKeySequence("C"));
 
+        asEmbelAction->setShortcut(QKeySequence("Ctrl+E"));
         slideShowAction->setShortcut(QKeySequence("S"));
         fullScreenAction->setShortcut(QKeySequence("F"));
 //        escapeFullScreenAction->setShortcut(QKeySequence("Esc")); // see MW::eventFilter
@@ -8388,6 +8400,17 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 //        thumbsWrapAction->setChecked(true);
         thumbView->setWrapping(true);
     }
+}
+
+void MW::embellish()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    G::isEmbel = !G::isEmbel;
+    loupeDisplay();
 }
 
 void MW::loupeDisplay()
@@ -8658,75 +8681,6 @@ void MW::compareDisplay()
     hasGridBeenActivated = false;
 }
 
-void MW::embelDisplay()
-{
-    {
-    #ifdef ISDEBUG
-    qDebug() << "\n\n\n";
-    G::track(__FUNCTION__);
-    #endif
-    }
-    G::mode = "Embel";
-    updateStatus(true, "", __FUNCTION__);
-    updateIconsVisible(false);
-
-    // save selection as tableView is hidden and not synced
-    saveSelection();
-
-    /* show imageView in the central widget. This makes thumbView visible, and
-    it updates the index to its previous state.  The index update triggers
-    fileSelectionChange  */
-    centralLayout->setCurrentIndex(EmbelTab);
-    prevCentralView = EmbelTab;
-
-    // recover thumbdock if it was visible before as gridView and full screen can
-    // hide the thumbdock
-    if(isNormalScreen && wasThumbDockVisible) {
-        thumbDock->setVisible(true);
-        thumbView->selectThumb(currentRow);
-    }
-
-    if (thumbView->isVisible()) thumbView->setFocus();
-    else embelView->setFocus();
-
-    QModelIndex idx = dm->sf->index(currentRow, 0);
-    thumbView->setCurrentIndex(idx);
-
-    // update embelView, use cache if image loaded, else read it from file
-    QString fPath = idx.data(G::PathRole).toString();
-    if (embelView->isVisible() && fPath.length() > 0) {
-        embelView->loadImage(fPath);
-    }
-    // do not show classification badge if no folder or nothing selected
-    updateClassification();
-
-    // req'd after compare mode to re-enable extended selection
-    thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-
-    // selection has been lost while tableView and possibly thumbView were hidden
-    recoverSelection();
-
-    // req'd to show thumbs first time
-    thumbView->setThumbParameters();
-
-    // sync scrolling between modes (loupe, grid and table)
-    updateIconsVisible(false);
-    if (prevMode == "Table") {
-        if (tableView->isRowVisible(currentRow)) scrollRow = currentRow;
-        else scrollRow = tableView->midVisibleRow;
-    }
-    if (prevMode == "Grid") {
-        if(gridView->isRowVisible(currentRow)) scrollRow = currentRow;
-        else scrollRow = gridView->midVisibleCell;
-    }
-    G::ignoreScrollSignal = false;
-//    thumbView->waitUntilOkToScroll();
-    thumbView->scrollToRow(scrollRow, __FUNCTION__);
-//    updateIconsVisible(false);
-
-    prevMode = "Embel";
-}
-
 void MW::saveSelection()
 {
 /* This function saves the current selection.  This is required, even though the three
@@ -8769,7 +8723,6 @@ void MW::setCentralView()
     if (asGridAction->isChecked()) gridDisplay();
     if (asTableAction->isChecked()) tableDisplay();
     if (asCompareAction->isChecked()) compareDisplay();
-    if (asEmbelAction->isChecked()) embelDisplay();
     if (currentViewDir == "") {
         QString msg = "Select a folder or bookmark to get started.";
         setCentralMessage(msg);
@@ -10975,19 +10928,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QVariant x = 0.2;
-    qDebug() << __FUNCTION__ << x;
-
-
-    QInputDialog d(this);
-    d.setStyleSheet(G::css);
-    d.setMinimumWidth(400);
-//    QSpacerItem* horizontalSpacer = new QSpacerItem(400, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
-//    auto layout = d.layout();
-//    layout->addItem(horizontalSpacer);
-//    d.layout()->addItem(horizontalSpacer);
-    QString s;
-    s = d.getText(this, "title", "name");
-    qDebug() << __FUNCTION__ << s;
+    embelProperties->test2();
 }
 // End MW

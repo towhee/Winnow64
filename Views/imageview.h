@@ -35,6 +35,14 @@ public:
               int classificationBadgeDiam = 0,
               int infoOverlayFontSize = 0);
 
+    QGraphicsScene *scene;
+    QGraphicsPixmapItem *pmItem;
+    QGraphicsTextItem *infoItem;
+    QMatrix matrix;
+    Pixmap *pixmap;
+
+    int cwMargin = 20;
+    qreal imAspect = 1;
     qreal zoom;
     qreal zoomFit;
     bool isFit;
@@ -77,6 +85,7 @@ public slots:
     void zoomToFit();
     void zoomTo(qreal zoomTo);
     void zoomToggle();
+    void resetFitZoom();
     void setFitZoom();
     void hideCursor();
     void refresh();
@@ -90,6 +99,7 @@ signals:
     void killSlideshow();                   // only call when slideshow is active
     void zoomChange(qreal zoomValue);
     void handleDrop(const QMimeData *mimeData);
+    void updateEmbel();
     void newTile();
 
 private slots:
@@ -133,12 +143,6 @@ private:
     void transform();
 
     InfoString *infoString;
-    Pixmap *pixmap;
-
-    QGraphicsScene *scene;
-    QGraphicsPixmapItem *pmItem;
-    QGraphicsTextItem *infoItem;
-    QMatrix matrix;
 
     QTimer *mouseMovementTimer;
     QTimer *loadFullSizeTimer;

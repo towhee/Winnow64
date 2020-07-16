@@ -695,6 +695,14 @@
        </item>
        <item>
         <property name="text">
+         <string>Embellish</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl +E</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Full Screen</string>
         </property>
         <property name="text">
@@ -900,80 +908,6 @@
         <property name="text">
          <string>Toggles visibility</string>
         </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Show/Hide Panel TitleBars</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <item>
-         <property name="text">
-          <string>Files Panel Titlebar</string>
-         </property>
-         <property name="text">
-          <string>Shift + Alt + F3</string>
-         </property>
-         <property name="text">
-          <string>Toggles</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Favourites Panel Titlebar</string>
-         </property>
-         <property name="text">
-          <string>Shift + Alt + F4</string>
-         </property>
-         <property name="text">
-          <string>Toggles</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Filters Panel Titlebar</string>
-         </property>
-         <property name="text">
-          <string>Shift + Alt + F5</string>
-         </property>
-         <property name="text">
-          <string>Toggles</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Metadata Panel Titlebar</string>
-         </property>
-         <property name="text">
-          <string>Shift + Alt + F6</string>
-         </property>
-         <property name="text">
-          <string>Toggles</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Thumbnails Panel Titlebar</string>
-         </property>
-         <property name="text">
-          <string>Shift + Alt + F7</string>
-         </property>
-         <property name="text">
-          <string>Toggles</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>All Panel Titlebars</string>
-         </property>
-         <property name="text">
-          <string>Cmd/Ctrl + L</string>
-         </property>
-         <property name="text">
-          <string>Toggles</string>
-         </property>
-        </item>
        </item>
       </item>
       <item>

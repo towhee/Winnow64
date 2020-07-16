@@ -1,11 +1,21 @@
 #include "embel.h"
 
-Embel::Embel(EmbelView *ev, EmbelProperties *p)
+Embel::Embel(ImageView *ev, EmbelProperties *p)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     this->ev = ev;
     this->p = p;
 
-    connect(ev, &EmbelView::updateEmbel, this, &Embel::build);
+    connect(ev, &ImageView::updateEmbel, this, &Embel::build);
+}
+
+void Embel::doNotEmbellish()
+{
+    G::isEmbel = false;
 }
 
 void Embel::test()
@@ -15,6 +25,11 @@ void Embel::test()
 
 void Embel::build()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     /*
     QGraphicsRectItem *bItem = new QGraphicsRectItem;
     QImage tile(":/images/icon16/tile.png");
@@ -29,12 +44,16 @@ void Embel::build()
     addBordersToScene();
     translateImage();
     ev->resetFitZoom();
-//    ev->setSceneRect(ev->scene->itemsBoundingRect());
     diagnostic();
 }
 
 void Embel::borderImageCoordinates()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // canvas coordinates: pixels
     QPoint tl(0,0), br(0,0);
     // long side in pixels (ls)
@@ -90,6 +109,11 @@ void Embel::borderImageCoordinates()
 
 void Embel::createBorders()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < bItems.size(); ++i) {
         ev->scene->removeItem(bItems[i]);
     }
@@ -105,6 +129,11 @@ void Embel::createBorders()
 
 void Embel::addBordersToScene()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < b.size(); ++i) {
         bItems[i]->setRect(0, 0, b[i].w, b[i].h);
         QColor color;
@@ -122,6 +151,11 @@ void Embel::addBordersToScene()
 
 void Embel::translateImage()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // scale the image to fit inside the borders
     QPixmap pm = ev->pmItem->pixmap().scaledToWidth(image.w);
     // add the image to the scene
@@ -135,6 +169,11 @@ void Embel::translateImage()
 
 void Embel::diagnostic()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
 //    qDebug().noquote()
 //            << "rect() =" << p->rect()
 //            << "sceneRect() =" << p->sceneRect()
