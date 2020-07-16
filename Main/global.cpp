@@ -47,9 +47,10 @@ namespace G
 
     int actualDevicePixelRatio;
     bool allMetadataLoaded;
-//    bool buildingFilters;
     bool ignoreScrollSignal;
     bool isSlideShow;
+
+    bool isEmbel;
 
     bool colorManage;
 

@@ -219,7 +219,8 @@ to prevent jarring changes in perceived scale by the user.
     if (isLoaded && rect().height() > 50) {
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
-        setSceneRect(scene->itemsBoundingRect());
+//        setSceneRect(scene->itemsBoundingRect());
+
         QModelIndex idx = thumbView->currentIndex();
         QString current = infoString->getCurrentInfoTemplate();
         shootingInfo = infoString->parseTokenString(infoString->infoTemplates[current],
@@ -241,6 +242,7 @@ to prevent jarring changes in perceived scale by the user.
     }
     QImage im = pmItem->pixmap().toImage();
 //    qDebug() << __FUNCTION__ << fPath << "im.pixelColor(0,0) =" << im.pixelColor(0,0);
+//    if (G::isEmbel) emit updateEmbel();
     return isLoaded;
 }
 
@@ -664,6 +666,23 @@ on to ImageView::scale(), which in turn makes the proper scale change.
     }
     zoom = zoomTo;
     isFit = false;
+    scale();
+}
+
+void ImageView::resetFitZoom()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__
+             << "rect() =" << rect()
+             << "sceneRect() =" << sceneRect()
+             << "scene->itemsBoundingRect() =" << scene->itemsBoundingRect();
+    zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
+    zoom = zoomFit;
+    if (limitFit100Pct  && zoom > 1) zoom = 1;
     scale();
 }
 

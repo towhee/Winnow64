@@ -2,33 +2,25 @@
 #define EMBEL_H
 
 #include <QtWidgets>
-#include "embelview.h"
+#include "Views/imageview.h"
 #include "Properties/embelproperties.h"
 
 class Embel : public QObject
 {
     Q_OBJECT
-//    friend class EmbelProperties;
 
 public:
-    Embel(EmbelView *ev, EmbelProperties *p);
+    Embel(ImageView *ev, EmbelProperties *p);
     void build();
     void test();
     void diagnostic();
 
-private:
-    EmbelView *ev;
-    EmbelProperties *p;
+public slots:
+    void doNotEmbellish();
 
-//    enum ModelHeaders {
-//        MH_Templates,
-//        MH_File,
-//        MH_Image,
-//        MH_Borders,
-//        MH_Texts,
-//        MH_Rectangles,
-//        MH_Graphics
-//    };
+private:
+    ImageView *ev;
+    EmbelProperties *p;
 
     // Canvas pixel coordinates
     struct Border {
