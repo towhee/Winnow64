@@ -367,7 +367,8 @@ private slots:
     void gridDisplay();
     void tableDisplay();
     void compareDisplay();
-    void embellish();
+    void newEmbelTemplate();
+    void embelTemplateChange(int id);
     void updateZoom();
     void zoomOut();
     void zoomIn();
@@ -686,11 +687,9 @@ private:
     QAction *randomImageAction; // req'd by slideshow
     QAction *fullScreenAction;
     QAction *escapeFullScreenAction;
-    QAction *asEmbelAction;
-    QAction *embellishAction;
-        QAction *embelDoNotAction;
-        QAction *embelNewTemplateAction;
-        QList<QAction *> embelTemplatesActions;
+    QAction *newEmbelTemplateAction;
+    QActionGroup *embelGroupAction;
+    QList<QAction *> embelTemplatesActions;
     QAction *ratingBadgeVisibleAction;
     QAction *infoVisibleAction;
     QAction *infoSelectAction;
@@ -881,6 +880,7 @@ private:
     bool wasThumbDockVisible;
     bool workspaceChange;
     bool isUpdatingState;
+    bool embelDockTabActivated;
 
     bool isFilterChange = false;        // prevent fileSelectionChange
     bool isRefreshingDM = false;

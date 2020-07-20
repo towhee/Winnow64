@@ -40,6 +40,7 @@ public:
     QGraphicsTextItem *infoItem;
     QMatrix matrix;
     Pixmap *pixmap;
+    QPixmap  displayPixmap;
 
     int cwMargin = 20;
     qreal imAspect = 1;
@@ -99,7 +100,7 @@ signals:
     void killSlideshow();                   // only call when slideshow is active
     void zoomChange(qreal zoomValue);
     void handleDrop(const QMimeData *mimeData);
-    void updateEmbel();
+    void embellish();
     void newTile();
 
 private slots:

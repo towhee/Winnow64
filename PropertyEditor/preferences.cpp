@@ -620,10 +620,10 @@ void Preferences::addItems()
     i.name = "metadataChunkSize";
     i.parentName = "CacheThumbnailHeader";
     i.captionText = "Incremental amount to load";
-    i.tooltip = "Enter the number of minimum thumbnails and metadata you want to cache.  If the\n"
-                "grid is displaying a larger number then the larger number will be used\n"
-                "to make sure they are all shown.  You can experiment to see what works\n"
-                "best.  250 is the default amount.";
+    i.tooltip = "Enter the number of minimum thumbnails and metadata you want to cache.\n"
+                "If the grid is displaying a larger number then the larger number will \n"
+                "be used to make sure they are all shown.  You can experiment to see \n"
+                "what works best.  250 is the default amount.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->metadataCacheThread->metadataChunkSize;
@@ -639,11 +639,12 @@ void Preferences::addItems()
     i.name = "maxIconSize";
     i.parentName = "CacheThumbnailHeader";
     i.captionText = "Maximum Icon Size";
-    i.tooltip = "Enter the maximum size in pixel width for thumbnails.  Icons will be \nt"
-                "created a this size.  The memory requirements increase at the square of \n"
-                "the size, and folders can contain thousands of images.\n\n"
-                "WARNING: Larger thumbnail sizes can consume huge amounts of memory.  The\n"
-                "default size is 256 pixels to a side.";
+    i.tooltip = "Enter the maximum size in pixel width for thumbnails.  Icons will be \n"
+                "created at this size.  \n\n"
+                "WARNING: The memory requirements increase at the square of the size, \n"
+                "and folders can contain thousands of images.  Larger thumbnail sizes \n"
+                "can consume huge amounts of memory.  The default size is 256 pixels \n"
+                "to a side.\n";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::maxIconSize;

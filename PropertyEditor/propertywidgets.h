@@ -182,6 +182,7 @@ public:
     ComboBoxEditor(const QModelIndex &idx, QWidget *parent = nullptr);
     void setValue(QVariant value);
     QString value();
+    void addItem(QString item);
 
 protected:
     void paintEvent(QPaintEvent *event);

@@ -105,9 +105,17 @@ LabelEditor::LabelEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
     label->setObjectName("DisableGoActions");  // used in MW::focusChange
     label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     QString clr = idx.data(UR_Color).toString();
-    label->setStyleSheet("QLabel {background:transparent; border:none;"
-                            "padding:0px; border-radius:0px; color:" + clr +"}" +
-                            "Qlabel:disabled {color:gray}");
+    label->setStyleSheet("QLabel "
+                            "{"
+                            "background:transparent;"
+                            "border:none;"
+                            "padding:0px;"
+                            "margin-left:-4;"
+//                            "border-radius:0px;"
+                            "color:" + clr + ";"
+                            "}"
+                            "Qlabel:disabled {color:gray}"
+                            );
     label->setWindowFlags(Qt::FramelessWindowHint);
     label->setAttribute(Qt::WA_TranslucentBackground);
 
@@ -272,9 +280,11 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
     // of the other custom widgets
     doubleSpinBox->setStyleSheet("QDoubleSpinBox "
                                  "{"
-                                     "margin-top:-1;"                 // nada
-                                     "margin-bottom:-2;"
-                                     "margin-left:-3;"
+                                     "background:transparent;"
+                                     "border:none;"
+//                                     "margin-top:-1;"                 // nada
+//                                     "margin-bottom:-2;"
+                                     "margin-left:-4;"
                                  "}"
                                   "QDoubleSpinBox:disabled {color:gray}"
                                  );
@@ -449,6 +459,14 @@ void ComboBoxEditor::setValue(QVariant value)
 {
     int i = comboBox->findText(value.toString());
     comboBox->setCurrentIndex(i);
+}
+
+void ComboBoxEditor::addItem(QString item)
+{
+/*
+This is used to add new templates to the template drop list
+*/
+    comboBox->addItem(item);
 }
 
 void ComboBoxEditor::change(int index)

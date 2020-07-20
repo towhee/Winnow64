@@ -25,17 +25,23 @@ void BarBtn::leaveEvent(QEvent*)
     setStyleSheet("background:transparent;");
 }
 
-/* DockTitleBtn *******************************************************************************
+/* DockTitleBar *******************************************************************************
 */
 
 DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout/*, QWidget *parent*/) : QFrame()
 {
     setStyle();
     setLayout(titleBarLayout);
-    QLabel *titleLabel = new QLabel;
+    titleLabel = new QLabel;
+    setTitle(title);
     titleLabel->setText(title);
     titleBarLayout->addWidget(titleLabel);
     titleBarLayout->addStretch();
+}
+
+void DockTitleBar::setTitle(QString title)
+{
+    titleLabel->setText(title);
 }
 
 void DockTitleBar::setStyle()
@@ -48,6 +54,8 @@ void DockTitleBar::setStyle()
                 "stop: 1 " + QColor(g0,g0,g0).name() + ");"
                 "padding-left: 2px;"
                 "padding-bottom: 2px;"
+//                "border: 10px;"               // not working
+//                "border-color: silver;"
                 "font-size:" + G::fontSize + "pt;";
     setStyleSheet(s);
 }

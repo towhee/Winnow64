@@ -547,8 +547,7 @@ bool MW::event(QEvent *event)
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
-    // use to show all events being filtered - handy to figure out which to intercept
-    /*
+    /* use to show all events being filtered - handy to figure out which to intercept
     if (event->type()        != QEvent::Paint
             && event->type() != QEvent::UpdateRequest
             && event->type() != QEvent::ZeroTimerEvent
@@ -565,19 +564,45 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 //*/
 
-    // figure out key presses
-    /*
+    /* figure out key presses
     if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
         G::track(__FUNCTION__, "Performance profiling");
         qDebug() << event <<  obj;
-    };
-//
+    };  */
 
+    /* Specific event
     if (event->type() == QEvent::FocusIn) {
             qDebug() << event << obj << embelDock->hasFocus();
+    }*/
+
+    /* Specific objectName
+    if (obj->objectName() == "embelDock") {
+        if (event->type()        != QEvent::Paint
+                && event->type() != QEvent::UpdateRequest
+                && event->type() != QEvent::ZeroTimerEvent
+                && event->type() != QEvent::Timer
+                && event->type() == QEvent::Enter
+                )
+        {
+            qDebug() << event;
+        }
     }
-//*/
-    /* CONTEXT MENU **********************************************************************
+//    */
+
+    /* EMBEL DOCK TITLE ***********************************************************************
+
+    Set dock title if not tabified
+
+    if (obj->objectName() == "embelDock" && event->type() == QEvent::Enter) {
+        qDebug() << event;
+        if (!embelDockTabActivated) embelTitleBar->setTitle("Embellish");
+        else embelTitleBar->setTitle("");
+        embelDockTabActivated = false;
+    }
+    */
+
+
+    /* CONTEXT MENU ***************************************************************************
 
     Intercept context menu
 
@@ -2701,21 +2726,17 @@ void MW::createActions()
     addAction(escapeFullScreenAction);
     connect(escapeFullScreenAction, &QAction::triggered, this, &MW::escapeFullScreen);
 
-    embelDoNotAction = new QAction(tr("Do not embellish"), this);
-    embelDoNotAction->setObjectName("embelDoNotAct");
-    embelDoNotAction->setShortcutVisibleInContextMenu(true);
-    addAction(embelDoNotAction);
-    connect(embelDoNotAction, &QAction::triggered, embel, &Embel::doNotEmbellish);
-
-    embelNewTemplateAction = new QAction(tr("New template"), this);
-    embelNewTemplateAction->setObjectName("embelNewTemplateAct");
-    embelNewTemplateAction->setShortcutVisibleInContextMenu(true);
-    addAction(embelNewTemplateAction);
-    connect(embelNewTemplateAction, &QAction::triggered, this, &MW::escapeFullScreen);
+    newEmbelTemplateAction = new QAction(tr("New template"), this);
+    newEmbelTemplateAction->setObjectName("newEmbelTemplateAct");
+    newEmbelTemplateAction->setShortcutVisibleInContextMenu(true);
+    addAction(newEmbelTemplateAction);
+    connect(newEmbelTemplateAction, &QAction::triggered, this, &MW::newEmbelTemplate);
 
     // general connection to handle invoking new embellish templates
     // MacOS will not allow runtime menu insertions.  Cludge workaround
     // add 10 dummy menu items and then hide until use.
+    embelGroupAction = new QActionGroup(this);
+    embelGroupAction->setExclusive(true);
     n = embelProperties->templateList.count();
     qDebug() << __FUNCTION__ << "embelProperties->templateList.count() =" << n;
     for (int i = 0; i < 10; i++) {
@@ -2729,17 +2750,21 @@ void MW::createActions()
 
         embelTemplatesActions.append(new QAction(name, this));
         if (i < n) {
-            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Shift+" + QString::number(i)));
+            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Ctrl+Shift+" + QString::number(i)));
             embelTemplatesActions.at(i)->setObjectName(objName);
             embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
+            embelTemplatesActions.at(i)->setCheckable(true);
             embelTemplatesActions.at(i)->setText(name);
             embelTemplatesActions.at(i)->setVisible(true);
             addAction(embelTemplatesActions.at(i));
         }
         if (i >= n) embelTemplatesActions.at(i)->setVisible(false);
-        embelTemplatesActions.at(i)->setShortcut(QKeySequence("Shift+" + QString::number(i)));
+        embelTemplatesActions.at(i)->setShortcut(QKeySequence("Ctrl+Shift+" + QString::number(i)));
+        embelGroupAction->addAction(embelTemplatesActions.at(i));
     }
     addActions(embelTemplatesActions);
+    // sync menu with QSettings last active embel template
+    embelTemplatesActions.at(embelProperties->templateId)->setChecked(true);
 
     ratingBadgeVisibleAction = new QAction(tr("Show Rating Badge"), this);
     ratingBadgeVisibleAction->setObjectName("toggleRatingBadge");
@@ -2798,13 +2823,6 @@ void MW::createActions()
     asCompareAction->setChecked(false); // never start with compare set true
     addAction(asCompareAction);
     connect(asCompareAction, &QAction::triggered, this, &MW::compareDisplay);
-
-    asEmbelAction = new QAction(tr("Embellish"), this);
-    asEmbelAction->setShortcutVisibleInContextMenu(true);
-    asEmbelAction->setCheckable(true);
-    asEmbelAction->setChecked(false);
-    addAction(asEmbelAction);
-    connect(asEmbelAction, &QAction::triggered, this, &MW::embellish);
 
     centralGroupAction = new QActionGroup(this);
     centralGroupAction->setExclusive(true);
@@ -3314,12 +3332,14 @@ void MW::createMenus()
     viewMenu->addAction(escapeFullScreenAction);
     viewMenu->addSeparator();
     embelMenu = viewMenu->addMenu(tr("&Embellish"));
-        embelMenu->addAction(embelDoNotAction);
-        embelMenu->addAction(embelNewTemplateAction);
+        embelMenu->addAction(newEmbelTemplateAction);
         // add 10 dummy menu items for embellish template choice
         for (int i = 0; i < 10; i++) {
             embelMenu->addAction(embelTemplatesActions.at(i));
+            if (i == 0) viewMenu->addSeparator();
         }
+        connect(embelMenu, SIGNAL(triggered(QAction*)),
+                embelProperties, SLOT(invokeFromAction(QAction*)));
     viewMenu->addSeparator();
     viewMenu->addAction(ratingBadgeVisibleAction);
     viewMenu->addAction(infoVisibleAction);
@@ -4537,6 +4557,8 @@ void MW::createEmbelDock()
     #endif
     }
     embelProperties = new EmbelProperties(this, setting);
+    connect (embelProperties, &EmbelProperties::templateChanged, this, &MW::embelTemplateChange);
+
     embelDock = new DockWidget(tr("  Embellish  "), this);
     embelDock->setObjectName("embelDock");
     embelDock->setWidget(embelProperties);
@@ -4549,8 +4571,8 @@ void MW::createEmbelDock()
     QHBoxLayout *embelTitleLayout = new QHBoxLayout();
     embelTitleLayout->setContentsMargins(0, 0, 0, 0);
     embelTitleLayout->setSpacing(0);
-    embelTitleBar = new DockTitleBar("", embelTitleLayout);
-//    embelTitleBar = new DockTitleBar("Embellish", embelTitleLayout);
+//    embelTitleBar = new DockTitleBar("", embelTitleLayout);
+    embelTitleBar = new DockTitleBar("Embellish", embelTitleLayout);
     embelDock->setTitleBarWidget(embelTitleBar);
 
     // add widgets to the right side of the title bar layout
@@ -4667,7 +4689,7 @@ void MW::embelDockVisibilityChange()
     G::track(__FUNCTION__);
     #endif
     }
-    if (embelDock->isVisible()) embellish();
+//    if (embelDock->isVisible()) newEmbelTemplate();
 }
 
 void MW::embelDockActivated(QDockWidget *dockWidget)
@@ -4679,11 +4701,17 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
     }
 //    if (dockWidget->objectName() == "embelDock") embelDisplay();
     // enable the folder dock (first one in tab)
+    embelDockTabActivated = true;
     QList<QTabBar *> tabList = findChildren<QTabBar *>();
     QTabBar* widgetTabBar = tabList.at(0);
     widgetTabBar->setCurrentIndex(4);
     qDebug() << __FUNCTION__ << dockWidget->objectName() << widgetTabBar->currentIndex();
 
+}
+
+void MW::embelTemplateChange(int id)
+{
+    embelTemplatesActions.at(id)->setChecked(true);
 }
 
 void MW::createEmbel()
@@ -4694,6 +4722,7 @@ void MW::createEmbel()
     #endif
     }
     embel = new Embel(imageView, embelProperties);
+    connect(imageView, &ImageView::embellish, embel, &Embel::build);
 }
 
 void MW::createFSTree()
@@ -5998,7 +6027,6 @@ void MW::invokeWorkspaceFromAction(QAction *workAction)
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == workAction->text()) {
             invokeWorkspace(workspaces->at(i));
-//            reportWorkspace(i);         // rgh remove after debugging
             return;
         }
     }
@@ -6073,7 +6101,6 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.isGridDisplay = asGridAction->isChecked();
     wsd.isTableDisplay = asTableAction->isChecked();
     wsd.isCompareDisplay = asCompareAction->isChecked();
-    wsd.isCompareDisplay = asEmbelAction->isChecked();
 
     wsd.thumbWidth = thumbView->iconWidth;
     wsd.thumbHeight = thumbView->iconHeight;
@@ -7572,7 +7599,6 @@ re-established when the application is re-opened.
     setting->setValue("isGridDisplay", asGridAction->isChecked());
     setting->setValue("isTableDisplay", asTableAction->isChecked());
     setting->setValue("isCompareDisplay", asCompareAction->isChecked());
-    setting->setValue("isEmbelDisplay", asEmbelAction->isChecked());
 
     setting->setValue("isMenuBarVisible", menuBarVisibleAction->isChecked());
     setting->setValue("isStatusBarVisible", statusBarVisibleAction->isChecked());
@@ -8184,7 +8210,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
         asTableAction->setShortcut(QKeySequence("T"));
         asCompareAction->setShortcut(QKeySequence("C"));
 
-        asEmbelAction->setShortcut(QKeySequence("Ctrl+E"));
         slideShowAction->setShortcut(QKeySequence("S"));
         fullScreenAction->setShortcut(QKeySequence("F"));
 //        escapeFullScreenAction->setShortcut(QKeySequence("Esc")); // see MW::eventFilter
@@ -8402,14 +8427,18 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     }
 }
 
-void MW::embellish()
+void MW::newEmbelTemplate()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    G::isEmbel = !G::isEmbel;
+    qDebug() << __FUNCTION__;
+                embelDock->setVisible(true);
+    embelDock->raise();
+    embelDockVisibleAction->setChecked(true);
+    embelProperties->newEmbelTemplate();
     loupeDisplay();
 }
 
@@ -10928,6 +10957,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    embelProperties->test2();
+    embelTitleBar->setWindowTitle("Embellish");
 }
 // End MW
