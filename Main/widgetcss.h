@@ -50,6 +50,7 @@ public:
     QString widget();
     QString mainWindow();
     QString dialog();
+    QString doubleSpinBox();
     QString frame();
     QString graphicsView();
     QString statusBar();

@@ -15,6 +15,8 @@ public:
     EmbelProperties(QWidget *parent, QSettings *setting);
 
     QStringList templateList;
+    QString templateName;
+    int templateId;                 // 0 == Do not embellish
 
     struct File {
         int horizontalFit;
@@ -52,13 +54,18 @@ public:
     } border;
     QVector<Border>b;
 
+    void newEmbelTemplate();
     void test1();
     void test2();
 
 public slots:
     void itemChange(QModelIndex idx);
+    void invokeFromAction(QAction *embelAction);
     void diagnostic(QModelIndex parent = QModelIndex());
     void coordHelp();
+
+signals:
+    void templateChanged(int id);
 
 private:
     void readTemplateList();
@@ -66,10 +73,16 @@ private:
     void setCurrentTemplate();
     void addTemplateHeader();
     void addTemplateItems();
-    void newTemplate();
+    void addFile();
+    void addImage();
+    void addBorders();
     void newBorder();
     void addBorder(int count);
+    void addTexts();
+    void addRectangles();
+    void addGraphics();
 
+    void templateChange(QVariant v);
     void fileItemChange(QVariant v, QString source);
     void imageItemChange(QVariant v, QString source);
     void borderItemChange(QModelIndex idx);
@@ -82,10 +95,8 @@ private:
 
     ItemInfo i;
     int templateCount;
-    QString templateName;
-    int templateId;                 // 0 == Do not embellish
     QString templatePath;
-    QWidget *templateListEditor;
+    ComboBoxEditor *templateListEditor;
     QSettings *setting;
 };
 

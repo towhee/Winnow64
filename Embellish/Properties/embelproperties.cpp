@@ -1,6 +1,64 @@
 #include "embelproperties.h"
-//#include "Embellish/embel.h"
 #include "Main/mainwindow.h"
+
+/*
+This class holds the template information used by Embel to create borders, add text, rectangles
+and graphics to any image in the loupe view.  Template0 is an empty template, which means no
+changes are made to the loupe image. The information is stored in QSettings, each template,
+when chosen, is represented in a StandardItemModel model and the model, in turn, is translated
+into structs and QVestors of struct such as QVector<Border>b.  The structs make it easier to
+use the information in Embel, where the graphics are build in the scene, which is contained in
+ImageView.
+
+Thus the embellish information is maintained in three information structures:
+
+- QSettings
+- DataModel
+- Local structs
+
+QSettings structure:
+
+Embel
+    Styles
+    Templates
+        Do not Embellish (template0)
+        Template1                   isCurrent
+            File
+            Image
+            Borders
+                Border0
+                ...
+            Texts
+                Text0
+                ...
+            Rectangles
+                Rectangle0
+                ...
+            Graphics
+                Graphic0
+                ...
+        Template2
+        ...
+    Tiles
+
+Each of the above in turn includes a series of fields the contain the information required by
+Embel.  The information is read from QSettings by addTemplateItems, addBorders ...  As each
+item is read, it is sent to PropertyEditor::addItem, which builds a StandardItemModel to
+mirror the QSettings. A custom widget is created in the treeview the is used to display the
+information to the user for editing.
+
+When items change in the datamodel this->itemChanged is signalled.  The change is saved in
+QSettings and the local structs.  Embel::build is called to update the QGraphicsScene in
+ImageView.
+
+Associated classes
+
+    MW::embelDockWidget (container for EmbelProperties - this treeview)
+        Embel
+            ImageView (contains the QGraphicsScene)
+            EmbelProperties - PropertyEditor - PropertyDelegate - PropertyWidgets
+
+*/
 
 extern MW *mw3;
 MW *mw3;
@@ -18,19 +76,16 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     this->setting = setting;
     setIndentation(12);
     setAlternatingRowColors(false);
-    resizeColumns("======String to fit in captions column======",
-                  "=String to fit in values column=");
+    resizeColumns("====captions column====",
+                  "====values column====");
 
     // get the list of templates and which one was last active
     readTemplateList();
-    // add the template header, which then selects to last active template
+    // add the template header, which then selects the last active template
     addTemplateHeader();
     // add the File, Image, Borders, Texts, Rectangles and Graphics items for the template
     if (templateId != 0) addTemplateItems();
     expandAll();
-
-    // test connection to Embel
-    f.suffix = "testsuffix";
 }
 
 void EmbelProperties::diagnostic(QModelIndex parent)
@@ -78,12 +133,15 @@ void EmbelProperties::setCurrentTemplate()
     G::track(__FUNCTION__);
     #endif
     }
-    for (int i = 1; i < templateList.length(); ++i) {
+    for (int i = 0; i < templateList.length(); ++i) {
         QString t = templateList.at(i);
-        bool isCurrent = t == templateName;
+        bool isCurrent = {t == templateName};
         QString path = "Embel/Templates/" + t + "/isCurrent";
         setting->setValue(path, isCurrent);
+        if (isCurrent) templateId = i;
+        templatePath = "Embel/Templates/" + templateName + "/";
     }
+    qDebug() << __FUNCTION__ << templateId << templateName << templatePath;
 }
 
 void EmbelProperties::readTemplateList()
@@ -96,20 +154,21 @@ Read the template list using QSettings
     G::track(__FUNCTION__);
     #endif
     }
-//    if (!setting->contains("Embel/Templates")) return;
-
+    templateId = 0;
+    templateName = "Do not Embellish";
     setting->beginGroup("Embel/Templates");
     // 1st time, no templates created yet
     if (setting->childGroups().count() == 0) {
         setting->setValue("Do not Embellish/isCurrent", true);
-        templateList << "Do not Embellish";
-        templateId = 0;
+//        templateId = 0;
+//        templateName = "Do not Embellish";
+        templateList << templateName;
     }
     else {
         for (int i = 0; i < setting->childGroups().count(); ++i) {
             templateList << setting->childGroups().at(i);
         }
-        templateName = "";
+//        templateName = "";
         for (int i = 1; i < templateList.size(); ++i) {
             QString t = templateList.at(i);
             QString path = /*"Embel/Templates/" + */t + "/isCurrent";
@@ -118,12 +177,14 @@ Read the template list using QSettings
                 templateId = i;
             }
         }
-        templatePath = "Embel/Templates/" + templateName + "/";
+        qDebug() << __FUNCTION__ << templateName << templateId;
+//        templatePath = "Embel/Templates/" + templateName + "/";
     }
     setting->endGroup();
+    templatePath = "Embel/Templates/" + templateName + "/";
 }
 
-void EmbelProperties::newTemplate()
+void EmbelProperties::newEmbelTemplate()
 {
     {
     #ifdef ISDEBUG
@@ -131,12 +192,24 @@ void EmbelProperties::newTemplate()
     #endif
     }
     templateName = Utilities::inputText("New Template", "Enter new template name");
+    templateId = templateList.count();
+//    // set all templates except templateName isCurrent = false
+//    setCurrentTemplate();
     templateList << templateName;
-    QString path = "Embel/Templates/" + templateName + "/isCurrent";
-    setting->setValue(path, true);
-    // if new template called from main menu the dock might not be visible
-    if(!isVisible()) setVisible(true);
-    G::isEmbel = true;
+    templateListEditor->addItem(templateName);
+    templateListEditor->setValue(templateName);
+    // add the File, Image, Borders, Texts, Rectangles and Graphics items for the template
+//    addTemplateItems();
+}
+
+void EmbelProperties::invokeFromAction(QAction *embelAction)
+{
+    if (templateName == embelAction->text()) return;
+    for (int i = 0; i < templateList.count(); ++i) {
+        if (templateList.at(i)  == embelAction->text()) {
+            templateListEditor->setValue(templateList.at(i));
+        }
+    }
 }
 
 void EmbelProperties::itemChange(QModelIndex idx)
@@ -169,28 +242,38 @@ itemChange, which is subclassed here.
 
     templatePath = "Embel/Templates/" + templateName + "/";
 //    QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
-    qDebug() << __FUNCTION__ << v << source << parent << grandparent;
+    qDebug() << __FUNCTION__ << "idx.isValid() =" << idx.isValid()
+             << v << source << templateId << parent << grandparent;
 
-    if (source == "templateList") {
-        qDebug() << __FUNCTION__;
-        templateName = v.toString();
-        // save which template is current
-        setCurrentTemplate();
-        // clear model except for template name
-        model->removeRows(1, model->rowCount(QModelIndex()) - 1);
-        // add items for this template
-        addTemplateItems();
+    if (source == "templateList") templateChange(v);
+    if (templateId != 0) {
+        if (parent == "FileHeader") fileItemChange(v, source);
+        if (parent == "ImageHeader") imageItemChange(v, source);
+        if (grandparent == "BordersHeader") borderItemChange(idx);
+        if (grandparent == "TextsHeader") textItemChange(v, source, parent);
+        if (grandparent == "RectanglesHeader") rectangleItemChange(v, source, parent);
+        if (grandparent == "GraphicsHeader") graphicItemChange(v, source, parent);
     }
-    if (templateId == 0) return;
-
-    if (parent == "FileHeader") fileItemChange(v, source);
-    if (parent == "ImageHeader") imageItemChange(v, source);
-    if (grandparent == "BordersHeader") borderItemChange(idx);
-    if (grandparent == "TextsHeader") textItemChange(v, source, parent);
-    if (grandparent == "RectanglesHeader") rectangleItemChange(v, source, parent);
-    if (grandparent == "GraphicsHeader") graphicItemChange(v, source, parent);
 
     e->build();
+}
+
+void EmbelProperties::templateChange(QVariant v)
+{
+    qDebug() << __FUNCTION__;
+    templateName = v.toString();
+    // save which template is current
+    setCurrentTemplate();
+    // update View > Embellish menu
+    emit templateChanged(templateId);
+    // clear model except for template name header
+    model->removeRows(1, model->rowCount(QModelIndex()) - 1);
+    // clear borders
+    b.clear();
+    // add items for this template
+    if (templateId > 0) addTemplateItems();
+    collapseAll();
+    expand(model->index(0,0,QModelIndex()));
 }
 
 void EmbelProperties::fileItemChange(QVariant v, QString source)
@@ -201,6 +284,7 @@ void EmbelProperties::fileItemChange(QVariant v, QString source)
     #endif
     }
     QString path = templatePath + "File/" + source;
+    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "horizontalFit") {
         setting->setValue(path, v.toInt());
@@ -318,7 +402,6 @@ void EmbelProperties::borderItemChange(QModelIndex idx)
         setting->setValue(path, v.toString());
         b[index].style = v.toString();
     }
-
 }
 
 void EmbelProperties::textItemChange(QVariant v, QString source, QString parent)
@@ -380,7 +463,7 @@ void EmbelProperties::addTemplateHeader()
     BarBtn *templateNewBtn = new BarBtn();
     templateNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     templateNewBtn->setToolTip("Create a new template");
-    connect(templateNewBtn, &BarBtn::clicked, this, &EmbelProperties::newTemplate);
+    connect(templateNewBtn, &BarBtn::clicked, this, &EmbelProperties::newEmbelTemplate);
     btns.append(templateNewBtn);
     addItem(i);
 
@@ -397,7 +480,7 @@ void EmbelProperties::addTemplateHeader()
     i.delegateType = DT_Combo;      // no parent, delegateType > 0 -> No header, has value
     i.type = "QString";
     i.dropList = templateList;
-    templateListEditor = addItem(i);
+    templateListEditor = static_cast<ComboBoxEditor*>(addItem(i));
 
     qDebug() << __FUNCTION__ << "templateList.size() =" << templateList.size();
     if (templateId == 0) return;
@@ -421,85 +504,17 @@ void EmbelProperties::addTemplateItems()
     G::track(__FUNCTION__);
     #endif
     }
-    /* template of ItemInfo
-    i.name = "";                    // all
-    i.parentName = "";              // all
-    i.hasValue = true;              // all
-    i.tooltip = "";                 // all
-    i.captionText = "";             // all
-    i.captionIsEditable = false;    // all
-    i.delegateType= DT_None;        // all
-    i.value = 0;                    // except hdr
-    i.valueName = "";               // except hdr
-    i.type = "";                    // except hdr
-    i.min = 0;                      // DT_Spinbox, DT_Slider
-    i.max = 0;                      // DT_Spinbox, DT_Slider
-    i.fixedWidth = 50;              // DT_Slider
-    i.dropList = {}                 // DT_Combo
-    i.index = QModelIndex();        // except hdr if connected to datamodel (ie InfoView fields to show)
-    */
+    addFile();
+    addImage();
+    addBorders();
+    addTexts();
+    addRectangles();
+    addGraphics();
+}
 
-    // TEMPLATES ============================================================================//
-
-    /*
-       {
-
-    // Templates header (Root)
-    i.name = "TemplatesHeader";
-    i.parentName = "???";
-    i.decorateGradient = true;
-    i.captionText = "Templates";
-    i.tooltip = "";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.delegateType = DT_BarBtns;
-    BarBtn *templateRenameBtn = new BarBtn();
-    templateRenameBtn->setIcon(QIcon(":/images/icon16/delta.png"));
-    templateRenameBtn->setToolTip("Rename the selected template");
-    btns.append(templateRenameBtn);
-    connect(templateRenameBtn, &BarBtn::clicked, this, &EmbelProperties::clearTemplate);
-    BarBtn *templateDeleteBtn = new BarBtn();
-    templateDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
-    templateDeleteBtn->setToolTip("Delete the selected template");
-    btns.append(templateDeleteBtn);
-    BarBtn *templateNewBtn = new BarBtn();
-    templateNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
-    templateNewBtn->setToolTip("Create a new template");
-    connect(templateNewBtn, &BarBtn::clicked, this, &EmbelProperties::newTemplate);
-    btns.append(templateNewBtn);
-    addItem(i);
-
-    // Templates
-    i.name = "templateList";
-    i.parentName = "TemplatesHeader";
-    i.decorateGradient = false;
-    i.captionText = "Select template";
-    i.tooltip = "Templates contain all the properties to embellish your images.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = 0;
-    i.valueName = "templateList";
-    i.delegateType = DT_Combo;      // no parent, delegateType > 0 -> No header, has value
-    i.type = "QString";
-    qDebug() << __FUNCTION__ << templateList;
-    i.dropList = templateList;
-    templateListEditor = addItem(i);
-
-    QModelIndex templatesIdx = model->index(0, 0, QModelIndex());
-    templateCount = templatesIdx.data(UR_StringList).toStringList().count();
-    if (templateCount == 0) {
-        QString msg = "You must create a template as a first step before adding\n"
-                      "borders, text, rectangles or graphics.";
-        G::popUp->showPopup(msg, 2000);
-    }
-
-    // end TEMPLATES
-    }*/
-
-    // FILES ================================================================================//
-    {
-
-    // FILES File header (Root)
+void EmbelProperties::addFile()
+{
+    // FILE File header (Root)
     i.name = "FileHeader";
     i.parentName = "???";
     i.decorateGradient = true;
@@ -527,12 +542,14 @@ void EmbelProperties::addTemplateItems()
     // FILES Horizontal fit
     i.name = "horizontalFit";
     i.parentName = "FileHeader";
-    i.captionText = "Maximum horizontal pixels";
+    i.captionText = "Fit horizontal";
     i.tooltip = "The number of pixels in the horizontal axis including the borders";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "horizontalFit";
-    i.value = setting->value(templatePath + "File/" + i.valueName);
+    if (setting->contains(templatePath + "File/" + i.valueName))
+        i.value = setting->value(templatePath + "File/" + i.valueName);
+    else i.value = 500;
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
@@ -544,12 +561,14 @@ void EmbelProperties::addTemplateItems()
     // FILES Vertical fit
     i.name = "verticalFit";
     i.parentName = "FileHeader";
-    i.captionText = "Maximum vertical pixels";
+    i.captionText = "Fit vertical";
     i.tooltip = "The number of pixels in the vertical axis including the borders";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "verticalFit";
-    i.value = setting->value(templatePath + "File/" + i.valueName);
+    if (setting->contains(templatePath + "File/" + i.valueName))
+        i.value = setting->value(templatePath + "File/" + i.valueName);
+    else i.value = 500;
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
@@ -561,7 +580,7 @@ void EmbelProperties::addTemplateItems()
     // FILES File type
     i.name = "fileType";
     i.parentName = "FileHeader";
-    i.captionText = "Select file type";
+    i.captionText = "File type";
     i.tooltip = "Select file type.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -576,7 +595,7 @@ void EmbelProperties::addTemplateItems()
     // FILES Save method
     i.name = "saveMethod";
     i.parentName = "FileHeader";
-    i.captionText = "Select save method";
+    i.captionText = "Save method";
     i.tooltip = "Select where to save the file.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -591,7 +610,7 @@ void EmbelProperties::addTemplateItems()
     // FILES Folder name
     i.name = "folderPath";
     i.parentName = "FileHeader";
-    i.captionText = "The full folder path";
+    i.captionText = "Folder path";
     i.tooltip = "Enter the full folder path, the folder name of a subfolder or the"""
                 "template to use.";
     i.hasValue = true;
@@ -606,7 +625,7 @@ void EmbelProperties::addTemplateItems()
     // FILES Suffix name
     i.name = "suffix";
     i.parentName = "FileHeader";
-    i.captionText = "Suffix to add to file names";
+    i.captionText = "Suffix";
     i.tooltip = "Suffix to add to file names.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -620,7 +639,7 @@ void EmbelProperties::addTemplateItems()
     // FILES Overwrite existing files
     i.name = "overwriteFiles";
     i.parentName = "FileHeader";
-    i.captionText = "Overwrite existing files";
+    i.captionText = "Overwrite";
     i.tooltip = "Overwrite existing files.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -630,13 +649,10 @@ void EmbelProperties::addTemplateItems()
     i.type = "bool";
     f.overwriteFiles = i.value.toBool();
     addItem(i);
+}
 
-    // end FILES
-    }
-
-    // IMAGE ================================================================================//
-    {
-
+void EmbelProperties::addImage()
+{
     // IMAGE Image header (Root)
     i.name = "ImageHeader";
     i.parentName = "???";
@@ -647,7 +663,6 @@ void EmbelProperties::addTemplateItems()
     i.captionIsEditable = false;
     i.delegateType = DT_None;
     addItem(i);
-
 
     QString settingRootPath = templatePath + "Image/";
 
@@ -671,7 +686,7 @@ void EmbelProperties::addTemplateItems()
 
     i.name = "outlineColor";
     i.parentName = "ImageHeader";
-    i.captionText = "Outline color (#RRGGBB)";
+    i.captionText = "Outline color";
     i.tooltip = "Select a color that will be used to full the border area.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -688,7 +703,7 @@ void EmbelProperties::addTemplateItems()
     // IMAGE style
     i.name = "imageStyle";
     i.parentName = "ImageHeader";
-    i.captionText = "Select style";
+    i.captionText = "Style";
     i.tooltip = "Select style to apply to the image ie a shadow.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -702,12 +717,10 @@ void EmbelProperties::addTemplateItems()
     i.type = "QString";
     i.dropList << "None" << "Emboss and dropshadow" << "Dropshadow 2";
     addItem(i);
+}
 
-    // end IMAGE
-    }
-
-    // BORDER ===============================================================================//
-
+void EmbelProperties::addBorders()
+{
     // BORDER header (Root)
     i.name = "BordersHeader";
     i.parentName = "???";
@@ -734,9 +747,10 @@ void EmbelProperties::addTemplateItems()
     qDebug() << __FUNCTION__ << path << "borderCount =" << borderCount;
     setting->endGroup();
     for (int i = 0; i < borderCount; ++i) newBorder();
+}
 
-    // TEXT =================================================================================//
-
+void EmbelProperties::addTexts()
+{
     // Texts header (Root)
     i.name = "TextsHeader";
     i.parentName = "???";
@@ -755,9 +769,10 @@ void EmbelProperties::addTemplateItems()
     textNewBtn->setToolTip("Create a new border");
     btns.append(textNewBtn);
     addItem(i);
+}
 
-    // RECTANGLE ============================================================================//
-
+void EmbelProperties::addRectangles()
+{
     // Rectangles header (Root)
     i.name = "RectanglesHeader";
     i.parentName = "???";
@@ -776,9 +791,10 @@ void EmbelProperties::addTemplateItems()
     rectangleNewBtn->setToolTip("Create a new border");
     btns.append(rectangleNewBtn);
     addItem(i);
+}
 
-    // GRAPHIC ==============================================================================//
-
+void EmbelProperties::addGraphics()
+{
     // Graphics header (Root)
     i.name = "GraphicsHeader";
     i.parentName = "???";
@@ -809,16 +825,6 @@ void EmbelProperties::newBorder()
     getIndex("BordersHeader");
     int row = model->rowCount(foundIdx);
     qDebug() << __FUNCTION__ << row << foundIdx << foundIdx.data();
-/*    border.name = "Border" + QString::number(row + 1);
-    border.caption = "Border " + QString::number(row + 1);
-    border.top = 0;
-    border.left = 0;
-    border.right = 0;
-    border.bottom = 0;
-    border.tile = "";
-    border.color = "";
-    border.opacity = 100;
-    border.style = "";  */
     addBorder(row);
     // expand only the new border
     collapseAll();
@@ -848,14 +854,14 @@ void EmbelProperties::addBorder(int count)
     i.parentName = "BordersHeader";
     i.captionText = borderName;
     i.tooltip = "";
-    i.hasValue = true;
+    i.hasValue = false;
     i.captionIsEditable = false;
     i.delegateType = UR_ItemIndex;
     addItem(i);
 
     i.name = "topMargin";
     i.parentName = borderName;
-    i.captionText = "Top amount";
+    i.captionText = "Top %";
     i.tooltip = "This is the margin for the top part of the border (% of the long side).";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -874,7 +880,7 @@ void EmbelProperties::addBorder(int count)
 
     i.name = "leftMargin";
     i.parentName = borderName;
-    i.captionText = "Left amount";
+    i.captionText = "Left %";
     i.tooltip = "This is the margin for the left part of the border (% of the long side).";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -892,7 +898,7 @@ void EmbelProperties::addBorder(int count)
 
     i.name = "rightMargin";
     i.parentName = borderName;
-    i.captionText = "Right amount";
+    i.captionText = "Right %";
     i.tooltip = "This is the margin for the right part of the border (% of the long side).";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -910,7 +916,7 @@ void EmbelProperties::addBorder(int count)
 
     i.name = "bottomMargin";
     i.parentName = borderName;
-    i.captionText = "Bottom amount";
+    i.captionText = "Bottom %";
     i.tooltip = "This is the margin for the bottom part of the border (% of the long side).";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -944,7 +950,7 @@ void EmbelProperties::addBorder(int count)
 
     i.name = "color";
     i.parentName = borderName;
-    i.captionText = "Border color (#RRGGBB)";
+    i.captionText = "Border color";
     i.tooltip = "Select a color that will be used to full the border area.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -995,7 +1001,7 @@ void EmbelProperties::addBorder(int count)
 
     i.name = "outlineColor";
     i.parentName = borderName;
-    i.captionText = "Outline color (#RRGGBB)";
+    i.captionText = "Outline color";
     i.tooltip = "Select a color that will be used to full the border area.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -1051,13 +1057,13 @@ void EmbelProperties::diagnostics(QModelIndex idx)
 
 void EmbelProperties::test1()
 {
-    e->build();
+    e->test();
 }
 
 void EmbelProperties::test2()
 {
     qDebug() << __FUNCTION__;
-    setting->remove("Embel/Templates");
+//    setting->remove("Embel/Templates");
 }
 
 void EmbelProperties::coordHelp()

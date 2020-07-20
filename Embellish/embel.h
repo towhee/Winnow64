@@ -10,16 +10,16 @@ class Embel : public QObject
     Q_OBJECT
 
 public:
-    Embel(ImageView *ev, EmbelProperties *p);
-    void build();
+    Embel(ImageView *iv, EmbelProperties *p);
     void test();
     void diagnostic();
 
 public slots:
-    void doNotEmbellish();
+    void build();
+    void clear();
 
 private:
-    ImageView *ev;
+    ImageView *iv;
     EmbelProperties *p;
 
     // Canvas pixel coordinates
@@ -27,8 +27,10 @@ private:
         int x, y, w, h, l, r, t, b;     //  l, r, t, b = left, right, top, bottom
         QPoint tl, tc, tr, cl, cc, cr, bl, bc, br;
     };
-    QVector<Border>b;
-    QVector<QGraphicsRectItem*> bItems;
+    QList<Border>b;
+//    QVector<Border>b;
+    QList<QGraphicsRectItem*> bItems;
+//    QVector<QGraphicsRectItem*> bItems;
 
     // Canvas pixel coordinates
     struct Image {
@@ -40,7 +42,7 @@ private:
     int ls, w, h;
     int shortside;
 
-//    void readModel();
+    void doNotEmbellish();
     void createBorders();
     void borderImageCoordinates();
     void addBordersToScene();

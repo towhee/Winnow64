@@ -80,17 +80,17 @@ void PropertyEditor::selectionChange(const QItemSelection &selected, const QItem
 //    qDebug() << __FUNCTION__ << selected << deselected;
 }
 
-//QVariant PropertyEditor::getValue(QString name)
-//{
-//    getIndex(name);
-//    QModelIndex valIdx = model->index(foundCatIdx.row(), 1, foundCatIdx.parent());
-//    qDebug() << __FUNCTION__
-//             << "name =" << foundCatIdx.data(UR_Name).toString()
-//             << "foundCatIdx ="  << foundCatIdx
-//             << "foundValIdx ="  << foundValIdx
-//             << "value =" << foundValIdx.data().toString();
-//    return valIdx.data();
-//}
+/*QVariant PropertyEditor::getValue(QString name)
+{
+    getIndex(name);
+    QModelIndex valIdx = model->index(foundCatIdx.row(), 1, foundCatIdx.parent());
+    qDebug() << __FUNCTION__
+             << "name =" << foundCatIdx.data(UR_Name).toString()
+             << "foundCatIdx ="  << foundCatIdx
+             << "foundValIdx ="  << foundValIdx
+             << "value =" << foundValIdx.data().toString();
+    return valIdx.data();
+}*/
 
 bool PropertyEditor::getIndex(QString searchName, QModelIndex parent)
 {
@@ -102,12 +102,9 @@ in the model.
     foundIdx = QModelIndex();
     for(int r = 0; r < model->rowCount(parent); ++r) {
         QModelIndex idx0 = model->index(r, 0, parent);
-//        QModelIndex idx1 = model->index(r, 1, parent);
         QString name = model->data(idx0, UR_Name).toString();
-//        qDebug() << __FUNCTION__ << name;
         if (name == searchName) {
             foundIdx = idx0;
-//            foundValIdx = idx1;
             return true;
         }
         // iterate children
@@ -159,6 +156,9 @@ supplied by the calling function.
         valIdx = valItem->index();
     }
 
+    if (capIdx == model->index(0,0,QModelIndex()))
+        qDebug() << __FUNCTION__ << "root:" << i.name << i.captionText;
+
     // caption
     model->setData(capIdx, i.decorateGradient, UR_DecorateGradient);
     model->setData(valIdx, i.decorateGradient, UR_DecorateGradient);
@@ -178,7 +178,7 @@ supplied by the calling function.
     model->setData(valIdx, i.value, Qt::EditRole);
     model->setData(valIdx, i.delegateType, UR_DelegateType);
     model->setData(valIdx, i.itemIndex, UR_ItemIndex);
-    qDebug() << __FUNCTION__ << valIdx << i.name << i.itemIndex << valIdx.data(UR_ItemIndex);
+//    qDebug() << __FUNCTION__ << valIdx << i.name << i.itemIndex << valIdx.data(UR_ItemIndex);
     model->setData(valIdx, i.valueName, UR_Source);
     model->setData(valIdx, i.type, UR_Type);
     model->setData(valIdx, i.min, UR_Min);

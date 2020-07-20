@@ -207,8 +207,7 @@ void PropertyDelegate::commit(QWidget *editor)
 void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
                                    const QModelIndex &index) const
 {
-//    if (!submitted) return;
-    qDebug() << __FUNCTION__ << index;
+//    qDebug() << __FUNCTION__ << index;
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0:

@@ -195,7 +195,7 @@ to prevent jarring changes in perceived scale by the user.
                 dm->addMetadataForItem(metadata->m);
             }
         }
-        QPixmap  displayPixmap;
+//        QPixmap  displayPixmap;
 
         if (G::isTest) {QElapsedTimer t; t.restart();}
         isLoaded = pixmap->load(fPath, displayPixmap);
@@ -231,7 +231,6 @@ to prevent jarring changes in perceived scale by the user.
         image beyond 100% to fit the window.  */
         zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
         if (isFirstImageNewFolder) {
-//            qDebug() << __FUNCTION__ << "isFirstImageNewFolder";
             isFit = true;
             isFirstImageNewFolder = false;
         }
@@ -241,8 +240,8 @@ to prevent jarring changes in perceived scale by the user.
         scale();
     }
     QImage im = pmItem->pixmap().toImage();
-//    qDebug() << __FUNCTION__ << fPath << "im.pixelColor(0,0) =" << im.pixelColor(0,0);
-//    if (G::isEmbel) emit updateEmbel();
+    imAspect = qreal(im.width()) / im.height();
+    emit embellish();
     return isLoaded;
 }
 

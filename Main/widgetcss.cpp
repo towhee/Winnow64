@@ -43,6 +43,7 @@ QString WidgetCSS::css()
             comboBox() +
 //            dockTitleBar() +
             dockWidget() +
+            doubleSpinBox() +
             graphicsView() +
             groupBox() +
             headerView() +
@@ -214,12 +215,14 @@ QString WidgetCSS::toolButton()
 QString WidgetCSS::dockWidget()
 {
     return
-    "QDockWidget > QWidget {"
+//    "QDockWidget > QWidget {"
+    "QDockWidget {"
         "color: " + textColor.name() + ";"
         "margin: 0px;"
         "padding: 0px;"
         "spacing: 0px;"
-        "border: none;"
+        "border: 1px;"
+        "border-color: " + textColor.name() + ";"
     "}"
 
     "QDockWidget::title {"
@@ -228,6 +231,8 @@ QString WidgetCSS::dockWidget()
             "stop: 1 " + QColor(g0,g0,g0).name() + ");"
         "padding-left: -2px;"
         "padding-bottom: 2px;"
+//        "border: 1px;"
+//        "border-color: " + textColor.name() + ";"
     "}"
 
     "QTabWidget::pane {"                      /* The tab widget frame */
@@ -583,6 +588,34 @@ QString WidgetCSS::spinBox()
     "QSpinBox::up-button, QSpinBox::down-button  {"
         "width: 0px;"
         "border-width: 0px;"
+    "}";
+}
+
+QString WidgetCSS::doubleSpinBox()
+{
+    /* NOTE - the spinbox style is "subclassed" in ZoomDlg, so any changes here
+    should also be made there ...  */
+    return
+    "QDoubleSpinBox {"
+    "background-color: " + QColor(d10,d10,d10).name() + ";"
+    "border: 1px solid gray;"
+    "selection-background-color: darkgray;"
+    "border-radius: 2px;"
+    "padding-left: 4px;"
+    "}"
+
+    "QDoubleSpinBox:hover, QDoubleSpinBox:focus {"
+    "border-color: silver;"
+    "}"
+
+    "QDoubleSpinBox:disabled {"
+    "color: " + QColor(d10,d10,d10).name() + ";"
+    "background-color: " + QColor(bg,bg,bg).name() + ";"
+    "}"
+
+    "QDoubleSpinBox::up-button, QDoubleSpinBox::down-button  {"
+    "width: 0px;"
+    "border-width: 0px;"
     "}";
 }
 
