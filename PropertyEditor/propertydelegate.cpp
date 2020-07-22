@@ -323,14 +323,17 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 //                */
 
     /* Root rows are highlighted with a darker gradient and the decoration, which gets covered
-    up, is repainted */
+    up, and is repainted */
     QRect r = option.rect;
     // r0 extends the rect over the decoration to the left margin
     QRect r0 = QRect(0, r.y(), r.x() + r.width(), r.height());
+    // r1 = r0 but leaves 1 pixel at the left and right margins to make room for a border
+    QRect r1 = QRect(1, r.y(), r.x() + r.width() - 1, r.height());
 
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;
-    int c = G::backgroundShade + 40;
+    int c = G::backgroundShade + 30;
+//    int c = G::backgroundShade + 40;
     int t = G::textShade;
 
     QLinearGradient categoryBackground;
@@ -345,7 +348,8 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     font.setPointSize(fontSize);
     painter->setFont(font);
 
-    QPen catPen(Qt::white);             // root items have white text
+    QPen catPen(QColor(t,t,t));             // root items !have white text
+//    QPen catPen(Qt::white);             // root items have white text
     QPen regPen(QColor(t,t,t));         // other items have silver text
     QPen selPen("#1b8a83");             // selected items have torqouis text
     QPen brdPen(QColor(c,c,c));         // border color
@@ -361,7 +365,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         // root item in caption column
         if (index.column() == 0) {
             // paint the gradient covering the decoration
-            painter->fillRect(r0, categoryBackground);
+            painter->fillRect(r1, categoryBackground);
             if (index.data(UR_isDecoration).toBool()) {
                 // re-instate the decorations
                 int x = 2;
@@ -374,13 +378,19 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                 }
             }
             // caption text and no borders for root item
-            if (option.state.testFlag(QStyle::State_Selected)) painter->setPen(selPen);
+            if (isSelected) painter->setPen(selPen);
             else painter->setPen(catPen);
             painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+            // left border
+//            painter->setPen(brdPen);
+//            painter->drawLine(r0.topLeft(), r0.bottomLeft());
         }
         // root row, but value column, so no decoration to deal with
         else {
             painter->fillRect(r, categoryBackground);
+            // right border
+//            painter->setPen(brdPen);
+//            painter->drawLine(r.topRight(), r.bottomRight());
         }
     }
     else {
@@ -392,17 +402,27 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             if (isSelected) painter->setPen(selPen);
             painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
             painter->setPen(brdPen);
-            if (hasChildren) {
-                painter->drawLine(r0.topLeft(), r0.topRight());
-            }
-            else painter->drawRect(r0);
+//            if (hasChildren) {
+//                painter->drawLine(r0.topLeft(), r0.topRight());
+//            }
+//            else painter->drawRect(r0);
+//            painter->drawLine(r0.topLeft(), r0.bottomLeft());
+            // draw line between column 0 and 1
+            if (!hasChildren) painter->drawLine(r0.topRight(), r0.bottomRight());
+            // draw bottom line
+            painter->setPen(brdPen);
+            painter->drawLine(r0.bottomLeft(), r0.bottomRight());
         }
         if (index.column() == 1) {
             painter->setPen(brdPen);
-            if (hasChildren) {
-                painter->drawLine(r.topLeft(), r.topRight());
-            }
-            else painter->drawRect(r);
+//            if (hasChildren) {
+//                painter->drawLine(r.topLeft(), r.topRight());
+//            }
+//            else painter->drawRect(r);
+//            painter->drawLine(r.topRight(), r.bottomRight());
+            // draw bottom line
+            painter->setPen(brdPen);
+            painter->drawLine(r.bottomLeft(), r.bottomRight());
         }
     }
 

@@ -50,7 +50,7 @@ namespace G
     bool ignoreScrollSignal;
     bool isSlideShow;
 
-    bool isEmbel;
+    bool isEmbellish;
 
     bool colorManage;
 

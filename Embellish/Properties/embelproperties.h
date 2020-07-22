@@ -94,7 +94,8 @@ private:
     void deleteText();
     void deleteRectangle();
     void deleteGraphic();
-    bool confirmDelete(QModelIndex idx);
+    void confirmDelete(QModelIndex idx);
+    void showRelevantDeleteBtn(QString btnToShow);
 
     void templateChange(QVariant v);
     void fileItemChange(QVariant v, QString source);
@@ -107,6 +108,11 @@ private:
     void treeChange(QModelIndex idx);
     bool okToSelect(QModelIndex idx);
     void diagnostics(QModelIndex idx);
+
+    BarBtn *borderDeleteBtn;
+    BarBtn *textDeleteBtn;
+    BarBtn *rectangleDeleteBtn;
+    BarBtn *graphicDeleteBtn;
 
     ItemInfo i;
     int templateCount;
