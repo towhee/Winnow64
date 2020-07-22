@@ -241,7 +241,7 @@ to prevent jarring changes in perceived scale by the user.
     }
     QImage im = pmItem->pixmap().toImage();
     imAspect = qreal(im.width()) / im.height();
-    emit embellish();
+    if (G::isEmbellish) emit embellish();
     return isLoaded;
 }
 

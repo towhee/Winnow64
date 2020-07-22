@@ -173,7 +173,7 @@ namespace G
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;
 
-    extern bool isEmbel;
+    extern bool isEmbellish;
 
     extern bool colorManage;
 

@@ -1,11 +1,16 @@
 #include "dockwidget.h"
 
 /* DockTitleBtn *******************************************************************************
+A tool button that is placed in the DockTitleBar.  The styling is inherited from DockTitleBar,
+which has a border, and must be over-ridden.
 */
 
 BarBtn::BarBtn(/*QWidget *parent*/) : QToolButton()
 {
-    setStyleSheet("background:transparent;");
+    setStyleSheet(
+        "background:transparent;"
+        "border:none;"
+        );
     int bg = G::backgroundShade + 30;
     btnHover = QColor(bg,bg,bg);
 }
@@ -17,24 +22,32 @@ QSize BarBtn::sizeHint()
 
 void BarBtn::enterEvent(QEvent*)
 {
-    setStyleSheet("background:" + btnHover.name() + ";");
+    setStyleSheet(
+    "background:" + btnHover.name() + ";"
+    "border:none;"
+    );
 }
 
 void BarBtn::leaveEvent(QEvent*)
 {
-    setStyleSheet("background:transparent;");
+    setStyleSheet(
+        "background:transparent;"
+        "border:none;"
+        );
 }
 
 /* DockTitleBar *******************************************************************************
+This replaces the QDockWidget titlebar, enabling the placement of tool buttons.
 */
 
-DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout/*, QWidget *parent*/) : QFrame()
+DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : QFrame()
 {
     setStyle();
     setLayout(titleBarLayout);
     titleLabel = new QLabel;
     setTitle(title);
     titleLabel->setText(title);
+    titleLabel->setStyleSheet("border:none;");
     titleBarLayout->addWidget(titleLabel);
     titleBarLayout->addStretch();
 }
@@ -49,31 +62,16 @@ void DockTitleBar::setStyle()
     int g1 = G::backgroundShade;
     int g0 = g1 - 10;
     if (g0 < 0) g0 = 0;
+    int c = G::backgroundShade + 30;
     QString s = "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
                 "stop: 0 " + QColor(g1,g1,g1).name() + ", "
                 "stop: 1 " + QColor(g0,g0,g0).name() + ");"
                 "padding-left: 2px;"
                 "padding-bottom: 2px;"
-//                "border: 10px;"               // not working
-//                "border-color: silver;"
+                "border: 1px solid " + QColor(c,c,c).name() + ";"
                 "font-size:" + G::fontSize + "pt;";
     setStyleSheet(s);
 }
-
-// Did not work
-//void DockTitleBar::paintEvent(QPaintEvent *)
-///*
-//Reqd as CSS styles to custom widgets inherited from QWidget requires reimplementing
-//paintEvent().
-// - see https://doc.qt.io/archives/qt-4.8/stylesheet-reference.html#list-of-stylable-widgets
-
-//*/
-//{
-//    QStyleOption opt;
-//    opt.init(this);
-//    QPainter p(this);
-//    style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
-//}
 
 /* DockWidget *********************************************************************************
 QDockWidget has a feature where you can double click on the title bar and the dock will toggle
@@ -88,6 +86,9 @@ between sessions.
 
 When a mouse double click occurs in the docked state, the stored screen, postion and size are
 used to re-establish the prior state.
+
+I have not figured out how to braw a border around the DockWidget, so the contained treeview
+stylesheet is used instead, along wiht a border around the DockTitleBar.
 */
 
 DockWidget::DockWidget(const QString &title, QWidget *parent)

@@ -88,7 +88,13 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     addTemplateHeader();
     // add the File, Image, Borders, Texts, Rectangles and Graphics items for the template
     if (templateId != 0) addTemplateItems();
-    expandAll();
+    // default state
+    collapseAll();
+    expand(model->index(_templates,0));
+    expand(model->index(_borders,0));
+    expand(model->index(_texts,0));
+    expand(model->index(_rectangles,0));
+    expand(model->index(_graphics,0));
 }
 
 void EmbelProperties::diagnostic(QModelIndex parent)
@@ -185,6 +191,8 @@ Read the template list using QSettings
     }
     setting->endGroup();
     templatePath = "Embel/Templates/" + templateName + "/";
+    if (templateId == 0) G::isEmbellish = false;
+    else G::isEmbellish = true;
 }
 
 void EmbelProperties::newEmbelTemplate()
@@ -267,6 +275,9 @@ void EmbelProperties::templateChange(QVariant v)
     templateName = v.toString();
     // save which template is current
     setCurrentTemplate();
+    // update global for ImageView
+    if (templateId == 0) G::isEmbellish = false;
+    else G::isEmbellish = true;
     // update View > Embellish menu
     emit templateChanged(templateId);
     // clear model except for template name header
@@ -751,7 +762,7 @@ void EmbelProperties::addBorders()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-    BarBtn *borderDeleteBtn = new BarBtn();
+    borderDeleteBtn = new BarBtn();
     borderDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     borderDeleteBtn->setToolTip("Delete the open border");
     btns.append(borderDeleteBtn);
@@ -782,7 +793,7 @@ void EmbelProperties::addTexts()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-    BarBtn *textDeleteBtn = new BarBtn();
+    textDeleteBtn = new BarBtn();
     textDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     textDeleteBtn->setToolTip("Delete the open text item");
     btns.append(textDeleteBtn);
@@ -805,7 +816,7 @@ void EmbelProperties::addRectangles()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-    BarBtn *rectangleDeleteBtn = new BarBtn();
+    rectangleDeleteBtn = new BarBtn();
     rectangleDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     rectangleDeleteBtn->setToolTip("Delete the open rectangle");
     btns.append(rectangleDeleteBtn);
@@ -828,7 +839,7 @@ void EmbelProperties::addGraphics()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-    BarBtn *graphicDeleteBtn = new BarBtn();
+    graphicDeleteBtn = new BarBtn();
     graphicDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     graphicDeleteBtn->setToolTip("Delete the open graphic");
     btns.append(graphicDeleteBtn);
@@ -1065,6 +1076,19 @@ void EmbelProperties::mouseDoubleClickEvent(QMouseEvent */*event*/)
     // ignore
 }
 
+void EmbelProperties::confirmDelete(QModelIndex idx)
+{
+
+    QMessageBox msg;
+    msg.setStyleSheet(G::css);
+    if (selectionModel()->selection().isEmpty()) {
+        QMessageBox::information(this, "Delete", "No item selected for deletion");
+        return;
+    }
+    QModelIndex delIdx = selectionModel()->selection().indexes().first();
+    delIdx = model->index(delIdx.row(), 0, delIdx.parent());
+}
+
 void EmbelProperties::mousePressEvent(QMouseEvent *event)
 /*
 Set the current index and expand/collapse when click anywhere on a row that has children.
@@ -1104,6 +1128,11 @@ void EmbelProperties::treeChange(QModelIndex idx)
 
 void EmbelProperties::selectionChanged(const QItemSelection &selection,
                                       const QItemSelection &prevSelection)
+/*
+Check if the new selection is legal (a member of borders, texts, rectangles, graphics or
+file or image).  If not, if there was a previous selection, revert to that.  Turn off all
+deletes except in the selected category.
+*/
 {
 //    qDebug() << __FUNCTION__ << selection.isEmpty() <<  selection.indexes();
     if (selection.isEmpty()) return;
@@ -1112,10 +1141,18 @@ void EmbelProperties::selectionChanged(const QItemSelection &selection,
     QModelIndex prevIdx = prevSelection.indexes().first();
     if (!okToSelect(idx) && okToSelect(prevIdx)) {
         selectionModel()->select(prevSelection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        idx = selection.indexes().first();
     }
-    else selectionModel()->clear();
-//    qDebug() << __FUNCTION__ << ok << idx.parent().isValid() << idx << selection << prevSelection;
-
+    else {
+        selectionModel()->clear();
+    }
+    // make sure using index for column 0
+    idx = model->index(idx.row(), 0, idx.parent());
+    // deal with delete buttons
+//    QStringList delBtns;
+//    delBtns << "Borders" << "Texts" << "Rectangles" << "Graphics";
+    QString selectedCategory = idx.parent().data(UR_Name).toString();
+    /*if (delBtns.contains(selectedCategory))*/ showRelevantDeleteBtn(selectedCategory);
 }
 
 bool EmbelProperties::okToSelect(QModelIndex idx)
@@ -1127,6 +1164,18 @@ bool EmbelProperties::okToSelect(QModelIndex idx)
     if (parIdx == model->index(_rectangles,0)) return true;
     if (parIdx == model->index(_graphics,0)) return true;
     return false;
+}
+
+void EmbelProperties::showRelevantDeleteBtn(QString btnToShow)
+{
+    borderDeleteBtn->setVisible(false);
+    textDeleteBtn->setVisible(false);
+    rectangleDeleteBtn->setVisible(false);
+    graphicDeleteBtn->setVisible(false);
+    if (btnToShow == "Borders") borderDeleteBtn->setVisible(true);
+    if (btnToShow == "Texts") textDeleteBtn->setVisible(true);
+    if (btnToShow == "Rectangles") rectangleDeleteBtn->setVisible(true);
+    if (btnToShow == "Graphics") graphicDeleteBtn->setVisible(true);
 }
 
 void EmbelProperties::diagnostics(QModelIndex idx)
@@ -1151,6 +1200,8 @@ void EmbelProperties::diagnostics(QModelIndex idx)
 
 void EmbelProperties::test1()
 {
+    borderDeleteBtn->setVisible(false);
+    return;
     e->test();
 }
 
