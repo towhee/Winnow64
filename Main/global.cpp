@@ -2,6 +2,14 @@
 
 namespace G
 {
+    QString fontSize;                   // app font point size
+    qreal dpi;                          // current logical screen dots per inch
+    qreal ptToPx;                       // font points to pixels conversion factor
+    int textShade = 190;                // text default luminousity
+    int disabledShade = textShade - 64; // disabled text default luminousity
+    int backgroundShade;                // app background luminousity
+    QString css;                        // app stylesheet;
+
     int transparency = 150;
     QColor labelNoneColor(85,85,85,transparency);                // Background Gray
     QColor labelRedColor(QColor(128,0,0,transparency));          // Dark red
@@ -36,14 +44,6 @@ namespace G
     int minIconSize = 40;
     int iconWMax;                       // widest icon found in datamodel
     int iconHMax;                       // highest icon found in datamodel
-
-    QString fontSize;                   // app font point size
-    qreal dpi;                          // current logical screen dots per inch
-    qreal ptToPx;                       // font points to pixels conversion factor
-    int textShade = 190;                // text default luminousity
-    int disabledShade = textShade - 64; // disabled text default luminousity
-    int backgroundShade;                // app background luminousity
-    QString css;                        // app stylesheet;
 
     int actualDevicePixelRatio;
     bool allMetadataLoaded;

@@ -29,6 +29,8 @@ public:
     } f;
 
     struct Image {
+        double outlineWidth;
+        QString outlineColor;
         QString style;
     };
     Image image;
@@ -48,9 +50,6 @@ public:
         QString style;
         double outlineWidth;
         QString outlineColor;
-        // coord
-//        QPointF tl, tc, tr, cl, cc, cr, bl, bc, br;
-//        double w, h;
     } border;
     QVector<Border>b;
 
@@ -59,7 +58,8 @@ public:
     void test2();
 
 public slots:
-    void itemChange(QModelIndex idx);
+    void itemChange(QModelIndex idx) override;
+    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
     void invokeFromAction(QAction *embelAction);
     void diagnostic(QModelIndex parent = QModelIndex());
     void coordHelp();
@@ -67,20 +67,34 @@ public slots:
 signals:
     void templateChanged(int id);
 
+protected:
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
+
 private:
     void readTemplateList();
     void renameCurrentTemplate();
     void setCurrentTemplate();
+
     void addTemplateHeader();
     void addTemplateItems();
     void addFile();
     void addImage();
+
     void addBorders();
     void newBorder();
     void addBorder(int count);
+
     void addTexts();
     void addRectangles();
     void addGraphics();
+
+    void deleteTremplate();
+    void deleteBorder();
+    void deleteText();
+    void deleteRectangle();
+    void deleteGraphic();
+    bool confirmDelete(QModelIndex idx);
 
     void templateChange(QVariant v);
     void fileItemChange(QVariant v, QString source);
@@ -90,14 +104,25 @@ private:
     void rectangleItemChange(QVariant v, QString source, QString parent);
     void graphicItemChange(QVariant v, QString source, QString parent);
 
+    void treeChange(QModelIndex idx);
+    bool okToSelect(QModelIndex idx);
     void diagnostics(QModelIndex idx);
-
 
     ItemInfo i;
     int templateCount;
     QString templatePath;
     ComboBoxEditor *templateListEditor;
     QSettings *setting;
+
+    enum roots {
+        _templates,
+        _file,
+        _image,
+        _borders,
+        _texts,
+        _rectangles,
+        _graphics
+    };
 };
 
 #endif // EMBELPROPERTIES_H

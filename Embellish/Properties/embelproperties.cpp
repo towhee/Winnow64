@@ -72,8 +72,11 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     #endif
     }
     mw3 = qobject_cast<MW*>(parent);
-
     this->setting = setting;
+
+    setSolo(true);
+    collapseAll();
+    expand(model->index(0,0,QModelIndex()));
     setIndentation(12);
     setAlternatingRowColors(false);
     resizeColumns("====captions column====",
@@ -273,7 +276,12 @@ void EmbelProperties::templateChange(QVariant v)
     // add items for this template
     if (templateId > 0) addTemplateItems();
     collapseAll();
-    expand(model->index(0,0,QModelIndex()));
+    collapseAll();
+    expand(model->index(_templates,0));
+    expand(model->index(_borders,0));
+    expand(model->index(_texts,0));
+    expand(model->index(_rectangles,0));
+    expand(model->index(_graphics,0));
 }
 
 void EmbelProperties::fileItemChange(QVariant v, QString source)
@@ -331,6 +339,16 @@ void EmbelProperties::imageItemChange(QVariant v, QString source)
     }
     QString path = templatePath + "Image/" + source;
     qDebug() << __FUNCTION__ << path;
+
+    if (source == "outlineWidth") {
+        setting->setValue(path, v.toDouble());
+        image.outlineWidth = v.toDouble();
+    }
+
+    if (source == "outlineColor") {
+        setting->setValue(path, v.toString());
+        image.outlineColor = v.toString();
+    }
 
     if (source == "style") {
         setting->setValue(path, v.toString());
@@ -445,6 +463,7 @@ void EmbelProperties::addTemplateHeader()
     i.name = "TemplatesHeader";
     i.parentName = "???";
     i.decorateGradient = true;
+    i.isDecoration = false;
     i.captionText = "Templates";
     i.tooltip = "";
     i.hasValue = true;
@@ -479,6 +498,7 @@ void EmbelProperties::addTemplateHeader()
     i.valueName = "templateList";
     i.delegateType = DT_Combo;      // no parent, delegateType > 0 -> No header, has value
     i.type = "QString";
+    i.color = "#1b8a83";
     i.dropList = templateList;
     templateListEditor = static_cast<ComboBoxEditor*>(addItem(i));
 
@@ -675,7 +695,7 @@ void EmbelProperties::addImage()
     i.valueName = "outlineWidth";
     if (setting->contains(settingRootPath + i.valueName))
         i.value = setting->value(settingRootPath + i.valueName);
-    else i.value = 0;
+    else i.value = 0.0;
     i.delegateType = DT_DoubleSpinbox;
     i.type = "double";
     i.min = 0;
@@ -694,7 +714,7 @@ void EmbelProperties::addImage()
     if (setting->contains(settingRootPath + i.valueName)) {
         i.value = setting->value(settingRootPath + i.valueName);
     }
-    else i.value = "";
+    else i.value = "#3f5f53";
     i.delegateType = DT_Color;
     i.type = "QString";
     border.outlineColor = i.value.toString();
@@ -725,6 +745,7 @@ void EmbelProperties::addBorders()
     i.name = "BordersHeader";
     i.parentName = "???";
     i.decorateGradient = true;
+    i.isDecoration = false;
     i.captionText = "Borders";
     i.tooltip = "";
     i.hasValue = true;
@@ -755,6 +776,7 @@ void EmbelProperties::addTexts()
     i.name = "TextsHeader";
     i.parentName = "???";
     i.decorateGradient = true;
+    i.isDecoration = false;
     i.captionText = "Text Items";
     i.tooltip = "";
     i.hasValue = true;
@@ -777,6 +799,7 @@ void EmbelProperties::addRectangles()
     i.name = "RectanglesHeader";
     i.parentName = "???";
     i.decorateGradient = true;
+    i.isDecoration = false;
     i.captionText = "Rectangles";
     i.tooltip = "";
     i.hasValue = true;
@@ -799,6 +822,7 @@ void EmbelProperties::addGraphics()
     i.name = "GraphicsHeader";
     i.parentName = "???";
     i.decorateGradient = true;
+    i.isDecoration = false;
     i.captionText = "Graphics";
     i.tooltip = "";
     i.hasValue = true;
@@ -856,7 +880,7 @@ void EmbelProperties::addBorder(int count)
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
-    i.delegateType = UR_ItemIndex;
+    i.delegateType = DT_Checkbox;
     addItem(i);
 
     i.name = "topMargin";
@@ -1033,6 +1057,76 @@ void EmbelProperties::addBorder(int count)
 
     // add the border info to the vector of borders
     b << border;
+}
+
+void EmbelProperties::mouseDoubleClickEvent(QMouseEvent */*event*/)
+{
+    qDebug() << __FUNCTION__;
+    // ignore
+}
+
+void EmbelProperties::mousePressEvent(QMouseEvent *event)
+/*
+Set the current index and expand/collapse when click anywhere on a row that has children.
+Do not pass on to QTreeView as this will enable QTreeView expanding and collapsing when the
+decoration is clicked.
+*/
+{
+    // ignore right mouse clicks for context menu
+    if (event->button() == Qt::RightButton) return;
+
+    treeChange(indexAt(event->pos()));
+}
+
+void EmbelProperties::treeChange(QModelIndex idx)
+{
+    if (!idx.isValid()) return;
+    if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
+    bool hasChildren = model->hasChildren(idx);
+    bool hasGrandChildren = model->hasChildren(model->index(0,0,idx));
+    bool templateHdr = (idx == model->index(0,0));
+    if (hasChildren && !hasGrandChildren && !templateHdr) {
+        bool wasExpanded = isExpanded(idx);
+        qDebug() << __FUNCTION__ << wasExpanded;
+        selectionModel()->clear();
+        if (okToSelect(idx)) {
+            selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        }
+        collapseAll();
+        expand(model->index(_templates,0));
+        expand(model->index(_borders,0));
+        expand(model->index(_texts,0));
+        expand(model->index(_rectangles,0));
+        expand(model->index(_graphics,0));
+        wasExpanded ? collapse(idx) : expand(idx);
+    }
+}
+
+void EmbelProperties::selectionChanged(const QItemSelection &selection,
+                                      const QItemSelection &prevSelection)
+{
+//    qDebug() << __FUNCTION__ << selection.isEmpty() <<  selection.indexes();
+    if (selection.isEmpty()) return;
+    if (prevSelection.isEmpty()) return;
+    QModelIndex idx = selection.indexes().first();
+    QModelIndex prevIdx = prevSelection.indexes().first();
+    if (!okToSelect(idx) && okToSelect(prevIdx)) {
+        selectionModel()->select(prevSelection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    }
+    else selectionModel()->clear();
+//    qDebug() << __FUNCTION__ << ok << idx.parent().isValid() << idx << selection << prevSelection;
+
+}
+
+bool EmbelProperties::okToSelect(QModelIndex idx)
+{
+    QModelIndex parIdx = idx.parent();
+    if (!parIdx.isValid()) return false;
+    if (parIdx == model->index(_borders,0)) return true;
+    if (parIdx == model->index(_texts,0)) return true;
+    if (parIdx == model->index(_rectangles,0)) return true;
+    if (parIdx == model->index(_graphics,0)) return true;
+    return false;
 }
 
 void EmbelProperties::diagnostics(QModelIndex idx)

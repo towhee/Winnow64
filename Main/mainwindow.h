@@ -471,6 +471,7 @@ private slots:
     void setFavDockVisibility();
     void setFilterDockVisibility();
     void setMetadataDockVisibility();
+    void setEmbelDockVisibility();
     void setMetadataDockFixedSize();
 
     void toggleThumbDockVisibity();

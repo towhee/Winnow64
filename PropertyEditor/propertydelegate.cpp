@@ -30,6 +30,11 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
                                         const QStyleOptionViewItem &option,
                                         const QModelIndex &index ) const
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0: return nullptr;
@@ -47,8 +52,6 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
         }
         case DT_Checkbox: {
             CheckBoxEditor *checkEditor = new CheckBoxEditor(index, parent);
-//            connect(checkEditor, &CheckBoxEditor::editorValueChanged,
-//                    this, &PropertyDelegate::commit);
             connect(checkEditor, &CheckBoxEditor::editorValueChanged,
                     this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, checkEditor);
@@ -63,8 +66,6 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
         }
         case DT_DoubleSpinbox: {
             DoubleSpinBoxEditor *doubleSpinBoxEditor = new DoubleSpinBoxEditor(index, parent);
-//            connect(doubleSpinBoxEditor, &DoubleSpinBoxEditor::editorValueChanged,
-//                    this, &PropertyDelegate::commit);
             connect(doubleSpinBoxEditor, &DoubleSpinBoxEditor::editorValueChanged,
                     this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, doubleSpinBoxEditor);
@@ -129,6 +130,11 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 void PropertyDelegate::setEditorData(QWidget *editor,
                                     const QModelIndex &index) const
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     switch (index.data(UR_DelegateType).toInt()) {
         case DT_None:
         case DT_Label: {
@@ -200,6 +206,11 @@ void PropertyDelegate::setEditorData(QWidget *editor,
 
 void PropertyDelegate::commit(QWidget *editor)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     qDebug() << __FUNCTION__ << submitted;
     emit commitData(editor);
 }
@@ -208,6 +219,11 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
                                    const QModelIndex &index) const
 {
 //    qDebug() << __FUNCTION__ << index;
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0:
@@ -285,8 +301,13 @@ void PropertyDelegate::updateEditorGeometry(QWidget *editor,
 
 void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const
 {
-
+//    if (index.column() == 0) {
+//        QStyledItemDelegate::paint(painter, option, index);
+//        return;
+//    }
     painter->save();
+    bool isSelected = option.state.testFlag(QStyle::State_Selected);
+    bool hasChildren = index.model()->hasChildren(index.model()->index(index.row(),0,index.parent()));
 
     /*
     static int i =0;
@@ -297,6 +318,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
              << index.data(UR_Name).toString().leftJustified(25)
              << "decorateGradient =" << index.data(UR_DecorateGradient).toInt()
              << "Delegate =" << index.data(UR_DelegateType).toInt()
+             << "isSelected =" << isSelected
                 ;
 //                */
 
@@ -309,6 +331,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;
     int c = G::backgroundShade + 40;
+    int t = G::textShade;
 
     QLinearGradient categoryBackground;
     categoryBackground.setStart(0, r.top());
@@ -323,7 +346,8 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     painter->setFont(font);
 
     QPen catPen(Qt::white);             // root items have white text
-    QPen regPen(QColor(190,190,190));   // other items have silver text
+    QPen regPen(QColor(t,t,t));         // other items have silver text
+    QPen selPen("#1b8a83");             // selected items have torqouis text
     QPen brdPen(QColor(c,c,c));         // border color
 
     QString text = index.data().toString();
@@ -338,17 +362,20 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         if (index.column() == 0) {
             // paint the gradient covering the decoration
             painter->fillRect(r0, categoryBackground);
-            // re-instate the decorations
-            int x = 2;
-            int y = r0.top() + r0.height()/2 - 3;
-            if (option.state & QStyle::State_Open) {
-                painter->drawPixmap(x, y, 9, 9, branchOpen);
-            }
-            else {
-                painter->drawPixmap(x, y, 9, 9, branchClosed);
+            if (index.data(UR_isDecoration).toBool()) {
+                // re-instate the decorations
+                int x = 2;
+                int y = r0.top() + r0.height()/2 - 3;
+                if (isSelected) {
+                    painter->drawPixmap(x, y, 9, 9, branchOpen);
+                }
+                else {
+                    painter->drawPixmap(x, y, 9, 9, branchClosed);
+                }
             }
             // caption text and no borders for root item
-            painter->setPen(catPen);
+            if (option.state.testFlag(QStyle::State_Selected)) painter->setPen(selPen);
+            else painter->setPen(catPen);
             painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
         }
         // root row, but value column, so no decoration to deal with
@@ -362,13 +389,20 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
         // caption text and cell borders
         if (index.column() == 0) {
+            if (isSelected) painter->setPen(selPen);
             painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
             painter->setPen(brdPen);
-            painter->drawRect(r0);
+            if (hasChildren) {
+                painter->drawLine(r0.topLeft(), r0.topRight());
+            }
+            else painter->drawRect(r0);
         }
         if (index.column() == 1) {
             painter->setPen(brdPen);
-            painter->drawRect(r);
+            if (hasChildren) {
+                painter->drawLine(r.topLeft(), r.topRight());
+            }
+            else painter->drawRect(r);
         }
     }
 
