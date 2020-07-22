@@ -3333,13 +3333,13 @@ void MW::createMenus()
     viewMenu->addSeparator();
     embelMenu = viewMenu->addMenu(tr("&Embellish"));
         embelMenu->addAction(newEmbelTemplateAction);
+        embelMenu->addSeparator();
         // add 10 dummy menu items for embellish template choice
         for (int i = 0; i < 10; i++) {
             embelMenu->addAction(embelTemplatesActions.at(i));
             if (i == 0) viewMenu->addSeparator();
         }
-        connect(embelMenu, SIGNAL(triggered(QAction*)),
-                embelProperties, SLOT(invokeFromAction(QAction*)));
+        connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
     viewMenu->addSeparator();
     viewMenu->addAction(ratingBadgeVisibleAction);
     viewMenu->addAction(infoVisibleAction);
@@ -8277,6 +8277,7 @@ condition of actions sets the visibility of all window components. */
     setFavDockVisibility();
     setFilterDockVisibility();
     setMetadataDockVisibility();
+    setEmbelDockVisibility();
     setThumbDockVisibity();
 //    setFolderDockLockMode();
 //    setFavDockLockMode();
@@ -8835,6 +8836,16 @@ void MW::setMetadataDockVisibility()
     #endif
     }
     metadataDock->setVisible(metadataDockVisibleAction->isChecked());
+}
+
+void MW::setEmbelDockVisibility()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    embelDock->setVisible(embelDockVisibleAction->isChecked());
 }
 
 void MW::setMetadataDockFixedSize()

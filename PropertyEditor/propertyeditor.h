@@ -32,6 +32,7 @@ public:
         bool hasValue;
         QString tooltip;
         QString captionText;
+        bool isDecoration = true;
         bool captionIsEditable;
         QVariant value;
         QString valueName;
@@ -58,7 +59,7 @@ protected:
 public slots:
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor);
     virtual void itemChange(QModelIndex);
-    virtual void selectionChange(const QItemSelection &selected, const QItemSelection &deselected);
+//    /*virtual*/ void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
 
 private:
     QLinearGradient categoryBackground;

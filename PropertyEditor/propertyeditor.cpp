@@ -27,11 +27,18 @@ PropertyEditor subclass ie Preferences.  All the property items are defined and 
 
 PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
 
     setRootIsDecorated(true);
     setAlternatingRowColors(true);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setEditTriggers(QAbstractItemView::AllEditTriggers);
+    setSelectionBehavior(QAbstractItemView::SelectRows);
+    setSelectionMode(QAbstractItemView::SingleSelection);
 
     indentation = 15;
     setIndentation(indentation);  
@@ -56,8 +63,9 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 
     connect(propertyDelegate, &PropertyDelegate::drawBranchesAgain, this, &PropertyEditor::drawBranches);
 
+//    connect(this, &PropertyEditor::selectionChanged, this, &PropertyEditor::selectionChange);
 //    connect(model, &QStandardItemModel::dataChanged, this, &PropertyEditor::)
-//    connect(this, &QTreeView::selectionChanged,
+
 }
 
 void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
@@ -65,6 +73,11 @@ void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
 Sets the custom editor widget for the value column (column 1).
 */
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     setIndexWidget(idx, editor);
     emit propertyDelegate->closeEditor(editor);
 }
@@ -75,10 +88,11 @@ void PropertyEditor::itemChange(QModelIndex)
 
 }
 
-void PropertyEditor::selectionChange(const QItemSelection &selected, const QItemSelection &deselected)
-{
+//void PropertyEditor::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+//// virtual function to be subclassed
+//{
 //    qDebug() << __FUNCTION__ << selected << deselected;
-}
+//}
 
 /*QVariant PropertyEditor::getValue(QString name)
 {
@@ -121,11 +135,16 @@ QWidget*  PropertyEditor::addItem(ItemInfo &i)
 Adds a row to the properties tree (model).  The necessary elements of the ItemInfo struct are
 supplied by the calling function.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int row;
     QModelIndex capIdx;                             // caption field
     QModelIndex valIdx;                             // value field
     QModelIndex parIdx = QModelIndex();             // parent caption field
-    QStandardItem *catItem = new QStandardItem;
+    QStandardItem *capItem = new QStandardItem;
     QStandardItem *valItem = new QStandardItem;
     QStandardItem *parItem = new QStandardItem;
     parItem = nullptr;
@@ -143,16 +162,16 @@ supplied by the calling function.
         // First item = root
         row = model->rowCount();
         if (row == 0) model->insertRow(0, QModelIndex());
-        else model->appendRow(catItem);
+        else model->appendRow(capItem);
         capIdx = model->index(row, 0, QModelIndex());
         valIdx = model->index(row, 1, QModelIndex());
     }
     else {
         // row for next child to add
         row = parItem->rowCount();
-        parItem->setChild(row, 0, catItem);
+        parItem->setChild(row, 0, capItem);
         parItem->setChild(row, 1, valItem);
-        capIdx = catItem->index();
+        capIdx = capItem->index();
         valIdx = valItem->index();
     }
 
@@ -160,6 +179,7 @@ supplied by the calling function.
         qDebug() << __FUNCTION__ << "root:" << i.name << i.captionText;
 
     // caption
+    model->setData(capIdx, i.isDecoration, UR_isDecoration);
     model->setData(capIdx, i.decorateGradient, UR_DecorateGradient);
     model->setData(valIdx, i.decorateGradient, UR_DecorateGradient);
     model->setData(capIdx, i.captionText);
@@ -197,6 +217,11 @@ supplied by the calling function.
 
 void PropertyEditor::clearItemInfo(ItemInfo &i)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     i.itemIndex = 0;                // all
     i.name = "";                    // all
     i.parentName = "";              // all
@@ -204,6 +229,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.hasValue = true;              // all
     i.tooltip = "";                 // all
     i.captionText = "";             // all
+    i.isDecoration = true;          // all
     i.captionIsEditable = false;    // all
     i.delegateType = DT_None;       // all
     i.value = 0;                    // except hdr
@@ -213,6 +239,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.max = 0;                      // DT_Spinbox, DT_Slider
     i.fixedWidth = 50;              // DT_Slider
     i.dropList.clear();             // DT_Combo
+    i.color = QColor(G::textShade,G::textShade,G::textShade).name();
     i.index = QModelIndex();        // except hdr if connected to datamodel (ie InfoView fields to show)
 }
 

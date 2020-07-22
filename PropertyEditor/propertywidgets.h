@@ -25,6 +25,7 @@ enum UserRole
     UR_Name = Qt::UserRole + 1,         // unique name to identify the item
     UR_DelegateType,                    // the PropertyWidget (custom widget)
     UR_ItemIndex,                       // the index for the border, text, rectangle or graphic
+    UR_isDecoration,                    // show expand/collaple decoration
     UR_DecorateGradient,                // make the root rows dark gray gradiant
     UR_Source,                          // name of property/variable being edited
     UR_QModelIndex,                     // index from another model ie infoView->ok

@@ -73,7 +73,7 @@ QString WidgetCSS::widget()
        "font-size:" + QString::number(fontSize) + "pt;"
        "background-color:" + widgetBackgroundColor.name() + ";"
        "color:" + textColor.name() + ";"
-       "border-width: 0px;" +
+       "border-width: 0px;"
    "}";
 }
 
@@ -221,8 +221,9 @@ QString WidgetCSS::dockWidget()
         "margin: 0px;"
         "padding: 0px;"
         "spacing: 0px;"
-        "border: 1px;"
-        "border-color: " + textColor.name() + ";"
+        "border: 5px solid green;"
+//        "border-color: green;"
+//        "border-color: " + QColor(l40,l40,l40).name() + ";"
     "}"
 
     "QDockWidget::title {"
@@ -236,7 +237,7 @@ QString WidgetCSS::dockWidget()
     "}"
 
     "QTabWidget::pane {"                      /* The tab widget frame */
-        "border: 1px solid " + QColor(mb,mb,mb).name() + ";"    /* not working in main window */
+//        "border: 1px solid " + QColor(l40,l40,l40).name() + ";"    /* not working in main window */
         "position: absolute;"
         "top: -0.5em;"
         "border-radius: 5px;"
@@ -347,6 +348,7 @@ QString WidgetCSS::treeView()
         "color: " + textColor.name() + ";"
         "selection-background-color: " + selectionColor.name() + ";"
         "selection-color: " + textColor.name() + ";"
+        "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
     "}"
 
     "QTreeView::branch:has-children:!has-siblings:closed,"

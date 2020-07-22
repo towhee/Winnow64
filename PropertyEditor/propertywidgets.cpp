@@ -27,6 +27,11 @@ PropertyEditor subclass ie Preferences.  All the property items are defined and 
 
 SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     this->idx = idx;
     int lineEditWidth = idx.data(UR_LabelFixedWidth).toInt();
     int min = idx.data(UR_Min).toInt();
@@ -67,16 +72,31 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
 
 int SliderEditor::value()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return slider->value();
 }
 
 void SliderEditor::setValue(QVariant value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     slider->setValue(value.toInt());
 }
 
 void SliderEditor::change(int value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QVariant v = value;
     emit editorValueChanged(this);
     lineEdit->setText(QString::number(value));
@@ -84,6 +104,11 @@ void SliderEditor::change(int value)
 
 void SliderEditor::updateSliderWhenLineEdited(QString value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     slider->setValue(value.toInt());
 }
 
@@ -97,6 +122,11 @@ void SliderEditor::paintEvent(QPaintEvent *event)
 
 LabelEditor::LabelEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
@@ -131,11 +161,21 @@ LabelEditor::LabelEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
 
 QString LabelEditor::value()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return label->text();
 }
 
 void LabelEditor::setValue(QVariant value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     label->setText(value.toString());
 }
 
@@ -150,6 +190,11 @@ void LabelEditor::paintEvent(QPaintEvent *event)
 
 LineEditor::LineEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
@@ -176,16 +221,31 @@ LineEditor::LineEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent
 
 QString LineEditor::value()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return lineEdit->text();
 }
 
 void LineEditor::setValue(QVariant value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     lineEdit->setText(value.toString());
 }
 
 void LineEditor::change(QString value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QVariant v = value;
     emit editorValueChanged(this);
 }
@@ -200,6 +260,11 @@ void LineEditor::paintEvent(QPaintEvent *event)
 
 SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     this->idx = idx;
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
@@ -242,23 +307,38 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
 
 int SpinBoxEditor::value()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return spinBox->value();
 }
 
 void SpinBoxEditor::setValue(QVariant value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     spinBox->setValue(value.toInt());
 }
 
 void SpinBoxEditor::change(int value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QVariant v = value;
     emit editorValueChanged(this);
 }
 
 void SpinBoxEditor::paintEvent(QPaintEvent *event)
 {
-    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
 }
 
@@ -266,7 +346,12 @@ void SpinBoxEditor::paintEvent(QPaintEvent *event)
 
 DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    this->idx = idx;
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+   this->idx = idx;
     double min = idx.data(UR_Min).toDouble();
     double max = idx.data(UR_Max).toDouble();
     source = idx.data(UR_Source).toString();
@@ -323,11 +408,21 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
 
 double DoubleSpinBoxEditor::value()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return doubleSpinBox->value();
 }
 
 void DoubleSpinBoxEditor::setValue(QVariant value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     qDebug() << __FUNCTION__ << value;
     doubleSpinBox->setValue(value.toDouble());
 }
@@ -340,12 +435,17 @@ void DoubleSpinBoxEditor::setValue(QVariant value)
 
 void DoubleSpinBoxEditor::paintEvent(QPaintEvent *event)
 {
-    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
 }
 
 // note that *object is reqd to instantiate event filter using "this"
 bool DoubleSpinBoxEditor::eventFilter(QObject *object, QEvent *event)
 {
+    {
+    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+    #endif
+    }
     if (event->type() == QEvent::KeyPress) {
         const auto key = static_cast<QKeyEvent *>(event)->key();
         if (key == Qt::Key_Enter || key == Qt::Key_Return || key == Qt::Key_Tab)
@@ -363,6 +463,11 @@ bool DoubleSpinBoxEditor::eventFilter(QObject *object, QEvent *event)
 
 CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
@@ -384,16 +489,31 @@ CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
 
 bool CheckBoxEditor::value()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return checkBox->isChecked();
 }
 
 void CheckBoxEditor::setValue(QVariant value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     checkBox->setChecked(value.toBool());
 }
 
 void CheckBoxEditor::change()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     emit editorValueChanged(this);
 }
 
@@ -407,14 +527,19 @@ void CheckBoxEditor::paintEvent(QPaintEvent *event)
 
 ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
     comboBox = new QComboBox;
     comboBox->setObjectName("DisableGoActions");  // used in MW::focusChange
-//    comboBox->setView(new QListView);
-
+    QString clr = idx.data(UR_Color).toString();
     comboBox->setStyleSheet("QComboBox {"
+                                "color:" + clr + ";"
                                 "background: transparent;"
                                 "border:none; "
                                 "padding: 0px 0px 0px 0px;"
@@ -452,11 +577,21 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
 
 QString ComboBoxEditor::value()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return comboBox->currentText();
 }
 
 void ComboBoxEditor::setValue(QVariant value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     int i = comboBox->findText(value.toString());
     comboBox->setCurrentIndex(i);
 }
@@ -466,11 +601,21 @@ void ComboBoxEditor::addItem(QString item)
 /*
 This is used to add new templates to the template drop list
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     comboBox->addItem(item);
 }
 
 void ComboBoxEditor::change(int index)
 {    
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QVariant v = comboBox->itemText(index);
     emit editorValueChanged(this);
 }
@@ -485,6 +630,11 @@ void ComboBoxEditor::paintEvent(QPaintEvent *event)
 
 PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
@@ -510,17 +660,32 @@ PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWid
 
 int PlusMinusEditor::value()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return plusMinus;
 }
 
 void PlusMinusEditor::minusChange()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     plusMinus = -1;
     emit editorValueChanged(this);
 }
 
 void PlusMinusEditor::plusChange()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     plusMinus = 1;
     emit editorValueChanged(this);
 }
@@ -536,12 +701,18 @@ QVector<BarBtn*> btns;
 BarBtnEditor::BarBtnEditor(const QModelIndex, QWidget *parent)
     : QWidget(parent)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->setContentsMargins(0,0,0,0);
+    layout->setSpacing(0);
+    layout->setAlignment(Qt::AlignRight);
     for (int i = 0; i < btns.size(); ++i) {
         layout->addWidget(btns.at(i));
     }
-    layout->setContentsMargins(0,0,0,0);
-    layout->setAlignment(Qt::AlignRight);
     setLayout(layout);
     btns.clear();
 }
@@ -556,6 +727,11 @@ void BarBtnEditor::paintEvent(QPaintEvent *event)
 
 ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     lineEdit = new QLineEdit;
     lineEdit->setObjectName("DisableGoActions");    // used in MW::focusChange
     lineEdit->setAlignment(Qt::AlignLeft);
@@ -587,6 +763,11 @@ ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
 
 QString ColorEditor::value()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return lineEdit->text();
 }
 
@@ -597,12 +778,22 @@ void ColorEditor::setValue(QVariant value)
 
 void ColorEditor::setValueFromColorDlg()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QColor color = QColorDialog::getColor();
     lineEdit->setText(color.name());
 }
 
 void ColorEditor::updateLabelWhenLineEdited(QString value)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     btn->setStyleSheet("QPushButton, QPushButton:pressed, QPushButton:hover, QPushButton:flat"
                         "{background-color:" + value + ";"
 //                        "font-size: 6px"
@@ -618,7 +809,7 @@ void ColorEditor::updateLabelWhenLineEdited(QString value)
 
 void ColorEditor::paintEvent(QPaintEvent *event)
 {
-    setStyleSheet("font-size: " + G::fontSize + "pt;");
+//    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
 }
 
