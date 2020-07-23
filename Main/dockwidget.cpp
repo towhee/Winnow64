@@ -7,10 +7,11 @@ which has a border, and must be over-ridden.
 
 BarBtn::BarBtn(/*QWidget *parent*/) : QToolButton()
 {
-    setStyleSheet(
+    setStyleSheet
+    (
         "background:transparent;"
         "border:none;"
-        );
+    );
     int bg = G::backgroundShade + 30;
     btnHover = QColor(bg,bg,bg);
 }
@@ -22,18 +23,20 @@ QSize BarBtn::sizeHint()
 
 void BarBtn::enterEvent(QEvent*)
 {
-    setStyleSheet(
-    "background:" + btnHover.name() + ";"
-    "border:none;"
+    setStyleSheet
+    (
+        "background:" + btnHover.name() + ";"
+        "border:none;"
     );
 }
 
 void BarBtn::leaveEvent(QEvent*)
 {
-    setStyleSheet(
+    setStyleSheet
+    (
         "background:transparent;"
         "border:none;"
-        );
+    );
 }
 
 /* DockTitleBar *******************************************************************************

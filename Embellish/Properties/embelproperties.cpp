@@ -26,16 +26,16 @@ Embel
             File
             Image
             Borders
-                Border0
+                Border1
                 ...
             Texts
-                Text0
+                Text1
                 ...
             Rectangles
-                Rectangle0
+                Rectangle1
                 ...
             Graphics
-                Graphic0
+                Graphic1
                 ...
         Template2
         ...
@@ -81,6 +81,12 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     setAlternatingRowColors(false);
     resizeColumns("====captions column====",
                   "====values column====");
+    setStyleSheet
+    (
+        "QTreeView {"
+            "selection-background-color: transparent;"
+        "}"
+    );
 
     // get the list of templates and which one was last active
     readTemplateList();
@@ -766,6 +772,7 @@ void EmbelProperties::addBorders()
     borderDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     borderDeleteBtn->setToolTip("Delete the open border");
     btns.append(borderDeleteBtn);
+    connect(borderDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     BarBtn *borderNewBtn = new BarBtn();
     borderNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     borderNewBtn->setToolTip("Create a new border");
@@ -1076,17 +1083,24 @@ void EmbelProperties::mouseDoubleClickEvent(QMouseEvent */*event*/)
     // ignore
 }
 
-void EmbelProperties::confirmDelete(QModelIndex idx)
+void EmbelProperties::deleteItem()
 {
-
-    QMessageBox msg;
-    msg.setStyleSheet(G::css);
-    if (selectionModel()->selection().isEmpty()) {
-        QMessageBox::information(this, "Delete", "No item selected for deletion");
-        return;
+    QModelIndex idx = selectionModel()->selection().indexes().first();
+    idx = model->index(idx.row(), 0, idx.parent());
+    QString name = idx.data(UR_Name).toString();
+    QString parName = idx.parent().data(UR_Name).toString();
+    qDebug() << __FUNCTION__ << templatePath;  return;
+    if (QMessageBox::warning(this, "Delete", "Confirn delete " + name,
+                             QMessageBox::Cancel | QMessageBox::Ok)) {
+        if (parName == "BordersHeader") {
+            // remove from local structs
+            b.remove(idx.row());
+            // remove from datamodel
+            model->removeRow(idx.row(), idx.parent());
+            // remove from QSettings
+            QString path = templatePath + "Borderss/" + name;
+        }
     }
-    QModelIndex delIdx = selectionModel()->selection().indexes().first();
-    delIdx = model->index(delIdx.row(), 0, delIdx.parent());
 }
 
 void EmbelProperties::mousePressEvent(QMouseEvent *event)
@@ -1111,8 +1125,10 @@ void EmbelProperties::treeChange(QModelIndex idx)
     bool templateHdr = (idx == model->index(0,0));
     if (hasChildren && !hasGrandChildren && !templateHdr) {
         bool wasExpanded = isExpanded(idx);
-        qDebug() << __FUNCTION__ << wasExpanded;
+        qDebug() << __FUNCTION__ << idx.data(UR_Name).toString();
+        // clear selection and delete buttons (re-instated after selection change)
         selectionModel()->clear();
+        showRelevantDeleteBtn();
         if (okToSelect(idx)) {
             selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
@@ -1136,23 +1152,26 @@ deletes except in the selected category.
 {
 //    qDebug() << __FUNCTION__ << selection.isEmpty() <<  selection.indexes();
     if (selection.isEmpty()) return;
-    if (prevSelection.isEmpty()) return;
     QModelIndex idx = selection.indexes().first();
-    QModelIndex prevIdx = prevSelection.indexes().first();
-    if (!okToSelect(idx) && okToSelect(prevIdx)) {
+    QString selName = idx.data(UR_Name).toString();
+    if (!okToSelect(idx) /*&& okToSelect(prevIdx)*/) {
+        qDebug() << __FUNCTION__ << "Not ok to select" << selName;
+        if (prevSelection.isEmpty()) return;
+        QModelIndex prevIdx = prevSelection.indexes().first();
         selectionModel()->select(prevSelection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         idx = selection.indexes().first();
     }
     else {
-        selectionModel()->clear();
+//        selectionModel()->clear();
     }
     // make sure using index for column 0
     idx = model->index(idx.row(), 0, idx.parent());
     // deal with delete buttons
-//    QStringList delBtns;
-//    delBtns << "Borders" << "Texts" << "Rectangles" << "Graphics";
     QString selectedCategory = idx.parent().data(UR_Name).toString();
-    /*if (delBtns.contains(selectedCategory))*/ showRelevantDeleteBtn(selectedCategory);
+    qDebug() << __FUNCTION__
+             << selName << "selected"
+             << "selectedCategory =" << selectedCategory;
+    showRelevantDeleteBtn(selectedCategory);
 }
 
 bool EmbelProperties::okToSelect(QModelIndex idx)
@@ -1172,10 +1191,10 @@ void EmbelProperties::showRelevantDeleteBtn(QString btnToShow)
     textDeleteBtn->setVisible(false);
     rectangleDeleteBtn->setVisible(false);
     graphicDeleteBtn->setVisible(false);
-    if (btnToShow == "Borders") borderDeleteBtn->setVisible(true);
-    if (btnToShow == "Texts") textDeleteBtn->setVisible(true);
-    if (btnToShow == "Rectangles") rectangleDeleteBtn->setVisible(true);
-    if (btnToShow == "Graphics") graphicDeleteBtn->setVisible(true);
+    if (btnToShow == "BordersHeader") borderDeleteBtn->setVisible(true);
+    if (btnToShow == "TextsHeader") textDeleteBtn->setVisible(true);
+    if (btnToShow == "RectanglesHeader") rectangleDeleteBtn->setVisible(true);
+    if (btnToShow == "GraphicsHeader") graphicDeleteBtn->setVisible(true);
 }
 
 void EmbelProperties::diagnostics(QModelIndex idx)
@@ -1200,7 +1219,8 @@ void EmbelProperties::diagnostics(QModelIndex idx)
 
 void EmbelProperties::test1()
 {
-    borderDeleteBtn->setVisible(false);
+    qDebug() << __FUNCTION__;
+    deleteItem();
     return;
     e->test();
 }

@@ -94,8 +94,8 @@ private:
     void deleteText();
     void deleteRectangle();
     void deleteGraphic();
-    void confirmDelete(QModelIndex idx);
-    void showRelevantDeleteBtn(QString btnToShow);
+    void deleteItem();
+    void showRelevantDeleteBtn(QString btnToShow = "");
 
     void templateChange(QVariant v);
     void fileItemChange(QVariant v, QString source);

@@ -62,10 +62,6 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
             this, &PropertyEditor::editorWidgetToDisplay);
 
     connect(propertyDelegate, &PropertyDelegate::drawBranchesAgain, this, &PropertyEditor::drawBranches);
-
-//    connect(this, &PropertyEditor::selectionChanged, this, &PropertyEditor::selectionChange);
-//    connect(model, &QStandardItemModel::dataChanged, this, &PropertyEditor::)
-
 }
 
 void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
@@ -87,24 +83,6 @@ void PropertyEditor::itemChange(QModelIndex)
 {
 
 }
-
-//void PropertyEditor::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
-//// virtual function to be subclassed
-//{
-//    qDebug() << __FUNCTION__ << selected << deselected;
-//}
-
-/*QVariant PropertyEditor::getValue(QString name)
-{
-    getIndex(name);
-    QModelIndex valIdx = model->index(foundCatIdx.row(), 1, foundCatIdx.parent());
-    qDebug() << __FUNCTION__
-             << "name =" << foundCatIdx.data(UR_Name).toString()
-             << "foundCatIdx ="  << foundCatIdx
-             << "foundValIdx ="  << foundValIdx
-             << "value =" << foundValIdx.data().toString();
-    return valIdx.data();
-}*/
 
 bool PropertyEditor::getIndex(QString searchName, QModelIndex parent)
 {
