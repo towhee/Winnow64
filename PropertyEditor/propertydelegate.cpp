@@ -301,16 +301,13 @@ void PropertyDelegate::updateEditorGeometry(QWidget *editor,
 
 void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const
 {
-//    if (index.column() == 0) {
-//        QStyledItemDelegate::paint(painter, option, index);
-//        return;
-//    }
     painter->save();
+
     bool isSelected = option.state.testFlag(QStyle::State_Selected);
     bool hasChildren = index.model()->hasChildren(index.model()->index(index.row(),0,index.parent()));
 
     /*
-    static int i =0;
+    static int i = 0;
     qDebug() << __FUNCTION__ << i++
              << index.row()
              << index.column()
@@ -333,7 +330,6 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;
     int c = G::backgroundShade + 30;
-//    int c = G::backgroundShade + 40;
     int t = G::textShade;
 
     QLinearGradient categoryBackground;
@@ -348,8 +344,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     font.setPointSize(fontSize);
     painter->setFont(font);
 
-    QPen catPen(QColor(t,t,t));             // root items !have white text
-//    QPen catPen(Qt::white);             // root items have white text
+    QPen catPen(QColor(t,t,t));         // root items same other items
     QPen regPen(QColor(t,t,t));         // other items have silver text
     QPen selPen("#1b8a83");             // selected items have torqouis text
     QPen brdPen(QColor(c,c,c));         // border color
@@ -381,16 +376,10 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             if (isSelected) painter->setPen(selPen);
             else painter->setPen(catPen);
             painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
-            // left border
-//            painter->setPen(brdPen);
-//            painter->drawLine(r0.topLeft(), r0.bottomLeft());
         }
         // root row, but value column, so no decoration to deal with
         else {
             painter->fillRect(r, categoryBackground);
-            // right border
-//            painter->setPen(brdPen);
-//            painter->drawLine(r.topRight(), r.bottomRight());
         }
     }
     else {
@@ -402,11 +391,6 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             if (isSelected) painter->setPen(selPen);
             painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
             painter->setPen(brdPen);
-//            if (hasChildren) {
-//                painter->drawLine(r0.topLeft(), r0.topRight());
-//            }
-//            else painter->drawRect(r0);
-//            painter->drawLine(r0.topLeft(), r0.bottomLeft());
             // draw line between column 0 and 1
             if (!hasChildren) painter->drawLine(r0.topRight(), r0.bottomRight());
             // draw bottom line
@@ -415,11 +399,6 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         }
         if (index.column() == 1) {
             painter->setPen(brdPen);
-//            if (hasChildren) {
-//                painter->drawLine(r.topLeft(), r.topRight());
-//            }
-//            else painter->drawRect(r);
-//            painter->drawLine(r.topRight(), r.bottomRight());
             // draw bottom line
             painter->setPen(brdPen);
             painter->drawLine(r.bottomLeft(), r.bottomRight());
