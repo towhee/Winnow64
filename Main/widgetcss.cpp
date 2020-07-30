@@ -353,14 +353,16 @@ QString WidgetCSS::treeView()
 
     "QTreeView::branch:has-children:!has-siblings:closed,"
     "QTreeView::branch:closed:has-children:has-siblings {"
-            "border-image: none;"
-           " image: url(:/images/branch-closed-small.png);"
+        "border-image: none;"
+        "image: url(:/images/branch-closed-small.png);"
+//        "margin-bottom: 2px;"
     "}"
 
     "QTreeView::branch:open:has-children:!has-siblings,"
     "QTreeView::branch:open:has-children:has-siblings  {"
-            "border-image: none;"
-            "image: url(:/images/branch-open-small.png);"
+        "border-image: none;"
+        "image: url(:/images/branch-open-small.png);"
+//        "margin-bottom: 2px;"
     "}"
 
     "QTreeView::item {"

@@ -3,9 +3,11 @@
 
 #include <QtWidgets>
 #include "Main/global.h"
+#include "Datamodel/datamodel.h"
 #include "Utilities/utilities.h"
 #include "PropertyEditor/propertyeditor.h"
 #include "PropertyEditor/propertywidgets.h"
+#include "Views/infostring.h"
 #include "ui_embelCoord.h"
 
 class EmbelProperties : public PropertyEditor
@@ -14,6 +16,7 @@ class EmbelProperties : public PropertyEditor
 public:
     EmbelProperties(QWidget *parent, QSettings *setting);
 
+    InfoString *is;
     QStringList templateList;
     QString templateName;
     int templateId;                 // 0 == Do not embellish
@@ -46,12 +49,37 @@ public:
         double bottom;
         QString tile;
         QString color;
-        int opacity;
+        double opacity;
         QString style;
         double outlineWidth;
         QString outlineColor;
     } border;
     QVector<Border>b;
+
+    struct Text {
+        int index;
+        QString name;
+        QString caption;
+        QString parent;
+        QString anchorObject;
+        QString anchorContainer;
+        double x;                   // container coordinate
+        double y;                   // container coordinate
+        QString anchorPoint;
+        QString justification;
+        QString source;
+        QString text;
+        QString metadataField;
+        QString metadataTemplate;
+        double size;                // percent of long side pixels
+        QString font;
+        QString fontStyle;
+        QString color;
+        int opacity;
+        QString style;
+    } text;
+    QVector<Text>t;
+
 
     void newEmbelTemplate();
     void test1();
@@ -69,9 +97,11 @@ signals:
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
-    void mouseDoubleClickEvent(QMouseEvent *event) override;
+//    void mouseDoubleClickEvent(QMouseEvent *event) override;
 
 private:
+    void initialize();
+    void updateBorderList();
     void readTemplateList();
     void renameCurrentTemplate();
     void setCurrentTemplate();
@@ -80,14 +110,17 @@ private:
     void addTemplateItems();
     void addFile();
     void addImage();
-
     void addBorders();
-    void newBorder();
     void addBorder(int count);
-
     void addTexts();
+    void addText(int count);
     void addRectangles();
     void addGraphics();
+
+    void newBorder();
+    void newText();
+    void newRectangle();
+    void newGraphic();
 
     void deleteTremplate();
     void deleteBorder();
@@ -101,13 +134,15 @@ private:
     void fileItemChange(QVariant v, QString source);
     void imageItemChange(QVariant v, QString source);
     void borderItemChange(QModelIndex idx);
-    void textItemChange(QVariant v, QString source, QString parent);
+    void textItemChange(QModelIndex idx);
     void rectangleItemChange(QVariant v, QString source, QString parent);
     void graphicItemChange(QVariant v, QString source, QString parent);
 
     void treeChange(QModelIndex idx);
     bool okToSelect(QModelIndex idx);
     void diagnostics(QModelIndex idx);
+
+    bool isTemplateChange = false;
 
     BarBtn *borderDeleteBtn;
     BarBtn *textDeleteBtn;
@@ -117,8 +152,9 @@ private:
     ItemInfo i;
     int templateCount;
     QString templatePath;
-    ComboBoxEditor *templateListEditor;
     QSettings *setting;
+    ComboBoxEditor *templateListEditor;
+    QVector<ComboBoxEditor*> textAnchorObjectEditor;
 
     enum roots {
         _templates,
@@ -129,6 +165,10 @@ private:
         _rectangles,
         _graphics
     };
+    QStringList anchorPoints;
+    QStringList borderList;
+    QStringList anchorObjectList;
+    QStringList anchorContainerList;
 };
 
 #endif // EMBELPROPERTIES_H

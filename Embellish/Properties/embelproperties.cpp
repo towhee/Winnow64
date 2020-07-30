@@ -72,6 +72,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     #endif
     }
     mw3 = qobject_cast<MW*>(parent);
+    is = new InfoString(this, mw3->dm);
     this->setting = setting;
 
     setSolo(true);
@@ -88,6 +89,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
         "}"
     );
 
+    initialize();
     // get the list of templates and which one was last active
     readTemplateList();
     // add the template header, which then selects the last active template
@@ -101,6 +103,28 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     expand(model->index(_texts,0));
     expand(model->index(_rectangles,0));
     expand(model->index(_graphics,0));
+}
+
+void EmbelProperties::initialize()
+{
+    anchorPoints << "Top Left" << "Top Center" << "Top Right"
+                 << "Middle Left" << "Middle Center" << "Middle Right"
+                 << "Bottom Left" << "Bottom Center" << "Bottom Right";
+    anchorContainerList << "Top" << "Left" << "Right" << "Bottom";
+}
+
+void EmbelProperties::updateBorderList()
+{
+    borderList.clear();
+    anchorObjectList.clear();
+    getIndex("Borders");
+    QModelIndex bordersIdx = foundIdx;
+    for (int i = 0; i < model->rowCount(bordersIdx); ++i) {
+        borderList << model->index(i, 0, bordersIdx).data(UR_Name).toString();
+        anchorObjectList << model->index(i, 0, bordersIdx).data(UR_Name).toString();
+    }
+    anchorObjectList << "Image";
+    // update textAnchorObjectEditor etc rgh
 }
 
 void EmbelProperties::diagnostic(QModelIndex parent)
@@ -266,10 +290,10 @@ itemChange, which is subclassed here.
     if (templateId != 0) {
         if (parent == "FileHeader") fileItemChange(v, source);
         if (parent == "ImageHeader") imageItemChange(v, source);
-        if (grandparent == "BordersHeader") borderItemChange(idx);
-        if (grandparent == "TextsHeader") textItemChange(v, source, parent);
-        if (grandparent == "RectanglesHeader") rectangleItemChange(v, source, parent);
-        if (grandparent == "GraphicsHeader") graphicItemChange(v, source, parent);
+        if (grandparent == "Borders") borderItemChange(idx);
+        if (grandparent == "Texts") textItemChange(idx);
+        if (grandparent == "Rectangles") rectangleItemChange(v, source, parent);
+        if (grandparent == "Graphics") graphicItemChange(v, source, parent);
     }
 
     e->build();
@@ -278,6 +302,7 @@ itemChange, which is subclassed here.
 void EmbelProperties::templateChange(QVariant v)
 {
     qDebug() << __FUNCTION__;
+    isTemplateChange = true;
     templateName = v.toString();
     // save which template is current
     setCurrentTemplate();
@@ -288,8 +313,9 @@ void EmbelProperties::templateChange(QVariant v)
     emit templateChanged(templateId);
     // clear model except for template name header
     model->removeRows(1, model->rowCount(QModelIndex()) - 1);
-    // clear borders
+    // clear borders, texts, rectangles and graphics
     b.clear();
+    t.clear();
     // add items for this template
     if (templateId > 0) addTemplateItems();
     collapseAll();
@@ -299,6 +325,7 @@ void EmbelProperties::templateChange(QVariant v)
     expand(model->index(_texts,0));
     expand(model->index(_rectangles,0));
     expand(model->index(_graphics,0));
+    isTemplateChange = false;
 }
 
 void EmbelProperties::fileItemChange(QVariant v, QString source)
@@ -429,7 +456,7 @@ void EmbelProperties::borderItemChange(QModelIndex idx)
     }
 
     if (source == "outlineColor") {
-        setting->setValue(path, v.toInt());
+        setting->setValue(path, v.toString());
         b[index].outlineColor = v.toString();
     }
 
@@ -439,14 +466,119 @@ void EmbelProperties::borderItemChange(QModelIndex idx)
     }
 }
 
-void EmbelProperties::textItemChange(QVariant v, QString source, QString parent)
+void EmbelProperties::textItemChange(QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    QVariant v = idx.data(Qt::EditRole);
+    QString source = idx.data(UR_Source).toString();
+    QString parent = idx.parent().data(UR_Name).toString();
+    int index = idx.parent().data(UR_ItemIndex).toInt();
+    QString path = templatePath + "Texts/" + parent + "/" + source;
+    qDebug() << __FUNCTION__ << path;
 
+    if (source == "anchorObject") {
+        setting->setValue(path, v.toString());
+        t[index].anchorObject = v.toString();
+    }
+
+    if (source == "anchorContainer") {
+        setting->setValue(path, v.toString());
+        t[index].anchorContainer = v.toString();
+    }
+
+    if (source == "x") {
+        setting->setValue(path, v.toInt());
+        t[index].x = v.toInt();
+    }
+
+    if (source == "y") {
+        setting->setValue(path, v.toInt());
+        t[index].y = v.toInt();
+    }
+
+    if (source == "anchorPoint") {
+        setting->setValue(path, v.toString());
+        t[index].anchorPoint = v.toString();
+    }
+
+    if (source == "justification") {
+        setting->setValue(path, v.toString());
+        t[index].justification = v.toString();
+    }
+
+    if (source == "source") {
+        QString s = v.toString();
+        setting->setValue(path, s);
+        t[index].source = s;
+        if (G::isInitializing) return;
+        int row = idx.row();
+        qDebug() << __FUNCTION__ << s << row;
+        // only works if branch is expanded
+        if (s == "Text") {
+            setRowHidden(row + 1, idx.parent(), false);
+            setRowHidden(row + 2, idx.parent(), true);
+            setRowHidden(row + 3, idx.parent(), true);
+        }
+        if (s == "Metadata field") {
+            setRowHidden(row + 1, idx.parent(), true);
+            setRowHidden(row + 2, idx.parent(), false);
+            setRowHidden(row + 3, idx.parent(), true);
+        }
+        if (s == "Metadata template") {
+            setRowHidden(row + 1, idx.parent(), true);
+            setRowHidden(row + 2, idx.parent(), true);
+            setRowHidden(row + 3, idx.parent(), false);
+        }
+    }
+
+    if (source == "text") {
+        setting->setValue(path, v.toString());
+        t[index].text = v.toString();
+    }
+
+    if (source == "metadataField") {
+        setting->setValue(path, v.toString());
+        t[index].metadataField = v.toString();
+    }
+
+    if (source == "metadataTemplate") {
+        setting->setValue(path, v.toString());
+        t[index].metadataTemplate = v.toString();
+    }
+
+    if (source == "font") {
+        setting->setValue(path, v.toString());
+        t[index].font = v.toString();
+    }
+
+    if (source == "size") {
+        setting->setValue(path, v.toDouble());
+        t[index].size = v.toDouble();
+    }
+
+    if (source == "fontStyle") {
+        setting->setValue(path, v.toString());
+        t[index].font = v.toString();
+    }
+
+    if (source == "color") {
+        setting->setValue(path, v.toString());
+        t[index].color = v.toString();
+    }
+
+    if (source == "opacity") {
+        setting->setValue(path, v.toInt());
+        t[index].opacity = v.toInt();
+    }
+
+    if (source == "style") {
+        setting->setValue(path, v.toString());
+        t[index].style = v.toString();
+    }
 }
 
 void EmbelProperties::rectangleItemChange(QVariant v, QString source, QString parent)
@@ -479,6 +611,7 @@ void EmbelProperties::addTemplateHeader()
     // Templates header (Root)
     i.name = "TemplatesHeader";
     i.parentName = "???";
+    i.isHeader = true;
     i.decorateGradient = true;
     i.isDecoration = false;
     i.captionText = "Templates";
@@ -554,7 +687,9 @@ void EmbelProperties::addFile()
     // FILE File header (Root)
     i.name = "FileHeader";
     i.parentName = "???";
+    i.isHeader = true;
     i.decorateGradient = true;
+    i.isDecoration = true;
     i.captionText = "File";
     i.tooltip = "";
     i.hasValue = false;
@@ -581,6 +716,7 @@ void EmbelProperties::addFile()
     i.parentName = "FileHeader";
     i.captionText = "Fit horizontal";
     i.tooltip = "The number of pixels in the horizontal axis including the borders";
+    i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "horizontalFit";
@@ -600,6 +736,7 @@ void EmbelProperties::addFile()
     i.parentName = "FileHeader";
     i.captionText = "Fit vertical";
     i.tooltip = "The number of pixels in the vertical axis including the borders";
+    i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "verticalFit";
@@ -619,6 +756,7 @@ void EmbelProperties::addFile()
     i.parentName = "FileHeader";
     i.captionText = "File type";
     i.tooltip = "Select file type.";
+    i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "fileType";
@@ -634,6 +772,7 @@ void EmbelProperties::addFile()
     i.parentName = "FileHeader";
     i.captionText = "Save method";
     i.tooltip = "Select where to save the file.";
+    i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "saveMethod";
@@ -650,6 +789,7 @@ void EmbelProperties::addFile()
     i.captionText = "Folder path";
     i.tooltip = "Enter the full folder path, the folder name of a subfolder or the"""
                 "template to use.";
+    i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "folderPath";
@@ -664,6 +804,7 @@ void EmbelProperties::addFile()
     i.parentName = "FileHeader";
     i.captionText = "Suffix";
     i.tooltip = "Suffix to add to file names.";
+    i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "suffix";
@@ -678,6 +819,7 @@ void EmbelProperties::addFile()
     i.parentName = "FileHeader";
     i.captionText = "Overwrite";
     i.tooltip = "Overwrite existing files.";
+    i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "overwriteFiles";
@@ -693,7 +835,9 @@ void EmbelProperties::addImage()
     // IMAGE Image header (Root)
     i.name = "ImageHeader";
     i.parentName = "???";
+    i.isHeader = true;
     i.decorateGradient = true;
+    i.isDecoration = true;
     i.captionText = "Image";
     i.tooltip = "";
     i.hasValue = false;
@@ -707,6 +851,7 @@ void EmbelProperties::addImage()
     i.parentName = "ImageHeader";
     i.captionText = "Outine width";
     i.tooltip = "This is the outline for the image (% of the long side).";
+    i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "outlineWidth";
@@ -725,6 +870,7 @@ void EmbelProperties::addImage()
     i.parentName = "ImageHeader";
     i.captionText = "Outline color";
     i.tooltip = "Select a color that will be used to full the border area.";
+    i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "outlineColor";
@@ -742,6 +888,7 @@ void EmbelProperties::addImage()
     i.parentName = "ImageHeader";
     i.captionText = "Style";
     i.tooltip = "Select style to apply to the image ie a shadow.";
+    i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.valueName = "imageStyle";
@@ -759,12 +906,15 @@ void EmbelProperties::addImage()
 void EmbelProperties::addBorders()
 {
     // BORDER header (Root)
-    i.name = "BordersHeader";
+    i.name = "Borders";
     i.parentName = "???";
+    i.isHeader = true;
+    i.isDecoration = false;
     i.decorateGradient = true;
     i.isDecoration = false;
     i.captionText = "Borders";
     i.tooltip = "";
+    //i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
@@ -773,6 +923,7 @@ void EmbelProperties::addBorders()
     borderDeleteBtn->setToolTip("Delete the open border");
     btns.append(borderDeleteBtn);
     connect(borderDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
+    borderDeleteBtn->setVisible(false);
     BarBtn *borderNewBtn = new BarBtn();
     borderNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     borderNewBtn->setToolTip("Create a new border");
@@ -782,20 +933,21 @@ void EmbelProperties::addBorders()
 
     QString path = templatePath + "/Borders";
     setting->beginGroup(path);
-    int borderCount = setting->childGroups().size();
-    qDebug() << __FUNCTION__ << path << "borderCount =" << borderCount;
+    int count = setting->childGroups().size();
+    qDebug() << __FUNCTION__ << path << "count =" << count;
     setting->endGroup();
-    for (int i = 0; i < borderCount; ++i) newBorder();
+    for (int i = 0; i < count; ++i) newBorder();
 }
 
 void EmbelProperties::addTexts()
 {
     // Texts header (Root)
-    i.name = "TextsHeader";
+    i.name = "Texts";
     i.parentName = "???";
+    i.isHeader = true;
     i.decorateGradient = true;
     i.isDecoration = false;
-    i.captionText = "Text Items";
+    i.captionText = "Texts";
     i.tooltip = "";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -804,18 +956,30 @@ void EmbelProperties::addTexts()
     textDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     textDeleteBtn->setToolTip("Delete the open text item");
     btns.append(textDeleteBtn);
+    connect(textDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
+    textDeleteBtn->setVisible(false);
     BarBtn *textNewBtn = new BarBtn();
     textNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     textNewBtn->setToolTip("Create a new border");
     btns.append(textNewBtn);
+    connect(textNewBtn, &BarBtn::clicked, this, &EmbelProperties::newText);
     addItem(i);
+
+    QString path = templatePath + "/Texts";
+    setting->beginGroup(path);
+    int count = setting->childGroups().size();
+    qDebug() << __FUNCTION__ << path << "count =" << count;
+    setting->endGroup();
+    for (int i = 0; i < count; ++i) newText();
 }
 
 void EmbelProperties::addRectangles()
 {
+    qDebug() << __FUNCTION__;
     // Rectangles header (Root)
-    i.name = "RectanglesHeader";
+    i.name = "Rectangles";
     i.parentName = "???";
+    i.isHeader = true;
     i.decorateGradient = true;
     i.isDecoration = false;
     i.captionText = "Rectangles";
@@ -827,18 +991,28 @@ void EmbelProperties::addRectangles()
     rectangleDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     rectangleDeleteBtn->setToolTip("Delete the open rectangle");
     btns.append(rectangleDeleteBtn);
+    rectangleDeleteBtn->setVisible(false);
     BarBtn *rectangleNewBtn = new BarBtn();
     rectangleNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     rectangleNewBtn->setToolTip("Create a new border");
     btns.append(rectangleNewBtn);
     addItem(i);
+
+//    QString path = templatePath + "/Rectangles";
+//    setting->beginGroup(path);
+//    int count = setting->childGroups().size();
+//    qDebug() << __FUNCTION__ << path << "count =" << count;
+//    setting->endGroup();
+//    for (int i = 0; i < count; ++i) newRectangle();
 }
 
 void EmbelProperties::addGraphics()
 {
+    qDebug() << __FUNCTION__;
     // Graphics header (Root)
-    i.name = "GraphicsHeader";
+    i.name = "Graphics";
     i.parentName = "???";
+    i.isHeader = true;
     i.decorateGradient = true;
     i.isDecoration = false;
     i.captionText = "Graphics";
@@ -850,258 +1024,91 @@ void EmbelProperties::addGraphics()
     graphicDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     graphicDeleteBtn->setToolTip("Delete the open graphic");
     btns.append(graphicDeleteBtn);
+    graphicDeleteBtn->setVisible(false);
     BarBtn *graphicNewBtn = new BarBtn();
     graphicNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     graphicNewBtn->setToolTip("Create a new graphic");
     btns.append(graphicNewBtn);
     addItem(i);
+
+//    QString path = templatePath + "/Graphics";
+//    setting->beginGroup(path);
+//    int count = setting->childGroups().size();
+//    qDebug() << __FUNCTION__ << path << "count =" << count;
+//    setting->endGroup();
+//    for (int i = 0; i < count; ++i) newGraphic();
 }
 
 void EmbelProperties::newBorder()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    getIndex("BordersHeader");
-    int row = model->rowCount(foundIdx);
-    qDebug() << __FUNCTION__ << row << foundIdx << foundIdx.data();
+    getIndex("Borders");
+    QModelIndex bordersIdx = foundIdx;
+    int row = model->rowCount(bordersIdx);
     addBorder(row);
-    // expand only the new border
-    collapseAll();
-    // get the parent of the new border
-    getIndex("BordersHeader");
-    // get the new border
-    QModelIndex idx = model->index(row, 0, foundIdx);
-    setExpanded(foundIdx, true);
-    setExpanded(idx, true);
+    updateBorderList();
+    if (G::isInitializing || isTemplateChange) return;
+    QModelIndex idx = model->index(row, 0, bordersIdx);
+    selectionModel()->clear();
+    selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    e->build();
 }
 
-void EmbelProperties::addBorder(int count)
+void EmbelProperties::newText()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    // Border name (used as node in settings and treeview)
-    QString borderName = "Border" + QString::number(count + 1);
-    QString settingRootPath = templatePath + "Borders/" + borderName + "/";
-
-    // subheader for this border
-    qDebug() << __FUNCTION__ << "count =" << count;
-    i.itemIndex = count;
-    i.name = borderName;
-    i.parentName = "BordersHeader";
-    i.captionText = borderName;
-    i.tooltip = "";
-    i.hasValue = false;
-    i.captionIsEditable = false;
-    i.delegateType = DT_Checkbox;
-    addItem(i);
-
-    i.name = "topMargin";
-    i.parentName = borderName;
-    i.captionText = "Top %";
-    i.tooltip = "This is the margin for the top part of the border (% of the long side).";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "topMargin";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
-    else i.value = 0;
-    qDebug() << __FUNCTION__ << i.value;
-    i.delegateType = DT_DoubleSpinbox;
-    i.type = "double";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    border.top = i.value.toDouble();
-    addItem(i);
-
-    i.name = "leftMargin";
-    i.parentName = borderName;
-    i.captionText = "Left %";
-    i.tooltip = "This is the margin for the left part of the border (% of the long side).";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "leftMargin";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
-    else i.value = 0;
-    i.delegateType = DT_DoubleSpinbox;
-    i.type = "double";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    border.left = i.value.toDouble();
-    addItem(i);
-
-    i.name = "rightMargin";
-    i.parentName = borderName;
-    i.captionText = "Right %";
-    i.tooltip = "This is the margin for the right part of the border (% of the long side).";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "rightMargin";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
-    else i.value = 0;
-    i.delegateType = DT_DoubleSpinbox;
-    i.type = "double";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    border.right = i.value.toDouble();
-    addItem(i);
-
-    i.name = "bottomMargin";
-    i.parentName = borderName;
-    i.captionText = "Bottom %";
-    i.tooltip = "This is the margin for the bottom part of the border (% of the long side).";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "bottomMargin";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
-    else i.value = 0;
-    i.delegateType = DT_DoubleSpinbox;
-    i.type = "double";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    border.bottom = i.value.toDouble();
-    addItem(i);
-
-    i.name = "tile";
-    i.parentName = borderName;
-    i.captionText = "Tile";
-    i.tooltip = "Select a tile that will be used to full the border area.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "tile";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
-    else i.value = "";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << "Use color" << "Tile 1" << "Tile 2";
-    border.tile = i.value.toString();
-    addItem(i);
-
-    i.name = "color";
-    i.parentName = borderName;
-    i.captionText = "Border color";
-    i.tooltip = "Select a color that will be used to full the border area.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "color";
-    if (setting->contains(settingRootPath + i.valueName)) {
-        i.value = setting->value(settingRootPath + i.valueName);
-    }
-    else i.value = "";
-    i.delegateType = DT_Color;
-    i.type = "QString";
-    border.color = i.value.toString();
-    addItem(i);
-
-    i.name = "opacity";
-    i.parentName = borderName;
-    i.captionText = "Opacity";
-    i.tooltip = "The opacity of the border.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "opacity";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
-    else i.value = 100;
-    i.delegateType =  DT_Slider;
-    i.min = 0;
-    i.max = 100;
-    i.type = "int";
-    border.opacity = i.value.toInt();
-    addItem(i);
-
-    i.name = "outlineWidth";
-    i.parentName = borderName;
-    i.captionText = "Outine width";
-    i.tooltip = "This is the outline for the border (% of the long side).";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "outlineWidth";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
-    else i.value = 0;
-    i.delegateType = DT_DoubleSpinbox;
-    i.type = "double";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    border.outlineWidth = i.value.toDouble();
-    addItem(i);
-
-    i.name = "outlineColor";
-    i.parentName = borderName;
-    i.captionText = "Outline color";
-    i.tooltip = "Select a color that will be used to full the border area.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "outlineColor";
-    if (setting->contains(settingRootPath + i.valueName)) {
-        i.value = setting->value(settingRootPath + i.valueName);
-    }
-    else i.value = "";
-    i.delegateType = DT_Color;
-    i.type = "QString";
-    border.outlineColor = i.value.toString();
-    addItem(i);
-
-    i.name = "style";
-    i.parentName = borderName;
-    i.captionText = "Style";
-    i.tooltip = "Select a style that will be applied to the border area.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "style";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
-    else i.value = "";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << "None" << "Style 1";
-    border.style = i.value.toString();
-    addItem(i);
-
-    // add the border info to the vector of borders
-    b << border;
-}
-
-void EmbelProperties::mouseDoubleClickEvent(QMouseEvent */*event*/)
-{
-    qDebug() << __FUNCTION__;
-    // ignore
+    getIndex("Texts");
+    QModelIndex textsIdx = foundIdx;
+    int row = model->rowCount(textsIdx);
+    addText(row);
+    if (G::isInitializing || isTemplateChange) return;
+    QModelIndex idx = model->index(row, 0, textsIdx);
+    selectionModel()->clear();
+    selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    e->build();
 }
 
 void EmbelProperties::deleteItem()
 {
+    if (selectionModel()->selection().isEmpty()) return;
     QModelIndex idx = selectionModel()->selection().indexes().first();
     idx = model->index(idx.row(), 0, idx.parent());
+    int row = idx.row();
     QString name = idx.data(UR_Name).toString();
-    QString parName = idx.parent().data(UR_Name).toString();
-    qDebug() << __FUNCTION__ << templatePath;  return;
-    if (QMessageBox::warning(this, "Delete", "Confirn delete " + name,
-                             QMessageBox::Cancel | QMessageBox::Ok)) {
-        if (parName == "BordersHeader") {
-            // remove from local structs
-            b.remove(idx.row());
-            // remove from datamodel
-            model->removeRow(idx.row(), idx.parent());
-            // remove from QSettings
-            QString path = templatePath + "Borderss/" + name;
-        }
+    QModelIndex parIdx = idx.parent();
+    QString parName = parIdx.data(UR_Name).toString();
+    QString path = templatePath + parName + "/" + name;
+    qDebug() << __FUNCTION__ << path;
+    if (!QMessageBox::warning(this, "Delete", "Confirn delete " + name,
+                             QMessageBox::Cancel | QMessageBox::Ok)) return;
+    // remove from local structs
+    if (parName == "Borders") b.remove(row);
+    if (parName == "Texts") t.remove(row);
+    // remove from datamodel
+    model->removeRow(idx.row(), idx.parent());
+    // remove from QSettings
+    setting->remove(path);
+    // select another item
+    int rowCount = model->rowCount(idx.parent());
+    if (rowCount > 0) {
+        QModelIndex nextIdx = model->index(row, 0, parIdx);
+        if (!nextIdx.isValid()) nextIdx = model->index(rowCount - 1, 0, parIdx);
+        selectionModel()->select(nextIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     }
+    // if no items left in category then hide delete button
+    else {
+        if (parName == "Borders") borderDeleteBtn->setVisible(false);
+        if (parName == "Texts") textDeleteBtn->setVisible(false);
+        if (parName == "Rectangles") rectangleDeleteBtn->setVisible(false);
+        if (parName == "Graphics") graphicDeleteBtn->setVisible(false);
+    }
+    // refresh the graphicsScene
+    e->build();
 }
+
+//void EmbelProperties::mouseDoubleClickEvent(QMouseEvent */*event*/)
+//{
+//    qDebug() << __FUNCTION__;
+//    // ignore
+//}
 
 void EmbelProperties::mousePressEvent(QMouseEvent *event)
 /*
@@ -1146,31 +1153,24 @@ void EmbelProperties::selectionChanged(const QItemSelection &selection,
                                       const QItemSelection &prevSelection)
 /*
 Check if the new selection is legal (a member of borders, texts, rectangles, graphics or
-file or image).  If not, if there was a previous selection, revert to that.  Turn off all
-deletes except in the selected category.
+file or image).  If not, if there was a previous selection, revert to that.  Hide all delete
+buttons except in the selected category.
 */
 {
-//    qDebug() << __FUNCTION__ << selection.isEmpty() <<  selection.indexes();
     if (selection.isEmpty()) return;
     QModelIndex idx = selection.indexes().first();
+    QModelIndex parIdx = idx.parent();
     QString selName = idx.data(UR_Name).toString();
-    if (!okToSelect(idx) /*&& okToSelect(prevIdx)*/) {
-        qDebug() << __FUNCTION__ << "Not ok to select" << selName;
-        if (prevSelection.isEmpty()) return;
-        QModelIndex prevIdx = prevSelection.indexes().first();
-        selectionModel()->select(prevSelection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-        idx = selection.indexes().first();
-    }
-    else {
-//        selectionModel()->clear();
+    if (!okToSelect(idx)) {
+        selectionModel()->clear();
+        if (!okToSelect(parIdx)) return;
+        selectionModel()->select(parIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        idx = parIdx;
     }
     // make sure using index for column 0
     idx = model->index(idx.row(), 0, idx.parent());
     // deal with delete buttons
     QString selectedCategory = idx.parent().data(UR_Name).toString();
-    qDebug() << __FUNCTION__
-             << selName << "selected"
-             << "selectedCategory =" << selectedCategory;
     showRelevantDeleteBtn(selectedCategory);
 }
 
@@ -1191,10 +1191,10 @@ void EmbelProperties::showRelevantDeleteBtn(QString btnToShow)
     textDeleteBtn->setVisible(false);
     rectangleDeleteBtn->setVisible(false);
     graphicDeleteBtn->setVisible(false);
-    if (btnToShow == "BordersHeader") borderDeleteBtn->setVisible(true);
-    if (btnToShow == "TextsHeader") textDeleteBtn->setVisible(true);
-    if (btnToShow == "RectanglesHeader") rectangleDeleteBtn->setVisible(true);
-    if (btnToShow == "GraphicsHeader") graphicDeleteBtn->setVisible(true);
+    if (btnToShow == "Borders") borderDeleteBtn->setVisible(true);
+    if (btnToShow == "Texts") textDeleteBtn->setVisible(true);
+    if (btnToShow == "Rectangles") rectangleDeleteBtn->setVisible(true);
+    if (btnToShow == "Graphics") graphicDeleteBtn->setVisible(true);
 }
 
 void EmbelProperties::diagnostics(QModelIndex idx)
@@ -1243,4 +1243,626 @@ void EmbelProperties::coordHelp()
 //    ui.setupUi(helpDoc);
 //    helpDoc->show();
 
+}
+
+void EmbelProperties::addBorder(int count)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // Name (used as node in settings and treeview)
+    QString borderName = "Border" + QString::number(count + 1);
+    border.name = borderName;
+    QString settingRootPath = templatePath + "Borders/" + borderName + "/";
+
+    // subheader for this border
+    qDebug() << __FUNCTION__ << "count =" << count;
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.itemIndex = count;
+    i.name = borderName;
+    i.parentName = "Borders";
+    i.captionText = borderName;
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_Checkbox;
+    addItem(i);
+
+    i.name = "topMargin";
+    i.parentName = borderName;
+    i.captionText = "Top %";
+    i.tooltip = "This is the margin for the top part of the border (% of the long side).";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "topMargin";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = 1;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    qDebug() << __FUNCTION__ << settingRootPath << i.value;
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    border.top = i.value.toDouble();
+    addItem(i);
+
+    i.name = "leftMargin";
+    i.parentName = borderName;
+    i.captionText = "Left %";
+    i.tooltip = "This is the margin for the left part of the border (% of the long side).";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "leftMargin";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = 1;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    border.left = i.value.toDouble();
+    addItem(i);
+
+    i.name = "rightMargin";
+    i.parentName = borderName;
+    i.captionText = "Right %";
+    i.tooltip = "This is the margin for the right part of the border (% of the long side).";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "rightMargin";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = 1;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    border.right = i.value.toDouble();
+    addItem(i);
+
+    i.name = "bottomMargin";
+    i.parentName = borderName;
+    i.captionText = "Bottom %";
+    i.tooltip = "This is the margin for the bottom part of the border (% of the long side).";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "bottomMargin";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = 1;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    border.bottom = i.value.toDouble();
+    addItem(i);
+
+    i.name = "tile";
+    i.parentName = borderName;
+    i.captionText = "Tile";
+    i.tooltip = "Select a tile that will be used to full the border area.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "tile";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "Use color" << "Tile 1" << "Tile 2";
+    border.tile = i.value.toString();
+    addItem(i);
+
+    i.name = "color";
+    i.parentName = borderName;
+    i.captionText = "Border color";
+    i.tooltip = "Select a color that will be used to full the border area.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "color";
+    if (setting->contains(settingRootPath + i.valueName)) {
+        i.value = setting->value(settingRootPath + i.valueName);
+    }
+    else {
+        // start with a random color
+        quint32 x = QRandomGenerator::global()->generate() * 16777215;
+        i.value = "#" + QString::number(x, 16);
+        qDebug() << __FUNCTION__ << i.value;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Color;
+    i.type = "QString";
+    border.color = i.value.toString();
+    addItem(i);
+
+    i.name = "opacity";
+    i.parentName = borderName;
+    i.captionText = "Opacity";
+    i.tooltip = "The opacity of the border.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "opacity";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = 100;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType =  DT_Slider;
+    i.min = 0;
+    i.max = 100;
+    i.type = "int";
+    border.opacity = i.value.toInt();
+    addItem(i);
+
+    i.name = "outlineWidth";
+    i.parentName = borderName;
+    i.captionText = "Outine width";
+    i.tooltip = "This is the outline for the border (% of the long side).";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "outlineWidth";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = 0.02;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    border.outlineWidth = i.value.toDouble();
+    addItem(i);
+
+    i.name = "outlineColor";
+    i.parentName = borderName;
+    i.captionText = "Outline color";
+    i.tooltip = "Select a color that will be used to full the border area.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "outlineColor";
+    if (setting->contains(settingRootPath + i.valueName)) {
+        i.value = setting->value(settingRootPath + i.valueName);
+    }
+    else {
+        i.value = "#FFFFFF";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Color;
+    i.type = "QString";
+    border.outlineColor = i.value.toString();
+    addItem(i);
+
+    i.name = "style";
+    i.parentName = borderName;
+    i.captionText = "Style";
+    i.tooltip = "Select a style that will be applied to the border area.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "style";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "None" << "Style 1";
+    border.style = i.value.toString();
+    addItem(i);
+
+    // add the border info to the vector of borders
+    b << border;
+}
+
+void EmbelProperties::addText(int count)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // Name (used as node in settings and treeview)
+    QString textName = "Text" + QString::number(count + 1);
+    QString settingRootPath = templatePath + "Texts/" + textName + "/";
+
+    // subheader for this border
+    qDebug() << __FUNCTION__ << "count =" << count;
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.itemIndex = count;
+    i.name = textName;
+    i.parentName = "Texts";
+    i.captionText = textName;
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_Checkbox;
+    addItem(i);
+
+    // get index to use as parent when update tree depending on source
+    getIndex(i.name);
+    QModelIndex parIdx = foundIdx;
+    text.name = textName;
+
+    i.name = "anchorObject";
+    i.parentName = textName;
+    i.captionText = "Put text in";
+    i.tooltip = "Select a border or image to contain the text.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "anchorObject";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "Image";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << anchorObjectList;
+    text.anchorObject = i.value.toString();
+    textAnchorObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
+
+    i.name = "anchorContainer";
+    i.parentName = textName;
+    i.captionText = "Border area";
+    i.tooltip = "Select a border area to contain the text.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "anchorContainer";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "Image";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << anchorContainerList;
+    text.anchorContainer = i.value.toString();
+    addItem(i);
+
+    i.name = "x";
+    i.parentName = textName;
+    i.captionText = "x coordinate";
+    i.tooltip = "The x coordinate for the container (0-100). Top left = 0,0.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "x";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = 50;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    qDebug() << __FUNCTION__ << settingRootPath << i.value;
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    text.x = i.value.toDouble();
+    addItem(i);
+
+    i.name = "y";
+    i.parentName = textName;
+    i.captionText = "y coordinate";
+    i.tooltip = "The y coordinate for the container (0-100). Top left = 0,0.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "y";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = 50;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    qDebug() << __FUNCTION__ << settingRootPath << i.value;
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    text.y = i.value.toDouble();
+    addItem(i);
+
+    i.name = "anchorPoint";
+    i.parentName = textName;
+    i.captionText = "Anchor point";
+    i.tooltip = "Select a text box anchor point.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "anchorPoint";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "Image";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << anchorPoints;
+    text.anchorPoint = i.value.toString();
+    addItem(i);
+
+    i.name = "justification";
+    i.parentName = textName;
+    i.captionText = "Justification";
+    i.tooltip = "Select a text box anchor point.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "justification";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "Auto";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "Auto" << "Left" << "Center" << "Right";
+    text.justification = i.value.toString();
+    addItem(i);
+
+    i.name = "source";
+    i.parentName = textName;
+    i.captionText = "Source";
+    i.tooltip = "Select a text box anchor point.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "source";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "Text";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "Text" << "Metadata field" << "Metadata template";
+    text.source = i.value.toString();
+    addItem(i);
+
+    // remember index from PropertyEditor::addItem when update visible source rows below
+    QModelIndex sourceIdx = capIdx;
+
+    i.name = "text";
+    i.parentName = textName;
+    i.captionText = "Text";
+    i.tooltip = "Enter text to be displayed.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "text";
+    if (setting->contains(settingRootPath + i.valueName)) {
+        i.value = setting->value(settingRootPath + i.valueName);
+    }
+    else {
+        i.value = "Enter text";
+        qDebug() << __FUNCTION__ << i.value;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_LineEdit;
+    i.type = "QString";
+    border.color = i.value.toString();
+    text.text = i.value.toString();
+    addItem(i);
+
+    i.name = "metadataField";
+    i.parentName = textName;
+    i.captionText = "Meta field";
+    i.tooltip = "Select a metadata field.  The metadata will be substituted in the text box.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "metadataField";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "Title";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << is->tokens;
+    text.metadataField = i.value.toString();
+    addItem(i);
+
+    i.name = "metadataTemplate";
+    i.parentName = textName;
+    i.captionText = "Meta template";
+    i.tooltip = "Select a metadata template.  A template can include multiple metadata \n"
+                "fields and user input text.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "metadataField";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "Text" << "Metadata field" << "Metadata template";
+    text.metadataTemplate = i.value.toString();
+    addItem(i);
+
+    // update tree based on source
+    qDebug() << __FUNCTION__ << "Update text source" << sourceIdx;
+    textItemChange(sourceIdx);
+
+    i.name = "size";
+    i.parentName = textName;
+    i.captionText = "Size";
+    i.tooltip = "Enter a percentage of the long side pixels to set a font size in pixels.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "size";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = 0.1;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    text.size = i.value.toDouble();
+    addItem(i);
+
+    i.name = "font";
+    i.parentName = textName;
+    i.captionText = "Font";
+    i.tooltip = "Select a font.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "font";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "Choose font";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    QFontDatabase fonts;
+    i.dropList << fonts.families();
+    text.font = i.value.toString();
+    addItem(i);
+
+    i.name = "fontStyle";
+    i.parentName = textName;
+    i.captionText = "Font style";
+    i.tooltip = "Select a font style.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "fontStyle";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "Regular";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << fonts.styles(text.font);
+    text.fontStyle = i.value.toString();
+    addItem(i);
+
+    i.name = "color";
+    i.parentName = textName;
+    i.captionText = "Color";
+    i.tooltip = "Select a color that will be used to fill the border area.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "color";
+    if (setting->contains(settingRootPath + i.valueName)) {
+        i.value = setting->value(settingRootPath + i.valueName);
+    }
+    else {
+        // start with a random color
+        quint32 x = QRandomGenerator::global()->generate() * 16777215;
+        i.value = "#" + QString::number(x, 16);
+        qDebug() << __FUNCTION__ << i.value;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Color;
+    i.type = "QString";
+    text.color = i.value.toString();
+    addItem(i);
+
+    i.name = "opacity";
+    i.parentName = textName;
+    i.captionText = "Opacity";
+    i.tooltip = "The opacity of the text.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "opacity";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = 100;
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType =  DT_Slider;
+    i.min = 0;
+    i.max = 100;
+    i.type = "int";
+    text.opacity = i.value.toInt();
+    addItem(i);
+
+    i.name = "style";
+    i.parentName = textName;
+    i.captionText = "Style";
+    i.tooltip = "Select a style that will be applied to the text.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.valueName = "style";
+    if (setting->contains(settingRootPath + i.valueName))
+        i.value = setting->value(settingRootPath + i.valueName);
+    else {
+        i.value = "";
+        setting->setValue(settingRootPath + i.valueName, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "None" << "Style 1";
+    border.style = i.value.toString();
+    addItem(i);
+
+    // add the text info to the vector of texts t
+    t << text;
 }

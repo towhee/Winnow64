@@ -16,6 +16,7 @@ public:
     QString getCurrentInfoTemplate();
     QString parseTokenString(QString &tokenString, QString &fPath, QModelIndex &idx);
 
+    QStringList tokens;
     QMap<QString, QString> infoTemplates;
     QString currentInfoTemplate;
 
@@ -24,7 +25,6 @@ protected:
 private:
     ImageMetadata m;
     DataModel *dm;
-    QStringList tokens;
     QMap<QString,QString> exampleMap;
 
     void initTokenList();

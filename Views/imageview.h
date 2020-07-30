@@ -37,7 +37,7 @@ public:
 
     QGraphicsScene *scene;
     QGraphicsPixmapItem *pmItem;
-    QGraphicsTextItem *infoItem;
+//    QGraphicsTextItem *infoItem;
     QMatrix matrix;
     Pixmap *pixmap;
     QPixmap  displayPixmap;
