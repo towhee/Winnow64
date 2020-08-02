@@ -111,7 +111,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
 
 QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-    int height = static_cast<int>(G::fontSize.toInt() * 1.7 * G::ptToPx);
+    int height = static_cast<int>(G::fontSize.toInt() * 1.5 * G::ptToPx);
     return QSize(option.rect.width(), height);
     /*
     int type = index.data(UR_DelegateType).toInt();
@@ -304,6 +304,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     painter->save();
 
     bool isSelected = option.state.testFlag(QStyle::State_Selected);
+    bool isExpanded = (option.state & QStyle::State_Open) > 0;
     bool hasChildren = index.model()->hasChildren(index.model()->index(index.row(),0,index.parent()));
 
     /*
@@ -326,17 +327,26 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QRect r0 = QRect(0, r.y(), r.x() + r.width(), r.height());
     // r1 = r0 but leaves 1 pixel at the left and right margins to make room for a border
     QRect r1 = QRect(1, r.y(), r.x() + r.width() - 1, r.height());
+    // r2 = r0 but leaves 1 pixel at the left, right and bottom margins to draw text
+    QRect r2 = QRect(5, r.y(), r.x() + r.width() - 5, r.height()-1);
+    // r3 = r but leaves 1 pixel at the bottom margins to draw text
+    QRect r3 = QRect(r.x(), r.y(), r.x() + r.width(), r.height()-3);
 
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;
     int c = G::backgroundShade + 30;
+    int d = G::backgroundShade;
+    int e = G::backgroundShade + 10;
     int t = G::textShade;
 
-    QLinearGradient categoryBackground;
-    categoryBackground.setStart(0, r.top());
-    categoryBackground.setFinalStop(0, r.bottom());
-    categoryBackground.setColorAt(0, QColor(a,a,a));
-    categoryBackground.setColorAt(1, QColor(b,b,b));
+    QLinearGradient rootCategoryBackground;
+    rootCategoryBackground.setStart(0, r.top());
+    rootCategoryBackground.setFinalStop(0, r.bottom());
+    rootCategoryBackground.setColorAt(0, QColor(a,a,a));
+    rootCategoryBackground.setColorAt(1, QColor(b,b,b));
+
+    QColor categoryRowBackground(QColor(d,d,d));
+    QColor valueRowBackground(QColor(e,e,e));
 
     QFont font;
     font = painter->font();
@@ -356,40 +366,60 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QPixmap branchClosed(":/images/branch-closed-small.png");
     QPixmap branchOpen(":/images/branch-open-small.png");
 
-    if (index.data(UR_DecorateGradient).toBool()) {
-        // root item in caption column
+    if (index.data(UR_isHeader).toBool()) {
+        // header item in caption column
         if (index.column() == 0) {
             // paint the gradient covering the decoration
-            painter->fillRect(r1, categoryBackground);
-            if (index.data(UR_isDecoration).toBool()) {
+            if (index.data(UR_isBackgroundGradient).toBool()) {
+                painter->fillRect(r1, rootCategoryBackground);
                 // re-instate the decorations
-                int x = 2;
-                int y = r0.top() + r0.height()/2 - 3;
-                if (isSelected) {
-                    painter->drawPixmap(x, y, 9, 9, branchOpen);
-                }
-                else {
-                    painter->drawPixmap(x, y, 9, 9, branchClosed);
+                if (index.data(UR_isDecoration).toBool()) {
+                    int x = 2;
+                    int y = 0;
+                    if (isExpanded) {
+                        y = r0.top() + r0.height()/2 - 7;
+                        painter->drawPixmap(x, y, 9, 9, branchOpen);
+                    }
+                    else {
+                        y = r0.top() + r0.height()/2 - 5;
+                        painter->drawPixmap(x, y, 9, 9, branchClosed);
+                    }
                 }
             }
             // caption text and no borders for root item
             if (isSelected) painter->setPen(selPen);
             else painter->setPen(catPen);
-            painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+            painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+            // draw separator line if not gradient background
+            if (!index.data(UR_isBackgroundGradient).toBool()) {
+                painter->setPen(brdPen);
+                painter->drawLine(r0.bottomLeft(), r0.bottomRight());
+            }
         }
-        // root row, but value column, so no decoration to deal with
+        // header row, but value column, so no decoration to deal with
         else {
-            painter->fillRect(r, categoryBackground);
+            if (index.data(UR_isBackgroundGradient).toBool())
+                painter->fillRect(r, rootCategoryBackground);
+            else {
+                painter->fillRect(r, categoryRowBackground);
+                painter->setPen(brdPen);
+                painter->drawLine(r.bottomLeft(), r.bottomRight());
+            }
         }
     }
     else {
-        // Not a root item
+        // Not a header item
         painter->setPen(regPen);
 
         // caption text and cell borders
         if (index.column() == 0) {
+            painter->fillRect(r2, valueRowBackground);
             if (isSelected) painter->setPen(selPen);
-            painter->drawText(r, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+            // indent the text (maybe not if not a header)
+            if (index.data((UR_isIndent)).toBool())
+                painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+            else
+                painter->drawText(r2, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
             painter->setPen(brdPen);
             // draw line between column 0 and 1
             if (!hasChildren) painter->drawLine(r0.topRight(), r0.bottomRight());
@@ -398,12 +428,68 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             painter->drawLine(r0.bottomLeft(), r0.bottomRight());
         }
         if (index.column() == 1) {
+            painter->fillRect(r, valueRowBackground);
             painter->setPen(brdPen);
             // draw bottom line
             painter->setPen(brdPen);
             painter->drawLine(r.bottomLeft(), r.bottomRight());
         }
     }
+
+//    if (index.data(UR_DecorateGradient).toBool()) {
+//        // root item in caption column
+//        if (index.column() == 0) {
+//            // paint the gradient covering the decoration
+//            painter->fillRect(r1, rootCategoryBackground);
+//            if (index.data(UR_isDecoration).toBool()) {
+//                // re-instate the decorations
+//                int x = 2;
+//                int y = 0;
+//                if (isExpanded) {
+//                    y = r0.top() + r0.height()/2 - 7;
+//                    painter->drawPixmap(x, y, 9, 9, branchOpen);
+//                }
+//                else {
+//                    y = r0.top() + r0.height()/2 - 5;
+//                    painter->drawPixmap(x, y, 9, 9, branchClosed);
+//                }
+//            }
+//            // caption text and no borders for root item
+//            if (isSelected) painter->setPen(selPen);
+//            else painter->setPen(catPen);
+//            painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+//        }
+//        // root row, but value column, so no decoration to deal with
+//        else {
+//            painter->fillRect(r, rootCategoryBackground);
+//        }
+//    }
+//    else {
+//        // Not a root item
+//        painter->setPen(regPen);
+
+//        // caption text and cell borders
+//        if (index.column() == 0) {
+//            if (isSelected) painter->setPen(selPen);
+//            // indent the text (maybe not if not a header)
+//            if (index.data((UR_isIndent)).toBool())
+//                painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+//            else
+//                painter->drawText(r2, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+//            painter->setPen(brdPen);
+//            // draw line between column 0 and 1
+//            if (!hasChildren) painter->drawLine(r0.topRight(), r0.bottomRight());
+//            // draw bottom line
+//            painter->setPen(brdPen);
+//            painter->drawLine(r0.bottomLeft(), r0.bottomRight());
+//        }
+//        if (index.column() == 1) {
+//            painter->setPen(brdPen);
+//            // draw bottom line
+//            painter->setPen(brdPen);
+//            painter->drawLine(r.bottomLeft(), r.bottomRight());
+//        }
+//    }
 
     painter->restore();
 }

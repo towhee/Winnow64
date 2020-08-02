@@ -13,6 +13,9 @@ Embel::Embel(ImageView *ev, EmbelProperties *p)
 
 void Embel::test()
 {
+    iv->scene->clear();
+    return;
+
     iv->scene->removeItem(bItems[0]);
     delete bItems[0];
     bItems.clear();
@@ -63,6 +66,12 @@ void Embel::clear()
     }
     bItems.clear();
     b.clear();
+    // remove texts
+    for (int i = 0; i < tItems.size(); ++i) {
+        iv->scene->removeItem(tItems[i]);
+        delete tItems[i];
+    }
+    tItems.clear();
 }
 
 void Embel::build()
@@ -176,8 +185,11 @@ void Embel::borderImageCoordinates()
 
 QPoint Embel::canvasCoord(QString object, QString container, double x, double y)
 {
+    qDebug() << __FUNCTION__ << "object=" << object
+             << "container =" << container
+             << "x =" << x << "y =" << y;
+
     if (object == "Image") {
-        qDebug() << __FUNCTION__ << object << container << x << y;
         int x0 = image.x + static_cast<int>(x / 100 * image.w);
         int y0 = image.y + static_cast<int>(y / 100 * image.h);
         return QPoint(x0, y0);
@@ -194,6 +206,7 @@ QPoint Embel::canvasCoord(QString object, QString container, double x, double y)
                     y1 = b[i].y;
                     w = b[i].w;
                     h = b[i].t;
+                    qDebug() << __FUNCTION__ << "Top";
                 }
                 else if (container == "Left") {
                     x1 = b[i].x;
@@ -216,6 +229,8 @@ QPoint Embel::canvasCoord(QString object, QString container, double x, double y)
                 }
                 int x0 = x1 + static_cast<int>(x / 100 * w);
                 int y0 = y1 + static_cast<int>(y / 100 * h);
+                qDebug() << __FUNCTION__
+                         << x1 << y1 << w << h << x0 << y0;
                 return QPoint(x0, y0);
             }
         }
@@ -277,7 +292,15 @@ void Embel::addBordersToScene()
         pen.setColor(color);
         bItems[i]->setPen(pen);
         color.setNamedColor(p->b[i].color);
-        bItems[i]->setBrush(color);
+        // tile or color background
+        if (p->b[i].tile.isEmpty()) {
+            bItems[i]->setBrush(color);
+        }
+        else {
+            QImage imTile;
+            imTile.loadFromData(p->b[i].tile);
+            bItems[i]->setBrush(imTile);
+        }
         bItems[i]->setOpacity(p->b[i].opacity/100);
         iv->scene->addItem(bItems[i]);
         bItems[i]->setPos(b[i].x, b[i].y);
@@ -301,12 +324,18 @@ void Embel::addTextsToScene()
         QFont font(p->t[i].font);
         int fontSize = static_cast<int>(p->t[i].size / 100 * ls);
         font.setPixelSize(fontSize);
+        font.setItalic(p->t[i].isItalic);
+        font.setBold(p->t[i].isBold);
         tItems[i]->setFont(font);
         tItems[i]->setDefaultTextColor(QColor(p->t[i].color));
-        tItems[i]->setOpacity(p->t[i].opacity/100);
+        double opacity = static_cast<double>(p->t[i].opacity)/100;
+        tItems[i]->setOpacity(opacity);
         tItems[i]->setZValue(20);
         iv->scene->addItem(tItems[i]);
         // position text
+        qDebug() << __FUNCTION__ << "Getting canvas coord for Text" << i
+                 << "p->t[i].anchorObject =" << p->t[i].anchorObject
+                 << "p->t[i].anchorContainer =" << p->t[i].anchorContainer;
         QPoint canvas = canvasCoord(p->t[i].anchorObject, p->t[i].anchorContainer,
                                     p->t[i].x, p->t[i].y);
         QPoint offset = anchorPointOffset(p->t[i].anchorPoint,

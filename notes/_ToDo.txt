@@ -1,4 +1,7 @@
 BUGS
+- resetFitZoom
+- MetaStrings
+- Shadows
 - Globalize css
 - Add hif file format
 - Add cr3 file format
@@ -20,7 +23,7 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
-- add color editor to PrepertyEditor
+- add color editor to PropertyEditor
 - Statusbar reverseSortBtn
 - Tile extractor
 - Added LoadMsecPerMpColumn to the datamodel
