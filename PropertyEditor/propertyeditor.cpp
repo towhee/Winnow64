@@ -119,7 +119,7 @@ supplied by the calling function.
     #endif
     }
     int row;
-    QModelIndex capIdx;                             // caption field
+//   capIdx;                                        // caption field defined in header file
     QModelIndex valIdx;                             // value field
     QModelIndex parIdx = QModelIndex();             // parent caption field
     QStandardItem *capItem = new QStandardItem;
@@ -157,9 +157,13 @@ supplied by the calling function.
         qDebug() << __FUNCTION__ << "root:" << i.name << i.captionText;
 
     // caption
+    model->setData(capIdx, i.isIndent, UR_isIndent);
+    model->setData(capIdx, i.isHeader, UR_isHeader);
+    model->setData(valIdx, i.isHeader, UR_isHeader);
     model->setData(capIdx, i.isDecoration, UR_isDecoration);
-    model->setData(capIdx, i.decorateGradient, UR_DecorateGradient);
-    model->setData(valIdx, i.decorateGradient, UR_DecorateGradient);
+    model->setData(valIdx, i.isDecoration, UR_isDecoration);
+    model->setData(capIdx, i.decorateGradient, UR_isBackgroundGradient);
+    model->setData(valIdx, i.decorateGradient, UR_isBackgroundGradient);
     model->setData(capIdx, i.captionText);
     model->setData(capIdx, i.name, UR_Name);
     model->setData(capIdx, i.tooltip, Qt::ToolTipRole);
@@ -177,7 +181,7 @@ supplied by the calling function.
     model->setData(valIdx, i.delegateType, UR_DelegateType);
     model->setData(valIdx, i.itemIndex, UR_ItemIndex);
 //    qDebug() << __FUNCTION__ << valIdx << i.name << i.itemIndex << valIdx.data(UR_ItemIndex);
-    model->setData(valIdx, i.valueName, UR_Source);
+    model->setData(valIdx, i.key, UR_Source);
     model->setData(valIdx, i.type, UR_Type);
     model->setData(valIdx, i.min, UR_Min);
     model->setData(valIdx, i.max, UR_Max);
@@ -185,7 +189,7 @@ supplied by the calling function.
     model->setData(valIdx, i.color, UR_Color);
     model->setData(valIdx, i.dropList, UR_StringList);
     model->setData(valIdx, i.index, UR_QModelIndex);
-    sourceIdx[i.valueName] = valIdx;
+    sourceIdx[i.key] = valIdx;
 
     // reset data struct
     clearItemInfo(i);
@@ -203,15 +207,17 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.itemIndex = 0;                // all
     i.name = "";                    // all
     i.parentName = "";              // all
-    i.decorateGradient = false;     // Root headers as reqd
+    i.isHeader = false;             // set true for header rows
+    i.isDecoration = false;         // set true for headers that can expand
+    i.isIndent = true;              // as required if not header with decoration
+    i.decorateGradient = false;     // Generally root headers as reqd
     i.hasValue = true;              // all
     i.tooltip = "";                 // all
     i.captionText = "";             // all
-    i.isDecoration = true;          // all
     i.captionIsEditable = false;    // all
     i.delegateType = DT_None;       // all
     i.value = 0;                    // except hdr
-    i.valueName = "";               // except hdr
+    i.key = "";               // except hdr
     i.type = "";                    // except hdr
     i.min = 0;                      // DT_Spinbox, DT_Slider
     i.max = 0;                      // DT_Spinbox, DT_Slider

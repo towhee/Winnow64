@@ -111,6 +111,7 @@ void EmbelProperties::initialize()
                  << "Middle Left" << "Middle Center" << "Middle Right"
                  << "Bottom Left" << "Bottom Center" << "Bottom Right";
     anchorContainerList << "Top" << "Left" << "Right" << "Bottom";
+    readTileList();
 }
 
 void EmbelProperties::updateBorderList()
@@ -134,6 +135,7 @@ void EmbelProperties::diagnostic(QModelIndex parent)
     G::track(__FUNCTION__);
     #endif
     }
+    // model
     for(int r = 0; r < model->rowCount(parent); ++r) {
         QModelIndex idx0 = model->index(r, 0, parent);
         QModelIndex idx1 = model->index(r, 1, parent);
@@ -147,6 +149,64 @@ void EmbelProperties::diagnostic(QModelIndex parent)
             diagnostic(idx0);
         }
     }
+    // vectors
+    qDebug() << __FUNCTION__ << "BORDER VECTOR";
+    for (int i = 0; i < b.length(); ++i) {
+        qDebug().noquote()
+            << i << " "
+            << "name = " << b[i].name
+            << "caption = " << b[i].caption
+            << "parent = " << b[i].parent
+            << "top = " << b[i].top
+            << "left = " << b[i].left
+            << "right = " << b[i].right
+            << "bottom = " << b[i].bottom
+            << "tile = " << b[i].tile
+            << "color = " << b[i].color
+            << "opacity = " << b[i].opacity
+            << "style = " << b[i].style
+            << "outlineWidth = " << b[i].outlineWidth
+            << "outlineColor = " << b[i].outlineColor;
+    }
+    qDebug() << __FUNCTION__ << "TEXT VECTOR";
+    for (int i = 0; i < t.length(); ++i) {
+        qDebug().noquote()
+            << i << " "
+            << "name = " << t[i].name
+            << "caption = " << t[i].caption
+            << "parent = " << t[i].parent
+            << "anchorObject = " << t[i].anchorObject
+            << "anchorContainer = " << t[i].anchorContainer
+            << "x = " << t[i].x
+            << "y = " << t[i].y
+            << "anchorPoint = " << t[i].anchorPoint
+            << "source = " << t[i].source
+            << "text = " << t[i].text
+            << "metadataField = " << t[i].metadataField
+            << "metadataTemplate = " << t[i].metadataTemplate
+            << "size = " << t[i].size
+            << "font = " << t[i].font
+            << "isBold = " << t[i].isBold
+            << "isItalic = " << t[i].isItalic
+            << "color = " << t[i].color
+            << "opacity = " << t[i].opacity
+            << "style = " << t[i].style;
+    }
+}
+
+void EmbelProperties::rename(QString path, QString from, QString to)
+{
+    QString path1 = path + "/" + from;
+    QString path2 = path + "/" + to;
+    setting->beginGroup(path1);
+    QStringList keys = setting->allKeys();
+    setting->endGroup();
+    for (int i = 0; i < keys.length(); ++i) {
+        QString key1 = path1 + "/" + keys.at(i);
+        QString key2 = path2 + "/" + keys.at(i);
+        setting->setValue(key2, setting->value(key1));
+    }
+    setting->remove(path1);
 }
 
 void EmbelProperties::renameCurrentTemplate()
@@ -156,13 +216,12 @@ void EmbelProperties::renameCurrentTemplate()
     G::track(__FUNCTION__);
     #endif
     }
-    e->test();
-//    mw3->embel->test();
-    return;
-
-    QModelIndex idx = sourceIdx["templateList"];
-    model->setData(idx, templateName);
-    propertyDelegate->setEditorData(templateListEditor, idx);
+    QString name = Utilities::inputText("Rename Template", "Rename template " + templateName);
+    if (name == "") return;
+    rename("Embel/Templates", templateName, name);
+    readTemplateList();
+    templateListEditor->refresh(templateList);
+    templateListEditor->setValue(name);
 }
 
 void EmbelProperties::setCurrentTemplate()
@@ -193,36 +252,44 @@ Read the template list using QSettings
     G::track(__FUNCTION__);
     #endif
     }
+    templateList.clear();
     templateId = 0;
     templateName = "Do not Embellish";
     setting->beginGroup("Embel/Templates");
+    // Add "Do not Embellish" as first template
+    templateList << templateName;
     // 1st time, no templates created yet
     if (setting->childGroups().count() == 0) {
         setting->setValue("Do not Embellish/isCurrent", true);
-//        templateId = 0;
-//        templateName = "Do not Embellish";
-        templateList << templateName;
     }
     else {
         for (int i = 0; i < setting->childGroups().count(); ++i) {
-            templateList << setting->childGroups().at(i);
+            if (setting->childGroups().at(i) != "Do not Embellish")
+                templateList << setting->childGroups().at(i);
         }
-//        templateName = "";
         for (int i = 1; i < templateList.size(); ++i) {
             QString t = templateList.at(i);
-            QString path = /*"Embel/Templates/" + */t + "/isCurrent";
+            QString path = t + "/isCurrent";
             if (setting->value(path).toBool()) {
                 templateName = t;
                 templateId = i;
             }
         }
         qDebug() << __FUNCTION__ << templateName << templateId;
-//        templatePath = "Embel/Templates/" + templateName + "/";
     }
     setting->endGroup();
     templatePath = "Embel/Templates/" + templateName + "/";
     if (templateId == 0) G::isEmbellish = false;
     else G::isEmbellish = true;
+}
+
+void EmbelProperties::readTileList()
+{
+    tileList.clear();
+    tileList << "Do not tile";
+    setting->beginGroup("Embel/Tiles");
+    tileList << setting->allKeys();
+    setting->endGroup();
 }
 
 void EmbelProperties::newEmbelTemplate()
@@ -437,7 +504,8 @@ void EmbelProperties::borderItemChange(QModelIndex idx)
 
     if (source == "tile") {
         setting->setValue(path, v.toString());
-        b[index].tile = v.toString();
+        if (v.toString() == "Do not tile")  b[index].tile.clear();
+        else b[index].tile = setting->value("Embel/Tiles/" + v.toString()).toByteArray();
     }
 
     if (source == "color") {
@@ -505,11 +573,6 @@ void EmbelProperties::textItemChange(QModelIndex idx)
         t[index].anchorPoint = v.toString();
     }
 
-    if (source == "justification") {
-        setting->setValue(path, v.toString());
-        t[index].justification = v.toString();
-    }
-
     if (source == "source") {
         QString s = v.toString();
         setting->setValue(path, s);
@@ -560,9 +623,14 @@ void EmbelProperties::textItemChange(QModelIndex idx)
         t[index].size = v.toDouble();
     }
 
-    if (source == "fontStyle") {
-        setting->setValue(path, v.toString());
-        t[index].font = v.toString();
+    if (source == "bold") {
+        setting->setValue(path, v.toBool());
+        t[index].isBold = v.toBool();
+    }
+
+    if (source == "italic") {
+        setting->setValue(path, v.toBool());
+        t[index].isItalic = v.toBool();
     }
 
     if (source == "color") {
@@ -645,7 +713,7 @@ void EmbelProperties::addTemplateHeader()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = templateName;
-    i.valueName = "templateList";
+    i.key = "templateList";
     i.delegateType = DT_Combo;      // no parent, delegateType > 0 -> No header, has value
     i.type = "QString";
     i.color = "#1b8a83";
@@ -719,9 +787,9 @@ void EmbelProperties::addFile()
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "horizontalFit";
-    if (setting->contains(templatePath + "File/" + i.valueName))
-        i.value = setting->value(templatePath + "File/" + i.valueName);
+    i.key = "horizontalFit";
+    if (setting->contains(templatePath + "File/" + i.key))
+        i.value = setting->value(templatePath + "File/" + i.key);
     else i.value = 500;
     i.delegateType = DT_Spinbox;
     i.type = "int";
@@ -739,9 +807,9 @@ void EmbelProperties::addFile()
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "verticalFit";
-    if (setting->contains(templatePath + "File/" + i.valueName))
-        i.value = setting->value(templatePath + "File/" + i.valueName);
+    i.key = "verticalFit";
+    if (setting->contains(templatePath + "File/" + i.key))
+        i.value = setting->value(templatePath + "File/" + i.key);
     else i.value = 500;
     i.delegateType = DT_Spinbox;
     i.type = "int";
@@ -759,8 +827,8 @@ void EmbelProperties::addFile()
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "fileType";
-    i.value = setting->value(templatePath + "File/" + i.valueName);
+    i.key = "fileType";
+    i.value = setting->value(templatePath + "File/" + i.key);
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << "Tiff" << "Jpg" << "Png";
@@ -775,8 +843,8 @@ void EmbelProperties::addFile()
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "saveMethod";
-    i.value = setting->value(templatePath + "File/" + i.valueName);
+    i.key = "saveMethod";
+    i.value = setting->value(templatePath + "File/" + i.key);
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << "Same folder" << "Subfolder" << "Template";
@@ -792,8 +860,8 @@ void EmbelProperties::addFile()
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "folderPath";
-    i.value = setting->value(templatePath + "File/" + i.valueName);
+    i.key = "folderPath";
+    i.value = setting->value(templatePath + "File/" + i.key);
     i.delegateType = DT_LineEdit;
     i.type = "string";
     f.folderPath = i.value.toString();
@@ -807,8 +875,8 @@ void EmbelProperties::addFile()
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "suffix";
-    i.value = setting->value(templatePath + "File/" + i.valueName);
+    i.key = "suffix";
+    i.value = setting->value(templatePath + "File/" + i.key);
     i.delegateType = DT_LineEdit;
     i.type = "string";
     f.suffix = i.value.toString();
@@ -822,8 +890,8 @@ void EmbelProperties::addFile()
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "overwriteFiles";
-    i.value = setting->value(templatePath + "File/" + i.valueName);
+    i.key = "overwriteFiles";
+    i.value = setting->value(templatePath + "File/" + i.key);
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     f.overwriteFiles = i.value.toBool();
@@ -854,9 +922,9 @@ void EmbelProperties::addImage()
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "outlineWidth";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "outlineWidth";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else i.value = 0.0;
     i.delegateType = DT_DoubleSpinbox;
     i.type = "double";
@@ -873,9 +941,9 @@ void EmbelProperties::addImage()
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "outlineColor";
-    if (setting->contains(settingRootPath + i.valueName)) {
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "outlineColor";
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
     }
     else i.value = "#3f5f53";
     i.delegateType = DT_Color;
@@ -891,10 +959,10 @@ void EmbelProperties::addImage()
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "imageStyle";
-    i.valueName = "outlineColor";
-    if (setting->contains(settingRootPath + i.valueName)) {
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "imageStyle";
+    i.key = "outlineColor";
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
     }
     else i.value = "";
     i.delegateType = DT_Combo;
@@ -1068,24 +1136,51 @@ void EmbelProperties::newText()
 
 void EmbelProperties::deleteItem()
 {
+    // if no item selected then return
     if (selectionModel()->selection().isEmpty()) return;
+    // get selected item index, name, parent, path ...
     QModelIndex idx = selectionModel()->selection().indexes().first();
     idx = model->index(idx.row(), 0, idx.parent());
     int row = idx.row();
     QString name = idx.data(UR_Name).toString();
     QModelIndex parIdx = idx.parent();
     QString parName = parIdx.data(UR_Name).toString();
-    QString path = templatePath + parName + "/" + name;
-    qDebug() << __FUNCTION__ << path;
-    if (!QMessageBox::warning(this, "Delete", "Confirn delete " + name,
-                             QMessageBox::Cancel | QMessageBox::Ok)) return;
-    // remove from local structs
+    QString itemBase = parName.left(parName.length() - 1);
+    QString objPath = templatePath + parName;
+    QString itemToDeletePath = objPath + "/" + name;
+    qDebug() << __FUNCTION__
+             << "row =" << row
+             << "name =" << name
+             << "parName =" << parName
+             << "itemBase =" << itemBase
+             << "objPath =" << objPath
+             << "itemToDeletePath =" << itemToDeletePath;
+    int ret = (QMessageBox::warning(this, "Delete", "Confirm delete " + name + "                     ",
+                             QMessageBox::Cancel | QMessageBox::Ok));
+    if (ret == QMessageBox::Cancel) return;
+
+    // remove from local vectors
     if (parName == "Borders") b.remove(row);
     if (parName == "Texts") t.remove(row);
     // remove from datamodel
     model->removeRow(idx.row(), idx.parent());
-    // remove from QSettings
-    setting->remove(path);
+    // remove from setting
+    setting->remove(itemToDeletePath);
+
+    // rename subsequent category items ie text2, text3 ... in setting, model and vectors
+    for (int i = row; i < model->rowCount(parIdx); ++i) {
+        QString oldName = model->index(i,0,parIdx).data().toString();
+        QString newName = itemBase + QString::number(i + 1);
+        qDebug() << __FUNCTION__ << i << objPath << oldName << newName;
+        // update setting
+        rename(objPath, oldName, newName);
+        // update model
+        model->setData(model->index(i,0,parIdx), newName);
+        // update local struct
+        if (parName == "Borders") b[i].name = newName;
+        if (parName == "Texts") t[i].name = newName;
+    }
+
     // select another item
     int rowCount = model->rowCount(idx.parent());
     if (rowCount > 0) {
@@ -1093,6 +1188,7 @@ void EmbelProperties::deleteItem()
         if (!nextIdx.isValid()) nextIdx = model->index(rowCount - 1, 0, parIdx);
         selectionModel()->select(nextIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     }
+
     // if no items left in category then hide delete button
     else {
         if (parName == "Borders") borderDeleteBtn->setVisible(false);
@@ -1100,6 +1196,7 @@ void EmbelProperties::deleteItem()
         if (parName == "Rectangles") rectangleDeleteBtn->setVisible(false);
         if (parName == "Graphics") graphicDeleteBtn->setVisible(false);
     }
+
     // refresh the graphicsScene
     e->build();
 }
@@ -1219,9 +1316,6 @@ void EmbelProperties::diagnostics(QModelIndex idx)
 
 void EmbelProperties::test1()
 {
-    qDebug() << __FUNCTION__;
-    deleteItem();
-    return;
     e->test();
 }
 
@@ -1278,12 +1372,12 @@ void EmbelProperties::addBorder(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "topMargin";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "topMargin";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = 1;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     qDebug() << __FUNCTION__ << settingRootPath << i.value;
     i.delegateType = DT_DoubleSpinbox;
@@ -1301,12 +1395,12 @@ void EmbelProperties::addBorder(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "leftMargin";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "leftMargin";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = 1;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_DoubleSpinbox;
     i.type = "double";
@@ -1323,12 +1417,12 @@ void EmbelProperties::addBorder(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "rightMargin";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "rightMargin";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = 1;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_DoubleSpinbox;
     i.type = "double";
@@ -1345,12 +1439,12 @@ void EmbelProperties::addBorder(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "bottomMargin";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "bottomMargin";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = 1;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_DoubleSpinbox;
     i.type = "double";
@@ -1363,21 +1457,23 @@ void EmbelProperties::addBorder(int count)
     i.name = "tile";
     i.parentName = borderName;
     i.captionText = "Tile";
-    i.tooltip = "Select a tile that will be used to full the border area.";
+    i.tooltip = "Select a tile that will be used to fill the border area.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "tile";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "tile";
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
+        border.tile = setting->value("Embel/Tiles/" + i.value.toString()).toByteArray();
+    }
     else {
-        i.value = "";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        i.value = "Do not tile";
+        setting->setValue(settingRootPath + i.key, i.value);
+        border.tile.clear();
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << "Use color" << "Tile 1" << "Tile 2";
-    border.tile = i.value.toString();
+    i.dropList << tileList;
     addItem(i);
 
     i.name = "color";
@@ -1387,16 +1483,16 @@ void EmbelProperties::addBorder(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "color";
-    if (setting->contains(settingRootPath + i.valueName)) {
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "color";
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
     }
     else {
         // start with a random color
         quint32 x = QRandomGenerator::global()->generate() * 16777215;
         i.value = "#" + QString::number(x, 16);
         qDebug() << __FUNCTION__ << i.value;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Color;
     i.type = "QString";
@@ -1410,12 +1506,12 @@ void EmbelProperties::addBorder(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "opacity";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "opacity";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = 100;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType =  DT_Slider;
     i.min = 0;
@@ -1431,12 +1527,12 @@ void EmbelProperties::addBorder(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "outlineWidth";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "outlineWidth";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = 0.02;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_DoubleSpinbox;
     i.type = "double";
@@ -1453,13 +1549,13 @@ void EmbelProperties::addBorder(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "outlineColor";
-    if (setting->contains(settingRootPath + i.valueName)) {
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "outlineColor";
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
     }
     else {
         i.value = "#FFFFFF";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Color;
     i.type = "QString";
@@ -1473,12 +1569,12 @@ void EmbelProperties::addBorder(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "style";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "style";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = "";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
@@ -1527,12 +1623,12 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "anchorObject";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "anchorObject";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = "Image";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
@@ -1547,12 +1643,12 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "anchorContainer";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "anchorContainer";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = "Image";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        i.value = "Bottom";
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
@@ -1567,12 +1663,12 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "x";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "x";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 50;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        i.value = 0;
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     qDebug() << __FUNCTION__ << settingRootPath << i.value;
     i.delegateType = DT_DoubleSpinbox;
@@ -1590,12 +1686,12 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "y";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "y";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 50;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        i.value = 10 * count;
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     qDebug() << __FUNCTION__ << settingRootPath << i.value;
     i.delegateType = DT_DoubleSpinbox;
@@ -1613,37 +1709,17 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "anchorPoint";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "anchorPoint";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = "Image";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        i.value = "Top Left";
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << anchorPoints;
     text.anchorPoint = i.value.toString();
-    addItem(i);
-
-    i.name = "justification";
-    i.parentName = textName;
-    i.captionText = "Justification";
-    i.tooltip = "Select a text box anchor point.";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.valueName = "justification";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
-    else {
-        i.value = "Auto";
-        setting->setValue(settingRootPath + i.valueName, i.value);
-    }
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << "Auto" << "Left" << "Center" << "Right";
-    text.justification = i.value.toString();
     addItem(i);
 
     i.name = "source";
@@ -1653,12 +1729,12 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "source";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "source";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = "Text";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
@@ -1676,14 +1752,14 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "text";
-    if (setting->contains(settingRootPath + i.valueName)) {
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "text";
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
     }
     else {
-        i.value = "Enter text";
+        i.value = "Text #" + QString::number(count + 1);
         qDebug() << __FUNCTION__ << i.value;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_LineEdit;
     i.type = "QString";
@@ -1698,12 +1774,12 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "metadataField";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "metadataField";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = "Title";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
@@ -1719,12 +1795,12 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "metadataField";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "metadataField";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = "";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
@@ -1743,12 +1819,12 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "size";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "size";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 0.1;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        i.value = 2.0;
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_DoubleSpinbox;
     i.type = "double";
@@ -1765,12 +1841,12 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "font";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "font";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = "Choose font";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
@@ -1779,24 +1855,42 @@ void EmbelProperties::addText(int count)
     text.font = i.value.toString();
     addItem(i);
 
-    i.name = "fontStyle";
+    i.name = "bold";
     i.parentName = textName;
-    i.captionText = "Font style";
-    i.tooltip = "Select a font style.";
+    i.captionText = "Bold";
+    i.tooltip = "Use bold font.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "fontStyle";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "bold";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = "Regular";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        i.value = false;
+        setting->setValue(settingRootPath + i.key, i.value);
     }
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << fonts.styles(text.font);
-    text.fontStyle = i.value.toString();
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    text.isBold = i.value.toBool();
+    addItem(i);
+
+    i.name = "italic";
+    i.parentName = textName;
+    i.captionText = "Italic";
+    i.tooltip = "Use italic font.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "italic";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = false;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    text.isItalic = i.value.toBool();
     addItem(i);
 
     i.name = "color";
@@ -1806,16 +1900,14 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "color";
-    if (setting->contains(settingRootPath + i.valueName)) {
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "color";
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
     }
     else {
-        // start with a random color
-        quint32 x = QRandomGenerator::global()->generate() * 16777215;
-        i.value = "#" + QString::number(x, 16);
-        qDebug() << __FUNCTION__ << i.value;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        // start with white
+        i.value = "#ffffff";
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Color;
     i.type = "QString";
@@ -1829,12 +1921,12 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "opacity";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "opacity";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = 100;
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType =  DT_Slider;
     i.min = 0;
@@ -1850,12 +1942,12 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.valueName = "style";
-    if (setting->contains(settingRootPath + i.valueName))
-        i.value = setting->value(settingRootPath + i.valueName);
+    i.key = "style";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = "";
-        setting->setValue(settingRootPath + i.valueName, i.value);
+        setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
     i.type = "QString";

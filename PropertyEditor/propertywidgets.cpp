@@ -203,9 +203,20 @@ LineEditor::LineEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent
     lineEdit->setObjectName("DisableGoActions");  // used in MW::focusChange
     lineEdit->setAlignment(Qt::AlignLeft);
     QString clr = idx.data(UR_Color).toString();
-    lineEdit->setStyleSheet("QLineEdit {background:transparent; border:none;"
-                            "padding:0px; border-radius:0px; color:" + clr +"}" +
-                            "QlineEdit:disabled {color:gray}");
+    lineEdit->setStyleSheet("QLineEdit "
+                            "{"
+                                "background:transparent;"
+                                "border:none;"
+                                "padding:0px;"
+                                "border-radius:0px;"
+                                "margin-left:0px;"
+                                "color:" + clr +";"
+                            "}"
+                            "QlineEdit:disabled"
+                            "{"
+                                "color:gray;"
+                            "}"
+                            );
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
 
@@ -277,6 +288,7 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
     spinBox->setMaximum(max);
     spinBox->setStyleSheet("QSpinBox {background:transparent; border:none;"
                            "padding:0px; border-radius:0px;}"
+                           "margin-left:-7;"
                            "QSpinBox:disabled {color:gray}");
     spinBox->setWindowFlags(Qt::FramelessWindowHint);
     spinBox->setAttribute(Qt::WA_TranslucentBackground);
@@ -369,7 +381,7 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
                                      "border:none;"
 //                                     "margin-top:-1;"                 // nada
 //                                     "margin-bottom:-2;"
-                                     "margin-left:-4;"
+                                     "margin-left:-7;"
                                  "}"
                                   "QDoubleSpinBox:disabled {color:gray}"
                                  );
@@ -609,6 +621,15 @@ This is used to add new templates to the template drop list
     comboBox->addItem(item);
 }
 
+void ComboBoxEditor::refresh(QStringList items)
+{
+/*
+Called when a template is renamed or deleted
+*/
+    comboBox->clear();
+    comboBox->addItems(items);
+}
+
 void ComboBoxEditor::change(int index)
 {    
     {
@@ -792,7 +813,7 @@ void ColorEditor::setValueFromColorDlg()
     G::track(__FUNCTION__);
     #endif
     }
-    QColor color = QColorDialog::getColor();
+    QColor color = QColorDialog::getColor(QColor(lineEdit->text()));
     lineEdit->setText(color.name());
 }
 

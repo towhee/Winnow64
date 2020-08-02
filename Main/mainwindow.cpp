@@ -7484,7 +7484,7 @@ void MW::writeTile()
     }
     qDebug() << __FUNCTION__;
     setting->beginGroup("Embel/Tiles");
-    setting->remove("");
+//    setting->remove("");
     setting->setValue(imageView->tileName, imageView->tileBa);
     setting->endGroup();
 }
@@ -10968,6 +10968,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    embelTitleBar->setWindowTitle("Embellish");
+    embelProperties->test2();
 }
 // End MW

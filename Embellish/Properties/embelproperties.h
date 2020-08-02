@@ -47,7 +47,7 @@ public:
         double left;
         double right;
         double bottom;
-        QString tile;
+        QByteArray tile;
         QString color;
         double opacity;
         QString style;
@@ -66,14 +66,14 @@ public:
         double x;                   // container coordinate
         double y;                   // container coordinate
         QString anchorPoint;
-        QString justification;
         QString source;
         QString text;
         QString metadataField;
         QString metadataTemplate;
         double size;                // percent of long side pixels
         QString font;
-        QString fontStyle;
+        bool isBold;
+        bool isItalic;
         QString color;
         int opacity;
         QString style;
@@ -101,8 +101,11 @@ protected:
 
 private:
     void initialize();
+    void readTileList();
+    void rename(QString path, QString from, QString to);
     void updateBorderList();
     void readTemplateList();
+    void readTile(QStringList tileName);
     void renameCurrentTemplate();
     void setCurrentTemplate();
 
@@ -169,6 +172,8 @@ private:
     QStringList borderList;
     QStringList anchorObjectList;
     QStringList anchorContainerList;
+    QStringList fontWeights;
+    QStringList tileList;
 };
 
 #endif // EMBELPROPERTIES_H

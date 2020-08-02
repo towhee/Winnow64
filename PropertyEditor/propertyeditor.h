@@ -25,17 +25,20 @@ public:
     int indentation;
     int captionColumnWidth;
     int valueColumnWidth;
+    QModelIndex capIdx; // used to get index for added item when subclassing addItem
     struct ItemInfo {
         QString name;
         QString parentName;
+        bool isHeader = false;
+        bool isIndent = true;
         bool decorateGradient = false;
         bool hasValue;
         QString tooltip;
         QString captionText;
-        bool isDecoration = true;
+        bool isDecoration = true;       // show collapse/expand decoration in header
         bool captionIsEditable;
         QVariant value;
-        QString valueName;
+        QString key;
         QString type;
         int delegateType;
         QVariant min;

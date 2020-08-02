@@ -299,7 +299,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::colorManage;
-    i.valueName = "colorManage";
+    i.key = "colorManage";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -312,7 +312,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->rememberLastDir;
-    i.valueName = "rememberLastDir";
+    i.key = "rememberLastDir";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -325,7 +325,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->checkIfUpdate;
-    i.valueName = "checkIfUpdate";
+    i.key = "checkIfUpdate";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -338,7 +338,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->imageView->limitFit100Pct;
-    i.valueName = "limitFit100Pct";
+    i.key = "limitFit100Pct";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -351,7 +351,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::backgroundShade;
-    i.valueName = "globalBackgroundShade";
+    i.key = "globalBackgroundShade";
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 10;
@@ -377,7 +377,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::fontSize;
-    i.valueName = "globalFontSize";
+    i.key = "globalFontSize";
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 6;
@@ -394,7 +394,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->imageView->infoOverlayFontSize;
-    i.valueName = "infoOverlayFontSize";
+    i.key = "infoOverlayFontSize";
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 6;
@@ -421,7 +421,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value =mw->classificationBadgeInImageDiameter;
-    i.valueName = "classificationBadgeInImageDiameter";
+    i.key = "classificationBadgeInImageDiameter";
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 10;
@@ -439,7 +439,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value =mw->classificationBadgeInThumbDiameter;
-    i.valueName = "classificationBadgeInThumbDiameter";
+    i.key = "classificationBadgeInThumbDiameter";
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 10;
@@ -477,7 +477,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = 0; // n/a
-    i.valueName = "thumbViewIconSize";
+    i.key = "thumbViewIconSize";
     i.delegateType = DT_PlusMinus;
     i.type = "int";
     addItem(i);
@@ -490,7 +490,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->thumbView->labelFontSize;
-    i.valueName = "thumbViewLabelSize";
+    i.key = "thumbViewLabelSize";
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 6;
@@ -506,7 +506,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->thumbView->showIconLabels;
-    i.valueName = "thumbViewShowLabel";
+    i.key = "thumbViewShowLabel";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -528,7 +528,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = 0; // n/a
-    i.valueName = "gridViewIconSize";
+    i.key = "gridViewIconSize";
     i.delegateType = DT_PlusMinus;
     i.type = "int";
     addItem(i);
@@ -541,7 +541,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->gridView->labelFontSize;
-    i.valueName = "gridViewLabelSize";
+    i.key = "gridViewLabelSize";
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 6;
@@ -557,7 +557,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->thumbView->showIconLabels;
-    i.valueName = "gridViewShowLabel";
+    i.key = "gridViewShowLabel";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -586,7 +586,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->isShowCacheThreadActivity;
-    i.valueName = "showThreadActivity";
+    i.key = "showThreadActivity";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -599,7 +599,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->gridView->labelFontSize;
-    i.valueName = "progressWidthSlider";
+    i.key = "progressWidthSlider";
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 100;
@@ -627,7 +627,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->metadataCacheThread->metadataChunkSize;
-    i.valueName = "metadataChunkSize";
+    i.key = "metadataChunkSize";
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
@@ -648,7 +648,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::maxIconSize;
-    i.valueName = "maxIconSize";
+    i.key = "maxIconSize";
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 40;
@@ -673,7 +673,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = QString::number(mw->cacheSizeMB) + " / " + QString::number(G::availableMemoryMB) + " MB";
-    i.valueName = "availableMBToCache";
+    i.key = "availableMBToCache";
     i.delegateType = DT_Label;
     i.type = "QString";
     i.color = "#1b8a83";
@@ -690,7 +690,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->cacheSizeMethod;
-    i.valueName = "imageCacheSizeMethod";
+    i.key = "imageCacheSizeMethod";
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << "Thrifty" << "Moderate" << "Greedy";
@@ -715,7 +715,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->slideShowDelay;
-    i.valueName = "slideshowDelay";
+    i.key = "slideshowDelay";
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
@@ -732,7 +732,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->isSlideShowRandom;
-    i.valueName = "isSlideShowRandom";
+    i.key = "isSlideShowRandom";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -745,7 +745,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->isSlideShowWrap;
-    i.valueName = "isSlideShowWrap";
+    i.key = "isSlideShowWrap";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -771,7 +771,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isFolders;
-    i.valueName = "fullScreenShowFolders";
+    i.key = "fullScreenShowFolders";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -784,7 +784,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isFavs;
-    i.valueName = "fullScreenShowBookmarks";
+    i.key = "fullScreenShowBookmarks";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -797,7 +797,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isFilters;
-    i.valueName = "fullScreenShowFilters";
+    i.key = "fullScreenShowFilters";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -810,7 +810,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isMetadata;
-    i.valueName = "fullScreenShowMetadata";
+    i.key = "fullScreenShowMetadata";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -823,7 +823,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isThumbs;
-    i.valueName = "fullScreenShowThumbs";
+    i.key = "fullScreenShowThumbs";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -836,7 +836,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isStatusBar;
-    i.valueName = "fullScreenShowStatusBar";
+    i.key = "fullScreenShowStatusBar";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -869,7 +869,7 @@ void Preferences::addItems()
         i.delegateType = DT_Checkbox;
         i.type = "bool";
         i.captionIsEditable = false;
-        i.valueName = "infoView->ok";
+        i.key = "infoView->ok";
         i.value = okInfo->index(row, 2).data().toBool();
         i.index = okInfo->index(row, 2);
         addItem(i);
@@ -882,7 +882,7 @@ void Preferences::addItems()
             i.delegateType = DT_Checkbox;
             i.type = "bool";
             i.captionIsEditable = false;
-            i.valueName = "infoView->ok";
+            i.key = "infoView->ok";
             i.value = okInfo->index(childRow, 2, parentIdx).data().toBool();
             i.index = okInfo->index(childRow, 2, parentIdx);
             addItem(i);
@@ -917,7 +917,7 @@ void Preferences::addItems()
         i.delegateType = DT_Checkbox;
         i.type = "bool";
         i.captionIsEditable = false;
-        i.valueName = "tableView->ok";
+        i.key = "tableView->ok";
         i.parentName = "TableViewColumnsHeader";
         i.value = tv->index(row, 1).data().toBool();
         i.index = tv->index(row, 1);
@@ -945,7 +945,7 @@ void Preferences::addItems()
         i.delegateType = DT_Checkbox;
         i.type = "bool";
         i.captionIsEditable = false;
-        i.valueName = "tableView->ok";
+        i.key = "tableView->ok";
         i.value = tv->index(row, 1).data().toBool();
         i.index = tv->index(row, 1);
         addItem(i);
