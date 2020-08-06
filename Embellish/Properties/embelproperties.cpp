@@ -72,7 +72,6 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     #endif
     }
     mw3 = qobject_cast<MW*>(parent);
-    is = new InfoString(this, mw3->dm);
     this->setting = setting;
 
     setSolo(true);
@@ -112,6 +111,11 @@ void EmbelProperties::initialize()
                  << "Bottom Left" << "Bottom Center" << "Bottom Right";
     anchorContainerList << "Top" << "Left" << "Right" << "Bottom";
     readTileList();
+    QMapIterator<QString, QString> i(mw3->infoString->infoTemplates);
+    while (i.hasNext()) {
+        i.next();
+        metadataTemplatesList << i.key();
+    }
 }
 
 void EmbelProperties::updateBorderList()
@@ -182,7 +186,6 @@ void EmbelProperties::diagnostic(QModelIndex parent)
             << "anchorPoint = " << t[i].anchorPoint
             << "source = " << t[i].source
             << "text = " << t[i].text
-            << "metadataField = " << t[i].metadataField
             << "metadataTemplate = " << t[i].metadataTemplate
             << "size = " << t[i].size
             << "font = " << t[i].font
@@ -275,7 +278,6 @@ Read the template list using QSettings
                 templateId = i;
             }
         }
-        qDebug() << __FUNCTION__ << templateName << templateId;
     }
     setting->endGroup();
     templatePath = "Embel/Templates/" + templateName + "/";
@@ -393,6 +395,8 @@ void EmbelProperties::templateChange(QVariant v)
     expand(model->index(_rectangles,0));
     expand(model->index(_graphics,0));
     isTemplateChange = false;
+
+    mw3->imageView->loadImage(mw3->dm->currentFilePath);
 }
 
 void EmbelProperties::fileItemChange(QVariant v, QString source)
@@ -407,12 +411,12 @@ void EmbelProperties::fileItemChange(QVariant v, QString source)
 
     if (source == "horizontalFit") {
         setting->setValue(path, v.toInt());
-        f.horizontalFit = v.toInt();
+        f.horizontalFitPx = v.toInt();
     }
 
     if (source == "verticalFit") {
         setting->setValue(path, v.toInt());
-        f.verticalFit = v.toInt();
+        f.verticalFitPx = v.toInt();
     }
 
     if (source == "fileType") {
@@ -546,7 +550,6 @@ void EmbelProperties::textItemChange(QModelIndex idx)
     QString parent = idx.parent().data(UR_Name).toString();
     int index = idx.parent().data(UR_ItemIndex).toInt();
     QString path = templatePath + "Texts/" + parent + "/" + source;
-    qDebug() << __FUNCTION__ << path;
 
     if (source == "anchorObject") {
         setting->setValue(path, v.toString());
@@ -559,13 +562,13 @@ void EmbelProperties::textItemChange(QModelIndex idx)
     }
 
     if (source == "x") {
-        setting->setValue(path, v.toInt());
-        t[index].x = v.toInt();
+        setting->setValue(path, v.toDouble());
+        t[index].x = v.toDouble();
     }
 
     if (source == "y") {
-        setting->setValue(path, v.toInt());
-        t[index].y = v.toInt();
+        setting->setValue(path, v.toDouble());
+        t[index].y = v.toDouble();
     }
 
     if (source == "anchorPoint") {
@@ -584,17 +587,10 @@ void EmbelProperties::textItemChange(QModelIndex idx)
         if (s == "Text") {
             setRowHidden(row + 1, idx.parent(), false);
             setRowHidden(row + 2, idx.parent(), true);
-            setRowHidden(row + 3, idx.parent(), true);
-        }
-        if (s == "Metadata field") {
-            setRowHidden(row + 1, idx.parent(), true);
-            setRowHidden(row + 2, idx.parent(), false);
-            setRowHidden(row + 3, idx.parent(), true);
         }
         if (s == "Metadata template") {
             setRowHidden(row + 1, idx.parent(), true);
-            setRowHidden(row + 2, idx.parent(), true);
-            setRowHidden(row + 3, idx.parent(), false);
+            setRowHidden(row + 2, idx.parent(), false);
         }
     }
 
@@ -603,14 +599,15 @@ void EmbelProperties::textItemChange(QModelIndex idx)
         t[index].text = v.toString();
     }
 
-    if (source == "metadataField") {
-        setting->setValue(path, v.toString());
-        t[index].metadataField = v.toString();
-    }
-
     if (source == "metadataTemplate") {
-        setting->setValue(path, v.toString());
-        t[index].metadataTemplate = v.toString();
+        QString key = v.toString();
+        setting->setValue(path, key);
+        t[index].metadataTemplate = key;
+        t[index].text = metaString(key);
+//        QString tokenString = mw3->infoString->infoTemplates[v.toString()];
+//        QString path = mw3->imageView->currentImagePath;
+//        QModelIndex idx = mw3->thumbView->currentIndex();
+//        t[index].text = mw3->infoString->parseTokenString(tokenString, path, idx);
     }
 
     if (source == "font") {
@@ -720,7 +717,6 @@ void EmbelProperties::addTemplateHeader()
     i.dropList = templateList;
     templateListEditor = static_cast<ComboBoxEditor*>(addItem(i));
 
-    qDebug() << __FUNCTION__ << "templateList.size() =" << templateList.size();
     if (templateId == 0) return;
 
     // select the active template
@@ -796,7 +792,7 @@ void EmbelProperties::addFile()
     i.min = 1;
     i.max = 10000;
     i.fixedWidth = 50;
-    f.horizontalFit = i.value.toInt();
+    f.horizontalFitPx = i.value.toInt();
     addItem(i);
 
     // FILES Vertical fit
@@ -816,7 +812,7 @@ void EmbelProperties::addFile()
     i.min = 1;
     i.max = 10000;
     i.fixedWidth = 50;
-    f.verticalFit = i.value.toInt();
+    f.verticalFitPx = i.value.toInt();
     addItem(i);
 
     // FILES File type
@@ -1043,7 +1039,7 @@ void EmbelProperties::addTexts()
 
 void EmbelProperties::addRectangles()
 {
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     // Rectangles header (Root)
     i.name = "Rectangles";
     i.parentName = "???";
@@ -1076,7 +1072,7 @@ void EmbelProperties::addRectangles()
 
 void EmbelProperties::addGraphics()
 {
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     // Graphics header (Root)
     i.name = "Graphics";
     i.parentName = "???";
@@ -1292,6 +1288,14 @@ void EmbelProperties::showRelevantDeleteBtn(QString btnToShow)
     if (btnToShow == "Texts") textDeleteBtn->setVisible(true);
     if (btnToShow == "Rectangles") rectangleDeleteBtn->setVisible(true);
     if (btnToShow == "Graphics") graphicDeleteBtn->setVisible(true);
+}
+
+QString EmbelProperties::metaString(QString key)
+{
+    QString tokenString = mw3->infoString->infoTemplates[key];
+    QString path = mw3->imageView->currentImagePath;
+    QModelIndex curIdx = mw3->thumbView->currentIndex();
+    return mw3->infoString->parseTokenString(tokenString, path, curIdx);
 }
 
 void EmbelProperties::diagnostics(QModelIndex idx)
@@ -1598,7 +1602,7 @@ void EmbelProperties::addText(int count)
     QString settingRootPath = templatePath + "Texts/" + textName + "/";
 
     // subheader for this border
-    qDebug() << __FUNCTION__ << "count =" << count;
+//    qDebug() << __FUNCTION__ << "count =" << count;
     i.isHeader = true;
     i.isDecoration = true;
     i.itemIndex = count;
@@ -1670,7 +1674,6 @@ void EmbelProperties::addText(int count)
         i.value = 0;
         setting->setValue(settingRootPath + i.key, i.value);
     }
-    qDebug() << __FUNCTION__ << settingRootPath << i.value;
     i.delegateType = DT_DoubleSpinbox;
     i.type = "double";
     i.min = 0;
@@ -1738,7 +1741,7 @@ void EmbelProperties::addText(int count)
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << "Text" << "Metadata field" << "Metadata template";
+    i.dropList << "Text" << "Metadata template";
     text.source = i.value.toString();
     addItem(i);
 
@@ -1767,26 +1770,6 @@ void EmbelProperties::addText(int count)
     text.text = i.value.toString();
     addItem(i);
 
-    i.name = "metadataField";
-    i.parentName = textName;
-    i.captionText = "Meta field";
-    i.tooltip = "Select a metadata field.  The metadata will be substituted in the text box.";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "metadataField";
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
-    else {
-        i.value = "Title";
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << is->tokens;
-    text.metadataField = i.value.toString();
-    addItem(i);
-
     i.name = "metadataTemplate";
     i.parentName = textName;
     i.captionText = "Meta template";
@@ -1795,7 +1778,7 @@ void EmbelProperties::addText(int count)
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "metadataField";
+    i.key = "metadataTemplate";
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -1804,8 +1787,11 @@ void EmbelProperties::addText(int count)
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << "Text" << "Metadata field" << "Metadata template";
-    text.metadataTemplate = i.value.toString();
+
+    i.dropList << metadataTemplatesList;
+    QString key = i.value.toString();
+    text.metadataTemplate = key;
+    text.text = metaString(key);
     addItem(i);
 
     // update tree based on source

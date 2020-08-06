@@ -16,14 +16,13 @@ class EmbelProperties : public PropertyEditor
 public:
     EmbelProperties(QWidget *parent, QSettings *setting);
 
-    InfoString *is;
     QStringList templateList;
     QString templateName;
     int templateId;                 // 0 == Do not embellish
 
     struct File {
-        int horizontalFit;
-        int verticalFit;
+        int horizontalFitPx;
+        int verticalFitPx;
         QString fileType;
         QString saveMethod;
         QString folderPath;
@@ -68,8 +67,8 @@ public:
         QString anchorPoint;
         QString source;
         QString text;
-        QString metadataField;
         QString metadataTemplate;
+        QString metadataText;
         double size;                // percent of long side pixels
         QString font;
         bool isBold;
@@ -82,6 +81,7 @@ public:
 
 
     void newEmbelTemplate();
+    QString metaString(QString key);
     void test1();
     void test2();
 
@@ -174,6 +174,7 @@ private:
     QStringList anchorContainerList;
     QStringList fontWeights;
     QStringList tileList;
+    QStringList metadataTemplatesList;
 };
 
 #endif // EMBELPROPERTIES_H

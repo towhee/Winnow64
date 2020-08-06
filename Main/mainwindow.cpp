@@ -412,6 +412,9 @@ void MW::closeEvent(QCloseEvent *event)
     if (!QApplication::clipboard()->image().isNull()) {
         QApplication::clipboard()->clear();
     }
+    delete workspaces;
+    delete recentFolders;
+    delete ingestHistoryFolders;
     event->accept();
 }
 
@@ -2738,7 +2741,6 @@ void MW::createActions()
     embelGroupAction = new QActionGroup(this);
     embelGroupAction->setExclusive(true);
     n = embelProperties->templateList.count();
-    qDebug() << __FUNCTION__ << "embelProperties->templateList.count() =" << n;
     for (int i = 0; i < 10; i++) {
         QString name;
         QString objName = "";
@@ -4104,23 +4106,18 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
      /* This is the info displayed on top of the image in loupe view. It is
      dependent on template data stored in QSettings */
     infoString = new InfoString(this, dm);
-
     if (isSettings) {
         if (setting->contains("currentInfoTemplate")) infoString->currentInfoTemplate = setting->value("currentInfoTemplate").toString();
-        setting->beginGroup("InfoTokens");
+        setting->beginGroup("InfoTemplates");
         QStringList keys = setting->childKeys();
         for (int i = 0; i < keys.size(); ++i) {
             QString key = keys.at(i);
             infoString->infoTemplates[key] = setting->value(key).toString();
         }
         setting->endGroup();
-        if (!infoString->infoTemplates.contains(" Default"))
-            if (!infoString->infoTemplates.contains("Default"))
-                infoString->infoTemplates["Default"] =
-                    "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}";
     }
     else {
-        infoString->currentInfoTemplate = "Default";
+        infoString->currentInfoTemplate = "Default info";
     }
 
     // prep pass values: first use of program vs settings have been saved
@@ -7267,8 +7264,6 @@ are not applicable.
     connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)),
             imageView, SLOT(updateToggleZoom(qreal)));
     connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)),
-            embelView, SLOT(updateToggleZoom(qreal)));
-    connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)),
             compareImages, SLOT(updateToggleZoom(qreal)));
 
     // if zoom change in parent send it to the zoom dialog
@@ -7696,7 +7691,7 @@ re-established when the application is re-opened.
 
     /* Token templates used for shooting information shown in ImageView */
     setting->setValue("currentInfoTemplate", infoString->currentInfoTemplate);
-    setting->beginGroup("InfoTokens");
+    setting->beginGroup("InfoTemplates");
     setting->remove("");
     QMapIterator<QString, QString> infoIter(infoString->infoTemplates);
     while (infoIter.hasNext()) {
@@ -7739,7 +7734,7 @@ re-established when the application is re-opened.
     /* save ingest history folders */
     setting->beginGroup("IngestHistoryFolders");
     setting->remove("");
-    for (int i=0; i < ingestHistoryFolders->count(); i++) {
+    for (int i = 0; i < ingestHistoryFolders->count(); i++) {
         setting->setValue("ingestHistoryFolder" + QString::number(i+1),
                           ingestHistoryFolders->at(i));
     }
@@ -10968,6 +10963,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    embelProperties->test2();
+    qDebug() << __FUNCTION__ << infoString->infoTemplates;
 }
 // End MW

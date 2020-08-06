@@ -195,7 +195,6 @@ to prevent jarring changes in perceived scale by the user.
                 dm->addMetadataForItem(metadata->m);
             }
         }
-//        QPixmap  displayPixmap;
 
         if (G::isTest) {QElapsedTimer t; t.restart();}
         isLoaded = pixmap->load(fPath, displayPixmap);
@@ -219,7 +218,7 @@ to prevent jarring changes in perceived scale by the user.
     if (isLoaded && rect().height() > 50) {
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
-//        setSceneRect(scene->itemsBoundingRect());
+        setSceneRect(scene->itemsBoundingRect());
 
         QModelIndex idx = thumbView->currentIndex();
         QString current = infoString->getCurrentInfoTemplate();
@@ -312,7 +311,7 @@ If isSlideshow then hide mouse cursor unless is moves.
     G::track(__FUNCTION__);
     #endif
     }
-    /*
+//    /*
     qDebug() << __FUNCTION__
              << "isPreview =" << isPreview
              << "isScrollable =" << isScrollable
@@ -422,8 +421,9 @@ qreal ImageView::getFitScaleFactor(QRectF container, QRectF content)
     G::track(__FUNCTION__);
     #endif
     }
-    qreal hScale = ((qreal)container.width() - 2) / content.width();
-    qreal vScale = ((qreal)container.height() - 2) / content.height();
+//    qDebug() << __FUNCTION__ << container << content;
+    qreal hScale = static_cast<qreal>(container.width() - 2) / content.width();
+    qreal vScale = static_cast<qreal>(container.height() - 2) / content.height();
     return (hScale < vScale) ? hScale : vScale;
 }
 
@@ -553,7 +553,8 @@ void ImageView::resizeEvent(QResizeEvent *event)
     //    */
     if (G::isInitializing) return;
     QGraphicsView::resizeEvent(event);
-    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+    zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
+//    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
     if (isFit) {
         setFitZoom();
         scale();
@@ -613,6 +614,7 @@ void ImageView::refresh()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     setFitZoom();
     scale();
 }
@@ -675,6 +677,7 @@ void ImageView::resetFitZoom()
     G::track(__FUNCTION__);
     #endif
     }
+    scene->setSceneRect(scene->itemsBoundingRect());
     qDebug() << __FUNCTION__
              << "rect() =" << rect()
              << "sceneRect() =" << sceneRect()
@@ -694,7 +697,6 @@ void ImageView::setFitZoom()
     }
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > 1) zoom = 1;
-//    qDebug() << __FUNCTION__ <<
 }
 
 void ImageView::zoomToggle()

@@ -1,58 +1,27 @@
 #include "embel.h"
 
-Embel::Embel(ImageView *ev, EmbelProperties *p)
+Embel::Embel(ImageView *iv, EmbelProperties *p)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    this->iv = ev;
+    this->iv = iv;
     this->p = p;
+    hole.resize(2);             // the area within the frame borders)
 }
 
 void Embel::test()
 {
     iv->scene->clear();
     return;
-
-    iv->scene->removeItem(bItems[0]);
-    delete bItems[0];
-    bItems.clear();
-    b.clear();
-
-    QGraphicsRectItem *x = new QGraphicsRectItem;
-    x->setRect(0,0,w,h);
-    x->setPen(QPen(Qt::red));
-    x->setBrush(QBrush(Qt::blue));
-    iv->scene->addItem(x);
-
-    iv->scene->removeItem(x);
-//    delete x;
-
-//    QGraphicsRectItem *x = new QGraphicsRectItem;
-    x->setRect(0,0,w,h);
-    x->setPen(QPen(Qt::green));
-    x->setBrush(QBrush(Qt::yellow));
-    iv->scene->addItem(x);
-
-    return;
-//    iv->scene->clear();
-//    iv->pmItem->setPixmap(iv->displayPixmap);
-    qDebug() << __FUNCTION__ << iv->displayPixmap;
-    doNotEmbellish();
 }
 
 void Embel::doNotEmbellish()
 {
     clear();
-    w = iv->displayPixmap.width();
-    h = iv->displayPixmap.height();
-    qDebug() << __FUNCTION__ << w << h;
-    iv->setSceneRect(0, 0, w, h);
-    iv->pmItem->setPos(0, 0);
-    iv->pmItem->setPixmap(iv->displayPixmap);
-    iv->resetFitZoom();
+    iv->loadImage(iv->currentImagePath);
 }
 
 void Embel::clear()
@@ -76,19 +45,14 @@ void Embel::clear()
 
 void Embel::build()
 {
+/*
+
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    /*
-    QGraphicsRectItem *bItem = new QGraphicsRectItem;
-    QImage tile(":/images/icon16/tile.png");
-    QBrush tileBrush(tile);
-    bItem->setBrush(tileBrush);
-    bItem->setZValue(-1);
-    */
-    qDebug() << __FUNCTION__ << "p->templateId =" << p->templateId;
     if (p->templateId == 0) {
         doNotEmbellish();
         return;
@@ -101,11 +65,14 @@ void Embel::build()
     addBordersToScene();
     addImageToScene();
     addTextsToScene();
-//    QGraphicsTextItem *tt = new QGraphicsTextItem;
-//    tt->setPlainText("Test");
-//    iv->scene->addItem(tt);
     iv->resetFitZoom();
-    diagnostic();
+//    diagnostic();
+}
+
+void Embel::fitAspect(double aspect, Hole &size)
+{
+    if (aspect > 1) size.h = static_cast<int>(qRound(size.w / aspect));
+    else size.w = static_cast<int>(size.h * aspect);
 }
 
 void Embel::borderImageCoordinates()
@@ -115,38 +82,56 @@ void Embel::borderImageCoordinates()
     G::track(__FUNCTION__);
     #endif
     }
+    //
+    int hFit = p->f.horizontalFitPx;
+    int vFit = p->f.verticalFitPx;
+    hFit > vFit ? ls = hFit : ls = vFit;
+    // the hole is the inside of the borders = the image area
+    hole.w = hFit;
+    hole.h = vFit;
+    hole.wb = 0;
+    hole.hb = 0;
+    // determine frame hole by iterating borders, starting with hole = fit dimensions
+    for (int i = 0; i < b.size(); ++i) {
+        int horBorders = static_cast<int>(qRound((p->b[i].left + p->b[i].right) * ls / 100));
+        int verBorders = static_cast<int>(qRound((p->b[i].top + p->b[i].bottom) * ls / 100));
+        hole.w -= horBorders;
+        hole.h -= verBorders;
+        hole.wb += horBorders;
+        hole.hb += verBorders;
+    }
+    fitAspect(iv->imAspect, hole);
+    /*
+    qDebug() << __FUNCTION__
+             << "hole =" << a
+             << "hole.w =" << hole.w
+             << "hole.h =" << hole.h
+             << "hole.wb =" << hole.wb
+             << "hole.hb =" << hole.hb
+             << "w =" << hole.w + hole.wb
+             << "h =" << hole.h + hole.hb
+             ;
+//                 */
+    // work back from hole dimensions to get scene w (width) and h (height)
+    w = hole.w + hole.wb;
+    h = hole.h + hole.hb;
+    // the hole = image dimensions
+    image.w = hole.w;
+    image.h = hole.h;
+
     // canvas coordinates: pixels
     QPoint tl(0,0), br(0,0);
-    // long side in pixels (ls)
-    if (iv->imAspect >= 1) ls = p->f.horizontalFit;
-    else ls = p->f.verticalFit;
-    // image long side before subtract border margins
-    int ils = ls;
-    // iterate borders to determine image width
+    // iterate borders
     for (int i = 0; i < b.size(); ++i) {
         // top left coord for this border
         b[i].tl = tl;
-        // update image width based on subtracting this border margins
+        // update image width based on subtracting the border margins
         b[i].l = static_cast<int>(qRound(p->b[i].left * ls / 100));
         b[i].r = static_cast<int>(qRound(p->b[i].right * ls / 100));
         b[i].t = static_cast<int>(qRound(p->b[i].top * ls / 100));
-        ils -= (b[i].l + b[i].r);
+        b[i].b = static_cast<int>(qRound(p->b[i].bottom * ls / 100));
         // top left for next border or the image
         tl = tl + QPoint(b[i].l, b[i].t);
-    }
-    if (iv->imAspect > 1) {
-        // canvas width
-        w = ls;
-        // image dimensions
-        image.w = ils;
-        image.h = static_cast<int>(qRound(image.w / iv->imAspect));
-    }
-    else {
-        //canvas height
-        h = ls;
-        // image dimensions
-        image.h = ils;
-        image.w = static_cast<int>(image.h * iv->imAspect);
     }
     image.tl = tl;
     image.x = tl.x();
@@ -155,7 +140,6 @@ void Embel::borderImageCoordinates()
     // now that we have the image coord from the aspect ratio finish calc border coord
     br = image.br;
     for (int i = b.size() - 1; i >= 0; --i) {
-        b[i].b = static_cast<int>(qRound(p->b[i].bottom * ls / 100));
         br += QPoint(b[i].r, b[i].b);
         b[i].br = br;
         b[i].w = b[i].br.x() - b[i].tl.x();
@@ -170,9 +154,6 @@ void Embel::borderImageCoordinates()
         b[i].bl = QPoint(b[i].x, b[i].y + b[i].h);
         b[i].bc = QPoint(b[i].x + b[i].w / 2, b[i].y + b[i].h);
     }
-    // canvas 2nd dimension, depending on aspect
-    if (iv->imAspect > 1) h = br.y();
-    else w = br.x();
     // other anchor points on image
     image.tc = QPoint(image.x + image.w / 2, image.y);
     image.tr = QPoint(image.x + image.w, image.y);
@@ -185,9 +166,11 @@ void Embel::borderImageCoordinates()
 
 QPoint Embel::canvasCoord(QString object, QString container, double x, double y)
 {
+    /*
     qDebug() << __FUNCTION__ << "object=" << object
              << "container =" << container
              << "x =" << x << "y =" << y;
+//             */
 
     if (object == "Image") {
         int x0 = image.x + static_cast<int>(x / 100 * image.w);
@@ -199,14 +182,12 @@ QPoint Embel::canvasCoord(QString object, QString container, double x, double y)
         for (int i = 0; i < p->b.size(); ++i) {
             // position and size of container
             if (p->b[i].name == object) {
-                qDebug() << __FUNCTION__ << object << container << x << y;
                 int x1, y1, w, h;
                 if (container == "Top") {
                     x1 = b[i].x;
                     y1 = b[i].y;
                     w = b[i].w;
                     h = b[i].t;
-                    qDebug() << __FUNCTION__ << "Top";
                 }
                 else if (container == "Left") {
                     x1 = b[i].x;
@@ -229,8 +210,6 @@ QPoint Embel::canvasCoord(QString object, QString container, double x, double y)
                 }
                 int x0 = x1 + static_cast<int>(x / 100 * w);
                 int y0 = y1 + static_cast<int>(y / 100 * h);
-                qDebug() << __FUNCTION__
-                         << x1 << y1 << w << h << x0 << y0;
                 return QPoint(x0, y0);
             }
         }
@@ -241,7 +220,7 @@ QPoint Embel::canvasCoord(QString object, QString container, double x, double y)
 
 QPoint Embel::anchorPointOffset(QString anchorPoint, int w, int h)
 {
-    qDebug() << __FUNCTION__ << anchorPoint << w << h;
+//    qDebug() << __FUNCTION__ << anchorPoint << w << h;
     int w2 = static_cast<int>(w/2);
     int h2 = static_cast<int>(h/2);
     if (anchorPoint == "Top Left") return QPoint(0, 0);
@@ -320,7 +299,10 @@ void Embel::createTexts()
 void Embel::addTextsToScene()
 {
     for (int i = 0; i < p->t.size(); ++i) {
-        tItems[i]->setPlainText(p->t[i].text);
+        // if a text entry
+        if (p->t[i].source == "Text") tItems[i]->setPlainText(p->t[i].text);
+        // if a metadata template used to build the text string
+        else tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate));
         QFont font(p->t[i].font);
         int fontSize = static_cast<int>(p->t[i].size / 100 * ls);
         font.setPixelSize(fontSize);
@@ -333,18 +315,25 @@ void Embel::addTextsToScene()
         tItems[i]->setZValue(20);
         iv->scene->addItem(tItems[i]);
         // position text
+        /*
         qDebug() << __FUNCTION__ << "Getting canvas coord for Text" << i
                  << "p->t[i].anchorObject =" << p->t[i].anchorObject
-                 << "p->t[i].anchorContainer =" << p->t[i].anchorContainer;
+                 << "p->t[i].anchorContainer =" << p->t[i].anchorContainer
+                 << "p->t[i].x =" << p->t[i].x
+                 << "p->t[i].y =" << p->t[i].y
+                    ;
+//                    */
         QPoint canvas = canvasCoord(p->t[i].anchorObject, p->t[i].anchorContainer,
                                     p->t[i].x, p->t[i].y);
         QPoint offset = anchorPointOffset(p->t[i].anchorPoint,
                                     static_cast<int>(tItems[i]->boundingRect().width()),
                                     static_cast<int>(tItems[i]->boundingRect().height()));
         tItems[i]->setPos(canvas - offset);
+        /*
         qDebug() << __FUNCTION__ << i << tItems[i] << p->t[i].text
                  << tItems[i]->boundingRect()
                  << canvas << offset;
+//                 */
     }
 }
 

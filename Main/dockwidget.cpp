@@ -71,7 +71,11 @@ void DockTitleBar::setStyle()
                 "stop: 1 " + QColor(g0,g0,g0).name() + ");"
                 "padding-left: 2px;"
                 "padding-bottom: 2px;"
-                "border: 1px solid " + QColor(c,c,c).name() + ";"
+                "border: none;"
+//                "border: 1px solid " + QColor(c,c,c).name() + ";"
+//                "border-bottom: 0px;"
+//                "border-right: 1px solid " + QColor(c,c,c).name() + ";"
+//                "border-top:   1px solid " + QColor(c,c,c).name() + ";"
                 "font-size:" + G::fontSize + "pt;";
     setStyleSheet(s);
 }

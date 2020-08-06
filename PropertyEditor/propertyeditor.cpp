@@ -153,9 +153,6 @@ supplied by the calling function.
         valIdx = valItem->index();
     }
 
-    if (capIdx == model->index(0,0,QModelIndex()))
-        qDebug() << __FUNCTION__ << "root:" << i.name << i.captionText;
-
     // caption
     model->setData(capIdx, i.isIndent, UR_isIndent);
     model->setData(capIdx, i.isHeader, UR_isHeader);

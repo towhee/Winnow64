@@ -1,5 +1,5 @@
 BUGS
-- resetFitZoom
+- Winnow preferences update formatting
 - MetaStrings
 - Shadows
 - Globalize css
