@@ -9,7 +9,6 @@ Embel::Embel(ImageView *iv, EmbelProperties *p)
     }
     this->iv = iv;
     this->p = p;
-    hole.resize(2);             // the area within the frame borders)
 }
 
 void Embel::test()
@@ -164,7 +163,7 @@ void Embel::borderImageCoordinates()
     image.bc = QPoint(image.x + image.w / 2, image.y + image.h);
 }
 
-QPoint Embel::canvasCoord(QString object, QString container, double x, double y)
+QPoint Embel::canvasCoord(QString object, QString container, double x, double y, double rotation)
 {
     /*
     qDebug() << __FUNCTION__ << "object=" << object
@@ -289,8 +288,6 @@ void Embel::addBordersToScene()
 void Embel::createTexts()
 {
     for (int i = 0; i < p->t.size(); ++i) {
-        Text x;
-//        t << x;
         QGraphicsTextItem *item = new QGraphicsTextItem;
         tItems << item;
     }
@@ -324,11 +321,12 @@ void Embel::addTextsToScene()
                     ;
 //                    */
         QPoint canvas = canvasCoord(p->t[i].anchorObject, p->t[i].anchorContainer,
-                                    p->t[i].x, p->t[i].y);
+                                    p->t[i].x, p->t[i].y, p->t[i].rotation);
         QPoint offset = anchorPointOffset(p->t[i].anchorPoint,
                                     static_cast<int>(tItems[i]->boundingRect().width()),
                                     static_cast<int>(tItems[i]->boundingRect().height()));
         tItems[i]->setPos(canvas - offset);
+        tItems[i]->setRotation(p->t[i].rotation);
         /*
         qDebug() << __FUNCTION__ << i << tItems[i] << p->t[i].text
                  << tItems[i]->boundingRect()

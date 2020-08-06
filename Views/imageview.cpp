@@ -311,7 +311,7 @@ If isSlideshow then hide mouse cursor unless is moves.
     G::track(__FUNCTION__);
     #endif
     }
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << "isPreview =" << isPreview
              << "isScrollable =" << isScrollable
@@ -678,10 +678,12 @@ void ImageView::resetFitZoom()
     #endif
     }
     scene->setSceneRect(scene->itemsBoundingRect());
+    /*
     qDebug() << __FUNCTION__
              << "rect() =" << rect()
              << "sceneRect() =" << sceneRect()
              << "scene->itemsBoundingRect() =" << scene->itemsBoundingRect();
+//    */
     zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > 1) zoom = 1;

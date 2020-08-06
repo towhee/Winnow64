@@ -64,6 +64,7 @@ public:
         QString anchorContainer;
         double x;                   // container coordinate
         double y;                   // container coordinate
+        double rotation;            // rotation in degrees
         QString anchorPoint;
         QString source;
         QString text;
