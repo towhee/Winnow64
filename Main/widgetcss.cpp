@@ -268,8 +268,8 @@ QString WidgetCSS::tabWidget()
 
     "QTabBar::tab {"
         "color: silver;"
-        "background-color: " + QColor(mb,mb,mb).name() + ";"
-        "border: 1px solid gray;"
+        "background-color: " + QColor(l5,l5,l5).name() + ";"
+        "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
         "padding: 4px 4px;"
     "}"
 

@@ -41,6 +41,7 @@ public:
     QMatrix matrix;
     Pixmap *pixmap;
     QPixmap  displayPixmap;
+    QString currentImagePath;
 
     int cwMargin = 20;
     qreal imAspect = 1;
@@ -193,7 +194,6 @@ private:
     QSize preview;
     QSize full;
 
-    QString currentImagePath;
     int classificationBadgeDiam;
 
     bool cursorIsHidden;        // use for slideshow and full screen - review rgh

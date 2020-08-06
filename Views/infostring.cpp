@@ -23,8 +23,9 @@ InfoString::InfoString(QWidget *parent, DataModel *dm) :
     this->dm = dm;
     initTokenList();
     initExampleMap();
-    infoTemplates["Default"] = "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}";
-//    setAttribute( Qt::WA_TransparentForMouseEvents );
+    infoTemplates["Default info"] = "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}";
+
+    //    setAttribute( Qt::WA_TransparentForMouseEvents );
 //    QRegion reg(frameGeometry());
 //    reg -= QRegion(geometry());
 //    reg += childrenRegion();
@@ -34,6 +35,7 @@ InfoString::InfoString(QWidget *parent, DataModel *dm) :
 void InfoString::editTemplates()
 {
     int index = getIndex();
+    qDebug() << __FUNCTION__ << infoTemplates;
     TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, infoTemplates, index,
           currentInfoTemplate, "Shooting Info in Image View", this);
     tokenDlg->exec();
@@ -53,19 +55,19 @@ The currentInfoTemplate index in the TokenDlg template combo.
     return 0;
 }
 
-QString InfoString::getCurrentInfoTemplate(int index)
-{
-/*
-The currentInfoTemplate matching the index in the TokenDlg template combo
-*/
-    QMap<QString, QString>::iterator i;
-    int ii = 0;
-    for (i = infoTemplates.begin(); i != infoTemplates.end(); ++i) {
-       if (ii == index) return i.key();
-       ii++;
-    }
-    return "";
-}
+//QString InfoString::getCurrentInfoTemplate(int index)
+//{
+///*
+//The currentInfoTemplate matching the index in the TokenDlg template combo
+//*/
+//    QMap<QString, QString>::iterator i;
+//    int ii = 0;
+//    for (i = infoTemplates.begin(); i != infoTemplates.end(); ++i) {
+//       if (ii == index) return i.key();
+//       ii++;
+//    }
+//    return "";
+//}
 
 //void InfoString::setCurrentInfoTemplate(QString &currentInfoTemplate)
 //{

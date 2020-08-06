@@ -22,6 +22,17 @@ private:
     ImageView *iv;
     EmbelProperties *p;
 
+    // the area inside the frame where the image fits
+    struct Hole {
+        int w;          // width
+        int h;          // height
+        int wb;         // total amount of left/right borders
+        int hb;         // total amount of top/bottom borders
+        int area;
+    };
+    Hole hole;
+//    QVector<Hole> hole;
+
     // Image canvas pixel coordinates
     struct Image {
         int x, y, w, h;
@@ -47,6 +58,7 @@ private:
     void doNotEmbellish();
     void createBorders();
     void borderImageCoordinates();
+    void fitAspect(double aspect, Hole &size);
     QPoint canvasCoord(QString object, QString container, double x, double y);
     QPoint anchorPointOffset(QString anchorPoint, int w, int h);
     void addBordersToScene();
