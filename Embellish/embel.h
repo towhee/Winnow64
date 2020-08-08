@@ -59,7 +59,7 @@ private:
     void createBorders();
     void borderImageCoordinates();
     void fitAspect(double aspect, Hole &size);
-    QPoint canvasCoord(QString object, QString container, double x, double y, double rotation);
+    QPoint textCanvasCoord(int n);
     QPoint anchorPointOffset(QString anchorPoint, int w, int h);
     void addBordersToScene();
     void createTexts();

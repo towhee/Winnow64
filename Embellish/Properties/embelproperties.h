@@ -65,6 +65,9 @@ public:
         double x;                   // container coordinate
         double y;                   // container coordinate
         double rotation;            // rotation in degrees
+        QString alignToCorner;
+        int alignTo_BorderId;
+        int alignTo_CornerId;
         QString anchorPoint;
         QString source;
         QString text;
@@ -104,7 +107,7 @@ private:
     void initialize();
     void readTileList();
     void rename(QString path, QString from, QString to);
-    void updateBorderList();
+    void updateBorderLists();
     void readTemplateList();
     void readTile(QStringList tileName);
     void renameCurrentTemplate();
@@ -145,6 +148,8 @@ private:
     void treeChange(QModelIndex idx);
     bool okToSelect(QModelIndex idx);
     void diagnostics(QModelIndex idx);
+    void diagnosticVectors();
+    void parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner);
 
     bool isTemplateChange = false;
 
@@ -158,6 +163,7 @@ private:
     QString templatePath;
     QSettings *setting;
     ComboBoxEditor *templateListEditor;
+    QVector<ComboBoxEditor*> textAlignToCornerObjectEditor;
     QVector<ComboBoxEditor*> textAnchorObjectEditor;
 
     enum roots {
@@ -169,8 +175,11 @@ private:
         _rectangles,
         _graphics
     };
+    enum corners {TopLeft, TopRight, BottomLeft, BottomRight};
     QStringList anchorPoints;
     QStringList borderList;
+    QStringList borderCorners;
+    QStringList alignToCornerList;
     QStringList anchorObjectList;
     QStringList anchorContainerList;
     QStringList fontWeights;
