@@ -624,7 +624,7 @@ This is used to add new templates to the template drop list
 void ComboBoxEditor::refresh(QStringList items)
 {
 /*
-Called when a template is renamed or deleted
+Called when a template is renamed or deleted to rebuild the dropdown list
 */
     comboBox->clear();
     comboBox->addItems(items);

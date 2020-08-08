@@ -102,6 +102,8 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     expand(model->index(_texts,0));
     expand(model->index(_rectangles,0));
     expand(model->index(_graphics,0));
+
+    diagnosticVectors();
 }
 
 void EmbelProperties::initialize()
@@ -110,6 +112,7 @@ void EmbelProperties::initialize()
                  << "Middle Left" << "Middle Center" << "Middle Right"
                  << "Bottom Left" << "Bottom Center" << "Bottom Right";
     anchorContainerList << "Top" << "Left" << "Right" << "Bottom";
+    borderCorners << "TopLeft" << "TopRight" << "BottomLeft" << "BottomRight";
     readTileList();
     QMapIterator<QString, QString> i(mw3->infoString->infoTemplates);
     while (i.hasNext()) {
@@ -118,18 +121,81 @@ void EmbelProperties::initialize()
     }
 }
 
-void EmbelProperties::updateBorderList()
+void EmbelProperties::updateBorderLists()
 {
+/*
+Called from new and delete borders to rebuild the lists that have the borders
+*/
     borderList.clear();
     anchorObjectList.clear();
+    alignToCornerList.clear();
+    alignToCornerList << "Do not align";
     getIndex("Borders");
     QModelIndex bordersIdx = foundIdx;
     for (int i = 0; i < model->rowCount(bordersIdx); ++i) {
-        borderList << model->index(i, 0, bordersIdx).data(UR_Name).toString();
-        anchorObjectList << model->index(i, 0, bordersIdx).data(UR_Name).toString();
+        QString borderName = model->index(i, 0, bordersIdx).data(UR_Name).toString();
+        borderList << borderName;
+        anchorObjectList << borderName;
+        for (int j = 0; j < 4; ++j) {
+            QString s = borderName + " " + borderCorners.at(j);
+            alignToCornerList << s;
+        }
     }
     anchorObjectList << "Image";
     // update textAnchorObjectEditor etc rgh
+    for (int i = 0; i < t.size(); ++i) {
+        textAlignToCornerObjectEditor[i]->refresh(alignToCornerList);
+//        textAnchorObjectEditor[i]->refresh(anchorObjectList);
+    }
+}
+
+void EmbelProperties::diagnosticVectors()
+{
+    // vectors
+    qDebug() << __FUNCTION__ << "BORDER VECTOR";
+    for (int i = 0; i < b.length(); ++i) {
+        qDebug().noquote()
+            << i << " "
+            << "name =" << b[i].name
+            << "caption =" << b[i].caption
+            << "parent =" << b[i].parent
+            << "top =" << b[i].top
+            << "left =" << b[i].left
+            << "right =" << b[i].right
+            << "bottom =" << b[i].bottom
+            << "tile =" << b[i].tile
+            << "color =" << b[i].color
+            << "opacity =" << b[i].opacity
+            << "style =" << b[i].style
+            << "outlineWidth =" << b[i].outlineWidth
+            << "outlineColor =" << b[i].outlineColor;
+    }
+    qDebug() << __FUNCTION__ << "TEXT VECTOR";
+    for (int i = 0; i < t.length(); ++i) {
+        qDebug().noquote()
+            << i << " "
+            << "name =" << t[i].name
+            << "caption =" << t[i].caption
+            << "parent =" << t[i].parent
+            << "anchorObject =" << t[i].anchorObject
+            << "anchorContainer =" << t[i].anchorContainer
+            << "x =" << t[i].x
+            << "y =" << t[i].y
+            << "alignToCorner =" << t[i].alignToCorner
+            << "alignTo_BorderId =" << t[i].alignTo_BorderId
+            << "alignTo_CornerId =" << t[i].alignTo_CornerId
+            << "anchorPoint =" << t[i].anchorPoint
+            << "source =" << t[i].source
+            << "text =" << t[i].text
+            << "metadataTemplate =" << t[i].metadataTemplate
+            << "size =" << t[i].size
+            << "font =" << t[i].font
+            << "isBold =" << t[i].isBold
+            << "isItalic =" << t[i].isItalic
+            << "color =" << t[i].color
+            << "opacity =" << t[i].opacity
+            << "style =" << t[i].style;
+    }
 }
 
 void EmbelProperties::diagnostic(QModelIndex parent)
@@ -152,48 +218,6 @@ void EmbelProperties::diagnostic(QModelIndex parent)
         if (model->hasChildren(idx0)) {
             diagnostic(idx0);
         }
-    }
-    // vectors
-    qDebug() << __FUNCTION__ << "BORDER VECTOR";
-    for (int i = 0; i < b.length(); ++i) {
-        qDebug().noquote()
-            << i << " "
-            << "name = " << b[i].name
-            << "caption = " << b[i].caption
-            << "parent = " << b[i].parent
-            << "top = " << b[i].top
-            << "left = " << b[i].left
-            << "right = " << b[i].right
-            << "bottom = " << b[i].bottom
-            << "tile = " << b[i].tile
-            << "color = " << b[i].color
-            << "opacity = " << b[i].opacity
-            << "style = " << b[i].style
-            << "outlineWidth = " << b[i].outlineWidth
-            << "outlineColor = " << b[i].outlineColor;
-    }
-    qDebug() << __FUNCTION__ << "TEXT VECTOR";
-    for (int i = 0; i < t.length(); ++i) {
-        qDebug().noquote()
-            << i << " "
-            << "name = " << t[i].name
-            << "caption = " << t[i].caption
-            << "parent = " << t[i].parent
-            << "anchorObject = " << t[i].anchorObject
-            << "anchorContainer = " << t[i].anchorContainer
-            << "x = " << t[i].x
-            << "y = " << t[i].y
-            << "anchorPoint = " << t[i].anchorPoint
-            << "source = " << t[i].source
-            << "text = " << t[i].text
-            << "metadataTemplate = " << t[i].metadataTemplate
-            << "size = " << t[i].size
-            << "font = " << t[i].font
-            << "isBold = " << t[i].isBold
-            << "isItalic = " << t[i].isItalic
-            << "color = " << t[i].color
-            << "opacity = " << t[i].opacity
-            << "style = " << t[i].style;
     }
 }
 
@@ -574,6 +598,12 @@ void EmbelProperties::textItemChange(QModelIndex idx)
     if (source == "rotation") {
         setting->setValue(path, v.toDouble());
         t[index].rotation = v.toDouble();
+    }
+
+    if (source == "alignToCorner") {
+        setting->setValue(path, v.toString());
+        t[index].alignToCorner = v.toString();
+        parseAlignToCorner(v.toString(), t[index].alignTo_BorderId, t[index].alignTo_CornerId);
     }
 
     if (source == "anchorPoint") {
@@ -999,7 +1029,6 @@ void EmbelProperties::addBorders()
     QString path = templatePath + "/Borders";
     setting->beginGroup(path);
     int count = setting->childGroups().size();
-    qDebug() << __FUNCTION__ << path << "count =" << count;
     setting->endGroup();
     for (int i = 0; i < count; ++i) newBorder();
 }
@@ -1033,7 +1062,6 @@ void EmbelProperties::addTexts()
     QString path = templatePath + "/Texts";
     setting->beginGroup(path);
     int count = setting->childGroups().size();
-    qDebug() << __FUNCTION__ << path << "count =" << count;
     setting->endGroup();
     for (int i = 0; i < count; ++i) newText();
 }
@@ -1110,7 +1138,7 @@ void EmbelProperties::newBorder()
     QModelIndex bordersIdx = foundIdx;
     int row = model->rowCount(bordersIdx);
     addBorder(row);
-    updateBorderList();
+    updateBorderLists();
     if (G::isInitializing || isTemplateChange) return;
     QModelIndex idx = model->index(row, 0, bordersIdx);
     selectionModel()->clear();
@@ -1157,7 +1185,10 @@ void EmbelProperties::deleteItem()
     if (ret == QMessageBox::Cancel) return;
 
     // remove from local vectors
-    if (parName == "Borders") b.remove(row);
+    if (parName == "Borders") {
+        b.remove(row);
+        updateBorderLists();
+    }
     if (parName == "Texts") t.remove(row);
     // remove from datamodel
     model->removeRow(idx.row(), idx.parent());
@@ -1317,6 +1348,21 @@ void EmbelProperties::diagnostics(QModelIndex idx)
         << "Delegate" << idx.data(UR_DelegateType).toString()
         << "Source" << idx.data(UR_Source).toString();
 
+}
+
+void EmbelProperties::parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner)
+{
+/*
+The string alignTo example: "Border2 BottomLeft".  We need to know the number of the border
+and the corner.
+*/
+    iBorder = alignTo.mid(6, 1).toInt() - 1;
+    QString s = alignTo.right(alignTo.length() - 8);
+    if (s == "TopLeft") iCorner = 0;
+    if (s == "TopRight") iCorner = 1;
+    if (s == "BottomLeft") iCorner = 2;
+    if (s == "BottomRight") iCorner = 3;
+    qDebug() << __FUNCTION__ << alignTo << s << iBorder << iCorner;
 }
 
 void EmbelProperties::test1()
@@ -1727,6 +1773,27 @@ void EmbelProperties::addText(int count)
     text.rotation = i.value.toDouble();
     addItem(i);
 
+    i.name = "alignToCorner";
+    i.parentName = textName;
+    i.captionText = "Align to corner";
+    i.tooltip = "Select a border corner to align to the anchor point.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "alignToCorner";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = "Do not align";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << alignToCornerList;
+    text.alignToCorner = i.value.toString();
+    parseAlignToCorner(text.alignToCorner,text.alignTo_BorderId, text.alignTo_CornerId);
+    textAlignToCornerObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
+
     i.name = "anchorPoint";
     i.parentName = textName;
     i.captionText = "Anchor point";
@@ -1745,7 +1812,7 @@ void EmbelProperties::addText(int count)
     i.type = "QString";
     i.dropList << anchorPoints;
     text.anchorPoint = i.value.toString();
-    addItem(i);
+    textAnchorObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
 
     i.name = "source";
     i.parentName = textName;

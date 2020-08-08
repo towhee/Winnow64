@@ -163,38 +163,37 @@ void Embel::borderImageCoordinates()
     image.bc = QPoint(image.x + image.w / 2, image.y + image.h);
 }
 
-QPoint Embel::canvasCoord(QString object, QString container, double x, double y, double rotation)
+QPoint Embel::textCanvasCoord(int n)
 {
-    /*
-    qDebug() << __FUNCTION__ << "object=" << object
-             << "container =" << container
-             << "x =" << x << "y =" << y;
-//             */
+/*
 
-    if (object == "Image") {
-        int x0 = image.x + static_cast<int>(x / 100 * image.w);
-        int y0 = image.y + static_cast<int>(y / 100 * image.h);
+*/
+    int x0 = 0, y0 = 0;
+    // put text in the Image object area
+    if (p->t[n].anchorObject == "Image") {
+        x0 = image.x + static_cast<int>(p->t[n].x / 100 * image.w);
+        y0 = image.y + static_cast<int>(p->t[n].y / 100 * image.h);
         return QPoint(x0, y0);
     }
     // not Image so must be a Border object
     else {
         for (int i = 0; i < p->b.size(); ++i) {
             // position and size of container
-            if (p->b[i].name == object) {
+            if (p->b[i].name == p->t[n].anchorObject) {
                 int x1, y1, w, h;
-                if (container == "Top") {
+                if (p->t[n].anchorContainer == "Top") {
                     x1 = b[i].x;
                     y1 = b[i].y;
                     w = b[i].w;
                     h = b[i].t;
                 }
-                else if (container == "Left") {
+                else if (p->t[n].anchorContainer  == "Left") {
                     x1 = b[i].x;
                     y1 = b[i].y + b[i].t;
                     w = b[i].l;
                     h = b[i].h - b[i].t - b[i].b;
                 }
-                else if (container == "Right") {
+                else if (p->t[n].anchorContainer  == "Right") {
                     x1 = b[i].x + b[i].w - b[i].r;
                     y1 = b[i].y + b[i].t;
                     w = b[i].r;
@@ -207,14 +206,56 @@ QPoint Embel::canvasCoord(QString object, QString container, double x, double y,
                     w = b[i].w;
                     h = b[i].b;
                 }
-                int x0 = x1 + static_cast<int>(x / 100 * w);
-                int y0 = y1 + static_cast<int>(y / 100 * h);
-                return QPoint(x0, y0);
+                x0 = x1 + static_cast<int>(p->t[n].x / 100 * w);
+                y0 = y1 + static_cast<int>(p->t[n].y / 100 * h);
+            }
+        }
+        // if align to a border corner
+        qDebug() << __FUNCTION__
+                 << "p->t[n].alignToCorner =" << p->t[n].alignToCorner
+                 << "x0 =" << x0 << "y0 =" << y0;
+        if (p->t[n].alignToCorner != "Do not align") {
+            // border number
+            int bId = p->t[n].alignTo_BorderId;
+            // is alignment horizontal or vertical
+            bool isHorAlignment = true;
+            if (p->t[n].anchorContainer == "Left" || p->t[n].anchorContainer == "Right")
+                isHorAlignment = false;
+            qDebug() << __FUNCTION__
+                     << "n =" << n
+                     << "bId =" << bId
+                     << "p->t[n].alignToCorner =" << p->t[n].alignToCorner
+                     << "isHorAlignment =" << isHorAlignment
+                     << "p->t[n].alignTo_CornerId =" << p->t[n].alignTo_CornerId
+                        ;
+            switch (p->t[n].alignTo_CornerId) {
+            // TopLeft
+            case 0:
+                if (isHorAlignment) x0 = b[bId].tl.x();
+                    else y0 = b[bId].tl.y();
+                    break;
+            // TopRight
+            case 1:
+                if (isHorAlignment) x0 = b[bId].tr.x();
+                else y0 = b[bId].tr.y();
+                break;
+            // BottomLeft
+            case 2:
+                if (isHorAlignment) x0 = b[bId].bl.x();
+                else y0 = b[bId].bl.y();
+                qDebug() << __FUNCTION__
+                         << "b[bId].bl =" << b[bId].bl;
+                break;
+            // BottomRight
+            case 3:
+                if (isHorAlignment) x0 = b[bId].br.x();
+                else y0 = b[bId].br.y();
+                break;
             }
         }
     }
-    // error - object not found
-    return QPoint(0,0);
+    qDebug() << __FUNCTION__ << "QPoint(x0,y0) =" << QPoint(x0,y0);
+    return QPoint(x0,y0);
 }
 
 QPoint Embel::anchorPointOffset(QString anchorPoint, int w, int h)
@@ -320,8 +361,7 @@ void Embel::addTextsToScene()
                  << "p->t[i].y =" << p->t[i].y
                     ;
 //                    */
-        QPoint canvas = canvasCoord(p->t[i].anchorObject, p->t[i].anchorContainer,
-                                    p->t[i].x, p->t[i].y, p->t[i].rotation);
+        QPoint canvas = textCanvasCoord(i);
         QPoint offset = anchorPointOffset(p->t[i].anchorPoint,
                                     static_cast<int>(tItems[i]->boundingRect().width()),
                                     static_cast<int>(tItems[i]->boundingRect().height()));
