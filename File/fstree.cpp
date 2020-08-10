@@ -309,6 +309,7 @@ void FSTree::resizeColumns()
         imageCountColumnWidth = 0;
         hideColumn(4);
     }
+    // have to include the width of the decoration foler png
     setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth - 10);
 }
 

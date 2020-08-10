@@ -148,7 +148,6 @@ the FSTree folders view.
 
 void BookMarks::resizeColumns()
 {
-    int w = width();
     if (showImageCount) {
         QFont font = this->font();
         font.setPointSize(G::fontSize.toInt());
@@ -161,8 +160,8 @@ void BookMarks::resizeColumns()
         imageCountColumnWidth = 0;
         hideColumn(1);
     }
-    setColumnWidth(0, w - G::scrollBarThickness - imageCountColumnWidth - 10);
-//    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth);
+    // have to include the width of the decoration foler png
+    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth - 15);
 }
 
 void BookMarks::resizeEvent(QResizeEvent *event)

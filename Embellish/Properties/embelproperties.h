@@ -110,6 +110,7 @@ private:
     void updateBorderLists();
     void readTemplateList();
     void readTile(QStringList tileName);
+    void renameCurrentStyle();
     void renameCurrentTemplate();
     void setCurrentTemplate();
 
@@ -123,11 +124,16 @@ private:
     void addText(int count);
     void addRectangles();
     void addGraphics();
+    void addStyles();
+    void addStyle(QString styleName, int n);
+    void addEffect(QString effectName);
 
     void newBorder();
     void newText();
     void newRectangle();
     void newGraphic();
+    void newStyle();
+    void newEffect();
 
     void deleteTremplate();
     void deleteBorder();
@@ -157,6 +163,8 @@ private:
     BarBtn *textDeleteBtn;
     BarBtn *rectangleDeleteBtn;
     BarBtn *graphicDeleteBtn;
+    BarBtn *stylesDeleteBtn;
+    BarBtn *styleDeleteBtn;
 
     ItemInfo i;
     int templateCount;
@@ -173,7 +181,8 @@ private:
         _borders,
         _texts,
         _rectangles,
-        _graphics
+        _graphics,
+        _styles
     };
     enum corners {TopLeft, TopRight, BottomLeft, BottomRight};
     QStringList anchorPoints;
@@ -185,6 +194,7 @@ private:
     QStringList fontWeights;
     QStringList tileList;
     QStringList metadataTemplatesList;
+    QStringList styleList;
 };
 
 #endif // EMBELPROPERTIES_H

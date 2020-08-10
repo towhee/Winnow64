@@ -32,7 +32,6 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     G::track(__FUNCTION__);
     #endif
     }
-
     setRootIsDecorated(true);
     setAlternatingRowColors(true);
     setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -54,6 +53,7 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     propertyDelegate = new PropertyDelegate(this);
     setItemDelegate(propertyDelegate);
     styleOptionViewItem = new QStyleOptionViewItem;
+    propertyDelegate->isAlternatingRows = true;
 
     connect(this->propertyDelegate, &PropertyDelegate::itemChanged,
             this, &PropertyEditor::itemChange);

@@ -65,6 +65,7 @@ public:
     QString stackedWidget();
     QString listView();
     QString listWidget();
+    QString toolTip();
     QString treeWidget();
     QString treeView();
     QString tableView();

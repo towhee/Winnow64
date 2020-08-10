@@ -2248,9 +2248,126 @@ release\moc_embelproperties.cpp: Embellish\Properties\embelproperties.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
+		Datamodel\datamodel.h \
+		Metadata\metadata.h \
+		Metadata\exif.h \
+		Metadata\ifd.h \
+		Metadata\metareport.h \
 		Utilities\utilities.h \
 		Utilities\inputdlg.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
+		Metadata\imagemetadata.h \
+		Metadata\iptc.h \
+		Metadata\gps.h \
+		Metadata\xmp.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QtXmlPatterns \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QtXmlPatternsDepends \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\QtNetwork \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\QtNetworkDepends \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qtnetworkglobal.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qtnetwork-config.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qabstractnetworkcache.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworkrequest.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QString \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QUrl \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qabstractsocket.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qauthenticator.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qdnslookup.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qdtls.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qsslsocket.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qtcpsocket.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qsslerror.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qsslcertificate.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qssl.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QFlags \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qhostaddress.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qhostinfo.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qhstspolicy.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qhttpmultipart.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QByteArray \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QIODevice \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\QNetworkRequest \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qlocalserver.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qlocalsocket.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworkaccessmanager.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QVector \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\QSslConfiguration \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qsslconfiguration.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\QSslPreSharedKeyAuthenticator \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qsslpresharedkeyauthenticator.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworkconfigmanager.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworkconfiguration.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworkcookie.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworkcookiejar.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworkdatagram.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworkdiskcache.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworkinterface.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworkproxy.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworkreply.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\QNetworkAccessManager \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qnetworksession.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qocspresponse.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qpassworddigestor.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QCryptographicHash \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qsctpserver.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qtcpserver.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qsctpsocket.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qsslcertificateextension.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qsslcipher.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qssldiffiehellmanparameters.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qsslellipticcurve.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QHash \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qsslkey.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qudpsocket.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtNetwork\qtnetworkversion.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsglobal.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qabstractmessagehandler.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QSourceLocation \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qsourcelocation.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qabstracturiresolver.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qabstractxmlnodemodel.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QXmlName \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlname.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QSharedData \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qabstractxmlreceiver.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QXmlNodeModelIndex \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qsimplexmlnodemodel.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QAbstractXmlNodeModel \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QXmlQuery \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlquery.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QAbstractXmlReceiver \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QXmlNamePool \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlnamepool.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlformatter.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\QXmlSerializer \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlserializer.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlresultitems.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlschema.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlschemavalidator.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
+		ui_metadatareport.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
+		ImageFormats\Heic\heic.h \
+		Lib\libde265\include\de265.h \
+		Lib\libde265\include\de265-version.h \
+		Lib\libheif\include\heif.h \
+		Lib\libheif\include\heif_version.h \
+		ImageFormats\Jpeg\jpeg.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QRgb \
+		ImageFormats\Canon\canon.h \
+		ImageFormats\Dng\dng.h \
+		ImageFormats\Fuji\fuji.h \
+		ImageFormats\Nikon\nikon.h \
+		ImageFormats\Olympus\olympus.h \
+		ImageFormats\Panasonic\panasonic.h \
+		ImageFormats\Sony\sony.h \
+		ImageFormats\Tiff\tiff.h \
+		Datamodel\filters.h \
+		Utilities\progressbar.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QMainWindow \
+		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QPainter \
 		PropertyEditor\propertyeditor.h \
 		Main\dockwidget.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDockWidget \
@@ -2258,9 +2375,10 @@ release\moc_embelproperties.cpp: Embellish\Properties\embelproperties.h \
 		PropertyEditor\propertydelegate.h \
 		PropertyEditor\propertywidgets.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QStyledItemDelegate \
+		Views\infostring.h \
+		Dialogs\tokendlg.h \
+		Dialogs\renamedlg.h \
 		ui_embelCoord.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QMainWindow \
 		release\moc_predefs.h \
 		C:\Qt\5.13.1\msvc2015_64\bin\moc.exe
 	C:\Qt\5.13.1\msvc2015_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/moc_predefs.h" -IC:/Qt/5.13.1/msvc2015_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.13.1/msvc2015_64/include -IC:/Qt/5.13.1/msvc2015_64/include/QtWidgets -IC:/Qt/5.13.1/msvc2015_64/include/QtGui -IC:/Qt/5.13.1/msvc2015_64/include/QtANGLE -IC:/Qt/5.13.1/msvc2015_64/include/QtConcurrent -IC:/Qt/5.13.1/msvc2015_64/include/QtXmlPatterns -IC:/Qt/5.13.1/msvc2015_64/include/QtNetwork -IC:/Qt/5.13.1/msvc2015_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Embellish\Properties\embelproperties.h -o release\moc_embelproperties.cpp
@@ -31106,27 +31224,14 @@ release\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embellish\
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
-		Utilities\utilities.h \
-		Utilities\inputdlg.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
-		PropertyEditor\propertyeditor.h \
-		Main\dockwidget.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDockWidget \
-		Main\widgetcss.h \
-		PropertyEditor\propertydelegate.h \
-		PropertyEditor\propertywidgets.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QStyledItemDelegate \
-		ui_embelCoord.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QMainWindow \
-		Main\mainwindow.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDesktopWidget \
-		Dialogs\appdlg.h \
 		Datamodel\datamodel.h \
 		Metadata\metadata.h \
 		Metadata\exif.h \
 		Metadata\ifd.h \
 		Metadata\metareport.h \
+		Utilities\utilities.h \
+		Utilities\inputdlg.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
@@ -31217,6 +31322,7 @@ release\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embellish\
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		ui_metadatareport.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QApplication \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
@@ -31236,7 +31342,22 @@ release\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embellish\
 		ImageFormats\Tiff\tiff.h \
 		Datamodel\filters.h \
 		Utilities\progressbar.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QPainter \
+		PropertyEditor\propertyeditor.h \
+		Main\dockwidget.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDockWidget \
+		Main\widgetcss.h \
+		PropertyEditor\propertydelegate.h \
+		PropertyEditor\propertywidgets.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QStyledItemDelegate \
+		Views\infostring.h \
+		Dialogs\tokendlg.h \
+		Dialogs\renamedlg.h \
+		ui_embelCoord.h \
+		Main\mainwindow.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDesktopWidget \
+		Dialogs\appdlg.h \
 		Datamodel\buildfilters.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QThread \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QWaitCondition \
@@ -31267,9 +31388,6 @@ release\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embellish\
 		Dialogs\testaligndlg.h \
 		Views\tableview.h \
 		Views\imageview.h \
-		Views\infostring.h \
-		Dialogs\tokendlg.h \
-		Dialogs\renamedlg.h \
 		Utilities\dropshadowlabel.h \
 		Dialogs\patterndlg.h \
 		Views\infoview.h \
