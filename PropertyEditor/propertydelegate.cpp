@@ -389,7 +389,8 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             // caption text and no borders for root item
             if (isSelected) painter->setPen(selPen);
             else painter->setPen(catPen);
-            painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+            painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, text);
+//            painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
             // draw separator line if not gradient background
             if (!index.data(UR_isBackgroundGradient).toBool()) {
                 painter->setPen(brdPen);
@@ -413,13 +414,13 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
         // caption text and cell borders
         if (index.column() == 0) {
-            painter->fillRect(r2, valueRowBackground);
+            if (!isAlternatingRows) painter->fillRect(r2, valueRowBackground);
             if (isSelected) painter->setPen(selPen);
             // indent the text (maybe not if not a header)
             if (index.data((UR_isIndent)).toBool())
-                painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+                painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, text);
             else
-                painter->drawText(r2, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
+                painter->drawText(r2, Qt::AlignVCenter|Qt::TextSingleLine, text);
             painter->setPen(brdPen);
             // draw line between column 0 and 1
             if (!hasChildren) painter->drawLine(r0.topRight(), r0.bottomRight());
@@ -428,7 +429,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             painter->drawLine(r0.bottomLeft(), r0.bottomRight());
         }
         if (index.column() == 1) {
-            painter->fillRect(r, valueRowBackground);
+            if (!isAlternatingRows) painter->fillRect(r, valueRowBackground);
             painter->setPen(brdPen);
             // draw bottom line
             painter->setPen(brdPen);

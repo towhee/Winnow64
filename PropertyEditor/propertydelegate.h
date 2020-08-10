@@ -24,6 +24,7 @@ public:
     void updateEditorGeometry(QWidget *editor,
         const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     bool submitted;
+    bool isAlternatingRows;
 
 signals:
     void itemChanged(QModelIndex idx) const;
@@ -35,6 +36,8 @@ public slots:
 
 protected:
 //    bool eventFilter(QObject *editor, QEvent *event) override;
+
+private:
 };
 
 

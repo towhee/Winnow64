@@ -61,6 +61,7 @@ QString WidgetCSS::css()
             tabWidget() +
             textEdit() +
             toolButton() +
+            toolTip() +
             treeView() +
             treeWidget()
             ;
@@ -208,6 +209,22 @@ QString WidgetCSS::toolButton()
     return
     "QToolButton {"
         "background:transparent;"
+        "border:none;"
+    "}"
+    "QToolButton:hover {"
+//    "background:green;"
+    "background:" + QColor(l30,l30,l30).name() + ";"
+    "border:none;"
+    "}"
+    ;
+}
+
+QString WidgetCSS::toolTip()
+{
+    return
+    "QToolTip {"
+        "background:white;"
+        "color:black;"
     "}"
     ;
 }

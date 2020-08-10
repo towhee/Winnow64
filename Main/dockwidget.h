@@ -13,8 +13,8 @@ public:
     BarBtn(/*QWidget *parent = nullptr*/);
     QSize sizeHint();
 protected:
-    void enterEvent(QEvent*);
-    void leaveEvent(QEvent*);
+//    void enterEvent(QEvent*);
+//    void leaveEvent(QEvent*);
 
 private:
     QColor btnHover;

@@ -79,8 +79,10 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     expand(model->index(0,0,QModelIndex()));
     setIndentation(12);
     setAlternatingRowColors(false);
+    propertyDelegate->isAlternatingRows = true;
     resizeColumns("====captions column====",
                   "====values column====");
+    setStyleSheet(G::css);
     setStyleSheet
     (
         "QTreeView {"
@@ -334,6 +336,29 @@ void EmbelProperties::newEmbelTemplate()
     templateListEditor->setValue(templateName);
     // add the File, Image, Borders, Texts, Rectangles and Graphics items for the template
 //    addTemplateItems();
+}
+
+void EmbelProperties::newStyle()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString styleName = Utilities::inputText("New Style", "Enter new style name");
+    styleList << styleName;
+    addStyle(styleName, styleList.length() - 1);
+}
+
+void EmbelProperties::newEffect()
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    QString effectName; // have to get this from combobox ??
+    addStyle(effectName, styleList.length() - 1);
 }
 
 void EmbelProperties::invokeFromAction(QAction *embelAction)
@@ -719,7 +744,7 @@ void EmbelProperties::addTemplateHeader()
     templateRenameBtn->setIcon(QIcon(":/images/icon16/delta.png"));
     templateRenameBtn->setToolTip("Rename the selected template");
     btns.append(templateRenameBtn);
-    connect(templateRenameBtn, &BarBtn::clicked, this, &EmbelProperties::test1);
+    connect(templateRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentTemplate);
     BarBtn *templateDeleteBtn = new BarBtn();
     templateDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     templateDeleteBtn->setToolTip("Delete the selected template");
@@ -775,6 +800,7 @@ void EmbelProperties::addTemplateItems()
     addTexts();
     addRectangles();
     addGraphics();
+    addStyles();
 }
 
 void EmbelProperties::addFile()
@@ -1006,7 +1032,6 @@ void EmbelProperties::addBorders()
     i.isHeader = true;
     i.isDecoration = false;
     i.decorateGradient = true;
-    i.isDecoration = false;
     i.captionText = "Borders";
     i.tooltip = "";
     //i.isIndent = false;
@@ -1132,6 +1157,136 @@ void EmbelProperties::addGraphics()
 //    for (int i = 0; i < count; ++i) newGraphic();
 }
 
+void EmbelProperties::addStyles()
+{
+    //    qDebug() << __FUNCTION__;
+    // Styles header (Root)
+    i.name = "Styles";
+    i.parentName = "???";
+    i.isHeader = true;
+    i.decorateGradient = true;
+    i.isDecoration = true;
+    i.captionText = "Styles";
+    i.tooltip = "";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    stylesDeleteBtn = new BarBtn();
+    stylesDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    stylesDeleteBtn->setToolTip("Delete the selected style");
+    btns.append(stylesDeleteBtn);
+    stylesDeleteBtn->setVisible(false);
+    BarBtn *styleNewBtn = new BarBtn();
+    styleNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    styleNewBtn->setToolTip("Create a new graphic");
+    connect(styleNewBtn, &BarBtn::clicked, this, &EmbelProperties::newStyle);
+    btns.append(styleNewBtn);
+    addItem(i);
+
+    //    QString path = templatePath + "/Graphics";
+    //    setting->beginGroup(path);
+    //    int count = setting->childGroups().size();
+    //    qDebug() << __FUNCTION__ << path << "count =" << count;
+    //    setting->endGroup();
+    //    for (int i = 0; i < count; ++i) newGraphic();
+}
+
+void EmbelProperties::addStyle(QString styleName, int n)
+{
+    // add the style header
+    qDebug() << __FUNCTION__ << styleName << n;
+    QString settingRootPath = "Embel/Styles/" + styleName + "/";
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.itemIndex = n;
+    i.name = styleName;
+    i.parentName = "Styles";
+    i.captionText = styleName;
+    i.tooltip = "";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    styleDeleteBtn = new BarBtn();
+    styleDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    styleDeleteBtn->setToolTip("Delete the selected style");
+    btns.append(styleDeleteBtn);
+    connect(styleDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
+    styleDeleteBtn->setVisible(false);
+    BarBtn *effectNewBtn = new BarBtn();
+    effectNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    effectNewBtn->setToolTip("Add an effect");
+    btns.append(effectNewBtn);
+    connect(effectNewBtn, &BarBtn::clicked, this, &EmbelProperties::newEffect);
+    addItem(i);
+    expand(model->index(_styles,0));
+
+    // STYLE global light direction
+    i.name = "globalLightDirection";
+    i.parentName = styleName;
+    i.captionText = "Global light direction";
+    i.tooltip = "Light source direction (0 - 360 degrees)";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "globalLightDirection";
+    if (setting->contains(templatePath + i.key))
+        i.value = setting->value(templatePath + "File/" + i.key);
+    else i.value = 225;
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 360;
+    i.fixedWidth = 50;
+//    f.horizontalFitPx = i.value.toInt();
+    addItem(i);
+
+    // STYLE global light elevation
+    i.name = "globalLightElevation";
+    i.parentName = styleName;
+    i.captionText = "Global light elevation";
+    i.tooltip = "Light source direction (0 - 90 degrees)";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "globalLightElevation";
+    if (setting->contains(templatePath + i.key))
+        i.value = setting->value(templatePath + "File/" + i.key);
+    else i.value = 45;
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 90;
+    i.fixedWidth = 50;
+    //    f.horizontalFitPx = i.value.toInt();
+    addItem(i);
+
+
+}
+
+void EmbelProperties::addEffect(QString effectName)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString settingRootPath = "Embel/Styles/" + effectName + "/";
+
+    // subheader for this border
+//    qDebug() << __FUNCTION__ << "count =" << count;
+    i.isHeader = true;
+    i.isDecoration = true;
+//    i.itemIndex = count;
+    i.name = effectName;
+    i.parentName = "Styles";
+    i.captionText = effectName;
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_Checkbox;
+    addItem(i);
+}
+
 void EmbelProperties::newBorder()
 {
     getIndex("Borders");
@@ -1229,11 +1384,12 @@ void EmbelProperties::deleteItem()
     e->build();
 }
 
-//void EmbelProperties::mouseDoubleClickEvent(QMouseEvent */*event*/)
-//{
-//    qDebug() << __FUNCTION__;
-//    // ignore
-//}
+
+/*void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    qDebug() << __FUNCTION__;
+    // ignore
+}*/
 
 void EmbelProperties::mousePressEvent(QMouseEvent *event)
 /*
@@ -1792,7 +1948,8 @@ void EmbelProperties::addText(int count)
     i.dropList << alignToCornerList;
     text.alignToCorner = i.value.toString();
     parseAlignToCorner(text.alignToCorner,text.alignTo_BorderId, text.alignTo_CornerId);
-    textAlignToCornerObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
+    textAlignToCornerObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
+//    textAlignToCornerObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
 
     i.name = "anchorPoint";
     i.parentName = textName;
@@ -1861,7 +2018,7 @@ void EmbelProperties::addText(int count)
 
     i.name = "metadataTemplate";
     i.parentName = textName;
-    i.captionText = "Meta template";
+    i.captionText = "Metadata template";
     i.tooltip = "Select a metadata template.  A template can include multiple metadata \n"
                 "fields and user input text.";
     i.isIndent = false;

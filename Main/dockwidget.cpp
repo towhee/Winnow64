@@ -7,11 +7,13 @@ which has a border, and must be over-ridden.
 
 BarBtn::BarBtn(/*QWidget *parent*/) : QToolButton()
 {
-    setStyleSheet
-    (
-        "background:transparent;"
-        "border:none;"
-    );
+    setStyleSheet(G::css);
+//    setStyleSheet
+//    (
+//    "QToolTip {"
+//        "background:yellow;"
+//    "}"
+//    );
     int bg = G::backgroundShade + 30;
     btnHover = QColor(bg,bg,bg);
 }
@@ -21,23 +23,23 @@ QSize BarBtn::sizeHint()
     return QSize(16,16);
 }
 
-void BarBtn::enterEvent(QEvent*)
-{
-    setStyleSheet
-    (
-        "background:" + btnHover.name() + ";"
-        "border:none;"
-    );
-}
+//void BarBtn::enterEvent(QEvent*)
+//{
+//    setStyleSheet
+//    (
+//        "background:" + btnHover.name() + ";"
+//        "border:none;"
+//    );
+//}
 
-void BarBtn::leaveEvent(QEvent*)
-{
-    setStyleSheet
-    (
-        "background:transparent;"
-        "border:none;"
-    );
-}
+//void BarBtn::leaveEvent(QEvent*)
+//{
+//    setStyleSheet
+//    (
+//        "background:transparent;"
+//        "border:none;"
+//    );
+//}
 
 /* DockTitleBar *******************************************************************************
 This replaces the QDockWidget titlebar, enabling the placement of tool buttons.

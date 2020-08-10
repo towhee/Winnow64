@@ -280,6 +280,8 @@ void Preferences::addItems()
     // General header (Root)
     i.name = "GeneralHeader";
     i.parentName = "???";
+    i.isHeader = true;
+    i.isDecoration = true;
     i.decorateGradient = true;
     i.captionText = "General";
     i.tooltip = "General items";
@@ -451,6 +453,8 @@ void Preferences::addItems()
     // Thumbnails Header (Root)
     i.name = "ThumbnailsHeader";
     i.parentName = "";
+    i.isHeader = true;
+    i.isDecoration = true;
     i.decorateGradient = true;
     i.captionText = "Thumbnails";
     i.tooltip = "";
@@ -566,6 +570,8 @@ void Preferences::addItems()
     // Cache Header (Root)
     i.name = "CacheHeader";
     i.parentName = "";
+    i.isHeader = true;
+    i.isDecoration = true;
     i.decorateGradient = true;
     i.captionText = "Cache";
     i.tooltip = "";
@@ -699,6 +705,8 @@ void Preferences::addItems()
     // Slideshow Header (Root)
     i.name = "SlideshowHeader";
     i.parentName = "";
+    i.isHeader = true;
+    i.isDecoration = true;
     i.decorateGradient = true;
     i.captionText = "Slideshow";
     i.tooltip = "";
@@ -754,6 +762,8 @@ void Preferences::addItems()
     // Full Screen Header (Root)
     i.name = "FullScreenHeader";
     i.parentName = "";
+    i.isHeader = true;
+    i.isDecoration = true;
     i.decorateGradient = true;
     i.captionText = "Full screen defaults";
     i.tooltip = "";
@@ -845,6 +855,8 @@ void Preferences::addItems()
     // Metadata InfoView Header (Root)
     i.name = "MetadataPanelHeader";
     i.parentName = "";
+    i.isHeader = true;
+    i.isDecoration = true;
     i.decorateGradient = true;
     i.captionText = "Metadata panel items";
     i.tooltip = "";
@@ -894,6 +906,8 @@ void Preferences::addItems()
     // TableView show/hide fields Header (Root)
     i.name = "TableViewColumnsHeader";
     i.parentName = "???";
+    i.isHeader = true;
+    i.isDecoration = true;
     i.decorateGradient = true;
     i.captionText = "TableView columns";
     i.tooltip = "";
@@ -902,7 +916,7 @@ void Preferences::addItems()
     i.delegateType = DT_None;
     addItem(i);
 
-    { // TableView show/hide fieldsw items
+    { // TableView show/hide field items
 
     // TableView conventional fields to show
     QStandardItemModel *tv = mw->tableView->ok;
@@ -950,7 +964,7 @@ void Preferences::addItems()
         i.index = tv->index(row, 1);
         addItem(i);
     }
-    // end TableView show/hide fieldsw items
+    // end TableView show/hide field items
     }
 
     return;
