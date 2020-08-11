@@ -58,6 +58,7 @@ public:
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
 public slots:
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor);

@@ -42,10 +42,12 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     slider->setObjectName("DisableGoActions");  // used in MW::focusChange
     slider->setMinimum(min);
     slider->setMaximum(max);
-    slider->setStyleSheet("QSlider {background: transparent;}"
+    slider->setStyleSheet(
+         "QSlider {background: transparent;}"
          "QSlider::groove:horizontal {border:1px solid gray; height:1px;}"
-         "QSlider::handle:horizontal {background:silver; width:6px; margin:-6px 0; height:10px;}"
-         "QSlider::handle:focus, QSlider::handle:hover{background:red;}");
+         "QSlider::handle:horizontal {background:silver; width:4px; margin:-4px 0; height:8px;}"
+         "QSlider::handle:focus, QSlider::handle:hover{background:red;}"
+    );
     slider->setWindowFlags(Qt::FramelessWindowHint);
     slider->setAttribute(Qt::WA_TranslucentBackground);
 
