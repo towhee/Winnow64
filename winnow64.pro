@@ -15,11 +15,7 @@ QT += widgets
 QT += concurrent
 QT += xmlpatterns
 
-HEADERS += Cache/imagecache.h \
-   Dialogs/patterndlg.h \
-   Embellish/Properties/embelproperties.h \
-   Embellish/embel.h \
-   Utilities/inputdlg.h
+HEADERS += Cache/imagecache.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/buildfilters.h
@@ -29,6 +25,7 @@ HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/ingestdlg.h
 HEADERS += Dialogs/loadusbdlg.h
+HEADERS += Dialogs/patterndlg.h
 HEADERS += Dialogs/preferencesdlg.h
 HEADERS += Dialogs/renamedlg.h
 HEADERS += Dialogs/saveasdlg.h
@@ -37,6 +34,8 @@ HEADERS += Dialogs/workspacedlg.h
 HEADERS += Dialogs/tokendlg.h
 HEADERS += Dialogs/updateapp.h
 HEADERS += Dialogs/zoomdlg.h
+HEADERS += Embellish/Properties/embelproperties.h
+HEADERS += Embellish/embel.h
 HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
 HEADERS += Image/imagealign.h
@@ -73,11 +72,12 @@ HEADERS += PropertyEditor/preferences.h
 HEADERS += PropertyEditor/propertyeditor.h
 HEADERS += PropertyEditor/propertydelegate.h
 HEADERS += PropertyEditor/propertywidgets.h
+HEADERS += Utilities/bit.h
 HEADERS += Utilities/classificationlabel.h
 HEADERS += Utilities/dropshadowlabel.h
-HEADERS += Utilities/bit.h
 win32:HEADERS += Utilities/icc.h
 mac:HEADERS += Utilities/mac.h
+HEADERS += Utilities/inputdlg.h
 HEADERS += Utilities/popup.h
 HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/usb.h
@@ -92,11 +92,7 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/imagecache.cpp \
-   Dialogs/patterndlg.cpp \
-   Embellish/Properties/embelproperties.cpp \
-   Embellish/embel.cpp \
-   Utilities/inputdlg.cpp
+SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp
@@ -105,6 +101,7 @@ SOURCES += Dialogs/aboutdlg.cpp
 SOURCES += Dialogs/appdlg.cpp
 SOURCES += Dialogs/ingestdlg.cpp
 SOURCES += Dialogs/loadusbdlg.cpp
+SOURCES += Dialogs/patterndlg.cpp
 SOURCES += Dialogs/preferencesdlg.cpp
 SOURCES += Dialogs/renamedlg.cpp
 SOURCES += Dialogs/saveasdlg.cpp
@@ -113,6 +110,8 @@ SOURCES += Dialogs/tokendlg.cpp
 SOURCES += Dialogs/updateapp.cpp
 SOURCES += Dialogs/workspacedlg.cpp
 SOURCES += Dialogs/zoomdlg.cpp
+SOURCES += Embellish/Properties/embelproperties.cpp
+SOURCES += Embellish/embel.cpp
 SOURCES += File/bookmarks.cpp
 SOURCES += File/fstree.cpp
 SOURCES += Image/imagealign.cpp
@@ -146,11 +145,12 @@ SOURCES += PropertyEditor/preferences.cpp
 SOURCES += PropertyEditor/propertyeditor.cpp
 SOURCES += PropertyEditor/propertydelegate.cpp
 SOURCES += PropertyEditor/propertywidgets.cpp
+SOURCES += Utilities/bit.cpp
 SOURCES += Utilities/classificationlabel.cpp
 SOURCES += Utilities/dropshadowlabel.cpp
-SOURCES += Utilities/bit.cpp
 win32:SOURCES += Utilities/icc.cpp
 mac:SOURCES += Utilities/mac.cpp
+SOURCES += Utilities/inputdlg.cpp
 SOURCES += Utilities/popup.cpp
 SOURCES += Utilities/progressbar.cpp
 SOURCES += Utilities/usb.cpp

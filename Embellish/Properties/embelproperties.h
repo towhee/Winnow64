@@ -19,6 +19,8 @@ public:
     QStringList templateList;
     QString templateName;
     int templateId;                 // 0 == Do not embellish
+    QString styleName;
+    int styleId;
 
     struct File {
         int horizontalFitPx;
@@ -125,15 +127,14 @@ private:
     void addRectangles();
     void addGraphics();
     void addStyles();
-    void addStyle(QString styleName, int n);
-    void addEffect(QString effectName);
+    void addStyle(QString name, int n);
+    void addShadowEffect(QString parentName);
 
     void newBorder();
     void newText();
     void newRectangle();
     void newGraphic();
     void newStyle();
-    void newEffect();
 
     void deleteTremplate();
     void deleteBorder();
@@ -156,6 +157,20 @@ private:
     void diagnostics(QModelIndex idx);
     void diagnosticVectors();
     void parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner);
+
+    void effectContextMenu();
+    void effectActionClicked();
+
+    QString effectParent;   // req'd to add an effect to parent style
+    QMenu *effectMenu;
+    QActionGroup *effectGroupAction;
+    QAction *shadowEffectAction;
+    QAction *bevelEffectAction;
+    QAction *embossEffectAction;
+    QAction *blurEffectAction;
+    QAction *sharpenEffectAction;
+    QAction *colorizeEffectAction;
+    QAction *edgeEffectAction;
 
     bool isTemplateChange = false;
 
@@ -195,6 +210,7 @@ private:
     QStringList tileList;
     QStringList metadataTemplatesList;
     QStringList styleList;
+    QStringList effectList;
 };
 
 #endif // EMBELPROPERTIES_H

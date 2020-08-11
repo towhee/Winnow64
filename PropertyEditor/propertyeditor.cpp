@@ -234,6 +234,7 @@ items, which is controlled by the "Metadata panel items" in preferences.
 Note: Even though treeIndex will find any index only root branches work. If the text for a
 secondary or tertiary branch is sent then all branches expand.
 */
+    qDebug() << __FUNCTION__ << text;
     collapseAll();
     getIndex(text);
     expandRecursively(foundIdx);
@@ -242,8 +243,6 @@ secondary or tertiary branch is sent then all branches expand.
 void PropertyEditor::mousePressEvent(QMouseEvent *event)
 /*
 Set the current index and expand/collapse when click anywhere on a row that has children.
-Do not pass on to QTreeView as this will enable QTreeView expanding and collapsing when the
-decoration is clicked.
 */
 {
     // ignore right mouse clicks for context menu
@@ -263,6 +262,14 @@ decoration is clicked.
             isExpanded(idx) ? collapse(idx) : expand(idx);
         }
     }
+}
+
+void PropertyEditor::mouseReleaseEvent(QMouseEvent */*event*/)
+{
+/*
+    Do not pass on to QTreeView as this will enable QTreeView expanding and collapsing when the
+    decoration is clicked.
+*/
 }
 
 void PropertyEditor::resizeColumns(QString stringToFitCaptions, QString stringToFitValues)

@@ -336,7 +336,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     int b = G::backgroundShade - 15;
     int c = G::backgroundShade + 30;
     int d = G::backgroundShade;
-    int e = G::backgroundShade + 10;
+    int e = G::backgroundShade + 20;
     int t = G::textShade;
 
     QLinearGradient rootCategoryBackground;
