@@ -17,9 +17,9 @@ public slots:
     void solo();
 
 private:
+    PropertyEditor *tree;
     void expand();
     void collapse();
-    PropertyEditor *tree;
     QAction *soloAction;
     bool &isSolo;
 };

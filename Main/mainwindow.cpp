@@ -10629,27 +10629,33 @@ ImageCache and update the image cache status bar.
     if (selection.isEmpty()) return;
 
     // convert selection to stringlist
-    QStringList sl;
+    QStringList sl, sldm;
     for (int i = 0; i < selection.count(); ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
         sl.append(fPath);
     }
+    qDebug() << __FUNCTION__ << "sl =" << sl;
 
     // delete file in folder on disk
     for (int i = 0; i < sl.count(); ++i) {
         QString fPath = sl.at(i);
-        qDebug() << __FUNCTION__ << "deleting " << fPath;
-        QFile::remove(fPath);
+        if (QFile::remove(fPath)) {
+            sldm.append(fPath);
+            qDebug() << __FUNCTION__ << "deleted:" << fPath;
+        }
+        else
+            qDebug() << __FUNCTION__ << "failed: " << fPath;
     }
+    qDebug() << __FUNCTION__ << "sldm =" << sldm;
 
-    // remove fPath from datamodel dm
-    for (int i = 0; i < sl.count(); ++i) {
-        QString fPath = sl.at(i);
+    // remove fPath from datamodel dm if successfully deleted
+    for (int i = 0; i < sldm.count(); ++i) {
+        QString fPath = sldm.at(i);
         dm->remove(fPath);
     }
 
     // remove selected from imageCache
-    imageCacheThread->removeFromCache(sl);
+    imageCacheThread->removeFromCache(sldm);
     // update cursor position on progressBar
     updateImageCacheStatus("Update all rows", currentRow, __FUNCTION__);
 
@@ -10963,6 +10969,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    bookmarks->resizeColumns();
+    embelProperties->test2();
 }
 // End MW
