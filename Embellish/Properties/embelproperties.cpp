@@ -74,7 +74,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     mw3 = qobject_cast<MW*>(parent);
     this->setting = setting;
 
-    setSolo(true);
+//    setSolo(true);
     collapseAll();
     expand(model->index(0,0,QModelIndex()));
     setIndentation(12);
@@ -105,7 +105,8 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     expand(model->index(_rectangles,0));
     expand(model->index(_graphics,0));
 
-    diagnosticVectors();
+//    diagnosticVectors();
+    qDebug() << __FUNCTION__ << "styleList =" << styleList;
 }
 
 void EmbelProperties::initialize()
@@ -121,46 +122,36 @@ void EmbelProperties::initialize()
         i.next();
         metadataTemplatesList << i.key();
     }
+
+    // EFFECTS
     effectList << "Shadow" << "Bevel" << "Emboss" << "Blur" << "Sharpen"
                << "Colorize" << "Edges";
 
     shadowEffectAction = new QAction(tr("Shadow"), this);
     shadowEffectAction->setObjectName("shadowEffectAction");
-    addAction(shadowEffectAction);
-    connect(shadowEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
-
-    shadowEffectAction = new QAction(tr("Shadow"), this);
-    shadowEffectAction->setObjectName("shadowEffectAction");
-    addAction(shadowEffectAction);
     connect(shadowEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
 
     bevelEffectAction = new QAction(tr("Bevel"), this);
     bevelEffectAction->setObjectName("bevelEffectAction");
-    addAction(bevelEffectAction);
     connect(bevelEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
 
     embossEffectAction = new QAction(tr("Emboss"), this);
     embossEffectAction->setObjectName("embossEffectAction");
-    addAction(embossEffectAction);
     connect(embossEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
 
     blurEffectAction = new QAction(tr("Blur"), this);
     blurEffectAction->setObjectName("blurEffectAction");
-    addAction(blurEffectAction);
     connect(blurEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
 
     sharpenEffectAction = new QAction(tr("Sharpen"), this);
     sharpenEffectAction->setObjectName("sharpenEffectAction");
-    addAction(sharpenEffectAction);
     connect(sharpenEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
 
     edgeEffectAction = new QAction(tr("Edge"), this);
     edgeEffectAction->setObjectName("edgeEffectAction");
-    addAction(edgeEffectAction);
     connect(edgeEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
 
     effectGroupAction = new QActionGroup(this);
-//    effectGroupAction->setExclusive(true);
     QList<QAction *> *effectActions = new QList<QAction *>;
     effectActions->append(shadowEffectAction);
     effectActions->append(bevelEffectAction);
@@ -169,28 +160,45 @@ void EmbelProperties::initialize()
     effectActions->append(sharpenEffectAction);
     effectActions->append(colorizeEffectAction);
     effectActions->append(edgeEffectAction);
-    addActions(*effectActions);
 
-    effectMenu = new QMenu;
+    effectMenu = new QMenu();
     effectMenu->addActions(*effectActions);
     effectMenu->setStyleSheet(G::css);
+
+    // CONTEXT MENU
+    QAction *expandAllAction = new QAction(tr("Expand all"), this);
+    expandAllAction->setShortcutVisibleInContextMenu(true);
+    expandAllAction->setShortcut(QKeySequence("Ctrl+>"));
+    addAction(expandAllAction);
+    connect(expandAllAction, &QAction::triggered, this, &EmbelProperties::expandAllRows);
+
+    QAction *collapseAllAction = new QAction(tr("Collapse all"), this);
+    collapseAllAction->setShortcutVisibleInContextMenu(true);
+    collapseAllAction->setShortcut(QKeySequence("Ctrl+<"));
+    addAction(collapseAllAction);
+    connect(collapseAllAction, &QAction::triggered, this, &EmbelProperties::collapseAllRows);
+
+    soloAction = new QAction(tr("Solo"), this);
+    soloAction->setShortcutVisibleInContextMenu(true);
+    soloAction->setShortcut(QKeySequence("Ctrl+*"));
+    soloAction->setCheckable(true);
+    addAction(soloAction);
+    soloAction->setChecked(isSolo);
+    connect(soloAction, &QAction::triggered, this, &EmbelProperties::solo);
+    solo();
 
     setContextMenuPolicy(Qt::ActionsContextMenu);
 }
 
 void EmbelProperties::effectContextMenu()
 {
-//    QObject* obj = sender();
     effectParent = sender()->objectName();
-//    QString s = obj->objectName();
-    qDebug() << __FUNCTION__ << "sender =" << effectParent;
     effectMenu->exec(QCursor::pos());
 }
 
 void EmbelProperties::effectActionClicked()
 {
     QString effect = (static_cast<QAction*>(sender()))->text();
-    qDebug() << __FUNCTION__ << effect;
     if (effect == "Shadow") addShadowEffect(effectParent); // fix parent
 }
 
@@ -432,10 +440,13 @@ void EmbelProperties::newStyle()
     G::track(__FUNCTION__);
     #endif
     }
-    QString styleName = Utilities::inputText("New Style", "Enter new style name");
-    styleList << styleName;
+    // rgh prevent duplicate style names
+    QString name = Utilities::inputText("New Style", "Enter new style name");
+//    styleName = "style_" + styleName.replace(" ", "_");
+    styleName = name;
+    styleList << name;
     int n = styleList.length() - 1;
-    addStyle(styleName, n);
+    addStyle(name, n);
 }
 
 void EmbelProperties::invokeFromAction(QAction *embelAction)
@@ -1265,6 +1276,26 @@ void EmbelProperties::addStyles()
     btns.append(styleNewBtn);
     addItem(i);
 
+    // STYLE global light direction
+    i.name = "globalLightDirection";
+    i.parentName = "Styles";
+    i.captionText = "Global light direction";
+    i.tooltip = "Light source direction (0 - 360 degrees)";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "globalLightDirection";
+    if (setting->contains(templatePath + i.key))
+        i.value = setting->value(templatePath + "File/" + i.key);
+    else i.value = 225;
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 360;
+    i.fixedWidth = 50;
+//    f.horizontalFitPx = i.value.toInt();
+    addItem(i);
+
     QString path = "Embel/Styles";
     setting->beginGroup(path);
     styleList = setting->childGroups();
@@ -1279,8 +1310,8 @@ void EmbelProperties::addStyle(QString name, int n)
     // add the style header
     styleName = name;
     styleId = n;
-    qDebug() << __FUNCTION__ << styleName << n;
-    QString settingRootPath = "Embel/Styles/" + styleName + "/";
+    qDebug() << __FUNCTION__ << name << n;
+    QString settingRootPath = "Embel/Styles/" + name;/* + "/";*/
     i.isHeader = true;
     i.isDecoration = true;
     i.itemIndex = n;
@@ -1304,27 +1335,13 @@ void EmbelProperties::addStyle(QString name, int n)
     btns.append(effectNewBtn);
     connect(effectNewBtn, &BarBtn::clicked, this, &EmbelProperties::effectContextMenu);
     addItem(i);
-    expand(model->index(_styles,0));
+//    expand(model->index(_styles,0));
 
-    // STYLE global light direction
-    i.name = "globalLightDirection";
-    i.parentName = styleName;
-    i.captionText = "Global light direction";
-    i.tooltip = "Light source direction (0 - 360 degrees)";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "globalLightDirection";
-    if (setting->contains(templatePath + i.key))
-        i.value = setting->value(templatePath + "File/" + i.key);
-    else i.value = 225;
-    i.delegateType = DT_Slider;
-    i.type = "int";
-    i.min = 0;
-    i.max = 360;
-    i.fixedWidth = 50;
-//    f.horizontalFitPx = i.value.toInt();
-    addItem(i);
+    setting->beginGroup(settingRootPath);
+    QStringList groups = setting->childGroups();
+    setting->endGroup();
+    qDebug() << __FUNCTION__ << settingRootPath << "groups =" << groups;
+    if (groups.contains("Shadow")) addShadowEffect(styleName);
 }
 
 void EmbelProperties::addShadowEffect(QString parentName)
@@ -1334,7 +1351,8 @@ void EmbelProperties::addShadowEffect(QString parentName)
     G::track(__FUNCTION__);
     #endif
     }
-    QString settingRootPath = "Embel/Styles/" + styleName + "/Shadow/";
+    qDebug() << __FUNCTION__ << "parentName =" << parentName;
+    QString settingRootPath = "Embel/Styles/" + parentName + "/Shadow/";
 
     // subheader for this border
     i.isHeader = true;
@@ -1536,28 +1554,46 @@ decoration is clicked.
 
 void EmbelProperties::treeChange(QModelIndex idx)
 {
+    qDebug() << __FUNCTION__ << idx << idx.isValid();
     if (!idx.isValid()) return;
     if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
     bool hasChildren = model->hasChildren(idx);
     bool hasGrandChildren = model->hasChildren(model->index(0,0,idx));
     bool templateHdr = (idx == model->index(0,0));
-    if (hasChildren && !hasGrandChildren && !templateHdr) {
+    QString selName = idx.data(UR_Name).toString();
+    QString parName = idx.parent().data(UR_Name).toString();
+    bool isStyle = styleList.contains(selName) || effectList.contains(selName);
+//    /*
+    qDebug() << __FUNCTION__
+             << "hasChildren =" << hasChildren
+             << "hasGrandChildren =" << hasGrandChildren
+             << "templateHdr =" << templateHdr
+             << "selName =" << selName
+             << "isStyle =" << isStyle
+                ;
+//    */
+    if ((hasChildren && !hasGrandChildren && !templateHdr) || isStyle) {
         bool wasExpanded = isExpanded(idx);
         qDebug() << __FUNCTION__ << idx.data(UR_Name).toString();
         // clear selection and delete buttons (re-instated after selection change)
         selectionModel()->clear();
         showRelevantDeleteBtn();
-        if (okToSelect(idx)) {
+        if (okToSelect(idx, selName)) {
             selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
-        collapseAll();
+        if (!isStyle) collapseAll();
+        else {
+            collapse(model->index(_borders,0));
+            collapse(model->index(_texts,0));
+            collapse(model->index(_rectangles,0));
+            collapse(model->index(_graphics,0));
+        }
         expand(model->index(_templates,0));
         expand(model->index(_borders,0));
         expand(model->index(_texts,0));
         expand(model->index(_rectangles,0));
         expand(model->index(_graphics,0));
-        expand(model->index(_styles,0));
-//        expandBranch("Styles");
+//        expand(model->index(_styles,0));
         wasExpanded ? collapse(idx) : expand(idx);
     }
 }
@@ -1574,9 +1610,9 @@ buttons except in the selected category.
     QModelIndex idx = selection.indexes().first();
     QModelIndex parIdx = idx.parent();
     QString selName = idx.data(UR_Name).toString();
-    if (!okToSelect(idx)) {
+    if (!okToSelect(idx, selName)) {
         selectionModel()->clear();
-        if (!okToSelect(parIdx)) return;
+        if (!okToSelect(parIdx, selName)) return;
         selectionModel()->select(parIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         idx = parIdx;
     }
@@ -1587,8 +1623,9 @@ buttons except in the selected category.
     showRelevantDeleteBtn(selectedCategory);
 }
 
-bool EmbelProperties::okToSelect(QModelIndex idx)
+bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
 {
+    qDebug() << __FUNCTION__ << "selName =" << selName;
     QModelIndex parIdx = idx.parent();
     if (!parIdx.isValid()) return false;
     if (parIdx == model->index(_borders,0)) return true;
@@ -1596,6 +1633,8 @@ bool EmbelProperties::okToSelect(QModelIndex idx)
     if (parIdx == model->index(_rectangles,0)) return true;
     if (parIdx == model->index(_graphics,0)) return true;
     if (parIdx == model->index(_styles,0)) return true;
+    if (styleList.contains(selName)) return true;
+    if (effectList.contains(selName)) return true;
     return false;
 }
 
@@ -1609,7 +1648,7 @@ void EmbelProperties::showRelevantDeleteBtn(QString btnToShow)
     if (btnToShow == "Texts") textDeleteBtn->setVisible(true);
     if (btnToShow == "Rectangles") rectangleDeleteBtn->setVisible(true);
     if (btnToShow == "Graphics") graphicDeleteBtn->setVisible(true);
-    if (btnToShow == "Styless") graphicDeleteBtn->setVisible(true);
+    if (btnToShow == "Styles") styleDeleteBtn->setVisible(true);
 }
 
 QString EmbelProperties::metaString(QString key)
@@ -1652,7 +1691,23 @@ and the corner.
     if (s == "TopRight") iCorner = 1;
     if (s == "BottomLeft") iCorner = 2;
     if (s == "BottomRight") iCorner = 3;
-    qDebug() << __FUNCTION__ << alignTo << s << iBorder << iCorner;
+//    qDebug() << __FUNCTION__ << alignTo << s << iBorder << iCorner;
+}
+
+void EmbelProperties::expandAllRows()
+{
+    expandAll();
+}
+
+void EmbelProperties::collapseAllRows()
+{
+    collapseAll();
+    expand(model->index(_templates,0));
+}
+
+void EmbelProperties::solo()
+{
+    isSolo = soloAction->isChecked();
 }
 
 void EmbelProperties::test1()
@@ -1662,7 +1717,7 @@ void EmbelProperties::test1()
 
 void EmbelProperties::test2()
 {
-    qDebug() << __FUNCTION__;
+    expandAll();
 //    setting->remove("Embel/Templates");
 }
 
@@ -2140,7 +2195,7 @@ void EmbelProperties::addText(int count)
     }
     else {
         i.value = "Text #" + QString::number(count + 1);
-        qDebug() << __FUNCTION__ << i.value;
+//        qDebug() << __FUNCTION__ << i.value;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_LineEdit;
@@ -2174,7 +2229,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     // update tree based on source
-    qDebug() << __FUNCTION__ << "Update text source" << sourceIdx;
+//    qDebug() << __FUNCTION__ << "Update text source" << sourceIdx;
     textItemChange(sourceIdx);
 
     i.name = "size";

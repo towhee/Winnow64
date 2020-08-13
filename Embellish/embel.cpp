@@ -211,9 +211,11 @@ QPoint Embel::textCanvasCoord(int n)
             }
         }
         // if align to a border corner
+        /*
         qDebug() << __FUNCTION__
                  << "p->t[n].alignToCorner =" << p->t[n].alignToCorner
                  << "x0 =" << x0 << "y0 =" << y0;
+//                 */
         if (p->t[n].alignToCorner != "Do not align") {
             // border number
             int bId = p->t[n].alignTo_BorderId;
@@ -221,6 +223,7 @@ QPoint Embel::textCanvasCoord(int n)
             bool isHorAlignment = true;
             if (p->t[n].anchorContainer == "Left" || p->t[n].anchorContainer == "Right")
                 isHorAlignment = false;
+            /*
             qDebug() << __FUNCTION__
                      << "n =" << n
                      << "bId =" << bId
@@ -228,6 +231,7 @@ QPoint Embel::textCanvasCoord(int n)
                      << "isHorAlignment =" << isHorAlignment
                      << "p->t[n].alignTo_CornerId =" << p->t[n].alignTo_CornerId
                         ;
+//                        */
             switch (p->t[n].alignTo_CornerId) {
             // TopLeft
             case 0:
@@ -243,8 +247,8 @@ QPoint Embel::textCanvasCoord(int n)
             case 2:
                 if (isHorAlignment) x0 = b[bId].bl.x();
                 else y0 = b[bId].bl.y();
-                qDebug() << __FUNCTION__
-                         << "b[bId].bl =" << b[bId].bl;
+//                qDebug() << __FUNCTION__
+//                         << "b[bId].bl =" << b[bId].bl;
                 break;
             // BottomRight
             case 3:
@@ -254,7 +258,7 @@ QPoint Embel::textCanvasCoord(int n)
             }
         }
     }
-    qDebug() << __FUNCTION__ << "QPoint(x0,y0) =" << QPoint(x0,y0);
+//    qDebug() << __FUNCTION__ << "QPoint(x0,y0) =" << QPoint(x0,y0);
     return QPoint(x0,y0);
 }
 

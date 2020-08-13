@@ -153,10 +153,17 @@ private:
     void graphicItemChange(QVariant v, QString source, QString parent);
 
     void treeChange(QModelIndex idx);
-    bool okToSelect(QModelIndex idx);
+    bool okToSelect(QModelIndex idx, QString selName);
     void diagnostics(QModelIndex idx);
     void diagnosticVectors();
     void parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner);
+
+    // expand/collapse in context menu
+    void expandAllRows();
+    void collapseAllRows();
+    void solo();
+    QAction *soloAction;
+    bool isSolo;
 
     void effectContextMenu();
     void effectActionClicked();
