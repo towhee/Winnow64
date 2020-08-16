@@ -1,5 +1,9 @@
 BUGS
-- Winnow preferences update formatting
+- Shift Ctrl 0 not working on PC
+- Thumbnails window menu not in sync on opening
+- Cannot delete heic files on PC
+- Filters will be updated msg on opening
+- Remember Embel dock on opening
 - MetaStrings
 - Shadows
 - Globalize css
@@ -23,6 +27,7 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Winnow preferences update formatting
 - add color editor to PropertyEditor
 - Statusbar reverseSortBtn
 - Tile extractor

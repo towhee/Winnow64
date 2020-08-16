@@ -142,7 +142,7 @@ private:
     void deleteRectangle();
     void deleteGraphic();
     void deleteItem();
-    void showRelevantDeleteBtn(QString btnToShow = "");
+    void showRelevantDeleteBtn(QModelIndex idx );
 
     void templateChange(QVariant v);
     void fileItemChange(QVariant v, QString source);
@@ -187,6 +187,7 @@ private:
     BarBtn *graphicDeleteBtn;
     BarBtn *stylesDeleteBtn;
     BarBtn *styleDeleteBtn;
+    QVector<BarBtn*> styleDeleteBtns;
 
     ItemInfo i;
     int templateCount;
@@ -195,6 +196,7 @@ private:
     ComboBoxEditor *templateListEditor;
     QVector<ComboBoxEditor*> textAlignToCornerObjectEditor;
     QVector<ComboBoxEditor*> textAnchorObjectEditor;
+    QVector<BarBtnEditor*> styleEditor;
 
     enum roots {
         _templates,
