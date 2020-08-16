@@ -1325,16 +1325,19 @@ void EmbelProperties::addStyle(QString name, int n)
     styleDeleteBtn = new BarBtn();
     styleDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     styleDeleteBtn->setToolTip("Delete the selected style");
+    // btn vector used in BarBtnEditor to show button in tree
     btns.append(styleDeleteBtn);
-    connect(styleDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
-    styleDeleteBtn->setVisible(false);
+    // btn vector for each button
+    styleDeleteBtns.append(styleDeleteBtn);
+    connect(styleDeleteBtns[n], &BarBtn::clicked, this, &EmbelProperties::deleteItem);
+    styleDeleteBtns[n]->setVisible(false);
     BarBtn *effectNewBtn = new BarBtn();
     effectNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     effectNewBtn->setToolTip("Add an effect");
     effectNewBtn->setObjectName(styleName);
     btns.append(effectNewBtn);
     connect(effectNewBtn, &BarBtn::clicked, this, &EmbelProperties::effectContextMenu);
-    addItem(i);
+    styleEditor.append(static_cast<BarBtnEditor*>(addItem(i)));
 //    expand(model->index(_styles,0));
 
     setting->beginGroup(settingRootPath);
@@ -1577,7 +1580,7 @@ void EmbelProperties::treeChange(QModelIndex idx)
         qDebug() << __FUNCTION__ << idx.data(UR_Name).toString();
         // clear selection and delete buttons (re-instated after selection change)
         selectionModel()->clear();
-        showRelevantDeleteBtn();
+        showRelevantDeleteBtn(idx);
         if (okToSelect(idx, selName)) {
             selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
@@ -1619,8 +1622,7 @@ buttons except in the selected category.
     // make sure using index for column 0
     idx = model->index(idx.row(), 0, idx.parent());
     // deal with delete buttons
-    QString selectedCategory = idx.parent().data(UR_Name).toString();
-    showRelevantDeleteBtn(selectedCategory);
+    showRelevantDeleteBtn(idx);
 }
 
 bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
@@ -1638,17 +1640,25 @@ bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
     return false;
 }
 
-void EmbelProperties::showRelevantDeleteBtn(QString btnToShow)
+void EmbelProperties::showRelevantDeleteBtn(QModelIndex idx)
 {
+    QString par = idx.parent().data(UR_Name).toString();
+    qDebug() << __FUNCTION__
+             << par << idx;
     borderDeleteBtn->setVisible(false);
     textDeleteBtn->setVisible(false);
     rectangleDeleteBtn->setVisible(false);
     graphicDeleteBtn->setVisible(false);
-    if (btnToShow == "Borders") borderDeleteBtn->setVisible(true);
-    if (btnToShow == "Texts") textDeleteBtn->setVisible(true);
-    if (btnToShow == "Rectangles") rectangleDeleteBtn->setVisible(true);
-    if (btnToShow == "Graphics") graphicDeleteBtn->setVisible(true);
-    if (btnToShow == "Styles") styleDeleteBtn->setVisible(true);
+    stylesDeleteBtn->setVisible(false);
+    if (par == "Borders") borderDeleteBtn->setVisible(true);
+    if (par == "Texts") textDeleteBtn->setVisible(true);
+    if (par == "Rectangles") rectangleDeleteBtn->setVisible(true);
+    if (par == "Graphics") graphicDeleteBtn->setVisible(true);
+    if (par == "Styles") stylesDeleteBtn->setVisible(true);
+    if (styleList.contains(par)) {
+        int n = idx.data(UR_ItemIndex).toInt();
+        styleDeleteBtns[n]->setVisible(true);
+    }
 }
 
 QString EmbelProperties::metaString(QString key)
@@ -1717,8 +1727,7 @@ void EmbelProperties::test1()
 
 void EmbelProperties::test2()
 {
-    expandAll();
-//    setting->remove("Embel/Templates");
+    styleDeleteBtn->setVisible(true);
 }
 
 void EmbelProperties::coordHelp()
