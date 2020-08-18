@@ -5,6 +5,7 @@
 #include "Main/global.h"
 #include "Main/dockwidget.h"  // includes BarBtn
 #include "propertydelegate.h"
+#include "PropertyEditor/propertywidgets.h"
 
 /* PropertyEditor Notes -----------------------------------------------------------------------
 
@@ -29,6 +30,7 @@ public:
     struct ItemInfo {
         QString name;
         QString parentName;
+        QString path;                   // the path in settings
         bool isHeader = false;
         bool isIndent = true;
         bool decorateGradient = false;
@@ -46,12 +48,14 @@ public:
         int fixedWidth;
         QString color;
         QStringList dropList;
-        QModelIndex index;
+        QModelIndex parIdx;             // datamodel parent index for the item
+        QModelIndex index;              // index for
         int itemIndex;
     };
     QWidget* addItem(ItemInfo &i); // abstract addItem
     void clearItemInfo(ItemInfo &i);
     bool getIndex(QString caption, QModelIndex parent = QModelIndex());
+    QModelIndex findIndex(QString name);
     QModelIndex foundIdx;
 
     QMap<QString, QModelIndex> sourceIdx;

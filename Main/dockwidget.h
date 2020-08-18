@@ -12,6 +12,7 @@ class BarBtn : public QToolButton
 public:
     BarBtn(/*QWidget *parent = nullptr*/);
     QSize sizeHint();
+    QModelIndex index;  // the index of the model row that contains the button
 protected:
 //    void enterEvent(QEvent*);
 //    void leaveEvent(QEvent*);

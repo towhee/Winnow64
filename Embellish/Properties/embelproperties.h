@@ -6,7 +6,6 @@
 #include "Datamodel/datamodel.h"
 #include "Utilities/utilities.h"
 #include "PropertyEditor/propertyeditor.h"
-#include "PropertyEditor/propertywidgets.h"
 #include "Views/infostring.h"
 #include "ui_embelCoord.h"
 
@@ -128,7 +127,7 @@ private:
     void addGraphics();
     void addStyles();
     void addStyle(QString name, int n);
-    void addShadowEffect(QString parentName);
+    void addShadowEffect(QModelIndex parIdx);
 
     void newBorder();
     void newText();
@@ -142,7 +141,6 @@ private:
     void deleteRectangle();
     void deleteGraphic();
     void deleteItem();
-    void showRelevantDeleteBtn(QModelIndex idx );
 
     void templateChange(QVariant v);
     void fileItemChange(QVariant v, QString source);
@@ -157,6 +155,15 @@ private:
     void diagnostics(QModelIndex idx);
     void diagnosticVectors();
     void parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner);
+
+    QModelIndex bordersIdx;
+    QModelIndex textsIdx;
+    QModelIndex rectanglesIdx;
+    QModelIndex graphicsIdx;
+    QModelIndex stylesIdx;
+    QModelIndex effectParentIdx;
+    QModelIndexList styleIdxList;
+    QModelIndexList effectIdxList;
 
     // expand/collapse in context menu
     void expandAllRows();
@@ -185,9 +192,8 @@ private:
     BarBtn *textDeleteBtn;
     BarBtn *rectangleDeleteBtn;
     BarBtn *graphicDeleteBtn;
-    BarBtn *stylesDeleteBtn;
     BarBtn *styleDeleteBtn;
-    QVector<BarBtn*> styleDeleteBtns;
+    BarBtn *effectDeleteBtn;
 
     ItemInfo i;
     int templateCount;
