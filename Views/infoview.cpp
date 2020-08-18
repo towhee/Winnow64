@@ -272,7 +272,7 @@ show flag.
         okToShow = ok->index(row, 2).data().toBool();
         setRowHidden(row, QModelIndex(), !okToShow);
         for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
-             okToShow = ok->index(childRow, 2, parentIdx).data().toBool();
+            okToShow = ok->index(childRow, 2, parentIdx).data().toBool();
             setRowHidden(childRow, parentIdx, !okToShow);
         }
     }

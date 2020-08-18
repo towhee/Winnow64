@@ -84,6 +84,14 @@ void PropertyEditor::itemChange(QModelIndex)
 
 }
 
+QModelIndex PropertyEditor::findIndex(QString name)
+{
+    QModelIndex start = model->index(0,0,QModelIndex());
+    QModelIndexList list = model->match(start, UR_Name, name, 1, Qt::MatchExactly | Qt::MatchRecursive);
+    if (list.size() > 0) return list.at(0);
+    else return QModelIndex();
+}
+
 bool PropertyEditor::getIndex(QString searchName, QModelIndex parent)
 {
 /*
@@ -95,8 +103,11 @@ in the model.
     for(int r = 0; r < model->rowCount(parent); ++r) {
         QModelIndex idx0 = model->index(r, 0, parent);
         QString name = model->data(idx0, UR_Name).toString();
+        qDebug() << __FUNCTION__ << searchName << name;
         if (name == searchName) {
             foundIdx = idx0;
+            qDebug() << __FUNCTION__ << "found" << idx0;
+
             return true;
         }
         // iterate children
@@ -127,8 +138,10 @@ supplied by the calling function.
     QStandardItem *parItem = new QStandardItem;
     parItem = nullptr;
 
-    getIndex(i.parentName);
-    parIdx = foundIdx;
+//    getIndex(i.parentName);
+//    parIdx = foundIdx;
+    if (i.parIdx.isValid()) parIdx = i.parIdx;
+    else parIdx = findIndex(i.parentName);
     parItem = model->itemFromIndex(parIdx);
     /*
     qDebug() << "Item =" << i.name
@@ -165,6 +178,8 @@ supplied by the calling function.
     model->setData(capIdx, i.name, UR_Name);
     model->setData(capIdx, i.tooltip, Qt::ToolTipRole);
     model->setData(valIdx, i.tooltip, Qt::ToolTipRole);
+    model->setData(capIdx, i.path, UR_Path);
+    model->setData(valIdx, i.path, UR_Path);
     model->setData(capIdx, i.itemIndex, UR_ItemIndex);
 
     // if no value associated (header item or spacer etc) then we are done
@@ -187,6 +202,12 @@ supplied by the calling function.
     model->setData(valIdx, i.dropList, UR_StringList);
     model->setData(valIdx, i.index, UR_QModelIndex);
     sourceIdx[i.key] = valIdx;
+
+    /*
+    qDebug() << __FUNCTION__
+             << "i.name =" << i.name
+                ;
+//    */
 
     // reset data struct
     clearItemInfo(i);
@@ -221,7 +242,8 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.fixedWidth = 50;              // DT_Slider
     i.dropList.clear();             // DT_Combo
     i.color = QColor(G::textShade,G::textShade,G::textShade).name();
-    i.index = QModelIndex();        // except hdr if connected to datamodel (ie InfoView fields to show)
+    i.index = QModelIndex();
+    i.parIdx = QModelIndex();
 }
 
 void PropertyEditor::expandBranch(QString text)

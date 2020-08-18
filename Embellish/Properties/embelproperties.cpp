@@ -193,13 +193,15 @@ void EmbelProperties::initialize()
 void EmbelProperties::effectContextMenu()
 {
     effectParent = sender()->objectName();
+    BarBtn *btn = qobject_cast<BarBtn*>(sender());
+    effectParentIdx = btn->index;
     effectMenu->exec(QCursor::pos());
 }
 
 void EmbelProperties::effectActionClicked()
 {
     QString effect = (static_cast<QAction*>(sender()))->text();
-    if (effect == "Shadow") addShadowEffect(effectParent); // fix parent
+    if (effect == "Shadow") addShadowEffect(effectParentIdx); // fix parent
 }
 
 void EmbelProperties::updateBorderLists()
@@ -211,8 +213,8 @@ Called from new and delete borders to rebuild the lists that have the borders
     anchorObjectList.clear();
     alignToCornerList.clear();
     alignToCornerList << "Do not align";
-    getIndex("Borders");
-    QModelIndex bordersIdx = foundIdx;
+//    getIndex("Borders");
+//    QModelIndex bordersIdx = foundIdx;
     for (int i = 0; i < model->rowCount(bordersIdx); ++i) {
         QString borderName = model->index(i, 0, bordersIdx).data(UR_Name).toString();
         borderList << borderName;
@@ -844,9 +846,11 @@ void EmbelProperties::addTemplateHeader()
     connect(templateNewBtn, &BarBtn::clicked, this, &EmbelProperties::newEmbelTemplate);
     btns.append(templateNewBtn);
     addItem(i);
+    QModelIndex parIdx = capIdx;
 
     // Templates
     i.name = "templateList";
+    i.parIdx = parIdx;
     i.parentName = "TemplatesHeader";
     i.decorateGradient = false;
     i.captionText = "Select template";
@@ -905,6 +909,7 @@ void EmbelProperties::addFile()
     i.captionIsEditable = false;
     i.delegateType = DT_None;
     addItem(i);
+    QModelIndex parIdx = capIdx;
 
 /*    // FILES Fit strategy
     i.name = "fitList";
@@ -922,6 +927,7 @@ void EmbelProperties::addFile()
 
     // FILES Horizontal fit
     i.name = "horizontalFit";
+    i.parIdx = parIdx;
     i.parentName = "FileHeader";
     i.captionText = "Fit horizontal";
     i.tooltip = "The number of pixels in the horizontal axis including the borders";
@@ -942,6 +948,7 @@ void EmbelProperties::addFile()
 
     // FILES Vertical fit
     i.name = "verticalFit";
+    i.parIdx = parIdx;
     i.parentName = "FileHeader";
     i.captionText = "Fit vertical";
     i.tooltip = "The number of pixels in the vertical axis including the borders";
@@ -962,6 +969,7 @@ void EmbelProperties::addFile()
 
     // FILES File type
     i.name = "fileType";
+    i.parIdx = parIdx;
     i.parentName = "FileHeader";
     i.captionText = "File type";
     i.tooltip = "Select file type.";
@@ -978,6 +986,7 @@ void EmbelProperties::addFile()
 
     // FILES Save method
     i.name = "saveMethod";
+    i.parIdx = parIdx;
     i.parentName = "FileHeader";
     i.captionText = "Save method";
     i.tooltip = "Select where to save the file.";
@@ -994,6 +1003,7 @@ void EmbelProperties::addFile()
 
     // FILES Folder name
     i.name = "folderPath";
+    i.parIdx = parIdx;
     i.parentName = "FileHeader";
     i.captionText = "Folder path";
     i.tooltip = "Enter the full folder path, the folder name of a subfolder or the"""
@@ -1010,6 +1020,7 @@ void EmbelProperties::addFile()
 
     // FILES Suffix name
     i.name = "suffix";
+    i.parIdx = parIdx;
     i.parentName = "FileHeader";
     i.captionText = "Suffix";
     i.tooltip = "Suffix to add to file names.";
@@ -1025,6 +1036,7 @@ void EmbelProperties::addFile()
 
     // FILES Overwrite existing files
     i.name = "overwriteFiles";
+    i.parIdx = parIdx;
     i.parentName = "FileHeader";
     i.captionText = "Overwrite";
     i.tooltip = "Overwrite existing files.";
@@ -1053,10 +1065,12 @@ void EmbelProperties::addImage()
     i.captionIsEditable = false;
     i.delegateType = DT_None;
     addItem(i);
+    QModelIndex parIdx = capIdx;
 
     QString settingRootPath = templatePath + "Image/";
 
     i.name = "outlineWidth";
+    i.parIdx = parIdx;
     i.parentName = "ImageHeader";
     i.captionText = "Outine width";
     i.tooltip = "This is the outline for the image (% of the long side).";
@@ -1076,6 +1090,7 @@ void EmbelProperties::addImage()
     addItem(i);
 
     i.name = "outlineColor";
+    i.parIdx = parIdx;
     i.parentName = "ImageHeader";
     i.captionText = "Outline color";
     i.tooltip = "Select a color that will be used to full the border area.";
@@ -1094,6 +1109,7 @@ void EmbelProperties::addImage()
 
     // IMAGE style
     i.name = "imageStyle";
+    i.parIdx = parIdx;
     i.parentName = "ImageHeader";
     i.captionText = "Style";
     i.tooltip = "Select style to apply to the image ie a shadow.";
@@ -1126,20 +1142,16 @@ void EmbelProperties::addBorders()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-    borderDeleteBtn = new BarBtn();
-    borderDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
-    borderDeleteBtn->setToolTip("Delete the open border");
-    btns.append(borderDeleteBtn);
-    connect(borderDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
-    borderDeleteBtn->setVisible(false);
     BarBtn *borderNewBtn = new BarBtn();
     borderNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     borderNewBtn->setToolTip("Create a new border");
     btns.append(borderNewBtn);
     connect(borderNewBtn, &BarBtn::clicked, this, &EmbelProperties::newBorder);
     addItem(i);
+    bordersIdx = capIdx;
 
     QString path = templatePath + "/Borders";
+    qDebug() << __FUNCTION__ << path;
     setting->beginGroup(path);
     int count = setting->childGroups().size();
     setting->endGroup();
@@ -1159,18 +1171,13 @@ void EmbelProperties::addTexts()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-    textDeleteBtn = new BarBtn();
-    textDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
-    textDeleteBtn->setToolTip("Delete the open text item");
-    btns.append(textDeleteBtn);
-    connect(textDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
-    textDeleteBtn->setVisible(false);
     BarBtn *textNewBtn = new BarBtn();
     textNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
-    textNewBtn->setToolTip("Create a new border");
+    textNewBtn->setToolTip("Create a new text item");
     btns.append(textNewBtn);
     connect(textNewBtn, &BarBtn::clicked, this, &EmbelProperties::newText);
     addItem(i);
+    textsIdx = capIdx;
 
     QString path = templatePath + "/Texts";
     setting->beginGroup(path);
@@ -1197,12 +1204,13 @@ void EmbelProperties::addRectangles()
     rectangleDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     rectangleDeleteBtn->setToolTip("Delete the open rectangle");
     btns.append(rectangleDeleteBtn);
-    rectangleDeleteBtn->setVisible(false);
     BarBtn *rectangleNewBtn = new BarBtn();
     rectangleNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
-    rectangleNewBtn->setToolTip("Create a new border");
+    rectangleNewBtn->setToolTip("Create a new rectangle");
     btns.append(rectangleNewBtn);
     addItem(i);
+    rectanglesIdx = capIdx;
+    rectangleDeleteBtn->index = capIdx;
 
 //    QString path = templatePath + "/Rectangles";
 //    setting->beginGroup(path);
@@ -1230,12 +1238,13 @@ void EmbelProperties::addGraphics()
     graphicDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
     graphicDeleteBtn->setToolTip("Delete the open graphic");
     btns.append(graphicDeleteBtn);
-    graphicDeleteBtn->setVisible(false);
     BarBtn *graphicNewBtn = new BarBtn();
     graphicNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     graphicNewBtn->setToolTip("Create a new graphic");
     btns.append(graphicNewBtn);
     addItem(i);
+    graphicsIdx = capIdx;
+    graphicDeleteBtn->index = capIdx;
 
 //    QString path = templatePath + "/Graphics";
 //    setting->beginGroup(path);
@@ -1259,25 +1268,17 @@ void EmbelProperties::addStyles()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-    BarBtn *styleRenameBtn = new BarBtn();
-    styleRenameBtn->setIcon(QIcon(":/images/icon16/delta.png"));
-    styleRenameBtn->setToolTip("Rename the selected style");
-    btns.append(styleRenameBtn);
-    connect(styleRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentStyle);
-    stylesDeleteBtn = new BarBtn();
-    stylesDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
-    stylesDeleteBtn->setToolTip("Delete the selected style");
-    btns.append(stylesDeleteBtn);
-    stylesDeleteBtn->setVisible(false);
     BarBtn *styleNewBtn = new BarBtn();
     styleNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     styleNewBtn->setToolTip("Create a new style");
     connect(styleNewBtn, &BarBtn::clicked, this, &EmbelProperties::newStyle);
     btns.append(styleNewBtn);
     addItem(i);
+    stylesIdx = capIdx;
 
     // STYLE global light direction
     i.name = "globalLightDirection";
+    i.parIdx = stylesIdx;
     i.parentName = "Styles";
     i.captionText = "Global light direction";
     i.tooltip = "Light source direction (0 - 360 degrees)";
@@ -1310,75 +1311,98 @@ void EmbelProperties::addStyle(QString name, int n)
     // add the style header
     styleName = name;
     styleId = n;
-    qDebug() << __FUNCTION__ << name << n;
-    QString settingRootPath = "Embel/Styles/" + name;/* + "/";*/
+    qDebug() << __FUNCTION__ << styleName << name << n;
+    QString settingRootPath = "Embel/Styles/" + styleName;/* + "/";*/
     i.isHeader = true;
     i.isDecoration = true;
     i.itemIndex = n;
     i.name = styleName;
+    i.parIdx = stylesIdx;
     i.parentName = "Styles";
+    i.path = "Embel/Styles/" + styleName;
     i.captionText = styleName;
     i.tooltip = "";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
+    BarBtn *styleRenameBtn = new BarBtn();
+    styleRenameBtn->setObjectName(styleName);
+    styleRenameBtn->setIcon(QIcon(":/images/icon16/delta.png"));
+    styleRenameBtn->setToolTip("Rename this style");
+    btns.append(styleRenameBtn);
+    connect(styleRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentStyle);
     styleDeleteBtn = new BarBtn();
+    styleDeleteBtn->setObjectName(styleName);
     styleDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
-    styleDeleteBtn->setToolTip("Delete the selected style");
-    // btn vector used in BarBtnEditor to show button in tree
+    styleDeleteBtn->setToolTip("Delete this style");
     btns.append(styleDeleteBtn);
-    // btn vector for each button
-    styleDeleteBtns.append(styleDeleteBtn);
-    connect(styleDeleteBtns[n], &BarBtn::clicked, this, &EmbelProperties::deleteItem);
-    styleDeleteBtns[n]->setVisible(false);
+    connect(styleDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     BarBtn *effectNewBtn = new BarBtn();
     effectNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
-    effectNewBtn->setToolTip("Add an effect");
+    effectNewBtn->setToolTip("Add an effect to this style");
     effectNewBtn->setObjectName(styleName);
     btns.append(effectNewBtn);
     connect(effectNewBtn, &BarBtn::clicked, this, &EmbelProperties::effectContextMenu);
-    styleEditor.append(static_cast<BarBtnEditor*>(addItem(i)));
+//    styleEditor.append(static_cast<BarBtnEditor*>(addItem(i)));
+    addItem(i);
+    QModelIndex styleIdx = capIdx;
+    styleDeleteBtn->index = capIdx;
+    styleRenameBtn->index = capIdx;
+    effectNewBtn->index = capIdx;
 //    expand(model->index(_styles,0));
 
     setting->beginGroup(settingRootPath);
     QStringList groups = setting->childGroups();
     setting->endGroup();
     qDebug() << __FUNCTION__ << settingRootPath << "groups =" << groups;
-    if (groups.contains("Shadow")) addShadowEffect(styleName);
+    if (groups.contains("Shadow")) addShadowEffect(styleIdx);
 }
 
-void EmbelProperties::addShadowEffect(QString parentName)
+void EmbelProperties::addShadowEffect(QModelIndex parIdx)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    QString parentName = parIdx.data(UR_Name).toString();
     qDebug() << __FUNCTION__ << "parentName =" << parentName;
     QString settingRootPath = "Embel/Styles/" + parentName + "/Shadow/";
+    QString effectName = "Shadow";
 
     // subheader for this border
     i.isHeader = true;
     i.isDecoration = true;
-//    i.itemIndex = count;
-    i.name = "Shadow";
+    i.name = effectName;
+    i.parIdx = parIdx;
     i.parentName = parentName;
+    i.path = "Embel/Styles/" + parentName + "/Shadow";
     i.captionText = "Shadow";  // maybe count shadow instances in case more than one
     i.tooltip = "";
-    i.hasValue = false;
+    i.hasValue = true;
     i.captionIsEditable = false;
-    i.delegateType = DT_Checkbox;
+    i.delegateType = DT_BarBtns;
+    effectDeleteBtn = new BarBtn();
+    effectDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    effectDeleteBtn->setToolTip("Delete this effect");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectDeleteBtn);
+    connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     addItem(i);
+    parIdx = capIdx;
+    effectDeleteBtn->index = capIdx;
 
     // shadow size
     i.name = "size";
-    i.parentName = "Shadow";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
     i.captionText = "Size";
     i.tooltip = "The size of the shadow (% of the long side).";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "size";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -1395,13 +1419,15 @@ void EmbelProperties::addShadowEffect(QString parentName)
 
     // shadow blur
     i.name = "blur";
-    i.parentName = "Shadow";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
     i.captionText = "Blur";
     i.tooltip = "The blur of the drop shadow.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "blur";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -1417,13 +1443,15 @@ void EmbelProperties::addShadowEffect(QString parentName)
 
     // shodow color
     i.name = "color";
-    i.parentName = "Shadow";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
     i.captionText = "Color";
     i.tooltip = "Select a color that will be used to fill the drop shadow.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "color";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
     }
@@ -1440,8 +1468,6 @@ void EmbelProperties::addShadowEffect(QString parentName)
 
 void EmbelProperties::newBorder()
 {
-    getIndex("Borders");
-    QModelIndex bordersIdx = foundIdx;
     int row = model->rowCount(bordersIdx);
     addBorder(row);
     updateBorderLists();
@@ -1454,8 +1480,6 @@ void EmbelProperties::newBorder()
 
 void EmbelProperties::newText()
 {
-    getIndex("Texts");
-    QModelIndex textsIdx = foundIdx;
     int row = model->rowCount(textsIdx);
     addText(row);
     if (G::isInitializing || isTemplateChange) return;
@@ -1467,25 +1491,27 @@ void EmbelProperties::newText()
 
 void EmbelProperties::deleteItem()
 {
-    // if no item selected then return
-    if (selectionModel()->selection().isEmpty()) return;
-    // get selected item index, name, parent, path ...
-    QModelIndex idx = selectionModel()->selection().indexes().first();
-    idx = model->index(idx.row(), 0, idx.parent());
+    BarBtn *btn = qobject_cast<BarBtn*>(sender());
+    /*
+    qDebug() << __FUNCTION__
+             << "index =" << btn->index
+             << "btn->objectName()" << btn->objectName();
+//             */
+    QModelIndex idx = btn->index;
+    if (!idx.isValid()) return;
+//    idx = model->index(idx.row(), 0, idx.parent());
     int row = idx.row();
     QString name = idx.data(UR_Name).toString();
     QModelIndex parIdx = idx.parent();
     QString parName = parIdx.data(UR_Name).toString();
-    QString itemBase = parName.left(parName.length() - 1);
-    QString objPath = templatePath + parName;
-    QString itemToDeletePath = objPath + "/" + name;
+    QString path = idx.data(UR_Path).toString();
+    /*
     qDebug() << __FUNCTION__
              << "row =" << row
              << "name =" << name
              << "parName =" << parName
-             << "itemBase =" << itemBase
-             << "objPath =" << objPath
-             << "itemToDeletePath =" << itemToDeletePath;
+             << "path =" << path;
+//    */
     int ret = (QMessageBox::warning(this, "Delete", "Confirm delete " + name + "                     ",
                              QMessageBox::Cancel | QMessageBox::Ok));
     if (ret == QMessageBox::Cancel) return;
@@ -1496,23 +1522,32 @@ void EmbelProperties::deleteItem()
         updateBorderLists();
     }
     if (parName == "Texts") t.remove(row);
+
     // remove from datamodel
     model->removeRow(idx.row(), idx.parent());
-    // remove from setting
-    setting->remove(itemToDeletePath);
 
-    // rename subsequent category items ie text2, text3 ... in setting, model and vectors
-    for (int i = row; i < model->rowCount(parIdx); ++i) {
-        QString oldName = model->index(i,0,parIdx).data().toString();
-        QString newName = itemBase + QString::number(i + 1);
-        qDebug() << __FUNCTION__ << i << objPath << oldName << newName;
-        // update setting
-        rename(objPath, oldName, newName);
-        // update model
-        model->setData(model->index(i,0,parIdx), newName);
-        // update local struct
-        if (parName == "Borders") b[i].name = newName;
-        if (parName == "Texts") t[i].name = newName;
+    // remove from setting
+    setting->remove(path);
+
+    /* rename subsequent category items ie text2, text3 ... in setting, model and vectors
+       This is not required for styles and effects as they are not numbered automatically */
+    QStringList templateItems;
+    templateItems << "Borders" << "Texts" << "Rectangles" << "Graphics";
+    if (templateItems.contains(parName)) {
+        QString itemBase = parName.left(parName.length() - 1);
+        for (int i = row; i < model->rowCount(parIdx); ++i) {
+            QString parPath = templatePath + parName;
+            QString oldName = model->index(i,0,parIdx).data().toString();
+            QString newName = itemBase + QString::number(i + 1);
+            qDebug() << __FUNCTION__ << i << path << oldName << newName;
+            // update setting
+            rename(parPath, oldName, newName);
+            // update model
+            model->setData(model->index(i,0,parIdx), newName);
+            // update local struct
+            if (parName == "Borders") b[i].name = newName;
+            if (parName == "Texts") t[i].name = newName;
+        }
     }
 
     // select another item
@@ -1523,18 +1558,9 @@ void EmbelProperties::deleteItem()
         selectionModel()->select(nextIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     }
 
-    // if no items left in category then hide delete button
-    else {
-        if (parName == "Borders") borderDeleteBtn->setVisible(false);
-        if (parName == "Texts") textDeleteBtn->setVisible(false);
-        if (parName == "Rectangles") rectangleDeleteBtn->setVisible(false);
-        if (parName == "Graphics") graphicDeleteBtn->setVisible(false);
-    }
-
     // refresh the graphicsScene
     e->build();
 }
-
 
 /*void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
 {
@@ -1557,7 +1583,7 @@ decoration is clicked.
 
 void EmbelProperties::treeChange(QModelIndex idx)
 {
-    qDebug() << __FUNCTION__ << idx << idx.isValid();
+//    qDebug() << __FUNCTION__ << idx << idx.isValid();
     if (!idx.isValid()) return;
     if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
     bool hasChildren = model->hasChildren(idx);
@@ -1566,7 +1592,7 @@ void EmbelProperties::treeChange(QModelIndex idx)
     QString selName = idx.data(UR_Name).toString();
     QString parName = idx.parent().data(UR_Name).toString();
     bool isStyle = styleList.contains(selName) || effectList.contains(selName);
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << "hasChildren =" << hasChildren
              << "hasGrandChildren =" << hasGrandChildren
@@ -1580,7 +1606,6 @@ void EmbelProperties::treeChange(QModelIndex idx)
         qDebug() << __FUNCTION__ << idx.data(UR_Name).toString();
         // clear selection and delete buttons (re-instated after selection change)
         selectionModel()->clear();
-        showRelevantDeleteBtn(idx);
         if (okToSelect(idx, selName)) {
             selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
@@ -1619,10 +1644,6 @@ buttons except in the selected category.
         selectionModel()->select(parIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         idx = parIdx;
     }
-    // make sure using index for column 0
-    idx = model->index(idx.row(), 0, idx.parent());
-    // deal with delete buttons
-    showRelevantDeleteBtn(idx);
 }
 
 bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
@@ -1637,28 +1658,8 @@ bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
     if (parIdx == model->index(_styles,0)) return true;
     if (styleList.contains(selName)) return true;
     if (effectList.contains(selName)) return true;
+    qDebug() << __FUNCTION__ << "false";
     return false;
-}
-
-void EmbelProperties::showRelevantDeleteBtn(QModelIndex idx)
-{
-    QString par = idx.parent().data(UR_Name).toString();
-    qDebug() << __FUNCTION__
-             << par << idx;
-    borderDeleteBtn->setVisible(false);
-    textDeleteBtn->setVisible(false);
-    rectangleDeleteBtn->setVisible(false);
-    graphicDeleteBtn->setVisible(false);
-    stylesDeleteBtn->setVisible(false);
-    if (par == "Borders") borderDeleteBtn->setVisible(true);
-    if (par == "Texts") textDeleteBtn->setVisible(true);
-    if (par == "Rectangles") rectangleDeleteBtn->setVisible(true);
-    if (par == "Graphics") graphicDeleteBtn->setVisible(true);
-    if (par == "Styles") stylesDeleteBtn->setVisible(true);
-    if (styleList.contains(par)) {
-        int n = idx.data(UR_ItemIndex).toInt();
-        styleDeleteBtns[n]->setVisible(true);
-    }
 }
 
 QString EmbelProperties::metaString(QString key)
@@ -1727,7 +1728,11 @@ void EmbelProperties::test1()
 
 void EmbelProperties::test2()
 {
-    styleDeleteBtn->setVisible(true);
+    QModelIndex x1 = QModelIndex();
+    QModelIndex x2 = model->index(-1,-1);
+    qDebug() << __FUNCTION__
+             << "x1" << x1 << x1.isValid()
+             << "x2" << x2 << x2.isValid();
 }
 
 void EmbelProperties::coordHelp()
@@ -1757,20 +1762,30 @@ void EmbelProperties::addBorder(int count)
     QString settingRootPath = templatePath + "Borders/" + borderName + "/";
 
     // subheader for this border
-//    qDebug() << __FUNCTION__ << "count =" << count;
     i.isHeader = true;
     i.isDecoration = true;
     i.itemIndex = count;
     i.name = borderName;
+    i.parIdx = bordersIdx;
     i.parentName = "Borders";
+    i.path = templatePath + "Borders/" + borderName;
     i.captionText = borderName;
     i.tooltip = "";
-    i.hasValue = false;
+    i.hasValue = true;
     i.captionIsEditable = false;
-    i.delegateType = DT_Checkbox;
+    i.delegateType = DT_BarBtns;
+    borderDeleteBtn = new BarBtn();
+    borderDeleteBtn->setObjectName(borderName);
+    borderDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    borderDeleteBtn->setToolTip("Delete this border");
+    btns.append(borderDeleteBtn);
+    connect(borderDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     addItem(i);
+    QModelIndex parIdx = capIdx;
+    borderDeleteBtn->index = capIdx;
 
     i.name = "topMargin";
+    i.parIdx = parIdx;
     i.parentName = borderName;
     i.captionText = "Top %";
     i.tooltip = "This is the margin for the top part of the border (% of the long side).";
@@ -1778,6 +1793,7 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "topMargin";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -1793,6 +1809,7 @@ void EmbelProperties::addBorder(int count)
     addItem(i);
 
     i.name = "leftMargin";
+    i.parIdx = parIdx;
     i.parentName = borderName;
     i.captionText = "Left %";
     i.tooltip = "This is the margin for the left part of the border (% of the long side).";
@@ -1800,6 +1817,7 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "leftMargin";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -1815,6 +1833,7 @@ void EmbelProperties::addBorder(int count)
     addItem(i);
 
     i.name = "rightMargin";
+    i.parIdx = parIdx;
     i.parentName = borderName;
     i.captionText = "Right %";
     i.tooltip = "This is the margin for the right part of the border (% of the long side).";
@@ -1822,6 +1841,7 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "rightMargin";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -1837,6 +1857,7 @@ void EmbelProperties::addBorder(int count)
     addItem(i);
 
     i.name = "bottomMargin";
+    i.parIdx = parIdx;
     i.parentName = borderName;
     i.captionText = "Bottom %";
     i.tooltip = "This is the margin for the bottom part of the border (% of the long side).";
@@ -1844,6 +1865,7 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "bottomMargin";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -1859,6 +1881,7 @@ void EmbelProperties::addBorder(int count)
     addItem(i);
 
     i.name = "tile";
+    i.parIdx = parIdx;
     i.parentName = borderName;
     i.captionText = "Tile";
     i.tooltip = "Select a tile that will be used to fill the border area.";
@@ -1866,6 +1889,7 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "tile";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
         border.tile = setting->value("Embel/Tiles/" + i.value.toString()).toByteArray();
@@ -1881,6 +1905,7 @@ void EmbelProperties::addBorder(int count)
     addItem(i);
 
     i.name = "color";
+    i.parIdx = parIdx;
     i.parentName = borderName;
     i.captionText = "Border color";
     i.tooltip = "Select a color that will be used to full the border area.";
@@ -1888,6 +1913,7 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "color";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
     }
@@ -1904,6 +1930,7 @@ void EmbelProperties::addBorder(int count)
     addItem(i);
 
     i.name = "opacity";
+    i.parIdx = parIdx;
     i.parentName = borderName;
     i.captionText = "Opacity";
     i.tooltip = "The opacity of the border.";
@@ -1911,6 +1938,7 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "opacity";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -1925,6 +1953,7 @@ void EmbelProperties::addBorder(int count)
     addItem(i);
 
     i.name = "outlineWidth";
+    i.parIdx = parIdx;
     i.parentName = borderName;
     i.captionText = "Outine width";
     i.tooltip = "This is the outline for the border (% of the long side).";
@@ -1932,6 +1961,7 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "outlineWidth";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -1947,6 +1977,7 @@ void EmbelProperties::addBorder(int count)
     addItem(i);
 
     i.name = "outlineColor";
+    i.parIdx = parIdx;
     i.parentName = borderName;
     i.captionText = "Outline color";
     i.tooltip = "Select a color that will be used to full the border area.";
@@ -1954,6 +1985,7 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "outlineColor";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
     }
@@ -1967,6 +1999,7 @@ void EmbelProperties::addBorder(int count)
     addItem(i);
 
     i.name = "style";
+    i.parIdx = parIdx;
     i.parentName = borderName;
     i.captionText = "Style";
     i.tooltip = "Select a style that will be applied to the border area.";
@@ -1974,6 +2007,7 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "style";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2002,25 +2036,32 @@ void EmbelProperties::addText(int count)
     QString settingRootPath = templatePath + "Texts/" + textName + "/";
 
     // subheader for this border
-//    qDebug() << __FUNCTION__ << "count =" << count;
     i.isHeader = true;
     i.isDecoration = true;
     i.itemIndex = count;
     i.name = textName;
     i.parentName = "Texts";
+    i.path = templatePath + "Texts/" + textName;
     i.captionText = textName;
     i.tooltip = "";
-    i.hasValue = false;
+    i.hasValue = true;
     i.captionIsEditable = false;
-    i.delegateType = DT_Checkbox;
+    i.delegateType = DT_BarBtns;
+    textDeleteBtn = new BarBtn();
+    textDeleteBtn->setObjectName(textName);
+    textDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    textDeleteBtn->setToolTip("Delete this text item");
+    btns.append(textDeleteBtn);
+    connect(textDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     addItem(i);
+    QModelIndex parIdx = capIdx;
+    textDeleteBtn->index = capIdx;
 
     // get index to use as parent when update tree depending on source
-    getIndex(i.name);
-    QModelIndex parIdx = foundIdx;
     text.name = textName;
 
     i.name = "anchorObject";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Put text in";
     i.tooltip = "Select a border or image to contain the text.";
@@ -2028,6 +2069,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "anchorObject";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2041,6 +2083,7 @@ void EmbelProperties::addText(int count)
     textAnchorObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
 
     i.name = "anchorContainer";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Border area";
     i.tooltip = "Select a border area to contain the text.";
@@ -2048,6 +2091,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "anchorContainer";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2061,6 +2105,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     i.name = "x";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "x coordinate";
     i.tooltip = "The x coordinate for the container (0-100). Top left = 0,0.";
@@ -2068,6 +2113,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "x";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2083,6 +2129,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     i.name = "y";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "y coordinate";
     i.tooltip = "The y coordinate for the container (0-100). Top left = 0,0.";
@@ -2090,6 +2137,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "y";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2105,6 +2153,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     i.name = "rotation";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Rotation";
     i.tooltip = "The rotation (degrees) of the text (+- 0-360)";
@@ -2112,6 +2161,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "rotation";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2127,6 +2177,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     i.name = "alignToCorner";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Align to corner";
     i.tooltip = "Select a border corner to align to the anchor point.";
@@ -2134,6 +2185,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "alignToCorner";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2149,6 +2201,7 @@ void EmbelProperties::addText(int count)
 //    textAlignToCornerObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
 
     i.name = "anchorPoint";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Anchor point";
     i.tooltip = "Select a text box anchor point.";
@@ -2156,6 +2209,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "anchorPoint";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2169,6 +2223,7 @@ void EmbelProperties::addText(int count)
     textAnchorObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
 
     i.name = "source";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Source";
     i.tooltip = "Select what is to be used: the text or text generated by a metadata template.";
@@ -2176,6 +2231,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "source";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2192,6 +2248,7 @@ void EmbelProperties::addText(int count)
     QModelIndex sourceIdx = capIdx;
 
     i.name = "text";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Text";
     i.tooltip = "Enter text to be displayed.";
@@ -2199,6 +2256,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "text";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
     }
@@ -2214,6 +2272,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     i.name = "metadataTemplate";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Metadata template";
     i.tooltip = "Select a metadata template.  A template can include multiple metadata \n"
@@ -2222,6 +2281,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "metadataTemplate";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2230,7 +2290,6 @@ void EmbelProperties::addText(int count)
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
-
     i.dropList << metadataTemplatesList;
     QString key = i.value.toString();
     text.metadataTemplate = key;
@@ -2242,6 +2301,7 @@ void EmbelProperties::addText(int count)
     textItemChange(sourceIdx);
 
     i.name = "size";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Size";
     i.tooltip = "Enter a percentage of the long side pixels to set a font size in pixels.";
@@ -2249,6 +2309,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "size";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2264,6 +2325,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     i.name = "font";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Font";
     i.tooltip = "Select a font.";
@@ -2271,6 +2333,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "font";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2285,6 +2348,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     i.name = "bold";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Bold";
     i.tooltip = "Use bold font.";
@@ -2292,6 +2356,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "bold";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2304,6 +2369,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     i.name = "italic";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Italic";
     i.tooltip = "Use italic font.";
@@ -2311,6 +2377,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "italic";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2323,6 +2390,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     i.name = "color";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Color";
     i.tooltip = "Select a color that will be used to fill the border area.";
@@ -2330,6 +2398,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "color";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
     }
@@ -2344,6 +2413,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     i.name = "opacity";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Opacity";
     i.tooltip = "The opacity of the text.";
@@ -2351,6 +2421,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "opacity";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
@@ -2365,6 +2436,7 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     i.name = "style";
+    i.parIdx = parIdx;
     i.parentName = textName;
     i.captionText = "Style";
     i.tooltip = "Select a style that will be applied to the text.";
@@ -2372,6 +2444,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "style";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {

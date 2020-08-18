@@ -23,6 +23,7 @@ enum DelegateType
 enum UserRole
 {
     UR_Name = Qt::UserRole + 1,         // unique name to identify the item
+    UR_Path,                            // settings path
     UR_DelegateType,                    // the PropertyWidget (custom widget)
     UR_ItemIndex,                       // the index for the border, text, rectangle or graphic
     UR_isIndent,                        // indent column 0 in QTreeView
