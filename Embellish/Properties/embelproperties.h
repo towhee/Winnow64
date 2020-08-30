@@ -175,9 +175,7 @@ private:
     void effectContextMenu();
     void effectActionClicked();
 
-    QString effectParent;   // req'd to add an effect to parent style
     QMenu *effectMenu;
-    QActionGroup *effectGroupAction;
     QAction *shadowEffectAction;
     QAction *bevelEffectAction;
     QAction *embossEffectAction;

@@ -1,8 +1,9 @@
 #include "heic.h"
 
-Heic::Heic(/*QFile &file*/) /*: file(file)*/
+Heic::Heic(/*QFile &file*/)
 {
     return;
+
     quint32 offset = 0;
     quint32 length;
     QString type;
@@ -18,10 +19,9 @@ Heic::Heic(/*QFile &file*/) /*: file(file)*/
         nextHeifBox(length, type);
         getHeifBox(type, offset, length);
     }
-
 }
 
-bool Heic::parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps)
+bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps)
 {
     heif_context* ctx = heif_context_alloc();
     QFileInfo info(p.file);

@@ -2735,6 +2735,7 @@ void MW::createActions()
     addAction(newEmbelTemplateAction);
     connect(newEmbelTemplateAction, &QAction::triggered, this, &MW::newEmbelTemplate);
 
+    if (!hideEmbellish) {
     // general connection to handle invoking new embellish templates
     // MacOS will not allow runtime menu insertions.  Cludge workaround
     // add 10 dummy menu items and then hide until use.
@@ -2767,6 +2768,7 @@ void MW::createActions()
     addActions(embelTemplatesActions);
     // sync menu with QSettings last active embel template
     embelTemplatesActions.at(embelProperties->templateId)->setChecked(true);
+    }
 
     ratingBadgeVisibleAction = new QAction(tr("Show Rating Badge"), this);
     ratingBadgeVisibleAction->setObjectName("toggleRatingBadge");
@@ -3333,6 +3335,7 @@ void MW::createMenus()
     viewMenu->addAction(fullScreenAction);
     viewMenu->addAction(escapeFullScreenAction);
     viewMenu->addSeparator();
+    if (!hideEmbellish) {
     embelMenu = viewMenu->addMenu(tr("&Embellish"));
         embelMenu->addAction(newEmbelTemplateAction);
         embelMenu->addSeparator();
@@ -3343,6 +3346,7 @@ void MW::createMenus()
         }
         connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
     viewMenu->addSeparator();
+    }
     viewMenu->addAction(ratingBadgeVisibleAction);
     viewMenu->addAction(infoVisibleAction);
     viewMenu->addAction(infoSelectAction);
@@ -3380,7 +3384,7 @@ void MW::createMenus()
     windowMenu->addAction(filterDockVisibleAction);
     windowMenu->addAction(metadataDockVisibleAction);
     windowMenu->addAction(thumbDockVisibleAction);
-    if (!isReleaseVersion) windowMenu->addAction(embelDockVisibleAction);
+    if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
     windowMenu->addSeparator();
 //    windowMenu->addAction(windowTitleBarVisibleAction);
 #ifdef Q_OS_WIN
@@ -4651,7 +4655,7 @@ void MW::createDocks()
     createFilterDock();
     createMetadataDock();
     createThumbDock();
-    if (!isReleaseVersion) createEmbelDock();
+    /*if (!hideEmbellish) */createEmbelDock();
 
     connect(this, &MW::tabifiedDockWidgetActivated, this, &MW::embelDockActivated);
 
@@ -4660,7 +4664,7 @@ void MW::createDocks()
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
     addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
-    if (!isReleaseVersion) addDockWidget(Qt::RightDockWidgetArea, embelDock);
+    if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
 
     folderDockOrigWidget = folderDock->titleBarWidget();
     favDockOrigWidget = favDock->titleBarWidget();

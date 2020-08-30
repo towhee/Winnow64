@@ -23,7 +23,7 @@ class Heic : public QObject
 
 public:
     Heic();
-    bool parse(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps);
+    bool parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps);
     bool decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image);
     bool decodeThumbnail(ImageMetadata &m, QString &fPath, QImage &image);
 

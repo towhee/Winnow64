@@ -113,5 +113,6 @@ public:
     QString xmpString;
     bool inclNonEssential;
 };
+//Q_DECLARE_METATYPE(MetadataParameters)
 
 #endif // IMAGEMETADATA_H

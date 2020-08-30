@@ -90,11 +90,12 @@ class MW : public QMainWindow
 public:
     MW(QWidget *parent = nullptr);
 
-    bool isReleaseVersion = false
-            ;
-    QString version = "Version: 1.11 beta";
+    bool isReleaseVersion = true;
+    bool hideEmbellish = true;
+
+    QString version = "Version: 1.11";
 //    QString version = "Version: 1.10 released 2020-06-04";
-    QString winnowWithVersion = "Winnow 1.11 beta";
+    QString winnowWithVersion = "Winnow 1.11";
     QString website = "Website: "
             "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"

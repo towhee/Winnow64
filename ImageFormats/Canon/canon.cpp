@@ -179,6 +179,8 @@ bool Canon::parse(MetadataParameters &p,
     } else {
         m.exposureTime = "";
     }
+
+    // width
     if (ifd->ifdDataHash.contains(40962)) {
         m.width = ifd->ifdDataHash.value(40962).tagValue;
     } else {
