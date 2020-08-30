@@ -122,7 +122,6 @@ void EmbelProperties::initialize()
         i.next();
         metadataTemplatesList << i.key();
     }
-
     // EFFECTS
     effectList << "Shadow" << "Bevel" << "Emboss" << "Blur" << "Sharpen"
                << "Colorize" << "Edges";
@@ -147,23 +146,22 @@ void EmbelProperties::initialize()
     sharpenEffectAction->setObjectName("sharpenEffectAction");
     connect(sharpenEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
 
+    colorizeEffectAction = new QAction(tr("Colorize"), this);
+    colorizeEffectAction->setObjectName("colorizeEffectAction");
+    connect(colorizeEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+
     edgeEffectAction = new QAction(tr("Edge"), this);
     edgeEffectAction->setObjectName("edgeEffectAction");
     connect(edgeEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
 
-    effectGroupAction = new QActionGroup(this);
-    QList<QAction *> *effectActions = new QList<QAction *>;
-    effectActions->append(shadowEffectAction);
-    effectActions->append(bevelEffectAction);
-    effectActions->append(embossEffectAction);
-    effectActions->append(blurEffectAction);
-    effectActions->append(sharpenEffectAction);
-    effectActions->append(colorizeEffectAction);
-    effectActions->append(edgeEffectAction);
-
-    effectMenu = new QMenu();
-    effectMenu->addActions(*effectActions);
-    effectMenu->setStyleSheet(G::css);
+    effectMenu = new QMenu(this);
+    effectMenu->addAction(shadowEffectAction);
+    effectMenu->addAction(bevelEffectAction);
+    effectMenu->addAction(embossEffectAction);
+    effectMenu->addAction(blurEffectAction);
+    effectMenu->addAction(sharpenEffectAction);
+    effectMenu->addAction(colorizeEffectAction);
+    effectMenu->addAction(edgeEffectAction);
 
     // CONTEXT MENU
     QAction *expandAllAction = new QAction(tr("Expand all"), this);
@@ -192,7 +190,6 @@ void EmbelProperties::initialize()
 
 void EmbelProperties::effectContextMenu()
 {
-    effectParent = sender()->objectName();
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
     effectParentIdx = btn->index;
     effectMenu->exec(QCursor::pos());
@@ -1200,17 +1197,17 @@ void EmbelProperties::addRectangles()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-    rectangleDeleteBtn = new BarBtn();
-    rectangleDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
-    rectangleDeleteBtn->setToolTip("Delete the open rectangle");
-    btns.append(rectangleDeleteBtn);
+//    rectangleDeleteBtn = new BarBtn();
+//    rectangleDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+//    rectangleDeleteBtn->setToolTip("Delete the open rectangle");
+//    btns.append(rectangleDeleteBtn);
     BarBtn *rectangleNewBtn = new BarBtn();
     rectangleNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     rectangleNewBtn->setToolTip("Create a new rectangle");
     btns.append(rectangleNewBtn);
     addItem(i);
     rectanglesIdx = capIdx;
-    rectangleDeleteBtn->index = capIdx;
+//    rectangleDeleteBtn->index = capIdx;
 
 //    QString path = templatePath + "/Rectangles";
 //    setting->beginGroup(path);
@@ -1234,17 +1231,17 @@ void EmbelProperties::addGraphics()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-    graphicDeleteBtn = new BarBtn();
-    graphicDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
-    graphicDeleteBtn->setToolTip("Delete the open graphic");
-    btns.append(graphicDeleteBtn);
+//    graphicDeleteBtn = new BarBtn();
+//    graphicDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+//    graphicDeleteBtn->setToolTip("Delete the open graphic");
+//    btns.append(graphicDeleteBtn);
     BarBtn *graphicNewBtn = new BarBtn();
     graphicNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
     graphicNewBtn->setToolTip("Create a new graphic");
     btns.append(graphicNewBtn);
     addItem(i);
     graphicsIdx = capIdx;
-    graphicDeleteBtn->index = capIdx;
+//    graphicDeleteBtn->index = capIdx;
 
 //    QString path = templatePath + "/Graphics";
 //    setting->beginGroup(path);

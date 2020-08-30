@@ -1,6 +1,7 @@
-#ifndef HEIC_H
-#define HEIC_H
+#ifndef CANONCR3_H
+#define CANONCR3_H
 
+#include <QObject>
 #include <QtWidgets>
 #include <QtCore>
 #include <QtXmlPatterns>
@@ -14,41 +15,22 @@
 #include "Metadata/ifd.h"
 #include "Metadata/gps.h"
 #include "Metadata/xmp.h"
-#include "Lib/libde265/include/de265.h"
-#include "Lib/libheif/include/heif.h"
+#include "ImageFormats/Jpeg/jpeg.h"
 
-class Heic : public QObject
+class CanonCR3
 {
-    Q_OBJECT
-
 public:
-    Heic();
-    bool parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps);
-    bool decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image);
-    bool decodeThumbnail(ImageMetadata &m, QString &fPath, QImage &image);
-
-    // the numeric values map directly to the values of chroma_format_idc in the h.265 bitstream
-    enum de265_chroma {
-      de265_chroma_mono = 0,
-      de265_chroma_420  = 1,
-      de265_chroma_422  = 2,
-      de265_chroma_444  = 3
-    };
-
-    enum de265_colorspace {
-      de265_colorspace_YCbCr= 0,
-      de265_colorspace_GBR  = 1
-    };
-
-    struct Context {
-        bool is_primary;
-        int w;
-        int h;
-        de265_chroma chroma;
-        int bitDepth_luma;
-        int bitDepth_chroma;
-        quint64 pts;
-    };
+    CanonCR3(MetadataParameters &p,
+             ImageMetadata &m,
+             IFD *ifd,
+             Exif *exif,
+             Jpeg *jpeg);
+//    CanonCR3();
+    bool parse(/*MetadataParameters &pp,
+               ImageMetadata &mm,
+               IFD *ifd,
+               Exif *exif,
+               Jpeg *jpeg*/);
 
     quint32 metaOffset;
     quint32 metaLength;
@@ -84,21 +66,45 @@ private:
     bool sitrBox(quint32 &offset, quint32 &length);  // Single Item Type Reference Box
     bool sitrBoxL(quint32 &offset, quint32 &length); // Single Item Type Reference Box Large
     bool urlBox(quint32 &offset, quint32 &length);   // Data Entry Url Box
-    bool urnBox(quint32 &offset, quint32 &length);   // Data Entry Urn Box
+    bool urnBox (quint32 &offset, quint32 &length);  // Data Entry Urn Box
     bool colrBox(quint32 &offset, quint32 &length);  // Color Information Box
     bool irotBox(quint32 &offset, quint32 &length);  // Color Information Box
     bool pixiBox(quint32 &offset, quint32 &length);  // Color Information Box
+    bool freeBox(quint32 &offset, quint32 &length);  // Free space to ignore
+    bool thmbBox(quint32 &offset, quint32 &length);  // thumbnail jpg
+    bool moovBox(quint32 &offset, quint32 &length);  // container
+    bool uuidBox(quint32 &offset, quint32 &length);  // container
+    bool cmt1Box(quint32 &offset, quint32 &length);  // IFD0
+    bool cmt2Box(quint32 &offset, quint32 &length);  // ExifIFD
+    bool cmt3Box(quint32 &offset, quint32 &length);  // ExifIFD
+    bool cmt4Box(quint32 &offset, quint32 &length);  // ExifIFD
+    bool trakBox(quint32 &offset, quint32 &length);  // Track
+    bool tkhdBox(quint32 &offset, quint32 &length);  // Track header
+    bool mdiaBox(quint32 &offset, quint32 &length);  // Media info for track
+    bool mdhdBox(quint32 &offset, quint32 &length);  // Media header
+    bool minfBox(quint32 &offset, quint32 &length);  //
+    bool vmhdBox(quint32 &offset, quint32 &length);  //
+    bool stblBox(quint32 &offset, quint32 &length);  //
+    bool stsdBox(quint32 &offset, quint32 &length);  //
+    bool sttsBox(quint32 &offset, quint32 &length);  //
+    bool stscBox(quint32 &offset, quint32 &length);  //
+    bool stszBox(quint32 &offset, quint32 &length);  //
+    bool co64Box(quint32 &offset, quint32 &length);  // trak - embedded jpg offset
 
-//    QFile &file;      // used in constructor before managed to compile libheif
-    QFile file;         // temp until decide what to do with constructor
+    void parseIfd0();
+    void parseExif();
+
+
+    MetadataParameters &p;
+    ImageMetadata &m;
+    IFD *ifd;
+    Exif *exif;
+    Jpeg *jpeg;
+
     qint64 eof;
+    quint32 ifd0Offset;
+    quint32 exifOffset;
+    int trakCount;
 };
 
-#endif // HEIC_H
-
-/*
-
-Image data appears to be stored in image.h  class decoder_context;
-    template <class DataUnit> class MetaDataArray
-
-*/
+#endif // CANONCR3_H

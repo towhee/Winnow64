@@ -68,6 +68,7 @@ void Metadata::initSupportedFiles()
     // add raw file types here as they are supported
     hasJpg              << "arw"
                         << "cr2"
+                        << "cr3"
                         << "dng"
                         << "nef"
                         << "orf"
@@ -76,7 +77,8 @@ void Metadata::initSupportedFiles()
                         << "rw2"
                            ;
 
-    hasHeic             << "cr3"
+    hasHeic
+//                        << "cr3"
                         << "heic"
                         << "hif"
                            ;
@@ -537,6 +539,21 @@ bool Metadata::parseCanon()
     return true;
 }
 
+bool Metadata::parseCanonCR3()
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+
+
+    CanonCR3 canonCR3(p, m, ifd, exif, jpeg);
+    canonCR3.parse(/*p, m, ifd, exif, jpeg*/);
+    if (p.report) reportMetadata();
+    return true;
+}
+
 bool Metadata::parseOlympus()
 {
     {
@@ -643,7 +660,7 @@ bool Metadata::parseHEIF()
 #ifdef Q_OS_WIN
     // rgh remove heic
     if (heic == nullptr) heic = new Heic;
-    bool ok = heic->parse(p, m, ifd, exif, gps);
+    bool ok = heic->parseLibHeif(p, m, ifd, exif, gps);
     if (ok && p.report) reportMetadata();
     return ok;
 #endif
@@ -726,6 +743,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     G::track(__FUNCTION__, path);
     #endif
     }
+    isReport = true;
     p.report = isReport;
 
     if (p.report) {
@@ -756,7 +774,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         if (gps == nullptr) gps = new GPS;
         if (ext == "arw")  fileOpened = parseSony();
         if (ext == "cr2")  fileOpened = parseCanon();
-        if (ext == "cr3")  fileOpened = parseHEIF();
+        if (ext == "cr3")  fileOpened = parseCanonCR3();
         if (ext == "dng")  fileOpened = parseDNG();
         // rgh remove heic
         if (ext == "heic") fileOpened = parseHEIF();

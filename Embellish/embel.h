@@ -4,6 +4,8 @@
 #include <QtWidgets>
 #include "Views/imageview.h"
 #include "Properties/embelproperties.h"
+#include "Effects/highlighteffect.h"
+#include "Effects/graphicseffect.h"
 
 class Embel : public QObject
 {

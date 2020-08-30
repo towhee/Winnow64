@@ -94,3 +94,28 @@ LIBHEIF_API
 struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle* handle,
                                                  heif_item_id metadata_id,
                                                  void* out_data);
+
+
+#ifndef GRAPHICSEFFECT_H
+#define GRAPHICSEFFECT_H
+
+#include <QGraphicsEffect>
+
+class GraphicsEffect : public QGraphicsEffect
+{
+public:
+    GraphicsEffect();
+    ~GraphicsEffect();
+};
+
+#endif // GRAPHICSEFFECT_H
+
+
+
+#include "graphicseffect.h"
+
+GraphicsEffect::GraphicsEffect()
+{
+
+}
+

@@ -75,7 +75,12 @@ QString WidgetCSS::widget()
        "background-color:" + widgetBackgroundColor.name() + ";"
        "color:" + textColor.name() + ";"
        "border-width: 0px;"
-   "}";
+    "}"
+    "QWidget:disabled {"
+//    "color:" + disabledColor.name() + ";"
+    "color:" + QColor(mb,mb,mb).name() + ";"
+    "}"
+   ;
 }
 
 QString WidgetCSS::mainWindow()
@@ -199,9 +204,10 @@ QString WidgetCSS::label()
         "border: none;"
     "}"
 
-    "QLabel:disabled {"
-        "color: gray;"
-    "}";
+//    "QLabel:disabled {"
+//        "color: gray;"
+//    "}"
+    ;
 }
 
 QString WidgetCSS::toolButton()

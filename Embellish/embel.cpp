@@ -355,7 +355,23 @@ void Embel::addTextsToScene()
         double opacity = static_cast<double>(p->t[i].opacity)/100;
         tItems[i]->setOpacity(opacity);
         tItems[i]->setZValue(20);
+
+
+//        HighlightEffect *highlight1 = new HighlightEffect;
+//        highlight1->setOffset(QPointF(10,10));
+//        QColor red = QColor(Qt::red);
+//        highlight1->setColor(red);
+//        tItems[i]->setGraphicsEffect(highlight1);
+
+//        QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect;
+//        tItems[i]->setGraphicsEffect(shadow);
+
+        qDebug() << __FUNCTION__ << "Add text to scene:" << i;
+        GraphicsEffect *effect = new GraphicsEffect;
+        tItems[i]->setGraphicsEffect(effect);
+
         iv->scene->addItem(tItems[i]);
+
         // position text
         /*
         qDebug() << __FUNCTION__ << "Getting canvas coord for Text" << i
@@ -371,6 +387,8 @@ void Embel::addTextsToScene()
                                     static_cast<int>(tItems[i]->boundingRect().height()));
         tItems[i]->setPos(canvas - offset);
         tItems[i]->setRotation(p->t[i].rotation);
+
+
         /*
         qDebug() << __FUNCTION__ << i << tItems[i] << p->t[i].text
                  << tItems[i]->boundingRect()

@@ -25,6 +25,7 @@
 
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "ImageFormats/Canon/canon.h"
+#include "ImageFormats/Canon/canoncr3.h"
 #include "ImageFormats/Dng/dng.h"
 #include "ImageFormats/Fuji/fuji.h"
 #include "ImageFormats/Nikon/nikon.h"
@@ -114,6 +115,7 @@ private:
     // formats
     Jpeg *jpeg = nullptr;
     Canon *canon = nullptr;
+    CanonCR3 *canonCR3 = nullptr;
     DNG *dng = nullptr;
     Fuji *fuji = nullptr;
     Nikon *nikon = nullptr;
@@ -162,6 +164,7 @@ private:
     int getNewOrientation(int orientation, int rotation);
 
     bool parseCanon();
+    bool parseCanonCR3();
     bool parseDNG();
     bool parseFuji();
     bool parseHEIF();

@@ -27,9 +27,11 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Parser for CR3 files
 - Winnow preferences update formatting
 - add color editor to PropertyEditor
 - Statusbar reverseSortBtn
+- Custom buttons in docking panel header
 - Tile extractor
 - Added LoadMsecPerMpColumn to the datamodel
 - Fixed Heic breakdown
