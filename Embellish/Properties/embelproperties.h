@@ -84,6 +84,29 @@ public:
     } text;
     QVector<Text>t;
 
+    struct Blur {
+        qreal radius;
+        bool quality;
+        int transposed;
+    };
+
+    struct Highlight {
+    //  QColor color;    // default constructor is implicitly deleted because variant field has a non-trivial default constructor
+    //  QPointF offset;  // default constructor is implicitly deleted because variant field has a non-trivial default constructor
+        int r, g, b;
+        int x, y;
+    };
+
+    // when add an effect must add to enum and union
+    enum EffectType {blur, highlight};
+    struct Effect {
+        enum EffectType effectType;
+        union {
+            Blur blur;
+            Highlight highlight;
+        };
+    };
+    QList<Effect> effects;
 
     void newEmbelTemplate();
     QString metaString(QString key);

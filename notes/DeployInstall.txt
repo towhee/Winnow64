@@ -5,6 +5,20 @@ For windows PuTTY Key generator and winscp.exe for file transfers.
 
 For Mac:
 ---------------------------------------------------------------------
+Just a dmg:
+- Compile a release version (Projects/Winnow64/Winnow.app)
+- Copy Winnow.app to Projects/WinnowDMG
+- Create DMG.  Open Disk Utility.  
+	- Menu: File > New Image > Image from Folder...  pick WinnowDMG
+	- Save as Projects/winnow###.dmg
+- Open Filezilla, Menu: Server > Reconnect
+- Create folder for previous version and move it from current to new folder
+- Drag winnow###.dmg from Projects to current
+-  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
+-  Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
+   download url for the archived version.
+
+Using an installer:
 Mac Deployment: (located in /Users/roryhill/Projects/WinnowInstall/Batch/DeployOnMac)
 cd /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_12_0_clang_64bit-Release
 /Users/roryhill/Qt/5.12.0/clang_64/bin/macdeployqt Winnow.app -dmg
@@ -46,11 +60,20 @@ For Win:
 ---------------------------------------------------------------------
 Win Deployment:  IMPORTANT WHEN CHANGE VERSIONS OF QT!
 
+Open cmd
 CD "D:\My Projects\Winnow Project\Deploy Winnow"     (use as temp location as cannot write to folders in "c:\program files"
-C:\Qt\5.13.0\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --dir "D:\My Projects\Winnow Project\Deploy Winnow"
-C:\Qt\5.13.0\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --plugindir "D:\My Projects\Winnow Project\Deploy Winnow"
+C:\Qt\5.13.1\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --dir "D:\My Projects\Winnow Project\Deploy Winnow"
+C:\Qt\5.13.1\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --plugindir "D:\My Projects\Winnow Project\Deploy Winnow"
 then copy files and folders to D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\data
 and D:\My Projects\Winnow Project\WinnowInstallLocal\packages\com.rh.prod\data
+
+When adding dll
+Copy dll files to:
+	D:\My Projects\Winnow Project\Deploy Winnow
+	D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\data
+	D:\My Projects\Winnow Project\WinnowInstallLocal\packages\com.rh.prod\data
+Update and save the releaseDate and version in
+   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
 
 Win Installation Update:
 -  Update deploy if new dlls required and when using a new version of Qt!!  (See above)
@@ -58,14 +81,11 @@ Win Installation Update:
 -  Set isReleaseVersion = true in mainwindow.h
 -  Update winnow.exe by compiling in release mode without shadow build
 -  Copy in winSCP the prior version in current to an archive folder.  DO NOT DELETE repository in current folder.
--  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
--  Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
-   download url for the archived version.
 -  Update and save the version and folder paths in D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
 -  Update and save the version and release date in
    D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.bin\meta\package.xml
 -  If changes other than binary update and save the releaseDate in
-   D:\My Projects\Winnow Project\WinnowInstall\packages\com.rh.prod\meta\package.xml
+   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
 -  Run the batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallation.bat
     - changes drive to D:
     - changes dir to D:\My Projects\Winnow Project\WinnowInstallOnline
@@ -77,6 +97,9 @@ Win Installation Update:
 - Open C:\Program Files\Winnow\Winnow.exe and perform update if auto update is enabled or perform
   "Help > Check for updates" to confirm that the update works.
   Or run C:\Program Files\Winnow\maintenancetool.exe to update Winnow on local machine.
+-  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
+-  Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
+   download url for the archived version.
 
 Run 165.227.46.158/winnow_win/current/winnowinstalleronline.exe for new installation of Winnow.
 This is available on the Winnow Main Page at http://165.227.46.158/winnow/winnow.html

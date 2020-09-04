@@ -34,51 +34,34 @@ QT_END_NAMESPACE
 
 void GraphicsEffect::blurEffect(PainterParameters &p, qreal radius, bool quality, bool alphaOnly, int transposed)
 {
-//    p.painter->setBrush(Qt::red);
-//    p.painter->drawRect(p.bound);
-  QTransform transform = p.painter->worldTransform();
+//  QTransform transform = p.painter->worldTransform();
   qt_blurImage(p.painter, p.canvas, radius, quality, alphaOnly);
-  p.painter->setWorldTransform(transform);
+//  p.painter->setWorldTransform(transform);
 }
 
 void GraphicsEffect::highlightEffect(PainterParameters &p,
                                      QColor color,
                                      QPointF offset)
 {
-//    p.painter->drawPixmap(p.offset, p.pixmap);
-//    return;
     QRectF newBound = p.bound.adjusted(-offset.x(), -offset.y(), offset.x(), offset.y());
     int w = static_cast<int>(newBound.width());
     int h = static_cast<int>(newBound.height());
-    QImage newCanvas(QSize(w, h), QImage::Format_ARGB32_Premultiplied);
+    double scale = p.painter->deviceTransform().m11();
+//    QImage newCanvas(QSize(w, h), QImage::Format_ARGB32_Premultiplied);
+    QImage newCanvas(QSize(w/scale, h/scale), QImage::Format_ARGB32_Premultiplied);
     newCanvas.fill(color);
     QPainter tmp(&newCanvas);
+    qDebug() << __FUNCTION__ << "p.painter->worldTransform() =" << p.painter->worldTransform()
+                << "tmp->worldTransform() =" << tmp.worldTransform()
+                ;
+//    tmp.setWorldTransform(p.painter->worldTransform());
+//    tmp.setTransform(p.painter->deviceTransform());
+//    QTransform transform = tmp.worldTransform();  // nada
     tmp.drawImage(offset, p.canvas);
+    tmp.worldTransform();
     p.canvas = newCanvas;
-    QTransform transform = p.painter->worldTransform();
     p.painter->drawImage(-offset, p.canvas);
-    p.painter->setWorldTransform(transform);
     return;
-
-//    p.bound = oldBound.adjusted(-offset.x(), -offset.y(), offset.x(), offset.y());
-////    boundingRectFor(oldBound);
-    p.painter->setCompositionMode(QPainter::RasterOp_SourceAndDestination);
-    p.painter->setPen(Qt::NoPen);
-    p.painter->setBrush(color);
-    QPointF pt(p.offset - offset);
-//    qDebug() << __FUNCTION__
-//             << "p.bound" << p.bound
-//             << "p.offset" << p.offset
-//             << "offset" << offset
-//             << "pt" << pt;
-
-////  p.bound QRectF(-2,-2 188x72) p.offset QPoint(0,0) offset QPointF(2,2) pt QPointF(-2,-2)
-//    p.bound.moveTopLeft(pt);
-//    p.painter->drawRoundedRect(p.bound, 5, 5, Qt::RelativeSize);
-//    p.painter->drawPixmap(p.offset, p.pixmap);
-    qDebug() << __FUNCTION__ << p.bound;
-//    p.painter->drawRect(adjBound);
-//    p.painter->drawPixmap(p.offset, p.pixmap);
 }
 
 
