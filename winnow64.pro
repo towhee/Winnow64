@@ -247,11 +247,13 @@ win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -llibde265
 win32:INCLUDEPATH += $$PWD/Lib/libde265/include
+win32:DEPENDPATH  += $$PWD/Lib/libde265/release
 
 # libheif
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -llibheif
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -llibheif
 win32:INCLUDEPATH += $$PWD/Lib/libheif/include
+win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
 
 # old stuff
 

@@ -105,8 +105,9 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     expand(model->index(_rectangles,0));
     expand(model->index(_graphics,0));
 
+    test2();
 //    diagnosticVectors();
-    qDebug() << __FUNCTION__ << "styleList =" << styleList;
+//    qDebug() << __FUNCTION__ << "styleList =" << styleList;
 }
 
 void EmbelProperties::initialize()
@@ -1148,7 +1149,7 @@ void EmbelProperties::addBorders()
     bordersIdx = capIdx;
 
     QString path = templatePath + "/Borders";
-    qDebug() << __FUNCTION__ << path;
+//    qDebug() << __FUNCTION__ << path;
     setting->beginGroup(path);
     int count = setting->childGroups().size();
     setting->endGroup();
@@ -1308,7 +1309,7 @@ void EmbelProperties::addStyle(QString name, int n)
     // add the style header
     styleName = name;
     styleId = n;
-    qDebug() << __FUNCTION__ << styleName << name << n;
+//    qDebug() << __FUNCTION__ << styleName << name << n;
     QString settingRootPath = "Embel/Styles/" + styleName;/* + "/";*/
     i.isHeader = true;
     i.isDecoration = true;
@@ -1363,7 +1364,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     #endif
     }
     QString parentName = parIdx.data(UR_Name).toString();
-    qDebug() << __FUNCTION__ << "parentName =" << parentName;
+//    qDebug() << __FUNCTION__ << "parentName =" << parentName;
     QString settingRootPath = "Embel/Styles/" + parentName + "/Shadow/";
     QString effectName = "Shadow";
 
@@ -1725,11 +1726,36 @@ void EmbelProperties::test1()
 
 void EmbelProperties::test2()
 {
-    QModelIndex x1 = QModelIndex();
-    QModelIndex x2 = model->index(-1,-1);
-    qDebug() << __FUNCTION__
-             << "x1" << x1 << x1.isValid()
-             << "x2" << x2 << x2.isValid();
+    Effect effect; // triggers default constructor is implicitly deleted error if use non-trivial member like QColor
+    effect.effectType = blur;
+    effect.blur.radius = 10;
+    effect.blur.quality = true;
+    effect.blur.transposed = 11;
+    effects.append(effect);
+    effect.effectType = highlight;
+    effect.highlight.r = 255;
+    effect.highlight.g = 0;
+    effect.highlight.b = 0;
+    effect.highlight.x = 5;
+    effect.highlight.y = 6;
+    effects.append(effect);
+
+    for (int i = 0; i < effects.length(); ++i) {
+        const Effect &ef = effects.at(i);
+        switch (ef.effectType) {
+        case blur:
+            qDebug() << "Blur" << ef.blur.radius << ef.blur.quality << ef.blur.transposed;
+            break;
+        case highlight:
+            qDebug() << "Highlight"
+                     << ef.highlight.r
+                     << ef.highlight.g
+                     << ef.highlight.b
+                     << ef.highlight.x
+                     << ef.highlight.y
+                        ;
+        }
+    }
 }
 
 void EmbelProperties::coordHelp()

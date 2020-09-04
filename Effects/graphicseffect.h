@@ -17,6 +17,7 @@ public:
     };
     PainterParameters p;
 
+private:
 //    virtual QRectF boundingRectFor( const QRectF& sourceRect ) const;
     void highlightEffect(PainterParameters &p,
                          QColor color,

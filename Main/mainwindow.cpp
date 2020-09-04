@@ -296,6 +296,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 #ifdef ISDEBUG
 G::track(__FUNCTION__);
 #endif
+
+    show();
 }
 
 void MW::initialize()
@@ -5423,7 +5425,7 @@ void MW::launchBuildFilters()
         return;
     }
     if (dm->loadingModel) {
-        G::popUp->showPopup("Not all data required for filtering has been loaded yet.");
+//        G::popUp->showPopup("Not all data required for filtering has been loaded yet.");
         return;
     }
 
