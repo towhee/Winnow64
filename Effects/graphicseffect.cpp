@@ -51,9 +51,9 @@ void GraphicsEffect::highlightEffect(PainterParameters &p,
     QImage newCanvas(QSize(w/scale, h/scale), QImage::Format_ARGB32_Premultiplied);
     newCanvas.fill(color);
     QPainter tmp(&newCanvas);
-    qDebug() << __FUNCTION__ << "p.painter->worldTransform() =" << p.painter->worldTransform()
-                << "tmp->worldTransform() =" << tmp.worldTransform()
-                ;
+//    qDebug() << __FUNCTION__ << "p.painter->worldTransform() =" << p.painter->worldTransform()
+//                << "tmp->worldTransform() =" << tmp.worldTransform()
+//                ;
 //    tmp.setWorldTransform(p.painter->worldTransform());
 //    tmp.setTransform(p.painter->deviceTransform());
 //    QTransform transform = tmp.worldTransform();  // nada

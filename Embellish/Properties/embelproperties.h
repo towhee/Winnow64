@@ -84,6 +84,15 @@ public:
     } text;
     QVector<Text>t;
 
+    struct Shadow {
+        qreal size;         // % of object long side
+        qreal blurRadius;
+        int r;
+        int g;
+        int b;
+        int a;
+    };
+
     struct Blur {
         qreal radius;
         bool quality;
@@ -91,8 +100,6 @@ public:
     };
 
     struct Highlight {
-    //  QColor color;    // default constructor is implicitly deleted because variant field has a non-trivial default constructor
-    //  QPointF offset;  // default constructor is implicitly deleted because variant field has a non-trivial default constructor
         int r, g, b;
         int x, y;
     };
@@ -106,7 +113,10 @@ public:
             Highlight highlight;
         };
     };
+    // a style is a list of effects
     QList<Effect> effects;
+    // map of styles
+    QMap<QString, QList<Effect>> styleMap;
 
     void newEmbelTemplate();
     QString metaString(QString key);
