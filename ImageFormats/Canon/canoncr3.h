@@ -26,11 +26,7 @@ public:
              Exif *exif,
              Jpeg *jpeg);
 //    CanonCR3();
-    bool parse(/*MetadataParameters &pp,
-               ImageMetadata &mm,
-               IFD *ifd,
-               Exif *exif,
-               Jpeg *jpeg*/);
+    bool parse();
 
     quint32 metaOffset;
     quint32 metaLength;

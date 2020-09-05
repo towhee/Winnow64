@@ -549,7 +549,7 @@ bool Metadata::parseCanonCR3()
 
 
     CanonCR3 canonCR3(p, m, ifd, exif, jpeg);
-    canonCR3.parse(/*p, m, ifd, exif, jpeg*/);
+    canonCR3.parse();
     if (p.report) reportMetadata();
     return true;
 }

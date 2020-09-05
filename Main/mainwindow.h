@@ -91,7 +91,7 @@ public:
     MW(QWidget *parent = nullptr);
 
     bool isReleaseVersion = true;
-    bool hideEmbellish = true;
+    bool hideEmbellish = false;
 
     QString version = "Version: 1.111";
 //    QString version = "Version: 1.10 released 2020-06-04";

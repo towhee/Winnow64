@@ -105,7 +105,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     expand(model->index(_rectangles,0));
     expand(model->index(_graphics,0));
 
-    test2();
+//    test2();
 //    diagnosticVectors();
 //    qDebug() << __FUNCTION__ << "styleList =" << styleList;
 }
@@ -1439,7 +1439,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
 //    text.opacity = i.value.toInt();
     addItem(i);
 
-    // shodow color
+    // shadow color
     i.name = "color";
     i.parIdx = parIdx;
     i.parentName = effectName;
