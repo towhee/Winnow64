@@ -95,6 +95,8 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     readTemplateList();
     // add the template header, which then selects the last active template
     addTemplateHeader();
+    // add styles, which are independent of templates
+    addStyles();
     // add the File, Image, Borders, Texts, Rectangles and Graphics items for the template
     if (templateId != 0) addTemplateItems();
     // default state
@@ -125,7 +127,7 @@ void EmbelProperties::initialize()
     }
     // EFFECTS
     effectList << "Shadow" << "Bevel" << "Emboss" << "Blur" << "Sharpen"
-               << "Colorize" << "Edges";
+               << "Colorize" << "Edges" << "Highlight";
 
     shadowEffectAction = new QAction(tr("Shadow"), this);
     shadowEffectAction->setObjectName("shadowEffectAction");
@@ -155,6 +157,10 @@ void EmbelProperties::initialize()
     edgeEffectAction->setObjectName("edgeEffectAction");
     connect(edgeEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
 
+    edgeEffectAction = new QAction(tr("Highlight"), this);
+    edgeEffectAction->setObjectName("highlightEffectAction");
+    connect(edgeEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+
     effectMenu = new QMenu(this);
     effectMenu->addAction(shadowEffectAction);
     effectMenu->addAction(bevelEffectAction);
@@ -163,6 +169,7 @@ void EmbelProperties::initialize()
     effectMenu->addAction(sharpenEffectAction);
     effectMenu->addAction(colorizeEffectAction);
     effectMenu->addAction(edgeEffectAction);
+    effectMenu->addAction(highlightEffectAction);
 
     // CONTEXT MENU
     QAction *expandAllAction = new QAction(tr("Expand all"), this);
@@ -199,7 +206,9 @@ void EmbelProperties::effectContextMenu()
 void EmbelProperties::effectActionClicked()
 {
     QString effect = (static_cast<QAction*>(sender()))->text();
-    if (effect == "Shadow") addShadowEffect(effectParentIdx); // fix parent
+    if (effect == "Blur") addBlurEffect(effectParentIdx);
+    if (effect == "Highlight") addHighlightEffect(effectParentIdx);
+    if (effect == "Shadow") addShadowEffect(effectParentIdx);
 }
 
 void EmbelProperties::updateBorderLists()
@@ -500,6 +509,7 @@ itemChange, which is subclassed here.
         if (grandparent == "Texts") textItemChange(idx);
         if (grandparent == "Rectangles") rectangleItemChange(v, source, parent);
         if (grandparent == "Graphics") graphicItemChange(v, source, parent);
+        if (source == "globalLightDirection") globalLightItemChange(v, source, parent);
     }
 
     e->build();
@@ -807,7 +817,19 @@ void EmbelProperties::graphicItemChange(QVariant v, QString source, QString pare
     G::track(__FUNCTION__);
     #endif
     }
+}
 
+void EmbelProperties::globalLightItemChange(QVariant v, QString source, QString parent)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString path = templatePath + source;
+    qDebug() << __FUNCTION__ << path << source << v.toInt();
+    setting->setValue(path, v.toString());
+    globalLightDirection = v.toInt();
 }
 
 void EmbelProperties::addTemplateHeader()
@@ -890,7 +912,6 @@ void EmbelProperties::addTemplateItems()
     addTexts();
     addRectangles();
     addGraphics();
-    addStyles();
 }
 
 void EmbelProperties::addFile()
@@ -1285,7 +1306,7 @@ void EmbelProperties::addStyles()
     i.captionIsEditable = false;
     i.key = "globalLightDirection";
     if (setting->contains(templatePath + i.key))
-        i.value = setting->value(templatePath + "File/" + i.key);
+        i.value = setting->value(templatePath + i.key);
     else i.value = 225;
     i.delegateType = DT_Slider;
     i.type = "int";
@@ -1352,8 +1373,191 @@ void EmbelProperties::addStyle(QString name, int n)
     setting->beginGroup(settingRootPath);
     QStringList groups = setting->childGroups();
     setting->endGroup();
-    qDebug() << __FUNCTION__ << settingRootPath << "groups =" << groups;
+//    qDebug() << __FUNCTION__ << settingRootPath << "groups =" << groups;
+    effects.clear();
+    if (groups.contains("Blur")) addBlurEffect(styleIdx);
+    if (groups.contains("Highlight")) addHighlightEffect(styleIdx);
     if (groups.contains("Shadow")) addShadowEffect(styleIdx);
+
+    qDebug() << __FUNCTION__ << styleName << effects.length();
+    styleMap[styleName] = effects;
+}
+
+void EmbelProperties::addBlurEffect(QModelIndex parIdx)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString parentName = parIdx.data(UR_Name).toString();
+    QString settingRootPath = "Embel/Styles/" + parentName + "/Blur/";
+    QString effectName = "Blur";
+    Effect effect;
+    effect.effectType = blur;
+
+    // subheader for this effect
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.name = effectName;
+    i.parIdx = parIdx;
+    i.parentName = parentName;
+    i.path = "Embel/Styles/" + parentName + "/Blur";
+    i.captionText = "Blur";
+    i.tooltip = "";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    effectDeleteBtn = new BarBtn();
+    effectDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    effectDeleteBtn->setToolTip("Delete this effect");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectDeleteBtn);
+    connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
+    addItem(i);
+    parIdx = capIdx;
+    effectDeleteBtn->index = capIdx;
+
+    // blur radius
+    i.name = "radius";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Radius";
+    i.tooltip = "The amount of transition from full shadow to background.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "radius";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = 1;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    effect.blur.radius = i.value.toDouble();
+    addItem(i);
+
+    // blur quality
+    i.name = "quality";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Quality";
+    i.tooltip = "Render best quality instead of best performance.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "quality";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = false;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    effect.blur.quality = i.value.toBool();
+    addItem(i);
+
+    qDebug() << __FUNCTION__ << "appending blur effect";
+    effects.append(effect);
+}
+
+void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString parentName = parIdx.data(UR_Name).toString();
+    QString settingRootPath = "Embel/Styles/" + parentName + "/Highlight/";
+    QString effectName = "Highlight";
+    Effect effect;
+    effect.effectType = highlight;
+
+    // subheader for this effect
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.name = effectName;
+    i.parIdx = parIdx;
+    i.parentName = parentName;
+    i.path = "Embel/Styles/" + parentName + "/Highlight";
+    i.captionText = "Highlight";
+    i.tooltip = "";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    effectDeleteBtn = new BarBtn();
+    effectDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    effectDeleteBtn->setToolTip("Delete this effect");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectDeleteBtn);
+    connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
+    addItem(i);
+    parIdx = capIdx;
+    effectDeleteBtn->index = capIdx;
+
+    // highlight size
+    i.name = "margin";  // x and y offsets are equal
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Margin";
+    i.tooltip = "The amount of highlighted margin surrounding the item.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "margin";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = 1;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_DoubleSpinbox;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    effect.highlight.margin = i.value.toInt();
+    addItem(i);
+
+    // highlight color
+    i.name = "color";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Color";
+    i.tooltip = "Highlight color.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "color";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
+    }
+    else {
+        // start with white
+        i.value = "#FFFFFF";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Color;
+    i.type = "QString";
+    QColor color(i.value.toString());
+    effect.highlight.r = color.red();
+    effect.highlight.g = color.green();
+    effect.highlight.b = color.blue();
+    effect.highlight.a = color.alpha();
+    addItem(i);
+
+    effects.append(effect);
 }
 
 void EmbelProperties::addShadowEffect(QModelIndex parIdx)
@@ -1364,20 +1568,21 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     #endif
     }
     QString parentName = parIdx.data(UR_Name).toString();
-//    qDebug() << __FUNCTION__ << "parentName =" << parentName;
     QString settingRootPath = "Embel/Styles/" + parentName + "/Shadow/";
     QString effectName = "Shadow";
+    Effect effect;
+    effect.effectType = shadow;
 
-    // subheader for this border
+    // subheader for this effect
     i.isHeader = true;
     i.isDecoration = true;
     i.name = effectName;
     i.parIdx = parIdx;
     i.parentName = parentName;
     i.path = "Embel/Styles/" + parentName + "/Shadow";
-    i.captionText = "Shadow";  // maybe count shadow instances in case more than one
+    i.captionText = "Shadow";
     i.tooltip = "";
-    i.hasValue = true;
+    i.hasValue = true;      // tool button
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
     effectDeleteBtn = new BarBtn();
@@ -1395,7 +1600,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     i.parIdx = parIdx;
     i.parentName = effectName;
     i.captionText = "Size";
-    i.tooltip = "The size of the shadow (% of the long side).";
+    i.tooltip = "The length of the shadow.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -1412,11 +1617,10 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     i.min = 0;
     i.max = 100;
     i.fixedWidth = 50;
-    border.top = i.value.toDouble();
+    effect.shadow.size = i.value.toInt();
     addItem(i);
 
     // shadow blur
-    i.name = "blur";
     i.parIdx = parIdx;
     i.parentName = effectName;
     i.captionText = "Blur";
@@ -1436,7 +1640,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     i.min = 0;
     i.max = 100;
     i.type = "int";
-//    text.opacity = i.value.toInt();
+    effect.shadow.blurRadius = i.value.toDouble();
     addItem(i);
 
     // shadow color
@@ -1460,8 +1664,14 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     }
     i.delegateType = DT_Color;
     i.type = "QString";
-//    text.color = i.value.toString();
+    QColor color(i.value.toString());
+    effect.shadow.r = color.red();
+    effect.shadow.g = color.green();
+    effect.shadow.b = color.blue();
+    effect.shadow.a = color.alpha();
     addItem(i);
+
+    effects.append(effect);
 }
 
 void EmbelProperties::newBorder()
@@ -1601,7 +1811,7 @@ void EmbelProperties::treeChange(QModelIndex idx)
 //    */
     if ((hasChildren && !hasGrandChildren && !templateHdr) || isStyle) {
         bool wasExpanded = isExpanded(idx);
-        qDebug() << __FUNCTION__ << idx.data(UR_Name).toString();
+//        qDebug() << __FUNCTION__ << idx.data(UR_Name).toString();
         // clear selection and delete buttons (re-instated after selection change)
         selectionModel()->clear();
         if (okToSelect(idx, selName)) {
@@ -1646,7 +1856,7 @@ buttons except in the selected category.
 
 bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
 {
-    qDebug() << __FUNCTION__ << "selName =" << selName;
+//    qDebug() << __FUNCTION__ << "selName =" << selName;
     QModelIndex parIdx = idx.parent();
     if (!parIdx.isValid()) return false;
     if (parIdx == model->index(_borders,0)) return true;
@@ -1656,7 +1866,7 @@ bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
     if (parIdx == model->index(_styles,0)) return true;
     if (styleList.contains(selName)) return true;
     if (effectList.contains(selName)) return true;
-    qDebug() << __FUNCTION__ << "false";
+//    qDebug() << __FUNCTION__ << "false for" << selName << effectList;
     return false;
 }
 
@@ -1726,7 +1936,8 @@ void EmbelProperties::test1()
 
 void EmbelProperties::test2()
 {
-    Effect effect; // triggers default constructor is implicitly deleted error if use non-trivial member like QColor
+    /*
+    Effect effect;
     effect.effectType = blur;
     effect.blur.radius = 10;
     effect.blur.quality = true;
@@ -1736,9 +1947,45 @@ void EmbelProperties::test2()
     effect.highlight.r = 255;
     effect.highlight.g = 0;
     effect.highlight.b = 0;
-    effect.highlight.x = 5;
-    effect.highlight.y = 6;
     effects.append(effect);
+    */
+
+    qDebug() << "\nStyles\n";
+    QMapIterator<QString, QList<Effect>> s(styleMap);
+    while (s.hasNext()) {
+        s.next();
+        qDebug() << "Style:" << s.key(); //i.value()
+        // effects in style
+        qDebug() << __FUNCTION__ << s.value().length();
+        for (int i =0; i < s.value().length(); ++i) {
+            const Effect &ef = s.value().at(i);
+            switch (ef.effectType) {
+            case blur:
+                qDebug() << "  Blur:  "
+                         << "radius =" << ef.blur.radius
+                         << "quality =" << ef.blur.quality
+                         << "transposed =" << ef.blur.transposed;
+                break;
+            case highlight:
+                qDebug() << "  Highlight:  "
+                         << "margin =" << ef.highlight.margin
+                         << "r =" << ef.highlight.r
+                         << "g =" << ef.highlight.g
+                         << "b =" << ef.highlight.b
+                         << "a =" << ef.highlight.a;
+                 break;
+            case shadow:
+                qDebug() << "  Shadow:  "
+                         << "size =" << ef.shadow.size
+                         << "blurRadius =" << ef.shadow.blurRadius
+                         << "r =" << ef.shadow.r
+                         << "g =" << ef.shadow.g
+                         << "b =" << ef.shadow.b
+                         << "a =" << ef.shadow.a;
+
+            }
+        }
+    }
 
     for (int i = 0; i < effects.length(); ++i) {
         const Effect &ef = effects.at(i);
@@ -1751,8 +1998,6 @@ void EmbelProperties::test2()
                      << ef.highlight.r
                      << ef.highlight.g
                      << ef.highlight.b
-                     << ef.highlight.x
-                     << ef.highlight.y
                         ;
         }
     }
@@ -2476,7 +2721,7 @@ void EmbelProperties::addText(int count)
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << "None" << "Style 1";
+    i.dropList << styleList;        // rgh must update if add/delete/rename styles
     border.style = i.value.toString();
     addItem(i);
 

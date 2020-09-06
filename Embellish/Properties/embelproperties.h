@@ -20,6 +20,7 @@ public:
     int templateId;                 // 0 == Do not embellish
     QString styleName;
     int styleId;
+    int globalLightDirection;       // 0-360 degrees used for shadows etc
 
     struct File {
         int horizontalFitPx;
@@ -87,10 +88,7 @@ public:
     struct Shadow {
         qreal size;         // % of object long side
         qreal blurRadius;
-        int r;
-        int g;
-        int b;
-        int a;
+        int r, g, b, a;
     };
 
     struct Blur {
@@ -100,17 +98,18 @@ public:
     };
 
     struct Highlight {
-        int r, g, b;
-        int x, y;
+        int r, g, b, a;
+        int margin;
     };
 
     // when add an effect must add to enum and union
-    enum EffectType {blur, highlight};
+    enum EffectType {blur, highlight, shadow};
     struct Effect {
         enum EffectType effectType;
         union {
             Blur blur;
             Highlight highlight;
+            Shadow shadow;
         };
     };
     // a style is a list of effects
@@ -160,6 +159,8 @@ private:
     void addGraphics();
     void addStyles();
     void addStyle(QString name, int n);
+    void addBlurEffect(QModelIndex parIdx);
+    void addHighlightEffect(QModelIndex parIdx);
     void addShadowEffect(QModelIndex parIdx);
 
     void newBorder();
@@ -182,6 +183,7 @@ private:
     void textItemChange(QModelIndex idx);
     void rectangleItemChange(QVariant v, QString source, QString parent);
     void graphicItemChange(QVariant v, QString source, QString parent);
+    void globalLightItemChange(QVariant v, QString source, QString parent);
 
     void treeChange(QModelIndex idx);
     bool okToSelect(QModelIndex idx, QString selName);
@@ -216,6 +218,7 @@ private:
     QAction *sharpenEffectAction;
     QAction *colorizeEffectAction;
     QAction *edgeEffectAction;
+    QAction *highlightEffectAction;
 
     bool isTemplateChange = false;
 

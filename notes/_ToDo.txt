@@ -1,14 +1,13 @@
 BUGS
+- DNG files showing on to of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
 - Shift Ctrl 0 not working on PC
 - Thumbnails window menu not in sync on opening
 - Cannot delete heic files on PC
 - Filters will be updated msg on opening
 - Remember Embel dock on opening
 - MetaStrings
-- Shadows
 - Globalize css
 - Add hif file format
-- Add cr3 file format
 - Rotate heic files
 - Mac check for updates not done yet
 - Dmg app missing logo
