@@ -15,15 +15,17 @@ void GraphicsEffect::draw(QPainter* painter)
 {
     p.painter = painter;
     QPixmap pixmap = sourcePixmap(Qt::LogicalCoordinates, &p.offset);
+    p.px = sourcePixmap(Qt::LogicalCoordinates, &p.offset);
     p.canvas = pixmap.toImage();
     p.bound  = pixmap.rect();
     p.canvas.save("D:/Pictures/Temp/effect/im1.tif");
 
     painter->save();
 
-    blurEffect(p, 15, true, false);
+    shadowEffect(p, QPointF(4,4), 10, QColor(Qt::black));
+//    blurEffect(p, 15, true, false);
 //    p.canvas.save("D:/Pictures/Temp/effect/im2.tif");
-    highlightEffect(p, QColor(Qt::blue), QPointF(0,0));
+//    highlightEffect(p, QColor(Qt::blue), QPointF(0,0));
 
     painter->restore();
 }
@@ -37,6 +39,49 @@ void GraphicsEffect::blurEffect(PainterParameters &p, qreal radius, bool quality
 //  QTransform transform = p.painter->worldTransform();
   qt_blurImage(p.painter, p.canvas, radius, quality, alphaOnly);
 //  p.painter->setWorldTransform(transform);
+}
+
+void GraphicsEffect::shadowEffect(PainterParameters &p,
+                                  const QPointF offset,
+                                  const double radius,
+                                  const QColor color/*,
+                                  const QPointF &pos,
+                                  const QPixmap &px,
+                                  const QRectF &src*/)
+{
+    if (p.px.isNull())
+        return;
+
+    QImage tmp(p.px.size(), QImage::Format_ARGB32_Premultiplied);
+    tmp.setDevicePixelRatio(p.px.devicePixelRatioF());
+    tmp.fill(0);
+    QPainter tmpPainter(&tmp);
+    tmpPainter.setCompositionMode(QPainter::CompositionMode_Source);
+    tmpPainter.drawPixmap(offset, p.px);
+    tmpPainter.end();
+
+    // blur the alpha channel
+    QImage blurred(tmp.size(), QImage::Format_ARGB32_Premultiplied);
+    blurred.setDevicePixelRatio(p.px.devicePixelRatioF());
+    blurred.fill(0);
+    QPainter blurPainter(&blurred);
+    qt_blurImage(&blurPainter, tmp, radius, false, true);
+    blurPainter.end();
+
+    tmp = std::move(blurred);
+
+    // blacken the image...
+    tmpPainter.begin(&tmp);
+    tmpPainter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    tmpPainter.fillRect(tmp.rect(), color);
+    tmpPainter.end();
+
+    QPointF pos(0,0);
+    // draw the blurred drop shadow...
+    p.painter->drawImage(pos, tmp);
+
+    // draw the actual pixmap...
+    p.painter->drawPixmap(pos, p.px, p.bound);
 }
 
 void GraphicsEffect::highlightEffect(PainterParameters &p,

@@ -10,6 +10,7 @@ public:
     GraphicsEffect();
     struct PainterParameters {
         QPainter* painter;
+        QPixmap px;
         QImage canvas;
         QRectF bound;
         QPoint offset;
@@ -19,6 +20,13 @@ public:
 
 private:
 //    virtual QRectF boundingRectFor( const QRectF& sourceRect ) const;
+    void shadowEffect(PainterParameters &p,
+                      const QPointF offset,
+                      const double radius,
+                      const QColor color/*,
+                      const QPointF &pos,
+                      const QPixmap &px,
+                      const QRectF &src*/);
     void highlightEffect(PainterParameters &p,
                          QColor color,
                          QPointF offset);
