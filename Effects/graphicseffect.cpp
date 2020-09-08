@@ -1,8 +1,9 @@
 #include "graphicseffect.h"
 
-GraphicsEffect::GraphicsEffect()
+GraphicsEffect::GraphicsEffect(QList<winnow_effects::Effect> &effects, int globalLightDirection)
+    : effects(effects)
 {
-
+    lightDirection = globalLightDirection;
 }
 
 //QRectF GraphicsEffect::boundingRectFor(const QRectF& sourceRect) const
@@ -13,6 +14,8 @@ GraphicsEffect::GraphicsEffect()
 
 void GraphicsEffect::draw(QPainter* painter)
 {
+    if (effects.length() == 0) return;
+
     p.painter = painter;
     QPixmap pixmap = sourcePixmap(Qt::LogicalCoordinates, &p.offset);
     p.px = sourcePixmap(Qt::LogicalCoordinates, &p.offset);
@@ -22,7 +25,32 @@ void GraphicsEffect::draw(QPainter* painter)
 
     painter->save();
 
-    shadowEffect(p, QPointF(4,4), 10, QColor(Qt::black));
+    // iterate effects in style
+//  /*
+    using namespace winnow_effects;
+    for (int i = 0; i < effects.length(); ++i) {
+        const Effect &ef = effects.at(i);
+        QColor color;
+        QPointF pt;
+        switch (ef.effectType) {
+        case blur:
+            blurEffect(p, ef.blur.radius, ef.blur.quality, ef.blur.transposed);
+            break;
+        case highlight:
+            color.setRgb(ef.highlight.r, ef.highlight.g, ef.highlight.b, ef.highlight.a);
+            pt.setX(ef.highlight.margin);
+            pt.setY(ef.highlight.margin);
+            highlightEffect(p, color, pt);
+            break;
+        case shadow:
+            qDebug() << __FUNCTION__ << "shadow";
+            color.setRgb(ef.shadow.r, ef.shadow.g, ef.shadow.b, ef.shadow.a);
+            shadowEffect(p, ef.shadow.size, ef.shadow.blurRadius, color);
+        }
+    }
+//*/
+
+//    shadowEffect(p, 4, 10, QColor(Qt::black));
 //    blurEffect(p, 15, true, false);
 //    p.canvas.save("D:/Pictures/Temp/effect/im2.tif");
 //    highlightEffect(p, QColor(Qt::blue), QPointF(0,0));
@@ -42,15 +70,16 @@ void GraphicsEffect::blurEffect(PainterParameters &p, qreal radius, bool quality
 }
 
 void GraphicsEffect::shadowEffect(PainterParameters &p,
-                                  const QPointF offset,
+                                  const double size,
                                   const double radius,
-                                  const QColor color/*,
-                                  const QPointF &pos,
-                                  const QPixmap &px,
-                                  const QRectF &src*/)
+                                  const QColor color)
 {
     if (p.px.isNull())
         return;
+
+    QPointF offset;
+    offset.setX(-sin(lightDirection) * size);
+    offset.setX(-cos(lightDirection) * size);
 
     QImage tmp(p.px.size(), QImage::Format_ARGB32_Premultiplied);
     tmp.setDevicePixelRatio(p.px.devicePixelRatioF());

@@ -356,19 +356,14 @@ void Embel::addTextsToScene()
         tItems[i]->setOpacity(opacity);
         tItems[i]->setZValue(20);
 
-
-//        HighlightEffect *highlight1 = new HighlightEffect;
-//        highlight1->setOffset(QPointF(10,10));
-//        QColor red = QColor(Qt::red);
-//        highlight1->setColor(red);
-//        tItems[i]->setGraphicsEffect(highlight1);
-
-//        QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect;
-//        tItems[i]->setGraphicsEffect(shadow);
-
-        qDebug() << __FUNCTION__ << "Add text to scene:" << i;
-        GraphicsEffect *effect = new GraphicsEffect;
-        tItems[i]->setGraphicsEffect(effect);
+        qDebug() << __FUNCTION__ << "Add text to scene:" << i
+                 << "p->t[i].style =" << p->t[i].style;
+        if (p->t[i].style != "No Style") {
+            GraphicsEffect *effect = new GraphicsEffect(p->styleMap[p->t[i].style],
+                                                        p->globalLightDirection);
+            tItems[i]->setGraphicsEffect(effect);
+//            delete effect;
+        }
 
         iv->scene->addItem(tItems[i]);
 

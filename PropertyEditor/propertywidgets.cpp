@@ -770,7 +770,7 @@ ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
     btn = new QPushButton;
 //    btn->setAutoFillBackground(true);
 //    btn->setFlat(true);
-    btn->setToolTip("Click here to change the color used to set the border background.");
+    btn->setToolTip("Click here to open the color select dialog.");
     btn->setStyleSheet(
         "QPushButton, QPushButton:pressed, QPushButton:hover, QPushButton:flat"
         "{background-color:#3f5f53;"
