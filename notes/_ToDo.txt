@@ -1,6 +1,5 @@
 BUGS
 - DNG files showing on to of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
-- Shift Ctrl 0 not working on PC
 - Thumbnails window menu not in sync on opening
 - Cannot delete heic files on PC
 - Filters will be updated msg on opening
@@ -17,6 +16,7 @@ CODE IMPROVEMENTS
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Copy template
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 - TableView freeze columns https://doc.qt.io/qt-5/qtwidgets-itemviews-frozencolumn-example.html
@@ -26,6 +26,7 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Shift Ctrl 0 not working on PC
 - Tile extractor
 - Release 1.11
 - Parser for CR3 files

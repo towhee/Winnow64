@@ -498,8 +498,13 @@ itemChange, which is subclassed here.
 
     templatePath = "Embel/Templates/" + templateName + "/";
 //    QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
-    qDebug() << __FUNCTION__ << "idx.isValid() =" << idx.isValid()
-             << v << source << templateId << parent << grandparent;
+    qDebug() << __FUNCTION__
+             << " =" << templateId
+             << "idx.isValid() =" << idx.isValid()
+             << "v =" << v
+             << "source =" << source
+             << "parent =" << parent
+             << "grandparent =" << grandparent;
 
     if (source == "templateList") templateChange(v);
     if (templateId != 0) {
@@ -510,6 +515,9 @@ itemChange, which is subclassed here.
         if (grandparent == "Rectangles") rectangleItemChange(v, source, parent);
         if (grandparent == "Graphics") graphicItemChange(v, source, parent);
         if (source == "globalLightDirection") globalLightItemChange(v, source, parent);
+        if (parent.left(6) == "Shadow") shadowItemChange(v, source, parent, grandparent);
+        if (parent.left(4) == "Blur") blurItemChange(v, source, parent, grandparent);
+        if (parent.left(9) == "Highlight") highlightItemChange(v, source, parent, grandparent);
     }
 
     e->build();
@@ -832,6 +840,96 @@ void EmbelProperties::globalLightItemChange(QVariant v, QString source, QString 
     globalLightDirection = v.toInt();
 }
 
+void EmbelProperties::shadowItemChange(QVariant v, QString source, QString effectName, QString style)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
+    qDebug() << __FUNCTION__ << path << source << v.toInt();
+
+    if (source == "size") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].shadow.size = v.toDouble();
+    }
+
+    if (source == "blur") {
+        setting->setValue(path, v.toInt());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].shadow.blurRadius = v.toInt();
+    }
+
+    if (source == "color") {
+        setting->setValue(path, v.toString());
+        QColor color(v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].shadow.r = color.red();
+        styleMap[style][effect].shadow.g = color.green();
+        styleMap[style][effect].shadow.b = color.blue();
+        styleMap[style][effect].shadow.a = color.alpha();
+    }
+}
+
+void EmbelProperties::blurItemChange(QVariant v, QString source, QString effectName, QString style)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
+    qDebug() << __FUNCTION__ << path << source << v.toInt();
+
+    if (source == "radius") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].blur.radius = v.toDouble();
+    }
+
+    if (source == "quality") {
+        setting->setValue(path, v.toBool());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].blur.quality = v.toBool();
+    }
+}
+
+void EmbelProperties::highlightItemChange(QVariant v, QString source, QString effectName, QString style)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
+    qDebug() << __FUNCTION__ << path << source << v.toInt();
+
+    if (source == "margin") {
+        setting->setValue(path, v.toInt());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].highlight.margin = v.toInt();
+    }
+
+    if (source == "color") {
+        setting->setValue(path, v.toString());
+        QColor color(v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].highlight.r = color.red();
+        styleMap[style][effect].highlight.g = color.green();
+        styleMap[style][effect].highlight.b = color.blue();
+        styleMap[style][effect].highlight.a = color.alpha();
+    }
+}
+
 void EmbelProperties::addTemplateHeader()
 {
     {
@@ -850,9 +948,23 @@ void EmbelProperties::addTemplateHeader()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
+
+    /*
+    QPixmap input("YourImage.png");
+    QImage image(input.size(), QImage::Format_ARGB32_Premultiplied); //Image with given size and format.
+    image.fill(Qt::transparent); //fills with transparent
+    QPainter p(&image);
+    p.setOpacity(0.2); // set opacity from 0.0 to 1.0, where 0.0 is fully transparent and 1.0 is fully opaque.
+    p.drawPixmap(0, 0, input); // given pixmap into the paint device.
+    p.end();
+    */
+
     BarBtn *templateRenameBtn = new BarBtn();
+    QIcon deltaIcon(":/images/icon16/delta.png");
     templateRenameBtn->setIcon(QIcon(":/images/icon16/delta.png"));
     templateRenameBtn->setToolTip("Rename the selected template");
+    templateRenameBtn->setAttribute(Qt::WA_TranslucentBackground, true);
+    templateRenameBtn->setWindowOpacity(0.5);
     btns.append(templateRenameBtn);
     connect(templateRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentTemplate);
     BarBtn *templateDeleteBtn = new BarBtn();
@@ -875,6 +987,7 @@ void EmbelProperties::addTemplateHeader()
     i.decorateGradient = false;
     i.captionText = "Select template";
     i.tooltip = "Templates contain all the properties to embellish your images.";
+    i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = templateName;
@@ -1390,11 +1503,14 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
     G::track(__FUNCTION__);
     #endif
     }
+    // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
-    QString settingRootPath = "Embel/Styles/" + parentName + "/Blur/";
-    QString effectName = "Blur";
-    Effect effect;
-    effect.effectType = blur;
+    winnow_effects::Effect effect;
+    effect.effectType = winnow_effects::blur;
+    QString effectName = uniqueEffectName(parentName, winnow_effects::shadow, "Blur");
+    effect.effectName = effectName;
+
+    QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
 
     // subheader for this effect
     i.isHeader = true;
@@ -1402,10 +1518,10 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
     i.name = effectName;
     i.parIdx = parIdx;
     i.parentName = parentName;
-    i.path = "Embel/Styles/" + parentName + "/Blur";
+    i.path = "Embel/Styles/" + parentName + "/" + effectName;
     i.captionText = "Blur";
     i.tooltip = "";
-    i.hasValue = true;
+    i.hasValue = true;      // tool button
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
     effectDeleteBtn = new BarBtn();
@@ -1465,7 +1581,6 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
     effect.blur.quality = i.value.toBool();
     addItem(i);
 
-    qDebug() << __FUNCTION__ << "appending blur effect";
     effects.append(effect);
 }
 
@@ -1476,11 +1591,14 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
     G::track(__FUNCTION__);
     #endif
     }
+    // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
-    QString settingRootPath = "Embel/Styles/" + parentName + "/Highlight/";
-    QString effectName = "Highlight";
-    Effect effect;
-    effect.effectType = highlight;
+    winnow_effects::Effect effect;
+    effect.effectType = winnow_effects::highlight;
+    QString effectName = uniqueEffectName(parentName, winnow_effects::highlight, "Highlight");
+    effect.effectName = effectName;
+
+    QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
 
     // subheader for this effect
     i.isHeader = true;
@@ -1488,8 +1606,8 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
     i.name = effectName;
     i.parIdx = parIdx;
     i.parentName = parentName;
-    i.path = "Embel/Styles/" + parentName + "/Highlight";
-    i.captionText = "Highlight";
+    i.path = "Embel/Styles/" + parentName + "/" + effectName;
+    i.captionText = effectName;
     i.tooltip = "";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -1567,11 +1685,14 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     G::track(__FUNCTION__);
     #endif
     }
+    // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
-    QString settingRootPath = "Embel/Styles/" + parentName + "/Shadow/";
-    QString effectName = "Shadow";
-    Effect effect;
-    effect.effectType = shadow;
+    winnow_effects::Effect effect;
+    effect.effectType = winnow_effects::shadow;
+    QString effectName = uniqueEffectName(parentName, winnow_effects::shadow, "Shadow");
+    effect.effectName = effectName;
+
+    QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
 
     // subheader for this effect
     i.isHeader = true;
@@ -1579,8 +1700,8 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     i.name = effectName;
     i.parIdx = parIdx;
     i.parentName = parentName;
-    i.path = "Embel/Styles/" + parentName + "/Shadow";
-    i.captionText = "Shadow";
+    i.path = "Embel/Styles/" + parentName + "/" + effectName;
+    i.captionText = effectName;
     i.tooltip = "";
     i.hasValue = true;      // tool button
     i.captionIsEditable = false;
@@ -1612,11 +1733,11 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
         i.value = 1;
         setting->setValue(settingRootPath + i.key, i.value);
     }
-    i.delegateType = DT_DoubleSpinbox;
+    i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
+    i.max = 30;
+//    i.fixedWidth = 50;
     effect.shadow.size = i.value.toInt();
     addItem(i);
 
@@ -1638,7 +1759,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     }
     i.delegateType =  DT_Slider;
     i.min = 0;
-    i.max = 100;
+    i.max = 20;
     i.type = "int";
     effect.shadow.blurRadius = i.value.toDouble();
     addItem(i);
@@ -1768,6 +1889,43 @@ void EmbelProperties::deleteItem()
 
     // refresh the graphicsScene
     e->build();
+}
+
+QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QString effectName)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    using namespace winnow_effects;
+    // effects in style
+    int effectCount = 0;
+    for (int i = 0; i < styleMap[styleName].length(); ++i) {
+        if (effectType == styleMap[styleName].at(i).effectType) effectCount++;
+    }
+    if (effectCount > 0) effectName += QString::number(effectCount);
+    return effectName;
+}
+
+int EmbelProperties::effectIndex(QString style, QString effectName)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    using namespace winnow_effects;
+    // effects in style
+    qDebug() << __FUNCTION__ << style << effectName;
+    for (int i = 0; i < styleMap[style].length(); ++i) {
+        qDebug() << __FUNCTION__
+                 << "i =" << i
+                 << "effectName =" << effectName
+                 << "styleMap[style].at(i).effectName =" << styleMap[style].at(i).effectName;
+        if (effectName == styleMap[style].at(i).effectName) return i;
+    }
+    return -1;
 }
 
 /*void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
@@ -1936,69 +2094,42 @@ void EmbelProperties::test1()
 
 void EmbelProperties::test2()
 {
-    /*
-    Effect effect;
-    effect.effectType = blur;
-    effect.blur.radius = 10;
-    effect.blur.quality = true;
-    effect.blur.transposed = 11;
-    effects.append(effect);
-    effect.effectType = highlight;
-    effect.highlight.r = 255;
-    effect.highlight.g = 0;
-    effect.highlight.b = 0;
-    effects.append(effect);
-    */
-
+    using namespace winnow_effects;
     qDebug() << "\nStyles\n";
     QMapIterator<QString, QList<Effect>> s(styleMap);
     while (s.hasNext()) {
         s.next();
-        qDebug() << "Style:" << s.key(); //i.value()
+        int n = s.value().length();
+        qDebug() << "Style:" << s.key() << "has" << n << "effects.";
         // effects in style
-        qDebug() << __FUNCTION__ << s.value().length();
-        for (int i =0; i < s.value().length(); ++i) {
+//        qDebug() << __FUNCTION__ << s.value().length();
+        for (int i =0; i < n; ++i) {
             const Effect &ef = s.value().at(i);
+            qDebug() << "  Effect index =" << i;
+            qDebug() << "  effectName   =" << ef.effectName;
+            qDebug() << "  effectType   =" << ef.effectType;
+
             switch (ef.effectType) {
             case blur:
-                qDebug() << "  Blur:  "
-                         << "radius =" << ef.blur.radius
-                         << "quality =" << ef.blur.quality
-                         << "transposed =" << ef.blur.transposed;
+                qDebug() << "    Blur: radius       =" << ef.blur.radius;
+                qDebug() << "    Blur: quality      =" << ef.blur.quality;
+                qDebug() << "    Blur: transposed   =" << ef.blur.transposed;
                 break;
             case highlight:
-                qDebug() << "  Highlight:  "
-                         << "margin =" << ef.highlight.margin
-                         << "r =" << ef.highlight.r
-                         << "g =" << ef.highlight.g
-                         << "b =" << ef.highlight.b
-                         << "a =" << ef.highlight.a;
-                 break;
+                qDebug() << "    Highlight: margin  =" << ef.highlight.margin;
+                qDebug() << "    Highlight: r       =" << ef.highlight.r;
+                qDebug() << "    Highlight: g       =" << ef.highlight.g;
+                qDebug() << "    Highlight: b       =" << ef.highlight.b;
+                qDebug() << "    Highlight: a       =" << ef.highlight.a;
+                break;
             case shadow:
-                qDebug() << "  Shadow:  "
-                         << "size =" << ef.shadow.size
-                         << "blurRadius =" << ef.shadow.blurRadius
-                         << "r =" << ef.shadow.r
-                         << "g =" << ef.shadow.g
-                         << "b =" << ef.shadow.b
-                         << "a =" << ef.shadow.a;
-
+                qDebug() << "    Shadow: size       =" << ef.shadow.size;
+                qDebug() << "    Shadow: blurRadius =" << ef.shadow.blurRadius;
+                qDebug() << "    Shadow: r          =" << ef.shadow.r;
+                qDebug() << "    Shadow: g          =" << ef.shadow.g;
+                qDebug() << "    Shadow: b          =" << ef.shadow.b;
+                qDebug() << "    Shadow: a          =" << ef.shadow.a;
             }
-        }
-    }
-
-    for (int i = 0; i < effects.length(); ++i) {
-        const Effect &ef = effects.at(i);
-        switch (ef.effectType) {
-        case blur:
-            qDebug() << "Blur" << ef.blur.radius << ef.blur.quality << ef.blur.transposed;
-            break;
-        case highlight:
-            qDebug() << "Highlight"
-                     << ef.highlight.r
-                     << ef.highlight.g
-                     << ef.highlight.b
-                        ;
         }
     }
 }
@@ -2721,8 +2852,8 @@ void EmbelProperties::addText(int count)
     }
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << styleList;        // rgh must update if add/delete/rename styles
-    border.style = i.value.toString();
+    i.dropList << "No style" << styleList;        // rgh must update if add/delete/rename styles
+    text.style = i.value.toString();
     addItem(i);
 
     // add the text info to the vector of texts t

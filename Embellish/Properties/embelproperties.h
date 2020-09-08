@@ -6,6 +6,7 @@
 #include "Datamodel/datamodel.h"
 #include "Utilities/utilities.h"
 #include "PropertyEditor/propertyeditor.h"
+#include "Effects/graphicseffect.h"
 #include "Views/infostring.h"
 #include "ui_embelCoord.h"
 
@@ -85,37 +86,40 @@ public:
     } text;
     QVector<Text>t;
 
-    struct Shadow {
-        qreal size;         // % of object long side
-        qreal blurRadius;
-        int r, g, b, a;
-    };
+//    struct Shadow {
+//        qreal size;         // % of object long side
+//        qreal blurRadius;
+//        int r, g, b, a;
+//    };
 
-    struct Blur {
-        qreal radius;
-        bool quality;
-        int transposed;
-    };
+//    struct Blur {
+//        qreal radius;
+//        bool quality;
+//        int transposed;
+//    };
 
-    struct Highlight {
-        int r, g, b, a;
-        int margin;
-    };
+//    struct Highlight {
+//        int r, g, b, a;
+//        int margin;
+//    };
 
-    // when add an effect must add to enum and union
-    enum EffectType {blur, highlight, shadow};
-    struct Effect {
-        enum EffectType effectType;
-        union {
-            Blur blur;
-            Highlight highlight;
-            Shadow shadow;
-        };
-    };
+//    // when add an effect must add to enum and union
+//    enum EffectType {blur, highlight, shadow};
+//    struct Effect {
+//        enum EffectType effectType;
+//        union {
+//            Blur blur;
+//            Highlight highlight;
+//            Shadow shadow;
+//        };
+//    };
+
+    // effect structs are defined in graphicseffect.h
+
     // a style is a list of effects
-    QList<Effect> effects;
+    QList<winnow_effects::Effect> effects;
     // map of styles
-    QMap<QString, QList<Effect>> styleMap;
+    QMap<QString, QList<winnow_effects::Effect>> styleMap;
 
     void newEmbelTemplate();
     QString metaString(QString key);
@@ -184,6 +188,9 @@ private:
     void rectangleItemChange(QVariant v, QString source, QString parent);
     void graphicItemChange(QVariant v, QString source, QString parent);
     void globalLightItemChange(QVariant v, QString source, QString parent);
+    void shadowItemChange(QVariant v, QString source, QString effectName, QString style);
+    void blurItemChange(QVariant v, QString source, QString effectName, QString style);
+    void highlightItemChange(QVariant v, QString source, QString effectName, QString style);
 
     void treeChange(QModelIndex idx);
     bool okToSelect(QModelIndex idx, QString selName);
@@ -209,6 +216,8 @@ private:
 
     void effectContextMenu();
     void effectActionClicked();
+    QString uniqueEffectName(QString styleName, int effectType, QString effectName);
+    int effectIndex(QString style, QString effectName);
 
     QMenu *effectMenu;
     QAction *shadowEffectAction;

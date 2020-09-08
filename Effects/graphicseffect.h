@@ -4,10 +4,42 @@
 #include <QtWidgets>
 #include <QGraphicsEffect>
 
+namespace winnow_effects
+{
+    struct Shadow {
+        qreal size;         // % of object long side
+        qreal blurRadius;
+        int r, g, b, a;
+    };
+
+    struct Blur {
+        qreal radius;
+        bool quality;
+        int transposed;
+    };
+
+    struct Highlight {
+        int r, g, b, a;
+        int margin;
+    };
+
+    // when add an effect must add to enum and union
+    enum EffectType {blur, highlight, shadow};
+    struct Effect {
+        enum EffectType effectType;
+        QString effectName;         // unique: req'd in case more than one of same effect
+        union {
+            Blur blur;
+            Highlight highlight;
+            Shadow shadow;
+        };
+    };
+}
+
 class GraphicsEffect : public QGraphicsEffect
 {
 public:
-    GraphicsEffect();
+    GraphicsEffect(QList<winnow_effects::Effect> &effects, int globalLightDirection);
     struct PainterParameters {
         QPainter* painter;
         QPixmap px;
@@ -21,17 +53,18 @@ public:
 private:
 //    virtual QRectF boundingRectFor( const QRectF& sourceRect ) const;
     void shadowEffect(PainterParameters &p,
-                      const QPointF offset,
+                      const double size,
                       const double radius,
-                      const QColor color/*,
-                      const QPointF &pos,
-                      const QPixmap &px,
-                      const QRectF &src*/);
+                      const QColor color);
     void highlightEffect(PainterParameters &p,
                          QColor color,
                          QPointF offset);
     void blurEffect(PainterParameters &p, qreal radius, bool quality,
                     bool alphaOnly, int transposed = 0);
+
+    QList<winnow_effects::Effect> &effects;
+    int lightDirection;
+
 //    void blurImage(QPainter *p, QImage &blurImage, qreal radius, bool quality,
 //                   bool alphaOnly, int transposed = 0);
 //    QImage halfScaled(const QImage &source);
