@@ -1,9 +1,9 @@
 #include "utilities.h"
 
-QString Utilities::inputText(QString title, QString description)
+QString Utilities::inputText(QString title, QString description, QStringList &doNotUse)
 {
     QString input;
-    InputDlg d(title, description, input);
+    InputDlg d(title, description, input, doNotUse);
     d.exec();
     return input;
 }
