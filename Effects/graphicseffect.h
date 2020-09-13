@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <QGraphicsEffect>
+#include "Main/global.h"
 
 namespace winnow_effects
 {
@@ -50,10 +51,11 @@ public:
     };
     PainterParameters p;
 
+
 private:
 //    virtual QRectF boundingRectFor( const QRectF& sourceRect ) const;
     void shadowEffect(PainterParameters &p,
-                      const double size,
+                      const int size,
                       const double radius,
                       const QColor color);
     void highlightEffect(PainterParameters &p,

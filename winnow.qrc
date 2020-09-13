@@ -146,5 +146,7 @@
         <file>images/icon16/delete.png</file>
         <file>images/icon16/questionmark.png</file>
         <file>images/icon16/new.png</file>
+        <file>images/icon16/down.png</file>
+        <file>images/icon16/up.png</file>
     </qresource>
 </RCC>

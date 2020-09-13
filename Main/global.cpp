@@ -29,6 +29,8 @@ namespace G
     QColor progressTargetColor = QColor(125,125,125);            // Gray
     QColor progressImageCacheColor = QColor(108,150,108);        // Green
 
+    double iconOpacity = 0.4;
+
     int availableMemoryMB;
     int winnowMemoryBeforeCacheMB;
     int metaCacheMB;

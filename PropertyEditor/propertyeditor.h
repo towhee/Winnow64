@@ -27,6 +27,7 @@ public:
     int captionColumnWidth;
     int valueColumnWidth;
     QModelIndex capIdx; // used to get index for added item when subclassing addItem
+    QModelIndex valIdx; // used to hide/show rows etc
     struct ItemInfo {
         QString name;
         QString parentName;
@@ -56,6 +57,7 @@ public:
     void clearItemInfo(ItemInfo &i);
     bool getIndex(QString caption, QModelIndex parent = QModelIndex());
     QModelIndex findIndex(QString name);
+    void updateHiddenRows(QModelIndex parent);
     QModelIndex foundIdx;
 
     QMap<QString, QModelIndex> sourceIdx;

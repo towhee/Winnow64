@@ -356,9 +356,11 @@ void Embel::addTextsToScene()
         tItems[i]->setOpacity(opacity);
         tItems[i]->setZValue(20);
 
-        qDebug() << __FUNCTION__ << "Add text to scene:" << i
-                 << "p->t[i].style =" << p->t[i].style;
-        if (p->t[i].style != "No Style") {
+//        qDebug() << __FUNCTION__ << "Add text to scene:" << i
+//                 << "p->t[i].style =" << p->t[i].style;
+        if (p->t[i].style != "No style" && p->t[i].style != "") {
+            qDebug() << __FUNCTION__
+                     << "p->globalLightDirection =" << p->globalLightDirection;
             GraphicsEffect *effect = new GraphicsEffect(p->styleMap[p->t[i].style],
                                                         p->globalLightDirection);
             tItems[i]->setGraphicsEffect(effect);
