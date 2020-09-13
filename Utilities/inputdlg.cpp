@@ -5,10 +5,12 @@
 InputDlg::InputDlg(QString windowTitle,
                    QString description,
                    QString &input,
+                   QStringList &doNotUse,
                    QWidget *parent) :
     QDialog(parent),
     ui(new Ui::InputDlg),
-    input(input)
+    input(input),
+    doNotUse(doNotUse)
 {
     ui->setupUi(this);
     setWindowTitle(windowTitle);
@@ -26,6 +28,9 @@ InputDlg::~InputDlg()
 void InputDlg::ok()
 {
     input = ui->inputText->text();
+    if (doNotUse.contains(ui->inputText->text())) {
+        ui->msg->setText();
+    }
     accept();
 }
 

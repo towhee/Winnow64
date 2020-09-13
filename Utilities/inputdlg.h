@@ -16,6 +16,7 @@ public:
     explicit InputDlg(QString windowTitle,
                       QString description,
                       QString &input,
+                      QStringList &doNotUse,
                       QWidget *parent = nullptr);
 
     ~InputDlg();
@@ -27,6 +28,7 @@ private slots:
 private:
     Ui::InputDlg *ui;
     QString &input;
+    QStringList &doNotUse;
 };
 
 #endif // INPUTDLG_H

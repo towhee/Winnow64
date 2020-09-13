@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>423</width>
-    <height>127</height>
+    <height>140</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -49,6 +49,16 @@
    </item>
    <item>
     <widget class="QLineEdit" name="inputText"/>
+   </item>
+   <item>
+    <widget class="QLabel" name="msg">
+     <property name="styleSheet">
+      <string notr="true">color:red</string>
+     </property>
+     <property name="text">
+      <string>msg</string>
+     </property>
+    </widget>
    </item>
    <item>
     <spacer name="verticalSpacer">

@@ -9,7 +9,7 @@
 class Utilities
 {
 public:
-    static QString inputText(QString title, QString description);
+    static QString inputText(QString title, QString description, QStringList &doNotUse = "");
     static void setOpacity(QWidget *widget, qreal opacity);
     static QString formatMemory(qulonglong bytes, int precision = 1);
     static QString enquote(QString &s);
