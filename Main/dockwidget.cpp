@@ -23,6 +23,26 @@ QSize BarBtn::sizeHint()
     return QSize(16,16);
 }
 
+// subclass to set opacity of icon on toolbutton
+void BarBtn::setIcon(QString path, double opacity)
+{
+    QPixmap pm(path);
+    QImage image(pm.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter p(&image);
+    p.setOpacity(opacity);
+    p.drawPixmap(0, 0, pm);
+    p.end();
+    QIcon icon(QPixmap::fromImage(image));
+    QToolButton::setIcon(icon);
+}
+
+// use QToolButton
+void BarBtn::setIcon(const QIcon &icon)
+{
+    QToolButton::setIcon(icon);
+}
+
 //void BarBtn::enterEvent(QEvent*)
 //{
 //    setStyleSheet

@@ -13,6 +13,9 @@ public:
     BarBtn(/*QWidget *parent = nullptr*/);
     QSize sizeHint();
     QModelIndex index;  // the index of the model row that contains the button
+    void setIcon(QString path, double opacity);
+    void setIcon(const QIcon &icon);
+
 protected:
 //    void enterEvent(QEvent*);
 //    void leaveEvent(QEvent*);

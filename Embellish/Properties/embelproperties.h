@@ -86,34 +86,6 @@ public:
     } text;
     QVector<Text>t;
 
-//    struct Shadow {
-//        qreal size;         // % of object long side
-//        qreal blurRadius;
-//        int r, g, b, a;
-//    };
-
-//    struct Blur {
-//        qreal radius;
-//        bool quality;
-//        int transposed;
-//    };
-
-//    struct Highlight {
-//        int r, g, b, a;
-//        int margin;
-//    };
-
-//    // when add an effect must add to enum and union
-//    enum EffectType {blur, highlight, shadow};
-//    struct Effect {
-//        enum EffectType effectType;
-//        union {
-//            Blur blur;
-//            Highlight highlight;
-//            Shadow shadow;
-//        };
-//    };
-
     // effect structs are defined in graphicseffect.h
 
     // a style is a list of effects
@@ -180,6 +152,10 @@ private:
     void deleteGraphic();
     void deleteItem();
 
+    void moveEffectUp();
+    void moveEffectDown();
+    void updateEffectsFromModelOrder(QString style);
+
     void templateChange(QVariant v);
     void fileItemChange(QVariant v, QString source);
     void imageItemChange(QVariant v, QString source);
@@ -195,6 +171,7 @@ private:
     void treeChange(QModelIndex idx);
     bool okToSelect(QModelIndex idx, QString selName);
     void diagnostics(QModelIndex idx);
+    void diagnosticStyles();
     void diagnosticVectors();
     void parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner);
 
@@ -237,6 +214,8 @@ private:
     BarBtn *graphicDeleteBtn;
     BarBtn *styleDeleteBtn;
     BarBtn *effectDeleteBtn;
+    BarBtn *effectUpBtn;
+    BarBtn *effectDownBtn;
 
     ItemInfo i;
     int templateCount;
@@ -245,17 +224,19 @@ private:
     ComboBoxEditor *templateListEditor;
     QVector<ComboBoxEditor*> textAlignToCornerObjectEditor;
     QVector<ComboBoxEditor*> textAnchorObjectEditor;
+    QVector<ComboBoxEditor*> textStyleObjectEditor;
     QVector<BarBtnEditor*> styleEditor;
 
+    // must be in correct order
     enum roots {
         _templates,
+        _styles,
         _file,
         _image,
         _borders,
         _texts,
         _rectangles,
-        _graphics,
-        _styles
+        _graphics
     };
     enum corners {TopLeft, TopRight, BottomLeft, BottomRight};
     QStringList anchorPoints;

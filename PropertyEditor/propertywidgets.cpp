@@ -613,7 +613,8 @@ void ComboBoxEditor::setValue(QVariant value)
 void ComboBoxEditor::addItem(QString item)
 {
 /*
-This is used to add new templates to the template drop list
+This is used to add new templates to the template drop list, new styles to
+the style dropdowns
 */
     {
     #ifdef ISDEBUG
@@ -621,6 +622,21 @@ This is used to add new templates to the template drop list
     #endif
     }
     comboBox->addItem(item);
+}
+
+void ComboBoxEditor::removeItem(QString item)
+{
+/*
+This is used to remove deleted templates from the template drop list, styles from
+the style dropdowns
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int i = comboBox->findText(item);
+    comboBox->removeItem(i);
 }
 
 void ComboBoxEditor::refresh(QStringList items)

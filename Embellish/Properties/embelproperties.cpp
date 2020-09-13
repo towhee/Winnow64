@@ -107,7 +107,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     expand(model->index(_rectangles,0));
     expand(model->index(_graphics,0));
 
-//    test2();
+    updateHiddenRows(QModelIndex());
 //    diagnosticVectors();
 //    qDebug() << __FUNCTION__ << "styleList =" << styleList;
 }
@@ -236,6 +236,47 @@ Called from new and delete borders to rebuild the lists that have the borders
     for (int i = 0; i < t.size(); ++i) {
         textAlignToCornerObjectEditor[i]->refresh(alignToCornerList);
 //        textAnchorObjectEditor[i]->refresh(anchorObjectList);
+    }
+}
+
+void EmbelProperties::diagnosticStyles()
+{
+    using namespace winnow_effects;
+    qDebug() << "\nStyles\n";
+    QMapIterator<QString, QList<Effect>> s(styleMap);
+    while (s.hasNext()) {
+        s.next();
+        int n = s.value().length();
+        qDebug() << "Style:" << s.key() << "has" << n << "effects.";
+        // effects in style
+        for (int i = 0; i < n; ++i) {
+            const Effect &ef = s.value().at(i);
+            qDebug() << "  Effect index =" << i;
+            qDebug() << "  effectName   =" << ef.effectName;
+            qDebug() << "  effectType   =" << ef.effectType;
+
+            switch (ef.effectType) {
+            case winnow_effects::blur:
+                qDebug() << "    Blur: radius       =" << ef.blur.radius;
+                qDebug() << "    Blur: quality      =" << ef.blur.quality;
+                qDebug() << "    Blur: transposed   =" << ef.blur.transposed;
+                break;
+            case winnow_effects::highlight:
+                qDebug() << "    Highlight: margin  =" << ef.highlight.margin;
+                qDebug() << "    Highlight: r       =" << ef.highlight.r;
+                qDebug() << "    Highlight: g       =" << ef.highlight.g;
+                qDebug() << "    Highlight: b       =" << ef.highlight.b;
+                qDebug() << "    Highlight: a       =" << ef.highlight.a;
+                break;
+            case winnow_effects::shadow:
+                qDebug() << "    Shadow: size       =" << ef.shadow.size;
+                qDebug() << "    Shadow: blurRadius =" << ef.shadow.blurRadius;
+                qDebug() << "    Shadow: r          =" << ef.shadow.r;
+                qDebug() << "    Shadow: g          =" << ef.shadow.g;
+                qDebug() << "    Shadow: b          =" << ef.shadow.b;
+                qDebug() << "    Shadow: a          =" << ef.shadow.a;
+            }
+        }
     }
 }
 
@@ -450,12 +491,20 @@ void EmbelProperties::newStyle()
     #endif
     }
     // rgh prevent duplicate style names
-    QString name = Utilities::inputText("New Style", "Enter new style name");
+    bool isDuplicate = true;
+//    while (isDuplicate) {
+        QString name = Utilities::inputText("New Style", "Enter new style name", styleList);
+
+//    }
 //    styleName = "style_" + styleName.replace(" ", "_");
     styleName = name;
     styleList << name;
     int n = styleList.length() - 1;
     addStyle(name, n);
+    for (int i = 0; i < textStyleObjectEditor.length(); ++i) {
+        textStyleObjectEditor[i]->addItem(name);
+    }
+    // rgh add for rectangles, borders and graphics
 }
 
 void EmbelProperties::invokeFromAction(QAction *embelAction)
@@ -466,6 +515,48 @@ void EmbelProperties::invokeFromAction(QAction *embelAction)
             templateListEditor->setValue(templateList.at(i));
         }
     }
+}
+
+void EmbelProperties::moveEffectUp()
+{
+    BarBtn *btn = qobject_cast<BarBtn*>(sender());
+    QModelIndex idx = btn->index;
+    if (!idx.isValid()) return;
+    int row = idx.row();
+    if (row == 0) return;
+    QModelIndex par = idx.parent();
+
+    model->takeRow(row);
+    qDebug() << __FUNCTION__ << idx;
+    return;
+    QStandardItem *item = new QStandardItem;
+    item = model->itemFromIndex(idx);
+//    QStandardItem *parent = new QStandardItem;
+//    parent = item->parent();
+
+    item->parent()->takeChild(row);
+//    item->parent()->insertRow(row - 1, item);
+}
+
+void EmbelProperties::moveEffectDown()
+{
+    BarBtn *btn = qobject_cast<BarBtn*>(sender());
+    QModelIndex idx = btn->index;
+    if (!idx.isValid()) return;
+    int row = idx.row();
+    int rows = model->rowCount(idx.parent());
+    if (row == rows) return;
+    QStandardItem *item = new QStandardItem;
+    item = model->itemFromIndex(idx);
+    //    QStandardItem *parent = new QStandardItem;
+    //    parent = item->parent();
+    item->parent()->takeChild(row);
+    item->parent()->insertRow(row + 1, item);
+}
+
+void EmbelProperties::updateEffectsFromModelOrder(QString style)
+{
+
 }
 
 void EmbelProperties::itemChange(QModelIndex idx)
@@ -706,9 +797,19 @@ void EmbelProperties::textItemChange(QModelIndex idx)
     int index = idx.parent().data(UR_ItemIndex).toInt();
     QString path = templatePath + "Texts/" + parent + "/" + source;
 
+    qDebug() << __FUNCTION__
+             << "source =" << source
+             << "parent =" << parent;
+
     if (source == "anchorObject") {
         setting->setValue(path, v.toString());
         t[index].anchorObject = v.toString();
+        int row = idx.row();
+        // also hidden on creation using updateHiddenRows(QModelIndex parent)
+        if (v.toString() == "Image")
+            setRowHidden(row + 1, idx.parent(), true);
+        else
+            setRowHidden(row + 1, idx.parent(), false);
     }
 
     if (source == "anchorContainer") {
@@ -746,18 +847,16 @@ void EmbelProperties::textItemChange(QModelIndex idx)
         QString s = v.toString();
         setting->setValue(path, s);
         t[index].source = s;
-//        if (!G::isInitializing) {
         int row = idx.row();
-        qDebug() << __FUNCTION__ << s << row;
-        // only works if branch is expanded
-//        if (s == "Text") {
-//            setRowHidden(row + 1, idx.parent(), false);
-//            setRowHidden(row + 2, idx.parent(), true);
-//        }
-//        if (s == "Metadata template") {
-//            setRowHidden(row + 1, idx.parent(), true);
-//            setRowHidden(row + 2, idx.parent(), false);
-//        }
+        // also hidden on creation using updateHiddenRows(QModelIndex parent)
+        if (s == "Text") {
+            setRowHidden(row + 1, idx.parent(), false);
+            setRowHidden(row + 2, idx.parent(), true);
+        }
+        if (s == "Metadata template") {
+            setRowHidden(row + 1, idx.parent(), true);
+            setRowHidden(row + 2, idx.parent(), false);
+        }
     }
 
     if (source == "text") {
@@ -918,6 +1017,13 @@ void EmbelProperties::highlightItemChange(QVariant v, QString source, QString ef
         styleMap[style][effect].highlight.margin = v.toInt();
     }
 
+    if (source == "opacity") {
+        setting->setValue(path, v.toInt());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].highlight.a = v.toInt() * 255 / 100;
+    }
+
     if (source == "color") {
         setting->setValue(path, v.toString());
         QColor color(v.toString());
@@ -949,31 +1055,18 @@ void EmbelProperties::addTemplateHeader()
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
 
-    /*
-    QPixmap input("YourImage.png");
-    QImage image(input.size(), QImage::Format_ARGB32_Premultiplied); //Image with given size and format.
-    image.fill(Qt::transparent); //fills with transparent
-    QPainter p(&image);
-    p.setOpacity(0.2); // set opacity from 0.0 to 1.0, where 0.0 is fully transparent and 1.0 is fully opaque.
-    p.drawPixmap(0, 0, input); // given pixmap into the paint device.
-    p.end();
-    */
-
     BarBtn *templateRenameBtn = new BarBtn();
-    QIcon deltaIcon(":/images/icon16/delta.png");
-    templateRenameBtn->setIcon(QIcon(":/images/icon16/delta.png"));
+    templateRenameBtn->setIcon(":/images/icon16/delta.png", G::iconOpacity);
     templateRenameBtn->setToolTip("Rename the selected template");
-    templateRenameBtn->setAttribute(Qt::WA_TranslucentBackground, true);
-    templateRenameBtn->setWindowOpacity(0.5);
     btns.append(templateRenameBtn);
     connect(templateRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentTemplate);
     BarBtn *templateDeleteBtn = new BarBtn();
-    templateDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    templateDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     templateDeleteBtn->setToolTip("Delete the selected template");
     btns.append(templateDeleteBtn);
     connect(templateDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::test2);
     BarBtn *templateNewBtn = new BarBtn();
-    templateNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    templateNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
     templateNewBtn->setToolTip("Create a new template");
     connect(templateNewBtn, &BarBtn::clicked, this, &EmbelProperties::newEmbelTemplate);
     btns.append(templateNewBtn);
@@ -1275,7 +1368,7 @@ void EmbelProperties::addBorders()
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
     BarBtn *borderNewBtn = new BarBtn();
-    borderNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    borderNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
     borderNewBtn->setToolTip("Create a new border");
     btns.append(borderNewBtn);
     connect(borderNewBtn, &BarBtn::clicked, this, &EmbelProperties::newBorder);
@@ -1304,7 +1397,7 @@ void EmbelProperties::addTexts()
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
     BarBtn *textNewBtn = new BarBtn();
-    textNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    textNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
     textNewBtn->setToolTip("Create a new text item");
     btns.append(textNewBtn);
     connect(textNewBtn, &BarBtn::clicked, this, &EmbelProperties::newText);
@@ -1333,11 +1426,11 @@ void EmbelProperties::addRectangles()
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
 //    rectangleDeleteBtn = new BarBtn();
-//    rectangleDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+//    rectangleDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
 //    rectangleDeleteBtn->setToolTip("Delete the open rectangle");
 //    btns.append(rectangleDeleteBtn);
     BarBtn *rectangleNewBtn = new BarBtn();
-    rectangleNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    rectangleNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
     rectangleNewBtn->setToolTip("Create a new rectangle");
     btns.append(rectangleNewBtn);
     addItem(i);
@@ -1371,7 +1464,7 @@ void EmbelProperties::addGraphics()
 //    graphicDeleteBtn->setToolTip("Delete the open graphic");
 //    btns.append(graphicDeleteBtn);
     BarBtn *graphicNewBtn = new BarBtn();
-    graphicNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    graphicNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
     graphicNewBtn->setToolTip("Create a new graphic");
     btns.append(graphicNewBtn);
     addItem(i);
@@ -1401,7 +1494,7 @@ void EmbelProperties::addStyles()
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
     BarBtn *styleNewBtn = new BarBtn();
-    styleNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    styleNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
     styleNewBtn->setToolTip("Create a new style");
     connect(styleNewBtn, &BarBtn::clicked, this, &EmbelProperties::newStyle);
     btns.append(styleNewBtn);
@@ -1426,7 +1519,7 @@ void EmbelProperties::addStyles()
     i.min = 0;
     i.max = 360;
     i.fixedWidth = 50;
-//    f.horizontalFitPx = i.value.toInt();
+    globalLightDirection = i.value.toInt();
     addItem(i);
 
     QString path = "Embel/Styles";
@@ -1459,18 +1552,18 @@ void EmbelProperties::addStyle(QString name, int n)
     i.delegateType = DT_BarBtns;
     BarBtn *styleRenameBtn = new BarBtn();
     styleRenameBtn->setObjectName(styleName);
-    styleRenameBtn->setIcon(QIcon(":/images/icon16/delta.png"));
+    styleRenameBtn->setIcon(":/images/icon16/delta.png", G::iconOpacity);
     styleRenameBtn->setToolTip("Rename this style");
     btns.append(styleRenameBtn);
     connect(styleRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentStyle);
     styleDeleteBtn = new BarBtn();
     styleDeleteBtn->setObjectName(styleName);
-    styleDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    styleDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     styleDeleteBtn->setToolTip("Delete this style");
     btns.append(styleDeleteBtn);
     connect(styleDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     BarBtn *effectNewBtn = new BarBtn();
-    effectNewBtn->setIcon(QIcon(":/images/icon16/new.png"));
+    effectNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
     effectNewBtn->setToolTip("Add an effect to this style");
     effectNewBtn->setObjectName(styleName);
     btns.append(effectNewBtn);
@@ -1492,7 +1585,7 @@ void EmbelProperties::addStyle(QString name, int n)
     if (groups.contains("Highlight")) addHighlightEffect(styleIdx);
     if (groups.contains("Shadow")) addShadowEffect(styleIdx);
 
-    qDebug() << __FUNCTION__ << styleName << effects.length();
+//    qDebug() << __FUNCTION__ << styleName << effects.length();
     styleMap[styleName] = effects;
 }
 
@@ -1507,7 +1600,7 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
     QString parentName = parIdx.data(UR_Name).toString();
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::blur;
-    QString effectName = uniqueEffectName(parentName, winnow_effects::shadow, "Blur");
+    QString effectName = uniqueEffectName(parentName, winnow_effects::blur, "Blur");
     effect.effectName = effectName;
 
     QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
@@ -1524,14 +1617,28 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
     i.hasValue = true;      // tool button
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
+    effectUpBtn = new BarBtn();
+    effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
+    effectUpBtn->setToolTip("Up this effect");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectUpBtn);
+    connect(effectUpBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectUp);
+    effectDownBtn = new BarBtn();
+    effectDownBtn->setIcon(":/images/icon16/down.png", G::iconOpacity);
+    effectDownBtn->setToolTip("Down this effect");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectDownBtn);
+    connect(effectDownBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectDown);
     effectDeleteBtn = new BarBtn();
-    effectDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    effectDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     effectDeleteBtn->setToolTip("Delete this effect");
     // btn vector used in BarBtnEditor to show button in tree
     btns.append(effectDeleteBtn);
     connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     addItem(i);
     parIdx = capIdx;
+    effectUpBtn->index = capIdx;
+    effectDownBtn->index = capIdx;
     effectDeleteBtn->index = capIdx;
 
     // blur radius
@@ -1612,14 +1719,28 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
+    effectUpBtn = new BarBtn();
+    effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
+    effectUpBtn->setToolTip("Up this effect");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectUpBtn);
+    connect(effectUpBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectUp);
+    effectDownBtn = new BarBtn();
+    effectDownBtn->setIcon(":/images/icon16/down.png", G::iconOpacity);
+    effectDownBtn->setToolTip("Down this effect");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectDownBtn);
+    connect(effectDownBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectDown);
     effectDeleteBtn = new BarBtn();
-    effectDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    effectDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     effectDeleteBtn->setToolTip("Delete this effect");
     // btn vector used in BarBtnEditor to show button in tree
     btns.append(effectDeleteBtn);
     connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     addItem(i);
     parIdx = capIdx;
+    effectUpBtn->index = capIdx;
+    effectDownBtn->index = capIdx;
     effectDeleteBtn->index = capIdx;
 
     // highlight size
@@ -1647,6 +1768,31 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
     effect.highlight.margin = i.value.toInt();
     addItem(i);
 
+    // highlight opacity
+    i.name = "opacity";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Opacity";
+    i.tooltip = "The opacity of the highlight.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "opacity";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = 100;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+//    i.fixedWidth = 50;
+    effect.highlight.a = i.value.toInt() * 255 / 100;
+    addItem(i);
+
     // highlight color
     i.name = "color";
     i.parIdx = parIdx;
@@ -1672,7 +1818,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
     effect.highlight.r = color.red();
     effect.highlight.g = color.green();
     effect.highlight.b = color.blue();
-    effect.highlight.a = color.alpha();
+//    effect.highlight.a = color.alpha();
     addItem(i);
 
     effects.append(effect);
@@ -1706,14 +1852,28 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     i.hasValue = true;      // tool button
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
+    effectUpBtn = new BarBtn();
+    effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
+    effectUpBtn->setToolTip("Up this effect");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectUpBtn);
+    connect(effectUpBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectUp);
+    effectDownBtn = new BarBtn();
+    effectDownBtn->setIcon(":/images/icon16/down.png", G::iconOpacity);
+    effectDownBtn->setToolTip("Down this effect");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectDownBtn);
+    connect(effectDownBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectDown);
     effectDeleteBtn = new BarBtn();
-    effectDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    effectDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     effectDeleteBtn->setToolTip("Delete this effect");
     // btn vector used in BarBtnEditor to show button in tree
     btns.append(effectDeleteBtn);
     connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     addItem(i);
     parIdx = capIdx;
+    effectUpBtn->index = capIdx;
+    effectDownBtn->index = capIdx;
     effectDeleteBtn->index = capIdx;
 
     // shadow size
@@ -1820,6 +1980,12 @@ void EmbelProperties::newText()
 
 void EmbelProperties::deleteItem()
 {
+/*
+The tree header rows can contain delete buttons.  All such delete operations are
+processed here.  The item (row in model) has to be removed from the data model,
+from local vectors and from QSettings.  Also, if it is referred to elsewhere, such
+as a style in a stylelist for a text, then the lists need to be updated.
+*/
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
     /*
     qDebug() << __FUNCTION__
@@ -1828,7 +1994,6 @@ void EmbelProperties::deleteItem()
 //             */
     QModelIndex idx = btn->index;
     if (!idx.isValid()) return;
-//    idx = model->index(idx.row(), 0, idx.parent());
     int row = idx.row();
     QString name = idx.data(UR_Name).toString();
     QModelIndex parIdx = idx.parent();
@@ -1877,6 +2042,14 @@ void EmbelProperties::deleteItem()
             if (parName == "Borders") b[i].name = newName;
             if (parName == "Texts") t[i].name = newName;
         }
+    }
+
+    // update references to style
+    if (parName == "Styles") {
+        for (int i = 0; i < textStyleObjectEditor.length(); ++i) {
+            textStyleObjectEditor[i]->removeItem(name);
+        }
+        // rgh add for rectangles, borders and graphics
     }
 
     // select another item
@@ -1975,13 +2148,14 @@ void EmbelProperties::treeChange(QModelIndex idx)
         if (okToSelect(idx, selName)) {
             selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
-        if (!isStyle) collapseAll();
-        else {
+//        if (!isStyle) collapseAll();
+//        else {
+            collapse(model->index(_image,0));
             collapse(model->index(_borders,0));
             collapse(model->index(_texts,0));
             collapse(model->index(_rectangles,0));
             collapse(model->index(_graphics,0));
-        }
+//        }
         expand(model->index(_templates,0));
         expand(model->index(_borders,0));
         expand(model->index(_texts,0));
@@ -2089,48 +2263,23 @@ void EmbelProperties::solo()
 
 void EmbelProperties::test1()
 {
-    e->test();
+//    e->test();
+
 }
 
 void EmbelProperties::test2()
 {
-    using namespace winnow_effects;
-    qDebug() << "\nStyles\n";
-    QMapIterator<QString, QList<Effect>> s(styleMap);
-    while (s.hasNext()) {
-        s.next();
-        int n = s.value().length();
-        qDebug() << "Style:" << s.key() << "has" << n << "effects.";
-        // effects in style
-//        qDebug() << __FUNCTION__ << s.value().length();
-        for (int i =0; i < n; ++i) {
-            const Effect &ef = s.value().at(i);
-            qDebug() << "  Effect index =" << i;
-            qDebug() << "  effectName   =" << ef.effectName;
-            qDebug() << "  effectType   =" << ef.effectType;
-
-            switch (ef.effectType) {
-            case blur:
-                qDebug() << "    Blur: radius       =" << ef.blur.radius;
-                qDebug() << "    Blur: quality      =" << ef.blur.quality;
-                qDebug() << "    Blur: transposed   =" << ef.blur.transposed;
-                break;
-            case highlight:
-                qDebug() << "    Highlight: margin  =" << ef.highlight.margin;
-                qDebug() << "    Highlight: r       =" << ef.highlight.r;
-                qDebug() << "    Highlight: g       =" << ef.highlight.g;
-                qDebug() << "    Highlight: b       =" << ef.highlight.b;
-                qDebug() << "    Highlight: a       =" << ef.highlight.a;
-                break;
-            case shadow:
-                qDebug() << "    Shadow: size       =" << ef.shadow.size;
-                qDebug() << "    Shadow: blurRadius =" << ef.shadow.blurRadius;
-                qDebug() << "    Shadow: r          =" << ef.shadow.r;
-                qDebug() << "    Shadow: g          =" << ef.shadow.g;
-                qDebug() << "    Shadow: b          =" << ef.shadow.b;
-                qDebug() << "    Shadow: a          =" << ef.shadow.a;
-            }
-        }
+    qDebug() << sin(45);
+    double r = 5;
+    for (double i = 0; i <= 360; i+=5) {
+        double rads = qDegreesToRadians(i);
+        double x = -r * sin(rads);
+        double y = -r * cos(rads);
+        qDebug().noquote()
+                 << "i =" << QString::number(i).leftJustified(4)
+                 << "r =" << QString::number(r).leftJustified(4)
+                 << "x =" << QString::number(x, 'g', 2).leftJustified(6)
+                 << "y =" << QString::number(y, 'g', 2).leftJustified(6);
     }
 }
 
@@ -2175,7 +2324,7 @@ void EmbelProperties::addBorder(int count)
     i.delegateType = DT_BarBtns;
     borderDeleteBtn = new BarBtn();
     borderDeleteBtn->setObjectName(borderName);
-    borderDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    borderDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     borderDeleteBtn->setToolTip("Delete this border");
     btns.append(borderDeleteBtn);
     connect(borderDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
@@ -2448,7 +2597,7 @@ void EmbelProperties::addText(int count)
     i.delegateType = DT_BarBtns;
     textDeleteBtn = new BarBtn();
     textDeleteBtn->setObjectName(textName);
-    textDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
+    textDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     textDeleteBtn->setToolTip("Delete this text item");
     btns.append(textDeleteBtn);
     connect(textDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
@@ -2502,6 +2651,12 @@ void EmbelProperties::addText(int count)
     i.dropList << anchorContainerList;
     text.anchorContainer = i.value.toString();
     addItem(i);
+
+    // update tree based on anchorObject (Image does not have border areas)
+    if (text.anchorObject == "Image") {
+        model->setData(capIdx, true, UR_isHidden);
+        model->setData(valIdx, true, UR_isHidden);
+    }
 
     i.name = "x";
     i.parIdx = parIdx;
@@ -2641,10 +2796,7 @@ void EmbelProperties::addText(int count)
     i.type = "QString";
     i.dropList << "Text" << "Metadata template";
     text.source = i.value.toString();
-    addItem(i);
-
-    // remember index from PropertyEditor::addItem when update visible source rows below
-    QModelIndex sourceIdx = capIdx;
+    addItem(i);    
 
     i.name = "text";
     i.parIdx = parIdx;
@@ -2669,6 +2821,12 @@ void EmbelProperties::addText(int count)
     border.color = i.value.toString();
     text.text = i.value.toString();
     addItem(i);
+
+    // update tree based on source
+    if (text.source == "Metadata template") {
+        model->setData(capIdx, true, UR_isHidden);
+        model->setData(valIdx, true, UR_isHidden);
+    }
 
     i.name = "metadataTemplate";
     i.parIdx = parIdx;
@@ -2696,8 +2854,8 @@ void EmbelProperties::addText(int count)
     addItem(i);
 
     // update tree based on source
-//    qDebug() << __FUNCTION__ << "Update text source" << sourceIdx;
-    textItemChange(sourceIdx);
+    if (text.source == "Text") model->setData(capIdx, true, UR_isHidden);
+    if (text.source == "Text") model->setData(valIdx, true, UR_isHidden);
 
     i.name = "size";
     i.parIdx = parIdx;
@@ -2854,7 +3012,7 @@ void EmbelProperties::addText(int count)
     i.type = "QString";
     i.dropList << "No style" << styleList;        // rgh must update if add/delete/rename styles
     text.style = i.value.toString();
-    addItem(i);
+    textStyleObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
 
     // add the text info to the vector of texts t
     t << text;

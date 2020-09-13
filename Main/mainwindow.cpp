@@ -2861,13 +2861,6 @@ void MW::createActions()
     addAction(zoomToggleAction);
     connect(zoomToggleAction, &QAction::triggered, this, &MW::zoomToggle);
 
-//    thumbsWrapAction = new QAction(tr("Wrap thumbs"), this);
-//    thumbsWrapAction->setObjectName("wrapThumbs");
-//    thumbsWrapAction->setShortcutVisibleInContextMenu(true);
-//    thumbsWrapAction->setCheckable(true);
-//    addAction(thumbsWrapAction);
-//    connect(thumbsWrapAction, &QAction::triggered, this, &MW::toggleThumbWrap);
-
     thumbsEnlargeAction = new QAction(tr("Enlarge thumbs"), this);
     thumbsEnlargeAction->setObjectName("enlargeThumbs");
     thumbsEnlargeAction->setShortcutVisibleInContextMenu(true);
@@ -2879,28 +2872,6 @@ void MW::createActions()
     thumbsShrinkAction->setShortcutVisibleInContextMenu(true);
     addAction(thumbsShrinkAction);
     connect(thumbsShrinkAction, &QAction::triggered, this, &MW::thumbsShrink);
-
-//    thumbsFitAction = new QAction(tr("Fit thumbs"), this);
-//    thumbsFitAction->setObjectName("thumbsZoomOut");
-//    thumbsFitAction->setShortcutVisibleInContextMenu(true);
-//    addAction(thumbsFitAction);
-//    connect(thumbsFitAction, &QAction::triggered, this, &MW::setDockFitThumbs);
-
-//    showThumbLabelsAction = new QAction(tr("Thumb labels"), this);
-//    showThumbLabelsAction->setObjectName("showLabels");
-//    showThumbLabelsAction->setCheckable(true);
-////    showThumbLabelsAction->setChecked(thumbView->showThumbLabels);
-//    connect(showThumbLabelsAction, SIGNAL(triggered()), this, SLOT(setThumbLabels()));
-//    showThumbLabelsAction->setEnabled(true);
-
-    // Window menu Visibility actions
-
-//    windowTitleBarVisibleAction = new QAction(tr("Window Titlebar"), this);
-//    windowTitleBarVisibleAction->setObjectName("toggleWindowsTitleBar");
-//    windowTitleBarVisibleAction->setShortcutVisibleInContextMenu(true);
-//    windowTitleBarVisibleAction->setCheckable(true);
-//    addAction(windowTitleBarVisibleAction);
-//    connect(windowTitleBarVisibleAction, &QAction::triggered, this, &MW::setWindowsTitleBarVisibility);
 
 //#ifdef Q_OS_WIN
     menuBarVisibleAction = new QAction(tr("Menubar"), this);
@@ -4632,14 +4603,14 @@ void MW::createEmbelDock()
 
     // question mark button
     BarBtn *embelQuestionBtn = new BarBtn();
-    embelQuestionBtn->setIcon(QIcon(":/images/icon16/questionmark.png"));
+    embelQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
     embelQuestionBtn->setToolTip("Embel coordinate and container system.");
     connect(embelQuestionBtn, &BarBtn::clicked, embelProperties, &EmbelProperties::coordHelp);
     embelTitleLayout->addWidget(embelQuestionBtn);
 
     // close button
     BarBtn *embelCloseBtn = new BarBtn();
-    embelCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
+    embelCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     embelCloseBtn->setToolTip("Hide the Embellish Panel");
     connect(embelCloseBtn, &BarBtn::clicked, this, &MW::toggleEmbelDockVisibility);
     embelTitleLayout->addWidget(embelCloseBtn);
@@ -4668,16 +4639,16 @@ void MW::createDocks()
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
 
-    folderDockOrigWidget = folderDock->titleBarWidget();
-    favDockOrigWidget = favDock->titleBarWidget();
-    filterDockOrigWidget = filterDock->titleBarWidget();
-    metadataDockOrigWidget = metadataDock->titleBarWidget();
-    thumbDockOrigWidget = thumbDock->titleBarWidget();
-    folderDockEmptyWidget = new QWidget;
-    favDockEmptyWidget = new QWidget;
-    filterDockEmptyWidget = new QWidget;
-    metadataDockEmptyWidget = new QWidget;
-    thumbDockEmptyWidget = new QWidget;
+//    folderDockOrigWidget = folderDock->titleBarWidget();
+//    favDockOrigWidget = favDock->titleBarWidget();
+//    filterDockOrigWidget = filterDock->titleBarWidget();
+//    metadataDockOrigWidget = metadataDock->titleBarWidget();
+//    thumbDockOrigWidget = thumbDock->titleBarWidget();
+//    folderDockEmptyWidget = new QWidget;
+//    favDockEmptyWidget = new QWidget;
+//    filterDockEmptyWidget = new QWidget;
+//    metadataDockEmptyWidget = new QWidget;
+//    thumbDockEmptyWidget = new QWidget;
 
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::tabifyDockWidget(folderDock, favDock);
@@ -6057,6 +6028,7 @@ workspace with a matching name to the action is used.
     favDockVisibleAction->setChecked(w.isFavDockVisible);
     filterDockVisibleAction->setChecked(w.isFilterDockVisible);
     metadataDockVisibleAction->setChecked(w.isMetadataDockVisible);
+    embelDockVisibleAction->setChecked(w.isEmbelDockVisible);
     thumbDockVisibleAction->setChecked(w.isThumbDockVisible);
     infoVisibleAction->setChecked(w.isImageInfoVisible);
     asLoupeAction->setChecked(w.isLoupeDisplay);
@@ -6097,6 +6069,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.isFavDockVisible = favDockVisibleAction->isChecked();
     wsd.isFilterDockVisible = filterDockVisibleAction->isChecked();
     wsd.isMetadataDockVisible = metadataDockVisibleAction->isChecked();
+    wsd.isEmbelDockVisible = embelDockVisibleAction->isChecked();
     wsd.isThumbDockVisible = thumbDockVisibleAction->isChecked();
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
 
@@ -6221,8 +6194,8 @@ app is "stranded" on secondary monitors that are not attached.
     favDockVisibleAction->setChecked(true);
     filterDockVisibleAction->setChecked(true);
     metadataDockVisibleAction->setChecked(true);
+    embelDockVisibleAction->setChecked(false);
     thumbDockVisibleAction->setChecked(true);
-
 
 //    thumbView->iconPadding = 0;
     thumbView->iconWidth = 100;
@@ -6247,12 +6220,14 @@ app is "stranded" on secondary monitors that are not attached.
     favDock->setFloating(false);
     filterDock->setFloating(false);
     metadataDock->setFloating(false);
+    embelDock->setFloating(false);
     thumbDock->setFloating(false);
 
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
     addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
+//    addDockWidget(Qt::RightDockWidgetArea, embelDock);
     addDockWidget(Qt::BottomDockWidgetArea, thumbDock);
 
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
@@ -6327,19 +6302,14 @@ void MW::reportWorkspace(int n)
              << "\nisFavDockVisible" << ws.isFavDockVisible
              << "\nisFilterDockVisible" << ws.isFilterDockVisible
              << "\nisMetadataDockVisible" << ws.isMetadataDockVisible
+             << "\nisEmbelDockVisible" << ws.isEmbelDockVisible
              << "\nisThumbDockVisible" << ws.isThumbDockVisible
-             << "\nisFolderLocked" << ws.isFolderDockLocked
-             << "\nisFavLocked" << ws.isFavDockLocked
-             << "\nisFilterLocked" << ws.isFilterDockLocked
-             << "\nisMetadataLocked" << ws.isMetadataDockLocked
-             << "\nisThumbsLocked" << ws.isThumbDockLocked
              << "\nthumbSpacing" << ws.thumbSpacing
              << "\nthumbPadding" << ws.thumbPadding
              << "\nthumbWidth" << ws.thumbWidth
              << "\nthumbHeight" << ws.thumbHeight
              << "\nlabelFontSize" << ws.labelFontSize
              << "\nshowThumbLabels" << ws.showThumbLabels
-//             << "\nwrapThumbs" << ws.wrapThumbs
              << "\nthumbSpacingGrid" << ws.thumbSpacingGrid
              << "\nthumbPaddingGrid" << ws.thumbPaddingGrid
              << "\nthumbWidthGrid" << ws.thumbWidthGrid
@@ -6377,19 +6347,14 @@ void MW::loadWorkspaces()
         ws.isFavDockVisible = setting->value("isFavDockVisible").toBool();
         ws.isFilterDockVisible = setting->value("isFilterDockVisible").toBool();
         ws.isMetadataDockVisible = setting->value("isMetadataDockVisible").toBool();
+        ws.isEmbelDockVisible = setting->value("isEmbelDockVisible").toBool();
         ws.isThumbDockVisible = setting->value("isThumbDockVisible").toBool();
-        ws.isFolderDockLocked = setting->value("isFolderDockLocked").toBool();
-        ws.isFavDockLocked = setting->value("isFavDockLocked").toBool();
-        ws.isFilterDockLocked = setting->value("isFilterDockLocked").toBool();
-        ws.isMetadataDockLocked = setting->value("isMetadataDockLocked").toBool();
-        ws.isThumbDockLocked = setting->value("isThumbDockLocked").toBool();
         ws.thumbSpacing = setting->value("thumbSpacing").toInt();
         ws.thumbPadding = setting->value("thumbPadding").toInt();
         ws.thumbWidth = setting->value("thumbWidth").toInt();
         ws.thumbHeight = setting->value("thumbHeight").toInt();
         ws.labelFontSize = setting->value("labelFontSize").toInt();
         ws.showThumbLabels = setting->value("showThumbLabels").toBool();
-//        ws.wrapThumbs = setting->value("wrapThumbs").toBool();
         ws.thumbSpacingGrid = setting->value("thumbSpacingGrid").toInt();
         ws.thumbPaddingGrid = setting->value("thumbPaddingGrid").toInt();
         ws.thumbWidthGrid = setting->value("thumbWidthGrid").toInt();
@@ -6424,19 +6389,14 @@ void MW::reportState()
              << "\nisFavDockVisible" << w.isFavDockVisible
              << "\nisFilterDockVisible" << w.isFilterDockVisible
              << "\nisMetadataDockVisible" << w.isMetadataDockVisible
+             << "\nisEmbelDockVisible" << w.isEmbelDockVisible
              << "\nisThumbDockVisible" << w.isThumbDockVisible
-             << "\nisFolderLocked" << w.isFolderDockLocked
-             << "\nisFavLocked" << w.isFavDockLocked
-             << "\nisFilterLocked" << w.isFilterDockLocked
-             << "\nisMetadataLocked" << w.isMetadataDockLocked
-             << "\nisThumbsLocked" << w.isThumbDockLocked
              << "\nthumbSpacing" << w.thumbSpacing
              << "\nthumbPadding" << w.thumbPadding
              << "\nthumbWidth" << w.thumbWidth
              << "\nthumbHeight" << w.thumbHeight
              << "\nlabelFontSize" << w.labelFontSize
              << "\nshowThumbLabels" << w.showThumbLabels
-//             << "\nwrapThumbs" << w.wrapThumbs
              << "\nthumbSpacingGrid" << w.thumbSpacingGrid
              << "\nthumbPaddingGrid" << w.thumbPaddingGrid
              << "\nthumbWidthGrid" << w.thumbWidthGrid
@@ -7181,6 +7141,8 @@ void MW::toggleFullScreen()
         filterDock->setVisible(fullScreenDocks.isFilters);
         metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
         metadataDock->setVisible(fullScreenDocks.isMetadata);
+        embelDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
+        embelDock->setVisible(fullScreenDocks.isMetadata);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
         thumbDock->setVisible(fullScreenDocks.isThumbs);
 //        thumbView->selectThumb(currentRow);
@@ -7607,6 +7569,7 @@ re-established when the application is re-opened.
     setting->setValue("isFavDockVisible", favDockVisibleAction->isChecked());
     setting->setValue("isFilterDockVisible", filterDockVisibleAction->isChecked());
     setting->setValue("isMetadataDockVisible", metadataDockVisibleAction->isChecked());
+    setting->setValue("isEmbelDockVisible", embelDockVisibleAction->isChecked());
     setting->setValue("isThumbDockVisible", thumbDockVisibleAction->isChecked());
 
     /* Property Editor */
@@ -7628,6 +7591,13 @@ re-established when the application is re-opened.
 
     /* MetadataDock floating info */
     setting->beginGroup(("MetadataDock"));
+    setting->setValue("screen", metadataDock->dw.screen);
+    setting->setValue("pos", metadataDock->dw.pos);
+    setting->setValue("size", metadataDock->dw.size);
+    setting->endGroup();
+
+    /* EmbelDock floating info */
+    setting->beginGroup(("EmbelDock"));
     setting->setValue("screen", metadataDock->dw.screen);
     setting->setValue("pos", metadataDock->dw.pos);
     setting->setValue("size", metadataDock->dw.size);
@@ -7770,18 +7740,13 @@ re-established when the application is re-opened.
         setting->setValue("isFavDockVisible", ws.isFavDockVisible);
         setting->setValue("isFilterDockVisible", ws.isFilterDockVisible);
         setting->setValue("isMetadataDockVisible", ws.isMetadataDockVisible);
+        setting->setValue("isEmbelDockVisible", ws.isEmbelDockVisible);
         setting->setValue("isThumbDockVisible", ws.isThumbDockVisible);
-        setting->setValue("isFolderDockLocked", ws.isFolderDockLocked);
-        setting->setValue("isFavDockLocked", ws.isFavDockLocked);
-        setting->setValue("isFilterDockLocked", ws.isFilterDockLocked);
-        setting->setValue("isMetadataDockLocked", ws.isMetadataDockLocked);
-        setting->setValue("isThumbDockLocked", ws.isThumbDockLocked);
         setting->setValue("thumbSpacing", ws.thumbSpacing);
         setting->setValue("thumbPadding", ws.thumbPadding);
         setting->setValue("thumbWidth", ws.thumbWidth);
         setting->setValue("thumbHeight", ws.thumbHeight);
         setting->setValue("showThumbLabels", ws.showThumbLabels);
-//        setting->setValue("wrapThumbs", ws.wrapThumbs);
         setting->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
         setting->setValue("thumbPaddingGrid", ws.thumbPaddingGrid);
         setting->setValue("thumbWidthGrid", ws.thumbWidthGrid);

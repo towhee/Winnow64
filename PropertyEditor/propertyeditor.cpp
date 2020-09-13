@@ -84,6 +84,21 @@ void PropertyEditor::itemChange(QModelIndex)
 
 }
 
+void PropertyEditor::updateHiddenRows(QModelIndex parent)
+{
+    for (int r = 0; r < model->rowCount(parent); ++r) {
+        QModelIndex idx = model->index(r, 0, parent);
+        if (model->data(idx, UR_isHidden).toBool())
+            setRowHidden(r, parent, true);
+        else
+            setRowHidden(r, parent, false);
+        // iterate children
+        if (model->hasChildren(idx)) {
+            updateHiddenRows(idx);
+        }
+    }
+}
+
 QModelIndex PropertyEditor::findIndex(QString name)
 {
     QModelIndex start = model->index(0,0,QModelIndex());
@@ -131,15 +146,13 @@ supplied by the calling function.
     }
     int row;
 //   capIdx;                                        // caption field defined in header file
-    QModelIndex valIdx;                             // value field
+//   valIdx;                                        // value field defined in header
     QModelIndex parIdx = QModelIndex();             // parent caption field
     QStandardItem *capItem = new QStandardItem;
     QStandardItem *valItem = new QStandardItem;
     QStandardItem *parItem = new QStandardItem;
     parItem = nullptr;
 
-//    getIndex(i.parentName);
-//    parIdx = foundIdx;
     if (i.parIdx.isValid()) parIdx = i.parIdx;
     else parIdx = findIndex(i.parentName);
     parItem = model->itemFromIndex(parIdx);
@@ -181,6 +194,8 @@ supplied by the calling function.
     model->setData(capIdx, i.path, UR_Path);
     model->setData(valIdx, i.path, UR_Path);
     model->setData(capIdx, i.itemIndex, UR_ItemIndex);
+    model->setData(capIdx, false, UR_isHidden);
+    model->setData(valIdx, false, UR_isHidden);
 
     // if no value associated (header item or spacer etc) then we are done
     if (!i.hasValue) {
@@ -201,7 +216,8 @@ supplied by the calling function.
     model->setData(valIdx, i.color, UR_Color);
     model->setData(valIdx, i.dropList, UR_StringList);
     model->setData(valIdx, i.index, UR_QModelIndex);
-    sourceIdx[i.key] = valIdx;
+
+    sourceIdx[i.key] = valIdx;      // map item key string to value index
 
     /*
     qDebug() << __FUNCTION__

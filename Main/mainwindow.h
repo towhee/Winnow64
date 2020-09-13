@@ -137,20 +137,15 @@ public:
         bool isFavDockVisible;
         bool isFilterDockVisible;
         bool isMetadataDockVisible;
+        bool isEmbelDockVisible;
         bool isThumbDockVisible;
         bool isImageDockVisible;
-        bool isFolderDockLocked;
-        bool isFavDockLocked;
-        bool isFilterDockLocked;
-        bool isMetadataDockLocked;
-        bool isThumbDockLocked;
         int thumbSpacing;
         int thumbPadding;
         int thumbWidth;
         int thumbHeight;
         int labelFontSize;
         bool showThumbLabels;
-//        bool wrapThumbs;
         int thumbSpacingGrid;
         int thumbPaddingGrid;
         int thumbWidthGrid;
@@ -227,7 +222,6 @@ public:
     bool updateImageCacheWhenFileSelectionChange = true;
     QStack<QString> *slideshowRandomHistoryStack;
 
-
     // preferences: cache
     QString cacheSizeMethod;
     int cacheSizePercentOfAvailable;
@@ -262,7 +256,7 @@ public:
         GridTab,
         StartTab,
         MessageTab,
-        EmbelTab
+        EmbelTab            // rgh req'd? fo coord help?
     };
 
     // mode change
@@ -473,7 +467,7 @@ private slots:
     void setFilterDockVisibility();
     void setMetadataDockVisibility();
     void setEmbelDockVisibility();
-    void setMetadataDockFixedSize();
+    void setMetadataDockFixedSize();    // rgh finish or remove
 
     void toggleThumbDockVisibity();
     void toggleEmbelDockVisibility();
@@ -848,15 +842,16 @@ private:
     UpdateApp *updateAppDlg;
     ZoomDlg *zoomDlg = nullptr;
     QTimer *slideShowTimer;
-    QWidget *folderDockOrigWidget;
-    QWidget *favDockOrigWidget;
-    QWidget *filterDockOrigWidget;
-    QWidget *metadataDockOrigWidget;
-    QWidget *thumbDockOrigWidget;
+//    QWidget *folderDockOrigWidget;
+//    QWidget *favDockOrigWidget;
+//    QWidget *filterDockOrigWidget;
+//    QWidget *metadataDockOrigWidget;
+//    QWidget *thumbDockOrigWidget;
     QWidget *folderDockEmptyWidget;
     QWidget *favDockEmptyWidget;
     QWidget *filterDockEmptyWidget;
     QWidget *metadataDockEmptyWidget;
+    QWidget *embelDockEmptyWidget;
     QWidget *thumbDockEmptyWidget;
     QVBoxLayout *imageViewContainer;
 

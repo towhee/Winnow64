@@ -389,7 +389,11 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             // caption text and no borders for root item
             if (isSelected) painter->setPen(selPen);
             else painter->setPen(catPen);
-            painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, text);
+            if (index.data(UR_isDecoration).toBool())
+                painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, text);
+            else {
+                painter->drawText(r2, Qt::AlignVCenter|Qt::TextSingleLine, text);
+            }
 //            painter->drawText(r3, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
             // draw separator line if not gradient background
             if (!index.data(UR_isBackgroundGradient).toBool()) {

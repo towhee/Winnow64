@@ -156,6 +156,8 @@ namespace G
     extern QColor progressTargetColor;
     extern QColor progressImageCacheColor;
 
+    extern double iconOpacity;
+
     extern QString mode;
     extern QString fileSelectionChangeSource;
 

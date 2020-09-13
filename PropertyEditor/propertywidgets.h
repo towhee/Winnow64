@@ -30,6 +30,7 @@ enum UserRole
     UR_isHeader,                        // header item in QTreeView
     UR_isDecoration,                    // show expand/collapse decoration
     UR_isBackgroundGradient,            // make the root rows dark gray gradiant
+    UR_isHidden,                        // flag to hide/show row in tree
     UR_Source,                          // name of property/variable being edited
     UR_QModelIndex,                     // index from another model ie infoView->ok
     UR_Type,                            // the data type required by the delegate
@@ -187,6 +188,7 @@ public:
     void setValue(QVariant value);
     QString value();
     void addItem(QString item);
+    void removeItem(QString item);
     void refresh(QStringList items);
 
 protected:
