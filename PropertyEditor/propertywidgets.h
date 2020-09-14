@@ -23,21 +23,23 @@ enum DelegateType
 enum UserRole
 {
     UR_Name = Qt::UserRole + 1,         // unique name to identify the item
+    UR_SortOrder,                       // override appended order ie for effects
     UR_Path,                            // settings path
     UR_DelegateType,                    // the PropertyWidget (custom widget)
+    UR_hasValue,                        // if no value then value column is empty
+    UR_CaptionIsEditable,               // can edit caption
     UR_ItemIndex,                       // the index for the border, text, rectangle or graphic
     UR_isIndent,                        // indent column 0 in QTreeView
     UR_isHeader,                        // header item in QTreeView
     UR_isDecoration,                    // show expand/collapse decoration
     UR_isBackgroundGradient,            // make the root rows dark gray gradiant
     UR_isHidden,                        // flag to hide/show row in tree
-    UR_Source,                          // name of property/variable being edited
+    UR_Source,                          // name of property/variable being edited = i.key
     UR_QModelIndex,                     // index from another model ie infoView->ok
     UR_Type,                            // the data type required by the delegate
     UR_Min,                             // validate minimum value
     UR_Max,                             // validate maximum value
-    UR_LabelFixedWidth,                 // fixed label width in custom widget
-    UR_LineEditFixedWidth,              // fixed lineedit width in custom widget
+    UR_FixedWidth,                      // fixed label width in custom widget
     UR_StringList,                      // list of items for comboBox
     UR_IsBtn,                           // button to run a secondary widget or help
     UR_BtnText,                         // button text

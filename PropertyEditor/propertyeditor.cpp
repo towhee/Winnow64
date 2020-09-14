@@ -38,14 +38,22 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     setEditTriggers(QAbstractItemView::AllEditTriggers);
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setSelectionMode(QAbstractItemView::SingleSelection);
+    setSortingEnabled(true);
 
     indentation = 15;
     setIndentation(indentation);  
 
     model = new QStandardItemModel;
+    model->setColumnCount(3);
+//    hideColumn(1);
+//    setColumnWidth(2, 0);
+//    setColumnHidden(2, true);
+//    proxy = new SortProperties(this);
+//    proxy->setSourceModel(model);
+//    setSortingEnabled(true);
     setModel(model);
-    // abstract
-    model->setColumnCount(2);
+//    setModel(proxy);
+
 //    QHeaderView *hdr = new QHeaderView(Qt::Horizontal);
 //    setHeader(hdr);
 //    hdr->setVisible(true);
@@ -66,7 +74,7 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 
 void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
 /*
-Sets the custom editor widget for the value column (column 1).
+Sets the custom editor widget for the value column (column 2).
 */
 {
     {
@@ -87,7 +95,7 @@ void PropertyEditor::itemChange(QModelIndex)
 void PropertyEditor::updateHiddenRows(QModelIndex parent)
 {
     for (int r = 0; r < model->rowCount(parent); ++r) {
-        QModelIndex idx = model->index(r, 0, parent);
+        QModelIndex idx = model->index(r, CapColumn, parent);
         if (model->data(idx, UR_isHidden).toBool())
             setRowHidden(r, parent, true);
         else
@@ -150,6 +158,7 @@ supplied by the calling function.
     QModelIndex parIdx = QModelIndex();             // parent caption field
     QStandardItem *capItem = new QStandardItem;
     QStandardItem *valItem = new QStandardItem;
+    QStandardItem *ordItem = new QStandardItem;
     QStandardItem *parItem = new QStandardItem;
     parItem = nullptr;
 
@@ -157,29 +166,43 @@ supplied by the calling function.
     else parIdx = findIndex(i.parentName);
     parItem = model->itemFromIndex(parIdx);
     /*
-    qDebug() << "Item =" << i.name
-             << "Searching for =" << i.parentName
-             << "parIdx =" << parIdx
-             << "parIdx name =" << model->data(parIdx, UR_Name).toString();
+    qDebug()
+            << "Parent =" << i.parentName
+             << "Item =" << i.name;
+//             << "parIdx name =" << model->data(parIdx, UR_Name).toString();
 //    */
     if (parItem == nullptr) {
         // First item = root
         row = model->rowCount();
-        if (row == 0) model->insertRow(0, QModelIndex());
-        else model->appendRow(capItem);
-        capIdx = model->index(row, 0, QModelIndex());
-        valIdx = model->index(row, 1, QModelIndex());
+        model->insertRow(row, QModelIndex());
+//        if (row == 0) model->insertRow(0, QModelIndex());
+//        else model->appendRow(capItem);
+        capIdx = model->index(row, CapColumn, QModelIndex());
+        ordIdx = model->index(row, OrdColumn, QModelIndex());
+        valIdx = model->index(row, ValColumn, QModelIndex());
     }
     else {
         // row for next child to add
-        row = parItem->rowCount();
-        parItem->setChild(row, 0, capItem);
-        parItem->setChild(row, 1, valItem);
-        capIdx = capItem->index();
-        valIdx = valItem->index();
+        if (i.insertRow == -1) row = model->rowCount(parIdx);
+        else row = i.insertRow;
+        if (row) {
+            parItem->insertRow(row, capItem);
+        }
+        else {
+            parItem->setChild(row, CapColumn, capItem);
+            parItem->setChild(row, ValColumn, valItem);
+            parItem->setChild(row, OrdColumn, ordItem);
+        }
+        capIdx = model->index(row, CapColumn, parIdx);
+        ordIdx = model->index(row, OrdColumn, parIdx);
+        valIdx = model->index(row, ValColumn, parIdx);
     }
 
     // caption
+    model->setData(capIdx, i.hasValue, UR_hasValue);
+    model->setData(capIdx, i.sortOrder, UR_SortOrder); // -1 if not sort
+    if (i.sortOrder != -1) model->setData(ordIdx, i.sortOrder);
+    model->setData(capIdx, i.captionIsEditable, UR_CaptionIsEditable);
     model->setData(capIdx, i.isIndent, UR_isIndent);
     model->setData(capIdx, i.isHeader, UR_isHeader);
     model->setData(valIdx, i.isHeader, UR_isHeader);
@@ -196,6 +219,7 @@ supplied by the calling function.
     model->setData(capIdx, i.itemIndex, UR_ItemIndex);
     model->setData(capIdx, false, UR_isHidden);
     model->setData(valIdx, false, UR_isHidden);
+    model->setData(capIdx, i.key, UR_Source);           // key = "effect" for sortOrder
 
     // if no value associated (header item or spacer etc) then we are done
     if (!i.hasValue) {
@@ -212,7 +236,7 @@ supplied by the calling function.
     model->setData(valIdx, i.type, UR_Type);
     model->setData(valIdx, i.min, UR_Min);
     model->setData(valIdx, i.max, UR_Max);
-    model->setData(valIdx, i.fixedWidth, UR_LabelFixedWidth);
+    model->setData(valIdx, i.fixedWidth, UR_FixedWidth);
     model->setData(valIdx, i.color, UR_Color);
     model->setData(valIdx, i.dropList, UR_StringList);
     model->setData(valIdx, i.index, UR_QModelIndex);
@@ -225,7 +249,7 @@ supplied by the calling function.
                 ;
 //    */
 
-    // reset data struct
+    // reset item data struct
     clearItemInfo(i);
 
     return propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
@@ -239,6 +263,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     #endif
     }
     i.itemIndex = 0;                // all
+    i.sortOrder = -1;               // all
     i.name = "";                    // all
     i.parentName = "";              // all
     i.isHeader = false;             // set true for header rows
@@ -260,6 +285,41 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.color = QColor(G::textShade,G::textShade,G::textShade).name();
     i.index = QModelIndex();
     i.parIdx = QModelIndex();
+    i.insertRow = -1;               // if -1 then append, else insert at this row
+}
+
+void PropertyEditor::getItemInfo(QModelIndex &idx, ItemInfo &copy)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    capIdx = idx;
+    valIdx = model->index(idx.row(), ValColumn, idx.parent());
+    copy.itemIndex = model->data(capIdx, UR_ItemIndex).toInt();
+    copy.name = model->data(capIdx, UR_Name).toString();
+    copy.parentName = model->data(capIdx.parent(), UR_Name).toString();
+    copy.isHeader = model->data(capIdx, UR_isHeader).toBool();
+    copy.isDecoration = model->data(capIdx, UR_isDecoration).toBool();
+    copy.isIndent = model->data(capIdx, UR_isIndent).toBool();
+    copy.decorateGradient = model->data(capIdx, UR_isBackgroundGradient).toBool();
+    copy.hasValue = model->data(capIdx, UR_hasValue).toBool();
+    copy.tooltip = model->data(capIdx.parent(), Qt::ToolTipRole).toString();
+    copy.captionText = model->data(capIdx).toString();
+    copy.captionIsEditable = model->data(capIdx, UR_CaptionIsEditable).toBool();
+    copy.delegateType = model->data(valIdx, UR_DelegateType).toInt();
+    copy.value = model->data(valIdx);
+    copy.key = model->data(capIdx.parent(), UR_Source).toString();
+    copy.type = model->data(valIdx, UR_Type).toString();
+    copy.min = model->data(valIdx, UR_Min).toInt();
+    copy.max = model->data(valIdx, UR_Max).toInt();
+    copy.fixedWidth = model->data(valIdx, UR_FixedWidth).toInt();
+    copy.dropList = model->data(valIdx, UR_StringList).toStringList();
+    copy.color = model->data(valIdx, UR_Color).toString();
+    copy.index = capIdx;
+    copy.parIdx = capIdx.parent();
+    copy.insertRow = -1;
 }
 
 void PropertyEditor::expandBranch(QString text)
@@ -287,7 +347,8 @@ Set the current index and expand/collapse when click anywhere on a row that has 
     if (event->button() == Qt::RightButton) return;
 
     QModelIndex idx = indexAt(event->pos());
-    if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
+//    QModelIndex idx = proxy->mapToSource(indexAt(event->pos()));
+    if (idx.column() != 0) idx = model->index(idx.row(), CapColumn, idx.parent());
     QStandardItem *item = model->itemFromIndex(idx);
     if (idx.isValid() && item->hasChildren()) {
         bool isRoot = idx.parent() == QModelIndex();
@@ -318,11 +379,64 @@ void PropertyEditor::resizeColumns(QString stringToFitCaptions, QString stringTo
     QFontMetrics fm(fnt);
     captionColumnWidth = fm.boundingRect(stringToFitCaptions).width();
     valueColumnWidth = fm.boundingRect(stringToFitValues).width();
-    setColumnWidth(0, captionColumnWidth);
-    setColumnWidth(1, valueColumnWidth);
+    setColumnWidth(CapColumn, captionColumnWidth);
+    setColumnWidth(OrdColumn, 25);
+    setColumnWidth(ValColumn, valueColumnWidth);
+//    hideColumn(OrdColumn);
+
 }
 
 void PropertyEditor::setSolo(bool isSolo)
 {
     this->isSolo = isSolo;
+}
+
+// --------------------------------------------------------------------------------------------
+// SortProperties Class used to custom sort
+// --------------------------------------------------------------------------------------------
+
+SortProperties::SortProperties(QObject *parent) : QSortFilterProxyModel(parent)
+{
+}
+
+bool SortProperties::lessThan(const QModelIndex &left, const QModelIndex &right) const
+{
+    return false;
+    QString leftSource = left.data(UR_Source).toString();
+    QString rightSource = right.data(UR_Source).toString();
+    QString leftName = left.data().toString();
+    QString rightName = right.data().toString();
+    QString leftParent = left.parent().data().toString();
+    QString rightParent = right.parent().data().toString();
+    int leftSortOrder = left.data(UR_SortOrder).toInt();
+    int rightSortOrder = right.data(UR_SortOrder).toInt();
+    bool less = left.data(UR_SortOrder) > right.data(UR_SortOrder);
+    bool test = leftName < rightName;
+
+    qDebug().noquote()
+             << "LEFT "
+             << left
+             << "P:" << leftParent.leftJustified(22)
+             << "N:" << leftName.leftJustified(22)
+             << "S:" << leftSource.leftJustified(20)
+                ;
+//             << "RIGHT "
+//             << "N:" << rightName.leftJustified(22)
+//             << "P:" << rightParent.leftJustified(22)
+//             << "S:" << rightSource.leftJustified(20)
+//             << leftSortOrder
+//             << rightSortOrder
+//             << "less =" << less
+//             << "test =" << test
+//                ;
+
+    if (leftSource == "effect"  && rightSource == "effect") {
+        return less;
+    }
+    return false;
+}
+
+void SortProperties::sortChange()
+{
+    invalidate();
 }

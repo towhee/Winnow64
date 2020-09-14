@@ -107,9 +107,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     expand(model->index(_rectangles,0));
     expand(model->index(_graphics,0));
 
-    updateHiddenRows(QModelIndex());
-//    diagnosticVectors();
-//    qDebug() << __FUNCTION__ << "styleList =" << styleList;
+//    updateHiddenRows(QModelIndex());
 }
 
 void EmbelProperties::initialize()
@@ -223,7 +221,7 @@ Called from new and delete borders to rebuild the lists that have the borders
 //    getIndex("Borders");
 //    QModelIndex bordersIdx = foundIdx;
     for (int i = 0; i < model->rowCount(bordersIdx); ++i) {
-        QString borderName = model->index(i, 0, bordersIdx).data(UR_Name).toString();
+        QString borderName = model->index(i, CapColumn, bordersIdx).data(UR_Name).toString();
         borderList << borderName;
         anchorObjectList << borderName;
         for (int j = 0; j < 4; ++j) {
@@ -338,8 +336,8 @@ void EmbelProperties::diagnostic(QModelIndex parent)
     }
     // model
     for(int r = 0; r < model->rowCount(parent); ++r) {
-        QModelIndex idx0 = model->index(r, 0, parent);
-        QModelIndex idx1 = model->index(r, 1, parent);
+        QModelIndex idx0 = model->index(r, CapColumn, parent);
+        QModelIndex idx1 = model->index(r, ValColumn, parent);
         QString p = parent.data(UR_Name).toString();
         QString n = idx0.data(UR_Name).toString();
         QVariant v = idx1.data(Qt::EditRole);
@@ -375,7 +373,7 @@ void EmbelProperties::renameCurrentStyle()
     #endif
     }
     QString styleName;  // need to get this somehow
-    QString name = Utilities::inputText("Rename Style", "Rename style " + styleName);
+    QString name = Utilities::inputText("Rename Style", "Rename style " + styleName, styleList);
     if (name == "") return;
     rename("Embel/Styles", styleName, name);
 //    readTemplateList();
@@ -390,7 +388,9 @@ void EmbelProperties::renameCurrentTemplate()
         G::track(__FUNCTION__);
 #endif
     }
-    QString name = Utilities::inputText("Rename Template", "Rename template " + templateName);
+    QString name = Utilities::inputText("Rename Template",
+                                        "Rename template " + templateName,
+                                        templateList);
     if (name == "") return;
     rename("Embel/Templates", templateName, name);
     readTemplateList();
@@ -472,7 +472,9 @@ void EmbelProperties::newEmbelTemplate()
     G::track(__FUNCTION__);
     #endif
     }
-    templateName = Utilities::inputText("New Template", "Enter new template name");
+    templateName = Utilities::inputText("New Template",
+                                        "Enter new template name",
+                                        templateList);
     templateId = templateList.count();
 //    // set all templates except templateName isCurrent = false
 //    setCurrentTemplate();
@@ -524,18 +526,20 @@ void EmbelProperties::moveEffectUp()
     if (!idx.isValid()) return;
     int row = idx.row();
     if (row == 0) return;
-    QModelIndex par = idx.parent();
 
-    model->takeRow(row);
-    qDebug() << __FUNCTION__ << idx;
-    return;
-    QStandardItem *item = new QStandardItem;
-    item = model->itemFromIndex(idx);
-//    QStandardItem *parent = new QStandardItem;
-//    parent = item->parent();
-
-    item->parent()->takeChild(row);
-//    item->parent()->insertRow(row - 1, item);
+    QModelIndex parIdx = idx.parent();
+    QModelIndex swapOrderIdx = model->index(row - 1, OrdColumn, parIdx);
+    QModelIndex thisOrderIdx = model->index(row, OrdColumn, parIdx);
+    int swapOrder = swapOrderIdx.data().toInt();
+    int thisOrder = thisOrderIdx.data().toInt();
+    model->setData(swapOrderIdx, thisOrder);
+    model->setData(thisOrderIdx, swapOrder);
+    qDebug() << __FUNCTION__
+             << "idx.data =" << idx.data()
+             << "parIdx.data() =" << parIdx.data();
+    QStandardItem *par = new QStandardItem;
+    par = model->itemFromIndex(thisOrderIdx.parent());
+    par->sortChildren(OrdColumn, Qt::AscendingOrder);
 }
 
 void EmbelProperties::moveEffectDown()
@@ -546,12 +550,6 @@ void EmbelProperties::moveEffectDown()
     int row = idx.row();
     int rows = model->rowCount(idx.parent());
     if (row == rows) return;
-    QStandardItem *item = new QStandardItem;
-    item = model->itemFromIndex(idx);
-    //    QStandardItem *parent = new QStandardItem;
-    //    parent = item->parent();
-    item->parent()->takeChild(row);
-    item->parent()->insertRow(row + 1, item);
 }
 
 void EmbelProperties::updateEffectsFromModelOrder(QString style)
@@ -1574,7 +1572,6 @@ void EmbelProperties::addStyle(QString name, int n)
     styleDeleteBtn->index = capIdx;
     styleRenameBtn->index = capIdx;
     effectNewBtn->index = capIdx;
-//    expand(model->index(_styles,0));
 
     setting->beginGroup(settingRootPath);
     QStringList groups = setting->childGroups();
@@ -1587,6 +1584,32 @@ void EmbelProperties::addStyle(QString name, int n)
 
 //    qDebug() << __FUNCTION__ << styleName << effects.length();
     styleMap[styleName] = effects;
+}
+
+void EmbelProperties::addEffectHeaderButtons()
+{
+    effectUpBtn = new BarBtn();
+    effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
+    effectUpBtn->setToolTip("Move effect up");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectUpBtn);
+    connect(effectUpBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectUp);
+    effectDownBtn = new BarBtn();
+    effectDownBtn->setIcon(":/images/icon16/down.png", G::iconOpacity);
+    effectDownBtn->setToolTip("Move effect down");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectDownBtn);
+    connect(effectDownBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectDown);
+    effectDeleteBtn = new BarBtn();
+    effectDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
+    effectDeleteBtn->setToolTip("Delete this effect");
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectDeleteBtn);
+    connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
+    addItem(i);
+    effectUpBtn->index = capIdx;
+    effectDownBtn->index = capIdx;
+    effectDeleteBtn->index = capIdx;
 }
 
 void EmbelProperties::addBlurEffect(QModelIndex parIdx)
@@ -1602,6 +1625,7 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
     effect.effectType = winnow_effects::blur;
     QString effectName = uniqueEffectName(parentName, winnow_effects::blur, "Blur");
     effect.effectName = effectName;
+    effect.effectOrder = model->rowCount(parIdx);
 
     QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
 
@@ -1612,34 +1636,27 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
     i.parIdx = parIdx;
     i.parentName = parentName;
     i.path = "Embel/Styles/" + parentName + "/" + effectName;
-    i.captionText = "Blur";
+    i.captionText = effectName;
     i.tooltip = "";
     i.hasValue = true;      // tool button
     i.captionIsEditable = false;
+    i.key = "sortOrder";
     i.delegateType = DT_BarBtns;
-    effectUpBtn = new BarBtn();
-    effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
-    effectUpBtn->setToolTip("Up this effect");
-    // btn vector used in BarBtnEditor to show button in tree
-    btns.append(effectUpBtn);
-    connect(effectUpBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectUp);
-    effectDownBtn = new BarBtn();
-    effectDownBtn->setIcon(":/images/icon16/down.png", G::iconOpacity);
-    effectDownBtn->setToolTip("Down this effect");
-    // btn vector used in BarBtnEditor to show button in tree
-    btns.append(effectDownBtn);
-    connect(effectDownBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectDown);
-    effectDeleteBtn = new BarBtn();
-    effectDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
-    effectDeleteBtn->setToolTip("Delete this effect");
-    // btn vector used in BarBtnEditor to show button in tree
-    btns.append(effectDeleteBtn);
-    connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
-    addItem(i);
+    // get settings data
+    QString key = i.path + "/sortOrder";
+    qDebug() << __FUNCTION__
+             << "key =" << key
+             << "value =" << setting->value(key).toInt();
+    if (setting->contains(key)) {
+        i.sortOrder = setting->value(key).toInt();
+    }
+    else {
+        i.sortOrder = model->rowCount(parIdx);
+        setting->setValue(key, i.sortOrder);
+    }
+    addEffectHeaderButtons();
+//    addItem(i);
     parIdx = capIdx;
-    effectUpBtn->index = capIdx;
-    effectDownBtn->index = capIdx;
-    effectDeleteBtn->index = capIdx;
 
     // blur radius
     i.name = "radius";
@@ -1718,30 +1735,23 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
     i.tooltip = "";
     i.hasValue = true;
     i.captionIsEditable = false;
+    i.key = "sortOrder";
     i.delegateType = DT_BarBtns;
-    effectUpBtn = new BarBtn();
-    effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
-    effectUpBtn->setToolTip("Up this effect");
-    // btn vector used in BarBtnEditor to show button in tree
-    btns.append(effectUpBtn);
-    connect(effectUpBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectUp);
-    effectDownBtn = new BarBtn();
-    effectDownBtn->setIcon(":/images/icon16/down.png", G::iconOpacity);
-    effectDownBtn->setToolTip("Down this effect");
-    // btn vector used in BarBtnEditor to show button in tree
-    btns.append(effectDownBtn);
-    connect(effectDownBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectDown);
-    effectDeleteBtn = new BarBtn();
-    effectDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
-    effectDeleteBtn->setToolTip("Delete this effect");
-    // btn vector used in BarBtnEditor to show button in tree
-    btns.append(effectDeleteBtn);
-    connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
-    addItem(i);
+    // get settings data
+    QString key = i.path + "/sortOrder";
+    qDebug() << __FUNCTION__
+             << "key =" << key
+             << "value =" << setting->value(key).toInt();
+    if (setting->contains(key)) {
+        i.sortOrder = setting->value(key).toInt();
+    }
+    else {
+        i.sortOrder = model->rowCount(parIdx);
+        setting->setValue(key, i.sortOrder);
+    }
+    addEffectHeaderButtons();
+//    addItem(i);
     parIdx = capIdx;
-    effectUpBtn->index = capIdx;
-    effectDownBtn->index = capIdx;
-    effectDeleteBtn->index = capIdx;
 
     // highlight size
     i.name = "margin";  // x and y offsets are equal
@@ -1851,30 +1861,24 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     i.tooltip = "";
     i.hasValue = true;      // tool button
     i.captionIsEditable = false;
+    i.key = "sortOrder";
     i.delegateType = DT_BarBtns;
-    effectUpBtn = new BarBtn();
-    effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
-    effectUpBtn->setToolTip("Up this effect");
-    // btn vector used in BarBtnEditor to show button in tree
-    btns.append(effectUpBtn);
-    connect(effectUpBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectUp);
-    effectDownBtn = new BarBtn();
-    effectDownBtn->setIcon(":/images/icon16/down.png", G::iconOpacity);
-    effectDownBtn->setToolTip("Down this effect");
-    // btn vector used in BarBtnEditor to show button in tree
-    btns.append(effectDownBtn);
-    connect(effectDownBtn, &BarBtn::clicked, this, &EmbelProperties::moveEffectDown);
-    effectDeleteBtn = new BarBtn();
-    effectDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
-    effectDeleteBtn->setToolTip("Delete this effect");
-    // btn vector used in BarBtnEditor to show button in tree
-    btns.append(effectDeleteBtn);
-    connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
-    addItem(i);
+    // get settings data
+    QString key = i.path + "/sortOrder";
+    qDebug() << __FUNCTION__
+             << "key =" << key
+             << "value =" << setting->value(key).toInt();
+    if (setting->contains(key)) {
+        i.sortOrder = setting->value(key).toInt();
+        qDebug() << __FUNCTION__ << i.path << i.sortOrder;
+    }
+    else {
+        i.sortOrder = model->rowCount(parIdx);
+        setting->setValue(key, i.sortOrder);
+    }
+    addEffectHeaderButtons();
+//    addItem(i);
     parIdx = capIdx;
-    effectUpBtn->index = capIdx;
-    effectDownBtn->index = capIdx;
-    effectDeleteBtn->index = capIdx;
 
     // shadow size
     i.name = "size";
@@ -1961,7 +1965,7 @@ void EmbelProperties::newBorder()
     addBorder(row);
     updateBorderLists();
     if (G::isInitializing || isTemplateChange) return;
-    QModelIndex idx = model->index(row, 0, bordersIdx);
+    QModelIndex idx = model->index(row, CapColumn, bordersIdx);
     selectionModel()->clear();
     selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     e->build();
@@ -1972,7 +1976,7 @@ void EmbelProperties::newText()
     int row = model->rowCount(textsIdx);
     addText(row);
     if (G::isInitializing || isTemplateChange) return;
-    QModelIndex idx = model->index(row, 0, textsIdx);
+    QModelIndex idx = model->index(row, CapColumn, textsIdx);
     selectionModel()->clear();
     selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     e->build();
@@ -2031,13 +2035,13 @@ as a style in a stylelist for a text, then the lists need to be updated.
         QString itemBase = parName.left(parName.length() - 1);
         for (int i = row; i < model->rowCount(parIdx); ++i) {
             QString parPath = templatePath + parName;
-            QString oldName = model->index(i,0,parIdx).data().toString();
+            QString oldName = model->index(i,CapColumn,parIdx).data().toString();
             QString newName = itemBase + QString::number(i + 1);
             qDebug() << __FUNCTION__ << i << path << oldName << newName;
             // update setting
             rename(parPath, oldName, newName);
             // update model
-            model->setData(model->index(i,0,parIdx), newName);
+            model->setData(model->index(i,CapColumn,parIdx), newName);
             // update local struct
             if (parName == "Borders") b[i].name = newName;
             if (parName == "Texts") t[i].name = newName;
@@ -2055,8 +2059,8 @@ as a style in a stylelist for a text, then the lists need to be updated.
     // select another item
     int rowCount = model->rowCount(idx.parent());
     if (rowCount > 0) {
-        QModelIndex nextIdx = model->index(row, 0, parIdx);
-        if (!nextIdx.isValid()) nextIdx = model->index(rowCount - 1, 0, parIdx);
+        QModelIndex nextIdx = model->index(row, CapColumn, parIdx);
+        if (!nextIdx.isValid()) nextIdx = model->index(rowCount - 1, CapColumn, parIdx);
         selectionModel()->select(nextIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     }
 
@@ -2124,7 +2128,7 @@ void EmbelProperties::treeChange(QModelIndex idx)
 {
 //    qDebug() << __FUNCTION__ << idx << idx.isValid();
     if (!idx.isValid()) return;
-    if (idx.column() != 0) idx = model->index(idx.row(), 0, idx.parent());
+    if (idx.column() != 0) idx = model->index(idx.row(), CapColumn, idx.parent());
     bool hasChildren = model->hasChildren(idx);
     bool hasGrandChildren = model->hasChildren(model->index(0,0,idx));
     bool templateHdr = (idx == model->index(0,0));
@@ -2269,18 +2273,7 @@ void EmbelProperties::test1()
 
 void EmbelProperties::test2()
 {
-    qDebug() << sin(45);
-    double r = 5;
-    for (double i = 0; i <= 360; i+=5) {
-        double rads = qDegreesToRadians(i);
-        double x = -r * sin(rads);
-        double y = -r * cos(rads);
-        qDebug().noquote()
-                 << "i =" << QString::number(i).leftJustified(4)
-                 << "r =" << QString::number(r).leftJustified(4)
-                 << "x =" << QString::number(x, 'g', 2).leftJustified(6)
-                 << "y =" << QString::number(y, 'g', 2).leftJustified(6);
-    }
+    proxy->sortChange();
 }
 
 void EmbelProperties::coordHelp()

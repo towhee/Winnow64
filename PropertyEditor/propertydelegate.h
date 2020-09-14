@@ -7,6 +7,13 @@
 #include "Main/widgetcss.h"
 #include <QStyledItemDelegate>
 
+enum Fields
+{
+    CapColumn,      // Caption / Name
+    ValColumn,      // Value
+    OrdColumn       // Sort order
+};
+
 class PropertyDelegate : public QStyledItemDelegate
 {
     Q_OBJECT

@@ -33,7 +33,7 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     #endif
     }
     this->idx = idx;
-    int lineEditWidth = idx.data(UR_LabelFixedWidth).toInt();
+    int lineEditWidth = idx.data(UR_FixedWidth).toInt();
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
     source = idx.data(UR_Source).toString();
