@@ -9292,6 +9292,9 @@ Push the changes onto the pick history stack.
 
     // update filter counts
     buildFilters->updateCountFiltered();
+
+    // auto advance
+    if (idxList.length() == 1) thumbView->selectNext();
 }
 
 void MW::pushPick(QString fPath, QString status)

@@ -31,9 +31,9 @@ void GraphicsEffect::draw(QPainter* painter)
         const Effect &ef = effects.at(i);
         QColor color;
         QPointF pt;
-        qDebug() << __FUNCTION__
-                 << "ef.effectType =" << ef.effectType
-                 << "ef.effectName =" << ef.effectName;
+//        qDebug() << __FUNCTION__
+//                 << "ef.effectType =" << ef.effectType
+//                 << "ef.effectName =" << ef.effectName;
         switch (ef.effectType) {
         case blur:
             blurEffect(p, ef.blur.radius, ef.blur.quality, ef.blur.transposed);
@@ -110,6 +110,7 @@ void GraphicsEffect::shadowEffect(PainterParameters &p,
     // draw the actual pixmap...
     p.painter->drawPixmap(pos, p.px, p.bound);
 
+    /*
     qDebug() << __FUNCTION__
              << "size =" << size
              << "lightDirection =" << lightDirection
@@ -117,6 +118,7 @@ void GraphicsEffect::shadowEffect(PainterParameters &p,
              << "shadSize =" << shadSize
              << "offset =" << offset
                 ;
+//                */
 }
 
 void GraphicsEffect::highlightEffect(PainterParameters &p,

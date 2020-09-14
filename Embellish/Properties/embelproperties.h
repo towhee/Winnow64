@@ -208,6 +208,7 @@ private:
 
     bool isTemplateChange = false;
 
+    void addEffectHeaderButtons();
     BarBtn *borderDeleteBtn;
     BarBtn *textDeleteBtn;
     BarBtn *rectangleDeleteBtn;

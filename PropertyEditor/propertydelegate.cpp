@@ -366,9 +366,17 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QPixmap branchClosed(":/images/branch-closed-small.png");
     QPixmap branchOpen(":/images/branch-open-small.png");
 
+    // for debugging
+    if (index.column() == OrdColumn) {
+//        qDebug() << __FUNCTION__ << text << index.parent().data();
+        painter->drawText(option.rect, Qt::AlignVCenter|Qt::TextSingleLine, text);
+        painter->restore();
+        return;
+    }
+
     if (index.data(UR_isHeader).toBool()) {
         // header item in caption column
-        if (index.column() == 0) {
+        if (index.column() == CapColumn) {
             // paint the gradient covering the decoration
             if (index.data(UR_isBackgroundGradient).toBool()) {
                 painter->fillRect(r1, rootCategoryBackground);
@@ -417,7 +425,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         painter->setPen(regPen);
 
         // caption text and cell borders
-        if (index.column() == 0) {
+        if (index.column() == CapColumn) {
             if (!isAlternatingRows) painter->fillRect(r2, valueRowBackground);
             if (isSelected) painter->setPen(selPen);
             // indent the text (maybe not if not a header)
@@ -432,7 +440,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             painter->setPen(brdPen);
             painter->drawLine(r0.bottomLeft(), r0.bottomRight());
         }
-        if (index.column() == 1) {
+        if (index.column() == ValColumn) {
             if (!isAlternatingRows) painter->fillRect(r, valueRowBackground);
             painter->setPen(brdPen);
             // draw bottom line

@@ -29,7 +29,8 @@ void InputDlg::ok()
 {
     input = ui->inputText->text();
     if (doNotUse.contains(ui->inputText->text())) {
-        ui->msg->setText();
+        ui->msg->setText("Duplicate text.  Please try again.");
+        return;
     }
     accept();
 }

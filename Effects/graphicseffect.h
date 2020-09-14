@@ -29,6 +29,7 @@ namespace winnow_effects
     struct Effect {
         enum EffectType effectType;
         QString effectName;         // unique: req'd in case more than one of same effect
+        int effectOrder;            // order executed within style
         union {
             Blur blur;
             Highlight highlight;
