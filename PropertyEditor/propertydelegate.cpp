@@ -366,14 +366,6 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QPixmap branchClosed(":/images/branch-closed-small.png");
     QPixmap branchOpen(":/images/branch-open-small.png");
 
-    // for debugging
-    if (index.column() == OrdColumn) {
-//        qDebug() << __FUNCTION__ << text << index.parent().data();
-        painter->drawText(option.rect, Qt::AlignVCenter|Qt::TextSingleLine, text);
-        painter->restore();
-        return;
-    }
-
     if (index.data(UR_isHeader).toBool()) {
         // header item in caption column
         if (index.column() == CapColumn) {

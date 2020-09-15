@@ -45,19 +45,8 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 
     model = new QStandardItemModel;
     model->setColumnCount(3);
-//    hideColumn(1);
-//    setColumnWidth(2, 0);
-//    setColumnHidden(2, true);
-//    proxy = new SortProperties(this);
-//    proxy->setSourceModel(model);
-//    setSortingEnabled(true);
+    model->setSortRole(UR_SortOrder);
     setModel(model);
-//    setModel(proxy);
-
-//    QHeaderView *hdr = new QHeaderView(Qt::Horizontal);
-//    setHeader(hdr);
-//    hdr->setVisible(true);
-
     propertyDelegate = new PropertyDelegate(this);
     setItemDelegate(propertyDelegate);
     styleOptionViewItem = new QStyleOptionViewItem;
@@ -158,7 +147,7 @@ supplied by the calling function.
     QModelIndex parIdx = QModelIndex();             // parent caption field
     QStandardItem *capItem = new QStandardItem;
     QStandardItem *valItem = new QStandardItem;
-    QStandardItem *ordItem = new QStandardItem;
+//    QStandardItem *ordItem = new QStandardItem;
     QStandardItem *parItem = new QStandardItem;
     parItem = nullptr;
 
@@ -178,7 +167,7 @@ supplied by the calling function.
 //        if (row == 0) model->insertRow(0, QModelIndex());
 //        else model->appendRow(capItem);
         capIdx = model->index(row, CapColumn, QModelIndex());
-        ordIdx = model->index(row, OrdColumn, QModelIndex());
+//        ordIdx = model->index(row, OrdColumn, QModelIndex());
         valIdx = model->index(row, ValColumn, QModelIndex());
     }
     else {
@@ -191,17 +180,17 @@ supplied by the calling function.
         else {
             parItem->setChild(row, CapColumn, capItem);
             parItem->setChild(row, ValColumn, valItem);
-            parItem->setChild(row, OrdColumn, ordItem);
+//            parItem->setChild(row, OrdColumn, ordItem);
         }
         capIdx = model->index(row, CapColumn, parIdx);
-        ordIdx = model->index(row, OrdColumn, parIdx);
+//        ordIdx = model->index(row, OrdColumn, parIdx);
         valIdx = model->index(row, ValColumn, parIdx);
     }
 
     // caption
     model->setData(capIdx, i.hasValue, UR_hasValue);
     model->setData(capIdx, i.sortOrder, UR_SortOrder); // -1 if not sort
-    if (i.sortOrder != -1) model->setData(ordIdx, i.sortOrder);
+//    if (i.sortOrder != -1) model->setData(ordIdx, i.sortOrder);
     model->setData(capIdx, i.captionIsEditable, UR_CaptionIsEditable);
     model->setData(capIdx, i.isIndent, UR_isIndent);
     model->setData(capIdx, i.isHeader, UR_isHeader);
@@ -347,6 +336,7 @@ Set the current index and expand/collapse when click anywhere on a row that has 
     if (event->button() == Qt::RightButton) return;
 
     QModelIndex idx = indexAt(event->pos());
+    qDebug() << __FUNCTION__ << idx;
 //    QModelIndex idx = proxy->mapToSource(indexAt(event->pos()));
     if (idx.column() != 0) idx = model->index(idx.row(), CapColumn, idx.parent());
     QStandardItem *item = model->itemFromIndex(idx);
@@ -380,9 +370,9 @@ void PropertyEditor::resizeColumns(QString stringToFitCaptions, QString stringTo
     captionColumnWidth = fm.boundingRect(stringToFitCaptions).width();
     valueColumnWidth = fm.boundingRect(stringToFitValues).width();
     setColumnWidth(CapColumn, captionColumnWidth);
-    setColumnWidth(OrdColumn, 25);
+//    setColumnWidth(OrdColumn, 25);
     setColumnWidth(ValColumn, valueColumnWidth);
-//    hideColumn(OrdColumn);
+    hideColumn(OrdColumn);
 
 }
 
