@@ -27,13 +27,16 @@ void GraphicsEffect::draw(QPainter* painter)
 
     // iterate effects in style
     using namespace winnow_effects;
+//    std::sort(effects.begin(), effects.end(), [](Effect const &l, Effect const &r) {
+//              return l.effectOrder < r.effectOrder; });
     for (int i = 0; i < effects.length(); ++i) {
         const Effect &ef = effects.at(i);
         QColor color;
         QPointF pt;
-//        qDebug() << __FUNCTION__
-//                 << "ef.effectType =" << ef.effectType
-//                 << "ef.effectName =" << ef.effectName;
+        qDebug() << __FUNCTION__
+                 << "ef.effectOrder =" << ef.effectOrder
+                 << "ef.effectName =" << ef.effectName
+                    ;
         switch (ef.effectType) {
         case blur:
             blurEffect(p, ef.blur.radius, ef.blur.quality, ef.blur.transposed);
@@ -148,264 +151,267 @@ void GraphicsEffect::highlightEffect(PainterParameters &p,
 }
 
 
-//#define AVG(a,b)  ( ((((a)^(b)) & 0xfefefefeUL) >> 1) + ((a)&(b)) )
-//#define AVG16(a,b)  ( ((((a)^(b)) & 0xf7deUL) >> 1) + ((a)&(b)) )
 
-//QImage GraphicsEffect::halfScaled(const QImage &source)
-//{
-//    if (source.width() < 2 || source.height() < 2)
-//        return QImage();
+/*
+#define AVG(a,b)  ( ((((a)^(b)) & 0xfefefefeUL) >> 1) + ((a)&(b)) )
+#define AVG16(a,b)  ( ((((a)^(b)) & 0xf7deUL) >> 1) + ((a)&(b)) )
 
-//    QImage srcImage = source;
+QImage GraphicsEffect::halfScaled(const QImage &source)
+{
+    if (source.width() < 2 || source.height() < 2)
+        return QImage();
 
-//    if (source.format() == QImage::Format_Indexed8 || source.format() == QImage::Format_Grayscale8) {
-//        // assumes grayscale
-//        QImage dest(source.width() / 2, source.height() / 2, srcImage.format());
-//        dest.setDevicePixelRatio(source.devicePixelRatioF());
+    QImage srcImage = source;
 
-//        const uchar *src = reinterpret_cast<const uchar*>(const_cast<const QImage &>(srcImage).bits());
-//        int sx = srcImage.bytesPerLine();
-//        int sx2 = sx << 1;
+    if (source.format() == QImage::Format_Indexed8 || source.format() == QImage::Format_Grayscale8) {
+        // assumes grayscale
+        QImage dest(source.width() / 2, source.height() / 2, srcImage.format());
+        dest.setDevicePixelRatio(source.devicePixelRatioF());
 
-//        uchar *dst = reinterpret_cast<uchar*>(dest.bits());
-//        int dx = dest.bytesPerLine();
-//        int ww = dest.width();
-//        int hh = dest.height();
+        const uchar *src = reinterpret_cast<const uchar*>(const_cast<const QImage &>(srcImage).bits());
+        int sx = srcImage.bytesPerLine();
+        int sx2 = sx << 1;
 
-//        for (int y = hh; y; --y, dst += dx, src += sx2) {
-//            const uchar *p1 = src;
-//            const uchar *p2 = src + sx;
-//            uchar *q = dst;
-//            for (int x = ww; x; --x, ++q, p1 += 2, p2 += 2)
-//                *q = ((int(p1[0]) + int(p1[1]) + int(p2[0]) + int(p2[1])) + 2) >> 2;
-//        }
+        uchar *dst = reinterpret_cast<uchar*>(dest.bits());
+        int dx = dest.bytesPerLine();
+        int ww = dest.width();
+        int hh = dest.height();
 
-//        return dest;
-//    } else if (source.format() == QImage::Format_ARGB8565_Premultiplied) {
-//        QImage dest(source.width() / 2, source.height() / 2, srcImage.format());
-//        dest.setDevicePixelRatio(source.devicePixelRatioF());
+        for (int y = hh; y; --y, dst += dx, src += sx2) {
+            const uchar *p1 = src;
+            const uchar *p2 = src + sx;
+            uchar *q = dst;
+            for (int x = ww; x; --x, ++q, p1 += 2, p2 += 2)
+                *q = ((int(p1[0]) + int(p1[1]) + int(p2[0]) + int(p2[1])) + 2) >> 2;
+        }
 
-//        const uchar *src = reinterpret_cast<const uchar*>(const_cast<const QImage &>(srcImage).bits());
-//        int sx = srcImage.bytesPerLine();
-//        int sx2 = sx << 1;
+        return dest;
+    } else if (source.format() == QImage::Format_ARGB8565_Premultiplied) {
+        QImage dest(source.width() / 2, source.height() / 2, srcImage.format());
+        dest.setDevicePixelRatio(source.devicePixelRatioF());
 
-//        uchar *dst = reinterpret_cast<uchar*>(dest.bits());
-//        int dx = dest.bytesPerLine();
-//        int ww = dest.width();
-//        int hh = dest.height();
+        const uchar *src = reinterpret_cast<const uchar*>(const_cast<const QImage &>(srcImage).bits());
+        int sx = srcImage.bytesPerLine();
+        int sx2 = sx << 1;
 
-//        for (int y = hh; y; --y, dst += dx, src += sx2) {
-//            const uchar *p1 = src;
-//            const uchar *p2 = src + sx;
-//            uchar *q = dst;
-//            for (int x = ww; x; --x, q += 3, p1 += 6, p2 += 6) {
-//                // alpha
-//                q[0] = AVG(AVG(p1[0], p1[3]), AVG(p2[0], p2[3]));
-//                // rgb
-//                const quint16 p16_1 = (p1[2] << 8) | p1[1];
-//                const quint16 p16_2 = (p1[5] << 8) | p1[4];
-//                const quint16 p16_3 = (p2[2] << 8) | p2[1];
-//                const quint16 p16_4 = (p2[5] << 8) | p2[4];
-//                const quint16 result = AVG16(AVG16(p16_1, p16_2), AVG16(p16_3, p16_4));
-//                q[1] = result & 0xff;
-//                q[2] = result >> 8;
-//            }
-//        }
+        uchar *dst = reinterpret_cast<uchar*>(dest.bits());
+        int dx = dest.bytesPerLine();
+        int ww = dest.width();
+        int hh = dest.height();
 
-//        return dest;
-//    } else if (source.format() != QImage::Format_ARGB32_Premultiplied
-//               && source.format() != QImage::Format_RGB32)
-//    {
-//        srcImage = source.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-//    }
+        for (int y = hh; y; --y, dst += dx, src += sx2) {
+            const uchar *p1 = src;
+            const uchar *p2 = src + sx;
+            uchar *q = dst;
+            for (int x = ww; x; --x, q += 3, p1 += 6, p2 += 6) {
+                // alpha
+                q[0] = AVG(AVG(p1[0], p1[3]), AVG(p2[0], p2[3]));
+                // rgb
+                const quint16 p16_1 = (p1[2] << 8) | p1[1];
+                const quint16 p16_2 = (p1[5] << 8) | p1[4];
+                const quint16 p16_3 = (p2[2] << 8) | p2[1];
+                const quint16 p16_4 = (p2[5] << 8) | p2[4];
+                const quint16 result = AVG16(AVG16(p16_1, p16_2), AVG16(p16_3, p16_4));
+                q[1] = result & 0xff;
+                q[2] = result >> 8;
+            }
+        }
 
-//    QImage dest(source.width() / 2, source.height() / 2, srcImage.format());
-//    dest.setDevicePixelRatio(source.devicePixelRatioF());
+        return dest;
+    } else if (source.format() != QImage::Format_ARGB32_Premultiplied
+               && source.format() != QImage::Format_RGB32)
+    {
+        srcImage = source.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    }
 
-//    const quint32 *src = reinterpret_cast<const quint32*>(const_cast<const QImage &>(srcImage).bits());
-//    int sx = srcImage.bytesPerLine() >> 2;
-//    int sx2 = sx << 1;
+    QImage dest(source.width() / 2, source.height() / 2, srcImage.format());
+    dest.setDevicePixelRatio(source.devicePixelRatioF());
 
-//    quint32 *dst = reinterpret_cast<quint32*>(dest.bits());
-//    int dx = dest.bytesPerLine() >> 2;
-//    int ww = dest.width();
-//    int hh = dest.height();
+    const quint32 *src = reinterpret_cast<const quint32*>(const_cast<const QImage &>(srcImage).bits());
+    int sx = srcImage.bytesPerLine() >> 2;
+    int sx2 = sx << 1;
 
-//    for (int y = hh; y; --y, dst += dx, src += sx2) {
-//        const quint32 *p1 = src;
-//        const quint32 *p2 = src + sx;
-//        quint32 *q = dst;
-//        for (int x = ww; x; --x, q++, p1 += 2, p2 += 2)
-//            *q = AVG(AVG(p1[0], p1[1]), AVG(p2[0], p2[1]));
-//    }
+    quint32 *dst = reinterpret_cast<quint32*>(dest.bits());
+    int dx = dest.bytesPerLine() >> 2;
+    int ww = dest.width();
+    int hh = dest.height();
 
-//    return dest;
-//}
+    for (int y = hh; y; --y, dst += dx, src += sx2) {
+        const quint32 *p1 = src;
+        const quint32 *p2 = src + sx;
+        quint32 *q = dst;
+        for (int x = ww; x; --x, q++, p1 += 2, p2 += 2)
+            *q = AVG(AVG(p1[0], p1[1]), AVG(p2[0], p2[1]));
+    }
 
-//template<int aprec, int zprec>
-//inline void qt_blurinner(uchar *bptr, int &zR, int &zG, int &zB, int &zA, int alpha)
-//{
-//    QRgb *pixel = (QRgb *)bptr;
+    return dest;
+}
 
-//#define Z_MASK (0xff << zprec)
-//    const int A_zprec = qt_static_shift<zprec - 24>(*pixel) & Z_MASK;
-//    const int R_zprec = qt_static_shift<zprec - 16>(*pixel) & Z_MASK;
-//    const int G_zprec = qt_static_shift<zprec - 8>(*pixel)  & Z_MASK;
-//    const int B_zprec = qt_static_shift<zprec>(*pixel)      & Z_MASK;
-//#undef Z_MASK
+template<int aprec, int zprec>
+inline void qt_blurinner(uchar *bptr, int &zR, int &zG, int &zB, int &zA, int alpha)
+{
+    QRgb *pixel = (QRgb *)bptr;
 
-//    const int zR_zprec = zR >> aprec;
-//    const int zG_zprec = zG >> aprec;
-//    const int zB_zprec = zB >> aprec;
-//    const int zA_zprec = zA >> aprec;
+#define Z_MASK (0xff << zprec)
+    const int A_zprec = qt_static_shift<zprec - 24>(*pixel) & Z_MASK;
+    const int R_zprec = qt_static_shift<zprec - 16>(*pixel) & Z_MASK;
+    const int G_zprec = qt_static_shift<zprec - 8>(*pixel)  & Z_MASK;
+    const int B_zprec = qt_static_shift<zprec>(*pixel)      & Z_MASK;
+#undef Z_MASK
 
-//    zR += alpha * (R_zprec - zR_zprec);
-//    zG += alpha * (G_zprec - zG_zprec);
-//    zB += alpha * (B_zprec - zB_zprec);
-//    zA += alpha * (A_zprec - zA_zprec);
+    const int zR_zprec = zR >> aprec;
+    const int zG_zprec = zG >> aprec;
+    const int zB_zprec = zB >> aprec;
+    const int zA_zprec = zA >> aprec;
 
-//#define ZA_MASK (0xff << (zprec + aprec))
-//    *pixel =
-//        qt_static_shift<24 - zprec - aprec>(zA & ZA_MASK)
-//        | qt_static_shift<16 - zprec - aprec>(zR & ZA_MASK)
-//        | qt_static_shift<8 - zprec - aprec>(zG & ZA_MASK)
-//        | qt_static_shift<-zprec - aprec>(zB & ZA_MASK);
-//#undef ZA_MASK
-//}
+    zR += alpha * (R_zprec - zR_zprec);
+    zG += alpha * (G_zprec - zG_zprec);
+    zB += alpha * (B_zprec - zB_zprec);
+    zA += alpha * (A_zprec - zA_zprec);
 
-//const int alphaIndex = (QSysInfo::ByteOrder == QSysInfo::BigEndian ? 0 : 3);
+#define ZA_MASK (0xff << (zprec + aprec))
+    *pixel =
+        qt_static_shift<24 - zprec - aprec>(zA & ZA_MASK)
+        | qt_static_shift<16 - zprec - aprec>(zR & ZA_MASK)
+        | qt_static_shift<8 - zprec - aprec>(zG & ZA_MASK)
+        | qt_static_shift<-zprec - aprec>(zB & ZA_MASK);
+#undef ZA_MASK
+}
 
-//template<int aprec, int zprec, bool alphaOnly>
-//inline void qt_blurrow(QImage & im, int line, int alpha)
-//{
-//    uchar *bptr = im.scanLine(line);
+const int alphaIndex = (QSysInfo::ByteOrder == QSysInfo::BigEndian ? 0 : 3);
 
-//    int zR = 0, zG = 0, zB = 0, zA = 0;
+template<int aprec, int zprec, bool alphaOnly>
+inline void qt_blurrow(QImage & im, int line, int alpha)
+{
+    uchar *bptr = im.scanLine(line);
 
-//    if (alphaOnly && im.format() != QImage::Format_Indexed8)
-//        bptr += alphaIndex;
+    int zR = 0, zG = 0, zB = 0, zA = 0;
 
-//    const int stride = im.depth() >> 3;
-//    const int im_width = im.width();
-//    for (int index = 0; index < im_width; ++index) {
-//        if (alphaOnly)
-//            qt_blurinner_alphaOnly<aprec, zprec>(bptr, zA, alpha);
-//        else
-//            qt_blurinner<aprec, zprec>(bptr, zR, zG, zB, zA, alpha);
-//        bptr += stride;
-//    }
+    if (alphaOnly && im.format() != QImage::Format_Indexed8)
+        bptr += alphaIndex;
 
-//    bptr -= stride;
+    const int stride = im.depth() >> 3;
+    const int im_width = im.width();
+    for (int index = 0; index < im_width; ++index) {
+        if (alphaOnly)
+            qt_blurinner_alphaOnly<aprec, zprec>(bptr, zA, alpha);
+        else
+            qt_blurinner<aprec, zprec>(bptr, zR, zG, zB, zA, alpha);
+        bptr += stride;
+    }
 
-//    for (int index = im_width - 2; index >= 0; --index) {
-//        bptr -= stride;
-//        if (alphaOnly)
-//            qt_blurinner_alphaOnly<aprec, zprec>(bptr, zA, alpha);
-//        else
-//            qt_blurinner<aprec, zprec>(bptr, zR, zG, zB, zA, alpha);
-//    }
-//}
+    bptr -= stride;
 
-//void GraphicsEffect::expblur(QImage &img, qreal radius, bool improvedQuality, int transposed)
-//{
-//    // halve the radius if we're using two passes
-//    if (improvedQuality)
-//        radius *= qreal(0.5);
+    for (int index = im_width - 2; index >= 0; --index) {
+        bptr -= stride;
+        if (alphaOnly)
+            qt_blurinner_alphaOnly<aprec, zprec>(bptr, zA, alpha);
+        else
+            qt_blurinner<aprec, zprec>(bptr, zR, zG, zB, zA, alpha);
+    }
+}
 
-//    Q_ASSERT(img.format() == QImage::Format_ARGB32_Premultiplied
-//             || img.format() == QImage::Format_RGB32
-//             || img.format() == QImage::Format_Indexed8
-//             || img.format() == QImage::Format_Grayscale8);
+void GraphicsEffect::expblur(QImage &img, qreal radius, bool improvedQuality, int transposed)
+{
+    // halve the radius if we're using two passes
+    if (improvedQuality)
+        radius *= qreal(0.5);
 
-//    // choose the alpha such that pixels at radius distance from a fully
-//    // saturated pixel will have an alpha component of no greater than
-//    // the cutOffIntensity
-//    const qreal cutOffIntensity = 2;
-//    int alpha = radius <= qreal(1e-5)
-//        ? ((1 << aprec)-1)
-//        : qRound((1<<aprec)*(1 - qPow(cutOffIntensity * (1 / qreal(255)), 1 / radius)));
+    Q_ASSERT(img.format() == QImage::Format_ARGB32_Premultiplied
+             || img.format() == QImage::Format_RGB32
+             || img.format() == QImage::Format_Indexed8
+             || img.format() == QImage::Format_Grayscale8);
 
-//    int img_height = img.height();
-//    for (int row = 0; row < img_height; ++row) {
-//        for (int i = 0; i <= int(improvedQuality); ++i)
-//            qt_blurrow<aprec, zprec, alphaOnly>(img, row, alpha);
-//    }
+    // choose the alpha such that pixels at radius distance from a fully
+    // saturated pixel will have an alpha component of no greater than
+    // the cutOffIntensity
+    const qreal cutOffIntensity = 2;
+    int alpha = radius <= qreal(1e-5)
+        ? ((1 << aprec)-1)
+        : qRound((1<<aprec)*(1 - qPow(cutOffIntensity * (1 / qreal(255)), 1 / radius)));
 
-//    QImage temp(img.height(), img.width(), img.format());
-//    temp.setDevicePixelRatio(img.devicePixelRatioF());
-//    if (transposed >= 0) {
-//        if (img.depth() == 8) {
-//            qt_memrotate270(reinterpret_cast<const quint8*>(img.bits()),
-//                            img.width(), img.height(), img.bytesPerLine(),
-//                            reinterpret_cast<quint8*>(temp.bits()),
-//                            temp.bytesPerLine());
-//        } else {
-//            qt_memrotate270(reinterpret_cast<const quint32*>(img.bits()),
-//                            img.width(), img.height(), img.bytesPerLine(),
-//                            reinterpret_cast<quint32*>(temp.bits()),
-//                            temp.bytesPerLine());
-//        }
-//    } else {
-//        if (img.depth() == 8) {
-//            qt_memrotate90(reinterpret_cast<const quint8*>(img.bits()),
-//                           img.width(), img.height(), img.bytesPerLine(),
-//                           reinterpret_cast<quint8*>(temp.bits()),
-//                           temp.bytesPerLine());
-//        } else {
-//            qt_memrotate90(reinterpret_cast<const quint32*>(img.bits()),
-//                           img.width(), img.height(), img.bytesPerLine(),
-//                           reinterpret_cast<quint32*>(temp.bits()),
-//                           temp.bytesPerLine());
-//        }
-//    }
+    int img_height = img.height();
+    for (int row = 0; row < img_height; ++row) {
+        for (int i = 0; i <= int(improvedQuality); ++i)
+            qt_blurrow<aprec, zprec, alphaOnly>(img, row, alpha);
+    }
 
-//    img_height = temp.height();
-//    for (int row = 0; row < img_height; ++row) {
-//        for (int i = 0; i <= int(improvedQuality); ++i)
-//            qt_blurrow<aprec, zprec, alphaOnly>(temp, row, alpha);
-//    }
+    QImage temp(img.height(), img.width(), img.format());
+    temp.setDevicePixelRatio(img.devicePixelRatioF());
+    if (transposed >= 0) {
+        if (img.depth() == 8) {
+            qt_memrotate270(reinterpret_cast<const quint8*>(img.bits()),
+                            img.width(), img.height(), img.bytesPerLine(),
+                            reinterpret_cast<quint8*>(temp.bits()),
+                            temp.bytesPerLine());
+        } else {
+            qt_memrotate270(reinterpret_cast<const quint32*>(img.bits()),
+                            img.width(), img.height(), img.bytesPerLine(),
+                            reinterpret_cast<quint32*>(temp.bits()),
+                            temp.bytesPerLine());
+        }
+    } else {
+        if (img.depth() == 8) {
+            qt_memrotate90(reinterpret_cast<const quint8*>(img.bits()),
+                           img.width(), img.height(), img.bytesPerLine(),
+                           reinterpret_cast<quint8*>(temp.bits()),
+                           temp.bytesPerLine());
+        } else {
+            qt_memrotate90(reinterpret_cast<const quint32*>(img.bits()),
+                           img.width(), img.height(), img.bytesPerLine(),
+                           reinterpret_cast<quint32*>(temp.bits()),
+                           temp.bytesPerLine());
+        }
+    }
 
-//    if (transposed == 0) {
-//        if (img.depth() == 8) {
-//            qt_memrotate90(reinterpret_cast<const quint8*>(temp.bits()),
-//                           temp.width(), temp.height(), temp.bytesPerLine(),
-//                           reinterpret_cast<quint8*>(img.bits()),
-//                           img.bytesPerLine());
-//        } else {
-//            qt_memrotate90(reinterpret_cast<const quint32*>(temp.bits()),
-//                           temp.width(), temp.height(), temp.bytesPerLine(),
-//                           reinterpret_cast<quint32*>(img.bits()),
-//                           img.bytesPerLine());
-//        }
-//    } else {
-//        img = temp;
-//    }
-//}
+    img_height = temp.height();
+    for (int row = 0; row < img_height; ++row) {
+        for (int i = 0; i <= int(improvedQuality); ++i)
+            qt_blurrow<aprec, zprec, alphaOnly>(temp, row, alpha);
+    }
 
-//void GraphicsEffect::blurImage(QPainter *p, QImage &blurImage, qreal radius,
-//                               bool quality, bool alphaOnly, int transposed)
-//{
-//    if (blurImage.format() != QImage::Format_ARGB32_Premultiplied
-//        && blurImage.format() != QImage::Format_RGB32)
-//    {
-//        blurImage = blurImage.convertToFormat(QImage::Format_ARGB32_Premultiplied);
-//    }
+    if (transposed == 0) {
+        if (img.depth() == 8) {
+            qt_memrotate90(reinterpret_cast<const quint8*>(temp.bits()),
+                           temp.width(), temp.height(), temp.bytesPerLine(),
+                           reinterpret_cast<quint8*>(img.bits()),
+                           img.bytesPerLine());
+        } else {
+            qt_memrotate90(reinterpret_cast<const quint32*>(temp.bits()),
+                           temp.width(), temp.height(), temp.bytesPerLine(),
+                           reinterpret_cast<quint32*>(img.bits()),
+                           img.bytesPerLine());
+        }
+    } else {
+        img = temp;
+    }
+}
 
-//    qreal scale = 1;
-//    if (radius >= 4 && blurImage.width() >= 2 && blurImage.height() >= 2) {
-//        blurImage = halfScaled(blurImage);
-//        scale = 2;
-//        radius *= qreal(0.5);
-//    }
+void GraphicsEffect::blurImage(QPainter *p, QImage &blurImage, qreal radius,
+                               bool quality, bool alphaOnly, int transposed)
+{
+    if (blurImage.format() != QImage::Format_ARGB32_Premultiplied
+        && blurImage.format() != QImage::Format_RGB32)
+    {
+        blurImage = blurImage.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    }
 
-//    if (alphaOnly)
-//        qt_expblur<12, 10, true>(blurImage, radius, quality, transposed);
-//    else
-//        expblur<12, 10, false>(blurImage, radius, quality, transposed);
+    qreal scale = 1;
+    if (radius >= 4 && blurImage.width() >= 2 && blurImage.height() >= 2) {
+        blurImage = halfScaled(blurImage);
+        scale = 2;
+        radius *= qreal(0.5);
+    }
 
-//    if (p) {
-//        p->scale(scale, scale);
-//        p->setRenderHint(QPainter::SmoothPixmapTransform);
-//        p->drawImage(QRect(QPoint(0, 0), blurImage.size() / blurImage.devicePixelRatioF()), blurImage);
-//    }
-//}
+    if (alphaOnly)
+        qt_expblur<12, 10, true>(blurImage, radius, quality, transposed);
+    else
+        expblur<12, 10, false>(blurImage, radius, quality, transposed);
+
+    if (p) {
+        p->scale(scale, scale);
+        p->setRenderHint(QPainter::SmoothPixmapTransform);
+        p->drawImage(QRect(QPoint(0, 0), blurImage.size() / blurImage.devicePixelRatioF()), blurImage);
+    }
+}
+*/

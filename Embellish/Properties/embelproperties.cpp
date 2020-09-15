@@ -249,30 +249,31 @@ void EmbelProperties::diagnosticStyles()
         // effects in style
         for (int i = 0; i < n; ++i) {
             const Effect &ef = s.value().at(i);
-            qDebug() << "  Effect index =" << i;
             qDebug() << "  effectName   =" << ef.effectName;
-            qDebug() << "  effectType   =" << ef.effectType;
+            qDebug() << "    Effect index =" << i;
+            qDebug() << "    effectType   =" << ef.effectType;
+            qDebug() << "    effectOrder  =" << ef.effectOrder;
 
             switch (ef.effectType) {
             case winnow_effects::blur:
-                qDebug() << "    Blur: radius       =" << ef.blur.radius;
-                qDebug() << "    Blur: quality      =" << ef.blur.quality;
-                qDebug() << "    Blur: transposed   =" << ef.blur.transposed;
+                qDebug() << "      Blur: radius       =" << ef.blur.radius;
+                qDebug() << "      Blur: quality      =" << ef.blur.quality;
+                qDebug() << "      Blur: transposed   =" << ef.blur.transposed;
                 break;
             case winnow_effects::highlight:
-                qDebug() << "    Highlight: margin  =" << ef.highlight.margin;
-                qDebug() << "    Highlight: r       =" << ef.highlight.r;
-                qDebug() << "    Highlight: g       =" << ef.highlight.g;
-                qDebug() << "    Highlight: b       =" << ef.highlight.b;
-                qDebug() << "    Highlight: a       =" << ef.highlight.a;
+                qDebug() << "      Highlight: margin  =" << ef.highlight.margin;
+                qDebug() << "      Highlight: r       =" << ef.highlight.r;
+                qDebug() << "      Highlight: g       =" << ef.highlight.g;
+                qDebug() << "      Highlight: b       =" << ef.highlight.b;
+                qDebug() << "      Highlight: a       =" << ef.highlight.a;
                 break;
             case winnow_effects::shadow:
-                qDebug() << "    Shadow: size       =" << ef.shadow.size;
-                qDebug() << "    Shadow: blurRadius =" << ef.shadow.blurRadius;
-                qDebug() << "    Shadow: r          =" << ef.shadow.r;
-                qDebug() << "    Shadow: g          =" << ef.shadow.g;
-                qDebug() << "    Shadow: b          =" << ef.shadow.b;
-                qDebug() << "    Shadow: a          =" << ef.shadow.a;
+                qDebug() << "      Shadow: size       =" << ef.shadow.size;
+                qDebug() << "      Shadow: blurRadius =" << ef.shadow.blurRadius;
+                qDebug() << "      Shadow: r          =" << ef.shadow.r;
+                qDebug() << "      Shadow: g          =" << ef.shadow.g;
+                qDebug() << "      Shadow: b          =" << ef.shadow.b;
+                qDebug() << "      Shadow: a          =" << ef.shadow.a;
             }
         }
     }
@@ -524,22 +525,48 @@ void EmbelProperties::moveEffectUp()
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
     QModelIndex idx = btn->index;
     if (!idx.isValid()) return;
-    int row = idx.row();
+
+    // get current row for this index as it may have been sorted
+    QString effectName = btn->name;
+    QStandardItem *styleItem = new QStandardItem;
+    styleItem = model->itemFromIndex(idx.parent());
+    int row;
+    for (row = 0; row < styleItem->rowCount(); ++row) {
+        QString sortedItemName = styleItem->child(row)->data(Qt::DisplayRole).toString();
+        if (sortedItemName == effectName) break;
+    }
     if (row == 0) return;
 
-    QModelIndex parIdx = idx.parent();
-    QModelIndex swapOrderIdx = model->index(row - 1, OrdColumn, parIdx);
-    QModelIndex thisOrderIdx = model->index(row, OrdColumn, parIdx);
-    int swapOrder = swapOrderIdx.data().toInt();
-    int thisOrder = thisOrderIdx.data().toInt();
-    model->setData(swapOrderIdx, thisOrder);
-    model->setData(thisOrderIdx, swapOrder);
-    qDebug() << __FUNCTION__
-             << "idx.data =" << idx.data()
-             << "parIdx.data() =" << parIdx.data();
-    QStandardItem *par = new QStandardItem;
-    par = model->itemFromIndex(thisOrderIdx.parent());
-    par->sortChildren(OrdColumn, Qt::AscendingOrder);
+    // swap the current row with the one above
+    int swapRow = row - 1;
+    QStandardItem *item = styleItem->child(row);
+    QStandardItem *swapItem = styleItem->child(swapRow);
+    int swapOrder = swapItem->data(UR_SortOrder).toInt();
+    int thisOrder = item->data(UR_SortOrder).toInt();
+    swapItem->setData(thisOrder, UR_SortOrder);
+    item->setData(swapOrder, UR_SortOrder);
+    styleItem->sortChildren(Qt::AscendingOrder);
+
+    // update order in settings
+    QString style = styleItem->data(Qt::DisplayRole).toString();
+    QString stylePath = "Embel/Styles/" + style + "/";
+    for (int i = 0; i < styleItem->rowCount(); ++i) {
+        QString effectName = styleItem->child(i)->data(Qt::DisplayRole).toString();
+//        qDebug() << __FUNCTION__ << i << effectName;
+        QString key = stylePath + effectName + "/sortOrder";
+        setting->setValue(key, i);
+        for (int a = 0; a < styleMap[style].length(); ++a) {
+            if (styleMap[style][a].effectName == effectName) styleMap[style][a].effectOrder = i;
+        }
+    }
+
+    // update order in styleMap
+    sortEffectList(style);
+
+    // refresh the graphicsScene
+    e->build();
+
+    return;
 }
 
 void EmbelProperties::moveEffectDown()
@@ -552,9 +579,15 @@ void EmbelProperties::moveEffectDown()
     if (row == rows) return;
 }
 
-void EmbelProperties::updateEffectsFromModelOrder(QString style)
+void EmbelProperties::sortEffectList(QString style)
 {
-
+    if (!styleMap.contains(style)) {
+        qDebug() << __FUNCTION__ << style << "not in list";
+        return;
+    }
+    std::sort(styleMap[style].begin(), styleMap[style].end(),
+              [](winnow_effects::Effect const &l, winnow_effects::Effect const &r) {
+              return l.effectOrder < r.effectOrder; });
 }
 
 void EmbelProperties::itemChange(QModelIndex idx)
@@ -1503,7 +1536,7 @@ void EmbelProperties::addStyles()
     i.name = "globalLightDirection";
     i.parIdx = stylesIdx;
     i.parentName = "Styles";
-    i.captionText = "Global light direction";
+    i.captionText = "Light direction";
     i.tooltip = "Light source direction (0 - 360 degrees)";
     i.isIndent = false;
     i.hasValue = true;
@@ -1573,17 +1606,25 @@ void EmbelProperties::addStyle(QString name, int n)
     styleRenameBtn->index = capIdx;
     effectNewBtn->index = capIdx;
 
+    // item reqd to sort effects after they have been read from settings
+    QStandardItem *styleItem = new QStandardItem;
+    styleItem = model->itemFromIndex(capIdx);
+
+    // read the effects from settings
     setting->beginGroup(settingRootPath);
     QStringList groups = setting->childGroups();
     setting->endGroup();
-//    qDebug() << __FUNCTION__ << settingRootPath << "groups =" << groups;
     effects.clear();
     if (groups.contains("Blur")) addBlurEffect(styleIdx);
     if (groups.contains("Highlight")) addHighlightEffect(styleIdx);
     if (groups.contains("Shadow")) addShadowEffect(styleIdx);
 
-//    qDebug() << __FUNCTION__ << styleName << effects.length();
+    // sort the effects
+    styleItem->sortChildren(Qt::AscendingOrder);
+
+    // add to local map used in embel
     styleMap[styleName] = effects;
+    sortEffectList(styleName);
 }
 
 void EmbelProperties::addEffectHeaderButtons()
@@ -1606,6 +1647,7 @@ void EmbelProperties::addEffectHeaderButtons()
     // btn vector used in BarBtnEditor to show button in tree
     btns.append(effectDeleteBtn);
     connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
+    effectUpBtn->name = i.name;
     addItem(i);
     effectUpBtn->index = capIdx;
     effectDownBtn->index = capIdx;
@@ -1625,7 +1667,6 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
     effect.effectType = winnow_effects::blur;
     QString effectName = uniqueEffectName(parentName, winnow_effects::blur, "Blur");
     effect.effectName = effectName;
-    effect.effectOrder = model->rowCount(parIdx);
 
     QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
 
@@ -1644,9 +1685,9 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
     i.delegateType = DT_BarBtns;
     // get settings data
     QString key = i.path + "/sortOrder";
-    qDebug() << __FUNCTION__
-             << "key =" << key
-             << "value =" << setting->value(key).toInt();
+//    qDebug() << __FUNCTION__
+//             << "key =" << key
+//             << "value =" << setting->value(key).toInt();
     if (setting->contains(key)) {
         i.sortOrder = setting->value(key).toInt();
     }
@@ -1654,8 +1695,8 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
         i.sortOrder = model->rowCount(parIdx);
         setting->setValue(key, i.sortOrder);
     }
+    effect.effectOrder = i.sortOrder;
     addEffectHeaderButtons();
-//    addItem(i);
     parIdx = capIdx;
 
     // blur radius
@@ -1739,9 +1780,9 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
     i.delegateType = DT_BarBtns;
     // get settings data
     QString key = i.path + "/sortOrder";
-    qDebug() << __FUNCTION__
-             << "key =" << key
-             << "value =" << setting->value(key).toInt();
+//    qDebug() << __FUNCTION__
+//             << "key =" << key
+//             << "value =" << setting->value(key).toInt();
     if (setting->contains(key)) {
         i.sortOrder = setting->value(key).toInt();
     }
@@ -1749,6 +1790,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
         i.sortOrder = model->rowCount(parIdx);
         setting->setValue(key, i.sortOrder);
     }
+    effect.effectOrder = i.sortOrder;
     addEffectHeaderButtons();
 //    addItem(i);
     parIdx = capIdx;
@@ -1865,9 +1907,9 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     i.delegateType = DT_BarBtns;
     // get settings data
     QString key = i.path + "/sortOrder";
-    qDebug() << __FUNCTION__
-             << "key =" << key
-             << "value =" << setting->value(key).toInt();
+//    qDebug() << __FUNCTION__
+//             << "key =" << key
+//             << "value =" << setting->value(key).toInt();
     if (setting->contains(key)) {
         i.sortOrder = setting->value(key).toInt();
         qDebug() << __FUNCTION__ << i.path << i.sortOrder;
@@ -1876,6 +1918,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
         i.sortOrder = model->rowCount(parIdx);
         setting->setValue(key, i.sortOrder);
     }
+    effect.effectOrder = i.sortOrder;
     addEffectHeaderButtons();
 //    addItem(i);
     parIdx = capIdx;
@@ -2121,6 +2164,9 @@ decoration is clicked.
     // ignore right mouse clicks for context menu
     if (event->button() == Qt::RightButton) return;
 
+//    QModelIndex idx = indexAt(event->pos());
+//    qDebug() << __FUNCTION__ << idx;
+
     treeChange(indexAt(event->pos()));
 }
 
@@ -2273,7 +2319,7 @@ void EmbelProperties::test1()
 
 void EmbelProperties::test2()
 {
-    proxy->sortChange();
+    diagnosticStyles();
 }
 
 void EmbelProperties::coordHelp()

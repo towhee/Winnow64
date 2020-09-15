@@ -154,7 +154,7 @@ private:
 
     void moveEffectUp();
     void moveEffectDown();
-    void updateEffectsFromModelOrder(QString style);
+    void sortEffectList(QString style);
 
     void templateChange(QVariant v);
     void fileItemChange(QVariant v, QString source);
