@@ -27,16 +27,20 @@ void GraphicsEffect::draw(QPainter* painter)
 
     // iterate effects in style
     using namespace winnow_effects;
-//    std::sort(effects.begin(), effects.end(), [](Effect const &l, Effect const &r) {
-//              return l.effectOrder < r.effectOrder; });
+    /*
+    std::sort(effects.begin(), effects.end(), [](Effect const &l, Effect const &r) {
+              return l.effectOrder < r.effectOrder; });
+//              */
     for (int i = 0; i < effects.length(); ++i) {
         const Effect &ef = effects.at(i);
         QColor color;
         QPointF pt;
+        /*
         qDebug() << __FUNCTION__
                  << "ef.effectOrder =" << ef.effectOrder
                  << "ef.effectName =" << ef.effectName
                     ;
+//                    */
         switch (ef.effectType) {
         case blur:
             blurEffect(p, ef.blur.radius, ef.blur.quality, ef.blur.transposed);

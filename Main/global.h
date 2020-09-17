@@ -118,6 +118,8 @@ namespace G
         QImage image;
     };
 
+    extern QPoint mousePos;
+
     extern int availableMemoryMB;
     extern int winnowMemoryBeforeCacheMB;
     extern int metaCacheMB;

@@ -557,7 +557,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             && event->type() != QEvent::UpdateRequest
             && event->type() != QEvent::ZeroTimerEvent
             && event->type() != QEvent::Timer
-//            && event->type() == QEvent::MouseButtonPress
+            && event->type() == QEvent::MouseMove
             )
     {
         qDebug() << __FUNCTION__
@@ -565,7 +565,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                  << event->type() << "\t"
                  << obj << "\t"
                  << obj->objectName();
-        return QWidget::eventFilter(obj, event);
+//        return QWidget::eventFilter(obj, event);
     }
 //*/
 
@@ -694,7 +694,15 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 
     if (event->type() == QEvent::MouseMove) {
-        if (isLeftMouseBtnPressed) isMouseDrag = true;        
+        if (isLeftMouseBtnPressed) isMouseDrag = true;
+//        QMouseEvent *e = static_cast<QMouseEvent *>(event);
+//        qDebug() << __FUNCTION__
+//                 << e->globalPos()
+//                 << e->screenPos()
+//                 << e->windowPos()
+//                 << e->pos()
+//                    ;
+//        G::mousePos = e->pos();
     }
 
     if (event->type() == QEvent::MouseButtonDblClick) {

@@ -109,13 +109,14 @@ signals:
     void templateChanged(int id);
 
 protected:
+//    void mouseMoveEvent(QMouseEvent *event) override;   // does not work here
     void mousePressEvent(QMouseEvent *event) override;
 //    void mouseDoubleClickEvent(QMouseEvent *event) override;
 
 private:
     void initialize();
     void readTileList();
-    void rename(QString path, QString from, QString to);
+    void renameSettingKey(QString path, QString from, QString to);
     void updateBorderLists();
     void readTemplateList();
     void readTile(QStringList tileName);
@@ -152,6 +153,7 @@ private:
     void deleteGraphic();
     void deleteItem();
 
+    void updateEffectOrder(QStandardItem *styleItem, int row, int swapRow);
     void moveEffectUp();
     void moveEffectDown();
     void sortEffectList(QString style);
@@ -206,6 +208,9 @@ private:
     QAction *edgeEffectAction;
     QAction *highlightEffectAction;
 
+    QAction *expandAllAction;
+    QAction *collapseAllAction;
+
     bool isTemplateChange = false;
 
     void addEffectHeaderButtons();
@@ -225,7 +230,7 @@ private:
     ComboBoxEditor *templateListEditor;
     QVector<ComboBoxEditor*> textAlignToCornerObjectEditor;
     QVector<ComboBoxEditor*> textAnchorObjectEditor;
-    QVector<ComboBoxEditor*> textStyleObjectEditor;
+    QVector<ComboBoxEditor*> styleListObjectEditor;
     QVector<BarBtnEditor*> styleEditor;
 
     // must be in correct order

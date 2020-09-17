@@ -76,6 +76,7 @@ public:
     QWidget* addItem(ItemInfo &i); // abstract addItem
     void getItemInfo(QModelIndex &idx, ItemInfo &copy);
     void clearItemInfo(ItemInfo &i);
+    void getIndexFromNameAndParent(QString name, QString parName, QModelIndex = QModelIndex());
     bool getIndex(QString caption, QModelIndex parent = QModelIndex());
     QModelIndex findIndex(QString name);
     void updateHiddenRows(QModelIndex parent);
