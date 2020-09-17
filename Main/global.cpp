@@ -2,6 +2,7 @@
 
 namespace G
 {
+    QPoint mousePos;                    // local mouse position used to locate mouse press custom button in qtreeview
     QString fontSize;                   // app font point size
     qreal dpi;                          // current logical screen dots per inch
     qreal ptToPx;                       // font points to pixels conversion factor

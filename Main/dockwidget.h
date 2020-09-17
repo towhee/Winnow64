@@ -14,6 +14,8 @@ public:
     QSize sizeHint();
     QModelIndex index;  // the index of the model row that contains the button
     QString name;       // The value of col 0
+    QString parName;    // The value of col 0 for the parent
+    QString type;       // ie "effect"
     void setIcon(QString path, double opacity);
     void setIcon(const QIcon &icon);
 

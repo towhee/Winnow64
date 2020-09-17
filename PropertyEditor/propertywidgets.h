@@ -191,6 +191,7 @@ public:
     QString value();
     void addItem(QString item);
     void removeItem(QString item);
+    void renameItem(QString oldText, QString newText);
     void refresh(QStringList items);
 
 protected:

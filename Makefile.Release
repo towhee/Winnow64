@@ -671,8 +671,10 @@ release\qrc_winnow.cpp: winnow.qrc \
 		images\icon16\filter.png \
 		images\icon16\rectangle.png \
 		images\icon16\slideshow.png \
+		images\icon16\up.png \
 		images\icon16\subfolders.png \
 		images\icon16\text.png \
+		images\icon16\down.png \
 		images\icon16\delta.png \
 		images\icon16\questionmark.png \
 		images\icon16\tile.png \
@@ -1785,6 +1787,16 @@ release\moc_highlighteffect.cpp: Effects\highlighteffect.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtwidgetsversion.h \
+		Main\global.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QColor \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QModelIndexList \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QElapsedTimer \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMutex \
+		Utilities\popup.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QLabel \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
 		release\moc_predefs.h \
 		C:\Qt\5.13.1\msvc2015_64\bin\moc.exe
 	C:\Qt\5.13.1\msvc2015_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/moc_predefs.h" -IC:/Qt/5.13.1/msvc2015_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.13.1/msvc2015_64/include -IC:/Qt/5.13.1/msvc2015_64/include/QtWidgets -IC:/Qt/5.13.1/msvc2015_64/include/QtGui -IC:/Qt/5.13.1/msvc2015_64/include/QtANGLE -IC:/Qt/5.13.1/msvc2015_64/include/QtConcurrent -IC:/Qt/5.13.1/msvc2015_64/include/QtXmlPatterns -IC:/Qt/5.13.1/msvc2015_64/include/QtNetwork -IC:/Qt/5.13.1/msvc2015_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Effects\highlighteffect.h -o release\moc_highlighteffect.cpp
@@ -10456,6 +10468,8 @@ release\moc_embelproperties.cpp: Embellish\Properties\embelproperties.h \
 		PropertyEditor\propertydelegate.h \
 		PropertyEditor\propertywidgets.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QStyledItemDelegate \
+		Effects\graphicseffect.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
 		Views\infostring.h \
 		Dialogs\tokendlg.h \
 		Dialogs\renamedlg.h \
@@ -11097,10 +11111,10 @@ release\moc_embel.cpp: Embellish\embel.h \
 		PropertyEditor\propertydelegate.h \
 		PropertyEditor\propertywidgets.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QStyledItemDelegate \
+		Effects\graphicseffect.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
 		ui_embelCoord.h \
 		Effects\highlighteffect.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
-		Effects\graphicseffect.h \
 		release\moc_predefs.h \
 		C:\Qt\5.13.1\msvc2015_64\bin\moc.exe
 	C:\Qt\5.13.1\msvc2015_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/moc_predefs.h" -IC:/Qt/5.13.1/msvc2015_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.13.1/msvc2015_64/include -IC:/Qt/5.13.1/msvc2015_64/include/QtWidgets -IC:/Qt/5.13.1/msvc2015_64/include/QtGui -IC:/Qt/5.13.1/msvc2015_64/include/QtANGLE -IC:/Qt/5.13.1/msvc2015_64/include/QtConcurrent -IC:/Qt/5.13.1/msvc2015_64/include/QtXmlPatterns -IC:/Qt/5.13.1/msvc2015_64/include/QtNetwork -IC:/Qt/5.13.1/msvc2015_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Embellish\embel.h -o release\moc_embel.cpp
@@ -19369,12 +19383,12 @@ release\moc_mainwindow.cpp: Main\mainwindow.h \
 		Dialogs\patterndlg.h \
 		Views\infoview.h \
 		Embellish\Properties\embelproperties.h \
+		Effects\graphicseffect.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
 		ui_embelCoord.h \
 		Embellish\embelview.h \
 		Embellish\embel.h \
 		Effects\highlighteffect.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
-		Effects\graphicseffect.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
@@ -31261,7 +31275,17 @@ release\graphicseffect.obj: Effects\graphicseffect.cpp Effects\graphicseffect.h 
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtwidgetsversion.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
+		Main\global.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QColor \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QModelIndexList \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QElapsedTimer \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMutex \
+		Utilities\popup.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QLabel \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\graphicseffect.obj Effects\graphicseffect.cpp
 
 release\highlighteffect.obj: Effects\highlighteffect.cpp Effects\highlighteffect.h \
@@ -31732,7 +31756,17 @@ release\highlighteffect.obj: Effects\highlighteffect.cpp Effects\highlighteffect
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwhatsthis.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qwizard.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtwidgetsversion.h
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\qtwidgetsversion.h \
+		Main\global.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtGui\QColor \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QModelIndexList \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QElapsedTimer \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QMutex \
+		Utilities\popup.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QLabel \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\highlighteffect.obj Effects\highlighteffect.cpp
 
 release\canoncr3.obj: ImageFormats\Canon\canoncr3.cpp ImageFormats\Canon\canoncr3.h \
@@ -41407,6 +41441,8 @@ release\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embellish\
 		PropertyEditor\propertydelegate.h \
 		PropertyEditor\propertywidgets.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QStyledItemDelegate \
+		Effects\graphicseffect.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
 		Views\infostring.h \
 		Dialogs\tokendlg.h \
 		Dialogs\renamedlg.h \
@@ -41450,8 +41486,6 @@ release\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embellish\
 		Embellish\embelview.h \
 		Embellish\embel.h \
 		Effects\highlighteffect.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
-		Effects\graphicseffect.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
@@ -42115,10 +42149,10 @@ release\embel.obj: Embellish\embel.cpp Embellish\embel.h \
 		PropertyEditor\propertydelegate.h \
 		PropertyEditor\propertywidgets.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QStyledItemDelegate \
-		ui_embelCoord.h \
-		Effects\highlighteffect.h \
+		Effects\graphicseffect.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
-		Effects\graphicseffect.h
+		ui_embelCoord.h \
+		Effects\highlighteffect.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\embel.obj Embellish\embel.cpp
 
 release\bookmarks.obj: File\bookmarks.cpp File\bookmarks.h \
@@ -52359,12 +52393,12 @@ release\main.obj: Main\main.cpp Main\mainwindow.h \
 		Dialogs\patterndlg.h \
 		Views\infoview.h \
 		Embellish\Properties\embelproperties.h \
+		Effects\graphicseffect.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
 		ui_embelCoord.h \
 		Embellish\embelview.h \
 		Embellish\embel.h \
 		Effects\highlighteffect.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
-		Effects\graphicseffect.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
@@ -53039,12 +53073,12 @@ release\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		Dialogs\patterndlg.h \
 		Views\infoview.h \
 		Embellish\Properties\embelproperties.h \
+		Effects\graphicseffect.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
 		ui_embelCoord.h \
 		Embellish\embelview.h \
 		Embellish\embel.h \
 		Effects\highlighteffect.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
-		Effects\graphicseffect.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
@@ -57676,12 +57710,12 @@ release\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\preferenc
 		Dialogs\patterndlg.h \
 		Views\infoview.h \
 		Embellish\Properties\embelproperties.h \
+		Effects\graphicseffect.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
 		ui_embelCoord.h \
 		Embellish\embelview.h \
 		Embellish\embel.h \
 		Effects\highlighteffect.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
-		Effects\graphicseffect.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
@@ -58356,12 +58390,12 @@ release\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEditor\pro
 		Dialogs\patterndlg.h \
 		Views\infoview.h \
 		Embellish\Properties\embelproperties.h \
+		Effects\graphicseffect.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
 		ui_embelCoord.h \
 		Embellish\embelview.h \
 		Embellish\embel.h \
 		Effects\highlighteffect.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
-		Effects\graphicseffect.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
@@ -61758,12 +61792,12 @@ release\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h \
 		Dialogs\patterndlg.h \
 		Views\infoview.h \
 		Embellish\Properties\embelproperties.h \
+		Effects\graphicseffect.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
 		ui_embelCoord.h \
 		Embellish\embelview.h \
 		Embellish\embel.h \
 		Effects\highlighteffect.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
-		Effects\graphicseffect.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
@@ -65113,12 +65147,12 @@ release\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		Dialogs\patterndlg.h \
 		Views\infoview.h \
 		Embellish\Properties\embelproperties.h \
+		Effects\graphicseffect.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
 		ui_embelCoord.h \
 		Embellish\embelview.h \
 		Embellish\embel.h \
 		Effects\highlighteffect.h \
-		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGraphicsEffect \
-		Effects\graphicseffect.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \

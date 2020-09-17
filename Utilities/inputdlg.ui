@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>423</width>
-    <height>140</height>
+    <height>151</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -51,7 +51,7 @@
     <widget class="QLineEdit" name="inputText"/>
    </item>
    <item>
-    <widget class="QLabel" name="msg">
+    <widget class="QLabel" name="label">
      <property name="styleSheet">
       <string notr="true">color:red</string>
      </property>

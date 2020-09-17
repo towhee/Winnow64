@@ -39,6 +39,7 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     setSelectionBehavior(QAbstractItemView::SelectRows);
     setSelectionMode(QAbstractItemView::SingleSelection);
     setSortingEnabled(true);
+    setObjectName("EmbelProperties");
 
     indentation = 15;
     setIndentation(indentation);  
@@ -79,6 +80,25 @@ void PropertyEditor::itemChange(QModelIndex)
 // virtual function to be subclassed
 {
 
+}
+
+void PropertyEditor::getIndexFromNameAndParent(QString name, QString parName, QModelIndex parent)
+{
+    for (int r = 0; r < model->rowCount(parent); ++r) {
+        QModelIndex idx = model->index(r, CapColumn, parent);
+        if (idx.parent().isValid()) {
+            QString thisName = idx.data().toString();
+            QString thisParName = idx.parent().data().toString();
+//            qDebug() << __FUNCTION__ << thisName << thisParName;
+            if (thisName == name && thisParName == parName) {
+                foundIdx = idx;
+            }
+        }
+        // iterate children
+        if (model->hasChildren(idx)) {
+            getIndexFromNameAndParent(name, parName, idx);
+        }
+    }
 }
 
 void PropertyEditor::updateHiddenRows(QModelIndex parent)
