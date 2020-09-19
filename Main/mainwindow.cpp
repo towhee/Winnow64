@@ -9302,7 +9302,7 @@ Push the changes onto the pick history stack.
     buildFilters->updateCountFiltered();
 
     // auto advance
-    if (idxList.length() == 1) thumbView->selectNext();
+//    if (idxList.length() == 1) thumbView->selectNext();
 }
 
 void MW::pushPick(QString fPath, QString status)

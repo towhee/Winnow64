@@ -12,18 +12,38 @@ GraphicsEffect::GraphicsEffect(QList<winnow_effects::Effect> &effects, int globa
 ////    return sourceRect.adjusted(-10,-10,10,10);
 //}
 
+void GraphicsEffect::clear(PainterParameters &p)
+{
+    QSize half(p.im.size().width() / 2, p.im.size().height());
+    QRect rHalf(QPoint(0,0),half);
+//    QImage erase(half, QImage::Format_ARGB32_Premultiplied);
+    QPixmap erase(half);
+    QPainter tmp(&erase);
+//    tmp.drawRect(rHalf);
+    tmp.setCompositionMode(QPainter::CompositionMode_Clear);
+    tmp.drawRect(rHalf);
+    tmp.end();
+//    p.painter->fillRect(erase.rect(), Qt::transparent);
+    p.painter->drawPixmap(0, 0, erase);
+//    p.painter->drawImage(0, 0, erase);
+}
+
 void GraphicsEffect::draw(QPainter* painter)
 {
     if (effects.length() == 0) return;
 
     p.painter = painter;
-    QPixmap pixmap = sourcePixmap(Qt::LogicalCoordinates, &p.offset);
-    p.px = sourcePixmap(Qt::LogicalCoordinates, &p.offset);
-    p.canvas = pixmap.toImage();
-    p.bound  = pixmap.rect();
-    p.canvas.save("D:/Pictures/Temp/effect/im1.tif");
+//    QPixmap pixmap = sourcePixmap(Qt::LogicalCoordinates, &p.offset);
+//    p.px = sourcePixmap(Qt::LogicalCoordinates, &p.offset);
+    p.im = sourcePixmap(Qt::LogicalCoordinates, &p.offset).toImage();
+    p.bound  = p.im.rect();
+    p.im.save("D:/Pictures/Temp/effect/im1.tif");
 
     painter->save();
+
+    // before apply effects
+    QPointF pos(0,0);
+    p.painter->drawImage(pos, p.im, p.bound);
 
     // iterate effects in style
     using namespace winnow_effects;
@@ -43,7 +63,7 @@ void GraphicsEffect::draw(QPainter* painter)
 //                    */
         switch (ef.effectType) {
         case blur:
-            blurEffect(p, ef.blur.radius, ef.blur.quality, ef.blur.transposed);
+            blurEffect(p, ef.blur.radius, ef.blur.quality, 0/*ef.blur.transposed*/);
             break;
         case highlight:
             color.setRgb(ef.highlight.r, ef.highlight.g, ef.highlight.b, ef.highlight.a);
@@ -67,7 +87,8 @@ QT_END_NAMESPACE
 void GraphicsEffect::blurEffect(PainterParameters &p, qreal radius, bool quality, bool alphaOnly, int transposed)
 {
 //  QTransform transform = p.painter->worldTransform();
-  qt_blurImage(p.painter, p.canvas, radius, quality, alphaOnly);
+    clear(p);
+//    qt_blurImage(p.painter, p.im, radius, quality, alphaOnly);
 //  p.painter->setWorldTransform(transform);
 }
 
@@ -76,8 +97,16 @@ void GraphicsEffect::shadowEffect(PainterParameters &p,
                                   const double radius,
                                   const QColor color)
 {
-    if (p.px.isNull())
+    if (p.im.isNull())
         return;
+
+//    return;
+//    QSize half(p.im.size().width() / 2, p.im.size().height());
+//    QImage erase(half, QImage::Format_ARGB32_Premultiplied);
+//    erase.fill(Qt::transparent);
+//    p.painter->setCompositionMode(QPainter::CompositionMode_Clear);
+//    p.painter->drawImage(0, 0, erase);
+//    return;
 
     // shadow offset from object
     QPointF offset;
@@ -85,18 +114,19 @@ void GraphicsEffect::shadowEffect(PainterParameters &p,
     offset.setX(-sin(rads) * size);
     offset.setY(+cos(rads) * size);
 
-    QSize shadSize(p.px.size().width() + 2 * size, p.px.size().height() + 2 * size);
+    // create a transparent image with the passed image from p.px
+    QSize shadSize(p.im.size().width() + 2 * size, p.im.size().height() + 2 * size);
     QImage shad(shadSize, QImage::Format_ARGB32_Premultiplied);
-    shad.setDevicePixelRatio(p.px.devicePixelRatioF());
+    shad.setDevicePixelRatio(p.im.devicePixelRatioF());
     shad.fill(0);
     QPainter shadPainter(&shad);
     shadPainter.setCompositionMode(QPainter::CompositionMode_Source);
-    shadPainter.drawPixmap(offset, p.px);
+    shadPainter.drawImage(offset, p.im);
     shadPainter.end();
 
     // blur the alpha channel
     QImage blurred(shad.size(), QImage::Format_ARGB32_Premultiplied);
-    blurred.setDevicePixelRatio(p.px.devicePixelRatioF());
+    blurred.setDevicePixelRatio(p.im.devicePixelRatioF());
     blurred.fill(0);
     QPainter blurPainter(&blurred);
     qt_blurImage(&blurPainter, shad, radius, false, true);
@@ -115,7 +145,53 @@ void GraphicsEffect::shadowEffect(PainterParameters &p,
     p.painter->drawImage(pos, shad);
 
     // draw the actual pixmap...
-    p.painter->drawPixmap(pos, p.px, p.bound);
+    p.painter->drawImage(pos, p.im, p.bound);
+
+//    p.painter->drawPixmap(pos, p.px, p.bound);
+
+//    if (p.px.isNull())
+//        return;
+
+//    // shadow offset from object
+//    QPointF offset;
+//    double rads = lightDirection * (3.14159 / 180);
+//    offset.setX(-sin(rads) * size);
+//    offset.setY(+cos(rads) * size);
+
+//    // create a transparent image with the passed image from p.px
+//    QSize shadSize(p.px.size().width() + 2 * size, p.px.size().height() + 2 * size);
+//    QImage shad(shadSize, QImage::Format_ARGB32_Premultiplied);
+//    shad.setDevicePixelRatio(p.px.devicePixelRatioF());
+//    shad.fill(0);
+//    QPainter shadPainter(&shad);
+//    shadPainter.setCompositionMode(QPainter::CompositionMode_Source);
+//    shadPainter.drawPixmap(offset, p.px);
+//    shadPainter.end();
+
+//    // blur the alpha channel
+//    QImage blurred(shad.size(), QImage::Format_ARGB32_Premultiplied);
+//    blurred.setDevicePixelRatio(p.px.devicePixelRatioF());
+//    blurred.fill(0);
+//    QPainter blurPainter(&blurred);
+//    qt_blurImage(&blurPainter, shad, radius, false, true);
+//    blurPainter.end();
+
+//    shad = std::move(blurred);
+
+//    // blacken the image...
+//    shadPainter.begin(&shad);
+//    shadPainter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+//    shadPainter.fillRect(shad.rect(), color);
+//    shadPainter.end();
+
+//    // clear p.painter
+//    //    p.painter->eraseRect(p.bound);
+//    QPointF pos(0,0);
+//    // draw the blurred drop shadow...
+//    p.painter->drawImage(pos, shad);
+
+//    // draw the actual pixmap...
+//    p.painter->drawPixmap(pos, p.px, p.bound);
 
     /*
     qDebug() << __FUNCTION__
@@ -146,11 +222,11 @@ void GraphicsEffect::highlightEffect(PainterParameters &p,
 //    tmp.setWorldTransform(p.painter->worldTransform());
 //    tmp.setTransform(p.painter->deviceTransform());
 //    QTransform transform = tmp.worldTransform();  // nada
-    tmp.drawImage(offset, p.canvas);
+    tmp.drawImage(offset, p.im);
 //    tmp.setOpacity(0.5);
     tmp.worldTransform();
-    p.canvas = newCanvas;
-    p.painter->drawImage(-offset, p.canvas);
+    p.im = newCanvas;
+    p.painter->drawImage(-offset, p.im);
     return;
 }
 

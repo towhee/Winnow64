@@ -411,7 +411,6 @@ void EmbelProperties::renameCurrentStyle()
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
     QModelIndex idx = btn->index;
     QString oldName = idx.data().toString();
-    qDebug() << __FUNCTION__ << "oldName =" << oldName;
     QString newName = Utilities::inputText("Rename Style", "Rename style " + oldName, styleList);
     if (newName == "") return;
 
@@ -422,8 +421,6 @@ void EmbelProperties::renameCurrentStyle()
     using namespace winnow_effects;
     QMap<QString, QList<Effect>> tmp;
     QMapIterator<QString, QList<Effect>> s(styleMap);
-    qDebug() << __FUNCTION__ << "Before update styleMap";
-    diagnosticStyles();
     while (s.hasNext()) {
         s.next();
         QString style = s.key();
@@ -435,8 +432,6 @@ void EmbelProperties::renameCurrentStyle()
     // update model
     model->setData(idx, newName);
     // update all stylelist dropdowns in model
-    qDebug();
-    qDebug() << __FUNCTION__ << "Before update stylelist dropdowns";
     for (int i = 0; i < styleListObjectEditor.length(); ++i) {
         styleListObjectEditor[i]->renameItem(oldName, newName);
         if (styleListObjectEditor[i]->value() == oldName)
@@ -447,8 +442,6 @@ void EmbelProperties::renameCurrentStyle()
     if (styleMap.contains(oldName)) {
         styleMap.remove(oldName);
     }
-    qDebug() << __FUNCTION__ << "After update stylelist dropdowns";
-    diagnosticStyles();
 }
 
 void EmbelProperties::renameCurrentTemplate()
@@ -759,6 +752,7 @@ itemChange, which is subclassed here.
 
     templatePath = "Embel/Templates/" + templateName + "/";
 //    QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
+    /*
     qDebug() << __FUNCTION__
              << " =" << templateId
              << "idx.isValid() =" << idx.isValid()
@@ -766,6 +760,7 @@ itemChange, which is subclassed here.
              << "source =" << source
              << "parent =" << parent
              << "grandparent =" << grandparent;
+             */
 
     if (source == "templateList") templateChange(v);
     if (templateId != 0) {
@@ -907,7 +902,7 @@ void EmbelProperties::borderItemChange(QModelIndex idx)
     QString parent = idx.parent().data(UR_Name).toString();
     int index = idx.parent().data(UR_ItemIndex).toInt();
     QString path = templatePath + "Borders/" + parent + "/" + source;
-    diagnostics(idx);
+//    diagnostics(idx);
 
     if (source == "topMargin") {
         setting->setValue(path, v);
@@ -1128,7 +1123,7 @@ void EmbelProperties::shadowItemChange(QVariant v, QString source, QString effec
     #endif
     }
     QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
-    qDebug() << __FUNCTION__ << path << source << v.toInt();
+//    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "size") {
         setting->setValue(path, v.toDouble());
@@ -1164,7 +1159,7 @@ void EmbelProperties::blurItemChange(QVariant v, QString source, QString effectN
     #endif
     }
     QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
-    qDebug() << __FUNCTION__ << path << source << v.toInt();
+//    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "radius") {
         setting->setValue(path, v.toDouble());
@@ -1189,7 +1184,7 @@ void EmbelProperties::highlightItemChange(QVariant v, QString source, QString ef
     #endif
     }
     QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
-    qDebug() << __FUNCTION__ << path << source << v.toInt();
+//    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "margin") {
         setting->setValue(path, v.toInt());
@@ -2121,7 +2116,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
 //             << "value =" << setting->value(key).toInt();
     if (setting->contains(key)) {
         i.sortOrder = setting->value(key).toInt();
-        qDebug() << __FUNCTION__ << i.path << i.sortOrder;
+//        qDebug() << __FUNCTION__ << i.path << i.sortOrder;
     }
     else {
         i.sortOrder = model->rowCount(parIdx);
@@ -2383,12 +2378,12 @@ int EmbelProperties::effectIndex(QString style, QString effectName)
     }
     using namespace winnow_effects;
     // effects in style
-    qDebug() << __FUNCTION__ << style << effectName;
+//    qDebug() << __FUNCTION__ << style << effectName;
     for (int i = 0; i < styleMap[style].length(); ++i) {
-        qDebug() << __FUNCTION__
-                 << "i =" << i
-                 << "effectName =" << effectName
-                 << "styleMap[style].at(i).effectName =" << styleMap[style].at(i).effectName;
+//        qDebug() << __FUNCTION__
+//                 << "i =" << i
+//                 << "effectName =" << effectName
+//                 << "styleMap[style].at(i).effectName =" << styleMap[style].at(i).effectName;
         if (effectName == styleMap[style].at(i).effectName) return i;
     }
     return -1;
@@ -2418,8 +2413,8 @@ decoration is clicked.
     getIndexFromNameAndParent("Highlight", "zenblur");
     QModelIndex btnIdx = foundIdx;
     QModelIndex idx = indexAt(event->pos());
-    qDebug() << __FUNCTION__ << "idx   " << idx << idx.data().toString();
-    qDebug() << __FUNCTION__ << "btnIdx" << btnIdx << btnIdx.data().toString();
+//    qDebug() << __FUNCTION__ << "idx   " << idx << idx.data().toString();
+//    qDebug() << __FUNCTION__ << "btnIdx" << btnIdx << btnIdx.data().toString();
 
 //    qDebug() << " =" << event->globalPos();
 //    qDebug() << " =" << event->screenPos();

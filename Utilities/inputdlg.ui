@@ -51,12 +51,12 @@
     <widget class="QLineEdit" name="inputText"/>
    </item>
    <item>
-    <widget class="QLabel" name="label">
+    <widget class="QLabel" name="msg">
      <property name="styleSheet">
       <string notr="true">color:red</string>
      </property>
      <property name="text">
-      <string>msg</string>
+      <string/>
      </property>
     </widget>
    </item>
