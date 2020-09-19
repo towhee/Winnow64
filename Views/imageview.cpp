@@ -58,6 +58,7 @@ ImageView::ImageView(QWidget *parent,
 
     setAcceptDrops(true);
     pmItem->setAcceptDrops(true);
+//    setAttribute(Qt::WA_TranslucentBackground);
     /*
     setOptimizationFlags(QGraphicsView::DontSavePainterState);
     setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);

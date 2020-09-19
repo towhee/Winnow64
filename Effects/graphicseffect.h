@@ -45,7 +45,7 @@ public:
     struct PainterParameters {
         QPainter* painter;
         QPixmap px;
-        QImage canvas;
+        QImage im;
         QRectF bound;
         QPoint offset;
         QRectF newSourceRect;
@@ -55,6 +55,7 @@ public:
 
 private:
 //    virtual QRectF boundingRectFor( const QRectF& sourceRect ) const;
+    void clear(PainterParameters &p);
     void shadowEffect(PainterParameters &p,
                       const int size,
                       const double radius,

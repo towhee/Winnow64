@@ -682,24 +682,31 @@ QString WidgetCSS::progressBar()
 {
     return
     "QProgressBar {"
-    "background-color: " + QColor(bg,bg,bg).name() + ";"
+        "background-color: " + QColor(bg,bg,bg).name() + ";"
     "}"
 
     "QProgressBar::chunk {"
-    "background-color: cadetblue;"
+        "background-color: cadetblue;"
     "}";
 }
 
 QString WidgetCSS::checkBox()
 {
     return "";
+//    return
 //    "QCheckBox::indicator {"
+//        "background-color: " + textColor.name() + ";"
+////        "background-color: " + QColor(l30,l30,l30).name() + ";"
 ////        "image: url(:/images/checkmark.png);"
-//        "border: 1px solid green;"
+//    "}"
+//    ;
+//    "QCheckBox::indicator:checked {"
+//        "background-color: " + QColor(l30,l30,l30).name() + ";"
 //    "}"
 //    "QCheckBox::indicator:checked:disabled {"
+//        "background-color: " + QColor(l30,l30,l30).name() + ";"
 ////        "image: url(:/images/checkmark.png);"
-//        "border: 1px solid red;"
+////        "border: 1px solid red;"
 //    "}"
 ////        "QCheckBox::indicator:indeterminate {"
 ////    //        "image: url(:/images/checkmark.png);"
