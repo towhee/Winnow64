@@ -2995,77 +2995,27 @@ void EmbelProperties::addText(int count)
         model->setData(valIdx, true, UR_isHidden);
     }
 
-    i.name = "x";
+    i.name = "anchorPoint";
     i.parIdx = parIdx;
     i.parentName = textName;
-    i.captionText = "x coordinate";
-    i.tooltip = "The x coordinate for the container (0-100). Top left = 0,0.";
+    i.captionText = "Anchor point";
+    i.tooltip = "Select a text box anchor point.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "x";
+    i.key = "anchorPoint";
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 0;
+        i.value = "Top Left";
         setting->setValue(settingRootPath + i.key, i.value);
     }
-    i.delegateType = DT_DoubleSpinbox;
-    i.type = "double";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    text.x = i.value.toDouble();
-    addItem(i);
-
-    i.name = "y";
-    i.parIdx = parIdx;
-    i.parentName = textName;
-    i.captionText = "y coordinate";
-    i.tooltip = "The y coordinate for the container (0-100). Top left = 0,0.";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "y";
-    i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
-    else {
-        i.value = 10 * count;
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_DoubleSpinbox;
-    i.type = "double";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    text.y = i.value.toDouble();
-    addItem(i);
-
-    i.name = "rotation";
-    i.parIdx = parIdx;
-    i.parentName = textName;
-    i.captionText = "Rotation";
-    i.tooltip = "The rotation (degrees) of the text (+- 0-360)";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "rotation";
-    i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
-    else {
-        i.value = 0;
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_DoubleSpinbox;
-    i.type = "double";
-    i.min = -360;
-    i.max = 360;
-    i.fixedWidth = 50;
-    text.rotation = i.value.toDouble();
-    addItem(i);
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << anchorPoints;
+    text.anchorPoint = i.value.toString();
+    textAnchorObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
 
     i.name = "alignToCorner";
     i.parIdx = parIdx;
@@ -3091,27 +3041,77 @@ void EmbelProperties::addText(int count)
     textAlignToCornerObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
 //    textAlignToCornerObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
 
-    i.name = "anchorPoint";
+    i.name = "x";
     i.parIdx = parIdx;
     i.parentName = textName;
-    i.captionText = "Anchor point";
-    i.tooltip = "Select a text box anchor point.";
+    i.captionText = "x coordinate";
+    i.tooltip = "The x coordinate for the container (0-100). Top left = 0,0.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "anchorPoint";
+    i.key = "x";
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = "Top Left";
+        i.value = 0;
         setting->setValue(settingRootPath + i.key, i.value);
     }
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << anchorPoints;
-    text.anchorPoint = i.value.toString();
-    textAnchorObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    text.x = i.value.toDouble();
+    addItem(i);
+
+    i.name = "y";
+    i.parIdx = parIdx;
+    i.parentName = textName;
+    i.captionText = "y coordinate";
+    i.tooltip = "The y coordinate for the container (0-100). Top left = 0,0.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "y";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = 10 * count;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    text.y = i.value.toDouble();
+    addItem(i);
+
+    i.name = "rotation";
+    i.parIdx = parIdx;
+    i.parentName = textName;
+    i.captionText = "Rotation";
+    i.tooltip = "The rotation (degrees) of the text (+- 0-360)";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "rotation";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = 0;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = -360;
+    i.max = 360;
+    i.fixedWidth = 50;
+    text.rotation = i.value.toDouble();
+    addItem(i);
 
     i.name = "source";
     i.parIdx = parIdx;
@@ -3210,7 +3210,7 @@ void EmbelProperties::addText(int count)
         i.value = 2.0;
         setting->setValue(settingRootPath + i.key, i.value);
     }
-    i.delegateType = DT_DoubleSpinbox;
+    i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
     i.max = 100;

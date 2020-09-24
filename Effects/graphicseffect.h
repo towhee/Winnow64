@@ -40,34 +40,44 @@ namespace winnow_effects
 
 class GraphicsEffect : public QGraphicsEffect
 {
+    Q_OBJECT
 public:
-    GraphicsEffect(QList<winnow_effects::Effect> &effects, int globalLightDirection);
+    GraphicsEffect(QObject *parent = nullptr);
+//    GraphicsEffect(QList<winnow_effects::Effect> &effects, int globalLightDirection);
     struct PainterParameters {
         QPainter* painter;
-        QPixmap px;
-        QImage im;
-        QRectF bound;
-        QPoint offset;
-        QRectF newSourceRect;
+        QSize srcSize;
+        QImage srcIm;                   // original image
+        QImage overlay;                   // effect applied and may use by another effect
+        int dx = 0;                     // offset from source bounding rect
+        int dy = 0;                     // offset from source bounding rect
+        int dw = 0;                     // delta from source bounding rect width
+        int dh = 0;                     // delta from source bounding rect height
+        QPointF offset;
+        QRectF rect;
     };
+
     PainterParameters p;
 
+    void set(QList<winnow_effects::Effect> &effects, int globalLightDirection);
 
 private:
-//    virtual QRectF boundingRectFor( const QRectF& sourceRect ) const;
-    void clear(PainterParameters &p);
+    virtual QRectF boundingRectFor(const QRectF& rect ) const;
+//    void clear(PainterParameters &p);
     void shadowEffect(PainterParameters &p,
                       const int size,
-                      const double radius,
-                      const QColor color);
+                      double radius,
+                      QColor color);
     void highlightEffect(PainterParameters &p,
                          QColor color,
                          QPointF offset);
     void blurEffect(PainterParameters &p, qreal radius, bool quality,
                     bool alphaOnly, int transposed = 0);
 
-    QList<winnow_effects::Effect> &effects;
+    QList<winnow_effects::Effect> effects;
+//    QList<winnow_effects::Effect> &effects;
     int lightDirection;
+    qreal _expansion;
 
 //    void blurImage(QPainter *p, QImage &blurImage, qreal radius, bool quality,
 //                   bool alphaOnly, int transposed = 0);
