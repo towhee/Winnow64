@@ -18,6 +18,7 @@ QT += xmlpatterns
 HEADERS += Cache/imagecache.h \
    Effects/graphicseffect.h \
    Effects/highlighteffect.h \
+   Effects/shadowtest.h \
    ImageFormats/Canon/canoncr3.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
@@ -98,6 +99,7 @@ HEADERS += Views/tableview.h
 SOURCES += Cache/imagecache.cpp \
    Effects/graphicseffect.cpp \
    Effects/highlighteffect.cpp \
+   Effects/shadowtest.cpp \
    ImageFormats/Canon/canoncr3.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp

@@ -16,12 +16,7 @@ void HighlightEffect::draw( QPainter* painter )
  QPoint offset;
  QPixmap pixmap;
 
- // if ( sourceIsPixmap() ) // doesn't seems to work, return false
- // {
- // No point in drawing in device coordinates (pixmap will be scaled anyways).
  pixmap = sourcePixmap( Qt::LogicalCoordinates, &offset );
- //}
-
  QRectF bound = boundingRectFor( pixmap.rect() );
 
  painter->save();
@@ -32,7 +27,8 @@ void HighlightEffect::draw( QPainter* painter )
           << "p.bound" << bound
           << "p.offset" << offset
           << "offset" << mOffset
-          << "pt" << p;
+          << "pt" << p
+          << "pixmap.devicePixelRatioF() =" << pixmap.devicePixelRatioF();
 // p.bound QRectF(0,0 184x68) p.offset QPoint(0,0) offset QPointF(0,0) pt QPointF(0,0)
 
  bound.moveTopLeft( p );

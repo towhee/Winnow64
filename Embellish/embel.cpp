@@ -359,14 +359,44 @@ void Embel::addTextsToScene()
 //        qDebug() << __FUNCTION__ << "Add text to scene:" << i
 //                 << "p->t[i].style =" << p->t[i].style;
         if (p->t[i].style != "No style" && p->t[i].style != "") {
-//            qDebug() << __FUNCTION__
-//                     << "p->globalLightDirection =" << p->globalLightDirection;
-            GraphicsEffect *effect = new GraphicsEffect(p->styleMap[p->t[i].style],
-                                                        p->globalLightDirection);
-            tItems[i]->setGraphicsEffect(effect);
-//            delete effect;
+            int selectedEffect = 0;
+            if (selectedEffect == 4) {
+                // QGraphicsDropShadowEffect works
+                ShadowTest *effect = new ShadowTest();
+                effect->set(6, 8, 3);
+                tItems[i]->setGraphicsEffect(effect);
+            }
+
+            if (selectedEffect == 1) {
+                // QGraphicsDropShadowEffect works
+                QGraphicsDropShadowEffect *effect = new QGraphicsDropShadowEffect(/*this*/);
+                effect->setXOffset(20);
+                effect->setYOffset(10);
+                effect->setBlurRadius(2);
+                tItems[i]->setGraphicsEffect(effect);
+            }
+
+            if (selectedEffect == 2) {
+                // HighlightEffect
+                HighlightEffect *effect = new HighlightEffect(10);
+                tItems[i]->setGraphicsEffect(effect);
+            }
+
+            if (selectedEffect == 0) {
+                // My effects
+                GraphicsEffect *effect = new GraphicsEffect();
+                effect->set(p->styleMap[p->t[i].style], p->globalLightDirection);
+                tItems[i]->setGraphicsEffect(effect);
+            }
         }
 
+        /*
+        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() ="
+                 << tItems[i]->boundingRect() << "Before";  */
+        /*
+        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() ="
+                 << tItems[i]->boundingRect() << "After";
+                 */
         iv->scene->addItem(tItems[i]);
 
         // position text
@@ -378,10 +408,12 @@ void Embel::addTextsToScene()
                  << "p->t[i].y =" << p->t[i].y
                     ;
 //                    */
+        int w = static_cast<int>(tItems[i]->boundingRect().width());
+        int h = static_cast<int>(tItems[i]->boundingRect().height());
+        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() =" << tItems[i]->boundingRect();
         QPoint canvas = textCanvasCoord(i);
-        QPoint offset = anchorPointOffset(p->t[i].anchorPoint,
-                                    static_cast<int>(tItems[i]->boundingRect().width()),
-                                    static_cast<int>(tItems[i]->boundingRect().height()));
+        QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h);
+        tItems[i]->setTransformOriginPoint(offset);
         tItems[i]->setPos(canvas - offset);
         tItems[i]->setRotation(p->t[i].rotation);
 

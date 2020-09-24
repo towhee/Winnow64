@@ -6,6 +6,7 @@
 #include "Properties/embelproperties.h"
 #include "Effects/highlighteffect.h"
 #include "Effects/graphicseffect.h"
+#include "Effects/shadowtest.h"
 
 class Embel : public QObject
 {
