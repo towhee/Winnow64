@@ -342,9 +342,13 @@ void Embel::addTextsToScene()
 {
     for (int i = 0; i < p->t.size(); ++i) {
         // if a text entry
-        if (p->t[i].source == "Text") tItems[i]->setPlainText(p->t[i].text);
+        if (p->t[i].source == "Text") {
+            tItems[i]->setPlainText(p->t[i].text);
+        }
         // if a metadata template used to build the text string
-        else tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate));
+        else {
+            tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate));
+        }
         QFont font(p->t[i].font);
         int fontSize = static_cast<int>(p->t[i].size / 100 * ls);
         font.setPixelSize(fontSize);
@@ -356,8 +360,33 @@ void Embel::addTextsToScene()
         tItems[i]->setOpacity(opacity);
         tItems[i]->setZValue(20);
 
-//        qDebug() << __FUNCTION__ << "Add text to scene:" << i
-//                 << "p->t[i].style =" << p->t[i].style;
+//        // bounding text rectangle without rotation
+//        tItems[i]->setRotation(0);
+//        QRectF boundRect = tItems[i]->boundingRect();
+//        qDebug() << __FUNCTION__ << "boundRect =" << boundRect;
+
+        // position text
+        /*
+        qDebug() << __FUNCTION__ << "Getting canvas coord for Text" << i
+                 << "p->t[i].anchorObject =" << p->t[i].anchorObject
+                 << "p->t[i].anchorContainer =" << p->t[i].anchorContainer
+                 << "p->t[i].x =" << p->t[i].x
+                 << "p->t[i].y =" << p->t[i].y
+                    ;
+//                    */
+        int w = static_cast<int>(tItems[i]->boundingRect().width());
+        int h = static_cast<int>(tItems[i]->boundingRect().height());
+        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() =" << tItems[i]->boundingRect();
+        QPoint canvas = textCanvasCoord(i);
+        QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h);
+        tItems[i]->setTransformOriginPoint(offset);
+        tItems[i]->setPos(canvas - offset);
+        double rotation = p->t[i].rotation;
+//        tItems[i]->setRotation(rotation);
+
+        iv->scene->addItem(tItems[i]);
+
+        // graphics effects
         if (p->t[i].style != "No style" && p->t[i].style != "") {
             int selectedEffect = 0;
             if (selectedEffect == 4) {
@@ -385,44 +414,13 @@ void Embel::addTextsToScene()
             if (selectedEffect == 0) {
                 // My effects
                 GraphicsEffect *effect = new GraphicsEffect();
-                effect->set(p->styleMap[p->t[i].style], p->globalLightDirection);
+                effect->set(p->styleMap[p->t[i].style],
+                        p->globalLightDirection,
+                        rotation,
+                        tItems[i]->boundingRect());
                 tItems[i]->setGraphicsEffect(effect);
             }
         }
-
-        /*
-        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() ="
-                 << tItems[i]->boundingRect() << "Before";  */
-        /*
-        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() ="
-                 << tItems[i]->boundingRect() << "After";
-                 */
-        iv->scene->addItem(tItems[i]);
-
-        // position text
-        /*
-        qDebug() << __FUNCTION__ << "Getting canvas coord for Text" << i
-                 << "p->t[i].anchorObject =" << p->t[i].anchorObject
-                 << "p->t[i].anchorContainer =" << p->t[i].anchorContainer
-                 << "p->t[i].x =" << p->t[i].x
-                 << "p->t[i].y =" << p->t[i].y
-                    ;
-//                    */
-        int w = static_cast<int>(tItems[i]->boundingRect().width());
-        int h = static_cast<int>(tItems[i]->boundingRect().height());
-        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() =" << tItems[i]->boundingRect();
-        QPoint canvas = textCanvasCoord(i);
-        QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h);
-        tItems[i]->setTransformOriginPoint(offset);
-        tItems[i]->setPos(canvas - offset);
-        tItems[i]->setRotation(p->t[i].rotation);
-
-
-        /*
-        qDebug() << __FUNCTION__ << i << tItems[i] << p->t[i].text
-                 << tItems[i]->boundingRect()
-                 << canvas << offset;
-//                 */
     }
 }
 

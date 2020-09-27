@@ -116,7 +116,7 @@ protected:
 private:
     void initialize();
     void readTileList();
-    void renameSettingKey(QString path, QString from, QString to);
+    void renameSettingKey(QString path, QString oldName, QString newName);
     void updateBorderLists();
     void readTemplateList();
     void readTile(QStringList tileName);
@@ -136,9 +136,9 @@ private:
     void addGraphics();
     void addStyles();
     void addStyle(QString name, int n);
-    void addBlurEffect(QModelIndex parIdx);
-    void addHighlightEffect(QModelIndex parIdx);
-    void addShadowEffect(QModelIndex parIdx);
+    void addBlurEffect(QModelIndex parIdx, QString effectName = "");
+    void addHighlightEffect(QModelIndex parIdx, QString effectName = "");
+    void addShadowEffect(QModelIndex parIdx, QString effectName = "");
 
     void newBorder();
     void newText();
@@ -169,6 +169,7 @@ private:
     void shadowItemChange(QVariant v, QString source, QString effectName, QString style);
     void blurItemChange(QVariant v, QString source, QString effectName, QString style);
     void highlightItemChange(QVariant v, QString source, QString effectName, QString style);
+    void strokeItemChange(QVariant v, QString source, QString effectName, QString style);
 
     void treeChange(QModelIndex idx);
     bool okToSelect(QModelIndex idx, QString selName);
@@ -207,6 +208,7 @@ private:
     QAction *colorizeEffectAction;
     QAction *edgeEffectAction;
     QAction *highlightEffectAction;
+    QAction *strokeEffectAction;
 
     QAction *expandAllAction;
     QAction *collapseAllAction;
