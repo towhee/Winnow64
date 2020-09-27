@@ -130,7 +130,7 @@ void EmbelProperties::initialize()
     }
     // EFFECTS
     effectList << "Shadow" << "Bevel" << "Emboss" << "Blur" << "Sharpen"
-               << "Colorize" << "Edges" << "Highlight";
+               << "Colorize" << "Edges" << "Highlight" << "Stroke";
 
     shadowEffectAction = new QAction(tr("Shadow"), this);
     shadowEffectAction->setObjectName("shadowEffectAction");
@@ -164,6 +164,10 @@ void EmbelProperties::initialize()
     highlightEffectAction->setObjectName("highlightEffectAction");
     connect(highlightEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
 
+    strokeEffectAction = new QAction(tr("Stroke"), this);
+    strokeEffectAction->setObjectName("strokeEffectAction");
+    connect(strokeEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+
     effectMenu = new QMenu(this);
     effectMenu->addAction(shadowEffectAction);
     effectMenu->addAction(bevelEffectAction);
@@ -173,6 +177,7 @@ void EmbelProperties::initialize()
     effectMenu->addAction(colorizeEffectAction);
     effectMenu->addAction(edgeEffectAction);
     effectMenu->addAction(highlightEffectAction);
+    effectMenu->addAction(strokeEffectAction);
 
     // CONTEXT MENU
     expandAllAction = new QAction(tr("Expand all"), this);
@@ -286,14 +291,17 @@ void EmbelProperties::diagnosticStyles()
                 qDebug() << "      Blur: transposed   =" << ef.blur.transposed;
                 break;
             case winnow_effects::highlight:
-                qDebug() << "      Highlight: margin  =" << ef.highlight.margin;
+                qDebug() << "      Highlight: top     =" << ef.highlight.top;
+                qDebug() << "      Highlight: left    =" << ef.highlight.left;
+                qDebug() << "      Highlight: right   =" << ef.highlight.right;
+                qDebug() << "      Highlight: bottom  =" << ef.highlight.bottom;
                 qDebug() << "      Highlight: r       =" << ef.highlight.r;
                 qDebug() << "      Highlight: g       =" << ef.highlight.g;
                 qDebug() << "      Highlight: b       =" << ef.highlight.b;
                 qDebug() << "      Highlight: a       =" << ef.highlight.a;
                 break;
             case winnow_effects::shadow:
-                qDebug() << "      Shadow: size       =" << ef.shadow.size;
+                qDebug() << "      Shadow: size       =" << ef.shadow.length;
                 qDebug() << "      Shadow: blurRadius =" << ef.shadow.blurRadius;
                 qDebug() << "      Shadow: r          =" << ef.shadow.r;
                 qDebug() << "      Shadow: g          =" << ef.shadow.g;
@@ -381,15 +389,15 @@ void EmbelProperties::diagnostic(QModelIndex parent)
     }
 }
 
-void EmbelProperties::renameSettingKey(QString path, QString from, QString to)
+void EmbelProperties::renameSettingKey(QString path, QString oldName, QString newName)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QString path1 = path + "/" + from;
-    QString path2 = path + "/" + to;
+    QString path1 = path + "/" + oldName;
+    QString path2 = path + "/" + newName;
     setting->beginGroup(path1);
     QStringList keys = setting->allKeys();
     setting->endGroup();
@@ -1129,7 +1137,7 @@ void EmbelProperties::shadowItemChange(QVariant v, QString source, QString effec
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
-        styleMap[style][effect].shadow.size = v.toDouble();
+        styleMap[style][effect].shadow.length = v.toDouble();
     }
 
     if (source == "blur") {
@@ -1186,11 +1194,32 @@ void EmbelProperties::highlightItemChange(QVariant v, QString source, QString ef
     QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
 //    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
-    if (source == "margin") {
+    if (source == "top") {
         setting->setValue(path, v.toInt());
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
-        styleMap[style][effect].highlight.margin = v.toInt();
+        styleMap[style][effect].highlight.top = v.toInt();
+    }
+
+    if (source == "left") {
+        setting->setValue(path, v.toInt());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].highlight.left = v.toInt();
+    }
+
+    if (source == "right") {
+        setting->setValue(path, v.toInt());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].highlight.right = v.toInt();
+    }
+
+    if (source == "bottom") {
+        setting->setValue(path, v.toInt());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].highlight.bottom = v.toInt();
     }
 
     if (source == "opacity") {
@@ -1797,12 +1826,14 @@ void EmbelProperties::addStyle(QString name, int n)
 
     // read the effects from settings
     setting->beginGroup(settingRootPath);
-    QStringList groups = setting->childGroups();
+    QStringList items = setting->childGroups();
     setting->endGroup();
     effects.clear();
-    if (groups.contains("Blur")) addBlurEffect(styleIdx);
-    if (groups.contains("Highlight")) addHighlightEffect(styleIdx);
-    if (groups.contains("Shadow")) addShadowEffect(styleIdx);
+    for (int i = 0; i < items.length(); ++i) {
+        if (items.at(i).contains("Blur")) addBlurEffect(styleIdx, items.at(i));
+        if (items.at(i).contains("Highlight")) addHighlightEffect(styleIdx);
+        if (items.at(i).contains("Shadow")) addShadowEffect(styleIdx);
+    }
 
     // sort the effects
     styleItem->sortChildren(Qt::AscendingOrder);
@@ -1853,7 +1884,7 @@ void EmbelProperties::addEffectHeaderButtons()
     effectDeleteBtn->index = capIdx;
 }
 
-void EmbelProperties::addBlurEffect(QModelIndex parIdx)
+void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
 {
     {
     #ifdef ISDEBUG
@@ -1865,7 +1896,8 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::blur;
-    QString effectName = uniqueEffectName(parentName, winnow_effects::blur, "Blur");
+    if (effectName == "")
+        effectName = uniqueEffectName(parentName, winnow_effects::blur, "Blur");
     effect.effectName = effectName;
 
     QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
@@ -1950,7 +1982,7 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx)
     styleMap[styleName].append(effect);
 }
 
-void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
+void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
 {
     {
     #ifdef ISDEBUG
@@ -1962,7 +1994,8 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::highlight;
-    QString effectName = uniqueEffectName(parentName, winnow_effects::highlight, "Highlight");
+    if (effectName == "")
+        effectName = uniqueEffectName(parentName, winnow_effects::highlight, "Highlight");
     effect.effectName = effectName;
 
     QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
@@ -1997,29 +2030,104 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
 //    addItem(i);
     parIdx = capIdx;
 
-    // highlight size
-    i.name = "margin";  // x and y offsets are equal
+    // highlight top margin
+    i.name = "top";  // x and y offsets are equal
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "Margin";
-    i.tooltip = "The amount of highlighted margin surrounding the item.";
+    i.captionText = "Top margin";
+    i.tooltip = "The amount of highlighted margin on top of the item.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "margin";
+    i.key = "top";
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 1;
+        i.value = 0;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Slider;
-    i.type = "double";
-    i.min = 0;
-    i.max = 50;
+    i.type = "int";
+    i.min = -20;
+    i.max = 20;
     i.fixedWidth = 50;
-    effect.highlight.margin = i.value.toInt();
+    effect.highlight.top = i.value.toInt();
+    addItem(i);
+
+    // highlight left margin
+    i.name = "left";  // x and y offsets are equal
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Left margin";
+    i.tooltip = "The amount of highlighted margin on left of the item.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "left";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = 0;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = -20;
+    i.max = 20;
+    i.fixedWidth = 50;
+    effect.highlight.left = i.value.toInt();
+    addItem(i);
+
+    // highlight right margin
+    i.name = "right";  // x and y offsets are equal
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Right margin";
+    i.tooltip = "The amount of highlighted margin on right of the item.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "right";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = 0;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = -20;
+    i.max = 20;
+    i.fixedWidth = 50;
+    effect.highlight.right = i.value.toInt();
+    addItem(i);
+
+    // highlight bottom margin
+    i.name = "bottom";  // x and y offsets are equal
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Bottom margin";
+    i.tooltip = "The amount of highlighted margin on bottom of the item.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "bottom";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = 0;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = -20;
+    i.max = 20;
+    i.fixedWidth = 50;
+    effect.highlight.bottom = i.value.toInt();
     addItem(i);
 
     // highlight opacity
@@ -2079,7 +2187,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx)
     styleMap[styleName].append(effect);
 }
 
-void EmbelProperties::addShadowEffect(QModelIndex parIdx)
+void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
 {
     {
     #ifdef ISDEBUG
@@ -2091,7 +2199,8 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::shadow;
-    QString effectName = uniqueEffectName(parentName, winnow_effects::shadow, "Shadow");
+    if (effectName == "")
+        effectName = uniqueEffectName(parentName, winnow_effects::shadow, "Shadow");
     effect.effectName = effectName;
 
     QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
@@ -2128,15 +2237,15 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     parIdx = capIdx;
 
     // shadow size
-    i.name = "size";
+    i.name = "length";
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "Size";
+    i.captionText = "Length";
     i.tooltip = "The length of the shadow.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "size";
+    i.key = "length";
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
@@ -2149,7 +2258,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx)
     i.min = 0;
     i.max = 30;
 //    i.fixedWidth = 50;
-    effect.shadow.size = i.value.toInt();
+    effect.shadow.length = i.value.toInt();
     addItem(i);
 
     // shadow blur
@@ -2363,7 +2472,9 @@ QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QSt
     // effects in style
     int effectCount = 0;
     for (int i = 0; i < styleMap[styleName].length(); ++i) {
-        if (effectType == styleMap[styleName].at(i).effectType) effectCount++;
+        if (effectType == styleMap[styleName].at(i).effectType) {
+            effectCount++;
+        }
     }
     if (effectCount > 0) effectName += QString::number(effectCount);
     return effectName;

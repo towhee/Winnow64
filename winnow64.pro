@@ -16,6 +16,7 @@ QT += concurrent
 QT += xmlpatterns
 
 HEADERS += Cache/imagecache.h \
+#   Effects/graphicaleffects.h \
    Effects/graphicseffect.h \
    Effects/highlighteffect.h \
    Effects/shadowtest.h \
@@ -97,6 +98,7 @@ HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
 SOURCES += Cache/imagecache.cpp \
+#   Effects/graphicaleffects.cpp \
    Effects/graphicseffect.cpp \
    Effects/highlighteffect.cpp \
    Effects/shadowtest.cpp \
