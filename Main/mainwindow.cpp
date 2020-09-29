@@ -10951,6 +10951,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    embelProperties->test2();
+    embelProperties->test1();
 }
 // End MW

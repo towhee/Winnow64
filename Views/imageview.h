@@ -58,7 +58,8 @@ public:
     QByteArray tileBa;
     QString tileName;
 
-    bool loadImage(QString imageFileName);
+    bool loadImage(QString fPath);
+    void exportImage();
     qreal getFitScaleFactor(QRectF container, QRectF content);
     void clear();
     void setCursorHiding(bool hide);

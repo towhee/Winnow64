@@ -11,6 +11,24 @@ Embel::Embel(ImageView *iv, EmbelProperties *p)
     this->p = p;
 }
 
+void Embel::exportImage()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__;
+    iv->scene->clearSelection();
+    iv->scene->setSceneRect(iv->scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
+    QImage image(iv->scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
+    image.fill(Qt::transparent);                                              // Start all pixels transparent
+
+    QPainter painter(&image);
+    iv->scene->render(&painter);
+    image.save("d:/pictures/test/out/test.tif");
+}
+
 void Embel::test()
 {
     iv->scene->clear();
@@ -310,9 +328,11 @@ void Embel::addBordersToScene()
         bItems[i]->setRect(0, 0, b[i].w, b[i].h);
         QColor color;
         QPen pen;
-        pen.setWidth(static_cast<int>(p->b[i].outlineWidth * ls / 100));
-        color.setNamedColor(p->b[i].outlineColor);
-        pen.setColor(color);
+        pen.setWidth(0);
+        pen.setColor(Qt::transparent);
+//        pen.setWidth(static_cast<int>(p->b[i].outlineWidth * ls / 100));
+//        color.setNamedColor(p->b[i].outlineColor);
+//        pen.setColor(color);
         bItems[i]->setPen(pen);
         color.setNamedColor(p->b[i].color);
         // tile or color background
@@ -327,6 +347,10 @@ void Embel::addBordersToScene()
         bItems[i]->setOpacity(p->b[i].opacity/100);
         iv->scene->addItem(bItems[i]);
         bItems[i]->setPos(b[i].x, b[i].y);
+        qDebug() << __FUNCTION__
+                 << i
+                 << "bItems[i]->boundingRect() ="
+                 << bItems[i]->boundingRect();
     }
 }
 

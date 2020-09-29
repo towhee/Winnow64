@@ -34,8 +34,6 @@ public:
     } f;
 
     struct Image {
-        double outlineWidth;
-        QString outlineColor;
         QString style;
     };
     Image image;
@@ -53,8 +51,6 @@ public:
         QString color;
         double opacity;
         QString style;
-        double outlineWidth;
-        QString outlineColor;
     } border;
     QVector<Border>b;
 
