@@ -1279,6 +1279,12 @@ QString ImageView::diagnostics()
     return reportString;
 }
 
+void ImageView::exportImage()
+{
+    QImage image = grab().toImage();
+//    image.save();
+}
+
 // COPY AND PASTE
 
 void ImageView::copyImage()

@@ -14,6 +14,7 @@ class Embel : public QObject
 
 public:
     Embel(ImageView *iv, EmbelProperties *p);
+    void exportImage();
     void test();
     void diagnostic();
 

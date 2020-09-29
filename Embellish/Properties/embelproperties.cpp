@@ -20,6 +20,11 @@ QSettings structure:
 
 Embel
     Styles
+        Style1
+            Effect1
+            ...
+        Style2
+        ...
     Templates
         Do not Embellish (template0)
         Template1                   isCurrent
@@ -44,7 +49,7 @@ Embel
 Each of the above in turn includes a series of fields the contain the information required by
 Embel.  The information is read from QSettings by addTemplateItems, addBorders ...  As each
 item is read, it is sent to PropertyEditor::addItem, which builds a StandardItemModel to
-mirror the QSettings. A custom widget is created in the treeview the is used to display the
+mirror the QSettings. A custom widget is created in the treeview that is used to display the
 information to the user for editing.
 
 When items change in the datamodel this->itemChanged is signalled.  The change is saved in
@@ -287,8 +292,8 @@ void EmbelProperties::diagnosticStyles()
             switch (ef.effectType) {
             case winnow_effects::blur:
                 qDebug() << "      Blur: radius       =" << ef.blur.radius;
-                qDebug() << "      Blur: quality      =" << ef.blur.quality;
-                qDebug() << "      Blur: transposed   =" << ef.blur.transposed;
+//                qDebug() << "      Blur: quality      =" << ef.blur.quality;
+
                 break;
             case winnow_effects::highlight:
                 qDebug() << "      Highlight: top     =" << ef.highlight.top;
@@ -334,9 +339,7 @@ void EmbelProperties::diagnosticVectors()
             << "tile =" << b[i].tile
             << "color =" << b[i].color
             << "opacity =" << b[i].opacity
-            << "style =" << b[i].style
-            << "outlineWidth =" << b[i].outlineWidth
-            << "outlineColor =" << b[i].outlineColor;
+            << "style =" << b[i].style;
     }
     qDebug() << __FUNCTION__ << "TEXT VECTOR";
     for (int i = 0; i < t.length(); ++i) {
@@ -663,6 +666,7 @@ void EmbelProperties::moveEffectUp()
 
     // get current row for this index as it may have been sorted
     QString effectName = btn->name;
+    qDebug() << __FUNCTION__ << effectName;
     QStandardItem *styleItem = new QStandardItem;
     styleItem = model->itemFromIndex(idx.parent());
     int row;
@@ -881,16 +885,6 @@ void EmbelProperties::imageItemChange(QVariant v, QString source)
     QString path = templatePath + "Image/" + source;
     qDebug() << __FUNCTION__ << path;
 
-    if (source == "outlineWidth") {
-        setting->setValue(path, v.toDouble());
-        image.outlineWidth = v.toDouble();
-    }
-
-    if (source == "outlineColor") {
-        setting->setValue(path, v.toString());
-        image.outlineColor = v.toString();
-    }
-
     if (source == "style") {
         setting->setValue(path, v.toString());
         image.style = v.toString();
@@ -946,16 +940,6 @@ void EmbelProperties::borderItemChange(QModelIndex idx)
     if (source == "opacity") {
         setting->setValue(path, v.toInt());
         b[index].opacity = v.toInt();
-    }
-
-    if (source == "outlineWidth") {
-        setting->setValue(path, v.toInt());
-        b[index].outlineWidth = v.toInt();
-    }
-
-    if (source == "outlineColor") {
-        setting->setValue(path, v.toString());
-        b[index].outlineColor = v.toString();
     }
 
     if (source == "style") {
@@ -1133,7 +1117,7 @@ void EmbelProperties::shadowItemChange(QVariant v, QString source, QString effec
     QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
 //    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
-    if (source == "size") {
+    if (source == "length") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
@@ -1176,11 +1160,11 @@ void EmbelProperties::blurItemChange(QVariant v, QString source, QString effectN
         styleMap[style][effect].blur.radius = v.toDouble();
     }
 
-    if (source == "quality") {
-        setting->setValue(path, v.toBool());
+    if (source == "blendMode") {
+        setting->setValue(path, v.toString());
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
-        styleMap[style][effect].blur.quality = v.toBool();
+        styleMap[style][effect].blur.blendMode = winnow_effects::blendModeMap[v.toString()];
     }
 }
 
@@ -1508,44 +1492,6 @@ void EmbelProperties::addImage()
     QModelIndex parIdx = capIdx;
 
     QString settingRootPath = templatePath + "Image/";
-
-    i.name = "outlineWidth";
-    i.parIdx = parIdx;
-    i.parentName = "ImageHeader";
-    i.captionText = "Outine width";
-    i.tooltip = "This is the outline for the image (% of the long side).";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "outlineWidth";
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
-    else i.value = 0.0;
-    i.delegateType = DT_DoubleSpinbox;
-    i.type = "double";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    border.outlineWidth = i.value.toDouble();
-    addItem(i);
-
-    i.name = "outlineColor";
-    i.parIdx = parIdx;
-    i.parentName = "ImageHeader";
-    i.captionText = "Outline color";
-    i.tooltip = "Select a color that will be used to full the border area.";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "outlineColor";
-    if (setting->contains(settingRootPath + i.key)) {
-        i.value = setting->value(settingRootPath + i.key);
-    }
-    else i.value = "#3f5f53";
-    i.delegateType = DT_Color;
-    i.type = "QString";
-    border.outlineColor = i.value.toString();
-    addItem(i);
 
     // IMAGE style
     i.name = "imageStyle";
@@ -1956,16 +1902,16 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
     effect.blur.radius = i.value.toDouble();
     addItem(i);
 
-    // blur quality
-    i.name = "quality";
+    // blur blend mode
+    i.name = "blendMode";
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "Quality";
-    i.tooltip = "Render best quality instead of best performance.";
+    i.captionText = "Blend mode";
+    i.tooltip = "The way this effect blends with other effects in the style.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "quality";
+    i.key = "blendMode";
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
@@ -1973,9 +1919,10 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
         i.value = false;
         setting->setValue(settingRootPath + i.key, i.value);
     }
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    effect.blur.quality = i.value.toBool();
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList  << winnow_effects::blendModes;
+    effect.blur.blendMode = winnow_effects::blendModeMap[i.value.toString()];
     addItem(i);
 
 //    effects.append(effect);
@@ -2722,7 +2669,7 @@ void EmbelProperties::solo()
 
 void EmbelProperties::test1()
 {
-//    e->test();
+    e->exportImage();
 
 }
 
@@ -2946,52 +2893,6 @@ void EmbelProperties::addBorder(int count)
     i.max = 100;
     i.type = "int";
     border.opacity = i.value.toInt();
-    addItem(i);
-
-    i.name = "outlineWidth";
-    i.parIdx = parIdx;
-    i.parentName = borderName;
-    i.captionText = "Outine width";
-    i.tooltip = "This is the outline for the border (% of the long side).";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "outlineWidth";
-    i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
-    else {
-        i.value = 0.02;
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_DoubleSpinbox;
-    i.type = "double";
-    i.min = 0;
-    i.max = 100;
-    i.fixedWidth = 50;
-    border.outlineWidth = i.value.toDouble();
-    addItem(i);
-
-    i.name = "outlineColor";
-    i.parIdx = parIdx;
-    i.parentName = borderName;
-    i.captionText = "Outline color";
-    i.tooltip = "Select a color that will be used to full the border area.";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "outlineColor";
-    i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key)) {
-        i.value = setting->value(settingRootPath + i.key);
-    }
-    else {
-        i.value = "#FFFFFF";
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_Color;
-    i.type = "QString";
-    border.outlineColor = i.value.toString();
     addItem(i);
 
     i.name = "style";

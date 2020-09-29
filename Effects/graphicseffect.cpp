@@ -14,7 +14,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                          double rotation,
                          QRectF boundRect)
 {
-    this->effects = effects;
+    this->effects = &effects;
     lightDirection = globalLightDirection;
     this->rotation = rotation;
     srcRectZeroRotation = boundRect;
@@ -35,7 +35,10 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
 //                    */
         switch (ef.effectType) {
         case blur:
-
+            if (m.top < ef.blur.radius) m.top = ef.blur.radius;
+            if (m.left < ef.blur.radius) m.left = ef.blur.radius;
+            if (m.right < ef.blur.radius) m.right = ef.blur.radius;
+            if (m.bottom < ef.blur.radius) m.bottom = ef.blur.radius;
             break;
         case highlight:
             if (m.top < ef.highlight.top) m.top = ef.highlight.top;
@@ -61,7 +64,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
 
 void GraphicsEffect::draw(QPainter* painter)
 {
-    if (effects.length() == 0) return;
+    if (effects->length() == 0) return;
 
     painter->save();
 
@@ -69,11 +72,10 @@ void GraphicsEffect::draw(QPainter* painter)
     PixmapPadMode mode = PadToEffectiveBoundingRect;
     srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, mode);
     overlay = srcPixmap.toImage();
+//  overlay.setDevicePixelRatio(srcPixmap.devicePixelRatioF());
     srcPixmap.save("D:/Pictures/Temp/effect/srcPixmap.tif");
     qDebug() << __FUNCTION__
-             << "sourceOffset =" << srcOffset
-             << "rotation =" << rotation
-             << "srcPixmap.rect() =" << srcPixmap.rect()
+             << "srcPixmap.devicePixelRatioF() =" << srcPixmap.devicePixelRatioF()
                 ;
 
     // iterate effects in style
@@ -82,8 +84,8 @@ void GraphicsEffect::draw(QPainter* painter)
     std::sort(effects.begin(), effects.end(), [](Effect const &l, Effect const &r) {
               return l.effectOrder < r.effectOrder; });
 //              */
-    for (int i = 0; i < effects.length(); ++i) {
-        const Effect &ef = effects.at(i);
+    for (int i = 0; i < effects->length(); ++i) {
+        const Effect &ef = effects->at(i);
         QColor color;
         QPointF pt;
         Margin margin;
@@ -95,7 +97,7 @@ void GraphicsEffect::draw(QPainter* painter)
 //                    */
         switch (ef.effectType) {
         case blur:
-            blurEffect(painter, ef.blur.radius, ef.blur.quality, 0/*ef.blur.transposed*/);
+            blurEffect(ef.blur.radius, ef.blur.blendMode);
             break;
         case highlight:
             color.setRgb(ef.highlight.r, ef.highlight.g, ef.highlight.b, ef.highlight.a);
@@ -147,6 +149,7 @@ void GraphicsEffect::draw(QPainter* painter)
         painter->drawImage(srcOffset + deltaOffset, rotatedOverlay);
     }
     else {
+        overlay.save("D:/Pictures/Temp/effect/overlay.tif");
         painter->drawImage(srcOffset, overlay);
     }
 
@@ -157,15 +160,36 @@ QT_BEGIN_NAMESPACE
   extern Q_WIDGETS_EXPORT void qt_blurImage(QPainter *p, QImage &blurImage, qreal radius, bool quality, bool alphaOnly, int transposed = 0 );
 QT_END_NAMESPACE
 
-void GraphicsEffect::blurEffect(QPainter *painter, qreal radius, bool quality, bool alphaOnly, int transposed)
+void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 {
-    qt_blurImage(painter, overlay, radius, quality, alphaOnly);
+    qDebug() << __FUNCTION__ << mode;
+
+    QImage tmp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    tmp.fill(Qt::transparent);
+    QPainter tmpPainter(&tmp);
+    tmpPainter.drawImage(0,0, overlay);
+    tmpPainter.end();
+
+    QImage blurred(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    blurred.fill(Qt::transparent);
+    QPainter blurPainter(&blurred);
+    qt_blurImage(&blurPainter, tmp, radius, true, false);
+    blurPainter.end();
+
+    tmp = std::move(blurred);
+//    overlay = std::move(blurred);
+
+    QPainter overlayPainter(&overlay);
+    overlayPainter.setCompositionMode(mode);
+//    overlayPainter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
+    overlayPainter.drawImage(0,0, tmp);
+    overlayPainter.end();
 }
 
 void GraphicsEffect::shadowEffect(double length, double radius, QColor color)
 {
     if (overlay.isNull()) return;
-
+    qDebug() << __FUNCTION__ << "length =" << length;
     double rads = lightDirection * (3.14159 / 180);
     QPointF shadowOffset;
     shadowOffset.setX(-sin(rads) * length);
@@ -215,6 +239,13 @@ void GraphicsEffect::highlightEffect(QColor color, Margin margin)
     QSize highlightBackgroundSize(w, h);
     QImage highlightBackgroundImage(highlightBackgroundSize, QImage::Format_ARGB32_Premultiplied);
     highlightBackgroundImage.fill(color);
+
+    qDebug() << __FUNCTION__
+             << "Margin.top =" << margin.top
+             << "Margin.left =" << margin.left
+             << "Margin.right =" << margin.right
+             << "Margin.bottom =" << margin.bottom
+             << "highlightBackgroundSize =" << highlightBackgroundSize;
 
     QPainter overlayPainter(&overlay);
     overlay.save("D:/Pictures/Temp/effect/overlay1.tif");

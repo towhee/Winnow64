@@ -15,8 +15,7 @@ namespace winnow_effects
 
     struct Blur {
         qreal radius;
-        bool quality;
-        int transposed;
+        QPainter::CompositionMode blendMode;
     };
 
     struct Highlight {
@@ -35,6 +34,62 @@ namespace winnow_effects
             Highlight highlight;
             Shadow shadow;
         };
+    };
+
+//    static QStringList blendModes;
+    static QStringList blendModes (QStringList()
+        << "Above"
+        << "Below"
+        << "Clear"
+        << "Source"
+        << "Destination"
+        << "SourceIn"
+        << "DestinationIn"
+        << "SourceOut"
+        << "DestinationOut"
+        << "SourceAtop"
+        << "DestinationAtop"
+        << "Xor"
+        << "Plus"
+        << "Multiply"
+        << "Screen"
+        << "Overlay"
+        << "Darken"
+        << "Lighten"
+        << "Color dodge"
+        << "Color burn"
+        << "Hard light"
+        << "Soft light"
+        << "Difference"
+        << "Exclusion"
+        );
+
+//    extern QMap<QString, QPainter::CompositionMode> blendModeMap;
+    static QMap<QString, QPainter::CompositionMode> blendModeMap{
+        {"Above", QPainter::CompositionMode_DestinationOver},
+        {"Below", QPainter::CompositionMode_SourceOver},
+        {"Clear", QPainter::CompositionMode_Clear},
+        {"Source", QPainter::CompositionMode_Source},
+        {"Destination", QPainter::CompositionMode_Destination},
+        {"SourceIn", QPainter::CompositionMode_SourceIn},
+        {"DestinationIn", QPainter::CompositionMode_DestinationIn},
+        {"SourceOut", QPainter::CompositionMode_SourceOut},
+        {"DestinationOut", QPainter::CompositionMode_DestinationOut},
+        {"SourceAtop", QPainter::CompositionMode_SourceAtop},
+        {"DestinationAtop", QPainter::CompositionMode_DestinationAtop},
+        {"Xor", QPainter::CompositionMode_Xor},
+        {"Plus", QPainter::CompositionMode_Plus},
+        {"Multiply", QPainter::CompositionMode_Multiply},
+        {"Screen", QPainter::CompositionMode_Screen},
+        {"Overlay", QPainter::CompositionMode_Overlay},
+        {"Darken", QPainter::CompositionMode_Darken},
+        {"Lighten", QPainter::CompositionMode_Lighten},
+        {"Color dodge", QPainter::CompositionMode_ColorDodge},
+        {"Color burn", QPainter::CompositionMode_ColorBurn},
+        {"Hard light", QPainter::CompositionMode_HardLight},
+        {"Soft light", QPainter::CompositionMode_SoftLight},
+        {"Difference", QPainter::CompositionMode_Difference},
+        {"Exclusion", QPainter::CompositionMode_Exclusion}
     };
 }
 
@@ -58,9 +113,9 @@ private:
     virtual QRectF boundingRectFor(const QRectF& rect ) const;
     void shadowEffect(double size, double radius, QColor color);
     void highlightEffect(QColor color, Margin margin);
-    void blurEffect(QPainter *painter, qreal radius, bool quality, bool alphaOnly, int transposed = 0);
+    void blurEffect(qreal radius, QPainter::CompositionMode mode);
 
-    QList<winnow_effects::Effect> effects;
+    QList<winnow_effects::Effect> *effects;
 
     QRectF srcRectZeroRotation;
     QRectF srcRect;
