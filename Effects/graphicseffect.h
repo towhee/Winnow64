@@ -11,6 +11,7 @@ namespace winnow_effects
         qreal length;               // % of object long side or text height
         qreal blurRadius;
         int r, g, b, a;
+        QPainter::CompositionMode blendMode;
     };
 
     struct Blur {
@@ -21,6 +22,7 @@ namespace winnow_effects
     struct Highlight {
         int r, g, b, a;
         int top, left, right, bottom;
+        QPainter::CompositionMode blendMode;
     };
 
     // when add an effect must add to enum and union
@@ -36,7 +38,6 @@ namespace winnow_effects
         };
     };
 
-//    static QStringList blendModes;
     static QStringList blendModes (QStringList()
         << "Above"
         << "Below"
@@ -64,10 +65,9 @@ namespace winnow_effects
         << "Exclusion"
         );
 
-//    extern QMap<QString, QPainter::CompositionMode> blendModeMap;
     static QMap<QString, QPainter::CompositionMode> blendModeMap{
-        {"Above", QPainter::CompositionMode_DestinationOver},
-        {"Below", QPainter::CompositionMode_SourceOver},
+        {"Above", QPainter::CompositionMode_SourceOver},
+        {"Below", QPainter::CompositionMode_DestinationOver},
         {"Clear", QPainter::CompositionMode_Clear},
         {"Source", QPainter::CompositionMode_Source},
         {"Destination", QPainter::CompositionMode_Destination},
@@ -111,8 +111,8 @@ public:
 
 private:
     virtual QRectF boundingRectFor(const QRectF& rect ) const;
-    void shadowEffect(double size, double radius, QColor color);
-    void highlightEffect(QColor color, Margin margin);
+    void shadowEffect(double size, double radius, QColor color, QPainter::CompositionMode mode);
+    void highlightEffect(QColor color, Margin margin, QPainter::CompositionMode mode);
     void blurEffect(qreal radius, QPainter::CompositionMode mode);
 
     QList<winnow_effects::Effect> *effects;

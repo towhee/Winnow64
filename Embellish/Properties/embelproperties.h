@@ -107,7 +107,7 @@ signals:
 protected:
 //    void mouseMoveEvent(QMouseEvent *event) override;   // does not work here
     void mousePressEvent(QMouseEvent *event) override;
-//    void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
 
 private:
     void initialize();

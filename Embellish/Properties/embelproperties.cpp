@@ -907,8 +907,9 @@ void EmbelProperties::borderItemChange(QModelIndex idx)
 //    diagnostics(idx);
 
     if (source == "topMargin") {
-        setting->setValue(path, v);
-        b[index].top = v.toDouble();
+        double x = v.toDouble() / 100;
+        setting->setValue(path, x);
+        b[index].top = x;
     }
 
     if (source == "leftMargin") {
@@ -1041,8 +1042,9 @@ void EmbelProperties::textItemChange(QModelIndex idx)
     }
 
     if (source == "size") {
-        setting->setValue(path, v.toDouble());
-        t[index].size = v.toDouble();
+        double x = v.toDouble() / 100;
+        setting->setValue(path, x);
+        t[index].size = x;
     }
 
     if (source == "bold") {
@@ -1141,6 +1143,13 @@ void EmbelProperties::shadowItemChange(QVariant v, QString source, QString effec
         styleMap[style][effect].shadow.b = color.blue();
         styleMap[style][effect].shadow.a = color.alpha();
     }
+
+    if (source == "blendMode") {
+        setting->setValue(path, v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].shadow.blendMode = winnow_effects::blendModeMap[v.toString()];
+    }
 }
 
 void EmbelProperties::blurItemChange(QVariant v, QString source, QString effectName, QString style)
@@ -1151,7 +1160,7 @@ void EmbelProperties::blurItemChange(QVariant v, QString source, QString effectN
     #endif
     }
     QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
-//    qDebug() << __FUNCTION__ << path << source << v.toInt();
+    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "radius") {
         setting->setValue(path, v.toDouble());
@@ -1222,6 +1231,13 @@ void EmbelProperties::highlightItemChange(QVariant v, QString source, QString ef
         styleMap[style][effect].highlight.g = color.green();
         styleMap[style][effect].highlight.b = color.blue();
         styleMap[style][effect].highlight.a = color.alpha();
+    }
+
+    if (source == "blendMode") {
+        setting->setValue(path, v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].highlight.blendMode = winnow_effects::blendModeMap[v.toString()];
     }
 }
 
@@ -1887,11 +1903,12 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "radius";
+    i.defaultValue = 0;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 1;
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Slider;
@@ -1987,6 +2004,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "top";
+    i.defaultValue = 0;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
@@ -2012,6 +2030,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "left";
+    i.defaultValue = 0;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
@@ -2037,6 +2056,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "right";
+    i.defaultValue = 0;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
@@ -2062,6 +2082,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "bottom";
+    i.defaultValue = 0;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
@@ -2128,6 +2149,29 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     effect.highlight.g = color.green();
     effect.highlight.b = color.blue();
 //    effect.highlight.a = color.alpha();
+    addItem(i);
+
+    // highlight blend mode
+    i.name = "blendMode";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Blend mode";
+    i.tooltip = "The way this effect blends with other effects in the style.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "blendMode";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = false;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList  << winnow_effects::blendModes;
+    effect.highlight.blendMode = winnow_effects::blendModeMap[i.value.toString()];
     addItem(i);
 
 //    effects.append(effect);
@@ -2257,6 +2301,29 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     effect.shadow.g = color.green();
     effect.shadow.b = color.blue();
     effect.shadow.a = color.alpha();
+    addItem(i);
+
+    // shadow blend mode
+    i.name = "blendMode";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Blend mode";
+    i.tooltip = "The way this effect blends with other effects in the style.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "blendMode";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = false;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList  << winnow_effects::blendModes;
+    effect.shadow.blendMode = winnow_effects::blendModeMap[i.value.toString()];
     addItem(i);
 
 //    effects.append(effect);
@@ -2447,11 +2514,12 @@ int EmbelProperties::effectIndex(QString style, QString effectName)
     return -1;
 }
 
-/*void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
+void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    qDebug() << __FUNCTION__;
-    // ignore
-}*/
+    QModelIndex idx = indexAt(event->pos());
+    idx = model->index(idx.row(), ValColumn, idx.parent());
+    setItemValue(idx, idx.data(UR_DelegateType).toInt(), idx.data(UR_DefaultValue));
+}
 
 void EmbelProperties::mousePressEvent(QMouseEvent *event)
 {
@@ -2743,10 +2811,11 @@ void EmbelProperties::addBorder(int count)
         i.value = 1;
         setting->setValue(settingRootPath + i.key, i.value);
     }
-    i.delegateType = DT_DoubleSpinbox;
+    i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
+    i.max = 2000;
+    i.div = 100;
     i.fixedWidth = 50;
     border.top = i.value.toDouble();
     addItem(i);
@@ -2767,10 +2836,11 @@ void EmbelProperties::addBorder(int count)
         i.value = 1;
         setting->setValue(settingRootPath + i.key, i.value);
     }
-    i.delegateType = DT_DoubleSpinbox;
+    i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
+    i.max = 2000;
+    i.div = 100;
     i.fixedWidth = 50;
     border.left = i.value.toDouble();
     addItem(i);
@@ -2791,10 +2861,11 @@ void EmbelProperties::addBorder(int count)
         i.value = 1;
         setting->setValue(settingRootPath + i.key, i.value);
     }
-    i.delegateType = DT_DoubleSpinbox;
+    i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
+    i.max = 2000;
+    i.div = 100;
     i.fixedWidth = 50;
     border.right = i.value.toDouble();
     addItem(i);
@@ -2815,10 +2886,11 @@ void EmbelProperties::addBorder(int count)
         i.value = 1;
         setting->setValue(settingRootPath + i.key, i.value);
     }
-    i.delegateType = DT_DoubleSpinbox;
+    i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
+    i.max = 2000;
+    i.div = 100;
     i.fixedWidth = 50;
     border.bottom = i.value.toDouble();
     addItem(i);
@@ -3110,6 +3182,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "rotation";
+    i.defaultValue = 0;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
@@ -3225,7 +3298,8 @@ void EmbelProperties::addText(int count)
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
+    i.max = 2000;
+    i.div = 100;
     i.fixedWidth = 50;
     text.size = i.value.toDouble();
     addItem(i);
