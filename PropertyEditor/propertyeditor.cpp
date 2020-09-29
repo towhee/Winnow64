@@ -238,6 +238,7 @@ supplied by the calling function.
 
     // value
     model->setData(valIdx, i.value, Qt::EditRole);
+    model->setData(valIdx, i.defaultValue, UR_DefaultValue);
     model->setData(valIdx, i.delegateType, UR_DelegateType);
     model->setData(valIdx, i.itemIndex, UR_ItemIndex);
 //    qDebug() << __FUNCTION__ << valIdx << i.name << i.itemIndex << valIdx.data(UR_ItemIndex);
@@ -245,6 +246,7 @@ supplied by the calling function.
     model->setData(valIdx, i.type, UR_Type);
     model->setData(valIdx, i.min, UR_Min);
     model->setData(valIdx, i.max, UR_Max);
+    model->setData(valIdx, i.div, UR_Div);
     model->setData(valIdx, i.fixedWidth, UR_FixedWidth);
     model->setData(valIdx, i.color, UR_Color);
     model->setData(valIdx, i.dropList, UR_StringList);
@@ -252,16 +254,14 @@ supplied by the calling function.
 
     sourceIdx[i.key] = valIdx;      // map item key string to value index
 
-    /*
-    qDebug() << __FUNCTION__
-             << "i.name =" << i.name
-                ;
-//    */
-
     // reset item data struct
     clearItemInfo(i);
 
-    return propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+    QWidget *editor = propertyDelegate->createEditor(this, *styleOptionViewItem, valIdx);
+    // save editor in data model for later use (see PropertyEditor::setItemValue)
+    model->setData(valIdx, QVariant::fromValue(static_cast<void*>(editor)), UR_Editor);
+
+    return editor;
 }
 
 void PropertyEditor::clearItemInfo(ItemInfo &i)
@@ -284,11 +284,13 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.captionText = "";             // all
     i.captionIsEditable = false;    // all
     i.delegateType = DT_None;       // all
+    i.defaultValue = "__Ignore__";
     i.value = 0;                    // except hdr
-    i.key = "";               // except hdr
+    i.key = "";                     // except hdr
     i.type = "";                    // except hdr
     i.min = 0;                      // DT_Spinbox, DT_Slider
     i.max = 0;                      // DT_Spinbox, DT_Slider
+    i.div = 1;                      // DT_Spinbox
     i.fixedWidth = 50;              // DT_Slider
     i.dropList.clear();             // DT_Combo
     i.color = QColor(G::textShade,G::textShade,G::textShade).name();
@@ -329,6 +331,51 @@ void PropertyEditor::getItemInfo(QModelIndex &idx, ItemInfo &copy)
     copy.index = capIdx;
     copy.parIdx = capIdx.parent();
     copy.insertRow = -1;
+}
+
+void PropertyEditor::setItemValue(QModelIndex idx, int type, QVariant value)
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (value.toString() == "__Ignore__") return;
+    if (type == DT_Label) {
+        auto editor = static_cast<LabelEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setValue(value);
+    }
+    if (type == DT_LineEdit) {
+        auto editor = static_cast<LineEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setValue(value);
+    }
+    if (type == DT_Spinbox) {
+        auto editor = static_cast<SpinBoxEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setValue(value);
+    }
+    if (type == DT_DoubleSpinbox) {
+        auto editor = static_cast<DoubleSpinBoxEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setValue(value);
+    }
+    if (type == DT_Checkbox) {
+        auto editor = static_cast<CheckBoxEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setValue(value);
+    }
+    if (type == DT_Combo) {
+        auto editor = static_cast<ComboBoxEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setValue(value);
+    }
+    if (type == DT_Slider) {
+        auto editor = static_cast<SliderEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setValue(value);
+    }
+    if (type == DT_Color) {
+        auto editor = static_cast<ColorEditor*>(idx.data(UR_Editor).value<void*>());
+        editor->setValue(value);
+    }
 }
 
 void PropertyEditor::expandBranch(QString text)

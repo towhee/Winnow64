@@ -35,10 +35,10 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
 //                    */
         switch (ef.effectType) {
         case blur:
-            if (m.top < ef.blur.radius) m.top = ef.blur.radius;
-            if (m.left < ef.blur.radius) m.left = ef.blur.radius;
-            if (m.right < ef.blur.radius) m.right = ef.blur.radius;
-            if (m.bottom < ef.blur.radius) m.bottom = ef.blur.radius;
+//            if (m.top < ef.blur.radius) m.top = ef.blur.radius;
+//            if (m.left < ef.blur.radius) m.left = ef.blur.radius;
+//            if (m.right < ef.blur.radius) m.right = ef.blur.radius;
+//            if (m.bottom < ef.blur.radius) m.bottom = ef.blur.radius;
             break;
         case highlight:
             if (m.top < ef.highlight.top) m.top = ef.highlight.top;
@@ -51,8 +51,8 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
             double rads = lightDirection * (3.14159 / 180);
             qreal dx = -sin(rads) * length;
             qreal dy = +cos(rads) * length;
-            if (offset.x() < dx) offset.setX(dx);
-            if (offset.y() < dy) offset.setY(dy);
+//            if (offset.x() < dx) offset.setX(dx);
+//            if (offset.y() < dy) offset.setY(dy);
             if (m.top < ef.shadow.blurRadius) m.top = ef.shadow.blurRadius;
             if (m.left < ef.shadow.blurRadius) m.left = ef.shadow.blurRadius;
             if (m.right < ef.shadow.blurRadius) m.right = ef.shadow.blurRadius;
@@ -105,11 +105,11 @@ void GraphicsEffect::draw(QPainter* painter)
             margin.left = ef.highlight.left;
             margin.right = ef.highlight.right;
             margin.bottom = ef.highlight.bottom;
-            highlightEffect(color, margin);
+            highlightEffect(color, margin, ef.highlight.blendMode);
             break;
         case shadow:
             color.setRgb(ef.shadow.r, ef.shadow.g, ef.shadow.b, ef.shadow.a);
-            shadowEffect(ef.shadow.length, ef.shadow.blurRadius, color);
+            shadowEffect(ef.shadow.length, ef.shadow.blurRadius, color, ef.shadow.blendMode);
         }
     }
 
@@ -186,7 +186,8 @@ void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
     overlayPainter.end();
 }
 
-void GraphicsEffect::shadowEffect(double length, double radius, QColor color)
+void GraphicsEffect::shadowEffect(double length, double radius, QColor color,
+                                  QPainter::CompositionMode mode)
 {
     if (overlay.isNull()) return;
     qDebug() << __FUNCTION__ << "length =" << length;
@@ -219,7 +220,8 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color)
 
     // compose adjusted image
     QPainter overlayPainter(&overlay);
-    overlayPainter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
+    overlayPainter.setCompositionMode(mode);
+//    overlayPainter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
     overlayPainter.drawImage(shadowOffset, shadIm);
     overlayPainter.end();
     /*
@@ -229,7 +231,7 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color)
     return;
 }
 
-void GraphicsEffect::highlightEffect(QColor color, Margin margin)
+void GraphicsEffect::highlightEffect(QColor color, Margin margin, QPainter::CompositionMode mode)
 {
     if (overlay.isNull()) return;
 
@@ -248,12 +250,10 @@ void GraphicsEffect::highlightEffect(QColor color, Margin margin)
              << "highlightBackgroundSize =" << highlightBackgroundSize;
 
     QPainter overlayPainter(&overlay);
-    overlay.save("D:/Pictures/Temp/effect/overlay1.tif");
     overlayPainter.translate(-highlightOffset);
-    overlay.save("D:/Pictures/Temp/effect/overlay2.tif");
-    overlayPainter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
+    overlayPainter.setCompositionMode(mode);
+//    overlayPainter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
     overlayPainter.drawImage(0, 0, highlightBackgroundImage);
-    overlay.save("D:/Pictures/Temp/effect/overlay3.tif");
     overlayPainter.end();
 
     return;

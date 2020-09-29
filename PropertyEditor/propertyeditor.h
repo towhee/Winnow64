@@ -59,12 +59,14 @@ public:
         QString captionText;
         bool isDecoration = true;       // show collapse/expand decoration in header
         bool captionIsEditable;
+        QVariant defaultValue;          // when created and when double click caption
         QVariant value;
         QString key;
         QString type;
         int delegateType;
         QVariant min;
         QVariant max;
+        QVariant div;                   // used to convert slider int amount to double ie / 100
         int fixedWidth;
         QString color;
         QStringList dropList;
@@ -74,6 +76,7 @@ public:
         int itemIndex;
     };
     QWidget* addItem(ItemInfo &i); // abstract addItem
+    void setItemValue(QModelIndex idx, int type, QVariant value);
     void getItemInfo(QModelIndex &idx, ItemInfo &copy);
     void clearItemInfo(ItemInfo &i);
     void getIndexFromNameAndParent(QString name, QString parName, QModelIndex = QModelIndex());

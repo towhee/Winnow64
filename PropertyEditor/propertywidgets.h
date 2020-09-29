@@ -23,9 +23,11 @@ enum DelegateType
 enum UserRole
 {
     UR_Name = Qt::UserRole + 1,         // unique name to identify the item
+    UR_DefaultValue,                    // when created or double click
     UR_SortOrder,                       // override appended order ie for effects
     UR_Path,                            // settings path
-    UR_DelegateType,                    // the PropertyWidget (custom widget)
+    UR_Editor,                          // pointer to custom editor created
+    UR_DelegateType,                    // type of custom widget
     UR_hasValue,                        // if no value then value column is empty
     UR_CaptionIsEditable,               // can edit caption
     UR_ItemIndex,                       // the index for the border, text, rectangle or graphic
@@ -39,6 +41,7 @@ enum UserRole
     UR_Type,                            // the data type required by the delegate
     UR_Min,                             // validate minimum value
     UR_Max,                             // validate maximum value
+    UR_Div,                             // Divide slider value by amount to get double from int
     UR_FixedWidth,                      // fixed label width in custom widget
     UR_StringList,                      // list of items for comboBox
     UR_IsBtn,                           // button to run a secondary widget or help
@@ -66,12 +69,14 @@ signals:
 
 private:
     void change(int value);
-    void updateSliderWhenLineEdited(QString value);
+    void updateSliderWhenLineEdited();
+    int div;
     QSlider *slider;
     QLineEdit *lineEdit;
     QString source;
     QModelIndex idx;
 };
+//Q_DECLARE_METATYPE(SliderEditor*);
 
 class SpinBoxEditor : public QWidget
 {

@@ -36,6 +36,9 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     int lineEditWidth = idx.data(UR_FixedWidth).toInt();
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
+    // divisor if converting integer slider value to double
+    div = idx.data(UR_Div).toInt();
+    if (div == 0) div = 1;
     source = idx.data(UR_Source).toString();
 
     slider = new QSlider(Qt::Horizontal);
@@ -57,11 +60,11 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none;}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
-    QValidator *validator = new QIntValidator(min, max, this);
-    lineEdit->setValidator(validator);
+//    QValidator *validator = new QIntValidator(min, max, this);
+//    lineEdit->setValidator(validator);
 
     connect(slider, &QSlider::valueChanged, this, &SliderEditor::change);
-    connect(lineEdit, &QLineEdit::textEdited, this, &SliderEditor::updateSliderWhenLineEdited);
+    connect(lineEdit, &QLineEdit::editingFinished, this, &SliderEditor::updateSliderWhenLineEdited);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(slider, Qt::AlignLeft);
@@ -69,7 +72,9 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
     setLayout(layout);
 
-    slider->setValue(idx.data(Qt::EditRole).toInt());
+    int sliderValue = idx.data(Qt::EditRole).toInt() * div;
+    slider->setValue(sliderValue);
+    emit slider->valueChanged(sliderValue);
 }
 
 int SliderEditor::value()
@@ -99,19 +104,25 @@ void SliderEditor::change(int value)
     G::track(__FUNCTION__);
     #endif
     }
-    QVariant v = value;
+    double v = static_cast<double>(value) / div;
+    qDebug() << __FUNCTION__
+             << "value =" << value
+             << "div =" << div
+             << "v =" << v;
     emit editorValueChanged(this);
-    lineEdit->setText(QString::number(value));
+    if (div == 1) lineEdit->setText(QString::number(value));
+    else lineEdit->setText(QString::number(v, 'f', 2));
 }
 
-void SliderEditor::updateSliderWhenLineEdited(QString value)
+void SliderEditor::updateSliderWhenLineEdited(/*QString value*/)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    slider->setValue(value.toInt());
+    double v = lineEdit->text().toDouble() * div;
+    slider->setValue(static_cast<int>(v));
 }
 
 void SliderEditor::paintEvent(QPaintEvent *event)
