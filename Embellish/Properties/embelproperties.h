@@ -154,17 +154,17 @@ private:
     void moveEffectDown();
     void sortEffectList(QString style);
 
-    void templateChange(QVariant v);
-    void fileItemChange(QVariant v, QString source);
-    void imageItemChange(QVariant v, QString source);
-    void borderItemChange(QModelIndex idx);
-    void textItemChange(QModelIndex idx);
-    void rectangleItemChange(QVariant v, QString source, QString parent);
-    void graphicItemChange(QVariant v, QString source, QString parent);
-    void globalLightItemChange(QVariant v, QString source, QString parent);
-    void shadowItemChange(QVariant v, QString source, QString effectName, QString style);
-    void blurItemChange(QVariant v, QString source, QString effectName, QString style);
-    void highlightItemChange(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeTemplate(QVariant v);
+    void itemChangeFile(QVariant v, QString source);
+    void itemChangeImage(QVariant v, QString source);
+    void itemChangeBorder(QModelIndex idx);
+    void itemChangeText(QModelIndex idx);
+    void itemChangeRectangle(QVariant v, QString source, QString parent);
+    void itemChangeGraphic(QVariant v, QString source, QString parent);
+    void itemChangeGlobalLight(QVariant v, QString source, QString parent);
+    void itemChangeShadowEffect(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeBlurEffect(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeHighlightEffect(QVariant v, QString source, QString effectName, QString style);
     void strokeItemChange(QVariant v, QString source, QString effectName, QString style);
 
     void treeChange(QModelIndex idx);

@@ -112,7 +112,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     expand(model->index(_rectangles,0));
     expand(model->index(_graphics,0));
 
-//    updateHiddenRows(QModelIndex());
+    updateHiddenRows(QModelIndex());
 }
 
 void EmbelProperties::initialize()
@@ -774,24 +774,24 @@ itemChange, which is subclassed here.
              << "grandparent =" << grandparent;
              */
 
-    if (source == "templateList") templateChange(v);
+    if (source == "templateList") itemChangeTemplate(v);
     if (templateId != 0) {
-        if (parent == "FileHeader") fileItemChange(v, source);
-        if (parent == "ImageHeader") imageItemChange(v, source);
-        if (grandparent == "Borders") borderItemChange(idx);
-        if (grandparent == "Texts") textItemChange(idx);
-        if (grandparent == "Rectangles") rectangleItemChange(v, source, parent);
-        if (grandparent == "Graphics") graphicItemChange(v, source, parent);
-        if (source == "globalLightDirection") globalLightItemChange(v, source, parent);
-        if (parent.left(6) == "Shadow") shadowItemChange(v, source, parent, grandparent);
-        if (parent.left(4) == "Blur") blurItemChange(v, source, parent, grandparent);
-        if (parent.left(9) == "Highlight") highlightItemChange(v, source, parent, grandparent);
+        if (parent == "FileHeader") itemChangeFile(v, source);
+        if (parent == "ImageHeader") itemChangeImage(v, source);
+        if (grandparent == "Borders") itemChangeBorder(idx);
+        if (grandparent == "Texts") itemChangeText(idx);
+        if (grandparent == "Rectangles") itemChangeRectangle(v, source, parent);
+        if (grandparent == "Graphics") itemChangeGraphic(v, source, parent);
+        if (source == "globalLightDirection") itemChangeGlobalLight(v, source, parent);
+        if (parent.left(6) == "Shadow") itemChangeShadowEffect(v, source, parent, grandparent);
+        if (parent.left(4) == "Blur") itemChangeBlurEffect(v, source, parent, grandparent);
+        if (parent.left(9) == "Highlight") itemChangeHighlightEffect(v, source, parent, grandparent);
     }
 
     e->build();
 }
 
-void EmbelProperties::templateChange(QVariant v)
+void EmbelProperties::itemChangeTemplate(QVariant v)
 {
     {
     #ifdef ISDEBUG
@@ -829,7 +829,7 @@ void EmbelProperties::templateChange(QVariant v)
     mw3->imageView->loadImage(mw3->dm->currentFilePath);
 }
 
-void EmbelProperties::fileItemChange(QVariant v, QString source)
+void EmbelProperties::itemChangeFile(QVariant v, QString source)
 {
     {
     #ifdef ISDEBUG
@@ -875,7 +875,7 @@ void EmbelProperties::fileItemChange(QVariant v, QString source)
     }
 }
 
-void EmbelProperties::imageItemChange(QVariant v, QString source)
+void EmbelProperties::itemChangeImage(QVariant v, QString source)
 {
     {
     #ifdef ISDEBUG
@@ -892,7 +892,7 @@ void EmbelProperties::imageItemChange(QVariant v, QString source)
 
 }
 
-void EmbelProperties::borderItemChange(QModelIndex idx)
+void EmbelProperties::itemChangeBorder(QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
@@ -913,18 +913,21 @@ void EmbelProperties::borderItemChange(QModelIndex idx)
     }
 
     if (source == "leftMargin") {
-        setting->setValue(path, v.toDouble());
-        b[index].left = v.toDouble();
+        double x = v.toDouble() / 100;
+        setting->setValue(path, x);
+        b[index].left = x;
     }
 
     if (source == "rightMargin") {
-        setting->setValue(path, v.toDouble());
-        b[index].right = v.toDouble();
+        double x = v.toDouble() / 100;
+        setting->setValue(path, x);
+        b[index].right = x;
     }
 
     if (source == "bottomMargin") {
-        setting->setValue(path, v.toDouble());
-        b[index].bottom = v.toDouble();
+        double x = v.toDouble() / 100;
+        setting->setValue(path, x);
+        b[index].bottom = x;
     }
 
     if (source == "tile") {
@@ -949,7 +952,7 @@ void EmbelProperties::borderItemChange(QModelIndex idx)
     }
 }
 
-void EmbelProperties::textItemChange(QModelIndex idx)
+void EmbelProperties::itemChangeText(QModelIndex idx)
 {
     {
     #ifdef ISDEBUG
@@ -971,10 +974,14 @@ void EmbelProperties::textItemChange(QModelIndex idx)
         t[index].anchorObject = v.toString();
         int row = idx.row();
         // also hidden on creation using updateHiddenRows(QModelIndex parent)
-        if (v.toString() == "Image")
-            setRowHidden(row + 1, idx.parent(), true);
-        else
+        if (v.toString() == "Image") {
+            setRowHidden(row + 1, idx.parent(), true);  // anchor container
+            setRowHidden(row + 3, idx.parent(), true);  // align to border corner
+        }
+        else {
             setRowHidden(row + 1, idx.parent(), false);
+            setRowHidden(row + 3, idx.parent(), false);
+        }
     }
 
     if (source == "anchorContainer") {
@@ -1074,7 +1081,7 @@ void EmbelProperties::textItemChange(QModelIndex idx)
     }
 }
 
-void EmbelProperties::rectangleItemChange(QVariant v, QString source, QString parent)
+void EmbelProperties::itemChangeRectangle(QVariant v, QString source, QString parent)
 {
     {
     #ifdef ISDEBUG
@@ -1084,7 +1091,7 @@ void EmbelProperties::rectangleItemChange(QVariant v, QString source, QString pa
 
 }
 
-void EmbelProperties::graphicItemChange(QVariant v, QString source, QString parent)
+void EmbelProperties::itemChangeGraphic(QVariant v, QString source, QString parent)
 {
     {
     #ifdef ISDEBUG
@@ -1093,7 +1100,7 @@ void EmbelProperties::graphicItemChange(QVariant v, QString source, QString pare
     }
 }
 
-void EmbelProperties::globalLightItemChange(QVariant v, QString source, QString parent)
+void EmbelProperties::itemChangeGlobalLight(QVariant v, QString source, QString parent)
 {
     {
     #ifdef ISDEBUG
@@ -1106,7 +1113,7 @@ void EmbelProperties::globalLightItemChange(QVariant v, QString source, QString 
     globalLightDirection = v.toInt();
 }
 
-void EmbelProperties::shadowItemChange(QVariant v, QString source, QString effectName, QString style)
+void EmbelProperties::itemChangeShadowEffect(QVariant v, QString source, QString effectName, QString style)
 {
 /*
 
@@ -1152,7 +1159,7 @@ void EmbelProperties::shadowItemChange(QVariant v, QString source, QString effec
     }
 }
 
-void EmbelProperties::blurItemChange(QVariant v, QString source, QString effectName, QString style)
+void EmbelProperties::itemChangeBlurEffect(QVariant v, QString source, QString effectName, QString style)
 {
     {
     #ifdef ISDEBUG
@@ -1177,7 +1184,7 @@ void EmbelProperties::blurItemChange(QVariant v, QString source, QString effectN
     }
 }
 
-void EmbelProperties::highlightItemChange(QVariant v, QString source, QString effectName, QString style)
+void EmbelProperties::itemChangeHighlightEffect(QVariant v, QString source, QString effectName, QString style)
 {
     {
     #ifdef ISDEBUG
@@ -3124,6 +3131,12 @@ void EmbelProperties::addText(int count)
     parseAlignToCorner(text.alignToCorner,text.alignTo_BorderId, text.alignTo_CornerId);
     textAlignToCornerObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
 //    textAlignToCornerObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
+
+    // update tree based on anchorObject (if Image cannot align to borders)
+    if (text.anchorObject == "Image") {
+        model->setData(capIdx, true, UR_isHidden);
+        model->setData(valIdx, true, UR_isHidden);
+    }
 
     i.name = "x";
     i.parIdx = parIdx;
