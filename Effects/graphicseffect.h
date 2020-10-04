@@ -19,6 +19,11 @@ namespace winnow_effects
         QPainter::CompositionMode blendMode;
     };
 
+    struct Sharpen {
+        qreal radius;
+        QPainter::CompositionMode blendMode;
+    };
+
     struct Highlight {
         int r, g, b, a;
         int top, left, right, bottom;
@@ -26,13 +31,14 @@ namespace winnow_effects
     };
 
     // when add an effect must add to enum and union
-    enum EffectType {blur, highlight, shadow};
+    enum EffectType {blur, sharpen, highlight, shadow};
     struct Effect {
         enum EffectType effectType;
         QString effectName;         // unique: req'd in case more than one of same effect
         int effectOrder;            // order executed within style
         union {
             Blur blur;
+            Sharpen sharpen;
             Highlight highlight;
             Shadow shadow;
         };
@@ -114,6 +120,7 @@ private:
     void shadowEffect(double size, double radius, QColor color, QPainter::CompositionMode mode);
     void highlightEffect(QColor color, Margin margin, QPainter::CompositionMode mode);
     void blurEffect(qreal radius, QPainter::CompositionMode mode);
+    void sharpenEffect(qreal radius, QPainter::CompositionMode mode);
 
     QList<winnow_effects::Effect> *effects;
 

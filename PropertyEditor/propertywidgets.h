@@ -69,7 +69,11 @@ signals:
 
 private:
     void change(int value);
+    void sliderMoved();
     void updateSliderWhenLineEdited();
+    bool isOutOfRange(double v);
+    bool outOfSliderRange;
+    bool ignoreSliderChange;
     int div;
     QSlider *slider;
     QLineEdit *lineEdit;

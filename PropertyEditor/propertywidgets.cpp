@@ -64,6 +64,7 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
 //    lineEdit->setValidator(validator);
 
     connect(slider, &QSlider::valueChanged, this, &SliderEditor::change);
+    connect(slider, &QSlider::sliderMoved, this, &SliderEditor::sliderMoved);
     connect(lineEdit, &QLineEdit::editingFinished, this, &SliderEditor::updateSliderWhenLineEdited);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
@@ -84,7 +85,8 @@ int SliderEditor::value()
     G::track(__FUNCTION__);
     #endif
     }
-    return slider->value();
+    return lineEdit->text().toDouble();
+//    return slider->value();
 }
 
 void SliderEditor::setValue(QVariant value)
@@ -97,6 +99,16 @@ void SliderEditor::setValue(QVariant value)
     slider->setValue(value.toInt());
 }
 
+void SliderEditor::sliderMoved()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    ignoreSliderChange = false;
+}
+
 void SliderEditor::change(int value)
 {
     {
@@ -104,11 +116,14 @@ void SliderEditor::change(int value)
     G::track(__FUNCTION__);
     #endif
     }
+    if (ignoreSliderChange) return;
     double v = static_cast<double>(value) / div;
+    /*
     qDebug() << __FUNCTION__
              << "value =" << value
              << "div =" << div
              << "v =" << v;
+//             */
     emit editorValueChanged(this);
     if (div == 1) lineEdit->setText(QString::number(value));
     else lineEdit->setText(QString::number(v, 'f', 2));
@@ -122,11 +137,28 @@ void SliderEditor::updateSliderWhenLineEdited(/*QString value*/)
     #endif
     }
     double v = lineEdit->text().toDouble() * div;
+    ignoreSliderChange = isOutOfRange(v);
     slider->setValue(static_cast<int>(v));
+}
+
+bool SliderEditor::isOutOfRange(double v)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (v < slider->minimum() || v > slider->maximum()) return true;
+    else return false;
 }
 
 void SliderEditor::paintEvent(QPaintEvent *event)
 {
+    QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
+    if (ignoreSliderChange)
+        setStyleSheet("QLineEdit {color:red;}");
+    else
+        setStyleSheet("QLineEdit {color:" + textColor.name() + ";}");
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
 }
