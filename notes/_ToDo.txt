@@ -1,5 +1,16 @@
 BUGS
-- DNG files showing on to of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
+- when grabbing tile make sure imageview at 100%
+- move embellish to separate menu
+- move styles to separate property editor?
+- relocate light direction
+- make header caption entire width and value zero width
+- update and refresh text metadata templates
+- drag n drop border and style effects order
+- values outside slider range
+- rename style has bugs - fixed??
+- update when change global font size and background shade
+
+- DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
 - Thumbnails window menu not in sync on opening
 - Cannot delete heic files on PC
 - Filters will be updated msg on opening

@@ -2,19 +2,19 @@
 #include "Main/mainwindow.h"
 
 /*
-This class holds the template information used by Embel to create borders, add text, rectangles
-and graphics to any image in the loupe view.  Template0 is an empty template, which means no
-changes are made to the loupe image. The information is stored in QSettings, each template,
-when chosen, is represented in a StandardItemModel model and the model, in turn, is translated
-into structs and QVestors of struct such as QVector<Border>b.  The structs make it easier to
-use the information in Embel, where the graphics are build in the scene, which is contained in
-ImageView.
+This class holds the template information used by Embel to create borders, add text,
+rectangles and graphics to any image in the loupe view (ImageView). Template0 is an empty
+template, which means no changes are made to the loupe image. The information is stored in
+QSettings. QSettings are loaded into a StandardItemModel for the QTreeView. The model is
+translated into structs and QVectors of struct such as QVector<Border>b. The structs make it
+easier to use the information in Embel, where the graphics are build in the scene, which is
+contained in ImageView.
 
 Thus the embellish information is maintained in three information structures:
 
-- QSettings
-- DataModel
-- Local structs
+- QSettings         Save and load data between sessions
+- DataModel         The property editor treeview
+- Local structs     Embel GraphicsView
 
 QSettings structure:
 
@@ -29,7 +29,9 @@ Embel
         Do not Embellish (template0)
         Template1                   isCurrent
             File
-            Image
+            General
+                Global light direction
+                Image style
             Borders
                 Border1
                 ...
@@ -47,10 +49,10 @@ Embel
     Tiles
 
 Each of the above in turn includes a series of fields the contain the information required by
-Embel.  The information is read from QSettings by addTemplateItems, addBorders ...  As each
-item is read, it is sent to PropertyEditor::addItem, which builds a StandardItemModel to
-mirror the QSettings. A custom widget is created in the treeview that is used to display the
-information to the user for editing.
+Embel. The information is read from QSettings by addTemplateItems, addBorders ... As each item
+is read, it is sent to PropertyEditor::addItem, which builds a StandardItemModel to mirror the
+QSettings. A custom widget is created in the treeview that is used to display and edit the
+information.
 
 When items change in the datamodel this->itemChanged is signalled.  The change is saved in
 QSettings and the local structs.  Embel::build is called to update the QGraphicsScene in
@@ -61,7 +63,10 @@ Associated classes
     MW::embelDockWidget (container for EmbelProperties - this treeview)
         Embel
             ImageView (contains the QGraphicsScene)
-            EmbelProperties - PropertyEditor - PropertyDelegate - PropertyWidgets
+        EmbelProperties
+          - PropertyEditor
+             - PropertyDelegate
+                - PropertyWidgets
 
 */
 
@@ -80,6 +85,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     this->setting = setting;
 
 //    setSolo(true);
+    isExpandRecursively = false;
     collapseAll();
     expand(model->index(0,0,QModelIndex()));
     setIndentation(12);
@@ -95,24 +101,23 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
         "}"
     );
 
+    QModelIndex root = model->invisibleRootItem()->index();
+
     initialize();
     // get the list of templates and which one was last active
     readTemplateList();
     // add the template header, which then selects the last active template
     addTemplateHeader();
-    // add styles, which are independent of templates
-    if (templateId != 0) addStyles();
+    // add styles, which are independent of templates, and hide if templateId == 0
+    addStyles();
+    if (templateId > 0) setRowHidden(1, root, false);
+    else setRowHidden(1, root, true);
     // add the File, Image, Borders, Texts, Rectangles and Graphics items for the template
     if (templateId != 0) addTemplateItems();
     // default state
     collapseAll();
     expand(model->index(_templates,0));
-    expand(model->index(_borders,0));
-    expand(model->index(_texts,0));
-    expand(model->index(_rectangles,0));
-    expand(model->index(_graphics,0));
-
-    updateHiddenRows(QModelIndex());
+//    updateHiddenRows(QModelIndex());
 }
 
 void EmbelProperties::initialize()
@@ -139,39 +144,39 @@ void EmbelProperties::initialize()
 
     shadowEffectAction = new QAction(tr("Shadow"), this);
     shadowEffectAction->setObjectName("shadowEffectAction");
-    connect(shadowEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+    connect(shadowEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
     bevelEffectAction = new QAction(tr("Bevel"), this);
     bevelEffectAction->setObjectName("bevelEffectAction");
-    connect(bevelEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+    connect(bevelEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
     embossEffectAction = new QAction(tr("Emboss"), this);
     embossEffectAction->setObjectName("embossEffectAction");
-    connect(embossEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+    connect(embossEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
     blurEffectAction = new QAction(tr("Blur"), this);
     blurEffectAction->setObjectName("blurEffectAction");
-    connect(blurEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+    connect(blurEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
     sharpenEffectAction = new QAction(tr("Sharpen"), this);
     sharpenEffectAction->setObjectName("sharpenEffectAction");
-    connect(sharpenEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+    connect(sharpenEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
     colorizeEffectAction = new QAction(tr("Colorize"), this);
     colorizeEffectAction->setObjectName("colorizeEffectAction");
-    connect(colorizeEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+    connect(colorizeEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
     edgeEffectAction = new QAction(tr("Edge"), this);
     edgeEffectAction->setObjectName("edgeEffectAction");
-    connect(edgeEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+    connect(edgeEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
     highlightEffectAction = new QAction(tr("Highlight"), this);
     highlightEffectAction->setObjectName("highlightEffectAction");
-    connect(highlightEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+    connect(highlightEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
     strokeEffectAction = new QAction(tr("Stroke"), this);
     strokeEffectAction->setObjectName("strokeEffectAction");
-    connect(strokeEffectAction, &QAction::triggered, this, &EmbelProperties::effectActionClicked);
+    connect(strokeEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
     effectMenu = new QMenu(this);
     effectMenu->addAction(shadowEffectAction);
@@ -197,14 +202,41 @@ void EmbelProperties::initialize()
     addAction(collapseAllAction);
     connect(collapseAllAction, &QAction::triggered, this, &EmbelProperties::collapseAllRows);
 
+    /*
     soloAction = new QAction(tr("Solo"), this);
     soloAction->setShortcutVisibleInContextMenu(true);
     soloAction->setShortcut(QKeySequence("Ctrl+*"));
     soloAction->setCheckable(true);
+    soloAction->setVisible(false);
     addAction(soloAction);
-    soloAction->setChecked(isSolo);
+    soloAction->setChecked(true);
     connect(soloAction, &QAction::triggered, this, &EmbelProperties::solo);
-    solo();
+//    solo();
+//        */
+
+    separatorAction0 = new QAction(this);
+    separatorAction0->setSeparator(true);
+    addAction(separatorAction0);
+
+    renameAction = new QAction(tr("Rename"), this);
+    addAction(renameAction);
+    connect(renameAction, &QAction::triggered, this,&EmbelProperties::rename);
+
+    copyAction = new QAction(tr("Copy"), this);
+    addAction(copyAction);
+    connect(copyAction, &QAction::triggered, this,&EmbelProperties::copy);
+
+    separatorAction1 = new QAction(this);
+    separatorAction1->setSeparator(true);
+    addAction(separatorAction1);
+
+    moveUpAction = new QAction(tr("Move up"), this);
+    addAction(moveUpAction);
+    connect(moveUpAction, &QAction::triggered, this,&EmbelProperties::moveUp);
+
+    moveDownAction = new QAction(tr("Move down"), this);
+    addAction(moveDownAction);
+    connect(moveDownAction, &QAction::triggered, this,&EmbelProperties::moveDown);
 
     setContextMenuPolicy(Qt::ActionsContextMenu);
 }
@@ -221,7 +253,7 @@ void EmbelProperties::effectContextMenu()
     effectMenu->exec(QCursor::pos());
 }
 
-void EmbelProperties::effectActionClicked()
+void EmbelProperties::newEffectActionClicked()
 {
     {
     #ifdef ISDEBUG
@@ -229,7 +261,9 @@ void EmbelProperties::effectActionClicked()
     #endif
     }
     QString effect = (static_cast<QAction*>(sender()))->text();
+    qDebug() << __FUNCTION__ << "effect =" << effect;
     if (effect == "Blur") addBlurEffect(effectParentIdx);
+    if (effect == "Sharpen") addSharpenEffect(effectParentIdx);
     if (effect == "Highlight") addHighlightEffect(effectParentIdx);
     if (effect == "Shadow") addShadowEffect(effectParentIdx);
 }
@@ -292,8 +326,9 @@ void EmbelProperties::diagnosticStyles()
             switch (ef.effectType) {
             case winnow_effects::blur:
                 qDebug() << "      Blur: radius       =" << ef.blur.radius;
-//                qDebug() << "      Blur: quality      =" << ef.blur.quality;
-
+                break;
+            case winnow_effects::sharpen:
+                qDebug() << "      Sharpen: radius    =" << ef.sharpen.radius;
                 break;
             case winnow_effects::highlight:
                 qDebug() << "      Highlight: top     =" << ef.highlight.top;
@@ -392,6 +427,23 @@ void EmbelProperties::diagnostic(QModelIndex parent)
     }
 }
 
+void EmbelProperties::rename() {
+    if (currentIdx.parent() == templateIdx) renameCurrentTemplate();
+    if (currentIdx.parent() == stylesIdx) renameCurrentStyle();
+}
+
+void EmbelProperties::copy() {
+
+}
+
+void EmbelProperties::moveUp() {
+
+}
+
+void EmbelProperties::moveDown() {
+
+}
+
 void EmbelProperties::renameSettingKey(QString path, QString oldName, QString newName)
 {
     {
@@ -419,8 +471,9 @@ void EmbelProperties::renameCurrentStyle()
     G::track(__FUNCTION__);
     #endif
     }
-    BarBtn *btn = qobject_cast<BarBtn*>(sender());
-    QModelIndex idx = btn->index;
+//    BarBtn *btn = qobject_cast<BarBtn*>(sender());
+//    QModelIndex idx = btn->index;
+    QModelIndex idx = currentIdx;
     QString oldName = idx.data().toString();
     QString newName = Utilities::inputText("Rename Style", "Rename style " + oldName, styleList);
     if (newName == "") return;
@@ -481,13 +534,13 @@ void EmbelProperties::setCurrentTemplate()
     }
     for (int i = 0; i < templateList.length(); ++i) {
         QString t = templateList.at(i);
-        bool isCurrent = {t == templateName};
+        bool isCurrent = (t == templateName);
         QString path = "Embel/Templates/" + t + "/isCurrent";
         setting->setValue(path, isCurrent);
         if (isCurrent) templateId = i;
         templatePath = "Embel/Templates/" + templateName + "/";
     }
-    qDebug() << __FUNCTION__ << templateId << templateName << templatePath;
+//    qDebug() << __FUNCTION__ << templateId << templateName << templatePath;
 }
 
 void EmbelProperties::readTemplateList()
@@ -777,14 +830,15 @@ itemChange, which is subclassed here.
     if (source == "templateList") itemChangeTemplate(v);
     if (templateId != 0) {
         if (parent == "FileHeader") itemChangeFile(v, source);
-        if (parent == "ImageHeader") itemChangeImage(v, source);
+        if (parent == "GeneralHeader") itemChangeGeneral(v, source);
         if (grandparent == "Borders") itemChangeBorder(idx);
         if (grandparent == "Texts") itemChangeText(idx);
         if (grandparent == "Rectangles") itemChangeRectangle(v, source, parent);
         if (grandparent == "Graphics") itemChangeGraphic(v, source, parent);
-        if (source == "globalLightDirection") itemChangeGlobalLight(v, source, parent);
+//        if (source == "globalLightDirection") itemChangeGlobalLight(v, source, parent);
         if (parent.left(6) == "Shadow") itemChangeShadowEffect(v, source, parent, grandparent);
         if (parent.left(4) == "Blur") itemChangeBlurEffect(v, source, parent, grandparent);
+        if (parent.left(7) == "Sharpen") itemChangeSharpenEffect(v, source, parent, grandparent);
         if (parent.left(9) == "Highlight") itemChangeHighlightEffect(v, source, parent, grandparent);
     }
 
@@ -798,32 +852,34 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     isTemplateChange = true;
     templateName = v.toString();
-    // save which template is current
+
+    // save which template is current and set templateId and templateName
     setCurrentTemplate();
-    // update global for ImageView
+
+    // update global for ImageView              rgh req'd??
     if (templateId == 0) G::isEmbellish = false;
     else G::isEmbellish = true;
+
     // update View > Embellish menu
     emit templateChanged(templateId);
-    // clear model except for template name header
-    model->removeRows(1, model->rowCount(QModelIndex()) - 1);
+
+    // clear model except for template name header and styles (row 0 and row 1)
+    model->removeRows(2, model->rowCount(QModelIndex()) - 2, QModelIndex());
+
     // clear borders, texts, rectangles and graphics
     b.clear();
     t.clear();
-    // add styles
-    if (templateId > 0) addStyles();
+
+    // show/hide Styles
+    if (templateId > 0) setRowHidden(1, root, false);
+    else setRowHidden(1, root, true);
+
     // add items for this template
     if (templateId > 0) addTemplateItems();
     collapseAll();
-    collapseAll();
     expand(model->index(_templates,0));
-    expand(model->index(_borders,0));
-    expand(model->index(_texts,0));
-    expand(model->index(_rectangles,0));
-    expand(model->index(_graphics,0));
     isTemplateChange = false;
 
     mw3->imageView->loadImage(mw3->dm->currentFilePath);
@@ -875,17 +931,22 @@ void EmbelProperties::itemChangeFile(QVariant v, QString source)
     }
 }
 
-void EmbelProperties::itemChangeImage(QVariant v, QString source)
+void EmbelProperties::itemChangeGeneral(QVariant v, QString source)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QString path = templatePath + "Image/" + source;
-    qDebug() << __FUNCTION__ << path;
+    QString path = templatePath + "General/" + source;
+//    qDebug() << __FUNCTION__ << path;
 
-    if (source == "style") {
+    if (source == "globalLightDirection") {
+        setting->setValue(path, v.toString());
+        globalLightDirection = v.toInt();
+    }
+
+    if (source == "imageStyle") {
         setting->setValue(path, v.toString());
         image.style = v.toString();
     }
@@ -964,10 +1025,11 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
     QString parent = idx.parent().data(UR_Name).toString();
     int index = idx.parent().data(UR_ItemIndex).toInt();
     QString path = templatePath + "Texts/" + parent + "/" + source;
-
+    /*
     qDebug() << __FUNCTION__
              << "source =" << source
              << "parent =" << parent;
+//    */
 
     if (source == "anchorObject") {
         setting->setValue(path, v.toString());
@@ -1100,18 +1162,17 @@ void EmbelProperties::itemChangeGraphic(QVariant v, QString source, QString pare
     }
 }
 
-void EmbelProperties::itemChangeGlobalLight(QVariant v, QString source, QString parent)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    QString path = templatePath + source;
-    qDebug() << __FUNCTION__ << path << source << v.toInt();
-    setting->setValue(path, v.toString());
-    globalLightDirection = v.toInt();
-}
+//void EmbelProperties::itemChangeGlobalLight(QVariant v, QString source, QString parent)
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    QString path = templatePath + source;
+//    setting->setValue(path, v.toString());
+//    globalLightDirection = v.toInt();
+//}
 
 void EmbelProperties::itemChangeShadowEffect(QVariant v, QString source, QString effectName, QString style)
 {
@@ -1181,6 +1242,31 @@ void EmbelProperties::itemChangeBlurEffect(QVariant v, QString source, QString e
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
         styleMap[style][effect].blur.blendMode = winnow_effects::blendModeMap[v.toString()];
+    }
+}
+
+void EmbelProperties::itemChangeSharpenEffect(QVariant v, QString source, QString effectName, QString style)
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
+    qDebug() << __FUNCTION__ << path << source << v.toInt();
+
+    if (source == "radius") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].sharpen.radius = v.toDouble();
+    }
+
+    if (source == "blendMode") {
+        setting->setValue(path, v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].sharpen.blendMode = winnow_effects::blendModeMap[v.toString()];
     }
 }
 
@@ -1283,6 +1369,7 @@ void EmbelProperties::addTemplateHeader()
     connect(templateNewBtn, &BarBtn::clicked, this, &EmbelProperties::newEmbelTemplate);
     btns.append(templateNewBtn);
     addItem(i);
+    templateIdx = model->index(0, 0, root);
     QModelIndex parIdx = capIdx;
 
     // Templates
@@ -1325,11 +1412,11 @@ void EmbelProperties::addTemplateItems()
     #endif
     }
     addFile();
-    addImage();
+    addGeneral();
     addBorders();
     addTexts();
-    addRectangles();
-    addGraphics();
+//    addRectangles();
+//    addGraphics();
 }
 
 void EmbelProperties::addFile()
@@ -1493,7 +1580,7 @@ void EmbelProperties::addFile()
     addItem(i);
 }
 
-void EmbelProperties::addImage()
+void EmbelProperties::addGeneral()
 {
     {
     #ifdef ISDEBUG
@@ -1501,12 +1588,12 @@ void EmbelProperties::addImage()
     #endif
     }
     // IMAGE Image header (Root)
-    i.name = "ImageHeader";
+    i.name = "GeneralHeader";
     i.parentName = "???";
     i.isHeader = true;
     i.decorateGradient = true;
     i.isDecoration = true;
-    i.captionText = "Image";
+    i.captionText = "General";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
@@ -1514,27 +1601,48 @@ void EmbelProperties::addImage()
     addItem(i);
     QModelIndex parIdx = capIdx;
 
-    QString settingRootPath = templatePath + "Image/";
+    QString settingRootPath = templatePath + "General/";
+
+    // Global light direction
+    i.name = "globalLightDirection";
+    i.parIdx = parIdx;
+    i.parentName = "General";
+    i.captionText = "Light direction";
+    i.tooltip = "Light source direction (0 - 360 degrees)";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "globalLightDirection";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else i.value = 315;
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 360;
+    i.fixedWidth = 50;
+    globalLightDirection = i.value.toInt();
+    addItem(i);
 
     // IMAGE style
     i.name = "imageStyle";
     i.parIdx = parIdx;
-    i.parentName = "ImageHeader";
-    i.captionText = "Style";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Image style";
     i.tooltip = "Select style to apply to the image ie a shadow.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "imageStyle";
-    i.key = "outlineColor";
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
     }
-    else i.value = "";
+    else i.value = "No style";
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << "None" << "Emboss and dropshadow" << "Dropshadow 2";
-    addItem(i);
+    i.dropList << "No style" << styleList;
+    image.style = i.value.toString();
+    styleListObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
 }
 
 void EmbelProperties::addBorders()
@@ -1548,7 +1656,7 @@ void EmbelProperties::addBorders()
     i.name = "Borders";
     i.parentName = "???";
     i.isHeader = true;
-    i.isDecoration = false;
+    i.isDecoration = true;
     i.decorateGradient = true;
     i.captionText = "Borders";
     i.tooltip = "";
@@ -1584,7 +1692,7 @@ void EmbelProperties::addTexts()
     i.parentName = "???";
     i.isHeader = true;
     i.decorateGradient = true;
-    i.isDecoration = false;
+    i.isDecoration = true;
     i.captionText = "Texts";
     i.tooltip = "";
     i.hasValue = true;
@@ -1710,27 +1818,6 @@ void EmbelProperties::addStyles()
     addItem(i);
     stylesIdx = capIdx;
 
-    // STYLE global light direction
-    i.name = "globalLightDirection";
-    i.parIdx = stylesIdx;
-    i.parentName = "Styles";
-    i.captionText = "Light direction";
-    i.tooltip = "Light source direction (0 - 360 degrees)";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "globalLightDirection";
-    if (setting->contains(templatePath + i.key))
-        i.value = setting->value(templatePath + i.key);
-    else i.value = 225;
-    i.delegateType = DT_Slider;
-    i.type = "int";
-    i.min = 0;
-    i.max = 360;
-    i.fixedWidth = 50;
-    globalLightDirection = i.value.toInt();
-    addItem(i);
-
     QString path = "Embel/Styles";
     setting->beginGroup(path);
     styleList = setting->childGroups();
@@ -1799,9 +1886,11 @@ void EmbelProperties::addStyle(QString name, int n)
     setting->endGroup();
     effects.clear();
     for (int i = 0; i < items.length(); ++i) {
-        if (items.at(i).contains("Blur")) addBlurEffect(styleIdx, items.at(i));
-        if (items.at(i).contains("Highlight")) addHighlightEffect(styleIdx);
-        if (items.at(i).contains("Shadow")) addShadowEffect(styleIdx);
+        QString effectName = items.at(i);
+        if (items.at(i).contains("Blur")) addBlurEffect(styleIdx, effectName);
+        if (items.at(i).contains("Sharpen")) addSharpenEffect(styleIdx, effectName);
+        if (items.at(i).contains("Highlight")) addHighlightEffect(styleIdx, effectName);
+        if (items.at(i).contains("Shadow")) addShadowEffect(styleIdx, effectName);
     }
 
     // sort the effects
@@ -1865,6 +1954,7 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::blur;
+    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::blur, "Blur");
     effect.effectName = effectName;
@@ -1953,6 +2043,107 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
     styleMap[styleName].append(effect);
 }
 
+void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // styleName = parent
+    QString parentName = parIdx.data(UR_Name).toString();
+    styleName = parentName;
+    winnow_effects::Effect effect;
+    effect.effectType = winnow_effects::sharpen;
+    qDebug() << __FUNCTION__ << "effectName =" << effectName;
+    if (effectName == "")
+        effectName = uniqueEffectName(parentName, winnow_effects::sharpen, "Sharpen");
+    effect.effectName = effectName;
+
+    QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
+
+    // subheader for this effect
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.name = effectName;
+    i.parIdx = parIdx;
+    i.parentName = parentName;
+    i.path = "Embel/Styles/" + parentName + "/" + effectName;
+    i.captionText = effectName;
+    i.tooltip = "";
+    i.hasValue = true;      // tool button
+    i.captionIsEditable = false;
+    i.key = "sortOrder";
+    i.delegateType = DT_BarBtns;
+    // get settings data
+    QString key = i.path + "/sortOrder";
+//    qDebug() << __FUNCTION__
+//             << "key =" << key
+//             << "value =" << setting->value(key).toInt();
+    if (setting->contains(key)) {
+        i.sortOrder = setting->value(key).toInt();
+    }
+    else {
+        i.sortOrder = model->rowCount(parIdx);
+        setting->setValue(key, i.sortOrder);
+    }
+    effect.effectOrder = i.sortOrder;
+    addEffectHeaderButtons();
+    parIdx = capIdx;
+
+    // sharpen radius
+    i.name = "radius";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Radius";
+    i.tooltip = "The amount of sharpening.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "radius";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    effect.sharpen.radius = i.value.toDouble();
+    addItem(i);
+
+    // sharpen blend mode
+    i.name = "blendMode";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Blend mode";
+    i.tooltip = "The way this effect blends with other effects in the style.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "blendMode";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = false;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList  << winnow_effects::blendModes;
+    effect.sharpen.blendMode = winnow_effects::blendModeMap[i.value.toString()];
+    addItem(i);
+
+//    effects.append(effect);
+    styleMap[styleName].append(effect);
+}
+
 void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
 {
     {
@@ -1965,6 +2156,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::highlight;
+    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::highlight, "Highlight");
     effect.effectName = effectName;
@@ -2197,6 +2389,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::shadow;
+    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::shadow, "Shadow");
     effect.effectName = effectName;
@@ -2489,15 +2682,28 @@ QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QSt
     G::track(__FUNCTION__);
     #endif
     }
-    using namespace winnow_effects;
+//    using namespace winnow_effects;
+    qDebug();
+    qDebug() << __FUNCTION__
+             << "styleName =" << styleName
+             << "effectType =" << effectType
+             << "effectName =" << effectName
+                ;
     // effects in style
     int effectCount = 0;
     for (int i = 0; i < styleMap[styleName].length(); ++i) {
         if (effectType == styleMap[styleName].at(i).effectType) {
             effectCount++;
         }
+        qDebug() << __FUNCTION__ << "Iterate styleMap[styleName]:"
+                 << "i =" << i
+                 << "effectType =" << effectType
+                 << "styleMap[styleName].at(i).effectType =" << styleMap[styleName].at(i).effectType
+                    ;
     }
     if (effectCount > 0) effectName += QString::number(effectCount);
+    qDebug() << __FUNCTION__ << "New effectName =" << effectName;
+    qDebug();
     return effectName;
 }
 
@@ -2540,25 +2746,44 @@ decoration is clicked.
     G::track(__FUNCTION__);
     #endif
     }
-    // ignore right mouse clicks for context menu
-    if (event->button() == Qt::RightButton) return;
 
-    getIndexFromNameAndParent("Highlight", "zenblur");
-    QModelIndex btnIdx = foundIdx;
-    QModelIndex idx = indexAt(event->pos());
-//    qDebug() << __FUNCTION__ << "idx   " << idx << idx.data().toString();
-//    qDebug() << __FUNCTION__ << "btnIdx" << btnIdx << btnIdx.data().toString();
+    if (event->button() == Qt::RightButton) {
+        renameAction->setVisible(false);
+        copyAction->setVisible(false);
+        moveUpAction->setVisible(false);
+        moveDownAction->setVisible(false);
 
-//    qDebug() << " =" << event->globalPos();
-//    qDebug() << " =" << event->screenPos();
-//    qDebug() << " =" << event->localPos();
-//    qDebug() << " =" << event->pos();
-//    qDebug() << " =" << this->window()->mapFromGlobal(event->globalPos());
-//    qDebug() << " =" << this->geometry();
-//    qDebug() << " =" << this->window()->pos();
+        QModelIndex idx = indexAt(event->pos());
+        currentIdx = model->index(idx.row(), 0, idx.parent());
 
+        if (currentIdx.parent() == templateIdx) {
+            renameAction->setVisible(true);
+        }
 
-    treeChange(indexAt(event->pos()));
+        if (currentIdx.parent() == stylesIdx) {
+            renameAction->setVisible(true);
+        }
+
+        if (currentIdx.parent().parent() == stylesIdx &&
+            model->rowCount(currentIdx.parent()) > 1)
+        {
+            moveUpAction->setVisible(true);
+            moveDownAction->setVisible(true);
+        }
+
+        if (currentIdx.parent() == bordersIdx) {
+            renameAction->setVisible(true);
+            copyAction->setVisible(true);
+            moveUpAction->setVisible(true);
+            moveDownAction->setVisible(true);
+        }
+
+    }
+
+    PropertyEditor::mousePressEvent(event);
+
+//    QTreeView::mousePressEvent(event);
+//    treeChange(indexAt(event->pos()));
 }
 
 void EmbelProperties::treeChange(QModelIndex idx)
@@ -2570,6 +2795,7 @@ void EmbelProperties::treeChange(QModelIndex idx)
     }
 //    qDebug() << __FUNCTION__ << idx << idx.isValid();
     if (!idx.isValid()) return;
+//    return;
     if (idx.column() != 0) idx = model->index(idx.row(), CapColumn, idx.parent());
     bool hasChildren = model->hasChildren(idx);
     bool hasGrandChildren = model->hasChildren(model->index(0,0,idx));
@@ -2577,7 +2803,8 @@ void EmbelProperties::treeChange(QModelIndex idx)
     QString selName = idx.data(UR_Name).toString();
     QString parName = idx.parent().data(UR_Name).toString();
     bool isStyle = styleList.contains(selName) || effectList.contains(selName);
-    /*
+    isStyle = true;
+//    /*
     qDebug() << __FUNCTION__
              << "hasChildren =" << hasChildren
              << "hasGrandChildren =" << hasGrandChildren
@@ -2612,30 +2839,30 @@ void EmbelProperties::treeChange(QModelIndex idx)
     }
 }
 
-void EmbelProperties::selectionChanged(const QItemSelection &selection,
-                                      const QItemSelection &prevSelection)
-{
-/*
-Check if the new selection is legal (a member of borders, texts, rectangles, graphics or
-file or image).  If not, if there was a previous selection, revert to that.  Hide all delete
-buttons except in the selected category.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    if (selection.isEmpty()) return;
-    QModelIndex idx = selection.indexes().first();
-    QModelIndex parIdx = idx.parent();
-    QString selName = idx.data(UR_Name).toString();
-    if (!okToSelect(idx, selName)) {
-        selectionModel()->clear();
-        if (!okToSelect(parIdx, selName)) return;
-        selectionModel()->select(parIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-        idx = parIdx;
-    }
-}
+//void EmbelProperties::selectionChanged(const QItemSelection &selection,
+//                                      const QItemSelection &prevSelection)
+//{
+///*
+//Check if the new selection is legal (a member of borders, texts, rectangles, graphics or
+//file or image).  If not, if there was a previous selection, revert to that.  Hide all delete
+//buttons except in the selected category.
+//*/
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    if (selection.isEmpty()) return;
+//    QModelIndex idx = selection.indexes().first();
+//    QModelIndex parIdx = idx.parent();
+//    QString selName = idx.data(UR_Name).toString();
+//    if (!okToSelect(idx, selName)) {
+//        selectionModel()->clear();
+//        if (!okToSelect(parIdx, selName)) return;
+//        selectionModel()->select(parIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+//        idx = parIdx;
+//    }
+//}
 
 bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
 {
@@ -2644,7 +2871,7 @@ bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << "selName =" << selName;
+    qDebug() << __FUNCTION__ << "selName =" << selName;
     QModelIndex parIdx = idx.parent();
     if (!parIdx.isValid()) return false;
     if (parIdx == model->index(_borders,0)) return true;
@@ -2739,12 +2966,19 @@ void EmbelProperties::solo()
     G::track(__FUNCTION__);
     #endif
     }
-    isSolo = soloAction->isChecked();
+    setSolo(soloAction->isChecked());
 }
 
 void EmbelProperties::test1()
 {
-    e->exportImage();
+//    e->exportImage();
+//    QModelIndex root = model->invisibleRootItem()->index();
+//    QModelIndex templateIdx = model->index(0, 0, root);
+//    QModelIndex idx = model->index(0, 0, templateIdx);
+//    QModelIndex idx1 = model->index(1, 0, templateIdx);
+
+//    qDebug() << __FUNCTION__ << templateIdx.data() << idx.data() << idx1.data();
+//    setRowHidden(2, templateIdx, true);
 
 }
 

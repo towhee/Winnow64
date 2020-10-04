@@ -16,13 +16,20 @@ PropertyWidgets - A collection of custom widget editors (slider, combobox etc) t
     inserted into column 1 in the treeview (PropertyEditor) by PropertyDelegate.  The editors
     are built based on information passed in the datamodel UserRole such as the DelegateType
     (Spinbox, Checkbox, Combo, Slider, PlusMinusBtns etc).  Other information includes the
-    source, datamodel index, mim value, max value, a stringlist for combos etc).
+    source, datamodel index, min value, max value, a stringlist for combos etc).
 
 PropertyEditor subclass ie Preferences.  All the property items are defined and added to the
     treeview in addItems().  When an item value has been changed in an editor itemChanged(idx)
     is signaled and the variable is updated in Winnow and any necessary actions are executed.
     For example, if the thumbnail size is increased then the IconView function to do this is
-    called.
+    called.  Use setItemValue to access and change the value held in a custom widget.
+
+Parameters to override as required when subclass:
+
+    setIndentation
+    setAlternatingRowColors
+    resizeColumns
+    isExpandRecursively
 */
 
 PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
@@ -105,6 +112,7 @@ void PropertyEditor::updateHiddenRows(QModelIndex parent)
 {
     for (int r = 0; r < model->rowCount(parent); ++r) {
         QModelIndex idx = model->index(r, CapColumn, parent);
+        qDebug() << __FUNCTION__ << idx.data();
         if (model->data(idx, UR_isHidden).toBool())
             setRowHidden(r, parent, true);
         else
@@ -399,20 +407,27 @@ void PropertyEditor::mousePressEvent(QMouseEvent *event)
 Set the current index and expand/collapse when click anywhere on a row that has children.
 */
 {
-    // ignore right mouse clicks for context menu
+    // ignore right mouse clicks (reserved for context menu)
     if (event->button() == Qt::RightButton) return;
 
+//    isExpandRecursively = true;
+
     QModelIndex idx = indexAt(event->pos());
-    qDebug() << __FUNCTION__ << idx;
+//    qDebug() << __FUNCTION__ << idx;
 //    QModelIndex idx = proxy->mapToSource(indexAt(event->pos()));
     if (idx.column() != 0) idx = model->index(idx.row(), CapColumn, idx.parent());
     QStandardItem *item = model->itemFromIndex(idx);
     if (idx.isValid() && item->hasChildren()) {
         bool isRoot = idx.parent() == QModelIndex();
         bool wasExpanded = isExpanded(idx);
-        if (isRoot) {
-            if (isSolo) collapseAll();
-            wasExpanded ? collapse(idx) : expandRecursively(idx);
+        if (isExpandRecursively) {
+            if (isRoot) {
+                if (isSolo) collapseAll();
+                wasExpanded ? collapse(idx) : expandRecursively(idx);
+            }
+            else {
+                isExpanded(idx) ? collapse(idx) : expand(idx);
+            }
         }
         else {
             isExpanded(idx) ? collapse(idx) : expand(idx);
@@ -446,54 +461,4 @@ void PropertyEditor::resizeColumns(QString stringToFitCaptions, QString stringTo
 void PropertyEditor::setSolo(bool isSolo)
 {
     this->isSolo = isSolo;
-}
-
-// --------------------------------------------------------------------------------------------
-// SortProperties Class used to custom sort
-// --------------------------------------------------------------------------------------------
-
-SortProperties::SortProperties(QObject *parent) : QSortFilterProxyModel(parent)
-{
-}
-
-bool SortProperties::lessThan(const QModelIndex &left, const QModelIndex &right) const
-{
-    return false;
-    QString leftSource = left.data(UR_Source).toString();
-    QString rightSource = right.data(UR_Source).toString();
-    QString leftName = left.data().toString();
-    QString rightName = right.data().toString();
-    QString leftParent = left.parent().data().toString();
-    QString rightParent = right.parent().data().toString();
-    int leftSortOrder = left.data(UR_SortOrder).toInt();
-    int rightSortOrder = right.data(UR_SortOrder).toInt();
-    bool less = left.data(UR_SortOrder) > right.data(UR_SortOrder);
-    bool test = leftName < rightName;
-
-    qDebug().noquote()
-             << "LEFT "
-             << left
-             << "P:" << leftParent.leftJustified(22)
-             << "N:" << leftName.leftJustified(22)
-             << "S:" << leftSource.leftJustified(20)
-                ;
-//             << "RIGHT "
-//             << "N:" << rightName.leftJustified(22)
-//             << "P:" << rightParent.leftJustified(22)
-//             << "S:" << rightSource.leftJustified(20)
-//             << leftSortOrder
-//             << rightSortOrder
-//             << "less =" << less
-//             << "test =" << test
-//                ;
-
-    if (leftSource == "effect"  && rightSource == "effect") {
-        return less;
-    }
-    return false;
-}
-
-void SortProperties::sortChange()
-{
-    invalidate();
 }

@@ -17,10 +17,11 @@ QT += xmlpatterns
 
 HEADERS += Cache/imagecache.h \
 #   Effects/graphicaleffects.h \
-   Effects/graphicseffect.h \
+   Effects/blur.h \
+   Effects/effect.h \
    Effects/highlighteffect.h \
-   Effects/shadowtest.h \
-   ImageFormats/Canon/canoncr3.h
+   Effects/interpolate.h \
+   Effects/shadowtest.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/buildfilters.h
@@ -39,6 +40,7 @@ HEADERS += Dialogs/workspacedlg.h
 HEADERS += Dialogs/tokendlg.h
 HEADERS += Dialogs/updateapp.h
 HEADERS += Dialogs/zoomdlg.h
+HEADERS += Effects/graphicseffect.h
 HEADERS += Embellish/Properties/embelproperties.h
 HEADERS += Embellish/embel.h
 HEADERS += File/bookmarks.h
@@ -48,6 +50,7 @@ HEADERS += Image/pixmap.h
 HEADERS += Image/thumb.h
 #HEADERS += Image/tiffhandler.h
 HEADERS += ImageFormats/Canon/canon.h
+HEADERS += ImageFormats/Canon/canoncr3.h
 HEADERS += ImageFormats/Dng/dng.h
 HEADERS += ImageFormats/Fuji/fuji.h
 #rgh remove heic
@@ -99,10 +102,9 @@ HEADERS += Views/tableview.h
 
 SOURCES += Cache/imagecache.cpp \
 #   Effects/graphicaleffects.cpp \
-   Effects/graphicseffect.cpp \
+   Effects/blur.cpp \
    Effects/highlighteffect.cpp \
-   Effects/shadowtest.cpp \
-   ImageFormats/Canon/canoncr3.cpp
+   Effects/shadowtest.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp
@@ -120,6 +122,7 @@ SOURCES += Dialogs/tokendlg.cpp
 SOURCES += Dialogs/updateapp.cpp
 SOURCES += Dialogs/workspacedlg.cpp
 SOURCES += Dialogs/zoomdlg.cpp
+SOURCES += Effects/graphicseffect.cpp
 SOURCES += Embellish/Properties/embelproperties.cpp
 SOURCES += Embellish/embel.cpp
 SOURCES += File/bookmarks.cpp
@@ -129,6 +132,7 @@ SOURCES += Image/pixmap.cpp
 SOURCES += Image/thumb.cpp
 #SOURCES += Image/tiffhandler.cpp
 SOURCES += ImageFormats/Canon/canon.cpp
+SOURCES += ImageFormats/Canon/canoncr3.cpp
 SOURCES += ImageFormats/Dng/dng.cpp
 SOURCES += ImageFormats/Fuji/fuji.cpp
 win32:SOURCES += ImageFormats/Heic/Heic.cpp

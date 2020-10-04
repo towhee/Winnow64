@@ -96,7 +96,7 @@ public:
 
 public slots:
     void itemChange(QModelIndex idx) override;
-    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
+//    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
     void invokeFromAction(QAction *embelAction);
     void diagnostic(QModelIndex parent = QModelIndex());
     void coordHelp();
@@ -123,7 +123,7 @@ private:
     void addTemplateHeader();
     void addTemplateItems();
     void addFile();
-    void addImage();
+    void addGeneral();
     void addBorders();
     void addBorder(int count);
     void addTexts();
@@ -133,6 +133,7 @@ private:
     void addStyles();
     void addStyle(QString name, int n);
     void addBlurEffect(QModelIndex parIdx, QString effectName = "");
+    void addSharpenEffect(QModelIndex parIdx, QString effectName = "");
     void addHighlightEffect(QModelIndex parIdx, QString effectName = "");
     void addShadowEffect(QModelIndex parIdx, QString effectName = "");
 
@@ -149,6 +150,12 @@ private:
     void deleteGraphic();
     void deleteItem();
 
+    // redirect from action to relevent function (use currentIdx)
+    void rename();
+    void copy();
+    void moveUp();
+    void moveDown();
+
     void updateEffectOrder(QStandardItem *styleItem, int row, int swapRow);
     void moveEffectUp();
     void moveEffectDown();
@@ -156,14 +163,15 @@ private:
 
     void itemChangeTemplate(QVariant v);
     void itemChangeFile(QVariant v, QString source);
-    void itemChangeImage(QVariant v, QString source);
+    void itemChangeGeneral(QVariant v, QString source);
     void itemChangeBorder(QModelIndex idx);
     void itemChangeText(QModelIndex idx);
     void itemChangeRectangle(QVariant v, QString source, QString parent);
     void itemChangeGraphic(QVariant v, QString source, QString parent);
-    void itemChangeGlobalLight(QVariant v, QString source, QString parent);
+//    void itemChangeGlobalLight(QVariant v, QString source, QString parent);
     void itemChangeShadowEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeBlurEffect(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeSharpenEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeHighlightEffect(QVariant v, QString source, QString effectName, QString style);
     void strokeItemChange(QVariant v, QString source, QString effectName, QString style);
 
@@ -174,6 +182,9 @@ private:
     void diagnosticVectors();
     void parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner);
 
+    QModelIndex root;                   // invisible root of treeview
+    QModelIndex templateIdx;
+    QModelIndex currentIdx;
     QModelIndex bordersIdx;
     QModelIndex textsIdx;
     QModelIndex rectanglesIdx;
@@ -188,10 +199,9 @@ private:
     void collapseAllRows();
     void solo();
     QAction *soloAction;
-    bool isSolo;
 
     void effectContextMenu();
-    void effectActionClicked();
+    void newEffectActionClicked();
     QString uniqueEffectName(QString styleName, int effectType, QString effectName);
     int effectIndex(QString style, QString effectName);
 
@@ -206,8 +216,16 @@ private:
     QAction *highlightEffectAction;
     QAction *strokeEffectAction;
 
+    // context menu
     QAction *expandAllAction;
     QAction *collapseAllAction;
+    QAction *renameAction;
+    QAction *copyAction;
+    QAction *moveUpAction;
+    QAction *moveDownAction;
+    QAction *separatorAction0;
+    QAction *separatorAction1;
+    QAction *separatorAction2;
 
     bool isTemplateChange = false;
 

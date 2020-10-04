@@ -330,9 +330,6 @@ void Embel::addBordersToScene()
         QPen pen;
         pen.setWidth(0);
         pen.setColor(Qt::transparent);
-//        pen.setWidth(static_cast<int>(p->b[i].outlineWidth * ls / 100));
-//        color.setNamedColor(p->b[i].outlineColor);
-//        pen.setColor(color);
         bItems[i]->setPen(pen);
         color.setNamedColor(p->b[i].color);
         // tile or color background
@@ -347,10 +344,23 @@ void Embel::addBordersToScene()
         bItems[i]->setOpacity(p->b[i].opacity/100);
         iv->scene->addItem(bItems[i]);
         bItems[i]->setPos(b[i].x, b[i].y);
+
+        // graphics effects
+        if (p->b[i].style != "No style" && p->b[i].style != "") {
+            GraphicsEffect *effect = new GraphicsEffect();
+            effect->set(p->styleMap[p->b[i].style],
+                    p->globalLightDirection,
+                    0,  /* rotation */
+                    bItems[i]->boundingRect());
+            bItems[i]->setGraphicsEffect(effect);
+        }
+
+        /*
         qDebug() << __FUNCTION__
                  << i
                  << "bItems[i]->boundingRect() ="
                  << bItems[i]->boundingRect();
+//                 */
     }
 }
 
@@ -384,11 +394,6 @@ void Embel::addTextsToScene()
         tItems[i]->setOpacity(opacity);
         tItems[i]->setZValue(20);
 
-//        // bounding text rectangle without rotation
-//        tItems[i]->setRotation(0);
-//        QRectF boundRect = tItems[i]->boundingRect();
-//        qDebug() << __FUNCTION__ << "boundRect =" << boundRect;
-
         // position text
         /*
         qDebug() << __FUNCTION__ << "Getting canvas coord for Text" << i
@@ -400,51 +405,27 @@ void Embel::addTextsToScene()
 //                    */
         int w = static_cast<int>(tItems[i]->boundingRect().width());
         int h = static_cast<int>(tItems[i]->boundingRect().height());
-        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() =" << tItems[i]->boundingRect();
+//        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() =" << tItems[i]->boundingRect();
         QPoint canvas = textCanvasCoord(i);
         QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h);
         tItems[i]->setTransformOriginPoint(offset);
         tItems[i]->setPos(canvas - offset);
-        double rotation = p->t[i].rotation;
-//        tItems[i]->setRotation(rotation);
 
-        iv->scene->addItem(tItems[i]);
+        // if style then rotate in GraphicsEffect, else rotate text here
+        double rotation = p->t[i].rotation;
 
         // graphics effects
         if (p->t[i].style != "No style" && p->t[i].style != "") {
-            int selectedEffect = 0;
-            if (selectedEffect == 4) {
-                // QGraphicsDropShadowEffect works
-                ShadowTest *effect = new ShadowTest();
-                effect->set(6, 8, 3);
-                tItems[i]->setGraphicsEffect(effect);
-            }
-
-            if (selectedEffect == 1) {
-                // QGraphicsDropShadowEffect works
-                QGraphicsDropShadowEffect *effect = new QGraphicsDropShadowEffect(/*this*/);
-                effect->setXOffset(20);
-                effect->setYOffset(10);
-                effect->setBlurRadius(2);
-                tItems[i]->setGraphicsEffect(effect);
-            }
-
-            if (selectedEffect == 2) {
-                // HighlightEffect
-                HighlightEffect *effect = new HighlightEffect(10);
-                tItems[i]->setGraphicsEffect(effect);
-            }
-
-            if (selectedEffect == 0) {
-                // My effects
-                GraphicsEffect *effect = new GraphicsEffect();
-                effect->set(p->styleMap[p->t[i].style],
-                        p->globalLightDirection,
-                        rotation,
-                        tItems[i]->boundingRect());
-                tItems[i]->setGraphicsEffect(effect);
-            }
+            GraphicsEffect *effect = new GraphicsEffect();
+            effect->set(p->styleMap[p->t[i].style],
+                    p->globalLightDirection,
+                    rotation,
+                    tItems[i]->boundingRect());
+            tItems[i]->setGraphicsEffect(effect);
         }
+        else tItems[i]->setRotation(rotation);
+
+        iv->scene->addItem(tItems[i]);
     }
 }
 
@@ -462,6 +443,17 @@ void Embel::addImageToScene()
     // move the image to center in the borders
     iv->pmItem->setPos(image.tl);
     iv->pmItem->setZValue(10);
+
+    // graphics effects
+    if (p->image.style != "No style" && p->image.style != "") {
+        GraphicsEffect *effect = new GraphicsEffect();
+        effect->set(p->styleMap[p->image.style],
+                p->globalLightDirection,
+                0,
+                pm.rect());
+        iv->pmItem->setGraphicsEffect(effect);
+    }
+
 }
 
 void Embel::diagnostic()

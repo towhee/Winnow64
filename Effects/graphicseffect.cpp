@@ -1,4 +1,5 @@
 #include "graphicseffect.h"
+#include "effect.h"
 
 GraphicsEffect::GraphicsEffect(QObject *parent)
 {
@@ -73,10 +74,7 @@ void GraphicsEffect::draw(QPainter* painter)
     srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, mode);
     overlay = srcPixmap.toImage();
 //  overlay.setDevicePixelRatio(srcPixmap.devicePixelRatioF());
-    srcPixmap.save("D:/Pictures/Temp/effect/srcPixmap.tif");
-    qDebug() << __FUNCTION__
-             << "srcPixmap.devicePixelRatioF() =" << srcPixmap.devicePixelRatioF()
-                ;
+//    srcPixmap.save("D:/Pictures/Temp/effect/srcPixmap.tif");
 
     // iterate effects in style
     using namespace winnow_effects;
@@ -98,6 +96,9 @@ void GraphicsEffect::draw(QPainter* painter)
         switch (ef.effectType) {
         case blur:
             blurEffect(ef.blur.radius, ef.blur.blendMode);
+            break;
+        case sharpen:
+            sharpenEffect(ef.blur.radius, ef.blur.blendMode);
             break;
         case highlight:
             color.setRgb(ef.highlight.r, ef.highlight.g, ef.highlight.b, ef.highlight.a);
@@ -135,7 +136,6 @@ void GraphicsEffect::draw(QPainter* painter)
         // draw overlay with center offset to translated origin
         rotatedOverlayPainter.drawImage(QPointF(-ovrX, -ovrY), overlay);
         rotatedOverlayPainter.end();
-    //    rotatedOverlayImage.save("D:/Pictures/Temp/effect/rotatedOverlayImage.tif");
 
         // delta offset based on offset to center from top left corner
         int srcCtrX = srcPixmap.width()/2;
@@ -149,7 +149,7 @@ void GraphicsEffect::draw(QPainter* painter)
         painter->drawImage(srcOffset + deltaOffset, rotatedOverlay);
     }
     else {
-        overlay.save("D:/Pictures/Temp/effect/overlay.tif");
+//        overlay.save("D:/Pictures/Temp/effect/overlay.tif");
         painter->drawImage(srcOffset, overlay);
     }
 
@@ -162,27 +162,42 @@ QT_END_NAMESPACE
 
 void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__ << mode;
+    if (overlay.isNull()) return;
 
-    QImage tmp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
-    tmp.fill(Qt::transparent);
-    QPainter tmpPainter(&tmp);
-    tmpPainter.drawImage(0,0, overlay);
-    tmpPainter.end();
+//    QImage tmp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+//    tmp.fill(Qt::transparent);
+//    QPainter tmpPainter(&tmp);
+//    tmpPainter.drawImage(0,0, overlay);
+//    tmpPainter.end();
 
-    QImage blurred(overlay.size(), QImage::Format_ARGB32_Premultiplied);
-    blurred.fill(Qt::transparent);
-    QPainter blurPainter(&blurred);
-    qt_blurImage(&blurPainter, tmp, radius, true, false);
-    blurPainter.end();
+//    QImage blurred(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+//    blurred.fill(Qt::transparent);
+//    QPainter blurPainter(&blurred);
+//    qt_blurImage(&blurPainter, tmp, radius, true, false);
+//    blurPainter.end();
 
-    tmp = std::move(blurred);
-//    overlay = std::move(blurred);
+//    tmp = std::move(blurred);
+
+    QImage blurred = GraphicEffect::charcoal(overlay);
+//    QImage blurred = GraphicEffect::blur(overlay, radius);
+    blurred.save("D:/Pictures/Temp/effect/blurred.tif");
 
     QPainter overlayPainter(&overlay);
     overlayPainter.setCompositionMode(mode);
-//    overlayPainter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
-    overlayPainter.drawImage(0,0, tmp);
+    overlayPainter.drawImage(0,0, blurred);
+    overlayPainter.end();
+}
+
+void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
+{
+    if (overlay.isNull()) return;
+
+    QImage sharpened = GraphicEffect::sharpen(overlay, radius);
+    sharpened.save("D:/Pictures/Temp/effect/sharpened.tif");
+
+    QPainter overlayPainter(&overlay);
+    overlayPainter.setCompositionMode(mode);
+    overlayPainter.drawImage(0,0, sharpened);
     overlayPainter.end();
 }
 
@@ -190,7 +205,7 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color,
                                   QPainter::CompositionMode mode)
 {
     if (overlay.isNull()) return;
-    qDebug() << __FUNCTION__ << "length =" << length;
+
     double rads = lightDirection * (3.14159 / 180);
     QPointF shadowOffset;
     shadowOffset.setX(-sin(rads) * length);
@@ -221,13 +236,8 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color,
     // compose adjusted image
     QPainter overlayPainter(&overlay);
     overlayPainter.setCompositionMode(mode);
-//    overlayPainter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
     overlayPainter.drawImage(shadowOffset, shadIm);
     overlayPainter.end();
-    /*
-    shadIm.save("D:/Pictures/Temp/effect/shad.tif");
-    p.adjIm.save("D:/Pictures/Temp/effect/adjIm.tif");
-//    */
     return;
 }
 
@@ -241,18 +251,17 @@ void GraphicsEffect::highlightEffect(QColor color, Margin margin, QPainter::Comp
     QSize highlightBackgroundSize(w, h);
     QImage highlightBackgroundImage(highlightBackgroundSize, QImage::Format_ARGB32_Premultiplied);
     highlightBackgroundImage.fill(color);
-
+    /*
     qDebug() << __FUNCTION__
              << "Margin.top =" << margin.top
              << "Margin.left =" << margin.left
              << "Margin.right =" << margin.right
              << "Margin.bottom =" << margin.bottom
              << "highlightBackgroundSize =" << highlightBackgroundSize;
-
+//    */
     QPainter overlayPainter(&overlay);
     overlayPainter.translate(-highlightOffset);
     overlayPainter.setCompositionMode(mode);
-//    overlayPainter.setCompositionMode(QPainter::CompositionMode_DestinationOver);
     overlayPainter.drawImage(0, 0, highlightBackgroundImage);
     overlayPainter.end();
 

@@ -7,19 +7,6 @@
 #include "propertydelegate.h"
 #include "PropertyEditor/propertywidgets.h"
 
-class SortProperties : public QSortFilterProxyModel
-{
-    Q_OBJECT
-
-public:
-    SortProperties(QObject *parent);
-
-public slots:
-    void sortChange();
-
-protected:
-    bool lessThan(const QModelIndex &left, const QModelIndex &right) const;
-};
 
 /* PropertyEditor Notes -----------------------------------------------------------------------
 
@@ -31,10 +18,9 @@ class PropertyEditor : public QTreeView
     Q_OBJECT
 public:
     explicit PropertyEditor(QWidget *parent);
-//    QAbstractItemModel *model;
     QStandardItemModel *model;
     PropertyDelegate *propertyDelegate;
-    SortProperties *proxy;
+//    SortProperties *proxy;
     const QStyleOptionViewItem *styleOptionViewItem;
     void setSolo(bool isSolo);
     void expandBranch(QString text);
@@ -42,6 +28,7 @@ public:
     int indentation;
     int captionColumnWidth;
     int valueColumnWidth;
+    bool isExpandRecursively = true;
     QModelIndex capIdx; // used to get index for added item when subclassing addItem
     QModelIndex valIdx; // used to hide/show rows etc
     QModelIndex ordIdx; // used to order rows etc
