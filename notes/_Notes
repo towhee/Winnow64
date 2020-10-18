@@ -20,5 +20,16 @@ MacOS trackpad single tap click - change the trackpad options setting in accessi
 to 'enable dragging' with "three finger drag" makes single tap work properly.
 
 Interesting stuff for graphics editing
-C:\Qt\5.13.1\Src\qtgraphicaleffects\src\effects\private
-C:\Qt\5.13.1\Src\qtgraphicaleffects\src\effects\doc\images
+   C:\Qt\5.13.1\Src\qtgraphicaleffects\src\effects\private
+   C:\Qt\5.13.1\Src\qtgraphicaleffects\src\effects\doc\images
+
+   ImageMagick: D:\Programming\ImageEditingSourceCode\ImageMagick-6.8.3\magick
+   http://www.fmwconcepts.com/imagemagick/bevel/index.php
+   https://imagemagick.org/script/convert.php
+
+
+   Blitz is an interm image effect library that people can use until KDE4.1 is
+   released. KImageEffect, the old image effect class is being dropped for KDE4.0
+   and the replacement, Quasar, won't be ready until KDE4.1. Blitz gives people
+   something to use in the meantime
+   Blitz: D:\Programming\ImageEditingSourceCode\qimageblitz-master

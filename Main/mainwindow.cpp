@@ -5396,7 +5396,7 @@ void MW::launchBuildFilters()
     }
     if (G::isInitializing) return;
     if (filterDock->visibleRegion().isNull()) {
-        G::popUp->showPopup("Filters will only be updated when the filters panel is visible.");
+//        G::popUp->showPopup("Filters will only be updated when the filters panel is visible.");
         return;
     }
     if (filters->filtersBuilt) {

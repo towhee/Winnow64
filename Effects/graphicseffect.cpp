@@ -54,10 +54,10 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
             qreal dy = +cos(rads) * length;
 //            if (offset.x() < dx) offset.setX(dx);
 //            if (offset.y() < dy) offset.setY(dy);
-            if (m.top < ef.shadow.blurRadius) m.top = ef.shadow.blurRadius;
-            if (m.left < ef.shadow.blurRadius) m.left = ef.shadow.blurRadius;
-            if (m.right < ef.shadow.blurRadius) m.right = ef.shadow.blurRadius;
-            if (m.bottom < ef.shadow.blurRadius) m.bottom = ef.shadow.blurRadius;
+//            if (m.top < ef.shadow.blurRadius) m.top = ef.shadow.blurRadius;
+//            if (m.left < ef.shadow.blurRadius) m.left = ef.shadow.blurRadius;
+//            if (m.right < ef.shadow.blurRadius) m.right = ef.shadow.blurRadius;
+//            if (m.bottom < ef.shadow.blurRadius) m.bottom = ef.shadow.blurRadius;
             updateBoundingRect();
         }
     }
@@ -164,22 +164,12 @@ void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 {
     if (overlay.isNull()) return;
 
-//    QImage tmp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
-//    tmp.fill(Qt::transparent);
-//    QPainter tmpPainter(&tmp);
-//    tmpPainter.drawImage(0,0, overlay);
-//    tmpPainter.end();
-
-//    QImage blurred(overlay.size(), QImage::Format_ARGB32_Premultiplied);
-//    blurred.fill(Qt::transparent);
-//    QPainter blurPainter(&blurred);
-//    qt_blurImage(&blurPainter, tmp, radius, true, false);
-//    blurPainter.end();
-
-//    tmp = std::move(blurred);
-
-    QImage blurred = GraphicEffect::charcoal(overlay);
-//    QImage blurred = GraphicEffect::blur(overlay, radius);
+    QImage blurred(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    blurred = overlay;
+    Effects effect;
+    effect.blur(blurred, radius);
+//    effect.brighten(blurred, static_cast<int>(radius) * 4);
+//    QImage blurred = WinnowGraphicEffect::blur(overlay, radius);
     blurred.save("D:/Pictures/Temp/effect/blurred.tif");
 
     QPainter overlayPainter(&overlay);
@@ -192,7 +182,7 @@ void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 {
     if (overlay.isNull()) return;
 
-    QImage sharpened = GraphicEffect::sharpen(overlay, radius);
+    QImage sharpened = WinnowGraphicEffect::sharpen(overlay, radius);
     sharpened.save("D:/Pictures/Temp/effect/sharpened.tif");
 
     QPainter overlayPainter(&overlay);
@@ -268,7 +258,18 @@ void GraphicsEffect::highlightEffect(QColor color, Margin margin, QPainter::Comp
     return;
 }
 
+void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
+{
+    qDebug() << __FUNCTION__;
+    QImage raised(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    raised = overlay;
+    effect.raise(raised, margin, 0.2, false);
 
+    QPainter overlayPainter(&overlay);
+    overlayPainter.setCompositionMode(mode);
+    overlayPainter.drawImage(0,0, raised);
+    overlayPainter.end();
+}
 
 /*
 #define AVG(a,b)  ( ((((a)^(b)) & 0xfefefefeUL) >> 1) + ((a)&(b)) )

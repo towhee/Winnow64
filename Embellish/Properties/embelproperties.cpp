@@ -968,25 +968,26 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
 //    diagnostics(idx);
 
     if (source == "topMargin") {
-        double x = v.toDouble() / 100;
+        qDebug() << __FUNCTION__ << "item change topMargin" << path;
+        double x = v.toDouble();
         setting->setValue(path, x);
         b[index].top = x;
     }
 
     if (source == "leftMargin") {
-        double x = v.toDouble() / 100;
+        double x = v.toDouble();
         setting->setValue(path, x);
         b[index].left = x;
     }
 
     if (source == "rightMargin") {
-        double x = v.toDouble() / 100;
+        double x = v.toDouble();
         setting->setValue(path, x);
         b[index].right = x;
     }
 
     if (source == "bottomMargin") {
-        double x = v.toDouble() / 100;
+        double x = v.toDouble();
         setting->setValue(path, x);
         b[index].bottom = x;
     }
@@ -1954,7 +1955,7 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::blur;
-    qDebug() << __FUNCTION__ << "effectName =" << effectName;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::blur, "Blur");
     effect.effectName = effectName;
@@ -2055,7 +2056,7 @@ void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::sharpen;
-    qDebug() << __FUNCTION__ << "effectName =" << effectName;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::sharpen, "Sharpen");
     effect.effectName = effectName;
@@ -2156,7 +2157,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::highlight;
-    qDebug() << __FUNCTION__ << "effectName =" << effectName;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::highlight, "Highlight");
     effect.effectName = effectName;
@@ -2389,7 +2390,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::shadow;
-    qDebug() << __FUNCTION__ << "effectName =" << effectName;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::shadow, "Shadow");
     effect.effectName = effectName;
@@ -2971,6 +2972,8 @@ void EmbelProperties::solo()
 
 void EmbelProperties::test1()
 {
+    qDebug() << __FUNCTION__;
+    e->test();
 //    e->exportImage();
 //    QModelIndex root = model->invisibleRootItem()->index();
 //    QModelIndex templateIdx = model->index(0, 0, root);

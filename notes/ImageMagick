@@ -1,0 +1,3 @@
+cd to d:\pictures\temp\effect
+magick convert goose.jpg -raise 20 raisedGoose.jpg
+magick convert text.tif -shade 135x30 shadedText.png
