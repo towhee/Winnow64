@@ -9,7 +9,28 @@ This code is from D:\Programming\ImageEditingSourceCode\qimageblitz-master
 GitHub: https://github.com/mylxiaoyi/qimageblitz
 */
 
-namespace GraphicEffect {
+namespace WinnowGraphicEffect {
+
+#define M_EPSILON 1.0e-6
+#define M_SQ2PI 2.50662827463100024161235523934010416269302368164062
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#define RoundToPixel(value) ((unsigned char) ((value) < 0.0 ? 0.0 : \
+  ((value) > (float) 255) ? (float) 255 : (value)+0.5))
+
+typedef struct
+{
+    float red, green, blue, alpha;
+} FloatPixel;
+
+
+#define CONVOLVE_ACC(weight, pixel) \
+    r+=((weight))*(qRed((pixel))); g+=((weight))*(qGreen((pixel))); \
+    b+=((weight))*(qBlue((pixel)));
+
+enum EffectQuality{Low=0, High};
 
 inline QRgb convertFromPremult(QRgb p)
 {
@@ -20,6 +41,7 @@ inline QRgb convertFromPremult(QRgb p)
                               alpha));
 }
 
+// done
 inline QRgb convertToPremult(QRgb p)
 {
     unsigned int a = p >> 24;
@@ -33,6 +55,294 @@ inline QRgb convertToPremult(QRgb p)
     p |= t | (a << 24);
     return(p);
 }
+
+int defaultConvolveMatrixSize(float radius, float sigma,
+                                            bool quality)
+{
+    int i, matrix_size;
+    float normalize, value;
+    float sigma2 = sigma*sigma*2.0;
+    float sigmaSQ2PI = M_SQ2PI*sigma;
+    int max = quality ? 65535 : 255;
+
+    if(sigma == 0.0){
+        qWarning("Blitz::convolve(): Zero sigma is invalid!");
+        return(5);
+    }
+
+    if(radius > 0.0)
+        return((int)(2.0*std::ceil(radius)+1.0));
+
+    matrix_size = 5;
+    do{
+        normalize = 0.0;
+        for(i=(-matrix_size/2); i <= (matrix_size/2); ++i)
+            normalize += std::exp(-((float) i*i)/sigma2) / sigmaSQ2PI;
+        i = matrix_size/2;
+        value = std::exp(-((float) i*i)/sigma2) / sigmaSQ2PI / normalize;
+        matrix_size += 2;
+    } while((int)(max*value) > 0);
+
+    matrix_size-=4;
+    return(matrix_size);
+}
+
+QImage convolve(QImage &img, int matrix_size, float *matrix)
+{
+    int i, x, y, w, h, matrix_x, matrix_y;
+    int edge = matrix_size/2;
+    QRgb *dest, *src, *s, **scanblock;
+    float *m, *normalize_matrix, normalize;
+    bool overflow = false;
+
+    if(!(matrix_size % 2)){
+        qWarning("convolve(): kernel width must be an odd number!");
+        return(img);
+    }
+
+    w = img.width();
+    h = img.height();
+    if (w < 3 || h < 3) {
+        qWarning("convolve(): Image is too small!");
+        return(img);
+    }
+
+    if(img.format() == QImage::Format_ARGB32_Premultiplied)
+        img = img.convertToFormat(QImage::Format_ARGB32);
+    else if(img.depth() < 32){
+        img = img.convertToFormat(img.hasAlphaChannel() ?
+                                  QImage::Format_ARGB32 :
+                                  QImage::Format_RGB32);
+    }
+    QImage buffer(w, h, img.format());
+
+    scanblock = new QRgb* [matrix_size];
+    normalize_matrix = new float[matrix_size*matrix_size];
+
+    // create normalized matrix
+    normalize = 0.0;
+    for(i=0; i < matrix_size*matrix_size; ++i)
+        normalize += matrix[i];
+    if(std::abs(normalize) <=  M_EPSILON)
+        normalize = 1.0;
+    normalize = 1.0/normalize;
+    for(i=0; i < matrix_size*matrix_size; ++i){
+        normalize_matrix[i] = normalize*matrix[i];
+        if(normalize_matrix[i] < 0.0)
+            overflow = true;
+    }
+
+    // apply
+    float r, g, b;
+    for (y = 0; y < h; ++y) {
+        src = (QRgb *)img.scanLine(y);
+        dest = (QRgb *)buffer.scanLine(y);
+        // Read in scanlines to pixel neighborhood. If the scanline is outside
+        // the image use the top or bottom edge.
+        for(x=y-edge, i=0; x <= y+edge; ++i, ++x){
+            scanblock[i] = (QRgb *)
+                img.scanLine((x < 0) ? 0 : (x > h-1) ? h-1 : x);
+        }
+        // Now we are about to start processing scanlines. First handle the
+        // part where the pixel neighborhood extends off the left edge.
+        for(x=0; x-edge < 0 ; ++x){
+            r = g = b = 0.0;
+            m = normalize_matrix;
+            for(matrix_y = 0; matrix_y < matrix_size; ++matrix_y){
+                s = scanblock[matrix_y];
+                matrix_x = -edge;
+                while(x+matrix_x < 0){
+                    CONVOLVE_ACC(*m, *s);
+                    ++matrix_x; ++m;
+                }
+                while(matrix_x <= edge){
+                    CONVOLVE_ACC(*m, *s);
+                    ++matrix_x; ++m; ++s;
+                }
+            }
+            r = r < 0.0 ? 0.0 : r > 255.0 ? 255.0 : r+0.5;
+            g = g < 0.0 ? 0.0 : g > 255.0 ? 255.0 : g+0.5;
+            b = b < 0.0 ? 0.0 : b > 255.0 ? 255.0 : b+0.5;
+            *dest++ = qRgba((unsigned char)r, (unsigned char)g,
+                            (unsigned char)b, qAlpha(*src++));
+        }
+        // Okay, now process the middle part where the entire neighborhood
+        // is on the image.
+        for(; x+edge < w; ++x){
+            m = normalize_matrix;
+            r = g = b = 0.0;
+            for(matrix_y = 0; matrix_y < matrix_size; ++matrix_y){
+                s = scanblock[matrix_y] + (x-edge);
+                for(matrix_x = -edge; matrix_x <= edge; ++matrix_x, ++m, ++s){
+                    CONVOLVE_ACC(*m, *s);
+                }
+            }
+            r = r < 0.0 ? 0.0 : r > 255.0 ? 255.0 : r+0.5;
+            g = g < 0.0 ? 0.0 : g > 255.0 ? 255.0 : g+0.5;
+            b = b < 0.0 ? 0.0 : b > 255.0 ? 255.0 : b+0.5;
+            *dest++ = qRgba((unsigned char)r, (unsigned char)g,
+                            (unsigned char)b, qAlpha(*src++));
+        }
+        // Finally process the right part where the neighborhood extends off
+        // the right edge of the image
+        for(; x < w; ++x){
+            r = g = b = 0.0;
+            m = normalize_matrix;
+            for(matrix_y = 0; matrix_y < matrix_size; ++matrix_y){
+                s = scanblock[matrix_y];
+                s += x-edge;
+                matrix_x = -edge;
+                while(x+matrix_x < w){
+                    CONVOLVE_ACC(*m, *s);
+                    ++matrix_x, ++m, ++s;
+                }
+                --s;
+                while(matrix_x <= edge){
+                    CONVOLVE_ACC(*m, *s);
+                    ++matrix_x, ++m;
+                }
+            }
+            r = r < 0.0 ? 0.0 : r > 255.0 ? 255.0 : r+0.5;
+            g = g < 0.0 ? 0.0 : g > 255.0 ? 255.0 : g+0.5;
+            b = b < 0.0 ? 0.0 : b > 255.0 ? 255.0 : b+0.5;
+            *dest++ = qRgba((unsigned char)r, (unsigned char)g,
+                            (unsigned char)b, qAlpha(*src++));
+        }
+    }
+
+    delete[] scanblock;
+    delete[] normalize_matrix;
+    return(buffer);
+}
+
+// Equalize
+// These are used as accumulators
+typedef struct
+{
+    quint32 red, green, blue, alpha;
+} IntegerPixel;
+
+typedef struct
+{
+    quint16 red, green, blue, alpha;
+} ShortPixel;
+
+typedef struct
+{
+    // Yes, a normal pixel can be used instead but this is easier to read
+    // and no shifts to get components.
+    quint8 red, green, blue, alpha;
+} CharPixel;
+
+typedef struct
+{
+    quint32 red, green, blue, alpha;
+} HistogramListItem;
+
+bool equalize(QImage &img)
+{
+    if(img.isNull())
+        return(false);
+
+    HistogramListItem *histogram;
+    IntegerPixel *map;
+    IntegerPixel intensity, high, low;
+    CharPixel *equalize_map;
+    int i, count;
+    QRgb pixel, *dest;
+    unsigned char r, g, b;
+
+    if(img.depth() < 32){
+        img = img.convertToFormat(img.hasAlphaChannel() ?
+                                  QImage::Format_ARGB32 :
+                                  QImage::Format_RGB32);
+    }
+    count = img.width()*img.height();
+
+    map = new IntegerPixel[256];
+    histogram = new HistogramListItem[256];
+    equalize_map = new CharPixel[256];
+
+    // form histogram
+    memset(histogram, 0, 256*sizeof(HistogramListItem));
+    dest = (QRgb *)img.bits();
+
+    if(img.format() == QImage::Format_ARGB32_Premultiplied){
+        for(i=0; i < count; ++i, ++dest){
+            pixel = convertFromPremult(*dest);
+            histogram[qRed(pixel)].red++;
+            histogram[qGreen(pixel)].green++;
+            histogram[qBlue(pixel)].blue++;
+            histogram[qAlpha(pixel)].alpha++;
+        }
+    }
+    else{
+        for(i=0; i < count; ++i){
+            pixel = *dest++;
+            histogram[qRed(pixel)].red++;
+            histogram[qGreen(pixel)].green++;
+            histogram[qBlue(pixel)].blue++;
+            histogram[qAlpha(pixel)].alpha++;
+        }
+    }
+
+    // integrate the histogram to get the equalization map
+    memset(&intensity, 0, sizeof(IntegerPixel));
+    for(i=0; i < 256; ++i){
+        intensity.red += histogram[i].red;
+        intensity.green += histogram[i].green;
+        intensity.blue += histogram[i].blue;
+        map[i] = intensity;
+    }
+
+    low = map[0];
+    high = map[255];
+    memset(equalize_map, 0, 256*sizeof(CharPixel));
+    for(i=0; i < 256; ++i){
+        if(high.red != low.red)
+            equalize_map[i].red=(unsigned char)
+                ((255*(map[i].red-low.red))/(high.red-low.red));
+        if(high.green != low.green)
+            equalize_map[i].green=(unsigned char)
+                ((255*(map[i].green-low.green))/(high.green-low.green));
+        if(high.blue != low.blue)
+            equalize_map[i].blue=(unsigned char)
+                ((255*(map[i].blue-low.blue))/(high.blue-low.blue));
+    }
+
+    // stretch the histogram and write
+    dest = (QRgb *)img.bits();
+    if(img.format() == QImage::Format_ARGB32_Premultiplied){
+        for(i=0; i < count; ++i, ++dest){
+            pixel = convertFromPremult(*dest);
+            r = (low.red != high.red) ? equalize_map[qRed(pixel)].red :
+                qRed(pixel);
+            g = (low.green != high.green) ? equalize_map[qGreen(pixel)].green :
+                qGreen(pixel);
+            b = (low.blue != high.blue) ?  equalize_map[qBlue(pixel)].blue :
+                qBlue(pixel);
+            *dest = convertToPremult(qRgba(r, g, b, qAlpha(pixel)));
+        }
+    }
+    else{
+        for(i=0; i < count; ++i){
+            pixel = *dest;
+            r = (low.red != high.red) ? equalize_map[qRed(pixel)].red :
+                qRed(pixel);
+            g = (low.green != high.green) ? equalize_map[qGreen(pixel)].green :
+                qGreen(pixel);
+            b = (low.blue != high.blue) ?  equalize_map[qBlue(pixel)].blue :
+                qBlue(pixel);
+            *dest++ = qRgba(r, g, b, qAlpha(pixel));
+        }
+    }
+
+    delete[] histogram;
+    delete[] map;
+    delete[] equalize_map;
+    return(true);
+}
+
 
 QImage blur(QImage &img, int radius)
 {
@@ -326,27 +636,27 @@ QImage edge(QImage &img)
 }
 
 // Normalize
-typedef struct
-{
-    quint32 red, green, blue, alpha;
-} IntegerPixel;
+//typedef struct
+//{
+//    quint32 red, green, blue, alpha;
+//} IntegerPixel;
 
-typedef struct
-{
-    quint16 red, green, blue, alpha;
-} ShortPixel;
+//typedef struct
+//{
+//    quint16 red, green, blue, alpha;
+//} ShortPixel;
 
-typedef struct
-{
-    // Yes, a normal pixel can be used instead but this is easier to read
-    // and no shifts to get components.
-    quint8 red, green, blue, alpha;
-} CharPixel;
+//typedef struct
+//{
+//    // Yes, a normal pixel can be used instead but this is easier to read
+//    // and no shifts to get components.
+//    quint8 red, green, blue, alpha;
+//} CharPixel;
 
-typedef struct
-{
-    quint32 red, green, blue, alpha;
-} HistogramListItem;
+//typedef struct
+//{
+//    quint32 red, green, blue, alpha;
+//} HistogramListItem;
 
 bool normalize(QImage &img)
 {
@@ -569,7 +879,160 @@ QImage charcoal(QImage &img)
     return(buffer);
 }
 
+QImage emboss(QImage &img, float radius = 0.0, float sigma = 1.0,
+                     EffectQuality quality = High)
+{
+    if(sigma == 0.0){
+        qWarning("emboss(): Zero sigma is invalid!");
+        return(img);
+    }
 
+    int matrix_size = defaultConvolveMatrixSize(radius, sigma, quality == High);
+    int len = matrix_size*matrix_size;
+
+    float alpha, *matrix = new float[len];
+    float sigma2 = sigma*sigma*2.0;
+    float sigmaPI2 = 2.0*M_PI*sigma*sigma;
+
+    int half = matrix_size/2;
+    int x, y, i=0, j=half;
+    for(y=(-half); y <= half; ++y, --j){
+        for(x=(-half); x <= half; ++x, ++i){
+            alpha = std::exp(-((float)x*x+y*y)/sigma2);
+            matrix[i]=((x < 0) || (y < 0) ? -8.0 : 8.0)*alpha/sigmaPI2;
+            if(x == j)
+                matrix[i]=0.0;
+        }
+    }
+    QImage result(convolve(img, matrix_size, matrix));
+    delete[] matrix;
+    equalize(result);
+    return(result);
+}
+
+QImage oilPaint(QImage &img, float radius = 0.0, EffectQuality quality = High)
+{
+    int matrix_size = defaultConvolveMatrixSize(radius, 0.5, quality == High);
+    int i, x, y, w, h, matrix_x, matrix_y;
+    int edge = matrix_size/2;
+    unsigned int max, value;
+    QRgb *dest, *src, *s, **scanblock;
+
+    w = img.width();
+    h = img.height();
+    if(w < 3 || h < 3){
+        qWarning("oilPaint(): Image is too small!");
+        return(img);
+    }
+
+    if(img.format() == QImage::Format_ARGB32_Premultiplied)
+        img = img.convertToFormat(QImage::Format_ARGB32);
+    else if(img.depth() < 32){
+        img = img.convertToFormat(img.hasAlphaChannel() ?
+                                  QImage::Format_ARGB32 :
+                                  QImage::Format_RGB32);
+    }
+    QImage buffer(w, h, img.format());
+
+    scanblock = new QRgb* [matrix_size];
+    unsigned int *histogram = new unsigned int[256];
+
+    for(y=0; y < h; ++y){
+        src = (QRgb *)img.scanLine(y);
+        dest = (QRgb *)buffer.scanLine(y);
+        // Read in scanlines to pixel neighborhood. If the scanline is outside
+        // the image use the top or bottom edge.
+        for(x=y-edge, i=0; x <= y+edge; ++i, ++x){
+            scanblock[i] = (QRgb *)
+                img.scanLine((x < 0) ? 0 : (x > h-1) ? h-1 : x);
+        }
+
+        // Now we are about to start processing scanlines. First handle the
+        // part where the pixel neighborhood extends off the left edge.
+        for(x=0; x-edge < 0 ; ++x){
+            (void)memset(histogram, 0, 256*sizeof(unsigned int));
+            max = 0;
+            for(matrix_y = 0; matrix_y < matrix_size; ++matrix_y){
+                s = scanblock[matrix_y];
+                matrix_x = -edge;
+                while(x+matrix_x < 0){
+                    value = qGray(*s);
+                    histogram[value]++;
+                    if(histogram[value] > max){
+                        max = histogram[value];
+                        *dest = *s;
+                    }
+                    ++matrix_x;
+                }
+                while(matrix_x <= edge){
+                    value = qGray(*s);
+                    histogram[value]++;
+                    if(histogram[value] > max){
+                        max = histogram[value];
+                        *dest = *s;
+                    }
+                    ++matrix_x; ++s;
+                }
+            }
+            ++dest;
+        }
+
+        // Okay, now process the middle part where the entire neighborhood
+        // is on the image.
+        for(; x+edge < w; ++x){
+            (void)memset(histogram, 0, 256*sizeof(unsigned int));
+            max = 0;
+            for(matrix_y = 0; matrix_y < matrix_size; ++matrix_y){
+                s = scanblock[matrix_y] + (x-edge);
+                for(matrix_x = -edge; matrix_x <= edge; ++matrix_x, ++s){
+                    value = qGray(*s);
+                    histogram[value]++;
+                    if(histogram[value] > max){
+                        max = histogram[value];
+                        *dest = *s;
+                    }
+                }
+            }
+            ++dest;
+        }
+
+        // Finally process the right part where the neighborhood extends off
+        // the right edge of the image
+        for(; x < w; ++x){
+            (void)memset(histogram, 0, 256*sizeof(unsigned int));
+            max = 0;
+            for(matrix_y = 0; matrix_y < matrix_size; ++matrix_y){
+                s = scanblock[matrix_y];
+                s += x-edge;
+                matrix_x = -edge;
+                while(x+matrix_x < w){
+                    value = qGray(*s);
+                    histogram[value]++;
+                    if(histogram[value] > max){
+                        max = histogram[value];
+                        *dest = *s;
+                    }
+                    ++matrix_x, ++s;
+                }
+                --s;
+                while(matrix_x <= edge){
+                    value = qGray(*s);
+                    histogram[value]++;
+                    if(histogram[value] > max){
+                        max = histogram[value];
+                        *dest = *s;
+                    }
+                    ++matrix_x;
+                }
+            }
+            ++dest;
+        }
+    }
+
+    delete[] histogram;
+    delete[] scanblock;
+    return(buffer);
+}
 
 // not useful
 QImage implode(QImage &img, float amount)
@@ -657,6 +1120,7 @@ QImage implode(QImage &img, float amount)
     }
     return(buffer);
 }
+
 
 } // end namespace
 

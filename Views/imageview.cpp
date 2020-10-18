@@ -51,14 +51,33 @@ ImageView::ImageView(QWidget *parent,
     this->classificationBadgeDiam = classificationBadgeDiam;
     pixmap = new Pixmap(this, dm, metadata);
 
+    /*
+    // set QOpenGLWidget as QGraphicsView viewport
+    openGLFrame = new OpenGLFrame;
+    QSurfaceFormat format;
+    format.setSamples(4);
+    format.setDepthBufferSize(24);
+    format.setStencilBufferSize(8);
+    format.setVersion(3, 2);
+    format.setProfile(QSurfaceFormat::CoreProfile);
+    openGLFrame->setFormat(format);
+    this->setViewport(openGLFrame);
+    this->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
+
+    // set scene so can override drawForeground
+    scene = new ImageScene(openGLFrame);
+    */
+
     scene = new QGraphicsScene();
+
     pmItem = new QGraphicsPixmapItem;
     pmItem->setBoundingRegionGranularity(1);
+    pmItem->setOpacity(1.0);
     scene->addItem(pmItem);
 
     setAcceptDrops(true);
     pmItem->setAcceptDrops(true);
-//    setAttribute(Qt::WA_TranslucentBackground);
+    setAttribute(Qt::WA_TranslucentBackground);
     /*
     setOptimizationFlags(QGraphicsView::DontSavePainterState);
     setViewportUpdateMode(QGraphicsView::SmartViewportUpdate);
@@ -971,6 +990,18 @@ void ImageView::paintEvent(QPaintEvent *event)
 //    p.drawText(pt, str);
 
 //    p.end();
+}
+
+void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
+{
+    QGraphicsView::drawForeground(painter, rect);
+
+            painter->save();
+//            painter->resetMatrix();
+//            painter->resetTransform();
+            painter->setPen(QPen(Qt::green));
+//            painter->drawRect(QRect(0, 0, 100, 100));
+            painter->restore();
 }
 
 void ImageView::scrollContentsBy(int dx, int dy)

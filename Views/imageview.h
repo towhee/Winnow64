@@ -11,6 +11,9 @@
 #include "Utilities/classificationlabel.h"
 #include "Image/pixmap.h"
 
+#include "Views/imagescene.h"
+#include "Effects/openglframe.h"
+
 #include "Dialogs/patterndlg.h"
 
 //#ifdef Q_OS_WIN
@@ -35,7 +38,10 @@ public:
               int classificationBadgeDiam = 0,
               int infoOverlayFontSize = 0);
 
+    OpenGLFrame *openGLFrame;
+//    ImageScene *scene;
     QGraphicsScene *scene;
+
     QGraphicsPixmapItem *pmItem;
 //    QGraphicsTextItem *infoItem;
     QMatrix matrix;
@@ -121,6 +127,7 @@ protected:
     void dropEvent(QDropEvent *event);
     void dragEnterEvent(QDragEnterEvent *event);
 
+    void drawForeground(QPainter *painter, const QRectF &rect);
 
 private:
     void noJpgAvailable();

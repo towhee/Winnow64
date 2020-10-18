@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QGraphicsEffect>
 #include "Main/global.h"
+#include "effects.h"
 
 namespace winnow_effects
 {
@@ -121,8 +122,10 @@ private:
     void highlightEffect(QColor color, Margin margin, QPainter::CompositionMode mode);
     void blurEffect(qreal radius, QPainter::CompositionMode mode);
     void sharpenEffect(qreal radius, QPainter::CompositionMode mode);
+    void raiseEffect(int margin, QPainter::CompositionMode mode);
 
     QList<winnow_effects::Effect> *effects;
+    Effects effect;
 
     QRectF srcRectZeroRotation;
     QRectF srcRect;

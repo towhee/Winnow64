@@ -14,14 +14,18 @@ UI_DIR = $$PWD
 QT += widgets
 QT += concurrent
 QT += xmlpatterns
+QT += opengl
 
 HEADERS += Cache/imagecache.h \
 #   Effects/graphicaleffects.h \
    Effects/blur.h \
    Effects/effect.h \
-   Effects/highlighteffect.h \
+#   Effects/highlighteffect.h \
+   Effects/effects.h \
    Effects/interpolate.h \
-   Effects/shadowtest.h
+   Effects/openglframe.h \
+   Effects/shadowtest.h \
+   Views/imagescene.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/buildfilters.h
@@ -103,8 +107,11 @@ HEADERS += Views/tableview.h
 SOURCES += Cache/imagecache.cpp \
 #   Effects/graphicaleffects.cpp \
    Effects/blur.cpp \
-   Effects/highlighteffect.cpp \
-   Effects/shadowtest.cpp
+#   Effects/highlighteffect.cpp \
+   Effects/effects.cpp \
+   Effects/openglframe.cpp \
+   Effects/shadowtest.cpp \
+   Views/imagescene.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp
@@ -212,6 +219,7 @@ ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
 DISTFILES += Docs/ingestautopath \
+   notes/ImageMagick \
    notes/users.txt
 DISTFILES += Docs/ingestautopath.html
 DISTFILES += Docs/versions

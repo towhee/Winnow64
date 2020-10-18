@@ -1,4 +1,5 @@
 #include "embel.h"
+//#include "Effects/effect.h"       // temp to test
 
 Embel::Embel(ImageView *iv, EmbelProperties *p)
 {
@@ -31,8 +32,78 @@ void Embel::exportImage()
 
 void Embel::test()
 {
-    iv->scene->clear();
+//    /*
+    // Test
+    Effects effect;
+    QImage img("D:/Pictures/Temp/effect/_border.tif");
+    effect.test(img);
+    img.save("D:/Pictures/Temp/effect/_borderShaded.tif");
+
+    /*
+    // brighten example
+    QImage img("D:/Pictures/Temp/effect/goose.jpg");
+    Effects effect;
+    effect.brighten(img, 120);
+    img.save("D:/Pictures/Temp/effect/goosebrighten.tif");
     return;
+//    */
+
+    /*
+    // Convolve example
+    int n = 9;
+    double matrix[81] =
+    {
+        9, 9, 9, 9, 9, 9, 9, 9, 9,
+        9, 9, 9, 9, 9, 9, 9, 9, 9,
+        9, 9, 1, 1, 1, 1, 1, 9, 9,
+        9, 9, 1, 1, 1, 1, 1, 9, 9,
+        9, 9, 1, 1, 1, 1, 1, 9, 9,
+        9, 9, 1, 1, 1, 1, 1, 9, 9,
+        9, 9, 1, 1, 1, 1, 1, 9, 9,
+        9, 9, 9, 9, 9, 9, 9, 9, 9,
+        9, 9, 9, 9, 9, 9, 9, 9, 9
+    };
+//    double matrix[81] =
+//    {
+//        9, 9, 9, 9, 9, 9, 9, 9, 9,
+//        9, 9, 9, 9, 9, 9, 9, 9, 9,
+//        9, 9, 9, 9, 9, 9, 9, 9, 9,
+//        9, 9, 9, 9, 9, 9, 9, 9, 9,
+//        9, 9, 9, 9, 9, 9, 9, 9, 9,
+//        9, 9, 9, 9, 9, 9, 9, 9, 9,
+//        9, 9, 9, 9, 9, 9, 9, 9, 9,
+//        9, 9, 9, 9, 9, 9, 9, 9, 9,
+//        9, 9, 9, 9, 9, 9, 9, 9, 9
+//    };
+//    double matrix[25] =
+//    {
+//        0.003765, 0.015019, 0.023792, 0.015019, 0.003765,
+//        0.015019, 0.059912, 0.094907, 0.059912, 0.015019,
+//        0.023792, 0.094907, 0.150342, 0.094907, 0.023792,
+//        0.015019, 0.059912, 0.094907, 0.059912, 0.015019,
+//        0.003765, 0.015019, 0.023792, 0.015019, 0.003765
+//    };
+    QImage img("D:/Pictures/Temp/effect/goose.jpg");
+    Effects effect;
+    QImage gooseConvolved = effect.convolve(img, n, matrix);
+    gooseConvolved.save("D:/Pictures/Temp/effect/gooseconvolved.tif");
+//    */
+
+    /*
+    // raise example
+    QImage img("D:/Pictures/Temp/effect/goose.jpg");
+    Effects effect;
+    effect.raise(img, 20, 0.0, 0, false);
+    img.save("D:/Pictures/Temp/effect/gooseraise.tif");
+    return;
+//    */
+
+    /* blur example
+    QImage img("D:/Pictures/Temp/effect/text.tif");
+    Effects effect;
+    effect.blur(img, 1);
+    img.save("d:/pictures/temp/effect/textblurred.tif");
+//    */
 }
 
 void Embel::doNotEmbellish()
