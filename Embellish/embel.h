@@ -15,6 +15,15 @@ class Embel : public QObject
 
 public:
     Embel(ImageView *iv, EmbelProperties *p);
+    ~Embel();
+    void updateBorder(int i);
+    void updateText(int i);
+    void updateGraphic(int i);
+    void updateImage();
+    void removeBorder(int i);
+    void removeText(int i);
+    void removeGraphic(int i);
+    void updateStyle(QString style);
     void exportImage();
     void test();
     void diagnostic();
@@ -22,10 +31,19 @@ public:
 public slots:
     void build();
     void clear();
+    void flashObject(QString type = "", int index = 0, bool show = false);
 
 private:
     ImageView *iv;
     EmbelProperties *p;
+
+    enum zLevel {
+        ZBorder,
+        ZImage,
+        ZGraphic,
+        ZText,
+        ZFlash
+    };
 
     // the area inside the frame where the image fits
     struct Hole {
@@ -57,18 +75,27 @@ private:
     struct Text {};
     QList<QGraphicsTextItem*> tItems;
 
+    QList<QGraphicsPixmapItem*> gItems;
+    QList<QPixmap> graphicPixmaps;
+
+    QGraphicsRectItem flashItem;
+
     int ls, w, h;
     int shortside;
 
     void doNotEmbellish();
-    void createBorders();
     void borderImageCoordinates();
     void fitAspect(double aspect, Hole &size);
-    QPoint textCanvasCoord(int n);
+    QPoint canvasCoord(double x, double y, QString anchorObject, QString anchorContainer,
+                       bool align, int alignTo_BorderId, int alignTo_CornerId);
+//    QPoint textCanvasCoord(int n);
     QPoint anchorPointOffset(QString anchorPoint, int w, int h);
-    void addBordersToScene();
+    void createBorders();
     void createTexts();
+    void createGraphics();
+    void addBordersToScene();
     void addTextsToScene();
+    void addGraphicsToScene();
     void addImageToScene();
 };
 

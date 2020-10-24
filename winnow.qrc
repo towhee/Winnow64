@@ -148,5 +148,8 @@
         <file>images/icon16/new.png</file>
         <file>images/icon16/down.png</file>
         <file>images/icon16/up.png</file>
+        <file>images/branch-blank.png</file>
+        <file>images/branch-closed-winnow.png</file>
+        <file>images/branch-open-winnow.png</file>
     </qresource>
 </RCC>

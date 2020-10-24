@@ -691,7 +691,7 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
             return;
         }
         // file path and dm source row in case filtered or sorted
-        mutex.lock();
+//        mutex.lock();     // rgh mutex
         QModelIndex idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
 
@@ -722,7 +722,7 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
             }
         }
         */
-        mutex.unlock();
+//        mutex.unlock();   // rgh mutex
         qApp->processEvents();
     }
 }
@@ -746,7 +746,7 @@ startRow and endRow.
         }
 
         // file path and dm source row in case filtered or sorted
-        mutex.lock();
+//        mutex.lock(); // rgh mutex
         QModelIndex idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
         QString fPath = idx.data(G::PathRole).toString();
@@ -775,7 +775,7 @@ startRow and endRow.
                 iconsCached.append(dmRow);
             }
         }
-        mutex.unlock();
+//        mutex.unlock();   // rgh mutex
     }
 }
 
@@ -797,10 +797,10 @@ If there has been a file selection change and not a new folder then update image
         emit updateIsRunning(true, true, __FUNCTION__);
         qApp->processEvents();
 
-        mutex.lock();
+//        mutex.lock();     // rgh mutex
         int rowCount = dm->rowCount();
         dm->loadingModel = true;
-        mutex.unlock();
+//        mutex.unlock();   // rgh mutex
 
         // pause image caching if it was running
         bool imageCachePaused = false;
@@ -836,14 +836,14 @@ If there has been a file selection change and not a new folder then update image
         // update allMetadataLoaded flag
         if (!G::allMetadataLoaded) {
             G::allMetadataLoaded = true;
-            mutex.lock();
+//            mutex.lock();     // rgh mutex
             for (int i = 0; i < rowCount; ++i) {
                 if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool()) {
                     G::allMetadataLoaded = false;
                     break;
                 }
             }
-            mutex.unlock();
+//            mutex.unlock();   // rgh mutex
         }
 
         // clean up orphaned icons outside icon range   rgh what about other actions
@@ -868,9 +868,9 @@ If there has been a file selection change and not a new folder then update image
         // resume image caching if it was interrupted
         if (imageCachePaused) imageCacheThread->resumeImageCache();
 
-        mutex.lock();
+//        mutex.lock();     // rgh mutex
         dm->loadingModel = false;
-        mutex.unlock();
+//        mutex.unlock();   // rgh mutex
 
     }
     /*

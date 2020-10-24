@@ -526,8 +526,8 @@ private:
     QMenu *goMenu;
     QMenu *filterMenu;
     QMenu *sortMenu;
+    QMenu *embelMenu;
     QMenu *viewMenu;
-       QMenu *embelMenu;
        QMenu *zoomSubMenu;
     QMenu *windowMenu;
         QMenu *workspaceMenu;

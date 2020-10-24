@@ -17,6 +17,8 @@ enum DelegateType
     DT_Slider,
     DT_PlusMinus,
     DT_BarBtns,
+    DT_SelectFolder,
+    DT_SelectFile,
     DT_Color
 };
 
@@ -58,7 +60,7 @@ class SliderEditor : public QWidget
 public:
     SliderEditor(const QModelIndex &idx, QWidget *parent = nullptr);
     void setValue(QVariant value);
-    int value();
+    double value();
 
 protected:
     void paintEvent(QPaintEvent *event);
@@ -68,12 +70,10 @@ signals:
     void enableGoKeyActions(bool ok);
 
 private:
-    void change(int value);
+    void change(double value);
     void sliderMoved();
     void updateSliderWhenLineEdited();
-    bool isOutOfRange(double v);
-    bool outOfSliderRange;
-    bool ignoreSliderChange;
+    bool outOfRange;
     int div;
     QSlider *slider;
     QLineEdit *lineEdit;
@@ -274,6 +274,50 @@ private:
     void updateLabelWhenLineEdited(QString value);
     QLineEdit *lineEdit;
     QPushButton *btn;
+};
+
+class SelectFolderEditor : public QWidget
+{
+    Q_OBJECT
+public:
+    SelectFolderEditor(const QModelIndex &idx, QWidget *parent = nullptr);
+    void setValue(QVariant value);
+    void setValueFromSaveFileDlg();
+    QString value();
+
+protected:
+    void paintEvent(QPaintEvent *event);
+
+signals:
+    void editorValueChanged(QWidget *);
+    void enableGoKeyActions(bool ok);
+
+private:
+    void change(QString value);
+    QLineEdit *lineEdit;
+    BarBtn *btn;
+};
+
+class SelectFileEditor : public QWidget
+{
+    Q_OBJECT
+public:
+    SelectFileEditor(const QModelIndex &idx, QWidget *parent = nullptr);
+    void setValue(QVariant value);
+    void setValueFromSaveFileDlg();
+    QString value();
+
+protected:
+    void paintEvent(QPaintEvent *event);
+
+signals:
+    void editorValueChanged(QWidget *);
+    void enableGoKeyActions(bool ok);
+
+private:
+    void change(QString value);
+    QLineEdit *lineEdit;
+    BarBtn *btn;
 };
 
 #endif // PROPERTYWIDGETS_H

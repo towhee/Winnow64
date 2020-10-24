@@ -27,6 +27,15 @@ PropertyEditor subclass ie Preferences.  All the property items are defined and 
 
 SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
+/*
+The SliderEditor works within a range of integer values defined by min and max.  The
+lineEdit control shows the slider value, but it can be edited to enter a number outside
+the slider range.
+
+When a real value is required, the range is increased by factor "div" and the lineEdit
+shows the slider value divided by "div".  The value in the lineEdit is returned as the
+sliderEditor value.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -37,7 +46,7 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
     // divisor if converting integer slider value to double
-    div = idx.data(UR_Div).toInt();
+    div = idx.data(UR_Div).toDouble();
     if (div == 0) div = 1;
     source = idx.data(UR_Source).toString();
 
@@ -73,12 +82,13 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
     setLayout(layout);
 
-    int sliderValue = idx.data(Qt::EditRole).toInt() * div;
+    outOfRange = false;
+    double sliderValue = idx.data(Qt::EditRole).toInt() * div;
     slider->setValue(sliderValue);
     emit slider->valueChanged(sliderValue);
 }
 
-int SliderEditor::value()
+double SliderEditor::value()
 {
     {
     #ifdef ISDEBUG
@@ -96,7 +106,7 @@ void SliderEditor::setValue(QVariant value)
     G::track(__FUNCTION__);
     #endif
     }
-    slider->setValue(value.toInt());
+    slider->setValue(value.toDouble());
 }
 
 void SliderEditor::sliderMoved()
@@ -106,17 +116,17 @@ void SliderEditor::sliderMoved()
     G::track(__FUNCTION__);
     #endif
     }
-    ignoreSliderChange = false;
+    outOfRange = false;
 }
 
-void SliderEditor::change(int value)
+void SliderEditor::change(double value)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    if (ignoreSliderChange) return;
+    if (outOfRange) return;
     double v = static_cast<double>(value) / div;
     /*
     qDebug() << __FUNCTION__
@@ -124,12 +134,16 @@ void SliderEditor::change(int value)
              << "div =" << div
              << "v =" << v;
 //             */
+    bool isInt = (v - static_cast<int>(v)) == 0;
+//    qDebug() << __FUNCTION__ << v << isInt;
+    if (div == 1 && isInt)
+        lineEdit->setText(QString::number(v));
+    else
+        lineEdit->setText(QString::number(v, 'f', 2));
     emit editorValueChanged(this);
-    if (div == 1) lineEdit->setText(QString::number(value));
-    else lineEdit->setText(QString::number(v, 'f', 2));
 }
 
-void SliderEditor::updateSliderWhenLineEdited(/*QString value*/)
+void SliderEditor::updateSliderWhenLineEdited()
 {
     {
     #ifdef ISDEBUG
@@ -137,29 +151,25 @@ void SliderEditor::updateSliderWhenLineEdited(/*QString value*/)
     #endif
     }
     double v = lineEdit->text().toDouble() * div;
-    ignoreSliderChange = isOutOfRange(v);
-    slider->setValue(static_cast<int>(v));
-}
-
-bool SliderEditor::isOutOfRange(double v)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
+    if (v >= slider->minimum() && v <= slider->maximum()) {
+        outOfRange = false;
+        slider->setValue(v);
+        slider->setValue(static_cast<int>(v));
+        return;
     }
-    if (v < slider->minimum() || v > slider->maximum()) return true;
-    else return false;
+    outOfRange = true;
+    if (v < slider->minimum()) slider->setValue(slider->minimum());
+    else slider->setValue(slider->maximum());
+    emit editorValueChanged(this);
 }
 
 void SliderEditor::paintEvent(QPaintEvent *event)
 {
     QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
-    if (ignoreSliderChange)
+    if (outOfRange)
         setStyleSheet("QLineEdit {color:red;}");
     else
         setStyleSheet("QLineEdit {color:" + textColor.name() + ";}");
-//    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
 }
 
@@ -736,12 +746,15 @@ PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWid
     source = idx.data(UR_Source).toString();
 
     minusBtn = new QPushButton;
-    minusBtn->setStyleSheet("QPushButton {color: white;}");
+    minusBtn->setStyleSheet(G::css);
     minusBtn->setObjectName("DisableGoActions");  // used in MW::focusChange
+    minusBtn->setMaximumHeight(16);
     minusBtn->setText("-");
 
     plusBtn = new QPushButton;
+    plusBtn->setStyleSheet(G::css);
     plusBtn->setObjectName("DisableGoActions");  // used in MW::focusChange
+    plusBtn->setMaximumHeight(16);
     plusBtn->setText("+");
 
     connect(minusBtn, &QPushButton::clicked, this, &PlusMinusEditor::minusChange);
@@ -847,13 +860,18 @@ ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
     btn->setToolTip("Click here to open the color select dialog.");
     btn->setStyleSheet(
         "QPushButton, QPushButton:pressed, QPushButton:hover, QPushButton:flat"
-        "{background-color:#3f5f53;"
-        "margin-right: 4px;"
-//        "max-width: 50px;"
-        "max-height: 10px;"
-        "min-height: 10px;"
+        "{"
+            "background-color:#3f5f53;"
+            "border: none;"
+            "border-radius: 0px;"
+            "padding: 0,0,0,0;"
+            "margin-right: 4px;"
+    //        "max-width: 50px;"
+            "max-height: 10px;"
+            "min-height: 10px;"
         "}"
         );
+    btn->setMaximumHeight(10);
 
     connect(btn, &QPushButton::clicked, this, &ColorEditor::setValueFromColorDlg);
     connect(lineEdit, &QLineEdit::textChanged, this, &ColorEditor::updateLabelWhenLineEdited);
@@ -917,3 +935,160 @@ void ColorEditor::paintEvent(QPaintEvent *event)
 //    QWidget::paintEvent(event);
 }
 
+/* SELECTFOLDER EDITOR ***********************************************************************/
+
+SelectFolderEditor::SelectFolderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    lineEdit = new QLineEdit;
+    lineEdit->setObjectName("DisableGoActions");                // used in MW::focusChange
+    lineEdit->setAlignment(Qt::AlignLeft);
+    lineEdit->setStyleSheet("QLineEdit"
+                            "{"
+                                "background: transparent;"      // this works
+                                "border:none;"                  // nada
+                                "padding:0px;"
+                            "}");
+    lineEdit->setWindowFlags(Qt::FramelessWindowHint);
+    lineEdit->setAttribute(Qt::WA_TranslucentBackground);
+
+    btn = new BarBtn;
+    btn->setText("...");
+    btn->setToolTip("Open browse folders dialog to create / select a folder.");
+
+    connect(lineEdit, &QLineEdit::textChanged, this, &SelectFolderEditor::change);
+    connect(btn, &QPushButton::clicked, this, &SelectFolderEditor::setValueFromSaveFileDlg);
+
+    QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->addWidget(lineEdit, Qt::AlignLeft);
+    layout->addWidget(btn);
+    layout->setContentsMargins(0,0,0,0);
+    setLayout(layout);
+
+    lineEdit->setText(idx.data(Qt::EditRole).toString());
+}
+
+QString SelectFolderEditor::value()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    return lineEdit->text();
+}
+
+void SelectFolderEditor::setValue(QVariant value)
+{
+    lineEdit->setText(value.toString());
+}
+
+void SelectFolderEditor::change(QString value)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QVariant v = value;
+    emit editorValueChanged(this);
+}
+
+void SelectFolderEditor::setValueFromSaveFileDlg()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString path = QFileDialog::getExistingDirectory
+            (this, tr("Select or create folder"), "/home",
+            QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    lineEdit->setText(path);
+}
+
+void SelectFolderEditor::paintEvent(QPaintEvent *event)
+{
+}
+
+/* SELECTFILE EDITOR *************************************************************************/
+
+SelectFileEditor::SelectFileEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    lineEdit = new QLineEdit;
+    lineEdit->setObjectName("DisableGoActions");                // used in MW::focusChange
+    lineEdit->setAlignment(Qt::AlignLeft);
+    lineEdit->setStyleSheet("QLineEdit"
+                            "{"
+                            "background: transparent;"      // this works
+                            "border:none;"                  // nada
+                            "padding:0px;"
+                            "}");
+    lineEdit->setWindowFlags(Qt::FramelessWindowHint);
+    lineEdit->setAttribute(Qt::WA_TranslucentBackground);
+
+    btn = new BarBtn;
+    btn->setText("...");
+    btn->setToolTip("Open browse folders dialog to create / select a folder.");
+
+    connect(lineEdit, &QLineEdit::textChanged, this, &SelectFileEditor::change);
+    connect(btn, &QPushButton::clicked, this, &SelectFileEditor::setValueFromSaveFileDlg);
+
+    QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->addWidget(lineEdit, Qt::AlignLeft);
+    layout->addWidget(btn);
+    layout->setContentsMargins(0,0,0,0);
+    setLayout(layout);
+
+    lineEdit->setText(idx.data(Qt::EditRole).toString());
+}
+
+QString SelectFileEditor::value()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    return lineEdit->text();
+}
+
+void SelectFileEditor::change(QString value)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QVariant v = value;
+    emit editorValueChanged(this);
+}
+
+void SelectFileEditor::setValue(QVariant value)
+{
+    lineEdit->setText(value.toString());
+}
+
+void SelectFileEditor::setValueFromSaveFileDlg()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString path = QFileDialog::getOpenFileName(this, tr("Select file"), "/home");
+    lineEdit->setText(path);
+}
+
+void SelectFileEditor::paintEvent(QPaintEvent *event)
+{
+}

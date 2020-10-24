@@ -377,14 +377,14 @@ QString WidgetCSS::treeView()
     "QTreeView::branch:has-children:!has-siblings:closed,"
     "QTreeView::branch:closed:has-children:has-siblings {"
         "border-image: none;"
-        "image: url(:/images/branch-closed-small.png);"
+        "image: url(:/images/branch-closed-winnow.png);"
 //        "margin-bottom: 2px;"
     "}"
 
     "QTreeView::branch:open:has-children:!has-siblings,"
     "QTreeView::branch:open:has-children:has-siblings  {"
         "border-image: none;"
-        "image: url(:/images/branch-open-small.png);"
+        "image: url(:/images/branch-open-winnow.png);"
 //        "margin-bottom: 2px;"
     "}"
 

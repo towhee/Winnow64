@@ -93,11 +93,25 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     propertyDelegate->isAlternatingRows = false;
     resizeColumns("====captions column====",
                   "====values column====");
+    qDebug() << __FUNCTION__ << columnWidth(0) << columnWidth(1);
     setStyleSheet(G::css);
+
+    // Assign blank png for treeview decorations so do not need to hide in delegate paint override
     setStyleSheet
     (
         "QTreeView {"
             "selection-background-color: transparent;"
+        "}"
+        "QTreeView::branch:has-children:!has-siblings:closed,"
+        "QTreeView::branch:closed:has-children:has-siblings {"
+            "border-image: none;"
+            "image: url(:/images/branch-blank.png);"
+        "}"
+
+        "QTreeView::branch:open:has-children:!has-siblings,"
+        "QTreeView::branch:open:has-children:has-siblings  {"
+            "border-image: none;"
+            "image: url(:/images/branch-blank.png);"
         "}"
     );
 
@@ -117,7 +131,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     // default state
     collapseAll();
     expand(model->index(_templates,0));
-//    updateHiddenRows(QModelIndex());
+    updateHiddenRows(QModelIndex());
 }
 
 void EmbelProperties::initialize()
@@ -220,11 +234,11 @@ void EmbelProperties::initialize()
 
     renameAction = new QAction(tr("Rename"), this);
     addAction(renameAction);
-    connect(renameAction, &QAction::triggered, this,&EmbelProperties::rename);
+    connect(renameAction, &QAction::triggered, this, &EmbelProperties::rename);
 
     copyAction = new QAction(tr("Copy"), this);
     addAction(copyAction);
-    connect(copyAction, &QAction::triggered, this,&EmbelProperties::copy);
+    connect(copyAction, &QAction::triggered, this, &EmbelProperties::copy);
 
     separatorAction1 = new QAction(this);
     separatorAction1->setSeparator(true);
@@ -232,11 +246,15 @@ void EmbelProperties::initialize()
 
     moveUpAction = new QAction(tr("Move up"), this);
     addAction(moveUpAction);
-    connect(moveUpAction, &QAction::triggered, this,&EmbelProperties::moveUp);
+    connect(moveUpAction, &QAction::triggered, this, &EmbelProperties::moveUp);
 
     moveDownAction = new QAction(tr("Move down"), this);
     addAction(moveDownAction);
-    connect(moveDownAction, &QAction::triggered, this,&EmbelProperties::moveDown);
+    connect(moveDownAction, &QAction::triggered, this, &EmbelProperties::moveDown);
+
+    separatorAction2 = new QAction(this);
+    separatorAction2->setSeparator(true);
+    addAction(separatorAction2);
 
     setContextMenuPolicy(Qt::ActionsContextMenu);
 }
@@ -825,16 +843,16 @@ itemChange, which is subclassed here.
              << "source =" << source
              << "parent =" << parent
              << "grandparent =" << grandparent;
-             */
+//           */
 
     if (source == "templateList") itemChangeTemplate(v);
     if (templateId != 0) {
-        if (parent == "FileHeader") itemChangeFile(v, source);
+        if (parent == "ExportHeader") itemChangeExport(idx, v, source);
         if (parent == "GeneralHeader") itemChangeGeneral(v, source);
         if (grandparent == "Borders") itemChangeBorder(idx);
         if (grandparent == "Texts") itemChangeText(idx);
         if (grandparent == "Rectangles") itemChangeRectangle(v, source, parent);
-        if (grandparent == "Graphics") itemChangeGraphic(v, source, parent);
+        if (grandparent == "Graphics") itemChangeGraphic(idx, v, source, parent);
 //        if (source == "globalLightDirection") itemChangeGlobalLight(v, source, parent);
         if (parent.left(6) == "Shadow") itemChangeShadowEffect(v, source, parent, grandparent);
         if (parent.left(4) == "Blur") itemChangeBlurEffect(v, source, parent, grandparent);
@@ -842,7 +860,7 @@ itemChange, which is subclassed here.
         if (parent.left(9) == "Highlight") itemChangeHighlightEffect(v, source, parent, grandparent);
     }
 
-    e->build();
+//    e->build();
 }
 
 void EmbelProperties::itemChangeTemplate(QVariant v)
@@ -871,10 +889,14 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     // clear borders, texts, rectangles and graphics
     b.clear();
     t.clear();
+    g.clear();
 
     // show/hide Styles
     if (templateId > 0) setRowHidden(1, root, false);
     else setRowHidden(1, root, true);
+
+    // clear all graphics items
+    if (templateId == 0) e->clear();
 
     // add items for this template
     if (templateId > 0) addTemplateItems();
@@ -885,49 +907,49 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     mw3->imageView->loadImage(mw3->dm->currentFilePath);
 }
 
-void EmbelProperties::itemChangeFile(QVariant v, QString source)
+void EmbelProperties::itemChangeExport(QModelIndex idx, QVariant v, QString source)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QString path = templatePath + "File/" + source;
-    qDebug() << __FUNCTION__ << path << source << v.toInt();
-
-    if (source == "horizontalFit") {
-        setting->setValue(path, v.toInt());
-        f.horizontalFitPx = v.toInt();
-    }
-
-    if (source == "verticalFit") {
-        setting->setValue(path, v.toInt());
-        f.verticalFitPx = v.toInt();
-    }
+    QString path = templatePath + "Export/" + source;
 
     if (source == "fileType") {
         setting->setValue(path, v.toString());
-        f.fileType = v.toString();
+        exportFileType = v.toString();
     }
 
     if (source == "saveMethod") {
         setting->setValue(path, v.toString());
-        f.saveMethod = v.toString();
+        saveMethod = v.toString();
+        qDebug() << __FUNCTION__ << source << saveMethod;
+        int row = idx.row();
+        // also hidden on creation using updateHiddenRows(QModelIndex parent)
+        if (saveMethod == "Another folder somewhere else") {
+            setRowHidden(row + 1, idx.parent(), false);
+            setRowHidden(row + 2, idx.parent(), true);
+        }
+        if (saveMethod == "Subfolder") {
+            setRowHidden(row + 1, idx.parent(), true);
+            setRowHidden(row + 2, idx.parent(), false);
+        }
     }
 
     if (source == "folderPath") {
         setting->setValue(path, v.toString());
-        f.folderPath = v.toString();
+        exportFolderPath = v.toString();
     }
 
-    if (source == "suffix") {
+    if (source == "subfolder") {
         setting->setValue(path, v.toString());
-        f.suffix = v.toString();
+        exportSubfolder = v.toString();
     }
 
     if (source == "overwriteFiles") {
         setting->setValue(path, v.toBool());
-        f.overwriteFiles = v.toBool();
+        overwriteFiles = v.toBool();
     }
 }
 
@@ -940,6 +962,16 @@ void EmbelProperties::itemChangeGeneral(QVariant v, QString source)
     }
     QString path = templatePath + "General/" + source;
 //    qDebug() << __FUNCTION__ << path;
+
+    if (source == "horizontalFit") {
+        setting->setValue(path, v.toInt());
+        horizontalFitPx = v.toInt();
+    }
+
+    if (source == "verticalFit") {
+        setting->setValue(path, v.toInt());
+        verticalFitPx = v.toInt();
+    }
 
     if (source == "globalLightDirection") {
         setting->setValue(path, v.toString());
@@ -968,28 +1000,40 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
 //    diagnostics(idx);
 
     if (source == "topMargin") {
-        qDebug() << __FUNCTION__ << "item change topMargin" << path;
         double x = v.toDouble();
+        qDebug() << __FUNCTION__ << "item change topMargin" << "x =" << x;
         setting->setValue(path, x);
         b[index].top = x;
+        // build embel as change in border dimension changes all coordinates
+        e->build();
+        return;
     }
 
     if (source == "leftMargin") {
         double x = v.toDouble();
         setting->setValue(path, x);
         b[index].left = x;
+        // build embel as change in border dimension changes all coordinates
+        e->build();
+        return;
     }
 
     if (source == "rightMargin") {
         double x = v.toDouble();
         setting->setValue(path, x);
         b[index].right = x;
+        // build embel as change in border dimension changes all coordinates
+        e->build();
+        return;
     }
 
     if (source == "bottomMargin") {
         double x = v.toDouble();
         setting->setValue(path, x);
         b[index].bottom = x;
+        // build embel as change in border dimension changes all coordinates
+        e->build();
+        return;
     }
 
     if (source == "tile") {
@@ -1012,6 +1056,8 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
         setting->setValue(path, v.toString());
         b[index].style = v.toString();
     }
+
+    e->updateBorder(index);
 }
 
 void EmbelProperties::itemChangeText(QModelIndex idx)
@@ -1113,6 +1159,7 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
 
     if (source == "size") {
         double x = v.toDouble() / 100;
+        qDebug() << __FUNCTION__ << "size" << x;
         setting->setValue(path, x);
         t[index].size = x;
     }
@@ -1142,6 +1189,8 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
         setting->setValue(path, v.toString());
         t[index].style = v.toString();
     }
+
+    e->updateText(index);
 }
 
 void EmbelProperties::itemChangeRectangle(QVariant v, QString source, QString parent)
@@ -1154,26 +1203,87 @@ void EmbelProperties::itemChangeRectangle(QVariant v, QString source, QString pa
 
 }
 
-void EmbelProperties::itemChangeGraphic(QVariant v, QString source, QString parent)
+void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString source, QString parent)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-}
+    int index = idx.parent().data(UR_ItemIndex).toInt();
+    QString path = templatePath + "Graphics/" + parent + "/" + source;
+//    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
-//void EmbelProperties::itemChangeGlobalLight(QVariant v, QString source, QString parent)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    QString path = templatePath + source;
-//    setting->setValue(path, v.toString());
-//    globalLightDirection = v.toInt();
-//}
+    if (source == "filePath") {
+        setting->setValue(path, v.toString());
+        g[index].filePath = v.toString();
+    }
+
+    if (source == "anchorObject") {
+        setting->setValue(path, v.toString());
+        g[index].anchorObject = v.toString();
+        int row = idx.row();
+        // also hidden on creation using updateHiddenRows(QModelIndex parent)
+        if (v.toString() == "Image") {
+            setRowHidden(row + 1, idx.parent(), true);  // anchor container
+            setRowHidden(row + 3, idx.parent(), true);  // align to border corner
+        }
+        else {
+            setRowHidden(row + 1, idx.parent(), false);
+            setRowHidden(row + 3, idx.parent(), false);
+        }
+    }
+
+    if (source == "anchorContainer") {
+        setting->setValue(path, v.toString());
+        g[index].anchorContainer = v.toString();
+    }
+
+    if (source == "x") {
+        setting->setValue(path, v.toDouble());
+        g[index].x = v.toDouble();
+    }
+
+    if (source == "y") {
+        setting->setValue(path, v.toDouble());
+        g[index].y = v.toDouble();
+    }
+
+    if (source == "size") {
+        setting->setValue(path, v.toDouble());
+        g[index].size = v.toDouble();
+        qDebug() << __FUNCTION__ << "g[index].size =" << g[index].size;
+    }
+
+    if (source == "rotation") {
+        setting->setValue(path, v.toDouble());
+        g[index].rotation = v.toDouble();
+    }
+
+    if (source == "alignToCorner") {
+        setting->setValue(path, v.toString());
+        g[index].alignToCorner = v.toString();
+        parseAlignToCorner(v.toString(), g[index].alignTo_BorderId, g[index].alignTo_CornerId);
+    }
+
+    if (source == "anchorPoint") {
+        setting->setValue(path, v.toString());
+        g[index].anchorPoint = v.toString();
+    }
+
+    if (source == "opacity") {
+        setting->setValue(path, v.toInt());
+        g[index].opacity = v.toInt();
+    }
+
+    if (source == "style") {
+        qDebug() << __FUNCTION__ << source;
+        setting->setValue(path, v.toString());
+        g[index].style = v.toString();
+    }
+
+    e->updateGraphic(index);
+}
 
 void EmbelProperties::itemChangeShadowEffect(QVariant v, QString source, QString effectName, QString style)
 {
@@ -1219,6 +1329,8 @@ void EmbelProperties::itemChangeShadowEffect(QVariant v, QString source, QString
         if (effect == -1) return;
         styleMap[style][effect].shadow.blendMode = winnow_effects::blendModeMap[v.toString()];
     }
+
+    e->updateStyle(style);
 }
 
 void EmbelProperties::itemChangeBlurEffect(QVariant v, QString source, QString effectName, QString style)
@@ -1244,6 +1356,8 @@ void EmbelProperties::itemChangeBlurEffect(QVariant v, QString source, QString e
         if (effect == -1) return;
         styleMap[style][effect].blur.blendMode = winnow_effects::blendModeMap[v.toString()];
     }
+
+    e->updateStyle(style);
 }
 
 void EmbelProperties::itemChangeSharpenEffect(QVariant v, QString source, QString effectName, QString style)
@@ -1269,6 +1383,8 @@ void EmbelProperties::itemChangeSharpenEffect(QVariant v, QString source, QStrin
         if (effect == -1) return;
         styleMap[style][effect].sharpen.blendMode = winnow_effects::blendModeMap[v.toString()];
     }
+
+    e->updateStyle(style);
 }
 
 void EmbelProperties::itemChangeHighlightEffect(QVariant v, QString source, QString effectName, QString style)
@@ -1333,6 +1449,8 @@ void EmbelProperties::itemChangeHighlightEffect(QVariant v, QString source, QStr
         if (effect == -1) return;
         styleMap[style][effect].highlight.blendMode = winnow_effects::blendModeMap[v.toString()];
     }
+
+    e->updateStyle(style);
 }
 
 void EmbelProperties::addTemplateHeader()
@@ -1354,11 +1472,11 @@ void EmbelProperties::addTemplateHeader()
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
 
-    BarBtn *templateRenameBtn = new BarBtn();
-    templateRenameBtn->setIcon(":/images/icon16/delta.png", G::iconOpacity);
-    templateRenameBtn->setToolTip("Rename the selected template");
-    btns.append(templateRenameBtn);
-    connect(templateRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentTemplate);
+//    BarBtn *templateRenameBtn = new BarBtn();
+//    templateRenameBtn->setIcon(":/images/icon16/delta.png", G::iconOpacity);
+//    templateRenameBtn->setToolTip("Rename the selected template");
+//    btns.append(templateRenameBtn);
+//    connect(templateRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentTemplate);
     BarBtn *templateDeleteBtn = new BarBtn();
     templateDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     templateDeleteBtn->setToolTip("Delete the selected template");
@@ -1412,28 +1530,28 @@ void EmbelProperties::addTemplateItems()
     G::track(__FUNCTION__);
     #endif
     }
-    addFile();
     addGeneral();
+    addExport();
     addBorders();
     addTexts();
 //    addRectangles();
-//    addGraphics();
+    addGraphics();
 }
 
-void EmbelProperties::addFile()
+void EmbelProperties::addExport()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    // FILE File header (Root)
-    i.name = "FileHeader";
+    // EXPORT File header (Root)
+    i.name = "ExportHeader";
     i.parentName = "???";
     i.isHeader = true;
     i.decorateGradient = true;
     i.isDecoration = true;
-    i.captionText = "File";
+    i.captionText = "Export";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
@@ -1441,143 +1559,100 @@ void EmbelProperties::addFile()
     addItem(i);
     QModelIndex parIdx = capIdx;
 
-/*    // FILES Fit strategy
-    i.name = "fitList";
-    i.parentName = "FileHeader";
-    i.captionText = "Select fit strategy";
-    i.tooltip = "Select strategy to fit to dimensions.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = 0;
-    i.valueName = "fitList";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << "Long dimension" << "Horizontal" << "Vertical";
-    addItem(i);*/
+    QString settingRootPath = templatePath + "Export/";
 
-    // FILES Horizontal fit
-    i.name = "horizontalFit";
-    i.parIdx = parIdx;
-    i.parentName = "FileHeader";
-    i.captionText = "Fit horizontal";
-    i.tooltip = "The number of pixels in the horizontal axis including the borders";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "horizontalFit";
-    if (setting->contains(templatePath + "File/" + i.key))
-        i.value = setting->value(templatePath + "File/" + i.key);
-    else i.value = 500;
-    i.delegateType = DT_Spinbox;
-    i.type = "int";
-    i.min = 1;
-    i.max = 10000;
-    i.fixedWidth = 50;
-    f.horizontalFitPx = i.value.toInt();
-    addItem(i);
-
-    // FILES Vertical fit
-    i.name = "verticalFit";
-    i.parIdx = parIdx;
-    i.parentName = "FileHeader";
-    i.captionText = "Fit vertical";
-    i.tooltip = "The number of pixels in the vertical axis including the borders";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "verticalFit";
-    if (setting->contains(templatePath + "File/" + i.key))
-        i.value = setting->value(templatePath + "File/" + i.key);
-    else i.value = 500;
-    i.delegateType = DT_Spinbox;
-    i.type = "int";
-    i.min = 1;
-    i.max = 10000;
-    i.fixedWidth = 50;
-    f.verticalFitPx = i.value.toInt();
-    addItem(i);
-
-    // FILES File type
+    // EXPORT File type
     i.name = "fileType";
     i.parIdx = parIdx;
-    i.parentName = "FileHeader";
+    i.parentName = "ExportHeader";
     i.captionText = "File type";
     i.tooltip = "Select file type.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "fileType";
-    i.value = setting->value(templatePath + "File/" + i.key);
+    i.value = setting->value(settingRootPath + i.key);
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << "Tiff" << "Jpg" << "Png";
-    f.fileType = i.value.toString();
+    exportFileType = i.value.toString();
     addItem(i);
 
-    // FILES Save method
+    // EXPORT Save method
     i.name = "saveMethod";
     i.parIdx = parIdx;
-    i.parentName = "FileHeader";
+    i.parentName = "ExportHeader";
     i.captionText = "Save method";
-    i.tooltip = "Select where to save the file.";
+    i.tooltip = "Select where to save the export file.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "saveMethod";
-    i.value = setting->value(templatePath + "File/" + i.key);
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else i.value = "Subfolder";
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << "Same folder" << "Subfolder" << "Template";
-    f.saveMethod = i.value.toString();
+    i.dropList << "Subfolder" << "Another folder somewhere else";
+    saveMethod = i.value.toString();
     addItem(i);
 
-    // FILES Folder name
+    // EXPORT Folder name
     i.name = "folderPath";
     i.parIdx = parIdx;
-    i.parentName = "FileHeader";
-    i.captionText = "Folder path";
-    i.tooltip = "Enter the full folder path, the folder name of a subfolder or the"""
-                "template to use.";
+    i.parentName = "ExportHeader";
+    i.captionText = "Export folder path";
+    i.tooltip = "Enter the full export folder path.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "folderPath";
-    i.value = setting->value(templatePath + "File/" + i.key);
-    i.delegateType = DT_LineEdit;
+    i.value = setting->value(settingRootPath + i.key);
+    i.delegateType = DT_SelectFolder;
     i.type = "string";
-    f.folderPath = i.value.toString();
+    exportFolderPath = i.value.toString();
     addItem(i);
+    // hide if not selected by saveMethod
+    if (saveMethod == "Subfolder") {
+        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
+        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
+    }
 
-    // FILES Suffix name
-    i.name = "suffix";
+    // EXPORT Subfolder name
+    i.name = "subfolder";
     i.parIdx = parIdx;
-    i.parentName = "FileHeader";
-    i.captionText = "Suffix";
-    i.tooltip = "Suffix to add to file names.";
+    i.parentName = "ExportHeader";
+    i.captionText = "Subfolder name";
+    i.tooltip = "Enter the name of the subfolder to contain the exported files.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "suffix";
-    i.value = setting->value(templatePath + "File/" + i.key);
+    i.key = "subfolder";
+    i.value = setting->value(settingRootPath + i.key);
     i.delegateType = DT_LineEdit;
     i.type = "string";
-    f.suffix = i.value.toString();
+    exportSubfolder = i.value.toString();
     addItem(i);
+    // hide if not selected by saveMethod
+    if (saveMethod == "Another folder somewhere else") {
+        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
+        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
+    }
 
-    // FILES Overwrite existing files
+    // EXPORT Overwrite existing files
     i.name = "overwriteFiles";
     i.parIdx = parIdx;
-    i.parentName = "FileHeader";
+    i.parentName = "ExportHeader";
     i.captionText = "Overwrite";
     i.tooltip = "Overwrite existing files.";
     i.isIndent = false;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "overwriteFiles";
-    i.value = setting->value(templatePath + "File/" + i.key);
+    i.value = setting->value(settingRootPath + i.key);
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    f.overwriteFiles = i.value.toBool();
+    overwriteFiles = i.value.toBool();
     addItem(i);
 }
 
@@ -1603,6 +1678,48 @@ void EmbelProperties::addGeneral()
     QModelIndex parIdx = capIdx;
 
     QString settingRootPath = templatePath + "General/";
+
+    // FILES Horizontal fit
+    i.name = "horizontalFit";
+    i.parIdx = parIdx;
+    i.parentName = "ExportHeader";
+    i.captionText = "Fit horizontal";
+    i.tooltip = "The number of pixels in the horizontal axis including the borders";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "horizontalFit";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else i.value = 500;
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 1;
+    i.max = 10000;
+    i.fixedWidth = 50;
+    horizontalFitPx = i.value.toInt();
+    addItem(i);
+
+    // FILES Vertical fit
+    i.name = "verticalFit";
+    i.parIdx = parIdx;
+    i.parentName = "ExportHeader";
+    i.captionText = "Fit vertical";
+    i.tooltip = "The number of pixels in the vertical axis including the borders";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "verticalFit";
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else i.value = 500;
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = 1;
+    i.max = 10000;
+    i.fixedWidth = 50;
+    verticalFitPx = i.value.toInt();
+    addItem(i);
 
     // Global light direction
     i.name = "globalLightDirection";
@@ -1760,36 +1877,31 @@ void EmbelProperties::addGraphics()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__;
     // Graphics header (Root)
     i.name = "Graphics";
     i.parentName = "???";
     i.isHeader = true;
     i.decorateGradient = true;
-    i.isDecoration = false;
+    i.isDecoration = true;
     i.captionText = "Graphics";
     i.tooltip = "";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-//    graphicDeleteBtn = new BarBtn();
-//    graphicDeleteBtn->setIcon(QIcon(":/images/icon16/delete.png"));
-//    graphicDeleteBtn->setToolTip("Delete the open graphic");
-//    btns.append(graphicDeleteBtn);
     BarBtn *graphicNewBtn = new BarBtn();
     graphicNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
-    graphicNewBtn->setToolTip("Create a new graphic");
+    graphicNewBtn->setToolTip("Create a new graphic item");
     btns.append(graphicNewBtn);
+    connect(graphicNewBtn, &BarBtn::clicked, this, &EmbelProperties::newGraphic);
     addItem(i);
     graphicsIdx = capIdx;
-//    graphicDeleteBtn->index = capIdx;
 
-//    QString path = templatePath + "/Graphics";
-//    setting->beginGroup(path);
-//    int count = setting->childGroups().size();
-//    qDebug() << __FUNCTION__ << path << "count =" << count;
-//    setting->endGroup();
-//    for (int i = 0; i < count; ++i) newGraphic();
+    QString path = templatePath + "/Graphics";
+    setting->beginGroup(path);
+    int count = setting->childGroups().size();
+    qDebug() << __FUNCTION__ << path << "count =" << count;
+    setting->endGroup();
+    for (int i = 0; i < count; ++i) newGraphic();
 }
 
 void EmbelProperties::addStyles()
@@ -1852,12 +1964,12 @@ void EmbelProperties::addStyle(QString name, int n)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-    BarBtn *styleRenameBtn = new BarBtn();
-    styleRenameBtn->setObjectName(styleName);
-    styleRenameBtn->setIcon(":/images/icon16/delta.png", G::iconOpacity);
-    styleRenameBtn->setToolTip("Rename this style");
-    btns.append(styleRenameBtn);
-    connect(styleRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentStyle);
+//    BarBtn *styleRenameBtn = new BarBtn();
+//    styleRenameBtn->setObjectName(styleName);
+//    styleRenameBtn->setIcon(":/images/icon16/delta.png", G::iconOpacity);
+//    styleRenameBtn->setToolTip("Rename this style");
+//    btns.append(styleRenameBtn);
+//    connect(styleRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentStyle);
     styleDeleteBtn = new BarBtn();
     styleDeleteBtn->setObjectName(styleName);
     styleDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
@@ -1874,7 +1986,7 @@ void EmbelProperties::addStyle(QString name, int n)
     addItem(i);
     QModelIndex styleIdx = capIdx;
     styleDeleteBtn->index = capIdx;
-    styleRenameBtn->index = capIdx;
+//    styleRenameBtn->index = capIdx;
     effectNewBtn->index = capIdx;
 
     // item reqd to sort effects after they have been read from settings
@@ -2564,6 +2676,22 @@ void EmbelProperties::newText()
     e->build();
 }
 
+void EmbelProperties::newGraphic()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int row = model->rowCount(graphicsIdx);
+    addGraphic(row);
+    if (G::isInitializing || isTemplateChange) return;
+    QModelIndex idx = model->index(row, CapColumn, graphicsIdx);
+    selectionModel()->clear();
+    selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    e->build();
+}
+
 void EmbelProperties::deleteItem()
 {
 /*
@@ -2607,12 +2735,20 @@ as a style in a stylelist for a text, then the lists need to be updated.
                              QMessageBox::Cancel | QMessageBox::Ok));
     if (ret == QMessageBox::Cancel) return;
 
-    // remove from local vectors
+    // remove from local vectors and Embel lists
     if (parName == "Borders") {
+        e->removeBorder(row);
         b.remove(row);
         updateBorderLists();
     }
-    if (parName == "Texts") t.remove(row);
+    if (parName == "Texts") {
+        e->removeText(row);
+        t.remove(row);
+    }
+    if (parName == "Graphics") {
+        e->removeGraphic(row);
+        g.remove(row);
+    }
 
     // remove from datamodel
     model->removeRow(idx.row(), idx.parent());
@@ -2728,6 +2864,15 @@ int EmbelProperties::effectIndex(QString style, QString effectName)
     return -1;
 }
 
+void EmbelProperties::flash(QModelIndex idx)
+{
+    QString type;
+    if (idx.parent() == bordersIdx) type = "border";
+    if (idx.parent() == textsIdx) type = "text";
+    if (idx.parent() == graphicsIdx) type = "graphic";
+    e->flashObject(type, idx.row(), true);
+}
+
 void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
 {
     QModelIndex idx = indexAt(event->pos());
@@ -2746,6 +2891,17 @@ decoration is clicked.
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    }
+
+    if (event->button() == Qt::LeftButton) {
+        QModelIndex idx = indexAt(event->pos());
+        currentIdx = model->index(idx.row(), 0, idx.parent());
+        if (currentIdx.parent() == bordersIdx ||
+            currentIdx.parent() == textsIdx ||
+            currentIdx.parent() == graphicsIdx)
+        {
+            flash(currentIdx);
+        }
     }
 
     if (event->button() == Qt::RightButton) {
@@ -2778,7 +2934,6 @@ decoration is clicked.
             moveUpAction->setVisible(true);
             moveDownAction->setVisible(true);
         }
-
     }
 
     PropertyEditor::mousePressEvent(event);
@@ -3689,4 +3844,303 @@ void EmbelProperties::addText(int count)
 
     // add the text info to the vector of texts t
     t << text;
+}
+
+void EmbelProperties::addGraphic(int count)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // Name (used as node in settings and treeview)
+    QString graphicName = "Graphic" + QString::number(count + 1);
+    QString settingRootPath = templatePath + "Graphics/" + graphicName + "/";
+
+    // subheader for this border
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.itemIndex = count;
+    i.name = graphicName;
+    i.parentName = "Graphics";
+    i.path = templatePath + "Graphics/" + graphicName;
+    i.captionText = graphicName;
+    i.tooltip = "";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.delegateType = DT_BarBtns;
+    graphicDeleteBtn = new BarBtn();
+    graphicDeleteBtn->setObjectName(graphicName);
+    graphicDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
+    graphicDeleteBtn->setToolTip("Delete this text item");
+    btns.append(graphicDeleteBtn);
+    connect(graphicDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
+    addItem(i);
+    QModelIndex parIdx = capIdx;
+    graphicDeleteBtn->index = capIdx;
+
+    // get index to use as parent when update tree depending on source
+    graphic.name = graphicName;
+
+    i.name = "filePath";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "File path";
+    i.tooltip = "Enter the file path for the graphic.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "filePath";
+    i.value = setting->value(settingRootPath + i.key);
+    i.delegateType = DT_SelectFile;
+    i.type = "string";
+    graphic.filePath = i.value.toString();
+    addItem(i);
+
+    i.name = "anchorObject";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "Place graphic in";
+    i.tooltip = "Select a border or image to place the graphic.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "anchorObject";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = "Image";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << anchorObjectList;
+    graphic.anchorObject = i.value.toString();
+    graphicAnchorObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
+
+    i.name = "anchorContainer";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "Border area";
+    i.tooltip = "Select a border area to contain the text.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "anchorContainer";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = "Bottom";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << anchorContainerList;
+    graphic.anchorContainer = i.value.toString();
+    addItem(i);
+    // hide if not selected by anchorObject
+    if (graphic.anchorObject == "Image") {
+        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
+        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
+    }
+
+    i.name = "anchorPoint";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "Anchor point";
+    i.tooltip = "Select a graphic anchor point.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "anchorPoint";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = "Top Left";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << anchorPoints;
+    graphic.anchorPoint = i.value.toString();
+    graphicAnchorObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
+
+    i.name = "alignToCorner";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "Align to corner";
+    i.tooltip = "Select a border corner to align to the graphic object anchor point.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "alignToCorner";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = "Do not align";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << alignToCornerList;
+    graphic.alignToCorner = i.value.toString();
+    parseAlignToCorner(graphic.alignToCorner,graphic.alignTo_BorderId, graphic.alignTo_CornerId);
+    graphicAlignToCornerObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
+    // hide if not selected by anchorObject
+    if (graphic.anchorObject == "Image") {
+        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
+        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
+    }
+
+    i.name = "x";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "x coordinate";
+    i.tooltip = "The x coordinate for the container (0-100). Top left = 0,0.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "x";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = 0;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    graphic.x = i.value.toDouble();
+    addItem(i);
+
+    i.name = "y";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "y coordinate";
+    i.tooltip = "The y coordinate for the container (0-100). Top left = 0,0.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "y";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = 10 * count;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
+    graphic.y = i.value.toDouble();
+    addItem(i);
+
+    i.name = "size";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "Size";
+    i.tooltip = "The size of the graphic defined by the % of the long side of the frame.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "size";
+    i.defaultValue = 0.5;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = 0;
+    i.max = 25;
+    i.fixedWidth = 50;
+    graphic.size = i.value.toDouble();
+    addItem(i);
+
+    i.name = "rotation";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "Rotation";
+    i.tooltip = "The rotation (degrees) of the graphic (+- 0-360)";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "rotation";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = 0;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = -360;
+    i.max = 360;
+    i.fixedWidth = 50;
+    graphic.rotation = i.value.toDouble();
+    addItem(i);
+
+    i.name = "opacity";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "Opacity";
+    i.tooltip = "The opacity of the graphic object.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "opacity";
+    i.defaultValue = 100;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType =  DT_Slider;
+    i.min = 0;
+    i.max = 100;
+    i.type = "int";
+    graphic.opacity = i.value.toInt();
+    addItem(i);
+
+    i.name = "style";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "Style";
+    i.tooltip = "Select a style that will be applied to the graphic object.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "style";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = "No style";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "No style" << styleList;
+    graphic.style = i.value.toString();
+    styleListObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
+
+    // add the text info to the vector of texts t
+    g << graphic;
+
 }

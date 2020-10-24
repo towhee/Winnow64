@@ -22,16 +22,17 @@ public:
     QString styleName;
     int styleId;
     int globalLightDirection;       // 0-360 degrees used for shadows etc
+    int horizontalFitPx;
+    int verticalFitPx;
 
-    struct File {
-        int horizontalFitPx;
-        int verticalFitPx;
-        QString fileType;
-        QString saveMethod;
-        QString folderPath;
-        QString suffix;
-        bool overwriteFiles;
-    } f;
+//    struct File {
+    // Export parameters
+    QString exportFileType;
+    QString saveMethod;
+    QString exportFolderPath;
+    QString exportSubfolder;
+    bool overwriteFiles;
+//    } f;
 
     struct Image {
         QString style;
@@ -82,6 +83,27 @@ public:
     } text;
     QVector<Text>t;
 
+    struct Graphic {
+        int index;
+        QString name;
+        QString caption;
+        QString parent;
+        QString filePath;
+        QString anchorObject;
+        QString anchorContainer;
+        double x;                   // container coordinate
+        double y;                   // container coordinate
+        double size;                // % of long dimension
+        double rotation;            // rotation in degrees
+        QString alignToCorner;
+        int alignTo_BorderId;
+        int alignTo_CornerId;
+        QString anchorPoint;
+        int opacity;
+        QString style;
+    } graphic;
+    QVector<Graphic>g;
+
     // effect structs are defined in graphicseffect.h
 
     // a style is a list of effects
@@ -111,10 +133,10 @@ protected:
 
 private:
     void initialize();
-    void readTileList();
     void renameSettingKey(QString path, QString oldName, QString newName);
     void updateBorderLists();
     void readTemplateList();
+    void readTileList();
     void readTile(QStringList tileName);
     void renameCurrentStyle();
     void renameCurrentTemplate();
@@ -122,7 +144,7 @@ private:
 
     void addTemplateHeader();
     void addTemplateItems();
-    void addFile();
+    void addExport();
     void addGeneral();
     void addBorders();
     void addBorder(int count);
@@ -130,6 +152,7 @@ private:
     void addText(int count);
     void addRectangles();
     void addGraphics();
+    void addGraphic(int count);
     void addStyles();
     void addStyle(QString name, int n);
     void addBlurEffect(QModelIndex parIdx, QString effectName = "");
@@ -150,6 +173,7 @@ private:
     void deleteGraphic();
     void deleteItem();
 
+    void flash(QModelIndex idx);
     // redirect from action to relevent function (use currentIdx)
     void rename();
     void copy();
@@ -162,12 +186,12 @@ private:
     void sortEffectList(QString style);
 
     void itemChangeTemplate(QVariant v);
-    void itemChangeFile(QVariant v, QString source);
+    void itemChangeExport(QModelIndex idx, QVariant v, QString source);
     void itemChangeGeneral(QVariant v, QString source);
     void itemChangeBorder(QModelIndex idx);
     void itemChangeText(QModelIndex idx);
     void itemChangeRectangle(QVariant v, QString source, QString parent);
-    void itemChangeGraphic(QVariant v, QString source, QString parent);
+    void itemChangeGraphic(QModelIndex idx, QVariant v, QString source, QString parent);
 //    void itemChangeGlobalLight(QVariant v, QString source, QString parent);
     void itemChangeShadowEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeBlurEffect(QVariant v, QString source, QString effectName, QString style);
@@ -246,6 +270,8 @@ private:
     ComboBoxEditor *templateListEditor;
     QVector<ComboBoxEditor*> textAlignToCornerObjectEditor;
     QVector<ComboBoxEditor*> textAnchorObjectEditor;
+    QVector<ComboBoxEditor*> graphicAlignToCornerObjectEditor;
+    QVector<ComboBoxEditor*> graphicAnchorObjectEditor;
     QVector<ComboBoxEditor*> styleListObjectEditor;
     QVector<BarBtnEditor*> styleEditor;
 

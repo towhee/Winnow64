@@ -56,8 +56,8 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
 //            if (offset.y() < dy) offset.setY(dy);
 //            if (m.top < ef.shadow.blurRadius) m.top = ef.shadow.blurRadius;
 //            if (m.left < ef.shadow.blurRadius) m.left = ef.shadow.blurRadius;
-//            if (m.right < ef.shadow.blurRadius) m.right = ef.shadow.blurRadius;
-//            if (m.bottom < ef.shadow.blurRadius) m.bottom = ef.shadow.blurRadius;
+            if (m.right < ef.shadow.blurRadius) m.right = ef.shadow.blurRadius;
+            if (m.bottom < ef.shadow.blurRadius) m.bottom = ef.shadow.blurRadius;
             updateBoundingRect();
         }
     }
@@ -167,9 +167,12 @@ void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
     QImage blurred(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     blurred = overlay;
     Effects effect;
-    effect.blur(blurred, radius);
+//    effect.blur(blurred, radius);
+
+    effect.raise(blurred, radius);
 //    effect.brighten(blurred, static_cast<int>(radius) * 4);
 //    QImage blurred = WinnowGraphicEffect::blur(overlay, radius);
+
     blurred.save("D:/Pictures/Temp/effect/blurred.tif");
 
     QPainter overlayPainter(&overlay);
