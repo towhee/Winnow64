@@ -1,5 +1,6 @@
 CLOC = Count Lines Of Code
 In terminal: cloc /Users/roryhill/Projects/Winnow64
+cmd prompt:  D:\Programs\CLOC\cloc-1.64 --exclude-dir=Lib,release,debug "D:\My Projects\Winnow Project\Winnow64"
 
 producer/consumer https://doc-snapshots.qt.io/4.8/threads-waitconditions.html
 

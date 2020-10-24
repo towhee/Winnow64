@@ -1,4 +1,6 @@
 BUGS
+- Grid does not always stretch to fit central widget
+- Change sort direction can crash
 - when grabbing tile make sure imageview at 100%
 - move embellish to separate menu
 - move styles to separate property editor?
@@ -37,6 +39,7 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- fix indent symbol alignment in properties tree
 - Shift Ctrl 0 not working on PC
 - Tile extractor
 - Release 1.11

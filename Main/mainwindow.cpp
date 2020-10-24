@@ -417,6 +417,7 @@ void MW::closeEvent(QCloseEvent *event)
     delete workspaces;
     delete recentFolders;
     delete ingestHistoryFolders;
+    delete embel;
     event->accept();
 }
 
@@ -2713,31 +2714,10 @@ void MW::createActions()
     sortReverseAction->setObjectName("reverse");
     sortReverseAction->setShortcutVisibleInContextMenu(true);
     sortReverseAction->setCheckable(true);
-//    sortReverseAction->setChecked(false);
     addAction(sortReverseAction);
     connect(sortReverseAction, &QAction::triggered, this, &MW::sortChange);
 
-    // View menu
-    slideShowAction = new QAction(tr("Slide Show"), this);
-    slideShowAction->setObjectName("slideShow");
-    slideShowAction->setShortcutVisibleInContextMenu(true);
-    addAction(slideShowAction);
-    connect(slideShowAction, &QAction::triggered, this, &MW::slideShow);
-
-    fullScreenAction = new QAction(tr("Full Screen"), this);
-    fullScreenAction->setObjectName("fullScreenAct");
-    fullScreenAction->setShortcutVisibleInContextMenu(true);
-    fullScreenAction->setCheckable(true);
-    if (isSettings && setting->contains("isFullScreen")) fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
-    else fullScreenAction->setChecked(false);
-    addAction(fullScreenAction);
-    connect(fullScreenAction, &QAction::triggered, this, &MW::toggleFullScreen);
-
-    escapeFullScreenAction = new QAction(tr("Escape Full Screen"), this);
-    escapeFullScreenAction->setObjectName("escapeFullScreenAct");
-    escapeFullScreenAction->setShortcutVisibleInContextMenu(true);
-    addAction(escapeFullScreenAction);
-    connect(escapeFullScreenAction, &QAction::triggered, this, &MW::escapeFullScreen);
+    // Embellish menu
 
     newEmbelTemplateAction = new QAction(tr("New template"), this);
     newEmbelTemplateAction->setObjectName("newEmbelTemplateAct");
@@ -2745,7 +2725,6 @@ void MW::createActions()
     addAction(newEmbelTemplateAction);
     connect(newEmbelTemplateAction, &QAction::triggered, this, &MW::newEmbelTemplate);
 
-    if (!hideEmbellish) {
     // general connection to handle invoking new embellish templates
     // MacOS will not allow runtime menu insertions.  Cludge workaround
     // add 10 dummy menu items and then hide until use.
@@ -2778,7 +2757,28 @@ void MW::createActions()
     addActions(embelTemplatesActions);
     // sync menu with QSettings last active embel template
     embelTemplatesActions.at(embelProperties->templateId)->setChecked(true);
-    }
+
+    // View menu
+    slideShowAction = new QAction(tr("Slide Show"), this);
+    slideShowAction->setObjectName("slideShow");
+    slideShowAction->setShortcutVisibleInContextMenu(true);
+    addAction(slideShowAction);
+    connect(slideShowAction, &QAction::triggered, this, &MW::slideShow);
+
+    fullScreenAction = new QAction(tr("Full Screen"), this);
+    fullScreenAction->setObjectName("fullScreenAct");
+    fullScreenAction->setShortcutVisibleInContextMenu(true);
+    fullScreenAction->setCheckable(true);
+    if (isSettings && setting->contains("isFullScreen")) fullScreenAction->setChecked(setting->value("isFullScreen").toBool());
+    else fullScreenAction->setChecked(false);
+    addAction(fullScreenAction);
+    connect(fullScreenAction, &QAction::triggered, this, &MW::toggleFullScreen);
+
+    escapeFullScreenAction = new QAction(tr("Escape Full Screen"), this);
+    escapeFullScreenAction->setObjectName("escapeFullScreenAct");
+    escapeFullScreenAction->setShortcutVisibleInContextMenu(true);
+    addAction(escapeFullScreenAction);
+    connect(escapeFullScreenAction, &QAction::triggered, this, &MW::escapeFullScreen);
 
     ratingBadgeVisibleAction = new QAction(tr("Show Rating Badge"), this);
     ratingBadgeVisibleAction->setObjectName("toggleRatingBadge");
@@ -3298,16 +3298,30 @@ void MW::createMenus()
 
     // Sort Menu
 
-    QMenu *sortMenu = new QMenu(this);
+    /*QMenu **/sortMenu = new QMenu(this);
     QAction *sortGroupAct = new QAction("Sort", this);
     sortGroupAct->setMenu(sortMenu);
     sortMenu->addActions(sortGroupAction->actions());
     sortMenu->addSeparator();
     sortMenu->addAction(sortReverseAction);
 
+    // Embellish Menu
+    QMenu *embelMenu = new QMenu(this);
+    QAction *embelGroupAct = new QAction("Embellish", this);
+    embelGroupAct->setMenu(embelMenu);
+    embelMenu->addAction(newEmbelTemplateAction);
+    embelMenu->addSeparator();
+    embelMenu->addActions(embelGroupAction->actions());
+//    // add 10 dummy menu items for embellish template choice
+//    for (int i = 0; i < 10; i++) {
+//        embelMenu->addAction(embelTemplatesActions.at(i));
+//        if (i == 0) viewMenu->addSeparator();
+//    }
+    connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
+
     // View Menu
 
-    QMenu *viewMenu = new QMenu(this);
+    /*QMenu **/viewMenu = new QMenu(this);
     QAction *viewGroupAct = new QAction("View", this);
     viewGroupAct->setMenu(viewMenu);
     viewMenu->addActions(centralGroupAction->actions());
@@ -3316,6 +3330,8 @@ void MW::createMenus()
     viewMenu->addAction(fullScreenAction);
     viewMenu->addAction(escapeFullScreenAction);
     viewMenu->addSeparator();
+
+    /*
     if (!hideEmbellish) {
     embelMenu = viewMenu->addMenu(tr("&Embellish"));
         embelMenu->addAction(newEmbelTemplateAction);
@@ -3328,6 +3344,7 @@ void MW::createMenus()
         connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
     viewMenu->addSeparator();
     }
+*/
     viewMenu->addAction(ratingBadgeVisibleAction);
     viewMenu->addAction(infoVisibleAction);
     viewMenu->addAction(infoSelectAction);
@@ -3528,6 +3545,7 @@ void MW::createMenus()
     menuBar()->addAction(goGroupAct);
     menuBar()->addAction(filterGroupAct);
     menuBar()->addAction(sortGroupAct);
+    menuBar()->addAction(embelGroupAct);
     menuBar()->addAction(viewGroupAct);
     menuBar()->addAction(windowGroupAct);
     menuBar()->addAction(helpGroupAct);
@@ -3540,6 +3558,7 @@ void MW::createMenus()
     mainContextActions->append(goGroupAct);
     mainContextActions->append(filterGroupAct);
     mainContextActions->append(sortGroupAct);
+    mainContextActions->append(embelGroupAct);
     mainContextActions->append(viewGroupAct);
     mainContextActions->append(windowGroupAct);
     mainContextActions->append(helpGroupAct);
@@ -4512,7 +4531,7 @@ void MW::createThumbDock()
     thumbDock = new DockWidget(tr("Thumbnails"), this);
     thumbDock->setObjectName("thumbDock");
     thumbDock->setWidget(thumbView);
-    thumbDock->setWindowTitle("Thumbs");
+    thumbDock->setWindowTitle(" Thumbs ");
     thumbDock->installEventFilter(this);
 
     if (isSettings) {
@@ -8279,6 +8298,13 @@ void MW::refreshFolders()
     // make folder panel visible and set focus
     folderDock->raise();
     folderDockVisibleAction->setChecked(true);
+
+    // set sort forward (not reverse)
+    if (sortReverseAction->isChecked()) {
+        sortReverseAction->setChecked(false);
+        sortChange();
+        reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
+    }
 }
 
 /*****************************************************************************************

@@ -12,6 +12,11 @@ Embel::Embel(ImageView *iv, EmbelProperties *p)
     this->p = p;
 }
 
+Embel::~Embel()
+{
+    clear();
+}
+
 void Embel::exportImage()
 {
     {
@@ -123,12 +128,24 @@ void Embel::clear()
     }
     bItems.clear();
     b.clear();
+
     // remove texts
     for (int i = 0; i < tItems.size(); ++i) {
         iv->scene->removeItem(tItems[i]);
         delete tItems[i];
     }
     tItems.clear();
+
+    // remove graphics
+    for (int i = 0; i < gItems.size(); ++i) {
+        iv->scene->removeItem(gItems[i]);
+        delete gItems[i];
+    }
+    graphicPixmaps.clear();
+    gItems.clear();
+
+    // remove flashItem
+    iv->scene->removeItem(&flashItem);
 }
 
 void Embel::build()
@@ -148,11 +165,14 @@ void Embel::build()
     clear();
     createBorders();
     createTexts();
+    createGraphics();
     borderImageCoordinates();
     iv->setSceneRect(0, 0, w, h);
     addBordersToScene();
     addImageToScene();
     addTextsToScene();
+    addGraphicsToScene();
+    iv->scene->addItem(&flashItem);
     iv->resetFitZoom();
 //    diagnostic();
 }
@@ -171,8 +191,8 @@ void Embel::borderImageCoordinates()
     #endif
     }
     //
-    int hFit = p->f.horizontalFitPx;
-    int vFit = p->f.verticalFitPx;
+    int hFit = p->horizontalFitPx;
+    int vFit = p->verticalFitPx;
     hFit > vFit ? ls = hFit : ls = vFit;
     // the hole is the inside of the borders = the image area
     hole.w = hFit;
@@ -252,37 +272,64 @@ void Embel::borderImageCoordinates()
     image.bc = QPoint(image.x + image.w / 2, image.y + image.h);
 }
 
-QPoint Embel::textCanvasCoord(int n)
+QPoint Embel::canvasCoord(double x, double y,
+                          QString anchorObject,
+                          QString anchorContainer,
+                          bool align,
+                          int alignTo_BorderId,
+                          int alignTo_CornerId)
 {
 /*
-
+Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
 */
+    /*
+    qDebug() << __FUNCTION__
+             << "x =" << x
+             << "y =" << y
+             << "anchorObject =" << anchorObject
+             << "anchorContainer =" << anchorContainer
+             << "align =" << align
+             << "alignTo_BorderId =" << alignTo_BorderId
+                ;
+//    */
     int x0 = 0, y0 = 0;
     // put text in the Image object area
-    if (p->t[n].anchorObject == "Image") {
-        x0 = image.x + static_cast<int>(p->t[n].x / 100 * image.w);
-        y0 = image.y + static_cast<int>(p->t[n].y / 100 * image.h);
+    if (anchorObject == "Image") {
+        x0 = image.x + static_cast<int>(x / 100 * image.w);
+        y0 = image.y + static_cast<int>(y / 100 * image.h);
+        /*
+        qDebug() << __FUNCTION__
+                 << "image.x =" << image.x
+                 << "image.y =" << image.y
+                 << "image.w =" << image.w
+                 << "image.h =" << image.h
+                 << "x =" << x
+                 << "y =" << y
+                 << "x0 =" << x0
+                 << "y0 =" << y0
+                    ;
+//                    */
         return QPoint(x0, y0);
     }
     // not Image so must be a Border object
     else {
         for (int i = 0; i < p->b.size(); ++i) {
             // position and size of container
-            if (p->b[i].name == p->t[n].anchorObject) {
+            if (p->b[i].name == anchorObject) {
                 int x1, y1, w, h;
-                if (p->t[n].anchorContainer == "Top") {
+                if (anchorContainer == "Top") {
                     x1 = b[i].x;
                     y1 = b[i].y;
                     w = b[i].w;
                     h = b[i].t;
                 }
-                else if (p->t[n].anchorContainer  == "Left") {
+                else if (anchorContainer  == "Left") {
                     x1 = b[i].x;
                     y1 = b[i].y + b[i].t;
                     w = b[i].l;
                     h = b[i].h - b[i].t - b[i].b;
                 }
-                else if (p->t[n].anchorContainer  == "Right") {
+                else if (anchorContainer  == "Right") {
                     x1 = b[i].x + b[i].w - b[i].r;
                     y1 = b[i].y + b[i].t;
                     w = b[i].r;
@@ -295,8 +342,8 @@ QPoint Embel::textCanvasCoord(int n)
                     w = b[i].w;
                     h = b[i].b;
                 }
-                x0 = x1 + static_cast<int>(p->t[n].x / 100 * w);
-                y0 = y1 + static_cast<int>(p->t[n].y / 100 * h);
+                x0 = static_cast<int>(x1 + x / 100 * w);
+                y0 = static_cast<int>(y1 + y / 100 * h);
             }
         }
         // if align to a border corner
@@ -305,12 +352,10 @@ QPoint Embel::textCanvasCoord(int n)
                  << "p->t[n].alignToCorner =" << p->t[n].alignToCorner
                  << "x0 =" << x0 << "y0 =" << y0;
 //                 */
-        if (p->t[n].alignToCorner != "Do not align") {
-            // border number
-            int bId = p->t[n].alignTo_BorderId;
+        if (align) {
             // is alignment horizontal or vertical
             bool isHorAlignment = true;
-            if (p->t[n].anchorContainer == "Left" || p->t[n].anchorContainer == "Right")
+            if (anchorContainer == "Left" || anchorContainer == "Right")
                 isHorAlignment = false;
             /*
             qDebug() << __FUNCTION__
@@ -321,34 +366,31 @@ QPoint Embel::textCanvasCoord(int n)
                      << "p->t[n].alignTo_CornerId =" << p->t[n].alignTo_CornerId
                         ;
 //                        */
-            switch (p->t[n].alignTo_CornerId) {
+            switch (alignTo_BorderId) {
             // TopLeft
             case 0:
-                if (isHorAlignment) x0 = b[bId].tl.x();
-                    else y0 = b[bId].tl.y();
+                if (isHorAlignment) x0 = b[alignTo_BorderId].tl.x();
+                    else y0 = b[alignTo_BorderId].tl.y();
                     break;
             // TopRight
             case 1:
-                if (isHorAlignment) x0 = b[bId].tr.x();
-                else y0 = b[bId].tr.y();
+                if (isHorAlignment) x0 = b[alignTo_BorderId].tr.x();
+                else y0 = b[alignTo_BorderId].tr.y();
                 break;
             // BottomLeft
             case 2:
-                if (isHorAlignment) x0 = b[bId].bl.x();
-                else y0 = b[bId].bl.y();
-//                qDebug() << __FUNCTION__
-//                         << "b[bId].bl =" << b[bId].bl;
+                if (isHorAlignment) x0 = b[alignTo_BorderId].bl.x();
+                else y0 = b[alignTo_BorderId].bl.y();
                 break;
             // BottomRight
             case 3:
-                if (isHorAlignment) x0 = b[bId].br.x();
-                else y0 = b[bId].br.y();
+                if (isHorAlignment) x0 = b[alignTo_BorderId].br.x();
+                else y0 = b[alignTo_BorderId].br.y();
                 break;
             }
         }
     }
-//    qDebug() << __FUNCTION__ << "QPoint(x0,y0) =" << QPoint(x0,y0);
-    return QPoint(x0,y0);
+    return QPoint(x0, y0);
 }
 
 QPoint Embel::anchorPointOffset(QString anchorPoint, int w, int h)
@@ -396,36 +438,8 @@ void Embel::addBordersToScene()
     #endif
     }
     for (int i = 0; i < b.size(); ++i) {
-        bItems[i]->setRect(0, 0, b[i].w, b[i].h);
-        QColor color;
-        QPen pen;
-        pen.setWidth(0);
-        pen.setColor(Qt::transparent);
-        bItems[i]->setPen(pen);
-        color.setNamedColor(p->b[i].color);
-        // tile or color background
-        if (p->b[i].tile.isEmpty()) {
-            bItems[i]->setBrush(color);
-        }
-        else {
-            QImage imTile;
-            imTile.loadFromData(p->b[i].tile);
-            bItems[i]->setBrush(imTile);
-        }
-        bItems[i]->setOpacity(p->b[i].opacity/100);
+        updateBorder(i);
         iv->scene->addItem(bItems[i]);
-        bItems[i]->setPos(b[i].x, b[i].y);
-
-        // graphics effects
-        if (p->b[i].style != "No style" && p->b[i].style != "") {
-            GraphicsEffect *effect = new GraphicsEffect();
-            effect->set(p->styleMap[p->b[i].style],
-                    p->globalLightDirection,
-                    0,  /* rotation */
-                    bItems[i]->boundingRect());
-            bItems[i]->setGraphicsEffect(effect);
-        }
-
         /*
         qDebug() << __FUNCTION__
                  << i
@@ -433,6 +447,45 @@ void Embel::addBordersToScene()
                  << bItems[i]->boundingRect();
 //                 */
     }
+}
+
+void Embel::updateBorder(int i)
+{
+    bItems[i]->setRect(0, 0, b[i].w, b[i].h);
+    QColor color;
+    QPen pen;
+    pen.setWidth(0);
+    pen.setColor(Qt::transparent);
+    bItems[i]->setPen(pen);
+    color.setNamedColor(p->b[i].color);
+    // tile or color background
+    if (p->b[i].tile.isEmpty()) {
+        bItems[i]->setBrush(color);
+    }
+    else {
+        QImage imTile;
+        imTile.loadFromData(p->b[i].tile);
+        bItems[i]->setBrush(imTile);
+    }
+    bItems[i]->setOpacity(p->b[i].opacity/100);
+    bItems[i]->setPos(b[i].x, b[i].y);
+    bItems[i]->setZValue(ZBorder);
+
+    // graphics effects
+    if (p->b[i].style != "No style" && p->b[i].style != "") {
+        GraphicsEffect *effect = new GraphicsEffect();
+        effect->set(p->styleMap[p->b[i].style],
+                    p->globalLightDirection,
+                    0,  /* rotation */
+                    bItems[i]->boundingRect());
+        bItems[i]->setGraphicsEffect(effect);
+    }
+}
+
+void Embel::removeBorder(int i)
+{
+    b.removeAt(i);
+    bItems.removeAt(i);
 }
 
 void Embel::createTexts()
@@ -446,58 +499,157 @@ void Embel::createTexts()
 void Embel::addTextsToScene()
 {
     for (int i = 0; i < p->t.size(); ++i) {
-        // if a text entry
-        if (p->t[i].source == "Text") {
-            tItems[i]->setPlainText(p->t[i].text);
-        }
-        // if a metadata template used to build the text string
-        else {
-            tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate));
-        }
-        QFont font(p->t[i].font);
-        int fontSize = static_cast<int>(p->t[i].size / 100 * ls);
-        font.setPixelSize(fontSize);
-        font.setItalic(p->t[i].isItalic);
-        font.setBold(p->t[i].isBold);
-        tItems[i]->setFont(font);
-        tItems[i]->setDefaultTextColor(QColor(p->t[i].color));
-        double opacity = static_cast<double>(p->t[i].opacity)/100;
-        tItems[i]->setOpacity(opacity);
-        tItems[i]->setZValue(20);
-
-        // position text
-        /*
-        qDebug() << __FUNCTION__ << "Getting canvas coord for Text" << i
-                 << "p->t[i].anchorObject =" << p->t[i].anchorObject
-                 << "p->t[i].anchorContainer =" << p->t[i].anchorContainer
-                 << "p->t[i].x =" << p->t[i].x
-                 << "p->t[i].y =" << p->t[i].y
-                    ;
-//                    */
-        int w = static_cast<int>(tItems[i]->boundingRect().width());
-        int h = static_cast<int>(tItems[i]->boundingRect().height());
-//        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() =" << tItems[i]->boundingRect();
-        QPoint canvas = textCanvasCoord(i);
-        QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h);
-        tItems[i]->setTransformOriginPoint(offset);
-        tItems[i]->setPos(canvas - offset);
-
-        // if style then rotate in GraphicsEffect, else rotate text here
-        double rotation = p->t[i].rotation;
-
-        // graphics effects
-        if (p->t[i].style != "No style" && p->t[i].style != "") {
-            GraphicsEffect *effect = new GraphicsEffect();
-            effect->set(p->styleMap[p->t[i].style],
-                    p->globalLightDirection,
-                    rotation,
-                    tItems[i]->boundingRect());
-            tItems[i]->setGraphicsEffect(effect);
-        }
-        else tItems[i]->setRotation(rotation);
-
+        updateText(i);
         iv->scene->addItem(tItems[i]);
     }
+}
+
+void Embel::updateText(int i)
+{
+    // if a text entry
+    if (p->t[i].source == "Text") {
+        tItems[i]->setPlainText(p->t[i].text);
+    }
+    // if a metadata template used to build the text string
+    else {
+        tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate));
+    }
+    QFont font(p->t[i].font);
+    int fontSize = static_cast<int>(p->t[i].size/* / 100*/ * ls);
+//        qDebug() << __FUNCTION__ << "fontSize =" << fontSize;
+    font.setPixelSize(fontSize);
+    font.setItalic(p->t[i].isItalic);
+    font.setBold(p->t[i].isBold);
+    tItems[i]->setFont(font);
+    tItems[i]->setDefaultTextColor(QColor(p->t[i].color));
+    double opacity = static_cast<double>(p->t[i].opacity)/100;
+    tItems[i]->setOpacity(opacity);
+    tItems[i]->setZValue(ZText);
+
+    // position text
+    /*
+    qDebug() << __FUNCTION__ << "Getting canvas coord for Text" << i
+             << "p->t[i].anchorObject =" << p->t[i].anchorObject
+             << "p->t[i].anchorContainer =" << p->t[i].anchorContainer
+             << "p->t[i].x =" << p->t[i].x
+             << "p->t[i].y =" << p->t[i].y
+                ;
+//                    */
+    int w = static_cast<int>(tItems[i]->boundingRect().width());
+    int h = static_cast<int>(tItems[i]->boundingRect().height());
+//        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() =" << tItems[i]->boundingRect();
+//    qDebug() << __FUNCTION__ << "Adding text #" << i;
+    QPoint canvas = canvasCoord(p->t[i].x,
+                                p->t[i].y,
+                                p->t[i].anchorObject,
+                                p->t[i].anchorContainer,
+                                p->t[i].alignToCorner != "Do not align",
+                                p->t[i].alignTo_BorderId,
+                                p->t[i].alignTo_CornerId);
+//        QPoint canvas = textCanvasCoord(i);
+//    qDebug() << __FUNCTION__ << "canvas coord =" << canvas;
+    QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h);
+    tItems[i]->setTransformOriginPoint(offset);
+    tItems[i]->setPos(canvas - offset);
+
+    // if style then rotate in GraphicsEffect, else rotate text here
+    double rotation = p->t[i].rotation;
+
+    // graphics effects
+    if (p->t[i].style != "No style" && p->t[i].style != "") {
+        GraphicsEffect *effect = new GraphicsEffect();
+        effect->set(p->styleMap[p->t[i].style],
+                p->globalLightDirection,
+                rotation,
+                tItems[i]->boundingRect());
+        tItems[i]->setGraphicsEffect(effect);
+    }
+    else tItems[i]->setRotation(rotation);
+}
+
+void Embel::removeText(int i)
+{
+    tItems.removeAt(i);
+}
+
+void Embel::createGraphics()
+{
+    for (int i = 0; i < p->g.size(); ++i) {
+        QGraphicsPixmapItem *gItem = new QGraphicsPixmapItem;
+        graphicPixmaps << QPixmap(p->g[i].filePath);
+        gItem->setPixmap(graphicPixmaps.at(i));
+        gItems << gItem;
+        qDebug() << __FUNCTION__
+                 << i << p->g[i].filePath;
+    }
+}
+
+void Embel::addGraphicsToScene()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    for (int i = 0; i < p->g.size(); ++i) {
+        updateGraphic(i);
+        iv->scene->addItem(gItems[i]);
+    }
+}
+
+void Embel::updateGraphic(int i)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    gItems[i]->setZValue(ZGraphic);
+    double opacity = static_cast<double>(p->g[i].opacity)/100;
+    gItems[i]->setOpacity(opacity);
+    int dim = static_cast<int>(static_cast<double>(p->g[i].size) / 100 * ls);
+    gItems[i]->setPixmap(graphicPixmaps.at(i).scaled(QSize(dim, dim), Qt::KeepAspectRatio));
+    int w = static_cast<int>(gItems[i]->pixmap().width());
+    int h = static_cast<int>(gItems[i]->boundingRect().height());
+    qDebug() << __FUNCTION__ << "Adding graphic #" << i
+             << "p->g[i].size =" << p->g[i].size
+             << "dim =" << dim << "w =" << w << "h =" << h;
+    QPoint canvas = canvasCoord(p->g[i].x,
+                                p->g[i].y,
+                                p->g[i].anchorObject,
+                                p->g[i].anchorContainer,
+                                p->g[i].alignToCorner != "Do not align",
+                                p->t[i].alignTo_BorderId,
+                                p->t[i].alignTo_CornerId);
+    QPoint offset = anchorPointOffset(p->g[i].anchorPoint, w, h);
+    qDebug() << __FUNCTION__
+             << "canvas coord =" << canvas
+             << "offset =" << offset;
+    gItems[i]->setTransformOriginPoint(offset);
+    gItems[i]->setPos(canvas - offset);
+
+    // if style then rotate in GraphicsEffect, else rotate text here
+    double rotation = p->g[i].rotation;
+
+    // graphics effects
+    if (p->g[i].style != "No style" && p->g[i].style != "") {
+        GraphicsEffect *effect = new GraphicsEffect();
+        effect->set(p->styleMap[p->g[i].style],
+                p->globalLightDirection,
+                rotation,
+                gItems[i]->boundingRect());
+        gItems[i]->setGraphicsEffect(effect);
+    }
+    else {
+        gItems[i]->setGraphicsEffect(nullptr);
+        gItems[i]->setRotation(rotation);
+    }
+}
+
+void Embel::removeGraphic(int i)
+{
+    gItems.removeAt(i);
+    graphicPixmaps.removeAt(i);
 }
 
 void Embel::addImageToScene()
@@ -513,18 +665,73 @@ void Embel::addImageToScene()
     iv->pmItem->setPixmap(pm);
     // move the image to center in the borders
     iv->pmItem->setPos(image.tl);
-    iv->pmItem->setZValue(10);
+    iv->pmItem->setZValue(ZImage);
 
+    updateImage();
+}
+
+void Embel::updateImage()
+{
     // graphics effects
     if (p->image.style != "No style" && p->image.style != "") {
         GraphicsEffect *effect = new GraphicsEffect();
         effect->set(p->styleMap[p->image.style],
                 p->globalLightDirection,
                 0,
-                pm.rect());
+                iv->pmItem->pixmap().rect());
         iv->pmItem->setGraphicsEffect(effect);
     }
+}
 
+void Embel::updateStyle(QString style)
+{
+    // update any borders with this style
+    for (int i = 0; i < bItems.size(); ++i) {
+        if (p->b[i].style == style) updateBorder(i);
+    }
+
+    // update any texts with this style
+    for (int i = 0; i < tItems.size(); ++i) {
+        if (p->t[i].style == style) updateText(i);
+    }
+
+    // update any graphics with this style
+    for (int i = 0; i < gItems.size(); ++i) {
+        if (p->g[i].style == style) updateGraphic(i);
+    }
+
+    // update image with this style
+    if (p->image.style == style) updateImage();
+}
+
+void Embel::flashObject(QString type, int index, bool show)
+{
+    flashItem.setVisible(show);
+    if (!show) return;
+    if (type == "border") {
+        flashItem.setRect(bItems[index]->boundingRect());
+        flashItem.setPos(bItems[index]->pos());
+        qDebug() << __FUNCTION__ << bItems[index]->boundingRect();
+    }
+    if (type == "text") {
+        flashItem.setRect(tItems[index]->boundingRect());
+        flashItem.setPos(tItems[index]->pos());
+    }
+    if (type == "graphic") {
+        flashItem.setRect(gItems[index]->boundingRect());
+        flashItem.setPos(gItems[index]->pos());
+    }
+    qDebug() << __FUNCTION__
+             << "type =" << type
+             << "index =" << index
+             << "flashItem.rect() =" << flashItem.rect()
+             << "flashItem.pos() =" << flashItem.pos()
+                ;
+    flashItem.setZValue(ZFlash);
+    flashItem.setPen(QPen(Qt::red, 2));
+    flashItem.setBrush(QBrush(Qt::transparent));
+
+    QTimer::singleShot(100, this, SLOT(flashObject()));
 }
 
 void Embel::diagnostic()

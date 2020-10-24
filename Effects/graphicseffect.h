@@ -25,6 +25,14 @@ namespace winnow_effects
         QPainter::CompositionMode blendMode;
     };
 
+    struct Raise {
+        int m;
+        double taper;
+        int blurWidth;
+        bool isRaise;
+        QPainter::CompositionMode blendMode;
+    };
+
     struct Highlight {
         int r, g, b, a;
         int top, left, right, bottom;

@@ -32,6 +32,14 @@ Parameters to override as required when subclass:
     isExpandRecursively
 */
 
+QVariant PropertyModel::data(const QModelIndex &index, int role) const
+{
+    if (role == Qt::BackgroundRole) {
+        qDebug() << __FUNCTION__ << QStandardItemModel::data(index, role);
+    }
+    return QStandardItemModel::data(index, role);
+}
+
 PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 {
     {
@@ -49,8 +57,10 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     setObjectName("EmbelProperties");
 
     indentation = 15;
-    setIndentation(indentation);  
+    setIndentation(indentation);
 
+
+//    model = new PropertyModel;
     model = new QStandardItemModel;
     model->setColumnCount(3);
     model->setSortRole(UR_SortOrder);
@@ -112,11 +122,24 @@ void PropertyEditor::updateHiddenRows(QModelIndex parent)
 {
     for (int r = 0; r < model->rowCount(parent); ++r) {
         QModelIndex idx = model->index(r, CapColumn, parent);
-        qDebug() << __FUNCTION__ << idx.data();
-        if (model->data(idx, UR_isHidden).toBool())
+        if (model->data(idx, UR_isHidden).toBool()) {
             setRowHidden(r, parent, true);
-        else
+            /*
+            qDebug() << __FUNCTION__
+                     << idx.parent().data().toString().leftJustified(20)
+                     << idx.data().toString().leftJustified(20)
+                     << "UR_isHidden = true";
+//            */
+        }
+        else {
             setRowHidden(r, parent, false);
+            /*
+            qDebug() << __FUNCTION__
+                     << idx.parent().data().toString().leftJustified(20)
+                     << idx.data().toString().leftJustified(20)
+                     << "UR_isHidden = false";
+//                     */
+        }
         // iterate children
         if (model->hasChildren(idx)) {
             updateHiddenRows(idx);
@@ -227,6 +250,7 @@ supplied by the calling function.
     model->setData(valIdx, i.isDecoration, UR_isDecoration);
     model->setData(capIdx, i.decorateGradient, UR_isBackgroundGradient);
     model->setData(valIdx, i.decorateGradient, UR_isBackgroundGradient);
+//    if (UR_isBackgroundGradient) model->setData(capIdx, QBrush(Qt::green), Qt::BackgroundRole);
     model->setData(capIdx, i.captionText);
     model->setData(capIdx, i.name, UR_Name);
     model->setData(capIdx, i.tooltip, Qt::ToolTipRole);
@@ -298,7 +322,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.type = "";                    // except hdr
     i.min = 0;                      // DT_Spinbox, DT_Slider
     i.max = 0;                      // DT_Spinbox, DT_Slider
-    i.div = 1;                      // DT_Spinbox
+    i.div = 1;                      // DT_Slider
     i.fixedWidth = 50;              // DT_Slider
     i.dropList.clear();             // DT_Combo
     i.color = QColor(G::textShade,G::textShade,G::textShade).name();

@@ -13,6 +13,13 @@
 
 */
 
+class PropertyModel : public QStandardItemModel
+{
+    Q_OBJECT
+public:
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
+};
+
 class PropertyEditor : public QTreeView
 {
     Q_OBJECT
