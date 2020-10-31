@@ -169,8 +169,10 @@ in the model.
         qDebug() << __FUNCTION__ << searchName << name;
         if (name == searchName) {
             foundIdx = idx0;
-            qDebug() << __FUNCTION__ << "found" << idx0;
-
+            qDebug() << __FUNCTION__
+                     << "found" << idx0
+                     << "name =" << name
+                        ;
             return true;
         }
         // iterate children

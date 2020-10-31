@@ -329,6 +329,7 @@ private slots:
     void setShowImageCount();
     void about();
     void ingest();
+    void exportEmbel();
     void enableSelectionDependentMenus();
     void enableEjectUsbMenu(QString path);
     void ejectUsb(QString path);
@@ -683,7 +684,8 @@ private:
     QAction *randomImageAction; // req'd by slideshow
     QAction *fullScreenAction;
     QAction *escapeFullScreenAction;
-    QAction *newEmbelTemplateAction;
+    QAction *embelNewTemplateAction;
+    QAction *embelExportAction;
     QActionGroup *embelGroupAction;
     QList<QAction *> embelTemplatesActions;
     QAction *ratingBadgeVisibleAction;

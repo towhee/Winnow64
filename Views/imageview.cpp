@@ -136,27 +136,24 @@ bool ImageView::loadImage(QString fPath)
 /*
 There are two sources for the image (pixmap): a file or the cache.
 
-The first choice is the image cache.  In the cache two versions of the image are
-stored: the full scale and a preview scaled to dimensions defined in
-the preferences.  The preview is used if it is large enough to fit in the
-window (viewport) without scaling larger than 1.  If the preview is too
-small then the full size is used.
+The first choice is the image cache. In the cache two versions of the image are stored: the
+full scale and a preview scaled to dimensions defined in the preferences. The preview is used
+if it is large enough to fit in the window (viewport) without scaling larger than 1. If the
+preview is too small then the full size is used.
 
-If the image has not been cached (usually the case for the first image to
-be shown, as the caching is just starting) then the full size image is read
-from the file.
+If the image has not been cached (usually the case for the first image to be shown, as the
+caching is just starting) then the full size image is read from the file.
 
-Previews are used to maximise performance paging through all the images.
-However, to examine an image in detail, the full scale image is much better. As
-soon as the preview has been loaded a timer is started. If the user moves on to
-the next image before a timer interval has elapsed then the timer is reset.
-Otherwise, when the timer interval occurs (loadFullSizeTimer->setInterval(500))
-then the full scale pixmap from the cache is set as the item pixmap in the
-scene.
+Previews are used to maximise performance paging through all the images. However, to examine
+an image in detail, the full scale image is much better. As soon as the preview has been
+loaded a timer is started. If the user moves on to the next image before a timer interval has
+elapsed then the timer is reset. Otherwise, when the timer interval occurs
+(loadFullSizeTimer->setInterval(500)) then the full scale pixmap from the cache is set as the
+item pixmap in the scene.
 
-Moving from one image to the next, the scenario where the currrent image is
-full scale and the next is a preview, requires the zoom factor to be normalized
-to prevent jarring changes in perceived scale by the user.
+Moving from one image to the next, the scenario where the currrent image is full scale and the
+next is a preview, requires the zoom factor to be normalized to prevent jarring changes in
+perceived scale by the user.
 */
     {
     #ifdef ISDEBUG
@@ -174,7 +171,6 @@ to prevent jarring changes in perceived scale by the user.
     bool isLoaded = false;
     pmItem->setVisible(true);
 
-    // load the image from the image cache if available
     if (imageCacheThread->imCache.contains(fPath)) {
         // load preview from cache
         bool tryPreview = true;     // for testing
@@ -261,6 +257,11 @@ to prevent jarring changes in perceived scale by the user.
     QImage im = pmItem->pixmap().toImage();
     imAspect = qreal(im.width()) / im.height();
     if (G::isEmbellish) emit embellish();
+    static int n;
+    n++;
+    qDebug();
+    qDebug() << "#" << n << G::t1.restart() << "TIME TO LOAD" << fPath;
+    qDebug();
     return isLoaded;
 }
 

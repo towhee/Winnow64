@@ -10,6 +10,7 @@ Embel::Embel(ImageView *iv, EmbelProperties *p)
     }
     this->iv = iv;
     this->p = p;
+    flashItem = new QGraphicsRectItem;
 }
 
 Embel::~Embel()
@@ -37,12 +38,17 @@ void Embel::exportImage()
 
 void Embel::test()
 {
-//    /*
+    qDebug() << __FUNCTION__
+             << "gItems.count() =" << gItems.count()
+             << "graphicPixmaps =" << graphicPixmaps
+                ;
+    /*
     // Test
     Effects effect;
     QImage img("D:/Pictures/Temp/effect/_border.tif");
     effect.test(img);
     img.save("D:/Pictures/Temp/effect/_borderShaded.tif");
+//    */
 
     /*
     // brighten example
@@ -119,33 +125,28 @@ void Embel::doNotEmbellish()
 
 void Embel::clear()
 {
-//    iv->scene->clear();
-//    iv->scene->addItem(iv->pmItem);
     // remove borders
-    for (int i = 0; i < bItems.size(); ++i) {
-        iv->scene->removeItem(bItems[i]);
-        delete bItems[i];
+    for (int i = bItems.size() - 1; i >= 0; --i) {
+        removeBorder(i);
     }
     bItems.clear();
     b.clear();
 
     // remove texts
-    for (int i = 0; i < tItems.size(); ++i) {
-        iv->scene->removeItem(tItems[i]);
-        delete tItems[i];
+    for (int i = tItems.size() - 1; i >= 0; --i) {
+        removeText(i);
     }
     tItems.clear();
 
     // remove graphics
-    for (int i = 0; i < gItems.size(); ++i) {
-        iv->scene->removeItem(gItems[i]);
-        delete gItems[i];
+    for (int i = gItems.size() - 1; i >= 0; --i) {
+        removeGraphic(i);
     }
     graphicPixmaps.clear();
     gItems.clear();
 
     // remove flashItem
-    iv->scene->removeItem(&flashItem);
+    iv->scene->removeItem(flashItem);
 }
 
 void Embel::build()
@@ -172,7 +173,7 @@ void Embel::build()
     addImageToScene();
     addTextsToScene();
     addGraphicsToScene();
-    iv->scene->addItem(&flashItem);
+    addFlashToScene();
     iv->resetFitZoom();
 //    diagnostic();
 }
@@ -274,10 +275,7 @@ void Embel::borderImageCoordinates()
 
 QPoint Embel::canvasCoord(double x, double y,
                           QString anchorObject,
-                          QString anchorContainer,
-                          bool align,
-                          int alignTo_BorderId,
-                          int alignTo_CornerId)
+                          QString anchorContainer)
 {
 /*
 Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
@@ -294,7 +292,7 @@ Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
 //    */
     int x0 = 0, y0 = 0;
     // put text in the Image object area
-    if (anchorObject == "Image") {
+    if (anchorObject == "Image" || b.size() == 0) {
         x0 = image.x + static_cast<int>(x / 100 * image.w);
         y0 = image.y + static_cast<int>(y / 100 * image.h);
         /*
@@ -311,7 +309,7 @@ Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
 //                    */
         return QPoint(x0, y0);
     }
-    // not Image so must be a Border object
+    // not Image so must be a Border object unless no border objects
     else {
         for (int i = 0; i < p->b.size(); ++i) {
             // position and size of container
@@ -344,49 +342,6 @@ Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
                 }
                 x0 = static_cast<int>(x1 + x / 100 * w);
                 y0 = static_cast<int>(y1 + y / 100 * h);
-            }
-        }
-        // if align to a border corner
-        /*
-        qDebug() << __FUNCTION__
-                 << "p->t[n].alignToCorner =" << p->t[n].alignToCorner
-                 << "x0 =" << x0 << "y0 =" << y0;
-//                 */
-        if (align) {
-            // is alignment horizontal or vertical
-            bool isHorAlignment = true;
-            if (anchorContainer == "Left" || anchorContainer == "Right")
-                isHorAlignment = false;
-            /*
-            qDebug() << __FUNCTION__
-                     << "n =" << n
-                     << "bId =" << bId
-                     << "p->t[n].alignToCorner =" << p->t[n].alignToCorner
-                     << "isHorAlignment =" << isHorAlignment
-                     << "p->t[n].alignTo_CornerId =" << p->t[n].alignTo_CornerId
-                        ;
-//                        */
-            switch (alignTo_BorderId) {
-            // TopLeft
-            case 0:
-                if (isHorAlignment) x0 = b[alignTo_BorderId].tl.x();
-                    else y0 = b[alignTo_BorderId].tl.y();
-                    break;
-            // TopRight
-            case 1:
-                if (isHorAlignment) x0 = b[alignTo_BorderId].tr.x();
-                else y0 = b[alignTo_BorderId].tr.y();
-                break;
-            // BottomLeft
-            case 2:
-                if (isHorAlignment) x0 = b[alignTo_BorderId].bl.x();
-                else y0 = b[alignTo_BorderId].bl.y();
-                break;
-            // BottomRight
-            case 3:
-                if (isHorAlignment) x0 = b[alignTo_BorderId].br.x();
-                else y0 = b[alignTo_BorderId].br.y();
-                break;
             }
         }
     }
@@ -426,7 +381,28 @@ illusion of border margins using the painters algorithm.
         Border x;
         b << x;
         QGraphicsRectItem *item = new QGraphicsRectItem;
+        item->setToolTip("Border" + QString::number(i));
         bItems << item;
+    }
+}
+
+void Embel::createTexts()
+{
+    for (int i = 0; i < p->t.size(); ++i) {
+        QGraphicsTextItem *item = new QGraphicsTextItem;
+        item->setToolTip("Text" + QString::number(i));
+        tItems << item;
+    }
+}
+
+void Embel::createGraphics()
+{
+    for (int i = 0; i < p->g.size(); ++i) {
+        QGraphicsPixmapItem *item = new QGraphicsPixmapItem;
+        item->setToolTip("Graphic" + QString::number(i));
+        graphicPixmaps << QPixmap(p->g[i].filePath);
+        item->setPixmap(graphicPixmaps.at(i));
+        gItems << item;
     }
 }
 
@@ -447,6 +423,50 @@ void Embel::addBordersToScene()
                  << bItems[i]->boundingRect();
 //                 */
     }
+}
+
+void Embel::addTextsToScene()
+{
+    for (int i = 0; i < p->t.size(); ++i) {
+        updateText(i);
+        iv->scene->addItem(tItems[i]);
+    }
+}
+
+void Embel::addGraphicsToScene()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    for (int i = 0; i < p->g.size(); ++i) {
+        updateGraphic(i);
+        iv->scene->addItem(gItems[i]);
+    }
+}
+
+void Embel::addImageToScene()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // scale the image to fit inside the borders
+    QPixmap pm = iv->pmItem->pixmap().scaledToWidth(image.w);
+    // add the image to the scene
+    iv->pmItem->setPixmap(pm);
+    // move the image to center in the borders
+    iv->pmItem->setPos(image.tl);
+    iv->pmItem->setZValue(ZImage);
+
+    updateImage();
+}
+
+void Embel::addFlashToScene()
+{
+    iv->scene->addItem(flashItem);
 }
 
 void Embel::updateBorder(int i)
@@ -479,28 +499,6 @@ void Embel::updateBorder(int i)
                     0,  /* rotation */
                     bItems[i]->boundingRect());
         bItems[i]->setGraphicsEffect(effect);
-    }
-}
-
-void Embel::removeBorder(int i)
-{
-    b.removeAt(i);
-    bItems.removeAt(i);
-}
-
-void Embel::createTexts()
-{
-    for (int i = 0; i < p->t.size(); ++i) {
-        QGraphicsTextItem *item = new QGraphicsTextItem;
-        tItems << item;
-    }
-}
-
-void Embel::addTextsToScene()
-{
-    for (int i = 0; i < p->t.size(); ++i) {
-        updateText(i);
-        iv->scene->addItem(tItems[i]);
     }
 }
 
@@ -537,16 +535,10 @@ void Embel::updateText(int i)
 //                    */
     int w = static_cast<int>(tItems[i]->boundingRect().width());
     int h = static_cast<int>(tItems[i]->boundingRect().height());
-//        qDebug() << __FUNCTION__ << "tItems[i]->boundingRect() =" << tItems[i]->boundingRect();
-//    qDebug() << __FUNCTION__ << "Adding text #" << i;
     QPoint canvas = canvasCoord(p->t[i].x,
                                 p->t[i].y,
                                 p->t[i].anchorObject,
-                                p->t[i].anchorContainer,
-                                p->t[i].alignToCorner != "Do not align",
-                                p->t[i].alignTo_BorderId,
-                                p->t[i].alignTo_CornerId);
-//        QPoint canvas = textCanvasCoord(i);
+                                p->t[i].anchorContainer);
 //    qDebug() << __FUNCTION__ << "canvas coord =" << canvas;
     QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h);
     tItems[i]->setTransformOriginPoint(offset);
@@ -567,36 +559,6 @@ void Embel::updateText(int i)
     else tItems[i]->setRotation(rotation);
 }
 
-void Embel::removeText(int i)
-{
-    tItems.removeAt(i);
-}
-
-void Embel::createGraphics()
-{
-    for (int i = 0; i < p->g.size(); ++i) {
-        QGraphicsPixmapItem *gItem = new QGraphicsPixmapItem;
-        graphicPixmaps << QPixmap(p->g[i].filePath);
-        gItem->setPixmap(graphicPixmaps.at(i));
-        gItems << gItem;
-        qDebug() << __FUNCTION__
-                 << i << p->g[i].filePath;
-    }
-}
-
-void Embel::addGraphicsToScene()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    for (int i = 0; i < p->g.size(); ++i) {
-        updateGraphic(i);
-        iv->scene->addItem(gItems[i]);
-    }
-}
-
 void Embel::updateGraphic(int i)
 {
     {
@@ -611,20 +573,16 @@ void Embel::updateGraphic(int i)
     gItems[i]->setPixmap(graphicPixmaps.at(i).scaled(QSize(dim, dim), Qt::KeepAspectRatio));
     int w = static_cast<int>(gItems[i]->pixmap().width());
     int h = static_cast<int>(gItems[i]->boundingRect().height());
+    /*
     qDebug() << __FUNCTION__ << "Adding graphic #" << i
              << "p->g[i].size =" << p->g[i].size
              << "dim =" << dim << "w =" << w << "h =" << h;
+//             */
     QPoint canvas = canvasCoord(p->g[i].x,
                                 p->g[i].y,
                                 p->g[i].anchorObject,
-                                p->g[i].anchorContainer,
-                                p->g[i].alignToCorner != "Do not align",
-                                p->t[i].alignTo_BorderId,
-                                p->t[i].alignTo_CornerId);
+                                p->g[i].anchorContainer);
     QPoint offset = anchorPointOffset(p->g[i].anchorPoint, w, h);
-    qDebug() << __FUNCTION__
-             << "canvas coord =" << canvas
-             << "offset =" << offset;
     gItems[i]->setTransformOriginPoint(offset);
     gItems[i]->setPos(canvas - offset);
 
@@ -646,30 +604,6 @@ void Embel::updateGraphic(int i)
     }
 }
 
-void Embel::removeGraphic(int i)
-{
-    gItems.removeAt(i);
-    graphicPixmaps.removeAt(i);
-}
-
-void Embel::addImageToScene()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    // scale the image to fit inside the borders
-    QPixmap pm = iv->pmItem->pixmap().scaledToWidth(image.w);
-    // add the image to the scene
-    iv->pmItem->setPixmap(pm);
-    // move the image to center in the borders
-    iv->pmItem->setPos(image.tl);
-    iv->pmItem->setZValue(ZImage);
-
-    updateImage();
-}
-
 void Embel::updateImage()
 {
     // graphics effects
@@ -681,6 +615,36 @@ void Embel::updateImage()
                 iv->pmItem->pixmap().rect());
         iv->pmItem->setGraphicsEffect(effect);
     }
+}
+
+void Embel::removeBorder(int i)
+{
+    if (iv->scene->items().contains(bItems[i]))
+        iv->scene->removeItem(bItems[i]);
+    if (bItems.contains(bItems[i])) {
+        delete bItems[i];
+        bItems.removeAt(i);
+        b.removeAt(i);
+    }
+}
+
+void Embel::removeText(int i)
+{
+    iv->scene->removeItem(tItems[i]);
+    delete tItems[i];
+    tItems.removeAt(i);
+}
+
+void Embel::removeGraphic(int i)
+{
+    if (iv->scene->items().contains(gItems[i]))
+        iv->scene->removeItem(gItems[i]);
+    if (gItems.contains(gItems[i])) {
+        delete gItems[i];
+        gItems.removeAt(i);
+    }
+    if (graphicPixmaps.count() > i)
+        graphicPixmaps.removeAt(i);
 }
 
 void Embel::updateStyle(QString style)
@@ -706,30 +670,32 @@ void Embel::updateStyle(QString style)
 
 void Embel::flashObject(QString type, int index, bool show)
 {
-    flashItem.setVisible(show);
+    flashItem->setVisible(show);
     if (!show) return;
     if (type == "border") {
-        flashItem.setRect(bItems[index]->boundingRect());
-        flashItem.setPos(bItems[index]->pos());
-        qDebug() << __FUNCTION__ << bItems[index]->boundingRect();
+        flashItem->setRect(bItems[index]->boundingRect());
+        flashItem->setPos(bItems[index]->pos());
+//        qDebug() << __FUNCTION__ << bItems[index]->boundingRect();
     }
     if (type == "text") {
-        flashItem.setRect(tItems[index]->boundingRect());
-        flashItem.setPos(tItems[index]->pos());
+        flashItem->setRect(tItems[index]->boundingRect());
+        flashItem->setPos(tItems[index]->pos());
     }
     if (type == "graphic") {
-        flashItem.setRect(gItems[index]->boundingRect());
-        flashItem.setPos(gItems[index]->pos());
+        flashItem->setRect(gItems[index]->boundingRect());
+        flashItem->setPos(gItems[index]->pos());
     }
+    /*
     qDebug() << __FUNCTION__
              << "type =" << type
              << "index =" << index
-             << "flashItem.rect() =" << flashItem.rect()
-             << "flashItem.pos() =" << flashItem.pos()
+             << "flashItem->rect() =" << flashItem->rect()
+             << "flashItem->pos() =" << flashItem->pos()
                 ;
-    flashItem.setZValue(ZFlash);
-    flashItem.setPen(QPen(Qt::red, 2));
-    flashItem.setBrush(QBrush(Qt::transparent));
+//                */
+    flashItem->setZValue(ZFlash);
+    flashItem->setPen(QPen(Qt::red, 2));
+    flashItem->setBrush(QBrush(Qt::transparent));
 
     QTimer::singleShot(100, this, SLOT(flashObject()));
 }
@@ -741,8 +707,54 @@ void Embel::diagnostic()
     G::track(__FUNCTION__);
     #endif
     }
+
     qDebug().noquote()
-            << "Canvas                      "
+            << "Scene total items =" << iv->scene->items().count();
+    for (int i = 0; i < iv->scene->items().count(); ++i) {
+        qDebug().noquote()
+             << "tooltip =" << iv->scene->items().at(i)->toolTip()
+             << "type =" << iv->scene->items().at(i)->type()
+             << "pos =" << iv->scene->items().at(i)->pos()
+             << "iv->scene->items().at(i) =" << iv->scene->items().at(i)
+                ;
+    }
+
+    qDebug().noquote()
+            << "\nTotal border items =" << bItems.count();
+    for (int i = 0; i < bItems.count(); ++i) {
+        qDebug().noquote()
+             << "tooltip =" << bItems.at(i)->toolTip()
+             << "type =" << bItems.at(i)->type()
+             << "pos =" << bItems.at(i)->pos()
+             << "bItems.at(i) =" << bItems.at(i)
+                ;
+            }
+
+    qDebug().noquote()
+            << "Total text items =" << tItems.count();
+    for (int i = 0; i < tItems.count(); ++i) {
+        qDebug().noquote()
+                << "tooltip =" << tItems.at(i)->toolTip()
+                << "type =" << tItems.at(i)->type()
+                << "pos =" << tItems.at(i)->pos()
+                << "tItems.at(i) =" << tItems.at(i)
+                   ;
+    }
+
+    qDebug().noquote()
+            << "Total graphic items =" << gItems.count();
+    for (int i = 0; i < gItems.count(); ++i) {
+        qDebug().noquote()
+                << "tooltip =" << gItems.at(i)->toolTip()
+                << "type =" << gItems.at(i)->type()
+                << "pos =" << gItems.at(i)->pos()
+                << "gItems.at(i) =" << gItems.at(i)
+                   ;
+    }
+
+
+    qDebug().noquote()
+            << "\nCanvas                      "
             << "w =" << QString::number(w).leftJustified(5)
             << "h =" << QString::number(h).leftJustified(5)
                ;
@@ -775,5 +787,4 @@ void Embel::diagnostic()
             << "br.x =" << QString::number(image.br.x()).leftJustified(5)
             << "br.y =" << QString::number(image.br.y()).leftJustified(5)
             ;
-
 }
