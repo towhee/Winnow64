@@ -69,6 +69,7 @@ namespace G
     QStringList copyCutFileList;
 
     QElapsedTimer t;
+    QElapsedTimer t1;
     bool isTimer;
     bool isTest;
 

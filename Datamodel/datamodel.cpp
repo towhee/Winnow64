@@ -721,7 +721,7 @@ Reads the image metadata into the datamodel for the row.
 */
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, index(row, 0).data(G::PathRole).toString());
     #endif
     }
     QString fPath = index(row, 0).data(G::PathRole).toString();

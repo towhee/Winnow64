@@ -456,6 +456,11 @@ void MW::keyPressEvent(QKeyEvent *event)
 //    else isShift = false;
 //    qDebug() << "MW::keyPressEvent" << event << isShift;
 
+    if (event->key() == Qt::Key_Right) {
+        G::t1.restart();
+        qDebug() << __FUNCTION__ << "Right key pressed";
+    }
+
     QMainWindow::keyPressEvent(event);
 
     if (event->key() == Qt::Key_Return) {
@@ -570,11 +575,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 //*/
 
-    /* figure out key presses
-    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow") {
+//    /* figure out key presses
+    if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow")
+    {
         G::track(__FUNCTION__, "Performance profiling");
         qDebug() << event <<  obj;
-    };  */
+    }
 
     /* Specific event
     if (event->type() == QEvent::FocusIn) {
@@ -1077,6 +1083,9 @@ delegate use of the current index must check the column.
              << "isFilterChange =" << isFilterChange
              << "current =" << current;
 //    */
+
+//    qDebug() << G::t.elapsed() << G::t.restart() << "\t" << __FUNCTION__ << 1;
+
     if (G::memTest) return;
     bool isStart = false;
     if(!isCurrentFolderOkay || G::isInitializing || isFilterChange) return;
@@ -1154,6 +1163,8 @@ delegate use of the current index must check the column.
 
     // check and load metadata for the current image ******************************************
 
+//    qDebug() << G::t.restart() << "\t" << __FUNCTION__ << 2;
+
     /* check metadata loaded for current image (might not be if random slideshow)
        to prevent a conflict with the metadataCacheThread*/
     int dmRow = dm->fPathRow[fPath];
@@ -1161,7 +1172,8 @@ delegate use of the current index must check the column.
         QFileInfo fileInfo(fPath);
         QString ext = fileInfo.suffix().toLower();
         if (metadata->getMetadataFormats.contains(ext)) {
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__))
+            {
                 metadata->m.row = dmRow;
                 dm->addMetadataForItem(metadata->m);
             }
@@ -2719,11 +2731,17 @@ void MW::createActions()
 
     // Embellish menu
 
-    newEmbelTemplateAction = new QAction(tr("New template"), this);
-    newEmbelTemplateAction->setObjectName("newEmbelTemplateAct");
-    newEmbelTemplateAction->setShortcutVisibleInContextMenu(true);
-    addAction(newEmbelTemplateAction);
-    connect(newEmbelTemplateAction, &QAction::triggered, this, &MW::newEmbelTemplate);
+    embelNewTemplateAction = new QAction(tr("New template"), this);
+    embelNewTemplateAction->setObjectName("newEmbelTemplateAct");
+    embelNewTemplateAction->setShortcutVisibleInContextMenu(true);
+    addAction(embelNewTemplateAction);
+    connect(embelNewTemplateAction, &QAction::triggered, this, &MW::newEmbelTemplate);
+
+    embelExportAction = new QAction(tr("Export"), this);
+    embelExportAction->setObjectName("embelExportAct");
+    embelExportAction->setShortcutVisibleInContextMenu(true);
+    addAction(embelExportAction);
+    connect(embelExportAction, &QAction::triggered, this, &MW::exportEmbel);
 
     // general connection to handle invoking new embellish templates
     // MacOS will not allow runtime menu insertions.  Cludge workaround
@@ -3309,7 +3327,8 @@ void MW::createMenus()
     QMenu *embelMenu = new QMenu(this);
     QAction *embelGroupAct = new QAction("Embellish", this);
     embelGroupAct->setMenu(embelMenu);
-    embelMenu->addAction(newEmbelTemplateAction);
+    embelMenu->addAction(embelNewTemplateAction);
+    embelMenu->addAction(embelExportAction);
     embelMenu->addSeparator();
     embelMenu->addActions(embelGroupAction->actions());
 //    // add 10 dummy menu items for embellish template choice
@@ -4655,7 +4674,7 @@ void MW::createDocks()
     createFilterDock();
     createMetadataDock();
     createThumbDock();
-    /*if (!hideEmbellish) */createEmbelDock();
+    createEmbelDock();
 
     connect(this, &MW::tabifiedDockWidgetActivated, this, &MW::embelDockActivated);
 
@@ -9430,6 +9449,40 @@ qulonglong MW::memoryReqdForSelection()
     return memTot;
 }
 
+void MW::exportEmbel()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString folderPath = embelProperties->exportFolderPath;
+    QString suffix = embelProperties->exportFileType;
+    for (int row = 0; row < dm->sf->rowCount(); ++row) {
+        QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
+        QModelIndex idx = dm->sf->index(row, 0);
+        // only picks
+        if (pickIdx.data(Qt::EditRole).toString() == "true") {
+            thumbView->selectThumb(row);
+            QString fPath = idx.data(G::PathRole).toString();
+            QFileInfo fileInfo(fPath);
+            QString fName = fileInfo.baseName() + "." + suffix;
+            QString exportPath = folderPath + "/" + fName;
+            imageView->scene->clearSelection();
+            imageView->scene->setSceneRect(imageView->scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
+            QImage image(imageView->scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
+            image.fill(Qt::transparent);                                              // Start all pixels transparent
+
+            QPainter painter(&image);
+            imageView->scene->render(&painter);
+            image.save(exportPath);
+        }
+    }
+}
+
 void MW::ingest()
 {
 /*
@@ -9960,6 +10013,9 @@ void MW::keyRight()
     G::track(__FUNCTION__);
     #endif
     }
+    static int n = 0;
+    G::t1.restart();
+    qDebug() << __FUNCTION__ << n++;
     if (G::mode == "Compare") compareImages->go("Right");
     else thumbView->selectNext();
 }

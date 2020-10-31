@@ -377,13 +377,15 @@ added to the datamodel. The image cache is updated.
     #endif
     }
     if (isRunning()) {
-        mutex.lock();
+        // !! rgh removed mutex.lock) to improve preformance - monitor this works
+//        mutex.lock();
         abort = true;
-        qDebug() << "abort = true : " << __FUNCTION__;
+//        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
-        mutex.unlock();
-        wait();
+//        mutex.unlock();
+//        wait();
     }
+
     abort = false;
     updateImageCache = okayToImageCache;
     action = Action::NewFileSelected;
@@ -685,8 +687,9 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
 //        */
     for (int row = start; row < end; ++row) {
         if (abort) {
-            /*
-            qDebug() << __FUNCTION__ << "Aborting on row" << row;  // */
+//            /*
+            qDebug() << __FUNCTION__ << "Aborting on row" << row;
+            // */
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }

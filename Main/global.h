@@ -2,7 +2,7 @@
 
 #define GLOBAL_H
 
-//#define ISDEBUG        // Uncomment this line to show debugging output
+#define ISDEBUG        // Uncomment this line to show debugging output
 
 #include <QtWidgets>
 #include <QColor>
@@ -193,6 +193,7 @@ namespace G
     extern QStringList copyCutFileList;     // req'd?
 
     extern QElapsedTimer t;
+    extern QElapsedTimer t1;
     extern bool isTimer;
     extern bool isTest;
 

@@ -78,7 +78,7 @@ private:
     QList<QGraphicsPixmapItem*> gItems;
     QList<QPixmap> graphicPixmaps;
 
-    QGraphicsRectItem flashItem;
+    QGraphicsRectItem *flashItem;
 
     int ls, w, h;
     int shortside;
@@ -86,9 +86,7 @@ private:
     void doNotEmbellish();
     void borderImageCoordinates();
     void fitAspect(double aspect, Hole &size);
-    QPoint canvasCoord(double x, double y, QString anchorObject, QString anchorContainer,
-                       bool align, int alignTo_BorderId, int alignTo_CornerId);
-//    QPoint textCanvasCoord(int n);
+    QPoint canvasCoord(double x, double y, QString anchorObject, QString anchorContainer);
     QPoint anchorPointOffset(QString anchorPoint, int w, int h);
     void createBorders();
     void createTexts();
@@ -97,6 +95,7 @@ private:
     void addTextsToScene();
     void addGraphicsToScene();
     void addImageToScene();
+    void addFlashToScene();
 };
 
 #endif // EMBEL_H

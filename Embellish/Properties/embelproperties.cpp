@@ -144,6 +144,7 @@ void EmbelProperties::initialize()
     anchorPoints << "Top Left" << "Top Center" << "Top Right"
                  << "Middle Left" << "Middle Center" << "Middle Right"
                  << "Bottom Left" << "Bottom Center" << "Bottom Right";
+    anchorObjectList << "Image";
     anchorContainerList << "Top" << "Left" << "Right" << "Bottom";
     borderCorners << "TopLeft" << "TopRight" << "BottomLeft" << "BottomRight";
     readTileList();
@@ -298,24 +299,32 @@ Called from new and delete borders to rebuild the lists that have the borders
     }
     borderList.clear();
     anchorObjectList.clear();
-    alignToCornerList.clear();
-    alignToCornerList << "Do not align";
-//    getIndex("Borders");
-//    QModelIndex bordersIdx = foundIdx;
-    for (int i = 0; i < model->rowCount(bordersIdx); ++i) {
+    int borderCount = model->rowCount(bordersIdx);
+    for (int i = 0; i < borderCount; ++i) {
         QString borderName = model->index(i, CapColumn, bordersIdx).data(UR_Name).toString();
         borderList << borderName;
         anchorObjectList << borderName;
-        for (int j = 0; j < 4; ++j) {
-            QString s = borderName + " " + borderCorners.at(j);
-            alignToCornerList << s;
-        }
     }
     anchorObjectList << "Image";
-    // update textAnchorObjectEditor etc rgh
+
+    // update texts anchor lists
     for (int i = 0; i < t.size(); ++i) {
-        textAlignToCornerObjectEditor[i]->refresh(alignToCornerList);
-//        textAnchorObjectEditor[i]->refresh(anchorObjectList);
+        QString currVal = textAnchorObjectEditor.at(i)->value();
+        textAnchorObjectEditor.at(i)->refresh(anchorObjectList);
+
+        qDebug() << __FUNCTION__
+                 << "currVal =" << currVal
+                 << "anchorObjectList =" << anchorObjectList
+                 << "anchorObjectList.at(0) =" << anchorObjectList.at(0)
+                    ;
+        if (anchorObjectList.contains(currVal)) textAnchorObjectEditor.at(i)->setValue(currVal);
+        else if (borderCount == 0) textAnchorObjectEditor.at(i)->setValue("Image");
+        else textAnchorObjectEditor.at(i)->setValue(anchorObjectList.at(0));
+    }
+
+    // update graphics anchor lists
+    for (int i = 0; i < g.size(); ++i) {
+        graphicAnchorObjectEditor.at(i)->refresh(anchorObjectList);
     }
 }
 
@@ -403,14 +412,11 @@ void EmbelProperties::diagnosticVectors()
             << "parent =" << t[i].parent
             << "anchorObject =" << t[i].anchorObject
             << "anchorContainer =" << t[i].anchorContainer
+            << "anchorPoint =" << t[i].anchorPoint
             << "x =" << t[i].x
             << "y =" << t[i].y
-            << "alignToCorner =" << t[i].alignToCorner
-            << "alignTo_BorderId =" << t[i].alignTo_BorderId
-            << "alignTo_CornerId =" << t[i].alignTo_CornerId
-            << "anchorPoint =" << t[i].anchorPoint
-            << "source =" << t[i].source
             << "text =" << t[i].text
+            << "rotation =" << t[i].rotation
             << "metadataTemplate =" << t[i].metadataTemplate
             << "size =" << t[i].size
             << "font =" << t[i].font
@@ -418,7 +424,27 @@ void EmbelProperties::diagnosticVectors()
             << "isItalic =" << t[i].isItalic
             << "color =" << t[i].color
             << "opacity =" << t[i].opacity
-            << "style =" << t[i].style;
+            << "style =" << t[i].style
+               ;
+    }
+    qDebug() << __FUNCTION__ << "GRAPHIC VECTOR";
+    for (int i = 0; i < g.length(); ++i) {
+        qDebug().noquote()
+            << i << " "
+            << "name =" << g[i].name
+            << "caption =" << g[i].caption
+            << "parent =" << g[i].parent
+            << "filePath =" << g[i].filePath
+            << "anchorObject =" << g[i].anchorObject
+            << "anchorContainer =" << g[i].anchorContainer
+            << "anchorPoint =" << g[i].anchorPoint
+            << "x =" << g[i].x
+            << "y =" << g[i].y
+            << "rotation =" << g[i].rotation
+            << "size =" << g[i].size
+            << "opacity =" << g[i].opacity
+            << "style =" << g[i].style
+               ;
     }
 }
 
@@ -430,7 +456,7 @@ void EmbelProperties::diagnostic(QModelIndex parent)
     #endif
     }
     // model
-    for(int r = 0; r < model->rowCount(parent); ++r) {
+    for(int r = 0; r < model->rowCount(bordersIdx); ++r) {
         QModelIndex idx0 = model->index(r, CapColumn, parent);
         QModelIndex idx1 = model->index(r, ValColumn, parent);
         QString p = parent.data(UR_Name).toString();
@@ -992,6 +1018,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
     QString parent = idx.parent().data(UR_Name).toString();
@@ -1079,17 +1106,16 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
 //    */
 
     if (source == "anchorObject") {
+        qDebug() << __FUNCTION__ << "anchorObject =" << v.toString();
         setting->setValue(path, v.toString());
         t[index].anchorObject = v.toString();
         int row = idx.row();
         // also hidden on creation using updateHiddenRows(QModelIndex parent)
         if (v.toString() == "Image") {
             setRowHidden(row + 1, idx.parent(), true);  // anchor container
-            setRowHidden(row + 3, idx.parent(), true);  // align to border corner
         }
         else {
             setRowHidden(row + 1, idx.parent(), false);
-            setRowHidden(row + 3, idx.parent(), false);
         }
     }
 
@@ -1111,12 +1137,6 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
     if (source == "rotation") {
         setting->setValue(path, v.toDouble());
         t[index].rotation = v.toDouble();
-    }
-
-    if (source == "alignToCorner") {
-        setting->setValue(path, v.toString());
-        t[index].alignToCorner = v.toString();
-        parseAlignToCorner(v.toString(), t[index].alignTo_BorderId, t[index].alignTo_CornerId);
     }
 
     if (source == "anchorPoint") {
@@ -1217,6 +1237,8 @@ void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString sou
     if (source == "filePath") {
         setting->setValue(path, v.toString());
         g[index].filePath = v.toString();
+        e->build();
+        return;
     }
 
     if (source == "anchorObject") {
@@ -1226,11 +1248,9 @@ void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString sou
         // also hidden on creation using updateHiddenRows(QModelIndex parent)
         if (v.toString() == "Image") {
             setRowHidden(row + 1, idx.parent(), true);  // anchor container
-            setRowHidden(row + 3, idx.parent(), true);  // align to border corner
         }
         else {
             setRowHidden(row + 1, idx.parent(), false);
-            setRowHidden(row + 3, idx.parent(), false);
         }
     }
 
@@ -1258,12 +1278,6 @@ void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString sou
     if (source == "rotation") {
         setting->setValue(path, v.toDouble());
         g[index].rotation = v.toDouble();
-    }
-
-    if (source == "alignToCorner") {
-        setting->setValue(path, v.toString());
-        g[index].alignToCorner = v.toString();
-        parseAlignToCorner(v.toString(), g[index].alignTo_BorderId, g[index].alignTo_CornerId);
     }
 
     if (source == "anchorPoint") {
@@ -1574,7 +1588,7 @@ void EmbelProperties::addExport()
     i.value = setting->value(settingRootPath + i.key);
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << "Tiff" << "Jpg" << "Png";
+    i.dropList << "tif" << "jpg" << "png";
     exportFileType = i.value.toString();
     addItem(i);
 
@@ -2687,6 +2701,8 @@ void EmbelProperties::newGraphic()
     addGraphic(row);
     if (G::isInitializing || isTemplateChange) return;
     QModelIndex idx = model->index(row, CapColumn, graphicsIdx);
+    expand(graphicsIdx);
+    expand(idx);
     selectionModel()->clear();
     selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     e->build();
@@ -2695,10 +2711,10 @@ void EmbelProperties::newGraphic()
 void EmbelProperties::deleteItem()
 {
 /*
-The tree header rows can contain delete buttons.  All such delete operations are
-processed here.  The item (row in model) has to be removed from the data model,
-from local vectors and from QSettings.  Also, if it is referred to elsewhere, such
-as a style in a stylelist for a text, then the lists need to be updated.
+The tree header rows can contain delete buttons. All such delete operations are processed
+here. The item (row in model) has to be removed from the data model, from local vectors, scene
+items in Embel and from QSettings. Also, if it is referred to elsewhere, such as a style in a
+stylelist for a text or graphic, then the lists need to be updated.
 */
     {
     #ifdef ISDEBUG
@@ -2735,47 +2751,55 @@ as a style in a stylelist for a text, then the lists need to be updated.
                              QMessageBox::Cancel | QMessageBox::Ok));
     if (ret == QMessageBox::Cancel) return;
 
-    // remove from local vectors and Embel lists
+    // remove from local vectors and Embel graphicItems
     if (parName == "Borders") {
         e->removeBorder(row);
         b.remove(row);
-        updateBorderLists();
     }
+
     if (parName == "Texts") {
         e->removeText(row);
         t.remove(row);
     }
+
     if (parName == "Graphics") {
         e->removeGraphic(row);
         g.remove(row);
     }
 
     // remove from datamodel
+//    qDebug() << __FUNCTION__ << "remove from datamodel";
     model->removeRow(idx.row(), idx.parent());
 
     // remove from setting
+//    qDebug() << __FUNCTION__ << "remove from setting:" << path;
     setting->remove(path);
 
     /* rename subsequent category items ie text2, text3 ... in setting, model and vectors
        This is not required for styles and effects as they are not numbered automatically */
     QStringList templateItems;
-    templateItems << "Borders" << "Texts" << "Rectangles" << "Graphics";
+    templateItems << "Borders" << "Texts" << "Graphics";
     if (templateItems.contains(parName)) {
         QString itemBase = parName.left(parName.length() - 1);
         for (int i = row; i < model->rowCount(parIdx); ++i) {
             QString parPath = templatePath + parName;
-            QString oldName = model->index(i,CapColumn,parIdx).data().toString();
+            QString oldName = model->index(i, CapColumn, parIdx).data().toString();
             QString newName = itemBase + QString::number(i + 1);
             qDebug() << __FUNCTION__ << i << path << oldName << newName;
             // update setting
             renameSettingKey(parPath, oldName, newName);
             // update model
-            model->setData(model->index(i,CapColumn,parIdx), newName);
+            model->setData(model->index(i, CapColumn, parIdx), newName);
             // update local struct
             if (parName == "Borders") b[i].name = newName;
             if (parName == "Texts") t[i].name = newName;
+            if (parName == "Graphics") g[i].name = newName;
         }
     }
+
+    /* if border deleted update lists that have borders and any anchorObjects in texts and
+       graphics.  This needs to happen after all data structures have been updated.  */
+    if (parName == "Borders") updateBorderLists();
 
     // update references to style
     if (parName == "Styles") {
@@ -3074,25 +3098,25 @@ void EmbelProperties::diagnostics(QModelIndex idx)
 
 }
 
-void EmbelProperties::parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner)
-{
-/*
-The string alignTo example: "Border2 BottomLeft".  We need to know the number of the border
-and the corner.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    iBorder = alignTo.mid(6, 1).toInt() - 1;
-    QString s = alignTo.right(alignTo.length() - 8);
-    if (s == "TopLeft") iCorner = 0;
-    if (s == "TopRight") iCorner = 1;
-    if (s == "BottomLeft") iCorner = 2;
-    if (s == "BottomRight") iCorner = 3;
-//    qDebug() << __FUNCTION__ << alignTo << s << iBorder << iCorner;
-}
+//void EmbelProperties::parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner)
+//{
+///*
+//The string alignTo example: "Border2 BottomLeft".  We need to know the number of the border
+//and the corner.
+//*/
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    iBorder = alignTo.mid(6, 1).toInt() - 1;
+//    QString s = alignTo.right(alignTo.length() - 8);
+//    if (s == "TopLeft") iCorner = 0;
+//    if (s == "TopRight") iCorner = 1;
+//    if (s == "BottomLeft") iCorner = 2;
+//    if (s == "BottomRight") iCorner = 3;
+////    qDebug() << __FUNCTION__ << alignTo << s << iBorder << iCorner;
+//}
 
 void EmbelProperties::expandAllRows()
 {
@@ -3127,8 +3151,30 @@ void EmbelProperties::solo()
 
 void EmbelProperties::test1()
 {
-    qDebug() << __FUNCTION__;
-    e->test();
+    QModelIndex tParIdx = model->index(0, 0, textsIdx);
+    QModelIndex idxCap = model->index(0, 0, tParIdx);
+    QModelIndex idxVal = model->index(0, 1, tParIdx);
+    qDebug() << __FUNCTION__
+             << idxCap.data().toString()
+             << idxVal.data().toString()
+                ;
+    setItemValue(idxVal, DT_Combo, "Image");
+    qDebug() << __FUNCTION__
+             << idxCap.data().toString()
+             << idxVal.data().toString()
+                ;
+    return;
+
+    e->diagnostic();
+    qDebug();
+    qDebug() << __FUNCTION__ << "\nClear()";
+    e->clear();
+    e->diagnostic();
+
+//    qDebug() << __FUNCTION__;
+//    diagnosticVectors();
+
+//    e->test();
 //    e->exportImage();
 //    QModelIndex root = model->invisibleRootItem()->index();
 //    QModelIndex templateIdx = model->index(0, 0, root);
@@ -3471,17 +3517,16 @@ void EmbelProperties::addText(int count)
     i.dropList << anchorContainerList;
     text.anchorContainer = i.value.toString();
     addItem(i);
-
-    // update tree based on anchorObject (Image does not have border areas)
+    // hide if anchorObject == "Image" (Image does not have border areas)
     if (text.anchorObject == "Image") {
-        model->setData(capIdx, true, UR_isHidden);
-        model->setData(valIdx, true, UR_isHidden);
+        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
+        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
     }
 
     i.name = "anchorPoint";
     i.parIdx = parIdx;
     i.parentName = textName;
-    i.captionText = "Anchor point";
+    i.captionText = "Text box anchor";
     i.tooltip = "Select a text box anchor point.";
     i.isIndent = false;
     i.hasValue = true;
@@ -3498,37 +3543,8 @@ void EmbelProperties::addText(int count)
     i.type = "QString";
     i.dropList << anchorPoints;
     text.anchorPoint = i.value.toString();
-    textAnchorObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
-
-    i.name = "alignToCorner";
-    i.parIdx = parIdx;
-    i.parentName = textName;
-    i.captionText = "Align to corner";
-    i.tooltip = "Select a border corner to align to the anchor point.";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "alignToCorner";
-    i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
-    else {
-        i.value = "Do not align";
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << alignToCornerList;
-    text.alignToCorner = i.value.toString();
-    parseAlignToCorner(text.alignToCorner,text.alignTo_BorderId, text.alignTo_CornerId);
-    textAlignToCornerObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
-//    textAlignToCornerObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
-
-    // update tree based on anchorObject (if Image cannot align to borders)
-    if (text.anchorObject == "Image") {
-        model->setData(capIdx, true, UR_isHidden);
-        model->setData(valIdx, true, UR_isHidden);
-    }
+    addItem(i);
+//    textAnchorObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
 
     i.name = "x";
     i.parIdx = parIdx;
@@ -3640,7 +3656,6 @@ void EmbelProperties::addText(int count)
     }
     else {
         i.value = "Text #" + QString::number(count + 1);
-//        qDebug() << __FUNCTION__ << i.value;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_LineEdit;
@@ -3891,7 +3906,15 @@ void EmbelProperties::addGraphic(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "filePath";
-    i.value = setting->value(settingRootPath + i.key);
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
+    }
+    else {
+        i.value = "";
+//        i.value = ":/images/icon16/winnow288.png";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+//    i.value = setting->value(settingRootPath + i.key);
     i.delegateType = DT_SelectFile;
     i.type = "string";
     graphic.filePath = i.value.toString();
@@ -3949,7 +3972,7 @@ void EmbelProperties::addGraphic(int count)
     i.name = "anchorPoint";
     i.parIdx = parIdx;
     i.parentName = graphicName;
-    i.captionText = "Anchor point";
+    i.captionText = "Graphic box anchor";
     i.tooltip = "Select a graphic anchor point.";
     i.isIndent = false;
     i.hasValue = true;
@@ -3966,35 +3989,8 @@ void EmbelProperties::addGraphic(int count)
     i.type = "QString";
     i.dropList << anchorPoints;
     graphic.anchorPoint = i.value.toString();
-    graphicAnchorObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
-
-    i.name = "alignToCorner";
-    i.parIdx = parIdx;
-    i.parentName = graphicName;
-    i.captionText = "Align to corner";
-    i.tooltip = "Select a border corner to align to the graphic object anchor point.";
-    i.isIndent = false;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "alignToCorner";
-    i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
-    else {
-        i.value = "Do not align";
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << alignToCornerList;
-    graphic.alignToCorner = i.value.toString();
-    parseAlignToCorner(graphic.alignToCorner,graphic.alignTo_BorderId, graphic.alignTo_CornerId);
-    graphicAlignToCornerObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
-    // hide if not selected by anchorObject
-    if (graphic.anchorObject == "Image") {
-        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
-        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
-    }
+    addItem(i);
+//    graphicAnchorObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
 
     i.name = "x";
     i.parIdx = parIdx;
@@ -4053,7 +4049,7 @@ void EmbelProperties::addGraphic(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "size";
-    i.defaultValue = 0.5;
+    i.defaultValue = 10.0;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);

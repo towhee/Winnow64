@@ -1,4 +1,6 @@
 BUGS
+- x, y coord should register real numbers
+- Bookmark count not refresh when filecount changes
 - Grid does not always stretch to fit central widget
 - Change sort direction can crash
 - when grabbing tile make sure imageview at 100%

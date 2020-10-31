@@ -25,14 +25,12 @@ public:
     int horizontalFitPx;
     int verticalFitPx;
 
-//    struct File {
     // Export parameters
     QString exportFileType;
     QString saveMethod;
     QString exportFolderPath;
     QString exportSubfolder;
     bool overwriteFiles;
-//    } f;
 
     struct Image {
         QString style;
@@ -65,9 +63,6 @@ public:
         double x;                   // container coordinate
         double y;                   // container coordinate
         double rotation;            // rotation in degrees
-        QString alignToCorner;
-        int alignTo_BorderId;
-        int alignTo_CornerId;
         QString anchorPoint;
         QString source;
         QString text;
@@ -93,12 +88,9 @@ public:
         QString anchorContainer;
         double x;                   // container coordinate
         double y;                   // container coordinate
+        QString anchorPoint;
         double size;                // % of long dimension
         double rotation;            // rotation in degrees
-        QString alignToCorner;
-        int alignTo_BorderId;
-        int alignTo_CornerId;
-        QString anchorPoint;
         int opacity;
         QString style;
     } graphic;
@@ -192,7 +184,6 @@ private:
     void itemChangeText(QModelIndex idx);
     void itemChangeRectangle(QVariant v, QString source, QString parent);
     void itemChangeGraphic(QModelIndex idx, QVariant v, QString source, QString parent);
-//    void itemChangeGlobalLight(QVariant v, QString source, QString parent);
     void itemChangeShadowEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeBlurEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeSharpenEffect(QVariant v, QString source, QString effectName, QString style);
@@ -204,7 +195,6 @@ private:
     void diagnostics(QModelIndex idx);
     void diagnosticStyles();
     void diagnosticVectors();
-    void parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner);
 
     QModelIndex root;                   // invisible root of treeview
     QModelIndex templateIdx;
@@ -268,9 +258,7 @@ private:
     QString templatePath;
     QSettings *setting;
     ComboBoxEditor *templateListEditor;
-    QVector<ComboBoxEditor*> textAlignToCornerObjectEditor;
     QVector<ComboBoxEditor*> textAnchorObjectEditor;
-    QVector<ComboBoxEditor*> graphicAlignToCornerObjectEditor;
     QVector<ComboBoxEditor*> graphicAnchorObjectEditor;
     QVector<ComboBoxEditor*> styleListObjectEditor;
     QVector<BarBtnEditor*> styleEditor;
@@ -290,7 +278,6 @@ private:
     QStringList anchorPoints;
     QStringList borderList;
     QStringList borderCorners;
-    QStringList alignToCornerList;
     QStringList anchorObjectList;
     QStringList anchorContainerList;
     QStringList fontWeights;
