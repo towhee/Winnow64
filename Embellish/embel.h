@@ -2,7 +2,8 @@
 #define EMBEL_H
 
 #include <QtWidgets>
-#include "Views/imageview.h"
+//#include "Views/imageview.h"
+//#include "Embellish/embelexport.h"
 #include "Properties/embelproperties.h"
 #include "Effects/highlighteffect.h"
 #include "Effects/graphicseffect.h"
@@ -14,7 +15,9 @@ class Embel : public QObject
     Q_OBJECT
 
 public:
-    Embel(ImageView *iv, EmbelProperties *p);
+    Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem, EmbelProperties *p);
+//    Embel(ImageView *gv, EmbelProperties *p);
+//    Embel(EmbelExport *ee, EmbelProperties *p);
     ~Embel();
     void updateBorder(int i);
     void updateText(int i);
@@ -30,11 +33,19 @@ public:
 
 public slots:
     void build();
+    void buildForExport();
     void clear();
     void flashObject(QString type = "", int index = 0, bool show = false);
 
+signals:
+    void done();
+
 private:
-    ImageView *iv;
+    QGraphicsScene *scene;
+    QGraphicsPixmapItem *pmItem;
+//    QGraphicsView *gv;
+//    ImageView *gv;
+//    EmbelExport *ee;
     EmbelProperties *p;
 
     enum zLevel {
@@ -62,6 +73,7 @@ private:
         QPoint tl, tc, tr, cl, cc, cr, bl, bc, br;
     } ;
     Image image;
+    qreal imageAspect;
 
     // Border canvas pixel coordinates
     struct Border {

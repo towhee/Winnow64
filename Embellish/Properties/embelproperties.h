@@ -126,7 +126,8 @@ protected:
 private:
     void initialize();
     void renameSettingKey(QString path, QString oldName, QString newName);
-    void updateBorderLists();
+    void updateBorderLists(int row);
+    void updateAnchorObjects(int deletedRow);
     void readTemplateList();
     void readTileList();
     void readTile(QStringList tileName);

@@ -57,9 +57,18 @@ This function positions the zoom dialog in the lower center of the central widge
     // c = centralWidget->geometry();
     int w = width();        // width of this dialog
     int h = height();       // height of this dialog
-    // anchor point = center of app and bottom central widget
-    QPoint anchor = a.topLeft() + QPoint(0, c.height()) + QPoint(a.width() / 2, 0);
-    setGeometry(anchor.x() - w/2, anchor.y() - h, w, h);
+    int x;                  // top left coord of the zoom dialog
+    int y;                  // top left coord of the zoom dialog
+    // bottom center of the central widget
+    x = a.left() + c.left() + c.width() / 2;
+    y = a.top() + c.bottom();
+    // adjust for zoom dialog size
+    x -= w / 2;
+    y -= h;
+    setGeometry(x, y, w, h);
+//    // anchor point = center of app and bottom central widget
+//    QPoint anchor = a.topLeft() + QPoint(0, c.height()) + QPoint(a.width() / 2, 0);
+//    setGeometry(anchor.x() - w/2, anchor.y() - h, w, h);
 }
 
 void ZoomDlg::zoomChange(qreal zoom)

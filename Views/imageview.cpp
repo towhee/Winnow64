@@ -253,15 +253,17 @@ perceived scale by the user.
             setFitZoom();
         }
         scale();
+        if (G::isEmbellish) emit embellish();
     }
-    QImage im = pmItem->pixmap().toImage();
-    imAspect = qreal(im.width()) / im.height();
-    if (G::isEmbellish) emit embellish();
+//    QImage im = pmItem->pixmap().toImage();
+//    imAspect = qreal(im.width()) / im.height();
+    /*
     static int n;
     n++;
     qDebug();
     qDebug() << "#" << n << G::t1.restart() << "TIME TO LOAD" << fPath;
     qDebug();
+//    */
     return isLoaded;
 }
 
@@ -477,6 +479,18 @@ void ImageView::getScrollBarStatus()
     scrl.vMax = verticalScrollBar()->maximum();
     scrl.vVal = verticalScrollBar()->value();
     scrl.vPct = qreal(scrl.vVal - scrl.vMin) / (scrl.vMax - scrl.vMin);
+    /*
+    qDebug() << __FUNCTION__
+             << "scrl.hMin =" << scrl.hMin
+             << "scrl.hMax =" << scrl.hMax
+             << "scrl.hVal =" << scrl.hVal
+             << "scrl.vMin =" << scrl.vMin
+             << "scrl.vMax =" << scrl.vMax
+             << "scrl.vVal =" << scrl.vVal
+             << "scrl.hPct =" << scrl.hPct
+             << "scrl.vPct =" << scrl.vPct
+                ;
+//      */
 }
 
 QPointF ImageView::getScrollPct()
@@ -698,7 +712,7 @@ void ImageView::resetFitZoom()
     G::track(__FUNCTION__);
     #endif
     }
-    scene->setSceneRect(scene->itemsBoundingRect());
+    setSceneRect(scene->itemsBoundingRect());
     /*
     qDebug() << __FUNCTION__
              << "rect() =" << rect()

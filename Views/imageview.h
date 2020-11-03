@@ -10,9 +10,10 @@
 #include "Utilities/dropshadowlabel.h"
 #include "Utilities/classificationlabel.h"
 #include "Image/pixmap.h"
+#include "Embellish/embel.h"
 
-#include "Views/imagescene.h"
-#include "Effects/openglframe.h"
+//#include "Views/imagescene.h"
+//#include "Effects/openglframe.h"
 
 #include "Dialogs/patterndlg.h"
 
@@ -38,7 +39,7 @@ public:
               int classificationBadgeDiam = 0,
               int infoOverlayFontSize = 0);
 
-    OpenGLFrame *openGLFrame;
+//    OpenGLFrame *openGLFrame;
 //    ImageScene *scene;
     QGraphicsScene *scene;
 

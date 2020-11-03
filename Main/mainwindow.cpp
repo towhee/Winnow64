@@ -4741,8 +4741,9 @@ void MW::createEmbel()
     G::track(__FUNCTION__);
     #endif
     }
-    embel = new Embel(imageView, embelProperties);
+    embel = new Embel(imageView->scene, imageView->pmItem, embelProperties);
     connect(imageView, &ImageView::embellish, embel, &Embel::build);
+    connect(embel, &Embel::done, imageView, &ImageView::resetFitZoom);
 }
 
 void MW::createFSTree()
@@ -9459,28 +9460,8 @@ void MW::exportEmbel()
     G::track(__FUNCTION__);
     #endif
     }
-    QString folderPath = embelProperties->exportFolderPath;
-    QString suffix = embelProperties->exportFileType;
-    for (int row = 0; row < dm->sf->rowCount(); ++row) {
-        QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
-        QModelIndex idx = dm->sf->index(row, 0);
-        // only picks
-        if (pickIdx.data(Qt::EditRole).toString() == "true") {
-            thumbView->selectThumb(row);
-            QString fPath = idx.data(G::PathRole).toString();
-            QFileInfo fileInfo(fPath);
-            QString fName = fileInfo.baseName() + "." + suffix;
-            QString exportPath = folderPath + "/" + fName;
-            imageView->scene->clearSelection();
-            imageView->scene->setSceneRect(imageView->scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
-            QImage image(imageView->scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
-            image.fill(Qt::transparent);                                              // Start all pixels transparent
-
-            QPainter painter(&image);
-            imageView->scene->render(&painter);
-            image.save(exportPath);
-        }
-    }
+    EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
+    embelExport.exportPicks();
 }
 
 void MW::ingest()
