@@ -287,7 +287,7 @@ void EmbelProperties::newEffectActionClicked()
     if (effect == "Shadow") addShadowEffect(effectParentIdx);
 }
 
-void EmbelProperties::updateBorderLists()
+void EmbelProperties::updateBorderLists(int row)
 {
 /*
 Called from new and delete borders to rebuild the lists that have the borders
@@ -301,30 +301,94 @@ Called from new and delete borders to rebuild the lists that have the borders
     anchorObjectList.clear();
     int borderCount = model->rowCount(bordersIdx);
     for (int i = 0; i < borderCount; ++i) {
-        QString borderName = model->index(i, CapColumn, bordersIdx).data(UR_Name).toString();
+//        QString borderName = model->index(i, CapColumn, bordersIdx).data(UR_Name).toString();
+        QString borderName = "Border" + QString::number(i + 1);
         borderList << borderName;
         anchorObjectList << borderName;
     }
     anchorObjectList << "Image";
 
+    // update texts and graphics that are anchored on a border
+    updateAnchorObjects(row);
+
+}
+
+void EmbelProperties::updateAnchorObjects(int deletedRow)
+{
+/*
+When borders are created or deleted the border and anchor lists are updated.  This function
+iterates through all texts and graphics to refresh the anchorObjectList and reassign the
+anchor object if it was a border, since the border list will have changed.
+
+Note that refreshing the anchorObjectList or each text and graphic removes the previous
+selected value, so even if the anchor object remains the same it still must be reassigned.
+
+Also note that when the setValue function of the textAnchorObjectEditor and
+graphicAnchorObjectEditor trigger itemChange which in turn updates settings and local vectors.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int borderCount = model->rowCount(bordersIdx);
+
     // update texts anchor lists
     for (int i = 0; i < t.size(); ++i) {
-        QString currVal = textAnchorObjectEditor.at(i)->value();
+        QString oldAnchoName = textAnchorObjectEditor.at(i)->value();
+        // rows are zero based (o, 1, ...), border names ie Border2 are 1 based (1, 2, ...)
+        int oldAnchorRow = oldAnchoName.right(oldAnchoName.length() - 6).toInt() - 1;
         textAnchorObjectEditor.at(i)->refresh(anchorObjectList);
-
+        // refreshing anchorObjectList removes old value for the text - reassign anchor object
+        /*
         qDebug() << __FUNCTION__
-                 << "currVal =" << currVal
+                 << "TEXT ITEM #" << i
+                 << "oldAnchoName =" << oldAnchoName
+                 << "oldAnchorRow =" << oldAnchorRow
+                 << "border row deleted =" << deletedRow
                  << "anchorObjectList =" << anchorObjectList
-                 << "anchorObjectList.at(0) =" << anchorObjectList.at(0)
                     ;
-        if (anchorObjectList.contains(currVal)) textAnchorObjectEditor.at(i)->setValue(currVal);
-        else if (borderCount == 0) textAnchorObjectEditor.at(i)->setValue("Image");
-        else textAnchorObjectEditor.at(i)->setValue(anchorObjectList.at(0));
+//                  */
+        // if all borders deleted then anchor to the Image
+        if (borderCount == 0 || oldAnchoName == "Image")
+            textAnchorObjectEditor.at(i)->setValue("Image");
+        // oldAnchorRow okay if deleted row is greater than anchor row (oldAnchorRow)
+        else if (deletedRow > oldAnchorRow)
+            textAnchorObjectEditor.at(i)->setValue(oldAnchoName);
+        // deleted row <= oldAnchorRow then newRow = oldAnchorRow - 1
+        else if (deletedRow <= oldAnchorRow) {
+            QString newStr = "Border" + QString::number(oldAnchorRow);
+            textAnchorObjectEditor.at(i)->setValue(newStr);
+        }
     }
 
     // update graphics anchor lists
-    for (int i = 0; i < g.size(); ++i) {
+    for (int i = 0; i < t.size(); ++i) {
+        QString oldAnchoName = graphicAnchorObjectEditor.at(i)->value();
+        // rows are zero based (o, 1, ...), border names ie Border2 are 1 based (1, 2, ...)
+        int oldAnchorRow = oldAnchoName.right(oldAnchoName.length() - 6).toInt() - 1;
         graphicAnchorObjectEditor.at(i)->refresh(anchorObjectList);
+        // refreshing anchorObjectList removes old value for the graphic - reassign anchor object
+        /*
+        qDebug() << __FUNCTION__
+                 << "GRAPHIC ITEM #" << i
+                 << "oldAnchoName =" << oldAnchoName
+                 << "oldAnchorRow =" << oldAnchorRow
+                 << "border row deleted =" << deletedRow
+                 << "anchorObjectList =" << anchorObjectList
+                    ;
+//                  */
+        // if all borders deleted then anchor to the Image
+        if (borderCount == 0 || oldAnchoName == "Image")
+            graphicAnchorObjectEditor.at(i)->setValue("Image");
+        // oldAnchorRow okay if deleted row is greater than anchor row (oldAnchorRow)
+        else if (deletedRow > oldAnchorRow)
+            graphicAnchorObjectEditor.at(i)->setValue(oldAnchoName);
+        // deleted row <= oldAnchorRow then newRow = oldAnchorRow - 1
+        else if (deletedRow <= oldAnchorRow) {
+            QString newStr = "Border" + QString::number(oldAnchorRow);
+            graphicAnchorObjectEditor.at(i)->setValue(newStr);
+        }
     }
 }
 
@@ -472,6 +536,11 @@ void EmbelProperties::diagnostic(QModelIndex parent)
 }
 
 void EmbelProperties::rename() {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (currentIdx.parent() == templateIdx) renameCurrentTemplate();
     if (currentIdx.parent() == stylesIdx) renameCurrentStyle();
 }
@@ -1018,7 +1087,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
     QString parent = idx.parent().data(UR_Name).toString();
@@ -1106,6 +1175,8 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
 //    */
 
     if (source == "anchorObject") {
+        // called during refresh operation
+        if (v.toString() == "") return;
         qDebug() << __FUNCTION__ << "anchorObject =" << v.toString();
         setting->setValue(path, v.toString());
         t[index].anchorObject = v.toString();
@@ -1377,9 +1448,9 @@ void EmbelProperties::itemChangeBlurEffect(QVariant v, QString source, QString e
 void EmbelProperties::itemChangeSharpenEffect(QVariant v, QString source, QString effectName, QString style)
 {
     {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
     }
     QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
     qDebug() << __FUNCTION__ << path << source << v.toInt();
@@ -2666,7 +2737,7 @@ void EmbelProperties::newBorder()
     }
     int row = model->rowCount(bordersIdx);
     addBorder(row);
-    updateBorderLists();
+    updateBorderLists(row);
     if (G::isInitializing || isTemplateChange) return;
     QModelIndex idx = model->index(row, CapColumn, bordersIdx);
     selectionModel()->clear();
@@ -2712,9 +2783,9 @@ void EmbelProperties::deleteItem()
 {
 /*
 The tree header rows can contain delete buttons. All such delete operations are processed
-here. The item (row in model) has to be removed from the data model, from local vectors, scene
+here. The item (row in model) has to be removed from the data model, local vectors, scene
 items in Embel and from QSettings. Also, if it is referred to elsewhere, such as a style in a
-stylelist for a text or graphic, then the lists need to be updated.
+stylelist for a text or graphic, or an anchorObject, then the lists need to be updated.
 */
     {
     #ifdef ISDEBUG
@@ -2768,11 +2839,9 @@ stylelist for a text or graphic, then the lists need to be updated.
     }
 
     // remove from datamodel
-//    qDebug() << __FUNCTION__ << "remove from datamodel";
     model->removeRow(idx.row(), idx.parent());
 
     // remove from setting
-//    qDebug() << __FUNCTION__ << "remove from setting:" << path;
     setting->remove(path);
 
     /* rename subsequent category items ie text2, text3 ... in setting, model and vectors
@@ -2799,7 +2868,7 @@ stylelist for a text or graphic, then the lists need to be updated.
 
     /* if border deleted update lists that have borders and any anchorObjects in texts and
        graphics.  This needs to happen after all data structures have been updated.  */
-    if (parName == "Borders") updateBorderLists();
+    if (parName == "Borders") updateBorderLists(row);
 
     // update references to style
     if (parName == "Styles") {
@@ -3381,7 +3450,7 @@ void EmbelProperties::addBorder(int count)
         // start with a random color
         quint32 x = QRandomGenerator::global()->generate() * 16777215;
         i.value = "#" + QString::number(x, 16);
-        qDebug() << __FUNCTION__ << i.value;
+//        qDebug() << __FUNCTION__ << i.value;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Color;

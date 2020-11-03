@@ -34,7 +34,7 @@
 #include "Metadata/metadata.h"
 #include "Main/dockwidget.h"
 #include "Embellish/Properties/embelproperties.h"
-#include "Embellish/embelview.h"
+#include "Embellish/embelexport.h"
 #include "Embellish/embel.h"
 
 #include "Cache/mdcache.h"
@@ -819,7 +819,7 @@ private:
     IconView *gridView;
     TableView *tableView;
     ImageView *imageView;
-    EmbelView *embelView;
+    EmbelExport *embelExport;
     EmbelProperties *embelProperties;
     QFrame *embelFrame;
     Embel *embel;

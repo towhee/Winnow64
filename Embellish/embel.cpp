@@ -1,14 +1,15 @@
 #include "embel.h"
 //#include "Effects/effect.h"       // temp to test
 
-Embel::Embel(ImageView *iv, EmbelProperties *p)
+Embel::Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem, EmbelProperties *p)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    this->iv = iv;
+    this->scene = scene;
+    this->pmItem = pmItem;
     this->p = p;
     flashItem = new QGraphicsRectItem;
 }
@@ -26,13 +27,13 @@ void Embel::exportImage()
     #endif
     }
     qDebug() << __FUNCTION__;
-    iv->scene->clearSelection();
-    iv->scene->setSceneRect(iv->scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
-    QImage image(iv->scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
+    scene->clearSelection();
+    scene->setSceneRect(scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
+    QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
     image.fill(Qt::transparent);                                              // Start all pixels transparent
 
     QPainter painter(&image);
-    iv->scene->render(&painter);
+    scene->render(&painter);
     image.save("d:/pictures/test/out/test.tif");
 }
 
@@ -120,11 +121,16 @@ void Embel::test()
 void Embel::doNotEmbellish()
 {
     clear();
-    iv->loadImage(iv->currentImagePath);
+//    gv->loadImage(gv->currentImagePath);
 }
 
 void Embel::clear()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // remove borders
     for (int i = bItems.size() - 1; i >= 0; --i) {
         removeBorder(i);
@@ -146,7 +152,7 @@ void Embel::clear()
     gItems.clear();
 
     // remove flashItem
-    iv->scene->removeItem(flashItem);
+    scene->removeItem(flashItem);
 }
 
 void Embel::build()
@@ -168,18 +174,29 @@ void Embel::build()
     createTexts();
     createGraphics();
     borderImageCoordinates();
-    iv->setSceneRect(0, 0, w, h);
+    qDebug() << __FUNCTION__ << w << h;
+    scene->setSceneRect(0, 0, w, h);
     addBordersToScene();
     addImageToScene();
     addTextsToScene();
     addGraphicsToScene();
     addFlashToScene();
-    iv->resetFitZoom();
+    emit done();        //    gv->resetFitZoom();
 //    diagnostic();
+}
+
+void Embel::buildForExport()
+{
+
 }
 
 void Embel::fitAspect(double aspect, Hole &size)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (aspect > 1) size.h = static_cast<int>(qRound(size.w / aspect));
     else size.w = static_cast<int>(size.h * aspect);
 }
@@ -209,7 +226,8 @@ void Embel::borderImageCoordinates()
         hole.wb += horBorders;
         hole.hb += verBorders;
     }
-    fitAspect(iv->imAspect, hole);
+    imageAspect = static_cast<double>(pmItem->pixmap().width()) / pmItem->pixmap().height();
+    fitAspect(imageAspect, hole);
     /*
     qDebug() << __FUNCTION__
              << "hole =" << a
@@ -280,6 +298,11 @@ QPoint Embel::canvasCoord(double x, double y,
 /*
 Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     /*
     qDebug() << __FUNCTION__
              << "x =" << x
@@ -350,6 +373,11 @@ Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
 
 QPoint Embel::anchorPointOffset(QString anchorPoint, int w, int h)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
 //    qDebug() << __FUNCTION__ << anchorPoint << w << h;
     int w2 = static_cast<int>(w/2);
     int h2 = static_cast<int>(h/2);
@@ -388,6 +416,11 @@ illusion of border margins using the painters algorithm.
 
 void Embel::createTexts()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < p->t.size(); ++i) {
         QGraphicsTextItem *item = new QGraphicsTextItem;
         item->setToolTip("Text" + QString::number(i));
@@ -397,6 +430,11 @@ void Embel::createTexts()
 
 void Embel::createGraphics()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < p->g.size(); ++i) {
         QGraphicsPixmapItem *item = new QGraphicsPixmapItem;
         item->setToolTip("Graphic" + QString::number(i));
@@ -415,7 +453,7 @@ void Embel::addBordersToScene()
     }
     for (int i = 0; i < b.size(); ++i) {
         updateBorder(i);
-        iv->scene->addItem(bItems[i]);
+        scene->addItem(bItems[i]);
         /*
         qDebug() << __FUNCTION__
                  << i
@@ -427,9 +465,14 @@ void Embel::addBordersToScene()
 
 void Embel::addTextsToScene()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     for (int i = 0; i < p->t.size(); ++i) {
         updateText(i);
-        iv->scene->addItem(tItems[i]);
+        scene->addItem(tItems[i]);
     }
 }
 
@@ -442,7 +485,7 @@ void Embel::addGraphicsToScene()
     }
     for (int i = 0; i < p->g.size(); ++i) {
         updateGraphic(i);
-        iv->scene->addItem(gItems[i]);
+        scene->addItem(gItems[i]);
     }
 }
 
@@ -454,23 +497,33 @@ void Embel::addImageToScene()
     #endif
     }
     // scale the image to fit inside the borders
-    QPixmap pm = iv->pmItem->pixmap().scaledToWidth(image.w);
+    QPixmap pm = pmItem->pixmap().scaledToWidth(image.w);
     // add the image to the scene
-    iv->pmItem->setPixmap(pm);
+    pmItem->setPixmap(pm);
     // move the image to center in the borders
-    iv->pmItem->setPos(image.tl);
-    iv->pmItem->setZValue(ZImage);
+    pmItem->setPos(image.tl);
+    pmItem->setZValue(ZImage);
 
     updateImage();
 }
 
 void Embel::addFlashToScene()
 {
-    iv->scene->addItem(flashItem);
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    scene->addItem(flashItem);
 }
 
 void Embel::updateBorder(int i)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     bItems[i]->setRect(0, 0, b[i].w, b[i].h);
     QColor color;
     QPen pen;
@@ -504,6 +557,11 @@ void Embel::updateBorder(int i)
 
 void Embel::updateText(int i)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // if a text entry
     if (p->t[i].source == "Text") {
         tItems[i]->setPlainText(p->t[i].text);
@@ -606,21 +664,31 @@ void Embel::updateGraphic(int i)
 
 void Embel::updateImage()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // graphics effects
     if (p->image.style != "No style" && p->image.style != "") {
         GraphicsEffect *effect = new GraphicsEffect();
         effect->set(p->styleMap[p->image.style],
                 p->globalLightDirection,
                 0,
-                iv->pmItem->pixmap().rect());
-        iv->pmItem->setGraphicsEffect(effect);
+                pmItem->pixmap().rect());
+        pmItem->setGraphicsEffect(effect);
     }
 }
 
 void Embel::removeBorder(int i)
 {
-    if (iv->scene->items().contains(bItems[i]))
-        iv->scene->removeItem(bItems[i]);
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (scene->items().contains(bItems[i]))
+        scene->removeItem(bItems[i]);
     if (bItems.contains(bItems[i])) {
         delete bItems[i];
         bItems.removeAt(i);
@@ -630,15 +698,25 @@ void Embel::removeBorder(int i)
 
 void Embel::removeText(int i)
 {
-    iv->scene->removeItem(tItems[i]);
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    scene->removeItem(tItems[i]);
     delete tItems[i];
     tItems.removeAt(i);
 }
 
 void Embel::removeGraphic(int i)
 {
-    if (iv->scene->items().contains(gItems[i]))
-        iv->scene->removeItem(gItems[i]);
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (scene->items().contains(gItems[i]))
+        scene->removeItem(gItems[i]);
     if (gItems.contains(gItems[i])) {
         delete gItems[i];
         gItems.removeAt(i);
@@ -649,6 +727,11 @@ void Embel::removeGraphic(int i)
 
 void Embel::updateStyle(QString style)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // update any borders with this style
     for (int i = 0; i < bItems.size(); ++i) {
         if (p->b[i].style == style) updateBorder(i);
@@ -670,6 +753,11 @@ void Embel::updateStyle(QString style)
 
 void Embel::flashObject(QString type, int index, bool show)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     flashItem->setVisible(show);
     if (!show) return;
     if (type == "border") {
@@ -709,13 +797,13 @@ void Embel::diagnostic()
     }
 
     qDebug().noquote()
-            << "Scene total items =" << iv->scene->items().count();
-    for (int i = 0; i < iv->scene->items().count(); ++i) {
+            << "Scene total items =" << scene->items().count();
+    for (int i = 0; i < scene->items().count(); ++i) {
         qDebug().noquote()
-             << "tooltip =" << iv->scene->items().at(i)->toolTip()
-             << "type =" << iv->scene->items().at(i)->type()
-             << "pos =" << iv->scene->items().at(i)->pos()
-             << "iv->scene->items().at(i) =" << iv->scene->items().at(i)
+             << "tooltip =" << scene->items().at(i)->toolTip()
+             << "type =" << scene->items().at(i)->type()
+             << "pos =" << scene->items().at(i)->pos()
+             << "iv->scene->items().at(i) =" << scene->items().at(i)
                 ;
     }
 

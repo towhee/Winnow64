@@ -25,6 +25,7 @@ HEADERS += Cache/imagecache.h \
    Effects/interpolate.h \
    Effects/openglframe.h \
    Effects/shadowtest.h \
+   Embellish/embelexport.h \
    Views/imagescene.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
@@ -111,6 +112,7 @@ SOURCES += Cache/imagecache.cpp \
    Effects/effects.cpp \
    Effects/openglframe.cpp \
    Effects/shadowtest.cpp \
+   Embellish/embelexport.cpp \
    Views/imagescene.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
