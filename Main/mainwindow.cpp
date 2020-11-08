@@ -209,6 +209,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     isShift = false;
     if (QGuiApplication::queryKeyboardModifiers()) {
         isShift = true;
+        G::isEmbellish = false;
         qDebug() << __FUNCTION__ << "isShift == true";
     }
 
@@ -269,6 +270,12 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
 
     // intercept events to thumbView to monitor splitter resize of thumbDock
     qApp->installEventFilter(this);
+
+    // if isShift then set "Do not Embellish"
+    if (isShift) {
+        embelTemplatesActions.at(0)->setChecked(true);
+        embelProperties->doNotEmbellish();
+    }
 
     // if previous sort was not by filename then sort
     sortReverseAction->setChecked(setting->value("sortReverse").toBool());
@@ -2737,6 +2744,12 @@ void MW::createActions()
     addAction(embelNewTemplateAction);
     connect(embelNewTemplateAction, &QAction::triggered, this, &MW::newEmbelTemplate);
 
+    embelTileAction = new QAction(tr("Extract tile"), this);
+    embelTileAction->setObjectName("embelExportAct");
+    embelTileAction->setShortcutVisibleInContextMenu(true);
+    addAction(embelTileAction);
+    connect(embelTileAction, &QAction::triggered, this, &MW::exportEmbel);
+
     embelExportAction = new QAction(tr("Export"), this);
     embelExportAction->setObjectName("embelExportAct");
     embelExportAction->setShortcutVisibleInContextMenu(true);
@@ -3329,6 +3342,7 @@ void MW::createMenus()
     embelGroupAct->setMenu(embelMenu);
     embelMenu->addAction(embelNewTemplateAction);
     embelMenu->addAction(embelExportAction);
+    embelMenu->addAction(embelTileAction);
     embelMenu->addSeparator();
     embelMenu->addActions(embelGroupAction->actions());
 //    // add 10 dummy menu items for embellish template choice
@@ -3349,21 +3363,6 @@ void MW::createMenus()
     viewMenu->addAction(fullScreenAction);
     viewMenu->addAction(escapeFullScreenAction);
     viewMenu->addSeparator();
-
-    /*
-    if (!hideEmbellish) {
-    embelMenu = viewMenu->addMenu(tr("&Embellish"));
-        embelMenu->addAction(newEmbelTemplateAction);
-        embelMenu->addSeparator();
-        // add 10 dummy menu items for embellish template choice
-        for (int i = 0; i < 10; i++) {
-            embelMenu->addAction(embelTemplatesActions.at(i));
-            if (i == 0) viewMenu->addSeparator();
-        }
-        connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
-    viewMenu->addSeparator();
-    }
-*/
     viewMenu->addAction(ratingBadgeVisibleAction);
     viewMenu->addAction(infoVisibleAction);
     viewMenu->addAction(infoSelectAction);
@@ -9460,8 +9459,12 @@ void MW::exportEmbel()
     G::track(__FUNCTION__);
     #endif
     }
-    EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
-    embelExport.exportPicks();
+    if (thumbView->isPick()) {
+        EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
+        embelExport.exportPicks();
+    }
+    else QMessageBox::information(this,
+         "Oops", "There are no picks to export.    ", QMessageBox::Ok);
 }
 
 void MW::ingest()

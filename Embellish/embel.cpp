@@ -121,7 +121,6 @@ void Embel::test()
 void Embel::doNotEmbellish()
 {
     clear();
-//    gv->loadImage(gv->currentImagePath);
 }
 
 void Embel::clear()
@@ -169,25 +168,21 @@ void Embel::build()
         doNotEmbellish();
         return;
     }
+    qDebug() << __FUNCTION__;
     clear();
     createBorders();
     createTexts();
     createGraphics();
     borderImageCoordinates();
-    qDebug() << __FUNCTION__ << w << h;
     scene->setSceneRect(0, 0, w, h);
     addBordersToScene();
     addImageToScene();
     addTextsToScene();
     addGraphicsToScene();
     addFlashToScene();
-    emit done();        //    gv->resetFitZoom();
+
+    emit done();    // call imageView->resetFitZoom() (not req'd when exporting)
 //    diagnostic();
-}
-
-void Embel::buildForExport()
-{
-
 }
 
 void Embel::fitAspect(double aspect, Hole &size)
@@ -409,7 +404,8 @@ illusion of border margins using the painters algorithm.
         Border x;
         b << x;
         QGraphicsRectItem *item = new QGraphicsRectItem;
-        item->setToolTip("Border" + QString::number(i));
+        item->setToolTip(p->b[i].name);
+//        item->setToolTip("Border" + QString::number(i));
         bItems << item;
     }
 }
@@ -532,6 +528,7 @@ void Embel::updateBorder(int i)
     bItems[i]->setPen(pen);
     color.setNamedColor(p->b[i].color);
     // tile or color background
+//    qDebug() << __FUNCTION__ << i << "p->b[i].tile =" << p->b[i].tile << p->b[i].tile.isEmpty();
     if (p->b[i].tile.isEmpty()) {
         bItems[i]->setBrush(color);
     }
@@ -571,7 +568,7 @@ void Embel::updateText(int i)
         tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate));
     }
     QFont font(p->t[i].font);
-    int fontSize = static_cast<int>(p->t[i].size/* / 100*/ * ls);
+    int fontSize = static_cast<int>(p->t[i].size / 100 * ls);
 //        qDebug() << __FUNCTION__ << "fontSize =" << fontSize;
     font.setPixelSize(fontSize);
     font.setItalic(p->t[i].isItalic);

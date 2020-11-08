@@ -674,6 +674,13 @@ private:
     QAction *sortFocalLengthAction;
     QAction *sortTitleAction;
 
+    // Embellish
+    QAction *embelNewTemplateAction;
+    QAction *embelExportAction;
+    QAction *embelTileAction;
+    QActionGroup *embelGroupAction;
+    QList<QAction *> embelTemplatesActions;
+
     // View Menu
     QActionGroup *centralGroupAction;
     QAction *asGridAction;
@@ -684,10 +691,6 @@ private:
     QAction *randomImageAction; // req'd by slideshow
     QAction *fullScreenAction;
     QAction *escapeFullScreenAction;
-    QAction *embelNewTemplateAction;
-    QAction *embelExportAction;
-    QActionGroup *embelGroupAction;
-    QList<QAction *> embelTemplatesActions;
     QAction *ratingBadgeVisibleAction;
     QAction *infoVisibleAction;
     QAction *infoSelectAction;

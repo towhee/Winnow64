@@ -3,9 +3,11 @@
 
 #include <QWidget>
 #include <QLabel>
+#include <QProgressBar>
 #include <QGridLayout>
 #include <QPropertyAnimation>
 #include <QTimer>
+//#include "Main/global.h"
 
 class PopUp : public QWidget
 {
@@ -22,7 +24,11 @@ public:
     void setPopUpSize(int w, int h);
     void setPopupText(const QString& text); // Setting text notification
     void setPopupAlignment(Qt::Alignment);
+    void setProgressVisible(bool isVisible);
+    void setProgressMax(int maxProgress);
+    void setProgress(int progress);
     QLabel label;
+    QProgressBar progressBar;
 
 protected:
     void paintEvent(QPaintEvent *event);    // The background will be drawn through the redraw method
@@ -35,12 +41,8 @@ public slots:
               int msDuration = 1000,
               bool isAutoSize = true,
               float opacity = 0.75,
-              Qt::Alignment alignment = Qt::AlignHCenter);                            /* own widget displaying method
-                                             * It is necessary to pre-animation settings
-                                             * */
-    void hide();                            /* At the end of the animation, it is checked in a given slot,
-                                             * Does the widget visible, or to hide
-                                             * */
+              Qt::Alignment alignment = Qt::AlignHCenter);
+    void hide();
 
 private slots:
     void hideAnimation();                   // Slot start the animation hide
@@ -52,6 +54,7 @@ private:
     Qt::Alignment popupAlignment;
     QTimer *timer;
     int popupDuration = 2000;
+    bool isProgressBar = false;
     QString popupText;
     QWidget *source;
 };

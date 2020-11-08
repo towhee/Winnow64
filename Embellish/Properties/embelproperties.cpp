@@ -13,7 +13,7 @@ contained in ImageView.
 Thus the embellish information is maintained in three information structures:
 
 - QSettings         Save and load data between sessions
-- DataModel         The property editor treeview
+- Model             The property editor treeview (for one template + Styles)
 - Local structs     Embel GraphicsView
 
 QSettings structure:
@@ -37,9 +37,6 @@ Embel
                 ...
             Texts
                 Text1
-                ...
-            Rectangles
-                Rectangle1
                 ...
             Graphics
                 Graphic1
@@ -239,7 +236,7 @@ void EmbelProperties::initialize()
 
     copyAction = new QAction(tr("Copy"), this);
     addAction(copyAction);
-    connect(copyAction, &QAction::triggered, this, &EmbelProperties::copy);
+    connect(copyAction, &QAction::triggered, this, &EmbelProperties::copyTemplate);
 
     separatorAction1 = new QAction(this);
     separatorAction1->setSeparator(true);
@@ -455,9 +452,10 @@ void EmbelProperties::diagnosticVectors()
     for (int i = 0; i < b.length(); ++i) {
         qDebug().noquote()
             << i << " "
+//            << "order =" << b[i].order
             << "name =" << b[i].name
-            << "caption =" << b[i].caption
-            << "parent =" << b[i].parent
+//            << "caption =" << b[i].caption
+//            << "parent =" << b[i].parent
             << "top =" << b[i].top
             << "left =" << b[i].left
             << "right =" << b[i].right
@@ -520,7 +518,7 @@ void EmbelProperties::diagnostic(QModelIndex parent)
     #endif
     }
     // model
-    for(int r = 0; r < model->rowCount(bordersIdx); ++r) {
+    for (int r = 0; r < model->rowCount(parent); ++r) {
         QModelIndex idx0 = model->index(r, CapColumn, parent);
         QModelIndex idx1 = model->index(r, ValColumn, parent);
         QString p = parent.data(UR_Name).toString();
@@ -542,19 +540,20 @@ void EmbelProperties::rename() {
     #endif
     }
     if (currentIdx.parent() == templateIdx) renameCurrentTemplate();
+    if (currentIdx == templateIdx) renameCurrentTemplate();
     if (currentIdx.parent() == stylesIdx) renameCurrentStyle();
 }
 
 void EmbelProperties::copy() {
-
+    // contextmenu placeholder
 }
 
 void EmbelProperties::moveUp() {
-
+    // contextmenu placeholder
 }
 
 void EmbelProperties::moveDown() {
-
+    // contextmenu placeholder
 }
 
 void EmbelProperties::renameSettingKey(QString path, QString oldName, QString newName)
@@ -628,6 +627,7 @@ void EmbelProperties::renameCurrentTemplate()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     QString name = Utilities::inputText("Rename Template",
                                         "Rename template " + templateName,
                                         templateList);
@@ -640,6 +640,10 @@ void EmbelProperties::renameCurrentTemplate()
 
 void EmbelProperties::setCurrentTemplate()
 {
+/*
+Sets the current template to templateName, which must be asigned before calling this function.
+The templatePath and isCurrent are defined. The template is selected.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -653,13 +657,41 @@ void EmbelProperties::setCurrentTemplate()
         if (isCurrent) templateId = i;
         templatePath = "Embel/Templates/" + templateName + "/";
     }
+    templateListEditor->setValue(templateName);
+
 //    qDebug() << __FUNCTION__ << templateId << templateName << templatePath;
+}
+
+void EmbelProperties::sortTemplateList()
+{
+/*
+The sort order of the templateList has "Do not Embellish" first, followed by the template
+items in alphabetical order. The template items are read from settings to a temp list, sorted,
+and then appended to templateList.
+
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (templateList.length() < 2) return;
+    QStringList list;
+    for (int i = 1; i < templateList.length(); ++i) {
+        list << templateList.at(i);
+    }
+    list.sort(Qt::CaseInsensitive);
+    templateList.clear();
+    templateList << "Do not Embellish" << list;
 }
 
 void EmbelProperties::readTemplateList()
 {
 /*
-Read the template list using QSettings
+Read the template list using QSettings.  The sort order of the templateList has "Do not
+Embellish" first, followed by the template items in alphabetical order.  The template items
+are read from settings to a temp list, sorted, and then appended to templateList.
+
 */
     {
     #ifdef ISDEBUG
@@ -677,10 +709,13 @@ Read the template list using QSettings
         setting->setValue("Do not Embellish/isCurrent", true);
     }
     else {
+        // build list of templates
         for (int i = 0; i < setting->childGroups().count(); ++i) {
             if (setting->childGroups().at(i) != "Do not Embellish")
                 templateList << setting->childGroups().at(i);
         }
+        sortTemplateList();
+       // determine which template is current
         for (int i = 1; i < templateList.size(); ++i) {
             QString t = templateList.at(i);
             QString path = t + "/isCurrent";
@@ -694,6 +729,51 @@ Read the template list using QSettings
     templatePath = "Embel/Templates/" + templateName + "/";
     if (templateId == 0) G::isEmbellish = false;
     else G::isEmbellish = true;
+}
+
+QString EmbelProperties::uniqueTemplateName(QString name)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    setting->beginGroup("Embel/Templates");
+    QStringList keys = setting->childGroups();
+    setting->endGroup();
+    bool nameExists = true;
+    QString newName = name;
+    int count = 0;
+    while (nameExists) {
+        if (keys.contains(newName)) newName = name + QString::number(++count);
+        else nameExists = false;
+    }
+    return newName;
+}
+
+void EmbelProperties::copyTemplate()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString path = "Embel/Templates/" + templateName + "/";
+    QString copyName = uniqueTemplateName(templateName + " copy");
+    qDebug() << __FUNCTION__ << copyName;
+    QString copyPath = "Embel/Templates/" + copyName + "/";
+    setting->beginGroup(path);
+    QStringList keys = setting->allKeys();
+    setting->endGroup();
+    for (int i = 0; i < keys.length(); ++i) {
+        QString key = path + keys.at(i);
+        setting->setValue(copyPath + keys.at(i), setting->value(key));
+    }
+    templateList << copyName;
+    sortTemplateList();
+    templateListEditor->refresh(templateList);
+    templateName = copyName;
+    templateListEditor->setValue(templateName);
 }
 
 void EmbelProperties::readTileList()
@@ -766,8 +846,133 @@ void EmbelProperties::invokeFromAction(QAction *embelAction)
     }
 }
 
-void EmbelProperties::updateEffectOrder(QStandardItem *styleItem, int row, int swapRow)
+void EmbelProperties::doNotEmbellish()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    templateListEditor->setValue("Do not Embellish");
+}
+
+void EmbelProperties::swapBorders(QStandardItem *borders, int row, int swapRow)
+{
+/*
+When borders are swapped to change their order 3 separate data structures must be kept in sync:
+model (properties tree), settings (persistent data between sessions) and border vector (a
+vector of Border more convenient to use than model).
+
+The model border items are swapped using QStandardItem::sortChildren, based on UR_SortOrder.
+
+The border vector is rebuilt using syncBorderVector.
+
+The sortOrder is updated in settings.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // swap the current row with the one above
+    QStandardItem *item = borders->child(row);
+    QStandardItem *swapItem = borders->child(swapRow);
+    int swapOrder = swapItem->data(UR_SortOrder).toInt();
+    int thisOrder = item->data(UR_SortOrder).toInt();
+
+    // update model
+    swapItem->setData(thisOrder, UR_SortOrder);
+    item->setData(swapOrder, UR_SortOrder);
+
+    // sort model
+    borders->sortChildren(Qt::AscendingOrder);
+
+    // sync border vector with model
+    syncBorderVector();
+
+    // update order in settings
+    QString borderPath = "Embel/Templates/" + templateName + "/Borders/";
+    for (int i = 0; i < borders->rowCount(); ++i) {
+        QString borderName = borders->child(i)->data(Qt::DisplayRole).toString();
+        QString key = borderPath + borderName + "/sortOrder";
+        setting->setValue(key, i);
+    }
+
+    // refresh the graphicsScene
+    e->build();
+}
+
+void EmbelProperties::moveBorderUp()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    BarBtn *btn = qobject_cast<BarBtn*>(sender());
+    QModelIndex idx = btn->index;
+    if (!idx.isValid()) return;
+
+    // get current row for this index as it may have been sorted already
+    QString borderName = btn->name;
+    QStandardItem *borders = new QStandardItem;
+    borders = model->itemFromIndex(idx.parent());
+    int row;
+    for (row = 0; row < borders->rowCount(); ++row) {
+        QString sortedItemName = borders->child(row)->data(Qt::DisplayRole).toString();
+        // if found border then break at this row
+        if (sortedItemName == borderName) break;
+    }
+    if (row == 0) return;
+
+    // swap the current row with the one above
+    int swapRow = row - 1;
+    swapBorders(borders, row, swapRow);
+}
+
+void EmbelProperties::moveBorderDown()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    BarBtn *btn = qobject_cast<BarBtn*>(sender());
+    QModelIndex idx = btn->index;
+    if (!idx.isValid()) return;
+
+    // get current row for this index as it may have been sorted already
+    QString borderName = btn->name;
+    QStandardItem *borders = new QStandardItem;
+    borders = model->itemFromIndex(idx.parent());
+    int row;
+    for (row = 0; row < borders->rowCount(); ++row) {
+        QString sortedItemName = borders->child(row)->data(Qt::DisplayRole).toString();
+        // if found border then break at this row
+        if (sortedItemName == borderName) break;
+    }
+    if (row == borders->rowCount() - 1) return;
+
+    // swap the current row with the one above
+    int swapRow = row + 1;
+    swapBorders(borders, row, swapRow);
+}
+
+void EmbelProperties::swapEffects(QStandardItem *styleItem, int row, int swapRow)
+{
+/*
+A style may contain multiple effects, and the effect order can be changed using the up and
+down arrow command buttons (moveEffectUp and moveEffectDown). When the order is changed, the
+settings, model (tree) and styleMap must be updated. When the model is saved to settings the
+various items order is not maintained, so the last sort order must be re-established after the
+settings have been read, based on the setting sortOrder. This is done in sortEffectList, which
+is called by addStyle, using the model role UR_SortOrder. The sorting is accomplished using
+QStandardItem::sortChildren. styleItem is the parent and the effects are the children being
+sorted.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -830,7 +1035,7 @@ void EmbelProperties::moveEffectUp()
     QModelIndex idx = btn->index;
     if (!idx.isValid()) return;
 
-    // get current row for this index as it may have been sorted
+    // get current row for this index as it may have been sorted already
     QString effectName = btn->name;
     qDebug() << __FUNCTION__ << effectName;
     QStandardItem *styleItem = new QStandardItem;
@@ -844,7 +1049,7 @@ void EmbelProperties::moveEffectUp()
 
     // swap the current row with the one above
     int swapRow = row - 1;
-    updateEffectOrder(styleItem, row, swapRow);
+    swapEffects(styleItem, row, swapRow);
 
     return;
 }
@@ -879,9 +1084,36 @@ void EmbelProperties::moveEffectDown()
 
     // swap the current row with the one above
     int swapRow = row + 1;
-    updateEffectOrder(styleItem, row, swapRow);
+    swapEffects(styleItem, row, swapRow);
 
     return;
+}
+
+void EmbelProperties::syncBorderVector()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    for (int i = 0; i < model->rowCount(bordersIdx); ++i) {
+        QModelIndex bIdx = model->index(i, 0, bordersIdx);
+        b[i].name = bIdx.data(UR_Name).toString();
+        b[i].top = getItemValue("topMargin", bIdx).toDouble();
+        b[i].left = getItemValue("leftMargin", bIdx).toDouble();
+        b[i].right = getItemValue("rightMargin", bIdx).toDouble();
+        b[i].bottom = getItemValue("bottomMargin", bIdx).toDouble();
+        QString tile = getItemValue("tile", bIdx).toString();
+        if (tile == "Do not tile") b[i].tile.clear();
+        else b[i].tile = setting->value("Embel/Tiles/" + tile).toByteArray();
+        b[i].color = getItemValue("color", bIdx).toString();
+        b[i].opacity = getItemValue("opacity", bIdx).toDouble();
+        b[i].style = getItemValue("style", bIdx).toString();
+    }
+
+//    std::sort(b.begin(), b.end(),
+//              [](Border const &l, Border const &r) {
+//              return l.order < r.order; });
 }
 
 void EmbelProperties::sortEffectList(QString style)
@@ -965,6 +1197,7 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << v;
     isTemplateChange = true;
     templateName = v.toString();
 
@@ -1145,6 +1378,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
 
     if (source == "opacity") {
         setting->setValue(path, v.toInt());
+        qDebug() << __FUNCTION__ << index;
         b[index].opacity = v.toInt();
     }
 
@@ -1176,10 +1410,12 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
 
     if (source == "anchorObject") {
         // called during refresh operation
-        if (v.toString() == "") return;
-        qDebug() << __FUNCTION__ << "anchorObject =" << v.toString();
-        setting->setValue(path, v.toString());
-        t[index].anchorObject = v.toString();
+        QString anchorObject = v.toString();
+        if (anchorObject == "") return;
+        setting->setValue(path, anchorObject);
+        t[index].anchorObject = anchorObject;
+
+        // show/hide the container row
         int row = idx.row();
         // also hidden on creation using updateHiddenRows(QModelIndex parent)
         if (v.toString() == "Image") {
@@ -1249,9 +1485,8 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
     }
 
     if (source == "size") {
-        double x = v.toDouble() / 100;
-        qDebug() << __FUNCTION__ << "size" << x;
-        setting->setValue(path, x);
+        setting->setValue(path, v);
+        double x = v.toDouble();
         t[index].size = x;
     }
 
@@ -1557,16 +1792,11 @@ void EmbelProperties::addTemplateHeader()
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
 
-//    BarBtn *templateRenameBtn = new BarBtn();
-//    templateRenameBtn->setIcon(":/images/icon16/delta.png", G::iconOpacity);
-//    templateRenameBtn->setToolTip("Rename the selected template");
-//    btns.append(templateRenameBtn);
-//    connect(templateRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentTemplate);
     BarBtn *templateDeleteBtn = new BarBtn();
     templateDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     templateDeleteBtn->setToolTip("Delete the selected template");
     btns.append(templateDeleteBtn);
-    connect(templateDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::test2);
+    connect(templateDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteTemplate);
     BarBtn *templateNewBtn = new BarBtn();
     templateNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
     templateNewBtn->setToolTip("Create a new template");
@@ -1619,7 +1849,6 @@ void EmbelProperties::addTemplateItems()
     addExport();
     addBorders();
     addTexts();
-//    addRectangles();
     addGraphics();
 }
 
@@ -1875,12 +2104,50 @@ void EmbelProperties::addBorders()
     addItem(i);
     bordersIdx = capIdx;
 
+    // item reqd to sort borders after they have been read from settings
+    QStandardItem *borders = new QStandardItem;
+    borders = model->itemFromIndex(bordersIdx);
+
     QString path = templatePath + "/Borders";
-//    qDebug() << __FUNCTION__ << path;
     setting->beginGroup(path);
     int count = setting->childGroups().size();
     setting->endGroup();
     for (int i = 0; i < count; ++i) newBorder();
+
+    // sort the borders
+    borders->sortChildren(Qt::AscendingOrder);
+    syncBorderVector();
+
+    for (int row = 0; row < model->rowCount(bordersIdx); ++row) {
+        QModelIndex bIdx = model->index(row, 0, bordersIdx);
+        /*
+        qDebug() << __FUNCTION__ << "DATA MODEL AND B VECTOR"
+                 << "row =" << row
+                 << "name =" << bIdx.data(UR_Name).toString()
+                 << "order =" << bIdx.data(UR_SortOrder).toInt()
+                 << "\t b[row].name = " << b[row].name
+                    ;
+//                    */
+    }
+    /*
+    qDebug() << __FUNCTION__ << "BORDER VECTOR";
+    for (int i = 0; i < b.length(); ++i) {
+        qDebug().noquote()
+            << i << " "
+//            << "order =" << b[i].order
+            << "name =" << b[i].name
+//            << "caption =" << b[i].caption
+//            << "parent =" << b[i].parent
+            << "top =" << b[i].top
+            << "left =" << b[i].left
+            << "right =" << b[i].right
+            << "bottom =" << b[i].bottom
+            << "tile =" << b[i].tile
+            << "color =" << b[i].color
+            << "opacity =" << b[i].opacity
+            << "style =" << b[i].style;
+    }
+//    */
 }
 
 void EmbelProperties::addTexts()
@@ -1984,7 +2251,6 @@ void EmbelProperties::addGraphics()
     QString path = templatePath + "/Graphics";
     setting->beginGroup(path);
     int count = setting->childGroups().size();
-    qDebug() << __FUNCTION__ << path << "count =" << count;
     setting->endGroup();
     for (int i = 0; i < count; ++i) newGraphic();
 }
@@ -2049,12 +2315,6 @@ void EmbelProperties::addStyle(QString name, int n)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-//    BarBtn *styleRenameBtn = new BarBtn();
-//    styleRenameBtn->setObjectName(styleName);
-//    styleRenameBtn->setIcon(":/images/icon16/delta.png", G::iconOpacity);
-//    styleRenameBtn->setToolTip("Rename this style");
-//    btns.append(styleRenameBtn);
-//    connect(styleRenameBtn, &BarBtn::clicked, this, &EmbelProperties::renameCurrentStyle);
     styleDeleteBtn = new BarBtn();
     styleDeleteBtn->setObjectName(styleName);
     styleDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
@@ -2099,7 +2359,48 @@ void EmbelProperties::addStyle(QString name, int n)
     sortEffectList(styleName);
 }
 
-void EmbelProperties::addEffectHeaderButtons()
+void EmbelProperties::addBorderHeaderButtons()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    effectUpBtn = new BarBtn();
+    effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
+    effectUpBtn->setToolTip("Move border up");
+    effectUpBtn->name = i.name;
+    effectUpBtn->parName = i.parentName;
+    effectUpBtn->type = "border";
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectUpBtn);
+    connect(effectUpBtn, &BarBtn::clicked, this, &EmbelProperties::moveBorderUp);
+    effectDownBtn = new BarBtn();
+    effectDownBtn->setIcon(":/images/icon16/down.png", G::iconOpacity);
+    effectDownBtn->setToolTip("Move border down");
+    effectDownBtn->name = i.name;
+    effectDownBtn->parName = i.parentName;
+    effectDownBtn->type = "border";
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectDownBtn);
+    connect(effectDownBtn, &BarBtn::clicked, this, &EmbelProperties::moveBorderDown);
+    effectDeleteBtn = new BarBtn();
+    effectDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
+    effectDeleteBtn->setToolTip("Delete this effect");
+    effectDeleteBtn->name = i.name;
+    effectDeleteBtn->parName = i.parentName;
+    effectDeleteBtn->type = "border";
+    // btn vector used in BarBtnEditor to show button in tree
+    btns.append(effectDeleteBtn);
+    connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
+    // add to model, where capIdx is defined
+    addItem(i);
+    effectUpBtn->index = capIdx;
+    effectDownBtn->index = capIdx;
+    effectDeleteBtn->index = capIdx;
+}
+
+void EmbelProperties::addEffectBtns()
 {
     {
     #ifdef ISDEBUG
@@ -2185,7 +2486,7 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
         setting->setValue(key, i.sortOrder);
     }
     effect.effectOrder = i.sortOrder;
-    addEffectHeaderButtons();
+    addEffectBtns();
     parIdx = capIdx;
 
     // blur radius
@@ -2209,7 +2510,8 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
+    i.max = 10000;
+    i.div = 100;
     i.fixedWidth = 50;
     effect.blur.radius = i.value.toDouble();
     addItem(i);
@@ -2286,7 +2588,7 @@ void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
         setting->setValue(key, i.sortOrder);
     }
     effect.effectOrder = i.sortOrder;
-    addEffectHeaderButtons();
+    addEffectBtns();
     parIdx = capIdx;
 
     // sharpen radius
@@ -2310,7 +2612,8 @@ void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
+    i.max = 10000;
+    i.div = 100;
     i.fixedWidth = 50;
     effect.sharpen.radius = i.value.toDouble();
     addItem(i);
@@ -2387,7 +2690,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
         setting->setValue(key, i.sortOrder);
     }
     effect.effectOrder = i.sortOrder;
-    addEffectHeaderButtons();
+    addEffectBtns();
 //    addItem(i);
     parIdx = capIdx;
 
@@ -2621,7 +2924,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
         setting->setValue(key, i.sortOrder);
     }
     effect.effectOrder = i.sortOrder;
-    addEffectHeaderButtons();
+    addEffectBtns();
 //    addItem(i);
     parIdx = capIdx;
 
@@ -2643,7 +2946,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Slider;
-    i.type = "double";
+    i.type = "int";
     i.min = 0;
     i.max = 30;
 //    i.fixedWidth = 50;
@@ -2779,6 +3082,27 @@ void EmbelProperties::newGraphic()
     e->build();
 }
 
+void EmbelProperties::deleteTemplate()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int ret = (QMessageBox::warning(this, "Delete Template", "Confirm delete template " + templateName + "                     ",
+                             QMessageBox::Cancel | QMessageBox::Ok));
+    if (ret == QMessageBox::Cancel) return;
+
+    QString pathToDelete = "Embel/Templates/" + templateName;
+    qDebug() << __FUNCTION__ << pathToDelete;
+
+    // remove from tree combo list
+    templateList.removeOne(templateName);
+    templateListEditor->removeItem(templateName);
+    // remove from settings
+    setting->remove(pathToDelete);
+}
+
 void EmbelProperties::deleteItem()
 {
 /*
@@ -2804,6 +3128,7 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
     else {
         idx = btn->index;
     }
+    qDebug() << __FUNCTION__ << idx.data().toString();
     if (!idx.isValid()) return;
 
     int row = idx.row();
@@ -2913,12 +3238,14 @@ QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QSt
     #endif
     }
 //    using namespace winnow_effects;
+    /*
     qDebug();
     qDebug() << __FUNCTION__
              << "styleName =" << styleName
              << "effectType =" << effectType
              << "effectName =" << effectName
                 ;
+//                */
     // effects in style
     int effectCount = 0;
     for (int i = 0; i < styleMap[styleName].length(); ++i) {
@@ -2932,8 +3259,10 @@ QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QSt
                     ;
     }
     if (effectCount > 0) effectName += QString::number(effectCount);
+    /*
     qDebug() << __FUNCTION__ << "New effectName =" << effectName;
     qDebug();
+//    */
     return effectName;
 }
 
@@ -2959,6 +3288,11 @@ int EmbelProperties::effectIndex(QString style, QString effectName)
 
 void EmbelProperties::flash(QModelIndex idx)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString type;
     if (idx.parent() == bordersIdx) type = "border";
     if (idx.parent() == textsIdx) type = "text";
@@ -2968,6 +3302,11 @@ void EmbelProperties::flash(QModelIndex idx)
 
 void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QModelIndex idx = indexAt(event->pos());
     idx = model->index(idx.row(), ValColumn, idx.parent());
     setItemValue(idx, idx.data(UR_DelegateType).toInt(), idx.data(UR_DefaultValue));
@@ -3005,9 +3344,17 @@ decoration is clicked.
 
         QModelIndex idx = indexAt(event->pos());
         currentIdx = model->index(idx.row(), 0, idx.parent());
+        /*
+        qDebug() << __FUNCTION__
+                 << currentIdx.data().toString()
+                 << currentIdx.parent().data().toString()
+                 << templateIdx.data().toString()
+                    ;
+//                    */
 
-        if (currentIdx.parent() == templateIdx) {
+        if (currentIdx.parent() == templateIdx || currentIdx == templateIdx) {
             renameAction->setVisible(true);
+            copyAction->setVisible(true);
         }
 
         if (currentIdx.parent() == stylesIdx) {
@@ -3220,44 +3567,38 @@ void EmbelProperties::solo()
 
 void EmbelProperties::test1()
 {
-    QModelIndex tParIdx = model->index(0, 0, textsIdx);
-    QModelIndex idxCap = model->index(0, 0, tParIdx);
-    QModelIndex idxVal = model->index(0, 1, tParIdx);
-    qDebug() << __FUNCTION__
-             << idxCap.data().toString()
-             << idxVal.data().toString()
-                ;
-    setItemValue(idxVal, DT_Combo, "Image");
-    qDebug() << __FUNCTION__
-             << idxCap.data().toString()
-             << idxVal.data().toString()
-                ;
-    return;
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
 
-    e->diagnostic();
-    qDebug();
-    qDebug() << __FUNCTION__ << "\nClear()";
-    e->clear();
-    e->diagnostic();
-
-//    qDebug() << __FUNCTION__;
-//    diagnosticVectors();
-
-//    e->test();
-//    e->exportImage();
-//    QModelIndex root = model->invisibleRootItem()->index();
-//    QModelIndex templateIdx = model->index(0, 0, root);
-//    QModelIndex idx = model->index(0, 0, templateIdx);
-//    QModelIndex idx1 = model->index(1, 0, templateIdx);
-
-//    qDebug() << __FUNCTION__ << templateIdx.data() << idx.data() << idx1.data();
-//    setRowHidden(2, templateIdx, true);
-
+    QString t = templateName;
+    sortTemplateList();
+    templateListEditor->refresh(templateList);
+    qDebug() << __FUNCTION__ << templateName;
+    templateListEditor->setValue(t);
 }
 
 void EmbelProperties::test2()
 {
-    diagnosticStyles();
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    BarBtn *btn = qobject_cast<BarBtn*>(sender());
+    int ret = (QMessageBox::warning(this, "Delete Template", "Confirm delete template " + templateName + "                     ",
+                             QMessageBox::Cancel | QMessageBox::Ok));
+    if (ret == QMessageBox::Cancel) return;
+
+    QString pathToDelete = "Embel/Templates/" + templateName;
+    qDebug() << __FUNCTION__ << pathToDelete;
+
+    // remove from tree combo list
+    templateListEditor->removeItem(templateName);
+    // remove from settings
+    setting->remove(pathToDelete);
 }
 
 void EmbelProperties::coordHelp()
@@ -3289,8 +3630,8 @@ void EmbelProperties::addBorder(int count)
     // subheader for this border
     i.isHeader = true;
     i.isDecoration = true;
-    i.itemIndex = count;
     i.name = borderName;
+    i.itemIndex = count;
     i.parIdx = bordersIdx;
     i.parentName = "Borders";
     i.path = templatePath + "Borders/" + borderName;
@@ -3299,15 +3640,27 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.delegateType = DT_BarBtns;
-    borderDeleteBtn = new BarBtn();
-    borderDeleteBtn->setObjectName(borderName);
-    borderDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
-    borderDeleteBtn->setToolTip("Delete this border");
-    btns.append(borderDeleteBtn);
-    connect(borderDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
-    addItem(i);
+    // get sort order for this border
+    QString key = i.path + "/sortOrder";
+    if (setting->contains(key)) {
+        i.sortOrder = setting->value(key).toInt();
+    }
+    else {
+        i.sortOrder = model->rowCount(bordersIdx);
+        setting->setValue(key, i.sortOrder);
+    }
+    // get itemIndex for this border
+//    key = i.path + "/itemIndex";
+//    if (setting->contains(key)) {
+//        i.itemIndex = setting->value(key).toInt();
+//    }
+//    else {
+//        i.itemIndex = uniqueItemIndex(bordersIdx);
+//        setting->setValue(key, i.itemIndex);
+//    }
+    // add buttons and addItem
+    addBorderHeaderButtons();
     QModelIndex parIdx = capIdx;
-    borderDeleteBtn->index = capIdx;
 
     i.name = "topMargin";
     i.parIdx = parIdx;
@@ -3634,7 +3987,8 @@ void EmbelProperties::addText(int count)
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
+    i.max = 10000;
+    i.div = 100;
     i.fixedWidth = 50;
     text.x = i.value.toDouble();
     addItem(i);
@@ -3658,7 +4012,8 @@ void EmbelProperties::addText(int count)
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
+    i.max = 10000;
+    i.div = 100;
     i.fixedWidth = 50;
     text.y = i.value.toDouble();
     addItem(i);
@@ -3681,11 +4036,11 @@ void EmbelProperties::addText(int count)
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Slider;
-    i.type = "double";
+    i.type = "int";
     i.min = -360;
     i.max = 360;
     i.fixedWidth = 50;
-    text.rotation = i.value.toDouble();
+    text.rotation = i.value.toInt();
     addItem(i);
 
     i.name = "source";
@@ -3898,9 +4253,9 @@ void EmbelProperties::addText(int count)
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType =  DT_Slider;
+    i.type = "int";
     i.min = 0;
     i.max = 100;
-    i.type = "int";
     text.opacity = i.value.toInt();
     addItem(i);
 
@@ -4080,7 +4435,8 @@ void EmbelProperties::addGraphic(int count)
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
+    i.max = 10000;
+    i.div = 100;
     i.fixedWidth = 50;
     graphic.x = i.value.toDouble();
     addItem(i);
@@ -4104,7 +4460,8 @@ void EmbelProperties::addGraphic(int count)
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 100;
+    i.max = 10000;
+    i.div = 100;
     i.fixedWidth = 50;
     graphic.y = i.value.toDouble();
     addItem(i);
@@ -4129,7 +4486,8 @@ void EmbelProperties::addGraphic(int count)
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 25;
+    i.max = 2500;
+    i.div = 100;
     i.fixedWidth = 50;
     graphic.size = i.value.toDouble();
     addItem(i);
@@ -4152,11 +4510,11 @@ void EmbelProperties::addGraphic(int count)
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Slider;
-    i.type = "double";
+    i.type = "int";
     i.min = -360;
     i.max = 360;
     i.fixedWidth = 50;
-    graphic.rotation = i.value.toDouble();
+    graphic.rotation = i.value.toInt();
     addItem(i);
 
     i.name = "opacity";

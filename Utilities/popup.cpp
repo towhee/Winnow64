@@ -5,17 +5,17 @@
 #include <QDebug>
 
 /*
-This class shows a pop up message for a given time with an assigned transparency.  The
-default time is 1000 ms and the default transparency is 75%.
+This class shows a pop up message for a given time with an assigned transparency. The default
+time is 1000 ms and the default transparency is 75%.
 
 The widget will autosize to fit the text message if isAutoSize is true.
 
 If there are a series of progress messages (example loading filters) then use the first
-message to set the size and then set isAutoSize = false and setPopupText to change the
-text while keeping the pop up box size constant.
+message to set the size and then set isAutoSize = false and setPopupText to change the text
+while keeping the pop up box size constant.
 
-In Winnow an instance of this class is created in global so that it is available to all
-parts of the program.  It is created once in MW::initialize.
+In Winnow an instance of this class is created in global so that it is available to all parts
+of the program. It is created once in MW::initialize.
 */
 
 PopUp::PopUp(QWidget *source, QWidget *parent) : QWidget(parent)
@@ -34,19 +34,25 @@ PopUp::PopUp(QWidget *source, QWidget *parent) : QWidget(parent)
 //    label.setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 //    label.setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
     label.setTextFormat(Qt::RichText);
-    label.setStyleSheet("QLabel { color : white; "
-                        "font-size: 16px;"
-                        "margin-top: 10px;"
-                        "margin-bottom: 10px;"
-                        "margin-left: 10px;"
-                        "margin-right: 10px; }");
-
+    label.setStyleSheet(
+        "QLabel "
+        "{"
+            "color : white; "
+            "font-size: 16px;"
+            "margin-top: 10px;"
+            "margin-bottom: 10px;"
+            "margin-left: 10px;"
+            "margin-right: 10px; "
+        "}"
+    );
+    setProgressVisible(false);
+    progressBar.setTextVisible(false);
     layout.addWidget(&label, 0, 0);
+    layout.addWidget(&progressBar, 1, 0);
     setLayout(&layout);
 
     timer = new QTimer();
     connect(timer, &QTimer::timeout, this, &PopUp::hide);
-//    connect(timer, &QTimer::timeout, this, &PopUp::hideAnimation);
 }
 
 void PopUp::paintEvent(QPaintEvent *event)
@@ -94,14 +100,15 @@ void PopUp::showPopup(const QString &text,
     label.setAlignment(alignment/* | Qt::AlignVCenter*/);
     label.setText(popupText);
     if (isAutoSize) adjustSize();               // With the recalculation notice sizes
-
-//    if (popupDuration > 0) {
-//        setWindowOpacity(0.0);                  // Set the transparency to zero
-//        animation.setDuration(150);             // Configuring the duration of the animation
-//        animation.setStartValue(0.0);           // The start value is 0 (fully transparent widget)
-//        animation.setEndValue(popupOpacity);    // End - completely opaque widget
-//    }
-//    else setWindowOpacity(popupOpacity);
+    /*
+    if (popupDuration > 0) {
+        setWindowOpacity(0.0);                  // Set the transparency to zero
+        animation.setDuration(150);             // Configuring the duration of the animation
+        animation.setStartValue(0.0);           // The start value is 0 (fully transparent widget)
+        animation.setEndValue(popupOpacity);    // End - completely opaque widget
+    }
+    else setWindowOpacity(popupOpacity);
+//    */
     setWindowOpacity(static_cast<double>(popupOpacity));
 
     int pW = width();
@@ -141,6 +148,46 @@ void PopUp::hideAnimation()
 void PopUp::hide()
 {
     QWidget::hide();
+}
+
+void PopUp::setProgressVisible(bool isVisible)
+{
+    if (isVisible) {
+        progressBar.setStyleSheet(
+            "QProgressBar"
+            "{"
+                "border: 1px solid black;"
+                "background-color: #202020;"
+                "margin-bottom: 6px;"
+            "}"
+            "QProgressBar::chunk"
+            "{"
+                "background-color: cadetblue;"
+            "}"
+        );
+        progressBar.setMaximumHeight(20);
+    }
+    else {
+        progressBar.setStyleSheet(
+            "QProgressBar"
+            "{"
+                "border: 1px solid grey;"
+                "margin-bottom: 0px;"
+            "}"
+        );
+        progressBar.setMaximumHeight(0);
+        progressBar.setValue(0);
+    }
+}
+
+void PopUp::setProgressMax(int maxProgress)
+{
+    progressBar.setMaximum(maxProgress);
+}
+
+void PopUp::setProgress(int progress)
+{
+    progressBar.setValue(progress);
 }
 
 void PopUp::setPopupAlignment(Qt::Alignment alignment)

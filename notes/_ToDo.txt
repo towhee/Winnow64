@@ -1,17 +1,17 @@
 BUGS
+- Propeties selection (torquise) not always updating
+- Slider tweak
+_ Thumbs have vertical scrollbar
+- rename style has bugs - fixed??
+- When close in grid mode does not reop prop when close in view mode
 - x, y coord should register real numbers
 - Bookmark count not refresh when filecount changes
 - Grid does not always stretch to fit central widget
 - Change sort direction can crash
 - when grabbing tile make sure imageview at 100%
-- move embellish to separate menu
 - move styles to separate property editor?
-- relocate light direction
-- make header caption entire width and value zero width
 - update and refresh text metadata templates
 - drag n drop border and style effects order
-- values outside slider range
-- rename style has bugs - fixed??
 - update when change global font size and background shade
 
 - DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
@@ -41,6 +41,10 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- relocate light direction
+- values outside slider range
+- make header caption entire width and value zero width
+- move embellish to separate menu
 - fix indent symbol alignment in properties tree
 - Shift Ctrl 0 not working on PC
 - Tile extractor

@@ -898,12 +898,6 @@ void IconView::selectThumb(QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << idx;
-//    G::t1.restart();
-//    qDebug();
-//    qDebug() << __FUNCTION__ << "New thumb selected:" << dm->sf->index(idx.row(), G::NameColumn).data();
-//    qDebug() << G::t.elapsed() << G::t.restart() << "\t" << __FUNCTION__ << 1;
-
     if (idx.isValid()) {
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
