@@ -38,10 +38,7 @@ public:
     Image image;
 
     struct Border {
-        int index;
         QString name;
-        QString caption;
-        QString parent;
         double top;
         double left;
         double right;
@@ -104,6 +101,7 @@ public:
     QMap<QString, QList<winnow_effects::Effect>> styleMap;
 
     void newEmbelTemplate();
+    void doNotEmbellish();
     QString metaString(QString key);
     void test1();
     void test2();
@@ -128,12 +126,15 @@ private:
     void renameSettingKey(QString path, QString oldName, QString newName);
     void updateBorderLists(int row);
     void updateAnchorObjects(int deletedRow);
+    void sortTemplateList();
     void readTemplateList();
     void readTileList();
     void readTile(QStringList tileName);
     void renameCurrentStyle();
     void renameCurrentTemplate();
     void setCurrentTemplate();
+    void copyTemplate();
+    QString uniqueTemplateName(QString name);
 
     void addTemplateHeader();
     void addTemplateItems();
@@ -159,21 +160,22 @@ private:
     void newGraphic();
     void newStyle();
 
-    void deleteTremplate();
-    void deleteBorder();
-    void deleteText();
-    void deleteRectangle();
-    void deleteGraphic();
+    void deleteTemplate();
     void deleteItem();
 
     void flash(QModelIndex idx);
     // redirect from action to relevent function (use currentIdx)
     void rename();
-    void copy();
     void moveUp();
     void moveDown();
+    void copy();
 
-    void updateEffectOrder(QStandardItem *styleItem, int row, int swapRow);
+    void swapBorders(QStandardItem *borders, int row, int swapRow);
+    void moveBorderUp();
+    void moveBorderDown();
+    void syncBorderVector();
+
+    void swapEffects(QStandardItem *styleItem, int row, int swapRow);
     void moveEffectUp();
     void moveEffectDown();
     void sortEffectList(QString style);
@@ -244,7 +246,8 @@ private:
 
     bool isTemplateChange = false;
 
-    void addEffectHeaderButtons();
+    void addBorderHeaderButtons();
+    void addEffectBtns();
     BarBtn *borderDeleteBtn;
     BarBtn *textDeleteBtn;
     BarBtn *rectangleDeleteBtn;

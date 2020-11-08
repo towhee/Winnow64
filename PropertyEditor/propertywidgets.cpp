@@ -35,6 +35,9 @@ the slider range.
 When a real value is required, the range is increased by factor "div" and the lineEdit
 shows the slider value divided by "div".  The value in the lineEdit is returned as the
 sliderEditor value.
+
+Integer mode: div == 0
+Double mode : div != 0
 */
     {
     #ifdef ISDEBUG
@@ -46,7 +49,9 @@ sliderEditor value.
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
     // divisor if converting integer slider value to double
-    div = idx.data(UR_Div).toDouble();
+    div = idx.data(UR_Div).toInt();
+    QString type = idx.data(UR_Type).toString();
+    type == "int" || div == 0 ? isInt = true : isInt = false;
     if (div == 0) div = 1;
     source = idx.data(UR_Source).toString();
 
@@ -69,8 +74,6 @@ sliderEditor value.
     lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none;}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
-//    QValidator *validator = new QIntValidator(min, max, this);
-//    lineEdit->setValidator(validator);
 
     connect(slider, &QSlider::valueChanged, this, &SliderEditor::change);
     connect(slider, &QSlider::sliderMoved, this, &SliderEditor::sliderMoved);
@@ -83,7 +86,7 @@ sliderEditor value.
     setLayout(layout);
 
     outOfRange = false;
-    double sliderValue = idx.data(Qt::EditRole).toInt() * div;
+    int sliderValue = static_cast<int>(idx.data(Qt::EditRole).toDouble() * div);
     slider->setValue(sliderValue);
     emit slider->valueChanged(sliderValue);
 }
@@ -106,7 +109,7 @@ void SliderEditor::setValue(QVariant value)
     G::track(__FUNCTION__);
     #endif
     }
-    slider->setValue(value.toDouble());
+    slider->setValue(value.toInt());
 }
 
 void SliderEditor::sliderMoved()
@@ -128,18 +131,8 @@ void SliderEditor::change(double value)
     }
     if (outOfRange) return;
     double v = static_cast<double>(value) / div;
-    /*
-    qDebug() << __FUNCTION__
-             << "value =" << value
-             << "div =" << div
-             << "v =" << v;
-//             */
-    bool isInt = (v - static_cast<int>(v)) == 0;
-//    qDebug() << __FUNCTION__ << v << isInt;
-    if (div == 1 && isInt)
-        lineEdit->setText(QString::number(v));
-    else
-        lineEdit->setText(QString::number(v, 'f', 2));
+    if (isInt) lineEdit->setText(QString::number(v));
+    else lineEdit->setText(QString::number(v, 'f', 2));
     emit editorValueChanged(this);
 }
 
@@ -150,17 +143,17 @@ void SliderEditor::updateSliderWhenLineEdited()
     G::track(__FUNCTION__);
     #endif
     }
-    double v = lineEdit->text().toDouble() * div;
-    if (v >= slider->minimum() && v <= slider->maximum()) {
+    int sliderValue = static_cast<int>(lineEdit->text().toDouble() * div);
+    if (sliderValue >= slider->minimum() && sliderValue <= slider->maximum()) {
         outOfRange = false;
-        slider->setValue(v);
-        slider->setValue(static_cast<int>(v));
+        slider->setValue(sliderValue);
+        slider->setValue(static_cast<int>(sliderValue));
         return;
     }
     outOfRange = true;
-    if (v < slider->minimum()) slider->setValue(slider->minimum());
+    if (sliderValue < slider->minimum()) slider->setValue(slider->minimum());
     else slider->setValue(slider->maximum());
-    emit editorValueChanged(this);
+//    emit editorValueChanged(this);
 }
 
 void SliderEditor::paintEvent(QPaintEvent *event)
@@ -629,7 +622,7 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     comboBox->view()->setPalette(view_palette);
 
     comboBox->setWindowFlags(Qt::FramelessWindowHint);
-//    comboBox->setAttribute(Qt::WA_TranslucentBackground);
+    comboBox->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     connect(comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             [=](int index){change(index);});
@@ -955,6 +948,7 @@ SelectFolderEditor::SelectFolderEditor(const QModelIndex &idx, QWidget *parent) 
                             "}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
+    lineEdit->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     btn = new BarBtn;
     btn->setText("...");
@@ -1035,6 +1029,7 @@ SelectFileEditor::SelectFileEditor(const QModelIndex &idx, QWidget *parent) : QW
                             "}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
+    lineEdit->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     btn = new BarBtn;
     btn->setText("...");

@@ -59,8 +59,6 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     indentation = 15;
     setIndentation(indentation);
 
-
-//    model = new PropertyModel;
     model = new QStandardItemModel;
     model->setColumnCount(3);
     model->setSortRole(UR_SortOrder);
@@ -147,12 +145,66 @@ void PropertyEditor::updateHiddenRows(QModelIndex parent)
     }
 }
 
+int PropertyEditor::uniqueItemIndex(QModelIndex parentIdx)
+{
+/*
+Creates a unique number, starting at 100, for the row in the model for the given parent.  This
+is used to find the item when it has been moved.  For example, if the item is one of a list of
+borders which can contain texts, then the ItemIndex can be assigned to the text, and it can be
+associated with the correct border even when the border is resorted.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int index = 100;
+    while (true) {
+        bool matchFound = false;
+        for (int row = 0; row < model->rowCount(parentIdx); ++row) {
+            QModelIndex idx = model->index(row, 0, parentIdx);
+            // match found, keep trying
+            if (idx.data(UR_ItemIndex) == index) {
+                matchFound = true;
+                break;
+            }
+        }
+        if (!matchFound) return index;
+        index++;
+    }
+}
+
+QModelIndex PropertyEditor::getItemIndex(int index, QModelIndex parentIdx)
+{
+/*
+Returns the QModelIndex for the ItemIndex.  See PropertyEditor::uniqueItemIndex.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    for (int row = 0; row < model->rowCount(parentIdx); ++row) {
+        QModelIndex idx = model->index(row, 0, parentIdx);
+        if (idx.data(UR_ItemIndex) == index) return idx;
+    }
+    // return invalid index if not found
+    return QModelIndex();
+}
+
 QModelIndex PropertyEditor::findIndex(QString name)
 {
     QModelIndex start = model->index(0,0,QModelIndex());
     QModelIndexList list = model->match(start, UR_Name, name, 1, Qt::MatchExactly | Qt::MatchRecursive);
     if (list.size() > 0) return list.at(0);
     else return QModelIndex();
+}
+
+QVariant PropertyEditor::getItemValue(QString name, QModelIndex parent)
+{
+    getIndex(name, parent);
+    QModelIndex idx = model->index(foundIdx.row(), ValColumn, foundIdx.parent());
+    return idx.data();
 }
 
 bool PropertyEditor::getIndex(QString searchName, QModelIndex parent)
@@ -166,13 +218,14 @@ in the model.
     for(int r = 0; r < model->rowCount(parent); ++r) {
         QModelIndex idx0 = model->index(r, 0, parent);
         QString name = model->data(idx0, UR_Name).toString();
-        qDebug() << __FUNCTION__ << searchName << name;
         if (name == searchName) {
             foundIdx = idx0;
+            /*
             qDebug() << __FUNCTION__
                      << "found" << idx0
                      << "name =" << name
                         ;
+//                        */
             return true;
         }
         // iterate children
@@ -187,7 +240,9 @@ QWidget*  PropertyEditor::addItem(ItemInfo &i)
 {
 /*
 Adds a row to the properties tree (model).  The necessary elements of the ItemInfo struct are
-supplied by the calling function.
+supplied by the calling function.  Each row has two columns: caption and value.  The caption is
+a description of the value.  The value is a propertyWidget custom editor (ComboBoxEditor,
+SliderEditor, LineEditor etc).
 */
     {
     #ifdef ISDEBUG
@@ -195,12 +250,11 @@ supplied by the calling function.
     #endif
     }
     int row;
-//   capIdx;                                        // caption field defined in header file
-//   valIdx;                                        // value field defined in header
+    // capIdx defined in header file
+    // valIdx defined in header file
     QModelIndex parIdx = QModelIndex();             // parent caption field
     QStandardItem *capItem = new QStandardItem;
     QStandardItem *valItem = new QStandardItem;
-//    QStandardItem *ordItem = new QStandardItem;
     QStandardItem *parItem = new QStandardItem;
     parItem = nullptr;
 
@@ -217,33 +271,25 @@ supplied by the calling function.
         // First item = root
         row = model->rowCount();
         model->insertRow(row, QModelIndex());
-//        if (row == 0) model->insertRow(0, QModelIndex());
-//        else model->appendRow(capItem);
         capIdx = model->index(row, CapColumn, QModelIndex());
-//        ordIdx = model->index(row, OrdColumn, QModelIndex());
         valIdx = model->index(row, ValColumn, QModelIndex());
     }
     else {
-        // row for next child to add
-        if (i.insertRow == -1) row = model->rowCount(parIdx);
-        else row = i.insertRow;
+        row = model->rowCount(parIdx);
         if (row) {
             parItem->insertRow(row, capItem);
         }
         else {
             parItem->setChild(row, CapColumn, capItem);
             parItem->setChild(row, ValColumn, valItem);
-//            parItem->setChild(row, OrdColumn, ordItem);
         }
         capIdx = model->index(row, CapColumn, parIdx);
-//        ordIdx = model->index(row, OrdColumn, parIdx);
         valIdx = model->index(row, ValColumn, parIdx);
     }
 
     // caption
     model->setData(capIdx, i.hasValue, UR_hasValue);
     model->setData(capIdx, i.sortOrder, UR_SortOrder); // -1 if not sort
-//    if (i.sortOrder != -1) model->setData(ordIdx, i.sortOrder);
     model->setData(capIdx, i.captionIsEditable, UR_CaptionIsEditable);
     model->setData(capIdx, i.isIndent, UR_isIndent);
     model->setData(capIdx, i.isHeader, UR_isHeader);
@@ -275,7 +321,6 @@ supplied by the calling function.
     model->setData(valIdx, i.defaultValue, UR_DefaultValue);
     model->setData(valIdx, i.delegateType, UR_DelegateType);
     model->setData(valIdx, i.itemIndex, UR_ItemIndex);
-//    qDebug() << __FUNCTION__ << valIdx << i.name << i.itemIndex << valIdx.data(UR_ItemIndex);
     model->setData(valIdx, i.key, UR_Source);
     model->setData(valIdx, i.type, UR_Type);
     model->setData(valIdx, i.min, UR_Min);
@@ -324,13 +369,12 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.type = "";                    // except hdr
     i.min = 0;                      // DT_Spinbox, DT_Slider
     i.max = 0;                      // DT_Spinbox, DT_Slider
-    i.div = 1;                      // DT_Slider
+    i.div = 0;                      // DT_Slider (zero == int, nonzero = double)
     i.fixedWidth = 50;              // DT_Slider
     i.dropList.clear();             // DT_Combo
     i.color = QColor(G::textShade,G::textShade,G::textShade).name();
     i.index = QModelIndex();
     i.parIdx = QModelIndex();
-    i.insertRow = -1;               // if -1 then append, else insert at this row
 }
 
 void PropertyEditor::getItemInfo(QModelIndex &idx, ItemInfo &copy)
@@ -364,7 +408,6 @@ void PropertyEditor::getItemInfo(QModelIndex &idx, ItemInfo &copy)
     copy.color = model->data(valIdx, UR_Color).toString();
     copy.index = capIdx;
     copy.parIdx = capIdx.parent();
-    copy.insertRow = -1;
 }
 
 void PropertyEditor::setItemValue(QModelIndex idx, int type, QVariant value)
@@ -487,4 +530,63 @@ void PropertyEditor::resizeColumns(QString stringToFitCaptions, QString stringTo
 void PropertyEditor::setSolo(bool isSolo)
 {
     this->isSolo = isSolo;
+}
+
+void PropertyEditor::diagnosticProperties(QModelIndex parent)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__ << "PROPERTIES MODEL\n";
+    // model
+    for (int r = 0; r < model->rowCount(parent); ++r) {
+        QModelIndex idx0 = model->index(r, CapColumn, parent);
+        QModelIndex idx1 = model->index(r, ValColumn, parent);
+        QString p = parent.data(UR_Name).toString();
+        QString n = idx0.data(UR_Name).toString();
+        QVariant v = idx1.data(Qt::EditRole);
+        QString s = idx0.data(UR_Source).toString();
+        qDebug().noquote() << "Caption UR_Name                    " << idx0.data(UR_Name).toString();
+        qDebug().noquote() << "Caption Parent                     " << parent.data(UR_Name).toString();
+        qDebug().noquote() << "Caption UR_Source                  " << idx0.data(UR_Source).toString();
+        qDebug().noquote() << "Caption UR_Path                    " << idx0.data(UR_Path).toString();
+        qDebug().noquote() << "Caption UR_ItemIndex               " << idx0.data(UR_ItemIndex).toString();
+        qDebug().noquote() << "Caption Qt::ToolTipRole            " << idx0.data(Qt::ToolTipRole).toString();
+        qDebug().noquote() << "Caption UR_hasValue                " << idx0.data(UR_hasValue).toString();
+        qDebug().noquote() << "Caption UR_SortOrder               " << idx0.data(UR_SortOrder).toString();
+        qDebug().noquote() << "Caption UR_CaptionIsEditable       " << idx0.data(UR_CaptionIsEditable).toString();
+        qDebug().noquote() << "Caption UR_isIndent                " << idx0.data(UR_isIndent).toString();
+        qDebug().noquote() << "Caption UR_isHeader                " << idx0.data(UR_isHeader).toString();
+        qDebug().noquote() << "Caption UR_isDecoration            " << idx0.data(UR_isDecoration).toString();
+        qDebug().noquote() << "Caption UR_isBackgroundGradient    " << idx0.data(UR_isBackgroundGradient).toString();
+        qDebug().noquote() << "Caption UR_isHidden                " << idx0.data(UR_isHidden).toString();
+
+        qDebug().noquote() << "Value   Qt::EditRole               " << idx1.data(Qt::EditRole).toString();
+        qDebug().noquote() << "Value   UR_DefaultValue            " << idx1.data(UR_DefaultValue).toString();
+        qDebug().noquote() << "Value   UR_Source                  " << idx1.data(UR_Source).toString();
+        qDebug().noquote() << "Value   Qt::ToolTipRole            " << idx1.data(Qt::ToolTipRole).toString();
+        qDebug().noquote() << "Value   UR_Path                    " << idx1.data(UR_Path).toString();
+        qDebug().noquote() << "Value   UR_ItemIndex               " << idx1.data(UR_ItemIndex).toString();
+        qDebug().noquote() << "Value   UR_isHeader                " << idx1.data(UR_isHeader).toString();
+        qDebug().noquote() << "Value   UR_isDecoration            " << idx1.data(UR_isDecoration).toString();
+        qDebug().noquote() << "Value   UR_isBackgroundGradient    " << idx1.data(UR_isBackgroundGradient).toString();
+        qDebug().noquote() << "Value   UR_isHidden                " << idx1.data(UR_isHidden).toString();
+        qDebug().noquote() << "Value   UR_Type                    " << idx1.data(UR_Type).toString();
+        qDebug().noquote() << "Value   UR_Min                     " << idx1.data(UR_Min).toString();
+        qDebug().noquote() << "Value   UR_Max                     " << idx1.data(UR_Max).toString();
+        qDebug().noquote() << "Value   UR_Div                     " << idx1.data(UR_Div).toString();
+        qDebug().noquote() << "Value   UR_FixedWidth              " << idx1.data(UR_FixedWidth).toString();
+        qDebug().noquote() << "Value   UR_Color                   " << idx1.data(UR_Color).toString();
+        qDebug().noquote() << "Value   UR_StringList              " << idx1.data(UR_StringList).toString();
+        qDebug().noquote() << "Value   UR_QModelIndex             " << idx1.data(UR_QModelIndex).toString();
+
+        qDebug();
+
+        // iterate children
+        if (model->hasChildren(idx0)) {
+            diagnosticProperties(idx0);
+        }
+    }
 }

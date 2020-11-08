@@ -20,7 +20,6 @@ public:
     ~EmbelExport();
 
     void exportPicks();
-    void toImage();
 
 private:
     bool loadImage(QString fPath);

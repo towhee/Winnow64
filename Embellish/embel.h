@@ -33,7 +33,6 @@ public:
 
 public slots:
     void build();
-    void buildForExport();
     void clear();
     void flashObject(QString type = "", int index = 0, bool show = false);
 
@@ -43,9 +42,6 @@ signals:
 private:
     QGraphicsScene *scene;
     QGraphicsPixmapItem *pmItem;
-//    QGraphicsView *gv;
-//    ImageView *gv;
-//    EmbelExport *ee;
     EmbelProperties *p;
 
     enum zLevel {

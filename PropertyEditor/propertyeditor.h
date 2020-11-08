@@ -65,19 +65,24 @@ public:
         QString color;
         QStringList dropList;
         QModelIndex parIdx;             // datamodel parent index for the item
-        QModelIndex index;              // index for
-        int insertRow;
-        int itemIndex;
+        QModelIndex index;
+        int itemIndex;                  // index for item (use when many items ie borders)
+        int assocIndex;                 // used for anchorObject
     };
     QWidget* addItem(ItemInfo &i); // abstract addItem
+    void copyTemplate(QString name);
+    QVariant getItemValue(QString name, QModelIndex parent);
     void setItemValue(QModelIndex idx, int type, QVariant value);
     void getItemInfo(QModelIndex &idx, ItemInfo &copy);
     void clearItemInfo(ItemInfo &i);
     void getIndexFromNameAndParent(QString name, QString parName, QModelIndex = QModelIndex());
     bool getIndex(QString caption, QModelIndex parent = QModelIndex());
     QModelIndex findIndex(QString name);
+    int uniqueItemIndex(QModelIndex parentIdx);
+    QModelIndex getItemIndex(int index, QModelIndex parentIdx);
     void updateHiddenRows(QModelIndex parent);
     QModelIndex foundIdx;
+    void diagnosticProperties(QModelIndex parent);
 
     QMap<QString, QModelIndex> sourceIdx;
 

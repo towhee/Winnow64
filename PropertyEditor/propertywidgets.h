@@ -74,6 +74,7 @@ private:
     void sliderMoved();
     void updateSliderWhenLineEdited();
     bool outOfRange;
+    bool isInt;
     int div;
     QSlider *slider;
     QLineEdit *lineEdit;
