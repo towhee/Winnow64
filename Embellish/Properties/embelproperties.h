@@ -117,7 +117,8 @@ signals:
     void templateChanged(int id);
 
 protected:
-//    void mouseMoveEvent(QMouseEvent *event) override;   // does not work here
+    void mouseMoveEvent(QMouseEvent *event) override;   // does not work here
+//    void focusInEvent(QFocusEvent  *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
 
@@ -150,6 +151,7 @@ private:
     void addStyles();
     void addStyle(QString name, int n);
     void addBlurEffect(QModelIndex parIdx, QString effectName = "");
+    void addBrightenEffect(QModelIndex parIdx, QString effectName = "");
     void addSharpenEffect(QModelIndex parIdx, QString effectName = "");
     void addHighlightEffect(QModelIndex parIdx, QString effectName = "");
     void addShadowEffect(QModelIndex parIdx, QString effectName = "");
@@ -191,6 +193,7 @@ private:
     void itemChangeBlurEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeSharpenEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeHighlightEffect(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeBrightenEffect(QVariant v, QString source, QString effectName, QString style);
     void strokeItemChange(QVariant v, QString source, QString effectName, QString style);
 
     void treeChange(QModelIndex idx);
@@ -223,6 +226,7 @@ private:
     int effectIndex(QString style, QString effectName);
 
     QMenu *effectMenu;
+    QAction *brightenEffectAction;
     QAction *shadowEffectAction;
     QAction *bevelEffectAction;
     QAction *embossEffectAction;

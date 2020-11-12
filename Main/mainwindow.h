@@ -57,6 +57,7 @@
 #include "Utilities/inputdlg.h"
 #include "progressbar.h"
 
+#include "Utilities/performance.h"
 #include "ui_helpform.h"
 #include "ui_shortcutsform.h"
 #include "ui_welcome.h"
@@ -572,6 +573,7 @@ private:
     QAction *showImageCountAction;
     QAction *runDropletAction;
     QAction *reportMetadataAction;
+    QAction *mediaReadSpeedAction;
     QAction *exitAction;
 
     // Open with menu in File menu
@@ -1015,6 +1017,7 @@ private:
     void diagnosticsZoom();
     void diagnosticsReport(QString reportString);
 
+    void mediaReadSpeed();
     void stressTest();
     void test();                    // for debugging
     template<typename T> void test2(T& io, int x);

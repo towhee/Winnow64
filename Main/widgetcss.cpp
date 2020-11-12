@@ -52,7 +52,7 @@ QString WidgetCSS::css()
             listView() +
             listWidget() +
             progressBar() +
-//            pushButton() +
+            pushButton() +
             scrollBar() +
             spinBox() +
             stackedWidget() +
@@ -511,18 +511,19 @@ QString WidgetCSS::pushButton()
     /*PushButton must be before ComboBox*/
     "QPushButton {"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
-        "border: 1px solid gray;"
+//        "border: 1px solid gray;"
         "border-radius: 2px;"
         "padding-left: 5px;"
         "padding-right: 5px;"
         "padding-top: 3px;"
         "padding-bottom: 3px;"
-//        "min-width: 100px;"
+        "min-width: 50px;"
     "}"
 
     "QPushButton:default {"
-        "border-color: rgb(225,225,225);"
-     /*   background-color: rgb(68,95,118);*/
+        "border: 1px solid gray;"
+//        "background-color: rgb(88,124,153);"
+//        "background-color: rgb(68,95,118);"
     "}"
 
     "QPushButton:pressed {"
@@ -532,7 +533,7 @@ QString WidgetCSS::pushButton()
     "}"
 
     "QPushButton:hover {"
-        "border-color: silver;"
+        "border-color: white;"
         "background-color: " + selectionColor.name() + ";"
     "}"
 

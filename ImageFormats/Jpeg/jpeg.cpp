@@ -143,6 +143,7 @@ bool Jpeg::parse(MetadataParameters &p,
     else if (segmentHash.contains("JFIF")) {
         // it's a jpg so the whole thing is the full length jpg and no other
         // metadata available
+        qDebug() << __FUNCTION__ << p.file.fileName() << "JFIF";
         m.offsetFull = 0;
         m.lengthFull = static_cast<uint>(p.file.size());
         return true;

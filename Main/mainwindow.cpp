@@ -2168,6 +2168,12 @@ void MW::createActions()
     addAction(reportMetadataAction);
     connect(reportMetadataAction, &QAction::triggered, this, &MW::reportMetadata);
 
+    mediaReadSpeedAction = new QAction(tr("Media read speed"), this);
+    mediaReadSpeedAction->setObjectName("mediaReadSpeed");
+    mediaReadSpeedAction->setShortcutVisibleInContextMenu(true);
+    addAction(mediaReadSpeedAction);
+    connect(mediaReadSpeedAction, &QAction::triggered, this, &MW::mediaReadSpeed);
+
     // Appears in Winnow menu in OSX
     exitAction = new QAction(tr("Exit"), this);
     exitAction->setObjectName("exit");
@@ -3224,6 +3230,7 @@ void MW::createMenus()
     fileMenu->addAction(collapseFoldersAction);
     fileMenu->addSeparator();
     fileMenu->addAction(reportMetadataAction);
+    fileMenu->addAction(mediaReadSpeedAction);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);    // Appears in Winnow menu in OSX
 
@@ -8395,7 +8402,6 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable |
                                QDockWidget::DockWidgetVerticalTitleBar);
-//        thumbsWrapAction->setChecked(false);
         thumbView->setWrapping(false);
 
         // if thumbDock area changed then set dock height to cell size
@@ -8406,8 +8412,8 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         // max and min cell heights (icon plus padding + name text)
         int maxHt = thumbView->iconViewDelegate->getCellSize(QSize(hMax, hMax)).height();
         int minHt = thumbView->iconViewDelegate->getCellSize(QSize(ICON_MIN, ICON_MIN)).height();
-        // plus the scroll bar
-        maxHt += G::scrollBarThickness;
+        // plus the scroll bar + 2 to make sure no vertical scroll bar is required
+        maxHt += G::scrollBarThickness + 2;
         minHt += G::scrollBarThickness;
 
         if (maxHt <= minHt) maxHt = G::maxIconSize;
@@ -8431,7 +8437,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
              << "thumbHeight =" << thumbView->thumbHeight
              << "newThumbDockHeight" << newThumbDockHeight
              << "scrollBarHeight =" << G::scrollBarThickness;
-        */
+//        */
     }
 
     /* Must be docked left or right or is floating.  Turn horizontal scrollbars off.  Turn
@@ -8442,7 +8448,6 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-//        thumbsWrapAction->setChecked(true);
         thumbView->setWrapping(true);
     }
 }
@@ -8480,6 +8485,7 @@ around lack of notification when the QListView has finished painting itself.
     #endif
     }
     G::mode = "Loupe";
+    asLoupeAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
     updateIconsVisible(false);
 
@@ -8557,6 +8563,7 @@ around lack of notification when the QListView has finished painting itself.
     #endif
     }
     G::mode = "Grid";
+    asGridAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
     updateIconsVisible(false);
 
@@ -8619,6 +8626,7 @@ void MW::tableDisplay()
     #endif
     }    
     G::mode = "Table";
+    asTableAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
     updateIconsVisible(false);
 
@@ -8695,6 +8703,7 @@ void MW::compareDisplay()
         G::track(__FUNCTION__, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     #endif
     }
+    asCompareAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
     int n = selectionModel->selectedRows().count();
     if (n < 2) {
@@ -10935,6 +10944,22 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     }
 
     return true;
+}
+
+void MW::mediaReadSpeed()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString fPath = QFileDialog::getOpenFileName(this, tr("Select file for speed test"), "/home");
+    QFile file(fPath);
+    double gbs = Performance::mediaReadSpeed(file);
+    if (static_cast<int>(gbs) == -1) return;  // err
+    QString msg = "Media read speed (Gb/sec): " + QString::number(gbs, 'f', 2) +
+                  ".     Press Esc to continue.";
+    G::popUp->showPopup(msg, 0);
 }
 
 void MW::createMessageView()

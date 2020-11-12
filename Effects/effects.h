@@ -7,33 +7,43 @@
 class Effects
 {
 public:
+    Effects();
     void blur(QImage &img, int radius);
     void blurOriginal(QImage &img, int radius);
     void raise(QImage &img, int m, double taper = 0.5, int blurWidth = 3, bool raise = false);
-    void brighten(QImage &img, int delta);
+    void brighten(QImage &img, qreal evDelta);
     QImage convolve(QImage &img, int mDim, double *matrix);
 
     void test(QImage &img);
+    void brightenPixel(QRgb &p, double deltaEv);
 
 private:
     struct Point {
         int x;
         int y;
     };
+    // Pixel ops
+
     QRgb convertToPremult(QRgb p);
     QRgb convertFromPremult(QRgb p);
-    void imageToVector(QImage &img, QVector<QVector<QRgb>> &v);
-    void vectorToImage(QImage &img, QVector<QVector<QRgb>> &v);
-    void zeroVector(QImage &img, QVector<QVector<QRgb>> &v);
-    void sumRgb(QRgb &a, QRgb &b);
-//    QImage convolve(QImage &img, int matrix_size, double *matrix);
-    void averagePixel(QVector<QVector<QRgb> > &v, const int &x, const int &y,
-                      const int &w, const int &h);
-    void blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
-                  const int &w, const int &h, const int &width);
     void swapPoints(Point &p1, Point &p2);
     void raisePixel(QVector<QVector<QRgb> > &s, const int &ground, const int &adj,
                     const int &x, const int &y, const double &blend);
+    void averagePixel(QVector<QVector<QRgb> > &v, const int &x, const int &y,
+                      const int &w, const int &h);
+    int luminosity(QRgb &p);
+//    void brightenPixel(QRgb &p, double deltaEv);
+
+    // Vector ops
+    void imageToVector(QImage &img, QVector<QVector<QRgb>> &v);
+    void vectorToImage(QImage &img, QVector<QVector<QRgb>> &v);
+    void zeroVector(QImage &img, QVector<QVector<QRgb>> &v);
+
+    // Image ops
+    void sumRgb(QRgb &a, QRgb &b);      // no function ???
+//    QImage convolve(QImage &img, int matrix_size, double *matrix);
+    void blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
+                  const int &w, const int &h, const int &width);
 
     // 3D
     typedef double
@@ -43,6 +53,11 @@ private:
     void lightVector(int azimuth, Vector &light);
     void normalize(Vector &p);
     void slopeUnitVector(Vector &a, Vector &b, int angle);
+
+    // Lookup tables
+    QMap<int, int>rgbToEv;
+    QMap<int, int>evToRgb;
+
 };
 
 #endif // EFFECTS_H

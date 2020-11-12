@@ -1705,6 +1705,19 @@
     <string>Include XMP sidecar with Winnow metadata</string>
    </property>
   </widget>
+  <widget class="QLabel" name="gbsLabel">
+   <property name="geometry">
+    <rect>
+     <x>390</x>
+     <y>820</y>
+     <width>141</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Gb/sec</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>

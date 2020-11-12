@@ -72,6 +72,10 @@ bool Pixmap::load(QString &fPath, QImage &image)
     QFile imFile(fPath);
     int dmRow = dm->fPathRow[fPath];
 
+    if (dmRow == 27) {
+        qDebug() << __FUNCTION__;
+    }
+
     QString err = dm->index(dmRow, G::ErrColumn).data().toString();
 
     // is metadata loaded
@@ -246,8 +250,11 @@ bool Pixmap::load(QString &fPath, QImage &image)
     // color manage if available
     #ifdef Q_OS_WIN
     if (G::colorManage && metadata->iccFormats.contains(ext)) {
-        ICC::setInProfile(dm->index(dmRow, G::ICCBufColumn).data().toByteArray());
-        ICC::transform(image);
+        QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
+        if (!ba.isEmpty()) {
+            ICC::setInProfile(ba);
+            ICC::transform(image);
+        }
     }
     #endif
 

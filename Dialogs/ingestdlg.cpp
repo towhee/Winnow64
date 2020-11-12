@@ -263,11 +263,12 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
     qulonglong bytes = 0;
     foreach(QFileInfo info, pickList) bytes += static_cast<qulonglong>(info.size());
     QString s1 = QString::number(fileCount);
-    QString s2 = fileCount == 1 ? " file using " : " files using ";
+    QString s2 = fileCount == 1 ? " file " : " files ";
     QString s3 = Utilities::formatMemory(bytes);
     QString s4 = "";
     if (inclDupJpg) s4 = " including duplicate jpg";
     ui->statsLabel->setText(s1 + s2 + s3 + s4);
+    ui->gbsLabel->setText("");
 }
 
 void IngestDlg::ingest()
@@ -328,12 +329,17 @@ Each picked image is copied from the source to the destination.
     // copy picked images
     ui->progressBar->setVisible(true);
     seqNum =  ui->spinBoxStartNumber->value();
+    QElapsedTimer t;
+    qint64 bytesCopied = 0;
+    t.restart();
     for (int i = 0; i < pickList.size(); ++i) {
+        qint64 fileBytesToCopy = 0;
         int progress = (i + 1) * 100 * n / (pickList.size() + 1);
         ui->progressBar->setValue(progress);
         qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
         QString sourcePath = fileInfo.absoluteFilePath();
+        fileBytesToCopy += fileInfo.size();
 
         // seqNum is required by parseTokenString
         // increase sequence unless dup (raw + jpg)
@@ -387,6 +393,7 @@ Each picked image is copied from the source to the destination.
             if (metadata->internalXmpFormats.contains(suffix)) {
                 // write xmp data into image file       rgh needs some work!!!
                 QFile newFile(destinationPath);
+                fileBytesToCopy += newFile.size();
                 newFile.open(QIODevice::WriteOnly);
                 newFile.write(buffer);
                 newFile.close();
@@ -394,6 +401,7 @@ Each picked image is copied from the source to the destination.
             else {
                 // write the sidecar xmp file
                 QFile sidecarFile(folderPath + destBaseName + ".xmp");
+                fileBytesToCopy += sidecarFile.size();
                 sidecarFile.open(QIODevice::WriteOnly);
                 sidecarFile.write(buffer);
                 sidecarFile.close();
@@ -410,7 +418,16 @@ Each picked image is copied from the source to the destination.
             QFile::copy(sourcePath, destinationPath);
             if(isBackup) QFile::copy(sourcePath, backupPath);
         }
+        if (isBackup) fileBytesToCopy *= 2;
+        bytesCopied += fileBytesToCopy;
+        double gigibitsPerSec = static_cast<double>(bytesCopied) / 131072 / t.elapsed();
+        QString gbs = QString::number(gigibitsPerSec, 'f', 2) + " Gb/sec";
+        ui->gbsLabel->setText(gbs);
     }
+    qDebug() << __FUNCTION__
+             << "bytesCopied =" << bytesCopied
+             << "msec =" << t.elapsed()
+                ;
     QDialog::accept();
 }
 

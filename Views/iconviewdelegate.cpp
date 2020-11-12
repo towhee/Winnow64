@@ -46,13 +46,59 @@ ThumbViewDelegate Anatomy:
 2 = fPadOffset + tPadOffset
 3 = frameRect.bottomLeft() - textHtOffset
 
+IconView thumbDock Anatomy
+
+
++-----------------------------------------------------------------------^-------->   ^
+|   |+------------------------------------------------------------+     |
+|   ||                                                            |
+| H ||                                                            |
+| e ||                                                            |
+| a ||                                                            |
+| d ||                                                            |
+| e ||                                                            |
+| r ||                                                            |
+|   ||                                                            |
+|   ||                                                            |
+|   ||                            Cell                            |
+|   ||                                                            |
+|   ||                                                            |
+|   ||                                                            |
+|   ||                                                            |
+|   ||                                                            |
+|   ||                                                            |
+|   ||                                                            |
+|   ||                                                            |
+|   ||                                                            |
+|   ||                                                            |
+|   ||                                                            |
+|   |+------------------------------------------------------------+
+|   |---------------------------------------------------------------------------->
+|   |
+|   |                          Horizontal Scrollbar
+|   |
++-------------------------------------------------------------------------------->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 */
 
 IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
         : isRatingBadgeVisible(isRatingBadgeVisible)
 {
     parent->isWidgetType();         // suppress compiler warning
-    fPad = 5;
+    fPad = 4;
     tPad = 4;         // allow small gap between thumb and outer border
 
     int currentWidth = 3;
@@ -213,12 +259,13 @@ int IconViewDelegate::getCellWidthFromThumbWidth(int width)
 
 int IconViewDelegate::getCellHeightFromThumbHeight(int height)
 {
-    return height + pad2 + textHeight;
+    return height + pad2 + textHeight + 2;
 }
 
-int IconViewDelegate::getCellHeightFromAvailHeight(int availHeight)
+int IconViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
 {
-    int thumbHeight = availHeight - pad2 - textHeight;
+    // used to fit thumb (icon) into the available viewport height
+    int thumbHeight = availHeight - pad2 - textHeight - 2;
     return thumbHeight <= G::maxIconSize ? thumbHeight : G::maxIconSize;
 }
 

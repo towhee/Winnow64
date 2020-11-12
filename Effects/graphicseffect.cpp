@@ -98,7 +98,7 @@ void GraphicsEffect::draw(QPainter* painter)
             blurEffect(ef.blur.radius, ef.blur.blendMode);
             break;
         case sharpen:
-            sharpenEffect(ef.blur.radius, ef.blur.blendMode);
+            sharpenEffect(ef.sharpen.radius, ef.sharpen.blendMode);
             break;
         case highlight:
             color.setRgb(ef.highlight.r, ef.highlight.g, ef.highlight.b, ef.highlight.a);
@@ -111,6 +111,10 @@ void GraphicsEffect::draw(QPainter* painter)
         case shadow:
             color.setRgb(ef.shadow.r, ef.shadow.g, ef.shadow.b, ef.shadow.a);
             shadowEffect(ef.shadow.length, ef.shadow.blurRadius, color, ef.shadow.blendMode);
+            break;
+        case brighten:
+            brightenEffect(ef.brighten.evDelta, ef.brighten.blendMode);
+            break;
         }
     }
 
@@ -167,9 +171,9 @@ void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
     QImage blurred(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     blurred = overlay;
     Effects effect;
-//    effect.blur(blurred, radius);
+    effect.blur(blurred, radius);
 
-    effect.raise(blurred, radius);
+//    effect.raise(blurred, radius);
 //    effect.brighten(blurred, static_cast<int>(radius) * 4);
 //    QImage blurred = WinnowGraphicEffect::blur(overlay, radius);
 
@@ -271,6 +275,28 @@ void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
     QPainter overlayPainter(&overlay);
     overlayPainter.setCompositionMode(mode);
     overlayPainter.drawImage(0,0, raised);
+    overlayPainter.end();
+}
+
+void GraphicsEffect::brightenEffect(qreal evDelta, QPainter::CompositionMode mode)
+{
+    if (overlay.isNull()) return;
+
+    QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    temp = overlay;
+    Effects effect;
+    qDebug() << __FUNCTION__ << "evDelta =" << evDelta;
+    effect.brighten(temp, evDelta);
+
+//    effect.raise(blurred, radius);
+//    effect.brighten(blurred, static_cast<int>(radius) * 4);
+//    QImage blurred = WinnowGraphicEffect::blur(overlay, radius);
+
+    temp.save("D:/Pictures/Temp/effect/brightened.tif");
+
+    QPainter overlayPainter(&overlay);
+    overlayPainter.setCompositionMode(mode);
+    overlayPainter.drawImage(0,0, temp);
     overlayPainter.end();
 }
 
