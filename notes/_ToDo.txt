@@ -1,10 +1,8 @@
 BUGS
 - Propeties selection (torquise) not always updating
-- Slider tweak
-_ Thumbs have vertical scrollbar
 - rename style has bugs - fixed??
+- is copy image (iconview context menu) working?
 - When close in grid mode does not reop prop when close in view mode
-- x, y coord should register real numbers
 - Bookmark count not refresh when filecount changes
 - Grid does not always stretch to fit central widget
 - Change sort direction can crash
@@ -41,6 +39,9 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- SliderEditor update and double vs int fixed
+- Thumbs sometimes have vertical scrollbar when docked at bottom
+- ICC crash if null bytearray
 - relocate light direction
 - values outside slider range
 - make header caption entire width and value zero width

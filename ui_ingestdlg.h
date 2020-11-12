@@ -84,6 +84,7 @@ public:
     QCheckBox *openIngestFolderChk;
     QCheckBox *backupChk;
     QCheckBox *includeXmpChk;
+    QLabel *gbsLabel;
 
     void setupUi(QDialog *IngestDlg)
     {
@@ -516,6 +517,9 @@ public:
         sizePolicy.setHeightForWidth(includeXmpChk->sizePolicy().hasHeightForWidth());
         includeXmpChk->setSizePolicy(sizePolicy);
         includeXmpChk->setFont(font);
+        gbsLabel = new QLabel(IngestDlg);
+        gbsLabel->setObjectName(QString::fromUtf8("gbsLabel"));
+        gbsLabel->setGeometry(QRect(390, 820, 141, 31));
 
         retranslateUi(IngestDlg);
 
@@ -709,6 +713,7 @@ public:
         openIngestFolderChk->setText(QCoreApplication::translate("IngestDlg", "Open ingest folder after ingest", nullptr));
         backupChk->setText(QCoreApplication::translate("IngestDlg", "Backup to second location while ingesting", nullptr));
         includeXmpChk->setText(QCoreApplication::translate("IngestDlg", "Include XMP sidecar with Winnow metadata", nullptr));
+        gbsLabel->setText(QCoreApplication::translate("IngestDlg", "Gb/sec", nullptr));
     } // retranslateUi
 
 };

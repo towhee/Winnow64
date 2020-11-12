@@ -62,7 +62,7 @@ Double mode : div != 0
     slider->setStyleSheet(
          "QSlider {background: transparent;}"
          "QSlider::groove:horizontal {border:1px solid gray; height:1px;}"
-         "QSlider::handle:horizontal {background:silver; width:4px; margin:-4px 0; height:8px;}"
+         "QSlider::handle:horizontal {background:silver; width:6px; margin:-6px 0; height:8px;}"
          "QSlider::handle:focus, QSlider::handle:hover{background:red;}"
     );
     slider->setWindowFlags(Qt::FramelessWindowHint);
@@ -71,6 +71,7 @@ Double mode : div != 0
     lineEdit = new QLineEdit;
     lineEdit->setObjectName("DisableGoActions");    // used in MW::focusChange
     lineEdit->setMaximumWidth(lineEditWidth);
+    lineEdit->setAlignment(Qt::AlignRight);
     lineEdit->setStyleSheet("QLineEdit {background: transparent; border:none;}");
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
@@ -601,12 +602,21 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     comboBox->setStyleSheet("QComboBox {"
                                 "color:" + clr + ";"
                                 "background: transparent;"
-                                "border:none; "
+                                "border: none;"
                                 "padding: 0px 0px 0px 0px;"
+                            "}"
+                            "QComboBox:focus {"
+                                "color:" + clr + ";"
+                                "background: transparent;"
+                                "padding: 0px 0px 0px 0px;"
+                                "border: 1 solid, green;"
                             "}"
                             "QComboBox::item:selected {"
                                 "background-color: rgb(68,95,118);"
                             "}"
+//                            "QComboBox::item:focus {"
+//                                "border: 1 solid, gray;"
+//                            "}"
 //                            "QComboBox QAbstractItemView::item {"
 //                                "height: 20px;"
 //                                "background-color: rgb(77,77,77);"
@@ -851,19 +861,19 @@ ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
 //    btn->setAutoFillBackground(true);
 //    btn->setFlat(true);
     btn->setToolTip("Click here to open the color select dialog.");
-    btn->setStyleSheet(
-        "QPushButton, QPushButton:pressed, QPushButton:hover, QPushButton:flat"
-        "{"
-            "background-color:#3f5f53;"
-            "border: none;"
-            "border-radius: 0px;"
-            "padding: 0,0,0,0;"
-            "margin-right: 4px;"
-    //        "max-width: 50px;"
-            "max-height: 10px;"
-            "min-height: 10px;"
-        "}"
-        );
+//    btn->setStyleSheet(
+//        "QPushButton"
+//        "{"
+//            "background-color:#3f5f53;"
+//            "border: none;"
+//            "border-radius: 0px;"
+//            "padding: 0,0,0,0;"
+//            "margin-right: 4px;"
+//            "max-width: 50px;"
+//            "max-height: 10px;"
+//            "min-height: 10px;"
+//        "}"
+//        );
     btn->setMaximumHeight(10);
 
     connect(btn, &QPushButton::clicked, this, &ColorEditor::setValueFromColorDlg);
@@ -911,14 +921,32 @@ void ColorEditor::updateLabelWhenLineEdited(QString value)
     G::track(__FUNCTION__);
     #endif
     }
-    btn->setStyleSheet("QPushButton, QPushButton:pressed, QPushButton:hover, QPushButton:flat"
-                        "{background-color:" + value + ";"
-                        "margin-right: 4px;"
-//                        "max-width: 50px;"
-                        "max-height: 10px;"
-                        "min-height: 10px;"
+    btn->setStyleSheet("QPushButton"
+                        "{"
+                            "background-color:" + value + ";"
+                            "margin-right: 4px;"
+                            "padding-left: 0px;"
+                            "padding-right: 0px;"
+                            "padding-top: 0px;"
+                            "padding-bottom: 0px;"
+                            "max-width: 50px;"
+                            "min-width: 50px;"
+                            "max-height: 10px;"
+                            "min-height: 10px;"
+                        "}"
+                        "QPushButton:hover {"
+                            "border: 1px solid yellow;"
                         "}"
                         );
+//    btn->setStyleSheet("QPushButton, QPushButton:pressed, QPushButton:hover, QPushButton:flat"
+//                        "{"
+//                            "background-color:" + value + ";"
+//                            "margin-right: 4px;"
+//                            "max-width: 50px;"
+//                            "max-height: 10px;"
+//                            "min-height: 10px;"
+//                        "}"
+//                        );
     emit editorValueChanged(this);
 }
 

@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <Main/dockwidget.h>
 #include "Main/global.h"
+#include "Main/widgetcss.h"
 
 enum DelegateType
 {
@@ -25,14 +26,14 @@ enum DelegateType
 enum UserRole
 {
     UR_Name = Qt::UserRole + 1,         // unique name to identify the item
+    UR_ItemIndex,                       // the index for the border, text, rectangle or graphic
+    UR_SortOrder,                       // override appended order ie for effects, borders
     UR_DefaultValue,                    // when created or double click
-    UR_SortOrder,                       // override appended order ie for effects
     UR_Path,                            // settings path
     UR_Editor,                          // pointer to custom editor created
     UR_DelegateType,                    // type of custom widget
     UR_hasValue,                        // if no value then value column is empty
     UR_CaptionIsEditable,               // can edit caption
-    UR_ItemIndex,                       // the index for the border, text, rectangle or graphic
     UR_isIndent,                        // indent column 0 in QTreeView
     UR_isHeader,                        // header item in QTreeView
     UR_isDecoration,                    // show expand/collapse decoration
@@ -203,6 +204,7 @@ public:
     void removeItem(QString item);
     void renameItem(QString oldText, QString newText);
     void refresh(QStringList items);
+    WidgetCSS css;
 
 protected:
     void paintEvent(QPaintEvent *event);

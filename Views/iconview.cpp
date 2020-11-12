@@ -50,7 +50,7 @@ not the view in the dock, where there can be many thumbs per row
 
 ThumbView behavior as container QDockWidget (thumbDock in MW), changes:
 
-    Behavior is controlled in prefDlg
+    Behavior is controlled in preferences
 
         ● thumb/icon size
         ● thumb padding
@@ -1294,31 +1294,23 @@ loaded.  Both thumbView and gridView have to be called.
     if (iconWidth < G::minIconSize) iconWidth = G::minIconSize;
     if (iconHeight < G::minIconSize) iconHeight = G::minIconSize;
 
-//    G::iconWMax = 0;
-//    G::iconHMax = 0;
-//    for (int row = 0; row < dm->rowCount(); ++row) {
-//        QModelIndex idx = dm->index(row, 0);
-//        if (idx.data(Qt::DecorationRole).isNull()) continue;
-//        QPixmap pm = dm->itemFromIndex(idx)->icon().pixmap(G::maxIconSize);
-//        if (G::iconWMax < pm.width()) G::iconWMax = pm.width();
-//        if (G::iconHMax < pm.height()) G::iconHMax = pm.height();
-//        if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) break;
-//    }
-
     if (G::iconWMax == G::iconHMax && iconWidth > iconHeight)
         iconHeight = iconWidth;
     if (G::iconWMax == G::iconHMax && iconHeight > iconWidth)
         iconWidth = iconHeight;
-    if (G::iconWMax > G::iconHMax) iconHeight = iconWidth * ((double)G::iconHMax / G::iconWMax);
-    if (G::iconHMax > G::iconWMax) iconWidth = iconHeight * ((double)G::iconWMax / G::iconHMax);
+    if (G::iconWMax > G::iconHMax)
+        iconHeight = static_cast<int>(iconWidth * (static_cast<double>(G::iconHMax) / G::iconWMax));
+    if (G::iconHMax > G::iconWMax)
+        iconWidth = static_cast<int>(iconHeight * (static_cast<double>(G::iconWMax) / G::iconHMax));
 
     setThumbParameters();
 
-    bestAspectRatio = (double)iconHeight / iconWidth;
+    bestAspectRatio = static_cast<double>(iconHeight) / iconWidth;
     /*
     qDebug() << __FUNCTION__
              << "G::iconWMax =" << G::iconWMax
-             << "G::iconHMax =" << G::iconHMax;*/
+             << "G::iconHMax =" << G::iconHMax;
+//  */
 }
 
 //void IconView::thumbsFit(Qt::DockWidgetArea area)
@@ -1400,43 +1392,52 @@ For icon cell anatomy (see diagram at top of IconViewDelegate)
     G::track(__FUNCTION__);
     #endif
     }
-    /* set here, clear in resize.  Used to flag when to just scroll the thumbView when the
-    thumbdock splitter triggers this function and when the resize event is from another event.
+    /* isFitTopOrBottom is set here, cleared in resize. Used to flag when to just scroll the
+    thumbView when the thumbdock splitter triggers this function and when the resize event is
+    from another event.
     */
     isFitTopOrBottom = true;
 
-    float aspect = (float)iconWidth / iconHeight;
-
     // viewport available height
     int newViewportHt = height() - G::scrollBarThickness;
-    qDebug() << "\n" << __FUNCTION__ << "viewportHeight =" << newViewportHt;
-    int hMax = iconViewDelegate->getCellHeightFromThumbHeight(G::maxIconSize * bestAspectRatio);
+
+    int maxCellHeight = static_cast<int>(G::maxIconSize * bestAspectRatio);
+    int hMax = iconViewDelegate->getCellHeightFromThumbHeight(maxCellHeight);
     int hMin = iconViewDelegate->getCellHeightFromThumbHeight(ICON_MIN);
 
     // restrict icon cell height within limits
     int newThumbSpaceHt = newViewportHt > hMax ? hMax : newViewportHt;
     newThumbSpaceHt = newThumbSpaceHt < hMin ? hMin : newThumbSpaceHt;
 
-    // derive new thumbsize from new thumbSpace
-    iconHeight = iconViewDelegate->getCellHeightFromAvailHeight(newThumbSpaceHt);
+    // derive new cellsize from new cellSpace
+    iconHeight = iconViewDelegate->getThumbHeightFromAvailHeight(newThumbSpaceHt);
 
     // make sure within range (should be from thumbSpace check but just to be sure)
+    if (bestAspectRatio < 0.1) bestAspectRatio = 1;
     iconHeight = iconHeight > G::maxIconSize ? G::maxIconSize : iconHeight;
     iconHeight = iconHeight < ICON_MIN ? ICON_MIN : iconHeight;
-    iconWidth = iconHeight * aspect;
+    iconWidth = static_cast<int>(iconHeight / bestAspectRatio);
+    /*
+    qDebug() << __FUNCTION__
+             << "viewportHeight =" << newViewportHt
+             << "bestAspectRatio =" << bestAspectRatio
+             << "iconHeight =" << iconHeight
+             << "iconWidth =" << iconWidth
+                ;
+//    */
 
     // check thumbWidth within range
     if(iconWidth > G::maxIconSize) {
         iconWidth = G::maxIconSize;
-        iconHeight = G::maxIconSize / aspect;
+        iconHeight = static_cast<int>(G::maxIconSize * bestAspectRatio);
     }
 
     // this is critical - otherwise thumbs bunch up
     setSpacing(0);
 
-    // this will change the icon size, which will triger the resize evcent
-    iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
-        labelFontSize, showIconLabels, badgeSize);
+    // this will change the icon size, which will trigger the resize event
+    iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
+                                         showIconLabels, badgeSize);
 }
 
 void IconView::updateLayout()
@@ -1615,7 +1616,7 @@ int IconView::getHorizontalScrollBarOffset(int row)
              << "thumbCntrOffset" << thumbCntrOffset
              << "Current/Estimate Pos = " << horizontalScrollBar()->value()
              << scrollOffset;
-*/
+//    */
     return scrollOffset;
 }
 
@@ -1639,18 +1640,18 @@ int IconView::getVerticalScrollBarOffset(int row)
     float thumbsPerPage = pageWidth / thumbCellWidth * (float)pageHeight / thumbCellHeight;
     float thumbRowsPerPage = (float)pageHeight / thumbCellHeight;
     int n = dm->sf->rowCount();
-/*    qDebug() << "objectName" << objectName()
+    /*
+    qDebug() << "objectName" << objectName()
              << "pageWidth" << pageWidth
              << "pageHeight" << pageHeight
              << "thumbCellWidth" << thumbCellWidth
              << "thumbCellHeight" << thumbCellHeight
              << "thumbRowsPerPage" << thumbRowsPerPage
-             << "thumbsPerPage" << thumbsPerPage;  */
+             << "thumbsPerPage" << thumbsPerPage;
+//    */
     float pages = (float(n) / thumbsPerPage) - 1;
     int vMax = pages * pageWidth;
 
-//    Q_ASSERT(thumbCellWidth == 0);
-//    Q_ASSERT(pageWidth == 0);
     int thumbRow = row / (pageWidth / thumbCellWidth);
     int startNoScrollItems = thumbRowsPerPage / 2;
     float fractpart = fmodf (thumbRowsPerPage / 2 , 1.0);
@@ -1672,7 +1673,7 @@ int IconView::getVerticalScrollBarOffset(int row)
              << "thumbCntrOffset" << thumbCntrOffset
              << "Current/Estimate Pos = " << verticalScrollBar()->value()
              << scrollOffset;
-*/
+//    */
     return scrollOffset;
 }
 

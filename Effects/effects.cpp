@@ -3,6 +3,375 @@
 #define M_EPSILON 1.0e-6
 #define M_SQ2PI 2.50662827463100024161235523934010416269302368164062
 
+Effects::Effects()
+{
+    rgbToEv[1] = -831;
+    rgbToEv[2] = -805;
+    rgbToEv[3] = -779;
+    rgbToEv[4] = -754;
+    rgbToEv[5] = -730;
+    rgbToEv[6] = -707;
+    rgbToEv[7] = -685;
+    rgbToEv[8] = -663;
+    rgbToEv[9] = -642;
+    rgbToEv[10] = -622;
+    rgbToEv[11] = -603;
+    rgbToEv[12] = -584;
+    rgbToEv[13] = -566;
+    rgbToEv[14] = -548;
+    rgbToEv[15] = -531;
+    rgbToEv[16] = -515;
+    rgbToEv[17] = -499;
+    rgbToEv[18] = -484;
+    rgbToEv[19] = -470;
+    rgbToEv[20] = -456;
+    rgbToEv[21] = -442;
+    rgbToEv[22] = -429;
+    rgbToEv[23] = -416;
+    rgbToEv[24] = -404;
+    rgbToEv[25] = -393;
+    rgbToEv[26] = -381;
+    rgbToEv[27] = -370;
+    rgbToEv[28] = -360;
+    rgbToEv[29] = -350;
+    rgbToEv[30] = -340;
+    rgbToEv[31] = -331;
+    rgbToEv[32] = -322;
+    rgbToEv[33] = -314;
+    rgbToEv[34] = -305;
+    rgbToEv[35] = -297;
+    rgbToEv[36] = -290;
+    rgbToEv[37] = -282;
+    rgbToEv[38] = -275;
+    rgbToEv[39] = -269;
+    rgbToEv[40] = -262;
+    rgbToEv[41] = -256;
+    rgbToEv[42] = -250;
+    rgbToEv[43] = -244;
+    rgbToEv[44] = -238;
+    rgbToEv[45] = -233;
+    rgbToEv[46] = -228;
+    rgbToEv[47] = -223;
+    rgbToEv[48] = -218;
+    rgbToEv[49] = -213;
+    rgbToEv[50] = -209;
+    rgbToEv[51] = -204;
+    rgbToEv[52] = -200;
+    rgbToEv[53] = -196;
+    rgbToEv[54] = -192;
+    rgbToEv[55] = -188;
+    rgbToEv[56] = -185;
+    rgbToEv[57] = -181;
+    rgbToEv[58] = -178;
+    rgbToEv[59] = -175;
+    rgbToEv[60] = -171;
+    rgbToEv[61] = -168;
+    rgbToEv[62] = -165;
+    rgbToEv[63] = -162;
+    rgbToEv[64] = -159;
+    rgbToEv[65] = -156;
+    rgbToEv[66] = -153;
+    rgbToEv[67] = -151;
+    rgbToEv[68] = -148;
+    rgbToEv[69] = -145;
+    rgbToEv[70] = -143;
+    rgbToEv[71] = -140;
+    rgbToEv[72] = -138;
+    rgbToEv[73] = -135;
+    rgbToEv[74] = -133;
+    rgbToEv[75] = -130;
+    rgbToEv[76] = -128;
+    rgbToEv[77] = -126;
+    rgbToEv[78] = -123;
+    rgbToEv[79] = -121;
+    rgbToEv[80] = -118;
+    rgbToEv[81] = -116;
+    rgbToEv[82] = -114;
+    rgbToEv[83] = -111;
+    rgbToEv[84] = -109;
+    rgbToEv[85] = -107;
+    rgbToEv[86] = -104;
+    rgbToEv[87] = -102;
+    rgbToEv[88] = -100;
+    rgbToEv[89] = -97;
+    rgbToEv[90] = -95;
+    rgbToEv[91] = -93;
+    rgbToEv[92] = -90;
+    rgbToEv[93] = -88;
+    rgbToEv[94] = -85;
+    rgbToEv[95] = -83;
+    rgbToEv[96] = -80;
+    rgbToEv[97] = -78;
+    rgbToEv[98] = -75;
+    rgbToEv[99] = -73;
+    rgbToEv[100] = -70;
+    rgbToEv[101] = -68;
+    rgbToEv[102] = -65;
+    rgbToEv[103] = -63;
+    rgbToEv[104] = -60;
+    rgbToEv[105] = -58;
+    rgbToEv[106] = -55;
+    rgbToEv[107] = -53;
+    rgbToEv[108] = -50;
+    rgbToEv[109] = -47;
+    rgbToEv[110] = -45;
+    rgbToEv[111] = -42;
+    rgbToEv[112] = -39;
+    rgbToEv[113] = -37;
+    rgbToEv[114] = -34;
+    rgbToEv[115] = -31;
+    rgbToEv[116] = -28;
+    rgbToEv[117] = -26;
+    rgbToEv[118] = -23;
+    rgbToEv[119] = -20;
+    rgbToEv[120] = -18;
+    rgbToEv[121] = -15;
+    rgbToEv[122] = -12;
+    rgbToEv[123] = -9;
+    rgbToEv[124] = -7;
+    rgbToEv[125] = -4;
+    rgbToEv[126] = -1;
+    rgbToEv[127] = 2;
+    rgbToEv[128] = 4;
+    rgbToEv[129] = 7;
+    rgbToEv[130] = 10;
+    rgbToEv[131] = 12;
+    rgbToEv[132] = 15;
+    rgbToEv[133] = 18;
+    rgbToEv[134] = 20;
+    rgbToEv[135] = 23;
+    rgbToEv[136] = 26;
+    rgbToEv[137] = 28;
+    rgbToEv[138] = 31;
+    rgbToEv[139] = 33;
+    rgbToEv[140] = 36;
+    rgbToEv[141] = 38;
+    rgbToEv[142] = 41;
+    rgbToEv[143] = 43;
+    rgbToEv[144] = 46;
+    rgbToEv[145] = 48;
+    rgbToEv[146] = 50;
+    rgbToEv[147] = 53;
+    rgbToEv[148] = 55;
+    rgbToEv[149] = 57;
+    rgbToEv[150] = 60;
+    rgbToEv[151] = 62;
+    rgbToEv[152] = 64;
+    rgbToEv[153] = 66;
+    rgbToEv[154] = 68;
+    rgbToEv[155] = 70;
+    rgbToEv[156] = 72;
+    rgbToEv[157] = 74;
+    rgbToEv[158] = 76;
+    rgbToEv[159] = 78;
+    rgbToEv[160] = 80;
+    rgbToEv[161] = 82;
+    rgbToEv[162] = 83;
+    rgbToEv[163] = 85;
+    rgbToEv[164] = 87;
+    rgbToEv[165] = 88;
+    rgbToEv[166] = 90;
+    rgbToEv[167] = 92;
+    rgbToEv[168] = 93;
+    rgbToEv[169] = 95;
+    rgbToEv[170] = 96;
+    rgbToEv[171] = 97;
+    rgbToEv[172] = 99;
+    rgbToEv[173] = 100;
+    rgbToEv[174] = 101;
+    rgbToEv[175] = 103;
+    rgbToEv[176] = 104;
+    rgbToEv[177] = 105;
+    rgbToEv[178] = 106;
+    rgbToEv[179] = 107;
+    rgbToEv[180] = 108;
+    rgbToEv[181] = 109;
+    rgbToEv[182] = 110;
+    rgbToEv[183] = 111;
+    rgbToEv[184] = 112;
+    rgbToEv[185] = 113;
+    rgbToEv[186] = 114;
+    rgbToEv[187] = 115;
+    rgbToEv[188] = 116;
+    rgbToEv[189] = 117;
+    rgbToEv[190] = 118;
+    rgbToEv[191] = 119;
+    rgbToEv[192] = 120;
+    rgbToEv[193] = 120;
+    rgbToEv[194] = 121;
+    rgbToEv[195] = 122;
+    rgbToEv[196] = 123;
+    rgbToEv[197] = 124;
+    rgbToEv[198] = 125;
+    rgbToEv[199] = 126;
+    rgbToEv[200] = 127;
+    rgbToEv[201] = 128;
+    rgbToEv[202] = 129;
+    rgbToEv[203] = 130;
+    rgbToEv[204] = 132;
+    rgbToEv[205] = 133;
+    rgbToEv[206] = 134;
+    rgbToEv[207] = 136;
+    rgbToEv[208] = 137;
+    rgbToEv[209] = 139;
+    rgbToEv[210] = 140;
+    rgbToEv[211] = 142;
+    rgbToEv[212] = 144;
+    rgbToEv[213] = 146;
+    rgbToEv[214] = 148;
+    rgbToEv[215] = 150;
+    rgbToEv[216] = 153;
+    rgbToEv[217] = 155;
+    rgbToEv[218] = 158;
+    rgbToEv[219] = 161;
+    rgbToEv[220] = 164;
+    rgbToEv[221] = 167;
+    rgbToEv[222] = 170;
+    rgbToEv[223] = 174;
+    rgbToEv[224] = 177;
+    rgbToEv[225] = 181;
+    rgbToEv[226] = 186;
+    rgbToEv[227] = 190;
+    rgbToEv[228] = 195;
+    rgbToEv[229] = 200;
+    rgbToEv[230] = 205;
+    rgbToEv[231] = 210;
+    rgbToEv[232] = 216;
+    rgbToEv[233] = 222;
+    rgbToEv[234] = 229;
+    rgbToEv[235] = 236;
+    rgbToEv[236] = 243;
+    rgbToEv[237] = 250;
+    rgbToEv[238] = 258;
+    rgbToEv[239] = 267;
+    rgbToEv[240] = 275;
+    rgbToEv[241] = 284;
+    rgbToEv[242] = 294;
+    rgbToEv[243] = 304;
+    rgbToEv[244] = 314;
+    rgbToEv[245] = 325;
+    rgbToEv[246] = 337;
+    rgbToEv[247] = 349;
+    rgbToEv[248] = 361;
+    rgbToEv[249] = 374;
+    rgbToEv[250] = 388;
+    rgbToEv[251] = 402;
+    rgbToEv[252] = 417;
+    rgbToEv[253] = 432;
+    rgbToEv[254] = 448;
+    rgbToEv[255] = 465;
+
+    evToRgb[-500] = 16;
+    evToRgb[-490] = 18;
+    evToRgb[-480] = 20;
+    evToRgb[-470] = 22;
+    evToRgb[-460] = 23;
+    evToRgb[-450] = 24;
+    evToRgb[-440] = 25;
+    evToRgb[-430] = 26;
+    evToRgb[-420] = 26;
+    evToRgb[-410] = 27;
+    evToRgb[-400] = 27;
+    evToRgb[-390] = 28;
+    evToRgb[-380] = 28;
+    evToRgb[-370] = 29;
+    evToRgb[-360] = 29;
+    evToRgb[-350] = 29;
+    evToRgb[-340] = 30;
+    evToRgb[-330] = 31;
+    evToRgb[-320] = 31;
+    evToRgb[-310] = 32;
+    evToRgb[-300] = 33;
+    evToRgb[-290] = 34;
+    evToRgb[-280] = 36;
+    evToRgb[-270] = 37;
+    evToRgb[-260] = 38;
+    evToRgb[-250] = 40;
+    evToRgb[-240] = 42;
+    evToRgb[-230] = 44;
+    evToRgb[-220] = 46;
+    evToRgb[-210] = 48;
+    evToRgb[-200] = 51;
+    evToRgb[-190] = 54;
+    evToRgb[-180] = 56;
+    evToRgb[-170] = 59;
+    evToRgb[-160] = 63;
+    evToRgb[-150] = 66;
+    evToRgb[-140] = 69;
+    evToRgb[-130] = 73;
+    evToRgb[-120] = 77;
+    evToRgb[-110] = 81;
+    evToRgb[-100] = 85;
+    evToRgb[-90] = 89;
+    evToRgb[-80] = 93;
+    evToRgb[-70] = 98;
+    evToRgb[-60] = 102;
+    evToRgb[-50] = 107;
+    evToRgb[-40] = 111;
+    evToRgb[-30] = 116;
+    evToRgb[-20] = 121;
+    evToRgb[-10] = 126;
+    evToRgb[0] = 131;
+    evToRgb[10] = 136;
+    evToRgb[20] = 140;
+    evToRgb[30] = 145;
+    evToRgb[40] = 150;
+    evToRgb[50] = 155;
+    evToRgb[60] = 160;
+    evToRgb[70] = 165;
+    evToRgb[80] = 170;
+    evToRgb[90] = 175;
+    evToRgb[100] = 179;
+    evToRgb[110] = 184;
+    evToRgb[120] = 188;
+    evToRgb[130] = 193;
+    evToRgb[140] = 197;
+    evToRgb[150] = 201;
+    evToRgb[160] = 205;
+    evToRgb[170] = 209;
+    evToRgb[180] = 213;
+    evToRgb[190] = 217;
+    evToRgb[200] = 220;
+    evToRgb[210] = 223;
+    evToRgb[220] = 227;
+    evToRgb[230] = 230;
+    evToRgb[240] = 232;
+    evToRgb[250] = 235;
+    evToRgb[260] = 238;
+    evToRgb[270] = 240;
+    evToRgb[280] = 242;
+    evToRgb[290] = 244;
+    evToRgb[300] = 246;
+    evToRgb[310] = 247;
+    evToRgb[320] = 249;
+    evToRgb[330] = 250;
+    evToRgb[340] = 251;
+    evToRgb[350] = 252;
+    evToRgb[360] = 252;
+    evToRgb[370] = 253;
+    evToRgb[380] = 254;
+    evToRgb[390] = 254;
+    evToRgb[400] = 254;
+    evToRgb[410] = 254;
+    evToRgb[420] = 254;
+    evToRgb[430] = 254;
+    evToRgb[440] = 254;
+    evToRgb[450] = 254;
+    evToRgb[460] = 254;
+    evToRgb[470] = 254;
+    evToRgb[480] = 254;
+    evToRgb[490] = 254;
+    evToRgb[500] = 255;
+
+}
+
+/* DEFINES ***********************************************************************************/
+
+#define MAX_3(a, b, c) ( ( a > b && a > c) ? a : (b > c ? b : c) )
+#define MIN_3(a, b, c) ( ( a < b && a < c) ? a : (b < c ? b : c) )
+
+/* PIXEL OPERATIONS **************************************************************************/
+
 QRgb Effects::convertFromPremult(QRgb p)
 {
     int alpha = qAlpha(p);
@@ -14,8 +383,8 @@ QRgb Effects::convertFromPremult(QRgb p)
 
 QRgb Effects::convertToPremult(QRgb p)
 {
-    unsigned int a = p >> 24;
-    unsigned int t = (p & 0xff00ff) * a;
+    uint a = p >> 24;
+    uint t = (p & 0xff00ff) * a;
     t = (t + ((t >> 8) & 0xff00ff) + 0x800080) >> 8;
     t &= 0xff00ff;
 
@@ -25,6 +394,119 @@ QRgb Effects::convertToPremult(QRgb p)
     p |= t | (a << 24);
     return(p);
 }
+
+void Effects::averagePixel(QVector<QVector<QRgb>> &v, const int &x, const int &y,
+                           const int &w, const int &h)
+{
+/*
+Return the average of the pixels left, right, above and below the pixel at x,y
+*/
+    if (x < 0 || x > w - 1 || y < 0 || y > h - 1) {
+        /*
+        qDebug() << __FUNCTION__ << "WARNING: OUT OF RANGE"
+                 << "x =" << x
+                 << "y =" << y
+                    ;
+                    */
+        return;
+    }
+    int x1, x2, y1, y2;
+    int r, g, b, a;
+    x - 1 < 0 ? x1 = 0 : x1 = x - 1;
+    y - 1 < 0 ? y1 = 0 : y1 = y - 1;
+    x + 1 > w - 1 ? x2 = w - 1 : x2 = x + 1;
+    y + 1 > h - 1 ? y2 = h - 1 : y2 = y + 1;
+    /*
+    qDebug() << __FUNCTION__
+             << "x =" << x
+             << "y =" << y
+             << "x1 =" << x1
+             << "x2 =" << x2
+             << "y1 =" << y1
+             << "y2 =" << y2
+             << "w =" << w
+             << "h =" << h
+                ;
+//                */
+
+    r = (qRed(v[y][x1]) + qRed(v[y][x2]) + qRed(v[y1][x]) + qRed(v[y2][x])) / 4;
+    g = (qGreen(v[y][x1]) + qGreen(v[y][x2]) + qGreen(v[y1][x]) + qGreen(v[y2][x])) / 4;
+    b = (qBlue(v[y][x1]) + qBlue(v[y][x2]) + qBlue(v[y1][x]) + qBlue(v[y2][x])) / 4;
+    a = (qAlpha(v[y][x1]) + qAlpha(v[y][x2]) + qAlpha(v[y1][x]) + qAlpha(v[y2][x])) / 4;
+    v[y][x] = qRgba(r, g, b, a);
+}
+
+void Effects::swapPoints(Point &p1, Point &p2)
+{
+    Point tmp;
+    tmp.x = p1.x;
+    tmp.y = p1.y;
+    p1.x = p2.x;
+    p1.y = p2.y;
+    p2.x = tmp.x;
+    p2.y = tmp.y;
+}
+
+
+
+int Effects::luminosity(QRgb &p)
+{
+//    int min = std::min({qRed(p), qGreen(p), qBlue(p)});
+//    int max = std::max({qRed(p), qGreen(p), qBlue(p)});
+    int min = MIN_3(qRed(p), qGreen(p), qBlue(p));
+    int max = MAX_3(qRed(p), qGreen(p), qBlue(p));
+    return (min + max) / 2;
+}
+
+void Effects::brightenPixel(QRgb &p, double deltaEv)
+{
+    int alpha = qAlpha(p);
+    // QColor for pixel p
+    QColor c(p);
+    // convert to HSV
+    c.toHsv();
+    // get the luminance 0-255
+    int lum = luminosity(p);  // or int lum = c.value();
+    // get the exposure value rounded to nearest 10
+    int ev = 10 * (qRound(rgbToEv[lum] * 1.0 / 10));
+    // convert deltaEv ie 1.5 to 150 for lookup table evToRgb
+    int deltaEv100 = qRound(deltaEv * 10);
+    deltaEv100 *= 10;
+    // new EV
+    int newEv = ev + deltaEv100;
+    if (newEv > 500) newEv = 500;
+    if (newEv < -500) newEv = -500;
+    // new luminance from new exposure value (0-255)
+    int v = evToRgb[newEv];
+    // plug new luminance into HSV
+    int h = c.hue();
+    int s = c.saturation();
+    c.setHsv(h, s, v);
+    // convert back to RGB
+    c.toRgb();
+    /*
+    qDebug() << __FUNCTION__
+             << "qRed(p) =" << qRed(p)
+             << "qGreen(p) =" << qGreen(p)
+             << "qBlue(p) =" << qBlue(p)
+             << "lum =" << lum
+             << "ev =" << ev
+             << "deltaEv100 =" << deltaEv100
+             << "newEv =" << newEv
+             << "h =" << h
+             << "s =" << s
+             << "v =" << v
+             << "c.red() =" << c.red()
+             << "c.green() =" << c.green()
+             << "c.blue() =" << c.blue()
+                ;
+//                */
+
+    // update pixel p
+    p = qRgba(c.red(), c.green(), c.blue(), alpha);
+}
+
+/* VECTOR OPERATIONS *************************************************************************/
 
 void Effects::imageToVector(QImage &img, QVector<QVector<QRgb>> &v)
 {
@@ -50,13 +532,15 @@ void Effects::zeroVector(QImage &img, QVector<QVector<QRgb>> &v)
     }
 }
 
+/* 2D EFFECTS ********************************************************************************/
+
+#define ConvolveAccumulate(weight, pixel) \
+    r += (weight * qRed(pixel)); \
+    g += (weight * qGreen(pixel)); \
+    b += (weight * qBlue(pixel));
+
 QImage Effects::convolve(QImage &img, int mDim, double *matrix)
 {
-#define ConvolveAccumulate(weight, pixel) \
-    r+=((weight))*(qRed((pixel))); \
-    g+=((weight))*(qGreen((pixel))); \
-    b+=((weight))*(qBlue((pixel)));
-
     // matrix descriptors
     int i, mX, mY;
 
@@ -93,11 +577,12 @@ QImage Effects::convolve(QImage &img, int mDim, double *matrix)
 
     // create normalized matrix
     normalize = 0.0;
-    for (i = 0; i < static_cast<int>(mLen); ++i)
+    for (i = 0; i < static_cast<int>(mLen); ++i) {
         normalize += matrix[i];
+    }
     if (std::abs(normalize) <=  M_EPSILON) normalize = 1.0;
     normalize = 1.0 / normalize;
-    for (i = 0; i < mDim*mDim; ++i){
+    for (i = 0; i < mDim*mDim; ++i) {
         normalizeMatrix[i] = normalize*matrix[i];
         if (normalizeMatrix[i] < 0.0) overflow = true;
     }
@@ -195,55 +680,6 @@ QImage Effects::convolve(QImage &img, int mDim, double *matrix)
     delete[] scanblock;
     delete[] normalizeMatrix;
     return(buffer);
-}
-
-void Effects::averagePixel(QVector<QVector<QRgb>> &v, const int &x, const int &y,
-                           const int &w, const int &h)
-{
-    if (x < 0 || x > w - 1 || y < 0 || y > h - 1) {
-        /*
-        qDebug() << __FUNCTION__ << "WARNING: OUT OF RANGE"
-                 << "x =" << x
-                 << "y =" << y
-                    ;
-                    */
-        return;
-    }
-    int x1, x2, y1, y2;
-    int r, g, b, a;
-    x - 1 < 0 ? x1 = 0 : x1 = x - 1;
-    y - 1 < 0 ? y1 = 0 : y1 = y - 1;
-    x + 1 > w - 1 ? x2 = w - 1 : x2 = x + 1;
-    y + 1 > h - 1 ? y2 = h - 1 : y2 = y + 1;
-    /*
-    qDebug() << __FUNCTION__
-             << "x =" << x
-             << "y =" << y
-             << "x1 =" << x1
-             << "x2 =" << x2
-             << "y1 =" << y1
-             << "y2 =" << y2
-             << "w =" << w
-             << "h =" << h
-                ;
-//                */
-
-    r = (qRed(v[y][x1]) + qRed(v[y][x2]) + qRed(v[y1][x]) + qRed(v[y2][x])) / 4;
-    g = (qGreen(v[y][x1]) + qGreen(v[y][x2]) + qGreen(v[y1][x]) + qGreen(v[y2][x])) / 4;
-    b = (qBlue(v[y][x1]) + qBlue(v[y][x2]) + qBlue(v[y1][x]) + qBlue(v[y2][x])) / 4;
-    a = (qAlpha(v[y][x1]) + qAlpha(v[y][x2]) + qAlpha(v[y1][x]) + qAlpha(v[y2][x])) / 4;
-    v[y][x] = qRgba(r, g, b, a);
-}
-
-void Effects::swapPoints(Point &p1, Point &p2)
-{
-    Point tmp;
-    tmp.x = p1.x;
-    tmp.y = p1.y;
-    p1.x = p2.x;
-    p1.y = p2.y;
-    p2.x = tmp.x;
-    p2.y = tmp.y;
 }
 
 void Effects::blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
@@ -806,15 +1242,16 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
 #undef AntialiasPixel
 }
 
-void Effects::brighten(QImage &img, int delta)
+void Effects::brighten(QImage &img, qreal evDelta)
 {
-    qDebug() << __FUNCTION__ << "delta =" << delta;
+    qDebug() << __FUNCTION__ << "delta =" << evDelta;
     QElapsedTimer t;
     t.start();
-
-    if (delta == 100) return;
-    if (delta > 400) return;
-    if (delta < 10) return;
+/*
+    if (evdelta == 100) return;
+    if (evdelta > 400) return;
+    if (evdelta < 10) return;
+    */
 
     // bDelta               // change in brightness
     int w = img.width();
@@ -823,12 +1260,19 @@ void Effects::brighten(QImage &img, int delta)
     if(img.depth() < 8)
         img = img.convertToFormat(QImage::Format_Indexed8);
 
-    int a, r, g, b;
+//    int a, r, g, b;
 
     // create QVector of img for pixel wrangling
     QVector<QVector<QRgb>> s(h);  // source, destination
     imageToVector(img, s);
 
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            brightenPixel(s[y][x], evDelta);
+        }
+    }
+
+    /*
     // lighten
     if (delta > 100) {
         for (int y = 0; y < h; ++y) {
@@ -846,7 +1290,7 @@ void Effects::brighten(QImage &img, int delta)
             }
         }
     }
-
+    */
     vectorToImage(img, s);
 
     qDebug() << __FUNCTION__

@@ -87,6 +87,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     expand(model->index(0,0,QModelIndex()));
     setIndentation(12);
     setAlternatingRowColors(false);
+    setMouseTracking(false);
     propertyDelegate->isAlternatingRows = false;
     resizeColumns("====captions column====",
                   "====values column====");
@@ -129,6 +130,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     collapseAll();
     expand(model->index(_templates,0));
     updateHiddenRows(QModelIndex());
+    setMouseTracking(true);
 }
 
 void EmbelProperties::initialize()
@@ -152,7 +154,7 @@ void EmbelProperties::initialize()
     }
     // EFFECTS
     effectList << "Shadow" << "Bevel" << "Emboss" << "Blur" << "Sharpen"
-               << "Colorize" << "Edges" << "Highlight" << "Stroke";
+               << "Brighten" << "Edges" << "Highlight" << "Stroke";
 
     shadowEffectAction = new QAction(tr("Shadow"), this);
     shadowEffectAction->setObjectName("shadowEffectAction");
@@ -174,9 +176,9 @@ void EmbelProperties::initialize()
     sharpenEffectAction->setObjectName("sharpenEffectAction");
     connect(sharpenEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
-    colorizeEffectAction = new QAction(tr("Colorize"), this);
-    colorizeEffectAction->setObjectName("colorizeEffectAction");
-    connect(colorizeEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
+    brightenEffectAction = new QAction(tr("Brighten"), this);
+    brightenEffectAction->setObjectName("brightenEffectAction");
+    connect(brightenEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
     edgeEffectAction = new QAction(tr("Edge"), this);
     edgeEffectAction->setObjectName("edgeEffectAction");
@@ -196,7 +198,7 @@ void EmbelProperties::initialize()
     effectMenu->addAction(embossEffectAction);
     effectMenu->addAction(blurEffectAction);
     effectMenu->addAction(sharpenEffectAction);
-    effectMenu->addAction(colorizeEffectAction);
+    effectMenu->addAction(brightenEffectAction);
     effectMenu->addAction(edgeEffectAction);
     effectMenu->addAction(highlightEffectAction);
     effectMenu->addAction(strokeEffectAction);
@@ -282,6 +284,7 @@ void EmbelProperties::newEffectActionClicked()
     if (effect == "Sharpen") addSharpenEffect(effectParentIdx);
     if (effect == "Highlight") addHighlightEffect(effectParentIdx);
     if (effect == "Shadow") addShadowEffect(effectParentIdx);
+    if (effect == "Brighten") addBrightenEffect(effectParentIdx);
 }
 
 void EmbelProperties::updateBorderLists(int row)
@@ -414,6 +417,9 @@ void EmbelProperties::diagnosticStyles()
             switch (ef.effectType) {
             case winnow_effects::blur:
                 qDebug() << "      Blur: radius       =" << ef.blur.radius;
+                break;
+            case winnow_effects::brighten:
+                qDebug() << "      Brighten: evDelta  =" << ef.brighten.evDelta;
                 break;
             case winnow_effects::sharpen:
                 qDebug() << "      Sharpen: radius    =" << ef.sharpen.radius;
@@ -1159,6 +1165,7 @@ itemChange, which is subclassed here.
     QString source = idx.data(UR_Source).toString();
     QString parent = idx.parent().data(UR_Name).toString();
     QString grandparent = idx.parent().parent().data(UR_Name).toString();
+    QModelIndex grandparentIdx = idx.parent().parent();
 
     templatePath = "Embel/Templates/" + templateName + "/";
 //    QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
@@ -1176,15 +1183,14 @@ itemChange, which is subclassed here.
     if (templateId != 0) {
         if (parent == "ExportHeader") itemChangeExport(idx, v, source);
         if (parent == "GeneralHeader") itemChangeGeneral(v, source);
-        if (grandparent == "Borders") itemChangeBorder(idx);
-        if (grandparent == "Texts") itemChangeText(idx);
-        if (grandparent == "Rectangles") itemChangeRectangle(v, source, parent);
-        if (grandparent == "Graphics") itemChangeGraphic(idx, v, source, parent);
-//        if (source == "globalLightDirection") itemChangeGlobalLight(v, source, parent);
+        if (grandparentIdx == bordersIdx) itemChangeBorder(idx);
+        if (grandparentIdx == textsIdx) itemChangeText(idx);
+        if (grandparentIdx == graphicsIdx) itemChangeGraphic(idx, v, source, parent);
         if (parent.left(6) == "Shadow") itemChangeShadowEffect(v, source, parent, grandparent);
         if (parent.left(4) == "Blur") itemChangeBlurEffect(v, source, parent, grandparent);
         if (parent.left(7) == "Sharpen") itemChangeSharpenEffect(v, source, parent, grandparent);
         if (parent.left(9) == "Highlight") itemChangeHighlightEffect(v, source, parent, grandparent);
+        if (parent.left(8) == "Brighten") itemChangeBrightenEffect(v, source, parent, grandparent);
     }
 
 //    e->build();
@@ -1197,7 +1203,6 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << v;
     isTemplateChange = true;
     templateName = v.toString();
 
@@ -1324,7 +1329,8 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
     QString parent = idx.parent().data(UR_Name).toString();
-    int index = idx.parent().data(UR_ItemIndex).toInt();
+    int index = idx.parent().data(UR_SortOrder).toInt();
+//    int index = idx.parent().data(UR_ItemIndex).toInt();
     QString path = templatePath + "Borders/" + parent + "/" + source;
 //    diagnostics(idx);
 
@@ -1773,6 +1779,33 @@ void EmbelProperties::itemChangeHighlightEffect(QVariant v, QString source, QStr
     e->updateStyle(style);
 }
 
+void EmbelProperties::itemChangeBrightenEffect(QVariant v, QString source, QString effectName, QString style)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
+    qDebug() << __FUNCTION__ << path << source << v.toInt();
+
+    if (source == "evDelta") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].brighten.evDelta = v.toDouble();
+    }
+
+    if (source == "blendMode") {
+        setting->setValue(path, v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].brighten.blendMode = winnow_effects::blendModeMap[v.toString()];
+    }
+
+    e->updateStyle(style);
+}
+
 void EmbelProperties::addTemplateHeader()
 {
     {
@@ -2084,7 +2117,7 @@ void EmbelProperties::addBorders()
     G::track(__FUNCTION__);
     #endif
     }
-    // BORDER header (Root)
+    // BORDER header (Borders)
     i.name = "Borders";
     i.parentName = "???";
     i.isHeader = true;
@@ -2117,27 +2150,21 @@ void EmbelProperties::addBorders()
     // sort the borders
     borders->sortChildren(Qt::AscendingOrder);
     syncBorderVector();
-
+    /*
     for (int row = 0; row < model->rowCount(bordersIdx); ++row) {
         QModelIndex bIdx = model->index(row, 0, bordersIdx);
-        /*
         qDebug() << __FUNCTION__ << "DATA MODEL AND B VECTOR"
                  << "row =" << row
                  << "name =" << bIdx.data(UR_Name).toString()
                  << "order =" << bIdx.data(UR_SortOrder).toInt()
                  << "\t b[row].name = " << b[row].name
                     ;
-//                    */
     }
-    /*
     qDebug() << __FUNCTION__ << "BORDER VECTOR";
     for (int i = 0; i < b.length(); ++i) {
         qDebug().noquote()
             << i << " "
-//            << "order =" << b[i].order
             << "name =" << b[i].name
-//            << "caption =" << b[i].caption
-//            << "parent =" << b[i].parent
             << "top =" << b[i].top
             << "left =" << b[i].left
             << "right =" << b[i].right
@@ -2349,6 +2376,7 @@ void EmbelProperties::addStyle(QString name, int n)
         if (items.at(i).contains("Sharpen")) addSharpenEffect(styleIdx, effectName);
         if (items.at(i).contains("Highlight")) addHighlightEffect(styleIdx, effectName);
         if (items.at(i).contains("Shadow")) addShadowEffect(styleIdx, effectName);
+        if (items.at(i).contains("Brighten")) addBrightenEffect(styleIdx, effectName);
     }
 
     // sort the effects
@@ -2878,6 +2906,108 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     styleMap[styleName].append(effect);
 }
 
+void EmbelProperties::addBrightenEffect(QModelIndex parIdx, QString effectName)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // styleName = parent
+    QString parentName = parIdx.data(UR_Name).toString();
+    styleName = parentName;
+    winnow_effects::Effect effect;
+    effect.effectType = winnow_effects::brighten;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
+    if (effectName == "")
+        effectName = uniqueEffectName(parentName, winnow_effects::brighten, "Brighten");
+    effect.effectName = effectName;
+
+    QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
+
+    // subheader for this effect
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.name = effectName;
+    i.parIdx = parIdx;
+    i.parentName = parentName;
+    i.path = "Embel/Styles/" + parentName + "/" + effectName;
+    i.captionText = effectName;
+    i.tooltip = "";
+    i.hasValue = true;      // tool button
+    i.captionIsEditable = false;
+    i.key = "sortOrder";
+    i.delegateType = DT_BarBtns;
+    // get settings data
+    QString key = i.path + "/sortOrder";
+//    qDebug() << __FUNCTION__
+//             << "key =" << key
+//             << "value =" << setting->value(key).toInt();
+    if (setting->contains(key)) {
+        i.sortOrder = setting->value(key).toInt();
+    }
+    else {
+        i.sortOrder = model->rowCount(parIdx);
+        setting->setValue(key, i.sortOrder);
+    }
+    effect.effectOrder = i.sortOrder;
+    addEffectBtns();
+    parIdx = capIdx;
+
+    // brighten evDelta
+    i.name = "evDelta";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Brightness";
+    i.tooltip = "A change in value of 1 is equal to changing the exposure value by one stop, "
+                "either halving or doubling the perceived brightness.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "evDelta";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = -500;
+    i.max = +500;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.brighten.evDelta = i.value.toDouble();
+    addItem(i);
+
+    // brightness blend mode
+    i.name = "blendMode";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Blend mode";
+    i.tooltip = "The way this effect blends with other effects in the style.";
+    i.isIndent = false;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "blendMode";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = false;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList  << winnow_effects::blendModes;
+    effect.blur.blendMode = winnow_effects::blendModeMap[i.value.toString()];
+    addItem(i);
+
+    styleMap[styleName].append(effect);
+}
+
 void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
 {
     {
@@ -3094,7 +3224,6 @@ void EmbelProperties::deleteTemplate()
     if (ret == QMessageBox::Cancel) return;
 
     QString pathToDelete = "Embel/Templates/" + templateName;
-    qDebug() << __FUNCTION__ << pathToDelete;
 
     // remove from tree combo list
     templateList.removeOne(templateName);
@@ -3293,11 +3422,60 @@ void EmbelProperties::flash(QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
+    // check index range (triggered by mouse movement while tree painting)
+    if (idx.row() < 0) return;
+
     QString type;
-    if (idx.parent() == bordersIdx) type = "border";
-    if (idx.parent() == textsIdx) type = "text";
-    if (idx.parent() == graphicsIdx) type = "graphic";
+    if (idx.parent() == bordersIdx) {
+        type = "border";
+        if (idx.row() > model->rowCount(bordersIdx)) return;
+    }
+    if (idx.parent() == textsIdx) {
+        type = "text";
+        if (idx.row() > model->rowCount(textsIdx)) return;
+    }
+    if (idx.parent() == graphicsIdx) {
+        type = "graphic";
+        if (idx.row() > model->rowCount(graphicsIdx)) return;
+    }
     e->flashObject(type, idx.row(), true);
+}
+
+void EmbelProperties::mouseMoveEvent(QMouseEvent *event)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // nothing to flash
+    if (!G::isEmbellish) return;
+
+    // make sure there is model data
+    if (!bordersIdx.isValid()) return;
+
+    QModelIndex idx = indexAt(event->pos());
+
+    // check if invalid index
+    if (!idx.isValid()) return;
+
+    // check if flashable item in property tree
+    if (idx.parent() == bordersIdx ||
+        idx.parent().parent() == bordersIdx ||
+        idx.parent() == textsIdx ||
+        idx.parent().parent() == textsIdx ||
+        idx.parent() == graphicsIdx ||
+        idx.parent().parent() == graphicsIdx
+       )
+    {
+        static int count = 0;
+        qDebug() << __FUNCTION__ << count
+                 << idx.data().toString()
+                 << idx.parent().data().toString()
+                 << idx.parent().parent().data().toString()
+                    ;
+        flash(idx);
+    }
 }
 
 void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
@@ -3572,12 +3750,8 @@ void EmbelProperties::test1()
     G::track(__FUNCTION__);
     #endif
     }
+    e->test();
 
-    QString t = templateName;
-    sortTemplateList();
-    templateListEditor->refresh(templateList);
-    qDebug() << __FUNCTION__ << templateName;
-    templateListEditor->setValue(t);
 }
 
 void EmbelProperties::test2()

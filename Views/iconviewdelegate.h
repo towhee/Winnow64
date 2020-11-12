@@ -25,7 +25,7 @@ public:
 
     QSize getCellSize();
     QSize getCellSize(QSize icon);
-    int getCellHeightFromAvailHeight(int availHeight);
+    int getThumbHeightFromAvailHeight(int availHeight);
     int getThumbWidthFromCellWidth(int cellWidth);
     int getCellWidthFromThumbWidth(int width);
     int getCellHeightFromThumbHeight(int height);

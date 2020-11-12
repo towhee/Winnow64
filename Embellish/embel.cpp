@@ -39,10 +39,7 @@ void Embel::exportImage()
 
 void Embel::test()
 {
-    qDebug() << __FUNCTION__
-             << "gItems.count() =" << gItems.count()
-             << "graphicPixmaps =" << graphicPixmaps
-                ;
+
     /*
     // Test
     Effects effect;
@@ -116,6 +113,16 @@ void Embel::test()
     effect.blur(img, 1);
     img.save("d:/pictures/temp/effect/textblurred.tif");
 //    */
+
+    Effects effect;
+    QRgb p = qRgba(110, 150, 65, 255);
+    qDebug() << __FUNCTION__
+             << "qRed(p) =" << qRed(p)
+             << "qGreen(p) =" << qGreen(p)
+             << "qBlue(p) =" << qBlue(p)
+             << "qAlpha(p) =" << qAlpha(p)
+                ;
+    effect.brightenPixel(p, 1.2);
 }
 
 void Embel::doNotEmbellish()
