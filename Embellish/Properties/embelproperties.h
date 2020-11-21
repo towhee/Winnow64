@@ -145,7 +145,6 @@ private:
     void addBorder(int count);
     void addTexts();
     void addText(int count);
-    void addRectangles();
     void addGraphics();
     void addGraphic(int count);
     void addStyles();
@@ -155,6 +154,7 @@ private:
     void addSharpenEffect(QModelIndex parIdx, QString effectName = "");
     void addHighlightEffect(QModelIndex parIdx, QString effectName = "");
     void addShadowEffect(QModelIndex parIdx, QString effectName = "");
+    void addEmbossEffect(QModelIndex parIdx, QString effectName = "");
 
     void newBorder();
     void newText();
@@ -194,7 +194,8 @@ private:
     void itemChangeSharpenEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeHighlightEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeBrightenEffect(QVariant v, QString source, QString effectName, QString style);
-    void strokeItemChange(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeEmbossEffect(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeStroke(QVariant v, QString source, QString effectName, QString style);
 
     void treeChange(QModelIndex idx);
     bool okToSelect(QModelIndex idx, QString selName);

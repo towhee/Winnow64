@@ -21,7 +21,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
     scene->addItem(pmItem);
     setScene(scene);
 
-    embellish= new Embel(scene, pmItem, embelProperties);
+    embellish= new Embel(scene, pmItem, embelProperties, imageCacheThread);
 }
 
 EmbelExport::~EmbelExport()
@@ -124,6 +124,7 @@ MW::exportEmbel.
             scene->render(&painter);
             // save
             image.save(exportPath);
+            qDebug() << __FUNCTION__ << "exporting to" << exportPath;
         }
     }
     G::popUp->setProgressVisible(false);

@@ -5,370 +5,48 @@
 
 Effects::Effects()
 {
-    rgbToEv[1] = -831;
-    rgbToEv[2] = -805;
-    rgbToEv[3] = -779;
-    rgbToEv[4] = -754;
-    rgbToEv[5] = -730;
-    rgbToEv[6] = -707;
-    rgbToEv[7] = -685;
-    rgbToEv[8] = -663;
-    rgbToEv[9] = -642;
-    rgbToEv[10] = -622;
-    rgbToEv[11] = -603;
-    rgbToEv[12] = -584;
-    rgbToEv[13] = -566;
-    rgbToEv[14] = -548;
-    rgbToEv[15] = -531;
-    rgbToEv[16] = -515;
-    rgbToEv[17] = -499;
-    rgbToEv[18] = -484;
-    rgbToEv[19] = -470;
-    rgbToEv[20] = -456;
-    rgbToEv[21] = -442;
-    rgbToEv[22] = -429;
-    rgbToEv[23] = -416;
-    rgbToEv[24] = -404;
-    rgbToEv[25] = -393;
-    rgbToEv[26] = -381;
-    rgbToEv[27] = -370;
-    rgbToEv[28] = -360;
-    rgbToEv[29] = -350;
-    rgbToEv[30] = -340;
-    rgbToEv[31] = -331;
-    rgbToEv[32] = -322;
-    rgbToEv[33] = -314;
-    rgbToEv[34] = -305;
-    rgbToEv[35] = -297;
-    rgbToEv[36] = -290;
-    rgbToEv[37] = -282;
-    rgbToEv[38] = -275;
-    rgbToEv[39] = -269;
-    rgbToEv[40] = -262;
-    rgbToEv[41] = -256;
-    rgbToEv[42] = -250;
-    rgbToEv[43] = -244;
-    rgbToEv[44] = -238;
-    rgbToEv[45] = -233;
-    rgbToEv[46] = -228;
-    rgbToEv[47] = -223;
-    rgbToEv[48] = -218;
-    rgbToEv[49] = -213;
-    rgbToEv[50] = -209;
-    rgbToEv[51] = -204;
-    rgbToEv[52] = -200;
-    rgbToEv[53] = -196;
-    rgbToEv[54] = -192;
-    rgbToEv[55] = -188;
-    rgbToEv[56] = -185;
-    rgbToEv[57] = -181;
-    rgbToEv[58] = -178;
-    rgbToEv[59] = -175;
-    rgbToEv[60] = -171;
-    rgbToEv[61] = -168;
-    rgbToEv[62] = -165;
-    rgbToEv[63] = -162;
-    rgbToEv[64] = -159;
-    rgbToEv[65] = -156;
-    rgbToEv[66] = -153;
-    rgbToEv[67] = -151;
-    rgbToEv[68] = -148;
-    rgbToEv[69] = -145;
-    rgbToEv[70] = -143;
-    rgbToEv[71] = -140;
-    rgbToEv[72] = -138;
-    rgbToEv[73] = -135;
-    rgbToEv[74] = -133;
-    rgbToEv[75] = -130;
-    rgbToEv[76] = -128;
-    rgbToEv[77] = -126;
-    rgbToEv[78] = -123;
-    rgbToEv[79] = -121;
-    rgbToEv[80] = -118;
-    rgbToEv[81] = -116;
-    rgbToEv[82] = -114;
-    rgbToEv[83] = -111;
-    rgbToEv[84] = -109;
-    rgbToEv[85] = -107;
-    rgbToEv[86] = -104;
-    rgbToEv[87] = -102;
-    rgbToEv[88] = -100;
-    rgbToEv[89] = -97;
-    rgbToEv[90] = -95;
-    rgbToEv[91] = -93;
-    rgbToEv[92] = -90;
-    rgbToEv[93] = -88;
-    rgbToEv[94] = -85;
-    rgbToEv[95] = -83;
-    rgbToEv[96] = -80;
-    rgbToEv[97] = -78;
-    rgbToEv[98] = -75;
-    rgbToEv[99] = -73;
-    rgbToEv[100] = -70;
-    rgbToEv[101] = -68;
-    rgbToEv[102] = -65;
-    rgbToEv[103] = -63;
-    rgbToEv[104] = -60;
-    rgbToEv[105] = -58;
-    rgbToEv[106] = -55;
-    rgbToEv[107] = -53;
-    rgbToEv[108] = -50;
-    rgbToEv[109] = -47;
-    rgbToEv[110] = -45;
-    rgbToEv[111] = -42;
-    rgbToEv[112] = -39;
-    rgbToEv[113] = -37;
-    rgbToEv[114] = -34;
-    rgbToEv[115] = -31;
-    rgbToEv[116] = -28;
-    rgbToEv[117] = -26;
-    rgbToEv[118] = -23;
-    rgbToEv[119] = -20;
-    rgbToEv[120] = -18;
-    rgbToEv[121] = -15;
-    rgbToEv[122] = -12;
-    rgbToEv[123] = -9;
-    rgbToEv[124] = -7;
-    rgbToEv[125] = -4;
-    rgbToEv[126] = -1;
-    rgbToEv[127] = 2;
-    rgbToEv[128] = 4;
-    rgbToEv[129] = 7;
-    rgbToEv[130] = 10;
-    rgbToEv[131] = 12;
-    rgbToEv[132] = 15;
-    rgbToEv[133] = 18;
-    rgbToEv[134] = 20;
-    rgbToEv[135] = 23;
-    rgbToEv[136] = 26;
-    rgbToEv[137] = 28;
-    rgbToEv[138] = 31;
-    rgbToEv[139] = 33;
-    rgbToEv[140] = 36;
-    rgbToEv[141] = 38;
-    rgbToEv[142] = 41;
-    rgbToEv[143] = 43;
-    rgbToEv[144] = 46;
-    rgbToEv[145] = 48;
-    rgbToEv[146] = 50;
-    rgbToEv[147] = 53;
-    rgbToEv[148] = 55;
-    rgbToEv[149] = 57;
-    rgbToEv[150] = 60;
-    rgbToEv[151] = 62;
-    rgbToEv[152] = 64;
-    rgbToEv[153] = 66;
-    rgbToEv[154] = 68;
-    rgbToEv[155] = 70;
-    rgbToEv[156] = 72;
-    rgbToEv[157] = 74;
-    rgbToEv[158] = 76;
-    rgbToEv[159] = 78;
-    rgbToEv[160] = 80;
-    rgbToEv[161] = 82;
-    rgbToEv[162] = 83;
-    rgbToEv[163] = 85;
-    rgbToEv[164] = 87;
-    rgbToEv[165] = 88;
-    rgbToEv[166] = 90;
-    rgbToEv[167] = 92;
-    rgbToEv[168] = 93;
-    rgbToEv[169] = 95;
-    rgbToEv[170] = 96;
-    rgbToEv[171] = 97;
-    rgbToEv[172] = 99;
-    rgbToEv[173] = 100;
-    rgbToEv[174] = 101;
-    rgbToEv[175] = 103;
-    rgbToEv[176] = 104;
-    rgbToEv[177] = 105;
-    rgbToEv[178] = 106;
-    rgbToEv[179] = 107;
-    rgbToEv[180] = 108;
-    rgbToEv[181] = 109;
-    rgbToEv[182] = 110;
-    rgbToEv[183] = 111;
-    rgbToEv[184] = 112;
-    rgbToEv[185] = 113;
-    rgbToEv[186] = 114;
-    rgbToEv[187] = 115;
-    rgbToEv[188] = 116;
-    rgbToEv[189] = 117;
-    rgbToEv[190] = 118;
-    rgbToEv[191] = 119;
-    rgbToEv[192] = 120;
-    rgbToEv[193] = 120;
-    rgbToEv[194] = 121;
-    rgbToEv[195] = 122;
-    rgbToEv[196] = 123;
-    rgbToEv[197] = 124;
-    rgbToEv[198] = 125;
-    rgbToEv[199] = 126;
-    rgbToEv[200] = 127;
-    rgbToEv[201] = 128;
-    rgbToEv[202] = 129;
-    rgbToEv[203] = 130;
-    rgbToEv[204] = 132;
-    rgbToEv[205] = 133;
-    rgbToEv[206] = 134;
-    rgbToEv[207] = 136;
-    rgbToEv[208] = 137;
-    rgbToEv[209] = 139;
-    rgbToEv[210] = 140;
-    rgbToEv[211] = 142;
-    rgbToEv[212] = 144;
-    rgbToEv[213] = 146;
-    rgbToEv[214] = 148;
-    rgbToEv[215] = 150;
-    rgbToEv[216] = 153;
-    rgbToEv[217] = 155;
-    rgbToEv[218] = 158;
-    rgbToEv[219] = 161;
-    rgbToEv[220] = 164;
-    rgbToEv[221] = 167;
-    rgbToEv[222] = 170;
-    rgbToEv[223] = 174;
-    rgbToEv[224] = 177;
-    rgbToEv[225] = 181;
-    rgbToEv[226] = 186;
-    rgbToEv[227] = 190;
-    rgbToEv[228] = 195;
-    rgbToEv[229] = 200;
-    rgbToEv[230] = 205;
-    rgbToEv[231] = 210;
-    rgbToEv[232] = 216;
-    rgbToEv[233] = 222;
-    rgbToEv[234] = 229;
-    rgbToEv[235] = 236;
-    rgbToEv[236] = 243;
-    rgbToEv[237] = 250;
-    rgbToEv[238] = 258;
-    rgbToEv[239] = 267;
-    rgbToEv[240] = 275;
-    rgbToEv[241] = 284;
-    rgbToEv[242] = 294;
-    rgbToEv[243] = 304;
-    rgbToEv[244] = 314;
-    rgbToEv[245] = 325;
-    rgbToEv[246] = 337;
-    rgbToEv[247] = 349;
-    rgbToEv[248] = 361;
-    rgbToEv[249] = 374;
-    rgbToEv[250] = 388;
-    rgbToEv[251] = 402;
-    rgbToEv[252] = 417;
-    rgbToEv[253] = 432;
-    rgbToEv[254] = 448;
-    rgbToEv[255] = 465;
-
-    evToRgb[-500] = 16;
-    evToRgb[-490] = 18;
-    evToRgb[-480] = 20;
-    evToRgb[-470] = 22;
-    evToRgb[-460] = 23;
-    evToRgb[-450] = 24;
-    evToRgb[-440] = 25;
-    evToRgb[-430] = 26;
-    evToRgb[-420] = 26;
-    evToRgb[-410] = 27;
-    evToRgb[-400] = 27;
-    evToRgb[-390] = 28;
-    evToRgb[-380] = 28;
-    evToRgb[-370] = 29;
-    evToRgb[-360] = 29;
-    evToRgb[-350] = 29;
-    evToRgb[-340] = 30;
-    evToRgb[-330] = 31;
-    evToRgb[-320] = 31;
-    evToRgb[-310] = 32;
-    evToRgb[-300] = 33;
-    evToRgb[-290] = 34;
-    evToRgb[-280] = 36;
-    evToRgb[-270] = 37;
-    evToRgb[-260] = 38;
-    evToRgb[-250] = 40;
-    evToRgb[-240] = 42;
-    evToRgb[-230] = 44;
-    evToRgb[-220] = 46;
-    evToRgb[-210] = 48;
-    evToRgb[-200] = 51;
-    evToRgb[-190] = 54;
-    evToRgb[-180] = 56;
-    evToRgb[-170] = 59;
-    evToRgb[-160] = 63;
-    evToRgb[-150] = 66;
-    evToRgb[-140] = 69;
-    evToRgb[-130] = 73;
-    evToRgb[-120] = 77;
-    evToRgb[-110] = 81;
-    evToRgb[-100] = 85;
-    evToRgb[-90] = 89;
-    evToRgb[-80] = 93;
-    evToRgb[-70] = 98;
-    evToRgb[-60] = 102;
-    evToRgb[-50] = 107;
-    evToRgb[-40] = 111;
-    evToRgb[-30] = 116;
-    evToRgb[-20] = 121;
-    evToRgb[-10] = 126;
-    evToRgb[0] = 131;
-    evToRgb[10] = 136;
-    evToRgb[20] = 140;
-    evToRgb[30] = 145;
-    evToRgb[40] = 150;
-    evToRgb[50] = 155;
-    evToRgb[60] = 160;
-    evToRgb[70] = 165;
-    evToRgb[80] = 170;
-    evToRgb[90] = 175;
-    evToRgb[100] = 179;
-    evToRgb[110] = 184;
-    evToRgb[120] = 188;
-    evToRgb[130] = 193;
-    evToRgb[140] = 197;
-    evToRgb[150] = 201;
-    evToRgb[160] = 205;
-    evToRgb[170] = 209;
-    evToRgb[180] = 213;
-    evToRgb[190] = 217;
-    evToRgb[200] = 220;
-    evToRgb[210] = 223;
-    evToRgb[220] = 227;
-    evToRgb[230] = 230;
-    evToRgb[240] = 232;
-    evToRgb[250] = 235;
-    evToRgb[260] = 238;
-    evToRgb[270] = 240;
-    evToRgb[280] = 242;
-    evToRgb[290] = 244;
-    evToRgb[300] = 246;
-    evToRgb[310] = 247;
-    evToRgb[320] = 249;
-    evToRgb[330] = 250;
-    evToRgb[340] = 251;
-    evToRgb[350] = 252;
-    evToRgb[360] = 252;
-    evToRgb[370] = 253;
-    evToRgb[380] = 254;
-    evToRgb[390] = 254;
-    evToRgb[400] = 254;
-    evToRgb[410] = 254;
-    evToRgb[420] = 254;
-    evToRgb[430] = 254;
-    evToRgb[440] = 254;
-    evToRgb[450] = 254;
-    evToRgb[460] = 254;
-    evToRgb[470] = 254;
-    evToRgb[480] = 254;
-    evToRgb[490] = 254;
-    evToRgb[500] = 255;
-
 }
 
 /* DEFINES ***********************************************************************************/
 
 #define MAX_3(a, b, c) ( ( a > b && a > c) ? a : (b > c ? b : c) )
 #define MIN_3(a, b, c) ( ( a < b && a < c) ? a : (b < c ? b : c) )
+
+/* 2D OPERATIONS *****************************************************************************/
+
+int Effects::ptToSegment(int x, int y, int x1, int y1, int x2, int y2)
+{
+    int a = x - x1;
+    int b = y - y1;
+    int c = x2 - x1;
+    int d = y2 - y1;
+
+    int dot = a * c + b * d;
+    int len_sq = c * c + d * d;
+    double param = -1;
+    if (len_sq != 0) //in case of 0 length line
+        param = static_cast<double>(dot) / len_sq;
+
+    int xx, yy;
+
+    if (param < 0) {
+      xx = x1;
+      yy = y1;
+    }
+    else if (param > 1) {
+      xx = x2;
+      yy = y2;
+    }
+    else {
+      xx = x1 + param * c;
+      yy = y1 + param * d;
+    }
+
+    int dx = x - xx;
+    int dy = y - yy;
+    double minDistance = qSqrt(dx * dx + dy * dy);
+    return static_cast<int>(minDistance);
+}
 
 /* PIXEL OPERATIONS **************************************************************************/
 
@@ -436,6 +114,60 @@ Return the average of the pixels left, right, above and below the pixel at x,y
     v[y][x] = qRgba(r, g, b, a);
 }
 
+QRgb Effects::averagePixelInBox(QVector<QVector<QRgb>> &q, const int &x, const int &y,
+                           const int &w, const int &h, const int &o)
+{
+/*
+Return the average of the pixels in the box defined by offset o centered on x,y
+(x-o, y-o) to (x+o, y+o)
+*/
+    // return if coordinate out of range
+    if (x < 0 || x > w - 1 || y < 0 || y > h - 1) {
+        /*
+        qDebug() << __FUNCTION__ << "WARNING: OUT OF RANGE"
+                 << "x =" << x
+                 << "y =" << y
+                    ;
+                    */
+        return 0;
+    }
+
+    int x1, x2, y1, y2;
+    int r, g, b, a;
+    r = g = b = a = 0;
+    x - o < 0 ? x1 = 0 : x1 = x - o;
+    y - o < 0 ? y1 = 0 : y1 = y - o;
+    x + o > w - 1 ? x2 = w - 1 : x2 = x + o;
+    y + o > h - 1 ? y2 = h - 1 : y2 = y + o;
+    /*
+    qDebug() << __FUNCTION__
+             << "x =" << x
+             << "y =" << y
+             << "x1 =" << x1
+             << "x2 =" << x2
+             << "y1 =" << y1
+             << "y2 =" << y2
+             << "w =" << w
+             << "h =" << h
+                ;
+//                */
+    int count = 0;
+    for (int v = y1; v <= y2; v++) {
+        for (int u = x1; u <= x2; u++) {
+            count++;
+            r += qRed(q[v][u]);
+            g += qGreen(q[v][u]);
+            b += qBlue(q[v][u]);
+            a += qAlpha(q[v][u]);
+        }
+    }
+    r /= count;
+    g /= count;
+    b /= count;
+    a /= count;
+    return qRgba(r, g, b, a);
+}
+
 void Effects::swapPoints(Point &p1, Point &p2)
 {
     Point tmp;
@@ -460,50 +192,74 @@ int Effects::luminosity(QRgb &p)
 
 void Effects::brightenPixel(QRgb &p, double deltaEv)
 {
+/*
+p = pixel from original image, deltaEV = change in exposure value
+
+Changes the luminance (brightness) of a pixel by an exposure value (f/stop) emulating how
+exposure works in lightroom.  Luminance (lum) is on a scale 0-255, where 128 = 0EV.
+
+Since EV reflects what our brain interprets from the amount of light, which is not linear. This
+table shows the relationship:
+
+    EV      Lum (0-255)
+    -5           17
+    -4           24
+    -3           35
+    -2           54
+    -1           83
+     0          128
+     1          179
+     2          223
+     3          246
+     4          252
+
+Two quadratic formulas for neg/pos ev:
+
+    lum = a * ev² + b * ev + c
+    ev  = (b + (b² - 4a(128 - lum))½) / 2a
+
+        Negative EV         Positive EV
+    a       5.426              -7.9286
+    b     -47.229             -63.214
+    c     128                 128
+
+*/
+    // if change is to ev 0 then just use original
+    if (deltaEv > -0.05 && deltaEv < 0.05) return;
+
     int alpha = qAlpha(p);
     // QColor for pixel p
-    QColor c(p);
-    // convert to HSV
-    c.toHsv();
-    // get the luminance 0-255
-    int lum = luminosity(p);  // or int lum = c.value();
-    // get the exposure value rounded to nearest 10
-    int ev = 10 * (qRound(rgbToEv[lum] * 1.0 / 10));
-    // convert deltaEv ie 1.5 to 150 for lookup table evToRgb
-    int deltaEv100 = qRound(deltaEv * 10);
-    deltaEv100 *= 10;
+    QColor rgb(p);
+    // convert to HSL
+    QColor hsl = rgb.toHsl();
+    // get the luminance 0-255 of the pixel
+    double lum = hsl.lightnessF() * 255;
+    // get the exposure value of the pixel
+    double ev;
+    if (lum < 26)
+        ev = -4;
+    else if (lum < 128)
+        ev = (-47.229 + qSqrt(2230.578441 - 21.704 * (128 - lum))) / 10.852;
+    else if (lum > 253)
+        ev = 4;
+    else
+        ev = (-63.214 + qSqrt(3996.00996 + 31.7144 * (128 - lum))) / (-15.8572);
     // new EV
-    int newEv = ev + deltaEv100;
-    if (newEv > 500) newEv = 500;
-    if (newEv < -500) newEv = -500;
-    // new luminance from new exposure value (0-255)
-    int v = evToRgb[newEv];
-    // plug new luminance into HSV
-    int h = c.hue();
-    int s = c.saturation();
-    c.setHsv(h, s, v);
+    double newEv = ev + deltaEv;
+    if (newEv > 4) newEv = 4;
+    if (newEv < -4) newEv = -4;
+    // new luminance from new exposure value
+    double l;
+    if (newEv < 0)
+        l = (5.426 * newEv * newEv + 47.229 * newEv + 128) / 255;
+    else
+        l = (-7.9286 * newEv * newEv + 63.214 * newEv + 128) / 255;
+    // plug new luminance into HSL
+    hsl.setHslF(hsl.hslHueF(), hsl.hslSaturationF(), l);
     // convert back to RGB
-    c.toRgb();
-    /*
-    qDebug() << __FUNCTION__
-             << "qRed(p) =" << qRed(p)
-             << "qGreen(p) =" << qGreen(p)
-             << "qBlue(p) =" << qBlue(p)
-             << "lum =" << lum
-             << "ev =" << ev
-             << "deltaEv100 =" << deltaEv100
-             << "newEv =" << newEv
-             << "h =" << h
-             << "s =" << s
-             << "v =" << v
-             << "c.red() =" << c.red()
-             << "c.green() =" << c.green()
-             << "c.blue() =" << c.blue()
-                ;
-//                */
-
+    rgb =  hsl.toRgb();
     // update pixel p
-    p = qRgba(c.red(), c.green(), c.blue(), alpha);
+    p = qRgba(rgb.red(), rgb.green(), rgb.blue(), alpha);
 }
 
 /* VECTOR OPERATIONS *************************************************************************/
@@ -687,6 +443,7 @@ void Effects::blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
 {
     if (p1.x > p2.x) swapPoints(p1, p2);
 
+    // define line y = mx + b;
     bool isVertical = p1.x == p2.x;
     double m = 0;
     double b;
@@ -698,6 +455,10 @@ void Effects::blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
         m = static_cast<double>(p2.y - p1.y) / (p2.x - p1.x);
         b = p1.y - m * p1.x;
     }
+
+    // vector to store average results
+    QVector<QRgb> temp;
+
     /*
     qDebug() << __FUNCTION__
              << "w =" << w
@@ -710,6 +471,7 @@ void Effects::blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
              << "b =" << b
                 ;
 //                */
+
     // line
     if (isVertical) {
         for (int y = p1.y; y <= p2.y; ++y) {
@@ -724,21 +486,45 @@ void Effects::blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
         }
     }
     else {
+        int offset = static_cast<int>(width/2);
         for (int x = p1.x; x <= p2.x; ++x) {
             int y = static_cast<int>(m * x + b);
-            averagePixel(q, x, y, w, h);
-            for (int d = 1; d < width; ++d) {
-                if (qFuzzyCompare(m, 0)) {   // horizontal line
-                    averagePixel(q, x, y-d, w, h);
-                    averagePixel(q, x, y+d, w, h);
+            if (offset > 0) {
+//                // tapered offset
+//                int to = 0;
+                for (int d = -offset; d <= offset; ++d) {
+//                    if (d <= 0) to++;
+//                    else to--;
+                    // horizontal line
+                    if (qFuzzyCompare(m, 0) && y+d >= 0 && y+d < h)
+                        temp << averagePixelInBox(q, x, y + d, w, h, offset);
+                    // everything else
+                    else if (x+d >= 0 && x+d < w)
+                        temp << averagePixelInBox(q, x + d, y, w, h, offset);
                 }
-                else if (m > 0) {
-                    averagePixel(q, x+d, y, w, h);
-                    averagePixel(q, x, y+d, w, h);
-                }
-                else {
-                    averagePixel(q, x-d, y, w, h);
-                    averagePixel(q, x, y-d, w, h);
+            }
+        }
+        // update img vector from temp averages
+        int i = 0;
+        int len = temp.size();
+        /*
+        qDebug() << __FUNCTION__
+                 << "width =" << width
+                 << "p1.x =" << p1.x
+                 << "p2.x =" << p2.x
+                 << "temp.size() =" << temp.size()
+                    ;
+//        */
+        for (int x = p1.x; x <= p2.x; ++x) {
+            int y = static_cast<int>(m * x + b);
+            if (offset > 0) {
+                for (int d = -offset; d <= offset; ++d) {
+                    // horizontal line
+                    if (qFuzzyCompare(m, 0) && y+d >= 0 && y+d < h)
+                        q[y+d][x] = temp.at(i);
+                    // everything else
+                    else if (x+d >= 0 && x+d < w)
+                        if (i < len) q[y][x+d] = temp.at(i++);
                 }
             }
         }
@@ -1244,14 +1030,9 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
 
 void Effects::brighten(QImage &img, qreal evDelta)
 {
-    qDebug() << __FUNCTION__ << "delta =" << evDelta;
+//    qDebug() << __FUNCTION__ << "delta =" << evDelta;
     QElapsedTimer t;
     t.start();
-/*
-    if (evdelta == 100) return;
-    if (evdelta > 400) return;
-    if (evdelta < 10) return;
-    */
 
     // bDelta               // change in brightness
     int w = img.width();
@@ -1259,8 +1040,6 @@ void Effects::brighten(QImage &img, qreal evDelta)
 
     if(img.depth() < 8)
         img = img.convertToFormat(QImage::Format_Indexed8);
-
-//    int a, r, g, b;
 
     // create QVector of img for pixel wrangling
     QVector<QVector<QRgb>> s(h);  // source, destination
@@ -1295,6 +1074,264 @@ void Effects::brighten(QImage &img, qreal evDelta)
 
     qDebug() << __FUNCTION__
              << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
+}
+
+void Effects::emboss(QImage &img, double size, double soften, int contour,
+                     double highlight, double shadow, int azimuth)
+{
+    // border or graphics object with no transparent pixels along outer border
+    size /= 100;                // emboss distance from edge (% of long side)
+    int w = img.width();
+    int h = img.height();
+    int ls = w > h ? w : h;     // long side in pixels
+    int m = ls * size;          // emboss width or margin in pixels
+    /*
+    qDebug() << __FUNCTION__
+             << "size =" << size
+             << "w =" << w
+             << "h =" << h
+             << "ls =" << ls
+             << "m =" << m
+                ;
+    */
+    // deal with light direction
+    double evTop, evLeft, evRight, evBottom, ev;
+    evTop = evLeft = evRight = evBottom = shadow;
+    if (azimuth > 270 || azimuth < 90) evTop = highlight;
+    if (azimuth > 0 && azimuth < 180) evRight = highlight;
+    if (azimuth > 90 && azimuth < 270) evBottom = highlight;
+    if (azimuth > 180 && azimuth < 360) evLeft = highlight;
+
+    bool fadeTopRight, fadeTopLeft, fadeBottomRight, fadeBottomLeft;
+    fadeTopRight = fadeTopLeft = fadeBottomRight = fadeBottomLeft = false;
+    if (azimuth > 270 && azimuth < 360) {
+        fadeTopRight = true;
+        fadeBottomLeft = true;
+    }
+    if (azimuth > 0 && azimuth < 90) {
+        fadeTopLeft = true;
+        fadeBottomRight = true;
+    }
+    if (azimuth > 90 && azimuth < 180) {
+        fadeTopRight = true;
+        fadeBottomLeft = true;
+    }
+    if (azimuth > 180 && azimuth < 270) {
+        fadeTopLeft = true;
+        fadeBottomRight = true;
+    }
+    if (azimuth == 0) {
+        fadeTopLeft = true;
+        fadeTopRight = true;
+    }
+
+//    qDebug() << __FUNCTION__
+//             << "evTop =" << evTop
+//             << "evLeft =" << evLeft
+//             << "evBottom =" << evBottom
+//             << "evRight =" << evRight
+//             << "azimuth =" << azimuth
+//                ;
+
+    /*
+                if (x==970)
+                qDebug() << __FUNCTION__
+                         << "x =" << x
+                         << "y =" << y
+                         << "w =" << w
+                         << "m =" << m
+                         << "d =" << d
+                         << "dst =" << dst
+                         << "evRight =" << evRight
+                         << "ev =" << ev
+                         << "(dst)/d =" << static_cast<double>(dst)/d
+                            ;
+    */
+    // create QVector of img for pixel wrangling
+    QVector<QVector<QRgb>> s(h);
+    imageToVector(img, s);
+
+    double pct = 0;
+    int d = soften * m;         // pixel range to soften
+    int ds = soften * m * 0.7;  // offset from inner corner to fade to either center or corner
+    int dc;                     // distance from x,y to center edge of border
+    int de;                     // distance from x,y to corner diagonal
+    int dst;                    // the lesser of cd and de
+
+    /*
+    // top
+    int x = 0;
+    for (int y = 0; y < m; y++) {
+        pct = static_cast<double>(y) / m;
+        if (1 - pct > soften) ev = evTop;
+        else ev = evTop * (1 - pct) / soften;
+        for (x = y ; x < w - y; x++) {
+            brightenPixel(s[y][x], ev);
+        }
+        */
+
+    // top
+    int x = 0;
+    int y = 0;
+    for (y = 0; y < m; y++) {
+        // top left
+        if (fadeTopLeft) {
+            for (x = y; x < m; x++) {
+                dst = x - y;
+                if (dst > d || d == 0) ev = evTop;
+                else ev = evTop * static_cast<double>(dst)/d;
+                brightenPixel(s[y][x], ev);
+            }
+        }
+        // top middle
+        dst = m - y;
+        if (dst > d || d == 0) ev = evTop;
+        else ev = evTop * static_cast<double>(dst)/d;
+        if (fadeTopLeft) {
+            for (; x < w - y; x++) {
+                brightenPixel(s[y][x], ev);
+            }
+        }
+        else {
+            for (x = y; x < w - m; x++) {
+                brightenPixel(s[y][x], ev);
+            }
+        }
+        // top right
+        if (fadeTopRight) {
+            for (; x < w - y; x++) {
+                dst = w - x - y;
+                if (dst > d || d == 0) ev = evTop;
+                else ev = evTop * static_cast<double>(dst)/d;
+                brightenPixel(s[y][x], ev);
+            }
+        }
+    }
+
+    // right
+    for (x = w - m; x < w; x++) {
+        // right top
+        if (fadeTopRight) {
+            for (y = w - x; y < m; y++) {
+                dst = y - (w - x);
+                if (dst > d || d == 0) ev = evRight;
+                else ev = evRight * static_cast<double>(dst)/d;
+                brightenPixel(s[y][x], ev);
+            }
+        }
+        // right middle
+        dst = m - w + x;
+        if (dst > d || d == 0) ev = evRight;
+        else ev = evRight * static_cast<double>(dst)/d;
+        if (fadeTopRight) {
+            for (; y < h - (w - x); y++) {
+                brightenPixel(s[y][x], ev);
+            }
+        }
+        else {
+            for (y = w - x; y < h - m; y++) {
+                brightenPixel(s[y][x], ev);
+            }
+        }
+        // right bottom
+        if (fadeBottomRight) {
+            for (; y < h - w + x; y++) {
+                dst = x - (w-h+y);
+                if (dst > d || d == 0) ev = evRight;
+                else ev = evRight * static_cast<double>(dst)/d;
+                brightenPixel(s[y][x], ev);
+            }
+        }
+    }
+
+    // bottom
+    for (y = h - m - 1; y < h; y++) {
+        // bottom left
+        if (fadeBottomLeft) {
+            for (x = h - y; x < m; x++) {
+//                dst = m - (h-y) - (m-x);
+                dst = x + y - h + 1;
+                if (dst > d || d == 0) ev = evBottom;
+                else ev = evBottom * static_cast<double>(dst)/d;
+                brightenPixel(s[y][x], ev);
+            }
+        }
+        // bottom middle
+        dst = m - h + y + 1;
+        if (dst > d || d == 0) ev = evBottom;
+        else ev = evBottom * static_cast<double>(dst)/d;
+        if (fadeBottomLeft) {
+            for (; x < w - h + y/* + 1*/; x++) {
+                brightenPixel(s[y][x], ev);
+                if (x==100)
+                qDebug() << __FUNCTION__
+                         << "x =" << x
+                         << "y =" << y
+                         << "w =" << w
+                         << "m =" << m
+                         << "d =" << d
+                         << "dst =" << dst
+                         << "evRight =" << evRight
+                         << "ev =" << ev
+                         << "(dst)/d =" << static_cast<double>(dst)/d
+                            ;
+           }
+        }
+        else {
+            for (x = h - y; x < w - m; x++) {
+                brightenPixel(s[y][x], ev);
+            }
+        }
+        // bottom right
+        if (fadeBottomRight) {
+            for (; x < w - h + y; x++) {
+                dst = w - h + y - x;
+                if (dst > d || d == 0) ev = evBottom;
+                else ev = evBottom * static_cast<double>(dst)/d;
+                brightenPixel(s[y][x], ev);
+            }
+        }
+    }
+
+    // left
+    for (x = 0; x < m; x++) {
+        // left top
+        if (fadeTopLeft) {
+            for (y = x; y < m; y++) {
+                dst = y - x;
+                if (dst > d || d == 0) ev = evLeft;
+                else ev = evLeft * static_cast<double>(dst)/d;
+                brightenPixel(s[y][x], ev);
+            }
+        }
+        // left middle
+        dst = m - x;
+        if (dst > d || d == 0) ev = evLeft;
+        else ev = evLeft * static_cast<double>(dst)/d;
+        if (fadeTopLeft) {
+            for (; y < h - x; y++) {
+                brightenPixel(s[y][x], ev);
+            }
+        }
+        else {
+            for (y = x + 1 ; y < h - m; y++) {
+                brightenPixel(s[y][x], ev);
+            }
+        }
+        // left bottom
+        if (fadeBottomLeft) {
+            for (; y < h - x; y++) {
+                dst = h - y - x;
+                if (dst > d || d == 0) ev = evLeft;
+                else ev = evLeft * static_cast<double>(dst)/d;
+                brightenPixel(s[y][x], ev);
+            }
+        }
+    }
+
+    // build destination image
+    vectorToImage(img, s);
+    qDebug() << __FUNCTION__ << "Done";
 }
 
 /* 3D OPERATIONS *****************************************************************************/

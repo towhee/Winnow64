@@ -109,7 +109,7 @@ signals:
     void killSlideshow();                   // only call when slideshow is active
     void zoomChange(qreal zoomValue);
     void handleDrop(const QMimeData *mimeData);
-    void embellish();
+    void embellish(QString fPath);
     void newTile();
 
 private slots:
