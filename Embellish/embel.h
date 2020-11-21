@@ -4,6 +4,7 @@
 #include <QtWidgets>
 //#include "Views/imageview.h"
 //#include "Embellish/embelexport.h"
+#include "Cache/imagecache.h"
 #include "Properties/embelproperties.h"
 #include "Effects/highlighteffect.h"
 #include "Effects/graphicseffect.h"
@@ -15,7 +16,8 @@ class Embel : public QObject
     Q_OBJECT
 
 public:
-    Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem, EmbelProperties *p);
+    Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
+          EmbelProperties *p, ImageCache *imCache);
 //    Embel(ImageView *gv, EmbelProperties *p);
 //    Embel(EmbelExport *ee, EmbelProperties *p);
     ~Embel();
@@ -32,7 +34,7 @@ public:
     void diagnostic();
 
 public slots:
-    void build();
+    void build(QString fPath = "");
     void clear();
     void flashObject(QString type = "", int index = 0, bool show = false);
 
@@ -43,6 +45,8 @@ private:
     QGraphicsScene *scene;
     QGraphicsPixmapItem *pmItem;
     EmbelProperties *p;
+    ImageCache *imCache;
+    QString fPath;
 
     enum zLevel {
         ZBorder,

@@ -3,6 +3,7 @@
 
 GraphicsEffect::GraphicsEffect(QObject *parent)
 {
+    qDebug() << __FUNCTION__;
 }
 
 QRectF GraphicsEffect::boundingRectFor(const QRectF& rect) const
@@ -66,6 +67,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
 void GraphicsEffect::draw(QPainter* painter)
 {
     if (effects->length() == 0) return;
+//    qDebug() << __FUNCTION__ << "effects->length() =" << effects->length();
 
     painter->save();
 
@@ -87,7 +89,7 @@ void GraphicsEffect::draw(QPainter* painter)
         QColor color;
         QPointF pt;
         Margin margin;
-        /*
+//        /*
         qDebug() << __FUNCTION__
                  << "ef.effectOrder =" << ef.effectOrder
                  << "ef.effectName =" << ef.effectName
@@ -111,6 +113,10 @@ void GraphicsEffect::draw(QPainter* painter)
         case shadow:
             color.setRgb(ef.shadow.r, ef.shadow.g, ef.shadow.b, ef.shadow.a);
             shadowEffect(ef.shadow.length, ef.shadow.blurRadius, color, ef.shadow.blendMode);
+            break;
+        case emboss:
+            embossEffect(ef.emboss.size, ef.emboss.soften, ef.emboss.contour, ef.emboss.highlight,
+                         ef.emboss.shadow, ef.emboss.opacity, ef.emboss.blendMode);
             break;
         case brighten:
             brightenEffect(ef.brighten.evDelta, ef.brighten.blendMode);
@@ -166,7 +172,7 @@ QT_END_NAMESPACE
 
 void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 {
-    if (overlay.isNull()) return;
+    qDebug() << __FUNCTION__;
 
     QImage blurred(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     blurred = overlay;
@@ -187,6 +193,8 @@ void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 
 void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 {
+    qDebug() << __FUNCTION__;
+
     if (overlay.isNull()) return;
 
     QImage sharpened = WinnowGraphicEffect::sharpen(overlay, radius);
@@ -201,6 +209,8 @@ void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 void GraphicsEffect::shadowEffect(double length, double radius, QColor color,
                                   QPainter::CompositionMode mode)
 {
+    qDebug() << __FUNCTION__;
+
     if (overlay.isNull()) return;
 
     double rads = lightDirection * (3.14159 / 180);
@@ -240,6 +250,8 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color,
 
 void GraphicsEffect::highlightEffect(QColor color, Margin margin, QPainter::CompositionMode mode)
 {
+    qDebug() << __FUNCTION__;
+
     if (overlay.isNull()) return;
 
     QPointF highlightOffset(margin.left, margin.top);
@@ -268,34 +280,49 @@ void GraphicsEffect::highlightEffect(QColor color, Margin margin, QPainter::Comp
 void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
 {
     qDebug() << __FUNCTION__;
-    QImage raised(overlay.size(), QImage::Format_ARGB32_Premultiplied);
-    raised = overlay;
-    effect.raise(raised, margin, 0.2, false);
+    QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    temp = overlay;
+    effect.raise(temp, margin, 0.2, false);
 
     QPainter overlayPainter(&overlay);
     overlayPainter.setCompositionMode(mode);
-    overlayPainter.drawImage(0,0, raised);
+    overlayPainter.drawImage(0,0, temp);
     overlayPainter.end();
 }
 
 void GraphicsEffect::brightenEffect(qreal evDelta, QPainter::CompositionMode mode)
+{
+    qDebug() << __FUNCTION__;
+
+    if (overlay.isNull()) return;
+
+    QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    temp = overlay;
+    Effects effect;
+    effect.brighten(temp, evDelta);
+//    effect.emboss(temp, evDelta, 0, 0, 1, -1, lightDirection);
+//    temp.save("D:/Pictures/Temp/effect/brightened.tif");
+
+    QPainter overlayPainter(&overlay);
+    overlayPainter.setCompositionMode(mode);
+    overlayPainter.drawImage(0,0, temp);
+    overlayPainter.end();
+}
+
+void GraphicsEffect::embossEffect(double size, double soften, int contour, double highlight,
+                                  double shadow, int opacity, QPainter::CompositionMode mode)
 {
     if (overlay.isNull()) return;
 
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
     Effects effect;
-    qDebug() << __FUNCTION__ << "evDelta =" << evDelta;
-    effect.brighten(temp, evDelta);
-
-//    effect.raise(blurred, radius);
-//    effect.brighten(blurred, static_cast<int>(radius) * 4);
-//    QImage blurred = WinnowGraphicEffect::blur(overlay, radius);
-
-    temp.save("D:/Pictures/Temp/effect/brightened.tif");
+    effect.emboss(temp, size, soften, contour, highlight, shadow, lightDirection);
+//    temp.save("D:/Pictures/Temp/effect/embossed.tif");
 
     QPainter overlayPainter(&overlay);
-    overlayPainter.setCompositionMode(mode);
+    // any mode other than source causes a crash.  Don't know why
+//    overlayPainter.setCompositionMode(mode);
     overlayPainter.drawImage(0,0, temp);
     overlayPainter.end();
 }

@@ -1,7 +1,18 @@
 #include "embel.h"
 //#include "Effects/effect.h"       // temp to test
 
-Embel::Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem, EmbelProperties *p)
+/*
+
+Embel applies all the settings in EmbelProperties to the ImageView QGraphicScene (scene), which
+contains just pmItem (a pixmap of the image) in the base "Do not embellish" mode.  All
+embellishments are defined in the PropertyEditor embelProperties.
+
+Export converts the scene, with any borders, texts and graphics, into a QImage.
+
+*/
+
+Embel::Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
+             EmbelProperties *p, ImageCache *imCache)
 {
     {
     #ifdef ISDEBUG
@@ -11,6 +22,7 @@ Embel::Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem, EmbelProperties
     this->scene = scene;
     this->pmItem = pmItem;
     this->p = p;
+    this->imCache = imCache;
     flashItem = new QGraphicsRectItem;
 }
 
@@ -40,25 +52,14 @@ void Embel::exportImage()
 void Embel::test()
 {
 
-    /*
-    // Test
+    /* Test
     Effects effect;
     QImage img("D:/Pictures/Temp/effect/_border.tif");
     effect.test(img);
     img.save("D:/Pictures/Temp/effect/_borderShaded.tif");
 //    */
 
-    /*
-    // brighten example
-    QImage img("D:/Pictures/Temp/effect/goose.jpg");
-    Effects effect;
-    effect.brighten(img, 120);
-    img.save("D:/Pictures/Temp/effect/goosebrighten.tif");
-    return;
-//    */
-
-    /*
-    // Convolve example
+    /* Convolve example
     int n = 9;
     double matrix[81] =
     {
@@ -98,8 +99,7 @@ void Embel::test()
     gooseConvolved.save("D:/Pictures/Temp/effect/gooseconvolved.tif");
 //    */
 
-    /*
-    // raise example
+    /* raise example
     QImage img("D:/Pictures/Temp/effect/goose.jpg");
     Effects effect;
     effect.raise(img, 20, 0.0, 0, false);
@@ -114,15 +114,11 @@ void Embel::test()
     img.save("d:/pictures/temp/effect/textblurred.tif");
 //    */
 
+//    /* brighten test
     Effects effect;
     QRgb p = qRgba(110, 150, 65, 255);
-    qDebug() << __FUNCTION__
-             << "qRed(p) =" << qRed(p)
-             << "qGreen(p) =" << qGreen(p)
-             << "qBlue(p) =" << qBlue(p)
-             << "qAlpha(p) =" << qAlpha(p)
-                ;
     effect.brightenPixel(p, 1.2);
+//    */
 }
 
 void Embel::doNotEmbellish()
@@ -161,7 +157,7 @@ void Embel::clear()
     scene->removeItem(flashItem);
 }
 
-void Embel::build()
+void Embel::build(QString fPath)
 {
 /*
 
@@ -176,6 +172,8 @@ void Embel::build()
         return;
     }
     qDebug() << __FUNCTION__;
+    // file path for the current image (req'd to update styles applied to pmItem)
+    if (fPath != "") this->fPath = fPath;
     clear();
     createBorders();
     createTexts();
@@ -293,9 +291,7 @@ void Embel::borderImageCoordinates()
     image.bc = QPoint(image.x + image.w / 2, image.y + image.h);
 }
 
-QPoint Embel::canvasCoord(double x, double y,
-                          QString anchorObject,
-                          QString anchorContainer)
+QPoint Embel::canvasCoord(double x, double y, QString anchorObject, QString anchorContainer)
 {
 /*
 Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
@@ -426,7 +422,7 @@ void Embel::createTexts()
     }
     for (int i = 0; i < p->t.size(); ++i) {
         QGraphicsTextItem *item = new QGraphicsTextItem;
-        item->setToolTip("Text" + QString::number(i));
+        item->setToolTip(p->t[i].name);
         tItems << item;
     }
 }
@@ -440,7 +436,7 @@ void Embel::createGraphics()
     }
     for (int i = 0; i < p->g.size(); ++i) {
         QGraphicsPixmapItem *item = new QGraphicsPixmapItem;
-        item->setToolTip("Graphic" + QString::number(i));
+        item->setToolTip(p->g[i].name);
         graphicPixmaps << QPixmap(p->g[i].filePath);
         item->setPixmap(graphicPixmaps.at(i));
         gItems << item;
@@ -506,6 +502,7 @@ void Embel::addImageToScene()
     // move the image to center in the borders
     pmItem->setPos(image.tl);
     pmItem->setZValue(ZImage);
+    pmItem->setToolTip("Image");
 
     updateImage();
 }
@@ -673,8 +670,14 @@ void Embel::updateImage()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << fPath;
     // graphics effects
     if (p->image.style != "No style" && p->image.style != "") {
+        // start with a fresh image from the ImageCache
+        if (imCache->imCache.contains(fPath)) {
+            qDebug() << __FUNCTION__ << "if (imCache->imCache.contains(fPath)) " << fPath;
+            pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
+        }
         GraphicsEffect *effect = new GraphicsEffect();
         effect->set(p->styleMap[p->image.style],
                 p->globalLightDirection,

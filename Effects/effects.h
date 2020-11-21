@@ -12,6 +12,8 @@ public:
     void blurOriginal(QImage &img, int radius);
     void raise(QImage &img, int m, double taper = 0.5, int blurWidth = 3, bool raise = false);
     void brighten(QImage &img, qreal evDelta);
+    void emboss(QImage &img, double size, double soften, int contour, double highlight,
+                double shadow, int azimuth);
     QImage convolve(QImage &img, int mDim, double *matrix);
 
     void test(QImage &img);
@@ -23,7 +25,6 @@ private:
         int y;
     };
     // Pixel ops
-
     QRgb convertToPremult(QRgb p);
     QRgb convertFromPremult(QRgb p);
     void swapPoints(Point &p1, Point &p2);
@@ -31,6 +32,8 @@ private:
                     const int &x, const int &y, const double &blend);
     void averagePixel(QVector<QVector<QRgb> > &v, const int &x, const int &y,
                       const int &w, const int &h);
+    QRgb averagePixelInBox(QVector<QVector<QRgb> > &v, const int &x, const int &y,
+                      const int &w, const int &h, const int &r);
     int luminosity(QRgb &p);
 //    void brightenPixel(QRgb &p, double deltaEv);
 
@@ -45,6 +48,9 @@ private:
     void blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
                   const int &w, const int &h, const int &width);
 
+    // 2D
+    int ptToSegment(int x, int y, int x1, int y1, int x2, int y2);
+
     // 3D
     typedef double
     Vector[3];
@@ -53,10 +59,6 @@ private:
     void lightVector(int azimuth, Vector &light);
     void normalize(Vector &p);
     void slopeUnitVector(Vector &a, Vector &b, int angle);
-
-    // Lookup tables
-    QMap<int, int>rgbToEv;
-    QMap<int, int>evToRgb;
 
 };
 

@@ -4747,7 +4747,7 @@ void MW::createEmbel()
     G::track(__FUNCTION__);
     #endif
     }
-    embel = new Embel(imageView->scene, imageView->pmItem, embelProperties);
+    embel = new Embel(imageView->scene, imageView->pmItem, embelProperties, imageCacheThread);
     connect(imageView, &ImageView::embellish, embel, &Embel::build);
     connect(embel, &Embel::done, imageView, &ImageView::resetFitZoom);
 }
@@ -11042,6 +11042,36 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    embelProperties->test1();
+    int r = 165;
+    int g = 154;
+    int b = 109;
+    QRgb p = qRgba(r,g,b,255);
+    QColor rgb = QColor(r,g,b);
+    QColor hsl = rgb.toHsl();
+
+    double lum = hsl.lightnessF() * 255;
+
+    double ev;
+    if (lum < 128)
+        ev = (-47.229+qSqrt(47.229*47.229-4*5.426*(128-lum)))/(2*5.426);
+    else
+        ev = (-63.214+qSqrt(63.214*63.214-4*-7.9286*(128-lum)))/(2*-7.9286);
+    double newEv = ev;
+//    int l;
+    double l;
+    if (newEv < 0)
+        l = /*static_cast<int>*/(5.426 * newEv * newEv + 47.229 * newEv + 128) / 255;
+    else
+        l = /*static_cast<int>*/(-7.9286 * newEv * newEv + 63.214 * newEv + 128) / 255;
+
+    hsl.setHslF(hsl.hslHueF(), hsl.hslSaturationF(), l);
+    rgb = hsl.toRgb();
+    QRgb q = qRgba(rgb.red(), rgb.green(), rgb.blue(), 255);
+    qDebug() << __FUNCTION__
+             << QString("%1").arg(p, 0, 16)
+             << QString("%1").arg(q, 0, 16)
+             << lum << l
+                ;
+
 }
 // End MW

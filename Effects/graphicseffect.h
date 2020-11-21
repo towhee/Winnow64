@@ -44,8 +44,19 @@ namespace winnow_effects
         QPainter::CompositionMode blendMode;
     };
 
+    enum Contour {flat, round};
+    struct Emboss {
+        double  size;
+        double soften;
+        Contour contour;
+        double highlight;
+        double shadow;
+        int opacity;
+        QPainter::CompositionMode blendMode;
+    };
+
     // when add an effect must add to enum and union
-    enum EffectType {blur, sharpen, highlight, shadow, brighten};
+    enum EffectType {blur, sharpen, highlight, shadow, brighten, emboss};
     struct Effect {
         enum EffectType effectType;
         QString effectName;         // unique: req'd in case more than one of same effect
@@ -56,6 +67,7 @@ namespace winnow_effects
             Highlight highlight;
             Shadow shadow;
             Brighten brighten;
+            Emboss emboss;
         };
     };
 
@@ -138,6 +150,8 @@ private:
     void brightenEffect(qreal delta, QPainter::CompositionMode mode);
     void sharpenEffect(qreal radius, QPainter::CompositionMode mode);
     void raiseEffect(int margin, QPainter::CompositionMode mode);
+    void embossEffect(double size, double soften, int contour, double highlight,
+                      double shadow, int opacity, QPainter::CompositionMode mode);
 
     QList<winnow_effects::Effect> *effects;
     Effects effect;

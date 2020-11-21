@@ -85,7 +85,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     isExpandRecursively = false;
     collapseAll();
     expand(model->index(0,0,QModelIndex()));
-    setIndentation(12);
+    setIndentation(10);
     setAlternatingRowColors(false);
     setMouseTracking(false);
     propertyDelegate->isAlternatingRows = false;
@@ -285,6 +285,7 @@ void EmbelProperties::newEffectActionClicked()
     if (effect == "Highlight") addHighlightEffect(effectParentIdx);
     if (effect == "Shadow") addShadowEffect(effectParentIdx);
     if (effect == "Brighten") addBrightenEffect(effectParentIdx);
+    if (effect == "Emboss") addEmbossEffect(effectParentIdx);
 }
 
 void EmbelProperties::updateBorderLists(int row)
@@ -420,6 +421,14 @@ void EmbelProperties::diagnosticStyles()
                 break;
             case winnow_effects::brighten:
                 qDebug() << "      Brighten: evDelta  =" << ef.brighten.evDelta;
+                break;
+            case winnow_effects::emboss:
+                qDebug() << "      Emboss: size       =" << ef.emboss.size;
+                qDebug() << "      Emboss: soften     =" << ef.emboss.soften;
+                qDebug() << "      Emboss: contou r   =" << ef.emboss.contour;
+                qDebug() << "      Emboss: highlight  =" << ef.emboss.highlight;
+                qDebug() << "      Emboss: shadow     =" << ef.emboss.shadow;
+                qDebug() << "      Emboss: opacity    =" << ef.emboss.opacity;
                 break;
             case winnow_effects::sharpen:
                 qDebug() << "      Sharpen: radius    =" << ef.sharpen.radius;
@@ -1191,6 +1200,7 @@ itemChange, which is subclassed here.
         if (parent.left(7) == "Sharpen") itemChangeSharpenEffect(v, source, parent, grandparent);
         if (parent.left(9) == "Highlight") itemChangeHighlightEffect(v, source, parent, grandparent);
         if (parent.left(8) == "Brighten") itemChangeBrightenEffect(v, source, parent, grandparent);
+        if (parent.left(6) == "Emboss") itemChangeEmbossEffect(v, source, parent, grandparent);
     }
 
 //    e->build();
@@ -1315,7 +1325,7 @@ void EmbelProperties::itemChangeGeneral(QVariant v, QString source)
         setting->setValue(path, v.toString());
         image.style = v.toString();
     }
-
+    e->build();
 }
 
 void EmbelProperties::itemChangeBorder(QModelIndex idx)
@@ -1787,7 +1797,7 @@ void EmbelProperties::itemChangeBrightenEffect(QVariant v, QString source, QStri
     #endif
     }
     QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
-    qDebug() << __FUNCTION__ << path << source << v.toInt();
+//    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "evDelta") {
         setting->setValue(path, v.toDouble());
@@ -1801,6 +1811,63 @@ void EmbelProperties::itemChangeBrightenEffect(QVariant v, QString source, QStri
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
         styleMap[style][effect].brighten.blendMode = winnow_effects::blendModeMap[v.toString()];
+    }
+
+    e->updateStyle(style);
+}
+
+void EmbelProperties::itemChangeEmbossEffect(QVariant v, QString source, QString effectName, QString style)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
+//    qDebug() << __FUNCTION__ << path << source << v.toInt();
+
+    if (source == "size") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.size = v.toDouble();
+    }
+
+    if (source == "soften") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.soften = v.toDouble();
+    }
+
+    // add contour
+
+    if (source == "highlight") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.highlight = v.toDouble();
+    }
+
+    if (source == "shadow") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.shadow = v.toDouble();
+    }
+
+    if (source == "opacity") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.opacity = v.toDouble();
+    }
+
+    if (source == "blendMode") {
+        setting->setValue(path, v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.blendMode = winnow_effects::blendModeMap[v.toString()];
     }
 
     e->updateStyle(style);
@@ -2210,45 +2277,6 @@ void EmbelProperties::addTexts()
     for (int i = 0; i < count; ++i) newText();
 }
 
-void EmbelProperties::addRectangles()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    qDebug() << __FUNCTION__;
-    // Rectangles header (Root)
-    i.name = "Rectangles";
-    i.parentName = "???";
-    i.isHeader = true;
-    i.decorateGradient = true;
-    i.isDecoration = false;
-    i.captionText = "Rectangles";
-    i.tooltip = "";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.delegateType = DT_BarBtns;
-//    rectangleDeleteBtn = new BarBtn();
-//    rectangleDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
-//    rectangleDeleteBtn->setToolTip("Delete the open rectangle");
-//    btns.append(rectangleDeleteBtn);
-    BarBtn *rectangleNewBtn = new BarBtn();
-    rectangleNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
-    rectangleNewBtn->setToolTip("Create a new rectangle");
-    btns.append(rectangleNewBtn);
-    addItem(i);
-    rectanglesIdx = capIdx;
-//    rectangleDeleteBtn->index = capIdx;
-
-//    QString path = templatePath + "/Rectangles";
-//    setting->beginGroup(path);
-//    int count = setting->childGroups().size();
-//    qDebug() << __FUNCTION__ << path << "count =" << count;
-//    setting->endGroup();
-//    for (int i = 0; i < count; ++i) newRectangle();
-}
-
 void EmbelProperties::addGraphics()
 {
     {
@@ -2377,6 +2405,7 @@ void EmbelProperties::addStyle(QString name, int n)
         if (items.at(i).contains("Highlight")) addHighlightEffect(styleIdx, effectName);
         if (items.at(i).contains("Shadow")) addShadowEffect(styleIdx, effectName);
         if (items.at(i).contains("Brighten")) addBrightenEffect(styleIdx, effectName);
+        if (items.at(i).contains("Emboss")) addEmbossEffect(styleIdx, effectName);
     }
 
     // sort the effects
@@ -2523,7 +2552,7 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Radius";
     i.tooltip = "The amount of transition from full shadow to background.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "radius";
@@ -2550,7 +2579,7 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Blend mode";
     i.tooltip = "The way this effect blends with other effects in the style.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "blendMode";
@@ -2625,7 +2654,7 @@ void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Radius";
     i.tooltip = "The amount of sharpening.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "radius";
@@ -2652,7 +2681,7 @@ void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Blend mode";
     i.tooltip = "The way this effect blends with other effects in the style.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "blendMode";
@@ -2728,7 +2757,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Top margin";
     i.tooltip = "The amount of highlighted margin on top of the item.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "top";
@@ -2754,7 +2783,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Left margin";
     i.tooltip = "The amount of highlighted margin on left of the item.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "left";
@@ -2780,7 +2809,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Right margin";
     i.tooltip = "The amount of highlighted margin on right of the item.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "right";
@@ -2806,7 +2835,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Bottom margin";
     i.tooltip = "The amount of highlighted margin on bottom of the item.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "bottom";
@@ -2832,7 +2861,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Opacity";
     i.tooltip = "The opacity of the highlight.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "opacity";
@@ -2857,7 +2886,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Color";
     i.tooltip = "Highlight color.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "color";
@@ -2885,7 +2914,7 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Blend mode";
     i.tooltip = "The way this effect blends with other effects in the style.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "blendMode";
@@ -2918,7 +2947,6 @@ void EmbelProperties::addBrightenEffect(QModelIndex parIdx, QString effectName)
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::brighten;
-//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::brighten, "Brighten");
     effect.effectName = effectName;
@@ -2940,9 +2968,6 @@ void EmbelProperties::addBrightenEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_BarBtns;
     // get settings data
     QString key = i.path + "/sortOrder";
-//    qDebug() << __FUNCTION__
-//             << "key =" << key
-//             << "value =" << setting->value(key).toInt();
     if (setting->contains(key)) {
         i.sortOrder = setting->value(key).toInt();
     }
@@ -2961,17 +2986,17 @@ void EmbelProperties::addBrightenEffect(QModelIndex parIdx, QString effectName)
     i.captionText = "Brightness";
     i.tooltip = "A change in value of 1 is equal to changing the exposure value by one stop, "
                 "either halving or doubling the perceived brightness.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "evDelta";
     i.defaultValue = 0;
     i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
     else {
         i.value = i.defaultValue;
-        setting->setValue(settingRootPath + i.key, i.value);
+        setting->setValue(i.path, i.value);
     }
     i.delegateType = DT_Slider;
     i.type = "double";
@@ -2988,7 +3013,216 @@ void EmbelProperties::addBrightenEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Blend mode";
     i.tooltip = "The way this effect blends with other effects in the style.";
-    i.isIndent = false;
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "blendMode";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = false;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList  << winnow_effects::blendModes;
+    effect.blur.blendMode = winnow_effects::blendModeMap[i.value.toString()];
+    addItem(i);
+
+    styleMap[styleName].append(effect);
+}
+
+void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // styleName = parent
+    QString parentName = parIdx.data(UR_Name).toString();
+    styleName = parentName;
+    winnow_effects::Effect effect;
+    effect.effectType = winnow_effects::emboss;
+    if (effectName == "")
+        effectName = uniqueEffectName(parentName, winnow_effects::brighten, "Emboss");
+    effect.effectName = effectName;
+
+    QString settingRootPath = "Embel/Styles/" + parentName + "/" + effectName + "/";
+
+    // subheader for this effect
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.name = effectName;
+    i.parIdx = parIdx;
+    i.parentName = parentName;
+    i.path = "Embel/Styles/" + parentName + "/" + effectName;
+    i.captionText = effectName;
+    i.tooltip = "";
+    i.hasValue = true;      // tool button
+    i.captionIsEditable = false;
+    i.key = "sortOrder";
+    i.delegateType = DT_BarBtns;
+    // get settings data
+    QString key = i.path + "/sortOrder";
+    if (setting->contains(key)) {
+        i.sortOrder = setting->value(key).toInt();
+    }
+    else {
+        i.sortOrder = model->rowCount(parIdx);
+        setting->setValue(key, i.sortOrder);
+    }
+    effect.effectOrder = i.sortOrder;
+    addEffectBtns();
+    parIdx = capIdx;
+
+    // emboss size
+    i.name = "size";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Size";
+    i.tooltip = "The width, as a percentage of the long side, of the emboss effect.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "size";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = 0;
+    i.max = 1000;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.size = i.value.toDouble();
+    qDebug() << __FUNCTION__
+             << "effect.emboss.size =" << effect.emboss.size;
+    addItem(i);
+
+    // emboss soften
+    i.name = "soften";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Soften";
+    i.tooltip = "The amount to soften, from chisel to smooth.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "soften";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.soften = i.value.toDouble();
+    addItem(i);
+
+    // embos contour (to be added)
+
+       // emboss highlight
+    i.name = "highlight";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Highlight";
+    i.tooltip = "The brightness of the highlights.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "highlight";
+    i.defaultValue = 1.0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = -300;
+    i.max = 300;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.highlight = i.value.toDouble();
+    addItem(i);
+
+    // emboss shadow
+    i.name = "shadow";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Shadow";
+    i.tooltip = "The brightness of the shadows.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "shadow";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = -300;
+    i.max = 300;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.shadow = i.value.toDouble();
+    addItem(i);
+
+    // emboss opacity
+    i.name = "opacity";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Opacity";
+    i.tooltip = "The brightness of the shadows.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "opacity";
+    i.defaultValue = 100;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+//    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.opacity = i.value.toInt();
+    addItem(i);
+
+    // emboss blend mode
+    i.name = "blendMode";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Blend mode";
+    i.tooltip = "The way this effect blends with other effects in the style.";
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "blendMode";
@@ -3064,7 +3298,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Length";
     i.tooltip = "The length of the shadow.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "length";
@@ -3088,7 +3322,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Blur";
     i.tooltip = "The blur of the drop shadow.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "blur";
@@ -3112,7 +3346,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Color";
     i.tooltip = "Select a color that will be used to fill the drop shadow.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "color";
@@ -3140,7 +3374,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     i.parentName = effectName;
     i.captionText = "Blend mode";
     i.tooltip = "The way this effect blends with other effects in the style.";
-    i.isIndent = false;
+    i.isIndent = true;;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "blendMode";
