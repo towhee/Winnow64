@@ -89,7 +89,7 @@ void GraphicsEffect::draw(QPainter* painter)
         QColor color;
         QPointF pt;
         Margin margin;
-//        /*
+        /*
         qDebug() << __FUNCTION__
                  << "ef.effectOrder =" << ef.effectOrder
                  << "ef.effectName =" << ef.effectName
@@ -115,8 +115,10 @@ void GraphicsEffect::draw(QPainter* painter)
             shadowEffect(ef.shadow.length, ef.shadow.blurRadius, color, ef.shadow.blendMode);
             break;
         case emboss:
-            embossEffect(ef.emboss.size, ef.emboss.soften, ef.emboss.contour, ef.emboss.highlight,
-                         ef.emboss.shadow, ef.emboss.opacity, ef.emboss.blendMode);
+            qDebug() << __FUNCTION__ << "ef.emboss.contour =" << ef.emboss.contour;
+            embossEffect(ef.emboss.size, ef.emboss.highlight, ef.emboss.shadow,
+                         ef.emboss.contour, ef.emboss.white, ef.emboss.black, ef.emboss.shade,
+                         ef.emboss.soften, ef.emboss.opacity, ef.emboss.blendMode);
             break;
         case brighten:
             brightenEffect(ef.brighten.evDelta, ef.brighten.blendMode);
@@ -309,20 +311,21 @@ void GraphicsEffect::brightenEffect(qreal evDelta, QPainter::CompositionMode mod
     overlayPainter.end();
 }
 
-void GraphicsEffect::embossEffect(double size, double soften, int contour, double highlight,
-                                  double shadow, int opacity, QPainter::CompositionMode mode)
+void GraphicsEffect::embossEffect(double size, double highlight, double shadow,
+                                  int contour, double white, double black, bool shade,
+                                  double soften, int opacity, QPainter::CompositionMode mode)
 {
     if (overlay.isNull()) return;
 
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
     Effects effect;
-    effect.emboss(temp, size, soften, contour, highlight, shadow, lightDirection);
+    effect.emboss(temp, lightDirection, size, highlight, shadow, contour, white, black, soften, shade);
 //    temp.save("D:/Pictures/Temp/effect/embossed.tif");
 
     QPainter overlayPainter(&overlay);
     // any mode other than source causes a crash.  Don't know why
-//    overlayPainter.setCompositionMode(mode);
+    overlayPainter.setCompositionMode(mode);
     overlayPainter.drawImage(0,0, temp);
     overlayPainter.end();
 }

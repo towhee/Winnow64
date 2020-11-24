@@ -64,6 +64,7 @@ public:
         int fixedWidth;
         QString color;
         QStringList dropList;
+        QStringList dropIconList;       // file location of icons
         QModelIndex parIdx;             // datamodel parent index for the item
         QModelIndex index;
         int itemIndex;                  // index for item (use when many items ie borders)

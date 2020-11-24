@@ -194,7 +194,7 @@ private:
     void itemChangeSharpenEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeHighlightEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeBrightenEffect(QVariant v, QString source, QString effectName, QString style);
-    void itemChangeEmbossEffect(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeEmbossEffect(QModelIndex idx, QVariant v, QString source, QString effectName, QString style);
     void itemChangeStroke(QVariant v, QString source, QString effectName, QString style);
 
     void treeChange(QModelIndex idx);
@@ -294,6 +294,8 @@ private:
     QStringList metadataTemplatesList;
     QStringList styleList;
     QStringList effectList;
+    QStringList embossContourList;
+    QStringList embossContourIconList;
 };
 
 #endif // EMBELPROPERTIES_H

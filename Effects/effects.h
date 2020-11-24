@@ -4,6 +4,15 @@
 #include <QtWidgets>
 #include "Main/global.h"
 
+enum Contour {contour_flat,
+              contour_ridge,
+              contour_trough,
+              contour_gradient_brighter,
+              contour_gradient_darker,
+              contour_offset_ridge,
+              contour_offset_trough
+             };
+
 class Effects
 {
 public:
@@ -12,8 +21,8 @@ public:
     void blurOriginal(QImage &img, int radius);
     void raise(QImage &img, int m, double taper = 0.5, int blurWidth = 3, bool raise = false);
     void brighten(QImage &img, qreal evDelta);
-    void emboss(QImage &img, double size, double soften, int contour, double highlight,
-                double shadow, int azimuth);
+    void emboss(QImage &img, int azimuth, double size, double highlight, double shadow,
+                int contour, double white, double black, double soften, bool shade);
     QImage convolve(QImage &img, int mDim, double *matrix);
 
     void test(QImage &img);
@@ -35,6 +44,10 @@ private:
     QRgb averagePixelInBox(QVector<QVector<QRgb> > &v, const int &x, const int &y,
                       const int &w, const int &h, const int &r);
     int luminosity(QRgb &p);
+    double embossEV(int &m, int d, int &dd, int &sft, double aspectEv, int contour,
+                    double &white, double &black, double shadowEv = 0, bool shade = false,
+                    bool rpt = false);
+
 //    void brightenPixel(QRgb &p, double deltaEv);
 
     // Vector ops

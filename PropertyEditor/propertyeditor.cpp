@@ -329,6 +329,7 @@ SliderEditor, LineEditor etc).
     model->setData(valIdx, i.fixedWidth, UR_FixedWidth);
     model->setData(valIdx, i.color, UR_Color);
     model->setData(valIdx, i.dropList, UR_StringList);
+    model->setData(valIdx, i.dropIconList, UR_IconList);
     model->setData(valIdx, i.index, UR_QModelIndex);
 
     sourceIdx[i.key] = valIdx;      // map item key string to value index
@@ -372,6 +373,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.div = 0;                      // DT_Slider (zero == int, nonzero = double)
     i.fixedWidth = 50;              // DT_Slider
     i.dropList.clear();             // DT_Combo
+    i.dropIconList.clear();         // DT_Combo
     i.color = QColor(G::textShade,G::textShade,G::textShade).name();
     i.index = QModelIndex();
     i.parIdx = QModelIndex();

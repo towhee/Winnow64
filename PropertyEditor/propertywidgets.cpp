@@ -641,7 +641,17 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     layout->addWidget(comboBox, Qt::AlignLeft);
     layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
     setLayout(layout);
-    comboBox->addItems(idx.data(UR_StringList).toStringList());
+
+    if (idx.data(UR_IconList).toStringList().length() == 0)
+        comboBox->addItems(idx.data(UR_StringList).toStringList());
+    else {
+        QStringList iconList = idx.data(UR_IconList).toStringList();
+        QStringList textList = idx.data(UR_StringList).toStringList();
+        qDebug() << __FUNCTION__ << textList << iconList;
+        for (int i = 0; i < iconList.length(); ++i) {
+            comboBox->addItem(QIcon(iconList.at(i)), textList.at(i));
+        }
+    }
     comboBox->setCurrentText(idx.data(Qt::EditRole).toString());
 }
 
@@ -666,7 +676,7 @@ void ComboBoxEditor::setValue(QVariant value)
     comboBox->setCurrentIndex(i);
 }
 
-void ComboBoxEditor::addItem(QString item)
+void ComboBoxEditor::addItem(QString item, QIcon icon)
 {
 /*
 This is used to add new templates to the template drop list, new styles to
@@ -677,7 +687,8 @@ the style dropdowns
     G::track(__FUNCTION__);
     #endif
     }
-    comboBox->addItem(item);
+    if (icon.isNull()) comboBox->addItem(item);
+    else comboBox->addItem(icon, item);
 }
 
 void ComboBoxEditor::removeItem(QString item)
