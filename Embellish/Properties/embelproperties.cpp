@@ -146,6 +146,22 @@ void EmbelProperties::initialize()
     anchorObjectList << "Image";
     anchorContainerList << "Top" << "Left" << "Right" << "Bottom";
     borderCorners << "TopLeft" << "TopRight" << "BottomLeft" << "BottomRight";
+    embossContourList << "Flat"
+                      << "Ridge"
+                      << "Trough"
+                      << "Gradient brighter"
+                      << "Gradient darker"
+                      << "Offset ridge"
+                      << "Offset trough"
+                         ;
+    embossContourIconList << ":/images/icon16/emboss_flat.png"
+                          << ":/images/icon16/emboss_ridge.png"
+                          << ":/images/icon16/emboss_trough.png"
+                          << ":/images/icon16/emboss_gradient_brighter.png"
+                          << ":/images/icon16/emboss_gradient_darker.png"
+                          << ":/images/icon16/emboss_offset_ridge.png"
+                          << ":/images/icon16/emboss_offset_trough.png"
+                             ;
     readTileList();
     QMapIterator<QString, QString> i(mw3->infoString->infoTemplates);
     while (i.hasNext()) {
@@ -424,10 +440,12 @@ void EmbelProperties::diagnosticStyles()
                 break;
             case winnow_effects::emboss:
                 qDebug() << "      Emboss: size       =" << ef.emboss.size;
-                qDebug() << "      Emboss: soften     =" << ef.emboss.soften;
-                qDebug() << "      Emboss: contou r   =" << ef.emboss.contour;
                 qDebug() << "      Emboss: highlight  =" << ef.emboss.highlight;
                 qDebug() << "      Emboss: shadow     =" << ef.emboss.shadow;
+                qDebug() << "      Emboss: contour    =" << ef.emboss.contour;
+                qDebug() << "      Emboss: white      =" << ef.emboss.white;
+                qDebug() << "      Emboss: black      =" << ef.emboss.black;
+                qDebug() << "      Emboss: soften     =" << ef.emboss.soften;
                 qDebug() << "      Emboss: opacity    =" << ef.emboss.opacity;
                 break;
             case winnow_effects::sharpen:
@@ -1200,7 +1218,7 @@ itemChange, which is subclassed here.
         if (parent.left(7) == "Sharpen") itemChangeSharpenEffect(v, source, parent, grandparent);
         if (parent.left(9) == "Highlight") itemChangeHighlightEffect(v, source, parent, grandparent);
         if (parent.left(8) == "Brighten") itemChangeBrightenEffect(v, source, parent, grandparent);
-        if (parent.left(6) == "Emboss") itemChangeEmbossEffect(v, source, parent, grandparent);
+        if (parent.left(6) == "Emboss") itemChangeEmbossEffect(idx, v, source, parent, grandparent);
     }
 
 //    e->build();
@@ -1816,7 +1834,8 @@ void EmbelProperties::itemChangeBrightenEffect(QVariant v, QString source, QStri
     e->updateStyle(style);
 }
 
-void EmbelProperties::itemChangeEmbossEffect(QVariant v, QString source, QString effectName, QString style)
+void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QString source,
+                                             QString effectName, QString style)
 {
     {
     #ifdef ISDEBUG
@@ -1825,7 +1844,28 @@ void EmbelProperties::itemChangeEmbossEffect(QVariant v, QString source, QString
     }
     QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
 //    qDebug() << __FUNCTION__ << path << source << v.toInt();
+    // item 0
+    if (source == "contour") {
+        int index = embossContourList.indexOf(v.toString());
+        setting->setValue(path, v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.contour = index;
 
+        // hide/show white and black
+        if (index == 0) {
+            setRowHidden(1, idx.parent(), true);   // shade
+            setRowHidden(5, idx.parent(), true);   // white
+            setRowHidden(6, idx.parent(), true);   // black
+        }
+        else {
+            setRowHidden(1, idx.parent(), false);  // shade
+            setRowHidden(5, idx.parent(), false);  // white
+            setRowHidden(6, idx.parent(), false);  // black
+        }
+    }
+
+    // item 1
     if (source == "size") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
@@ -1833,15 +1873,7 @@ void EmbelProperties::itemChangeEmbossEffect(QVariant v, QString source, QString
         styleMap[style][effect].emboss.size = v.toDouble();
     }
 
-    if (source == "soften") {
-        setting->setValue(path, v.toDouble());
-        int effect = effectIndex(style, effectName);
-        if (effect == -1) return;
-        styleMap[style][effect].emboss.soften = v.toDouble();
-    }
-
-    // add contour
-
+    // item 2
     if (source == "highlight") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
@@ -1849,6 +1881,7 @@ void EmbelProperties::itemChangeEmbossEffect(QVariant v, QString source, QString
         styleMap[style][effect].emboss.highlight = v.toDouble();
     }
 
+    // item 3
     if (source == "shadow") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
@@ -1856,6 +1889,31 @@ void EmbelProperties::itemChangeEmbossEffect(QVariant v, QString source, QString
         styleMap[style][effect].emboss.shadow = v.toDouble();
     }
 
+    // item 4
+    if (source == "contourWhite") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.white = v.toDouble();
+    }
+
+    // item 5
+    if (source == "contourBlack") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.black = v.toDouble();
+    }
+
+    // item 6
+    if (source == "soften") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.soften = v.toDouble();
+    }
+
+    // item 7
     if (source == "opacity") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
@@ -1863,6 +1921,7 @@ void EmbelProperties::itemChangeEmbossEffect(QVariant v, QString source, QString
         styleMap[style][effect].emboss.opacity = v.toDouble();
     }
 
+    // item 8
     if (source == "blendMode") {
         setting->setValue(path, v.toString());
         int effect = effectIndex(style, effectName);
@@ -3077,12 +3136,64 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     addEffectBtns();
     parIdx = capIdx;
 
+    // emboss contour
+    i.name = "contour";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Contour";
+    i.tooltip = "The histogram shows how much brightness to add across the margin (size).";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "contour";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = false;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << embossContourList;
+    i.dropIconList << embossContourIconList;
+    effect.emboss.contour = embossContourList.indexOf(i.value.toString());
+    addItem(i);
+
+    // emboss apply lighting
+    i.name = "shade";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Shade";
+    i.tooltip = "If true, the shadow slider will only work on the border sides that are "
+            "opposite to the light direction.  The light direction is in General.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "shade";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = false;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    effect.emboss.shade = i.value.toBool();
+    addItem(i);
+    // hide if countour = flat
+    if (effect.emboss.contour == 0) {
+        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
+        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
+    }
+
     // emboss size
     i.name = "size";
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "Size";
-    i.tooltip = "The width, as a percentage of the long side, of the emboss effect.";
+    i.captionText = "Margin";
+    i.tooltip = "The width or margin, as a percentage of the long side, of the emboss effect.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -3106,36 +3217,7 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
              << "effect.emboss.size =" << effect.emboss.size;
     addItem(i);
 
-    // emboss soften
-    i.name = "soften";
-    i.parIdx = parIdx;
-    i.parentName = effectName;
-    i.captionText = "Soften";
-    i.tooltip = "The amount to soften, from chisel to smooth.";
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "soften";
-    i.defaultValue = 0;
-    i.path = settingRootPath + i.key;
-    if (setting->contains(i.path))
-        i.value = setting->value(i.path);
-    else {
-        i.value = i.defaultValue;
-        setting->setValue(i.path, i.value);
-    }
-    i.delegateType = DT_Slider;
-    i.type = "double";
-    i.min = 0;
-    i.max = 100;
-    i.div = 100;
-    i.fixedWidth = 50;
-    effect.emboss.soften = i.value.toDouble();
-    addItem(i);
-
-    // embos contour (to be added)
-
-       // emboss highlight
+    // emboss highlight
     i.name = "highlight";
     i.parIdx = parIdx;
     i.parentName = effectName;
@@ -3189,6 +3271,97 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     effect.emboss.shadow = i.value.toDouble();
     addItem(i);
 
+    // emboss contour white
+    i.name = "contourWhite";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "White";
+    i.tooltip = "Contour maximum brightness.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "contourWhite";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = -300;
+    i.max = 300;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.white = i.value.toDouble();
+    addItem(i);
+    // hide if countour = flat
+    if (effect.emboss.contour == 0) {
+        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
+        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
+    }
+
+    // emboss contour black
+    i.name = "contourBlack";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Black";
+    i.tooltip = "Contour maximum darkness.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "contourBlack";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = -300;
+    i.max = 300;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.black = i.value.toDouble();
+    addItem(i);
+    // hide if countour = flat
+    if (effect.emboss.contour == 0) {
+        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
+        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
+    }
+
+    // emboss soften
+    i.name = "soften";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Soften";
+    i.tooltip = "The amount to soften, from chisel to smooth.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "soften";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = 0;
+    i.max = 100;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.soften = i.value.toDouble();
+    addItem(i);
+
     // emboss opacity
     i.name = "opacity";
     i.parIdx = parIdx;
@@ -3236,7 +3409,7 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList  << winnow_effects::blendModes;
-    effect.blur.blendMode = winnow_effects::blendModeMap[i.value.toString()];
+    effect.emboss.blendMode = winnow_effects::blendModeMap[i.value.toString()];
     addItem(i);
 
     styleMap[styleName].append(effect);
@@ -3721,7 +3894,10 @@ void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
     }
     QModelIndex idx = indexAt(event->pos());
     idx = model->index(idx.row(), ValColumn, idx.parent());
-    setItemValue(idx, idx.data(UR_DelegateType).toInt(), idx.data(UR_DefaultValue));
+    QVariant value = idx.data(UR_DefaultValue);
+    if (idx.data(UR_DelegateType).toInt() == DT_Slider)
+        value = idx.data(UR_DefaultValue).toDouble() * idx.data(UR_Div).toInt();
+    setItemValue(idx, idx.data(UR_DelegateType).toInt(), value);
 }
 
 void EmbelProperties::mousePressEvent(QMouseEvent *event)
@@ -3984,7 +4160,8 @@ void EmbelProperties::test1()
     G::track(__FUNCTION__);
     #endif
     }
-    e->test();
+    diagnosticStyles();
+//    e->test();
 
 }
 

@@ -47,6 +47,7 @@ enum UserRole
     UR_Div,                             // Divide slider value by amount to get double from int
     UR_FixedWidth,                      // fixed label width in custom widget
     UR_StringList,                      // list of items for comboBox
+    UR_IconList,                        // list of icons for comboBox
     UR_IsBtn,                           // button to run a secondary widget or help
     UR_BtnText,                         // button text
     UR_Color                            // QColor for text in LineEdit, LabelEdit
@@ -200,7 +201,7 @@ public:
     ComboBoxEditor(const QModelIndex &idx, QWidget *parent = nullptr);
     void setValue(QVariant value);
     QString value();
-    void addItem(QString item);
+    void addItem(QString item, QIcon = QIcon());
     void removeItem(QString item);
     void renameItem(QString oldText, QString newText);
     void refresh(QStringList items);

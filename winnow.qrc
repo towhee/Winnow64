@@ -151,5 +151,12 @@
         <file>images/branch-blank.png</file>
         <file>images/branch-closed-winnow.png</file>
         <file>images/branch-open-winnow.png</file>
+        <file>images/icon16/emboss_flat.png</file>
+        <file>images/icon16/emboss_gradient_brighter.png</file>
+        <file>images/icon16/emboss_gradient_darker.png</file>
+        <file>images/icon16/emboss_offset_ridge.png</file>
+        <file>images/icon16/emboss_offset_trough.png</file>
+        <file>images/icon16/emboss_ridge.png</file>
+        <file>images/icon16/emboss_trough.png</file>
     </qresource>
 </RCC>

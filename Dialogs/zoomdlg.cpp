@@ -89,7 +89,7 @@ controls are updated to the current scale.
 
     // update controls
     ui->zoomSB->setValue(qRound(zoom));
-    if (zoom >= 1 && zoom <= 200) ui->zoomSlider->setValue(qRound(zoom));
+    if (zoom >= 1 && zoom <= 800) ui->zoomSlider->setValue(qRound(zoom));
 }
 
 void ZoomDlg::on_zoomSB_valueChanged(int value)
