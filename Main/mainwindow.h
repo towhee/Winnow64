@@ -89,7 +89,7 @@ class MW : public QMainWindow
     friend class EmbelProperties;   // mw3
 
 public:
-    MW(QWidget *parent = nullptr);
+    MW(/*QApplication &app, */QWidget *parent = nullptr);
 
     bool isReleaseVersion = true;
     bool hideEmbellish = false;
@@ -302,6 +302,7 @@ protected:
     void dragEnterEvent(QDragEnterEvent *event);
 
 public slots:
+    void handleStartupArgs(const QString &msg);
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex);
     void nullFiltration();
@@ -322,7 +323,8 @@ public slots:
 signals:
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     void closeZoomDlg();
-    void aSyncGo(int);
+    void aSyncGo(int);  // rgh req'd?
+    void needToShow();
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
@@ -515,7 +517,7 @@ private slots:
     void helpWelcome();
 
 private:
-
+    QApplication *app;
 //    friend class ProgressBar;   // mw1
 
 
@@ -935,7 +937,6 @@ private:
     void clearAll();
     void deleteViewerImage();
     void selectCurrentViewDir();
-    void handleStartupArgs();
     void addMenuSeparator(QWidget *widget);
     void createActions();
     void createBookmarks();

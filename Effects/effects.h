@@ -21,12 +21,13 @@ public:
     void blurOriginal(QImage &img, int radius);
     void raise(QImage &img, int m, double taper = 0.5, int blurWidth = 3, bool raise = false);
     void brighten(QImage &img, qreal evDelta);
-    void emboss(QImage &img, int azimuth, double size, double highlight, double shadow,
-                int contour, double white, double black, double soften, bool shade);
+    void emboss(QImage &img, int azimuth, double size, double exposure,
+                double inflection, double start, double mid, double end,
+                double umbra, double soften, int opacity);
     QImage convolve(QImage &img, int mDim, double *matrix);
 
     void test(QImage &img);
-    void brightenPixel(QRgb &p, double deltaEv);
+    void brightenPixel(QRgb &p, double deltaEv, double opacity = 1);
 
 private:
     struct Point {
@@ -44,8 +45,9 @@ private:
     QRgb averagePixelInBox(QVector<QVector<QRgb> > &v, const int &x, const int &y,
                       const int &w, const int &h, const int &r);
     int luminosity(QRgb &p);
-    double embossEV(int &m, int d, int &dd, int &sft, double aspectEv, int contour,
-                    double &white, double &black, double shadowEv = 0, bool shade = false,
+    double embossEV(int &m, int d, double &soften, double exposure,
+                    double inflection, double start, double mid, double end,
+                    double &umbra, bool isUmbra,
                     bool rpt = false);
 
 //    void brightenPixel(QRgb &p, double deltaEv);
@@ -76,29 +78,3 @@ private:
 };
 
 #endif // EFFECTS_H
-
-//Effects::test Azimuth = 0        n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  0.000 l[1] =  1.000 l[2] = -0.707     Illumination =  1.000
-//Effects::test Azimuth = 15       n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -0.259 l[1] =  0.966 l[2] = -0.707     Illumination =  0.966
-//Effects::test Azimuth = 30       n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -0.500 l[1] =  0.866 l[2] = -0.707     Illumination =  0.866
-//Effects::test Azimuth = 45       n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -0.707 l[1] =  0.707 l[2] = -0.707     Illumination =  0.707
-//Effects::test Azimuth = 60       n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -0.866 l[1] =  0.500 l[2] = -0.707     Illumination =  0.500
-//Effects::test Azimuth = 75       n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -0.966 l[1] =  0.259 l[2] = -0.707     Illumination =  0.259
-//Effects::test Azimuth = 90       n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -1.000 l[1] =  0.000 l[2] = -0.707     Illumination =  0.000
-//Effects::test Azimuth = 105      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -0.966 l[1] = -0.259 l[2] = -0.707     Illumination = -0.259
-//Effects::test Azimuth = 120      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -0.866 l[1] = -0.500 l[2] = -0.707     Illumination = -0.500
-//Effects::test Azimuth = 135      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -0.707 l[1] = -0.707 l[2] = -0.707     Illumination = -0.707
-//Effects::test Azimuth = 150      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -0.500 l[1] = -0.866 l[2] = -0.707     Illumination = -0.866
-//Effects::test Azimuth = 165      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -0.259 l[1] = -0.966 l[2] = -0.707     Illumination = -0.966
-//Effects::test Azimuth = 180      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] = -0.000 l[1] = -1.000 l[2] = -0.707     Illumination = -1.000
-//Effects::test Azimuth = 195      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  0.259 l[1] = -0.966 l[2] = -0.707     Illumination = -0.966
-//Effects::test Azimuth = 210      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  0.500 l[1] = -0.866 l[2] = -0.707     Illumination = -0.866
-//Effects::test Azimuth = 225      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  0.707 l[1] = -0.707 l[2] = -0.707     Illumination = -0.707
-//Effects::test Azimuth = 240      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  0.866 l[1] = -0.500 l[2] = -0.707     Illumination = -0.500
-//Effects::test Azimuth = 255      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  0.966 l[1] = -0.259 l[2] = -0.707     Illumination = -0.259
-//Effects::test Azimuth = 270      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  1.000 l[1] = -0.000 l[2] = -0.707     Illumination = -0.000
-//Effects::test Azimuth = 285      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  0.966 l[1] =  0.259 l[2] = -0.707     Illumination =  0.259
-//Effects::test Azimuth = 300      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  0.866 l[1] =  0.500 l[2] = -0.707     Illumination =  0.500
-//Effects::test Azimuth = 315      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  0.707 l[1] =  0.707 l[2] = -0.707     Illumination =  0.707
-//Effects::test Azimuth = 330      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  0.500 l[1] =  0.866 l[2] = -0.707     Illumination =  0.866
-//Effects::test Azimuth = 345      n[0] =  0.000 n[1] =  1.000 n[2] =  0.000     l[0] =  0.259 l[1] =  0.966 l[2] = -0.707     Illumination =  0.966
-

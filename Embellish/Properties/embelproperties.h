@@ -110,6 +110,7 @@ public slots:
     void itemChange(QModelIndex idx) override;
 //    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
     void invokeFromAction(QAction *embelAction);
+    void setCurrentTemplate(QString name);
     void diagnostic(QModelIndex parent = QModelIndex());
     void coordHelp();
 
@@ -133,7 +134,6 @@ private:
     void readTile(QStringList tileName);
     void renameCurrentStyle();
     void renameCurrentTemplate();
-    void setCurrentTemplate();
     void copyTemplate();
     QString uniqueTemplateName(QString name);
 
@@ -294,6 +294,8 @@ private:
     QStringList metadataTemplatesList;
     QStringList styleList;
     QStringList effectList;
+
+    // req'd?
     QStringList embossContourList;
     QStringList embossContourIconList;
 };

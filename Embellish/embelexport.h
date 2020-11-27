@@ -20,9 +20,11 @@ public:
     ~EmbelExport();
 
     void exportPicks();
+    void exportFile(QString fPath, QString templateName);
 
 private:
     bool loadImage(QString fPath);
+    QString exportFolderPath(QString folderPath = "");
     Metadata *metadata;
     DataModel *dm;
     ImageCache *imageCacheThread;

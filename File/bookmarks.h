@@ -33,6 +33,7 @@ private:
     QStringList *fileFilters;
     int imageCountColumn = 2;
     int imageCountColumnWidth;
+    QTreeWidgetItem *rightClickItem;
 
 private slots:
 

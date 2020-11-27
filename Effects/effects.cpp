@@ -190,7 +190,7 @@ int Effects::luminosity(QRgb &p)
     return (min + max) / 2;
 }
 
-void Effects::brightenPixel(QRgb &p, double deltaEv)
+void Effects::brightenPixel(QRgb &p, double deltaEv, double opacity)
 {
 /*
 p = pixel from original image, deltaEV = change in exposure value
@@ -227,7 +227,7 @@ Two quadratic formulas for neg/pos ev:
     // if change is to ev 0 then just use original
     if (deltaEv > -0.01 && deltaEv < 0.01) return;
 
-    int alpha = qAlpha(p);
+    int alpha = qAlpha(p) * opacity;
     // QColor for pixel p
     QColor rgb(p);
     // convert to HSL
@@ -1076,155 +1076,104 @@ void Effects::brighten(QImage &img, qreal evDelta)
              << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 }
 
-double Effects::embossEV(int &m, int d, int &dd, int &sft, double aspectEv, int contour,
-                         double &white, double &black, double shadowEv, bool shade, bool rpt)
+double Effects::embossEV(int &m, int d, double &soften, double exposure,
+                         double inflection, double start, double mid, double end,
+                         double &umbra, bool isUmbra, bool rpt)
 {
     /*
     m        = the margin in pixels to emboss (ie the width of a border)
     d        = the current distance through the margin in pixels
     dd       = m - d = the pixels remaining to the edge of the margin
     sft      = the number of pixels to soften, starting at m - sft
-    aspectEv = the amount of brightening to add to represent the aspect vs light direction
+    exposure = the amount of brightening to add
     contour  = the function to use to determine the amount of brightening for each pixel
                ie flat, ridge, trough gradient...
     white    = the brightest point in the contour
     black    = the darkest point in the contour
-    shade    = if true and contour != flat, the shadow slider will only work if the border is
-               opposite to the light direction (azimuth).
-
+    umbra    = adjusts the blacks for areas not exposed to light.
+    isUmbra  = not exposed directly to light source (see light direction = azimuth)
     */
-    double ev = aspectEv;
-    if (shade) ev = 0;
+
+    double ev = exposure;
     double x = static_cast<double>(d) / m;
     double black1, white1;
     black1 = white1 = 0;
-    switch (contour) {
-    case contour_flat:
-        if (dd > sft || sft == 0) ev = aspectEv;
-        else ev = aspectEv * static_cast<double>(dd)/sft;
-        return ev;
-    case contour_ridge:
-        /*
-                    |     * white
-                    |    * *
-                   b*   *   *
-                 0,0|--*-----*---1,0
-                    | *       *
-                    |*         *
-                   b*           * black
+    double xi;                  // contour inflection point on x axis
+    /*
+                |     * xi, mid
+                |    * *
+                |   *   *
+             0,0|--*-----*---1,0
+                | *       *
+                |*         *
+        0,start *           * 1,end
 
-        top half of circle: (optional formula)
-        ev += ((white - black) * qSqrt(1 - ((2 * x - 1) * (2 * x - 1))) + black);
-        */
-        if (x < 0.5) ev += (((white - black) / 0.5 * x) + black);
-        else ev += ((-(white - black) / 0.5 * (x - 0.5)) + white);
-        break;
-    case contour_trough:
-        /*
-                   b*           * white
-                    |*         *
-                    | *       *
-                 0,0|--*-----*---1,0
-                    |   *   *
-                    |    * *
-                    |     * black
-
-        bottom half of circle: (optional formula)
-        ev += (1 - (white - black) * qSqrt(1 - ((2 * x - 1) * (2 * x - 1))) + white);
-        */
-        if (x < 0.5) ev += ((-(white - black) / 0.5 * x) + white);
-        else ev += (((white - black) / 0.5 * (x - 0.5)) + black);
-        break;
-    case contour_gradient_brighter:
-        /*
-                    | * white
-                    |*  *
-                  b *     *
-                 0,0|-------*------1,0
-                    |         *
-                    |           *
-                    |             * black
-        */
-        ev += (((white - black) * x) + black);
-        break;
-    case contour_gradient_darker:
-        /*
-                  b * white
-                    | *
-                    |   *
-                 0,0|-----*------1,0
-                    |       *
-                    |         *
-                    |           * black
-        */
-        ev += (((black - white) * x) + white);
-        break;
-    case contour_offset_ridge:
-        /*
-                    |           * white
-                    |         *
-                   b*       *
-                 0,0|-----*------1,0
-                    |   *
-                    | *
-                    * black
-        */
-        if (shade) black += shadowEv;
-        white1 = white * 0.7;
-        // b = (white1)
-        // slope = (white - b) / 0.2
-        if (x < 0.2) ev += ((white - white1) / 0.2 * x + white1);
-        // b = white
-        // slope = -(white - black) / 0.8
-        else ev += ((-(white - black) / 0.8 * (x - 0.2)) + white);
-        break;
-    case contour_offset_trough:
-        /*
-                    |             * white
-                    |           *
-                    |         *
-                 0,0|-------*------1,0
-                   b*     *     *
-                    |*  *          *
-                    | * black
-        */
-        black1 = black * 0.75;
-        // b = (black1)
-        // slope = -(b - black) / 0.2
-        if (x < 0.2) ev += (-(black1 - black) / 0.2 * x + black1);
-        // b = black
-        // slope = -(black - white) / 0.8
-        else ev += ((-(black - white) / 0.8 * (x - 0.2)) + black);
-        break;
+           xi = 0  b = start  slope = (start - end)
+           x < xi  b = start  slope = (start - mid) / xi
+           x > xi  b = mid    slope = (mid - end) / (1 - xi)
+    */
+    xi = inflection;
+    if (xi > 0) {
+        if (x < xi) {
+            if (isUmbra && mid > start) start += umbra;
+            ev += (mid - start) / xi * x + start;
+        }
+        else {
+            if (!isUmbra && mid > end) end += umbra;
+            ev += (end - mid) / (1 - xi) * (x - xi) + mid;
+        }
     }
+    else {
+        ev += (start - end) * x + start;
+    }
+
     /*
     if (rpt) qDebug().noquote() << __FUNCTION__
          << "d =" << QString::number(d).leftJustified(4)
          << "m =" << QString::number(m).leftJustified(3)
-         << "dd =" << QString::number(dd).leftJustified(3)
-         << "sft =" << QString::number(sft).leftJustified(3)
+         << "xi =" << QString::number(xi, 'f', 2).rightJustified(6)
+         << "start =" << QString::number(start, 'f', 2).rightJustified(6)
+         << "mid =" << QString::number(mid, 'f', 2).rightJustified(6)
+         << "end =" << QString::number(end, 'f', 2).rightJustified(6)
          << "x =" << QString::number(x, 'f', 3).rightJustified(6)
          << "ev =" << QString::number(ev, 'f', 3).rightJustified(6)
-         << "white =" << QString::number(white, 'f', 3).rightJustified(6)
-         << "black =" << QString::number(black, 'f', 3).rightJustified(6)
                 ;
 //                */
 
-    // soften if not flat
-    if (sft != 0 && dd < sft) ev *= static_cast<double>(dd)/sft;
+    // soften
+    ev *= (1 - soften);
 
     return ev;
 }
 
-void Effects::emboss(QImage &img, int azimuth, double size, double highlight, double shadow,
-                     int contour, double white, double black, double soften, bool shade)
+void Effects::emboss(QImage &img, int azimuth, double size, double exposure, double inflection,
+                     double start, double mid, double end, double umbra, double soften, int opacity)
 {
+    /*
+                              <            dd            >
+                                         <     sft       >
+                        |                |               |
+       Outside border   |     *          |    soften     |  Inside border
+                        |     ^          |               |
+                              |
+                              Current pixel (x,y)
+
+       see D:\My Projects\Winnow Project\Doc\Embellish.xlsx
+    */
+
     // border or graphics object with no transparent pixels along outer border
     size /= 100;                // emboss distance from edge (% of long side)
     int w = img.width();
     int h = img.height();
     int ls = w > h ? w : h;     // long side in pixels
     int m = ls * size;          // emboss width or margin in pixels
+    double alpha = static_cast<double>(opacity) / 100;
+
+    double ev = 0;
+    int x = 0;
+    int y = 0;
+    bool isUmbra;
+
     /*
     qDebug() << __FUNCTION__
              << "size =" << size
@@ -1238,47 +1187,6 @@ void Effects::emboss(QImage &img, int azimuth, double size, double highlight, do
              << "white =" << white
              << "black =" << black
                 ;
-//    */
-    // deal with light direction
-    double evTop, evLeft, evRight, evBottom, ev;
-    evTop = evLeft = evRight = evBottom = shadow;
-    if (azimuth > 270 || azimuth < 90) evTop = highlight;
-    if (azimuth > 0 && azimuth < 180) evRight = highlight;
-    if (azimuth > 90 && azimuth < 270) evBottom = highlight;
-    if (azimuth > 180 && azimuth < 360) evLeft = highlight;
-
-    bool fadeTopRight, fadeTopLeft, fadeBottomRight, fadeBottomLeft;
-    fadeTopRight = fadeTopLeft = fadeBottomRight = fadeBottomLeft = false;
-    if (azimuth > 270 && azimuth < 360) {
-        fadeTopRight = true;
-        fadeBottomLeft = true;
-    }
-    if (azimuth > 0 && azimuth < 90) {
-        fadeTopLeft = true;
-        fadeBottomRight = true;
-    }
-    if (azimuth > 90 && azimuth < 180) {
-        fadeTopRight = true;
-        fadeBottomLeft = true;
-    }
-    if (azimuth > 180 && azimuth < 270) {
-        fadeTopLeft = true;
-        fadeBottomRight = true;
-    }
-    if (azimuth == 0) {
-        fadeTopLeft = true;
-        fadeTopRight = true;
-    }
-
-//    qDebug() << __FUNCTION__
-//             << "evTop =" << evTop
-//             << "evLeft =" << evLeft
-//             << "evBottom =" << evBottom
-//             << "evRight =" << evRight
-//             << "azimuth =" << azimuth
-//                ;
-
-    /*
                 if (x==200)
                 qDebug().noquote()
                      << __FUNCTION__
@@ -1297,208 +1205,49 @@ void Effects::emboss(QImage &img, int azimuth, double size, double highlight, do
                      << "black =" << QString::number(black, 'f', 3).rightJustified(6)
                         ;
     */
+
     // create QVector of img for pixel wrangling
     QVector<QVector<QRgb>> s(h);
     imageToVector(img, s);
 
-    /*
-                              <            dd            >
-                                         <     sft       >
-                        |                |               |
-       Outside border   |     *          |    soften     |  Inside border
-                        |     ^          |               |
-                              |
-                              Current pixel (x,y)
-
-       see D:\My Projects\Winnow Project\Doc\Embellish.xlsx
-    */
-    int sft = soften * m;       // pixel range to soften
-    int dd;                     // the distance from current pixel to inside edge of border
-
     // top
-    int x = 0;
-    int y = 0;
-    /*
-    if (contour == 0) {
-        for (y = 0; y < m; y++) {
-            // top left
-            if (fadeTopLeft) {
-                for (x = y; x < m; x++) {
-                    dd = x - y;
-                    ev = embossEV(m, y, dd, sft, evTop, contour, white, black);
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-            // top middle
-            dd = m - y;
-            ev = embossEV(m, y, dd, sft, evTop, contour, white, black, true);
-            if (fadeTopLeft) {
-                for (; x < w - y; x++) {
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-            else {
-                for (x = y; x < w - m; x++) {
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-            // top right
-            if (fadeTopRight) {
-                for (; x < w - y; x++) {
-                    dd = w - x - y;
-                    ev = embossEV(m, y, dd, sft, evTop, contour, white, black);
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-        }
-
-        // right
-        for (x = w - m; x < w; x++) {
-            // right top
-            if (fadeTopRight) {
-                for (y = w - x + 1; y < m; y++) {
-                    dd = y - (w - x);
-                    ev = embossEV(m, w-x, dd, sft, evRight, contour, white, black);
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-            // right middle
-            dd = m - w + x;
-            ev = embossEV(m, w-x, dd, sft, evRight, contour, white, black);
-            if (fadeTopRight) {
-                for (; y < h - (w - x); y++) {
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-            else {
-                for (y = w - x; y < h - m; y++) {
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-            // right bottom
-            if (fadeBottomRight) {
-                for (; y < h - w + x; y++) {
-                    dd = x - (w-h+y);
-                    ev = embossEV(m, w-x, dd, sft, evRight, contour, white, black);
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-        }
-
-        // bottom
-        for (y = h - m; y < h; y++) {
-            // bottom left
-            if (fadeBottomLeft) {
-                for (x = h - y; x < m; x++) {
-                    dd = x + y - h + 1;
-                    ev = embossEV(m, h-y, dd, sft, evBottom, contour, white, black);
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-            // bottom middle
-            dd = m - h + y + 1;
-            ev = embossEV(m, h-y, dd, sft, evBottom, contour, white, black);
-            if (fadeBottomLeft) {
-                for (; x < w - h + y + 1; x++) {
-                    brightenPixel(s[y][x], ev);
-               }
-            }
-            else {
-                for (x = h - y; x < w - m; x++) {
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-            // bottom right
-            if (fadeBottomRight) {
-                for (; x < w - h + y + 1; x++) {
-                    dd = w - h + y - x;
-                    ev = embossEV(m, h-y, dd, sft, evBottom, contour, white, black);
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-        }
-
-        // left
-        for (x = 0; x < m; x++) {
-            // left top
-            if (fadeTopLeft) {
-                for (y = x + 1; y < m; y++) {
-                    dd = y - x;
-                    ev = embossEV(m, x, dd, sft, evLeft, contour, white, black);
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-            // left middle
-            dd = m - x;
-            ev = embossEV(m, x, dd, sft, evLeft, contour, white, black);
-            if (fadeTopLeft) {
-                for (; y < h - x; y++) {
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-            else {
-                for (y = x + 1; y < h - m; y++) {
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-            // left bottom
-            if (fadeBottomLeft) {
-                for (; y < h - x; y++) {
-                    dd = h - y - x;
-                    ev = embossEV(m, x, dd, sft, evLeft, contour, white, black);
-                    brightenPixel(s[y][x], ev);
-                }
-            }
-        }
-    }
-    // contour not flat
-    else {
-    */
-    bool applyShade;
-    // top
-    (azimuth > 270 || azimuth < 90) && shade ? applyShade = true : applyShade = false;
+    (azimuth > 270 || azimuth < 90) ? isUmbra = false : isUmbra = true;
     for (y = 0; y < m; y++) {
-        dd = m - y;
-        ev = embossEV(m, y, dd, sft, evTop, contour, white, black, shadow, applyShade);
+        ev = embossEV(m, y, soften, exposure, inflection, start, mid, end, umbra, isUmbra);
         for (x = y; x < w - y; x++) {
-            brightenPixel(s[y][x], ev);
+            brightenPixel(s[y][x], ev, alpha);
         }
     }
 
     // right
-    (azimuth > 0 && azimuth < 180)  && shade ? applyShade = true : applyShade = false;
+    (azimuth > 0 && azimuth < 180) ? isUmbra = false : isUmbra = true;
     for (x = w - m /*- 1*/; x < w; x++) {
-        dd = m - w + x;
-        ev = embossEV(m, w-x, dd, sft, evRight, contour, white, black, shadow, applyShade);
+        ev = embossEV(m, w-x, soften, exposure, inflection, start, mid, end, umbra, isUmbra);
         for (y = w - x; y < h - w + x; y++) {
-            brightenPixel(s[y][x], ev);
+            brightenPixel(s[y][x], ev, alpha);
         }
     }
 
     // bottom
-    (azimuth > 90 && azimuth < 270)  && shade ? applyShade = true : applyShade = false;
+    (azimuth > 90 && azimuth < 270) ? isUmbra = false : isUmbra = true;
     for (y = h - m /*- 1*/; y < h; y++) {
-        dd = m - h + y + 1;
-        ev = embossEV(m, h-y, dd, sft, evBottom, contour, white, black, shadow, applyShade);
+        ev = embossEV(m, h-y, soften, exposure, inflection, start, mid, end, umbra, isUmbra);
         for (x = h - y; x < w - h + y + 1; x++) {
-            brightenPixel(s[y][x], ev);
+            brightenPixel(s[y][x], ev, alpha);
         }
     }
 
     // left
-    (azimuth > 180 && azimuth < 360)  && shade ? applyShade = true : applyShade = false;
+    (azimuth > 180 && azimuth < 360) ? isUmbra = false : isUmbra = true;
     for (x = 0; x < m; x++) {
-        dd = m - x;
-        ev = embossEV(m, x, dd, sft, evLeft, contour, white, black, shadow, applyShade);
+        ev = embossEV(m, x, soften, exposure, inflection, start, mid, end, umbra, isUmbra);
         for (y = x + 1; y < h - x; y++) {
-            brightenPixel(s[y][x], ev);
+            brightenPixel(s[y][x], ev, alpha);
         }
     }
-//    }
 
     // build destination image
     vectorToImage(img, s);
-//    qDebug() << __FUNCTION__ << "Done";
 }
 
 /* 3D OPERATIONS *****************************************************************************/

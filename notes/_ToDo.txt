@@ -1,11 +1,11 @@
 BUGS
-- Propeties selection (torquise) not always updating
+- Docks not always remembered between sessions
+- Properties selection (torquise) not always updating
 - rename style has bugs - fixed??
 - is copy image (iconview context menu) working?
-- When close in grid mode does not reop prop when close in view mode
-- Bookmark count not refresh when filecount changes
+- File/Bookmark count not refresh when filecount changes see QFileSystemWatcher
 - Grid does not always stretch to fit central widget
-- Change sort direction can crash
+- *Change sort direction can crash
 - when grabbing tile make sure imageview at 100%
 - move styles to separate property editor?
 - update and refresh text metadata templates
@@ -25,11 +25,14 @@ BUGS
 - Dmg app missing logo
 - Open with ... (doesn't work on macOS)
 PERFORMANCE
+- Delay when caching large files
 CODE IMPROVEMENTS
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- Single instance of Winnow
 - Copy template
+- Copy files between folders using drag'n'drop
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 - TableView freeze columns https://doc.qt.io/qt-5/qtwidgets-itemviews-frozencolumn-example.html
@@ -39,6 +42,7 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Remove bookmark removes selected vs clicked
 - SliderEditor update and double vs int fixed
 - Thumbs sometimes have vertical scrollbar when docked at bottom
 - ICC crash if null bytearray

@@ -14,21 +14,15 @@ UI_DIR = $$PWD
 QT += widgets
 QT += concurrent
 QT += xmlpatterns
-QT += opengl
+#QT += opengl
 
 HEADERS += Cache/imagecache.h \
-#   Effects/graphicaleffects.h \
-   Effects/blur.h \
-   Effects/effect.h \
-#   Effects/highlighteffect.h \
-   Effects/effects.h \
+   Effects/REF_imageblitz_effects.h \
    Effects/interpolate.h \
-   Effects/openglframe.h \
-   Effects/shadowtest.h \
-   Embellish/embelexport.h \
-   Utilities/performance.h \
-   Views/imagescene.h
-HEADERS += Cache/mdcache.h
+HEADERS += Cache/mdcache.h \
+   Main/qtlocalpeer.h \
+   Main/qtlockedfile.h \
+   Main/qtsingleapplication.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/buildfilters.h
 HEADERS += Datamodel/datamodel.h
@@ -46,9 +40,11 @@ HEADERS += Dialogs/workspacedlg.h
 HEADERS += Dialogs/tokendlg.h
 HEADERS += Dialogs/updateapp.h
 HEADERS += Dialogs/zoomdlg.h
+HEADERS += Effects/effects.h
 HEADERS += Effects/graphicseffect.h
-HEADERS += Embellish/Properties/embelproperties.h
 HEADERS += Embellish/embel.h
+HEADERS += Embellish/embelexport.h
+HEADERS += Embellish/Properties/embelproperties.h
 HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
 HEADERS += Image/imagealign.h
@@ -92,6 +88,7 @@ HEADERS += Utilities/dropshadowlabel.h
 win32:HEADERS += Utilities/icc.h
 mac:HEADERS += Utilities/mac.h
 HEADERS += Utilities/inputdlg.h
+HEADERS += Utilities/performance.h
 HEADERS += Utilities/popup.h
 HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/usb.h
@@ -107,15 +104,10 @@ HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
 SOURCES += Cache/imagecache.cpp \
-#   Effects/graphicaleffects.cpp \
-   Effects/blur.cpp \
-#   Effects/highlighteffect.cpp \
-   Effects/effects.cpp \
-   Effects/openglframe.cpp \
-   Effects/shadowtest.cpp \
-   Embellish/embelexport.cpp \
-   Utilities/performance.cpp \
-   Views/imagescene.cpp
+   Main/qtlocalpeer.cpp \
+   Main/qtlockedfile.cpp \
+   Main/qtlockedfile_win.cpp \
+   Main/qtsingleapplication.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp
@@ -133,9 +125,11 @@ SOURCES += Dialogs/tokendlg.cpp
 SOURCES += Dialogs/updateapp.cpp
 SOURCES += Dialogs/workspacedlg.cpp
 SOURCES += Dialogs/zoomdlg.cpp
+SOURCES += Effects/effects.cpp
 SOURCES += Effects/graphicseffect.cpp
-SOURCES += Embellish/Properties/embelproperties.cpp
 SOURCES += Embellish/embel.cpp
+SOURCES += Embellish/Properties/embelproperties.cpp
+SOURCES += Embellish/embelexport.cpp
 SOURCES += File/bookmarks.cpp
 SOURCES += File/fstree.cpp
 SOURCES += Image/imagealign.cpp
@@ -176,6 +170,7 @@ SOURCES += Utilities/dropshadowlabel.cpp
 win32:SOURCES += Utilities/icc.cpp
 mac:SOURCES += Utilities/mac.cpp
 SOURCES += Utilities/inputdlg.cpp
+SOURCES += Utilities/performance.cpp
 SOURCES += Utilities/popup.cpp
 SOURCES += Utilities/progressbar.cpp
 SOURCES += Utilities/usb.cpp
@@ -250,7 +245,8 @@ DISTFILES += notes/xmp.txt
 mac:LIBS += -framework ApplicationServices
 mac:LIBS += -framework AppKit
 
-win32:QMAKE_CXXFLAGS += /MDd
+win32:QMAKE_CXXFLAGS += /MD
+#win32:QMAKE_CXXFLAGS += /MDd
 #win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../LIBRARYNAME/Lib/ -lLIBRARY /NODEFAULTLIB:library
 
 # zLib

@@ -195,14 +195,14 @@ there does not appear to be any signal or event when ListView is finished hence 
 
 */
 
-MW::MW(QWidget *parent) : QMainWindow(parent)
+MW::MW(/*QApplication &app, */QWidget *parent) : QMainWindow(parent)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__, "Start Winnow");
     #endif
     }
-
+//    this->app = &app;
     setObjectName("WinnowMainWindow");
 
     // Check if modifier key pressed while program opening
@@ -259,8 +259,6 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     createActions();            // dependent on above
     createMenus();              // dependent on createActions and loadSettings
 
-    handleStartupArgs();
-
     loadShortcuts(true);            // dependent on createActions
     setupCentralWidget();
     setActualDevicePixelRatio();
@@ -290,6 +288,8 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
             folderSelectionChange();
         }
     }
+
+//    handleStartupArgs();
 
     if (!isSettings) centralLayout->setCurrentIndex(StartTab);
     else {
@@ -886,14 +886,78 @@ bool MW::checkForUpdate()
 #endif
 }
 
-// Do we need this?  rgh
-void MW::handleStartupArgs()
+void MW::handleStartupArgs(const QString &args)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+//    QMessageBox::information(nullptr, "Args", args, QMessageBox::Ok);
+    if (args.length() == 0) return;
+    QString delimiter = "\n";
+    QStringList argList = args.split(delimiter);
+
+    QString msg;
+//    for (int i = 0; i < argList.length(); ++i) {
+//        msg += argList.at(i) + "\n";
+//    }
+
+//    QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
+//    return;
+
+    QMap<QString,QString> argMap;
+    int n = argList.length();
+    qDebug().noquote() << __FUNCTION__ << args << "n =" << n;
+
+    if (n == 1) {
+        // only one argument, therefore must be folder to open
+        fsTree->select(argList.at(0));
+        folderSelectionChange();
+    }
+    else {
+        // more than one argument, could be -o, -e or -t
+        for (int i = 0; i < n; ++i) {
+            // check if another argument follows - then is a pair
+            if (i + 1 < n) {
+                argMap[argList.at(i)] = argList.at(i + 1);
+                i++;
+            }
+        }
+    }
+
+    if (argMap.contains("-o")) {
+        msg = "o: " + argMap["-o"];
+        QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
+    }
+
+    if (argMap.contains("-e")) {
+        if (argMap.contains("-t")) {
+            msg = "e: " + argMap["-e"] + "   t: " + argMap["-t"];
+            qDebug() << __FUNCTION__ << msg;
+            QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
+            EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
+            embelExport.exportFile(argMap["-e"], argMap["-t"]);
+        }
+    }
+
+/*
+    QCommandLineParser parser;
+    const QCommandLineOption openFolderOption("o", "Open <folder>.", "folder");
+    parser.addOption(openFolderOption);
+    const QCommandLineOption exportOption("e", "Export <file>.", "file");
+    parser.addOption(exportOption);
+    const QCommandLineOption templateOption("t", "Use template <template>.", "template");
+    parser.addOption(templateOption);
+    parser.parse(argsList);
+    QString msg;
+    msg += "\n";
+    msg += "o: " + parser.value(openFolderOption) + "\n";
+    msg += "e: " + parser.value(exportOption) + "\n";
+    msg += "t: " + parser.value(templateOption) + "\n";
+    QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
+    */
+
 }
 
 void MW::folderSelectionChange()
@@ -4731,7 +4795,7 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
     QList<QTabBar *> tabList = findChildren<QTabBar *>();
     QTabBar* widgetTabBar = tabList.at(0);
     widgetTabBar->setCurrentIndex(4);
-    qDebug() << __FUNCTION__ << dockWidget->objectName() << widgetTabBar->currentIndex();
+//    qDebug() << __FUNCTION__ << dockWidget->objectName() << widgetTabBar->currentIndex();
 
 }
 
@@ -8413,8 +8477,9 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         int maxHt = thumbView->iconViewDelegate->getCellSize(QSize(hMax, hMax)).height();
         int minHt = thumbView->iconViewDelegate->getCellSize(QSize(ICON_MIN, ICON_MIN)).height();
         // plus the scroll bar + 2 to make sure no vertical scroll bar is required
-        maxHt += G::scrollBarThickness + 2;
+        maxHt += G::scrollBarThickness /*+ 2*/;
         minHt += G::scrollBarThickness;
+//        thumbView->verticalScrollBar()->setVisible(false);
 
         if (maxHt <= minHt) maxHt = G::maxIconSize;
 
@@ -8429,6 +8494,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
         thumbView->setMinimumHeight(minHt);
 
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
         /*
         qDebug() << "\nMW::setThumbDockFeatures dock area =" << area << "\n"
@@ -8448,6 +8514,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
                                QDockWidget::DockWidgetMovable  |
                                QDockWidget::DockWidgetFloatable);
         thumbView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        thumbView->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
         thumbView->setWrapping(true);
     }
 }

@@ -46,13 +46,13 @@ namespace winnow_effects
 
 //    enum Contour {contour_flat, contour_convex_round};
     struct Emboss {
-        bool shade;
-        double  size;
-        double highlight;
-        double shadow;
-        int contour;
-        double white;
-        double black;
+        double size;
+        double exposure;
+        double start;
+        double mid;
+        double end;
+        double inflection;
+        double umbra;
         double soften;
         int opacity;
         QPainter::CompositionMode blendMode;
@@ -153,8 +153,8 @@ private:
     void brightenEffect(qreal delta, QPainter::CompositionMode mode);
     void sharpenEffect(qreal radius, QPainter::CompositionMode mode);
     void raiseEffect(int margin, QPainter::CompositionMode mode);
-    void embossEffect(double size, double highlight, double shadow,
-                      int contour, double white, double black, bool shade,
+    void embossEffect(double size, double exposure, double umbra,
+                      double inflection, double start, double mid, double end,
                       double soften, int opacity, QPainter::CompositionMode mode);
 
     QList<winnow_effects::Effect> *effects;

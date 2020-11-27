@@ -180,9 +180,10 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) {
 //        QTreeWidgetItem *item = itemAt(event->pos());
-//        if (item) {
-//            qDebug() << __FUNCTION__ << item->toolTip(0);
-//        }
+        rightClickItem = itemAt(event->pos());
+        if (rightClickItem) {
+            qDebug() << __FUNCTION__ << rightClickItem->toolTip(0);
+        }
         return;
     }
 //    QApplication::setOverrideCursor(Qt::WaitCursor);
@@ -196,10 +197,13 @@ void BookMarks::removeBookmark()
     G::track(__FUNCTION__);
     #endif
     }
-	if (selectedItems().size() == 1) {
-        bookmarkPaths.remove(selectedItems().at(0)->toolTip(0));
-		reloadBookmarks();
-	}
+    qDebug() << __FUNCTION__;
+    bookmarkPaths.remove(rightClickItem->toolTip(0));
+    reloadBookmarks();
+//	if (selectedItems().size() == 1) {
+//        bookmarkPaths.remove(selectedItems().at(0)->toolTip(0));
+//		reloadBookmarks();
+//	}
 }
 
 void BookMarks::dragEnterEvent(QDragEnterEvent *event)
