@@ -61,6 +61,56 @@ bool EmbelExport::loadImage(QString fPath)
     return true;
 }
 
+QString EmbelExport::exportFolderPath(QString folderPath)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString path;
+    if (embelProperties->saveMethod == "Subfolder")
+        if (folderPath != "")
+            path = dm->currentFilePath + "/" + embelProperties->exportSubfolder;
+        else path = folderPath + "/" + embelProperties->exportSubfolder;
+    else path = embelProperties->exportFolderPath;
+
+    return path;
+}
+
+void EmbelExport::exportFile(QString fPath, QString templateName)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // set the embellish template, which updates all the parameters
+    embelProperties->setCurrentTemplate(templateName);
+    // build export file path
+    QFileInfo fileInfo(fPath);
+    QString suffix = embelProperties->exportFileType;
+    QString fName = fileInfo.baseName() + "." + suffix;
+    QString exportPath = exportFolderPath(fileInfo.dir().path()) + "/" + fName;
+//    QFile file(exportPath);
+
+    // read the image, add it to the scene and embellish
+    if (loadImage(fPath)) {
+        // embellish
+        embellish->build();
+        setSceneRect(scene->itemsBoundingRect());
+    }
+
+    // create image to show rendering with embellish
+    QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
+    image.fill(Qt::transparent);                                              // Start all pixels transparent
+    QPainter painter(&image);
+    scene->render(&painter);
+    // save
+    image.save(exportPath);
+    qDebug() << __FUNCTION__ << "exporting " << fName << " to " << exportPath;
+}
+
 void EmbelExport::exportPicks()
 {
 /*
@@ -73,8 +123,15 @@ MW::exportEmbel.
     G::track(__FUNCTION__);
     #endif
     }
-    QString folderPath = embelProperties->exportFolderPath;
+    QString folderPath;
+    if (embelProperties->saveMethod == "Subfolder")
+        folderPath = dm->currentFilePath + "/" + embelProperties->exportSubfolder;
+    else folderPath = embelProperties->exportFolderPath;
     QString suffix = embelProperties->exportFileType;
+    qDebug() << __FUNCTION__
+             << "folderPath =" << folderPath
+             << "suffix =" << suffix
+                ;
 
     // get number of images to export
     int pickCount = 0;

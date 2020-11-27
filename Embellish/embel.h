@@ -6,9 +6,7 @@
 //#include "Embellish/embelexport.h"
 #include "Cache/imagecache.h"
 #include "Properties/embelproperties.h"
-#include "Effects/highlighteffect.h"
 #include "Effects/graphicseffect.h"
-#include "Effects/shadowtest.h"
 #include "Effects/effects.h"       // temp to test
 
 class Embel : public QObject

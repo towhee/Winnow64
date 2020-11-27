@@ -171,7 +171,7 @@ void Embel::build(QString fPath)
         doNotEmbellish();
         return;
     }
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     // file path for the current image (req'd to update styles applied to pmItem)
     if (fPath != "") this->fPath = fPath;
     clear();
@@ -670,12 +670,12 @@ void Embel::updateImage()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << fPath;
+//    qDebug() << __FUNCTION__ << fPath;
     // graphics effects
     if (p->image.style != "No style" && p->image.style != "") {
         // start with a fresh image from the ImageCache
         if (imCache->imCache.contains(fPath)) {
-            qDebug() << __FUNCTION__ << "if (imCache->imCache.contains(fPath)) " << fPath;
+//            qDebug() << __FUNCTION__ << "if (imCache->imCache.contains(fPath)) " << fPath;
             pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
         }
         GraphicsEffect *effect = new GraphicsEffect();

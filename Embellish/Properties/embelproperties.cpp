@@ -91,7 +91,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     propertyDelegate->isAlternatingRows = false;
     resizeColumns("====captions column====",
                   "====values column====");
-    qDebug() << __FUNCTION__ << columnWidth(0) << columnWidth(1);
+//    qDebug() << __FUNCTION__ << columnWidth(0) << columnWidth(1);
     setStyleSheet(G::css);
 
     // Assign blank png for treeview decorations so do not need to hide in delegate paint override
@@ -440,11 +440,12 @@ void EmbelProperties::diagnosticStyles()
                 break;
             case winnow_effects::emboss:
                 qDebug() << "      Emboss: size       =" << ef.emboss.size;
-                qDebug() << "      Emboss: highlight  =" << ef.emboss.highlight;
-                qDebug() << "      Emboss: shadow     =" << ef.emboss.shadow;
-                qDebug() << "      Emboss: contour    =" << ef.emboss.contour;
-                qDebug() << "      Emboss: white      =" << ef.emboss.white;
-                qDebug() << "      Emboss: black      =" << ef.emboss.black;
+                qDebug() << "      Emboss: exposure   =" << ef.emboss.exposure;
+                qDebug() << "      Emboss: inflection =" << ef.emboss.inflection;
+                qDebug() << "      Emboss: start      =" << ef.emboss.start;
+                qDebug() << "      Emboss: mid        =" << ef.emboss.mid;
+                qDebug() << "      Emboss: end        =" << ef.emboss.end;
+                qDebug() << "      Emboss: umbra      =" << ef.emboss.umbra;
                 qDebug() << "      Emboss: soften     =" << ef.emboss.soften;
                 qDebug() << "      Emboss: opacity    =" << ef.emboss.opacity;
                 break;
@@ -671,10 +672,10 @@ void EmbelProperties::renameCurrentTemplate()
     templateListEditor->setValue(name);
 }
 
-void EmbelProperties::setCurrentTemplate()
+void EmbelProperties::setCurrentTemplate(QString name)
 {
 /*
-Sets the current template to templateName, which must be asigned before calling this function.
+Sets the current template to templateName, which must be assigned before calling this function.
 The templatePath and isCurrent are defined. The template is selected.
 */
     {
@@ -682,6 +683,7 @@ The templatePath and isCurrent are defined. The template is selected.
     G::track(__FUNCTION__);
     #endif
     }
+    templateName = name;
     for (int i = 0; i < templateList.length(); ++i) {
         QString t = templateList.at(i);
         bool isCurrent = (t == templateName);
@@ -1232,10 +1234,10 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     #endif
     }
     isTemplateChange = true;
-    templateName = v.toString();
+//    templateName = v.toString();
 
     // save which template is current and set templateId and templateName
-    setCurrentTemplate();
+    setCurrentTemplate(v.toString());
 
     // update global for ImageView              rgh req'd??
     if (templateId == 0) G::isEmbellish = false;
@@ -1845,27 +1847,14 @@ void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QStrin
     QString path = "Embel/Styles/" + style + "/" + effectName + "/" + source;
 //    qDebug() << __FUNCTION__ << path << source << v.toInt();
     // item 0
-    if (source == "contour") {
-        int index = embossContourList.indexOf(v.toString());
-        setting->setValue(path, v.toString());
-        int effect = effectIndex(style, effectName);
-        if (effect == -1) return;
-        styleMap[style][effect].emboss.contour = index;
+//    if (source == "contour") {
+//        int index = embossContourList.indexOf(v.toString());
+//        setting->setValue(path, v.toString());
+//        int effect = effectIndex(style, effectName);
+//        if (effect == -1) return;
+//        styleMap[style][effect].emboss.contour = index;
+//    }
 
-        // hide/show white and black
-        if (index == 0) {
-            setRowHidden(1, idx.parent(), true);   // shade
-            setRowHidden(5, idx.parent(), true);   // white
-            setRowHidden(6, idx.parent(), true);   // black
-        }
-        else {
-            setRowHidden(1, idx.parent(), false);  // shade
-            setRowHidden(5, idx.parent(), false);  // white
-            setRowHidden(6, idx.parent(), false);  // black
-        }
-    }
-
-    // item 1
     if (source == "size") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
@@ -1873,39 +1862,62 @@ void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QStrin
         styleMap[style][effect].emboss.size = v.toDouble();
     }
 
-    // item 2
-    if (source == "highlight") {
+    if (source == "inflection") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
-        styleMap[style][effect].emboss.highlight = v.toDouble();
+        styleMap[style][effect].emboss.inflection = v.toDouble();
     }
 
-    // item 3
-    if (source == "shadow") {
+    if (source == "exposure") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
-        styleMap[style][effect].emboss.shadow = v.toDouble();
+        styleMap[style][effect].emboss.exposure = v.toDouble();
     }
 
-    // item 4
-    if (source == "contourWhite") {
+    if (source == "start") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
-        styleMap[style][effect].emboss.white = v.toDouble();
+        styleMap[style][effect].emboss.start = v.toDouble();
     }
 
-    // item 5
-    if (source == "contourBlack") {
+    if (source == "mid") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
-        styleMap[style][effect].emboss.black = v.toDouble();
+        styleMap[style][effect].emboss.mid = v.toDouble();
     }
 
-    // item 6
+    if (source == "end") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.end = v.toDouble();
+    }
+
+//    if (source == "white") {
+//        setting->setValue(path, v.toDouble());
+//        int effect = effectIndex(style, effectName);
+//        if (effect == -1) return;
+//        styleMap[style][effect].emboss.white = v.toDouble();
+//    }
+
+//    if (source == "black") {
+//        setting->setValue(path, v.toDouble());
+//        int effect = effectIndex(style, effectName);
+//        if (effect == -1) return;
+//        styleMap[style][effect].emboss.black = v.toDouble();
+//    }
+
+    if (source == "umbra") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.umbra = v.toDouble();
+    }
+
     if (source == "soften") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
@@ -1913,7 +1925,6 @@ void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QStrin
         styleMap[style][effect].emboss.soften = v.toDouble();
     }
 
-    // item 7
     if (source == "opacity") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
@@ -1921,7 +1932,6 @@ void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QStrin
         styleMap[style][effect].emboss.opacity = v.toDouble();
     }
 
-    // item 8
     if (source == "blendMode") {
         setting->setValue(path, v.toString());
         int effect = effectIndex(style, effectName);
@@ -2040,7 +2050,7 @@ void EmbelProperties::addExport()
     i.parentName = "ExportHeader";
     i.captionText = "File type";
     i.tooltip = "Select file type.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "fileType";
@@ -2057,13 +2067,16 @@ void EmbelProperties::addExport()
     i.parentName = "ExportHeader";
     i.captionText = "Save method";
     i.tooltip = "Select where to save the export file.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "saveMethod";
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
-    else i.value = "Subfolder";
+    else {
+        i.value = "Subfolder";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << "Subfolder" << "Another folder somewhere else";
@@ -2076,7 +2089,7 @@ void EmbelProperties::addExport()
     i.parentName = "ExportHeader";
     i.captionText = "Export folder path";
     i.tooltip = "Enter the full export folder path.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "folderPath";
@@ -2097,7 +2110,7 @@ void EmbelProperties::addExport()
     i.parentName = "ExportHeader";
     i.captionText = "Subfolder name";
     i.tooltip = "Enter the name of the subfolder to contain the exported files.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "subfolder";
@@ -2118,7 +2131,7 @@ void EmbelProperties::addExport()
     i.parentName = "ExportHeader";
     i.captionText = "Overwrite";
     i.tooltip = "Overwrite existing files.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "overwriteFiles";
@@ -2158,7 +2171,7 @@ void EmbelProperties::addGeneral()
     i.parentName = "ExportHeader";
     i.captionText = "Fit horizontal";
     i.tooltip = "The number of pixels in the horizontal axis including the borders";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "horizontalFit";
@@ -2179,7 +2192,7 @@ void EmbelProperties::addGeneral()
     i.parentName = "ExportHeader";
     i.captionText = "Fit vertical";
     i.tooltip = "The number of pixels in the vertical axis including the borders";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "verticalFit";
@@ -2200,7 +2213,7 @@ void EmbelProperties::addGeneral()
     i.parentName = "General";
     i.captionText = "Light direction";
     i.tooltip = "Light source direction (0 - 360 degrees)";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "globalLightDirection";
@@ -2221,7 +2234,7 @@ void EmbelProperties::addGeneral()
     i.parentName = "GeneralHeader";
     i.captionText = "Image style";
     i.tooltip = "Select style to apply to the image ie a shadow.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "imageStyle";
@@ -3136,58 +3149,6 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     addEffectBtns();
     parIdx = capIdx;
 
-    // emboss contour
-    i.name = "contour";
-    i.parIdx = parIdx;
-    i.parentName = effectName;
-    i.captionText = "Contour";
-    i.tooltip = "The histogram shows how much brightness to add across the margin (size).";
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "contour";
-    i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
-    else {
-        i.value = false;
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << embossContourList;
-    i.dropIconList << embossContourIconList;
-    effect.emboss.contour = embossContourList.indexOf(i.value.toString());
-    addItem(i);
-
-    // emboss apply lighting
-    i.name = "shade";
-    i.parIdx = parIdx;
-    i.parentName = effectName;
-    i.captionText = "Shade";
-    i.tooltip = "If true, the shadow slider will only work on the border sides that are "
-            "opposite to the light direction.  The light direction is in General.";
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "shade";
-    i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
-    else {
-        i.value = false;
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    effect.emboss.shade = i.value.toBool();
-    addItem(i);
-    // hide if countour = flat
-    if (effect.emboss.contour == 0) {
-        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
-        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
-    }
-
     // emboss size
     i.name = "size";
     i.parIdx = parIdx;
@@ -3213,21 +3174,19 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.div = 100;
     i.fixedWidth = 50;
     effect.emboss.size = i.value.toDouble();
-    qDebug() << __FUNCTION__
-             << "effect.emboss.size =" << effect.emboss.size;
     addItem(i);
 
-    // emboss highlight
-    i.name = "highlight";
+    // emboss inflection
+    i.name = "inflection";
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "Highlight";
-    i.tooltip = "The brightness of the highlights.";
+    i.captionText = "Inflection";
+    i.tooltip = "Set the point of inflection between the start and finish.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "highlight";
-    i.defaultValue = 1.0;
+    i.key = "inflection";
+    i.defaultValue = 0;
     i.path = settingRootPath + i.key;
     if (setting->contains(i.path))
         i.value = setting->value(i.path);
@@ -3237,23 +3196,23 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     }
     i.delegateType = DT_Slider;
     i.type = "double";
-    i.min = -300;
-    i.max = 300;
+    i.min = 0;
+    i.max = 100;
     i.div = 100;
     i.fixedWidth = 50;
-    effect.emboss.highlight = i.value.toDouble();
+    effect.emboss.inflection = i.value.toDouble();
     addItem(i);
 
-    // emboss shadow
-    i.name = "shadow";
+    // emboss exposure
+    i.name = "exposure";
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "Shadow";
-    i.tooltip = "The brightness of the shadows.";
+    i.captionText = "Exposure";
+    i.tooltip = "Adjust the brightness.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "shadow";
+    i.key = "exposure";
     i.defaultValue = 0;
     i.path = settingRootPath + i.key;
     if (setting->contains(i.path))
@@ -3268,19 +3227,100 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.max = 300;
     i.div = 100;
     i.fixedWidth = 50;
-    effect.emboss.shadow = i.value.toDouble();
+    effect.emboss.exposure = i.value.toDouble();
     addItem(i);
 
-    // emboss contour white
-    i.name = "contourWhite";
+    // emboss start
+    i.name = "start";
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "White";
-    i.tooltip = "Contour maximum brightness.";
+    i.captionText = "Start";
+    i.tooltip = "Adjust the brightness for the start point.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "contourWhite";
+    i.key = "start";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = -400;
+    i.max = 400;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.start = i.value.toDouble();
+    addItem(i);
+
+    // emboss middle
+    i.name = "mid";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Mid";
+    i.tooltip = "Adjust the brightness for the inflection point.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "mid";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = -400;
+    i.max = 400;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.mid = i.value.toDouble();
+    addItem(i);
+
+    // emboss end
+    i.name = "end";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "End";
+    i.tooltip = "Adjust the brightness for the end point.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "end";
+    i.defaultValue = 0;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = -400;
+    i.max = 400;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.end = i.value.toDouble();
+    addItem(i);
+
+    // emboss umbra
+    i.name = "umbra";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Umbra";
+    i.tooltip = "Adjust the black for areas in shade.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "umbra";
     i.defaultValue = 0;
     i.path = settingRootPath + i.key;
     if (setting->contains(i.path))
@@ -3295,45 +3335,8 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.max = 300;
     i.div = 100;
     i.fixedWidth = 50;
-    effect.emboss.white = i.value.toDouble();
+    effect.emboss.umbra = i.value.toDouble();
     addItem(i);
-    // hide if countour = flat
-    if (effect.emboss.contour == 0) {
-        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
-        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
-    }
-
-    // emboss contour black
-    i.name = "contourBlack";
-    i.parIdx = parIdx;
-    i.parentName = effectName;
-    i.captionText = "Black";
-    i.tooltip = "Contour maximum darkness.";
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "contourBlack";
-    i.defaultValue = 0;
-    i.path = settingRootPath + i.key;
-    if (setting->contains(i.path))
-        i.value = setting->value(i.path);
-    else {
-        i.value = i.defaultValue;
-        setting->setValue(i.path, i.value);
-    }
-    i.delegateType = DT_Slider;
-    i.type = "double";
-    i.min = -300;
-    i.max = 300;
-    i.div = 100;
-    i.fixedWidth = 50;
-    effect.emboss.black = i.value.toDouble();
-    addItem(i);
-    // hide if countour = flat
-    if (effect.emboss.contour == 0) {
-        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
-        model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
-    }
 
     // emboss soften
     i.name = "soften";
@@ -3382,7 +3385,7 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     }
     i.delegateType = DT_Slider;
     i.type = "int";
-    i.min = 0;
+    i.min = 1;
     i.max = 100;
 //    i.div = 100;
     i.fixedWidth = 50;
@@ -4160,7 +4163,7 @@ void EmbelProperties::test1()
     G::track(__FUNCTION__);
     #endif
     }
-    diagnosticStyles();
+    qDebug() << __FUNCTION__ << exportFolderPath;
 //    e->test();
 
 }
@@ -4252,7 +4255,7 @@ void EmbelProperties::addBorder(int count)
     i.parentName = borderName;
     i.captionText = "Top %";
     i.tooltip = "This is the margin for the top part of the border (% of the long side).";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "topMargin";
@@ -4277,7 +4280,7 @@ void EmbelProperties::addBorder(int count)
     i.parentName = borderName;
     i.captionText = "Left %";
     i.tooltip = "This is the margin for the left part of the border (% of the long side).";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "leftMargin";
@@ -4302,7 +4305,7 @@ void EmbelProperties::addBorder(int count)
     i.parentName = borderName;
     i.captionText = "Right %";
     i.tooltip = "This is the margin for the right part of the border (% of the long side).";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "rightMargin";
@@ -4327,7 +4330,7 @@ void EmbelProperties::addBorder(int count)
     i.parentName = borderName;
     i.captionText = "Bottom %";
     i.tooltip = "This is the margin for the bottom part of the border (% of the long side).";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "bottomMargin";
@@ -4352,7 +4355,7 @@ void EmbelProperties::addBorder(int count)
     i.parentName = borderName;
     i.captionText = "Tile";
     i.tooltip = "Select a tile that will be used to fill the border area.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "tile";
@@ -4376,7 +4379,7 @@ void EmbelProperties::addBorder(int count)
     i.parentName = borderName;
     i.captionText = "Border color";
     i.tooltip = "Select a color that will be used to full the border area.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "color";
@@ -4401,7 +4404,7 @@ void EmbelProperties::addBorder(int count)
     i.parentName = borderName;
     i.captionText = "Opacity";
     i.tooltip = "The opacity of the border.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "opacity";
@@ -4424,7 +4427,7 @@ void EmbelProperties::addBorder(int count)
     i.parentName = borderName;
     i.captionText = "Style";
     i.tooltip = "Select a style that will be applied to the border area.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "style";
@@ -4486,7 +4489,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Put text in";
     i.tooltip = "Select a border or image to contain the text.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "anchorObject";
@@ -4508,7 +4511,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Border area";
     i.tooltip = "Select a border area to contain the text.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "anchorContainer";
@@ -4533,9 +4536,9 @@ void EmbelProperties::addText(int count)
     i.name = "anchorPoint";
     i.parIdx = parIdx;
     i.parentName = textName;
-    i.captionText = "Text box anchor";
+    i.captionText = "Anchor point";
     i.tooltip = "Select a text box anchor point.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "anchorPoint";
@@ -4558,7 +4561,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "x coordinate";
     i.tooltip = "The x coordinate for the container (0-100). Top left = 0,0.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "x";
@@ -4583,7 +4586,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "y coordinate";
     i.tooltip = "The y coordinate for the container (0-100). Top left = 0,0.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "y";
@@ -4608,7 +4611,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Rotation";
     i.tooltip = "The rotation (degrees) of the text (+- 0-360)";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "rotation";
@@ -4633,7 +4636,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Source";
     i.tooltip = "Select what is to be used: the text or text generated by a metadata template.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "source";
@@ -4655,7 +4658,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Text";
     i.tooltip = "Enter text to be displayed.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "text";
@@ -4685,7 +4688,7 @@ void EmbelProperties::addText(int count)
     i.captionText = "Metadata template";
     i.tooltip = "Select a metadata template.  A template can include multiple metadata \n"
                 "fields and user input text.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "metadataTemplate";
@@ -4713,7 +4716,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Size";
     i.tooltip = "Enter a percentage of the long side pixels to set a font size in pixels.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "size";
@@ -4738,7 +4741,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Font";
     i.tooltip = "Select a font.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "font";
@@ -4761,7 +4764,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Bold";
     i.tooltip = "Use bold font.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "bold";
@@ -4782,7 +4785,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Italic";
     i.tooltip = "Use italic font.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "italic";
@@ -4803,7 +4806,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Color";
     i.tooltip = "Select a color that will be used to fill the border area.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "color";
@@ -4826,7 +4829,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Opacity";
     i.tooltip = "The opacity of the text.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "opacity";
@@ -4849,7 +4852,7 @@ void EmbelProperties::addText(int count)
     i.parentName = textName;
     i.captionText = "Style";
     i.tooltip = "Select a style that will be applied to the text.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "style";
@@ -4911,7 +4914,7 @@ void EmbelProperties::addGraphic(int count)
     i.parentName = graphicName;
     i.captionText = "File path";
     i.tooltip = "Enter the file path for the graphic.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "filePath";
@@ -4934,7 +4937,7 @@ void EmbelProperties::addGraphic(int count)
     i.parentName = graphicName;
     i.captionText = "Place graphic in";
     i.tooltip = "Select a border or image to place the graphic.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "anchorObject";
@@ -4956,7 +4959,7 @@ void EmbelProperties::addGraphic(int count)
     i.parentName = graphicName;
     i.captionText = "Border area";
     i.tooltip = "Select a border area to contain the text.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "anchorContainer";
@@ -4981,9 +4984,9 @@ void EmbelProperties::addGraphic(int count)
     i.name = "anchorPoint";
     i.parIdx = parIdx;
     i.parentName = graphicName;
-    i.captionText = "Graphic box anchor";
+    i.captionText = "Anchor point";
     i.tooltip = "Select a graphic anchor point.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "anchorPoint";
@@ -5006,7 +5009,7 @@ void EmbelProperties::addGraphic(int count)
     i.parentName = graphicName;
     i.captionText = "x coordinate";
     i.tooltip = "The x coordinate for the container (0-100). Top left = 0,0.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "x";
@@ -5031,7 +5034,7 @@ void EmbelProperties::addGraphic(int count)
     i.parentName = graphicName;
     i.captionText = "y coordinate";
     i.tooltip = "The y coordinate for the container (0-100). Top left = 0,0.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "y";
@@ -5056,7 +5059,7 @@ void EmbelProperties::addGraphic(int count)
     i.parentName = graphicName;
     i.captionText = "Size";
     i.tooltip = "The size of the graphic defined by the % of the long side of the frame.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "size";
@@ -5082,7 +5085,7 @@ void EmbelProperties::addGraphic(int count)
     i.parentName = graphicName;
     i.captionText = "Rotation";
     i.tooltip = "The rotation (degrees) of the graphic (+- 0-360)";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "rotation";
@@ -5107,7 +5110,7 @@ void EmbelProperties::addGraphic(int count)
     i.parentName = graphicName;
     i.captionText = "Opacity";
     i.tooltip = "The opacity of the graphic object.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "opacity";
@@ -5131,7 +5134,7 @@ void EmbelProperties::addGraphic(int count)
     i.parentName = graphicName;
     i.captionText = "Style";
     i.tooltip = "Select a style that will be applied to the graphic object.";
-    i.isIndent = false;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "style";

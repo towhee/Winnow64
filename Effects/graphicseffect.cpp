@@ -1,9 +1,9 @@
 #include "graphicseffect.h"
-#include "effect.h"
+#include "REF_imageblitz_effects.h"
 
 GraphicsEffect::GraphicsEffect(QObject *parent)
 {
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
 }
 
 QRectF GraphicsEffect::boundingRectFor(const QRectF& rect) const
@@ -115,9 +115,8 @@ void GraphicsEffect::draw(QPainter* painter)
             shadowEffect(ef.shadow.length, ef.shadow.blurRadius, color, ef.shadow.blendMode);
             break;
         case emboss:
-            qDebug() << __FUNCTION__ << "ef.emboss.contour =" << ef.emboss.contour;
-            embossEffect(ef.emboss.size, ef.emboss.highlight, ef.emboss.shadow,
-                         ef.emboss.contour, ef.emboss.white, ef.emboss.black, ef.emboss.shade,
+            embossEffect(ef.emboss.size, ef.emboss.exposure, ef.emboss.umbra,
+                         ef.emboss.inflection, ef.emboss.start, ef.emboss.mid, ef.emboss.end,
                          ef.emboss.soften, ef.emboss.opacity, ef.emboss.blendMode);
             break;
         case brighten:
@@ -311,8 +310,8 @@ void GraphicsEffect::brightenEffect(qreal evDelta, QPainter::CompositionMode mod
     overlayPainter.end();
 }
 
-void GraphicsEffect::embossEffect(double size, double highlight, double shadow,
-                                  int contour, double white, double black, bool shade,
+void GraphicsEffect::embossEffect(double size, double exposure, double umbra,
+                                  double inflection, double start, double mid, double end,
                                   double soften, int opacity, QPainter::CompositionMode mode)
 {
     if (overlay.isNull()) return;
@@ -320,7 +319,9 @@ void GraphicsEffect::embossEffect(double size, double highlight, double shadow,
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
     Effects effect;
-    effect.emboss(temp, lightDirection, size, highlight, shadow, contour, white, black, soften, shade);
+    effect.emboss(temp, lightDirection, size, exposure,
+                  inflection, start, mid, end,
+                  umbra, soften, opacity);
 //    temp.save("D:/Pictures/Temp/effect/embossed.tif");
 
     QPainter overlayPainter(&overlay);

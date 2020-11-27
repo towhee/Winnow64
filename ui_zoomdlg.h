@@ -68,7 +68,7 @@ public:
         zoomSlider->setMaximumSize(QSize(16777215, 10));
         zoomSlider->setFocusPolicy(Qt::StrongFocus);
         zoomSlider->setMinimum(1);
-        zoomSlider->setMaximum(200);
+        zoomSlider->setMaximum(800);
         zoomSlider->setValue(100);
         zoomSlider->setOrientation(Qt::Horizontal);
         zoomSlider->setTickPosition(QSlider::TicksAbove);
@@ -141,7 +141,7 @@ public:
         zoomSB->setFont(font2);
         zoomSB->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         zoomSB->setMinimum(1);
-        zoomSB->setMaximum(400);
+        zoomSB->setMaximum(800);
         zoomSB->setSingleStep(10);
         zoomSB->setDisplayIntegerBase(10);
 
