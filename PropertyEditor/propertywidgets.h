@@ -29,7 +29,7 @@ enum UserRole
     UR_ItemIndex,                       // the index for the border, text, rectangle or graphic
     UR_SortOrder,                       // override appended order ie for effects, borders
     UR_DefaultValue,                    // when created or double click
-    UR_Path,                            // settings path
+    UR_SettingsPath,                    // settings path
     UR_Editor,                          // pointer to custom editor created
     UR_DelegateType,                    // type of custom widget
     UR_hasValue,                        // if no value then value column is empty

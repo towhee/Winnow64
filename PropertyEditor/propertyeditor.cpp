@@ -303,8 +303,8 @@ SliderEditor, LineEditor etc).
     model->setData(capIdx, i.name, UR_Name);
     model->setData(capIdx, i.tooltip, Qt::ToolTipRole);
     model->setData(valIdx, i.tooltip, Qt::ToolTipRole);
-    model->setData(capIdx, i.path, UR_Path);
-    model->setData(valIdx, i.path, UR_Path);
+    model->setData(capIdx, i.path, UR_SettingsPath);
+    model->setData(valIdx, i.path, UR_SettingsPath);
     model->setData(capIdx, i.itemIndex, UR_ItemIndex);
     model->setData(capIdx, false, UR_isHidden);
     model->setData(valIdx, false, UR_isHidden);
@@ -553,7 +553,7 @@ void PropertyEditor::diagnosticProperties(QModelIndex parent)
         qDebug().noquote() << "Caption UR_Name                    " << idx0.data(UR_Name).toString();
         qDebug().noquote() << "Caption Parent                     " << parent.data(UR_Name).toString();
         qDebug().noquote() << "Caption UR_Source                  " << idx0.data(UR_Source).toString();
-        qDebug().noquote() << "Caption UR_Path                    " << idx0.data(UR_Path).toString();
+        qDebug().noquote() << "Caption UR_Path                    " << idx0.data(UR_SettingsPath).toString();
         qDebug().noquote() << "Caption UR_ItemIndex               " << idx0.data(UR_ItemIndex).toString();
         qDebug().noquote() << "Caption Qt::ToolTipRole            " << idx0.data(Qt::ToolTipRole).toString();
         qDebug().noquote() << "Caption UR_hasValue                " << idx0.data(UR_hasValue).toString();
@@ -569,7 +569,7 @@ void PropertyEditor::diagnosticProperties(QModelIndex parent)
         qDebug().noquote() << "Value   UR_DefaultValue            " << idx1.data(UR_DefaultValue).toString();
         qDebug().noquote() << "Value   UR_Source                  " << idx1.data(UR_Source).toString();
         qDebug().noquote() << "Value   Qt::ToolTipRole            " << idx1.data(Qt::ToolTipRole).toString();
-        qDebug().noquote() << "Value   UR_Path                    " << idx1.data(UR_Path).toString();
+        qDebug().noquote() << "Value   UR_Path                    " << idx1.data(UR_SettingsPath).toString();
         qDebug().noquote() << "Value   UR_ItemIndex               " << idx1.data(UR_ItemIndex).toString();
         qDebug().noquote() << "Value   UR_isHeader                " << idx1.data(UR_isHeader).toString();
         qDebug().noquote() << "Value   UR_isDecoration            " << idx1.data(UR_isDecoration).toString();

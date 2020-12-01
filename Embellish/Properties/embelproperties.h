@@ -126,8 +126,9 @@ protected:
 private:
     void initialize();
     void renameSettingKey(QString path, QString oldName, QString newName);
-    void updateBorderLists(int row);
-    void updateAnchorObjects(int deletedRow);
+    void updateBorderLists();
+    void updateAnchorObjects();
+    void updateBorderOrderAfterDeletion();
     void sortTemplateList();
     void readTemplateList();
     void readTileList();
@@ -142,7 +143,7 @@ private:
     void addExport();
     void addGeneral();
     void addBorders();
-    void addBorder(int count);
+    void addBorder(int count, QString borderName);
     void addTexts();
     void addText(int count);
     void addGraphics();
@@ -156,7 +157,8 @@ private:
     void addShadowEffect(QModelIndex parIdx, QString effectName = "");
     void addEmbossEffect(QModelIndex parIdx, QString effectName = "");
 
-    void newBorder();
+    void newBorderFromBtn();
+    void newBorder(QString name = "");
     void newText();
     void newRectangle();
     void newGraphic();

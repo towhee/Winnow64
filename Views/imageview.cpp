@@ -254,6 +254,7 @@ perceived scale by the user.
         }
         scale();
         if (G::isEmbellish) emit embellish(fPath);
+        else pmItem->setGraphicsEffect(nullptr);
     }
 //    QImage im = pmItem->pixmap().toImage();
 //    imAspect = qreal(im.width()) / im.height();

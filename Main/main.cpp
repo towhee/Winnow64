@@ -84,5 +84,9 @@ QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
 /*
 "D:/My Projects/Winnow Project/Winnow64/release/winnow.exe" -o "c:/users/rory" -e "c:/users/rory/wizard with a dash.jpg" -t Zen2048
 "D:/My Projects/Winnow Project/Winnow64/release/winnow.exe" c:/users/rory
+"D:/My Projects/Winnow Project/Winnow64/release/winnow.exe" -e D:/Pictures/test_export/2020-11-25_0007.jpg -t Zen2048
+"D:/My Projects/Winnow Project/Winnow64/release/winnow_zen2048.exe" -e D:/Pictures/test_export/2020-11-25_0007.jpg -t Zen2048
+"D:/Documents/Bat/bat2exe/winnow_zen2048.exe" D:/Pictures/test_export/2020-11-25_0007.jpg
 "D:/My Projects/Winnow Project/Winnow64/release/winnow_zen2048.exe" "c:/users/rory"
+"D:/My Projects/Winnow Project/Winnow64/release/winnow_zen2048.exe" "d:/Pictures/test_export/2011-01-09_0034.jpg"
 */

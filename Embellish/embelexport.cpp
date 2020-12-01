@@ -70,10 +70,16 @@ QString EmbelExport::exportFolderPath(QString folderPath)
     }
     QString path;
     if (embelProperties->saveMethod == "Subfolder")
-        if (folderPath != "")
+        if (folderPath == "") {
             path = dm->currentFilePath + "/" + embelProperties->exportSubfolder;
-        else path = folderPath + "/" + embelProperties->exportSubfolder;
+        }
+        else {
+            path = folderPath + "/" + embelProperties->exportSubfolder;
+            QDir dir(folderPath);
+            dir.mkdir(embelProperties->exportSubfolder);
+        }
     else path = embelProperties->exportFolderPath;
+
 
     return path;
 }
@@ -85,14 +91,24 @@ void EmbelExport::exportFile(QString fPath, QString templateName)
     G::track(__FUNCTION__);
     #endif
     }
+    // save current embellish template
+    QString prevTemplate = embelProperties->templateName;
     // set the embellish template, which updates all the parameters
     embelProperties->setCurrentTemplate(templateName);
     // build export file path
     QFileInfo fileInfo(fPath);
     QString suffix = embelProperties->exportFileType;
     QString fName = fileInfo.baseName() + "." + suffix;
-    QString exportPath = exportFolderPath(fileInfo.dir().path()) + "/" + fName;
+    QString fDir = fileInfo.dir().path();
+    QString exportPath = exportFolderPath(fDir) + "/" + fName;
 //    QFile file(exportPath);
+    qDebug() << __FUNCTION__
+             << "fPath =" << fPath
+             << "fDir =" << fDir
+             << "exportPath =" << exportPath
+             << "embelProperties->saveMethod =" << embelProperties->saveMethod
+             << "embelProperties->exportSubfolder =" << embelProperties->exportSubfolder
+                ;
 
     // read the image, add it to the scene and embellish
     if (loadImage(fPath)) {
@@ -108,6 +124,8 @@ void EmbelExport::exportFile(QString fPath, QString templateName)
     scene->render(&painter);
     // save
     image.save(exportPath);
+    embelProperties->setCurrentTemplate(prevTemplate);
+
     qDebug() << __FUNCTION__ << "exporting " << fName << " to " << exportPath;
 }
 
@@ -124,14 +142,14 @@ MW::exportEmbel.
     #endif
     }
     QString folderPath;
-    if (embelProperties->saveMethod == "Subfolder")
-        folderPath = dm->currentFilePath + "/" + embelProperties->exportSubfolder;
-    else folderPath = embelProperties->exportFolderPath;
-    QString suffix = embelProperties->exportFileType;
-    qDebug() << __FUNCTION__
-             << "folderPath =" << folderPath
-             << "suffix =" << suffix
-                ;
+//    if (embelProperties->saveMethod == "Subfolder")
+//        folderPath = dm->currentFilePath + "/" + embelProperties->exportSubfolder;
+//    else folderPath = embelProperties->exportFolderPath;
+//    QString suffix = embelProperties->exportFileType;
+//    qDebug() << __FUNCTION__
+//             << "folderPath =" << folderPath
+//             << "suffix =" << suffix
+//                ;
 
     // get number of images to export
     int pickCount = 0;
@@ -164,8 +182,10 @@ MW::exportEmbel.
             QString fPath = idx.data(G::PathRole).toString();
             // build export file path
             QFileInfo fileInfo(fPath);
+            QString suffix = embelProperties->exportFileType;
             QString fName = fileInfo.baseName() + "." + suffix;
-            QString exportPath = folderPath + "/" + fName;
+            QString fDir = fileInfo.dir().path();
+            QString exportPath = exportFolderPath(fDir) + "/" + fName;
 
             // read the image, add it to the scene and embellish
             if (loadImage(fPath)) {

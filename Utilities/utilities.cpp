@@ -8,6 +8,19 @@ QString Utilities::inputText(QString title, QString description, QStringList doN
     return input;
 }
 
+void Utilities::log(QString function, QString msg)
+{
+    QFile fLog("C:/Users/Rory/Documents/WinnowLog.txt");
+    if (fLog.open(QIODevice::ReadWrite)) {
+        fLog.readAll();
+        QString t = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        QString f = function;
+        QString txt = t + "  " + function + "  " + msg + "\n";
+        fLog.write(txt.toUtf8());
+        fLog.close();
+    }
+}
+
 void Utilities::setOpacity(QWidget *widget, qreal opacity)
 {
     QGraphicsOpacityEffect * effect = new QGraphicsOpacityEffect(widget);

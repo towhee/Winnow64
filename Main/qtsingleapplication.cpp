@@ -38,6 +38,7 @@
 **
 ****************************************************************************/
 
+// https://github.com/qtproject/qt-solutions/tree/master/qtsingleapplication
 
 #include "qtsingleapplication.h"
 #include "qtlocalpeer.h"
