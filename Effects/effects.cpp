@@ -1072,8 +1072,8 @@ void Effects::brighten(QImage &img, qreal evDelta)
     */
     vectorToImage(img, s);
 
-    qDebug() << __FUNCTION__
-             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
+//    qDebug() << __FUNCTION__
+//             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 }
 
 double Effects::embossEV(int &m, int d, double &soften, double exposure,

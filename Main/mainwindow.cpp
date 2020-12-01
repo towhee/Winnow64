@@ -912,7 +912,10 @@ void MW::handleStartupArgs(const QString &args)
 
     if (n == 1) {
         // only one argument, therefore must be folder to open
-        fsTree->select(argList.at(0));
+        Utilities::log(__FUNCTION__, argList.at(0));
+        QFileInfo f(argList.at(0));
+        f.dir().path();
+        fsTree->select(f.dir().path());
         folderSelectionChange();
     }
     else {
@@ -928,36 +931,19 @@ void MW::handleStartupArgs(const QString &args)
 
     if (argMap.contains("-o")) {
         msg = "o: " + argMap["-o"];
-        QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
+//        QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
     }
 
     if (argMap.contains("-e")) {
         if (argMap.contains("-t")) {
             msg = "e: " + argMap["-e"] + "   t: " + argMap["-t"];
+            Utilities::log(__FUNCTION__, msg);
             qDebug() << __FUNCTION__ << msg;
-            QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
+//            QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
             EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
             embelExport.exportFile(argMap["-e"], argMap["-t"]);
         }
     }
-
-/*
-    QCommandLineParser parser;
-    const QCommandLineOption openFolderOption("o", "Open <folder>.", "folder");
-    parser.addOption(openFolderOption);
-    const QCommandLineOption exportOption("e", "Export <file>.", "file");
-    parser.addOption(exportOption);
-    const QCommandLineOption templateOption("t", "Use template <template>.", "template");
-    parser.addOption(templateOption);
-    parser.parse(argsList);
-    QString msg;
-    msg += "\n";
-    msg += "o: " + parser.value(openFolderOption) + "\n";
-    msg += "e: " + parser.value(exportOption) + "\n";
-    msg += "t: " + parser.value(templateOption) + "\n";
-    QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
-    */
-
 }
 
 void MW::folderSelectionChange()
@@ -4667,6 +4653,7 @@ void MW::createEmbelDock()
 
     // add widgets to the right side of the title bar layout
 
+    /*
     // run template button
     BarBtn *embelRunBtn = new BarBtn();
     embelRunBtn->setIcon(QIcon(":/images/icon16/lightning.png"));
@@ -4691,7 +4678,6 @@ void MW::createEmbelDock()
     //    connect(embelAnchorBtn, &DockTitleBtn::clicked, imageView, &ImageView::activateRubberBand);
     embelTitleLayout->addWidget(embelAnchorBtn);
 
-    /*
     // text button
     BarBtn *embelTextBtn = new BarBtn();
     embelTextBtn->setIcon(QIcon(":/images/icon16/text.png"));
@@ -4712,10 +4698,11 @@ void MW::createEmbelDock()
     embelGraphicBtn->setToolTip("Add a graphic like a logo or signature PNG");
     //    connect(embelGraphicBtn, &DockTitleBtn::clicked, imageView, &ImageView::activateRubberBand);
     embelTitleLayout->addWidget(embelGraphicBtn);
-    */
 
     // Spacer
     embelTitleLayout->addSpacing(10);
+
+    */
 
     // question mark button
     BarBtn *embelQuestionBtn = new BarBtn();

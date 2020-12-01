@@ -38,6 +38,8 @@
 **
 ****************************************************************************/
 
+// https://github.com/qtproject/qt-solutions/tree/master/qtsingleapplication
+
 #ifndef QTSINGLEAPPLICATION_H
 #define QTSINGLEAPPLICATION_H
 

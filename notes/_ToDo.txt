@@ -1,4 +1,6 @@
 BUGS
+- Confirm check for updates is working (Andreas)
+- When create new style etc open that new item
 - Docks not always remembered between sessions
 - Properties selection (torquise) not always updating
 - rename style has bugs - fixed??

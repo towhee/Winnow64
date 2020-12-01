@@ -167,11 +167,13 @@ void Embel::build(QString fPath)
     G::track(__FUNCTION__);
     #endif
     }
+
+    qDebug() << __FUNCTION__;
+
     if (p->templateId == 0) {
         doNotEmbellish();
         return;
     }
-//    qDebug() << __FUNCTION__;
     // file path for the current image (req'd to update styles applied to pmItem)
     if (fPath != "") this->fPath = fPath;
     clear();
@@ -532,7 +534,6 @@ void Embel::updateBorder(int i)
     bItems[i]->setPen(pen);
     color.setNamedColor(p->b[i].color);
     // tile or color background
-//    qDebug() << __FUNCTION__ << i << "p->b[i].tile =" << p->b[i].tile << p->b[i].tile.isEmpty();
     if (p->b[i].tile.isEmpty()) {
         bItems[i]->setBrush(color);
     }
@@ -547,13 +548,17 @@ void Embel::updateBorder(int i)
 
     // graphics effects
     if (p->b[i].style != "No style" && p->b[i].style != "") {
-        GraphicsEffect *effect = new GraphicsEffect();
-        effect->set(p->styleMap[p->b[i].style],
-                    p->globalLightDirection,
-                    0,  /* rotation */
-                    bItems[i]->boundingRect());
-        bItems[i]->setGraphicsEffect(effect);
+        // make sure style exists
+        if (p->styleMap.contains(p->b[i].style)) {
+            GraphicsEffect *effect = new GraphicsEffect();
+            effect->set(p->styleMap[p->b[i].style],
+                        p->globalLightDirection,
+                        0,  /* rotation */
+                        bItems[i]->boundingRect());
+            bItems[i]->setGraphicsEffect(effect);
+        }
     }
+    else bItems[i]->setGraphicsEffect(nullptr);
 }
 
 void Embel::updateText(int i)
@@ -608,14 +613,20 @@ void Embel::updateText(int i)
 
     // graphics effects
     if (p->t[i].style != "No style" && p->t[i].style != "") {
-        GraphicsEffect *effect = new GraphicsEffect();
-        effect->set(p->styleMap[p->t[i].style],
-                p->globalLightDirection,
-                rotation,
-                tItems[i]->boundingRect());
-        tItems[i]->setGraphicsEffect(effect);
+        // make sure style exists
+        if (p->styleMap.contains(p->t[i].style)) {
+            GraphicsEffect *effect = new GraphicsEffect();
+            effect->set(p->styleMap[p->t[i].style],
+                    p->globalLightDirection,
+                    rotation,
+                    tItems[i]->boundingRect());
+            tItems[i]->setGraphicsEffect(effect);
+        }
     }
-    else tItems[i]->setRotation(rotation);
+    else {
+        tItems[i]->setRotation(rotation);
+        tItems[i]->setGraphicsEffect(nullptr);
+    }
 }
 
 void Embel::updateGraphic(int i)
@@ -650,12 +661,15 @@ void Embel::updateGraphic(int i)
 
     // graphics effects
     if (p->g[i].style != "No style" && p->g[i].style != "") {
-        GraphicsEffect *effect = new GraphicsEffect();
-        effect->set(p->styleMap[p->g[i].style],
-                p->globalLightDirection,
-                rotation,
-                gItems[i]->boundingRect());
-        gItems[i]->setGraphicsEffect(effect);
+        // make sure style exists
+        if (p->styleMap.contains(p->g[i].style)) {
+            GraphicsEffect *effect = new GraphicsEffect();
+            effect->set(p->styleMap[p->g[i].style],
+                    p->globalLightDirection,
+                    rotation,
+                    gItems[i]->boundingRect());
+            gItems[i]->setGraphicsEffect(effect);
+        }
     }
     else {
         gItems[i]->setGraphicsEffect(nullptr);
@@ -670,21 +684,23 @@ void Embel::updateImage()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << fPath;
     // graphics effects
     if (p->image.style != "No style" && p->image.style != "") {
-        // start with a fresh image from the ImageCache
-        if (imCache->imCache.contains(fPath)) {
-//            qDebug() << __FUNCTION__ << "if (imCache->imCache.contains(fPath)) " << fPath;
-            pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
+        // make sure style exists
+        if (p->styleMap.contains(p->image.style)) {
+            // start with a fresh image from the ImageCache
+            if (imCache->imCache.contains(fPath)) {
+                pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
+            }
+            GraphicsEffect *effect = new GraphicsEffect();
+            effect->set(p->styleMap[p->image.style],
+                    p->globalLightDirection,
+                    0,
+                    pmItem->pixmap().rect());
+            pmItem->setGraphicsEffect(effect);
         }
-        GraphicsEffect *effect = new GraphicsEffect();
-        effect->set(p->styleMap[p->image.style],
-                p->globalLightDirection,
-                0,
-                pmItem->pixmap().rect());
-        pmItem->setGraphicsEffect(effect);
     }
+    else pmItem->setGraphicsEffect(nullptr);
 }
 
 void Embel::removeBorder(int i)
@@ -694,6 +710,8 @@ void Embel::removeBorder(int i)
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << "i =" << i << "bItems.size() =" << bItems.size();
+    if (i >= bItems.size()) return;
     if (scene->items().contains(bItems[i]))
         scene->removeItem(bItems[i]);
     if (bItems.contains(bItems[i])) {

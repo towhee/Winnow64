@@ -302,9 +302,41 @@ void EmbelProperties::newEffectActionClicked()
     if (effect == "Shadow") addShadowEffect(effectParentIdx);
     if (effect == "Brighten") addBrightenEffect(effectParentIdx);
     if (effect == "Emboss") addEmbossEffect(effectParentIdx);
+    QModelIndex idx = model->index(model->rowCount(effectParentIdx) - 1, 0, effectParentIdx);
+    expand(stylesIdx);
+    expand(effectParentIdx);
+    expand(idx);
+    selectionModel()->clear();
+    selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
 }
 
-void EmbelProperties::updateBorderLists(int row)
+void EmbelProperties::updateBorderOrderAfterDeletion()
+{
+/*
+After a deletion the sort order wil no longer be contiguous. For example:
+
+Before:                 1, 2, 3, 4
+Delete the 2nd row:     1, 3, 4
+Update to:              1, 2, 3
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // Get a standardItem as it supports sorting of the children, and the borders may be sorted
+    QStandardItem *borders = new QStandardItem;
+    borders = model->itemFromIndex(bordersIdx);
+    int row;
+    for (row = 0; row < borders->rowCount(); ++row) {
+        QModelIndex idx = borders->child(row)->index();
+        model->setData(idx, row, UR_SortOrder);
+        QString path = idx.data(UR_SettingsPath).toString() + "/sortOrder";
+        setting->setValue(path, row);
+    }
+}
+
+void EmbelProperties::updateBorderLists()
 {
 /*
 Called from new and delete borders to rebuild the lists that have the borders
@@ -318,19 +350,21 @@ Called from new and delete borders to rebuild the lists that have the borders
     anchorObjectList.clear();
     int borderCount = model->rowCount(bordersIdx);
     for (int i = 0; i < borderCount; ++i) {
-//        QString borderName = model->index(i, CapColumn, bordersIdx).data(UR_Name).toString();
-        QString borderName = "Border" + QString::number(i + 1);
+        QString borderName = model->index(i, CapColumn, bordersIdx).data(UR_Name).toString();
         borderList << borderName;
         anchorObjectList << borderName;
     }
     anchorObjectList << "Image";
 
+    borderList.sort();
+    anchorObjectList.sort();
+
     // update texts and graphics that are anchored on a border
-    updateAnchorObjects(row);
+    updateAnchorObjects();
 
 }
 
-void EmbelProperties::updateAnchorObjects(int deletedRow)
+void EmbelProperties::updateAnchorObjects()
 {
 /*
 When borders are created or deleted the border and anchor lists are updated.  This function
@@ -348,64 +382,26 @@ graphicAnchorObjectEditor trigger itemChange which in turn updates settings and 
     G::track(__FUNCTION__);
     #endif
     }
-    int borderCount = model->rowCount(bordersIdx);
-
     // update texts anchor lists
     for (int i = 0; i < t.size(); ++i) {
-        QString oldAnchoName = textAnchorObjectEditor.at(i)->value();
-        // rows are zero based (o, 1, ...), border names ie Border2 are 1 based (1, 2, ...)
-        int oldAnchorRow = oldAnchoName.right(oldAnchoName.length() - 6).toInt() - 1;
+        QString oldAnchorName = textAnchorObjectEditor.at(i)->value();
         textAnchorObjectEditor.at(i)->refresh(anchorObjectList);
         // refreshing anchorObjectList removes old value for the text - reassign anchor object
-        /*
-        qDebug() << __FUNCTION__
-                 << "TEXT ITEM #" << i
-                 << "oldAnchoName =" << oldAnchoName
-                 << "oldAnchorRow =" << oldAnchorRow
-                 << "border row deleted =" << deletedRow
-                 << "anchorObjectList =" << anchorObjectList
-                    ;
-//                  */
-        // if all borders deleted then anchor to the Image
-        if (borderCount == 0 || oldAnchoName == "Image")
+        if (anchorObjectList.contains(oldAnchorName))
+            textAnchorObjectEditor.at(i)->setValue(oldAnchorName);
+        else
             textAnchorObjectEditor.at(i)->setValue("Image");
-        // oldAnchorRow okay if deleted row is greater than anchor row (oldAnchorRow)
-        else if (deletedRow > oldAnchorRow)
-            textAnchorObjectEditor.at(i)->setValue(oldAnchoName);
-        // deleted row <= oldAnchorRow then newRow = oldAnchorRow - 1
-        else if (deletedRow <= oldAnchorRow) {
-            QString newStr = "Border" + QString::number(oldAnchorRow);
-            textAnchorObjectEditor.at(i)->setValue(newStr);
-        }
     }
 
     // update graphics anchor lists
-    for (int i = 0; i < t.size(); ++i) {
-        QString oldAnchoName = graphicAnchorObjectEditor.at(i)->value();
-        // rows are zero based (o, 1, ...), border names ie Border2 are 1 based (1, 2, ...)
-        int oldAnchorRow = oldAnchoName.right(oldAnchoName.length() - 6).toInt() - 1;
+    for (int i = 0; i < g.size(); ++i) {
+        QString oldAnchorName = graphicAnchorObjectEditor.at(i)->value();
         graphicAnchorObjectEditor.at(i)->refresh(anchorObjectList);
         // refreshing anchorObjectList removes old value for the graphic - reassign anchor object
-        /*
-        qDebug() << __FUNCTION__
-                 << "GRAPHIC ITEM #" << i
-                 << "oldAnchoName =" << oldAnchoName
-                 << "oldAnchorRow =" << oldAnchorRow
-                 << "border row deleted =" << deletedRow
-                 << "anchorObjectList =" << anchorObjectList
-                    ;
-//                  */
-        // if all borders deleted then anchor to the Image
-        if (borderCount == 0 || oldAnchoName == "Image")
+        if (anchorObjectList.contains(oldAnchorName))
+            graphicAnchorObjectEditor.at(i)->setValue(oldAnchorName);
+        else
             graphicAnchorObjectEditor.at(i)->setValue("Image");
-        // oldAnchorRow okay if deleted row is greater than anchor row (oldAnchorRow)
-        else if (deletedRow > oldAnchorRow)
-            graphicAnchorObjectEditor.at(i)->setValue(oldAnchoName);
-        // deleted row <= oldAnchorRow then newRow = oldAnchorRow - 1
-        else if (deletedRow <= oldAnchorRow) {
-            QString newStr = "Border" + QString::number(oldAnchorRow);
-            graphicAnchorObjectEditor.at(i)->setValue(newStr);
-        }
     }
 }
 
@@ -860,10 +856,13 @@ void EmbelProperties::newStyle()
     styleList << name;
     int n = styleList.length() - 1;
     addStyle(name, n);
+    QModelIndex idx = model->index(n, 0, stylesIdx);
     for (int i = 0; i < styleListObjectEditor.length(); ++i) {
         styleListObjectEditor[i]->addItem(name);
     }
-    // rgh add for rectangles and graphics
+    expand(stylesIdx);
+    selectionModel()->clear();
+    selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
 }
 
 void EmbelProperties::invokeFromAction(QAction *embelAction)
@@ -951,7 +950,7 @@ void EmbelProperties::moveBorderUp()
     QModelIndex idx = btn->index;
     if (!idx.isValid()) return;
 
-    // get current row for this index as it may have been sorted already
+    // get current row for this index as it may have been sorted
     QString borderName = btn->name;
     QStandardItem *borders = new QStandardItem;
     borders = model->itemFromIndex(idx.parent());
@@ -1239,11 +1238,13 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     // save which template is current and set templateId and templateName
     setCurrentTemplate(v.toString());
 
-    // update global for ImageView              rgh req'd??
+    // update global for ImageView
     if (templateId == 0) G::isEmbellish = false;
     else G::isEmbellish = true;
 
-    // update View > Embellish menu
+    qDebug() << __FUNCTION__ << templateName << templateId << G::isEmbellish;
+
+    // update Embellish menu
     emit templateChanged(templateId);
 
     // clear model except for template name header and styles (row 0 and row 1)
@@ -1367,7 +1368,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
     if (source == "topMargin") {
         double x = v.toDouble();
         qDebug() << __FUNCTION__ << "item change topMargin" << "x =" << x;
-        setting->setValue(path, x);
+
         b[index].top = x;
         // build embel as change in border dimension changes all coordinates
         e->build();
@@ -2272,7 +2273,7 @@ void EmbelProperties::addBorders()
     borderNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
     borderNewBtn->setToolTip("Create a new border");
     btns.append(borderNewBtn);
-    connect(borderNewBtn, &BarBtn::clicked, this, &EmbelProperties::newBorder);
+    connect(borderNewBtn, &BarBtn::clicked, this, &EmbelProperties::newBorderFromBtn);
     addItem(i);
     bordersIdx = capIdx;
 
@@ -2282,9 +2283,11 @@ void EmbelProperties::addBorders()
 
     QString path = templatePath + "/Borders";
     setting->beginGroup(path);
-    int count = setting->childGroups().size();
+    QStringList bordersList = setting->childGroups();
     setting->endGroup();
-    for (int i = 0; i < count; ++i) newBorder();
+    for (int i = 0; i < bordersList.count(); ++i) {
+        newBorder(bordersList.at(i));
+    }
 
     // sort the borders
     borders->sortChildren(Qt::AscendingOrder);
@@ -3180,7 +3183,7 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.name = "inflection";
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "Inflection";
+    i.captionText = "Inflection point";
     i.tooltip = "Set the point of inflection between the start and finish.";
     i.isIndent = true;
     i.hasValue = true;
@@ -3571,20 +3574,54 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     styleMap[styleName].append(effect);
 }
 
-void EmbelProperties::newBorder()
+void EmbelProperties::newBorderFromBtn()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    int row = model->rowCount(bordersIdx);
-    addBorder(row);
-    updateBorderLists(row);
+    newBorder("");
+}
+
+void EmbelProperties::newBorder(QString name)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int rowCount = model->rowCount(bordersIdx);
+    QString borderName = "";
+    QStack<QString> bNum;
+    if (name == "") {
+        /* Get a new border name (Border1, border2...).  Account for border deletions and order
+           changes. Start by getting all numbers used so far.  */
+        for (int i = 0; i < rowCount; ++i) {
+            QString s = model->index(i, 0, bordersIdx).data().toString();
+            bNum.push(s.replace("Border", ""));
+        }
+        // Find first available and assign borderName
+        for (int i = 0; i <= rowCount; ++i) {
+            if (!bNum.contains(QString::number(i+1))) {
+                borderName = "Border" + QString::number(i+1);
+                break;
+            }
+            if (i == rowCount)
+                borderName = "Border" + QString::number(i+1);
+        }
+    }
+    else borderName = name;
+
+    // add the new border
+    addBorder(rowCount, borderName);
+    updateBorderLists();
     if (G::isInitializing || isTemplateChange) return;
-    QModelIndex idx = model->index(row, CapColumn, bordersIdx);
+    QModelIndex idx = model->index(rowCount, CapColumn, bordersIdx);
     selectionModel()->clear();
     selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    expand(bordersIdx);
+    expand(idx);
     e->build();
 }
 
@@ -3599,6 +3636,8 @@ void EmbelProperties::newText()
     addText(row);
     if (G::isInitializing || isTemplateChange) return;
     QModelIndex idx = model->index(row, CapColumn, textsIdx);
+    expand(textsIdx);
+    expand(idx);
     selectionModel()->clear();
     selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     e->build();
@@ -3657,24 +3696,33 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
     }
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
     QModelIndex idx;
-    /* If an effect is being deleted its index cannot be determined by btn->index as it may
-       have been sorted.  Instead the index is determined by searching for the name and
+
+    /* If a border or effect is being deleted its index cannot be determined by btn->index as
+       it may have been sorted. Instead the index is determined by searching for the name and
        parName */
-    if (btn->type == "effect") {
+        if (btn->type == "effect" || btn->type == "border") {
         getIndexFromNameAndParent(btn->name, btn->parName);
         idx = foundIdx;
     }
     else {
         idx = btn->index;
     }
-    qDebug() << __FUNCTION__ << idx.data().toString();
+
+    qDebug() << __FUNCTION__
+             << "btn->type =" << btn->type
+             << "btn->parName =" << btn->parName
+             << "btn->name =" << btn->name
+             << "idx.data() =" << idx.data().toString()
+             << "idx.row() =" << idx.row()
+             << "idx.data(UR_Path) =" << idx.data(UR_SettingsPath).toString()
+                ;
     if (!idx.isValid()) return;
 
     int row = idx.row();
-    QString name = idx.data(UR_Name).toString();
     QModelIndex parIdx = idx.parent();
     QString parName = parIdx.data(UR_Name).toString();
-    QString path = idx.data(UR_Path).toString();
+    QString name = idx.data(UR_Name).toString();
+    QString path = idx.data(UR_SettingsPath).toString();
     /*
     qDebug() << __FUNCTION__
              << "row =" << row
@@ -3688,6 +3736,7 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
 
     // remove from local vectors and Embel graphicItems
     if (parName == "Borders") {
+        qDebug() << __FUNCTION__ << "Remove border" << row;
         e->removeBorder(row);
         b.remove(row);
     }
@@ -3704,6 +3753,7 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
 
     // remove from datamodel
     model->removeRow(idx.row(), idx.parent());
+    updateBorderOrderAfterDeletion();
 
     // remove from setting
     setting->remove(path);
@@ -3711,7 +3761,7 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
     /* rename subsequent category items ie text2, text3 ... in setting, model and vectors
        This is not required for styles and effects as they are not numbered automatically */
     QStringList templateItems;
-    templateItems << "Borders" << "Texts" << "Graphics";
+    templateItems /*<< "Borders"*/ << "Texts" << "Graphics";
     if (templateItems.contains(parName)) {
         QString itemBase = parName.left(parName.length() - 1);
         for (int i = row; i < model->rowCount(parIdx); ++i) {
@@ -3724,7 +3774,7 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
             // update model
             model->setData(model->index(i, CapColumn, parIdx), newName);
             // update local struct
-            if (parName == "Borders") b[i].name = newName;
+//            if (parName == "Borders") b[i].name = newName;
             if (parName == "Texts") t[i].name = newName;
             if (parName == "Graphics") g[i].name = newName;
         }
@@ -3732,7 +3782,7 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
 
     /* if border deleted update lists that have borders and any anchorObjects in texts and
        graphics.  This needs to happen after all data structures have been updated.  */
-    if (parName == "Borders") updateBorderLists(row);
+    if (parName == "Borders") updateBorderLists();
 
     // update references to style
     if (parName == "Styles") {
@@ -3878,12 +3928,12 @@ void EmbelProperties::mouseMoveEvent(QMouseEvent *event)
         idx.parent().parent() == graphicsIdx
        )
     {
-        static int count = 0;
-        qDebug() << __FUNCTION__ << count
-                 << idx.data().toString()
-                 << idx.parent().data().toString()
-                 << idx.parent().parent().data().toString()
-                    ;
+//        static int count = 0;
+//        qDebug() << __FUNCTION__ << count
+//                 << idx.data().toString()
+//                 << idx.parent().data().toString()
+//                 << idx.parent().parent().data().toString()
+//                    ;
         flash(idx);
     }
 }
@@ -4163,9 +4213,8 @@ void EmbelProperties::test1()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << exportFolderPath;
 //    e->test();
-
+    diagnosticVectors();
 }
 
 void EmbelProperties::test2()
@@ -4203,7 +4252,7 @@ void EmbelProperties::coordHelp()
 
 }
 
-void EmbelProperties::addBorder(int count)
+void EmbelProperties::addBorder(int count, QString borderName)
 {
     {
     #ifdef ISDEBUG
@@ -4211,8 +4260,9 @@ void EmbelProperties::addBorder(int count)
     #endif
     }
     // Name (used as node in settings and treeview)
-    QString borderName = "Border" + QString::number(count + 1);
+//    QString borderName = "Border" + QString::number(count + 1);
     border.name = borderName;
+    qDebug() << __FUNCTION__ << borderName << count;
     QString settingRootPath = templatePath + "Borders/" + borderName + "/";
 
     // subheader for this border
@@ -4250,6 +4300,8 @@ void EmbelProperties::addBorder(int count)
     addBorderHeaderButtons();
     QModelIndex parIdx = capIdx;
 
+    int defaultMargin = 5;
+
     i.name = "topMargin";
     i.parIdx = parIdx;
     i.parentName = borderName;
@@ -4259,11 +4311,12 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "topMargin";
+    i.defaultValue = defaultMargin;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 1;
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Slider;
@@ -4284,11 +4337,12 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "leftMargin";
+    i.defaultValue = defaultMargin;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 1;
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Slider;
@@ -4309,11 +4363,12 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "rightMargin";
+    i.defaultValue = defaultMargin;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 1;
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Slider;
@@ -4334,11 +4389,12 @@ void EmbelProperties::addBorder(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "bottomMargin";
+    i.defaultValue = defaultMargin;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 1;
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Slider;
@@ -4389,7 +4445,7 @@ void EmbelProperties::addBorder(int count)
     }
     else {
         // start with a random color
-        quint32 x = QRandomGenerator::global()->generate() * 16777215;
+        quint32 x = QRandomGenerator::global()->generateDouble() * 16777215;
         i.value = "#" + QString::number(x, 16);
 //        qDebug() << __FUNCTION__ << i.value;
         setting->setValue(settingRootPath + i.key, i.value);
@@ -4857,8 +4913,11 @@ void EmbelProperties::addText(int count)
     i.captionIsEditable = false;
     i.key = "style";
     i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
+    if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
+        if (!styleMap.contains(i.value.toString())) qDebug() << __FUNCTION__
+            << "Style " << i.value << "no longer exists";
+    }
     else {
         i.value = "No style";
         setting->setValue(settingRootPath + i.key, i.value);

@@ -41,12 +41,17 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
 //            if (m.left < ef.blur.radius) m.left = ef.blur.radius;
 //            if (m.right < ef.blur.radius) m.right = ef.blur.radius;
 //            if (m.bottom < ef.blur.radius) m.bottom = ef.blur.radius;
+//            updateBoundingRect();
             break;
         case highlight:
             if (m.top < ef.highlight.top) m.top = ef.highlight.top;
             if (m.left < ef.highlight.left) m.left = ef.highlight.left;
             if (m.right < ef.highlight.right) m.right = ef.highlight.right;
             if (m.bottom < ef.highlight.bottom) m.bottom = ef.highlight.bottom;
+            break;
+        case emboss:
+//            m.bottom = -2;
+//            updateBoundingRect();
             break;
         case shadow:
             qreal length = ef.shadow.length;
@@ -57,9 +62,12 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
 //            if (offset.y() < dy) offset.setY(dy);
 //            if (m.top < ef.shadow.blurRadius) m.top = ef.shadow.blurRadius;
 //            if (m.left < ef.shadow.blurRadius) m.left = ef.shadow.blurRadius;
-            if (m.right < ef.shadow.blurRadius) m.right = ef.shadow.blurRadius;
-            if (m.bottom < ef.shadow.blurRadius) m.bottom = ef.shadow.blurRadius;
+
+//            if (m.right < ef.shadow.blurRadius) m.right = ef.shadow.blurRadius;
+//            if (m.bottom < ef.shadow.blurRadius) m.bottom = ef.shadow.blurRadius;
             updateBoundingRect();
+            break;
+
         }
     }
 }
@@ -173,8 +181,6 @@ QT_END_NAMESPACE
 
 void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__;
-
     QImage blurred(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     blurred = overlay;
     Effects effect;
@@ -210,7 +216,6 @@ void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 void GraphicsEffect::shadowEffect(double length, double radius, QColor color,
                                   QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__;
 
     if (overlay.isNull()) return;
 
@@ -293,7 +298,6 @@ void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
 
 void GraphicsEffect::brightenEffect(qreal evDelta, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__;
 
     if (overlay.isNull()) return;
 
