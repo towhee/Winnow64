@@ -418,7 +418,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                 painter->fillRect(r1, rootCategoryBackground);
             }
             // re-instate the decorations
-            if (index.data(UR_isDecoration).toBool()) {
+            if (index.data(UR_isDecoration).toBool() && hasChildren) {
                 int x = r.x() - 10;
                 int y = 0;
                 if (isExpanded) {

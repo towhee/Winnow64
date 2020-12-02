@@ -20,6 +20,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
     lightDirection = globalLightDirection;
     this->rotation = rotation;
     srcRectZeroRotation = boundRect;
+    qDebug() << __FUNCTION__ << "m:" << m.top << m.left << m.right << m.bottom;
 
     // iterate effects in style to set boundingRect
     using namespace winnow_effects;
@@ -36,12 +37,16 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                     ;
 //                    */
         switch (ef.effectType) {
+        case emboss:
+        case sharpen:
+        case brighten:
+            break;
         case blur:
-//            if (m.top < ef.blur.radius) m.top = ef.blur.radius;
-//            if (m.left < ef.blur.radius) m.left = ef.blur.radius;
-//            if (m.right < ef.blur.radius) m.right = ef.blur.radius;
-//            if (m.bottom < ef.blur.radius) m.bottom = ef.blur.radius;
-//            updateBoundingRect();
+            if (m.top < ef.blur.radius) m.top = static_cast<int>(ef.blur.radius);
+            if (m.left < ef.blur.radius) m.left = static_cast<int>(ef.blur.radius);
+            if (m.right < ef.blur.radius) m.right = static_cast<int>(ef.blur.radius);
+            if (m.bottom < ef.blur.radius) m.bottom = static_cast<int>(ef.blur.radius);
+            updateBoundingRect();
             break;
         case highlight:
             if (m.top < ef.highlight.top) m.top = ef.highlight.top;
@@ -49,22 +54,22 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
             if (m.right < ef.highlight.right) m.right = ef.highlight.right;
             if (m.bottom < ef.highlight.bottom) m.bottom = ef.highlight.bottom;
             break;
-        case emboss:
-//            m.bottom = -2;
-//            updateBoundingRect();
-            break;
         case shadow:
+            // expand for shadow offset
             qreal length = ef.shadow.length;
             double rads = lightDirection * (3.14159 / 180);
-            qreal dx = -sin(rads) * length;
-            qreal dy = +cos(rads) * length;
-//            if (offset.x() < dx) offset.setX(dx);
-//            if (offset.y() < dy) offset.setY(dy);
-//            if (m.top < ef.shadow.blurRadius) m.top = ef.shadow.blurRadius;
-//            if (m.left < ef.shadow.blurRadius) m.left = ef.shadow.blurRadius;
-
-//            if (m.right < ef.shadow.blurRadius) m.right = ef.shadow.blurRadius;
-//            if (m.bottom < ef.shadow.blurRadius) m.bottom = ef.shadow.blurRadius;
+            int dx = static_cast<int>(-sin(rads) * length);
+            int dy = static_cast<int>(+cos(rads) * length);
+            if (dx > 0 && m.right < dx) m.right = dx;
+            if (dx < 0 && m.left < -dx) m.left = -dx;
+            if (dy > 0 && m.bottom < dy) m.bottom = dy;
+            if (dy < 0 && m.top < -dy) m.top = -dy;
+            // expand for shadow blur
+            int radius = static_cast<int>(ef.shadow.blurRadius);
+            if (m.top < radius) m.top = radius;
+            if (m.left < radius) m.left = radius;
+            if (m.right < radius) m.right = radius;
+            if (m.bottom < radius) m.bottom = radius;
             updateBoundingRect();
             break;
 

@@ -17,6 +17,7 @@ QT += xmlpatterns
 #QT += opengl
 
 HEADERS += Cache/imagecache.h \
+   Dialogs/copystyledlg.h \
    Effects/REF_imageblitz_effects.h \
    Effects/interpolate.h \
 HEADERS += Cache/mdcache.h \
@@ -104,6 +105,7 @@ HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
 SOURCES += Cache/imagecache.cpp \
+   Dialogs/copystyledlg.cpp \
    Main/qtlocalpeer.cpp \
    Main/qtlockedfile.cpp \
    Main/qtlockedfile_win.cpp \
@@ -186,6 +188,7 @@ SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
+   Dialogs/copystyledlg.ui \
    Dialogs/patterndlg.ui \
    Embellish/embelCoord.ui \
    Utilities/inputdlg.ui
