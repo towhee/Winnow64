@@ -313,9 +313,13 @@ Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
              << "alignTo_BorderId =" << alignTo_BorderId
                 ;
 //    */
+    // range check
+    if (p->b.size() > b.size()) {
+        qDebug() << __FUNCTION__ << "$$$$$$$$$$$$$$$  p->b.size() > b.size())   $$$$$$$$$$$$$";
+    }
     int x0 = 0, y0 = 0;
     // put text in the Image object area
-    if (anchorObject == "Image" || b.size() == 0) {
+    if (anchorObject == "Image" || b.size() == 0 || p->b.size() > b.size()) {
         x0 = image.x + static_cast<int>(x / 100 * image.w);
         y0 = image.y + static_cast<int>(y / 100 * image.h);
         /*
@@ -498,7 +502,11 @@ void Embel::addImageToScene()
     #endif
     }
     // scale the image to fit inside the borders
-    QPixmap pm = pmItem->pixmap().scaledToWidth(image.w);
+    QPixmap pm;
+    if (imCache->imCache.contains(fPath))
+        pm = QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w);
+    else
+        pm = pmItem->pixmap().scaledToWidth(image.w);
     // add the image to the scene
     pmItem->setPixmap(pm);
     // move the image to center in the borders
@@ -597,16 +605,21 @@ void Embel::updateText(int i)
              << "p->t[i].y =" << p->t[i].y
                 ;
 //                    */
-    int w = static_cast<int>(tItems[i]->boundingRect().width());
-    int h = static_cast<int>(tItems[i]->boundingRect().height());
-    QPoint canvas = canvasCoord(p->t[i].x,
-                                p->t[i].y,
-                                p->t[i].anchorObject,
-                                p->t[i].anchorContainer);
-//    qDebug() << __FUNCTION__ << "canvas coord =" << canvas;
-    QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h);
-    tItems[i]->setTransformOriginPoint(offset);
-    tItems[i]->setPos(canvas - offset);
+
+    /* Range check - make sure embel borders synced with embelProperties borders.  A text
+       update could be triggered before a new border has been processed.  */
+    if (p->b.size() == b.size()) {
+        int w = static_cast<int>(tItems[i]->boundingRect().width());
+        int h = static_cast<int>(tItems[i]->boundingRect().height());
+        QPoint canvas = canvasCoord(p->t[i].x,
+                                    p->t[i].y,
+                                    p->t[i].anchorObject,
+                                    p->t[i].anchorContainer);
+    //    qDebug() << __FUNCTION__ << "canvas coord =" << canvas;
+        QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h);
+        tItems[i]->setTransformOriginPoint(offset);
+        tItems[i]->setPos(canvas - offset);
+    }
 
     // if style then rotate in GraphicsEffect, else rotate text here
     double rotation = p->t[i].rotation;
@@ -641,20 +654,25 @@ void Embel::updateGraphic(int i)
     gItems[i]->setOpacity(opacity);
     int dim = static_cast<int>(static_cast<double>(p->g[i].size) / 100 * ls);
     gItems[i]->setPixmap(graphicPixmaps.at(i).scaled(QSize(dim, dim), Qt::KeepAspectRatio));
-    int w = static_cast<int>(gItems[i]->pixmap().width());
-    int h = static_cast<int>(gItems[i]->boundingRect().height());
-    /*
-    qDebug() << __FUNCTION__ << "Adding graphic #" << i
-             << "p->g[i].size =" << p->g[i].size
-             << "dim =" << dim << "w =" << w << "h =" << h;
-//             */
-    QPoint canvas = canvasCoord(p->g[i].x,
-                                p->g[i].y,
-                                p->g[i].anchorObject,
-                                p->g[i].anchorContainer);
-    QPoint offset = anchorPointOffset(p->g[i].anchorPoint, w, h);
-    gItems[i]->setTransformOriginPoint(offset);
-    gItems[i]->setPos(canvas - offset);
+
+    /* Range check - make sure embel borders synced with embelProperties borders.  A graphic
+       update could be triggered before a new border has been processed.  */
+    if (p->b.size() == b.size()) {
+        int w = static_cast<int>(gItems[i]->pixmap().width());
+        int h = static_cast<int>(gItems[i]->boundingRect().height());
+        /*
+        qDebug() << __FUNCTION__ << "Adding graphic #" << i
+                 << "p->g[i].size =" << p->g[i].size
+                 << "dim =" << dim << "w =" << w << "h =" << h;
+    //             */
+        QPoint canvas = canvasCoord(p->g[i].x,
+                                    p->g[i].y,
+                                    p->g[i].anchorObject,
+                                    p->g[i].anchorContainer);
+        QPoint offset = anchorPointOffset(p->g[i].anchorPoint, w, h);
+        gItems[i]->setTransformOriginPoint(offset);
+        gItems[i]->setPos(canvas - offset);
+    }
 
     // if style then rotate in GraphicsEffect, else rotate text here
     double rotation = p->g[i].rotation;

@@ -32,7 +32,7 @@ public:
                        QStringList &existingNames,
                        QString dlgTitle,
                        QString nameTitle,
-                       QWidget *parent = 0);
+                       QWidget *parent = nullptr);
     ~RenameDlg();
 
 private slots:

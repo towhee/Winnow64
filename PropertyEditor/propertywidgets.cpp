@@ -269,7 +269,8 @@ LineEditor::LineEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent
     lineEdit->setWindowFlags(Qt::FramelessWindowHint);
     lineEdit->setAttribute(Qt::WA_TranslucentBackground);
 
-    connect(lineEdit, &QLineEdit::textChanged, this, &LineEditor::change);
+    connect(lineEdit, &QLineEdit::editingFinished, this, &LineEditor::change);
+//    connect(lineEdit, &QLineEdit::textChanged, this, &LineEditor::change);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(lineEdit, Qt::AlignLeft);
@@ -299,14 +300,15 @@ void LineEditor::setValue(QVariant value)
     lineEdit->setText(value.toString());
 }
 
-void LineEditor::change(QString value)
+void LineEditor::change(/*QString value*/)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QVariant v = value;
+//    QVariant v = value;
+//    emit editorValueChanged(this);
     emit editorValueChanged(this);
 }
 
@@ -353,7 +355,8 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
     btn->setText("...");
     btn->setVisible(false);
 
-    connect(spinBox, QOverload<int>::of(&QSpinBox::valueChanged), [=](int i){change(i);});
+    connect(spinBox, &QSpinBox::editingFinished, this, &SpinBoxEditor::change);
+//    connect(spinBox, QOverload<int>::of(&QSpinBox::valueChanged), [=](int i){change(i);});
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(spinBox, Qt::AlignLeft);
@@ -386,14 +389,14 @@ void SpinBoxEditor::setValue(QVariant value)
     spinBox->setValue(value.toInt());
 }
 
-void SpinBoxEditor::change(int value)
+void SpinBoxEditor::change(/*int value*/)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QVariant v = value;
+//    QVariant v = value;
     emit editorValueChanged(this);
 }
 

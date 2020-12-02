@@ -101,7 +101,7 @@ signals:
     void enableGoKeyActions(bool ok);
 
 private:
-    void change(int value);
+    void change();
     QSpinBox *spinBox;
     QString source;
     QModelIndex idx;
@@ -146,7 +146,7 @@ signals:
     void enableGoKeyActions(bool ok);
 
 private:
-    void change(QString value);
+    void change();
     QLineEdit *lineEdit;
     QString source;
     QModelIndex idx;

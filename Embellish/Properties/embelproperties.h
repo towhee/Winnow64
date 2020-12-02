@@ -8,6 +8,7 @@
 #include "PropertyEditor/propertyeditor.h"
 #include "Effects/graphicseffect.h"
 #include "Views/infostring.h"
+#include "Dialogs/copystyledlg.h"
 #include "ui_embelCoord.h"
 
 class EmbelProperties : public PropertyEditor
@@ -135,6 +136,7 @@ private:
     void readTile(QStringList tileName);
     void renameCurrentStyle();
     void renameCurrentTemplate();
+    void copyStyle();
     void copyTemplate();
     QString uniqueTemplateName(QString name);
 
@@ -244,7 +246,8 @@ private:
     QAction *expandAllAction;
     QAction *collapseAllAction;
     QAction *renameAction;
-    QAction *copyAction;
+    QAction *copyTemplateAction;
+    QAction *copyStyleAction;
     QAction *moveUpAction;
     QAction *moveDownAction;
     QAction *separatorAction0;
@@ -273,6 +276,8 @@ private:
     QVector<ComboBoxEditor*> graphicAnchorObjectEditor;
     QVector<ComboBoxEditor*> styleListObjectEditor;
     QVector<BarBtnEditor*> styleEditor;
+
+//    QString copyStyleSettingsPath = "";
 
     // must be in correct order
     enum roots {
