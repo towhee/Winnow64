@@ -161,6 +161,7 @@ associated with the correct border even when the border is resorted.
     int index = 100;
     while (true) {
         bool matchFound = false;
+//        for (int row = 0; row < model->rowCount(parentIdx); ++row) {
         for (int row = 0; row < model->rowCount(parentIdx); ++row) {
             QModelIndex idx = model->index(row, 0, parentIdx);
             // match found, keep trying
@@ -174,22 +175,22 @@ associated with the correct border even when the border is resorted.
     }
 }
 
-QModelIndex PropertyEditor::getItemIndex(int index, QModelIndex parentIdx)
+QModelIndex PropertyEditor::getItemIndex(int itemIndex, QModelIndex parentIdx)
 {
 /*
-Returns the QModelIndex for the ItemIndex.  See PropertyEditor::uniqueItemIndex.
+Returns the QModelIndex for the itemIndex. itemIndex is unique for every row in the model.
+It is assigned in addItem().  Use it to find the correct index when items have been sorted
+or deleted, and the associated settings and vectors have not been adjusted.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    for (int row = 0; row < model->rowCount(parentIdx); ++row) {
-        QModelIndex idx = model->index(row, 0, parentIdx);
-        if (idx.data(UR_ItemIndex) == index) return idx;
-    }
-    // return invalid index if not found
-    return QModelIndex();
+    QModelIndex start = model->index(0,0,QModelIndex());
+    QModelIndexList list = model->match(start, UR_ItemIndex, itemIndex, 1, Qt::MatchExactly | Qt::MatchRecursive);
+    if (list.size() > 0) return list.at(0);
+    else return QModelIndex();
 }
 
 QModelIndex PropertyEditor::findIndex(QString name)
@@ -257,6 +258,7 @@ SliderEditor, LineEditor etc).
     QStandardItem *valItem = new QStandardItem;
     QStandardItem *parItem = new QStandardItem;
     parItem = nullptr;
+    itemIndex++;
 
     if (i.parIdx.isValid()) parIdx = i.parIdx;
     else parIdx = findIndex(i.parentName);
@@ -305,7 +307,7 @@ SliderEditor, LineEditor etc).
     model->setData(valIdx, i.tooltip, Qt::ToolTipRole);
     model->setData(capIdx, i.path, UR_SettingsPath);
     model->setData(valIdx, i.path, UR_SettingsPath);
-    model->setData(capIdx, i.itemIndex, UR_ItemIndex);
+    model->setData(capIdx, itemIndex, UR_ItemIndex);
     model->setData(capIdx, false, UR_isHidden);
     model->setData(valIdx, false, UR_isHidden);
     model->setData(capIdx, i.key, UR_Source);           // key = "effect" for sortOrder
@@ -320,7 +322,7 @@ SliderEditor, LineEditor etc).
     model->setData(valIdx, i.value, Qt::EditRole);
     model->setData(valIdx, i.defaultValue, UR_DefaultValue);
     model->setData(valIdx, i.delegateType, UR_DelegateType);
-    model->setData(valIdx, i.itemIndex, UR_ItemIndex);
+    model->setData(valIdx, itemIndex, UR_ItemIndex);
     model->setData(valIdx, i.key, UR_Source);
     model->setData(valIdx, i.type, UR_Type);
     model->setData(valIdx, i.min, UR_Min);

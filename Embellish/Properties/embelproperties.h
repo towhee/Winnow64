@@ -104,6 +104,7 @@ public:
     void newEmbelTemplate();
     void doNotEmbellish();
     QString metaString(QString key);
+    QString metaString(QString key, QString fPath);
     void test1();
     void test2();
 
@@ -184,7 +185,7 @@ private:
     void swapEffects(QStandardItem *styleItem, int row, int swapRow);
     void moveEffectUp();
     void moveEffectDown();
-    void sortEffectList(QString style);
+    bool sortEffectList(QString style);
 
     void itemChangeTemplate(QVariant v);
     void itemChangeExport(QModelIndex idx, QVariant v, QString source);
@@ -287,7 +288,6 @@ private:
         _image,
         _borders,
         _texts,
-        _rectangles,
         _graphics
     };
     enum corners {TopLeft, TopRight, BottomLeft, BottomRight};

@@ -15,6 +15,7 @@ public:
 //    void setCurrentInfoTemplate(QString &currentInfoTemplate);
     QString getCurrentInfoTemplate();
     QString parseTokenString(QString &tokenString, QString &fPath, QModelIndex &idx);
+    QString parseTokenString(QString &tokenString, QString &fPath);
 
     QStringList tokens;
     QMap<QString, QString> infoTemplates;
@@ -31,6 +32,7 @@ private:
     void initExampleMap();
     bool parseToken(QString &tokenString, int pos, QString &token, int &tokenEnd);
     QString tokenValue(QString &tokenString, QFileInfo &info, QString &fPath, QModelIndex &idx);
+    QString tokenValue(QString &tokenString, QFileInfo &info, QString &fPath, ImageMetadata &m);
     int getIndex();
     QString getCurrentInfoTemplate(int index);
 };

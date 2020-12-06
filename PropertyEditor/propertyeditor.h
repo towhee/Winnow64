@@ -79,8 +79,8 @@ public:
     void getIndexFromNameAndParent(QString name, QString parName, QModelIndex = QModelIndex());
     bool getIndex(QString caption, QModelIndex parent = QModelIndex());
     QModelIndex findIndex(QString name);
-    int uniqueItemIndex(QModelIndex parentIdx);
-    QModelIndex getItemIndex(int index, QModelIndex parentIdx);
+    int uniqueItemIndex(QModelIndex parentIdx = QModelIndex());
+    QModelIndex getItemIndex(int itemIndex, QModelIndex parentIdx = QModelIndex());
     void updateHiddenRows(QModelIndex parent);
     QModelIndex foundIdx;
     void diagnosticProperties(QModelIndex parent);
@@ -97,6 +97,7 @@ public slots:
 //    /*virtual*/ void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
 
 private:
+    int itemIndex = -1;
     QLinearGradient categoryBackground;
     bool isSolo;
 };

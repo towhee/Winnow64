@@ -940,6 +940,10 @@ void MW::handleStartupArgs(const QString &args)
             Utilities::log(__FUNCTION__, msg);
             qDebug() << __FUNCTION__ << msg;
 //            QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
+//            QFileInfo f(argMap["-e"]);
+//            f.dir().path();
+//            fsTree->select(f.dir().path());
+//            folderSelectionChange();
             EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
             embelExport.exportFile(argMap["-e"], argMap["-t"]);
         }

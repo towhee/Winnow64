@@ -287,7 +287,8 @@ void EmbelProperties::effectContextMenu()
     #endif
     }
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
-    effectParentIdx = btn->index;
+//    effectParentIdx = btn->index;
+    effectParentIdx = getItemIndex(btn->itemIndex);
     effectMenu->exec(QCursor::pos());
 }
 
@@ -440,14 +441,14 @@ void EmbelProperties::diagnosticStyles()
                 break;
             case winnow_effects::emboss:
                 qDebug() << "      Emboss: size       =" << ef.emboss.size;
-                qDebug() << "      Emboss: exposure   =" << ef.emboss.exposure;
                 qDebug() << "      Emboss: inflection =" << ef.emboss.inflection;
+                qDebug() << "      Emboss: exposure   =" << ef.emboss.exposure;
+                qDebug() << "      Emboss: contrast   =" << ef.emboss.contrast;
                 qDebug() << "      Emboss: start      =" << ef.emboss.start;
                 qDebug() << "      Emboss: mid        =" << ef.emboss.mid;
                 qDebug() << "      Emboss: end        =" << ef.emboss.end;
                 qDebug() << "      Emboss: umbra      =" << ef.emboss.umbra;
-                qDebug() << "      Emboss: soften     =" << ef.emboss.soften;
-                qDebug() << "      Emboss: opacity    =" << ef.emboss.opacity;
+                qDebug() << "      Emboss: isUmbraGradient =" << ef.emboss.isUmbraGradient;
                 break;
             case winnow_effects::sharpen:
                 qDebug() << "      Sharpen: radius    =" << ef.sharpen.radius;
@@ -557,9 +558,10 @@ void EmbelProperties::diagnostic(QModelIndex parent)
         QModelIndex idx1 = model->index(r, ValColumn, parent);
         QString p = parent.data(UR_Name).toString();
         QString n = idx0.data(UR_Name).toString();
+        QString u = idx0.data(UR_ItemIndex).toString();
         QVariant v = idx1.data(Qt::EditRole);
         QString s = idx0.data(UR_Source).toString();
-        qDebug() << __FUNCTION__ << p << n << v;
+        qDebug() << __FUNCTION__ << p << n << "itemIndex:" << u << v;
         // iterate children
         if (model->hasChildren(idx0)) {
             diagnostic(idx0);
@@ -962,7 +964,7 @@ The sortOrder is updated in settings.
     }
 
     // refresh the graphicsScene
-    e->build();
+    e->build("", __FUNCTION__);
 }
 
 void EmbelProperties::moveBorderUp()
@@ -976,7 +978,8 @@ void EmbelProperties::moveBorderUp()
     #endif
     }
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
-    QModelIndex idx = btn->index;
+//    QModelIndex idx = btn->index;
+    QModelIndex idx = getItemIndex(btn->itemIndex);
     if (!idx.isValid()) return;
 
     // get current row for this index as it may have been sorted
@@ -1004,7 +1007,8 @@ void EmbelProperties::moveBorderDown()
     #endif
     }
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
-    QModelIndex idx = btn->index;
+//    QModelIndex idx = btn->index;
+    QModelIndex idx = getItemIndex(btn->itemIndex);
     if (!idx.isValid()) return;
 
     // get current row for this index as it may have been sorted already
@@ -1066,7 +1070,7 @@ sorted.
     sortEffectList(style);
 
     // refresh the graphicsScene
-    e->build();
+    e->build("", __FUNCTION__);
 
     return;
 }
@@ -1095,7 +1099,8 @@ void EmbelProperties::moveEffectUp()
     qDebug() << "mw3->embelDock->window()->pos() =" << mw3->embelDock->window()->pos();
     return;
 //    */
-    QModelIndex idx = btn->index;
+    QModelIndex idx = getItemIndex(btn->itemIndex);
+//    QModelIndex idx = btn->index;
     if (!idx.isValid()) return;
 
     // get current row for this index as it may have been sorted already
@@ -1125,7 +1130,8 @@ void EmbelProperties::moveEffectDown()
     #endif
     }
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
-    QModelIndex idx = btn->index;
+    QModelIndex idx = getItemIndex(btn->itemIndex);
+//    QModelIndex idx = btn->index;
     if (!idx.isValid()) return;
 
     // get current row for this index as it may have been sorted
@@ -1179,7 +1185,7 @@ void EmbelProperties::syncBorderVector()
 //              return l.order < r.order; });
 }
 
-void EmbelProperties::sortEffectList(QString style)
+bool EmbelProperties::sortEffectList(QString style)
 {
     {
     #ifdef ISDEBUG
@@ -1188,11 +1194,12 @@ void EmbelProperties::sortEffectList(QString style)
     }
     if (!styleMap.contains(style)) {
         qDebug() << __FUNCTION__ << style << "not in list";
-        return;
+        return false;
     }
     std::sort(styleMap[style].begin(), styleMap[style].end(),
               [](winnow_effects::Effect const &l, winnow_effects::Effect const &r) {
               return l.effectOrder < r.effectOrder; });
+    return true;
 }
 
 void EmbelProperties::itemChange(QModelIndex idx)
@@ -1279,14 +1286,10 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     // clear model except for template name header (row 0)
     model->removeRows(1, model->rowCount(QModelIndex()) - 1, QModelIndex());
 
-    // clear borders, texts, rectangles and graphics
+    // clear borders, texts and graphics
     b.clear();
     t.clear();
     g.clear();
-
-    // show/hide Styles
-//    if (templateId > 0) setRowHidden(1, root, false);
-//    else setRowHidden(1, root, true);
 
     // clear all graphics items
     if (templateId == 0) e->clear();
@@ -1375,7 +1378,7 @@ void EmbelProperties::itemChangeGeneral(QVariant v, QString source)
         setting->setValue(path, v.toString());
         image.style = v.toString();
     }
-    e->build();
+    e->build("", __FUNCTION__);
 }
 
 void EmbelProperties::itemChangeBorder(QModelIndex idx)
@@ -1400,7 +1403,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
 
         b[index].top = x;
         // build embel as change in border dimension changes all coordinates
-        e->build();
+        e->build("", __FUNCTION__);
         return;
     }
 
@@ -1409,7 +1412,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
         setting->setValue(path, x);
         b[index].left = x;
         // build embel as change in border dimension changes all coordinates
-        e->build();
+        e->build("", __FUNCTION__);
         return;
     }
 
@@ -1418,7 +1421,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
         setting->setValue(path, x);
         b[index].right = x;
         // build embel as change in border dimension changes all coordinates
-        e->build();
+        e->build("", __FUNCTION__);
         return;
     }
 
@@ -1427,7 +1430,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
         setting->setValue(path, x);
         b[index].bottom = x;
         // build embel as change in border dimension changes all coordinates
-        e->build();
+        e->build("", __FUNCTION__);
         return;
     }
 
@@ -1466,7 +1469,8 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
     QString parent = idx.parent().data(UR_Name).toString();
-    int index = idx.parent().data(UR_ItemIndex).toInt();
+    // see PropertyEditor::getItemIndex for details on using itemIndex
+    int index = getItemIndex(idx.parent().data(UR_ItemIndex).toInt()).row();
     QString path = templatePath + "Texts/" + parent + "/" + source;
     /*
     qDebug() << __FUNCTION__
@@ -1602,14 +1606,15 @@ void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString sou
     G::track(__FUNCTION__);
     #endif
     }
-    int index = idx.parent().data(UR_ItemIndex).toInt();
+    // see PropertyEditor::getItemIndex for details on using itemIndex
+    int index = getItemIndex(idx.parent().data(UR_ItemIndex).toInt()).row();
     QString path = templatePath + "Graphics/" + parent + "/" + source;
-//    qDebug() << __FUNCTION__ << path << source << v.toInt();
+    qDebug() << __FUNCTION__ << "row =" << index << path << source << v.toInt();
 
     if (source == "filePath") {
         setting->setValue(path, v.toString());
         g[index].filePath = v.toString();
-        e->build();
+        e->build("", __FUNCTION__);
         return;
     }
 
@@ -1906,6 +1911,13 @@ void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QStrin
         styleMap[style][effect].emboss.exposure = v.toDouble();
     }
 
+    if (source == "contrast") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].emboss.contrast = v.toDouble();
+    }
+
     if (source == "start") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
@@ -1927,20 +1939,6 @@ void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QStrin
         styleMap[style][effect].emboss.end = v.toDouble();
     }
 
-//    if (source == "white") {
-//        setting->setValue(path, v.toDouble());
-//        int effect = effectIndex(style, effectName);
-//        if (effect == -1) return;
-//        styleMap[style][effect].emboss.white = v.toDouble();
-//    }
-
-//    if (source == "black") {
-//        setting->setValue(path, v.toDouble());
-//        int effect = effectIndex(style, effectName);
-//        if (effect == -1) return;
-//        styleMap[style][effect].emboss.black = v.toDouble();
-//    }
-
     if (source == "umbra") {
         setting->setValue(path, v.toDouble());
         int effect = effectIndex(style, effectName);
@@ -1948,18 +1946,11 @@ void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QStrin
         styleMap[style][effect].emboss.umbra = v.toDouble();
     }
 
-    if (source == "soften") {
-        setting->setValue(path, v.toDouble());
+    if (source == "isUmbraGradient") {
+        setting->setValue(path, v.toBool());
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
-        styleMap[style][effect].emboss.soften = v.toDouble();
-    }
-
-    if (source == "opacity") {
-        setting->setValue(path, v.toDouble());
-        int effect = effectIndex(style, effectName);
-        if (effect == -1) return;
-        styleMap[style][effect].emboss.opacity = v.toDouble();
+        styleMap[style][effect].emboss.isUmbraGradient = v.toBool();
     }
 
     if (source == "blendMode") {
@@ -2448,6 +2439,7 @@ void EmbelProperties::addStyles()
     int count = setting->childGroups().size();
     setting->endGroup();
 //    qDebug() << __FUNCTION__ << stylesList;
+    styleMap.clear();
     for (int i = 0; i < count; ++i) addStyle(styleList.at(i), i);
 }
 
@@ -2490,9 +2482,10 @@ void EmbelProperties::addStyle(QString name, int n)
 //    styleEditor.append(static_cast<BarBtnEditor*>(addItem(i)));
     addItem(i);
     QModelIndex styleIdx = capIdx;
-    styleDeleteBtn->index = capIdx;
-//    styleRenameBtn->index = capIdx;
-    effectNewBtn->index = capIdx;
+//    styleDeleteBtn->index = capIdx;
+//    effectNewBtn->index = capIdx;
+    styleDeleteBtn->itemIndex = capIdx.data(UR_ItemIndex).toInt();
+    effectNewBtn->itemIndex = capIdx.data(UR_ItemIndex).toInt();
 
     // item reqd to sort effects after they have been read from settings
     QStandardItem *styleItem = new QStandardItem;
@@ -2557,9 +2550,9 @@ void EmbelProperties::addBorderHeaderButtons()
     connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     // add to model, where capIdx is defined
     addItem(i);
-    effectUpBtn->index = capIdx;
-    effectDownBtn->index = capIdx;
-    effectDeleteBtn->index = capIdx;
+    effectUpBtn->itemIndex = capIdx.data(UR_ItemIndex).toInt();
+    effectDownBtn->itemIndex = capIdx.data(UR_ItemIndex).toInt();
+    effectDeleteBtn->itemIndex = capIdx.data(UR_ItemIndex).toInt();
 }
 
 void EmbelProperties::addEffectBtns()
@@ -2598,9 +2591,9 @@ void EmbelProperties::addEffectBtns()
     connect(effectDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     // add to model, where capIdx is defined
     addItem(i);
-    effectUpBtn->index = capIdx;
-    effectDownBtn->index = capIdx;
-    effectDeleteBtn->index = capIdx;
+    effectUpBtn->itemIndex = capIdx.data(UR_ItemIndex).toInt();
+    effectDownBtn->itemIndex = capIdx.data(UR_ItemIndex).toInt();
+    effectDeleteBtn->itemIndex = capIdx.data(UR_ItemIndex).toInt();
 }
 
 void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
@@ -3192,7 +3185,7 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "size";
-    i.defaultValue = 0;
+    i.defaultValue = 3;
     i.path = settingRootPath + i.key;
     if (setting->contains(i.path))
         i.value = setting->value(i.path);
@@ -3219,7 +3212,7 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "inflection";
-    i.defaultValue = 0;
+    i.defaultValue = 0.5;
     i.path = settingRootPath + i.key;
     if (setting->contains(i.path))
         i.value = setting->value(i.path);
@@ -3241,7 +3234,7 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.parIdx = parIdx;
     i.parentName = effectName;
     i.captionText = "Exposure";
-    i.tooltip = "Adjust the brightness.";
+    i.tooltip = "Adjust the overall brightness.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -3263,17 +3256,44 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     effect.emboss.exposure = i.value.toDouble();
     addItem(i);
 
+    // emboss contrast
+    i.name = "contrast";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Contrast";
+    i.tooltip = "The amount to contrast.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "contrast";
+    i.defaultValue = 1;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(i.path))
+        i.value = setting->value(i.path);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(i.path, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "double";
+    i.min = 0;
+    i.max = 200;
+    i.div = 100;
+    i.fixedWidth = 50;
+    effect.emboss.contrast = i.value.toDouble();
+    addItem(i);
+
     // emboss start
     i.name = "start";
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "Start";
-    i.tooltip = "Adjust the brightness for the start point.";
+    i.captionText = "Start EV";
+    i.tooltip = "Adjust the brightness (EV) for the start point.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "start";
-    i.defaultValue = 0;
+    i.defaultValue = -1;
     i.path = settingRootPath + i.key;
     if (setting->contains(i.path))
         i.value = setting->value(i.path);
@@ -3294,13 +3314,13 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.name = "mid";
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "Mid";
-    i.tooltip = "Adjust the brightness for the inflection point.";
+    i.captionText = "Mid EV";
+    i.tooltip = "Adjust the brightness (EV) for the inflection point.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "mid";
-    i.defaultValue = 0;
+    i.defaultValue = 1;
     i.path = settingRootPath + i.key;
     if (setting->contains(i.path))
         i.value = setting->value(i.path);
@@ -3321,13 +3341,13 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.name = "end";
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "End";
-    i.tooltip = "Adjust the brightness for the end point.";
+    i.captionText = "End EV";
+    i.tooltip = "Adjust the brightness (EV) for the end point.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "end";
-    i.defaultValue = 0;
+    i.defaultValue = -1.25;
     i.path = settingRootPath + i.key;
     if (setting->contains(i.path))
         i.value = setting->value(i.path);
@@ -3371,44 +3391,17 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     effect.emboss.umbra = i.value.toDouble();
     addItem(i);
 
-    // emboss soften
-    i.name = "soften";
+    // emboss umbra apply gradient
+    i.name = "isUmbraGradient";
     i.parIdx = parIdx;
     i.parentName = effectName;
-    i.captionText = "Soften";
-    i.tooltip = "The amount to soften, from chisel to smooth.";
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "soften";
-    i.defaultValue = 0;
-    i.path = settingRootPath + i.key;
-    if (setting->contains(i.path))
-        i.value = setting->value(i.path);
-    else {
-        i.value = i.defaultValue;
-        setting->setValue(i.path, i.value);
-    }
-    i.delegateType = DT_Slider;
-    i.type = "double";
-    i.min = 0;
-    i.max = 100;
-    i.div = 100;
-    i.fixedWidth = 50;
-    effect.emboss.soften = i.value.toDouble();
-    addItem(i);
-
-    // emboss opacity
-    i.name = "opacity";
-    i.parIdx = parIdx;
-    i.parentName = effectName;
-    i.captionText = "Opacity";
+    i.captionText = "Umbra gradient";
     i.tooltip = "The brightness of the shadows.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "opacity";
-    i.defaultValue = 100;
+    i.key = "isUmbraGradient";
+    i.defaultValue = true;
     i.path = settingRootPath + i.key;
     if (setting->contains(i.path))
         i.value = setting->value(i.path);
@@ -3416,13 +3409,9 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
         i.value = i.defaultValue;
         setting->setValue(i.path, i.value);
     }
-    i.delegateType = DT_Slider;
-    i.type = "int";
-    i.min = 1;
-    i.max = 100;
-//    i.div = 100;
-    i.fixedWidth = 50;
-    effect.emboss.opacity = i.value.toInt();
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    effect.emboss.isUmbraGradient = i.value.toBool();
     addItem(i);
 
     // emboss blend mode
@@ -3435,11 +3424,12 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "blendMode";
+    i.defaultValue = "Above";
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = false;
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
@@ -3511,11 +3501,12 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "length";
+    i.defaultValue = 4;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 1;
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Slider;
@@ -3535,11 +3526,12 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "blur";
+    i.defaultValue = 6;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 100;
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType =  DT_Slider;
@@ -3587,11 +3579,12 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "blendMode";
+    i.defaultValue = "Below";
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = false;
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
@@ -3652,7 +3645,7 @@ void EmbelProperties::newBorder(QString name)
 //    selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     expand(bordersIdx);
     expand(idx);
-    e->build();
+    e->build("", __FUNCTION__);
     updateBorderLists();
 }
 
@@ -3671,7 +3664,7 @@ void EmbelProperties::newText()
     expand(idx);
     selectionModel()->clear();
     selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-    e->build();
+    e->build("", __FUNCTION__);
 }
 
 void EmbelProperties::newGraphic()
@@ -3689,7 +3682,7 @@ void EmbelProperties::newGraphic()
     expand(idx);
     selectionModel()->clear();
     selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-    e->build();
+    e->build("", __FUNCTION__);
 }
 
 void EmbelProperties::deleteTemplate()
@@ -3726,27 +3719,30 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
     #endif
     }
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
-    QModelIndex idx;
+    QModelIndex idx = getItemIndex(btn->itemIndex);
 
     /* If a border or effect is being deleted its index cannot be determined by btn->index as
        it may have been sorted. Instead the index is determined by searching for the name and
        parName */
-        if (btn->type == "effect" || btn->type == "border") {
-        getIndexFromNameAndParent(btn->name, btn->parName);
-        idx = foundIdx;
-    }
-    else {
-        idx = btn->index;
-    }
+//    if (btn->type == "effect" || btn->type == "border") {
+//        getIndexFromNameAndParent(btn->name, btn->parName);
+//        idx = foundIdx;
+//    }
+//    else {
+//        idx = getItemIndex(btn->itemIndex);
+//    }
 
+//        /*
     qDebug() << __FUNCTION__
              << "btn->type =" << btn->type
              << "btn->parName =" << btn->parName
              << "btn->name =" << btn->name
              << "idx.data() =" << idx.data().toString()
              << "idx.row() =" << idx.row()
+             << "idx.data(UR_ItemIndex) =" << idx.data(UR_ItemIndex).toString()
              << "idx.data(UR_Path) =" << idx.data(UR_SettingsPath).toString()
                 ;
+//                */
     if (!idx.isValid()) return;
 
     int row = idx.row();
@@ -3847,7 +3843,7 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
     }
 
     // refresh the graphicsScene
-    e->build();
+    e->build("", __FUNCTION__);
 }
 
 QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QString effectName)
@@ -4096,13 +4092,11 @@ void EmbelProperties::treeChange(QModelIndex idx)
             collapse(model->index(_image,0));
             collapse(model->index(_borders,0));
             collapse(model->index(_texts,0));
-            collapse(model->index(_rectangles,0));
             collapse(model->index(_graphics,0));
 //        }
         expand(model->index(_templates,0));
         expand(model->index(_borders,0));
         expand(model->index(_texts,0));
-        expand(model->index(_rectangles,0));
         expand(model->index(_graphics,0));
 //        expand(model->index(_styles,0));
         wasExpanded ? collapse(idx) : expand(idx);
@@ -4146,7 +4140,6 @@ bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
     if (!parIdx.isValid()) return false;
     if (parIdx == model->index(_borders,0)) return true;
     if (parIdx == model->index(_texts,0)) return true;
-    if (parIdx == model->index(_rectangles,0)) return true;
     if (parIdx == model->index(_graphics,0)) return true;
     if (parIdx == model->index(_styles,0)) return true;
     if (styleList.contains(selName)) return true;
@@ -4157,6 +4150,9 @@ bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
 
 QString EmbelProperties::metaString(QString key)
 {
+/*
+Local information (datamodel, currentImage etc) is available.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -4166,6 +4162,21 @@ QString EmbelProperties::metaString(QString key)
     QString path = mw3->imageView->currentImagePath;
     QModelIndex curIdx = mw3->thumbView->currentIndex();
     return mw3->infoString->parseTokenString(tokenString, path, curIdx);
+}
+
+QString EmbelProperties::metaString(QString key, QString fPath)
+{
+/*
+Look up information using Metadata if the image will not be active
+in Winnow (ie triggered by EmbelExport).
+*/
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    QString tokenString = mw3->infoString->infoTemplates[key];
+    return mw3->infoString->parseTokenString(tokenString, fPath);
 }
 
 void EmbelProperties::diagnostics(QModelIndex idx)
@@ -4247,7 +4258,9 @@ void EmbelProperties::test1()
     #endif
     }
 //    e->test();
-    diagnosticVectors();
+    diagnostic();
+//    diagnosticVectors();
+//    diagnosticStyles();
 }
 
 void EmbelProperties::test2()
@@ -4295,7 +4308,7 @@ void EmbelProperties::addBorder(int count, QString borderName)
     // Name (used as node in settings and treeview)
 //    QString borderName = "Border" + QString::number(count + 1);
     border.name = borderName;
-    qDebug() << __FUNCTION__ << borderName << count;
+//    qDebug() << __FUNCTION__ << borderName << count;
     QString settingRootPath = templatePath + "Borders/" + borderName + "/";
 
     // subheader for this border
@@ -4551,7 +4564,7 @@ void EmbelProperties::addText(int count)
     // subheader for this border
     i.isHeader = true;
     i.isDecoration = true;
-    i.itemIndex = count;
+//    i.itemIndex = uniqueItemIndex(textsIdx);
     i.name = textName;
     i.parentName = "Texts";
     i.path = templatePath + "Texts/" + textName;
@@ -4564,11 +4577,18 @@ void EmbelProperties::addText(int count)
     textDeleteBtn->setObjectName(textName);
     textDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     textDeleteBtn->setToolTip("Delete this text item");
+
+    // rgh req'd ?
+    textDeleteBtn->name = i.name;
+    textDeleteBtn->parName = i.parentName;
+
+    textDeleteBtn->type = "text";
     btns.append(textDeleteBtn);
     connect(textDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     addItem(i);
     QModelIndex parIdx = capIdx;
-    textDeleteBtn->index = capIdx;
+    // itemIndex is assigned in addItem()
+    textDeleteBtn->itemIndex = capIdx.data(UR_ItemIndex).toInt();
 
     // get index to use as parent when update tree depending on source
     text.name = textName;
@@ -4992,11 +5012,17 @@ void EmbelProperties::addGraphic(int count)
     graphicDeleteBtn->setObjectName(graphicName);
     graphicDeleteBtn->setIcon(":/images/icon16/delete.png", G::iconOpacity);
     graphicDeleteBtn->setToolTip("Delete this text item");
+
+    // rgh req'd ?
+    graphicDeleteBtn->name = i.name;
+    graphicDeleteBtn->parName = i.parentName;
+
+    graphicDeleteBtn->type = "graphic";
     btns.append(graphicDeleteBtn);
     connect(graphicDeleteBtn, &BarBtn::clicked, this, &EmbelProperties::deleteItem);
     addItem(i);
     QModelIndex parIdx = capIdx;
-    graphicDeleteBtn->index = capIdx;
+    graphicDeleteBtn->itemIndex = capIdx.data(UR_ItemIndex).toInt();
 
     // get index to use as parent when update tree depending on source
     graphic.name = graphicName;
@@ -5243,7 +5269,7 @@ void EmbelProperties::addGraphic(int count)
     graphic.style = i.value.toString();
     styleListObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
 
-    // add the text info to the vector of texts t
+    // add the graphic info to the vector of graphics g
     g << graphic;
 
 }

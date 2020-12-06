@@ -4,10 +4,22 @@
 GraphicsEffect::GraphicsEffect(QObject *parent)
 {
 //    qDebug() << __FUNCTION__;
+    this->objectName() = "GraphicsEffect";
 }
 
 QRectF GraphicsEffect::boundingRectFor(const QRectF& rect) const
 {
+            /*
+    qDebug() << __FUNCTION__
+             << "rect =" << rect
+             << "offset =" << offset
+             << "m.top =" << m.top
+             << "m.left =" << m.left
+             << "m.right =" << m.right
+             << "m.bottom =" << m.bottom
+             << "new =" << rect.united(rect.translated(offset).adjusted(-m.left, -m.top, m.right, m.bottom))
+                ;
+//                        */
     return rect.united(rect.translated(offset).adjusted(-m.left, -m.top, m.right, m.bottom));
 }
 
@@ -16,11 +28,21 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                          double rotation,
                          QRectF boundRect)
 {
+//    qDebug() << __FUNCTION__;
+
     this->effects = &effects;
     lightDirection = globalLightDirection;
     this->rotation = rotation;
     srcRectZeroRotation = boundRect;
-    qDebug() << __FUNCTION__ << "m:" << m.top << m.left << m.right << m.bottom;
+
+    // reset bounding rect
+//    offset.setX(0);
+//    offset.setY(0);
+//    m.top = 0;
+//    m.left = 0;
+//    m.right = 0;
+//    m.bottom = 0;
+//    updateBoundingRect();
 
     // iterate effects in style to set boundingRect
     using namespace winnow_effects;
@@ -55,21 +77,49 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
             if (m.bottom < ef.highlight.bottom) m.bottom = ef.highlight.bottom;
             break;
         case shadow:
-            // expand for shadow offset
+            // shadow offset
             qreal length = ef.shadow.length;
             double rads = lightDirection * (3.14159 / 180);
             int dx = static_cast<int>(-sin(rads) * length);
             int dy = static_cast<int>(+cos(rads) * length);
-            if (dx > 0 && m.right < dx) m.right = dx;
-            if (dx < 0 && m.left < -dx) m.left = -dx;
-            if (dy > 0 && m.bottom < dy) m.bottom = dy;
-            if (dy < 0 && m.top < -dy) m.top = -dy;
-            // expand for shadow blur
-            int radius = static_cast<int>(ef.shadow.blurRadius);
-            if (m.top < radius) m.top = radius;
-            if (m.left < radius) m.left = radius;
-            if (m.right < radius) m.right = radius;
-            if (m.bottom < radius) m.bottom = radius;
+            offset.setX(dx);
+            offset.setY(dy);
+            // blur expansion
+            int dt, dl, dr, db;  // dt = delta top etc
+            dt = dl = dr = db = 0;
+            int r = static_cast<int>(ef.shadow.blurRadius);
+            if (dx > 0) {
+                dr = r;
+                dl = 0;
+            }
+            else {
+                dl = r;
+                dr = 0;
+            }
+            if (dy > 0) {
+                db = r;
+                dt = 0;
+            }
+            else {
+                dt = r;
+                db = 0;
+            }
+            // expand for greater of shadow length or shadow blur
+            if (m.top < dt) m.top = dt;
+            if (m.left < dl) m.left = dl;
+            if (m.right < dr) m.right = dr;
+            if (m.bottom < db) m.bottom = db;
+            /*
+            qDebug() << __FUNCTION__
+                     << "dx =" << dx
+                     << "dy =" << dy
+                     << "r =" << r
+                     << "m.top =" << m.top
+                     << "m.left =" << m.left
+                     << "m.right =" << m.right
+                     << "m.bottom =" << m.bottom
+                        ;
+//                        */
             updateBoundingRect();
             break;
 
@@ -85,8 +135,10 @@ void GraphicsEffect::draw(QPainter* painter)
     painter->save();
 
     QPoint srcOffset;
-    PixmapPadMode mode = PadToEffectiveBoundingRect;
-    srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, mode);
+//    PixmapPadMode mode = PadToEffectiveBoundingRect;
+    // unpadded image is req'd for some effects like emboss
+    unpaddedSrcImage = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, NoPad).toImage();
+    srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, PadToEffectiveBoundingRect);
     overlay = srcPixmap.toImage();
 //  overlay.setDevicePixelRatio(srcPixmap.devicePixelRatioF());
 //    srcPixmap.save("D:/Pictures/Temp/effect/srcPixmap.tif");
@@ -97,6 +149,7 @@ void GraphicsEffect::draw(QPainter* painter)
     std::sort(effects.begin(), effects.end(), [](Effect const &l, Effect const &r) {
               return l.effectOrder < r.effectOrder; });
 //              */
+//    qDebug() << "\n" << __FUNCTION__ << painter << effects->length();
     for (int i = 0; i < effects->length(); ++i) {
         const Effect &ef = effects->at(i);
         QColor color;
@@ -104,8 +157,10 @@ void GraphicsEffect::draw(QPainter* painter)
         Margin margin;
         /*
         qDebug() << __FUNCTION__
+                 << "i =" << i
                  << "ef.effectOrder =" << ef.effectOrder
                  << "ef.effectName =" << ef.effectName
+                 << "ef.effectType =" << ef.effectType
                     ;
 //                    */
         switch (ef.effectType) {
@@ -130,7 +185,7 @@ void GraphicsEffect::draw(QPainter* painter)
         case emboss:
             embossEffect(ef.emboss.size, ef.emboss.exposure, ef.emboss.umbra,
                          ef.emboss.inflection, ef.emboss.start, ef.emboss.mid, ef.emboss.end,
-                         ef.emboss.soften, ef.emboss.opacity, ef.emboss.blendMode);
+                         ef.emboss.isUmbraGradient, ef.emboss.contrast, ef.emboss.blendMode);
             break;
         case brighten:
             brightenEffect(ef.brighten.evDelta, ef.brighten.blendMode);
@@ -142,6 +197,7 @@ void GraphicsEffect::draw(QPainter* painter)
     painter->setWorldTransform(QTransform());
 
     if (rotation != 0.0) {
+        qDebug() << __FUNCTION__ << "rotation =" << rotation;
         // Rotate the overlay
         double ovrX = overlay.width() / 2;
         double ovrY = overlay.height() / 2;
@@ -186,6 +242,8 @@ QT_END_NAMESPACE
 
 void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 {
+//    qDebug() << __FUNCTION__;
+
     QImage blurred(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     blurred = overlay;
     Effects effect;
@@ -205,7 +263,7 @@ void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 
 void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
 
     if (overlay.isNull()) return;
 
@@ -221,6 +279,7 @@ void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 void GraphicsEffect::shadowEffect(double length, double radius, QColor color,
                                   QPainter::CompositionMode mode)
 {
+//    qDebug() << __FUNCTION__;
 
     if (overlay.isNull()) return;
 
@@ -261,7 +320,7 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color,
 
 void GraphicsEffect::highlightEffect(QColor color, Margin margin, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
 
     if (overlay.isNull()) return;
 
@@ -290,7 +349,7 @@ void GraphicsEffect::highlightEffect(QColor color, Margin margin, QPainter::Comp
 
 void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
     effect.raise(temp, margin, 0.2, false);
@@ -303,7 +362,7 @@ void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
 
 void GraphicsEffect::brightenEffect(qreal evDelta, QPainter::CompositionMode mode)
 {
-
+//    qDebug() << __FUNCTION__;
     if (overlay.isNull()) return;
 
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
@@ -319,18 +378,21 @@ void GraphicsEffect::brightenEffect(qreal evDelta, QPainter::CompositionMode mod
     overlayPainter.end();
 }
 
-void GraphicsEffect::embossEffect(double size, double exposure, double umbra,
-                                  double inflection, double start, double mid, double end,
-                                  double soften, int opacity, QPainter::CompositionMode mode)
+void GraphicsEffect::embossEffect(double size, double exposure,
+                                  double umbra, double inflection,
+                                  double startEV, double midEV, double endEV,
+                                  bool isUmbraGradient,
+                                  double contrast, QPainter::CompositionMode mode)
 {
+//    qDebug() << __FUNCTION__;
     if (overlay.isNull()) return;
 
-    QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
-    temp = overlay;
+    // do not use overlay, which may have padding
+    QImage temp = unpaddedSrcImage;
     Effects effect;
-    effect.emboss(temp, lightDirection, size, exposure,
-                  inflection, start, mid, end,
-                  umbra, soften, opacity);
+    effect.emboss(temp, lightDirection, size, exposure, contrast,
+                  inflection, startEV, midEV, endEV,
+                  umbra, isUmbraGradient);
 //    temp.save("D:/Pictures/Temp/effect/embossed.tif");
 
     QPainter overlayPainter(&overlay);

@@ -32,7 +32,7 @@ public:
     void diagnostic();
 
 public slots:
-    void build(QString fPath = "");
+    void build(QString fPath = "", QString src = "");
     void clear();
     void flashObject(QString type = "", int index = 0, bool show = false);
 
@@ -45,6 +45,9 @@ private:
     EmbelProperties *p;
     ImageCache *imCache;
     QString fPath;
+
+    // set true when called from EmbelExport (see explanation in EmBel::build)
+    bool isRemote = false;
 
     enum zLevel {
         ZBorder,
