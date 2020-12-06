@@ -21,9 +21,9 @@ public:
     void blurOriginal(QImage &img, int radius);
     void raise(QImage &img, int m, double taper = 0.5, int blurWidth = 3, bool raise = false);
     void brighten(QImage &img, qreal evDelta);
-    void emboss(QImage &img, int azimuth, double size, double exposure,
-                double inflection, double start, double mid, double end,
-                double umbra, double soften, int opacity);
+    void emboss(QImage &img, int azimuth, double size, double exposure, double contrast,
+                double inflection, double startEV, double midEV, double endEV,
+                double umbra, bool isUmbraGradient);
     QImage convolve(QImage &img, int mDim, double *matrix);
 
     void test(QImage &img);
@@ -45,10 +45,9 @@ private:
     QRgb averagePixelInBox(QVector<QVector<QRgb> > &v, const int &x, const int &y,
                       const int &w, const int &h, const int &r);
     int luminosity(QRgb &p);
-    double embossEV(int &m, int d, double &soften, double exposure,
-                    double inflection, double start, double mid, double end,
-                    double &umbra, bool isUmbra,
-                    bool rpt = false);
+    double embossEV(int &m, int d, double &contrast, double exposure,
+                    double inflection, double startEV, double midEV, double endEV,
+                    double &umbra, bool isUmbra, bool isUmbraGradient);
 
 //    void brightenPixel(QRgb &p, double deltaEv);
 

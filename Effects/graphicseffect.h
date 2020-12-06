@@ -53,8 +53,8 @@ namespace winnow_effects
         double end;
         double inflection;
         double umbra;
-        double soften;
-        int opacity;
+        bool isUmbraGradient;
+        double contrast;
         QPainter::CompositionMode blendMode;
     };
 
@@ -153,15 +153,16 @@ private:
     void brightenEffect(qreal delta, QPainter::CompositionMode mode);
     void sharpenEffect(qreal radius, QPainter::CompositionMode mode);
     void raiseEffect(int margin, QPainter::CompositionMode mode);
-    void embossEffect(double size, double exposure, double umbra,
-                      double inflection, double start, double mid, double end,
-                      double soften, int opacity, QPainter::CompositionMode mode);
+    void embossEffect(double size, double exposure, double umbra, double inflection,
+                      double startEV, double midEV, double endEV, bool isUmbraGradient,
+                      double soften, QPainter::CompositionMode mode);
 
     QList<winnow_effects::Effect> *effects;
     Effects effect;
 
     QRectF srcRectZeroRotation;
     QRectF srcRect;
+    QImage unpaddedSrcImage;
     QPixmap srcPixmap;
     QImage overlay;
     QPointF offset;

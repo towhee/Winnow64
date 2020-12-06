@@ -1076,9 +1076,9 @@ void Effects::brighten(QImage &img, qreal evDelta)
 //             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 }
 
-double Effects::embossEV(int &m, int d, double &soften, double exposure,
-                         double inflection, double start, double mid, double end,
-                         double &umbra, bool isUmbra, bool rpt)
+double Effects::embossEV(int &m, int d, double &contrast, double exposure,
+                         double inflection, double startEV, double midEV, double endEV,
+                         double &umbra, bool isUmbra, bool isUmbraGradient)
 {
     /*
     m        = the margin in pixels to emboss (ie the width of a border)
@@ -1096,9 +1096,7 @@ double Effects::embossEV(int &m, int d, double &soften, double exposure,
 
     double ev = exposure;
     double x = static_cast<double>(d) / m;
-    double black1, white1;
-    black1 = white1 = 0;
-    double xi;                  // contour inflection point on x axis
+    double xi;                  // contour inflection point between 0 and 1
     /*
                 |     * xi, mid
                 |    * *
@@ -1113,20 +1111,24 @@ double Effects::embossEV(int &m, int d, double &soften, double exposure,
            x > xi  b = mid    slope = (mid - end) / (1 - xi)
     */
     xi = inflection;
-    if (xi > 0) {
-        if (x < xi) {
-            if (isUmbra && mid > start) start += umbra;
-            ev += (mid - start) / xi * x + start;
-        }
-        else {
-            if (!isUmbra && mid > end) end += umbra;
-            ev += (end - mid) / (1 - xi) * (x - xi) + mid;
-        }
-    }
-    else {
-        ev += (start - end) * x + start;
-    }
+    double factor;
 
+    // between start and inflection point
+    if (xi > 0 && x < xi) {
+        factor = x / xi;
+        ev += (midEV - startEV) * factor + startEV;
+        if (!isUmbraGradient) factor = 0;
+        if (isUmbra && midEV > startEV) ev += umbra * (1 - factor);
+        if (!isUmbra && midEV < startEV) ev += umbra * (1 - factor);
+    }
+    // inflection point to the end
+    else {
+        factor = (x - xi) / (1 - xi);
+        ev += (endEV - midEV) * factor + midEV;
+        if (!isUmbraGradient) factor = 1;
+        if (isUmbra && endEV > midEV) ev += umbra * factor;
+        if (!isUmbra && endEV < midEV) ev += umbra * factor;
+    }
     /*
     if (rpt) qDebug().noquote() << __FUNCTION__
          << "d =" << QString::number(d).leftJustified(4)
@@ -1140,23 +1142,29 @@ double Effects::embossEV(int &m, int d, double &soften, double exposure,
                 ;
 //                */
 
-    // soften
-    ev *= (1 - soften);
+    // contrast
+    ev *= (contrast);
 
     return ev;
 }
 
-void Effects::emboss(QImage &img, int azimuth, double size, double exposure, double inflection,
-                     double start, double mid, double end, double umbra, double soften, int opacity)
+void Effects::emboss(QImage &img, int azimuth, double size, double exposure, double contrast,
+                     double inflection, double startEV, double midEV, double endEV,
+                     double umbra, bool isUmbraGradient)
 {
     /*
-                              <            dd            >
+                                    inflection
+                     startEV           midEV           endEV
+                        v                v               v
+                              <            d             >
                                          <     sft       >
                         |                |               |
        Outside border   |     *          |    soften     |  Inside border
                         |     ^          |               |
                               |
                               Current pixel (x,y)
+
+
 
        see D:\My Projects\Winnow Project\Doc\Embellish.xlsx
     */
@@ -1167,7 +1175,7 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     int h = img.height();
     int ls = w > h ? w : h;     // long side in pixels
     int m = ls * size;          // emboss width or margin in pixels
-    double alpha = static_cast<double>(opacity) / 100;
+    double alpha = 1.0;
 
     double ev = 0;
     int x = 0;
@@ -1213,7 +1221,7 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     // top
     (azimuth > 270 || azimuth < 90) ? isUmbra = false : isUmbra = true;
     for (y = 0; y < m; y++) {
-        ev = embossEV(m, y, soften, exposure, inflection, start, mid, end, umbra, isUmbra);
+        ev = embossEV(m, y, contrast, exposure, inflection, startEV, midEV, endEV, umbra, isUmbra, isUmbraGradient);
         for (x = y; x < w - y; x++) {
             brightenPixel(s[y][x], ev, alpha);
         }
@@ -1221,8 +1229,8 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
 
     // right
     (azimuth > 0 && azimuth < 180) ? isUmbra = false : isUmbra = true;
-    for (x = w - m /*- 1*/; x < w; x++) {
-        ev = embossEV(m, w-x, soften, exposure, inflection, start, mid, end, umbra, isUmbra);
+    for (x = w - m; x < w; x++) {
+        ev = embossEV(m, w-x-1, contrast, exposure, inflection, startEV, midEV, endEV, umbra, isUmbra, isUmbraGradient);
         for (y = w - x; y < h - w + x; y++) {
             brightenPixel(s[y][x], ev, alpha);
         }
@@ -1230,8 +1238,8 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
 
     // bottom
     (azimuth > 90 && azimuth < 270) ? isUmbra = false : isUmbra = true;
-    for (y = h - m /*- 1*/; y < h; y++) {
-        ev = embossEV(m, h-y, soften, exposure, inflection, start, mid, end, umbra, isUmbra);
+    for (y = h - m; y < h; y++) {
+        ev = embossEV(m, h-y-1, contrast, exposure, inflection, startEV, midEV, endEV, umbra, isUmbra, isUmbraGradient);
         for (x = h - y; x < w - h + y + 1; x++) {
             brightenPixel(s[y][x], ev, alpha);
         }
@@ -1240,7 +1248,7 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     // left
     (azimuth > 180 && azimuth < 360) ? isUmbra = false : isUmbra = true;
     for (x = 0; x < m; x++) {
-        ev = embossEV(m, x, soften, exposure, inflection, start, mid, end, umbra, isUmbra);
+        ev = embossEV(m, x, contrast, exposure, inflection, startEV, midEV, endEV, umbra, isUmbra, isUmbraGradient);
         for (y = x + 1; y < h - x; y++) {
             brightenPixel(s[y][x], ev, alpha);
         }

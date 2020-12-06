@@ -26,7 +26,7 @@ enum DelegateType
 enum UserRole
 {
     UR_Name = Qt::UserRole + 1,         // unique name to identify the item
-    UR_ItemIndex,                       // the index for the border, text, rectangle or graphic
+    UR_ItemIndex,                       // unique, consistent index for all items
     UR_SortOrder,                       // override appended order ie for effects, borders
     UR_DefaultValue,                    // when created or double click
     UR_SettingsPath,                    // settings path

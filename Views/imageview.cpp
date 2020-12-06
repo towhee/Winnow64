@@ -253,7 +253,7 @@ perceived scale by the user.
             setFitZoom();
         }
         scale();
-        if (G::isEmbellish) emit embellish(fPath);
+        if (G::isEmbellish) emit embellish(fPath, __FUNCTION__);
         else pmItem->setGraphicsEffect(nullptr);
     }
 //    QImage im = pmItem->pixmap().toImage();

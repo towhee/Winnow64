@@ -222,6 +222,7 @@ QString InfoString::parseTokenString(QString &tokenString,
                                      QModelIndex &idx)
 {
 /*
+   Use when datamodel is available.
 setMetadata must be called first to set metadata variables for the current
 image.
 */
@@ -244,11 +245,42 @@ image.
     return s;
 }
 
+QString InfoString::parseTokenString(QString &tokenString,
+                                     QString &fPath)
+{
+/*
+   Use when datamodel is NOT available.  For example EmbelExport::exportFile, which can be
+   called from startup arguments, and will not have the datamodel loaded for the file.
+*/
+//    Utilities::log(__FUNCTION__, fPath);
+    QFileInfo info(fPath);
+    Metadata metadata;
+    metadata.loadImageMetadata(info);
+    QString s;
+    int tokenEnd;
+    int i = 0;
+    while (i < tokenString.length()) {
+        QString token;
+        if (parseToken(tokenString, i + 1, token, tokenEnd)) {
+            s.append(tokenValue(token, info, fPath, metadata.m));
+            i = tokenEnd;
+        }
+        else {
+            s.append(tokenString.at(i));
+            i++;
+        }
+    }
+    return s;
+}
+
 QString InfoString::tokenValue(QString &token,
                                QFileInfo &info,
                                QString &fPath,
                                QModelIndex &idx)
 {
+/*
+Finds the token in the datamodel and returns the datamodel value.
+*/
     if (token == "Path")
         return fPath;
     if (token == "Filename")
@@ -351,5 +383,112 @@ QString InfoString::tokenValue(QString &token,
     return "";
 }
 
-
+QString InfoString::tokenValue(QString &token,
+                               QFileInfo &info,
+                               QString &fPath,
+                               ImageMetadata &m)
+{
+/*
+Finds the token in the datamodel and returns the datamodel value.
+*/
+    QString msg = "Token = " + token + "fPath = " + fPath;
+//    Utilities::log(__FUNCTION__, msg);
+    if (token == "Path")
+        return fPath;
+    if (token == "Filename")
+        return info.fileName();
+    if (token == "Type")
+        return info.suffix().toUpper();
+    if (token == "Pick") {
+        return "N/A";
+    }
+    if (token == "Rating") {
+        return "N/A";
+    }
+    if (token == "Label") {
+        return "N/A";
+    }
+    if (token == "SizeBytes") {
+        QFileInfo info(fPath);
+        return QLocale(QLocale::English).toString(info.size());
+    }
+    if (token == "MPix") {
+        uint width = m.width;
+        uint height = m.height;
+        return QString::number((width * height) / 1000000.0, 'f', 1);
+    }
+    if (token == "CreateDate")
+        return m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
+    if (token == "YYYY")
+        return m.createdDate.date().toString("yyyy");
+    if (token == "YY")
+        return m.createdDate.date().toString("yy");
+    if (token == "MONTH")
+        return m.createdDate.date().toString("MMMM").toUpper();
+    if (token == "Month")
+        return m.createdDate.date().toString("MMMM");
+    if (token == "MON")
+        return m.createdDate.date().toString("MMM").toUpper();
+    if (token == "Mon")
+        return m.createdDate.date().toString("MMM");
+    if (token == "MM")
+        return m.createdDate.date().toString("MM");
+    if (token == "DAY")
+        return m.createdDate.date().toString("dddd").toUpper();
+    if (token == "Day")
+        return m.createdDate.date().toString("dddd");
+    if (token == "DDD")
+        return m.createdDate.date().toString("ddd").toUpper();
+    if (token == "Ddd")
+        return m.createdDate.date().toString("ddd");
+    if (token == "DD")
+        return m.createdDate.date().toString("dd");
+    if (token == "HOUR")
+        return m.createdDate.time().toString("hh");
+    if (token == "MINUTE")
+        return m.createdDate.time().toString("mm");
+    if (token == "SECOND")
+        return m.createdDate.time().toString("ss");
+    if (token == "MILLISECOND")
+        return m.createdDate.time().toString("zzz");
+    if (token == "ModifiedDate")
+        return info.lastModified().toString("yyyy-MM-dd hh:mm:ss");
+    if (token == "Dimensions")
+        return m.dimensions;
+    if (token == "Width")
+        return QString::number(m.width);
+    if (token == "Height")
+        return QString::number(m.height);
+    if (token == "Rotation")
+        return QString::number(m.rotationDegrees);
+    if (token == "Orientation")
+        return QString::number(m.orientation);
+    if (token == "ShootingInfo")
+        return m.shootingInfo;
+    if (token == "Aperture")
+        return m.aperture;
+    if (token == "ShutterSpeed")
+        return m.exposureTime;
+    if (token == "ISO")
+        return m.ISO;
+    if (token == "Exposure Compensation")
+        return m.exposureCompensation;
+    if (token == "Model")
+        return m.model;
+    if (token == "Lens")
+        return m.lens;
+    if (token == "FocalLength")
+        return m.focalLength;
+    if (token == "Creator")
+        return m.creator;
+    if (token == "Title")
+        return m.title;
+    if (token == "Copyright")
+        return m.copyright;
+    if (token == "Email")
+        return m.email;
+    if (token == "Url")
+        return m.url;
+    return "";
+}
 // END InfoString

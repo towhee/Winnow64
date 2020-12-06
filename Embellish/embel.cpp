@@ -157,7 +157,7 @@ void Embel::clear()
     scene->removeItem(flashItem);
 }
 
-void Embel::build(QString fPath)
+void Embel::build(QString path, QString src)
 {
 /*
 
@@ -168,14 +168,24 @@ void Embel::build(QString fPath)
     #endif
     }
 
-    qDebug() << __FUNCTION__;
+    QString msg = "src = " + src + "  path = " + path;
+    Utilities::log(__FUNCTION__, msg);
+//    qDebug() << __FUNCTION__ << msg;
+
+    QElapsedTimer t;
+    t.start();
 
     if (p->templateId == 0) {
         doNotEmbellish();
         return;
     }
-    // file path for the current image (req'd to update styles applied to pmItem)
-    if (fPath != "") this->fPath = fPath;
+    /* file path for the current image (req'd to update styles applied to pmItem).  If it is
+       blank then source is main Winnow program, otherwise called from EmbelExport, which will
+       not have loaded the folder, and therefore no datamodel.  */
+    if (path != "") {
+        isRemote = true;
+        fPath = path;
+    }
     clear();
     createBorders();
     createTexts();
@@ -189,6 +199,8 @@ void Embel::build(QString fPath)
     addFlashToScene();
 
     emit done();    // call imageView->resetFitZoom() (not req'd when exporting)
+    qDebug() << __FUNCTION__
+             << "Elapsed time (ms) =" << QString("%L1").arg(t.elapsed());
 //    diagnostic();
 }
 
@@ -534,6 +546,8 @@ void Embel::updateBorder(int i)
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << i;
+
     bItems[i]->setRect(0, 0, b[i].w, b[i].h);
     QColor color;
     QPen pen;
@@ -576,13 +590,19 @@ void Embel::updateText(int i)
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << i;
+
     // if a text entry
     if (p->t[i].source == "Text") {
         tItems[i]->setPlainText(p->t[i].text);
     }
     // if a metadata template used to build the text string
     else {
-        tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate));
+        if (isRemote)
+            // from Embel::Export
+            tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate, fPath));
+        else
+            tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate));
     }
     QFont font(p->t[i].font);
     int fontSize = static_cast<int>(p->t[i].size / 100 * ls);
@@ -625,6 +645,7 @@ void Embel::updateText(int i)
     double rotation = p->t[i].rotation;
 
     // graphics effects
+    tItems[i]->setGraphicsEffect(nullptr);
     if (p->t[i].style != "No style" && p->t[i].style != "") {
         // make sure style exists
         if (p->styleMap.contains(p->t[i].style)) {
@@ -638,7 +659,7 @@ void Embel::updateText(int i)
     }
     else {
         tItems[i]->setRotation(rotation);
-        tItems[i]->setGraphicsEffect(nullptr);
+//        tItems[i]->setGraphicsEffect(nullptr);
     }
 }
 
@@ -649,6 +670,8 @@ void Embel::updateGraphic(int i)
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << i;
+
     gItems[i]->setZValue(ZGraphic);
     double opacity = static_cast<double>(p->g[i].opacity)/100;
     gItems[i]->setOpacity(opacity);
@@ -702,6 +725,8 @@ void Embel::updateImage()
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__;
+
     // graphics effects
     if (p->image.style != "No style" && p->image.style != "") {
         // make sure style exists
@@ -714,7 +739,8 @@ void Embel::updateImage()
             effect->set(p->styleMap[p->image.style],
                     p->globalLightDirection,
                     0,
-                    pmItem->pixmap().rect());
+                    pmItem->pixmap().rect()
+                    );
             pmItem->setGraphicsEffect(effect);
         }
     }
@@ -746,9 +772,13 @@ void Embel::removeText(int i)
     G::track(__FUNCTION__);
     #endif
     }
-    scene->removeItem(tItems[i]);
-    delete tItems[i];
-    tItems.removeAt(i);
+    if (i >= tItems.size()) return;
+    if (scene->items().contains(tItems[i]))
+        scene->removeItem(tItems[i]);
+    if (tItems.contains(tItems[i])) {
+        delete tItems[i];
+        tItems.removeAt(i);
+    }
 }
 
 void Embel::removeGraphic(int i)

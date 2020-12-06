@@ -91,6 +91,8 @@ void EmbelExport::exportFile(QString fPath, QString templateName)
     G::track(__FUNCTION__);
     #endif
     }
+    Utilities::log(__FUNCTION__, fPath);
+
     // save current embellish template
     QString prevTemplate = embelProperties->templateName;
     // set the embellish template, which updates all the parameters
@@ -113,7 +115,7 @@ void EmbelExport::exportFile(QString fPath, QString templateName)
     // read the image, add it to the scene and embellish
     if (loadImage(fPath)) {
         // embellish
-        embellish->build();
+        embellish->build(fPath, __FUNCTION__);
         setSceneRect(scene->itemsBoundingRect());
     }
 
@@ -125,6 +127,7 @@ void EmbelExport::exportFile(QString fPath, QString templateName)
     // save
     image.save(exportPath);
     embelProperties->setCurrentTemplate(prevTemplate);
+    delete embellish;
 
     qDebug() << __FUNCTION__ << "exporting " << fName << " to " << exportPath;
 }
@@ -190,7 +193,7 @@ MW::exportEmbel.
             // read the image, add it to the scene and embellish
             if (loadImage(fPath)) {
                 // embellish
-                embellish->build();
+                embellish->build(fPath, __FUNCTION__);
                 setSceneRect(scene->itemsBoundingRect());
             }
 
@@ -206,4 +209,5 @@ MW::exportEmbel.
     }
     G::popUp->setProgressVisible(false);
     G::popUp->hide();
+    delete embellish;
 }

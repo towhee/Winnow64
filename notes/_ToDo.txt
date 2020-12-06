@@ -1,9 +1,11 @@
 BUGS
+- Delete last text crashes
+- Rotate text bounding rect
 - Standardize use of G:css
 - Emboss when transparent edges
 - Add glow, stroke
 - Sort out i.name vs i.key in PropertyEditor
-_ Default values for effects
+- Default values for effects
 - Inflection point = 0
 - Confirm check for updates is working (Andreas)
 - When create new style etc open that new item
