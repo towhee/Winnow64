@@ -203,7 +203,7 @@ MW::exportEmbel.
             QPainter painter(&image);
             scene->render(&painter);
             // save
-            image.save(exportPath);
+            image.save(exportPath, "JPG", 100);
             qDebug() << __FUNCTION__ << "exporting to" << exportPath;
         }
     }

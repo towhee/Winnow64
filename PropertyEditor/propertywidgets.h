@@ -45,6 +45,7 @@ enum UserRole
     UR_Min,                             // validate minimum value
     UR_Max,                             // validate maximum value
     UR_Div,                             // Divide slider value by amount to get double from int
+    UR_DivPx,                           // Slider singlestep = one pixel
     UR_FixedWidth,                      // fixed label width in custom widget
     UR_StringList,                      // list of items for comboBox
     UR_IconList,                        // list of icons for comboBox
@@ -55,6 +56,19 @@ enum UserRole
 
 // reqd as can only pass QVariant convertable type through StandardItemModel
 extern QVector<BarBtn*> btns;
+
+class Slider : public QSlider
+{
+    Q_OBJECT
+public:
+    Slider(Qt::Orientation orientation, int div, QWidget *parent = nullptr);
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override;
+
+private:
+    int div;
+};
 
 class SliderEditor : public QWidget
 {

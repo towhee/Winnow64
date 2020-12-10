@@ -554,8 +554,8 @@ void ImageView::activateRubberBand()
     isRubberBand = true;
     setCursor(Qt::CrossCursor);
     QString msg = "Rubberband activated.  Make a selection in the ImageView.\n"
-                  "Press Esc to quit rubberbanding";
-    G::popUp->showPopup(msg, 1500);
+                  "Press Esc to quit rubberbanding.";
+    G::popUp->showPopup(msg, 2000);
 }
 
 void ImageView::quitRubberBand()
@@ -1124,13 +1124,13 @@ void ImageView::mousePressEvent(QMouseEvent *event)
     isMouseDoubleClick = false;
     isMouseDrag = false;
     if (event->button() == Qt::LeftButton) {
-        if (isRubberBand) {
-            setCursor(Qt::CrossCursor);
-            origin = event->pos();
-            rubberBand->setGeometry(QRect(origin, QSize()));
-            rubberBand->show();
-            return;
-        }
+//        if (isRubberBand) {
+//            setCursor(Qt::CrossCursor);
+//            origin = event->pos();
+//            rubberBand->setGeometry(QRect(origin, QSize()));
+//            rubberBand->show();
+//            return;
+//        }
         isLeftMouseBtnPressed = true;
         scrollCount = 0;                // still used?
         mousePressPt.setX(event->x());
@@ -1163,10 +1163,10 @@ Set a delay to hide cursor if in slideshow mode
 //    G::track(__FUNCTION__);
     #endif
     }
-    if (isRubberBand) {
-        rubberBand->setGeometry(QRect(origin, event->pos()).normalized());
-        return;
-    }
+//    if (isRubberBand) {
+//        rubberBand->setGeometry(QRect(origin, event->pos()).normalized());
+//        return;
+//    }
 
     static QPoint prevPos = event->pos();
 
@@ -1205,25 +1205,25 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     }
 
     // rubberband
-    if (isRubberBand) {
-        setCursor(Qt::ArrowCursor);
-        QRect rb = rubberBand->geometry();
-        rubberBand->hide();
-        QPoint p0 = mapToScene(rb.topLeft()).toPoint();
-        QPoint p1 = mapToScene(rb.bottomRight()).toPoint();
-        QRect r(p0, p1);
-        QPixmap pm = pmItem->pixmap().copy(r);
-        isRubberBand = false;
-        QPixmap tile;
-        PatternDlg *patternDlg = new PatternDlg(this, pm, tile, tileName);
-        patternDlg->exec();
-        QBuffer buffer(&tileBa);
-        buffer.open(QIODevice::WriteOnly);
-        tile.save(&buffer, "PNG");
-        qDebug() << __FUNCTION__ << "new tile";
-        emit newTile();
-        return;
-    }
+//    if (isRubberBand) {
+//        setCursor(Qt::ArrowCursor);
+//        QRect rb = rubberBand->geometry();
+//        rubberBand->hide();
+//        QPoint p0 = mapToScene(rb.topLeft()).toPoint();
+//        QPoint p1 = mapToScene(rb.bottomRight()).toPoint();
+//        QRect r(p0, p1);
+//        QPixmap pm = pmItem->pixmap().copy(r);
+//        isRubberBand = false;
+//        QPixmap tile;
+//        PatternDlg *patternDlg = new PatternDlg(this, pm, tile, tileName);
+//        patternDlg->exec();
+//        QBuffer buffer(&tileBa);
+//        buffer.open(QIODevice::WriteOnly);
+//        tile.save(&buffer, "PNG");
+//        qDebug() << __FUNCTION__ << "new tile";
+////        emit newTile();
+//        return;
+//    }
 
     // prevent zooming when right click for context menu
     if (event->button() == Qt::RightButton) {

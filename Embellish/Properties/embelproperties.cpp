@@ -140,6 +140,7 @@ void EmbelProperties::initialize()
     G::track(__FUNCTION__);
     #endif
     }
+    if (longSidePx < 1) longSidePx = 500;
     anchorPoints << "Top Left" << "Top Center" << "Top Right"
                  << "Middle Left" << "Middle Center" << "Middle Right"
                  << "Bottom Left" << "Bottom Center" << "Bottom Right";
@@ -169,8 +170,15 @@ void EmbelProperties::initialize()
         metadataTemplatesList << i.key();
     }
     // EFFECTS
-    effectList << "Shadow" << "Bevel" << "Emboss" << "Blur" << "Sharpen"
-               << "Brighten" << "Edges" << "Highlight" << "Stroke";
+    effectList
+                << "Shadow"
+                << "Emboss"
+                << "Blur"
+                << "Sharpen"
+                << "Brighten"
+                << "Highlight"
+                << "Stroke"
+                << "Glow";
 
     shadowEffectAction = new QAction(tr("Shadow"), this);
     shadowEffectAction->setObjectName("shadowEffectAction");
@@ -208,6 +216,10 @@ void EmbelProperties::initialize()
     strokeEffectAction->setObjectName("strokeEffectAction");
     connect(strokeEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
 
+    glowEffectAction = new QAction(tr("Glow"), this);
+    glowEffectAction->setObjectName("glowEffectAction");
+    connect(glowEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
+
     effectMenu = new QMenu(this);
     effectMenu->addAction(shadowEffectAction);
     effectMenu->addAction(bevelEffectAction);
@@ -218,6 +230,7 @@ void EmbelProperties::initialize()
     effectMenu->addAction(edgeEffectAction);
     effectMenu->addAction(highlightEffectAction);
     effectMenu->addAction(strokeEffectAction);
+    effectMenu->addAction(glowEffectAction);
 
     // CONTEXT MENU
     expandAllAction = new QAction(tr("Expand all"), this);
@@ -307,6 +320,8 @@ void EmbelProperties::newEffectActionClicked()
     if (effect == "Shadow") addShadowEffect(effectParentIdx);
     if (effect == "Brighten") addBrightenEffect(effectParentIdx);
     if (effect == "Emboss") addEmbossEffect(effectParentIdx);
+    if (effect == "Stroke") addStrokeEffect(effectParentIdx);
+    if (effect == "Glow") addGlowEffect(effectParentIdx);
     QModelIndex idx = model->index(model->rowCount(effectParentIdx) - 1, 0, effectParentIdx);
     expand(stylesIdx);
     expand(effectParentIdx);
@@ -470,6 +485,22 @@ void EmbelProperties::diagnosticStyles()
                 qDebug() << "      Shadow: g          =" << ef.shadow.g;
                 qDebug() << "      Shadow: b          =" << ef.shadow.b;
                 qDebug() << "      Shadow: a          =" << ef.shadow.a;
+                break;
+            case winnow_effects::stroke:
+                qDebug() << "      Stroke: size       =" << ef.stroke.width;
+                qDebug() << "      Stroke: r          =" << ef.stroke.r;
+                qDebug() << "      Stroke: g          =" << ef.stroke.g;
+                qDebug() << "      Stroke: b          =" << ef.stroke.b;
+                qDebug() << "      Stroke: a          =" << ef.stroke.a;
+                break;
+            case winnow_effects::glow:
+                qDebug() << "      Glow: size         =" << ef.glow.width;
+                qDebug() << "      Glow: blurRadius   =" << ef.glow.blurRadius;
+                qDebug() << "      Glow: r            =" << ef.glow.r;
+                qDebug() << "      Glow: g            =" << ef.glow.g;
+                qDebug() << "      Glow: b            =" << ef.glow.b;
+                qDebug() << "      Glow: a            =" << ef.glow.a;
+                break;
             }
         }
     }
@@ -838,6 +869,47 @@ void EmbelProperties::copyTemplate()
     templateListEditor->setValue(templateName);
 }
 
+void EmbelProperties::extractTile()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString fPath = QFileDialog::getOpenFileName(this, tr("Select image containing tile pattern"), "/home");
+    QFile file(fPath);
+    if (file.isOpen()) {
+        QString msg = "Whoops.  The file is already open in another process.  \n"
+                      "Close the file and try again.  Press ESC to continue.";
+        G::popUp->showPopup(msg, 0);
+        return;
+    }
+    QPixmap src(fPath);
+    QPixmap tile;
+    QString tileName;
+    patternDlg = new PatternDlg(this, src);
+    connect(patternDlg, &PatternDlg::saveTile, this, &EmbelProperties::saveTile);
+    patternDlg->exec();
+}
+
+void EmbelProperties::saveTile(QString name, QPixmap *tile)
+{
+    qDebug() << __FUNCTION__ << tile->size();
+    if (tile->size() == QSize(0,0)) {
+        qDebug() << __FUNCTION__ << "No tile!!";
+        return;
+    }
+
+    QByteArray tileBa;
+    QBuffer buffer(&tileBa);
+    buffer.open(QIODevice::WriteOnly);
+    tile->save(&buffer, "PNG");
+    setting->beginGroup("Embel/Tiles");
+    setting->setValue(name, tileBa);
+    setting->endGroup();
+    updateTileList();
+}
+
 void EmbelProperties::readTileList()
 {
     {
@@ -850,6 +922,32 @@ void EmbelProperties::readTileList()
     setting->beginGroup("Embel/Tiles");
     tileList << setting->allKeys();
     setting->endGroup();
+}
+
+void EmbelProperties::updateTileList()
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    tileList.clear();
+    setting->beginGroup("Embel/Tiles");
+    tileList << setting->allKeys();
+    setting->endGroup();
+    tileList.sort();
+    tileList.insert(0, "Do not tile");
+
+    // update tileList in each border
+    for (int i = 0; i < t.size(); ++i) {
+        QString oldTileName = borderTileObjectEditor.at(i)->value();
+        borderTileObjectEditor.at(i)->refresh(tileList);
+        // refreshing anchorObjectList removes old value for the text - reassign anchor object
+        if (anchorObjectList.contains(oldTileName))
+            borderTileObjectEditor.at(i)->setValue(oldTileName);
+        else
+            borderTileObjectEditor.at(i)->setValue("Do not tile");
+    }
 }
 
 void EmbelProperties::newEmbelTemplate()
@@ -1256,6 +1354,8 @@ itemChange, which is subclassed here.
         if (parent.left(9) == "Highlight") itemChangeHighlightEffect(v, source, parent, grandparent);
         if (parent.left(8) == "Brighten") itemChangeBrightenEffect(v, source, parent, grandparent);
         if (parent.left(6) == "Emboss") itemChangeEmbossEffect(idx, v, source, parent, grandparent);
+        if (parent.left(6) == "Stroke") itemChangeStrokeEffect(v, source, parent, grandparent);
+        if (parent.left(6) == "Glow") itemChangeGlowEffect(v, source, parent, grandparent);
     }
 
 //    e->build();
@@ -1362,11 +1462,13 @@ void EmbelProperties::itemChangeGeneral(QVariant v, QString source)
     if (source == "horizontalFit") {
         setting->setValue(path, v.toInt());
         horizontalFitPx = v.toInt();
+        horizontalFitPx > verticalFitPx ? longSidePx = horizontalFitPx : longSidePx = verticalFitPx;
     }
 
     if (source == "verticalFit") {
         setting->setValue(path, v.toInt());
         verticalFitPx = v.toInt();
+        horizontalFitPx > verticalFitPx ? longSidePx = horizontalFitPx : longSidePx = verticalFitPx;
     }
 
     if (source == "globalLightDirection") {
@@ -1399,8 +1501,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
 
     if (source == "topMargin") {
         double x = v.toDouble();
-        qDebug() << __FUNCTION__ << "item change topMargin" << "x =" << x;
-
+        setting->setValue(path, x);
         b[index].top = x;
         // build embel as change in border dimension changes all coordinates
         e->build("", __FUNCTION__);
@@ -1609,7 +1710,7 @@ void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString sou
     // see PropertyEditor::getItemIndex for details on using itemIndex
     int index = getItemIndex(idx.parent().data(UR_ItemIndex).toInt()).row();
     QString path = templatePath + "Graphics/" + parent + "/" + source;
-    qDebug() << __FUNCTION__ << "row =" << index << path << source << v.toInt();
+//    qDebug() << __FUNCTION__ << "row =" << index << path << source << v.toInt();
 
     if (source == "filePath") {
         setting->setValue(path, v.toString());
@@ -1719,6 +1820,95 @@ void EmbelProperties::itemChangeShadowEffect(QVariant v, QString source, QString
         int effect = effectIndex(style, effectName);
         if (effect == -1) return;
         styleMap[style][effect].shadow.blendMode = winnow_effects::blendModeMap[v.toString()];
+    }
+
+    e->updateStyle(style);
+}
+
+void EmbelProperties::itemChangeStrokeEffect(QVariant v, QString source, QString effectName, QString style)
+{
+    /*
+
+*/
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
+    //    qDebug() << __FUNCTION__ << path << source << v.toInt();
+
+    if (source == "width") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].stroke.width = v.toDouble();
+    }
+
+    if (source == "color") {
+        setting->setValue(path, v.toString());
+        QColor color(v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].stroke.r = color.red();
+        styleMap[style][effect].stroke.g = color.green();
+        styleMap[style][effect].stroke.b = color.blue();
+        styleMap[style][effect].stroke.a = color.alpha();
+    }
+
+    if (source == "blendMode") {
+        setting->setValue(path, v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].stroke.blendMode = winnow_effects::blendModeMap[v.toString()];
+    }
+
+    e->updateStyle(style);
+}
+
+void EmbelProperties::itemChangeGlowEffect(QVariant v, QString source, QString effectName, QString style)
+{
+    /*
+
+*/
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
+    //    qDebug() << __FUNCTION__ << path << source << v.toInt();
+
+    if (source == "width") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].glow.width = v.toDouble();
+    }
+
+    if (source == "blurRadius") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].glow.blurRadius = v.toDouble();
+    }
+
+    if (source == "color") {
+        setting->setValue(path, v.toString());
+        QColor color(v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].glow.r = color.red();
+        styleMap[style][effect].glow.g = color.green();
+        styleMap[style][effect].glow.b = color.blue();
+        styleMap[style][effect].glow.a = color.alpha();
+    }
+
+    if (source == "blendMode") {
+        setting->setValue(path, v.toString());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].glow.blendMode = winnow_effects::blendModeMap[v.toString()];
     }
 
     e->updateStyle(style);
@@ -2229,6 +2419,8 @@ void EmbelProperties::addGeneral()
     verticalFitPx = i.value.toInt();
     addItem(i);
 
+    horizontalFitPx > verticalFitPx ? longSidePx = horizontalFitPx : longSidePx = verticalFitPx;
+
     // Global light direction
     i.name = "globalLightDirection";
     i.parIdx = parIdx;
@@ -2504,6 +2696,8 @@ void EmbelProperties::addStyle(QString name, int n)
         if (items.at(i).contains("Shadow")) addShadowEffect(styleIdx, effectName);
         if (items.at(i).contains("Brighten")) addBrightenEffect(styleIdx, effectName);
         if (items.at(i).contains("Emboss")) addEmbossEffect(styleIdx, effectName);
+        if (items.at(i).contains("Stroke")) addStrokeEffect(styleIdx, effectName);
+        if (items.at(i).contains("Glow")) addGlowEffect(styleIdx, effectName);
     }
 
     // sort the effects
@@ -2663,10 +2857,10 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Slider;
-    i.type = "double";
+    i.type = "int";
     i.min = 0;
-    i.max = 10000;
-    i.div = 100;
+    i.max = 100;
+    i.div = 1;
     i.fixedWidth = 50;
     effect.blur.radius = i.value.toDouble();
     addItem(i);
@@ -3033,6 +3227,344 @@ void EmbelProperties::addHighlightEffect(QModelIndex parIdx, QString effectName)
     styleMap[styleName].append(effect);
 }
 
+void EmbelProperties::addStrokeEffect(QModelIndex parIdx, QString effectName)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // styleName = parent
+    QString parentName = parIdx.data(UR_Name).toString();
+    styleName = parentName;
+    winnow_effects::Effect effect;
+    effect.effectType = winnow_effects::stroke;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
+    if (effectName == "")
+        effectName = uniqueEffectName(parentName, winnow_effects::stroke, "Stroke");
+    effect.effectName = effectName;
+
+    QString settingRootPath = "Embel/Templates/" + templateName + "/Styles/" + parentName + "/" + effectName + "/";
+
+    // subheader for this effect
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.name = effectName;
+    i.parIdx = parIdx;
+    i.parentName = parentName;
+    i.path = "Embel/Templates/" + templateName + "/Styles/" + parentName + "/" + effectName;
+    i.captionText = effectName;
+    i.tooltip = "";
+    i.hasValue = true;      // tool button
+    i.captionIsEditable = false;
+    i.key = "sortOrder";
+    i.delegateType = DT_BarBtns;
+    // get settings data
+    QString key = i.path + "/sortOrder";
+//    qDebug() << __FUNCTION__
+//             << "key =" << key
+//             << "value =" << setting->value(key).toInt();
+    if (setting->contains(key)) {
+        i.sortOrder = setting->value(key).toInt();
+//        qDebug() << __FUNCTION__ << i.path << i.sortOrder;
+    }
+    else {
+        i.sortOrder = model->rowCount(parIdx);
+        setting->setValue(key, i.sortOrder);
+    }
+    effect.effectOrder = i.sortOrder;
+    addEffectBtns();
+//    addItem(i);
+    parIdx = capIdx;
+
+    // stroke width
+    i.name = "width";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Width";
+    i.tooltip = "The width of the stroke.";
+    i.isIndent = true;;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "width";
+    i.defaultValue = 4;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 30;
+//    i.fixedWidth = 50;
+    effect.stroke.width = i.value.toInt();
+    addItem(i);
+
+    // stroke color
+    i.name = "color";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Color";
+    i.tooltip = "Select a color that will be used to stroke.";
+    i.isIndent = true;;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "color";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
+    }
+    else {
+        // start with red
+        i.value = "#FF0000";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Color;
+    i.type = "QString";
+    QColor color(i.value.toString());
+    effect.stroke.r = color.red();
+    effect.stroke.g = color.green();
+    effect.stroke.b = color.blue();
+    effect.stroke.a = color.alpha();
+    addItem(i);
+
+//    // stroke opacity
+//    i.name = "opacity";
+//    i.parIdx = parIdx;
+//    i.parentName = effectName;
+//    i.captionText = "Opacity";
+//    i.tooltip = "The opacity of the stroke.";
+//    i.isIndent = true;
+//    i.hasValue = true;
+//    i.captionIsEditable = false;
+//    i.key = "opacity";
+//    i.defaultValue = 100;
+//    i.path = settingRootPath + i.key;
+//    if (setting->contains(settingRootPath + i.key))
+//        i.value = setting->value(settingRootPath + i.key);
+//    else {
+//        i.value = i.defaultValue;
+//        setting->setValue(settingRootPath + i.key, i.value);
+//    }
+//    i.delegateType =  DT_Slider;
+//    i.type = "int";
+//    i.min = 0;
+//    i.max = 100;
+//    text.opacity = i.value.toInt();
+//    addItem(i);
+
+    // stroke blend mode
+    i.name = "blendMode";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Blend mode";
+    i.tooltip = "The way this effect blends with other effects in the style.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "blendMode";
+    i.defaultValue = "Above";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList  << winnow_effects::blendModes;
+    effect.stroke.blendMode = winnow_effects::blendModeMap[i.value.toString()];
+    addItem(i);
+
+//    effects.append(effect);
+    styleMap[styleName].append(effect);
+}
+
+void EmbelProperties::addGlowEffect(QModelIndex parIdx, QString effectName)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // styleName = parent
+    QString parentName = parIdx.data(UR_Name).toString();
+    styleName = parentName;
+    winnow_effects::Effect effect;
+    effect.effectType = winnow_effects::glow;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
+    if (effectName == "")
+        effectName = uniqueEffectName(parentName, winnow_effects::glow, "Glow");
+    effect.effectName = effectName;
+
+    QString settingRootPath = "Embel/Templates/" + templateName + "/Styles/" + parentName + "/" + effectName + "/";
+
+    // subheader for this effect
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.name = effectName;
+    i.parIdx = parIdx;
+    i.parentName = parentName;
+    i.path = "Embel/Templates/" + templateName + "/Styles/" + parentName + "/" + effectName;
+    i.captionText = effectName;
+    i.tooltip = "";
+    i.hasValue = true;      // tool button
+    i.captionIsEditable = false;
+    i.key = "sortOrder";
+    i.delegateType = DT_BarBtns;
+    // get settings data
+    QString key = i.path + "/sortOrder";
+//    qDebug() << __FUNCTION__
+//             << "key =" << key
+//             << "value =" << setting->value(key).toInt();
+    if (setting->contains(key)) {
+        i.sortOrder = setting->value(key).toInt();
+//        qDebug() << __FUNCTION__ << i.path << i.sortOrder;
+    }
+    else {
+        i.sortOrder = model->rowCount(parIdx);
+        setting->setValue(key, i.sortOrder);
+    }
+    effect.effectOrder = i.sortOrder;
+    addEffectBtns();
+//    addItem(i);
+    parIdx = capIdx;
+
+    // glow width
+    i.name = "width";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Width";
+    i.tooltip = "The width of the glow.";
+    i.isIndent = true;;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "width";
+    i.defaultValue = 4;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 30;
+//    i.fixedWidth = 50;
+    effect.glow.width = i.value.toInt();
+    addItem(i);
+
+    // glow blur
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Blur";
+    i.tooltip = "The blur of the glow effect.";
+    i.isIndent = true;;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "blur";
+    i.defaultValue = 6;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType =  DT_Slider;
+    i.min = 0;
+    i.max = 20;
+    i.type = "int";
+    effect.glow.blurRadius = i.value.toDouble();
+    addItem(i);
+
+    // glow color
+    i.name = "color";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Color";
+    i.tooltip = "Select a color that will be used for the glow.";
+    i.isIndent = true;;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "color";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
+    }
+    else {
+        // start with red
+        i.value = "#FF0000";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Color;
+    i.type = "QString";
+    QColor color(i.value.toString());
+    effect.glow.r = color.red();
+    effect.glow.g = color.green();
+    effect.glow.b = color.blue();
+    effect.glow.a = color.alpha();
+    addItem(i);
+
+//    // glow opacity
+//    i.name = "opacity";
+//    i.parIdx = parIdx;
+//    i.parentName = effectName;
+//    i.captionText = "Opacity";
+//    i.tooltip = "The opacity of the glow.";
+//    i.isIndent = true;
+//    i.hasValue = true;
+//    i.captionIsEditable = false;
+//    i.key = "opacity";
+//    i.defaultValue = 100;
+//    i.path = settingRootPath + i.key;
+//    if (setting->contains(settingRootPath + i.key))
+//        i.value = setting->value(settingRootPath + i.key);
+//    else {
+//        i.value = i.defaultValue;
+//        setting->setValue(settingRootPath + i.key, i.value);
+//    }
+//    i.delegateType =  DT_Slider;
+//    i.type = "int";
+//    i.min = 0;
+//    i.max = 100;
+//    effect.glow.opacity = i.value.toInt();
+//    addItem(i);
+
+    // glow blend mode
+    i.name = "blendMode";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Blend mode";
+    i.tooltip = "The way this effect blends with other effects in the style.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "blendMode";
+    i.defaultValue = "Above";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList  << winnow_effects::blendModes;
+    effect.glow.blendMode = winnow_effects::blendModeMap[i.value.toString()];
+    addItem(i);
+
+//    effects.append(effect);
+    styleMap[styleName].append(effect);
+}
+
 void EmbelProperties::addBrightenEffect(QModelIndex parIdx, QString effectName)
 {
     {
@@ -3101,6 +3633,8 @@ void EmbelProperties::addBrightenEffect(QModelIndex parIdx, QString effectName)
     i.min = -500;
     i.max = +500;
     i.div = 100;
+    double range = i.max - i.min;
+    i.step = static_cast<int>(range / 255);
     i.fixedWidth = 50;
     effect.brighten.evDelta = i.value.toDouble();
     addItem(i);
@@ -3196,8 +3730,10 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 1000;
+    i.max = 10000;
     i.div = 100;
+    double range = i.max - i.min;
+    i.step = static_cast<int>(range / longSidePx);
     i.fixedWidth = 50;
     effect.emboss.size = i.value.toDouble();
     addItem(i);
@@ -3252,6 +3788,8 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.min = -300;
     i.max = 300;
     i.div = 100;
+    range = i.max - i.min;
+    i.step = static_cast<int>(range / 255);
     i.fixedWidth = 50;
     effect.emboss.exposure = i.value.toDouble();
     addItem(i);
@@ -3279,6 +3817,7 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.min = 0;
     i.max = 200;
     i.div = 100;
+    i.step = 5;
     i.fixedWidth = 50;
     effect.emboss.contrast = i.value.toDouble();
     addItem(i);
@@ -3306,6 +3845,8 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.min = -400;
     i.max = 400;
     i.div = 100;
+    range = i.max - i.min;
+    i.step = static_cast<int>(range / 255);
     i.fixedWidth = 50;
     effect.emboss.start = i.value.toDouble();
     addItem(i);
@@ -3333,6 +3874,8 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.min = -400;
     i.max = 400;
     i.div = 100;
+    range = i.max - i.min;
+    i.step = static_cast<int>(range / 255);
     i.fixedWidth = 50;
     effect.emboss.mid = i.value.toDouble();
     addItem(i);
@@ -3360,6 +3903,8 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.min = -400;
     i.max = 400;
     i.div = 100;
+    range = i.max - i.min;
+    i.step = static_cast<int>(range / 255);
     i.fixedWidth = 50;
     effect.emboss.end = i.value.toDouble();
     addItem(i);
@@ -3387,6 +3932,8 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.min = -300;
     i.max = 300;
     i.div = 100;
+    range = i.max - i.min;
+    i.step = static_cast<int>(range / 255);
     i.fixedWidth = 50;
     effect.emboss.umbra = i.value.toDouble();
     addItem(i);
@@ -3557,7 +4104,7 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     }
     else {
         // start with gray
-        i.value = "#404040";
+        i.value = "#101010";
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Color;
@@ -3638,7 +4185,7 @@ void EmbelProperties::newBorder(QString name)
 
     // add the new border
     addBorder(rowCount, borderName);
-//    updateBorderLists();
+    updateBorderLists();
     if (G::isInitializing || isTemplateChange) return;
     QModelIndex idx = model->index(rowCount, CapColumn, bordersIdx);
 //    selectionModel()->clear();
@@ -4258,9 +4805,9 @@ void EmbelProperties::test1()
     #endif
     }
 //    e->test();
-    diagnostic();
+//    diagnostic();
 //    diagnosticVectors();
-//    diagnosticStyles();
+    diagnosticStyles();
 }
 
 void EmbelProperties::test2()
@@ -4363,13 +4910,15 @@ void EmbelProperties::addBorder(int count, QString borderName)
         i.value = setting->value(settingRootPath + i.key);
     else {
         i.value = i.defaultValue;
-        setting->setValue(settingRootPath + i.key, i.value);
+        setting->setValue(settingRootPath + i.key, i.value.toDouble());
     }
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
     i.max = 2000;
     i.div = 100;
+    double range = i.max - i.min;
+    i.step = static_cast<int>(range * 5 / longSidePx);
     i.fixedWidth = 50;
     border.top = i.value.toDouble();
     addItem(i);
@@ -4396,7 +4945,8 @@ void EmbelProperties::addBorder(int count, QString borderName)
     i.min = 0;
     i.max = 2000;
     i.div = 100;
-    i.fixedWidth = 50;
+    range = i.max - i.min;
+    i.step = static_cast<int>(range * 5 / longSidePx);    i.fixedWidth = 50;
     border.left = i.value.toDouble();
     addItem(i);
 
@@ -4422,6 +4972,8 @@ void EmbelProperties::addBorder(int count, QString borderName)
     i.min = 0;
     i.max = 2000;
     i.div = 100;
+    range = i.max - i.min;
+    i.step = static_cast<int>(range * 5 / longSidePx);    i.fixedWidth = 50;
     i.fixedWidth = 50;
     border.right = i.value.toDouble();
     addItem(i);
@@ -4448,6 +5000,8 @@ void EmbelProperties::addBorder(int count, QString borderName)
     i.min = 0;
     i.max = 2000;
     i.div = 100;
+    range = i.max - i.min;
+    i.step = static_cast<int>(range * 5 / longSidePx);    i.fixedWidth = 50;
     i.fixedWidth = 50;
     border.bottom = i.value.toDouble();
     addItem(i);
@@ -4474,7 +5028,8 @@ void EmbelProperties::addBorder(int count, QString borderName)
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << tileList;
-    addItem(i);
+    borderTileObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
+
 
     i.name = "color";
     i.parIdx = parIdx;
@@ -4686,6 +5241,8 @@ void EmbelProperties::addText(int count)
     i.min = 0;
     i.max = 10000;
     i.div = 100;
+    double range = i.max - i.min;
+    i.step = static_cast<int>(range / longSidePx);
     i.fixedWidth = 50;
     text.x = i.value.toDouble();
     addItem(i);
@@ -4711,7 +5268,8 @@ void EmbelProperties::addText(int count)
     i.min = 0;
     i.max = 10000;
     i.div = 100;
-    i.fixedWidth = 50;
+    range = i.max - i.min;
+    i.step = static_cast<int>(range / longSidePx);    i.fixedWidth = 50;
     text.y = i.value.toDouble();
     addItem(i);
 
@@ -4942,11 +5500,12 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "opacity";
+    i.defaultValue = 100;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = 100;
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType =  DT_Slider;
@@ -5143,6 +5702,8 @@ void EmbelProperties::addGraphic(int count)
     i.min = 0;
     i.max = 10000;
     i.div = 100;
+    double range = i.max - i.min;
+    i.step = static_cast<int>(range / longSidePx);
     i.fixedWidth = 50;
     graphic.x = i.value.toDouble();
     addItem(i);
@@ -5168,6 +5729,8 @@ void EmbelProperties::addGraphic(int count)
     i.min = 0;
     i.max = 10000;
     i.div = 100;
+    range = i.max - i.min;
+    i.step = static_cast<int>(range / longSidePx);
     i.fixedWidth = 50;
     graphic.y = i.value.toDouble();
     addItem(i);
@@ -5192,8 +5755,10 @@ void EmbelProperties::addGraphic(int count)
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 2500;
+    i.max = 10000;
     i.div = 100;
+    range = i.max - i.min;
+    i.step = static_cast<int>(range / longSidePx);
     i.fixedWidth = 50;
     graphic.size = i.value.toDouble();
     addItem(i);

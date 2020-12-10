@@ -24,10 +24,14 @@ public:
     void emboss(QImage &img, int azimuth, double size, double exposure, double contrast,
                 double inflection, double startEV, double midEV, double endEV,
                 double umbra, bool isUmbraGradient);
+    void stroke(QImage &img, double width, QColor color, bool inner);
+    void glow(QImage &img, double width, QColor color, double blurRadius);
+
     QImage convolve(QImage &img, int mDim, double *matrix);
 
     void test(QImage &img);
     void brightenPixel(QRgb &p, double deltaEv, double opacity = 1);
+
 
 private:
     struct Point {
@@ -63,11 +67,20 @@ private:
                   const int &w, const int &h, const int &width);
 
     // 2D
+    struct Pt {
+        int x;
+        int y;
+    };
+
     int ptToSegment(int x, int y, int x1, int y1, int x2, int y2);
+    void surrounding8Px(QList<Pt> &sPts, Pt &p, const int &w, const int &h);
+    void surrounding4Px(QList<Pt> &sPts, Pt &p, const int &w, const int &h);
+    void transparentEdgeMap(QImage &im, int depth,
+                            QVector<QVector<QRgb>> &s,
+                            QMultiMap<int, Pt> &edge);
 
     // 3D
-    typedef double
-    Vector[3];
+    typedef double Vector[3];
     typedef double Vector2D[2];
     void crossProduct(Vector &a, Vector &b, Vector &n);
     void lightVector(int azimuth, Vector &light);

@@ -51,6 +51,17 @@ void Embel::exportImage()
 
 void Embel::test()
 {
+//    /* transparentEdgeMap
+    QPixmap srcPixmap(tItems[0]->boundingRect().size().toSize());
+    QPainter tmpPainter(&srcPixmap);
+    tItems[0]->document()->drawContents(&tmpPainter);
+    tmpPainter.end();
+    QImage img = srcPixmap.toImage();
+    QImage edgeMap;
+    Effects effect;
+//    effect.transparentEdgeMap(img, edgeMap);
+    img.save("D:/Pictures/Temp/effect/_transparentEdgeMap.tif");
+//    */
 
     /* Test
     Effects effect;
@@ -114,7 +125,7 @@ void Embel::test()
     img.save("d:/pictures/temp/effect/textblurred.tif");
 //    */
 
-//    /* brighten test
+    /* brighten test
     Effects effect;
     QRgb p = qRgba(110, 150, 65, 255);
     effect.brightenPixel(p, 1.2);
@@ -657,10 +668,10 @@ void Embel::updateText(int i)
             tItems[i]->setGraphicsEffect(effect);
         }
     }
-    else {
+//    else {
         tItems[i]->setRotation(rotation);
 //        tItems[i]->setGraphicsEffect(nullptr);
-    }
+//    }
 }
 
 void Embel::updateGraphic(int i)

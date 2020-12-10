@@ -1,12 +1,12 @@
 BUGS
-- Delete last text crashes
+- add style can crash
+- When extract a new tile add it to the tile lookup in borders
 - Rotate text bounding rect
 - Standardize use of G:css
 - Emboss when transparent edges
 - Add glow, stroke
 - Sort out i.name vs i.key in PropertyEditor
 - Default values for effects
-- Inflection point = 0
 - Confirm check for updates is working (Andreas)
 - When create new style etc open that new item
 - Docks not always remembered between sessions
@@ -16,17 +16,14 @@ BUGS
 - File/Bookmark count not refresh when filecount changes see QFileSystemWatcher
 - Grid does not always stretch to fit central widget
 - *Change sort direction can crash
-- when grabbing tile make sure imageview at 100%
 - move styles to separate property editor?
 - update and refresh text metadata templates
 - drag n drop border and style effects order
 - update when change global font size and background shade
-
 - DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
 - Thumbnails window menu not in sync on opening
 - Cannot delete heic files on PC
 - Filters will be updated msg on opening
-- Remember Embel dock on opening
 - MetaStrings
 - Globalize css
 - Add hif file format
@@ -40,18 +37,20 @@ CODE IMPROVEMENTS
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
-- Single instance of Winnow
-- Copy template
 - Copy files between folders using drag'n'drop
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
-- TableView freeze columns https://doc.qt.io/qt-5/qtwidgets-itemviews-frozencolumn-example.html
 - Read keywords
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Remember Embel dock on opening
+- Copy template
+- Single instance of Winnow
+- Inflection point = 0
+- when grabbing tile make sure imageview at 100%
 - Show count for header items or show/hide decoration
 - Remove bookmark removes selected vs clicked
 - SliderEditor update and double vs int fixed

@@ -58,10 +58,11 @@ public:
         QString key;
         QString type;
         int delegateType;
-        QVariant min;
-        QVariant max;
-        QVariant div;                   // used to convert slider int amount to double ie / 100
-        int fixedWidth;
+        int min;
+        int max;
+        int div;                        // used to convert slider int amount to double ie / 100
+        int step;                      // amount to adjust slider one pixel
+        int fixedWidth;                 // width of control (ie lineedit in slider)
         QString color;
         QStringList dropList;
         QStringList dropIconList;       // file location of icons
