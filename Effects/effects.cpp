@@ -48,6 +48,184 @@ int Effects::ptToSegment(int x, int y, int x1, int y1, int x2, int y2)
     return static_cast<int>(minDistance);
 }
 
+void Effects::surrounding4Px(QList<Pt> &sPts, Pt &p, const int &w, const int &h)
+{
+    // sample point
+    Pt sp;
+    if (p.x > 0) {
+        sp.x = p.x - 1;
+        sp.y = p.y;
+        sPts << sp;
+    }
+    if (p.x < w) {
+        sp.x = p.x + 1;
+        sp.y = p.y;
+        sPts << sp;
+    }
+    if (p.y > 0) {
+        sp.x = p.x - 1;
+        sp.y = p.y - 1;
+        sPts << sp;
+    }
+    if (p.y < h) {
+        sp.x = p.x + 1;
+        sp.y = p.y + 1;
+        sPts << sp;
+    }
+}
+
+void Effects::surrounding8Px(QList<Pt> &sPts, Pt &p, const int &w, const int &h)
+{
+    Pt sp;
+    for (int x = p.x-1; x < p.x+2; x++) {
+        if (x < 0) x = 0;
+        if (x >= w) continue;
+        for (int y = p.y-1; y < p.y+2; y++) {
+            if (y < 0) y = 0;
+            if (y >= h) continue;
+            if (x == p.x && y == p.y) continue;
+            sp.x = x;
+            sp.y = y;
+            sPts << sp;
+        }
+    }
+}
+
+void Effects::transparentEdgeMap(QImage &img, int depth,
+                                 QVector<QVector<QRgb>> &s,
+                                 QMultiMap<int, Pt> &edge)
+{
+    int w = img.width();
+    int h = img.height();
+    int x, y;
+
+    // create QVector edge map (em) used to tally pixels added to QMultiMap edge
+    QVector<QVector<int>> em(h);
+    for (y = 0; y < h; y++) {
+        em[y].resize(w);
+        // start with zeros, change to d (distance from edge)
+        em[y].fill(0);
+    }
+
+    bool prevTransparent;
+    Pt pt;
+
+    // scan left to right
+    for (y = 0; y < h; y++) {
+        prevTransparent = true;
+        for (x = 0; x < w; x++) {
+            pt.x= x;
+            pt.y= y;
+            // opaque to transparent edge
+            if (qAlpha(s[y][x]) == 0 && !prevTransparent)  {
+                pt.x= x-1;
+                // do not need to check if already tallied on first pass
+                edge.insertMulti(1, pt);
+                em[y][x-1] = 1;
+                prevTransparent = true;
+            }
+            // transparent to opaque edge
+            if (qAlpha(s[y][x]) > 0 && prevTransparent)  {
+                edge.insertMulti(1, pt);
+                em[y][x] = 1;
+                prevTransparent = false;
+            }
+            // right and bottom of image
+            if (x == w - 1 && qAlpha(s[y][x]) > 0) {
+                edge.insertMulti(1, pt);
+                em[y][x] = 1;
+            }
+            if (y == h - 1 && qAlpha(s[y][x]) > 0) {
+                edge.insertMulti(1, pt);
+                em[y][x] = 1;
+            }
+        }
+    }
+
+    // scan top to bottom
+    for (x = 0; x < w; x++) {
+        prevTransparent = true;
+        for (y = 0; y < h; y++) {
+            pt.x= x;
+            pt.y= y;
+            // opaque to transparent edge
+            if (qAlpha(s[y][x]) == 0 && !prevTransparent)  {
+                pt.y= y-1;
+                // check if already tallied
+                if (em[y-1][x] == 0) {
+                    edge.insertMulti(1, pt);
+                    em[y-1][x] = 1;
+                }
+                prevTransparent = true;
+            }
+            // transparent to opaque edge
+            if (qAlpha(s[y][x]) > 0 && prevTransparent)  {
+                // check if already tallied
+                if (em[y][x] == 0) {
+                    edge.insertMulti(1, pt);
+                    em[y][x] = 1;
+                }
+                prevTransparent = false;
+            }
+        }
+    }
+
+    // iterate to find points pts for distances > 1
+    int d = 1;
+    bool morePtsToProcess = true;
+    // list of pixels for a distance from the edge
+    QList<Pt> pts;
+    // list of pixels surrounding a pixel
+    QList<Pt> sPts;
+    while (morePtsToProcess) {
+        morePtsToProcess = false;
+        pts.clear();
+        // get list of points for the previous distance from the edge
+        pts = edge.values(d);
+//        qDebug() << __FUNCTION__ << "d =" << d << "pts.size() =" << pts.size();
+        d++;
+        if (d > depth) break;
+        for (int i = 0; i < pts.size(); i++) {
+            sPts.clear();
+            // get a list of the 8 surrounding pixels (except for image edges)
+            pt = pts.at(i);
+//            surrounding4Px(sPts, pt, w, h);
+            surrounding8Px(sPts, pt, w, h);
+            // for each surrounding pixel
+            for (int j = 0; j < sPts.size(); j++) {
+                x = sPts.at(j).x;
+                y = sPts.at(j).y;
+                // if not already tallied and not transparent then tally
+                if (em[y][x] == 0 && qAlpha(s[y][x]) > 0) {
+                    // add new pixel
+                    edge.insertMulti(d, sPts.at(j));
+                    // tally new pixel
+                    em[y][x] = d;
+                    morePtsToProcess = true;
+                }
+            }
+        }
+    }
+
+    /*
+    // show result
+    qDebug() << __FUNCTION__ << "edge.lastKey() ="  << edge.lastKey();
+    int step = 220 / edge.lastKey();
+    for (d = 1; d <= edge.lastKey(); d++) {
+        pts.clear();
+        pts = edge.values(d);
+        for (int i = 0; i < pts.size(); i++) {
+            int red = d * step + 20;
+            if (red>255) red = 255;
+            x = pts.at(i).x;
+            y = pts.at(i).y;
+            s[y][x] = qRgba(red, 0, 0, qAlpha(s[y][x]));
+        }
+    }
+    */
+    return;
+}
+
 /* PIXEL OPERATIONS **************************************************************************/
 
 QRgb Effects::convertFromPremult(QRgb p)
@@ -283,7 +461,6 @@ void Effects::vectorToImage(QImage &img, QVector<QVector<QRgb> > &v)
 void Effects::zeroVector(QImage &img, QVector<QVector<QRgb>> &v)
 {
     for (int y = 0; y < img.height(); ++y) {
-//        qDebug() << __FUNCTION__ << "Zeroing row =" << y;
         memset(&v[y], 0, static_cast<uint>(img.width()) * sizeof(int));
     }
 }
@@ -1081,53 +1258,67 @@ double Effects::embossEV(int &m, int d, double &contrast, double exposure,
                          double &umbra, bool isUmbra, bool isUmbraGradient)
 {
     /*
-    m        = the margin in pixels to emboss (ie the width of a border)
-    d        = the current distance through the margin in pixels
-    dd       = m - d = the pixels remaining to the edge of the margin
-    sft      = the number of pixels to soften, starting at m - sft
-    exposure = the amount of brightening to add
-    contour  = the function to use to determine the amount of brightening for each pixel
-               ie flat, ridge, trough gradient...
-    white    = the brightest point in the contour
-    black    = the darkest point in the contour
-    umbra    = adjusts the blacks for areas not exposed to light.
-    isUmbra  = not exposed directly to light source (see light direction = azimuth)
-    */
+    This is called from Effects::emboss to return the brightness (ev) of a pixel.
 
-    double ev = exposure;
-    double x = static_cast<double>(d) / m;
-    double xi;                  // contour inflection point between 0 and 1
-    /*
-                |     * xi, mid
+    The emboss effect works by adjusting the brightness of the pixels across a margin or
+    boundary around the perimeter of the object.  In the diagram the margin is the x axis,
+    which is normalized to 0 to 1.  The y axis is the brightness, measured in ev (exposure
+    value). The * represent the ev at each pixel across the margin.  The inflection point
+    is where the two lines either peak or trough.
+
+                |     * inflection pt xi, midEV
                 |    * *
                 |   *   *
              0,0|--*-----*---1,0
                 | *       *
                 |*         *
-        0,start *           * 1,end
+      0,startEV *           * 1,endEV
 
-           xi = 0  b = start  slope = (start - end)
-           x < xi  b = start  slope = (start - mid) / xi
-           x > xi  b = mid    slope = (mid - end) / (1 - xi)
+      for the formula of a line y = ax + b, where a = slope, b = y intercept
+
+          if xi = 0  b = start  slope = (start - end)
+          if x < xi  b = start  slope = (start - mid) / xi
+          if x > xi  b = mid    slope = (mid - end) / (1 - xi)
+
+    ev       = measure of brightness in exposure values (see Effects::brightenPixel)
+    m        = the margin in pixels to emboss (ie the width of a border)
+    d        = the current distance through the margin in pixels
+    x        = d normalized between 0 and 1
+    dd       = m - d = the pixels remaining to the edge of the margin
+    slope    = the slope of the line, either before or after the inflection point
+    exposure = the amount of brightening to add
+    contrast = darken neg ev and brighten pos ev
+    contour  = (n/a) the function to use to determine the amount of brightening for each pixel
+               ie flat, ridge, trough gradient...
+    startEV  = the ev at the start of the margin
+    midEV    = the ev at the inflection point
+    endEV    = the ev at the end of the margin
+    umbra    = the ev amount to adjust the areas not exposed to light.  This is determined
+               by the slope and isUmbra
+    isUmbra  = not exposed directly to light source (see light direction = azimuth)
+    isUmbraGradient = create a smooth gradient between startEv to midEV to endEV
     */
-    xi = inflection;
-    double factor;
+
+    double ev = exposure;
+    double x = static_cast<double>(d) / m;
+    double xi = inflection;
+    double slope;
 
     // between start and inflection point
     if (xi > 0 && x < xi) {
-        factor = x / xi;
-        ev += (midEV - startEV) * factor + startEV;
-        if (!isUmbraGradient) factor = 0;
-        if (isUmbra && midEV > startEV) ev += umbra * (1 - factor);
-        if (!isUmbra && midEV < startEV) ev += umbra * (1 - factor);
+        slope = x / xi;
+        ev += (midEV - startEV) * slope + startEV;
+        if (!isUmbraGradient) slope = 0;
+        if (isUmbra && midEV > startEV) ev += umbra * (1 - slope);
+        if (!isUmbra && midEV < startEV) ev += umbra * (1 - slope);
     }
     // inflection point to the end
     else {
-        factor = (x - xi) / (1 - xi);
-        ev += (endEV - midEV) * factor + midEV;
-        if (!isUmbraGradient) factor = 1;
-        if (isUmbra && endEV > midEV) ev += umbra * factor;
-        if (!isUmbra && endEV < midEV) ev += umbra * factor;
+        slope = (x - xi) / (1 - xi);
+        ev += (endEV - midEV) * slope + midEV;
+        if (!isUmbraGradient) slope = 1;
+        if (isUmbra && endEV > midEV) ev += umbra * slope;
+        if (!isUmbra && endEV < midEV) ev += umbra * slope;
     }
     /*
     if (rpt) qDebug().noquote() << __FUNCTION__
@@ -1143,7 +1334,7 @@ double Effects::embossEV(int &m, int d, double &contrast, double exposure,
 //                */
 
     // contrast
-    ev *= (contrast);
+    ev *= contrast;
 
     return ev;
 }
@@ -1153,20 +1344,22 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
                      double umbra, bool isUmbraGradient)
 {
     /*
-                                    inflection
+    The emboss effect works by adjusting the brightness of the pixels across a margin or
+    boundary width around the perimeter of the object.
+
+                                    inflection xi
                      startEV           midEV           endEV
                         v                v               v
                               <            d             >
-                                         <     sft       >
                         |                |               |
-       Outside border   |     *          |    soften     |  Inside border
+     Outside boundary   |     *          |               |  Inside boundary
                         |     ^          |               |
                               |
                               Current pixel (x,y)
 
+                        <              margin            >
 
-
-       see D:\My Projects\Winnow Project\Doc\Embellish.xlsx
+    For each pixel, Effects::embossEV is called.
     */
 
     // border or graphics object with no transparent pixels along outer border
@@ -1256,6 +1449,93 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
 
     // build destination image
     vectorToImage(img, s);
+}
+
+void Effects::stroke(QImage &img, double width, QColor color, bool inner)
+{
+/*
+Draws a solid boundary around an object in an image, where the boundary is transparency.
+*/
+    // create QVector (s) of img for pixel wrangling
+    QVector<QVector<QRgb>> s(img.height());
+    imageToVector(img, s);
+
+    // get edge map for img
+    QMultiMap<int, Pt> edge;
+    int depth = static_cast<int>(width);
+    transparentEdgeMap(img, depth, s, edge);
+
+    // erase img so can paint back effect only
+    img.fill(Qt::transparent);
+
+    // paint in the stroke for the assigned width and color
+    QList<Pt> pts;
+    int w;
+    double aPct;
+    width > edge.lastKey() ? w = edge.lastKey() : w = static_cast<int>(width);
+    for (int d = 1; d <= w; d++) {
+        aPct = 1.0;
+        if (d == 1) aPct = 0.5;
+        if (d == 2) aPct = 0.75;
+        if (d == w - 1) aPct = 0.75;
+        if (d == w) aPct = 0.5;
+        pts.clear();
+        pts = edge.values(d);
+        for (int i = 0; i < pts.size(); i++) {
+            int x = pts.at(i).x;
+            int y = pts.at(i).y;
+            s[y][x] = qRgba(color.red(), color.green(), color.blue(), qAlpha(s[y][x]) * aPct);
+        }
+    }
+
+    // anti-alias
+//    pts.clear();
+//    pts = edge.values(1);
+//    for (int i = 0; i < pts.size(); i++) {
+//        int x = pts.at(i).x;
+//        int y = pts.at(i).y;
+//        if (qAlpha(s[y][x]) > 192)
+//            s[y][x] = qRgba(color.red(), color.green(), color.blue(), qAlpha(s[y][x]) * 0.33);
+//    }
+
+
+    vectorToImage(img, s);
+}
+
+void Effects::glow(QImage &img, double width, QColor color, double blurRadius)
+{
+    // create QVector (s) of img for pixel wrangling
+    QVector<QVector<QRgb>> s(img.height());
+    imageToVector(img, s);
+
+    // get edge map for img
+    QMultiMap<int, Pt> edge;
+    int depth = static_cast<int>(width);
+    transparentEdgeMap(img, depth, s, edge);
+
+    // erase img so can paint back effect only
+    img.fill(Qt::transparent);
+
+    // paint in the stroke for the assigned width and color
+    QList<Pt> pts;
+    int w;
+    width > edge.lastKey() ? w = edge.lastKey() : w = static_cast<int>(width);
+    for (int d = 1; d <= w; d++) {
+        pts.clear();
+        pts = edge.values(d);
+        for (int i = 0; i < pts.size(); i++) {
+            int x = pts.at(i).x;
+            int y = pts.at(i).y;
+            s[y][x] = qRgba(color.red(), color.green(), color.blue(), qAlpha(s[y][x]));
+        }
+    }
+
+    // convert back to QImage
+    vectorToImage(img, s);
+
+    // blur the stroke
+    int radius = static_cast<int>(blurRadius);
+    blurOriginal(img, radius);
 }
 
 /* 3D OPERATIONS *****************************************************************************/

@@ -328,6 +328,7 @@ SliderEditor, LineEditor etc).
     model->setData(valIdx, i.min, UR_Min);
     model->setData(valIdx, i.max, UR_Max);
     model->setData(valIdx, i.div, UR_Div);
+    model->setData(valIdx, i.step, UR_DivPx);
     model->setData(valIdx, i.fixedWidth, UR_FixedWidth);
     model->setData(valIdx, i.color, UR_Color);
     model->setData(valIdx, i.dropList, UR_StringList);
@@ -373,6 +374,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.min = 0;                      // DT_Spinbox, DT_Slider
     i.max = 0;                      // DT_Spinbox, DT_Slider
     i.div = 0;                      // DT_Slider (zero == int, nonzero = double)
+    i.step = 1;                    // DT_Slider
     i.fixedWidth = 50;              // DT_Slider
     i.dropList.clear();             // DT_Combo
     i.dropIconList.clear();         // DT_Combo

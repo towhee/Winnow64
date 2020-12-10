@@ -1,248 +1,265 @@
 #include "patterndlg.h"
 
-PatternDlg::PatternDlg(QWidget *parent, QPixmap &pm, QPixmap &tile, QString &name)
-    : QDialog(parent),
-      pm(pm),
-      tile(tile),
-      name(name)
+/*
+   Find a repeating pattern in the pixmap (pm) or any selection in pm.  Save this as a tile
+   in Embellish QSettings to be used to create a border texture in Embellish.
+*/
+
+PatternDlgView::PatternDlgView(QPixmap &pm, QPixmap &tile, QWidget *parent)
+    : pm(pm), tile(tile)
 {
-    qDebug() << __FUNCTION__ << pm.size();
-    resize(800, 600);
-    setWindowTitle("Tile Extractor");
-
-    saveBtn->setMinimumSize(100, 25);
-    patternBtn->setMinimumSize(100, 25);
-    plusBtn->setMinimumSize(100, 25);
-    minusBtn->setMinimumSize(100, 25);
-    zoomText = new QLabel("100%");
-
-    // image at top
-    layout = new QVBoxLayout;
-    v = new QGraphicsView;
     scene = new QGraphicsScene;
-    QGraphicsPixmapItem *pmItem = new QGraphicsPixmapItem;
+    pmItem = new QGraphicsPixmapItem;
     pmItem->setBoundingRegionGranularity(1);
     scene->addItem(pmItem);
-    v->setScene(scene);
+    setScene(scene);
     pmItem->setPixmap(pm);
-
-    // buttons at bottom
-    btnLayout = new QHBoxLayout;
-    btnLayout->setAlignment(Qt::AlignRight);
-    btnFrame = new QFrame;
-    btnLayout->addWidget(plusBtn);
-    btnLayout->addWidget(minusBtn);
-    btnLayout->addWidget(zoomText);
-    btnLayout->addStretch();
-    btnLayout->addWidget(patternBtn);
-    btnLayout->addWidget(saveBtn);
-    btnFrame->setLayout(btnLayout);
-
-    layout->addWidget(v);
-    layout->addWidget(btnFrame);
-    layout->setGeometry(QRect(-11, -11, 800, 600));
-
-    setLayout(layout);
     zoom = 1;
+    matrix.reset();
+    matrix.scale(zoom, zoom);
+    setMatrix(matrix);
+
+    rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
+    patternRect = new QGraphicsRectItem;
 
     imageRect = new QGraphicsRectItem;
-    imageRect->setRect(-1, -1, pm.width(), pm.height());
+    imageRect->setRect(-1, -1, pm.width()+1, pm.height()+1);
     QPen pen;
     pen.setColor(QColor("#708090"));
     pen.setWidth(1);
     imageRect->setPen(pen);
     scene->addItem(imageRect);
     imageRect->show();
-
-
-    connect(plusBtn, &QPushButton::clicked, this, &PatternDlg::zoomIn);
-    connect(minusBtn, &QPushButton::clicked, this, &PatternDlg::zoomOut);
-    connect(patternBtn, &QPushButton::clicked, this, &PatternDlg::findPattern);
-    connect(saveBtn, &QPushButton::clicked, this, &PatternDlg::save);
-
-    findPattern();
-
-//    delete pmItem;
-//    delete btnLayout;
 }
 
-PatternDlg::~PatternDlg()
+void PatternDlgView::mousePressEvent(QMouseEvent *event)
 {
-//    delete saveBtn;
-//    delete patternBtn;
-//    delete plusBtn;
-//    delete minusBtn;
-//    delete zoomText;
-//    delete v;
-//    delete scene;
-//    delete imageRect;
-//    delete layout;
-//    delete btnLayout;
-//    delete btnFrame;
+    setCursor(Qt::CrossCursor);
+    origin = event->pos();
+    rubberBand->setGeometry(QRect(origin, QSize()));
+    rubberBand->show();
 }
 
-void PatternDlg::save()
+void PatternDlgView::mouseMoveEvent(QMouseEvent *event)
 {
-    qDebug() << __FUNCTION__;
-    bool ok;
-    QInputDialog input;
-    input.setFixedWidth(500);
-    name = input.getText(this, tr("Tile extractor"),
-                  tr("Enter tile name"), QLineEdit::Normal,
-                  "", &ok);
-    if (ok) {
-        // quit dialog
-        accept();
+    rubberBand->setGeometry(QRect(origin, event->pos()).normalized());
+}
+
+void PatternDlgView::mouseReleaseEvent(QMouseEvent *event)
+{
+    setCursor(Qt::ArrowCursor);
+    QRect rb = rubberBand->geometry();
+    QPoint p0 = mapToScene(rb.topLeft()).toPoint();
+    QPoint p1 = mapToScene(rb.bottomRight()).toPoint();
+    QRect sampleRect(p0, p1);
+    QPixmap sample = pmItem->pixmap().copy(sampleRect);
+    findPatternInSample(sample, sampleRect);
+}
+
+void PatternDlgView::debugPxArray(QImage &i, int originX, int originY, int size)
+{
+/*
+    Uncomment "Send array to console for debugging" in PatternDlgView::findPatternInSample.
+    This function will print the array of pixels to the console.  Copy the console and paste
+    into D:\data\My Projects\Winnow Project\Doc\Embellish.xlsx in the tile pixels sheet.  If
+    necessary convert text to columns.  You can then analyse the pixels in the array to debug
+    the tile pattern.
+*/
+    qDebug() << __FUNCTION__ << size << i.size();
+    QString row;
+
+    for (int y = 0; y < size; y++) {
+        row = "";
+        for (int x = 0; x < size; x++) {
+            QString pRgba = QString::number(i.pixel(originX + x, originY + y), 16) + " ";
+            row += pRgba;
+        }
+        Utilities::log("", row);
+        qDebug().noquote() << row;
     }
 }
 
-void PatternDlg::findPattern()
+void PatternDlgView::findPatternInSample(QPixmap &sample, QRect &sampleRect)
 {
+/*
+   This function searches the pixmap sample for a repeating pattern.  The x axis is scanned
+   for a repeating pattern starting at (0,0) and if found, then the pixmap is searched for
+   the next row starting with the same pattern.  If found, then the pixmap tile is created
+   with a copy of sample for the repeating area.
 
-    patternRect = new QGraphicsRectItem;
+   If no repeating area is found then the entire sample is copied to the pixmap tile.
+*/
+qDebug() << __FUNCTION__;
+    rubberBand->hide();
     QPen pen;
     pen.setColor(QColor(Qt::white));
     pen.setWidth(1);
     patternRect->setPen(pen);
     scene->addItem(patternRect);
 
-    QDebug debug = qDebug();
-    debug.noquote();
-
-    QImage i = pm.toImage();
+    QImage i = sample.toImage();
     int w = i.width();
     int h = i.height();
     // tile width and height
     int tw = 0;
-    int ty = 0;
+    int th = 0;
     /*
     // example using QRgb
     QRgb o = i.pixel(0,0);
     QRgb px;
 //    */
     int xMatch;
-    QString s, sx, sy, s0, s1, s2;
-    s0 = "    0:";
-    s0 += QString::number(i.pixel(0,0)).rightJustified(10);
 
-    // find a match on the x coordinates
-    /*
-    debug << s0 << "\n";
+    /* Send array to console for debugging
+    debugPxArray(i, 0, 0, 150);
+    return;
 //    */
+
+    // cycle through every possible start point to find pattern (v = y coord, u == x coord)
     bool found = false;
+    // find a match on the x coordinates
+    tw = th = 0;
+    found = false;
+    // origin or current search is u,v
     for (int x = 1; x < w; ++x) {
-        /*
-        sx = QString::number(x).rightJustified(4) + ":";
-        sx += QString::number(i.pixel(x,0)).rightJustified(10);
-        */
         if (i.pixel(x,0) == i.pixel(0,0)) {
             // found a match, check if total match
-            /*
-            debug << sx << "==" << s0 <<"Match found - check next\n";
-//            */
             xMatch = x;
             for (int x1 = 1, x2 = xMatch + 1; x1 < xMatch; ++x1, ++x2) {
-                /*
-                s1 = QString::number(x1).rightJustified(4) + ":";
-                s1 += QString::number(i.pixel(x1,0)).rightJustified(10);
-                s2 = QString::number(x2).rightJustified(4) + ":";
-                s2 += QString::number(i.pixel(x2,0)).rightJustified(10);
-//                */
                 // not a match
                 if (x2 == w || i.pixel(x1,0) != i.pixel(x2,0)) {
-                    /*
-                    debug << sx << "   " << s1 << "!=" << s2 << "Match not found, continue trying\n";
-//                    */
                     break;
                 }
-                /*
-                debug << sx << "   " << s1 << "==" << s2 << "Match found so far\n";
-                */
                 if (x1 == xMatch - 1) found = true;
             }
             if (found) {
-                /*
-                debug << "match found at" << x << "Tile x = 0 to " << x - 1 << "\n\n";
-                */
                 tw = x;
                 break;
             }
         }
-        /*
-        debug << sx << "!=" << s0 << "\n";
-//        */
     }
 
-    // find a match on the y coordinates
-    int yMatch;
-    debug << s0 << "\n";
-    found = false;
-    for (int y = 1; y < h; ++y) {
-        /*
-        sy = QString::number(y).rightJustified(4) + ":";
-        sy += QString::number(i.pixel(0,y)).rightJustified(10);
-//        */
-        if (i.pixel(0,y) == i.pixel(0,0)) {
-            // found a match, check if total match
-            /*
-            debug << sy << "==" << s0 <<"Match found - check next\n";
-//            */
-            yMatch = y;
-            for (int y1 = 1, y2 = yMatch + 1; y1 < yMatch; ++y1, ++y2) {
-                /*
-                s1 = QString::number(y1).rightJustified(4) + ":";
-                s1 += QString::number(i.pixel(0,y1)).rightJustified(10);
-                s2 = QString::number(y2).rightJustified(4) + ":";
-                s2 += QString::number(i.pixel(0,y2)).rightJustified(10);
-//                */
-                // not a match
-                if (y2 == h || i.pixel(0,y1) != i.pixel(0,y2)) {
-                    /*
-                    debug << sy << "   " << s1 << "!=" << s2 << "Match not found, continue trying\n";
-//                    */
-                    break;
+    // a repeating pattern was found on the x axis
+    if (found) {
+        // find a repeat of the x pattern in another row (y)
+        for (int y = 1; y < h; ++y) {
+            found = true;
+            for (int x = 0; x < tw; x++) {
+                if (i.pixel(x,y) != i.pixel(x,0)) {
+                        found = false;
+                        break;
                 }
-                /*
-                debug << sy << "   " << s1 << "==" << s2 << "Match found so far\n";
-//                */
-                if (y1 == yMatch - 1) found = true;
             }
             if (found) {
-                /*
-                debug << "match found at" << y << "Tile y = 0 to " << y - 1 << "\n\n";
-//                */
-                ty = y;
+                th = y;
                 break;
             }
         }
-        /*
-        debug << sy << "!=" << s0 << "\n";
-//        */
     }
 
-    if (tw && ty) {
-        patternRect->setRect(-1,-1,tw,ty);
+    if (tw && th) {
+        msg("Pattern found.  Tile shown in white box.  ");
+        int x = sampleRect.x();
+        int y = sampleRect.y();
+        patternRect->setRect(x, y , tw, th);
         patternRect->show();
-        QRect tileRect(0, 0, tw, ty);
+        QRect tileRect(x, y , tw, th);
         tile = pm.copy(tileRect);
     }
-
+    else {
+        msg("No pattern found.  You can still save the rubberbanded area as a tile, "
+            "but it may not create a seamless texture.");
+        patternRect->hide();
+        rubberBand->show();
+        tile = pm.copy(sampleRect);
+    }
 }
 
-void PatternDlg::zoomIn()
+PatternDlg::PatternDlg(QWidget *parent, QPixmap &pm)
+    : QDialog(parent),
+      pm(pm)
 {
-    matrix.reset();
-    zoom *= 2;
-    matrix.scale(zoom, zoom);
-    v->setMatrix(matrix);
-    zoomText->setText(QString::number(zoom*100) + "%");
+    qDebug() << __FUNCTION__ << pm.size();
+    int h;
+    pm.height() > 600 ? h = 600 : h = pm.height();
+    resize(800, h + 100);
+    setWindowTitle("Tile Extractor");
+    setMouseTracking(true);
+
+    saveBtn->setStyleSheet("QPushButton {min-width: 100px;}");
+    exitBtn->setStyleSheet("QPushButton {min-width: 100px;}");
+
+    layout = new QVBoxLayout;
+
+    // graphicview at top
+    v = new PatternDlgView(pm, tile);
+    vLayout = new QHBoxLayout;
+    vLayout->addWidget(v);
+    vFrame = new QFrame;
+    vFrame->setMinimumHeight(h);
+    vFrame->setMaximumHeight(h);
+    vFrame->setLayout(vLayout);
+
+    // message area
+    msg = new QLabel;
+    msg->setWordWrap(true);
+    msg->setAlignment(Qt::AlignTop);
+    QString msgText = "INSTRUCTIONS:  Mouse click and drag to make a selection.  \n\n"
+            "To extract a repeating pattern, the selection must be within the "
+            "pattern area and be double the size of a tile.\n\n"
+            "To select a texture with no repeating pattern just make a selection and save. "
+            "Note that it may not create a seamless texture.";
+    msg->setText(msgText);
+    msg->setMinimumHeight(50);
+    msg->setMaximumHeight(50);
+    msgLayout = new QHBoxLayout;
+    msgLayout->addWidget(msg);
+    msgFrame = new QFrame;
+    msgFrame->setLineWidth(1);
+    msgFrame->setLayout(msgLayout);
+
+    // buttons at bottom
+    btnLayout = new QHBoxLayout;
+    btnLayout->setAlignment(Qt::AlignRight);
+    btnFrame = new QFrame;
+    btnLayout->addStretch();
+    btnLayout->addWidget(saveBtn);
+    btnLayout->addWidget(exitBtn);
+    btnFrame->setLayout(btnLayout);
+
+    layout->addWidget(vFrame);
+    layout->addWidget(msgFrame);
+    layout->addWidget(btnFrame);
+
+    setLayout(layout);
+
+    connect(v, &PatternDlgView::msg, this, &PatternDlg::updateMsg);
+    connect(exitBtn, &QPushButton::clicked, this, &PatternDlg::quit);
+    connect(saveBtn, &QPushButton::clicked, this, &PatternDlg::save);
 }
 
-void PatternDlg::zoomOut()
+PatternDlg::~PatternDlg()
 {
-    matrix.reset();
-    zoom /= 2;
-    matrix.scale(zoom, zoom);
-    v->setMatrix(matrix);
-    zoomText->setText(QString::number(zoom*100) + "%");
+}
+
+void PatternDlg::updateMsg(QString txt)
+{
+    msg->setText(txt);
+}
+
+void PatternDlg::save()
+{
+    qDebug() << __FUNCTION__ << "tile.size() =" << tile.size();
+    bool ok;
+    QInputDialog input;
+    input.setFixedWidth(500);
+    QString name = input.getText(this, tr("Tile extractor"),
+                  tr("Enter tile name"), QLineEdit::Normal,
+                  "", &ok);
+    emit saveTile(name, &tile);
+}
+
+void PatternDlg::quit()
+{
+    accept();
 }

@@ -707,16 +707,9 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
-    if (event->type() == QEvent::MouseMove) {
+    if (event->type() == QEvent::MouseMove && obj->objectName() == "WinnowMainWindowWindow") {
+//        qDebug() << __FUNCTION__ << "MouseMove" << obj->objectName();
         if (isLeftMouseBtnPressed) isMouseDrag = true;
-//        QMouseEvent *e = static_cast<QMouseEvent *>(event);
-//        qDebug() << __FUNCTION__
-//                 << e->globalPos()
-//                 << e->screenPos()
-//                 << e->windowPos()
-//                 << e->pos()
-//                    ;
-//        G::mousePos = e->pos();
     }
 
     if (event->type() == QEvent::MouseButtonDblClick) {
@@ -2808,7 +2801,7 @@ void MW::createActions()
     embelTileAction->setObjectName("embelExportAct");
     embelTileAction->setShortcutVisibleInContextMenu(true);
     addAction(embelTileAction);
-    connect(embelTileAction, &QAction::triggered, this, &MW::exportEmbel);
+    connect(embelTileAction, &QAction::triggered, embelProperties, &EmbelProperties::extractTile);
 
     embelExportAction = new QAction(tr("Export"), this);
     embelExportAction->setObjectName("embelExportAct");
@@ -3041,7 +3034,7 @@ void MW::createActions()
     embelDockVisibleAction->setObjectName("toggleEmbelDock");
     embelDockVisibleAction->setShortcutVisibleInContextMenu(true);
     embelDockVisibleAction->setCheckable(true);
-    if (isSettings && setting->contains("isThumbDockVisible")) embelDockVisibleAction->setChecked(setting->value("isThumbDockVisible").toBool());
+    if (isSettings && setting->contains("isEmbelDockVisible")) embelDockVisibleAction->setChecked(setting->value("isEmbelDockVisible").toBool());
     else embelDockVisibleAction->setChecked(false);
     addAction(embelDockVisibleAction);
     connect(embelDockVisibleAction, &QAction::triggered, this, &MW::toggleEmbelDockVisibility);
@@ -4253,8 +4246,6 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
 
     connect(imageView, SIGNAL(killSlideshow()),
             this, SLOT(slideShow()));
-
-    connect(imageView, &ImageView::newTile, this, &MW::writeTile);
 }
 
 void MW::createCompareView()
@@ -7546,20 +7537,6 @@ for each bookmark folder.
  * READ/WRITE PREFERENCES
  * **************************************************************************************/
 
-void MW::writeTile()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    qDebug() << __FUNCTION__;
-    setting->beginGroup("Embel/Tiles");
-//    setting->remove("");
-    setting->setValue(imageView->tileName, imageView->tileBa);
-    setting->endGroup();
-}
-
 void MW::writeSettings()
 {
 /*
@@ -9503,9 +9480,9 @@ qulonglong MW::memoryReqdForPicks()
 qulonglong MW::memoryReqdForSelection()
 {
     {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
     }
     qulonglong memTot = 0;
     QModelIndexList selection = selectionModel->selectedRows();

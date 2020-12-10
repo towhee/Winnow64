@@ -35,14 +35,16 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
     this->rotation = rotation;
     srcRectZeroRotation = boundRect;
 
+    /*
     // reset bounding rect
-//    offset.setX(0);
-//    offset.setY(0);
-//    m.top = 0;
-//    m.left = 0;
-//    m.right = 0;
-//    m.bottom = 0;
-//    updateBoundingRect();
+    offset.setX(0);
+    offset.setY(0);
+    m.top = 0;
+    m.left = 0;
+    m.right = 0;
+    m.bottom = 0;
+    updateBoundingRect();
+//    */
 
     // iterate effects in style to set boundingRect
     using namespace winnow_effects;
@@ -59,70 +61,77 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                     ;
 //                    */
         switch (ef.effectType) {
-        case emboss:
-        case sharpen:
-        case brighten:
-            break;
-        case blur:
-            if (m.top < ef.blur.radius) m.top = static_cast<int>(ef.blur.radius);
-            if (m.left < ef.blur.radius) m.left = static_cast<int>(ef.blur.radius);
-            if (m.right < ef.blur.radius) m.right = static_cast<int>(ef.blur.radius);
-            if (m.bottom < ef.blur.radius) m.bottom = static_cast<int>(ef.blur.radius);
-            updateBoundingRect();
-            break;
-        case highlight:
-            if (m.top < ef.highlight.top) m.top = ef.highlight.top;
-            if (m.left < ef.highlight.left) m.left = ef.highlight.left;
-            if (m.right < ef.highlight.right) m.right = ef.highlight.right;
-            if (m.bottom < ef.highlight.bottom) m.bottom = ef.highlight.bottom;
-            break;
-        case shadow:
-            // shadow offset
-            qreal length = ef.shadow.length;
-            double rads = lightDirection * (3.14159 / 180);
-            int dx = static_cast<int>(-sin(rads) * length);
-            int dy = static_cast<int>(+cos(rads) * length);
-            offset.setX(dx);
-            offset.setY(dy);
-            // blur expansion
-            int dt, dl, dr, db;  // dt = delta top etc
-            dt = dl = dr = db = 0;
-            int r = static_cast<int>(ef.shadow.blurRadius);
-            if (dx > 0) {
-                dr = r;
-                dl = 0;
+            case emboss:
+            case sharpen:
+            case brighten:
+            case stroke:
+            case glow:
+                break;
+            case highlight: {
+                if (m.top < ef.highlight.top) m.top = ef.highlight.top;
+                if (m.left < ef.highlight.left) m.left = ef.highlight.left;
+                if (m.right < ef.highlight.right) m.right = ef.highlight.right;
+                if (m.bottom < ef.highlight.bottom) m.bottom = ef.highlight.bottom;
+                break;
             }
-            else {
-                dl = r;
-                dr = 0;
+            case blur: {
+                int radius = static_cast<int>(ef.blur.radius);
+                if (m.top < radius) m.top = radius;
+                if (m.left < radius) m.left = radius;
+                if (m.right < radius) m.right = radius;
+                if (m.bottom < radius) m.bottom = radius;
+//                offset.setX(radius);
+//                offset.setY(radius);
+                updateBoundingRect();
+                break;
             }
-            if (dy > 0) {
-                db = r;
-                dt = 0;
+            case shadow: {
+                // shadow offset
+                qreal length = ef.shadow.length;
+                double rads = lightDirection * (3.14159 / 180);
+                int dx = static_cast<int>(-sin(rads) * length);
+                int dy = static_cast<int>(+cos(rads) * length);
+                offset.setX(dx);
+                offset.setY(dy);
+                // blur expansion
+                int dt, dl, dr, db;  // dt = delta top etc
+                dt = dl = dr = db = 0;
+                int r = static_cast<int>(ef.shadow.blurRadius);
+                if (dx > 0) {
+                    dr = r;
+                    dl = 0;
+                }
+                else {
+                    dl = r;
+                    dr = 0;
+                }
+                if (dy > 0) {
+                    db = r;
+                    dt = 0;
+                }
+                else {
+                    dt = r;
+                    db = 0;
+                }
+                // expand for greater of shadow length or shadow blur
+                if (m.top < dt) m.top = dt;
+                if (m.left < dl) m.left = dl;
+                if (m.right < dr) m.right = dr;
+                if (m.bottom < db) m.bottom = db;
+                /*
+                qDebug() << __FUNCTION__
+                         << "dx =" << dx
+                         << "dy =" << dy
+                         << "r =" << r
+                         << "m.top =" << m.top
+                         << "m.left =" << m.left
+                         << "m.right =" << m.right
+                         << "m.bottom =" << m.bottom
+                            ;
+    //                        */
+                updateBoundingRect();
+                break;
             }
-            else {
-                dt = r;
-                db = 0;
-            }
-            // expand for greater of shadow length or shadow blur
-            if (m.top < dt) m.top = dt;
-            if (m.left < dl) m.left = dl;
-            if (m.right < dr) m.right = dr;
-            if (m.bottom < db) m.bottom = db;
-            /*
-            qDebug() << __FUNCTION__
-                     << "dx =" << dx
-                     << "dy =" << dy
-                     << "r =" << r
-                     << "m.top =" << m.top
-                     << "m.left =" << m.left
-                     << "m.right =" << m.right
-                     << "m.bottom =" << m.bottom
-                        ;
-//                        */
-            updateBoundingRect();
-            break;
-
         }
     }
 }
@@ -169,6 +178,14 @@ void GraphicsEffect::draw(QPainter* painter)
             break;
         case sharpen:
             sharpenEffect(ef.sharpen.radius, ef.sharpen.blendMode);
+            break;
+        case stroke:
+            color.setRgb(ef.stroke.r, ef.stroke.g, ef.stroke.b, ef.stroke.a);
+            strokeEffect(ef.stroke.width, color, ef.stroke.blendMode);
+            break;
+        case glow:
+            color.setRgb(ef.glow.r, ef.glow.g, ef.glow.b, ef.glow.a);
+            glowEffect(ef.glow.width, color, ef.glow.blurRadius, ef.glow.blendMode);
             break;
         case highlight:
             color.setRgb(ef.highlight.r, ef.highlight.g, ef.highlight.b, ef.highlight.a);
@@ -244,20 +261,16 @@ void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 {
 //    qDebug() << __FUNCTION__;
 
-    QImage blurred(overlay.size(), QImage::Format_ARGB32_Premultiplied);
-    blurred = overlay;
+    QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    temp = overlay;
     Effects effect;
-    effect.blur(blurred, radius);
+    effect.blur(temp, static_cast<int>(radius));
 
-//    effect.raise(blurred, radius);
-//    effect.brighten(blurred, static_cast<int>(radius) * 4);
-//    QImage blurred = WinnowGraphicEffect::blur(overlay, radius);
-
-    blurred.save("D:/Pictures/Temp/effect/blurred.tif");
+    temp.save("D:/Pictures/Temp/effect/blurred.tif");
 
     QPainter overlayPainter(&overlay);
     overlayPainter.setCompositionMode(mode);
-    overlayPainter.drawImage(0,0, blurred);
+    overlayPainter.drawImage(0,0, temp);
     overlayPainter.end();
 }
 
@@ -371,6 +384,42 @@ void GraphicsEffect::brightenEffect(qreal evDelta, QPainter::CompositionMode mod
     effect.brighten(temp, evDelta);
 //    effect.emboss(temp, evDelta, 0, 0, 1, -1, lightDirection);
 //    temp.save("D:/Pictures/Temp/effect/brightened.tif");
+
+    QPainter overlayPainter(&overlay);
+    overlayPainter.setCompositionMode(mode);
+    overlayPainter.drawImage(0,0, temp);
+    overlayPainter.end();
+}
+
+void GraphicsEffect::strokeEffect(double width, QColor color, QPainter::CompositionMode mode)
+{
+//        qDebug() << __FUNCTION__;
+    if (overlay.isNull()) return;
+
+    QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    temp = overlay;
+    Effects effect;
+    QImage edgeMap;
+    effect.stroke(temp, width, color, true);
+    temp.save("D:/Pictures/Temp/effect/_transparentEdgeMap.tif");
+
+    QPainter overlayPainter(&overlay);
+    overlayPainter.setCompositionMode(mode);
+    overlayPainter.drawImage(0,0, temp);
+    overlayPainter.end();
+}
+
+void GraphicsEffect::glowEffect(double width, QColor color, double blurRadius, QPainter::CompositionMode mode)
+{
+    //        qDebug() << __FUNCTION__;
+    if (overlay.isNull()) return;
+
+    QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    temp = overlay;
+    Effects effect;
+    QImage edgeMap;
+    effect.stroke(temp, width, color, true);
+    temp.save("D:/Pictures/Temp/effect/_transparentEdgeMap.tif");
 
     QPainter overlayPainter(&overlay);
     overlayPainter.setCompositionMode(mode);

@@ -20,6 +20,20 @@ namespace winnow_effects
         QPainter::CompositionMode blendMode;
     };
 
+    struct Stroke {
+        qreal width;
+        int r, g, b, a;
+        bool inner;
+        QPainter::CompositionMode blendMode;
+    };
+
+    struct Glow {
+        qreal width;
+        int r, g, b, a;
+        int blurRadius;
+        QPainter::CompositionMode blendMode;
+    };
+
     struct Sharpen {
         qreal radius;
         QPainter::CompositionMode blendMode;
@@ -59,7 +73,7 @@ namespace winnow_effects
     };
 
     // when add an effect must add to enum and union
-    enum EffectType {blur, sharpen, highlight, shadow, brighten, emboss};
+    enum EffectType {blur, sharpen, highlight, shadow, brighten, emboss, stroke, glow};
     struct Effect {
         enum EffectType effectType;
         QString effectName;         // unique: req'd in case more than one of same effect
@@ -71,6 +85,8 @@ namespace winnow_effects
             Shadow shadow;
             Brighten brighten;
             Emboss emboss;
+            Stroke stroke;
+            Glow glow;
         };
     };
 
@@ -149,6 +165,8 @@ private:
     virtual QRectF boundingRectFor(const QRectF& rect ) const;
     void shadowEffect(double size, double radius, QColor color, QPainter::CompositionMode mode);
     void highlightEffect(QColor color, Margin margin, QPainter::CompositionMode mode);
+    void strokeEffect(double width, QColor color, QPainter::CompositionMode mode);
+    void glowEffect(double width, QColor color, double blurRadius, QPainter::CompositionMode mode);
     void blurEffect(qreal radius, QPainter::CompositionMode mode);
     void brightenEffect(qreal delta, QPainter::CompositionMode mode);
     void sharpenEffect(qreal radius, QPainter::CompositionMode mode);

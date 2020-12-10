@@ -338,7 +338,6 @@ private slots:
     void ejectUsb(QString path);
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
-    void writeTile();
     void setCachedStatus(QString fPath, bool isCached);
     void searchTextEdit();
     void setRating();

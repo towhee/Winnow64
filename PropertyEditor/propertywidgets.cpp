@@ -23,6 +23,32 @@ PropertyEditor subclass ie Preferences.  All the property items are defined and 
     called.
 */
 
+/* SLIDER ************************************************************************************/
+Slider::Slider(Qt::Orientation orientation, int div, QWidget *parent) : QSlider(parent)
+{
+    setOrientation(orientation);
+    this->div = div;
+}
+
+void Slider::mousePressEvent(QMouseEvent *event)
+{
+    QSlider::mousePressEvent(event);
+    int min = minimum();
+    int max = maximum();
+    int value = event->pos().x() * 1.0 / width() * (max - min) + min;
+    setValue(value);
+//    qDebug() << __FUNCTION__
+//             << event->pos().x()
+//             << width()
+//             << minimum()
+//             << maximum()
+//             << div
+//             << min
+//             << max
+//             << value
+//                ;
+}
+
 /* SLIDER EDITOR *****************************************************************************/
 
 SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
@@ -50,15 +76,19 @@ Double mode : div != 0
     int max = idx.data(UR_Max).toInt();
     // divisor if converting integer slider value to double
     div = idx.data(UR_Div).toInt();
+    int step = idx.data(UR_DivPx).toInt();
     QString type = idx.data(UR_Type).toString();
     type == "int" || div == 0 ? isInt = true : isInt = false;
     if (div == 0) div = 1;
     source = idx.data(UR_Source).toString();
 
-    slider = new QSlider(Qt::Horizontal);
+    slider = new Slider(Qt::Horizontal, div);
+//    slider = new QSlider(Qt::Horizontal);
     slider->setObjectName("DisableGoActions");  // used in MW::focusChange
     slider->setMinimum(min);
     slider->setMaximum(max);
+    slider->setSingleStep(step);
+    slider->setPageStep(step * 10);
     slider->setStyleSheet(
          "QSlider {background: transparent;}"
          "QSlider::groove:horizontal {border:1px solid gray; height:1px;}"

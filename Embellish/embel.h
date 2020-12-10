@@ -30,6 +30,7 @@ public:
     void exportImage();
     void test();
     void diagnostic();
+    int ls;
 
 public slots:
     void build(QString fPath = "", QString src = "");
@@ -93,7 +94,7 @@ private:
 
     QGraphicsRectItem *flashItem;
 
-    int ls, w, h;
+    int w, h;
     int shortside;
 
     void doNotEmbellish();

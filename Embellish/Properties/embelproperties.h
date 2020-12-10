@@ -9,6 +9,7 @@
 #include "Effects/graphicseffect.h"
 #include "Views/infostring.h"
 #include "Dialogs/copystyledlg.h"
+#include "Dialogs/patterndlg.h"
 #include "ui_embelCoord.h"
 
 class EmbelProperties : public PropertyEditor
@@ -25,6 +26,7 @@ public:
     int globalLightDirection;       // 0-360 degrees used for shadows etc
     int horizontalFitPx;
     int verticalFitPx;
+    int longSidePx;
 
     // Export parameters
     QString exportFileType;
@@ -111,6 +113,8 @@ public:
 public slots:
     void itemChange(QModelIndex idx) override;
 //    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
+    void extractTile();
+    void saveTile(QString name, QPixmap *tile);
     void invokeFromAction(QAction *embelAction);
     void setCurrentTemplate(QString name);
     void diagnostic(QModelIndex parent = QModelIndex());
@@ -134,6 +138,7 @@ private:
     void sortTemplateList();
     void readTemplateList();
     void readTileList();
+    void updateTileList();
     void readTile(QStringList tileName);
     void renameCurrentStyle();
     void renameCurrentTemplate();
@@ -159,6 +164,8 @@ private:
     void addHighlightEffect(QModelIndex parIdx, QString effectName = "");
     void addShadowEffect(QModelIndex parIdx, QString effectName = "");
     void addEmbossEffect(QModelIndex parIdx, QString effectName = "");
+    void addStrokeEffect(QModelIndex parIdx, QString effectName = "");
+    void addGlowEffect(QModelIndex parIdx, QString effectName = "");
 
     void newBorderFromBtn();
     void newBorder(QString name = "");
@@ -200,13 +207,16 @@ private:
     void itemChangeHighlightEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeBrightenEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeEmbossEffect(QModelIndex idx, QVariant v, QString source, QString effectName, QString style);
-    void itemChangeStroke(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeStrokeEffect(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeGlowEffect(QVariant v, QString source, QString effectName, QString style);
 
     void treeChange(QModelIndex idx);
     bool okToSelect(QModelIndex idx, QString selName);
     void diagnostics(QModelIndex idx);
     void diagnosticStyles();
     void diagnosticVectors();
+
+    PatternDlg *patternDlg;
 
     QModelIndex root;                   // invisible root of treeview
     QModelIndex templateIdx;
@@ -242,6 +252,7 @@ private:
     QAction *edgeEffectAction;
     QAction *highlightEffectAction;
     QAction *strokeEffectAction;
+    QAction *glowEffectAction;
 
     // context menu
     QAction *expandAllAction;
@@ -273,6 +284,7 @@ private:
     QString templatePath;
     QSettings *setting;
     ComboBoxEditor *templateListEditor;
+    QVector<ComboBoxEditor*> borderTileObjectEditor;
     QVector<ComboBoxEditor*> textAnchorObjectEditor;
     QVector<ComboBoxEditor*> graphicAnchorObjectEditor;
     QVector<ComboBoxEditor*> styleListObjectEditor;
