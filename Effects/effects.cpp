@@ -1205,7 +1205,7 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
 #undef AntialiasPixel
 }
 
-void Effects::brighten(QImage &img, qreal evDelta)
+void Effects::brightness(QImage &img, qreal evDelta)
 {
 //    qDebug() << __FUNCTION__ << "delta =" << evDelta;
     QElapsedTimer t;
@@ -1350,7 +1350,9 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
                                     inflection xi
                      startEV           midEV           endEV
                         v                v               v
+
                               <            d             >
+
                         |                |               |
      Outside boundary   |     *          |               |  Inside boundary
                         |     ^          |               |

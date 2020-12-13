@@ -180,7 +180,7 @@ void Embel::build(QString path, QString src)
     }
 
     QString msg = "src = " + src + "  path = " + path;
-    Utilities::log(__FUNCTION__, msg);
+//    Utilities::log(__FUNCTION__, msg);
 //    qDebug() << __FUNCTION__ << msg;
 
     QElapsedTimer t;
@@ -210,8 +210,8 @@ void Embel::build(QString path, QString src)
     addFlashToScene();
 
     emit done();    // call imageView->resetFitZoom() (not req'd when exporting)
-    qDebug() << __FUNCTION__
-             << "Elapsed time (ms) =" << QString("%L1").arg(t.elapsed());
+//    qDebug() << __FUNCTION__
+//             << "Elapsed time (ms) =" << QString("%L1").arg(t.elapsed());
 //    diagnostic();
 }
 
@@ -736,7 +736,7 @@ void Embel::updateImage()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__ << p->image.style;
 
     // graphics effects
     if (p->image.style != "No style" && p->image.style != "") {

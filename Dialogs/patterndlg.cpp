@@ -182,7 +182,7 @@ PatternDlg::PatternDlg(QWidget *parent, QPixmap &pm)
     qDebug() << __FUNCTION__ << pm.size();
     int h;
     pm.height() > 600 ? h = 600 : h = pm.height();
-    resize(800, h + 100);
+    resize(800, h + 150);
     setWindowTitle("Tile Extractor");
     setMouseTracking(true);
 
@@ -204,16 +204,17 @@ PatternDlg::PatternDlg(QWidget *parent, QPixmap &pm)
     msg = new QLabel;
     msg->setWordWrap(true);
     msg->setAlignment(Qt::AlignTop);
-    QString msgText = "INSTRUCTIONS:  Mouse click and drag to make a selection.  \n\n"
+    QString msgText = "INSTRUCTIONS:  Mouse click and drag to make a selection.<p>" //  \n\n"
             "To extract a repeating pattern, the selection must be within the "
-            "pattern area and be double the size of a tile.\n\n"
-            "To select a texture with no repeating pattern just make a selection and save. "
-            "Note that it may not create a seamless texture.";
+            "pattern area and be double the size of a tile.<p>To select a texture "
+            "with no repeating pattern just make a selection and save.  Note that this "
+            "may not create a seamless texture.";
     msg->setText(msgText);
-    msg->setMinimumHeight(50);
-    msg->setMaximumHeight(50);
-    msgLayout = new QHBoxLayout;
+    msg->setMinimumHeight(100);
+    msg->setMaximumHeight(100);
+    msgLayout = new QVBoxLayout;
     msgLayout->addWidget(msg);
+    msgLayout->addStretch();
     msgFrame = new QFrame;
     msgFrame->setLineWidth(1);
     msgFrame->setLayout(msgLayout);

@@ -58,7 +58,7 @@ private:
     QVBoxLayout *layout;
     QHBoxLayout *vLayout;
     QHBoxLayout *btnLayout;
-    QHBoxLayout *msgLayout;
+    QVBoxLayout *msgLayout;
     QFrame *vFrame;
     QFrame *btnFrame;
     QFrame *msgFrame;

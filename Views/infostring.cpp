@@ -35,10 +35,11 @@ InfoString::InfoString(QWidget *parent, DataModel *dm) :
 void InfoString::editTemplates()
 {
     int index = getIndex();
-    qDebug() << __FUNCTION__ << infoTemplates;
+//    qDebug() << __FUNCTION__ << infoTemplates;
     TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, infoTemplates, index,
-          currentInfoTemplate, "Shooting Info in Image View", this);
+          currentInfoTemplate, "Token Editor", this);
     tokenDlg->exec();
+    emit change();
 }
 
 int InfoString::getIndex()

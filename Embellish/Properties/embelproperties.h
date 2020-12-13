@@ -10,6 +10,7 @@
 #include "Views/infostring.h"
 #include "Dialogs/copystyledlg.h"
 #include "Dialogs/patterndlg.h"
+#include "Dialogs/managetilesdlg.h"
 #include "ui_embelCoord.h"
 
 class EmbelProperties : public PropertyEditor
@@ -30,9 +31,11 @@ public:
 
     // Export parameters
     QString exportFileType;
+    int exportFileQuality;
     QString saveMethod;
     QString exportFolderPath;
     QString exportSubfolder;
+    QString exportSuffix;
     bool overwriteFiles;
 
     struct Image {
@@ -107,7 +110,7 @@ public:
     void doNotEmbellish();
     QString metaString(QString key);
     QString metaString(QString key, QString fPath);
-    void test1();
+    void test1(QIcon icon = QIcon());
     void test2();
 
 public slots:
@@ -115,6 +118,7 @@ public slots:
 //    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
     void extractTile();
     void saveTile(QString name, QPixmap *tile);
+    void manageTiles();
     void invokeFromAction(QAction *embelAction);
     void setCurrentTemplate(QString name);
     void diagnostic(QModelIndex parent = QModelIndex());
@@ -140,6 +144,8 @@ private:
     void readTileList();
     void updateTileList();
     void readTile(QStringList tileName);
+    void readMetadataTemplateList();
+    void updateMetadataTemplateList();
     void renameCurrentStyle();
     void renameCurrentTemplate();
     void copyStyle();
@@ -159,9 +165,9 @@ private:
     void addStyles();
     void addStyle(QString name, int n);
     void addBlurEffect(QModelIndex parIdx, QString effectName = "");
-    void addBrightenEffect(QModelIndex parIdx, QString effectName = "");
+    void addBrightnessEffect(QModelIndex parIdx, QString effectName = "");
     void addSharpenEffect(QModelIndex parIdx, QString effectName = "");
-    void addHighlightEffect(QModelIndex parIdx, QString effectName = "");
+    void addHighlighterEffect(QModelIndex parIdx, QString effectName = "");
     void addShadowEffect(QModelIndex parIdx, QString effectName = "");
     void addEmbossEffect(QModelIndex parIdx, QString effectName = "");
     void addStrokeEffect(QModelIndex parIdx, QString effectName = "");
@@ -176,6 +182,7 @@ private:
 
     void deleteTemplate();
     void deleteItem();
+    void deleteTile();
 
     void flash(QModelIndex idx);
     // redirect from action to relevent function (use currentIdx)
@@ -204,8 +211,8 @@ private:
     void itemChangeShadowEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeBlurEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeSharpenEffect(QVariant v, QString source, QString effectName, QString style);
-    void itemChangeHighlightEffect(QVariant v, QString source, QString effectName, QString style);
-    void itemChangeBrightenEffect(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeHighlighterEffect(QVariant v, QString source, QString effectName, QString style);
+    void itemChangeBrightnessEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeEmbossEffect(QModelIndex idx, QVariant v, QString source, QString effectName, QString style);
     void itemChangeStrokeEffect(QVariant v, QString source, QString effectName, QString style);
     void itemChangeGlowEffect(QVariant v, QString source, QString effectName, QString style);
@@ -242,15 +249,13 @@ private:
     int effectIndex(QString style, QString effectName);
 
     QMenu *effectMenu;
-    QAction *brightenEffectAction;
+    QAction *brightnessEffectAction;
     QAction *shadowEffectAction;
-    QAction *bevelEffectAction;
     QAction *embossEffectAction;
     QAction *blurEffectAction;
     QAction *sharpenEffectAction;
     QAction *colorizeEffectAction;
-    QAction *edgeEffectAction;
-    QAction *highlightEffectAction;
+    QAction *highlighterEffectAction;
     QAction *strokeEffectAction;
     QAction *glowEffectAction;
 
@@ -260,6 +265,8 @@ private:
     QAction *renameAction;
     QAction *copyTemplateAction;
     QAction *copyStyleAction;
+    QAction *tokenEditorAction;
+    QAction *deleteTileAction;
     QAction *moveUpAction;
     QAction *moveDownAction;
     QAction *separatorAction0;
@@ -286,6 +293,7 @@ private:
     ComboBoxEditor *templateListEditor;
     QVector<ComboBoxEditor*> borderTileObjectEditor;
     QVector<ComboBoxEditor*> textAnchorObjectEditor;
+    QVector<ComboBoxEditor*> textMetadataTemplateObjectEditor;
     QVector<ComboBoxEditor*> graphicAnchorObjectEditor;
     QVector<ComboBoxEditor*> styleListObjectEditor;
     QVector<BarBtnEditor*> styleEditor;

@@ -58,6 +58,8 @@ public:
     QPushButton *deleteBtn;
     QSpacerItem *horizontalSpacer;
     QPushButton *okBtn;
+    QSpacerItem *horizontalSpacer_3;
+    QPushButton *closeBtn;
 
     void setupUi(QDialog *TokenDlg)
     {
@@ -310,6 +312,15 @@ public:
 
         horizontalLayout->addWidget(okBtn);
 
+        horizontalSpacer_3 = new QSpacerItem(20, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+        horizontalLayout->addItem(horizontalSpacer_3);
+
+        closeBtn = new QPushButton(frame_8);
+        closeBtn->setObjectName(QString::fromUtf8("closeBtn"));
+
+        horizontalLayout->addWidget(closeBtn);
+
 
         verticalLayout->addWidget(frame_8);
 
@@ -332,10 +343,23 @@ public:
         label_5->setText(QCoreApplication::translate("TokenDlg", "Edits to the token string are automatically saved to the currently selected template.\n"
 "", nullptr));
         uniqueWarningLabel->setText(QCoreApplication::translate("TokenDlg", "<html><head/><body><p><span style=\" font-weight:600; color:#ffff00;\">Warning:</span> The tokenized file name is unlikely to produce unique file names. Consider including the ORIGINAL FILENAME, time MINUTE and SECOND or a sequence XXXX</p></body></html>", nullptr));
+#if QT_CONFIG(tooltip)
+        renameBtn->setToolTip(QCoreApplication::translate("TokenDlg", "Rename the current template", nullptr));
+#endif // QT_CONFIG(tooltip)
         renameBtn->setText(QCoreApplication::translate("TokenDlg", "Rename", nullptr));
+#if QT_CONFIG(tooltip)
+        newBtn->setToolTip(QCoreApplication::translate("TokenDlg", "Create a new template", nullptr));
+#endif // QT_CONFIG(tooltip)
         newBtn->setText(QCoreApplication::translate("TokenDlg", "New", nullptr));
+#if QT_CONFIG(tooltip)
+        deleteBtn->setToolTip(QCoreApplication::translate("TokenDlg", "Delete the current template", nullptr));
+#endif // QT_CONFIG(tooltip)
         deleteBtn->setText(QCoreApplication::translate("TokenDlg", "Delete", nullptr));
-        okBtn->setText(QCoreApplication::translate("TokenDlg", "Select", nullptr));
+#if QT_CONFIG(tooltip)
+        okBtn->setToolTip(QCoreApplication::translate("TokenDlg", "Use this template to show information in loupe view when Do not Embellish", nullptr));
+#endif // QT_CONFIG(tooltip)
+        okBtn->setText(QCoreApplication::translate("TokenDlg", "Use in Loupe View", nullptr));
+        closeBtn->setText(QCoreApplication::translate("TokenDlg", "Close", nullptr));
     } // retranslateUi
 
 };
