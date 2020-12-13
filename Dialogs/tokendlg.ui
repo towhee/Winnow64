@@ -537,6 +537,9 @@
            <property name="focusPolicy">
             <enum>Qt::NoFocus</enum>
            </property>
+           <property name="toolTip">
+            <string>Rename the current template</string>
+           </property>
            <property name="text">
             <string>Rename</string>
            </property>
@@ -559,6 +562,9 @@
            <property name="focusPolicy">
             <enum>Qt::NoFocus</enum>
            </property>
+           <property name="toolTip">
+            <string>Create a new template</string>
+           </property>
            <property name="text">
             <string>New</string>
            </property>
@@ -580,6 +586,9 @@
            </property>
            <property name="focusPolicy">
             <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>Delete the current template</string>
            </property>
            <property name="text">
             <string>Delete</string>
@@ -619,8 +628,31 @@
            <property name="focusPolicy">
             <enum>Qt::NoFocus</enum>
            </property>
+           <property name="toolTip">
+            <string>Use this template to show information in loupe view when Do not Embellish</string>
+           </property>
            <property name="text">
-            <string>Select</string>
+            <string>Use in Loupe View</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_3">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="closeBtn">
+           <property name="text">
+            <string>Close</string>
            </property>
           </widget>
          </item>

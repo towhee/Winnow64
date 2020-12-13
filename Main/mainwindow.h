@@ -681,6 +681,7 @@ private:
     QAction *embelNewTemplateAction;
     QAction *embelExportAction;
     QAction *embelTileAction;
+    QAction *embelManageTilesAction;
     QActionGroup *embelGroupAction;
     QList<QAction *> embelTemplatesActions;
 

@@ -63,15 +63,15 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
         switch (ef.effectType) {
             case emboss:
             case sharpen:
-            case brighten:
+            case brightness:
             case stroke:
             case glow:
                 break;
-            case highlight: {
-                if (m.top < ef.highlight.top) m.top = ef.highlight.top;
-                if (m.left < ef.highlight.left) m.left = ef.highlight.left;
-                if (m.right < ef.highlight.right) m.right = ef.highlight.right;
-                if (m.bottom < ef.highlight.bottom) m.bottom = ef.highlight.bottom;
+            case highlighter: {
+                if (m.top < ef.highlighter.top) m.top = ef.highlighter.top;
+                if (m.left < ef.highlighter.left) m.left = ef.highlighter.left;
+                if (m.right < ef.highlighter.right) m.right = ef.highlighter.right;
+                if (m.bottom < ef.highlighter.bottom) m.bottom = ef.highlighter.bottom;
                 break;
             }
             case blur: {
@@ -187,13 +187,13 @@ void GraphicsEffect::draw(QPainter* painter)
             color.setRgb(ef.glow.r, ef.glow.g, ef.glow.b, ef.glow.a);
             glowEffect(ef.glow.width, color, ef.glow.blurRadius, ef.glow.blendMode);
             break;
-        case highlight:
-            color.setRgb(ef.highlight.r, ef.highlight.g, ef.highlight.b, ef.highlight.a);
-            margin.top = ef.highlight.top;
-            margin.left = ef.highlight.left;
-            margin.right = ef.highlight.right;
-            margin.bottom = ef.highlight.bottom;
-            highlightEffect(color, margin, ef.highlight.blendMode);
+        case highlighter:
+            color.setRgb(ef.highlighter.r, ef.highlighter.g, ef.highlighter.b, ef.highlighter.a);
+            margin.top = ef.highlighter.top;
+            margin.left = ef.highlighter.left;
+            margin.right = ef.highlighter.right;
+            margin.bottom = ef.highlighter.bottom;
+            highligherEffect(color, margin, ef.highlighter.blendMode);
             break;
         case shadow:
             color.setRgb(ef.shadow.r, ef.shadow.g, ef.shadow.b, ef.shadow.a);
@@ -204,8 +204,8 @@ void GraphicsEffect::draw(QPainter* painter)
                          ef.emboss.inflection, ef.emboss.start, ef.emboss.mid, ef.emboss.end,
                          ef.emboss.isUmbraGradient, ef.emboss.contrast, ef.emboss.blendMode);
             break;
-        case brighten:
-            brightenEffect(ef.brighten.evDelta, ef.brighten.blendMode);
+        case brightness:
+            brightnessEffect(ef.brightness.evDelta, ef.brightness.blendMode);
             break;
         }
     }
@@ -331,18 +331,18 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color,
     return;
 }
 
-void GraphicsEffect::highlightEffect(QColor color, Margin margin, QPainter::CompositionMode mode)
+void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::CompositionMode mode)
 {
 //    qDebug() << __FUNCTION__;
 
     if (overlay.isNull()) return;
 
-    QPointF highlightOffset(margin.left, margin.top);
+    QPointF highlighterOffset(margin.left, margin.top);
     int w = overlay.size().width() + margin.left + margin.right;
     int h = overlay.size().height() + margin.top + margin.bottom;
-    QSize highlightBackgroundSize(w, h);
-    QImage highlightBackgroundImage(highlightBackgroundSize, QImage::Format_ARGB32_Premultiplied);
-    highlightBackgroundImage.fill(color);
+    QSize highlighterBackgroundSize(w, h);
+    QImage highlighterBackgroundImage(highlighterBackgroundSize, QImage::Format_ARGB32_Premultiplied);
+    highlighterBackgroundImage.fill(color);
     /*
     qDebug() << __FUNCTION__
              << "Margin.top =" << margin.top
@@ -351,10 +351,11 @@ void GraphicsEffect::highlightEffect(QColor color, Margin margin, QPainter::Comp
              << "Margin.bottom =" << margin.bottom
              << "highlightBackgroundSize =" << highlightBackgroundSize;
 //    */
+
     QPainter overlayPainter(&overlay);
-    overlayPainter.translate(-highlightOffset);
+    overlayPainter.translate(-highlighterOffset);
     overlayPainter.setCompositionMode(mode);
-    overlayPainter.drawImage(0, 0, highlightBackgroundImage);
+    overlayPainter.drawImage(0, 0, highlighterBackgroundImage);
     overlayPainter.end();
 
     return;
@@ -373,7 +374,7 @@ void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
     overlayPainter.end();
 }
 
-void GraphicsEffect::brightenEffect(qreal evDelta, QPainter::CompositionMode mode)
+void GraphicsEffect::brightnessEffect(qreal evDelta, QPainter::CompositionMode mode)
 {
 //    qDebug() << __FUNCTION__;
     if (overlay.isNull()) return;
@@ -381,7 +382,7 @@ void GraphicsEffect::brightenEffect(qreal evDelta, QPainter::CompositionMode mod
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
     Effects effect;
-    effect.brighten(temp, evDelta);
+    effect.brightness(temp, evDelta);
 //    effect.emboss(temp, evDelta, 0, 0, 1, -1, lightDirection);
 //    temp.save("D:/Pictures/Temp/effect/brightened.tif");
 

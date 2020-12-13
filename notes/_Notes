@@ -28,9 +28,14 @@ Interesting stuff for graphics editing
    http://www.fmwconcepts.com/imagemagick/bevel/index.php
    https://imagemagick.org/script/convert.php
 
-
    Blitz is an interm image effect library that people can use until KDE4.1 is
    released. KImageEffect, the old image effect class is being dropped for KDE4.0
    and the replacement, Quasar, won't be ready until KDE4.1. Blitz gives people
    something to use in the meantime
    Blitz: D:\Programming\ImageEditingSourceCode\qimageblitz-master
+
+   Vinnie Falco LayerEffects
+   Brings Photoshop style Layer Effects to a juce::Graphics context.
+   D:\Programming\ImageEditingSourceCode\LayerEffects-master\Extern\VFLib\modules\vf_unfinished\graphics
+   contains stroke and alias stuff hopefully.
+   Also see https://dsp.stackexchange.com/questions/513/bitmap-border-stroke-alogirthm

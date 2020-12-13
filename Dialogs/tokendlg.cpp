@@ -440,3 +440,8 @@ Update tokenEdit with the template token string stored in templatesMap
     if (templatesMap.contains(key))
         ui->tokenEdit->setText(templatesMap.value(key));
 }
+
+void TokenDlg::on_closeBtn_clicked()
+{
+    accept();
+}

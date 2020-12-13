@@ -19,8 +19,9 @@ public:
                 QWidget *parent = nullptr);
     ~EmbelExport();
 
-    void exportPicks();
-    void exportFile(QString fPath, QString templateName);
+    void exportImages(const QStringList &fPathList);
+    void exportRemoteFile(QString fPath, QString templateName);
+    void exportImage(const QString &fPath);
 
 private:
     bool loadImage(QString fPath);

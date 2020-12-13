@@ -20,7 +20,7 @@ public:
     void blur(QImage &img, int radius);
     void blurOriginal(QImage &img, int radius);
     void raise(QImage &img, int m, double taper = 0.5, int blurWidth = 3, bool raise = false);
-    void brighten(QImage &img, qreal evDelta);
+    void brightness(QImage &img, qreal evDelta);
     void emboss(QImage &img, int azimuth, double size, double exposure, double contrast,
                 double inflection, double startEV, double midEV, double endEV,
                 double umbra, bool isUmbraGradient);

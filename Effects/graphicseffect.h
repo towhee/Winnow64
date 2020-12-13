@@ -47,13 +47,13 @@ namespace winnow_effects
         QPainter::CompositionMode blendMode;
     };
 
-    struct Highlight {
+    struct Highlighter {
         int r, g, b, a;
         int top, left, right, bottom;
         QPainter::CompositionMode blendMode;
     };
 
-    struct Brighten {
+    struct Brightness {
         qreal evDelta;
         QPainter::CompositionMode blendMode;
     };
@@ -73,7 +73,7 @@ namespace winnow_effects
     };
 
     // when add an effect must add to enum and union
-    enum EffectType {blur, sharpen, highlight, shadow, brighten, emboss, stroke, glow};
+    enum EffectType {blur, sharpen, highlighter, shadow, brightness, emboss, stroke, glow};
     struct Effect {
         enum EffectType effectType;
         QString effectName;         // unique: req'd in case more than one of same effect
@@ -81,9 +81,9 @@ namespace winnow_effects
         union {
             Blur blur;
             Sharpen sharpen;
-            Highlight highlight;
+            Highlighter highlighter;
             Shadow shadow;
-            Brighten brighten;
+            Brightness brightness;
             Emboss emboss;
             Stroke stroke;
             Glow glow;
@@ -164,11 +164,11 @@ public:
 private:
     virtual QRectF boundingRectFor(const QRectF& rect ) const;
     void shadowEffect(double size, double radius, QColor color, QPainter::CompositionMode mode);
-    void highlightEffect(QColor color, Margin margin, QPainter::CompositionMode mode);
+    void highligherEffect(QColor color, Margin margin, QPainter::CompositionMode mode);
     void strokeEffect(double width, QColor color, QPainter::CompositionMode mode);
     void glowEffect(double width, QColor color, double blurRadius, QPainter::CompositionMode mode);
     void blurEffect(qreal radius, QPainter::CompositionMode mode);
-    void brightenEffect(qreal delta, QPainter::CompositionMode mode);
+    void brightnessEffect(qreal delta, QPainter::CompositionMode mode);
     void sharpenEffect(qreal radius, QPainter::CompositionMode mode);
     void raiseEffect(int margin, QPainter::CompositionMode mode);
     void embossEffect(double size, double exposure, double umbra, double inflection,

@@ -932,13 +932,8 @@ void MW::handleStartupArgs(const QString &args)
             msg = "e: " + argMap["-e"] + "   t: " + argMap["-t"];
             Utilities::log(__FUNCTION__, msg);
             qDebug() << __FUNCTION__ << msg;
-//            QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
-//            QFileInfo f(argMap["-e"]);
-//            f.dir().path();
-//            fsTree->select(f.dir().path());
-//            folderSelectionChange();
             EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
-            embelExport.exportFile(argMap["-e"], argMap["-t"]);
+            embelExport.exportRemoteFile(argMap["-e"], argMap["-t"]);
         }
     }
 }
@@ -2803,6 +2798,12 @@ void MW::createActions()
     addAction(embelTileAction);
     connect(embelTileAction, &QAction::triggered, embelProperties, &EmbelProperties::extractTile);
 
+    embelManageTilesAction = new QAction(tr("Manage tiles"), this);
+    embelManageTilesAction->setObjectName("embelManageTilesAct");
+    embelManageTilesAction->setShortcutVisibleInContextMenu(true);
+    addAction(embelManageTilesAction);
+    connect(embelManageTilesAction, &QAction::triggered, embelProperties, &EmbelProperties::manageTiles);
+
     embelExportAction = new QAction(tr("Export"), this);
     embelExportAction->setObjectName("embelExportAct");
     embelExportAction->setShortcutVisibleInContextMenu(true);
@@ -3397,6 +3398,7 @@ void MW::createMenus()
     embelMenu->addAction(embelNewTemplateAction);
     embelMenu->addAction(embelExportAction);
     embelMenu->addAction(embelTileAction);
+    embelMenu->addAction(embelManageTilesAction);
     embelMenu->addSeparator();
     embelMenu->addActions(embelGroupAction->actions());
 //    // add 10 dummy menu items for embellish template choice
@@ -9503,12 +9505,39 @@ void MW::exportEmbel()
     G::track(__FUNCTION__);
     #endif
     }
+    QStringList picks;
+
+    // build QStringList of picks
     if (thumbView->isPick()) {
-        EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
-        embelExport.exportPicks();
+        for (int row = 0; row < dm->sf->rowCount(); ++row) {
+            QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
+            QModelIndex idx = dm->sf->index(row, 0);
+            // only picks
+            if (pickIdx.data(Qt::EditRole).toString() == "true") {
+                picks << idx.data(G::PathRole).toString();
+            }
+        }
     }
-    else QMessageBox::information(this,
-         "Oops", "There are no picks to export.    ", QMessageBox::Ok);
+
+    // build QStringList of selected images
+    else if (selectionModel->selectedRows().size() > 0) {
+        QModelIndexList idxList = selectionModel->selectedRows();
+        for (int i = 0; i < idxList.size(); ++i) {
+            int row = idxList.at(i).row();
+            QModelIndex idx = dm->sf->index(row, 0);
+            picks << idx.data(G::PathRole).toString();
+        }
+    }
+
+    if (picks.size() == 0)  {
+        QMessageBox::information(this,
+            "Oops", "There are no picks or selected images to export.    ",
+            QMessageBox::Ok);
+        return;
+    }
+
+    EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
+    embelExport.exportImages(picks);
 }
 
 void MW::ingest()
@@ -11077,6 +11106,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+
     embelProperties->test1();
 }
 // End MW

@@ -21,7 +21,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
     scene->addItem(pmItem);
     setScene(scene);
 
-    embellish= new Embel(scene, pmItem, embelProperties, imageCacheThread);
+    embellish = new Embel(scene, pmItem, embelProperties, imageCacheThread);
 }
 
 EmbelExport::~EmbelExport()
@@ -84,8 +84,14 @@ QString EmbelExport::exportFolderPath(QString folderPath)
     return path;
 }
 
-void EmbelExport::exportFile(QString fPath, QString templateName)
+void EmbelExport::exportRemoteFile(QString fPath, QString templateName)
 {
+/*
+    Images sent from another program, such as lightroom, are sent here from
+    MW::handleStartupArgs.  The current embellish template is saved, the assigned
+    template is set, the images are embellished and exported, and the original
+    template is re-established.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -97,20 +103,101 @@ void EmbelExport::exportFile(QString fPath, QString templateName)
     QString prevTemplate = embelProperties->templateName;
     // set the embellish template, which updates all the parameters
     embelProperties->setCurrentTemplate(templateName);
-    // build export file path
+
+    // export the file
+    exportImage(fPath);
+
+    // cleanup
+    embelProperties->setCurrentTemplate(prevTemplate);
+    delete embellish;
+}
+
+void EmbelExport::exportImages(const QStringList &fPathList)
+{
+/*
+    Images within the current filtration that are picked or selected are rendered with
+    the current embellish template and saved to the template output folder. This is called
+    from MW::exportEmbel.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int count = fPathList.size();
+    if (count == 0) {
+        G::popUp->showPopup("No images picked or selected");
+        return;
+    }
+qDebug() << __FUNCTION__ << embelProperties->templateName;
+    if (embelProperties->templateName == "Do not Embellish") {
+        G::popUp->showPopup("The current embellish template is 'Do not Embellish'<p>"
+                            "Please select an embellish template and try again.<p><hr>"
+                            "Press <font color=\"red\"><b>Esc</b></font> to continue.",
+                            0);
+        return;
+    }
+
+    QElapsedTimer t;
+    t.start();
+
+    QFileInfo filedir(fPathList.at(0));
+    QString folderPath = filedir.dir().path();
+
+    G::popUp->setProgressVisible(true);
+    G::popUp->setProgressMax(count);
+    QString txt = "Exporting " + QString::number(count) + " embellished images to "
+            + folderPath;
+    G::popUp->showPopup(txt, 0, true, 1);
+
+    for (int i=0; i < count; i++) {
+        exportImage(fPathList.at(i));
+        G::popUp->setProgress(i);
+    }
+
+    G::popUp->setProgressVisible(false);
+    G::popUp->hide();
+    delete embellish;
+
+    qint64 ms = t.elapsed();
+    QString _ms = QString("%L1").arg(ms);
+    double sec = ms * 1.0 / 1000;
+    QString _sec = QString::number(sec, 'g', 2);
+    QString second;
+    sec > 1 ? second = " seconds." : second = " second.";
+    int msperim = static_cast<int>(ms * 1.0 / count);
+    QString _msperim = QString("%L1").arg(msperim);
+    QString msg = "Rendered and exported " +
+                  QString::number(count) + " images.<p>"
+                  "Elapsed time " + _sec + second + "<p>" +
+                  _msperim + " milliseconds per image.<p>" +
+                  "<hr>" +
+                  "Press <font color=\"red\"><b>Esc</b></font> to continue";
+    G::popUp->showPopup(msg, 0);
+}
+
+void EmbelExport::exportImage(const QString &fPath)
+{
+    QFileInfo filedir(fPath);
+    QString folderPath = filedir.dir().path();
+    QString extension = embelProperties->exportFileType;
     QFileInfo fileInfo(fPath);
-    QString suffix = embelProperties->exportFileType;
-    QString fName = fileInfo.baseName() + "." + suffix;
-    QString fDir = fileInfo.dir().path();
-    QString exportPath = exportFolderPath(fDir) + "/" + fName;
-//    QFile file(exportPath);
-    qDebug() << __FUNCTION__
-             << "fPath =" << fPath
-             << "fDir =" << fDir
-             << "exportPath =" << exportPath
-             << "embelProperties->saveMethod =" << embelProperties->saveMethod
-             << "embelProperties->exportSubfolder =" << embelProperties->exportSubfolder
-                ;
+    QString baseName = fileInfo.baseName() + embelProperties->exportSuffix;
+    QString exportFolder = exportFolderPath(folderPath);
+    QString exportPath = exportFolder + "/" + baseName + "." + extension;
+
+    // Check if destination image file already exists
+    if (!embelProperties->overwriteFiles) {
+        int count = 0;
+        bool fileAlreadyExists = true;
+        do {
+            QFile testFile(exportPath);
+            if (testFile.exists()) {
+                exportPath = exportFolder + "/" + baseName + "_" + QString::number(++count) + "." + extension;
+            }
+            else fileAlreadyExists = false;
+        } while (fileAlreadyExists);
+    }
 
     // read the image, add it to the scene and embellish
     if (loadImage(fPath)) {
@@ -124,90 +211,9 @@ void EmbelExport::exportFile(QString fPath, QString templateName)
     image.fill(Qt::transparent);                                              // Start all pixels transparent
     QPainter painter(&image);
     scene->render(&painter);
+
     // save
-    image.save(exportPath);
-    embelProperties->setCurrentTemplate(prevTemplate);
-    delete embellish;
-
-    qDebug() << __FUNCTION__ << "exporting " << fName << " to " << exportPath;
-}
-
-void EmbelExport::exportPicks()
-{
-/*
-Images with the current filtration that are picked are rendered according to the current
-embellish template and saved to the template output folder.  This is called from
-MW::exportEmbel.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    QString folderPath;
-//    if (embelProperties->saveMethod == "Subfolder")
-//        folderPath = dm->currentFilePath + "/" + embelProperties->exportSubfolder;
-//    else folderPath = embelProperties->exportFolderPath;
-//    QString suffix = embelProperties->exportFileType;
-//    qDebug() << __FUNCTION__
-//             << "folderPath =" << folderPath
-//             << "suffix =" << suffix
-//                ;
-
-    // get number of images to export
-    int pickCount = 0;
-    for (int row = 0; row < dm->sf->rowCount(); ++row) {
-        QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
-        // only picks
-        if (pickIdx.data(Qt::EditRole).toString() == "true") {
-            pickCount++;
-        }
-    }
-
-    // setup progress popup
-    qDebug() << __FUNCTION__
-             << "pickCount =" << pickCount
-             << "QString::number(pickCount) =" << QString::number(pickCount)
-                ;
-    G::popUp->setProgressVisible(true);
-    G::popUp->setProgressMax(pickCount);
-    QString txt = "Exporting " + QString::number(pickCount) + "embellished images to "
-            + folderPath;
-    G::popUp->showPopup(txt, 0, true, 1);
-
-    for (int row = 0; row < dm->sf->rowCount(); ++row) {
-        G::popUp->setProgress(row + 1);
-        QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
-        QModelIndex idx = dm->sf->index(row, 0);
-        // only picks
-        if (pickIdx.data(Qt::EditRole).toString() == "true") {
-            // input file path
-            QString fPath = idx.data(G::PathRole).toString();
-            // build export file path
-            QFileInfo fileInfo(fPath);
-            QString suffix = embelProperties->exportFileType;
-            QString fName = fileInfo.baseName() + "." + suffix;
-            QString fDir = fileInfo.dir().path();
-            QString exportPath = exportFolderPath(fDir) + "/" + fName;
-
-            // read the image, add it to the scene and embellish
-            if (loadImage(fPath)) {
-                // embellish
-                embellish->build(fPath, __FUNCTION__);
-                setSceneRect(scene->itemsBoundingRect());
-            }
-
-            // create image to show rendering with embellish
-            QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
-            image.fill(Qt::transparent);                                              // Start all pixels transparent
-            QPainter painter(&image);
-            scene->render(&painter);
-            // save
-            image.save(exportPath, "JPG", 100);
-            qDebug() << __FUNCTION__ << "exporting to" << exportPath;
-        }
-    }
-    G::popUp->setProgressVisible(false);
-    G::popUp->hide();
-    delete embellish;
+    if (extension == "JPG") image.save(exportPath, "JPG", 100);
+    if (extension == "PNG") image.save(exportPath, "PNG", 100);
+    if (extension == "TIF") image.save(exportPath, "TIF");
 }

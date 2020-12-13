@@ -92,6 +92,7 @@ private slots:
     void on_newBtn_clicked();
     void on_renameBtn_clicked();
     void on_templatesCB_currentIndexChanged(int row);
+    void on_closeBtn_clicked();
 
 private:
     Ui::TokenDlg *ui;

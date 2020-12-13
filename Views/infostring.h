@@ -21,7 +21,8 @@ public:
     QMap<QString, QString> infoTemplates;
     QString currentInfoTemplate;
 
-protected:
+signals:
+    void change();
 
 private:
     ImageMetadata m;

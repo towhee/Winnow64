@@ -712,8 +712,8 @@ void ComboBoxEditor::setValue(QVariant value)
 void ComboBoxEditor::addItem(QString item, QIcon icon)
 {
 /*
-This is used to add new templates to the template drop list, new styles to
-the style dropdowns
+This is used to add new templates to the template, style, general,
+border, text and graphic dropdown lists
 */
     {
     #ifdef ISDEBUG
