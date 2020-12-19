@@ -24,7 +24,8 @@ HEADERS += Cache/imagecache.h \
 HEADERS += Cache/mdcache.h \
    Main/qtlocalpeer.h \
    Main/qtlockedfile.h \
-   Main/qtsingleapplication.h
+   Main/qtsingleapplication.h \
+   Utilities/coloranalysis.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/buildfilters.h
 HEADERS += Datamodel/datamodel.h
@@ -111,7 +112,8 @@ SOURCES += Cache/imagecache.cpp \
    Main/qtlocalpeer.cpp \
    Main/qtlockedfile.cpp \
    Main/qtlockedfile_win.cpp \
-   Main/qtsingleapplication.cpp
+   Main/qtsingleapplication.cpp \
+   Utilities/coloranalysis.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp

@@ -9,6 +9,8 @@ Effects::Effects()
 
 /* DEFINES ***********************************************************************************/
 
+#define MAX(a, b) ( ( a > b) ? a : b )
+#define MIN(a, b) ( ( a > b) ? b : a )
 #define MAX_3(a, b, c) ( ( a > b && a > c) ? a : (b > c ? b : c) )
 #define MIN_3(a, b, c) ( ( a < b && a < c) ? a : (b < c ? b : c) )
 
@@ -442,7 +444,27 @@ Two quadratic formulas for neg/pos ev:
 
 /* VECTOR OPERATIONS *************************************************************************/
 
-void Effects::imageToVector(QImage &img, QVector<QVector<QRgb>> &v)
+void Effects::imageToVector(QImage &img, QVector<uint> &v)
+{
+    int w = img.width();
+    int h = img.height();
+    int bpl = img.bytesPerLine();
+    v.resize(w * h);
+    for (int y = 0; y < h; ++y) {
+        memcpy(&v[y * w], img.scanLine(y), bpl);
+    }
+}
+
+void Effects::vectorToImage(QImage &img, QVector<QRgb> &v)
+{
+    int bpl = img.bytesPerLine();
+    int w = img.width();
+    for (int y = 0; y < img.height(); ++y) {
+        memcpy(img.scanLine(y), &v[y * w], bpl);
+    }
+}
+
+void Effects::imageToVector2D(QImage &img, QVector<QVector<QRgb>> &v)
 {
     for (int y = 0; y < img.height(); ++y) {
         v[y].resize(img.width());         // source = img
@@ -450,9 +472,8 @@ void Effects::imageToVector(QImage &img, QVector<QVector<QRgb>> &v)
     }
 }
 
-void Effects::vectorToImage(QImage &img, QVector<QVector<QRgb> > &v)
+void Effects::vector2DToImage(QImage &img, QVector<QVector<QRgb> > &v)
 {
-//    qDebug() << __FUNCTION__;
     for (int y = 0; y < img.height(); ++y) {
         memcpy(img.scanLine(y), &v[y][0], img.bytesPerLine());
     }
@@ -462,6 +483,36 @@ void Effects::zeroVector(QImage &img, QVector<QVector<QRgb>> &v)
 {
     for (int y = 0; y < img.height(); ++y) {
         memset(&v[y], 0, static_cast<uint>(img.width()) * sizeof(int));
+    }
+}
+
+void Effects::arrayToImage(QImage &img, int *a, quint32 bytes)
+{
+    memcpy(img.scanLine(0), a, bytes);
+}
+
+/* 2D ANALYSIS *******************************************************************************/
+
+void Effects::hueCount(QImage &img, QVector<int> &hues)
+{
+    QVector<QVector<QRgb>> s(img.height());
+    imageToVector2D(img, s);
+    hues.fill(0);
+    for (int y = 0; y < img.height(); ++y) {
+        for (int x = 0; x < img.width(); ++ x) {
+            QColor rgb(s[y][x]);
+            QColor hsl = rgb.toHsl();
+            int hue = hsl.hslHue();
+            if (hue >= 0 && hue < 360) hues[hue]++;
+//            if (y == 0 && x == 0) {
+//                qDebug() << __FUNCTION__
+//                         << "s[y][x] =" << s[y][x]
+//                         << "rgb =" << rgb
+//                         << "hsl =" << hsl
+//                         << "hue =" << hue
+//                            ;
+//            }
+        }
     }
 }
 
@@ -708,81 +759,716 @@ void Effects::blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
     }
 }
 
-void Effects::blur(QImage &img, int radius)
+void Effects::boxBlur(QImage &img, int radius)
 {
-//    qDebug() << __FUNCTION__;
-//    QElapsedTimer t;
-//    t.start();
+/*
+    Super Fast Blur v1.1
+    by Mario Klingemann <http://incubator.quasimondo.com>
 
-    int m = radius;
-    int w, h;               // image width, height
-    int a, r, g, b;
-    int n;                  // sample size
-    int *as, *rs, *gs, *bs;
+    Tip: Multiple invovations of this filter with a small
+    radius will approximate a gaussian blur quite well.
 
-    if(radius < 1 || img.isNull() || img.width() < (radius << 1))
-        return;
+BImage a;
+BImage b;
 
-    w = img.width();
-    h = img.height();
+void setup()
+{
 
-    if(img.depth() < 8)
-        img = img.convertToFormat(QImage::Format_Indexed8);
+  a=loadImage("dog.jpg");
+  size(a.width, a.height);
+  b=new BImage(a.width, a.height);
+  fill(255);
+  noStroke();
+  framerate(25);
 
+}
+
+void loop()
+{
+  System.arraycopy(a.pixels,0,b.pixels,0,a.pixels.length);
+  fastblur(b,mouseY/8);
+  image(b, 0, 0);
+}
+
+void fastblur(BImage img,int radius){
+
+  if (radius<1){
+    return;
+  }
+  int w=img.width;
+  int h=img.height;
+  int wm=w-1;
+  int hm=h-1;
+  int wh=w*h;
+  int div=radius+radius+1;
+  int r[]=new int[wh];
+  int g[]=new int[wh];
+  int b[]=new int[wh];
+  int rsum,gsum,bsum,x,y,i,p,p1,p2,yp,yi,yw;
+  int vmin[] = new int[max(w,h)];
+  int vmax[] = new int[max(w,h)];
+  int[] pix=img.pixels;
+  int dv[]=new int[256*div];
+  for (i=0;i<256*div;i++){
+     dv[i]=(i/div);
+  }
+
+  yw=yi=0;
+
+  for (y=0;y<h;y++){
+    rsum=gsum=bsum=0;
+    for(i=-radius;i<=radius;i++){
+      p=pix[yi+min(wm,max(i,0))];
+      rsum+=(p & 0xff0000)>>16;
+      gsum+=(p & 0x00ff00)>>8;
+      bsum+= p & 0x0000ff;
+   }
+    for (x=0;x<w;x++){
+
+      r[yi]=dv[rsum];
+      g[yi]=dv[gsum];
+      b[yi]=dv[bsum];
+
+      if(y==0){
+        vmin[x]=min(x+radius+1,wm);
+        vmax[x]=max(x-radius,0);
+       }
+       p1=pix[yw+vmin[x]];
+       p2=pix[yw+vmax[x]];
+
+      rsum+=((p1 & 0xff0000)-(p2 & 0xff0000))>>16;
+      gsum+=((p1 & 0x00ff00)-(p2 & 0x00ff00))>>8;
+      bsum+= (p1 & 0x0000ff)-(p2 & 0x0000ff);
+      yi++;
+    }
+    yw+=w;
+  }
+
+  for (x=0;x<w;x++){
+    rsum=gsum=bsum=0;
+    yp=-radius*w;
+    for(i=-radius;i<=radius;i++){
+      yi=max(0,yp)+x;
+      rsum+=r[yi];
+      gsum+=g[yi];
+      bsum+=b[yi];
+      yp+=w;
+    }
+    yi=x;
+    for (y=0;y<h;y++){
+      pix[yi]=0xff000000 | (dv[rsum]<<16) | (dv[gsum]<<8) | dv[bsum];
+      if(x==0){
+        vmin[y]=min(y+radius+1,hm)*w;
+        vmax[y]=max(y-radius,0)*w;
+      }
+      p1=x+vmin[y];
+      p2=x+vmax[y];
+
+      rsum+=r[p1]-r[p2];
+      gsum+=g[p1]-g[p2];
+      bsum+=b[p1]-b[p2];
+
+      yi+=w;
+    }
+  }
+
+  see C:\Qt\5.13.1\Src\qtbase\src\gui\painting\qrgb.h
+  if rgba
+  (a & 0xffu) << 24) | ((r & 0xffu) << 16) | ((g & 0xffu) << 8) | (b & 0xffu)
+  if rgb
+  (0xffu << 24) | ((r & 0xffu) << 16) | ((g & 0xffu) << 8) | (b & 0xffu)
+
+}
+
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (radius < 1) return;
+    QElapsedTimer t;
+    t.start();
+
+    int w = img.width();
+    int h = img.height();
+    if(img.depth() < 8) img = img.convertToFormat(QImage::Format_Indexed8);
+    int wm = w - 1;
+    int hm = h - 1;
+    int wh = w * h;
+    int div = radius + radius + 1;
+
+    // pointer to source image pixels
+    quint32 *s = reinterpret_cast<quint32*>(img.scanLine(0));
+
+    // vectors
+//    QVector<QRgb> d(wh);    // dest
+//    QVector<int> r(wh);
+//    QVector<int> g(wh);
+//    QVector<int> b(wh);
+
+    // arrays (~ 13% faster than QVector)
+    int *d = new int[wh];
+    int *a = new int[wh];
+    int *r = new int[wh];
+    int *g = new int[wh];
+    int *b = new int[wh];
+
+    int asum,rsum,gsum,bsum;
+    int x,y,yp,n,yw;
+    uint p = 0;
+    uint p1 = 0;
+    uint p2 = 0;
+    //  = y * w + x = x,y position in one dim array (used for r, g, b)
+    int *vmin = new int[MAX(w, h)];
+    int *vmax = new int[MAX(w, h)];
+    //      int *pix = pixels;
+
+    // precalc all possible mean values
+    int *dv = new int[256 * div];
+    for (int i = 0; i < 256 * div; i++) {
+        dv[i] = (i / div);
+    }
+
+    // scan from left to right
+    n = yw = 0;
+    for (y = 0; y < h; y++){
+        asum = rsum = gsum = bsum = 0;
+        // sum r,g,b for radius at start of row
+        for (int i = -radius; i <= radius; i++) {
+            p = s[n + MIN(wm, MAX(i, 0))];
+            rsum += (p & 0x00ff0000)>>16;
+            gsum += (p & 0x0000ff00)>>8;
+            bsum +=  p & 0x000000ff;
+        }
+        // traverse the row
+        for (x = 0; x < w; x++) {
+            if (y == 0) {
+                vmin[x] = MIN(x + radius + 1, wm);
+                vmax[x] = MAX(x - radius, 0);
+            }
+
+            r[n] = dv[rsum];
+            g[n] = dv[gsum];
+            b[n] = dv[bsum];
+
+            p1 = s[yw + vmin[x]];
+            p2 = s[yw + vmax[x]];
+//                    asum += (((p1 & 0xff000000) >> 24) - ((p2 & 0xff000000) >> 24));
+            rsum += (((p1 & 0x00ff0000) >> 16) - ((p2 & 0x00ff0000)>>16));
+            gsum += (((p1 & 0x0000ff00) >> 8) - ((p2 & 0x0000ff00)>>8));
+            bsum +=  (p1 & 0x000000ff)-(p2 & 0x000000ff);
+
+            n++;
+        }
+        yw += w;
+    }
+
+    // scan from top to bottom
+    for (x = 0; x < w; x++){
+        asum = rsum = gsum = bsum = 0;
+        // sum r,g,b for radius at start of row
+        yp = -radius * w;
+        for (int i = -radius; i <= radius; i++) {
+            n = MAX(0, yp) + x;
+            rsum += r[n];
+            gsum += g[n];
+            bsum += b[n];
+            yp += w;
+        }
+        n = x;
+        // traverse the column
+        for (y = 0; y < h; y++) {
+            d[n] = 0xff000000 | (dv[rsum]<<16) | (dv[gsum]<<8) | dv[bsum];
+
+            if (x == 0) {
+                vmin[y] = MIN(y + radius + 1, hm) * w;
+                vmax[y] = MAX(y - radius, 0) * w;
+            }
+
+            p1 = x + vmin[y];
+            p2 = x + vmax[y];
+
+            rsum += r[p1] - r[p2];
+            gsum += g[p1] - g[p2];
+            bsum += b[p1] - b[p2];
+
+            n += w;
+        }
+    }
+
+    // convert vector back to image
+//    vectorToImage(img, d);
+    arrayToImage(img, d, wh*4);
+
+    delete[] d;
+    delete[] a;
+    delete[] r;
+    delete[] g;
+    delete[] b;
+    delete[] vmin;
+    delete[] vmax;
+
+    qDebug() << __FUNCTION__
+             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
+}
+
+void Effects::boxBlur1(QImage &img, int radius)
+{
+/*
+    Super Fast Blur v1.1
+    by Mario Klingemann <http://incubator.quasimondo.com>
+
+    Tip: Multiple invovations of this filter with a small
+    radius will approximate a gaussian blur quite well.
+
+BImage a;
+BImage b;
+
+void setup()
+{
+
+  a=loadImage("dog.jpg");
+  size(a.width, a.height);
+  b=new BImage(a.width, a.height);
+  fill(255);
+  noStroke();
+  framerate(25);
+
+}
+
+void loop()
+{
+  System.arraycopy(a.pixels,0,b.pixels,0,a.pixels.length);
+  fastblur(b,mouseY/8);
+  image(b, 0, 0);
+}
+
+void fastblur(BImage img,int radius){
+
+  if (radius<1){
+    return;
+  }
+  int w=img.width;
+  int h=img.height;
+  int wm=w-1;
+  int hm=h-1;
+  int wh=w*h;
+  int div=radius+radius+1;
+  int r[]=new int[wh];
+  int g[]=new int[wh];
+  int b[]=new int[wh];
+  int rsum,gsum,bsum,x,y,i,p,p1,p2,yp,yi,yw;
+  int vmin[] = new int[max(w,h)];
+  int vmax[] = new int[max(w,h)];
+  int[] pix=img.pixels;
+  int dv[]=new int[256*div];
+  for (i=0;i<256*div;i++){
+     dv[i]=(i/div);
+  }
+
+  yw=yi=0;
+
+  for (y=0;y<h;y++){
+    rsum=gsum=bsum=0;
+    for(i=-radius;i<=radius;i++){
+      p=pix[yi+min(wm,max(i,0))];
+      rsum+=(p & 0xff0000)>>16;
+      gsum+=(p & 0x00ff00)>>8;
+      bsum+= p & 0x0000ff;
+   }
+    for (x=0;x<w;x++){
+
+      r[yi]=dv[rsum];
+      g[yi]=dv[gsum];
+      b[yi]=dv[bsum];
+
+      if(y==0){
+        vmin[x]=min(x+radius+1,wm);
+        vmax[x]=max(x-radius,0);
+       }
+       p1=pix[yw+vmin[x]];
+       p2=pix[yw+vmax[x]];
+
+      rsum+=((p1 & 0xff0000)-(p2 & 0xff0000))>>16;
+      gsum+=((p1 & 0x00ff00)-(p2 & 0x00ff00))>>8;
+      bsum+= (p1 & 0x0000ff)-(p2 & 0x0000ff);
+      yi++;
+    }
+    yw+=w;
+  }
+
+  for (x=0;x<w;x++){
+    rsum=gsum=bsum=0;
+    yp=-radius*w;
+    for(i=-radius;i<=radius;i++){
+      yi=max(0,yp)+x;
+      rsum+=r[yi];
+      gsum+=g[yi];
+      bsum+=b[yi];
+      yp+=w;
+    }
+    yi=x;
+    for (y=0;y<h;y++){
+      pix[yi]=0xff000000 | (dv[rsum]<<16) | (dv[gsum]<<8) | dv[bsum];
+      if(x==0){
+        vmin[y]=min(y+radius+1,hm)*w;
+        vmax[y]=max(y-radius,0)*w;
+      }
+      p1=x+vmin[y];
+      p2=x+vmax[y];
+
+      rsum+=r[p1]-r[p2];
+      gsum+=g[p1]-g[p2];
+      bsum+=b[p1]-b[p2];
+
+      yi+=w;
+    }
+  }
+
+  see C:\Qt\5.13.1\Src\qtbase\src\gui\painting\qrgb.h
+  if rgba
+  (a & 0xffu) << 24) | ((r & 0xffu) << 16) | ((g & 0xffu) << 8) | (b & 0xffu)
+  if rgb
+  (0xffu << 24) | ((r & 0xffu) << 16) | ((g & 0xffu) << 8) | (b & 0xffu)
+
+}
+
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (radius < 1) return;
+
+    QElapsedTimer t;
+    t.start();
+
+    bool excludeTransparency = true;
+    int w = img.width();
+    int h = img.height();
+    int wi = w - radius - radius;
+    int hi = w - radius - radius;
+    // outside margin
+    int om = radius;
+    if(img.depth() < 8) img = img.convertToFormat(QImage::Format_Indexed8);
+    /*
     // create QVector of img for pixel wrangling
-    QVector<QVector<QRgb>> s(h);  // source, destination
-    QVector<QVector<QRgb>> d(h);  // source, destination
+//    QVector<QVector<QRgb>> s2(h);  // source, destination
+//    imageToVector2D(img, s2);
+//    QVector<QVector<QRgb>> d(h);  // source, destination
+*/
+    QVector<QRgb> s;    // source
+    QVector<QRgb> d;    // dest
     imageToVector(img, s);
-    imageToVector(img, d);
+    d.resize(w * h);
 
-    as = new int[w];
-    rs = new int[w];
-    gs = new int[w];
-    bs = new int[w];
+    int wm = w - 1;
+    int hm = h - 1;
+    int wh = w * h;
+    int div = radius + radius + 1;
+    /*
+//    QVector<QVector<int>> r(h);
+//    QVector<QVector<int>> g(h);
+//    QVector<QVector<int>> r(h);
+*/
+    int *a = new int[wh];
+    int *r = new int[wh];
+    int *g = new int[wh];
+    int *b = new int[wh];
+    /*
+    Doing a memset on an image with ~700,000 pixels takes about 2ms.  Note that the time to
+    execute t.nsecsElapsed() is ~ 1.8ms, and this has been factored into the 2ms time.  However,
+    since all array elements are populated the memset does not appear necessary.
+    QElapsedTimer t1;
+    t1.start();
+    memset(a, 0, wh * sizeof(int));
+    memset(r, 0, wh * sizeof(int));
+    memset(g, 0, wh * sizeof(int));
+    memset(b, 0, wh * sizeof(int));
+    qint64 t1ms = t.nsecsElapsed();
+    qDebug() << __FUNCTION__ << "memset =" << t1ms;
+    */
+    int asum,rsum,gsum,bsum,x,y,yp,n,yw;
+    int yo;     // first opaque pixel in row or column as n (x + y * w)
+    int fop;    // first opaque pixel in row or column as x or y
+//    QRgb *p, *p1, *p2;
+    uint p = 0;
+    uint p1 = 0;
+    uint p2 = 0;
+    //  = y * w + x = x,y position in one dim array (used for r, g, b)
+    int *vmin = new int[MAX(w, h)];
+    int *vmax = new int[MAX(w, h)];
 
-    int y1, y2;
-    for (int y = 0; y < h; ++y) {
-        y - m < 0 ? y1 = 0 : y1 = y - m;
-        y + m > h ? y2 = h : y2 = y + m;
-        memset(as, 0, w * sizeof(int));
-        memset(rs, 0, w * sizeof(int));
-        memset(gs, 0, w * sizeof(int));
-        memset(bs, 0, w * sizeof(int));
-        for (int x = 0; x < w; ++x) {
-            for (int yy = y1; yy < y2; ++yy) {
-                QRgb pixel = s[yy][x];
-                as[x] += qAlpha(pixel);
-                rs[x] += qRed(pixel);
-                gs[x] += qGreen(pixel);
-                bs[x] += qBlue(pixel);
-                n++;
+    // precalc all possible mean values
+    int *dv = new int[256 * div];
+    for (int i = 0; i < 256 * div; i++) {
+        dv[i] = (i / div);
+    }
+
+    // scan from left to right
+    n = yw = 0;
+    for (y = 0; y < h; y++){
+        asum = rsum = gsum = bsum = fop = 0;
+        if (excludeTransparency/* && (s[n]>>24 == 255)*/) {
+            // find first opaque pixel in row
+            bool foundOpaquePixel = false;
+            if (excludeTransparency) {
+                for (x = 0; x < w; x++) {
+                    if (s[n]>>24 == 255) {
+                        foundOpaquePixel = true;
+                        fop = x;
+                        yo = n;
+                        break;
+                    }
+                    n++;
+                }
             }
         }
-        for (int x = 0; x < w; ++x) {
-            int x1, x2;
-            x - m < 0 ? x1 = 0 : x1 = x - m;
-            x + m > w ? x2 = w : x2 = x + m;
-            a = 0; r = 0; g = 0; b = 0;
 
-            for (int xx = x1; xx < x2; ++xx) {
-                a += as[xx];
-                r += rs[xx];
-                g += gs[xx];
-                b += bs[xx];
+        // sum r,g,b for radius at start of row
+        for (int i = fop; i <= div; i++) {
+            p = s[n + MIN(wm, i)];
+            /*
+            int red = (p & 0x00ff0000)>>16;
+            qDebug() << __FUNCTION__
+                     << "p =" << QString::number(p, 16)
+                     << "red =" << red
+                     << "rsum =" << rsum
+                        ;
+//                        */
+//                asum += p>>24;
+            rsum += (p & 0x00ff0000)>>16;
+            gsum += (p & 0x0000ff00)>>8;
+            bsum +=  p & 0x000000ff;
+        }
+
+        // traverse the row
+        for (x = 0; x < w; x++) {
+            if (y == 0) {
+                vmin[x] = MIN(x + radius + 1, wm);
+                vmax[x] = MAX(x - radius, 0);
             }
-            n = (y2 - y1) * (x2 - x1);
-            d[y][x] = qRgba(r/n, g/n, b/n, a/n);
+            bool isSum;
+            if (excludeTransparency && (s[n]>>24 == 255)) {
+                if (!isSum) {
+                    p = s[n];
+                    isSum = true;
+                    rsum += (p & 0x00ff0000)>>16;
+                    gsum += (p & 0x0000ff00)>>8;
+                    bsum +=  p & 0x000000ff;
+                }
+
+                r[n] = dv[rsum];
+                g[n] = dv[gsum];
+                b[n] = dv[bsum];
+
+                p1 = s[yw + vmin[x]];
+                p2 = s[yw + vmax[x]];
+//                    asum += (((p1 & 0xff000000) >> 24) - ((p2 & 0xff000000) >> 24));
+                rsum += (((p1 & 0x00ff0000) >> 16) - ((p2 & 0x00ff0000)>>16));
+                gsum += (((p1 & 0x0000ff00) >> 8) - ((p2 & 0x0000ff00)>>8));
+                bsum +=  (p1 & 0x000000ff)-(p2 & 0x000000ff);
             }
+            n++;
+        }
+        yw += w;
     }
+
+    // scan from top to bottom
+    for (x = 0; x < w; x++){
+        asum = rsum = gsum = bsum = fop = 0;
+        n = x;
+        // find first opaque pixel in column
+        bool foundOpaquePixel = false;
+        if (excludeTransparency) {
+            for (y = 0; y < h; y++) {
+                if (s[n]>>24 == 255) {
+                    foundOpaquePixel = true;
+                    fop = y;
+                    yo = n;
+                    break;
+                }
+                n += w;
+            }
+        }
+        // if no opaque pixel then skip column as it is all transparent
+        if (!foundOpaquePixel) continue;
+        yp = -radius * w + x;
+        // sum r,g,b for radius at start of column
+        for (int i = -radius; i <= radius; i++) {
+            n = MAX_3(x, yp, yo);
+            rsum += r[n];
+            gsum += g[n];
+            bsum += b[n];
+            yp += w;
+        }
+
+        n = x;
+        // traverse the column
+        for (y = 0; y < h; y++) {
+            /*
+            if (x == 200 && y == 200) {
+                qDebug() << __FUNCTION__
+                         << "rsum =" << rsum
+                         << "gsum =" << gsum
+                         << "bsum =" << bsum
+                         << "d[n] =" << d[n]
+                            ;
+            }
+            */
+            if (excludeTransparency && (n >= yo)) {
+//                d[n] = 0xff000000 | (dv[rsum]<<16) | (dv[gsum]<<8) | dv[bsum];
+//                qDebug() << __FUNCTION__ << x << y;
+
+                if (x == 0) {
+                    vmin[y] = MIN(y + radius + 1, hm) * w;
+                    vmax[y] = MAX(y - radius, fop) * w;
+                }
+
+                p1 = x + vmin[y];
+                p2 = x + vmax[y];
+
+                rsum += r[p1] - r[p2];
+                gsum += g[p1] - g[p2];
+                bsum += b[p1] - b[p2];
+            }
+            n += w;
+        }
+    }
+
+    // convert vector back to image
     vectorToImage(img, d);
 
-    delete[] as;
-    delete[] rs;
-    delete[] gs;
-    delete[] bs;
+    // cleanup
+    delete[] a;
+    delete[] r;
+    delete[] g;
+    delete[] b;
+    qDebug() << __FUNCTION__
+             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
+}
 
+void Effects::boxBlur2D(QImage &img, int radius)
+{
+    if (radius < 1) return;
+    QElapsedTimer t;
+    t.start();
+
+    int w = img.width();
+    int h = img.height();
+    int wm = w - 1;
+    int hm = h - 1;
+    int wh = w * h;
+    int blurRange = radius + radius + 1;
+
+    if(img.depth() < 8) img = img.convertToFormat(QImage::Format_Indexed8);
+
+    // 2D vectors for pixels AARRGGBB (source s and blurred destination d)
+    QVector<QVector<QRgb>> s(h);
+    imageToVector2D(img, s);
+    QVector<QVector<QRgb>> d(h);
+    imageToVector2D(img, d);
+
+    // 2D vectors for r,g,b
+    QVector<QVector<int>> r(h);
+    QVector<QVector<int>> g(h);
+    QVector<QVector<int>> b(h);
+    for (int y = 0; y < h; y++) {
+        r[y].resize(w);
+        g[y].resize(w);
+        b[y].resize(w);
+    }
 //    qDebug() << __FUNCTION__
-//             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
+//             << "Vectors created Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
+
+    /*
+    Doing a memset on an image with ~700,000 pixels takes about 2ms.  Note that the time to
+    execute t.nsecsElapsed() is ~ 1.8ms, and this has been factored into the 2ms time.  However,
+    since all array elements are populated the memset does not appear necessary.
+    QElapsedTimer t1;
+    t1.start();
+    memset(a, 0, wh * sizeof(int));
+    memset(r, 0, wh * sizeof(int));
+    memset(g, 0, wh * sizeof(int));
+    memset(b, 0, wh * sizeof(int));
+    qint64 t1ms = t.nsecsElapsed();
+    qDebug() << __FUNCTION__ << "memset =" << t1ms;
+    */
+    int asum, rsum, gsum, bsum;
+//    QRgb *p, *p1, *p2;
+    quint32 p = 0;     // pixel = int = 4 bytes AARRGGBB
+    quint32 p1 = 0;    // first pixel in sample range
+    quint32 p2 = 0;    // last pixel in sampe range
+
+    // precalc all possible mean values
+    int dvSize = 256 * blurRange;
+    int *dv = new int[dvSize];
+    for (int i = 0; i < dvSize; i++) {
+        dv[i] = (i / blurRange);
+    }
+
+    // scan from left to right
+    for (int y = 0; y < h; y++){
+        asum = rsum = gsum = bsum = 0;
+        // initial sum r,g,b for blur range at start of row
+        for (int i = -radius; i <= radius; i++) {
+            int x = MIN(wm, MAX(i, 0));
+            p = s[y][x];
+            rsum += (p & 0x00ff0000) >> 16;
+            gsum += (p & 0x0000ff00) >> 8;
+            bsum +=  p & 0x000000ff;
+        }
+        // traverse the row
+        for (int x = 0; x < w; x++) {
+            r[y][x] = dv[rsum];
+            g[y][x] = dv[gsum];
+            b[y][x] = dv[bsum];
+
+            int x1 = MAX(x - radius, 0);            // start of blur range
+            int x2 = MIN(x + radius + 1, wm);       // end of blur range
+
+            p1 = s[y][x1];
+            p2 = s[y][x2];
+
+//            asum += (((p1 & 0xff000000) >> 24) - ((p2 & 0xff000000) >> 24));
+            rsum += (((p2 & 0x00ff0000) >> 16) - ((p1 & 0x00ff0000)>>16));
+            gsum += (((p2 & 0x0000ff00) >> 8) - ((p1 & 0x0000ff00)>>8));
+            bsum += (p2 & 0x000000ff) - (p1 & 0x000000ff);
+        }
+    }
+
+    // scan from top to bottom
+    for (int x = 0; x < w; x++){
+        asum = rsum = gsum = bsum = 0;
+//        qDebug() << __FUNCTION__ << bsum;
+        // initial sum r,g,b for blur range at start of column
+        for (int i = -radius; i <= radius; i++) {
+            int y = MIN(MAX(i, 0), hm);
+            rsum += r[y][x];
+            gsum += g[y][x];
+            bsum += b[y][x];
+        }
+        // traverse the column
+        for (int y = 0; y < h; y++) {
+            d[y][x] = 0xff000000 | (dv[rsum]<<16) | (dv[gsum]<<8) | dv[bsum];
+
+            int y1 = MAX(y - radius, 0);            // start of blur range
+            int y2 = MIN(y + radius + 1, hm);       // end of blur range
+
+            rsum += (r[y2][x] - r[y1][x]);
+            gsum += (g[y2][x] - g[y1][x]);
+            bsum += (b[y2][x] - b[y1][x]);
+        }
+    }
+
+    // convert vector back to image
+    vector2DToImage(img, d);
+    delete[] dv;
+
+    qDebug() << __FUNCTION__
+             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 }
 
 void Effects::blurOriginal(QImage &img, int radius)
@@ -1027,7 +1713,7 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
 
     // create QVector of img for pixel wrangling
     QVector<QVector<QRgb>> s(h);
-    imageToVector(img, s);
+    imageToVector2D(img, s);
     /*
     for (int y = 0; y < h; ++y) {
         s[y].resize(w);         // source = img
@@ -1196,7 +1882,7 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
     blurLine(s, p1, p2, w, h, blurWidth);
 
     // build destination image
-    vectorToImage(img, s);
+    vector2DToImage(img, s);
 
 //    qDebug() << __FUNCTION__
 //             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
@@ -1220,7 +1906,7 @@ void Effects::brightness(QImage &img, qreal evDelta)
 
     // create QVector of img for pixel wrangling
     QVector<QVector<QRgb>> s(h);  // source, destination
-    imageToVector(img, s);
+    imageToVector2D(img, s);
 
     for (int y = 0; y < h; ++y) {
         for (int x = 0; x < w; ++x) {
@@ -1247,7 +1933,7 @@ void Effects::brightness(QImage &img, qreal evDelta)
         }
     }
     */
-    vectorToImage(img, s);
+    vector2DToImage(img, s);
 
 //    qDebug() << __FUNCTION__
 //             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
@@ -1411,7 +2097,7 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
 
     // create QVector of img for pixel wrangling
     QVector<QVector<QRgb>> s(h);
-    imageToVector(img, s);
+    imageToVector2D(img, s);
 
     // top
     (azimuth > 270 || azimuth < 90) ? isUmbra = false : isUmbra = true;
@@ -1450,7 +2136,7 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     }
 
     // build destination image
-    vectorToImage(img, s);
+    vector2DToImage(img, s);
 }
 
 void Effects::stroke(QImage &img, double width, QColor color, bool inner)
@@ -1460,7 +2146,7 @@ Draws a solid boundary around an object in an image, where the boundary is trans
 */
     // create QVector (s) of img for pixel wrangling
     QVector<QVector<QRgb>> s(img.height());
-    imageToVector(img, s);
+    imageToVector2D(img, s);
 
     // get edge map for img
     QMultiMap<int, Pt> edge;
@@ -1501,14 +2187,14 @@ Draws a solid boundary around an object in an image, where the boundary is trans
 //    }
 
 
-    vectorToImage(img, s);
+    vector2DToImage(img, s);
 }
 
 void Effects::glow(QImage &img, double width, QColor color, double blurRadius)
 {
     // create QVector (s) of img for pixel wrangling
     QVector<QVector<QRgb>> s(img.height());
-    imageToVector(img, s);
+    imageToVector2D(img, s);
 
     // get edge map for img
     QMultiMap<int, Pt> edge;
@@ -1533,7 +2219,7 @@ void Effects::glow(QImage &img, double width, QColor color, double blurRadius)
     }
 
     // convert back to QImage
-    vectorToImage(img, s);
+    vector2DToImage(img, s);
 
     // blur the stroke
     int radius = static_cast<int>(blurRadius);
@@ -1755,7 +2441,7 @@ void Effects::test(QImage &img)
 
     // create QVector of img for pixel wrangling
     QVector<QVector<QRgb>> s(h);  // source, destination
-    imageToVector(img, s);
+    imageToVector2D(img, s);
 
     // shade
     for (int y = 0; y < h; ++y) {
@@ -1782,6 +2468,6 @@ void Effects::test(QImage &img)
                  << "Illumination =" << QString::number(illumination).rightJustified(6)
                  ;
     }
-    vectorToImage(img, s);
+    vector2DToImage(img, s);
 
 }

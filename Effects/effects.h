@@ -2,7 +2,6 @@
 #define EFFECTS_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 
 enum Contour {contour_flat,
               contour_ridge,
@@ -17,8 +16,10 @@ class Effects
 {
 public:
     Effects();
-    void blur(QImage &img, int radius);
     void blurOriginal(QImage &img, int radius);
+    void boxBlur(QImage &img, int radius);
+    void boxBlur2D(QImage &img, int radius);
+    void boxBlur1(QImage &img, int radius);
     void raise(QImage &img, int m, double taper = 0.5, int blurWidth = 3, bool raise = false);
     void brightness(QImage &img, qreal evDelta);
     void emboss(QImage &img, int azimuth, double size, double exposure, double contrast,
@@ -28,6 +29,7 @@ public:
     void glow(QImage &img, double width, QColor color, double blurRadius);
 
     QImage convolve(QImage &img, int mDim, double *matrix);
+    void hueCount(QImage &img, QVector<int> &hues);
 
     void test(QImage &img);
     void brightenPixel(QRgb &p, double deltaEv, double opacity = 1);
@@ -56,9 +58,12 @@ private:
 //    void brightenPixel(QRgb &p, double deltaEv);
 
     // Vector ops
-    void imageToVector(QImage &img, QVector<QVector<QRgb>> &v);
-    void vectorToImage(QImage &img, QVector<QVector<QRgb>> &v);
+    void imageToVector(QImage &img, QVector<uint> &v);
+    void vectorToImage(QImage &img, QVector<uint> &v);
+    void imageToVector2D(QImage &img, QVector<QVector<QRgb>> &v);
+    void vector2DToImage(QImage &img, QVector<QVector<QRgb>> &v);
     void zeroVector(QImage &img, QVector<QVector<QRgb>> &v);
+    void arrayToImage(QImage &img, int *a, quint32 bytes);
 
     // Image ops
     void sumRgb(QRgb &a, QRgb &b);      // no function ???

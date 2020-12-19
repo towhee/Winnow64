@@ -122,6 +122,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     addTemplateHeader();
 //    // add styles, which are independent of templates, and hide if templateId == 0
 //    addStyles();
+
     if (templateId > 0) setRowHidden(1, root, false);
     else setRowHidden(1, root, true);
     // add the Styles, General, Image, Borders, Texts, and Graphics items for the template
@@ -1005,7 +1006,7 @@ void EmbelProperties::updateMetadataTemplateList()
     }
 }
 
-void EmbelProperties::newEmbelTemplate()
+void EmbelProperties::newTemplate()
 {
     {
     #ifdef ISDEBUG
@@ -1017,7 +1018,6 @@ void EmbelProperties::newEmbelTemplate()
                                         templateList);
     templateId = templateList.count();
 //    // set all templates except templateName isCurrent = false
-//    setCurrentTemplate();
     templateList << templateName;
     templateListEditor->addItem(templateName);
     templateListEditor->setValue(templateName);
@@ -1481,11 +1481,19 @@ void EmbelProperties::itemChangeExport(QModelIndex idx, QVariant v, QString sour
     G::track(__FUNCTION__);
     #endif
     }
+    // prevent template "Export" is being mysteriously created
+    if (source == "") return;
+
     QString path = templatePath + "Export/" + source;
 
     if (source == "fileType") {
         setting->setValue(path, v.toString());
         exportFileType = v.toString();
+    }
+
+    if (source == "fileQuality") {
+        setting->setValue(path, v.toInt());
+        exportFileQuality = v.toInt();
     }
 
     if (source == "saveMethod") {
@@ -2251,7 +2259,7 @@ void EmbelProperties::addTemplateHeader()
     BarBtn *templateNewBtn = new BarBtn();
     templateNewBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
     templateNewBtn->setToolTip("Create a new template");
-    connect(templateNewBtn, &BarBtn::clicked, this, &EmbelProperties::newEmbelTemplate);
+    connect(templateNewBtn, &BarBtn::clicked, this, &EmbelProperties::newTemplate);
     btns.append(templateNewBtn);
     addItem(i);
     templateIdx = model->index(0, 0, root);
@@ -2511,7 +2519,7 @@ void EmbelProperties::addGeneral()
     i.key = "horizontalFit";
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
-    else i.value = 500;
+    else i.value = 1000;
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
@@ -2532,7 +2540,7 @@ void EmbelProperties::addGeneral()
     i.key = "verticalFit";
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
-    else i.value = 500;
+    else i.value = 1000;
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
