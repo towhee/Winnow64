@@ -353,13 +353,19 @@ QString WidgetCSS::treeWidget()
     "}"
 
     "QTreeWidget::item:disabled {"
-        "color:" + disabledColor.name() + ";"
+        "color:" + QColor(l20,l20,l20).name() + ";"
     "}"
 
     "QTreeWidget::item {"
         "height: 24px;"
         "margin-left: -1px;"  // aligns edit box with cell contents
-    "}";
+    "}"
+
+    "QTreeWidget::indicator:disabled {"
+        "image: url(:/images/checkbox_disabled.png);"
+    "}"
+
+    ;
 }
 
 QString WidgetCSS::treeView()
@@ -693,8 +699,11 @@ QString WidgetCSS::progressBar()
 
 QString WidgetCSS::checkBox()
 {
-    return "";
-//    return
+//    return "";
+    return
+    "QCheckBox {"
+//        "color: blue;"
+    "}";
 //    "QCheckBox::indicator {"
 //        "background-color: " + textColor.name() + ";"
 ////        "background-color: " + QColor(l30,l30,l30).name() + ";"

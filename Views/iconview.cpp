@@ -500,6 +500,13 @@ visible in the viewport, how many icons are visible and the first/last icons vis
     if (rowInView >= firstVPRowScrollReq && rowInView <= lastVRowReqScroll)
         rowsPerVP += 1;
 
+    /*
+    qDebug() << __FUNCTION__
+             << "cellsPerVPRow =" << cellsPerVPRow
+             << "rowsPerVP =" << rowsPerVP
+                ;
+//                */
+
     visibleCells = cellsPerVPRow * rowsPerVP;
     int visibleRowsAbove = qCeil((rowsPerVP - 1) / 2);
 
@@ -526,26 +533,27 @@ visible in the viewport, how many icons are visible and the first/last icons vis
     visibleCells = lastVisibleCell - firstVisibleCell + 1;
     midVisibleCell = firstVisibleCell + visibleCells / 2;
 
-/*    qDebug()
-             << __FUNCTION__
-             << "i:" << i
-             << "row =" << rowInView
-             << "rows =" << rowsInView
-             << "viewport:" << vp << "cell:" << cell
-             << "firstVisibleVPRow =" << firstVisibleVPRow
-             << "firstVisibleCell =" << firstVisibleCell
-             << "lastVisibleCell =" << lastVisibleCell
-             << "cellsPerVPRow =" << cellsPerVPRow
-             << "rowsPerVP =" << rowsPerVPDbl << rowsPerVP
-             << "visibleCells ="  << visibleCells
-             << "posInVPRow =" << posInVPRow
-             << "rowInView =" << rowInView
-             << "firstVPRowScrollReq =" << firstVPRowScrollReq
-             << "lastVRowReqScroll =" << lastVRowReqScroll
-             << "firstCellReqScroll =" << firstCellReqScroll
-             << "lastCellReqScroll =" << lastCellReqScroll
-                ;
-*/
+//    /*
+    qDebug()
+        << __FUNCTION__
+        << "i:" << i
+        << "row =" << rowInView
+        << "rows =" << rowsInView
+        << "viewport:" << vp << "cell:" << cell
+        << "firstVisibleVPRow =" << firstVisibleVPRow
+        << "firstVisibleCell =" << firstVisibleCell
+        << "lastVisibleCell =" << lastVisibleCell
+        << "cellsPerVPRow =" << cellsPerVPRow
+        << "rowsPerVP =" << rowsPerVPDbl << rowsPerVP
+        << "visibleCells ="  << visibleCells
+//        << "posInVPRow =" << posInVPRow
+        << "rowInView =" << rowInView
+        << "firstVPRowScrollReq =" << firstVPRowScrollReq
+        << "lastVRowReqScroll =" << lastVRowReqScroll
+        << "firstCellReqScroll =" << firstCellReqScroll
+        << "lastCellReqScroll =" << lastCellReqScroll
+        ;
+//    */
     return true;
 }
 

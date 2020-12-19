@@ -269,7 +269,7 @@ MW::MW(/*QApplication &app, */QWidget *parent) : QMainWindow(parent)
     // intercept events to thumbView to monitor splitter resize of thumbDock
     qApp->installEventFilter(this);
 
-    // if isShift then set "Do not Embellish"
+    // if isShift then set "Do not Embellish".  Note other isShift in MW::showEvent.
     if (isShift) {
         embelTemplatesActions.at(0)->setChecked(true);
         embelProperties->doNotEmbellish();
@@ -403,6 +403,8 @@ void MW::showEvent(QShowEvent *event)
     QPoint loc = centralWidget->window()->geometry().center();
     prevScreen = qApp->screenAt(loc)->name();
 
+    if (isShift) refreshFolders();
+
     G::isInitializing = false;
 }
 
@@ -495,8 +497,8 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape) {
         // hide a popup message
-        if (G::popUp->isVisible()) {
-            G::popUp->hide();
+        if (G::popUp->isVisible() /*&& G::isSlideShow*/) {
+//            G::popUp->hide();
             return;
         }
         // hide preferences
@@ -514,6 +516,8 @@ void MW::keyReleaseEvent(QKeyEvent *event)
     }
 
     if (G::isSlideShow) {
+        int n = event->key() - 48;
+
         if (event->key() == Qt::Key_Backspace) {
             isSlideshowPaused = false;
             prevRandomSlide();
@@ -547,8 +551,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             G::popUp->showPopup(msg);
         }
         // change slideshow delay 1 - 9 seconds
-        int n = event->key() - 48;
-        if (n > 0 && n <= 9) {
+        else if (n > 0 && n <= 9) {
             isSlideshowPaused = false;
             slideShowDelay = n;
             slideShowResetDelay();
@@ -1380,7 +1383,8 @@ visible.  This is used in the metadataCacheThread to determine the range of file
         if (tableView->lastVisibleRow > last) last = tableView->lastVisibleRow;
     }
 
-/*    qDebug() << __FUNCTION__
+//        /*
+        qDebug() << __FUNCTION__
              << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
              << "thumbView->lastVisibleCell =" << thumbView->lastVisibleCell
              << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
@@ -1389,11 +1393,14 @@ visible.  This is used in the metadataCacheThread to determine the range of file
              << "tableView->lastVisibleCell =" << tableView->lastVisibleRow
              << "\n\tfirst =" << first
              << "last =" << last;
-*/
+//        */
     metadataCacheThread->firstIconVisible = first;
     metadataCacheThread->midIconVisible = (first + last) / 2;// rgh qCeil ??
     metadataCacheThread->lastIconVisible = last;
     metadataCacheThread->visibleIcons = last - first + 1;
+
+    if (G::isInitializing || !G::isNewFolderLoaded) return;
+    metadataCacheThread->sizeChange();
 }
 
 void MW::updateImageCachePositionAfterDelay()
@@ -1466,9 +1473,10 @@ to work all the time.
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconsVisible(false);
 //        if (gridView->isVisible())
-            gridView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
+        updateIconsVisible(false);
+        gridView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
+        updateIconsVisible(false);
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         metadataCacheThread->scrollChange();
@@ -1664,22 +1672,6 @@ the filter and sort operations cannot commence until all the metadata has been l
     updateStatus(false, "Loading metadata for all images");
 //    */
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    progressBar->saveProgressState();
-    progressBar->clearProgress();
-    QApplication::processEvents();
-    int rows = dm->rowCount();
-    // update progress for already loaded metadata
-    for (int row = 0; row < rows; ++row) {
-        if (dm->index(row, G::MetadataLoadedColumn).data().toBool()) {
-            progressBar->updateProgress(row, row + 1, rows, G::progressAddMetadataColor, "");
-        }
-    }
-    QApplication::processEvents();
-
-//    if (dm->buildFiltersTimer.elapsed() > dm->buildFiltersMaxDelay) {
-//        QApplication::restoreOverrideCursor();
-//        return;
-//    }
 
     /* adding all metadata in dm slightly slower than using metadataCacheThread but progress
        bar does not update from separate thread
@@ -1688,13 +1680,9 @@ the filter and sort operations cannot commence until all the metadata has been l
     // metadataCacheThread->loadAllMetadata();
     // metadataCacheThread->wait();
 
-    progressBar->recoverProgressState();
     if (resumeImageCaching) imageCacheThread->resumeImageCache();
     QApplication::restoreOverrideCursor();
-    /*
-    popup("Metadata loaded.", 500, 0.75, true);
-    QApplication::processEvents();
-//*/
+
 }
 
 void MW::updateMetadataCacheStatus(int row, bool clear)
@@ -2870,7 +2858,7 @@ void MW::createActions()
     ratingBadgeVisibleAction->setShortcutVisibleInContextMenu(true);
     ratingBadgeVisibleAction->setCheckable(true);
     if (isSettings && setting->contains("isRatingBadgeVisible")) ratingBadgeVisibleAction->setChecked(setting->value("isRatingBadgeVisible").toBool());
-    else ratingBadgeVisibleAction->setChecked(true);
+    else ratingBadgeVisibleAction->setChecked(false);
     addAction(ratingBadgeVisibleAction);
     connect(ratingBadgeVisibleAction, &QAction::triggered, this, &MW::setRatingBadgeVisibility);
 
@@ -3393,6 +3381,7 @@ void MW::createMenus()
 
     // Embellish Menu
     QMenu *embelMenu = new QMenu(this);
+//    embelMenu->setIcon(QIcon(":/images/icon16/lightning.png"));
     QAction *embelGroupAct = new QAction("Embellish", this);
     embelGroupAct->setMenu(embelMenu);
     embelMenu->addAction(embelNewTemplateAction);
@@ -5237,23 +5226,22 @@ QString fileSym = "📷";
     double availMemGB = static_cast<double>(G::availableMemoryMB) / 1024;
     QString mem = QString::number(availMemGB, 'f', 1) + " GB";
 #endif
+
+    // show embellish if active
+    if (G::isEmbellish) base = "<font color=\"red\">Embellishing</font> ";
+    else base = "";
+
     // image of total: fileCount
     if (keepBase && isCurrentFolderOkay) {
 //        base += "Mem: " + mem + spacer;
         if (G::mode == "Loupe" || G::mode == "Compare" || G::mode == "Embel")
             base += "Zoom: " + getZoom();
         base += spacer + "Pos: " + getPosition();
+        if (source != "nextSlide") {
         QString s = QString::number(thumbView->getSelectedCount());
-        base += spacer +"Selected: " + s;
-        base += spacer + "Picked: " + getPicked();
-
-//        base += spacer;
-//        imageView->isFit ? s = "true" : s = "false";
-//        base += "isFit: " + s;
-
-//        QString err = dm->index(row, G::ErrColumn).data().toString();
-//        base += spacer;
-//        base += err;
+            base += spacer +"Selected: " + s;
+            base += spacer + "Picked: " + getPicked();
+        }
     }
 
     status = " " + base + s;
@@ -7650,6 +7638,8 @@ re-established when the application is re-opened.
     setting->setValue("isTableDisplay", asTableAction->isChecked());
     setting->setValue("isCompareDisplay", asCompareAction->isChecked());
 
+    setting->setValue("wasThumbDockVisible", wasThumbDockVisible);
+
     setting->setValue("isMenuBarVisible", menuBarVisibleAction->isChecked());
     setting->setValue("isStatusBarVisible", statusBarVisibleAction->isChecked());
     setting->setValue("isFolderDockVisible", folderDockVisibleAction->isChecked());
@@ -7882,7 +7872,7 @@ Preferences are located in the prefdlg class and updated here.
         infoOverlayFontSize = 24;
         classificationBadgeInImageDiameter = 32;
         classificationBadgeInThumbDiameter = 16;
-        isRatingBadgeVisible = true;
+        isRatingBadgeVisible = false;
 
         // datamodel
         G::maxIconSize = 256;
@@ -8500,7 +8490,7 @@ void MW::newEmbelTemplate()
                 embelDock->setVisible(true);
     embelDock->raise();
     embelDockVisibleAction->setChecked(true);
-    embelProperties->newEmbelTemplate();
+    embelProperties->newTemplate();
     loupeDisplay();
 }
 
@@ -8539,6 +8529,7 @@ around lack of notification when the QListView has finished painting itself.
     // hide the thumbdock
     if(isNormalScreen && wasThumbDockVisible) {
         thumbDock->setVisible(true);
+        thumbDockVisibleAction->setChecked(wasThumbDockVisible);
         thumbView->selectThumb(currentRow);
     }
 
@@ -8694,9 +8685,14 @@ void MW::tableDisplay()
     if(isNormalScreen){
         if(wasThumbDockVisible && !thumbDock->isVisible()) {
             thumbDock->setVisible(true);
+            thumbDockVisibleAction->setChecked(wasThumbDockVisible);
             thumbView->selectThumb(currentRow);
         }
-        if(!wasThumbDockVisible && thumbDock->isVisible()) thumbDock->setVisible(false);
+        if(!wasThumbDockVisible && thumbDock->isVisible()) {
+            thumbDock->setVisible(false);
+            thumbDockVisibleAction->setChecked(wasThumbDockVisible);
+        }
+
     }
 
     // req'd after compare mode to re-enable extended selection
@@ -8772,7 +8768,9 @@ void MW::compareDisplay()
     compareImages->load(centralWidget->size(), isRatingBadgeVisible, selectionModel);
 
     // restore thumbdock to previous state
-    if(!wasThumbDockVisible) toggleThumbDockVisibity();
+    thumbDock->setVisible(wasThumbDockVisible);
+    thumbDockVisibleAction->setChecked(wasThumbDockVisible);
+
     hasGridBeenActivated = false;
 }
 
@@ -10226,11 +10224,10 @@ void MW::slideShow()
         // stop slideshow
         imageView->setCursor(Qt::ArrowCursor);
         slideShowStatusLabel->setText("");
-        G::isSlideShow = false;
+        G::popUp->showPopup("Stopping slideshow", 2000);
         updateStatus(true, "", __FUNCTION__);
         updateStatusBar();
         slideShowAction->setText(tr("Slide Show"));
-        G::popUp->showPopup("Stopping slideshow");
         slideShowTimer->stop();
         delete slideShowTimer;
         updateImageCacheWhenFileSelectionChange = true;
@@ -10239,10 +10236,12 @@ void MW::slideShow()
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
         for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);
+        G::isSlideShow = false;
     } else {
         // start slideshow
         imageView->setCursor(Qt::BlankCursor);
         G::isSlideShow = true;
+        isSlideshowPaused = false;
         if (isSlideShowRandom) updateImageCacheWhenFileSelectionChange = false;
         updateStatusBar();
         QString msg = "<h2>Press <font color=\"red\"><b>Esc</b></font> to exit slideshow</h2><p>";
@@ -10284,7 +10283,11 @@ void MW::nextSlide()
     #endif
     }
     static int counter = 0;
-//    qDebug() << "\n" << __FUNCTION__ << "\ncounter =" << counter;
+    qDebug() << __FUNCTION__
+             << "counter =" << counter
+             << "isStressTest =" << isStressTest
+             << "isSlideshowPaused =" << isSlideshowPaused
+                ;
 
     if (isStressTest) {
 //        slideShowTimer->stop();
@@ -10338,7 +10341,7 @@ void MW::nextSlide()
         else thumbView->selectNext();
     }
 
-    QString msg = "Slide # "+ QString::number(counter) + "     (press H for slideshow shortcuts)";
+    QString msg = "  Slide # "+ QString::number(counter) + "  (press H for slideshow shortcuts)";
     updateStatus(true, msg, __FUNCTION__);
 
 }
@@ -11106,7 +11109,15 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    refreshFolders();
 
-    embelProperties->test1();
+//    folderDockVisibleAction->setChecked(true);
+//    folderDock->setFocus();
+//    folderDock->raise();
+
+//    ColorAnalysis a(dm->currentFilePath);
+//    qDebug() << __FUNCTION__ << t.elapsed();
+
+//    embelProperties->test1();
 }
 // End MW

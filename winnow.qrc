@@ -158,5 +158,6 @@
         <file>images/icon16/emboss_offset_trough.png</file>
         <file>images/icon16/emboss_ridge.png</file>
         <file>images/icon16/emboss_trough.png</file>
+        <file>images/checkbox_disabled.png</file>
     </qresource>
 </RCC>

@@ -1,4 +1,12 @@
 BUGS
+- Confirm check for updates is working (Andreas)
+- File/Bookmark count not refresh when filecount changes see QFileSystemWatcher
+- Grid does not always stretch to fit central widget
+- DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
+- Thumbnails window menu not in sync on opening
+- Is copy image (iconview context menu) working?
+- blur effect is slow
+- Properties selection (torquise) not always updating
 - Sharpen needs TLC
 - Add glow, stroke
 - Emboss when transparent edges
@@ -8,15 +16,6 @@ BUGS
 - Standardize use of G:css
 - Globalize css
 - Sort out i.name vs i.key in PropertyEditor
-- Confirm check for updates is working (Andreas)
-- When create new style etc open that new item
-- Docks not always remembered between sessions
-- Properties selection (torquise) not always updating
-- is copy image (iconview context menu) working?
-- File/Bookmark count not refresh when filecount changes see QFileSystemWatcher
-- Grid does not always stretch to fit central widget
-- DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
-- Thumbnails window menu not in sync on opening
 - Cannot delete heic files on PC
 - Filters will be updated msg on opening
 - Add hif file format
@@ -39,6 +38,9 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Disabled style in Filters
+- Docks not always remembered between sessions
+- Shift start in do not embellish
 - update and refresh text metadata templates
 - When extract a new tile add it to the tile lookup in borders
 - Remember Embel dock on opening

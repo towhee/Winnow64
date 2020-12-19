@@ -106,7 +106,7 @@ public:
     // map of styles
     QMap<QString, QList<winnow_effects::Effect>> styleMap;
 
-    void newEmbelTemplate();
+    void newTemplate();
     void doNotEmbellish();
     QString metaString(QString key);
     QString metaString(QString key, QString fPath);

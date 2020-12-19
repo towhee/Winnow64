@@ -57,6 +57,8 @@
 #include "Utilities/inputdlg.h"
 #include "progressbar.h"
 
+#include "Utilities/coloranalysis.h"
+
 #include "Utilities/performance.h"
 #include "ui_helpform.h"
 #include "ui_shortcutsform.h"

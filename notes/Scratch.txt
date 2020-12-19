@@ -118,32 +118,3 @@ GraphicsEffect::GraphicsEffect()
 {
 
 }
-
-
-When first open
-- activate
-   textChangeIndex = 0
-   textHasChanged = false
-- editingFinished
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -76,12 +76,10 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
             }
             case blur: {
                 int radius = static_cast<int>(ef.blur.radius);
-                if (m.top < radius) m.top = radius;
-                if (m.left < radius) m.left = radius;
-                if (m.right < radius) m.right = radius;
-                if (m.bottom < radius) m.bottom = radius;
-//                offset.setX(radius);
-//                offset.setY(radius);
+//                if (m.top < radius) m.top = radius;
+//                if (m.left < radius) m.left = radius;
+//                if (m.right < radius) m.right = radius;
+//                if (m.bottom < radius) m.bottom = radius;
                 updateBoundingRect();
                 break;
             }
@@ -264,12 +262,19 @@ void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
     Effects effect;
-    effect.blur(temp, static_cast<int>(radius));
+    effect.boxBlur(temp, static_cast<int>(radius));
+//    effect.boxBlur2D(temp, static_cast<int>(radius));
 
-    temp.save("D:/Pictures/Temp/effect/blurred.tif");
+//    effect.boxBlur1(temp, static_cast<int>(radius));
+//    effect.blur(temp, static_cast<int>(radius));
+//    effect.blurOriginal(temp, static_cast<int>(radius));
+
+//    temp.save("D:/Pictures/Temp/effect/blurred.tif");
 
     QPainter overlayPainter(&overlay);
     overlayPainter.setCompositionMode(mode);
+    // qt blur
+//    qt_blurImage(&overlayPainter, temp, radius, true, false);
     overlayPainter.drawImage(0,0, temp);
     overlayPainter.end();
 }

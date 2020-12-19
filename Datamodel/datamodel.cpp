@@ -687,9 +687,16 @@ to run as a separate thread and can be executed directly.
     #endif
     }
     G::t.restart();
+    QString x = QString::number(rowCount());
+    G::popUp->setProgressVisible(true);
+    G::popUp->setProgressMax(rowCount());
+    QString msg = "It may take a moment to load all the metadata for " + x + " files<p>"
+            "This is required before any filtering or sorting of metadata can be done.";
+    G::popUp->showPopup(msg, 0, true, 1);
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
         // is metadata already cached
+        G::popUp->setProgress(row);
         if (index(row, G::MetadataLoadedColumn).data().toBool()) continue;
 
         QString fPath = index(row, 0).data(G::PathRole).toString();
@@ -705,6 +712,8 @@ to run as a separate thread and can be executed directly.
     }
     G::allMetadataLoaded = true;
     loadingModel = false;
+    G::popUp->setProgressVisible(false);
+    G::popUp->hide();
     /*
     qint64 ms = G::t.elapsed();
     qreal msperfile = static_cast<double>(ms) / count;
