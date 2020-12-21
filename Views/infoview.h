@@ -17,6 +17,7 @@ public:
     InfoView(QWidget *parent, DataModel *dm, Metadata *metadata);
     void updateInfo(const int &row);
     void clearInfo();
+    void refreshLayout();
 
     // datamodel for metadata to show or hide
     QStandardItemModel *ok;

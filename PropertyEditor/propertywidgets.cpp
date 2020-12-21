@@ -187,6 +187,12 @@ void SliderEditor::updateSliderWhenLineEdited()
 //    emit editorValueChanged(this);
 }
 
+
+void SliderEditor::fontSizeChanged(int fontSize)
+{
+    qDebug() << __FUNCTION__ << fontSize;
+    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+}
 void SliderEditor::paintEvent(QPaintEvent *event)
 {
     QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
@@ -256,6 +262,11 @@ void LabelEditor::setValue(QVariant value)
     #endif
     }
     label->setText(value.toString());
+}
+
+void LabelEditor::fontSizeChanged(int fontSize)
+{
+    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
 void LabelEditor::paintEvent(QPaintEvent *event)
@@ -342,6 +353,11 @@ void LineEditor::change(/*QString value*/)
     emit editorValueChanged(this);
 }
 
+void LineEditor::fontSizeChanged(int fontSize)
+{
+    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+}
+
 void LineEditor::paintEvent(QPaintEvent *event)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
@@ -374,7 +390,7 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
     spinBox->setWindowFlags(Qt::FramelessWindowHint);
     spinBox->setAttribute(Qt::WA_TranslucentBackground);
 
-    QLabel *label = new QLabel;
+    label = new QLabel;
     label->setStyleSheet("QLabel {}");
     label->setText("(" + QString::number(min) + "-" + QString::number(max) + ")");
     label->setDisabled(true);
@@ -428,6 +444,13 @@ void SpinBoxEditor::change(/*int value*/)
     }
 //    QVariant v = value;
     emit editorValueChanged(this);
+}
+
+void SpinBoxEditor::fontSizeChanged(int fontSize)
+{
+//    setStyleSheet(G::css);
+    qDebug() << __FUNCTION__ << fontSize;
+    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
 void SpinBoxEditor::paintEvent(QPaintEvent *event)
@@ -527,6 +550,11 @@ void DoubleSpinBoxEditor::setValue(QVariant value)
 //    emit editorValueChanged(this);
 //}
 
+void DoubleSpinBoxEditor::fontSizeChanged(int fontSize)
+{
+    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+}
+
 void DoubleSpinBoxEditor::paintEvent(QPaintEvent *event)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
@@ -611,6 +639,11 @@ void CheckBoxEditor::change()
     emit editorValueChanged(this);
 }
 
+void CheckBoxEditor::fontSizeChanged(int fontSize)
+{
+    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+}
+
 void CheckBoxEditor::paintEvent(QPaintEvent *event)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
@@ -632,6 +665,7 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     comboBox = new QComboBox;
     comboBox->setObjectName("DisableGoActions");  // used in MW::focusChange
     QString clr = idx.data(UR_Color).toString();
+    comboBox->setMaxVisibleItems(20);
     comboBox->setStyleSheet("QComboBox {"
                                 "color:" + clr + ";"
                                 "background: transparent;"
@@ -656,6 +690,9 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
 //                            "}"
                             "QComboBox::drop-down {"
                                 "border:none;"
+                            "}"
+                            "QComboBox::QAbstractItemView {"
+//                                "height:1000px;"
                             "}"
                             );
 
@@ -774,6 +811,12 @@ void ComboBoxEditor::change(int index)
     emit editorValueChanged(this);
 }
 
+void ComboBoxEditor::fontSizeChanged(int fontSize)
+{
+//    setStyleSheet(G::css);
+    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+}
+
 void ComboBoxEditor::paintEvent(QPaintEvent *event)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
@@ -847,6 +890,11 @@ void PlusMinusEditor::plusChange()
     emit editorValueChanged(this);
 }
 
+void PlusMinusEditor::fontSizeChanged(int fontSize)
+{
+    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+}
+
 void PlusMinusEditor::paintEvent(QPaintEvent *event)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
@@ -905,23 +953,29 @@ ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
 //    btn->setAutoFillBackground(true);
 //    btn->setFlat(true);
     btn->setToolTip("Click here to open the color select dialog.");
-//    btn->setStyleSheet(
-//        "QPushButton"
-//        "{"
-//            "background-color:#3f5f53;"
-//            "border: none;"
-//            "border-radius: 0px;"
-//            "padding: 0,0,0,0;"
-//            "margin-right: 4px;"
-//            "max-width: 50px;"
-//            "max-height: 10px;"
-//            "min-height: 10px;"
-//        "}"
-//        );
+    /*
+    btn->setStyleSheet(
+        "QPushButton"
+        "{"
+            "background-color:#3f5f53;"
+            "border: none;"
+            "border-radius: 0px;"
+            "padding: 0,0,0,0;"
+            "margin-right: 4px;"
+            "max-width: 50px;"
+            "max-height: 10px;"
+            "min-height: 10px;"
+        "}"
+        );
+//    */
     btn->setMaximumHeight(10);
+
+    colorDlg = new QColorDialog;
+    colorDlg->setAttribute(Qt::WA_DeleteOnClose);
 
     connect(btn, &QPushButton::clicked, this, &ColorEditor::setValueFromColorDlg);
     connect(lineEdit, &QLineEdit::textChanged, this, &ColorEditor::updateLabelWhenLineEdited);
+    connect(colorDlg, &QColorDialog::currentColorChanged, this, &ColorEditor::dlgColorChanged);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(lineEdit, Qt::AlignLeft);
@@ -947,15 +1001,32 @@ void ColorEditor::setValue(QVariant value)
     lineEdit->setText(value.toString());
 }
 
-void ColorEditor::setValueFromColorDlg()
+void ColorEditor::dlgColorChanged(const QColor &color)
 {
+/*
+    colorDlg signals to dlgColorChanged when the color changes so we can we the changes
+    without closing the dialog or an more interactive experience.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QColor color = QColorDialog::getColor(QColor(lineEdit->text()));
     lineEdit->setText(color.name());
+}
+
+void ColorEditor::setValueFromColorDlg()
+{
+/*
+    colorDlg signals to dlgColorChanged when the color changes so we can we the changes
+    without closing the dialog or an more interactive experience.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    colorDlg->open();
 }
 
 void ColorEditor::updateLabelWhenLineEdited(QString value)
@@ -992,6 +1063,11 @@ void ColorEditor::updateLabelWhenLineEdited(QString value)
 //                        "}"
 //                        );
     emit editorValueChanged(this);
+}
+
+void ColorEditor::fontSizeChanged(int fontSize)
+{
+    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
 void ColorEditor::paintEvent(QPaintEvent *event)
@@ -1077,6 +1153,11 @@ void SelectFolderEditor::setValueFromSaveFileDlg()
     lineEdit->setText(path);
 }
 
+void SelectFolderEditor::fontSizeChanged(int fontSize)
+{
+    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
+}
+
 void SelectFolderEditor::paintEvent(QPaintEvent *event)
 {
 }
@@ -1154,6 +1235,11 @@ void SelectFileEditor::setValueFromSaveFileDlg()
     }
     QString path = QFileDialog::getOpenFileName(this, tr("Select file"), "/home");
     lineEdit->setText(path);
+}
+
+void SelectFileEditor::fontSizeChanged(int fontSize)
+{
+    setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
 void SelectFileEditor::paintEvent(QPaintEvent *event)

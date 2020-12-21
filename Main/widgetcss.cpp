@@ -2,6 +2,7 @@
 
 QString WidgetCSS::css()
 {
+    fg = G::textShade;
     bg = widgetBackgroundColor.red();   // desaturate
     mb = bg + 15;
     fm = bg + 35;
@@ -204,9 +205,9 @@ QString WidgetCSS::label()
         "border: none;"
     "}"
 
-//    "QLabel:disabled {"
-//        "color: gray;"
-//    "}"
+    "QLabel:disabled {"
+        "color:" + QColor(l40,l40,l40).name() + ";"
+    "}"
     ;
 }
 

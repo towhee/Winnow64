@@ -31,10 +31,13 @@ public:
     const QStyleOptionViewItem *styleOptionViewItem;
     void setSolo(bool isSolo);
     void expandBranch(QString text);
-    void resizeColumns(QString stringToFitCaptions, QString stringToFitValues);
+    void resizeColumns(/*QString stringToFitCaptions, QString stringToFitValues*/);
     int indentation;
+    QString stringToFitCaptions;
+    QString stringToFitValues;
     int captionColumnWidth;
     int valueColumnWidth;
+    bool ignoreFontSizeChangeSignals = false;
     bool isExpandRecursively = true;
     QModelIndex capIdx; // used to get index for added item when subclassing addItem
     QModelIndex valIdx; // used to hide/show rows etc
@@ -91,10 +94,15 @@ public:
 protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
+
+signals:
+    void fontSizeChange(int fontSize);
 
 public slots:
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor);
     virtual void itemChange(QModelIndex);
+    void fontSizeChanged(int fontSize);
 //    /*virtual*/ void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
 
 private:

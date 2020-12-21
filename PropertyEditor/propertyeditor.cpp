@@ -75,6 +75,8 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
             this, &PropertyEditor::editorWidgetToDisplay);
 
     connect(propertyDelegate, &PropertyDelegate::drawBranchesAgain, this, &PropertyEditor::drawBranches);
+
+    connect(this, &PropertyEditor::fontSizeChange, propertyDelegate, &PropertyDelegate::fontSizeChanged);
 }
 
 void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
@@ -373,7 +375,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.type = "";                    // except hdr
     i.min = 0;                      // DT_Spinbox, DT_Slider
     i.max = 0;                      // DT_Spinbox, DT_Slider
-    i.div = 0;                      // DT_Slider (zero == int, nonzero = double)
+    i.div = 1;                      // DT_Slider (zero == int, nonzero = double)
     i.step = 1;                    // DT_Slider
     i.fixedWidth = 50;              // DT_Slider
     i.dropList.clear();             // DT_Combo
@@ -477,6 +479,21 @@ secondary or tertiary branch is sent then all branches expand.
     expandRecursively(foundIdx);
 }
 
+void PropertyEditor::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QModelIndex idx = indexAt(event->pos());
+    idx = model->index(idx.row(), ValColumn, idx.parent());
+    QVariant value = idx.data(UR_DefaultValue);
+    if (idx.data(UR_DelegateType).toInt() == DT_Slider)
+        value = idx.data(UR_DefaultValue).toDouble() * idx.data(UR_Div).toInt();
+    setItemValue(idx, idx.data(UR_DelegateType).toInt(), value);
+}
+
 void PropertyEditor::mousePressEvent(QMouseEvent *event)
 /*
 Set the current index and expand/collapse when click anywhere on a row that has children.
@@ -518,7 +535,7 @@ void PropertyEditor::mouseReleaseEvent(QMouseEvent */*event*/)
 */
 }
 
-void PropertyEditor::resizeColumns(QString stringToFitCaptions, QString stringToFitValues)
+void PropertyEditor::resizeColumns(/*QString stringToFitCaptions, QString stringToFitValues*/)
 {
     QFont fnt = this->font();
     int px = static_cast<int>(G::fontSize.toInt() * G::ptToPx);
@@ -530,7 +547,16 @@ void PropertyEditor::resizeColumns(QString stringToFitCaptions, QString stringTo
 //    setColumnWidth(OrdColumn, 25);
     setColumnWidth(ValColumn, valueColumnWidth);
     hideColumn(OrdColumn);
+}
 
+void PropertyEditor::fontSizeChanged(int fontSize)
+{
+    if (!ignoreFontSizeChangeSignals) {
+        emit propertyDelegate->fontSizeChange(fontSize);
+    }
+    resizeColumns();
+    // this forces treeview to trigger sizehint for every item
+    scheduleDelayedItemsLayout();
 }
 
 void PropertyEditor::setSolo(bool isSolo)

@@ -85,6 +85,9 @@ signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
 
+public slots:
+    void fontSizeChanged(int fontSize);
+
 private:
     void change(double value);
     void sliderMoved();
@@ -114,9 +117,13 @@ signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
 
+public slots:
+    void fontSizeChanged(int fontSize);
+
 private:
     void change();
     QSpinBox *spinBox;
+    QLabel *label;
     QString source;
     QModelIndex idx;
 };
@@ -136,6 +143,9 @@ protected:
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
+
+public slots:
+    void fontSizeChanged(int fontSize);
 
 private:
     QDoubleSpinBox *doubleSpinBox;
@@ -159,6 +169,9 @@ signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
 
+public slots:
+    void fontSizeChanged(int fontSize);
+
 private:
     void change();
     QLineEdit *lineEdit;
@@ -180,6 +193,9 @@ protected:
 signals:
     void enableGoKeyActions(bool ok);
 
+public slots:
+    void fontSizeChanged(int fontSize);
+
 private:
     QLabel *label;
     QString source;
@@ -200,6 +216,9 @@ protected:
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
+
+public slots:
+    void fontSizeChanged(int fontSize);
 
 private:
     void change();
@@ -227,7 +246,10 @@ protected:
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
-    
+
+public slots:
+    void fontSizeChanged(int fontSize);
+
 private:
     void change(int index);
     QComboBox *comboBox;
@@ -248,6 +270,9 @@ protected:
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
+
+public slots:
+    void fontSizeChanged(int fontSize);
 
 private:
     void minusChange();
@@ -288,10 +313,17 @@ signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
 
+public slots:
+    void dlgColorChanged(const QColor &color);
+
+public slots:
+    void fontSizeChanged(int fontSize);
+
 private:
     void updateLabelWhenLineEdited(QString value);
     QLineEdit *lineEdit;
     QPushButton *btn;
+    QColorDialog *colorDlg;
 };
 
 class SelectFolderEditor : public QWidget
@@ -309,6 +341,9 @@ protected:
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
+
+public slots:
+    void fontSizeChanged(int fontSize);
 
 private:
     void change(QString value);
@@ -331,6 +366,9 @@ protected:
 signals:
     void editorValueChanged(QWidget *);
     void enableGoKeyActions(bool ok);
+
+public slots:
+    void fontSizeChanged(int fontSize);
 
 private:
     void change(QString value);

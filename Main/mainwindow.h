@@ -273,6 +273,7 @@ public:
     bool gridDisplayFirstOpen = true;
     bool justUpdatedBestFit;
     int sortColumn = 0;
+    int prevSortColumn = 0;
     bool preferencesHasFocus = false;
 
     bool showImageCount = true;
@@ -356,6 +357,7 @@ private slots:
     void uncheckAllFilters();
     void clearAllFilters();
     void sortChange();
+    void updateSortColumn(int sortColumn);
     void reverseSortDirection();
     void allPreferences();
     void infoViewPreferences();
@@ -415,7 +417,7 @@ private slots:
     void tableHasScrolled();
     void loadMetadataCacheAfterDelay();
 //    void loadMetadataCache(int startRow = 0);
-    void loadEntireMetadataCache();
+    void loadEntireMetadataCache(QString source);
     void loadImageCacheForNewFolder();
     void launchBuildFilters();
 //    void loadFilteredImageCache();
@@ -830,6 +832,7 @@ private:
     ImageView *imageView;
     EmbelExport *embelExport;
     EmbelProperties *embelProperties;
+    Preferences *pref;
     QFrame *embelFrame;
     Embel *embel;
     InfoString *infoString;

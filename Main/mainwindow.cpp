@@ -485,7 +485,7 @@ void MW::keyPressEvent(QKeyEvent *event)
         if(fullScreenAction->isChecked()) {
             escapeFullScreen();
         }
-        else {
+        if (dm->loadingModel) {
             dm->timeToQuit = true;
         }
     }
@@ -1383,7 +1383,7 @@ visible.  This is used in the metadataCacheThread to determine the range of file
         if (tableView->lastVisibleRow > last) last = tableView->lastVisibleRow;
     }
 
-//        /*
+        /*
         qDebug() << __FUNCTION__
              << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
              << "thumbView->lastVisibleCell =" << thumbView->lastVisibleCell
@@ -1643,7 +1643,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     metadataCacheThread->scrollChange();
 }
 
-void MW::loadEntireMetadataCache()
+void MW::loadEntireMetadataCache(QString source)
 {
 /*
 This is called before a filter or sort operation, which only makes sense if all the metadata
@@ -1665,18 +1665,14 @@ the filter and sort operations cannot commence until all the metadata has been l
         imageCacheThread->pauseImageCache();
         resumeImageCaching = true;
     }
-    /*
-    popup("It may take a moment to load all the metadata...\n"
-          "This is required before any filtering or sorting of metadata can be done.",
-          0, 0.75, true);
-    updateStatus(false, "Loading metadata for all images");
-//    */
+
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
     /* adding all metadata in dm slightly slower than using metadataCacheThread but progress
        bar does not update from separate thread
     */
     dm->addAllMetadata();
+//    if (!G::allMetadataLoaded && source == "SortChange") updateSortColumn(prevSortColumn);
     // metadataCacheThread->loadAllMetadata();
     // metadataCacheThread->wait();
 
@@ -2747,23 +2743,7 @@ void MW::createActions()
     sortGroupAction->addAction(sortCreatorAction);
 
 //    sortFileNameAction->setChecked(true);
-
-    if (sortColumn == G::NameColumn) sortFileNameAction->setChecked(true);
-    if (sortColumn == G::TypeColumn) sortFileTypeAction->setChecked(true);
-    if (sortColumn == G::SizeColumn) sortFileSizeAction->setChecked(true);
-    if (sortColumn == G::CreatedColumn) sortCreateAction->setChecked(true);
-    if (sortColumn == G::ModifiedColumn) sortModifyAction->setChecked(true);
-    if (sortColumn == G::PickColumn) sortPickAction->setChecked(true);
-    if (sortColumn == G::LabelColumn) sortLabelAction->setChecked(true);
-    if (sortColumn == G::RatingColumn) sortRatingAction->setChecked(true);
-    if (sortColumn == G::MegaPixelsColumn) sortMegaPixelsAction->setChecked(true);
-    if (sortColumn == G::DimensionsColumn) sortDimensionsAction->setChecked(true);
-    if (sortColumn == G::ApertureColumn) sortApertureAction->setChecked(true);
-    if (sortColumn == G::ShutterspeedColumn) sortShutterSpeedAction->setChecked(true);
-    if (sortColumn == G::ISOColumn) sortISOAction->setChecked(true);
-    if (sortColumn == G::CameraModelColumn) sortModelAction->setChecked(true);
-    if (sortColumn == G::FocalLengthColumn) sortFocalLengthAction->setChecked(true);
-    if (sortColumn == G::TitleColumn) sortTitleAction->setChecked(true);
+    updateSortColumn(sortColumn);
 
     sortReverseAction = new QAction(tr("Reverse sort order"), this);
     sortReverseAction->setObjectName("reverse");
@@ -2829,7 +2809,8 @@ void MW::createActions()
     }
     addActions(embelTemplatesActions);
     // sync menu with QSettings last active embel template
-    embelTemplatesActions.at(embelProperties->templateId)->setChecked(true);
+    if (embelProperties->templateId < 10)
+        embelTemplatesActions.at(embelProperties->templateId)->setChecked(true);
 
     // View menu
     slideShowAction = new QAction(tr("Slide Show"), this);
@@ -4774,7 +4755,7 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
 
 void MW::embelTemplateChange(int id)
 {
-    embelTemplatesActions.at(id)->setChecked(true);
+    if (id < 10) embelTemplatesActions.at(id)->setChecked(true);
 }
 
 void MW::createEmbel()
@@ -5390,7 +5371,7 @@ triggers a sort, which needs to be suppressed while syncing the menu actions wit
     }
 //    QString columnName = tableView->model()->headerData(column, Qt::Horizontal).toString();
 //    qDebug() << __FUNCTION__ << column << columnName << sortOrder << sortColumn;
-    if (!G::allMetadataLoaded && column > G::DimensionsColumn) loadEntireMetadataCache();
+    if (!G::allMetadataLoaded && column > G::DimensionsColumn) loadEntireMetadataCache("SortChange");
 
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
     switch (column) {
@@ -5514,6 +5495,8 @@ and icons are loaded if necessary.
     // Need all metadata loaded before filtering
     dm->forceBuildFilters = true;
     if (!G::allMetadataLoaded) dm->addAllMetadata();
+    // failed to load all metadata - maybe terminated by user pressing ESC
+    if (!G::allMetadataLoaded) return;
 
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
@@ -5611,7 +5594,7 @@ void MW::invertFilters()
     G::track(__FUNCTION__);
     #endif
     }
-    if (!G::allMetadataLoaded) loadEntireMetadataCache();
+    if (!G::allMetadataLoaded) loadEntireMetadataCache("FilterChange");
 
     if (dm->rowCount() == 0) {
         G::popUp->showPopup("No images available to invert filtration", 2000);
@@ -5658,7 +5641,7 @@ void MW::clearAllFilters()
     #endif
     }
 
-    if (!G::allMetadataLoaded) loadEntireMetadataCache();   // rgh is this reqd
+    if (!G::allMetadataLoaded) loadEntireMetadataCache("FilterChange");   // rgh is this reqd
     uncheckAllFilters();
     filters->searchString = "";
     dm->searchStringChange("");
@@ -5773,21 +5756,30 @@ void MW::refine()
 
 void MW::sortChange()
 {
+/*
+
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    if (sortMenuUpdateToMatchTable/* || !G::isNewFolderLoaded*/) return;
+    // reset sort to file name if was sorting on non-core metadata while folder still loading
+    if (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn) {
+        prevSortColumn = G::NameColumn;
+        updateSortColumn(G::NameColumn);
+    }
+    // do not sort conditions
+    if (sortMenuUpdateToMatchTable || !G::isNewFolderLoaded) return;
 
-    if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;
-    if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;
-    if (sortFileSizeAction->isChecked()) sortColumn = G::SizeColumn;
-    if (sortCreateAction->isChecked()) sortColumn = G::CreatedColumn;
-    if (sortModifyAction->isChecked()) sortColumn = G::ModifiedColumn;
-    if (sortPickAction->isChecked()) sortColumn = G::PickColumn;
-    if (sortLabelAction->isChecked()) sortColumn = G::LabelColumn;
-    if (sortRatingAction->isChecked()) sortColumn = G::RatingColumn;
+    if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;        // core
+    if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;        // core
+    if (sortFileSizeAction->isChecked()) sortColumn = G::SizeColumn;        // core
+    if (sortCreateAction->isChecked()) sortColumn = G::CreatedColumn;       // core
+    if (sortModifyAction->isChecked()) sortColumn = G::ModifiedColumn;      // core
+    if (sortPickAction->isChecked()) sortColumn = G::PickColumn;            // core
+    if (sortLabelAction->isChecked()) sortColumn = G::LabelColumn;          // core
+    if (sortRatingAction->isChecked()) sortColumn = G::RatingColumn;        // core
     if (sortMegaPixelsAction->isChecked()) sortColumn = G::MegaPixelsColumn;
     if (sortDimensionsAction->isChecked()) sortColumn = G::DimensionsColumn;
     if (sortApertureAction->isChecked()) sortColumn = G::ApertureColumn;
@@ -5798,7 +5790,24 @@ void MW::sortChange()
     if (sortTitleAction->isChecked()) sortColumn = G::TitleColumn;
 
     // Need all metadata loaded before sorting non-core metadata
-    if (!G::allMetadataLoaded && sortColumn > G::ModifiedColumn) loadEntireMetadataCache();
+    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn)
+        loadEntireMetadataCache("SortChange");
+
+    // failed to load all metadata, restore prior sort in menu and return
+    if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn) {
+        qDebug() << __FUNCTION__ << "failed"
+                 << "sortColumn =" << sortColumn
+                 << "prevSortColumn =" << prevSortColumn
+                 ;
+        updateSortColumn(prevSortColumn);
+        return;
+    }
+
+    prevSortColumn = sortColumn;
+    qDebug() << __FUNCTION__ << "succeeded"
+             << "sortColumn =" << sortColumn
+             << "prevSortColumn =" << prevSortColumn
+             ;
 
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
 
@@ -5825,6 +5834,37 @@ void MW::sortChange()
     fileSelectionChange(idx, idx);
 
     scrollToCurrentRow();
+}
+
+void MW::updateSortColumn(int sortColumn)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+//    prevSortColumn = sortColumn;
+    qDebug() << __FUNCTION__
+             << "sortColumn =" << sortColumn
+             << "prevSortColumn =" << prevSortColumn
+             ;
+
+    if (sortColumn == G::NameColumn) sortFileNameAction->setChecked(true);
+    if (sortColumn == G::TypeColumn) sortFileTypeAction->setChecked(true);
+    if (sortColumn == G::SizeColumn) sortFileSizeAction->setChecked(true);
+    if (sortColumn == G::CreatedColumn) sortCreateAction->setChecked(true);
+    if (sortColumn == G::ModifiedColumn) sortModifyAction->setChecked(true);
+    if (sortColumn == G::PickColumn) sortPickAction->setChecked(true);
+    if (sortColumn == G::LabelColumn) sortLabelAction->setChecked(true);
+    if (sortColumn == G::RatingColumn) sortRatingAction->setChecked(true);
+    if (sortColumn == G::MegaPixelsColumn) sortMegaPixelsAction->setChecked(true);
+    if (sortColumn == G::DimensionsColumn) sortDimensionsAction->setChecked(true);
+    if (sortColumn == G::ApertureColumn) sortApertureAction->setChecked(true);
+    if (sortColumn == G::ShutterspeedColumn) sortShutterSpeedAction->setChecked(true);
+    if (sortColumn == G::ISOColumn) sortISOAction->setChecked(true);
+    if (sortColumn == G::CameraModelColumn) sortModelAction->setChecked(true);
+    if (sortColumn == G::FocalLengthColumn) sortFocalLengthAction->setChecked(true);
+    if (sortColumn == G::TitleColumn) sortTitleAction->setChecked(true);
 }
 
 void MW::reverseSortDirection()
@@ -6906,7 +6946,7 @@ void MW::preferences(QString text)
     G::track(__FUNCTION__);
     #endif
     }
-    Preferences *pref = new Preferences(this);
+    pref = new Preferences(this);
     if (text != "") pref->expandBranch(text);
     preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
     preferencesDlg->exec();
@@ -6944,19 +6984,26 @@ void MW::setShowImageCount()
 
 void MW::setFontSize(int fontPixelSize)
 {
+/*
+    The font size and container sizes are updated for all objects in Winnow.  For most objects
+    updating the font size in the QStyleSheet is sufficient.  For items in list and tree views
+    the sizehint needs to be triggered, either by refreshing all the values or calling
+    scheduleDelayedItemsLayout().
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     G::fontSize = QString::number(fontPixelSize);
     widgetCSS.fontSize = fontPixelSize;
+//    emit widgetCSS.fontSizeChange(fontPixelSize);
     css = widgetCSS.css();
     G::css = css;
     setStyleSheet(css);
 
-    infoView->updateInfo(currentRow);                           // triggers sizehint!
+    infoView->refreshLayout();                                    // triggers sizehint!
+//    infoView->updateInfo(currentRow);                           // triggers sizehint!
     bookmarks->setStyleSheet(css);
     fsTree->setStyleSheet(css);
     filters->setStyleSheet(css);
@@ -6966,6 +7013,9 @@ void MW::setFontSize(int fontPixelSize)
     favTitleBar->setStyle();
     filterTitleBar->setStyle();
     metaTitleBar->setStyle();
+    embelTitleBar->setStyle();
+    embelProperties->fontSizeChanged(fontPixelSize);
+    pref->fontSizeChanged(fontPixelSize);
 }
 
 void MW::setBackgroundShade(int shade)
@@ -11109,11 +11159,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    refreshFolders();
-
-//    folderDockVisibleAction->setChecked(true);
-//    folderDock->setFocus();
-//    folderDock->raise();
+    embelProperties->fontSizeChanged(13);
+    embelProperties->resizeColumns();
 
 //    ColorAnalysis a(dm->currentFilePath);
 //    qDebug() << __FUNCTION__ << t.elapsed();

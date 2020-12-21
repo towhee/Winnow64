@@ -51,8 +51,8 @@ namespace G
         WidthColumn,
         HeightColumn,
         ModifiedColumn,
-        // items read on demand (secondary metadata fields)
         CreatedColumn,
+        // items read on demand (secondary metadata fields)
         YearColumn,
         DayColumn,
         CreatorColumn,

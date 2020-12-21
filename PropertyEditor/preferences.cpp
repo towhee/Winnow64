@@ -11,8 +11,14 @@ Preferences::Preferences(QWidget *parent): PropertyEditor(parent)
 {
     mw = qobject_cast<MW*>(parent);
 
-    resizeColumns("======String to fit in captions column======",
-                  "=String to fit in values column=");
+    // necessary as the font size is changed in preferences so the slider action would not
+    // work if being resized at the same time due to changes in font size
+    ignoreFontSizeChangeSignals = true;
+
+    stringToFitCaptions = "======String to fit in captions column======";
+    stringToFitValues   = "=String to fit in values column=";
+    resizeColumns();
+
     addItems();
 }
 
@@ -352,6 +358,7 @@ void Preferences::addItems()
     i.tooltip = "Change the background shade throughout the application.";
     i.hasValue = true;
     i.captionIsEditable = false;
+    i.defaultValue = 50;
     i.value = G::backgroundShade;
     i.key = "globalBackgroundShade";
     i.delegateType = DT_Slider;
@@ -378,9 +385,11 @@ void Preferences::addItems()
     i.captionText = "Global";
     i.hasValue = true;
     i.captionIsEditable = false;
+    i.defaultValue = 10;
     i.value = G::fontSize;
     i.key = "globalFontSize";
-    i.delegateType = DT_Slider;
+    i.delegateType = DT_Spinbox;
+//    i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 6;
     i.max = 20;
@@ -395,6 +404,7 @@ void Preferences::addItems()
     i.captionText = "Info overlay";
     i.hasValue = true;
     i.captionIsEditable = false;
+    i.defaultValue = 16;
     i.value = mw->imageView->infoOverlayFontSize;
     i.key = "infoOverlayFontSize";
     i.delegateType = DT_Slider;
@@ -422,6 +432,7 @@ void Preferences::addItems()
     i.captionText = "Loupe";
     i.hasValue = true;
     i.captionIsEditable = false;
+    i.defaultValue = 36;
     i.value =mw->classificationBadgeInImageDiameter;
     i.key = "classificationBadgeInImageDiameter";
     i.delegateType = DT_Slider;
@@ -440,6 +451,7 @@ void Preferences::addItems()
     i.captionText = "Thumbnail";
     i.hasValue = true;
     i.captionIsEditable = false;
+    i.defaultValue = 19;
     i.value =mw->classificationBadgeInThumbDiameter;
     i.key = "classificationBadgeInThumbDiameter";
     i.delegateType = DT_Slider;
@@ -493,6 +505,7 @@ void Preferences::addItems()
     i.tooltip = "Change the display size of the file name shown at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
+    i.defaultValue = 8;
     i.value = mw->thumbView->labelFontSize;
     i.key = "thumbViewLabelSize";
     i.delegateType = DT_Slider;
@@ -509,6 +522,7 @@ void Preferences::addItems()
     i.tooltip = "Show or hide the label with the file name at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
+    i.defaultValue = 8;
     i.value = mw->thumbView->showIconLabels;
     i.key = "thumbViewShowLabel";
     i.delegateType = DT_Checkbox;
@@ -604,6 +618,7 @@ void Preferences::addItems()
     i.tooltip = "Change the width of the cache status in the status bar.";
     i.hasValue = true;
     i.captionIsEditable = false;
+    i.defaultValue = 120;
     i.value = mw->gridView->labelFontSize;
     i.key = "progressWidthSlider";
     i.delegateType = DT_Slider;

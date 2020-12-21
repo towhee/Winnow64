@@ -40,11 +40,13 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
         case 0: return nullptr;
         case DT_Label: {
             LabelEditor *label = new LabelEditor(index, parent);
+            connect(this, &PropertyDelegate::fontSizeChange, label, &LabelEditor::fontSizeChanged);
             emit editorWidgetToDisplay(index, label);
             return label;
         }
         case DT_LineEdit: {
             LineEditor *lineEditor = new LineEditor(index, parent);
+            connect(this, &PropertyDelegate::fontSizeChange, lineEditor, &LineEditor::fontSizeChanged);
             connect(lineEditor, &LineEditor::editorValueChanged,
                     this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, lineEditor);
@@ -52,6 +54,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
         }
         case DT_Checkbox: {
             CheckBoxEditor *checkEditor = new CheckBoxEditor(index, parent);
+            connect(this, &PropertyDelegate::fontSizeChange, checkEditor, &CheckBoxEditor::fontSizeChanged);
             connect(checkEditor, &CheckBoxEditor::editorValueChanged,
                     this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, checkEditor);
@@ -59,6 +62,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
         }
         case DT_Spinbox: {
             SpinBoxEditor *spinBoxEditor = new SpinBoxEditor(index, parent);
+            connect(this, &PropertyDelegate::fontSizeChange, spinBoxEditor, &SpinBoxEditor::fontSizeChanged);
             connect(spinBoxEditor, &SpinBoxEditor::editorValueChanged,
                     this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, spinBoxEditor);
@@ -66,6 +70,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
         }
         case DT_DoubleSpinbox: {
             DoubleSpinBoxEditor *doubleSpinBoxEditor = new DoubleSpinBoxEditor(index, parent);
+            connect(this, &PropertyDelegate::fontSizeChange, doubleSpinBoxEditor, &DoubleSpinBoxEditor::fontSizeChanged);
             connect(doubleSpinBoxEditor, &DoubleSpinBoxEditor::editorValueChanged,
                     this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, doubleSpinBoxEditor);
@@ -73,6 +78,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
         }
         case DT_Combo: {
             ComboBoxEditor *comboBoxEditor = new ComboBoxEditor(index, parent);
+            connect(this, &PropertyDelegate::fontSizeChange, comboBoxEditor, &ComboBoxEditor::fontSizeChanged);
             connect(comboBoxEditor, &ComboBoxEditor::editorValueChanged,
                     this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, comboBoxEditor);
@@ -80,6 +86,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
         }
         case DT_Slider: {
             SliderEditor *sliderEditor = new SliderEditor(index, parent);
+            connect(this, &PropertyDelegate::fontSizeChange, sliderEditor, &SliderEditor::fontSizeChanged);
             connect(sliderEditor, &SliderEditor::editorValueChanged,
                     this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, sliderEditor);
@@ -99,6 +106,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
         }
         case DT_Color: {
             ColorEditor *colorEditor = new ColorEditor(index, parent);
+            connect(this, &PropertyDelegate::fontSizeChange, colorEditor, &ColorEditor::fontSizeChanged);
             connect(colorEditor, &ColorEditor::editorValueChanged,
                     this, &PropertyDelegate::commitData);
             emit editorWidgetToDisplay(index, colorEditor);
@@ -126,6 +134,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
 QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
     int height = static_cast<int>(G::fontSize.toInt() * 1.5 * G::ptToPx);
+//    qDebug() << __FUNCTION__ << height;
     return QSize(option.rect.width(), height);
     /*
     int type = index.data(UR_DelegateType).toInt();
@@ -199,32 +208,10 @@ void PropertyDelegate::setEditorData(QWidget *editor,
     }
 }
 
-//bool PropertyDelegate::eventFilter(QObject *editorObject, QEvent *event)
-//{
-////    bool ok = QStyledItemDelegate::eventFilter(editor, event);
-////    qDebug() << __FUNCTION__ << editor << event << event->type();
-////    return ok;
-//    if (event->type() == QEvent::KeyPress)
-//    {
-////        const auto key = static_cast<QKeyEvent *>(event)->key();
-////        if (key == Qt::Key_Enter || key == Qt::Key_Return || key == Qt::Key_Tab)
-////            submitted = true;
-////        else
-////            submitted = true;
-
-//        qDebug() << __FUNCTION__ << submitted;
-//        QWidget *editor = qobject_cast<QWidget *>(editorObject);
-//        emit commitData(editor);
-//        return true;
-//    }
-//    else if (event->type() == QEvent::Leave /*&&
-//             static_cast<QFocusEvent*>(event)->reason() == Qt::MouseFocusReason*/)
-//    {
-//        submitted = true;
-//        qDebug() << __FUNCTION__ << submitted;
-//    }
-//    return submitted;
-//}
+void PropertyDelegate::fontSizeChanged(int fontSize)
+{
+    emit fontSizeChange(fontSize);
+}
 
 void PropertyDelegate::commit(QWidget *editor)
 {

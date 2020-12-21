@@ -1009,8 +1009,8 @@ void fastblur(BImage img,int radius){
     delete[] vmin;
     delete[] vmax;
 
-    qDebug() << __FUNCTION__
-             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
+//    qDebug() << __FUNCTION__
+//             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 }
 
 void Effects::boxBlur1(QImage &img, int radius)

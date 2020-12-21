@@ -11,6 +11,7 @@ public:
     QString css();
 
     // QWidget
+    int fg;                             // widget foreground shade (r = g = b = bg)
     int bg;                             // widget background shade (r = g = b = bg)
     int mb;                             // menu background shade
     int fm;                             // frame shade relative to bg
@@ -78,5 +79,8 @@ public:
     QString lineEdit();
     QString checkBox();
     QString progressBar();
+
+signals:
+    void fontSizeChange(const int &size);
 };
 #endif // WIDGETCSS_H
