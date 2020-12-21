@@ -82,36 +82,41 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     this->setting = setting;
 
 //    setSolo(true);
-    isExpandRecursively = false;
-    collapseAll();
-    expand(model->index(0,0,QModelIndex()));
+
+//    isExpandRecursively = false;
+//    collapseAll();
+//    expand(model->index(0,0,QModelIndex()));
     setIndentation(10);
     setAlternatingRowColors(false);
     setMouseTracking(false);
-    propertyDelegate->isAlternatingRows = false;
-    resizeColumns("====captions column====",
-                  "====values column====");
-//    qDebug() << __FUNCTION__ << columnWidth(0) << columnWidth(1);
-    setStyleSheet(G::css);
+//    propertyDelegate->isAlternatingRows = false;
 
-    // Assign blank png for treeview decorations so do not need to hide in delegate paint override
-    setStyleSheet
-    (
-        "QTreeView {"
-            "selection-background-color: transparent;"
-        "}"
-        "QTreeView::branch:has-children:!has-siblings:closed,"
-        "QTreeView::branch:closed:has-children:has-siblings {"
-            "border-image: none;"
-            "image: url(:/images/branch-blank.png);"
-        "}"
+    ignoreFontSizeChangeSignals = false;
 
-        "QTreeView::branch:open:has-children:!has-siblings,"
-        "QTreeView::branch:open:has-children:has-siblings  {"
-            "border-image: none;"
-            "image: url(:/images/branch-blank.png);"
-        "}"
-    );
+    stringToFitCaptions = "====captions column====";
+    stringToFitValues   = "====values column====";
+    resizeColumns();
+
+//    setStyleSheet(G::css);
+
+//    // Assign blank png for treeview decorations so do not need to hide in delegate paint override
+//    setStyleSheet
+//    (
+//        "QTreeView {"
+//            "selection-background-color: transparent;"
+//        "}"
+//        "QTreeView::branch:has-children:!has-siblings:closed,"
+//        "QTreeView::branch:closed:has-children:has-siblings {"
+//            "border-image: none;"
+//            "image: url(:/images/branch-blank.png);"
+//        "}"
+
+//        "QTreeView::branch:open:has-children:!has-siblings,"
+//        "QTreeView::branch:open:has-children:has-siblings  {"
+//            "border-image: none;"
+//            "image: url(:/images/branch-blank.png);"
+//        "}"
+//    );
 
     QModelIndex root = model->invisibleRootItem()->index();
 
@@ -1201,10 +1206,22 @@ sorted.
     // swap the current row with the one above
     QStandardItem *item = styleItem->child(row);
     QStandardItem *swapItem = styleItem->child(swapRow);
+    /*
+    qDebug() << __FUNCTION__
+             << "item->data() =" << item->data()
+             << "swapItem->data() =" << swapItem->data()
+                ;
+//                */
     int swapOrder = swapItem->data(UR_SortOrder).toInt();
     int thisOrder = item->data(UR_SortOrder).toInt();
     swapItem->setData(thisOrder, UR_SortOrder);
     item->setData(swapOrder, UR_SortOrder);
+    /*
+    qDebug() << __FUNCTION__
+             << "styleItem->columnCount() =" << styleItem->columnCount()
+             << "swapItem->data() =" << swapItem->data()
+                ;
+//                */
     styleItem->sortChildren(Qt::AscendingOrder);
 
     // update order in settings
@@ -1258,7 +1275,13 @@ void EmbelProperties::moveEffectUp()
 
     // get current row for this index as it may have been sorted already
     QString effectName = btn->name;
-    qDebug() << __FUNCTION__ << effectName;
+    /*
+    qDebug() << __FUNCTION__
+             << "effectName =" << effectName
+             << "idx.data() =" << idx.data()
+             << "idx.parent().data() =" << idx.parent().data()
+                ;
+//                */
     QStandardItem *styleItem = new QStandardItem;
     styleItem = model->itemFromIndex(idx.parent());
     int row;
@@ -2556,7 +2579,7 @@ void EmbelProperties::addGeneral()
     i.parIdx = parIdx;
     i.parentName = "General";
     i.captionText = "Light direction";
-    i.tooltip = "Light source direction (0 - 360 degrees)";
+    i.tooltip = "Light source direction (0 - 360 degrees from north = 0)";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -3176,7 +3199,7 @@ void EmbelProperties::addHighlighterEffect(QModelIndex parIdx, QString effectNam
     i.parentName = effectName;
     i.captionText = "Top margin";
     i.tooltip = "The amount of highlighted margin on top of the item.";
-    i.isIndent = true;;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "top";
@@ -4654,20 +4677,20 @@ void EmbelProperties::mouseMoveEvent(QMouseEvent *event)
     }
 }
 
-void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    QModelIndex idx = indexAt(event->pos());
-    idx = model->index(idx.row(), ValColumn, idx.parent());
-    QVariant value = idx.data(UR_DefaultValue);
-    if (idx.data(UR_DelegateType).toInt() == DT_Slider)
-        value = idx.data(UR_DefaultValue).toDouble() * idx.data(UR_Div).toInt();
-    setItemValue(idx, idx.data(UR_DelegateType).toInt(), value);
-}
+//void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
+//    QModelIndex idx = indexAt(event->pos());
+//    idx = model->index(idx.row(), ValColumn, idx.parent());
+//    QVariant value = idx.data(UR_DefaultValue);
+//    if (idx.data(UR_DelegateType).toInt() == DT_Slider)
+//        value = idx.data(UR_DefaultValue).toDouble() * idx.data(UR_Div).toInt();
+//    setItemValue(idx, idx.data(UR_DelegateType).toInt(), value);
+//}
 
 void EmbelProperties::mousePressEvent(QMouseEvent *event)
 {

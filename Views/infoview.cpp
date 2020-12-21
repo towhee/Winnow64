@@ -53,7 +53,6 @@ public:
         else
             elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
 
-//        painter->drawText(textRect, Qt::AlignBaseline|Qt::TextSingleLine, elidedText);
         painter->setPen(QColor(G::textShade,G::textShade,G::textShade));
         painter->drawText(textRect, Qt::AlignVCenter|Qt::TextSingleLine, elidedText);
 
@@ -61,8 +60,6 @@ public:
         painter->drawRect(option.rect);
 
         painter->restore();
-
-//        QStyledItemDelegate::paint(painter, option, index);
     }
 };
 
@@ -121,6 +118,17 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata) : QTreeVi
             SLOT(showInfoViewMenu(QPoint)));
 }
 
+void InfoView::refreshLayout()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    setColumn0Width();
+    scheduleDelayedItemsLayout();
+}
+
 void InfoView::showInfoViewMenu(QPoint pt)
 {
     {
@@ -143,7 +151,7 @@ void InfoView::setColumn0Width()
     QFont ft = this->font();
     ft.setPixelSize(static_cast<int>(G::fontSize.toInt() * 1.333/* * G::ptToPx*/));
     QFontMetrics fm(ft);
-    setColumnWidth(0, fm.boundingRect("--Shutter Speed--").width());
+    setColumnWidth(0, fm.boundingRect("--Exposure compensation--").width());
 }
 
 void InfoView::setupOk()

@@ -1,20 +1,22 @@
 BUGS
+- After delete selection not right
+- Cache status bar width not showing correctly in preferences
+- Export appearing in templates
+- Export multiple files from lightroom, only first processed in Winnow
+- Add opacity to effects??
+
 - Confirm check for updates is working (Andreas)
 - File/Bookmark count not refresh when filecount changes see QFileSystemWatcher
 - Grid does not always stretch to fit central widget
 - DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
 - Thumbnails window menu not in sync on opening
 - Is copy image (iconview context menu) working?
-- blur effect is slow
-- Properties selection (torquise) not always updating
 - Sharpen needs TLC
 - Add glow, stroke
 - Emboss when transparent edges
 - update when change global font size and background shade
 - Default values for effects
-- *Change sort direction can crash
 - Standardize use of G:css
-- Globalize css
 - Sort out i.name vs i.key in PropertyEditor
 - Cannot delete heic files on PC
 - Filters will be updated msg on opening
@@ -38,6 +40,11 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Resize infoView column 0 when font size change
+- Resize text in propertywidgets and dock headers
+- LineEdit helper text faint
+- Change sort direction can crash
+- Global font size applied to all propertywidgets
 - Disabled style in Filters
 - Docks not always remembered between sessions
 - Shift start in do not embellish

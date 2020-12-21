@@ -37,9 +37,11 @@ signals:
     void itemChanged(QModelIndex idx) const;
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor) const;
     void drawBranchesAgain(QPainter *painter, QRect rect, QModelIndex index) const;
+    void fontSizeChange(int fontSize);
 
 public slots:
     void commit(QWidget *editor);
+    void fontSizeChanged(int fontSize);
 
 protected:
 //    bool eventFilter(QObject *editor, QEvent *event) override;

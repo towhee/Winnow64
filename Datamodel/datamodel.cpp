@@ -432,7 +432,19 @@ Steps:
 bool DataModel::addFileData()
 {
 /*
-Load the information from the operating system contained in QFileInfo first
+    Load the information from the operating system contained in QFileInfo first
+
+    • PathColumn
+    • NameColumn        (core sort item)
+    • TypeColumn        (core sort item)
+    • SizeColumn        (core sort item)
+    • CreatedColumn     (core sort item)
+    • ModifiedColumn    (core sort item)
+    • RefineColumn
+    • PickColumn        (core sort item)
+    • IngestedColumn
+    • SearchColumn
+    • ErrColumn
 */
     {
     #ifdef ISDEBUG
@@ -484,6 +496,9 @@ Load the information from the operating system contained in QFileInfo first
         setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
         setData(index(row, G::SizeColumn), fileInfo.size());
         setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss");
+        search += s;
+        setData(index(row, G::CreatedColumn), s);
         s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
         search += s;
         setData(index(row, G::ModifiedColumn), s);
@@ -687,14 +702,19 @@ to run as a separate thread and can be executed directly.
     #endif
     }
     G::t.restart();
+    timeToQuit = false;
+    loadingModel = true;
     QString x = QString::number(rowCount());
     G::popUp->setProgressVisible(true);
     G::popUp->setProgressMax(rowCount());
     QString msg = "It may take a moment to load all the metadata for " + x + " files<p>"
-            "This is required before any filtering or sorting of metadata can be done.";
+            "This is required before any filtering or sorting of metadata can be done.<p>"
+            "Press <font color=\"red\"><b>Esc</b></font> to cancel.";
     G::popUp->showPopup(msg, 0, true, 1);
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
+        qApp->processEvents();
+        if (timeToQuit) break;
         // is metadata already cached
         G::popUp->setProgress(row);
         if (index(row, G::MetadataLoadedColumn).data().toBool()) continue;
@@ -710,10 +730,13 @@ to run as a separate thread and can be executed directly.
             // rgh add error proofing
         }
     }
-    G::allMetadataLoaded = true;
+    if (!timeToQuit) G::allMetadataLoaded = true;
     loadingModel = false;
     G::popUp->setProgressVisible(false);
     G::popUp->hide();
+
+    timeToQuit = false;
+
     /*
     qint64 ms = G::t.elapsed();
     qreal msperfile = static_cast<double>(ms) / count;
