@@ -800,6 +800,8 @@ are read from settings to a temp list, sorted, and then appended to templateList
     templatePath = "Embel/Templates/" + templateName + "/";
     if (templateId == 0) G::isEmbellish = false;
     else G::isEmbellish = true;
+
+//    syncWinnets();
 }
 
 QString EmbelProperties::uniqueTemplateName(QString name)
@@ -988,6 +990,7 @@ void EmbelProperties::readMetadataTemplateList()
 void EmbelProperties::updateMetadataTemplateList()
 {
 /*
+
     After the token editor has been invoked and closed the text metadataTemplate lists
     are updated in case the template list has changed.
 */
@@ -1028,6 +1031,92 @@ void EmbelProperties::newTemplate()
     templateListEditor->setValue(templateName);
     // add the File, Image, Borders, Texts, Rectangles and Graphics items for the template
 //    addTemplateItems();
+}
+
+void EmbelProperties::syncWinnets()
+{
+/*
+    Winnets are small executables that act like photoshop droplets. They reside in the same
+    folder as the Winnow executable. They send a list of files and a template name to Winnow
+    to be embellished. For example, in order for Winnow to embellish a series of files that
+    have been exported from lightroom, Winnow needs to know which embellish template to use.
+    Instead of sending the files directly to Winnow, thay are sent to an intermediary program
+    (a Winnet) that is named after the template. The Winnet (ie Zen2048) receives the list of
+    files, inserts the strings Embellish" and "Zen2048" and then resends to Winnow.
+
+    Argument options:
+
+    arg[0] = system parameter - usually path to executing program (Winnow)
+
+    if arg[1]  = "Embellish" then
+       arg[2]  = templateName (also name on Winnet used to send to Winnow)
+       arg[3+] = path to each image being exported to be embellished
+
+    else
+       arg[1+] = path to each image to view in Winnow.  Only arg[1] is used to determine the
+       directory to open in Winnow.
+
+    The main Winnet is called winnet.exe and it is copied and renamed to the template name
+    when a new template is created.  The Winnets need to be synced when templates are created,
+    renamed or deleted.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // list of executables that must not be changed
+    QStringList criticalExecutables;
+    criticalExecutables << "Winnow.exe" << "Winnet.exe";
+
+    // list of all executables in the Winnow folder
+    QString appDir = qApp->applicationDirPath();
+    QString dirPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    dirPath += "/Winnets";
+    QDir dir(dirPath);
+    if (!dir.exists()) dir.mkpath(dirPath);
+
+    // make sure Qt5Core.dll exists
+    QString dllPath = dirPath + "/Qt5Core.dll";
+    qDebug() << __FUNCTION__ << "dllPath" << dllPath;
+    if (!QFile(dllPath).exists()) {
+        QString dllSourcePath = appDir + "/Qt5Core.dll";
+        QFile dll(dllSourcePath);
+        dll.copy(dllPath);
+    }
+
+    QStringList dirFilter("*.exe");
+    dir.setNameFilters(dirFilter);
+    dir.setFilter(QDir::Files);
+    QStringList okToChange;
+    okToChange << dir.entryList();
+
+    // strip ".exe"
+    okToChange.replaceInStrings(".exe", "");
+    qDebug() << __FUNCTION__ << okToChange;
+
+    // remove if existing Winnet is not in templateList
+    for (int i = okToChange.length() - 1; i >= 0; i--) {
+        if (!templateList.contains(okToChange.at(i))) {
+            QString fPath = dirPath + "/" + okToChange.at(i) + ".exe";
+            qDebug() << __FUNCTION__ << "DELETE" << fPath;
+//            QFile::remove(fPath);
+//            okToChange.removeAt(i);
+        }
+    }
+
+    // add if missing item in templateList
+    QString winnetPath = appDir + "/Winnet.exe";
+    QFile winnet(winnetPath);
+    for (int i = 0; i < templateList.length(); i++) {
+        if (!okToChange.contains(templateList.at(i))) {
+            QString newWinnet = dirPath + "/" + templateList.at(i) + ".exe";
+            qDebug() << __FUNCTION__ << newWinnet;
+            // add a new Winnet
+            winnet.copy(newWinnet);
+        }
+    }
+    qDebug() << __FUNCTION__ << templateList;
 }
 
 void EmbelProperties::newStyle()
@@ -4980,10 +5069,11 @@ void EmbelProperties::test1(QIcon icon)
     G::track(__FUNCTION__);
     #endif
     }
+    syncWinnets();
 //    e->test();
 //    diagnostic();
 //    diagnosticVectors();
-    diagnosticStyles();
+//    diagnosticStyles();
 }
 
 void EmbelProperties::test2()

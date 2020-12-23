@@ -619,7 +619,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 120;
-    i.value = mw->gridView->labelFontSize;
+    i.value = mw->progressWidth;
     i.key = "progressWidthSlider";
     i.delegateType = DT_Slider;
     i.type = "int";

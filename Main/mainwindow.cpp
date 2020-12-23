@@ -234,6 +234,8 @@ MW::MW(/*QApplication &app, */QWidget *parent) : QMainWindow(parent)
     if (setting->contains("cacheSizeMB") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
     loadSettings();             //dependent on bookmarks, actions, infoView
+    // update executable location - req'd by Winnets (see MW::handleStartupArgs)
+    setting->setValue("appPath", qApp->applicationDirPath());
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
@@ -884,60 +886,62 @@ bool MW::checkForUpdate()
 
 void MW::handleStartupArgs(const QString &args)
 {
+/*
+    Argument options:
+
+    arg[0] = system parameter - usually path to executing program (Winnow)
+
+    if arg[1]  = "Embellish" then
+       arg[2]  = templateName (also name on Winnet used to send to Winnow)
+       arg[3+] = path to each image being exported to be embellished
+
+    else
+       arg[1+] = path to each image to view in Winnow.  Only arg[1] is used to determine the
+       directory to open in Winnow.
+
+    Winnets are small executables that act like photoshop droplets. They reside in the same
+    folder as the Winnow executable. They send a list of files and a template name to Winnow
+    to be embellished. For example, in order for Winnow to embellish a series of files that
+    have been exported from lightroom, Winnow needs to know which embellish template to use.
+    Instead of sending the files directly to Winnow, thay are sent to an intermediary program
+    (a Winnet) that is named after the template. The Winnet (ie Zen2048) receives the list of
+    files, inserts the strings Embellish" and "Zen2048" and then resends to Winnow.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-//    QMessageBox::information(nullptr, "Args", args, QMessageBox::Ok);
     if (args.length() == 0) return;
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
-
+    /*
     QString msg;
-//    for (int i = 0; i < argList.length(); ++i) {
-//        msg += argList.at(i) + "\n";
-//    }
+    for (int i = 1; i < argList.length(); ++i) {
+        msg += argList.at(i) + "\n";
+    }
 
-//    QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
-//    return;
+    QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
+    return;
+//    */
 
-    QMap<QString,QString> argMap;
-    int n = argList.length();
-    qDebug().noquote() << __FUNCTION__ << args << "n =" << n;
-
-    if (n == 1) {
-        // only one argument, therefore must be folder to open
-        Utilities::log(__FUNCTION__, argList.at(0));
-        QFileInfo f(argList.at(0));
+    QStringList pathList;
+    QString templateName;
+    if (argList.at(1) == "Embellish") {
+        // check if any image path sent, if not, return
+        if (argList.length() < 4) return;
+        templateName = argList.at(2);
+        for (int i = 3; i < argList.length(); i++) {
+            pathList << argList.at(i);
+        }
+        EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
+        embelExport.exportRemoteFiles(templateName, pathList);
+    }
+    else {
+        QFileInfo f(argList.at(1));
         f.dir().path();
         fsTree->select(f.dir().path());
         folderSelectionChange();
-    }
-    else {
-        // more than one argument, could be -o, -e or -t
-        for (int i = 0; i < n; ++i) {
-            // check if another argument follows - then is a pair
-            if (i + 1 < n) {
-                argMap[argList.at(i)] = argList.at(i + 1);
-                i++;
-            }
-        }
-    }
-
-    if (argMap.contains("-o")) {
-        msg = "o: " + argMap["-o"];
-//        QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
-    }
-
-    if (argMap.contains("-e")) {
-        if (argMap.contains("-t")) {
-            msg = "e: " + argMap["-e"] + "   t: " + argMap["-t"];
-            Utilities::log(__FUNCTION__, msg);
-            qDebug() << __FUNCTION__ << msg;
-            EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
-            embelExport.exportRemoteFile(argMap["-e"], argMap["-t"]);
-        }
     }
 }
 
@@ -1111,15 +1115,15 @@ void MW::folderSelectionChange()
 void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 {
 /*
-Triggered when file selection changes (folder change selects new image, so it also
-triggers this function). The new image is loaded, the pick status is updated and the
-infoView metadata is updated. The imageCache is updated if necessary. The imageCache will
-not be updated if triggered by folderSelectionChange since a new one will be Update. The
-metadataCache is updated to include metadata and icons for all the visible thumbnails.
+    Triggered when file selection changes (folder change selects new image, so it also
+    triggers this function). The new image is loaded, the pick status is updated and the
+    infoView metadata is updated. The imageCache is updated if necessary. The imageCache will
+    not be updated if triggered by folderSelectionChange since a new one will be Update. The
+    metadataCache is updated to include metadata and icons for all the visible thumbnails.
 
-Note that the datamodel includes multiple columns for each row and the index sent to
-fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo and
-delegate use of the current index must check the column.
+    Note that the datamodel includes multiple columns for each row and the index sent to
+    fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo and
+    delegate use of the current index must check the column.
 */
     {
     #ifdef ISDEBUG
@@ -10802,25 +10806,33 @@ ImageCache and update the image cache status bar.
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     if (selection.isEmpty()) return;
 
+    /* set the currentIndex to the first row in selection (order depends on how selection was
+       made) to insure the correct index is selected after deletion.  */
+    int lowRow = 999999;
+    for (int i = 0; i < selection.count(); ++i) {
+        if (selection.at(i).row() < lowRow) {
+            selectionModel->setCurrentIndex(selection.at(i), QItemSelectionModel::Current);
+            lowRow = selection.at(i).row();
+        }
+    }
+
+    qDebug() << __FUNCTION__ << "lowRow =" << lowRow;
+
     // convert selection to stringlist
     QStringList sl, sldm;
     for (int i = 0; i < selection.count(); ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
         sl.append(fPath);
     }
-    qDebug() << __FUNCTION__ << "sl =" << sl;
+    thumbView->selectionModel()->clearSelection();
 
     // delete file in folder on disk
     for (int i = 0; i < sl.count(); ++i) {
         QString fPath = sl.at(i);
         if (QFile::remove(fPath)) {
             sldm.append(fPath);
-            qDebug() << __FUNCTION__ << "deleted:" << fPath;
         }
-        else
-            qDebug() << __FUNCTION__ << "failed: " << fPath;
     }
-    qDebug() << __FUNCTION__ << "sldm =" << sldm;
 
     // remove fPath from datamodel dm if successfully deleted
     for (int i = 0; i < sldm.count(); ++i) {
@@ -10833,7 +10845,9 @@ ImageCache and update the image cache status bar.
     // update cursor position on progressBar
     updateImageCacheStatus("Update all rows", currentRow, __FUNCTION__);
 
-    thumbView->selectThumb(thumbView->currentIndex());
+    // update current index
+    QModelIndex sfIdx = dm->sf->index(lowRow, 0);
+    thumbView->setCurrentIndex(sfIdx);
 }
 
 void MW::openUsbFolder()
@@ -11159,8 +11173,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    embelProperties->fontSizeChanged(13);
-    embelProperties->resizeColumns();
+    embelProperties->test1();
 
 //    ColorAnalysis a(dm->currentFilePath);
 //    qDebug() << __FUNCTION__ << t.elapsed();
