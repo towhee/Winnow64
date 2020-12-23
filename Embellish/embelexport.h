@@ -20,7 +20,7 @@ public:
     ~EmbelExport();
 
     void exportImages(const QStringList &fPathList);
-    void exportRemoteFile(QString fPath, QString templateName);
+    void exportRemoteFiles(QString templateName, QStringList &pathList);
     void exportImage(const QString &fPath);
 
 private:

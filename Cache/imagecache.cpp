@@ -518,7 +518,6 @@ void ImageCache::removeFromCache(QStringList &pathList)
         imCache.remove(fPath);
         for (int j = 0; j < cacheItemList.count(); ++j) {
             if (cacheItemList.at(j).fPath == fPath) {
-                qDebug() << __FUNCTION__ << cacheItemList.at(j).fPath;
                 cacheItemList.removeAt(j);
             }
         }

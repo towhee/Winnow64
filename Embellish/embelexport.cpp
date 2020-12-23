@@ -84,7 +84,7 @@ QString EmbelExport::exportFolderPath(QString folderPath)
     return path;
 }
 
-void EmbelExport::exportRemoteFile(QString fPath, QString templateName)
+void EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathList)
 {
 /*
     Images sent from another program, such as lightroom, are sent here from
@@ -97,17 +97,19 @@ void EmbelExport::exportRemoteFile(QString fPath, QString templateName)
     G::track(__FUNCTION__);
     #endif
     }
-    Utilities::log(__FUNCTION__, fPath);
+//    Utilities::log(__FUNCTION__, fPath);
 
     // save current embellish template
     QString prevTemplate = embelProperties->templateName;
     // set the embellish template, which updates all the parameters
     embelProperties->setCurrentTemplate(templateName);
 
-    // export the file
-    exportImage(fPath);
+    // export the file(s)
+    for (int i = 0; i < pathList.length(); i++) {
+        exportImage(pathList.at(i));
+    }
 
-    // cleanup
+    // cleanup (open export folder??)
     embelProperties->setCurrentTemplate(prevTemplate);
     delete embellish;
 }
