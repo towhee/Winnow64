@@ -55,6 +55,7 @@
 #include "Utilities/utilities.h"
 #include "Utilities/usb.h"
 #include "Utilities/inputdlg.h"
+#include "Utilities/htmlwindow.h"
 #include "progressbar.h"
 
 #include "Utilities/coloranalysis.h"
@@ -493,6 +494,7 @@ private slots:
     void openUsbFolder();
     void saveAsFile();
     void copyFolderPathFromContext();
+    void revealWinnets();
     void revealFile();
     void revealFileFromContext();
     void revealInFileBrowser(QString path);
@@ -686,6 +688,7 @@ private:
     QAction *embelExportAction;
     QAction *embelTileAction;
     QAction *embelManageTilesAction;
+    QAction *embelRevealWinnetsAction;
     QActionGroup *embelGroupAction;
     QList<QAction *> embelTemplatesActions;
 

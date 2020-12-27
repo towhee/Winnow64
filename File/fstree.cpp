@@ -276,7 +276,11 @@ void FSTree::select(QString dirPath)
     G::track(__FUNCTION__);
     #endif
     }
-    setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
+    QDir test(dirPath);
+    if (test.exists())
+        setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
+    else
+        qDebug() << __FUNCTION__ << "Error:" << dirPath << "does not exist";
 }
 
 QModelIndex FSTree::getCurrentIndex()

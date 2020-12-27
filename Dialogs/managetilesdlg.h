@@ -15,12 +15,16 @@ public:
     explicit ManageTilesDlg(QSettings *setting, QWidget *parent = nullptr);
     ~ManageTilesDlg();
 
+signals:
+    void extractTile();
+
 private slots:
     void on_deleteBtn_clicked();
     void on_closeBtn_clicked();
     void textChange(QString text);
     void activate(int index);
     void editingFinished();
+    void on_newBtn_clicked();
 
 private:
     Ui::ManageTilesDlg *ui;

@@ -269,9 +269,9 @@ void EmbelProperties::initialize()
     addAction(tokenEditorAction);
     connect(tokenEditorAction, &QAction::triggered, mw3, &MW::selectShootingInfo);
 
-    deleteTileAction = new QAction(tr("Permanently delete selected tile"), this);
-    addAction(deleteTileAction);
-    connect(deleteTileAction, &QAction::triggered, this, &EmbelProperties::deleteTile);
+    manageTilesAction = new QAction(tr("Manage tiles"), this);
+    addAction(manageTilesAction);
+    connect(manageTilesAction, &QAction::triggered, this, &EmbelProperties::manageTiles);
 
     separatorAction1 = new QAction(this);
     separatorAction1->setSeparator(true);
@@ -633,6 +633,11 @@ void EmbelProperties::renameSettingKey(QString path, QString oldName, QString ne
     G::track(__FUNCTION__);
     #endif
     }
+    // if name is blank then could remove all child items in settings
+    if (oldName == "") {
+        qDebug() << __FUNCTION__ << "Error: Blank name";
+        return;
+    }
     QString path1 = path + "/" + oldName;
     QString path2 = path + "/" + newName;
     setting->beginGroup(path1);
@@ -719,14 +724,17 @@ The templatePath and isCurrent are defined. The template is selected.
     G::track(__FUNCTION__);
     #endif
     }
+    if (name == "") return;
     templateName = name;
     for (int i = 0; i < templateList.length(); ++i) {
         QString t = templateList.at(i);
         bool isCurrent = (t == templateName);
         QString path = "Embel/Templates/" + t + "/isCurrent";
         setting->setValue(path, isCurrent);
-        if (isCurrent) templateId = i;
-        templatePath = "Embel/Templates/" + templateName + "/";
+        if (isCurrent) {
+            templateId = i;
+            templatePath = "Embel/Templates/" + templateName + "/";
+        }
     }
     templateListEditor->setValue(templateName);
 
@@ -801,7 +809,7 @@ are read from settings to a temp list, sorted, and then appended to templateList
     if (templateId == 0) G::isEmbellish = false;
     else G::isEmbellish = true;
 
-//    syncWinnets();
+    syncWinnets();
 }
 
 QString EmbelProperties::uniqueTemplateName(QString name)
@@ -883,6 +891,7 @@ void EmbelProperties::extractTile()
     }
     QString fPath = QFileDialog::getOpenFileName(this, tr("Select image containing tile pattern"), "/home");
     QFile file(fPath);
+    if (!file.exists()) return;
     if (file.isOpen()) {
         QString msg = "Whoops.  The file is already open in another process.  \n"
                       "Close the file and try again.  Press ESC to continue.";
@@ -936,14 +945,9 @@ void EmbelProperties::manageTiles()
     G::track(__FUNCTION__);
     #endif
     }
-//    QStringList tiles;
-//    setting->beginGroup("Embel/Tiles");
-//    tiles << setting->allKeys();
-//    setting->endGroup();
     ManageTilesDlg manageTilesDlg(setting);
+    connect(&manageTilesDlg, &ManageTilesDlg::extractTile, this, &EmbelProperties::extractTile);
     manageTilesDlg.exec();
-//    updateTileList();
-//    qDebug() << __FUNCTION__ << tiles;
 }
 
 void EmbelProperties::updateTileList()
@@ -1024,6 +1028,7 @@ void EmbelProperties::newTemplate()
     templateName = Utilities::inputText("New Template",
                                         "Enter new template name",
                                         templateList);
+    if (templateName == "") return;
     templateId = templateList.count();
 //    // set all templates except templateName isCurrent = false
     templateList << templateName;
@@ -1031,6 +1036,7 @@ void EmbelProperties::newTemplate()
     templateListEditor->setValue(templateName);
     // add the File, Image, Borders, Texts, Rectangles and Graphics items for the template
 //    addTemplateItems();
+    syncWinnets();
 }
 
 void EmbelProperties::syncWinnets()
@@ -1078,7 +1084,6 @@ void EmbelProperties::syncWinnets()
 
     // make sure Qt5Core.dll exists
     QString dllPath = dirPath + "/Qt5Core.dll";
-    qDebug() << __FUNCTION__ << "dllPath" << dllPath;
     if (!QFile(dllPath).exists()) {
         QString dllSourcePath = appDir + "/Qt5Core.dll";
         QFile dll(dllSourcePath);
@@ -1093,17 +1098,6 @@ void EmbelProperties::syncWinnets()
 
     // strip ".exe"
     okToChange.replaceInStrings(".exe", "");
-    qDebug() << __FUNCTION__ << okToChange;
-
-    // remove if existing Winnet is not in templateList
-    for (int i = okToChange.length() - 1; i >= 0; i--) {
-        if (!templateList.contains(okToChange.at(i))) {
-            QString fPath = dirPath + "/" + okToChange.at(i) + ".exe";
-            qDebug() << __FUNCTION__ << "DELETE" << fPath;
-//            QFile::remove(fPath);
-//            okToChange.removeAt(i);
-        }
-    }
 
     // add if missing item in templateList
     QString winnetPath = appDir + "/Winnet.exe";
@@ -1111,12 +1105,19 @@ void EmbelProperties::syncWinnets()
     for (int i = 0; i < templateList.length(); i++) {
         if (!okToChange.contains(templateList.at(i))) {
             QString newWinnet = dirPath + "/" + templateList.at(i) + ".exe";
-            qDebug() << __FUNCTION__ << newWinnet;
             // add a new Winnet
             winnet.copy(newWinnet);
         }
     }
-    qDebug() << __FUNCTION__ << templateList;
+
+    // remove if existing Winnet is not in templateList
+    for (int i = okToChange.length() - 1; i >= 0; i--) {
+        if (!templateList.contains(okToChange.at(i))) {
+            QString fPath = dirPath + "/" + okToChange.at(i) + ".exe";
+            QFile::remove(fPath);
+            okToChange.removeAt(i);
+        }
+    }
 }
 
 void EmbelProperties::newStyle()
@@ -1580,7 +1581,7 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     // add items for this template
     if (templateId > 0) addTemplateItems();
     collapseAll();
-    expand(model->index(_templates,0));
+    expand(model->index(_templates, 0));
     isTemplateChange = false;
 
     mw3->imageView->loadImage(mw3->dm->currentFilePath);
@@ -1782,6 +1783,7 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
         // also hidden on creation using updateHiddenRows(QModelIndex parent)
         if (v.toString() == "Image") {
             setRowHidden(row + 1, idx.parent(), true);  // anchor container
+            t[index].anchorContainer = "";
         }
         else {
             setRowHidden(row + 1, idx.parent(), false);
@@ -1811,6 +1813,11 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
     if (source == "anchorPoint") {
         setting->setValue(path, v.toString());
         t[index].anchorPoint = v.toString();
+    }
+
+    if (source == "align") {
+        setting->setValue(path, v.toBool());
+        t[index].align = v.toBool();
     }
 
     if (source == "source") {
@@ -1917,6 +1924,7 @@ void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString sou
         // also hidden on creation using updateHiddenRows(QModelIndex parent)
         if (v.toString() == "Image") {
             setRowHidden(row + 1, idx.parent(), true);  // anchor container
+            g[index].anchorContainer = "";
         }
         else {
             setRowHidden(row + 1, idx.parent(), false);
@@ -1938,6 +1946,16 @@ void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString sou
         g[index].y = v.toDouble();
     }
 
+    if (source == "anchorPoint") {
+        setting->setValue(path, v.toString());
+        g[index].anchorPoint = v.toString();
+    }
+
+    if (source == "align") {
+        setting->setValue(path, v.toBool());
+        g[index].align = v.toBool();
+    }
+
     if (source == "size") {
         setting->setValue(path, v.toDouble());
         g[index].size = v.toDouble();
@@ -1947,11 +1965,6 @@ void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString sou
     if (source == "rotation") {
         setting->setValue(path, v.toDouble());
         g[index].rotation = v.toDouble();
-    }
-
-    if (source == "anchorPoint") {
-        setting->setValue(path, v.toString());
-        g[index].anchorPoint = v.toString();
     }
 
     if (source == "opacity") {
@@ -2530,6 +2543,7 @@ void EmbelProperties::addExport()
     if (saveMethod == "Subfolder") {
         model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
         model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
+        setRowHidden(capIdx.row(), capIdx.parent(), true);
     }
 
     // EXPORT Subfolder name
@@ -2551,6 +2565,7 @@ void EmbelProperties::addExport()
     if (saveMethod == "Another folder somewhere else") {
         model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
         model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
+        setRowHidden(capIdx.row(), capIdx.parent(), true);
     }
 
     // Append text to filename
@@ -4481,6 +4496,12 @@ void EmbelProperties::deleteTemplate()
     G::track(__FUNCTION__);
     #endif
     }
+    // a blank template name could delete all templates
+    if (templateName == "") {
+        qDebug() << __FUNCTION__ << "Error: Blank template name";
+        return;
+    }
+
     int ret = (QMessageBox::warning(this, "Delete Template", "Confirm delete template " + templateName + "                     ",
                              QMessageBox::Cancel | QMessageBox::Ok));
     if (ret == QMessageBox::Cancel) return;
@@ -4492,29 +4513,31 @@ void EmbelProperties::deleteTemplate()
     templateListEditor->removeItem(templateName);
     // remove from settings
     setting->remove(pathToDelete);
+
+    syncWinnets();
 }
 
-void EmbelProperties::deleteTile()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+//void EmbelProperties::deleteTile()
+//{
+//    {
+//    #ifdef ISDEBUG
+//    G::track(__FUNCTION__);
+//    #endif
+//    }
 
-    QString tileName;
-    int ret = (QMessageBox::warning(this, "Delete Tile", "Confirm delete template " + tileName + "                     ",
-                             QMessageBox::Cancel | QMessageBox::Ok));
-    if (ret == QMessageBox::Cancel) return;
+//    QString tileName;
+//    int ret = (QMessageBox::warning(this, "Delete Tile", "Confirm delete tile " + tileName + "                     ",
+//                             QMessageBox::Cancel | QMessageBox::Ok));
+//    if (ret == QMessageBox::Cancel) return;
 
-    QString pathToDelete = "Embel/Tiles/" + tileName;
+//    QString pathToDelete = "Embel/Tiles/" + tileName;
 
-    // remove from tree combo list
-    tileList.removeOne(tileName);
-//    borderTileObjectEditor->removeItem(tileName);
-    // remove from settings
-    setting->remove(pathToDelete);
-}
+//    // remove from tree combo list
+//    tileList.removeOne(tileName);
+////    borderTileObjectEditor->removeItem(tileName);
+//    // remove from settings
+//    setting->remove(pathToDelete);
+//}
 
 void EmbelProperties::deleteItem()
 {
@@ -4550,6 +4573,14 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
     QString parName = parIdx.data(UR_Name).toString();
     QString name = idx.data(UR_Name).toString();
     QString path = idx.data(UR_SettingsPath).toString();
+
+    // make sure not templatePath as this could delete all templates
+    if (path == "Embel/Templates" || path == "Embel/Templates/" || path == "Embel/Templates//") {
+        qDebug() << __FUNCTION__ << "ERROR: path to delte =" << path
+                 << "would delete all templates!";
+        return;
+    }
+
     /*
     qDebug() << __FUNCTION__
              << "row =" << row
@@ -4812,7 +4843,7 @@ decoration is clicked.
         copyTemplateAction->setVisible(false);
         copyStyleAction->setVisible(false);
         tokenEditorAction->setVisible(false);
-        deleteTileAction->setVisible(false);
+        manageTilesAction->setVisible(false);
         moveUpAction->setVisible(false);
         moveDownAction->setVisible(false);
 
@@ -4850,7 +4881,7 @@ decoration is clicked.
 
         if (currentIdx.parent().parent() == bordersIdx) {
             if (currentIdx.data().toString() == "Tile" && b[idx.row()].tile != "Do not tile")
-                deleteTileAction->setVisible(true);
+                manageTilesAction->setVisible(true);
         }
 
         if (currentIdx.parent() == textsIdx || currentIdx.parent().parent() == textsIdx) {
@@ -4970,6 +5001,7 @@ Local information (datamodel, currentImage etc) is available.
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << "Local" << key;
     QString tokenString = mw3->infoString->infoTemplates[key];
     QString path = mw3->imageView->currentImagePath;
     QModelIndex curIdx = mw3->thumbView->currentIndex();
@@ -4987,6 +5019,7 @@ in Winnow (ie triggered by EmbelExport).
         G::track(__FUNCTION__);
 #endif
     }
+//    qDebug() << __FUNCTION__ << "Remote" << key;
     QString tokenString = mw3->infoString->infoTemplates[key];
     return mw3->infoString->parseTokenString(tokenString, fPath);
 }
@@ -5083,18 +5116,7 @@ void EmbelProperties::test2()
     G::track(__FUNCTION__);
     #endif
     }
-    BarBtn *btn = qobject_cast<BarBtn*>(sender());
-    int ret = (QMessageBox::warning(this, "Delete Template", "Confirm delete template " + templateName + "                     ",
-                             QMessageBox::Cancel | QMessageBox::Ok));
-    if (ret == QMessageBox::Cancel) return;
 
-    QString pathToDelete = "Embel/Templates/" + templateName;
-    qDebug() << __FUNCTION__ << pathToDelete;
-
-    // remove from tree combo list
-    templateListEditor->removeItem(templateName);
-    // remove from settings
-    setting->remove(pathToDelete);
 }
 
 void EmbelProperties::coordHelp()
@@ -5104,11 +5126,9 @@ void EmbelProperties::coordHelp()
     G::track(__FUNCTION__);
     #endif
     }
-//    QWidget *helpDoc = new QWidget;
-//    Ui::embelCoord ui;
-//    ui.setupUi(helpDoc);
-//    helpDoc->show();
-
+    HtmlWindow *w = new HtmlWindow("Winnow - Embel Container and Coordinate System",
+                                   ":/Docs/embelcoordsystem.html",
+                                   QSize(939,736));
 }
 
 void EmbelProperties::addBorder(int count, QString borderName)
@@ -5463,29 +5483,6 @@ void EmbelProperties::addText(int count)
         model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
     }
 
-    i.name = "anchorPoint";
-    i.parIdx = parIdx;
-    i.parentName = textName;
-    i.captionText = "Anchor point";
-    i.tooltip = "Select a text box anchor point.";
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "anchorPoint";
-    i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
-    else {
-        i.value = "Top Left";
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << anchorPoints;
-    text.anchorPoint = i.value.toString();
-    addItem(i);
-//    textAnchorObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
-
     i.name = "x";
     i.parIdx = parIdx;
     i.parentName = textName;
@@ -5537,6 +5534,49 @@ void EmbelProperties::addText(int count)
     range = i.max - i.min;
     i.step = static_cast<int>(range / longSidePx);    i.fixedWidth = 50;
     text.y = i.value.toDouble();
+    addItem(i);
+
+    i.name = "anchorPoint";
+    i.parIdx = parIdx;
+    i.parentName = textName;
+    i.captionText = "Justify";
+    i.tooltip = "Select a text box anchor point.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "anchorPoint";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = "Top Left";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << anchorPoints;
+    text.anchorPoint = i.value.toString();
+    addItem(i);
+
+    i.name = "align";
+    i.parIdx = parIdx;
+    i.parentName = textName;
+    i.captionText = "Align";
+    i.tooltip = "Align text anchor point to the nearest image edge.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "align";
+    i.defaultValue = false;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    text.align = i.value.toBool();
     addItem(i);
 
     i.name = "rotation";
@@ -5611,8 +5651,9 @@ void EmbelProperties::addText(int count)
 
     // update tree based on source
     if (text.source == "Metadata template") {
-        model->setData(capIdx, true, UR_isHidden);
-        model->setData(valIdx, true, UR_isHidden);
+        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
+        model->setData(valIdx, true, UR_isHidden);      // capIdx defined by addItem
+        setRowHidden(capIdx.row(), capIdx.parent(), true);
     }
 
     i.name = "metadataTemplate";
@@ -5638,13 +5679,14 @@ void EmbelProperties::addText(int count)
     i.dropList << metadataTemplatesList;
     QString key = i.value.toString();
     text.metadataTemplate = key;
-//    text.text = metaString(key);
-//    addItem(i);
     textMetadataTemplateObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
 
     // update tree based on source
-    if (text.source == "Text") model->setData(capIdx, true, UR_isHidden);
-    if (text.source == "Text") model->setData(valIdx, true, UR_isHidden);
+    if (text.source == "Text") {
+        model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
+        model->setData(valIdx, true, UR_isHidden);      // capIdx defined by addItem
+        setRowHidden(capIdx.row(), capIdx.parent(), true);
+    }
 
     i.name = "size";
     i.parIdx = parIdx;
@@ -5924,30 +5966,8 @@ void EmbelProperties::addGraphic(int count)
     if (graphic.anchorObject == "Image") {
         model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
         model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
+        setRowHidden(capIdx.row(), capIdx.parent(), true);
     }
-
-    i.name = "anchorPoint";
-    i.parIdx = parIdx;
-    i.parentName = graphicName;
-    i.captionText = "Anchor point";
-    i.tooltip = "Select a graphic anchor point.";
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "anchorPoint";
-    i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
-        i.value = setting->value(settingRootPath + i.key);
-    else {
-        i.value = "Top Left";
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << anchorPoints;
-    graphic.anchorPoint = i.value.toString();
-    addItem(i);
-//    graphicAnchorObjectEditor[count] = static_cast<ComboBoxEditor*>(addItem(i));
 
     i.name = "x";
     i.parIdx = parIdx;
@@ -6001,6 +6021,49 @@ void EmbelProperties::addGraphic(int count)
     i.step = static_cast<int>(range / longSidePx);
     i.fixedWidth = 50;
     graphic.y = i.value.toDouble();
+    addItem(i);
+
+    i.name = "anchorPoint";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "Justify";
+    i.tooltip = "Select a graphic anchor point.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "anchorPoint";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = "Top Left";
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << anchorPoints;
+    graphic.anchorPoint = i.value.toString();
+    addItem(i);
+
+    i.name = "align";
+    i.parIdx = parIdx;
+    i.parentName = graphicName;
+    i.captionText = "Align";
+    i.tooltip = "Align text anchor point to the nearest image edge.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "align";
+    i.defaultValue = false;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    graphic.align = i.value.toBool();
     addItem(i);
 
     i.name = "size";

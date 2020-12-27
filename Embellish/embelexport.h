@@ -20,12 +20,12 @@ public:
     ~EmbelExport();
 
     void exportImages(const QStringList &fPathList);
-    void exportRemoteFiles(QString templateName, QStringList &pathList);
+    QString exportRemoteFiles(QString templateName, QStringList &pathList);
     void exportImage(const QString &fPath);
+    QString exportFolderPath(QString folderPath = "");
 
 private:
     bool loadImage(QString fPath);
-    QString exportFolderPath(QString folderPath = "");
     Metadata *metadata;
     DataModel *dm;
     ImageCache *imageCacheThread;

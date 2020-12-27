@@ -96,6 +96,8 @@ void ManageTilesDlg::textChange(QString text)
     be the same. If it is not then set a flag (textHasBeenEdited = false) and the slots
     "activate" and "editingFinished" will ignore signals.
 */
+    // if extract new tile then index may not have been built
+    if (ui->tileBox->count() <= 0) return;
 
     // has text changed or just enter pressed - compare to tiles
     int index = ui->tileBox->currentIndex();
@@ -158,7 +160,11 @@ void ManageTilesDlg::on_deleteBtn_clicked()
     Delete the selected tile.
 */
     int index = ui->tileBox->currentIndex();
-    QString sKey = "Embel/Tiles/" + tiles.at(index);
+    QString tileName = tiles.at(index);
+    int ret = (QMessageBox::warning(this, "Delete Tile", "Confirm delete tile " + tileName + "                     ",
+                             QMessageBox::Cancel | QMessageBox::Ok));
+    if (ret == QMessageBox::Cancel) return;
+    QString sKey = "Embel/Tiles/" + tileName;
     /*
     qDebug();
     qDebug() << __FUNCTION__ << "tiles   " << tiles;
@@ -177,4 +183,22 @@ void ManageTilesDlg::on_deleteBtn_clicked()
 void ManageTilesDlg::on_closeBtn_clicked()
 {
     accept();
+}
+
+void ManageTilesDlg::on_newBtn_clicked()
+{
+    extractTile();
+
+    QString currentTile = ui->tileBox->currentText();
+    tiles.clear();
+
+    // reread list of tiles from QSettings in case new tiles
+    setting->beginGroup("Embel/Tiles");
+    tiles << setting->allKeys();
+    setting->endGroup();
+
+    ui->tileBox->clear();
+    ui->tileBox->addItems(tiles);
+    ui->tileBox->setCurrentText(currentTile);
+
 }

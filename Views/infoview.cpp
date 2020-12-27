@@ -74,7 +74,8 @@ Column 2 = Flag to show or hide row (hidden)
 It is used to show some file, image and application state information.
 */
 
-InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata) : QTreeView(parent)
+InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView *thumbView)
+    : QTreeView(parent)
 {
     {
     #ifdef ISDEBUG
@@ -83,10 +84,12 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata) : QTreeVi
     }
     this->dm = dm;
     this->metadata = metadata;
+    this->thumbView = thumbView;        // req'd to update metadata in dm for selections
 
     ok = new QStandardItemModel(this);
     setupOk();
     setModel(ok);
+    selectionModel()->setModel(ok);
 
     setRootIsDecorated(true);
 //    setColumnWidth(0, 100);
@@ -116,6 +119,75 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata) : QTreeVi
 
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),
             SLOT(showInfoViewMenu(QPoint)));
+
+    connect(ok, &QStandardItemModel::dataChanged, this, &InfoView::dataChanged);
+
+//    connect(itemDelegate(), &QStyledItemDelegate::closeEditor, this, &InfoView::editorClosed);
+//    connect(selectionModel(), &QItemSelectionModel::currentChanged, this, &InfoView::selectionChanged);
+}
+
+void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex, const QVector<int> &roles)
+{
+/*
+    Updates the datamodel for info items that can be edited: title, creator, copyright, email
+    and url (at present).  This is used in Embel (ie image title) and "Show shooting data".
+
+    The dataChanged signal is triggered twice for the same edit so count is used to only
+    process once.
+
+    The signal dataEdited is emitted, which triggers Embel to update the text fields. This
+    will only work if Embel::isRemote == false.
+*/
+    static int count = 0;
+    if (count == 0) {
+        bool isEditable = ok->itemFromIndex(idx1)->isEditable();
+        if ( isEditable) {
+            QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+            QModelIndex idx0 = ok->index(idx1.row(), 0, idx1.parent());
+            QString field = idx0.data().toString();
+//            int row = dm->currentRow;
+            for (int i = 0; i < selection.count(); i++) {
+                int row = selection.at(i).row();
+                if (field == "Title") {
+                    QString s = idx1.data().toString();
+                    dm->setData(dm->sf->index(row, G::TitleColumn), s);
+                    dm->setData(dm->sf->index(row, G::TitleColumn), s, Qt::ToolTipRole);
+                    /*
+                    qDebug() << __FUNCTION__
+                             << "dm->currentRow =" << dm->currentRow
+                             << "idx0.data() =" << idx0.data()
+                             << "idx1.data() =" << idx1.data()
+                             << "isEditable =" << isEditable
+                                ;
+    //                            */
+                }
+                if (field == "Creator") {
+                    QString s = idx1.data().toString();
+                    dm->setData(dm->sf->index(row, G::CreatorColumn), s);
+                    dm->setData(dm->sf->index(row, G::CreatorColumn), s, Qt::ToolTipRole);
+                }
+                if (field == "Copyright") {
+                    QString s = idx1.data().toString();
+                    dm->setData(dm->sf->index(row, G::CopyrightColumn), s);
+                    dm->setData(dm->sf->index(row, G::CopyrightColumn), s, Qt::ToolTipRole);
+                }
+                if (field == "Email") {
+                    QString s = idx1.data().toString();
+                    dm->setData(dm->sf->index(row, G::EmailColumn), s);
+                    dm->setData(dm->sf->index(row, G::EmailColumn), s, Qt::ToolTipRole);
+                }
+                if (field == "Url") {
+                    QString s = idx1.data().toString();
+                    dm->setData(dm->sf->index(row, G::UrlColumn), s);
+                    dm->setData(dm->sf->index(row, G::UrlColumn), s, Qt::ToolTipRole);
+                }
+            }
+
+            emit dataEdited();
+        }
+    }
+    count++;
+    if (count > 1) count = 0;
 }
 
 void InfoView::refreshLayout()
@@ -322,6 +394,7 @@ void InfoView::updateInfo(const int &row)
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << row;
 
     // flag updates so itemChanged will be ignored in MW::metadataChanged
     isNewImageDataChange = true;
