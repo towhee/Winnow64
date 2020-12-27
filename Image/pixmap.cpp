@@ -72,10 +72,6 @@ bool Pixmap::load(QString &fPath, QImage &image)
     QFile imFile(fPath);
     int dmRow = dm->fPathRow[fPath];
 
-    if (dmRow == 27) {
-        qDebug() << __FUNCTION__;
-    }
-
     QString err = dm->index(dmRow, G::ErrColumn).data().toString();
 
     // is metadata loaded

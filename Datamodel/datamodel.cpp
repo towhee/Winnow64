@@ -1259,12 +1259,12 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("shootingInfo", 25) << G::s(index(row, G::ShootingInfoColumn).data());
     rpt << "\n  " << G::sj("loadMsecPerMp", 25) << G::s(index(row, G::LoadMsecPerMpColumn).data());
     rpt << "\n  " << G::sj("searchText", 25) << G::s(index(row, G::SearchTextColumn).data());
-    QStringList sl = index(row, G::ErrColumn).data().toStringList();
-    rpt << "\n  " << G::sj("err", 25) << sl.at(0);
-    QString whitespace = "";
-    for (int i = 1; i < sl.size(); ++i) {
-        rpt << "\n  " << whitespace.leftJustified(26, ' ') << sl.at(i);
-    }
+//    QStringList sl = index(row, G::ErrColumn).data().toStringList();
+//    rpt << "\n  " << G::sj("err", 25) << sl.at(0);
+//    QString whitespace = "";
+//    for (int i = 1; i < sl.size(); ++i) {
+//        rpt << "\n  " << whitespace.leftJustified(26, ' ') << sl.at(i);
+//    }
 }
 
 // --------------------------------------------------------------------------------------------

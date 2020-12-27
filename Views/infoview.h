@@ -6,6 +6,7 @@
 #include <QtWidgets>
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
+#include "Views/iconview.h"
 
 #include "Main/global.h"
 
@@ -14,7 +15,7 @@ class InfoView : public QTreeView
 	Q_OBJECT
 
 public:
-    InfoView(QWidget *parent, DataModel *dm, Metadata *metadata);
+    InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView *thumbView);
     void updateInfo(const int &row);
     void clearInfo();
     void refreshLayout();
@@ -81,6 +82,8 @@ public:
         statusInfoRowsEnd   // insert additional items before this
     };
 
+signals:
+    void dataEdited();
 
 public slots:
     void showOrHide();
@@ -89,6 +92,7 @@ public slots:
     void setColumn0Width();
 
 private slots:
+    void dataChanged(const QModelIndex &idx1, const QModelIndex, const QVector<int> &roles);
 
 protected:
     void mousePressEvent(QMouseEvent *event);
@@ -101,6 +105,7 @@ private:
 	QAction *copyAction;
     DataModel *dm;
     Metadata *metadata;
+    IconView *thumbView;
     QString fPath;
 };
 

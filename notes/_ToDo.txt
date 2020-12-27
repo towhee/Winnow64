@@ -1,6 +1,9 @@
 BUGS
+- Prevent blank template creation
+- Check for multiple signals to trigger Embel processes
+- Change access to token editor in view menu
+- Sometimes all docks except embellish are locked
 - Export appearing in templates
-- Export multiple files from lightroom, only first processed in Winnow
 - Add opacity to effects??
 
 - Confirm check for updates is working (Andreas)
@@ -11,12 +14,9 @@ BUGS
 - Sharpen needs TLC
 - Add glow, stroke
 - Emboss when transparent edges
-- update when change global font size and background shade
-- Default values for effects
 - Standardize use of G:css
 - Sort out i.name vs i.key in PropertyEditor
 - Cannot delete heic files on PC
-- Filters will be updated msg on opening
 - Add hif file format
 - Rotate heic files
 - Mac check for updates not done yet
@@ -37,7 +37,20 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- ManageTiles crashes when create new tile
+- Hidden items are not hidden when first open template
+- Help > All diagnostics crashes
+- Filters will be updated msg on opening
+- QGraphicsScene::removeItem: item 0x2bbb5684910's scene (0x0) is different from this scene (0x2bbb3dcee20)
+- Fix weird edit mode in InfoView
+- Edit title show in embellish render
+- Attribute Qt::AA_EnableHighDpiScaling must be set before QCoreApplication is created.
+- Hor line in Zen2048 wrong if portait aspect
+- Default values for effects
+- Export multiple files from lightroom, only first processed in Winnow
+- Crash setting template to "Do not Embellish"
 - Cache status bar width not showing correctly in preferences
+- update when change global font size and background shade
 - After delete selection not right
 - Resize infoView column 0 when font size change
 - Resize text in propertywidgets and dock headers

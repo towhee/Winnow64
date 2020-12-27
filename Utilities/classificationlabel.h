@@ -8,7 +8,7 @@ class ClassificationLabel : public QLabel
 {
     Q_OBJECT
 public:
-    ClassificationLabel(QWidget *parent = 0);
+    ClassificationLabel(QWidget *parent = nullptr);
     void setDiameter(int diameter);
     void setColorClass(QString colorClass);
     void setRating(QString rating);

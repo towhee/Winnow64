@@ -247,7 +247,7 @@ MW::MW(/*QApplication &app, */QWidget *parent) : QMainWindow(parent)
     createGridView();           // dependent on QSetting, filterView
     createTableView();          // dependent on centralWidget
     createSelectionModel();     // dependent on ThumbView, ImageView
-    createInfoView();           // dependent on Metadata
+    createInfoView();           // dependent on DataModel, Metadata, ThumbView
     createCaching();            // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
@@ -317,8 +317,6 @@ void MW::initialize()
     #endif
     }
     this->setWindowTitle("Winnow");
-    QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-//    QGuiApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTouchEvents);
     G::isInitializing = true;
     isNormalScreen = true;
     G::isSlideShow = false;
@@ -406,6 +404,8 @@ void MW::showEvent(QShowEvent *event)
     prevScreen = qApp->screenAt(loc)->name();
 
     if (isShift) refreshFolders();
+
+//    sortChange();
 
     G::isInitializing = false;
 }
@@ -912,6 +912,8 @@ void MW::handleStartupArgs(const QString &args)
     G::track(__FUNCTION__);
     #endif
     }
+//    qDebug() << __FUNCTION__ << args;
+
     if (args.length() == 0) return;
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
@@ -935,7 +937,20 @@ void MW::handleStartupArgs(const QString &args)
             pathList << argList.at(i);
         }
         EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
-        embelExport.exportRemoteFiles(templateName, pathList);
+        QString path = embelExport.exportRemoteFiles(templateName, pathList);
+
+        qDebug() << __FUNCTION__ << "path =" << path;
+
+        // go to export folder, sorted reverse modify, no filters, first image
+        embelProperties->setCurrentTemplate("Do not Embellish");
+        clearAllFilters();
+        sortModifyAction->setChecked(true);
+        sortReverseAction->setChecked(true);
+        sortChange();
+        embelProperties->templateId = 0;
+        fsTree->select(path);
+        folderSelectionChange();
+        thumbView->selectThumb(0);
     }
     else {
         QFileInfo f(argList.at(1));
@@ -1843,6 +1858,10 @@ memory has been consumed or all the images are cached.
     imageCacheThread->updateImageCachePosition(/*fPath*/);
 
     G::isNewFolderLoaded = true;
+
+    // update sort order
+    sortChange();
+    thumbView->selectThumb(0);
 
     // set focus when program opens
     if (G::mode == "Loupe") thumbView->setFocus();
@@ -2764,11 +2783,11 @@ void MW::createActions()
     addAction(embelNewTemplateAction);
     connect(embelNewTemplateAction, &QAction::triggered, this, &MW::newEmbelTemplate);
 
-    embelTileAction = new QAction(tr("Extract tile"), this);
-    embelTileAction->setObjectName("embelExportAct");
-    embelTileAction->setShortcutVisibleInContextMenu(true);
-    addAction(embelTileAction);
-    connect(embelTileAction, &QAction::triggered, embelProperties, &EmbelProperties::extractTile);
+//    embelTileAction = new QAction(tr("Extract tile"), this);
+//    embelTileAction->setObjectName("embelExportAct");
+//    embelTileAction->setShortcutVisibleInContextMenu(true);
+//    addAction(embelTileAction);
+//    connect(embelTileAction, &QAction::triggered, embelProperties, &EmbelProperties::extractTile);
 
     embelManageTilesAction = new QAction(tr("Manage tiles"), this);
     embelManageTilesAction->setObjectName("embelManageTilesAct");
@@ -2782,13 +2801,26 @@ void MW::createActions()
     addAction(embelExportAction);
     connect(embelExportAction, &QAction::triggered, this, &MW::exportEmbel);
 
+    #ifdef Q_OS_WIN
+        revealText = "Show Winnets in Explorer";
+    #endif
+    #ifdef Q_OS_MAC
+        revealText = "Show Winnets in Finder";
+    #endif
+
+    embelRevealWinnetsAction = new QAction(revealText, this);
+    embelRevealWinnetsAction->setObjectName("RevealWinnetsAct");
+    embelRevealWinnetsAction->setShortcutVisibleInContextMenu(true);
+    addAction(embelRevealWinnetsAction);
+    connect(embelRevealWinnetsAction, &QAction::triggered, this, &MW::revealWinnets);
+
     // general connection to handle invoking new embellish templates
     // MacOS will not allow runtime menu insertions.  Cludge workaround
-    // add 10 dummy menu items and then hide until use.
+    // add 30 dummy menu items and then hide until use.
     embelGroupAction = new QActionGroup(this);
     embelGroupAction->setExclusive(true);
     n = embelProperties->templateList.count();
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 30; i++) {
         QString name;
         QString objName = "";
         if (i < n) {
@@ -2798,22 +2830,32 @@ void MW::createActions()
         else name = "Future Template" + QString::number(i);
 
         embelTemplatesActions.append(new QAction(name, this));
+
         if (i < n) {
-            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Ctrl+Shift+" + QString::number(i)));
             embelTemplatesActions.at(i)->setObjectName(objName);
-            embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
             embelTemplatesActions.at(i)->setCheckable(true);
             embelTemplatesActions.at(i)->setText(name);
+        }
+
+        if (i < 10 && i < n) {
+            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Ctrl+Shift+" + QString::number(i)));
+//            embelTemplatesActions.at(i)->setObjectName(objName);
+            embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
+//            embelTemplatesActions.at(i)->setCheckable(true);
+//            embelTemplatesActions.at(i)->setText(name);
             embelTemplatesActions.at(i)->setVisible(true);
             addAction(embelTemplatesActions.at(i));
         }
+
+        if (i < n) addAction(embelTemplatesActions.at(i));
+
         if (i >= n) embelTemplatesActions.at(i)->setVisible(false);
         embelTemplatesActions.at(i)->setShortcut(QKeySequence("Ctrl+Shift+" + QString::number(i)));
         embelGroupAction->addAction(embelTemplatesActions.at(i));
     }
     addActions(embelTemplatesActions);
     // sync menu with QSettings last active embel template
-    if (embelProperties->templateId < 10)
+    if (embelProperties->templateId < n)
         embelTemplatesActions.at(embelProperties->templateId)->setChecked(true);
 
     // View menu
@@ -3373,6 +3415,7 @@ void MW::createMenus()
     embelMenu->addAction(embelExportAction);
     embelMenu->addAction(embelTileAction);
     embelMenu->addAction(embelManageTilesAction);
+    embelMenu->addAction(embelRevealWinnetsAction);
     embelMenu->addSeparator();
     embelMenu->addActions(embelGroupAction->actions());
 //    // add 10 dummy menu items for embellish template choice
@@ -4259,7 +4302,7 @@ InfoView shows basic metadata in a dock widget.
     G::track(__FUNCTION__);
     #endif
     }
-    infoView = new InfoView(this, dm, metadata);
+    infoView = new InfoView(this, dm, metadata, thumbView);
     infoView->setMaximumWidth(folderMaxWidth);
 
     if (isSettings) {
@@ -4772,6 +4815,7 @@ void MW::createEmbel()
     embel = new Embel(imageView->scene, imageView->pmItem, embelProperties, imageCacheThread);
     connect(imageView, &ImageView::embellish, embel, &Embel::build);
     connect(embel, &Embel::done, imageView, &ImageView::resetFitZoom);
+    connect(infoView, &InfoView::dataEdited, embel, &Embel::refreshTexts);
 }
 
 void MW::createFSTree()
@@ -5497,10 +5541,12 @@ and icons are loaded if necessary.
     if (!G::isNewFolderLoaded) return;
 
     // Need all metadata loaded before filtering
-    dm->forceBuildFilters = true;
-    if (!G::allMetadataLoaded) dm->addAllMetadata();
-    // failed to load all metadata - maybe terminated by user pressing ESC
-    if (!G::allMetadataLoaded) return;
+    if (source != "MW::clearAllFilters") {
+        dm->forceBuildFilters = true;
+        if (!G::allMetadataLoaded) dm->addAllMetadata();
+        // failed to load all metadata - maybe terminated by user pressing ESC
+        if (!G::allMetadataLoaded) return;
+    }
 
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
@@ -5799,19 +5845,23 @@ void MW::sortChange()
 
     // failed to load all metadata, restore prior sort in menu and return
     if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn) {
+        /*
         qDebug() << __FUNCTION__ << "failed"
                  << "sortColumn =" << sortColumn
                  << "prevSortColumn =" << prevSortColumn
                  ;
+//                 */
         updateSortColumn(prevSortColumn);
         return;
     }
 
     prevSortColumn = sortColumn;
+    /*
     qDebug() << __FUNCTION__ << "succeeded"
              << "sortColumn =" << sortColumn
              << "prevSortColumn =" << prevSortColumn
              ;
+//             */
 
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
 
@@ -5847,11 +5897,12 @@ void MW::updateSortColumn(int sortColumn)
     G::track(__FUNCTION__);
     #endif
     }
-//    prevSortColumn = sortColumn;
+    /*
     qDebug() << __FUNCTION__
              << "sortColumn =" << sortColumn
              << "prevSortColumn =" << prevSortColumn
              ;
+//    */
 
     if (sortColumn == G::NameColumn) sortFileNameAction->setChecked(true);
     if (sortColumn == G::TypeColumn) sortFileTypeAction->setChecked(true);
@@ -10848,6 +10899,7 @@ ImageCache and update the image cache status bar.
     // update current index
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
     thumbView->setCurrentIndex(sfIdx);
+    fileSelectionChange(sfIdx, sfIdx);
 }
 
 void MW::openUsbFolder()
@@ -10928,6 +10980,18 @@ void MW::copyFolderPathFromContext()
     QApplication::clipboard()->setText(mouseOverFolder);
     QString msg = "Copied " + mouseOverFolder + " to the clipboard";
     G::popUp->showPopup(msg, 1500);
+}
+
+void MW::revealWinnets()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString dirPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    dirPath += "/Winnets";
+    revealInFileBrowser(dirPath);
 }
 
 void MW::revealFile()
@@ -11173,8 +11237,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    embelProperties->test1();
-
+    setting->setValue("Embel/Templates//", "See what happens");
 //    ColorAnalysis a(dm->currentFilePath);
 //    qDebug() << __FUNCTION__ << t.elapsed();
 

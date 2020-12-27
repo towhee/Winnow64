@@ -57,7 +57,7 @@ public:
     {
         if (About->objectName().isEmpty())
             About->setObjectName(QString::fromUtf8("About"));
-        About->resize(811, 584);
+        About->resize(1502, 584);
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
         sizePolicy.setHorizontalStretch(0);
         sizePolicy.setVerticalStretch(0);
@@ -274,7 +274,7 @@ public:
     void retranslateUi(QDialog *About)
     {
         About->setWindowTitle(QCoreApplication::translate("About", "About", nullptr));
-        title->setText(QCoreApplication::translate("About", "<h1><i>Winnow Image Viewer and Ingester</i></h1>", nullptr));
+        title->setText(QCoreApplication::translate("About", "<h1><i>Winnow</i></h1>", nullptr));
         label->setText(QString());
         version->setText(QCoreApplication::translate("About", "<html><head/><body><p>Version 1.0 updated 2019-08-25</p></body></html>", nullptr));
         webSite->setText(QCoreApplication::translate("About", "<html><head/><body><p>Website: <a href=\"http://165.227.46.158/winnow/winnow.html\"><span style=\" text-decoration: underline; color:#e5e5e5;\">Winnow main page</span></a>&nbsp;&nbsp;(Includes links to download the application and video tutorials)</p></body></html>", nullptr));

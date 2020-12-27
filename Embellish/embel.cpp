@@ -165,7 +165,7 @@ void Embel::clear()
     gItems.clear();
 
     // remove flashItem
-    scene->removeItem(flashItem);
+    if (scene->items().contains(flashItem)) scene->removeItem(flashItem);
 }
 
 void Embel::build(QString path, QString src)
@@ -193,10 +193,12 @@ void Embel::build(QString path, QString src)
     /* file path for the current image (req'd to update styles applied to pmItem).  If it is
        blank then source is main Winnow program, otherwise called from EmbelExport, which will
        not have loaded the folder, and therefore no datamodel.  */
+    isRemote = false;
     if (path != "") {
         isRemote = true;
         fPath = path;
     }
+//    qDebug() << __FUNCTION__ << "isRemote =" << isRemote << "path =" << path << "src =" << src;
     clear();
     createBorders();
     createTexts();
@@ -316,10 +318,14 @@ void Embel::borderImageCoordinates()
     image.bc = QPoint(image.x + image.w / 2, image.y + image.h);
 }
 
-QPoint Embel::canvasCoord(double x, double y, QString anchorObject, QString anchorContainer)
+QPoint Embel::canvasCoord(double x, double y,
+                          QString anchorObject,
+                          QString anchorContainer,
+                          bool alignWithImageEdge)
 {
 /*
-Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
+    Returns a QPoint canvas coordinate for the anchor point of a text or graphic.  The input
+    x,y are in the container coordinates (0-100%).
 */
     {
     #ifdef ISDEBUG
@@ -362,9 +368,9 @@ Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
     // not Image so must be a Border object unless no border objects
     else {
         for (int i = 0; i < p->b.size(); ++i) {
+            int x1, y1, w, h;
             // position and size of container
             if (p->b[i].name == anchorObject) {
-                int x1, y1, w, h;
                 if (anchorContainer == "Top") {
                     x1 = b[i].x;
                     y1 = b[i].y;
@@ -390,11 +396,36 @@ Returns a QPoint canvas coordinate for the anchor point of a text or graphic.
                     w = b[i].w;
                     h = b[i].b;
                 }
+                // container offset + container coordinate
                 x0 = static_cast<int>(x1 + x / 100 * w);
                 y0 = static_cast<int>(y1 + y / 100 * h);
             }
         }
     }
+
+    if (alignWithImageEdge) {
+        if (anchorContainer == "Top" || anchorContainer == "Bottom") {
+            if (x < 50) x0 = image.tl.x();
+            else x0 = image.tr.x();
+        }
+        if (anchorContainer == "Left" || anchorContainer == "Right") {
+            if (y < 50) y0 = image.tl.y();
+            else y0 = image.bl.y();
+        }
+    }
+
+    /*
+    qDebug() << __FUNCTION__
+             << "x =" << x
+             << "y =" << y
+             << "x0 =" << x0
+             << "y0 =" << y0
+             << "anchorObject =" << anchorObject
+             << "anchorContainer =" << anchorContainer
+             << "alignWithImageEdge =" << alignWithImageEdge
+                ;
+//    */
+
     return QPoint(x0, y0);
 }
 
@@ -615,14 +646,15 @@ void Embel::updateText(int i)
         else
             tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate));
     }
+    // font
     QFont font(p->t[i].font);
     int fontSize = static_cast<int>(p->t[i].size / 100 * ls);
-//        qDebug() << __FUNCTION__ << "fontSize =" << fontSize;
     font.setPixelSize(fontSize);
     font.setItalic(p->t[i].isItalic);
     font.setBold(p->t[i].isBold);
     tItems[i]->setFont(font);
     tItems[i]->setDefaultTextColor(QColor(p->t[i].color));
+    // opacity
     double opacity = static_cast<double>(p->t[i].opacity)/100;
     tItems[i]->setOpacity(opacity);
     tItems[i]->setZValue(ZText);
@@ -645,8 +677,8 @@ void Embel::updateText(int i)
         QPoint canvas = canvasCoord(p->t[i].x,
                                     p->t[i].y,
                                     p->t[i].anchorObject,
-                                    p->t[i].anchorContainer);
-    //    qDebug() << __FUNCTION__ << "canvas coord =" << canvas;
+                                    p->t[i].anchorContainer,
+                                    p->t[i].align);
         QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h);
         tItems[i]->setTransformOriginPoint(offset);
         tItems[i]->setPos(canvas - offset);
@@ -686,7 +718,10 @@ void Embel::updateGraphic(int i)
     gItems[i]->setZValue(ZGraphic);
     double opacity = static_cast<double>(p->g[i].opacity)/100;
     gItems[i]->setOpacity(opacity);
-    int dim = static_cast<int>(static_cast<double>(p->g[i].size) / 100 * ls);
+    if (p->g[i].anchorContainer == "Left" || p->g[i].anchorContainer == "Right") stu = h;
+    else stu = w;
+    int dim = static_cast<int>(static_cast<double>(p->g[i].size) / 100 * stu);
+//    int dim = static_cast<int>(static_cast<double>(p->g[i].size) / 100 * ls);
     gItems[i]->setPixmap(graphicPixmaps.at(i).scaled(QSize(dim, dim), Qt::KeepAspectRatio));
 
     /* Range check - make sure embel borders synced with embelProperties borders.  A graphic
@@ -702,7 +737,8 @@ void Embel::updateGraphic(int i)
         QPoint canvas = canvasCoord(p->g[i].x,
                                     p->g[i].y,
                                     p->g[i].anchorObject,
-                                    p->g[i].anchorContainer);
+                                    p->g[i].anchorContainer,
+                                    p->g[i].align);
         QPoint offset = anchorPointOffset(p->g[i].anchorPoint, w, h);
         gItems[i]->setTransformOriginPoint(offset);
         gItems[i]->setPos(canvas - offset);
@@ -757,6 +793,20 @@ void Embel::updateImage()
     }
     else pmItem->setGraphicsEffect(nullptr);
 }
+
+void Embel::refreshTexts()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    for (int i = 0; i < p->t.size(); ++i) {
+        updateText(i);
+    }
+}
+
+
 
 void Embel::removeBorder(int i)
 {

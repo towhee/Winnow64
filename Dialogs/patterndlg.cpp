@@ -186,8 +186,8 @@ PatternDlg::PatternDlg(QWidget *parent, QPixmap &pm)
     setWindowTitle("Tile Extractor");
     setMouseTracking(true);
 
-    saveBtn->setStyleSheet("QPushButton {min-width: 100px;}");
-    exitBtn->setStyleSheet("QPushButton {min-width: 100px;}");
+    saveBtn->setStyleSheet("QPushButton {min-width: 120px;}");
+    exitBtn->setStyleSheet("QPushButton {min-width: 120px;}");
 
     layout = new QVBoxLayout;
 
@@ -251,12 +251,14 @@ void PatternDlg::updateMsg(QString txt)
 void PatternDlg::save()
 {
     qDebug() << __FUNCTION__ << "tile.size() =" << tile.size();
-    bool ok;
-    QInputDialog input;
-    input.setFixedWidth(500);
-    QString name = input.getText(this, tr("Tile extractor"),
-                  tr("Enter tile name"), QLineEdit::Normal,
-                  "", &ok);
+//    bool ok;
+//    QInputDialog input;
+//    input.setFixedWidth(500);
+//    QString name = input.getText(this, tr("Tile extractor"),
+//                  tr("Enter tile name"), QLineEdit::Normal,
+//                  "", &ok);
+    QStringList doNotUse;
+    QString name = Utilities::inputText("Save tile", "Enter tile name", doNotUse);
     emit saveTile(name, &tile);
 }
 

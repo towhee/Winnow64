@@ -659,7 +659,8 @@ QString WidgetCSS::textEdit()
     return
     "QTextBrowser, QTextEdit {"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
-        "border: 1px solid gray;"
+//        "border: 1px solid red;"
+        "border: none;"
     "}";
 }
 
@@ -667,10 +668,10 @@ QString WidgetCSS::lineEdit()
 {
     return
     "QLineEdit {"
-        "background-color: " + QColor(d10,d10,d10).name() + ";"
-        "border: 1px solid gray;"
+//        "background-color: " + QColor(d10,d10,d10).name() + ";"
+//        "border: 1px solid gray;"
         "margin-left: 5px;"   /*Not sure why, but this is required*/
-        "selection-background-color: darkgray;"
+//        "selection-background-color: darkgray;"
         "padding-top: 1px;"
         "padding-bottom: 1px;"
         "padding-left: 4px;"
@@ -678,7 +679,7 @@ QString WidgetCSS::lineEdit()
     "}"
 
     "QLineEdit:hover, QLineEdit:focus {"
-        "border-color: silver;"
+//        "border-color: red;"
     "}"
 
     "QLineEdit:disabled {"

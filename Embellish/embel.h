@@ -30,12 +30,15 @@ public:
     void exportImage();
     void test();
     void diagnostic();
-    int ls;
+    int ls;     // long side
+    int ss;     // short side
+    int stu;    // side to use for relative measures
 
 public slots:
     void build(QString fPath = "", QString src = "");
     void clear();
     void flashObject(QString type = "", int index = 0, bool show = false);
+    void refreshTexts();
 
 signals:
     void done();
@@ -100,7 +103,8 @@ private:
     void doNotEmbellish();
     void borderImageCoordinates();
     void fitAspect(double aspect, Hole &size);
-    QPoint canvasCoord(double x, double y, QString anchorObject, QString anchorContainer);
+    QPoint canvasCoord(double x, double y, QString anchorObject,
+                       QString anchorContainer, bool alignWithImageEdge);
     QPoint anchorPointOffset(QString anchorPoint, int w, int h);
     void createBorders();
     void createTexts();

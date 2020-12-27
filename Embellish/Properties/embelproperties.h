@@ -5,6 +5,7 @@
 #include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Utilities/utilities.h"
+#include "Utilities/htmlwindow.h"
 #include "PropertyEditor/propertyeditor.h"
 #include "Effects/graphicseffect.h"
 #include "Views/infostring.h"
@@ -66,7 +67,8 @@ public:
         double x;                   // container coordinate
         double y;                   // container coordinate
         double rotation;            // rotation in degrees
-        QString anchorPoint;
+        QString anchorPoint;        // text anchor pt to justify upon
+        bool align;                 // align text to nearest image edge
         QString source;
         QString text;
         QString metadataTemplate;
@@ -92,6 +94,7 @@ public:
         double x;                   // container coordinate
         double y;                   // container coordinate
         QString anchorPoint;
+        bool align;                 // align graphic to nearest image edge
         double size;                // % of long dimension
         double rotation;            // rotation in degrees
         int opacity;
@@ -183,7 +186,7 @@ private:
 
     void deleteTemplate();
     void deleteItem();
-    void deleteTile();
+//    void deleteTile();
 
     void flash(QModelIndex idx);
     // redirect from action to relevent function (use currentIdx)
@@ -267,7 +270,7 @@ private:
     QAction *copyTemplateAction;
     QAction *copyStyleAction;
     QAction *tokenEditorAction;
-    QAction *deleteTileAction;
+    QAction *manageTilesAction;
     QAction *moveUpAction;
     QAction *moveDownAction;
     QAction *separatorAction0;

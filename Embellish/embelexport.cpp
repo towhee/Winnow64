@@ -61,30 +61,32 @@ bool EmbelExport::loadImage(QString fPath)
     return true;
 }
 
-QString EmbelExport::exportFolderPath(QString folderPath)
+QString EmbelExport::exportFolderPath(QString fPath)
 {
+/*
+    The incoming fPath is the file path for one of the images being exported.  Its folder is
+    fromFolderPath.  If the export folder save method == Subfolder, then the subfolder name
+    is used, otherwise, all this is ignored then embelProperties->exportSubfolder is used.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QString path;
-    if (embelProperties->saveMethod == "Subfolder")
-        if (folderPath == "") {
-            path = dm->currentFilePath + "/" + embelProperties->exportSubfolder;
-        }
-        else {
-            path = folderPath + "/" + embelProperties->exportSubfolder;
-            QDir dir(folderPath);
-            dir.mkdir(embelProperties->exportSubfolder);
-        }
-    else path = embelProperties->exportFolderPath;
+    QFileInfo filedir(fPath);
+    QString fromFolderPath = filedir.dir().path();
+    QString exportFolder;
+    if (embelProperties->saveMethod == "Subfolder") {
+        exportFolder = fromFolderPath + "/" + embelProperties->exportSubfolder;
+        QDir dir(fromFolderPath);
+        dir.mkdir(embelProperties->exportSubfolder);
+    }
+    else exportFolder = embelProperties->exportFolderPath;
 
-
-    return path;
+    return exportFolder;
 }
 
-void EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathList)
+QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathList)
 {
 /*
     Images sent from another program, such as lightroom, are sent here from
@@ -109,9 +111,21 @@ void EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathList)
         exportImage(pathList.at(i));
     }
 
+    int n = pathList.length() - 1;
+    QString fPath = pathList.at(n);
+    QString exportFolder = exportFolderPath(fPath);
+    qDebug() << __FUNCTION__ << fPath << exportFolder;
+
     // cleanup (open export folder??)
-    embelProperties->setCurrentTemplate(prevTemplate);
+//    embelProperties->setCurrentTemplate(prevTemplate);
     delete embellish;
+
+//    qDebug() << __FUNCTION__
+//             << "exportFolderPath(fPath) ="
+//             << exportFolderPath(fPath);
+//    Utilities::log(__FUNCTION__, "fPath =" + fPath);
+//    Utilities::log(__FUNCTION__, "exportFolderPath(fPath) =" + exportFolderPath(fPath));
+    return exportFolderPath(fPath);
 }
 
 void EmbelExport::exportImages(const QStringList &fPathList)
@@ -180,12 +194,11 @@ qDebug() << __FUNCTION__ << embelProperties->templateName;
 
 void EmbelExport::exportImage(const QString &fPath)
 {
-    QFileInfo filedir(fPath);
-    QString folderPath = filedir.dir().path();
     QString extension = embelProperties->exportFileType;
     QFileInfo fileInfo(fPath);
     QString baseName = fileInfo.baseName() + embelProperties->exportSuffix;
-    QString exportFolder = exportFolderPath(folderPath);
+    QString exportFolder = exportFolderPath(fPath);
+    qDebug() << __FUNCTION__ << fPath << exportFolder;
     QString exportPath = exportFolder + "/" + baseName + "." + extension;
 
     // Check if destination image file already exists

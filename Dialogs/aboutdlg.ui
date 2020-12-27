@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>811</width>
+    <width>1502</width>
     <height>584</height>
    </rect>
   </property>
@@ -67,7 +67,7 @@
         </font>
        </property>
        <property name="text">
-        <string>&lt;h1&gt;&lt;i&gt;Winnow Image Viewer and Ingester&lt;/i&gt;&lt;/h1&gt;</string>
+        <string>&lt;h1&gt;&lt;i&gt;Winnow&lt;/i&gt;&lt;/h1&gt;</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>

@@ -57,7 +57,8 @@ void ClassificationLabel::setDiameter(int diameter)
 {
     this->diameter = diameter;
     setFixedSize(diameter, diameter);
-    repaint();
+//    refresh();
+//    if (isVisible()) repaint();
 }
 
 void ClassificationLabel::refresh()

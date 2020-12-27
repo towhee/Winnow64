@@ -2,20 +2,9 @@
 #include <QApplication>
 #include "qtsingleapplication.h"
 
-/*
-class Obj: public QObject
-{
-    Q_OBJECT
-
-public:
-    Obj(QObject *parent = nullptr)  : QObject (parent) {}
-};
-
-#include "release/main.moc"
-//    */
-
 int main(int argc, char *argv[])
 {
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QtSingleApplication instance("Winnow", argc, argv);
 
     QString args;

@@ -55,7 +55,6 @@
         <file>images/down-arrow.png</file>
         <file>console.txt</file>
         <file>images/winnow.icns</file>
-        <file>images/Winnow coordinate spaces.png</file>
         <file>images/combobox-updown-arrow</file>
         <file>images/spindown_hover.png</file>
         <file>images/spindown_off.png</file>
@@ -142,7 +141,6 @@
         <file>images/icon16/colorwheel.png</file>
         <file>images/icon16/morevertthin.png</file>
         <file>images/icon16/delta.png</file>
-        <file>images/Embellish container and coord system.png</file>
         <file>images/icon16/delete.png</file>
         <file>images/icon16/questionmark.png</file>
         <file>images/icon16/new.png</file>
@@ -159,5 +157,7 @@
         <file>images/icon16/emboss_ridge.png</file>
         <file>images/icon16/emboss_trough.png</file>
         <file>images/checkbox_disabled.png</file>
+        <file>Docs/images/EmbelCoordSystem.png</file>
+        <file>Docs/embelcoordsystem.html</file>
     </qresource>
 </RCC>

@@ -31,6 +31,7 @@ public:
     QLabel *tileLabel;
     QHBoxLayout *horizontalLayout_3;
     QSpacerItem *horizontalSpacer;
+    QPushButton *newBtn;
     QPushButton *deleteBtn;
     QPushButton *closeBtn;
 
@@ -72,6 +73,11 @@ public:
 
         horizontalLayout_3->addItem(horizontalSpacer);
 
+        newBtn = new QPushButton(ManageTilesDlg);
+        newBtn->setObjectName(QString::fromUtf8("newBtn"));
+
+        horizontalLayout_3->addWidget(newBtn);
+
         deleteBtn = new QPushButton(ManageTilesDlg);
         deleteBtn->setObjectName(QString::fromUtf8("deleteBtn"));
         deleteBtn->setMinimumSize(QSize(100, 0));
@@ -105,6 +111,7 @@ public:
         ManageTilesDlg->setWindowTitle(QCoreApplication::translate("ManageTilesDlg", "Manage Tiles", nullptr));
         label->setText(QCoreApplication::translate("ManageTilesDlg", "Tiles", nullptr));
         tileLabel->setText(QString());
+        newBtn->setText(QCoreApplication::translate("ManageTilesDlg", "New", nullptr));
         deleteBtn->setText(QCoreApplication::translate("ManageTilesDlg", "Delete", nullptr));
         closeBtn->setText(QCoreApplication::translate("ManageTilesDlg", "Close", nullptr));
     } // retranslateUi
