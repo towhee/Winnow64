@@ -36,6 +36,7 @@ enum UserRole
     UR_CaptionIsEditable,               // can edit caption
     UR_isIndent,                        // indent column 0 in QTreeView
     UR_isHeader,                        // header item in QTreeView
+    UR_okToCollapseRoot,                // collapse root item when collapseAll
     UR_isDecoration,                    // show expand/collapse decoration
     UR_isBackgroundGradient,            // make the root rows dark gray gradiant
     UR_isHidden,                        // flag to hide/show row in tree
@@ -137,8 +138,8 @@ public:
     double value();
 
 protected:
-    void paintEvent(QPaintEvent *event) override;
     bool eventFilter(QObject *object, QEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
 
 signals:
     void editorValueChanged(QWidget *);
@@ -315,6 +316,7 @@ signals:
 
 public slots:
     void dlgColorChanged(const QColor &color);
+    void dlgColorClose(int result);
 
 public slots:
     void fontSizeChanged(int fontSize);

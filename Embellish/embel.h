@@ -8,6 +8,7 @@
 #include "Properties/embelproperties.h"
 #include "Effects/graphicseffect.h"
 #include "Effects/effects.h"       // temp to test
+#include "Effects/graphicsitemeventfilter.h"
 
 class Embel : public QObject
 {
@@ -15,7 +16,7 @@ class Embel : public QObject
 
 public:
     Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
-          EmbelProperties *p, ImageCache *imCache);
+          EmbelProperties *p, ImageCache *imCache, QObject *object = nullptr);
 //    Embel(ImageView *gv, EmbelProperties *p);
 //    Embel(EmbelExport *ee, EmbelProperties *p);
     ~Embel();
@@ -40,12 +41,16 @@ public slots:
     void flashObject(QString type = "", int index = 0, bool show = false);
     void refreshTexts();
 
+protected:
+    bool eventFilter(QObject *object, QEvent *event) override;
+
 signals:
     void done();
 
 private:
     QGraphicsScene *scene;
     QGraphicsPixmapItem *pmItem;
+    GraphicsItemEventFilter *itemEventFilter;
     EmbelProperties *p;
     ImageCache *imCache;
     QString fPath;

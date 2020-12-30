@@ -12,7 +12,7 @@ Export converts the scene, with any borders, texts and graphics, into a QImage.
 */
 
 Embel::Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
-             EmbelProperties *p, ImageCache *imCache)
+             EmbelProperties *p, ImageCache *imCache, QObject *)
 {
     {
     #ifdef ISDEBUG
@@ -24,6 +24,8 @@ Embel::Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
     this->p = p;
     this->imCache = imCache;
     flashItem = new QGraphicsRectItem;
+    itemEventFilter = new GraphicsItemEventFilter;
+//    scene->addItem(itemEventFilter);
 }
 
 Embel::~Embel()
@@ -178,6 +180,9 @@ void Embel::build(QString path, QString src)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << QTime::currentTime()
+             << "path =" << path
+             << "src =" << src;
 
     QString msg = "src = " + src + "  path = " + path;
 //    Utilities::log(__FUNCTION__, msg);
@@ -272,6 +277,10 @@ void Embel::borderImageCoordinates()
     // the hole = image dimensions
     image.w = hole.w;
     image.h = hole.h;
+    qDebug() << __FUNCTION__
+             << "w =" << w << "h =" << h
+             << "image.w =" << image.w << "image.h =" << image.h
+                ;
 
     // canvas coordinates: pixels
     QPoint tl(0,0), br(0,0);
@@ -513,6 +522,7 @@ void Embel::addBordersToScene()
     for (int i = 0; i < b.size(); ++i) {
         updateBorder(i);
         scene->addItem(bItems[i]);
+        bItems[i]->installSceneEventFilter(itemEventFilter);
         /*
         qDebug() << __FUNCTION__
                  << i
@@ -532,6 +542,7 @@ void Embel::addTextsToScene()
     for (int i = 0; i < p->t.size(); ++i) {
         updateText(i);
         scene->addItem(tItems[i]);
+        tItems[i]->installSceneEventFilter(itemEventFilter);
     }
 }
 
@@ -567,6 +578,7 @@ void Embel::addImageToScene()
     pmItem->setPos(image.tl);
     pmItem->setZValue(ZImage);
     pmItem->setToolTip("Image");
+    pmItem->installSceneEventFilter(itemEventFilter);
 
     updateImage();
 }
@@ -588,7 +600,7 @@ void Embel::updateBorder(int i)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << i;
+    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
 
     bItems[i]->setRect(0, 0, b[i].w, b[i].h);
     QColor color;
@@ -632,7 +644,7 @@ void Embel::updateText(int i)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << i;
+    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
 
     // if a text entry
     if (p->t[i].source == "Text") {
@@ -693,6 +705,7 @@ void Embel::updateText(int i)
         // make sure style exists
         if (p->styleMap.contains(p->t[i].style)) {
             GraphicsEffect *effect = new GraphicsEffect();
+//            effect->setObjectName("Text" + QString::number(i));
             effect->set(p->styleMap[p->t[i].style],
                     p->globalLightDirection,
                     rotation,
@@ -713,7 +726,7 @@ void Embel::updateGraphic(int i)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << i;
+    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
 
     gItems[i]->setZValue(ZGraphic);
     double opacity = static_cast<double>(p->g[i].opacity)/100;
@@ -752,6 +765,7 @@ void Embel::updateGraphic(int i)
         // make sure style exists
         if (p->styleMap.contains(p->g[i].style)) {
             GraphicsEffect *effect = new GraphicsEffect();
+//            effect->setObjectName("Graphic" + QString::number(i));
             effect->set(p->styleMap[p->g[i].style],
                     p->globalLightDirection,
                     rotation,
@@ -772,7 +786,7 @@ void Embel::updateImage()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << p->image.style;
+    qDebug() << __FUNCTION__ << QTime::currentTime() << p->image.style;
 
     // graphics effects
     if (p->image.style != "No style" && p->image.style != "") {
@@ -782,7 +796,10 @@ void Embel::updateImage()
             if (imCache->imCache.contains(fPath)) {
                 pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
             }
+            qDebug() << __FUNCTION__ << "image.w =" << image.w << "pmItem->pixmap().width() =" << pmItem->pixmap().width();
             GraphicsEffect *effect = new GraphicsEffect();
+            effect->installEventFilter(this);
+            effect->setObjectName("EmbelImageEffect");
             effect->set(p->styleMap[p->image.style],
                     p->globalLightDirection,
                     0,
@@ -920,6 +937,12 @@ void Embel::flashObject(QString type, int index, bool show)
     flashItem->setBrush(QBrush(Qt::transparent));
 
     QTimer::singleShot(100, this, SLOT(flashObject()));
+}
+
+bool Embel::eventFilter(QObject *object, QEvent *event)
+{
+    qDebug() << __FUNCTION__ << object << event;
+    return true;// QWidget::eventFilter(object, event);
 }
 
 void Embel::diagnostic()

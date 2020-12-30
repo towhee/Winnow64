@@ -20,6 +20,7 @@ HEADERS += Cache/imagecache.h \
    Dialogs/copystyledlg.h \
    Dialogs/managetilesdlg.h \
    Effects/REF_imageblitz_effects.h \
+   Effects/graphicsitemeventfilter.h \
    Effects/interpolate.h \
 HEADERS += Cache/mdcache.h \
    Main/qtlocalpeer.h \
@@ -110,6 +111,7 @@ HEADERS += Views/tableview.h
 SOURCES += Cache/imagecache.cpp \
    Dialogs/copystyledlg.cpp \
    Dialogs/managetilesdlg.cpp \
+   Effects/graphicsitemeventfilter.cpp \
    Main/qtlocalpeer.cpp \
    Main/qtlockedfile.cpp \
    Main/qtlockedfile_win.cpp \

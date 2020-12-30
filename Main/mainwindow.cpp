@@ -281,7 +281,7 @@ MW::MW(/*QApplication &app, */QWidget *parent) : QMainWindow(parent)
     sortReverseAction->setChecked(setting->value("sortReverse").toBool());
     if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
     else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
-    if (sortColumn > 0) sortChange();
+//    if (sortColumn > 0) sortChange();
 
     // process the persistant folder if available
     if (rememberLastDir && !isShift) {
@@ -571,11 +571,12 @@ bool MW::event(QEvent *event)
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
     /* use to show all events being filtered - handy to figure out which to intercept
-    if (event->type()        != QEvent::Paint
-            && event->type() != QEvent::UpdateRequest
-            && event->type() != QEvent::ZeroTimerEvent
-            && event->type() != QEvent::Timer
-            && event->type() == QEvent::MouseMove
+    if (event->type()
+//                             != QEvent::Paint
+//            && event->type() != QEvent::UpdateRequest
+//            && event->type() != QEvent::ZeroTimerEvent
+//            && event->type() != QEvent::Timer
+//            && event->type() == QEvent::MouseMove
             )
     {
         qDebug() << __FUNCTION__
@@ -587,7 +588,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }
 //*/
 
-//    /* figure out key presses
+    /* figure out key presses
     if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow")
     {
         G::track(__FUNCTION__, "Performance profiling");
@@ -600,15 +601,20 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     }*/
 
     /* Specific objectName
-    if (obj->objectName() == "embelDock") {
-        if (event->type()        != QEvent::Paint
-                && event->type() != QEvent::UpdateRequest
-                && event->type() != QEvent::ZeroTimerEvent
-                && event->type() != QEvent::Timer
-                && event->type() == QEvent::Enter
-                )
+    if (obj->objectName() == "GraphicsEffect") {
+//        if (event->type()        != QEvent::Paint
+//                && event->type() != QEvent::UpdateRequest
+//                && event->type() != QEvent::ZeroTimerEvent
+//                && event->type() != QEvent::Timer
+//                && event->type() == QEvent::Enter
+//                )
         {
-            qDebug() << event;
+            qDebug() << __FUNCTION__
+                     << event << "\t"
+                     << event->type() << "\t"
+                     << obj << "\t"
+                     << obj->objectName();
+//            qDebug() << event;
         }
     }
 //    */
@@ -1089,6 +1095,9 @@ void MW::folderSelectionChange()
     // made it this far, folder must have eligible images and is good-to-go
     isCurrentFolderOkay = true;
 
+    // update sort if necessary
+    if (sortColumn > 0 || sortReverseAction->isChecked()) sortChange();
+
     // folder change triggered by dragdrop event
     bool dragFileSelected = false;
     if (isDragDrop) {
@@ -1260,7 +1269,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     // update imageView, use cache if image loaded, else read it from file
     if (G::mode == "Loupe") {
-        if (imageView->loadImage(fPath)) {
+        if (imageView->loadImage(fPath, __FUNCTION__)) {
             updateClassification();
         }
     }
@@ -3413,7 +3422,7 @@ void MW::createMenus()
     embelGroupAct->setMenu(embelMenu);
     embelMenu->addAction(embelNewTemplateAction);
     embelMenu->addAction(embelExportAction);
-    embelMenu->addAction(embelTileAction);
+//    embelMenu->addAction(embelTileAction);
     embelMenu->addAction(embelManageTilesAction);
     embelMenu->addAction(embelRevealWinnetsAction);
     embelMenu->addSeparator();
@@ -5257,7 +5266,10 @@ QString fileSym = "📷";
 #endif
 
     // show embellish if active
-    if (G::isEmbellish) base = "<font color=\"red\">Embellishing</font> ";
+    if (G::isEmbellish) {
+        base = "<font color=\"red\">" + embelProperties->templateName + "</font>"
+                + "&nbsp;" + "&nbsp;" + "&nbsp;";
+    }
     else base = "";
 
     // image of total: fileCount
@@ -5593,7 +5605,7 @@ and icons are loaded if necessary.
         thumbView->selectThumb(idx);
     }
 //    */
-
+    qDebug() << __FUNCTION__ << idx.data() << "Calling fileSelectionChange(idx, idx)";
     fileSelectionChange(idx, idx);
 
     source = "";    // suppress compiler warning
@@ -5820,7 +5832,7 @@ void MW::sortChange()
         updateSortColumn(G::NameColumn);
     }
     // do not sort conditions
-    if (sortMenuUpdateToMatchTable || !G::isNewFolderLoaded) return;
+    if (sortMenuUpdateToMatchTable || (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn)) return;
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;        // core
     if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;        // core
@@ -5885,6 +5897,7 @@ void MW::sortChange()
     /* if the previous selected image is also part of the filtered datamodel then the
     selected index does not change and fileSelectionChange will not be signalled.
     Therefore we call it here to force the update to caching and icons */
+    qDebug() << __FUNCTION__ << idx.data() << "Calling fileSelectionChange(idx, idx)";
     fileSelectionChange(idx, idx);
 
     scrollToCurrentRow();
@@ -8647,7 +8660,7 @@ around lack of notification when the QListView has finished painting itself.
     // update imageView, use cache if image loaded, else read it from file
     QString fPath = idx.data(G::PathRole).toString();
     if (imageView->isVisible() && fPath.length() > 0) {
-        imageView->loadImage(fPath);
+        imageView->loadImage(fPath, __FUNCTION__);
     }
     // do not show classification badge if no folder or nothing selected
     updateClassification();
@@ -9199,6 +9212,7 @@ void MW::toggleThumbDockVisibity()
         thumbDock->setVisible(true);
         thumbDock->raise();
         thumbDockVisibleAction->setChecked(true);
+        qDebug() << __FUNCTION__ << currentSfIdx.data() << "Calling fileSelectionChange(currentSfIdx, currentSfIdx)";
         fileSelectionChange(currentSfIdx, currentSfIdx);
     }
 
@@ -10759,7 +10773,7 @@ folder images have changed.
             // update image cache in case image has changed
             if (imageCacheThread->imCache.contains(fPath)) imageCacheThread->imCache.remove(fPath);
             if (dm->currentFilePath == fPath) {
-                if (imageView->loadImage(fPath)) {
+                if (imageView->loadImage(fPath, __FUNCTION__)) {
                     updateClassification();
                 }
             }
@@ -10898,6 +10912,7 @@ ImageCache and update the image cache status bar.
 
     // update current index
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
+    qDebug() << __FUNCTION__ << sfIdx.data() << "Calling fileSelectionChange(sfIdx, sfIdx)";
     thumbView->setCurrentIndex(sfIdx);
     fileSelectionChange(sfIdx, sfIdx);
 }
@@ -11237,7 +11252,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    setting->setValue("Embel/Templates//", "See what happens");
+    QDebug bug = qDebug().noquote().nospace();
+    bug << "Test";
+    bug << " this out";
+    bug << "\n";
+    bug << "start new line";
+
 //    ColorAnalysis a(dm->currentFilePath);
 //    qDebug() << __FUNCTION__ << t.elapsed();
 

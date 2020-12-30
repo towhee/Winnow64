@@ -30,6 +30,7 @@ public:
 //    SortProperties *proxy;
     const QStyleOptionViewItem *styleOptionViewItem;
     void setSolo(bool isSolo);
+    void setExpandRecursively(bool isExpandRecursively);
     void expandBranch(QString text);
     void resizeColumns(/*QString stringToFitCaptions, QString stringToFitValues*/);
     int indentation;
@@ -38,7 +39,6 @@ public:
     int captionColumnWidth;
     int valueColumnWidth;
     bool ignoreFontSizeChangeSignals = false;
-    bool isExpandRecursively = true;
     QModelIndex capIdx; // used to get index for added item when subclassing addItem
     QModelIndex valIdx; // used to hide/show rows etc
     QModelIndex ordIdx; // used to order rows etc
@@ -54,6 +54,7 @@ public:
         bool hasValue;
         QString tooltip;
         QString captionText;
+        bool okToCollapseRoot = true;   // force root stay expanded (ie Templates in EmbelProperties)
         bool isDecoration = true;       // show collapse/expand decoration in header
         bool captionIsEditable;
         QVariant defaultValue;          // when created and when double click caption
@@ -106,9 +107,11 @@ public slots:
 //    /*virtual*/ void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
 
 private:
+    void collapseAllExcept();
     int itemIndex = -1;
     QLinearGradient categoryBackground;
     bool isSolo;
+    bool isExpandRecursively;
 };
 
 
