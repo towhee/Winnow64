@@ -15,7 +15,7 @@
 //#include "Views/imagescene.h"
 //#include "Effects/openglframe.h"
 
-#include "Dialogs/patterndlg.h"
+//#include "Dialogs/patterndlg.h"
 
 //#ifdef Q_OS_WIN
 //#include "Utilities/icc.h"
@@ -65,7 +65,7 @@ public:
     QByteArray tileBa;
     QString tileName;
 
-    bool loadImage(QString fPath);
+    bool loadImage(QString fPath, QString src);
     void exportImage();
     qreal getFitScaleFactor(QRectF container, QRectF content);
     void clear();

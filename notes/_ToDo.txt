@@ -1,10 +1,10 @@
 BUGS
-- Prevent blank template creation
-- Check for multiple signals to trigger Embel processes
+- Sometimes style effect up/down arrows not working (ie if add effect to style)
+- Check for multiple signals to trigger Embel processes (challenging)
 - Change access to token editor in view menu
-- Sometimes all docks except embellish are locked
-- Export appearing in templates
-- Add opacity to effects??
+- Sometimes all docks except embellish are locked (not lately)
+- Export appearing in templates (not lately)
+- Add opacity to effects.  Shadow, stroke done.
 
 - Confirm check for updates is working (Andreas)
 - File/Bookmark count not refresh when filecount changes see QFileSystemWatcher
@@ -12,7 +12,7 @@ BUGS
 - DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
 - Is copy image (iconview context menu) working?
 - Sharpen needs TLC
-- Add glow, stroke
+- Add glow
 - Emboss when transparent edges
 - Standardize use of G:css
 - Sort out i.name vs i.key in PropertyEditor
@@ -28,6 +28,8 @@ CODE IMPROVEMENTS
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - Tweak panning in compareView (eliminate incremental scrolling)
 ENHANCEMENTS
+- changing template does not force redraw to new template until select new image
+- New template not working
 - Copy files between folders using drag'n'drop
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
@@ -37,6 +39,9 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- ColorEditor crashed is clicked twice
+- ColorEditor does not default to current color
+- Prevent blank template creation
 - ManageTiles crashes when create new tile
 - Hidden items are not hidden when first open template
 - Help > All diagnostics crashes

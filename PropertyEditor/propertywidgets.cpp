@@ -563,11 +563,6 @@ void DoubleSpinBoxEditor::paintEvent(QPaintEvent *event)
 // note that *object is reqd to instantiate event filter using "this"
 bool DoubleSpinBoxEditor::eventFilter(QObject *object, QEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-    #endif
-    }
     if (event->type() == QEvent::KeyPress) {
         const auto key = static_cast<QKeyEvent *>(event)->key();
         if (key == Qt::Key_Enter || key == Qt::Key_Return || key == Qt::Key_Tab)
@@ -971,11 +966,12 @@ ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
     btn->setMaximumHeight(10);
 
     colorDlg = new QColorDialog;
-    colorDlg->setAttribute(Qt::WA_DeleteOnClose);
+//    colorDlg->setAttribute(Qt::WA_DeleteOnClose);
 
     connect(btn, &QPushButton::clicked, this, &ColorEditor::setValueFromColorDlg);
     connect(lineEdit, &QLineEdit::textChanged, this, &ColorEditor::updateLabelWhenLineEdited);
     connect(colorDlg, &QColorDialog::currentColorChanged, this, &ColorEditor::dlgColorChanged);
+    connect(colorDlg, &QColorDialog::finished, this, &ColorEditor::dlgColorClose);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(lineEdit, Qt::AlignLeft);
@@ -1015,6 +1011,11 @@ void ColorEditor::dlgColorChanged(const QColor &color)
     lineEdit->setText(color.name());
 }
 
+void ColorEditor::dlgColorClose(int result)
+{
+    colorDlg->close();
+}
+
 void ColorEditor::setValueFromColorDlg()
 {
 /*
@@ -1026,6 +1027,7 @@ void ColorEditor::setValueFromColorDlg()
     G::track(__FUNCTION__);
     #endif
     }
+    colorDlg->setCurrentColor(QColor(lineEdit->text()));
     colorDlg->open();
 }
 
@@ -1053,15 +1055,6 @@ void ColorEditor::updateLabelWhenLineEdited(QString value)
                             "border: 1px solid yellow;"
                         "}"
                         );
-//    btn->setStyleSheet("QPushButton, QPushButton:pressed, QPushButton:hover, QPushButton:flat"
-//                        "{"
-//                            "background-color:" + value + ";"
-//                            "margin-right: 4px;"
-//                            "max-width: 50px;"
-//                            "max-height: 10px;"
-//                            "min-height: 10px;"
-//                        "}"
-//                        );
     emit editorValueChanged(this);
 }
 
@@ -1072,8 +1065,6 @@ void ColorEditor::fontSizeChanged(int fontSize)
 
 void ColorEditor::paintEvent(QPaintEvent *event)
 {
-//    setStyleSheet("font-size: " + G::fontSize + "pt;");
-//    QWidget::paintEvent(event);
 }
 
 /* SELECTFOLDER EDITOR ***********************************************************************/

@@ -298,6 +298,8 @@ SliderEditor, LineEditor etc).
     model->setData(capIdx, i.isIndent, UR_isIndent);
     model->setData(capIdx, i.isHeader, UR_isHeader);
     model->setData(valIdx, i.isHeader, UR_isHeader);
+    model->setData(capIdx, i.okToCollapseRoot, UR_okToCollapseRoot);
+    model->setData(valIdx, i.okToCollapseRoot, UR_okToCollapseRoot);
     model->setData(capIdx, i.isDecoration, UR_isDecoration);
     model->setData(valIdx, i.isDecoration, UR_isDecoration);
     model->setData(capIdx, i.decorateGradient, UR_isBackgroundGradient);
@@ -359,6 +361,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.itemIndex = 0;                // all
     i.sortOrder = -1;               // all
     i.name = "";                    // all
+    i.path = "";                    // all
     i.parentName = "";              // all
     i.isHeader = false;             // set true for header rows
     i.isDecoration = false;         // set true for headers that can expand
@@ -367,6 +370,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.hasValue = true;              // all
     i.tooltip = "";                 // all
     i.captionText = "";             // all
+    i.okToCollapseRoot = true;      // only root items
     i.captionIsEditable = false;    // all
     i.delegateType = DT_None;       // all
     i.defaultValue = "__Ignore__";
@@ -481,6 +485,9 @@ secondary or tertiary branch is sent then all branches expand.
 
 void PropertyEditor::mouseDoubleClickEvent(QMouseEvent *event)
 {
+/*
+    Set the value to the default value
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -496,33 +503,24 @@ void PropertyEditor::mouseDoubleClickEvent(QMouseEvent *event)
 
 void PropertyEditor::mousePressEvent(QMouseEvent *event)
 /*
-Set the current index and expand/collapse when click anywhere on a row that has children.
+    Set the current index and expand/collapse when click anywhere on a row that has children.
 */
 {
     // ignore right mouse clicks (reserved for context menu)
     if (event->button() == Qt::RightButton) return;
 
-//    isExpandRecursively = true;
-
     QModelIndex idx = indexAt(event->pos());
-//    qDebug() << __FUNCTION__ << idx;
-//    QModelIndex idx = proxy->mapToSource(indexAt(event->pos()));
     if (idx.column() != 0) idx = model->index(idx.row(), CapColumn, idx.parent());
     QStandardItem *item = model->itemFromIndex(idx);
     if (idx.isValid() && item->hasChildren()) {
         bool isRoot = idx.parent() == QModelIndex();
         bool wasExpanded = isExpanded(idx);
+        if (isRoot && !wasExpanded && isSolo) collapseAllExcept();
         if (isExpandRecursively) {
-            if (isRoot) {
-                if (isSolo) collapseAll();
-                wasExpanded ? collapse(idx) : expandRecursively(idx);
-            }
-            else {
-                isExpanded(idx) ? collapse(idx) : expand(idx);
-            }
+            wasExpanded ? collapse(idx) : expandRecursively(idx);
         }
         else {
-            isExpanded(idx) ? collapse(idx) : expand(idx);
+            wasExpanded ? collapse(idx) : expand(idx);
         }
     }
 }
@@ -562,6 +560,25 @@ void PropertyEditor::fontSizeChanged(int fontSize)
 void PropertyEditor::setSolo(bool isSolo)
 {
     this->isSolo = isSolo;
+}
+
+void PropertyEditor::setExpandRecursively(bool isExpandRecursively)
+{
+    this->isExpandRecursively = isExpandRecursively;
+}
+
+void PropertyEditor::collapseAllExcept()
+{
+/*
+    Iterates through all root items in the property tree and collapses if the item
+    okToCollapseRoot = true.  This is used in EmbelProperties to keep the Template header
+    open all the time to show the current template.
+*/
+    for(int r = 0; r < model->rowCount(QModelIndex()); ++r) {
+        QModelIndex idx = model->index(r, 0);
+        if (idx.data(UR_okToCollapseRoot).toBool()) collapse(idx);
+    }
+
 }
 
 void PropertyEditor::diagnosticProperties(QModelIndex parent)

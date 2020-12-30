@@ -22,6 +22,7 @@ public:
     ~InputDlg();
 
 private slots:
+    void checkDoNotUse(QString text);
     void ok();
     void cancel();
 
@@ -29,6 +30,7 @@ private:
     Ui::InputDlg *ui;
     QString &input;
     QStringList &doNotUse;
+    bool okToSave = true;
 };
 
 #endif // INPUTDLG_H

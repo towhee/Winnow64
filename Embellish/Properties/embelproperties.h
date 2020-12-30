@@ -245,7 +245,7 @@ private:
     void expandAllRows();
     void collapseAllRows();
     void solo();
-    QAction *soloAction;
+    void expandRecursively();
 
     void effectContextMenu();
     void newEffectActionClicked();
@@ -266,6 +266,8 @@ private:
     // context menu
     QAction *expandAllAction;
     QAction *collapseAllAction;
+    QAction *soloAction;
+    QAction *expandRecursivelyAction;
     QAction *renameAction;
     QAction *copyTemplateAction;
     QAction *copyStyleAction;

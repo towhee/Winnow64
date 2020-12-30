@@ -1896,6 +1896,7 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     G::track(__FUNCTION__);
     #endif
     }
+    if (G::isEmbellish) return;
     if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
         setCursor(Qt::ArrowCursor);
         prevIdx = model()->index(-1, -1);

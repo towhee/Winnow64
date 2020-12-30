@@ -25,7 +25,7 @@ public:
     void emboss(QImage &img, int azimuth, double size, double exposure, double contrast,
                 double inflection, double startEV, double midEV, double endEV,
                 double umbra, bool isUmbraGradient);
-    void stroke(QImage &img, double width, QColor color, bool inner);
+    void stroke(QImage &img, double width, QColor color, double opacity, bool inner);
     void glow(QImage &img, double width, QColor color, double blurRadius);
 
     QImage convolve(QImage &img, int mDim, double *matrix);
@@ -70,6 +70,7 @@ private:
 //    QImage convolve(QImage &img, int matrix_size, double *matrix);
     void blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
                   const int &w, const int &h, const int &width);
+    void setOpacity(QImage &img, double opacity);
 
     // 2D
     struct Pt {

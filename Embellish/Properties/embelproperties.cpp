@@ -81,7 +81,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     mw3 = qobject_cast<MW*>(parent);
     this->setting = setting;
 
-//    setSolo(true);
+    setSolo(false);
 
 //    isExpandRecursively = false;
 //    collapseAll();
@@ -237,17 +237,25 @@ void EmbelProperties::initialize()
     addAction(collapseAllAction);
     connect(collapseAllAction, &QAction::triggered, this, &EmbelProperties::collapseAllRows);
 
-    /*
     soloAction = new QAction(tr("Solo"), this);
     soloAction->setShortcutVisibleInContextMenu(true);
-    soloAction->setShortcut(QKeySequence("Ctrl+*"));
+//    soloAction->setShortcut(QKeySequence("Ctrl+*"));
     soloAction->setCheckable(true);
-    soloAction->setVisible(false);
+    soloAction->setVisible(true);
     addAction(soloAction);
-    soloAction->setChecked(true);
+    soloAction->setChecked(setting->value("Embel/isSolo").toBool());
     connect(soloAction, &QAction::triggered, this, &EmbelProperties::solo);
-//    solo();
-//        */
+    solo();
+
+    expandRecursivelyAction = new QAction(tr("Expand recursively"), this);
+    expandRecursivelyAction->setShortcutVisibleInContextMenu(true);
+//    expandRecursivelyAction->setShortcut(QKeySequence("Ctrl+*"));
+    expandRecursivelyAction->setCheckable(true);
+    expandRecursivelyAction->setVisible(true);
+    addAction(expandRecursivelyAction);
+    expandRecursivelyAction->setChecked(setting->value("Embel/expandRecursively").toBool());
+    connect(expandRecursivelyAction, &QAction::triggered, this, &EmbelProperties::expandRecursively);
+    expandRecursively();
 
     separatorAction0 = new QAction(this);
     separatorAction0->setSeparator(true);
@@ -587,15 +595,43 @@ void EmbelProperties::diagnostic(QModelIndex parent)
     #endif
     }
     // model
+    // Report headers
+    QString c1 = "Idx";
+    QString c2 = "Header";
+    QString c3 = "Key";
+    QString c4 = "Value";
+    QString c5 = "SettingPath";
+    QString c0 = "-";
+    qDebug();
+    // Underline headers
+    qDebug().noquote() /*<< __FUNCTION__*/
+             << c1.leftJustified(4)
+             << c2.leftJustified(15)
+             << c3.leftJustified(25)
+             << c4.leftJustified(40)
+             << c5.leftJustified(70);
+    qDebug().noquote() /*<< __FUNCTION__*/
+            << c0.leftJustified(4, '-')
+            << c0.leftJustified(15, '-')
+            << c0.leftJustified(25, '-')
+            << c0.leftJustified(40, '-')
+            << c0.leftJustified(70, '-');
+
     for (int r = 0; r < model->rowCount(parent); ++r) {
         QModelIndex idx0 = model->index(r, CapColumn, parent);
         QModelIndex idx1 = model->index(r, ValColumn, parent);
         QString p = parent.data(UR_Name).toString();
         QString n = idx0.data(UR_Name).toString();
         QString u = idx0.data(UR_ItemIndex).toString();
-        QVariant v = idx1.data(Qt::EditRole);
+        QString v = idx1.data(Qt::EditRole).toString();
         QString s = idx0.data(UR_Source).toString();
-        qDebug() << __FUNCTION__ << p << n << "itemIndex:" << u << v;
+        QString path = idx0.data(UR_SettingsPath).toString();
+        qDebug().noquote() /*<< __FUNCTION__*/
+                 << u.leftJustified(4)
+                 << p.leftJustified(15)
+                 << n.leftJustified(25)
+                 << v.leftJustified(40)
+                 << path.leftJustified(70);
         // iterate children
         if (model->hasChildren(idx0)) {
             diagnostic(idx0);
@@ -662,7 +698,8 @@ void EmbelProperties::renameCurrentStyle()
 //    QModelIndex idx = btn->index;
     QModelIndex idx = currentIdx;
     QString oldName = idx.data().toString();
-    QString newName = Utilities::inputText("Rename Style", "Rename style " + oldName, styleList);
+    QString newName = Utilities::inputText("Rename Style", "Rename style " + oldName,
+                                           styleList, oldName);
     if (newName == "") return;
 
     // update setting
@@ -948,6 +985,7 @@ void EmbelProperties::manageTiles()
     ManageTilesDlg manageTilesDlg(setting);
     connect(&manageTilesDlg, &ManageTilesDlg::extractTile, this, &EmbelProperties::extractTile);
     manageTilesDlg.exec();
+    updateTileList();
 }
 
 void EmbelProperties::updateTileList()
@@ -969,7 +1007,7 @@ void EmbelProperties::updateTileList()
         QString oldTileName = borderTileObjectEditor.at(i)->value();
         borderTileObjectEditor.at(i)->refresh(tileList);
         // refreshing anchorObjectList removes old value for the text - reassign anchor object
-        if (anchorObjectList.contains(oldTileName))
+        if (tileList.contains(oldTileName))
             borderTileObjectEditor.at(i)->setValue(oldTileName);
         else
             borderTileObjectEditor.at(i)->setValue("Do not tile");
@@ -1028,6 +1066,7 @@ void EmbelProperties::newTemplate()
     templateName = Utilities::inputText("New Template",
                                         "Enter new template name",
                                         templateList);
+    qDebug() << __FUNCTION__ << templateName;
     if (templateName == "") return;
     templateId = templateList.count();
 //    // set all templates except templateName isCurrent = false
@@ -1306,7 +1345,7 @@ sorted.
     int thisOrder = item->data(UR_SortOrder).toInt();
     swapItem->setData(thisOrder, UR_SortOrder);
     item->setData(swapOrder, UR_SortOrder);
-    /*
+//    /*
     qDebug() << __FUNCTION__
              << "styleItem->columnCount() =" << styleItem->columnCount()
              << "swapItem->data() =" << swapItem->data()
@@ -1361,7 +1400,10 @@ void EmbelProperties::moveEffectUp()
 //    */
     QModelIndex idx = getItemIndex(btn->itemIndex);
 //    QModelIndex idx = btn->index;
-    if (!idx.isValid()) return;
+    if (!idx.isValid()) {
+        qDebug() << __FUNCTION__ << "idx.isValid() =" << idx.isValid();
+        return;
+    }
 
     // get current row for this index as it may have been sorted already
     QString effectName = btn->name;
@@ -1372,6 +1414,7 @@ void EmbelProperties::moveEffectUp()
              << "idx.parent().data() =" << idx.parent().data()
                 ;
 //                */
+    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     QStandardItem *styleItem = new QStandardItem;
     styleItem = model->itemFromIndex(idx.parent());
     int row;
@@ -1379,6 +1422,7 @@ void EmbelProperties::moveEffectUp()
         QString sortedItemName = styleItem->child(row)->data(Qt::DisplayRole).toString();
         if (sortedItemName == effectName) break;
     }
+    qDebug() << __FUNCTION__ << "row =" << row;
     if (row == 0) return;
 
     // swap the current row with the one above
@@ -1536,6 +1580,7 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << v;
     isTemplateChange = true;
 //    templateName = v.toString();
 
@@ -1584,7 +1629,7 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     expand(model->index(_templates, 0));
     isTemplateChange = false;
 
-    mw3->imageView->loadImage(mw3->dm->currentFilePath);
+    mw3->imageView->loadImage(mw3->dm->currentFilePath, __FUNCTION__);
 }
 
 void EmbelProperties::itemChangeExport(QModelIndex idx, QVariant v, QString source)
@@ -2019,6 +2064,13 @@ void EmbelProperties::itemChangeShadowEffect(QVariant v, QString source, QString
         styleMap[style][effect].shadow.a = color.alpha();
     }
 
+    if (source == "opacity") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].shadow.opacity = v.toDouble() * 1.0 / 100;
+    }
+
     if (source == "blendMode") {
         setting->setValue(path, v.toString());
         int effect = effectIndex(style, effectName);
@@ -2058,6 +2110,13 @@ void EmbelProperties::itemChangeStrokeEffect(QVariant v, QString source, QString
         styleMap[style][effect].stroke.g = color.green();
         styleMap[style][effect].stroke.b = color.blue();
         styleMap[style][effect].stroke.a = color.alpha();
+    }
+
+    if (source == "opacity") {
+        setting->setValue(path, v.toDouble());
+        int effect = effectIndex(style, effectName);
+        if (effect == -1) return;
+        styleMap[style][effect].stroke.opacity = v.toDouble() * 1.0 / 100;
     }
 
     if (source == "blendMode") {
@@ -2369,6 +2428,7 @@ void EmbelProperties::addTemplateHeader()
     i.parentName = "???";
     i.isHeader = true;
     i.decorateGradient = true;
+    i.okToCollapseRoot = false;
     i.isDecoration = false;
     i.captionText = "Templates";
     i.tooltip = "";
@@ -2454,6 +2514,7 @@ void EmbelProperties::addExport()
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
+//    i.value = templatePath + "Export";
     i.delegateType = DT_None;
     addItem(i);
     QModelIndex parIdx = capIdx;
@@ -2470,6 +2531,7 @@ void EmbelProperties::addExport()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "fileType";
+    i.path = settingRootPath + i.key;
     i.defaultValue = "JPG";
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
@@ -2490,6 +2552,7 @@ void EmbelProperties::addExport()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "fileQuality";
+    i.path = settingRootPath + i.key;
     i.defaultValue = 100;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
@@ -2512,10 +2575,12 @@ void EmbelProperties::addExport()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "saveMethod";
+    i.path = settingRootPath + i.key;
+    i.defaultValue= "Subfolder";
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = "Subfolder";
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
@@ -2534,7 +2599,15 @@ void EmbelProperties::addExport()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "folderPath";
-    i.value = setting->value(settingRootPath + i.key);
+    i.path = settingRootPath + i.key;
+    i.defaultValue = "";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
+    }
+    else {
+        i.value = i.defaultValue;
+    }
     i.delegateType = DT_SelectFolder;
     i.type = "string";
     exportFolderPath = i.value.toString();
@@ -2556,7 +2629,15 @@ void EmbelProperties::addExport()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "subfolder";
-    i.value = setting->value(settingRootPath + i.key);
+    i.path = settingRootPath + i.key;
+    i.defaultValue = "";
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
+    }
+    else {
+        i.value = i.defaultValue;
+    }
     i.delegateType = DT_LineEdit;
     i.type = "string";
     exportSubfolder = i.value.toString();
@@ -2581,6 +2662,7 @@ void EmbelProperties::addExport()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "suffix";
+    i.path = settingRootPath + i.key;
     i.defaultValue = "_" + templateName;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key)) {
@@ -2604,7 +2686,15 @@ void EmbelProperties::addExport()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "overwriteFiles";
-    i.value = setting->value(settingRootPath + i.key);
+    i.path = settingRootPath + i.key;
+    i.defaultValue = false;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
+    }
+    else {
+        i.value = i.defaultValue;
+    }
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     overwriteFiles = i.value.toBool();
@@ -2628,6 +2718,7 @@ void EmbelProperties::addGeneral()
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
+    i.path = templatePath + "General";
     i.delegateType = DT_None;
     addItem(i);
     QModelIndex parIdx = capIdx;
@@ -2644,9 +2735,11 @@ void EmbelProperties::addGeneral()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "horizontalFit";
+    i.defaultValue = 1000;
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
-    else i.value = 1000;
+    else i.value = i.defaultValue;
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
@@ -2665,9 +2758,11 @@ void EmbelProperties::addGeneral()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "verticalFit";
+    i.defaultValue = 1000;
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
-    else i.value = 1000;
+    else i.value = i.defaultValue;
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
@@ -2688,9 +2783,11 @@ void EmbelProperties::addGeneral()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "globalLightDirection";
+    i.defaultValue = 315;
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
-    else i.value = 315;
+    else i.value = i.defaultValue;
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 0;
@@ -2709,10 +2806,12 @@ void EmbelProperties::addGeneral()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "imageStyle";
+    i.defaultValue = "No style";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
     }
-    else i.value = "No style";
+    else i.value = i.defaultValue;
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << "No style" << styleList;
@@ -3588,30 +3687,30 @@ void EmbelProperties::addStrokeEffect(QModelIndex parIdx, QString effectName)
     effect.stroke.a = color.alpha();
     addItem(i);
 
-//    // stroke opacity
-//    i.name = "opacity";
-//    i.parIdx = parIdx;
-//    i.parentName = effectName;
-//    i.captionText = "Opacity";
-//    i.tooltip = "The opacity of the stroke.";
-//    i.isIndent = true;
-//    i.hasValue = true;
-//    i.captionIsEditable = false;
-//    i.key = "opacity";
-//    i.defaultValue = 100;
-//    i.path = settingRootPath + i.key;
-//    if (setting->contains(settingRootPath + i.key))
-//        i.value = setting->value(settingRootPath + i.key);
-//    else {
-//        i.value = i.defaultValue;
-//        setting->setValue(settingRootPath + i.key, i.value);
-//    }
-//    i.delegateType =  DT_Slider;
-//    i.type = "int";
-//    i.min = 0;
-//    i.max = 100;
-//    text.opacity = i.value.toInt();
-//    addItem(i);
+    // stroke opacity
+    i.name = "opacity";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Opacity";
+    i.tooltip = "The opacity of the stroke.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "opacity";
+    i.defaultValue = 100;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType =  DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    effect.stroke.opacity = i.value.toDouble() * 1.0 / 100;
+    addItem(i);
 
     // stroke blend mode
     i.name = "blendMode";
@@ -4373,6 +4472,31 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     effect.shadow.a = color.alpha();
     addItem(i);
 
+    // shadow opacity
+    i.name = "opacity";
+    i.parIdx = parIdx;
+    i.parentName = effectName;
+    i.captionText = "Opacity";
+    i.tooltip = "The opacity of the stroke.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "opacity";
+    i.defaultValue = 100;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key))
+        i.value = setting->value(settingRootPath + i.key);
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
+    i.delegateType =  DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    effect.shadow.opacity = i.value.toDouble() * 1.0 / 100;
+    addItem(i);
+
     // shadow blend mode
     i.name = "blendMode";
     i.parIdx = parIdx;
@@ -4880,7 +5004,7 @@ decoration is clicked.
         }
 
         if (currentIdx.parent().parent() == bordersIdx) {
-            if (currentIdx.data().toString() == "Tile" && b[idx.row()].tile != "Do not tile")
+            if (currentIdx.data().toString() == "Tile" && b[idx.parent().row()].tile != "Do not tile")
                 manageTilesAction->setVisible(true);
         }
 
@@ -4890,9 +5014,6 @@ decoration is clicked.
     }
 
     PropertyEditor::mousePressEvent(event);
-
-//    QTreeView::mousePressEvent(event);
-//    treeChange(indexAt(event->pos()));
 }
 
 void EmbelProperties::treeChange(QModelIndex idx)
@@ -5093,6 +5214,18 @@ void EmbelProperties::solo()
     #endif
     }
     setSolo(soloAction->isChecked());
+    setting->setValue("Embel/isSolo", soloAction->isChecked());
+}
+
+void EmbelProperties::expandRecursively()
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+    }
+    setExpandRecursively(expandRecursivelyAction->isChecked());
+    setting->setValue("Embel/expandRecursively", expandRecursivelyAction->isChecked());
 }
 
 void EmbelProperties::test1(QIcon icon)
@@ -5102,9 +5235,9 @@ void EmbelProperties::test1(QIcon icon)
     G::track(__FUNCTION__);
     #endif
     }
-    syncWinnets();
+//    syncWinnets();
 //    e->test();
-//    diagnostic();
+    diagnostic();
 //    diagnosticVectors();
 //    diagnosticStyles();
 }
@@ -5567,6 +5700,7 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "align";
+    i.path = settingRootPath + i.key;
     i.defaultValue = false;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);

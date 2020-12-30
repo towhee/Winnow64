@@ -69,6 +69,7 @@ ImageView::ImageView(QWidget *parent,
     */
 
     scene = new QGraphicsScene();
+    scene->setObjectName("Scene");
 
     pmItem = new QGraphicsPixmapItem;
     pmItem->setBoundingRegionGranularity(1);
@@ -131,7 +132,7 @@ ImageView::ImageView(QWidget *parent,
     isFirstImageNewFolder = true;
 }
 
-bool ImageView::loadImage(QString fPath)
+bool ImageView::loadImage(QString fPath, QString src)
 {
 /*
 There are two sources for the image (pixmap): a file or the cache.
@@ -166,7 +167,8 @@ perceived scale by the user.
 
     /* important to keep currentImagePath.  It is used to check if there isn't
     an image (when currentImagePath.isEmpty() == true) - for example when
-    no folder has been chosen. */
+    no folder has been chosen or the same image is being reloaded. */
+//    if (fPath == currentImagePath) return false;  // this prevents reloading image if change embellish template
     currentImagePath = fPath;
     bool isLoaded = false;
     pmItem->setVisible(true);
@@ -253,6 +255,7 @@ perceived scale by the user.
             setFitZoom();
         }
         scale();
+        qDebug() << __FUNCTION__ << fPath << src;
         if (G::isEmbellish) emit embellish("", __FUNCTION__);
 //        if (G::isEmbellish) emit embellish(fPath, __FUNCTION__);
         else pmItem->setGraphicsEffect(nullptr);
