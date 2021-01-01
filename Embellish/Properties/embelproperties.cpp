@@ -82,41 +82,15 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     this->setting = setting;
 
     setSolo(false);
-
-//    isExpandRecursively = false;
-//    collapseAll();
-//    expand(model->index(0,0,QModelIndex()));
     setIndentation(10);
     setAlternatingRowColors(false);
     setMouseTracking(false);
-//    propertyDelegate->isAlternatingRows = false;
 
     ignoreFontSizeChangeSignals = false;
 
     stringToFitCaptions = "====captions column====";
     stringToFitValues   = "====values column====";
     resizeColumns();
-
-//    setStyleSheet(G::css);
-
-//    // Assign blank png for treeview decorations so do not need to hide in delegate paint override
-//    setStyleSheet
-//    (
-//        "QTreeView {"
-//            "selection-background-color: transparent;"
-//        "}"
-//        "QTreeView::branch:has-children:!has-siblings:closed,"
-//        "QTreeView::branch:closed:has-children:has-siblings {"
-//            "border-image: none;"
-//            "image: url(:/images/branch-blank.png);"
-//        "}"
-
-//        "QTreeView::branch:open:has-children:!has-siblings,"
-//        "QTreeView::branch:open:has-children:has-siblings  {"
-//            "border-image: none;"
-//            "image: url(:/images/branch-blank.png);"
-//        "}"
-//    );
 
     QModelIndex root = model->invisibleRootItem()->index();
 
@@ -1376,6 +1350,10 @@ sorted.
 
 void EmbelProperties::moveEffectUp()
 {
+/*
+    Move an effect up one item in a group of effects within a style in the property tree.
+    The effects may have been sorted
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -1418,6 +1396,8 @@ void EmbelProperties::moveEffectUp()
     QStandardItem *styleItem = new QStandardItem;
     styleItem = model->itemFromIndex(idx.parent());
     int row;
+    int rowCount = styleItem->rowCount();
+    qDebug() << __FUNCTION__ << rowCount;
     for (row = 0; row < styleItem->rowCount(); ++row) {
         QString sortedItemName = styleItem->child(row)->data(Qt::DisplayRole).toString();
         if (sortedItemName == effectName) break;

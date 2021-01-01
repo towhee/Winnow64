@@ -92,7 +92,8 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     Images sent from another program, such as lightroom, are sent here from
     MW::handleStartupArgs.  The current embellish template is saved, the assigned
     template is set, the images are embellished and exported, and the original
-    template is re-established.
+    template is re-established, or the exported folder is opened, with the sort order
+    set to last modified in reverse.
 */
     {
     #ifdef ISDEBUG
@@ -114,7 +115,6 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     int n = pathList.length() - 1;
     QString fPath = pathList.at(n);
     QString exportFolder = exportFolderPath(fPath);
-    qDebug() << __FUNCTION__ << fPath << exportFolder;
 
     // cleanup (open export folder??)
 //    embelProperties->setCurrentTemplate(prevTemplate);
@@ -145,7 +145,7 @@ void EmbelExport::exportImages(const QStringList &fPathList)
         G::popUp->showPopup("No images picked or selected");
         return;
     }
-qDebug() << __FUNCTION__ << embelProperties->templateName;
+    qDebug() << __FUNCTION__ << embelProperties->templateName;
     if (embelProperties->templateName == "Do not Embellish") {
         G::popUp->showPopup("The current embellish template is 'Do not Embellish'<p>"
                             "Please select an embellish template and try again.<p><hr>"

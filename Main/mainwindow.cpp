@@ -500,7 +500,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
     if (event->key() == Qt::Key_Escape) {
         // hide a popup message
         if (G::popUp->isVisible() /*&& G::isSlideShow*/) {
-//            G::popUp->hide();
+            G::popUp->hide();
             return;
         }
         // hide preferences
@@ -905,13 +905,14 @@ void MW::handleStartupArgs(const QString &args)
        arg[1+] = path to each image to view in Winnow.  Only arg[1] is used to determine the
        directory to open in Winnow.
 
-    Winnets are small executables that act like photoshop droplets. They reside in the same
-    folder as the Winnow executable. They send a list of files and a template name to Winnow
-    to be embellished. For example, in order for Winnow to embellish a series of files that
-    have been exported from lightroom, Winnow needs to know which embellish template to use.
-    Instead of sending the files directly to Winnow, thay are sent to an intermediary program
-    (a Winnet) that is named after the template. The Winnet (ie Zen2048) receives the list of
-    files, inserts the strings Embellish" and "Zen2048" and then resends to Winnow.
+    Winnets are small executables that act like photoshop droplets. They reside in
+    QStandardPaths::AppDataLocation (Windows: user/AppData/Roaming/Winnow/Winnets). They send
+    a list of files and a template name to Winnow to be embellished. For example, in order for
+    Winnow to embellish a series of files that have been exported from lightroom, Winnow needs
+    to know which embellish template to use. Instead of sending the files directly to Winnow,
+    thay are sent to an intermediary program (a Winnet) that is named after the template. The
+    Winnet (ie Zen2048) receives the list of files, inserts the strings "Embellish" and the
+    template name "Zen2048" and then resends to Winnow.
 */
     {
     #ifdef ISDEBUG
@@ -952,7 +953,7 @@ void MW::handleStartupArgs(const QString &args)
         clearAllFilters();
         sortModifyAction->setChecked(true);
         sortReverseAction->setChecked(true);
-        sortChange();
+        sortChange(__FUNCTION__);
         embelProperties->templateId = 0;
         fsTree->select(path);
         folderSelectionChange();
@@ -1045,6 +1046,7 @@ void MW::folderSelectionChange()
     // sync the folders tree with the current folder
     fsTree->scrollToCurrent();
 
+    // rgh still req'd?
     // show image count in Folders (fsTree) if showImageCountAction isChecked
     if (showImageCount) {
         fsTree->setShowImageCount(true);
@@ -1090,13 +1092,24 @@ void MW::folderSelectionChange()
         G::isInitializing = false;
         return;
     }
+    else {
+        // datamodel loaded - initialize indexes
+        currentRow = 0;
+        currentSfIdx = dm->sf->index(currentRow, 0);
+        dm->currentRow = currentRow;
+        currentDmIdx = dm->sf->mapToSource(currentSfIdx);
+    }
+
     centralLayout->setCurrentIndex(prevCentralView);    // rgh req'd?
 
     // made it this far, folder must have eligible images and is good-to-go
     isCurrentFolderOkay = true;
 
     // update sort if necessary
-    if (sortColumn > 0 || sortReverseAction->isChecked()) sortChange();
+//    qDebug() << __FUNCTION__ << "Sort new folder if necessary"
+//             << "sortColumn =" << sortColumn
+//             << "sortReverseAction->isChecked() =" << sortReverseAction->isChecked();
+//    if (sortColumn != G::NameColumn || sortReverseAction->isChecked()) sortChange();
 
     // folder change triggered by dragdrop event
     bool dragFileSelected = false;
@@ -1267,8 +1280,15 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     if (!G::isSlideShow) progressLabel->setVisible(isShowCacheStatus);
 
-    // update imageView, use cache if image loaded, else read it from file
-    if (G::mode == "Loupe") {
+    /* update imageView, use cache if image loaded, else read it from file unless a new folder
+       is loading and the sort oder != dm order.  */
+    bool okToLoadImage = false;
+    bool basicSort = sortColumn == 0 && !sortReverseAction->isChecked();
+    if (!G::isNewFolderLoaded && basicSort)  okToLoadImage = true;
+    if (G::isNewFolderLoaded)  okToLoadImage = true;
+    if (G::mode != "Loupe")  okToLoadImage = false;
+
+    if (okToLoadImage) {
         if (imageView->loadImage(fPath, __FUNCTION__)) {
             updateClassification();
         }
@@ -1869,7 +1889,7 @@ memory has been consumed or all the images are cached.
     G::isNewFolderLoaded = true;
 
     // update sort order
-    sortChange();
+    sortChange(__FUNCTION__);
     thumbView->selectThumb(0);
 
     // set focus when program opens
@@ -2647,110 +2667,110 @@ void MW::createActions()
     sortFileNameAction->setShortcutVisibleInContextMenu(true);
     sortFileNameAction->setCheckable(true);
     addAction(sortFileNameAction);
-    connect(sortFileNameAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortFileNameAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortFileTypeAction = new QAction(tr("Sort by file type"), this);
     sortFileTypeAction->setShortcutVisibleInContextMenu(true);
     sortFileTypeAction->setCheckable(true);
     addAction(sortFileTypeAction);
-    connect(sortFileTypeAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortFileTypeAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortFileSizeAction = new QAction(tr("Sort by file size"), this);
     sortFileSizeAction->setShortcutVisibleInContextMenu(true);
     sortFileSizeAction->setCheckable(true);
     addAction(sortFileSizeAction);
-    connect(sortFileSizeAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortFileSizeAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortCreateAction = new QAction(tr("Sort by created time"), this);
     sortCreateAction->setShortcutVisibleInContextMenu(true);
     sortCreateAction->setCheckable(true);
     addAction(sortCreateAction);
-    connect(sortCreateAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortCreateAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortModifyAction = new QAction(tr("Sort by last modified time"), this);
     sortModifyAction->setShortcutVisibleInContextMenu(true);
     sortModifyAction->setCheckable(true);
     addAction(sortModifyAction);
-    connect(sortModifyAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortModifyAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortPickAction = new QAction(tr("Sort by picked status"), this);
     sortPickAction->setShortcutVisibleInContextMenu(true);
     sortPickAction->setCheckable(true);
     addAction(sortPickAction);
-    connect(sortPickAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortPickAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortLabelAction = new QAction(tr("Sort by label"), this);
     sortLabelAction->setShortcutVisibleInContextMenu(true);
     sortLabelAction->setCheckable(true);
     addAction(sortLabelAction);
-    connect(sortLabelAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortLabelAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortRatingAction = new QAction(tr("Sort by rating"), this);
     sortRatingAction->setShortcutVisibleInContextMenu(true);
     sortRatingAction->setCheckable(true);
     addAction(sortRatingAction);
-    connect(sortRatingAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortRatingAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortMegaPixelsAction = new QAction(tr("Sort by megapixels"), this);
     sortMegaPixelsAction->setShortcutVisibleInContextMenu(true);
     sortMegaPixelsAction->setCheckable(true);
     addAction(sortMegaPixelsAction);
-    connect(sortMegaPixelsAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortMegaPixelsAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortDimensionsAction = new QAction(tr("Sort by dimensions"), this);
     sortDimensionsAction->setShortcutVisibleInContextMenu(true);
     sortDimensionsAction->setCheckable(true);
     addAction(sortDimensionsAction);
-    connect(sortDimensionsAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortDimensionsAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortApertureAction = new QAction(tr("Sort by aperture"), this);
 //    sortApertureAction->setObjectName("SortAperture");
     sortApertureAction->setShortcutVisibleInContextMenu(true);
     sortApertureAction->setCheckable(true);
     addAction(sortApertureAction);
-    connect(sortApertureAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortApertureAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortShutterSpeedAction = new QAction(tr("Sort by shutter speed"), this);
     sortShutterSpeedAction->setShortcutVisibleInContextMenu(true);
     sortShutterSpeedAction->setCheckable(true);
     addAction(sortShutterSpeedAction);
-    connect(sortShutterSpeedAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortShutterSpeedAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortISOAction = new QAction(tr("Sort by ISO"), this);
     sortISOAction->setShortcutVisibleInContextMenu(true);
     sortISOAction->setCheckable(true);
     addAction(sortISOAction);
-    connect(sortISOAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortISOAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortModelAction = new QAction(tr("Sort by camera model"), this);
     sortModelAction->setShortcutVisibleInContextMenu(true);
     sortModelAction->setCheckable(true);
     addAction(sortModelAction);
-    connect(sortModelAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortModelAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortFocalLengthAction = new QAction(tr("Sort by focal length"), this);
     sortFocalLengthAction->setShortcutVisibleInContextMenu(true);
     sortFocalLengthAction->setCheckable(true);
     addAction(sortFocalLengthAction);
-    connect(sortFocalLengthAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortFocalLengthAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortTitleAction = new QAction(tr("Sort by title"), this);
     sortTitleAction->setShortcutVisibleInContextMenu(true);
     sortTitleAction->setCheckable(true);
     addAction(sortTitleAction);
-    connect(sortTitleAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortTitleAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortLensAction = new QAction(tr("Sort by lens"), this);
     sortLensAction->setShortcutVisibleInContextMenu(true);
     sortLensAction->setCheckable(true);
     addAction(sortLensAction);
-    connect(sortLensAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortLensAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortCreatorAction = new QAction(tr("Sort by creator"), this);
     sortCreatorAction->setShortcutVisibleInContextMenu(true);
     sortCreatorAction->setCheckable(true);
     addAction(sortCreatorAction);
-    connect(sortCreatorAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortCreatorAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     sortGroupAction = new QActionGroup(this);
     sortGroupAction->setExclusive(true);
@@ -2782,7 +2802,7 @@ void MW::createActions()
     sortReverseAction->setShortcutVisibleInContextMenu(true);
     sortReverseAction->setCheckable(true);
     addAction(sortReverseAction);
-    connect(sortReverseAction, &QAction::triggered, this, &MW::sortChange);
+    connect(sortReverseAction, &QAction::triggered, this, &MW::sortChangeFromAction);
 
     // Embellish menu
 
@@ -5570,7 +5590,7 @@ and icons are loaded if necessary.
     if (source == "Filters::itemChangedSignal search text change") buildFilters->unfilteredItemSearchCount();
 
     // recover sort after filtration
-    sortChange();
+    sortChange(__FUNCTION__);
 
     isFilterChange = false;     // allow fileSelectionChange()
 
@@ -5816,23 +5836,44 @@ void MW::refine()
     filterChange("MW::refine");
 }
 
-void MW::sortChange()
+void MW::sortChangeFromAction()
+{
+    sortChange("Action");
+}
+
+void MW::sortChange(QString src)
 {
 /*
-
+    Triggered by a menu sort item or a new folder.  Core sort items (QFileInfo items) are
+    always loaded into the datamodel, so we can sort on them at any time.  Non-core items,
+    read from the image file metadata, are only loaded on demand.  All non-core items must
+    be loaded in order to sort on them.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    /*
+    qDebug() << __FUNCTION__ << "src =" << src
+             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "prevSortColumn =" << prevSortColumn
+             << "sortColumn =" << sortColumn
+                ;
+//                */
+
     // reset sort to file name if was sorting on non-core metadata while folder still loading
     if (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn) {
         prevSortColumn = G::NameColumn;
         updateSortColumn(G::NameColumn);
     }
+
     // do not sort conditions
-    if (sortMenuUpdateToMatchTable || (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn)) return;
+    bool doNotSearch = false;
+    if (sortMenuUpdateToMatchTable) doNotSearch = true;
+    if (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn) doNotSearch = true;
+    if (!G::isNewFolderLoaded && sortColumn == G::NameColumn && !sortReverseAction->isChecked()) doNotSearch = true;
+    if (doNotSearch) return;
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;        // core
     if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;        // core
@@ -5872,6 +5913,7 @@ void MW::sortChange()
     qDebug() << __FUNCTION__ << "succeeded"
              << "sortColumn =" << sortColumn
              << "prevSortColumn =" << prevSortColumn
+             << "  Commencing sort"
              ;
 //             */
 
@@ -5879,6 +5921,9 @@ void MW::sortChange()
 
     // get the current selected item
     currentRow = dm->sf->mapFromSource(currentDmIdx).row();
+//    if (G::isNewFolderLoaded) currentRow = dm->sf->mapFromSource(currentDmIdx).row();
+//    else currentRow = 0;
+
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
     QModelIndex idx = dm->sf->index(currentRow, 0);
@@ -5895,9 +5940,9 @@ void MW::sortChange()
     imageCacheThread->rebuildImageCacheParameters(fPath);
 
     /* if the previous selected image is also part of the filtered datamodel then the
-    selected index does not change and fileSelectionChange will not be signalled.
-    Therefore we call it here to force the update to caching and icons */
-    qDebug() << __FUNCTION__ << idx.data() << "Calling fileSelectionChange(idx, idx)";
+       selected index does not change and fileSelectionChange will not be signalled.
+       Therefore we call it here to force the update to caching and icons */
+//    qDebug() << __FUNCTION__ << idx.data() << "Calling fileSelectionChange(idx, idx)";
     fileSelectionChange(idx, idx);
 
     scrollToCurrentRow();
@@ -5939,13 +5984,14 @@ void MW::reverseSortDirection()
 {
     if (sortReverseAction->isChecked()) {
         sortReverseAction->setChecked(false);
-        sortChange();
+        sortReverse = sortReverseAction->isChecked();
+        sortChange(__FUNCTION__);
         reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
     }
     else {
         sortReverseAction->setChecked(true);
         reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
-        sortChange();
+        sortChange(__FUNCTION__);
     }
 }
 
@@ -8040,6 +8086,7 @@ Preferences are located in the prefdlg class and updated here.
 
     // general
     sortColumn = setting->value("sortColumn").toInt();
+    sortReverse = setting->value("sortReverse").toBool();
 
     // appearance
     if (setting->contains("backgroundShade")) {
@@ -8470,7 +8517,7 @@ void MW::refreshFolders()
     // set sort forward (not reverse)
     if (sortReverseAction->isChecked()) {
         sortReverseAction->setChecked(false);
-        sortChange();
+        sortChange(__FUNCTION__);
         reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
     }
 }
@@ -10915,6 +10962,18 @@ ImageCache and update the image cache status bar.
     qDebug() << __FUNCTION__ << sfIdx.data() << "Calling fileSelectionChange(sfIdx, sfIdx)";
     thumbView->setCurrentIndex(sfIdx);
     fileSelectionChange(sfIdx, sfIdx);
+
+    // refresh image count in folders and bookmarks
+    if (sldm.count()) {
+        fsTree->getImageCount();
+//        fsTree->refreshModel();  // nada
+//        fsTree->fsFilter->invalidate();  // nada
+        QModelIndex idx = fsTree->getCurrentIndex();
+        QModelIndex countIdx = fsTree->fsModel->index(idx.row(), 4, idx.parent());
+//        fsTree->fsModel->setData(countIdx, 99);  // nada
+//        fsTree->fsModel->fetchMore(idx); // nada
+        bookmarks->count();
+    }
 }
 
 void MW::openUsbFolder()

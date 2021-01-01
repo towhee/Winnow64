@@ -201,7 +201,7 @@ MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
     }
     if (isRunning()) {
         mutex.lock();
-        qDebug() << "abort = true : " << __FUNCTION__;
+//        qDebug() << "abort = true : " << __FUNCTION__;
         abort = true;
         condition.wakeOne();
         mutex.unlock();
@@ -244,7 +244,7 @@ metadata and icons are loaded into the datamodel.
     if (isRunning()) {
         mutex.lock();
         abort = true;
-        qDebug() << "abort = true : " << __FUNCTION__;
+//        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
@@ -283,12 +283,12 @@ progress bar update is more important then use the datamodel function dm::addAll
     if (isRunning()) {
         mutex.lock();
         abort = true;
-        qDebug() << "abort = true : " << __FUNCTION__;
+//        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
     }
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     abort = false;
     startRow = 0;
     endRow = dm->sf->rowCount();
@@ -346,7 +346,7 @@ size or the viewport change size.
     if (isRunning()) {
         mutex.lock();
         abort = true;
-        qDebug() << "abort = true : " << __FUNCTION__;
+//        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
@@ -378,12 +378,12 @@ added to the datamodel. The image cache is updated.
     }
     if (isRunning()) {
         // !! rgh removed mutex.lock) to improve preformance - monitor this works
-//        mutex.lock();
+        mutex.lock();
         abort = true;
 //        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
-//        mutex.unlock();
-//        wait();
+        mutex.unlock();
+        wait();
     }
 
     abort = false;

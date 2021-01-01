@@ -142,10 +142,22 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
     }
 }
 
+void GraphicsEffect::sourceChanged(QGraphicsEffect::ChangeFlags flags)
+{
+//    qDebug() << __FUNCTION__ << flags;
+//    if (flags & QGraphicsEffect::SourceInvalidated ||
+//        flags & QGraphicsEffect::SourceBoundingRectChanged)
+//        okToDraw = true;
+//    else okToDraw = false;
+}
+
 void GraphicsEffect::draw(QPainter* painter)
 {
+//    qDebug() << __FUNCTION__ << okToDraw << QTime::currentTime() << painter;
+//    if (!okToDraw) return;
+//    okToDraw = false;
+
     if (effects->length() == 0) return;
-//    qDebug() << __FUNCTION__ << QTime::currentTime() << painter;
     painter->save();
 
     QPoint srcOffset;
@@ -306,7 +318,7 @@ void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 void GraphicsEffect::shadowEffect(double length, double radius, QColor color, double opacity,
                                   QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__ << QTime::currentTime();
+//    qDebug() << __FUNCTION__ << QTime::currentTime();
 
     if (overlay.isNull()) return;
 

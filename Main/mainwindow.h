@@ -275,6 +275,7 @@ public:
     bool justUpdatedBestFit;
     int sortColumn = 0;
     int prevSortColumn = 0;
+    bool sortReverse;           // not used (maybe prevent unnecessary sorts?)
     bool preferencesHasFocus = false;
 
     bool showImageCount = true;
@@ -357,7 +358,8 @@ private slots:
     void refine();
     void uncheckAllFilters();
     void clearAllFilters();
-    void sortChange();
+    void sortChangeFromAction();
+    void sortChange(QString src = "Action");
     void updateSortColumn(int sortColumn);
     void reverseSortDirection();
     void allPreferences();
