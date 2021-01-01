@@ -164,6 +164,7 @@ perceived scale by the user.
     // No folder selected yet
     if (!fPath.length()) return false;
     if (G::memTest) return false;
+//    qDebug() << __FUNCTION__ << src;
 
     /* important to keep currentImagePath.  It is used to check if there isn't
     an image (when currentImagePath.isEmpty() == true) - for example when
@@ -255,7 +256,7 @@ perceived scale by the user.
             setFitZoom();
         }
         scale();
-        qDebug() << __FUNCTION__ << fPath << src;
+//        qDebug() << __FUNCTION__ << fPath << src;
         if (G::isEmbellish) emit embellish("", __FUNCTION__);
 //        if (G::isEmbellish) emit embellish(fPath, __FUNCTION__);
         else pmItem->setGraphicsEffect(nullptr);

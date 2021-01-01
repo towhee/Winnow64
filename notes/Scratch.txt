@@ -118,3 +118,29 @@ GraphicsEffect::GraphicsEffect()
 {
 
 }
+
+"      8,894,000"   "Pixmap::load......................................"   "Loaded D:/Pictures/iPad/2010-12-30_0011.jpg"
+"         72,900"   "Pixmap::load......................................"   "Completed load image"
+"         34,000"   "ImageCache::getImCacheSize........................"   ""
+"         78,300"   "DataModel::proxyIndexFromPath....................."   ""
+"         11,000"   "ImageCache::nextToCache..........................."   ""
+"         67,200"   "IconView::refreshThumb............................"   ""
+"         36,900"   "Pixmap::load......................................"   "D:/Pictures/iPad/2010-12-30_0027.jpg"
+"         70,700"   "IconView::refreshThumb............................"   ""
+"         65,400"   "DataModel::readMetadataForItem...................."   "D:/Pictures/iPad/2010-12-30_0027.jpg"
+"        130,900"   "Metadata::loadImageMetadata......................."   "D:/Pictures/iPad/2010-12-30_0027.jpg"
+"         31,400"   "Metadata::readMetadata............................"   "D:/Pictures/iPad/2010-12-30_0027.jpg"
+"         29,800"   "Metadata::clearMetadata..........................."   ""
+"         67,400"   "Metadata::parseJPG................................"   ""
+"        515,300"   "Metadata::reportMetadata.........................."   ""
+"        318,600"   "DataModel::addMetadataForItem....................."   ""
+Error XPST0003 in file:///D:/My Projects/Winnow Project/Winnow64/release/Winnow.exe, at line 1, column 1: syntax error, unexpected unknown keyword
+"      6,941,700"   "Pixmap::load......................................"   "Loaded D:/Pictures/iPad/2010-12-30_0027.jpg"
+"         73,100"   "Pixmap::load......................................"   "Completed load image"
+"         34,800"   "ImageCache::getImCacheSize........................"   ""
+"         71,300"   "ImageCache::nextToCache..........................."   ""
+"        108,500"   "Pixmap::load......................................"   "D:/Pictures/iPad/2010-12-31_0008.jpg"
+"         49,300"   "DataModel::proxyIndexFromPath....................."   ""
+"          6,100"   "DataModel::readMetadataForItem...................."   "D:/Pictures/iPad/2010-12-31_0008.jpg"
+"         85,000"   "IconView::refreshThumb............................"   ""
+"

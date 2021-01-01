@@ -533,7 +533,7 @@ visible in the viewport, how many icons are visible and the first/last icons vis
     visibleCells = lastVisibleCell - firstVisibleCell + 1;
     midVisibleCell = firstVisibleCell + visibleCells / 2;
 
-//    /*
+    /*
     qDebug()
         << __FUNCTION__
         << "i:" << i

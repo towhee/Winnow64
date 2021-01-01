@@ -1,11 +1,12 @@
 BUGS
-- Sometimes style effect up/down arrows not working (ie if add effect to style)
+- Option to go to export folder after export?
+- Sometimes style effect up/down arrows not working (not lately)
 - Check for multiple signals to trigger Embel processes (challenging)
 - Change access to token editor in view menu
 - Sometimes all docks except embellish are locked (not lately)
 - Export appearing in templates (not lately)
-- Add opacity to effects.  Shadow, stroke done.
-
+- cleanup imageview rubberband
+- Error XPST0003 in file:///D:/My Projects/Winnow Project/Winnow64/release/Winnow.exe, at line 1, column 1: syntax error, unexpected unknown keyword
 - Confirm check for updates is working (Andreas)
 - File/Bookmark count not refresh when filecount changes see QFileSystemWatcher
 - Grid does not always stretch to fit central widget
@@ -39,6 +40,9 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Click on template header causes crash
+- If sort order different than datamodel, wrong loupe image shown initially
+- Add opacity to effects.  Shadow, stroke done.
 - ColorEditor crashed is clicked twice
 - ColorEditor does not default to current color
 - Prevent blank template creation

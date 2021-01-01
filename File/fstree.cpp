@@ -118,7 +118,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
 {
     /* Return image count for each folder by looking it up in the QHash count which is
        built in FSTree::getImageCount and referenced here.  This is much faster than
-       performing the image count "on-the-fly" here, which caused scroll latency. */
+       performing the image count "on-the-fly" here, which causes scroll latency. */
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
             QString path = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();

@@ -15,6 +15,8 @@ InputDlg::InputDlg(QString windowTitle,
     ui->setupUi(this);
     setWindowTitle(windowTitle);
     setStyleSheet(G::css);
+    int b = G::backgroundShade - 10;
+    ui->inputText->setStyleSheet("QLineEdit {background: " + QColor(b,b,b).name() + ";}");
     ui->inputText->setText(input);
     ui->descriptionText->setText(description);
     if (doNotUse.contains(input)) doNotUse.removeAt(doNotUse.indexOf(input));

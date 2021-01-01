@@ -35,14 +35,16 @@ private:
     int imageCountColumnWidth;
     QTreeWidgetItem *rightClickItem;
 
+//    virtual bool event(QEvent *event) override;
+
 private slots:
 
 protected:
-    void mousePressEvent(QMouseEvent *event);
-    void resizeEvent(QResizeEvent *event);
-	void dragEnterEvent(QDragEnterEvent *event);
-	void dragMoveEvent(QDragMoveEvent *event);
-	void dropEvent(QDropEvent *event);
+    void mousePressEvent(QMouseEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dragMoveEvent(QDragMoveEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
 
 signals:
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);

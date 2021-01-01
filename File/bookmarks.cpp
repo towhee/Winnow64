@@ -120,7 +120,6 @@ void BookMarks::count()
          (*it)->setText(1, QString::number(count));
          ++it;
      }
-
 }
 
 void BookMarks::select(QString fPath)
@@ -139,7 +138,9 @@ the FSTree folders view.
         if (items.length() > 0) {
             setCurrentItem(items[0]);
             setCurrentIndex(selectedIndexes().at(0));
+            count();
         }
+
     }
     else {
         selectionModel()->clear();
@@ -254,4 +255,14 @@ void BookMarks::dropEvent(QDropEvent *event)
         addBookmark(fPath);
     }
 }
+
+//bool BookMarks::event(QEvent *event)
+//{
+//    qDebug() << __FUNCTION__
+//             << event << "\t"
+//             << event->type()
+//                ;
+//    return  QTreeWidget::event(event);
+//}
+
 

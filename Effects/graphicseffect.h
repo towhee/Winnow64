@@ -163,11 +163,12 @@ public:
         int bottom = 0;
     };
 
-//protected:
-//    bool eventFilter(QObject *obj, QEvent *event) override;
+protected:
+    virtual void draw(QPainter *painter) override;
+    virtual void sourceChanged(QGraphicsEffect::ChangeFlags flags) override;
 
 private:
-    virtual QRectF boundingRectFor(const QRectF& rect ) const;
+    virtual QRectF boundingRectFor(const QRectF& rect ) const override;
     void shadowEffect(double size, double radius, QColor color, double opacity, QPainter::CompositionMode mode);
     void highligherEffect(QColor color, Margin margin, QPainter::CompositionMode mode);
     void strokeEffect(double width, QColor color, double opacity, QPainter::CompositionMode mode);
@@ -180,10 +181,11 @@ private:
                       double startEV, double midEV, double endEV, bool isUmbraGradient,
                       double soften, QPainter::CompositionMode mode);
 
-    bool event(QEvent *event) override;
+    virtual bool event(QEvent *event) override;
 
     QList<winnow_effects::Effect> *effects;
     Effects effect;
+    bool okToDraw = false;
 
     QRectF srcRectZeroRotation;
     QRectF srcRect;
@@ -202,8 +204,6 @@ private:
     QImage halfScaled(const QImage &source);
     void expblur(QImage &img, qreal radius, bool improvedQuality = false, int transposed = 0);
     */
-protected:
-    virtual void draw(QPainter *painter);
 };
 
 #endif // GRAPHICSEFFECT_H
