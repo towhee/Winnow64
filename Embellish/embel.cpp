@@ -180,13 +180,19 @@ void Embel::build(QString path, QString src)
     G::track(__FUNCTION__);
     #endif
     }
+    /*
     qDebug() << __FUNCTION__ << QTime::currentTime()
              << "path =" << path
              << "src =" << src;
+//             */
 
     QString msg = "src = " + src + "  path = " + path;
 //    Utilities::log(__FUNCTION__, msg);
-//    qDebug() << __FUNCTION__ << msg;
+    /*
+    qDebug() << __FUNCTION__
+             << "src =" << src
+             << "path =" << path;
+             */
 
     QElapsedTimer t;
     t.start();
@@ -601,7 +607,7 @@ void Embel::updateBorder(int i)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
+//    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
 
     bItems[i]->setRect(0, 0, b[i].w, b[i].h);
     QColor color;
@@ -645,7 +651,7 @@ void Embel::updateText(int i)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
+//    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
 
     // if a text entry
     if (p->t[i].source == "Text") {
@@ -798,11 +804,12 @@ void Embel::updateImage()
                 pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
             }
             GraphicsEffect *effect = new GraphicsEffect();
-//            effect->installEventFilter(this);
             effect->setObjectName("EmbelImageEffect");
+            /*
             qDebug() << __FUNCTION__
                      << "effect =" << effect
                      << "p->image.style =" << p->image.style;
+//                     */
             effect->set(p->styleMap[p->image.style],
                     p->globalLightDirection,
                     0,

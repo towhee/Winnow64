@@ -728,7 +728,7 @@ void EmbelProperties::setCurrentTemplate(QString name)
 {
 /*
 Sets the current template to templateName, which must be assigned before calling this function.
-The templatePath and isCurrent are defined. The template is selected.
+    The templatePath and isCurrent are defined. The template is selected.
 */
     {
     #ifdef ISDEBUG
@@ -1594,6 +1594,7 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     // other lists
     borderList.clear();
     anchorObjectList.clear();
+    anchorObjectList << "Image";
 
     // clear borders, texts and graphics
     b.clear();
@@ -1608,7 +1609,8 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     collapseAll();
     expand(model->index(_templates, 0));
     isTemplateChange = false;
-
+    qDebug() << __FUNCTION__ << "loadImage..."
+             << "mw3->dm->currentFilePath =" << mw3->dm->currentFilePath;
     mw3->imageView->loadImage(mw3->dm->currentFilePath, __FUNCTION__);
 }
 
@@ -2719,7 +2721,10 @@ void EmbelProperties::addGeneral()
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
-    else i.value = i.defaultValue;
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
@@ -2742,7 +2747,10 @@ void EmbelProperties::addGeneral()
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
-    else i.value = i.defaultValue;
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
@@ -2767,7 +2775,10 @@ void EmbelProperties::addGeneral()
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
-    else i.value = i.defaultValue;
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 0;
@@ -2791,7 +2802,10 @@ void EmbelProperties::addGeneral()
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
     }
-    else i.value = i.defaultValue;
+    else {
+        i.value = i.defaultValue;
+        setting->setValue(settingRootPath + i.key, i.value);
+    }
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << "No style" << styleList;
@@ -5556,11 +5570,17 @@ void EmbelProperties::addText(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "anchorObject";
+    i.defaultValue = "Image";
     i.path = settingRootPath + i.key;
-    if (setting->contains(settingRootPath + i.key))
+    if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
+        if (i.value != "Image" && b.count() == 0) {
+            i.value = "Image";
+            setting->setValue(settingRootPath + i.key, i.value);
+        }
+    }
     else {
-        i.value = "Image";
+        i.value = i.defaultValue;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;
@@ -5594,6 +5614,7 @@ void EmbelProperties::addText(int count)
     if (text.anchorObject == "Image") {
         model->setData(capIdx, true, UR_isHidden);      // capIdx defined by addItem
         model->setData(valIdx, true, UR_isHidden);      // valIdx defined by addItem
+        setRowHidden(capIdx.row(), capIdx.parent(), true);
     }
 
     i.name = "x";

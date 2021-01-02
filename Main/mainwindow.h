@@ -278,6 +278,7 @@ public:
     bool sortReverse;           // not used (maybe prevent unnecessary sorts?)
     bool preferencesHasFocus = false;
 
+    bool remoteAccess = false;
     bool showImageCount = true;
     bool isCurrentFolderOkay;
     bool copyOp;
@@ -310,6 +311,7 @@ public slots:
     void handleStartupArgs(const QString &msg);
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex);
+    void folderAndFileSelectionChange(QString fPath);
     void nullFiltration();
     void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);

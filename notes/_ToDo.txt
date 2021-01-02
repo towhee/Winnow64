@@ -1,4 +1,6 @@
 BUGS
+- Switching between templates sometimes screws up the scale and position of the scene
+- Weird bleeding if stroke on right and bottom edges of image
 - Option to go to export folder after export?
 - Sometimes style effect up/down arrows not working (not lately)
 - Check for multiple signals to trigger Embel processes (challenging)
@@ -40,6 +42,11 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Metadata template Zen shooting info not working
+- Texts "Put text in" is blank if no borders
+- Texts "Border area" should be hidden if no borders
+- Change template not refreshing
+- Remote embellish export sorts current folder before going to export folder
 - Click on template header causes crash
 - If sort order different than datamodel, wrong loupe image shown initially
 - Add opacity to effects.  Shadow, stroke done.

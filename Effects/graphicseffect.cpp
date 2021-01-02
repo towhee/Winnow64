@@ -142,14 +142,14 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
     }
 }
 
-void GraphicsEffect::sourceChanged(QGraphicsEffect::ChangeFlags flags)
-{
+//void GraphicsEffect::sourceChanged(QGraphicsEffect::ChangeFlags flags)
+//{
 //    qDebug() << __FUNCTION__ << flags;
 //    if (flags & QGraphicsEffect::SourceInvalidated ||
 //        flags & QGraphicsEffect::SourceBoundingRectChanged)
 //        okToDraw = true;
 //    else okToDraw = false;
-}
+//}
 
 void GraphicsEffect::draw(QPainter* painter)
 {
@@ -278,7 +278,7 @@ QT_END_NAMESPACE
 
 void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__ << QTime::currentTime();
+//    qDebug() << __FUNCTION__ << QTime::currentTime();
 
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
@@ -302,7 +302,7 @@ void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 
 void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__ << QTime::currentTime();
+//    qDebug() << __FUNCTION__ << QTime::currentTime();
 
     if (overlay.isNull()) return;
 
@@ -334,6 +334,8 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color, do
     shadPainter.drawImage(0,0, overlay);
     shadPainter.end();
 
+//    QImage shadIm = srcPixmap.toImage();
+
     // blur the alpha channel
     QImage blurred(shadIm.size(), QImage::Format_ARGB32_Premultiplied);
     blurred.fill(Qt::transparent);
@@ -344,6 +346,9 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color, do
     shadIm = std::move(blurred);
 
     // apply color to shadow
+
+//    QPainter shadPainter(&shadIm);
+
     shadPainter.begin(&shadIm);
     shadPainter.setOpacity(opacity);
     shadPainter.setCompositionMode(QPainter::CompositionMode_SourceIn);
@@ -360,7 +365,7 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color, do
 
 void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__ << QTime::currentTime();
+//    qDebug() << __FUNCTION__ << QTime::currentTime();
 
     if (overlay.isNull()) return;
 
@@ -390,7 +395,7 @@ void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::Com
 
 void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__ << QTime::currentTime();
+//    qDebug() << __FUNCTION__ << QTime::currentTime();
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
     effect.raise(temp, margin, 0.2, false);
@@ -403,7 +408,7 @@ void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
 
 void GraphicsEffect::brightnessEffect(qreal evDelta, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__ << QTime::currentTime();
+//    qDebug() << __FUNCTION__ << QTime::currentTime();
     if (overlay.isNull()) return;
 
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
@@ -439,7 +444,7 @@ void GraphicsEffect::strokeEffect(double width, QColor color, double opacity,
 
 void GraphicsEffect::glowEffect(double width, QColor color, double blurRadius, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__ << QTime::currentTime();
+//    qDebug() << __FUNCTION__ << QTime::currentTime();
     if (overlay.isNull()) return;
 
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);

@@ -54,7 +54,7 @@ public:
     FSFilter *fsFilter;
 
 	QModelIndex getCurrentIndex();
-    void select(QString dirPath);
+    bool select(QString dirPath);
     void scrollToCurrent();
 //    void showSupportedImageCount();
 

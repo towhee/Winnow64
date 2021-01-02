@@ -328,14 +328,15 @@ void MW::initialize()
     isDragDrop = false;
     setAcceptDrops(true);
     reverseSortBtn = new BarBtn();
-    reverseSortBtn ->setToolTip("Reverse sort direction.  Shortcut to toggle: Opt/Alt + S");
+    reverseSortBtn ->setToolTip("Sort direction.  Shortcut to toggle: Opt/Alt + S");
     connect(reverseSortBtn, &BarBtn::clicked, this, &MW::reverseSortDirection);
     filterStatusLabel = new QLabel;
     filterStatusLabel->setToolTip("The images have been filtered");
     subfolderStatusLabel = new QLabel;
     subfolderStatusLabel->setToolTip("Showing contents of all subfolders");
     rawJpgStatusLabel = new QLabel;
-    rawJpgStatusLabel->setToolTip("Raw and Jpg files are combined for viewing");
+    rawJpgStatusLabel->setToolTip("Raw and Jpg files are combined for viewing.  "
+                                  "Shortcut to toggle: Opt/Alt + J");
     slideShowStatusLabel = new QLabel;
     slideShowStatusLabel->setToolTip("Slideshow is active");
     prevCentralView = 0;
@@ -799,19 +800,8 @@ void MW::handleDrop(const QMimeData *mimeData)
     if (mimeData->hasUrls())
     {
         dragDropFilePath = mimeData->urls().at(0).toLocalFile();
-        QFileInfo fInfo = QFileInfo(dragDropFilePath);
-        if (fInfo.isDir()) {
-            dragDropFolderPath = fInfo.absoluteFilePath();
-            dragDropFilePath = "";
-        }
-        else {
-            dragDropFolderPath = fInfo.absoluteDir().absolutePath();
-        }
-        isDragDrop = true;
-        fsTree->select(dragDropFolderPath);
-        folderSelectionChange();
+        folderAndFileSelectionChange(dragDropFilePath);
     }
-
 }
 
 bool MW::checkForUpdate()
@@ -921,7 +911,7 @@ void MW::handleStartupArgs(const QString &args)
     }
 //    qDebug() << __FUNCTION__ << args;
 
-    if (args.length() == 0) return;
+    if (args.length() < 2) return;
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
     /*
@@ -944,20 +934,8 @@ void MW::handleStartupArgs(const QString &args)
             pathList << argList.at(i);
         }
         EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
-        QString path = embelExport.exportRemoteFiles(templateName, pathList);
-
-        qDebug() << __FUNCTION__ << "path =" << path;
-
-        // go to export folder, sorted reverse modify, no filters, first image
-        embelProperties->setCurrentTemplate("Do not Embellish");
-        clearAllFilters();
-        sortModifyAction->setChecked(true);
-        sortReverseAction->setChecked(true);
-        sortChange(__FUNCTION__);
-        embelProperties->templateId = 0;
-        fsTree->select(path);
-        folderSelectionChange();
-        thumbView->selectThumb(0);
+        QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
+        folderAndFileSelectionChange(fPath);
     }
     else {
         QFileInfo f(argList.at(1));
@@ -1109,7 +1087,7 @@ void MW::folderSelectionChange()
 //    qDebug() << __FUNCTION__ << "Sort new folder if necessary"
 //             << "sortColumn =" << sortColumn
 //             << "sortReverseAction->isChecked() =" << sortReverseAction->isChecked();
-//    if (sortColumn != G::NameColumn || sortReverseAction->isChecked()) sortChange();
+    if (sortColumn != G::NameColumn || sortReverseAction->isChecked()) sortChange();
 
     // folder change triggered by dragdrop event
     bool dragFileSelected = false;
@@ -1326,6 +1304,38 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     // update cursor position on progressBar
     updateImageCacheStatus("Update cursor", currentRow, "MW::fileSelectionChange");
+}
+
+void MW::folderAndFileSelectionChange(QString fPath)
+{
+/*
+    Loads the folder containing the image and then selects the image.  Used by
+    MW::handleStartupArgs and MW::handleDrop.  After the folder change a delay is req'd
+    before the initial metadata has been cached and the image can be selected.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    embelProperties->setCurrentTemplate("Do not Embellish");
+    QFileInfo info(fPath);
+    QString folder = info.dir().absolutePath();
+    if (fsTree->select(folder)) {
+        folderSelectionChange();
+        for (int i = 0; i < 100; i++) {
+            if (G::isNewFolderLoaded) {
+                thumbView->selectionModel()->clear();
+                thumbView->selectThumb(fPath);
+                break;
+            }
+            else {
+//                qDebug() << __FUNCTION__ << "waiting for folder to load:" << i;
+                G::wait(100);
+            }
+        }
+    }
+
 }
 
 void MW::clearAll()
@@ -1888,9 +1898,10 @@ memory has been consumed or all the images are cached.
 
     G::isNewFolderLoaded = true;
 
-    // update sort order
-    sortChange(__FUNCTION__);
-    thumbView->selectThumb(0);
+    /* req'd to trigger MW::fileSelectionChange.  This must be done to initialize many things
+       including current index and file path req'd by mdCache and EmbelProperties...  */
+    QModelIndex idx = dm->sf->index(0, 0);
+    fileSelectionChange(idx, idx);
 
     // set focus when program opens
     if (G::mode == "Loupe") thumbView->setFocus();
@@ -1898,21 +1909,21 @@ memory has been consumed or all the images are cached.
     if (G::mode == "Table") tableView->setFocus();
 }
 
-// called by signal itemClicked in bookmark
 void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
 {
+/*
+   Called by signal itemClicked in bookmark.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-//    QString fPath = item->text(0);
     const QString fPath =  item->toolTip(col);
     isCurrentFolderOkay = isFolderValid(fPath, true, false);
 
     if (isCurrentFolderOkay) {
         QModelIndex idx = fsTree->fsModel->index(fPath);
-//        QModelIndex idx = fsTree->fsModel->index(item->toolTip(col));
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
@@ -4831,7 +4842,7 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
 
 void MW::embelTemplateChange(int id)
 {
-    if (id < 10) embelTemplatesActions.at(id)->setChecked(true);
+    embelTemplatesActions.at(id)->setChecked(true);
 }
 
 void MW::createEmbel()
@@ -5859,6 +5870,8 @@ void MW::sortChange(QString src)
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "prevSortColumn =" << prevSortColumn
              << "sortColumn =" << sortColumn
+             << "sortReverse =" << sortReverse
+             << "sortReverseAction->isChecked() =" << sortReverseAction->isChecked()
                 ;
 //                */
 
@@ -5919,6 +5932,8 @@ void MW::sortChange(QString src)
 
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
 
+    if (!G::allMetadataLoaded) return;
+
     // get the current selected item
     currentRow = dm->sf->mapFromSource(currentDmIdx).row();
 //    if (G::isNewFolderLoaded) currentRow = dm->sf->mapFromSource(currentDmIdx).row();
@@ -5930,8 +5945,10 @@ void MW::sortChange(QString src)
     selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
-    // also update datamodel, used in MdCache
+    // also update datamodel, used in MdCache and EmbelProperties
     dm->currentFilePath = fPath;
+
+//    if (!G::allMetadataLoaded) return;
 
     centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true, "", __FUNCTION__);
@@ -11311,11 +11328,19 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QDebug bug = qDebug().noquote().nospace();
-    bug << "Test";
-    bug << " this out";
-    bug << "\n";
-    bug << "start new line";
+    qDebug() << __FUNCTION__ << "dm->currentFilePath =" << dm->currentFilePath;
+
+//    QString fPath = "D:/Pictures/Zenfolio/pbase2048/2020-12-31_0004_Zen2048.JPG";
+//    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath,
+//                                            1, Qt::MatchFixedString);
+//    qDebug() << __FUNCTION__ << idxList << idxList.length();
+//    if (idxList.length() > 0) thumbView->selectThumb(idxList.at(0));
+
+//    QDebug bug = qDebug().noquote().nospace();
+//    bug << "Test";
+//    bug << " this out";
+//    bug << "\n";
+//    bug << "start new line";
 
 //    ColorAnalysis a(dm->currentFilePath);
 //    qDebug() << __FUNCTION__ << t.elapsed();

@@ -77,7 +77,7 @@ public:
 
     IconViewDelegate *iconViewDelegate;
     void selectThumb(int row);
-    void selectThumb(QString &filePath);
+    void selectThumb(QString &fPath);
     bool isThumb(int row);
     void reportThumb();                             //debugging thumb roles
     QString diagnostics();
