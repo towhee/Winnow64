@@ -926,7 +926,7 @@ void IconView::selectThumb(int row)
     selectThumb(idx);
 }
 
-void IconView::selectThumb(QString &fName)
+void IconView::selectThumb(QString &fPath)
 {
     {
     #ifdef ISDEBUG
@@ -934,11 +934,16 @@ void IconView::selectThumb(QString &fName)
     #endif
     }
     // rgh use dm->fPathRow[fPath] instead - much faster
-    // selectThumb(dm->fPathRow[fName]);
-    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fName);
-    QModelIndex idx = idxList[0];
+    qDebug() << __FUNCTION__ << fPath;
+//    int dmRow = dm->fPathRow[fPath];
+//    QModelIndex sfIdx =
+//    selectThumb(dm->fPathRow[fPath]);
+    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath,
+                                            1, Qt::MatchFixedString);
+    if (idxList.length() > 0) selectThumb(idxList[0]);
+    else G::popUp->showPopup("Could not find " + fPath + ".  Press Esc to continue.", 0);
 //    qDebug() << G::t.restart() << "\t" << "selectThumb  idx.row()" << idx.row();
-    if(idx.isValid()) selectThumb(idx);
+
 }
 
 void IconView::selectNext()

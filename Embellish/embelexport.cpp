@@ -115,6 +115,8 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     int n = pathList.length() - 1;
     QString fPath = pathList.at(n);
     QString exportFolder = exportFolderPath(fPath);
+    QFileInfo info(fPath);
+    QString exportPathToLastFile = exportFolder + "/" + info.fileName();
 
     // cleanup (open export folder??)
 //    embelProperties->setCurrentTemplate(prevTemplate);
@@ -125,7 +127,9 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
 //             << exportFolderPath(fPath);
 //    Utilities::log(__FUNCTION__, "fPath =" + fPath);
 //    Utilities::log(__FUNCTION__, "exportFolderPath(fPath) =" + exportFolderPath(fPath));
-    return exportFolderPath(fPath);
+
+//    return exportFolderPath(fPath);
+    return lastFileExportedPath;
 }
 
 void EmbelExport::exportImages(const QStringList &fPathList)
@@ -231,4 +235,6 @@ void EmbelExport::exportImage(const QString &fPath)
     if (extension == "JPG") image.save(exportPath, "JPG", 100);
     if (extension == "PNG") image.save(exportPath, "PNG", 100);
     if (extension == "TIF") image.save(exportPath, "TIF");
+
+    lastFileExportedPath = exportPath;
 }

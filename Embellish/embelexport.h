@@ -33,6 +33,7 @@ private:
     Embel *embellish;
     QGraphicsScene *scene;
     QGraphicsPixmapItem *pmItem;
+    QString lastFileExportedPath;
 };
 
 #endif // EMBELEXPORT_H

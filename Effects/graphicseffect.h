@@ -165,7 +165,7 @@ public:
 
 protected:
     virtual void draw(QPainter *painter) override;
-    virtual void sourceChanged(QGraphicsEffect::ChangeFlags flags) override;
+//    virtual void sourceChanged(QGraphicsEffect::ChangeFlags flags) override;
 
 private:
     virtual QRectF boundingRectFor(const QRectF& rect ) const override;

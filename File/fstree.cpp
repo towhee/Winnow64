@@ -269,7 +269,7 @@ void FSTree::scrollToCurrent()
     if (idx.isValid()) scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
-void FSTree::select(QString dirPath)
+bool FSTree::select(QString dirPath)
 {
     {
     #ifdef ISDEBUG
@@ -277,10 +277,17 @@ void FSTree::select(QString dirPath)
     #endif
     }
     QDir test(dirPath);
-    if (test.exists())
+//    QModelIndexList idx = fsModel->match(fsModel->index(0,0), Qt::DisplayRole, dirPath);
+    if (test.exists()) {
+//        qDebug() << __FUNCTION__ << "Selecting" << dirPath;
         setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
-    else
-        qDebug() << __FUNCTION__ << "Error:" << dirPath << "does not exist";
+        return true;
+    }
+    else {
+//        qDebug() << __FUNCTION__ << "Error:" << dirPath << "does not exist";
+        G::popUp->showPopup("The folder path " + dirPath + " was not found.", 2000);
+        return false;
+    }
 }
 
 QModelIndex FSTree::getCurrentIndex()
