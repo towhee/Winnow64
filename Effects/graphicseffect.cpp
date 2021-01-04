@@ -165,8 +165,12 @@ void GraphicsEffect::draw(QPainter* painter)
     // unpadded image is req'd for some effects like emboss
     unpaddedSrcImage = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, NoPad).toImage();
     srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, PadToEffectiveBoundingRect);
+//    srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, NoPad);
     overlay = srcPixmap.toImage();
-//    qDebug() << __FUNCTION__ << "overlay.width() =" << overlay.width();
+//    qDebug() << __FUNCTION__ << "boundingRect =" << boundingRect();
+    overlay.save("D:/Pictures/Temp/effect/o0.tif");
+
+    qDebug() << __FUNCTION__ << "draw overlay.width() =" << overlay.width();
 //  overlay.setDevicePixelRatio(srcPixmap.devicePixelRatioF());
 //    srcPixmap.save("D:/Pictures/Temp/effect/srcPixmap.tif");
 
@@ -360,14 +364,17 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color, do
     overlayPainter.setCompositionMode(mode);
     overlayPainter.drawImage(shadowOffset, shadIm);
     overlayPainter.end();
+
     return;
 }
 
 void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::CompositionMode mode)
 {
-//    qDebug() << __FUNCTION__ << QTime::currentTime();
+    qDebug() << __FUNCTION__ /*<< QTime::currentTime()*/
+             << "boundingRect =" << boundingRect();
 
     if (overlay.isNull()) return;
+    overlay.save("D:/Pictures/Temp/effect/o3.tif");
 
     QPointF highlighterOffset(margin.left, margin.top);
     int w = overlay.size().width() + margin.left + margin.right;
@@ -384,12 +391,15 @@ void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::Com
              << "highlightBackgroundSize =" << highlightBackgroundSize;
 //    */
 
+//    overlay.save("D:/Pictures/Temp/effect/_stroked1.tif");
+    highlighterBackgroundImage.save("D:/Pictures/Temp/effect/hl.tif");
+
     QPainter overlayPainter(&overlay);
     overlayPainter.translate(-highlighterOffset);
     overlayPainter.setCompositionMode(mode);
     overlayPainter.drawImage(0, 0, highlighterBackgroundImage);
     overlayPainter.end();
-
+    overlay.save("D:/Pictures/Temp/effect/o4.tif");
     return;
 }
 
@@ -427,19 +437,27 @@ void GraphicsEffect::brightnessEffect(qreal evDelta, QPainter::CompositionMode m
 void GraphicsEffect::strokeEffect(double width, QColor color, double opacity,
                                   QPainter::CompositionMode mode)
 {
-//    qDebug() << __FUNCTION__ << QTime::currentTime()
-//             << "opacity =" << opacity;
+    qDebug() << __FUNCTION__ /*<< QTime::currentTime()*/
+             << "boundingRect =" << boundingRect();
+
     if (overlay.isNull() || width < 1) return;
+
+    overlay.save("D:/Pictures/Temp/effect/o1.tif");
 
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
     Effects effect;
-    effect.stroke(temp, width, color, opacity, true);
+    if (effect.stroke(temp, width, color, opacity, true)) {
+        temp.save("D:/Pictures/Temp/effect/stroke.tif");
 
-    QPainter overlayPainter(&overlay);
-    overlayPainter.setCompositionMode(mode);
-    overlayPainter.drawImage(0,0, temp);
-    overlayPainter.end();
+        qDebug() << __FUNCTION__ << "temp w/h =" << temp.width() << temp.height();
+
+        QPainter overlayPainter(&overlay);
+        overlayPainter.setCompositionMode(mode);
+        overlayPainter.drawImage(0, 0, temp);
+        overlayPainter.end();
+        overlay.save("D:/Pictures/Temp/effect/o2.tif");
+    }
 }
 
 void GraphicsEffect::glowEffect(double width, QColor color, double blurRadius, QPainter::CompositionMode mode)
@@ -453,6 +471,8 @@ void GraphicsEffect::glowEffect(double width, QColor color, double blurRadius, Q
     QImage edgeMap;
     effect.stroke(temp, width, color, 0.5, true);
     temp.save("D:/Pictures/Temp/effect/_transparentEdgeMap.tif");
+
+
 
     QPainter overlayPainter(&overlay);
     overlayPainter.setCompositionMode(mode);

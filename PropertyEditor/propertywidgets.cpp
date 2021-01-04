@@ -1189,6 +1189,7 @@ SelectFileEditor::SelectFileEditor(const QModelIndex &idx, QWidget *parent) : QW
     setLayout(layout);
 
     lineEdit->setText(idx.data(Qt::EditRole).toString());
+    lineEdit->setCursorPosition(0);
 }
 
 QString SelectFileEditor::value()

@@ -124,6 +124,7 @@ void Effects::transparentEdgeMap(QImage &img, int depth,
 
     bool prevTransparent;
     Pt pt;
+    int d = 1;
 
     // scan left to right
     for (y = 0; y < h; y++) {
@@ -134,25 +135,25 @@ void Effects::transparentEdgeMap(QImage &img, int depth,
             pt.y= y;
             // transparent to opaque edge
             if (qAlpha(s[y][x]) > 0 && prevTransparent)  {
-                edge.insertMulti(1, pt);
-                em[y][x] = 1;
+                edge.insertMulti(d, pt);
+                em[y][x] = d;
                 prevTransparent = false;
             }
             // opaque to transparent edge
             if (qAlpha(s[y][x]) == 0 && !prevTransparent)  {
-                // do not need to check if already tallied on first pass
-                edge.insertMulti(1, pt);
-                em[y][x] = 1;
+                pt.x = x-1;
+                edge.insertMulti(d, pt);
+                em[y][x-1] = d;
                 prevTransparent = true;
             }
             // right and bottom of image
             if (x == w - 1 && qAlpha(s[y][x]) > 0) {
-                edge.insertMulti(1, pt);
-                em[y][x] = 1;
+                edge.insertMulti(d, pt);
+                em[y][x] = d;
             }
             if (y == h - 1 && qAlpha(s[y][x]) > 0) {
-                edge.insertMulti(1, pt);
-                em[y][x] = 1;
+                edge.insertMulti(d, pt);
+                em[y][x] = d;
             }
         }
     }
@@ -167,18 +168,18 @@ void Effects::transparentEdgeMap(QImage &img, int depth,
             if (qAlpha(s[y][x]) > 0 && prevTransparent)  {
                 // check if already tallied
                 if (em[y][x] == 0) {
-                    edge.insertMulti(1, pt);
-                    em[y][x] = 1;
+                    edge.insertMulti(d, pt);
+                    em[y][x] = d;
                 }
                 prevTransparent = false;
             }
             // opaque to transparent edge
             if (qAlpha(s[y][x]) == 0 && !prevTransparent)  {
-                pt.y = y;
+                pt.y = y-1;
                 // check if already tallied
-                if (em[y][x] == 0) {
-                    edge.insertMulti(1, pt);
-                    em[y][x] = 1;
+                if (em[y-1][x] == 0) {
+                    edge.insertMulti(d, pt);
+                    em[y-1][x] = d;
                 }
                 prevTransparent = true;
             }
@@ -186,7 +187,6 @@ void Effects::transparentEdgeMap(QImage &img, int depth,
     }
 
     // iterate to find points pts for distances > 1
-    int d = 1;
     int dMax = 1;
     bool morePtsToProcess = true;
     // list of pixels for a distance from the edge
@@ -543,8 +543,10 @@ void Effects::vector2DToImage(QImage &img, QVector<QVector<QRgb> > &v)
 
 void Effects::zeroVector(QImage &img, QVector<QVector<QRgb>> &v)
 {
+    QRgb zero = 0;
     for (int y = 0; y < img.height(); ++y) {
-        memset(&v[y], 0, static_cast<uint>(img.width()) * sizeof(int));
+//        memset(&v[y], 0, static_cast<uint>(img.width()) * sizeof(int));
+        memset(&v[y], zero, img.bytesPerLine());
     }
 }
 
@@ -2198,11 +2200,12 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     vector2DToImage(img, s);
 }
 
-void Effects::stroke(QImage &img, double width, QColor color, double opacity, bool inner)
+bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bool inner)
 {
 /*
-Draws a solid boundary around an object in an image, where the boundary is transparency.
+    Draws a solid boundary around an object in an image, where the boundary is transparency.
 */
+
 //    qDebug() << __FUNCTION__ << QTime::currentTime() << "opacity =" << opacity;
     // create QVector (s) of img for pixel wrangling
     QVector<QVector<QRgb>> s(img.height());
@@ -2213,8 +2216,21 @@ Draws a solid boundary around an object in an image, where the boundary is trans
     int depth = static_cast<int>(width);
     transparentEdgeMap(img, depth, s, edge);
 
+    // erase vector s so can paint back effect only
+//    zeroVector(img, s);
+    for (int y = 0; y < img.height(); y++)
+        for (int x = 0; x < img.width(); x++)
+            s[y][x] = 0;
+
     // erase img so can paint back effect only
     img.fill(Qt::transparent);
+
+    // check for edge failure
+    if (edge.size() == 0) {
+        qDebug() << __FUNCTION__ << "Failed to find edge";
+//        G::popUp->showPopup("Failed to find edge in stroke effect", 2000);
+        return false;
+    }
 
     // paint in the stroke for the assigned width and color
     int red = color.red();
@@ -2232,6 +2248,8 @@ Draws a solid boundary around an object in an image, where the boundary is trans
     // width of stroke
     int w;
     width > edge.lastKey() ? w = edge.lastKey() : w = static_cast<int>(width);
+
+    // iterate depth d from 1 to width of stroke
     for (int d = 0; d <= w; d++) {
         fadePct = 1.0;
         if (fadeEdge & (d < 3)) fadePct = fade[d];
@@ -2242,7 +2260,9 @@ Draws a solid boundary around an object in an image, where the boundary is trans
             int x = pts.at(i).x;
             int y = pts.at(i).y;
             double alpha = fadePct * opacity;
-            int a = static_cast<int>(qAlpha(s[y][x]) * alpha);
+            int a = static_cast<int>(opacity * 255);
+//            int a = 255;
+//            int a = static_cast<int>(qAlpha(s[y][x]) * alpha);
             int r = static_cast<int>(red * alpha);
             int g = static_cast<int>(green * alpha);
             int b = static_cast<int>(blue * alpha);
@@ -2274,7 +2294,13 @@ Draws a solid boundary around an object in an image, where the boundary is trans
 //            s[y][x] = qRgba(color.red(), color.green(), color.blue(), qAlpha(s[y][x]) * 0.33);
 //    }
 
+//    img.save("D:/Pictures/Temp/effect/temp.tif");
+
     vector2DToImage(img, s);
+
+//    img.save("D:/Pictures/Temp/effect/temp.tif");
+    return true;
+
 }
 
 void Effects::glow(QImage &img, double width, QColor color, double blurRadius)
