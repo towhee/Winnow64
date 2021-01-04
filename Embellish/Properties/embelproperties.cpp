@@ -1560,9 +1560,8 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << v;
+//    qDebug() << __FUNCTION__ << v;
     isTemplateChange = true;
-//    templateName = v.toString();
 
     // save which template is current and set templateId and templateName
     setCurrentTemplate(v.toString());
@@ -1792,7 +1791,7 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
     // see PropertyEditor::getItemIndex for details on using itemIndex
     int index = getItemIndex(idx.parent().data(UR_ItemIndex).toInt()).row();
     QString path = templatePath + "Texts/" + parent + "/" + source;
-    /*
+//    /*
     qDebug() << __FUNCTION__
              << "source =" << source
              << "parent =" << parent;
@@ -5972,8 +5971,10 @@ void EmbelProperties::addText(int count)
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
-        if (!styleMap.contains(i.value.toString())) qDebug() << __FUNCTION__
-            << "Style " << i.value << "no longer exists";
+        if (!styleList.contains(i.value.toString())) {
+            qDebug() << __FUNCTION__ << "Style " << i.value << "no longer exists";
+            i.value = "No style";
+        }
     }
     else {
         i.value = "No style";

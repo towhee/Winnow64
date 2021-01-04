@@ -192,7 +192,7 @@ void Embel::build(QString path, QString src)
     qDebug() << __FUNCTION__
              << "src =" << src
              << "path =" << path;
-             */
+//           */
 
     QElapsedTimer t;
     t.start();
@@ -651,7 +651,7 @@ void Embel::updateText(int i)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
+//    qDebug() << __FUNCTION__/* << QTime::currentTime()*/ << i;
 
     // if a text entry
     if (p->t[i].source == "Text") {
@@ -733,7 +733,7 @@ void Embel::updateGraphic(int i)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
+//    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
 
     gItems[i]->setZValue(ZGraphic);
     double opacity = static_cast<double>(p->g[i].opacity)/100;
@@ -741,8 +741,15 @@ void Embel::updateGraphic(int i)
     if (p->g[i].anchorContainer == "Left" || p->g[i].anchorContainer == "Right") stu = h;
     else stu = w;
     int dim = static_cast<int>(static_cast<double>(p->g[i].size) / 100 * stu);
-//    int dim = static_cast<int>(static_cast<double>(p->g[i].size) / 100 * ls);
+
     gItems[i]->setPixmap(graphicPixmaps.at(i).scaled(QSize(dim, dim), Qt::KeepAspectRatio));
+    // check if squished to zero height (to make line work in Zen2048 template - real fix is
+    // to add shapes (oval, arc, rectangle, polygon and line)
+    if (gItems[i]->pixmap().height() < 2) {
+        gItems[i]->setPixmap(graphicPixmaps.at(i).scaledToWidth(dim));
+        gItems[i]->setPixmap(graphicPixmaps.at(i).scaledToHeight(2));
+        gItems[i]->setPixmap(graphicPixmaps.at(i).scaledToWidth(dim));
+    }
 
     /* Range check - make sure embel borders synced with embelProperties borders.  A graphic
        update could be triggered before a new border has been processed.  */
@@ -803,6 +810,7 @@ void Embel::updateImage()
             if (imCache->imCache.contains(fPath)) {
                 pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
             }
+            qDebug() << __FUNCTION__ << "pmItem->pixmap().rect() =" << pmItem->pixmap().rect();
             GraphicsEffect *effect = new GraphicsEffect();
             effect->setObjectName("EmbelImageEffect");
             /*
@@ -828,7 +836,7 @@ void Embel::refreshTexts()
     G::track(__FUNCTION__);
     #endif
     }
-    for (int i = 0; i < p->t.size(); ++i) {
+    for (int i = 0; i < tItems.size(); ++i) {
         updateText(i);
     }
 }
@@ -919,7 +927,7 @@ void Embel::flashObject(QString type, int index, bool show)
     G::track(__FUNCTION__);
     #endif
     }
-    if (index < 1) return;
+//    if (index < 1) return;
     flashItem->setVisible(show);
     if (!show) return;
     if (type == "border") {

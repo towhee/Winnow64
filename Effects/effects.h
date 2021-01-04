@@ -2,6 +2,7 @@
 #define EFFECTS_H
 
 #include <QtWidgets>
+#include "Main/global.h"
 
 enum Contour {contour_flat,
               contour_ridge,
@@ -25,7 +26,7 @@ public:
     void emboss(QImage &img, int azimuth, double size, double exposure, double contrast,
                 double inflection, double startEV, double midEV, double endEV,
                 double umbra, bool isUmbraGradient);
-    void stroke(QImage &img, double width, QColor color, double opacity, bool inner);
+    bool stroke(QImage &img, double width, QColor color, double opacity, bool inner);
     void glow(QImage &img, double width, QColor color, double blurRadius);
 
     QImage convolve(QImage &img, int mDim, double *matrix);
