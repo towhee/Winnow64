@@ -546,7 +546,7 @@ void Effects::zeroVector(QImage &img, QVector<QVector<QRgb>> &v)
     QRgb zero = 0;
     for (int y = 0; y < img.height(); ++y) {
 //        memset(&v[y], 0, static_cast<uint>(img.width()) * sizeof(int));
-        memset(&v[y], zero, img.bytesPerLine());
+        memset(&v[y], 0, img.bytesPerLine());
     }
 }
 
@@ -2217,7 +2217,6 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
     transparentEdgeMap(img, depth, s, edge);
 
     // erase vector s so can paint back effect only
-//    zeroVector(img, s);
     for (int y = 0; y < img.height(); y++)
         for (int x = 0; x < img.width(); x++)
             s[y][x] = 0;
@@ -2226,8 +2225,9 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
     img.fill(Qt::transparent);
 
     // check for edge failure
-    if (edge.size() == 0) {
+     if (edge.size() == 0) {
         qDebug() << __FUNCTION__ << "Failed to find edge";
+        // timed popUps do not work here - cause crash
 //        G::popUp->showPopup("Failed to find edge in stroke effect", 2000);
         return false;
     }
@@ -2236,6 +2236,7 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
     int red = color.red();
     int green = color.green();
     int blue = color.blue();
+
     QList<Pt> pts;
 
     // add transparency along the edge to soften
@@ -2284,15 +2285,16 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
         }
     }
 
-    // anti-alias
-//    pts.clear();
-//    pts = edge.values(1);
-//    for (int i = 0; i < pts.size(); i++) {
-//        int x = pts.at(i).x;
-//        int y = pts.at(i).y;
-//        if (qAlpha(s[y][x]) > 192)
-//            s[y][x] = qRgba(color.red(), color.green(), color.blue(), qAlpha(s[y][x]) * 0.33);
-//    }
+    /* anti-alias
+    pts.clear();
+    pts = edge.values(1);
+    for (int i = 0; i < pts.size(); i++) {
+        int x = pts.at(i).x;
+        int y = pts.at(i).y;
+        if (qAlpha(s[y][x]) > 192)
+            s[y][x] = qRgba(color.red(), color.green(), color.blue(), qAlpha(s[y][x]) * 0.33);
+    }
+    */
 
 //    img.save("D:/Pictures/Temp/effect/temp.tif");
 

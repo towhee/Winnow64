@@ -406,6 +406,9 @@ void MW::showEvent(QShowEvent *event)
 
     if (isShift) refreshFolders();
 
+    // set initial visibility
+    embelTemplateChange(embelProperties->templateId);
+
 //    sortChange();
 
     G::isInitializing = false;
@@ -500,7 +503,8 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape) {
         // hide a popup message
-        if (G::popUp->isVisible() /*&& G::isSlideShow*/) {
+        if (G::popUp->isVisible()) {
+            emit abortEmbelExport();
             G::popUp->hide();
             return;
         }
@@ -934,6 +938,7 @@ void MW::handleStartupArgs(const QString &args)
             pathList << argList.at(i);
         }
         EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
+
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
         folderAndFileSelectionChange(fPath);
     }
@@ -2878,7 +2883,7 @@ void MW::createActions()
         }
 
         if (i < 10 && i < n) {
-            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Ctrl+Shift+" + QString::number(i)));
+            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Alt+Shift+" + QString::number(i)));
 //            embelTemplatesActions.at(i)->setObjectName(objName);
             embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
 //            embelTemplatesActions.at(i)->setCheckable(true);
@@ -3248,6 +3253,12 @@ void MW::createActions()
     addAction(diagnosticsImageCacheAction);
     connect(diagnosticsImageCacheAction, &QAction::triggered, this, &MW::diagnosticsImageCache);
 
+    diagnosticsEmbellishAction = new QAction(tr("Embellish"), this);
+    diagnosticsEmbellishAction->setObjectName("diagnosticsEmbellish");
+    diagnosticsEmbellishAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsEmbellishAction);
+    connect(diagnosticsEmbellishAction, &QAction::triggered, this, &MW::diagnosticsEmbellish);
+
     // Testing
 
     testAction = new QAction(tr("Test"), this);
@@ -3544,6 +3555,7 @@ void MW::createMenus()
     helpDiagnosticsMenu->addAction(diagnosticsMetadataAction);
     helpDiagnosticsMenu->addAction(diagnosticsDataModelAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
+    helpDiagnosticsMenu->addAction(diagnosticsEmbellishAction);
 
     // Separator Action
     QAction *separatorAction = new QAction(this);
@@ -4687,6 +4699,7 @@ void MW::createEmbelDock()
     #endif
     }
     embelProperties = new EmbelProperties(this, setting);
+
     connect (embelProperties, &EmbelProperties::templateChanged, this, &MW::embelTemplateChange);
 
     embelDock = new DockWidget(tr("  Embellish  "), this);
@@ -4707,24 +4720,24 @@ void MW::createEmbelDock()
 
     // add widgets to the right side of the title bar layout
 
-    /*
     // run template button
-    BarBtn *embelRunBtn = new BarBtn();
+    embelRunBtn = new BarBtn();
     embelRunBtn->setIcon(QIcon(":/images/icon16/lightning.png"));
-    embelRunBtn->setToolTip("Run the template on the selected images.");
-    connect(embelRunBtn, &BarBtn::clicked, imageView, &ImageView::activateRubberBand);
+    embelRunBtn->setToolTip("Export the selected images.");
+    connect(embelRunBtn, &BarBtn::clicked, this, &MW::exportEmbel);
     embelTitleLayout->addWidget(embelRunBtn);
-
-    // Spacer
-    embelTitleLayout->addSpacing(10);
 
     // tile button
     BarBtn *embelTileBtn = new BarBtn();
     embelTileBtn->setIcon(QIcon(":/images/icon16/tile.png"));
-    embelTileBtn->setToolTip("Extract a tile from a pattern that is available in the image view");
-    connect(embelTileBtn, &BarBtn::clicked, imageView, &ImageView::activateRubberBand);
+    embelTileBtn->setToolTip("Manage tile extraction, deletion and renaming");
+    connect(embelTileBtn, &BarBtn::clicked, embelProperties, &EmbelProperties::manageTiles);
     embelTitleLayout->addWidget(embelTileBtn);
 
+    // Spacer
+    embelTitleLayout->addSpacing(10);
+
+    /*
     // anchor button
     BarBtn *embelAnchorBtn = new BarBtn();
     embelAnchorBtn->setIcon(QIcon(":/images/icon16/anchor.png"));
@@ -4842,7 +4855,10 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
 
 void MW::embelTemplateChange(int id)
 {
+//    qDebug() << __FUNCTION__ << id;
     embelTemplatesActions.at(id)->setChecked(true);
+    if (id == 0) embelRunBtn->setVisible(false);
+    else embelRunBtn->setVisible(true);
 }
 
 void MW::createEmbel()
@@ -6834,6 +6850,7 @@ void MW::diagnosticsMetadataCache() {}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
 void MW::diagnosticsErrors() {diagnosticsReport(dm->diagnosticsErrors());}
+void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics());}
 void MW::diagnosticsFilters() {}
 void MW::diagnosticsFileTree() {}
 void MW::diagnosticsBookmarks() {}
@@ -9718,6 +9735,7 @@ void MW::exportEmbel()
     }
 
     EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
+    connect(this, &MW::abortEmbelExport, &embelExport, &EmbelExport::abortEmbelExport);
     embelExport.exportImages(picks);
 }
 

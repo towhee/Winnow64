@@ -162,6 +162,10 @@ public:
         int right = 0;
         int bottom = 0;
     };
+    struct Shift {
+        int x = 0;
+        int y = 0;
+    };
 
 protected:
     virtual void draw(QPainter *painter) override;
@@ -194,6 +198,7 @@ private:
     QImage overlay;
     QPointF offset;
     Margin m;
+    Shift shift;
     qreal expansion = 0;
     int lightDirection;
     double rotation;

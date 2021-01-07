@@ -332,6 +332,7 @@ signals:
     void closeZoomDlg();
     void aSyncGo(int);  // rgh req'd?
     void needToShow();
+    void abortEmbelExport();
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
@@ -765,6 +766,7 @@ private:
     QAction *diagnosticsMetadataCacheAction;
     QAction *diagnosticsImageCacheAction;
     QAction *diagnosticsDataModelAction;
+    QAction *diagnosticsEmbellishAction;
     QAction *diagnosticsFiltersAction;
     QAction *diagnosticsFileTreeAction;
     QAction *diagnosticsBookmarksAction;
@@ -823,6 +825,7 @@ private:
     DockTitleBar *filterTitleBar;
     DockTitleBar *metaTitleBar;
     DockTitleBar *embelTitleBar;
+    BarBtn *embelRunBtn;
     FSTree *fsTree;
     BookMarks *bookmarks;
     Filters *filters;
@@ -1020,6 +1023,7 @@ private:
     void diagnosticsMetadataCache();
     void diagnosticsImageCache();
     void diagnosticsDataModel();
+    void diagnosticsEmbellish();
     void diagnosticsErrors();
     void diagnosticsFilters();
     void diagnosticsFileTree();

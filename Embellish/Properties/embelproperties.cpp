@@ -104,6 +104,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
 
     if (templateId > 0) setRowHidden(1, root, false);
     else setRowHidden(1, root, true);
+
     // add the Styles, General, Image, Borders, Texts, and Graphics items for the template
     if (templateId != 0) addTemplateItems();
     // default state
@@ -149,54 +150,55 @@ void EmbelProperties::initialize()
     effectList
                 << "Shadow"
                 << "Emboss"
+                << "Stroke"
+                << "Highlighter"
                 << "Blur"
                 << "Sharpen"
                 << "Brightness"
-                << "Highlighter"
-                << "Stroke"
-                << "Glow";
+//                << "Glow"
+                   ;
 
     shadowEffectAction = new QAction(tr("Shadow"), this);
     shadowEffectAction->setObjectName("shadowEffectAction");
-    connect(shadowEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
+    connect(shadowEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
     embossEffectAction = new QAction(tr("Emboss"), this);
     embossEffectAction->setObjectName("embossEffectAction");
-    connect(embossEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
+    connect(embossEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
     blurEffectAction = new QAction(tr("Blur"), this);
     blurEffectAction->setObjectName("blurEffectAction");
-    connect(blurEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
+    connect(blurEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
-    sharpenEffectAction = new QAction(tr("Sharpen"), this);
+    sharpenEffectAction = new QAction(tr("Sharpness"), this);
     sharpenEffectAction->setObjectName("sharpenEffectAction");
-    connect(sharpenEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
+    connect(sharpenEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
     brightnessEffectAction = new QAction(tr("Brightness"), this);
     brightnessEffectAction->setObjectName("brightnessEffectAction");
-    connect(brightnessEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
+    connect(brightnessEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
-    highlighterEffectAction = new QAction(tr("Highlighter"), this);
+    highlighterEffectAction = new QAction(tr("Highlight"), this);
     highlighterEffectAction->setObjectName("highlighterEffectAction");
-    connect(highlighterEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
+    connect(highlighterEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
     strokeEffectAction = new QAction(tr("Stroke"), this);
     strokeEffectAction->setObjectName("strokeEffectAction");
-    connect(strokeEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
+    connect(strokeEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
     glowEffectAction = new QAction(tr("Glow"), this);
     glowEffectAction->setObjectName("glowEffectAction");
-    connect(glowEffectAction, &QAction::triggered, this, &EmbelProperties::newEffectActionClicked);
+    connect(glowEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
     effectMenu = new QMenu(this);
     effectMenu->addAction(shadowEffectAction);
     effectMenu->addAction(embossEffectAction);
+    effectMenu->addAction(strokeEffectAction);
+    effectMenu->addAction(highlighterEffectAction);
     effectMenu->addAction(brightnessEffectAction);
     effectMenu->addAction(blurEffectAction);
     effectMenu->addAction(sharpenEffectAction);
-    effectMenu->addAction(highlighterEffectAction);
-    effectMenu->addAction(strokeEffectAction);
-    effectMenu->addAction(glowEffectAction);
+//    effectMenu->addAction(glowEffectAction);
 
     // CONTEXT MENU
     expandAllAction = new QAction(tr("Expand all"), this);
@@ -289,7 +291,7 @@ void EmbelProperties::effectContextMenu()
     effectMenu->exec(QCursor::pos());
 }
 
-void EmbelProperties::newEffectActionClicked()
+void EmbelProperties::newEffect()
 {
     {
     #ifdef ISDEBUG
@@ -312,12 +314,14 @@ void EmbelProperties::newEffectActionClicked()
     expand(idx);
     selectionModel()->clear();
     selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+
+    e->build("", __FUNCTION__);
 }
 
-void EmbelProperties::updateBorderOrderAfterDeletion()
+void EmbelProperties::updateEffectOrderAfterDeletion(QModelIndex parIdx)
 {
 /*
-After a deletion the sort order wil no longer be contiguous. For example:
+After a deletion the sort order will no longer be contiguous. For example:
 
 Before:                 1, 2, 3, 4
 Delete the 2nd row:     1, 3, 4
@@ -327,6 +331,32 @@ Update to:              1, 2, 3
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    }
+    // Get a standardItem as it supports sorting of the children, and the borders may be sorted
+    QStandardItem *effectItem = new QStandardItem;
+    effectItem = model->itemFromIndex(parIdx);
+    int row;
+    for (row = 0; row < effectItem->rowCount(); ++row) {
+        QModelIndex idx = effectItem->child(row)->index();
+        model->setData(idx, row, UR_SortOrder);
+        QString path = idx.data(UR_SettingsPath).toString() + "/sortOrder";
+        setting->setValue(path, row);
+    }
+}
+
+void EmbelProperties::updateBorderOrderAfterDeletion()
+{
+    /*
+After a deletion the sort order will no longer be contiguous. For example:
+
+Before:                 1, 2, 3, 4
+Delete the 2nd row:     1, 3, 4
+Update to:              1, 2, 3
+*/
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
     }
     // Get a standardItem as it supports sorting of the children, and the borders may be sorted
     QStandardItem *borders = new QStandardItem;
@@ -410,7 +440,7 @@ void EmbelProperties::updateAnchorObjects()
     }
 }
 
-void EmbelProperties::diagnosticStyles()
+void EmbelProperties::diagnosticStyles(QTextStream &rpt)
 {
     {
     #ifdef ISDEBUG
@@ -418,150 +448,242 @@ void EmbelProperties::diagnosticStyles()
     #endif
     }
     using namespace winnow_effects;
-    qDebug() << "\nStyles\n";
     QMapIterator<QString, QList<Effect>> s(styleMap);
     while (s.hasNext()) {
         s.next();
         int n = s.value().length();
-        qDebug() << "Style:" << s.key() << "has" << n << "effects.";
+        rpt << "\n\n" "Style " << s.key() << " has " << n << " effect(s).";
         // effects in style
         for (int i = 0; i < n; ++i) {
             const Effect &ef = s.value().at(i);
-            qDebug() << "  effectName   =" << ef.effectName;
-            qDebug() << "    Effect index =" << i;
-            qDebug() << "    effectType   =" << ef.effectType;
-            qDebug() << "    effectOrder  =" << ef.effectOrder;
+            rpt << "\n" << "  effectName     = " << ef.effectName;
+            rpt << "\n" << "    Effect index = " << i;
+            rpt << "\n" << "    effectType   = " << ef.effectType;
+            rpt << "\n" << "    effectOrder  = " << ef.effectOrder;
 
             switch (ef.effectType) {
             case winnow_effects::blur:
-                qDebug() << "      Blur: radius            =" << ef.blur.radius;
+                rpt << "\n" << "      Blur: radius            = " << ef.blur.radius;
                 break;
             case winnow_effects::brightness:
-                qDebug() << "      Brightness: evDelta     =" << ef.brightness.evDelta;
+                rpt << "\n" << "      Brightness: evDelta     = " << ef.brightness.evDelta;
                 break;
             case winnow_effects::emboss:
-                qDebug() << "      Emboss: size            =" << ef.emboss.size;
-                qDebug() << "      Emboss: inflection      =" << ef.emboss.inflection;
-                qDebug() << "      Emboss: exposure        =" << ef.emboss.exposure;
-                qDebug() << "      Emboss: contrast        =" << ef.emboss.contrast;
-                qDebug() << "      Emboss: start           =" << ef.emboss.start;
-                qDebug() << "      Emboss: mid             =" << ef.emboss.mid;
-                qDebug() << "      Emboss: end             =" << ef.emboss.end;
-                qDebug() << "      Emboss: umbra           =" << ef.emboss.umbra;
-                qDebug() << "      Emboss: isUmbraGradient =" << ef.emboss.isUmbraGradient;
+                rpt << "\n" << "      Emboss: size            = " << ef.emboss.size;
+                rpt << "\n" << "      Emboss: inflection      = " << ef.emboss.inflection;
+                rpt << "\n" << "      Emboss: exposure        = " << ef.emboss.exposure;
+                rpt << "\n" << "      Emboss: contrast        = " << ef.emboss.contrast;
+                rpt << "\n" << "      Emboss: start           = " << ef.emboss.start;
+                rpt << "\n" << "      Emboss: mid             = " << ef.emboss.mid;
+                rpt << "\n" << "      Emboss: end             = " << ef.emboss.end;
+                rpt << "\n" << "      Emboss: umbra           = " << ef.emboss.umbra;
+                rpt << "\n" << "      Emboss: isUmbraGradient = " << ef.emboss.isUmbraGradient;
                 break;
             case winnow_effects::sharpen:
-                qDebug() << "      Sharpen: radius         =" << ef.sharpen.radius;
+                rpt << "\n" << "      Sharpen: radius         = " << ef.sharpen.radius;
                 break;
             case winnow_effects::highlighter:
-                qDebug() << "      Highlighter: top        =" << ef.highlighter.top;
-                qDebug() << "      Highlighter: left       =" << ef.highlighter.left;
-                qDebug() << "      Highlighter: right      =" << ef.highlighter.right;
-                qDebug() << "      Highlighter: bottom     =" << ef.highlighter.bottom;
-                qDebug() << "      Highlighter: r          =" << ef.highlighter.r;
-                qDebug() << "      Highlighter: g          =" << ef.highlighter.g;
-                qDebug() << "      Highlighter: b          =" << ef.highlighter.b;
-                qDebug() << "      Highlighter: a          =" << ef.highlighter.a;
+                rpt << "\n" << "      Highlighter: top        = " << ef.highlighter.top;
+                rpt << "\n" << "      Highlighter: left       = " << ef.highlighter.left;
+                rpt << "\n" << "      Highlighter: right      = " << ef.highlighter.right;
+                rpt << "\n" << "      Highlighter: bottom     = " << ef.highlighter.bottom;
+                rpt << "\n" << "      Highlighter: r          = " << ef.highlighter.r;
+                rpt << "\n" << "      Highlighter: g          = " << ef.highlighter.g;
+                rpt << "\n" << "      Highlighter: b          = " << ef.highlighter.b;
+                rpt << "\n" << "      Highlighter: a          = " << ef.highlighter.a;
                 break;
             case winnow_effects::shadow:
-                qDebug() << "      Shadow: size            =" << ef.shadow.length;
-                qDebug() << "      Shadow: blurRadius      =" << ef.shadow.blurRadius;
-                qDebug() << "      Shadow: r               =" << ef.shadow.r;
-                qDebug() << "      Shadow: g               =" << ef.shadow.g;
-                qDebug() << "      Shadow: b               =" << ef.shadow.b;
-                qDebug() << "      Shadow: a               =" << ef.shadow.a;
+                rpt << "\n" << "      Shadow: size            = " << ef.shadow.length;
+                rpt << "\n" << "      Shadow: blurRadius      = " << ef.shadow.blurRadius;
+                rpt << "\n" << "      Shadow: r               = " << ef.shadow.r;
+                rpt << "\n" << "      Shadow: g               = " << ef.shadow.g;
+                rpt << "\n" << "      Shadow: b               = " << ef.shadow.b;
+                rpt << "\n" << "      Shadow: a               = " << ef.shadow.a;
                 break;
             case winnow_effects::stroke:
-                qDebug() << "      Stroke: size            =" << ef.stroke.width;
-                qDebug() << "      Stroke: r               =" << ef.stroke.r;
-                qDebug() << "      Stroke: g               =" << ef.stroke.g;
-                qDebug() << "      Stroke: b               =" << ef.stroke.b;
-                qDebug() << "      Stroke: a               =" << ef.stroke.a;
+                rpt << "\n" << "      Stroke: size            = " << ef.stroke.width;
+                rpt << "\n" << "      Stroke: r               = " << ef.stroke.r;
+                rpt << "\n" << "      Stroke: g               = " << ef.stroke.g;
+                rpt << "\n" << "      Stroke: b               = " << ef.stroke.b;
+                rpt << "\n" << "      Stroke: a               = " << ef.stroke.a;
                 break;
             case winnow_effects::glow:
-                qDebug() << "      Glow: size              =" << ef.glow.width;
-                qDebug() << "      Glow: blurRadius        =" << ef.glow.blurRadius;
-                qDebug() << "      Glow: r                 =" << ef.glow.r;
-                qDebug() << "      Glow: g                 =" << ef.glow.g;
-                qDebug() << "      Glow: b                 =" << ef.glow.b;
-                qDebug() << "      Glow: a                 =" << ef.glow.a;
+                rpt << "\n" << "      Glow: size              = " << ef.glow.width;
+                rpt << "\n" << "      Glow: blurRadius        = " << ef.glow.blurRadius;
+                rpt << "\n" << "      Glow: r                 = " << ef.glow.r;
+                rpt << "\n" << "      Glow: g                 = " << ef.glow.g;
+                rpt << "\n" << "      Glow: b                 = " << ef.glow.b;
+                rpt << "\n" << "      Glow: a                 = " << ef.glow.a;
                 break;
             }
         }
     }
 }
 
-void EmbelProperties::diagnosticVectors()
+void EmbelProperties::diagnosticVectors(QTextStream &rpt)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    // vectors
-    qDebug() << __FUNCTION__ << "BORDER VECTOR";
+    rpt << "\n" << "\nVectors:";
+    if (b.length()) rpt << "\n" << "Border(s)";
     for (int i = 0; i < b.length(); ++i) {
-        qDebug().noquote()
-            << i << " "
-//            << "order =" << b[i].order
-            << "name =" << b[i].name
-//            << "caption =" << b[i].caption
-//            << "parent =" << b[i].parent
-            << "top =" << b[i].top
-            << "left =" << b[i].left
-            << "right =" << b[i].right
-            << "bottom =" << b[i].bottom
-            << "tile =" << b[i].tile
-            << "color =" << b[i].color
-            << "opacity =" << b[i].opacity
-            << "style =" << b[i].style;
+        rpt << "\n"
+            << i
+            << ". name = " << b[i].name
+            << ", top = " << b[i].top
+            << ", left = " << b[i].left
+            << ", right = " << b[i].right
+            << ", bottom = " << b[i].bottom
+            << ", tile = " << b[i].tile
+            << ", color = " << b[i].color
+            << ", opacity = " << b[i].opacity
+            << ", style = " << b[i].style;
     }
-    qDebug() << __FUNCTION__ << "TEXT VECTOR";
+    if (t.length()) rpt << "\n" << "Text(s)";
     for (int i = 0; i < t.length(); ++i) {
-        qDebug().noquote()
-            << i << " "
-            << "name =" << t[i].name
-            << "caption =" << t[i].caption
-            << "parent =" << t[i].parent
-            << "anchorObject =" << t[i].anchorObject
-            << "anchorContainer =" << t[i].anchorContainer
-            << "anchorPoint =" << t[i].anchorPoint
-            << "x =" << t[i].x
-            << "y =" << t[i].y
-            << "text =" << t[i].text
-            << "rotation =" << t[i].rotation
-            << "metadataTemplate =" << t[i].metadataTemplate
-            << "size =" << t[i].size
-            << "font =" << t[i].font
-            << "isBold =" << t[i].isBold
-            << "isItalic =" << t[i].isItalic
-            << "color =" << t[i].color
-            << "opacity =" << t[i].opacity
-            << "style =" << t[i].style
+        rpt << "\n"
+            << i
+            << " name = " << t[i].name
+            << " caption = " << t[i].caption
+            << " parent = " << t[i].parent
+            << " anchorObject = " << t[i].anchorObject
+            << " anchorContainer = " << t[i].anchorContainer
+            << " anchorPoint = " << t[i].anchorPoint
+            << " x = " << t[i].x
+            << " y = " << t[i].y
+            << " text = " << t[i].text
+            << " rotation = " << t[i].rotation
+            << " metadataTemplate = " << t[i].metadataTemplate
+            << " size = " << t[i].size
+            << " font = " << t[i].font
+            << " isBold = " << t[i].isBold
+            << " isItalic = " << t[i].isItalic
+            << " color = " << t[i].color
+            << " opacity = " << t[i].opacity
+            << " style = " << t[i].style
                ;
     }
-    qDebug() << __FUNCTION__ << "GRAPHIC VECTOR";
+    if (g.length()) rpt << "\n" << "Graphic(s)";
     for (int i = 0; i < g.length(); ++i) {
-        qDebug().noquote()
-            << i << " "
-            << "name =" << g[i].name
-            << "caption =" << g[i].caption
-            << "parent =" << g[i].parent
-            << "filePath =" << g[i].filePath
-            << "anchorObject =" << g[i].anchorObject
-            << "anchorContainer =" << g[i].anchorContainer
-            << "anchorPoint =" << g[i].anchorPoint
-            << "x =" << g[i].x
-            << "y =" << g[i].y
-            << "rotation =" << g[i].rotation
-            << "size =" << g[i].size
-            << "opacity =" << g[i].opacity
-            << "style =" << g[i].style
+        rpt << "\n"
+            << i
+            << " name = " << g[i].name
+            << " caption = " << g[i].caption
+            << " parent = " << g[i].parent
+            << " filePath = " << g[i].filePath
+            << " anchorObject = " << g[i].anchorObject
+            << " anchorContainer = " << g[i].anchorContainer
+            << " anchorPoint = " << g[i].anchorPoint
+            << " x = " << g[i].x
+            << " y = " << g[i].y
+            << " rotation = " << g[i].rotation
+            << " size = " << g[i].size
+            << " opacity = " << g[i].opacity
+            << " style = " << g[i].style
                ;
     }
 }
 
-void EmbelProperties::diagnostic(QModelIndex parent)
+void EmbelProperties::diagnosticModel(QTextStream &rpt, QModelIndex parent)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    static int iteration = 0;
+    if (iteration == 0) {
+        rpt << "\n\n" "Embellish Properties Model:\n\n";  // << rowCount << " items.\n\n";
+
+        // Report headers
+        QString cBlank = "-";
+
+        QString cName = "Name";
+        QString cParent = "Parent";
+        QString cRow = "Row";
+        QString cSortOrder = "Order";
+        QString cKey = "Key";
+        QString cValue = "Value";
+        QString cDefaultValue = "DefaultValue";
+        QString cItemIndex = "ItemIdx";
+        QString cSettingsPath = "Settings Path";
+        QString cDelegateType = "Delegate Type";
+        QString cMin = "Min";
+        QString cMax = "Max";
+        QString cDiv = "Div";
+
+        rpt << cParent.leftJustified(16);
+        rpt << cName.leftJustified(16);
+        rpt << cRow.leftJustified(5);
+        rpt << cSortOrder.leftJustified(6);
+        rpt << cItemIndex.leftJustified(8);
+        rpt << cKey.leftJustified(15);
+        rpt << cValue.leftJustified(15);
+        rpt << cDefaultValue.leftJustified(15);
+        rpt << cMin.leftJustified(5);
+        rpt << cMax.leftJustified(8);
+        rpt << cDiv.leftJustified(8);
+        rpt << cSettingsPath.leftJustified(70);
+
+        // Underline headers
+        rpt << "\n";
+        rpt << cBlank.leftJustified(15, '-') << " ";
+        rpt << cBlank.leftJustified(15, '-') << " ";
+        rpt << cBlank.leftJustified(4, '-') << " ";
+        rpt << cBlank.leftJustified(5, '-') << " ";
+        rpt << cBlank.leftJustified(7, '-') << " ";
+        rpt << cBlank.leftJustified(14, '-') << " ";
+        rpt << cBlank.leftJustified(14, '-') << " ";
+        rpt << cBlank.leftJustified(14, '-') << " ";
+        rpt << cBlank.leftJustified(4, '-') << " ";
+        rpt << cBlank.leftJustified(7, '-') << " ";
+        rpt << cBlank.leftJustified(7, '-') << " ";
+        rpt << cBlank.leftJustified(69, '-') << " ";
+    }
+    iteration++;
+
+    for (int r = 0; r < model->rowCount(parent); ++r) {
+        QModelIndex idx0 = model->index(r, CapColumn, parent);
+        QModelIndex idx1 = model->index(r, ValColumn, parent);
+        QString parentName = parent.data(UR_Name).toString();
+        QString name = idx0.data(UR_Name).toString();
+        QString row = QString::number(r);
+        QString sortOrder = idx0.data(UR_SortOrder).toString();
+        QString key = idx0.data(UR_Source).toString();
+        QString value = idx1.data(Qt::EditRole).toString();
+        QString defaultValue = idx1.data(UR_DefaultValue).toString();
+        QString itemIndex = idx0.data(UR_ItemIndex).toString();
+        QString settingsPath = idx0.data(UR_SettingsPath).toString();
+        QString delegateType = idx0.data(UR_DelegateType).toString();
+        QString min = idx0.data(UR_Min).toString();
+        QString max = idx0.data(UR_Max).toString();
+        QString div = idx0.data(UR_Div).toString();
+
+        rpt << "\n";
+        rpt << parentName.leftJustified(16);
+        rpt << name.leftJustified(16);
+        rpt << row.leftJustified(5);
+        rpt << sortOrder.leftJustified(6);
+        rpt << itemIndex.leftJustified(8);
+        rpt << key.leftJustified(15);
+        rpt << value.leftJustified(15);
+        rpt << defaultValue.leftJustified(15);
+        rpt << min.leftJustified(5);
+        rpt << max.leftJustified(8);
+        rpt << div.leftJustified(8);
+        rpt << settingsPath.leftJustified(70);
+
+        // iterate children
+        if (model->hasChildren(idx0)) {
+            diagnosticModel(rpt, idx0);
+        }
+    }
+}
+
+/* void EmbelProperties::diagnosticModel(QModelIndex parent)
 {
     {
     #ifdef ISDEBUG
@@ -578,13 +700,13 @@ void EmbelProperties::diagnostic(QModelIndex parent)
     QString c0 = "-";
     qDebug();
     // Underline headers
-    qDebug().noquote() /*<< __FUNCTION__*/
+    qDebug().noquote()
              << c1.leftJustified(4)
              << c2.leftJustified(15)
              << c3.leftJustified(25)
              << c4.leftJustified(40)
              << c5.leftJustified(70);
-    qDebug().noquote() /*<< __FUNCTION__*/
+    qDebug().noquote()
             << c0.leftJustified(4, '-')
             << c0.leftJustified(15, '-')
             << c0.leftJustified(25, '-')
@@ -600,7 +722,7 @@ void EmbelProperties::diagnostic(QModelIndex parent)
         QString v = idx1.data(Qt::EditRole).toString();
         QString s = idx0.data(UR_Source).toString();
         QString path = idx0.data(UR_SettingsPath).toString();
-        qDebug().noquote() /*<< __FUNCTION__*/
+        qDebug().noquote()
                  << u.leftJustified(4)
                  << p.leftJustified(15)
                  << n.leftJustified(25)
@@ -608,10 +730,11 @@ void EmbelProperties::diagnostic(QModelIndex parent)
                  << path.leftJustified(70);
         // iterate children
         if (model->hasChildren(idx0)) {
-            diagnostic(idx0);
+            diagnosticModel(idx0);
         }
     }
 }
+*/
 
 void EmbelProperties::rename() {
     {
@@ -716,7 +839,8 @@ void EmbelProperties::renameCurrentTemplate()
     qDebug() << __FUNCTION__;
     QString name = Utilities::inputText("Rename Template",
                                         "Rename template " + templateName,
-                                        templateList);
+                                        templateList,
+                                        templateName);
     if (name == "") return;
     renameSettingKey("Embel/Templates", templateName, name);
     readTemplateList();
@@ -1144,6 +1268,7 @@ void EmbelProperties::newStyle()
     QString name = Utilities::inputText("New Style",
                                         "Enter new style name (not created until you add an effect)",
                                         styleList);
+    if (name == "") return;
     styleName = name;
     styleList << name;
     int n = styleList.length() - 1;
@@ -1294,10 +1419,10 @@ void EmbelProperties::swapEffects(QStandardItem *styleItem, int row, int swapRow
 /*
 A style may contain multiple effects, and the effect order can be changed using the up and
 down arrow command buttons (moveEffectUp and moveEffectDown). When the order is changed, the
-settings, model (tree) and styleMap must be updated. When the model is saved to settings the
-various items order is not maintained, so the last sort order must be re-established after the
-settings have been read, based on the setting sortOrder. This is done in sortEffectList, which
-is called by addStyle, using the model role UR_SortOrder. The sorting is accomplished using
+settings, model (tree) and styleMap must be updated. QSettings keeps everything in
+alphabetical order, so the last sort order must be re-established after the settings have been
+read, based on the setting sortOrder. This is done in sortEffectList, which is called by
+addStyle, using the model role UR_SortOrder. The sorting is accomplished using
 QStandardItem::sortChildren. styleItem is the parent and the effects are the children being
 sorted.
 */
@@ -1306,24 +1431,42 @@ sorted.
     G::track(__FUNCTION__);
     #endif
     }
-    // swap the current row with the one above
+    // swap the current row with the swap row
     QStandardItem *item = styleItem->child(row);
     QStandardItem *swapItem = styleItem->child(swapRow);
-    /*
+
+    QModelIndex par = styleItem->index();   // for debugging
+//    /*
     qDebug() << __FUNCTION__
              << "item->data() =" << item->data()
              << "swapItem->data() =" << swapItem->data()
                 ;
 //                */
+
+    for (int i = 0; i < model->rowCount(par); ++i) {
+        QModelIndex idx = model->index(i, 0, par);
+        QString name = idx.data().toString();
+        qDebug() << __FUNCTION__ << "Before swap"
+                 << "row =" << i
+                 << "name =" << name.leftJustified(8)
+                 << "order =" << idx.data(UR_SortOrder).toInt()
+                    ;
+    }
+
     int swapOrder = swapItem->data(UR_SortOrder).toInt();
     int thisOrder = item->data(UR_SortOrder).toInt();
     swapItem->setData(thisOrder, UR_SortOrder);
     item->setData(swapOrder, UR_SortOrder);
 //    /*
-    qDebug() << __FUNCTION__
-             << "styleItem->columnCount() =" << styleItem->columnCount()
-             << "swapItem->data() =" << swapItem->data()
-                ;
+    for (int i = 0; i < model->rowCount(par); ++i) {
+        QModelIndex idx = model->index(i, 0, par);
+        QString name = idx.data().toString();
+        qDebug() << __FUNCTION__ << "After  swap"
+                 << "row =" << i
+                 << "name =" << name.leftJustified(8)
+                 << "order =" << idx.data(UR_SortOrder).toInt()
+                    ;
+    }
 //                */
     styleItem->sortChildren(Qt::AscendingOrder);
 
@@ -1428,12 +1571,17 @@ void EmbelProperties::moveEffectDown()
     QString effectName = btn->name;
     QStandardItem *styleItem = new QStandardItem;
     styleItem = model->itemFromIndex(idx.parent());
+
+    int modelRowCount = model->rowCount(idx.parent());
+    int standardItemRowCount = styleItem->rowCount();
+
     int row;
     for (row = 0; row < styleItem->rowCount(); ++row) {
         QString sortedItemName = styleItem->child(row)->data(Qt::DisplayRole).toString();
-        /*
+//        /*
         qDebug() << __FUNCTION__
                  << "row =" << row
+                 << "effectName =" << effectName
                  << "sortedItemName =" << sortedItemName
                  << "effectName =" << effectName;
 //                 */
@@ -1570,8 +1718,6 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     if (templateId == 0) G::isEmbellish = false;
     else G::isEmbellish = true;
 
-    qDebug() << __FUNCTION__ << templateName << templateId << G::isEmbellish;
-
     // update Embellish menu
     emit templateChanged(templateId);
 
@@ -1691,7 +1837,7 @@ void EmbelProperties::itemChangeGeneral(QVariant v, QString source)
 
     if (source == "globalLightDirection") {
         setting->setValue(path, v.toString());
-        globalLightDirection = v.toInt();
+        lightDirection = v.toInt();
     }
 
     if (source == "imageStyle") {
@@ -2761,7 +2907,7 @@ void EmbelProperties::addGeneral()
     horizontalFitPx > verticalFitPx ? longSidePx = horizontalFitPx : longSidePx = verticalFitPx;
 
     // Global light direction
-    i.name = "globalLightDirection";
+    i.name = "lightDirection";
     i.parIdx = parIdx;
     i.parentName = "General";
     i.captionText = "Light direction";
@@ -2769,7 +2915,7 @@ void EmbelProperties::addGeneral()
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "globalLightDirection";
+    i.key = "lightDirection";
     i.defaultValue = 315;
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key))
@@ -2783,7 +2929,7 @@ void EmbelProperties::addGeneral()
     i.min = 0;
     i.max = 360;
     i.fixedWidth = 50;
-    globalLightDirection = i.value.toInt();
+    lightDirection = i.value.toInt();
     addItem(i);
 
     // IMAGE style
@@ -4729,6 +4875,7 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
     // remove from datamodel
     model->removeRow(idx.row(), idx.parent());
     updateBorderOrderAfterDeletion();
+    updateEffectOrderAfterDeletion(idx.parent());
 
     // remove from setting
     setting->remove(path);
@@ -5138,13 +5285,19 @@ in Winnow (ie triggered by EmbelExport).
     return mw3->infoString->parseTokenString(tokenString, fPath);
 }
 
-void EmbelProperties::diagnostics(QModelIndex idx)
+QString EmbelProperties::diagnostics()
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', "Embellish Diagnostics");
+    rpt << "\n";
+    /*
     qDebug().noquote() << "Diagnostics for index"
                        << idx.data(UR_Name).toString()
                        << "row =" << idx.row()
@@ -5155,7 +5308,14 @@ void EmbelProperties::diagnostics(QModelIndex idx)
         << "Index" << idx.parent().data(UR_ItemIndex).toInt()
         << "Delegate" << idx.data(UR_DelegateType).toString()
         << "Source" << idx.data(UR_Source).toString();
-
+        */
+    rpt << "\ncurrent:  template = " << templateName;
+    diagnosticStyles(rpt);
+    diagnosticVectors(rpt);
+    e->diagnostics(rpt);
+    diagnosticModel(rpt);
+    rpt << "\n\n" ;
+    return reportString;
 }
 
 //void EmbelProperties::parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner)
@@ -5230,7 +5390,6 @@ void EmbelProperties::test1(QIcon icon)
     }
 //    syncWinnets();
 //    e->test();
-    diagnostic();
 //    diagnosticVectors();
 //    diagnosticStyles();
 }

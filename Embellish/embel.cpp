@@ -635,7 +635,7 @@ void Embel::updateBorder(int i)
         if (p->styleMap.contains(p->b[i].style)) {
             GraphicsEffect *effect = new GraphicsEffect();
             effect->set(p->styleMap[p->b[i].style],
-                        p->globalLightDirection,
+                        p->lightDirection,
                         0,  /* rotation */
                         bItems[i]->boundingRect());
             bItems[i]->setGraphicsEffect(effect);
@@ -714,7 +714,7 @@ void Embel::updateText(int i)
             GraphicsEffect *effect = new GraphicsEffect();
 //            effect->setObjectName("Text" + QString::number(i));
             effect->set(p->styleMap[p->t[i].style],
-                    p->globalLightDirection,
+                    p->lightDirection,
                     rotation,
                     tItems[i]->boundingRect());
             tItems[i]->setGraphicsEffect(effect);
@@ -746,9 +746,12 @@ void Embel::updateGraphic(int i)
     // check if squished to zero height (to make line work in Zen2048 template - real fix is
     // to add shapes (oval, arc, rectangle, polygon and line)
     if (gItems[i]->pixmap().height() < 2) {
+        gItems[i]->setPixmap(graphicPixmaps.at(i).scaled(dim, 2));
+        /*
         gItems[i]->setPixmap(graphicPixmaps.at(i).scaledToWidth(dim));
         gItems[i]->setPixmap(graphicPixmaps.at(i).scaledToHeight(2));
         gItems[i]->setPixmap(graphicPixmaps.at(i).scaledToWidth(dim));
+        */
     }
 
     /* Range check - make sure embel borders synced with embelProperties borders.  A graphic
@@ -781,7 +784,7 @@ void Embel::updateGraphic(int i)
             GraphicsEffect *effect = new GraphicsEffect();
 //            effect->setObjectName("Graphic" + QString::number(i));
             effect->set(p->styleMap[p->g[i].style],
-                    p->globalLightDirection,
+                    p->lightDirection,
                     rotation,
                     gItems[i]->boundingRect());
             gItems[i]->setGraphicsEffect(effect);
@@ -810,7 +813,7 @@ void Embel::updateImage()
             if (imCache->imCache.contains(fPath)) {
                 pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
             }
-            qDebug() << __FUNCTION__ << "pmItem->pixmap().rect() =" << pmItem->pixmap().rect();
+//            qDebug() << __FUNCTION__ << "pmItem->pixmap().rect() =" << pmItem->pixmap().rect();
             GraphicsEffect *effect = new GraphicsEffect();
             effect->setObjectName("EmbelImageEffect");
             /*
@@ -819,7 +822,7 @@ void Embel::updateImage()
                      << "p->image.style =" << p->image.style;
 //                     */
             effect->set(p->styleMap[p->image.style],
-                    p->globalLightDirection,
+                    p->lightDirection,
                     0,
                     pmItem->pixmap().rect()
                     );
@@ -964,7 +967,7 @@ bool Embel::eventFilter(QObject *object, QEvent *event)
     return true;// QWidget::eventFilter(object, event);
 }
 
-void Embel::diagnostic()
+void Embel::diagnostics(QTextStream &rpt)
 {
     {
     #ifdef ISDEBUG
@@ -972,83 +975,91 @@ void Embel::diagnostic()
     #endif
     }
 
-    qDebug().noquote()
-            << "Scene total items =" << scene->items().count();
+    rpt << "\n" << "\nEmbel:";
+
+    rpt << "\nScene total items = " << scene->items().count() << "\n";
     for (int i = 0; i < scene->items().count(); ++i) {
-        qDebug().noquote()
-             << "tooltip =" << scene->items().at(i)->toolTip()
-             << "type =" << scene->items().at(i)->type()
-             << "pos =" << scene->items().at(i)->pos()
-             << "iv->scene->items().at(i) =" << scene->items().at(i)
+        rpt << QString::number(i)
+             << ". tooltip = " << scene->items().at(i)->toolTip()
+             << ", type = " << scene->items().at(i)->type()
+             << ", pos = ("
+             << QString::number(scene->items().at(i)->pos().x()) << ","
+             << QString::number(scene->items().at(i)->pos().y()) << ")"
+             << ", iv->scene->items().at(i) = " << scene->items().at(i)
+             << "\n"
                 ;
     }
 
-    qDebug().noquote()
-            << "\nTotal border items =" << bItems.count();
+    rpt << "\nTotal border items = " << bItems.count();
     for (int i = 0; i < bItems.count(); ++i) {
-        qDebug().noquote()
-             << "tooltip =" << bItems.at(i)->toolTip()
-             << "type =" << bItems.at(i)->type()
-             << "pos =" << bItems.at(i)->pos()
-             << "bItems.at(i) =" << bItems.at(i)
+        rpt  << i
+             << ". tooltip = " << bItems.at(i)->toolTip()
+             << ", type = " << bItems.at(i)->type()
+             << ", pos = ("
+             << QString::number(bItems.at(i)->pos().x()) << ","
+             << QString::number(bItems.at(i)->pos().y()) << ")"
+             << ", bItems.at(i) =" << bItems.at(i)
+             << "\n"
                 ;
             }
 
-    qDebug().noquote()
-            << "Total text items =" << tItems.count();
+    rpt << "\nTotal text items = " << tItems.count();
     for (int i = 0; i < tItems.count(); ++i) {
-        qDebug().noquote()
-                << "tooltip =" << tItems.at(i)->toolTip()
-                << "type =" << tItems.at(i)->type()
-                << "pos =" << tItems.at(i)->pos()
-                << "tItems.at(i) =" << tItems.at(i)
-                   ;
+        rpt << i
+            << ". tooltip = " << tItems.at(i)->toolTip()
+            << ", type = " << tItems.at(i)->type()
+            << ", pos = ("
+            << QString::number(tItems.at(i)->pos().x()) << ","
+            << QString::number(tItems.at(i)->pos().y()) << ")"
+            << ", tItems.at(i) = " << tItems.at(i)
+            << "\n"
+              ;
     }
 
-    qDebug().noquote()
-            << "Total graphic items =" << gItems.count();
+    rpt << "\nTotal graphic items = " << gItems.count();
     for (int i = 0; i < gItems.count(); ++i) {
-        qDebug().noquote()
-                << "tooltip =" << gItems.at(i)->toolTip()
-                << "type =" << gItems.at(i)->type()
-                << "pos =" << gItems.at(i)->pos()
-                << "gItems.at(i) =" << gItems.at(i)
-                   ;
+        rpt << i
+            << ". tooltip =" << gItems.at(i)->toolTip()
+            << ", type =" << gItems.at(i)->type()
+            << ", pos = ("
+            << QString::number(gItems.at(i)->pos().x()) << ","
+            << QString::number(gItems.at(i)->pos().y()) << ")"
+            << ", gItems.at(i) =" << gItems.at(i)
+            << "\n"
+               ;
     }
 
-
-    qDebug().noquote()
-            << "\nCanvas                      "
-            << "w =" << QString::number(w).leftJustified(5)
-            << "h =" << QString::number(h).leftJustified(5)
+    rpt << "\nCanvas                     "
+        << " w = " << QString::number(w).leftJustified(5)
+        << " h = " << QString::number(h).leftJustified(5)
+        << "\n"
                ;
     for (int i = 0; i < b.size(); ++i) {
-        qDebug().noquote()
-            << "Border" << i
-            << "x =" << QString::number(b[i].x).leftJustified(5)
-            << "y =" << QString::number(b[i].y).leftJustified(5)
-            << "w =" << QString::number(b[i].w).leftJustified(5)
-            << "h =" << QString::number(b[i].h).leftJustified(5)
-            << "l =" << QString::number(b[i].l).leftJustified(5)
-            << "r =" << QString::number(b[i].r).leftJustified(5)
-            << "t =" << QString::number(b[i].t).leftJustified(5)
-            << "b =" << QString::number(b[i].b).leftJustified(5)
-            << "tl.x =" << QString::number(b[i].tl.x()).leftJustified(5)
-            << "tl.y =" << QString::number(b[i].tl.y()).leftJustified(5)
-            << "br.x =" << QString::number(b[i].br.x()).leftJustified(5)
-            << "br.y =" << QString::number(b[i].br.y()).leftJustified(5)
-            ;
+        rpt << "Border" << i
+        << " x = " << QString::number(b[i].x).leftJustified(5)
+        << " y = " << QString::number(b[i].y).leftJustified(5)
+        << " w = " << QString::number(b[i].w).leftJustified(5)
+        << " h = " << QString::number(b[i].h).leftJustified(5)
+        << " l = " << QString::number(b[i].l).leftJustified(5)
+        << " r = " << QString::number(b[i].r).leftJustified(5)
+        << " t = " << QString::number(b[i].t).leftJustified(5)
+        << " b = " << QString::number(b[i].b).leftJustified(5)
+        << " tl.x = " << QString::number(b[i].tl.x()).leftJustified(5)
+        << " tl.y = " << QString::number(b[i].tl.y()).leftJustified(5)
+        << " br.x = " << QString::number(b[i].br.x()).leftJustified(5)
+        << " br.y = " << QString::number(b[i].br.y()).leftJustified(5)
+        << "\n"
+        ;
     }
-    qDebug().noquote()
-            << "Image   "
-            << "x =" << QString::number(image.x).leftJustified(5)
-            << "y =" << QString::number(image.y).leftJustified(5)
-            << "w =" << QString::number(image.w).leftJustified(5)
-            << "h =" << QString::number(image.h).leftJustified(5)
-            << "                                       "
-            << "tl.x =" << QString::number(image.tl.x()).leftJustified(5)
-            << "tl.y =" << QString::number(image.tl.y()).leftJustified(5)
-            << "br.x =" << QString::number(image.br.x()).leftJustified(5)
-            << "br.y =" << QString::number(image.br.y()).leftJustified(5)
-            ;
+    rpt << "Image  "
+        << " x = " << QString::number(image.x).leftJustified(5)
+        << " y = " << QString::number(image.y).leftJustified(5)
+        << " w = " << QString::number(image.w).leftJustified(5)
+        << " h = " << QString::number(image.h).leftJustified(5)
+        << "                                        "
+        << " tl.x = " << QString::number(image.tl.x()).leftJustified(5)
+        << " tl.y = " << QString::number(image.tl.y()).leftJustified(5)
+        << " br.x = " << QString::number(image.br.x()).leftJustified(5)
+        << " br.y = " << QString::number(image.br.y()).leftJustified(5)
+        ;
 }

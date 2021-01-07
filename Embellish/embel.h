@@ -30,7 +30,7 @@ public:
     void updateStyle(QString style);
     void exportImage();
     void test();
-    void diagnostic();
+    void diagnostics(QTextStream &rpt);
     int ls;     // long side
     int ss;     // short side
     int stu;    // side to use for relative measures
