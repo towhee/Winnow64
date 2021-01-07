@@ -119,16 +119,16 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     QString exportPathToLastFile = exportFolder + "/" + info.fileName();
 
     // cleanup (open export folder??)
-//    embelProperties->setCurrentTemplate(prevTemplate);
+    /*
+    embelProperties->setCurrentTemplate(prevTemplate);
+    qDebug() << __FUNCTION__
+             << "exportFolderPath(fPath) ="
+             << exportFolderPath(fPath);
+    Utilities::log(__FUNCTION__, "fPath =" + fPath);
+    Utilities::log(__FUNCTION__, "exportFolderPath(fPath) =" + exportFolderPath(fPath));
+    */
     delete embellish;
 
-//    qDebug() << __FUNCTION__
-//             << "exportFolderPath(fPath) ="
-//             << exportFolderPath(fPath);
-//    Utilities::log(__FUNCTION__, "fPath =" + fPath);
-//    Utilities::log(__FUNCTION__, "exportFolderPath(fPath) =" + exportFolderPath(fPath));
-
-//    return exportFolderPath(fPath);
     return lastFileExportedPath;
 }
 
@@ -166,18 +166,27 @@ void EmbelExport::exportImages(const QStringList &fPathList)
 
     G::popUp->setProgressVisible(true);
     G::popUp->setProgressMax(count);
-    QString txt = "Exporting " + QString::number(count) + " embellished images to "
-            + folderPath;
+    QString txt = "Exporting " + QString::number(count) +
+                  " embellished images to " + folderPath +
+                  "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
     G::popUp->showPopup(txt, 0, true, 1);
 
     for (int i=0; i < count; i++) {
+        qApp->processEvents();
+        if (abort) break;
         exportImage(fPathList.at(i));
-        G::popUp->setProgress(i);
+        G::popUp->setProgress(i+1);
     }
 
     G::popUp->setProgressVisible(false);
     G::popUp->hide();
     delete embellish;
+
+    if (abort) {
+        abort = false;
+        G::popUp->showPopup("Export has been aborted", 1500);
+        return;
+    }
 
     qint64 ms = t.elapsed();
     QString _ms = QString("%L1").arg(ms);
@@ -198,6 +207,7 @@ void EmbelExport::exportImages(const QStringList &fPathList)
 
 void EmbelExport::exportImage(const QString &fPath)
 {
+    abort = false;
     QString extension = embelProperties->exportFileType;
     QFileInfo fileInfo(fPath);
     QString baseName = fileInfo.baseName() + embelProperties->exportSuffix;
@@ -237,4 +247,11 @@ void EmbelExport::exportImage(const QString &fPath)
     if (extension == "TIF") image.save(exportPath, "TIF");
 
     lastFileExportedPath = exportPath;
+}
+
+void EmbelExport::abortEmbelExport()
+{
+    qApp->processEvents();
+    qDebug() << __FUNCTION__ << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+    abort = true;
 }

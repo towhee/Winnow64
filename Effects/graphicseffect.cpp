@@ -29,7 +29,9 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                          double rotation,
                          QRectF boundRect)
 {
-//    qDebug() << __FUNCTION__;
+/*
+       padding, shift, rotation, ligt direction
+*/
 
     this->effects = &effects;
     lightDirection = globalLightDirection;
@@ -73,6 +75,8 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                 if (m.left < ef.highlighter.left) m.left = ef.highlighter.left;
                 if (m.right < ef.highlighter.right) m.right = ef.highlighter.right;
                 if (m.bottom < ef.highlighter.bottom) m.bottom = ef.highlighter.bottom;
+                shift.x += -m.left;
+                shift.y += -m.top;
                 break;
             }
             case blur: {
@@ -93,9 +97,10 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                 offset.setX(dx);
                 offset.setY(dy);
                 // blur expansion
+                int r = static_cast<int>(ef.shadow.blurRadius);
+                /*
                 int dt, dl, dr, db;  // dt = delta top etc
                 dt = dl = dr = db = 0;
-                int r = static_cast<int>(ef.shadow.blurRadius);
                 if (dx > 0) {
                     dr = r;
                     dl = 0;
@@ -118,7 +123,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                 if (m.right < dr) m.right = dr;
                 if (m.bottom < db) m.bottom = db;
 
-                // or...
+                // or...  */
                 m.top = r;
                 m.left = r;
                 m.right = r;
@@ -142,14 +147,14 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
     }
 }
 
-//void GraphicsEffect::sourceChanged(QGraphicsEffect::ChangeFlags flags)
-//{
-//    qDebug() << __FUNCTION__ << flags;
-//    if (flags & QGraphicsEffect::SourceInvalidated ||
-//        flags & QGraphicsEffect::SourceBoundingRectChanged)
-//        okToDraw = true;
-//    else okToDraw = false;
-//}
+/* void GraphicsEffect::sourceChanged(QGraphicsEffect::ChangeFlags flags)
+{
+    qDebug() << __FUNCTION__ << flags;
+    if (flags & QGraphicsEffect::SourceInvalidated ||
+        flags & QGraphicsEffect::SourceBoundingRectChanged)
+        okToDraw = true;
+    else okToDraw = false;
+} */
 
 void GraphicsEffect::draw(QPainter* painter)
 {
@@ -170,7 +175,7 @@ void GraphicsEffect::draw(QPainter* painter)
 //    qDebug() << __FUNCTION__ << "boundingRect =" << boundingRect();
     overlay.save("D:/Pictures/Temp/effect/o0.tif");
 
-    qDebug() << __FUNCTION__ << "draw overlay.width() =" << overlay.width();
+//    qDebug() << __FUNCTION__ << "draw overlay.width() =" << overlay.width();
 //  overlay.setDevicePixelRatio(srcPixmap.devicePixelRatioF());
 //    srcPixmap.save("D:/Pictures/Temp/effect/srcPixmap.tif");
 
@@ -370,11 +375,11 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color, do
 
 void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__ /*<< QTime::currentTime()*/
-             << "boundingRect =" << boundingRect();
+//    qDebug() << __FUNCTION__ /*<< QTime::currentTime()*/
+//             << "boundingRect =" << boundingRect();
 
     if (overlay.isNull()) return;
-    overlay.save("D:/Pictures/Temp/effect/o3.tif");
+//    overlay.save("D:/Pictures/Temp/effect/o3.tif");
 
     QPointF highlighterOffset(margin.left, margin.top);
     int w = overlay.size().width() + margin.left + margin.right;
@@ -399,7 +404,7 @@ void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::Com
     overlayPainter.setCompositionMode(mode);
     overlayPainter.drawImage(0, 0, highlighterBackgroundImage);
     overlayPainter.end();
-    overlay.save("D:/Pictures/Temp/effect/o4.tif");
+//    overlay.save("D:/Pictures/Temp/effect/o4.tif");
     return;
 }
 
@@ -421,12 +426,15 @@ void GraphicsEffect::brightnessEffect(qreal evDelta, QPainter::CompositionMode m
 //    qDebug() << __FUNCTION__ << QTime::currentTime();
     if (overlay.isNull()) return;
 
-    QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
-    temp = overlay;
+//    QImage temp(overlay.size(), QImage::Format_ARGB32/*_Premultiplied*/);
+//    temp = overlay;
+    QImage temp(overlay.size(), QImage::Format_ARGB32);
+    QPainter tempPainter(&temp);
+    // transparency not working unless add overlay in a painter
+    tempPainter.drawImage(0, 0, overlay);
+    tempPainter.end();
     Effects effect;
     effect.brightness(temp, evDelta);
-//    effect.emboss(temp, evDelta, 0, 0, 1, -1, lightDirection);
-//    temp.save("D:/Pictures/Temp/effect/brightened.tif");
 
     QPainter overlayPainter(&overlay);
     overlayPainter.setCompositionMode(mode);
@@ -437,26 +445,25 @@ void GraphicsEffect::brightnessEffect(qreal evDelta, QPainter::CompositionMode m
 void GraphicsEffect::strokeEffect(double width, QColor color, double opacity,
                                   QPainter::CompositionMode mode)
 {
-    qDebug() << __FUNCTION__ /*<< QTime::currentTime()*/
-             << "boundingRect =" << boundingRect();
+//    qDebug() << __FUNCTION__ /*<< QTime::currentTime()*/
+//             << "boundingRect =" << boundingRect();
 
     if (overlay.isNull() || width < 1) return;
+//    overlay.save("D:/Pictures/Temp/effect/o1.tif");
 
-    overlay.save("D:/Pictures/Temp/effect/o1.tif");
-
-    QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
-    temp = overlay;
+    QImage temp(overlay.size(), QImage::Format_ARGB32);
+    QPainter tempPainter(&temp);
+    // transparency not working unless add overlay in a painter
+    tempPainter.drawImage(0, 0, overlay);
+    tempPainter.end();
     Effects effect;
     if (effect.stroke(temp, width, color, opacity, true)) {
         temp.save("D:/Pictures/Temp/effect/stroke.tif");
-
-        qDebug() << __FUNCTION__ << "temp w/h =" << temp.width() << temp.height();
-
         QPainter overlayPainter(&overlay);
         overlayPainter.setCompositionMode(mode);
         overlayPainter.drawImage(0, 0, temp);
         overlayPainter.end();
-        overlay.save("D:/Pictures/Temp/effect/o2.tif");
+//        overlay.save("D:/Pictures/Temp/effect/o2.tif");
     }
 }
 
@@ -490,7 +497,8 @@ void GraphicsEffect::embossEffect(double size, double exposure,
     if (overlay.isNull()) return;
 
     // do not use overlay, which may have padding
-    QImage temp = unpaddedSrcImage;
+    QImage temp = overlay;
+//    QImage temp = unpaddedSrcImage;
     Effects effect;
     effect.emboss(temp, lightDirection, size, exposure, contrast,
                   inflection, startEV, midEV, endEV,
@@ -504,15 +512,15 @@ void GraphicsEffect::embossEffect(double size, double exposure,
     overlayPainter.end();
 }
 
-//bool GraphicsEffect::eventFilter(QObject *obj, QEvent *event)
-//{
-//    qDebug() << __FUNCTION__
-//             << event << "\t"
-//             << event->type() << "\t"
-//             << obj << "\t"
-//             << obj->objectName();
-//    return QGraphicsEffect::eventFilter(obj, event);
-//}
+/* bool GraphicsEffect::eventFilter(QObject *obj, QEvent *event)
+{
+    qDebug() << __FUNCTION__
+             << event << "\t"
+             << event->type() << "\t"
+             << obj << "\t"
+             << obj->objectName();
+    return QGraphicsEffect::eventFilter(obj, event);
+} */
 
 bool GraphicsEffect::event(QEvent *event)
 {

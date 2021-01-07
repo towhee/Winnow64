@@ -25,7 +25,7 @@ public:
     int templateId;                 // 0 == Do not embellish
     QString styleName;
     int styleId;
-    int globalLightDirection;       // 0-360 degrees used for shadows etc
+    int lightDirection;             // 0-360 degrees used for shadows etc
     int horizontalFitPx;
     int verticalFitPx;
     int longSidePx;
@@ -124,8 +124,9 @@ public slots:
     void manageTiles();
     void invokeFromAction(QAction *embelAction);
     void setCurrentTemplate(QString name);
-    void diagnostic(QModelIndex parent = QModelIndex());
+//    void diagnosticModel(QModelIndex parent = QModelIndex());
     void coordHelp();
+    QString diagnostics();
 
 signals:
     void templateChanged(int id);
@@ -142,6 +143,7 @@ private:
     void updateBorderLists();
     void updateAnchorObjects();
     void updateBorderOrderAfterDeletion();
+    void updateEffectOrderAfterDeletion(QModelIndex parIdx);
     void sortTemplateList();
     void readTemplateList();
     void readTileList();
@@ -223,9 +225,9 @@ private:
 
     void treeChange(QModelIndex idx);
     bool okToSelect(QModelIndex idx, QString selName);
-    void diagnostics(QModelIndex idx);
-    void diagnosticStyles();
-    void diagnosticVectors();
+    void diagnosticStyles(QTextStream &rpt);
+    void diagnosticVectors(QTextStream &rpt);
+    void diagnosticModel(QTextStream &rpt, QModelIndex parent = QModelIndex());
 
     PatternDlg *patternDlg;
 
@@ -248,7 +250,7 @@ private:
     void expandRecursively();
 
     void effectContextMenu();
-    void newEffectActionClicked();
+    void newEffect();
     QString uniqueEffectName(QString styleName, int effectType, QString effectName);
     int effectIndex(QString style, QString effectName);
 

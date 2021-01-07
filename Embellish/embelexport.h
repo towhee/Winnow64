@@ -24,6 +24,9 @@ public:
     void exportImage(const QString &fPath);
     QString exportFolderPath(QString folderPath = "");
 
+public slots:
+    void abortEmbelExport();
+
 private:
     bool loadImage(QString fPath);
     Metadata *metadata;
@@ -34,6 +37,7 @@ private:
     QGraphicsScene *scene;
     QGraphicsPixmapItem *pmItem;
     QString lastFileExportedPath;
+    bool abort = false;
 };
 
 #endif // EMBELEXPORT_H
