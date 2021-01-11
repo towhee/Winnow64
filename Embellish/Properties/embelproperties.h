@@ -127,6 +127,7 @@ public slots:
 //    void diagnosticModel(QModelIndex parent = QModelIndex());
     void coordHelp();
     QString diagnostics();
+    void updateMetadataTemplateList();
 
 signals:
     void templateChanged(int id);
@@ -150,7 +151,6 @@ private:
     void updateTileList();
     void readTile(QStringList tileName);
     void readMetadataTemplateList();
-    void updateMetadataTemplateList();
     void renameCurrentStyle();
     void renameCurrentTemplate();
     void copyStyle();

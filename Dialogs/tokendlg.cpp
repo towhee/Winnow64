@@ -418,16 +418,25 @@ void TokenDlg::on_renameBtn_clicked()
 /*
 As noted in on_okBtn_clicked, renaming the template changes the QMap key.
 */
+    // current name
     int row = ui->templatesCB->currentIndex();
     QString name = ui->templatesCB->currentText();
+    QString oldName = name;
     QStringList existing = existingTemplates(row);
+    // get new name
     RenameDlg *nameDlg = new RenameDlg(name, existing,
              "Rename Template", "Rename template name:", this);
     if (!nameDlg->exec()) {
         delete nameDlg;
         return;
     }
+    // update dialog token template name
     ui->templatesCB->setItemText(row, name);
+    /* update in QSettings done when Winnow closes
+    QSettings *setting = new QSettings("Winnow", "winnow_100");
+    QString tokenString = setting->value("InfoTemplates/" + oldName).toString();
+    setting->remove("InfoTemplates/" + oldName);
+    setting->setValue("InfoTemplates/" + name, tokenString);  */
     delete nameDlg;
 }
 
@@ -443,5 +452,6 @@ Update tokenEdit with the template token string stored in templatesMap
 
 void TokenDlg::on_closeBtn_clicked()
 {
+    on_okBtn_clicked();
     accept();
 }

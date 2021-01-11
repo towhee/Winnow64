@@ -9,6 +9,7 @@
 class Utilities
 {
 public:
+    static void renameFileIfExists(QString &fPath, QString delimiter = "_");
     static QString inputText(QString title, QString description,
                              QStringList doNotUse, QString input = "");
     static void log(QString function, QString msg);

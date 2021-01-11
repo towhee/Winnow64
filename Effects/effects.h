@@ -21,6 +21,7 @@ public:
     void boxBlur(QImage &img, int radius);
     void boxBlur2D(QImage &img, int radius);
     void boxBlur1(QImage &img, int radius);
+    void boxBlur2(QImage &img, int radius); // blurs alpha too
     void raise(QImage &img, int m, double taper = 0.5, int blurWidth = 3, bool raise = false);
     void brightness(QImage &img, qreal evDelta);
     void emboss(QImage &img, int azimuth, double size, double exposure, double contrast,

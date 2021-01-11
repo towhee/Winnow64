@@ -854,7 +854,7 @@ void Embel::removeBorder(int i)
     #endif
     }
 //    qDebug() << __FUNCTION__ << "i =" << i << "bItems.size() =" << bItems.size();
-    if (i >= bItems.size()) return;
+    if (i >= bItems.size() || i >= b.size()) return;
     if (scene->items().contains(bItems[i]))
         scene->removeItem(bItems[i]);
     if (bItems.contains(bItems[i])) {
@@ -887,6 +887,7 @@ void Embel::removeGraphic(int i)
     G::track(__FUNCTION__);
     #endif
     }
+    if (i >= gItems.size()) return;
     if (scene->items().contains(gItems[i]))
         scene->removeItem(gItems[i]);
     if (gItems.contains(gItems[i])) {

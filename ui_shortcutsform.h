@@ -391,8 +391,8 @@ public:
         ___qtreewidgetitem63->setText(1, QCoreApplication::translate("shortcutsForm", "C", nullptr));
         ___qtreewidgetitem63->setText(0, QCoreApplication::translate("shortcutsForm", "Compare View", nullptr));
         QTreeWidgetItem *___qtreewidgetitem64 = ___qtreewidgetitem59->child(4);
-        ___qtreewidgetitem64->setText(1, QCoreApplication::translate("shortcutsForm", "Cmd/Ctrl +E", nullptr));
-        ___qtreewidgetitem64->setText(0, QCoreApplication::translate("shortcutsForm", "Embellish", nullptr));
+        ___qtreewidgetitem64->setText(1, QCoreApplication::translate("shortcutsForm", "N", nullptr));
+        ___qtreewidgetitem64->setText(0, QCoreApplication::translate("shortcutsForm", "No Embellishment", nullptr));
         QTreeWidgetItem *___qtreewidgetitem65 = ___qtreewidgetitem59->child(5);
         ___qtreewidgetitem65->setText(2, QCoreApplication::translate("shortcutsForm", "Toggles", nullptr));
         ___qtreewidgetitem65->setText(1, QCoreApplication::translate("shortcutsForm", "F", nullptr));

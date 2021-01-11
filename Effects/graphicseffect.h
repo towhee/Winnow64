@@ -174,6 +174,7 @@ protected:
 private:
     virtual QRectF boundingRectFor(const QRectF& rect ) const override;
     void shadowEffect(double size, double radius, QColor color, double opacity, QPainter::CompositionMode mode);
+    void shadowEffect1(double size, double radius, QColor color, double opacity, QPainter::CompositionMode mode);
     void highligherEffect(QColor color, Margin margin, QPainter::CompositionMode mode);
     void strokeEffect(double width, QColor color, double opacity, QPainter::CompositionMode mode);
     void glowEffect(double width, QColor color, double blurRadius, QPainter::CompositionMode mode);

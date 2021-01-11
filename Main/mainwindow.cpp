@@ -195,14 +195,13 @@ there does not appear to be any signal or event when ListView is finished hence 
 
 */
 
-MW::MW(/*QApplication &app, */QWidget *parent) : QMainWindow(parent)
+MW::MW(QWidget *parent) : QMainWindow(parent)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__, "Start Winnow");
     #endif
     }
-//    this->app = &app;
     setObjectName("WinnowMainWindow");
 
     // Check if modifier key pressed while program opening
@@ -568,10 +567,10 @@ void MW::keyReleaseEvent(QKeyEvent *event)
     QMainWindow::keyReleaseEvent(event);
 }
 
-bool MW::event(QEvent *event)
-{
-    return QMainWindow::event(event);
-}
+//bool MW::event(QEvent *event)
+//{
+//    return QMainWindow::event(event);
+//}
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
@@ -934,9 +933,41 @@ void MW::handleStartupArgs(const QString &args)
         // check if any image path sent, if not, return
         if (argList.length() < 4) return;
         templateName = argList.at(2);
-        for (int i = 3; i < argList.length(); i++) {
-            pathList << argList.at(i);
+        /* get lastModified time for first file, then choose all files in the folder that
+           are Winnow supported formats and have been modified after the first file.  This
+           allows unlimited files to be received, getting around the command argument buffer
+           limited size.  */
+        QFileInfo info(argList.at(3));
+        QString folderPath = info.dir().absolutePath();
+        // time first file last modified
+        QDateTime t = info.lastModified();
+        // list of all supported files in the folder
+        QStringList fileFilters;
+        foreach (const QString &str, metadata->supportedFormats)
+                fileFilters.append("*." + str);
+        QDir dir;
+        dir.setNameFilters(fileFilters);
+        dir.setFilter(QDir::Files);
+        dir.setPath(folderPath);
+        Utilities::log(__FUNCTION__, QString::number(dir.entryInfoList().size()) + " files " +
+                       folderPath + "  " + t.toString("yyyy-MM-dd hh:mm:ss"));
+        for (int i = 0; i < dir.entryInfoList().size(); ++i) {
+            QFileInfo f = dir.entryInfoList().at(i);
+//            Utilities::log(__FUNCTION__, f.filePath() + "  " +
+//                           f.lastModified().toString("yyyy-MM-dd hh:mm:ss"));
+//            // only add files just modified
+            if (f.lastModified() >= t) {
+                pathList << f.filePath();
+                QString msg = "Adding " + QString::number(i) + " " + f.absolutePath() +
+                        "  " + f.lastModified().toString("yyyy-MM-dd hh:mm:ss");
+                Utilities::log(__FUNCTION__, msg);
+            }
         }
+
+//        for (int i = 3; i < argList.length(); i++) {
+//            pathList << argList.at(i);
+//            Utilities::log(__FUNCTION__, argList.at(i));
+//        }
         EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
 
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
@@ -2882,20 +2913,22 @@ void MW::createActions()
             embelTemplatesActions.at(i)->setText(name);
         }
 
-        if (i < 10 && i < n) {
-            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Alt+Shift+" + QString::number(i)));
-//            embelTemplatesActions.at(i)->setObjectName(objName);
+        if (i == 0) {
+            embelTemplatesActions.at(i)->setShortcut(QKeySequence("N"));
             embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
-//            embelTemplatesActions.at(i)->setCheckable(true);
-//            embelTemplatesActions.at(i)->setText(name);
-            embelTemplatesActions.at(i)->setVisible(true);
-            addAction(embelTemplatesActions.at(i));
         }
+
+//        if (i < 10 && i < n) {
+//            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Alt+Shift+" + QString::number(i)));
+//            embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
+//            embelTemplatesActions.at(i)->setVisible(true);
+//            addAction(embelTemplatesActions.at(i));
+//        }
 
         if (i < n) addAction(embelTemplatesActions.at(i));
 
         if (i >= n) embelTemplatesActions.at(i)->setVisible(false);
-        embelTemplatesActions.at(i)->setShortcut(QKeySequence("Ctrl+Shift+" + QString::number(i)));
+//        embelTemplatesActions.at(i)->setShortcut(QKeySequence("Ctrl+Shift+" + QString::number(i)));
         embelGroupAction->addAction(embelTemplatesActions.at(i));
     }
     addActions(embelTemplatesActions);
@@ -4722,7 +4755,7 @@ void MW::createEmbelDock()
 
     // run template button
     embelRunBtn = new BarBtn();
-    embelRunBtn->setIcon(QIcon(":/images/icon16/lightning.png"));
+    embelRunBtn->setIcon(QIcon(":/images/icon16/lightning1.png"));
     embelRunBtn->setToolTip("Export the selected images.");
     connect(embelRunBtn, &BarBtn::clicked, this, &MW::exportEmbel);
     embelTitleLayout->addWidget(embelRunBtn);
@@ -9037,6 +9070,7 @@ void MW::selectShootingInfo()
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
     imageView->moveShootingInfo(info);
+    embelProperties->updateMetadataTemplateList();
 }
 
 void MW::setRatingBadgeVisibility() {
@@ -11346,13 +11380,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << "dm->currentFilePath =" << dm->currentFilePath;
+    QString folderPath = "D:/Pictures/Temp/LightroomExport";
+    QStringList fileFilters;
+    foreach (const QString &str, metadata->supportedFormats)
+            fileFilters.append("*." + str);
+    QDir dir;
+    dir.setNameFilters(fileFilters);
+    dir.setFilter(QDir::Files);
+    dir.setPath(folderPath);
+    qDebug() << __FUNCTION__ << dir.entryInfoList().size();
 
-//    QString fPath = "D:/Pictures/Zenfolio/pbase2048/2020-12-31_0004_Zen2048.JPG";
-//    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath,
-//                                            1, Qt::MatchFixedString);
-//    qDebug() << __FUNCTION__ << idxList << idxList.length();
-//    if (idxList.length() > 0) thumbView->selectThumb(idxList.at(0));
 
 //    QDebug bug = qDebug().noquote().nospace();
 //    bug << "Test";

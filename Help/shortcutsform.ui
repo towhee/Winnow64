@@ -695,10 +695,10 @@
        </item>
        <item>
         <property name="text">
-         <string>Embellish</string>
+         <string>No Embellishment</string>
         </property>
         <property name="text">
-         <string>Cmd/Ctrl +E</string>
+         <string>N</string>
         </property>
        </item>
        <item>

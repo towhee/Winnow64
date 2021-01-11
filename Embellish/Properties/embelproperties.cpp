@@ -46,7 +46,7 @@ Embel
     Tiles
 
 Each of the above in turn includes a series of fields the contain the information required by
-Embel. The information is read from QSettings by addTemplateItems, addBorders ... As each item
+Embel. The information is read from QSettings by additemsToRenumber, addBorders ... As each item
 is read, it is sent to PropertyEditor::addItem, which builds a StandardItemModel to mirror the
 QSettings. A custom widget is created in the treeview that is used to display and edit the
 information.
@@ -335,8 +335,7 @@ Update to:              1, 2, 3
     // Get a standardItem as it supports sorting of the children, and the borders may be sorted
     QStandardItem *effectItem = new QStandardItem;
     effectItem = model->itemFromIndex(parIdx);
-    int row;
-    for (row = 0; row < effectItem->rowCount(); ++row) {
+    for (int row = 0; row < effectItem->rowCount(); ++row) {
         QModelIndex idx = effectItem->child(row)->index();
         model->setData(idx, row, UR_SortOrder);
         QString path = idx.data(UR_SettingsPath).toString() + "/sortOrder";
@@ -361,8 +360,7 @@ Update to:              1, 2, 3
     // Get a standardItem as it supports sorting of the children, and the borders may be sorted
     QStandardItem *borders = new QStandardItem;
     borders = model->itemFromIndex(bordersIdx);
-    int row;
-    for (row = 0; row < borders->rowCount(); ++row) {
+    for (int row = 0; row < borders->rowCount(); ++row) {
         QModelIndex idx = borders->child(row)->index();
         model->setData(idx, row, UR_SortOrder);
         QString path = idx.data(UR_SettingsPath).toString() + "/sortOrder";
@@ -373,7 +371,7 @@ Update to:              1, 2, 3
 void EmbelProperties::updateBorderLists()
 {
 /*
-Called from new and delete borders to rebuild the lists that have the borders
+    Called from new and delete borders to rebuild the lists that have the borders
 */
     {
     #ifdef ISDEBUG
@@ -1171,7 +1169,7 @@ void EmbelProperties::newTemplate()
     templateList << templateName;
     templateListEditor->addItem(templateName);
     templateListEditor->setValue(templateName);
-    // add the File, Image, Borders, Texts, Rectangles and Graphics items for the template
+    // add the File, Image, Borders, Textsand Graphics items for the template
 //    addTemplateItems();
     syncWinnets();
 }
@@ -1734,7 +1732,7 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     graphicAnchorObjectEditor.clear();
     styleListObjectEditor.clear();
     styleEditor.clear();
-    anchorContainerList.clear();
+//    anchorContainerList.clear();
 
     // other lists
     borderList.clear();
@@ -2616,9 +2614,9 @@ void EmbelProperties::addTemplateItems()
     G::track(__FUNCTION__);
     #endif
     }
+    addExport();
     addStyles();
     addGeneral();
-    addExport();
     addBorders();
     addTexts();
     addGraphics();
@@ -2842,7 +2840,7 @@ void EmbelProperties::addGeneral()
     i.decorateGradient = true;
     i.isDecoration = true;
     i.captionText = "General";
-    i.tooltip = "";
+    i.tooltip = "Dimensions, light and image style";
     i.hasValue = false;
     i.captionIsEditable = false;
     i.path = templatePath + "General";
@@ -3793,7 +3791,7 @@ void EmbelProperties::addStrokeEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 0;
-    i.max = 30;
+    i.max = 100;
 //    i.fixedWidth = 50;
     effect.stroke.width = i.value.toInt();
     addItem(i);
@@ -4225,7 +4223,7 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_Slider;
     i.type = "double";
     i.min = 0;
-    i.max = 10000;
+    i.max = 5000;
     i.div = 100;
     double range = i.max - i.min;
     i.step = static_cast<int>(range / longSidePx);
@@ -4857,19 +4855,18 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
 
     // remove from local vectors and Embel graphicItems
     if (parName == "Borders") {
-        qDebug() << __FUNCTION__ << "Remove border" << row;
         e->removeBorder(row);
-        b.remove(row);
+        if (row < b.size()) b.remove(row);
     }
 
     if (parName == "Texts") {
         e->removeText(row);
-        t.remove(row);
+         if (row < t.size()) t.remove(row);
     }
 
     if (parName == "Graphics") {
         e->removeGraphic(row);
-        g.remove(row);
+         if (row < g.size()) g.remove(row);
     }
 
     // remove from datamodel
@@ -4881,22 +4878,23 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
     setting->remove(path);
 
     /* rename subsequent category items ie text2, text3 ... in setting, model and vectors
-       This is not required for styles and effects as they are not numbered automatically */
-    QStringList templateItems;
-    templateItems /*<< "Borders"*/ << "Texts" << "Graphics";
-    if (templateItems.contains(parName)) {
-        QString itemBase = parName.left(parName.length() - 1);
+       This is not required for styles and effects as they are not numbered automatically.
+       Borders can be reordered so they are not renumbered.  */
+    QStringList itemsToRenumber;
+    itemsToRenumber << "Texts" << "Graphics";
+    if (itemsToRenumber.contains(parName)) {
+        QString itemBase; //= parName.left(parName.length() - 1);
+        if (parName == "Texts") itemBase = "Text";
+        if (parName == "Graphics") itemBase = "Graphic";
         for (int i = row; i < model->rowCount(parIdx); ++i) {
             QString parPath = templatePath + parName;
             QString oldName = model->index(i, CapColumn, parIdx).data().toString();
             QString newName = itemBase + QString::number(i + 1);
-            qDebug() << __FUNCTION__ << i << path << oldName << newName;
             // update setting
             renameSettingKey(parPath, oldName, newName);
             // update model
             model->setData(model->index(i, CapColumn, parIdx), newName);
             // update local struct
-//            if (parName == "Borders") b[i].name = newName;
             if (parName == "Texts") t[i].name = newName;
             if (parName == "Graphics") g[i].name = newName;
         }
@@ -4908,11 +4906,11 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
 
     // update references to style
     styleList.removeAt(styleList.indexOf(name));
+    // styleListObjectEditor is a list of editors with style lists
     if (parName == "Styles") {
         for (int i = 0; i < styleListObjectEditor.length(); ++i) {
             styleListObjectEditor[i]->removeItem(name);
         }
-        // rgh add for rectangles, borders and graphics
     }
 
     // update styleMap if a style was deleted
@@ -4924,10 +4922,14 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
     if (btn->type == "effect") {
         // find the effect
         int i;
+        bool effectFound = false;
         for (i = 0; i < styleMap[parName].length(); ++i) {
-            if (styleMap[parName][i].effectName == name) break;
+            if (styleMap[parName][i].effectName == name) {
+                effectFound = true;
+                break;
+            }
         }
-        styleMap[parName].removeAt(i);
+        if ( effectFound) styleMap[parName].removeAt(i);
     }
 
     // select another item
@@ -4935,6 +4937,7 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
     if (rowCount > 0) {
         QModelIndex nextIdx = model->index(row, CapColumn, parIdx);
         if (!nextIdx.isValid()) nextIdx = model->index(rowCount - 1, CapColumn, parIdx);
+        // req'd ?
         selectionModel()->select(nextIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     }
 
