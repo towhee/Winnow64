@@ -33,6 +33,7 @@ Combine Raw+Jpg              J    ⌘
 Loupe view                   L
 All docks lock               L    ⌘
 Report metadata              M    ⌘  ⇧  ⌥
+No embellishment             N
 Open folder                  O
 Open USB Drive               O    ⌘
 Manage external programs     O           ⌥

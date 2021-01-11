@@ -356,31 +356,31 @@ Finds the token in the datamodel and returns the datamodel value.
     if (token == "Orientation")
         return QString::number(m.orientation);
     if (token == "ShootingInfo")
-        return m.shootingInfo;
+        return m.shootingInfo.trimmed();
     if (token == "Aperture")
-        return m.aperture;
+        return m.aperture.trimmed();
     if (token == "ShutterSpeed")
-        return m.exposureTime;
+        return m.exposureTime.trimmed();
     if (token == "ISO")
-        return m.ISO;
+        return m.ISO.trimmed();
     if (token == "Exposure Compensation")
-        return m.exposureCompensation;
+        return m.exposureCompensation.trimmed();
     if (token == "Model")
-        return m.model;
+        return m.model.trimmed();
     if (token == "Lens")
-        return m.lens;
+        return m.lens.trimmed();
     if (token == "FocalLength")
-        return m.focalLength;
+        return m.focalLength.trimmed();
     if (token == "Creator")
-        return m.creator;
+        return m.creator.trimmed();
     if (token == "Title")
-        return m.title;
+        return m.title.trimmed();
     if (token == "Copyright")
-        return m.copyright;
+        return m.copyright.trimmed();
     if (token == "Email")
-        return m.email;
+        return m.email.trimmed();
     if (token == "Url")
-        return m.url;
+        return m.url.trimmed();
     return "";
 }
 

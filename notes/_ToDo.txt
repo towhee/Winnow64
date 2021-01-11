@@ -1,4 +1,7 @@
 BUGS
+- Sometimes effect controls to not trigger effect changes
+- Eliminate shadow blur in sunward direction
+- Focus shift away from Embellish when mouseover central widget or thumbdock
 - FlashObject rectangle wrong depending on text justification
 - Check for multiple signals to trigger Embel processes (challenging)
 - Change access to token editor in view menu
@@ -25,7 +28,8 @@ ENHANCEMENTS
 - File/Bookmark count not refresh when filecount changes see QFileSystemWatcher
 - changing template does not force redraw to new template until select new image
 - Add fade and alias to stroke
-- Add glow
+- Add glow (inner/outer)
+- Add guassian blur (inner/outer)
 - Copy files between folders using drag'n'drop
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
@@ -35,7 +39,14 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
-- Stop an export.
+- Trim metadata strings before concatenate
+- Rename metadata template not working
+- N for Do not Embellish
+- Border area list not populated
+- ComboBoxEditor edit mode borders bigger that row
+- Not all images are processed in remote export ie 26 out of 100
+- Overwrite export files
+- Stop an export
 - Switching between templates sometimes screws up the scale and position of the scene (not lately)
 - Brightness has boundary weirdness
 - changing template does not force redraw to new template until select new image

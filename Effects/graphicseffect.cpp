@@ -80,11 +80,13 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                 break;
             }
             case blur: {
-                int radius = static_cast<int>(ef.blur.radius);
-//                if (m.top < radius) m.top = radius;
-//                if (m.left < radius) m.left = radius;
-//                if (m.right < radius) m.right = radius;
-//                if (m.bottom < radius) m.bottom = radius;
+                int r = static_cast<int>(ef.blur.radius);
+//                if (ef.blur.outer) {
+//                    if (m.top < r) m.top = r;
+//                    if (m.left < r) m.left = r;
+//                    if (m.right < r) m.right = r;
+//                    if (m.bottom < r) m.bottom = r;
+//                }
                 updateBoundingRect();
                 break;
             }
@@ -92,8 +94,10 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                 // shadow offset
                 qreal length = ef.shadow.length;
                 double rads = lightDirection * (3.14159 / 180);
-                int dx = static_cast<int>(-sin(rads) * length);
-                int dy = static_cast<int>(+cos(rads) * length);
+                int dx = qRound(-sin(rads) * length);
+                int dy = qRound(+cos(rads) * length);
+//                int dx = static_cast<int>(-sin(rads) * length);
+//                int dy = static_cast<int>(+cos(rads) * length);
                 offset.setX(dx);
                 offset.setY(dy);
                 // blur expansion
@@ -172,7 +176,11 @@ void GraphicsEffect::draw(QPainter* painter)
     srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, PadToEffectiveBoundingRect);
 //    srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, NoPad);
     overlay = srcPixmap.toImage();
-//    qDebug() << __FUNCTION__ << "boundingRect =" << boundingRect();
+//    qDebug() << __FUNCTION__
+//             << "boundingRect =" << boundingRect()
+//             << "boundingRect.x() =" << boundingRect().x()
+//             << "overlay =" << overlay.rect()
+//                ;
     overlay.save("D:/Pictures/Temp/effect/o0.tif");
 
 //    qDebug() << __FUNCTION__ << "draw overlay.width() =" << overlay.width();
@@ -373,6 +381,96 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color, do
     return;
 }
 
+void GraphicsEffect::shadowEffect1(double length, double radius, QColor color, double opacity,
+                                  QPainter::CompositionMode mode)
+{
+    /*
+    qDebug() << __FUNCTION__ << QTime::currentTime();
+    qDebug() << __FUNCTION__
+             << "overlay.rect() =" << overlay.rect()
+                ;
+//                */
+
+    if (overlay.isNull()) return;
+
+//    overlay.save("D:/Pictures/Temp/effect/o1.tif");
+    double rads = lightDirection * (3.14159 / 180);
+    int dx = qRound(-sin(rads) * length);
+    int dy = qRound(+cos(rads) * length);
+    int x = boundingRect().x();
+    int y = boundingRect().y();
+//    int w = boundingRect().width();
+//    int h = boundingRect().height();
+    /*
+    qDebug() << __FUNCTION__
+             << "unpaddedSrcImage.rect() =" << unpaddedSrcImage.rect()
+             << "overlay.rect() =" << overlay.rect()
+             << "boundingRect.rect() =" << boundingRect()
+                ;
+//              */
+
+    // Create the shadow image offset by the shadow length
+    QImage shadIm(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+//    shadIm.fill(Qt::transparent);
+    QPainter shadPainter(&shadIm);
+    shadPainter.drawImage(dx, dy, overlay);
+    shadPainter.end();
+
+    // Make a blurred copy of the offset overlay
+    QImage blurred(overlay.size(), QImage::Format_ARGB32);
+//    blurred.fill(Qt::transparent);
+    QPainter blurPainter(&blurred);
+    qt_blurImage(&blurPainter, shadIm, radius, false, true);
+  /*
+    QRegion all(0, 0, overlay.width(), overlay.height());
+    QRegion blur(dx, dy, overlay.width(), overlay.height());
+    QRegion topLeft = all.subtracted(blur);
+    blurPainter.setClipRegion(topLeft);
+    blurPainter.fillRect(0, 0, overlay.width(), overlay.height(), Qt::transparent);
+//  */
+    blurPainter.end();
+
+    blurred.save("D:/Pictures/Temp/effect/blurred.tif");
+    // move the shadow back to the shadow image
+    shadIm = std::move(blurred);
+
+    // apply color to shadow
+    shadPainter.begin(&shadIm);
+    shadPainter.setOpacity(opacity);
+    shadPainter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    shadPainter.fillRect(shadIm.rect(), color);
+   /*  erase blur except revealed shadow
+    qDebug() << __FUNCTION__
+             << "x =" << x
+             << "y =" << y
+             << "dy =" << dy
+             << "dy =" << dy
+             << "radius =" << radius
+             << "overlay =" << overlay.rect()
+                ;
+    int w = shadIm.width();
+    int h = shadIm.height();
+    QRect top(0, 0, w, -y);
+    QRect left(0, 0, -x, h);
+    QRect right(w + x, 0, -x, h);
+    QRect bottom(0, h + y, w, -y);
+    shadPainter.setOpacity(1.0);
+    shadPainter.setCompositionMode(QPainter::CompositionMode_Source);
+    shadPainter.fillRect(top, Qt::green);
+    shadPainter.fillRect(left, Qt::darkBlue);
+    shadPainter.fillRect(right, Qt::darkCyan);
+    shadPainter.fillRect(bottom, Qt::darkMagenta);
+//  */
+    shadPainter.end();
+    shadIm.save("D:/Pictures/Temp/effect/shadIm.tif");
+
+    // compose adjusted image
+    QPainter overlayPainter(&overlay);
+    overlayPainter.setCompositionMode(mode);
+    overlayPainter.drawImage(dx, dy, shadIm);
+    overlayPainter.end();
+}
+
 void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::CompositionMode mode)
 {
 //    qDebug() << __FUNCTION__ /*<< QTime::currentTime()*/
@@ -497,8 +595,13 @@ void GraphicsEffect::embossEffect(double size, double exposure,
     if (overlay.isNull()) return;
 
     // do not use overlay, which may have padding
-    QImage temp = overlay;
+//    QImage temp = overlay;
 //    QImage temp = unpaddedSrcImage;
+    QImage temp(overlay.size(), QImage::Format_ARGB32);
+    QPainter tempPainter(&temp);
+    // transparency not working unless add overlay in a painter
+    tempPainter.drawImage(0, 0, overlay);
+    tempPainter.end();
     Effects effect;
     effect.emboss(temp, lightDirection, size, exposure, contrast,
                   inflection, startEV, midEV, endEV,

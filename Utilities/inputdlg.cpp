@@ -36,16 +36,15 @@ void InputDlg::checkDoNotUse(QString text)
         ui->msg->setText("Duplicate text.  Please try again.");
         okToSave = false;
     }
-    else ui->msg->setText("");
+    else {
+        ui->msg->setText("");
+        okToSave = true;
+    }
 }
 
 void InputDlg::ok()
 {
     input = ui->inputText->text().trimmed();
-//    if (doNotUse.contains(input)) {
-//        ui->msg->setText("Duplicate text.  Please try again.");
-//        return;
-//    }
     if (okToSave) accept();
 }
 

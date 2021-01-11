@@ -828,6 +828,237 @@ void Effects::boxBlur(QImage &img, int radius)
 /*
     Super Fast Blur v1.1
     by Mario Klingemann <http://incubator.quasimondo.com>
+    Tip: Multiple invovations of this filter with a small
+    radius will approximate a gaussian blur quite well.
+BImage a;
+BImage b;
+void setup()
+{
+  a=loadImage("dog.jpg");
+  size(a.width, a.height);
+  b=new BImage(a.width, a.height);
+  fill(255);
+  noStroke();
+  framerate(25);
+}
+void loop()
+{
+  System.arraycopy(a.pixels,0,b.pixels,0,a.pixels.length);
+  fastblur(b,mouseY/8);
+  image(b, 0, 0);
+}
+void fastblur(BImage img,int radius){
+  if (radius<1){
+    return;
+  }
+  int w=img.width;
+  int h=img.height;
+  int wm=w-1;
+  int hm=h-1;
+  int wh=w*h;
+  int div=radius+radius+1;
+  int r[]=new int[wh];
+  int g[]=new int[wh];
+  int b[]=new int[wh];
+  int rsum,gsum,bsum,x,y,i,p,p1,p2,yp,yi,yw;
+  int vmin[] = new int[max(w,h)];
+  int vmax[] = new int[max(w,h)];
+  int[] pix=img.pixels;
+  int dv[]=new int[256*div];
+  for (i=0;i<256*div;i++){
+     dv[i]=(i/div);
+  }
+  yw=yi=0;
+  for (y=0;y<h;y++){
+    rsum=gsum=bsum=0;
+    for(i=-radius;i<=radius;i++){
+      p=pix[yi+min(wm,max(i,0))];
+      rsum+=(p & 0xff0000)>>16;
+      gsum+=(p & 0x00ff00)>>8;
+      bsum+= p & 0x0000ff;
+   }
+    for (x=0;x<w;x++){
+      r[yi]=dv[rsum];
+      g[yi]=dv[gsum];
+      b[yi]=dv[bsum];
+      if(y==0){
+        vmin[x]=min(x+radius+1,wm);
+        vmax[x]=max(x-radius,0);
+       }
+       p1=pix[yw+vmin[x]];
+       p2=pix[yw+vmax[x]];
+      rsum+=((p1 & 0xff0000)-(p2 & 0xff0000))>>16;
+      gsum+=((p1 & 0x00ff00)-(p2 & 0x00ff00))>>8;
+      bsum+= (p1 & 0x0000ff)-(p2 & 0x0000ff);
+      yi++;
+    }
+    yw+=w;
+  }
+  for (x=0;x<w;x++){
+    rsum=gsum=bsum=0;
+    yp=-radius*w;
+    for(i=-radius;i<=radius;i++){
+      yi=max(0,yp)+x;
+      rsum+=r[yi];
+      gsum+=g[yi];
+      bsum+=b[yi];
+      yp+=w;
+    }
+    yi=x;
+    for (y=0;y<h;y++){
+      pix[yi]=0xff000000 | (dv[rsum]<<16) | (dv[gsum]<<8) | dv[bsum];
+      if(x==0){
+        vmin[y]=min(y+radius+1,hm)*w;
+        vmax[y]=max(y-radius,0)*w;
+      }
+      p1=x+vmin[y];
+      p2=x+vmax[y];
+      rsum+=r[p1]-r[p2];
+      gsum+=g[p1]-g[p2];
+      bsum+=b[p1]-b[p2];
+      yi+=w;
+    }
+  }
+  see C:\Qt\5.13.1\Src\qtbase\src\gui\painting\qrgb.h
+  if rgba
+  (a & 0xffu) << 24) | ((r & 0xffu) << 16) | ((g & 0xffu) << 8) | (b & 0xffu)
+  if rgb
+  (0xffu << 24) | ((r & 0xffu) << 16) | ((g & 0xffu) << 8) | (b & 0xffu)
+}
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    qDebug() << __FUNCTION__ << QTime::currentTime();
+
+    if (radius < 1) return;
+    QElapsedTimer t;
+    t.start();
+
+    int w = img.width();
+    int h = img.height();
+    if(img.depth() < 8) img = img.convertToFormat(QImage::Format_Indexed8);
+    int wm = w - 1;
+    int hm = h - 1;
+    int wh = w * h;
+    int div = radius + radius + 1;
+
+    // pointer to source image pixels
+    quint32 *s = reinterpret_cast<quint32*>(img.scanLine(0));
+
+    // arrays (~ 13% faster than QVector)
+    int *d = new int[wh];
+    int *a = new int[wh];
+    int *r = new int[wh];
+    int *g = new int[wh];
+    int *b = new int[wh];
+
+    int asum,rsum,gsum,bsum;
+    int x,y,yp,n,yw;
+    uint p = 0;
+    uint p1 = 0;
+    uint p2 = 0;
+    //  = y * w + x = x,y position in one dim array (used for r, g, b)
+    int *vmin = new int[MAX(w, h)];
+    int *vmax = new int[MAX(w, h)];
+    //      int *pix = pixels;
+
+    // precalc all possible mean values
+    int *dv = new int[256 * div];
+    for (int i = 0; i < 256 * div; i++) {
+        dv[i] = (i / div);
+    }
+
+    // scan from left to right
+    n = yw = 0;
+    for (y = 0; y < h; y++){
+        asum = rsum = gsum = bsum = 0;
+        // sum r,g,b for radius at start of row
+        for (int i = -radius; i <= radius; i++) {
+            p = s[n + MIN(wm, MAX(i, 0))];
+            rsum += (p & 0x00ff0000)>>16;
+            gsum += (p & 0x0000ff00)>>8;
+            bsum +=  p & 0x000000ff;
+        }
+        // traverse the row
+        for (x = 0; x < w; x++) {
+            if (y == 0) {
+                vmin[x] = MIN(x + radius + 1, wm);
+                vmax[x] = MAX(x - radius, 0);
+            }
+
+            r[n] = dv[rsum];
+            g[n] = dv[gsum];
+            b[n] = dv[bsum];
+
+            p1 = s[yw + vmin[x]];
+            p2 = s[yw + vmax[x]];
+//                    asum += (((p1 & 0xff000000) >> 24) - ((p2 & 0xff000000) >> 24));
+            rsum += (((p1 & 0x00ff0000) >> 16) - ((p2 & 0x00ff0000)>>16));
+            gsum += (((p1 & 0x0000ff00) >> 8) - ((p2 & 0x0000ff00)>>8));
+            bsum +=  (p1 & 0x000000ff)-(p2 & 0x000000ff);
+
+            n++;
+        }
+        yw += w;
+    }
+
+    // scan from top to bottom
+    for (x = 0; x < w; x++){
+        asum = rsum = gsum = bsum = 0;
+        // sum r,g,b for radius at start of row
+        yp = -radius * w;
+        for (int i = -radius; i <= radius; i++) {
+            n = MAX(0, yp) + x;
+            rsum += r[n];
+            gsum += g[n];
+            bsum += b[n];
+            yp += w;
+        }
+        n = x;
+        // traverse the column
+        for (y = 0; y < h; y++) {
+            d[n] = 0xff000000 | (dv[rsum]<<16) | (dv[gsum]<<8) | dv[bsum];
+
+            if (x == 0) {
+                vmin[y] = MIN(y + radius + 1, hm) * w;
+                vmax[y] = MAX(y - radius, 0) * w;
+            }
+
+            p1 = x + vmin[y];
+            p2 = x + vmax[y];
+
+            rsum += r[p1] - r[p2];
+            gsum += g[p1] - g[p2];
+            bsum += b[p1] - b[p2];
+
+            n += w;
+        }
+    }
+
+    // convert vector back to image
+//    vectorToImage(img, d);
+    arrayToImage(img, d, wh*4);
+
+    delete[] d;
+    delete[] a;
+    delete[] r;
+    delete[] g;
+    delete[] b;
+    delete[] vmin;
+    delete[] vmax;
+
+//    qDebug() << __FUNCTION__
+//             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
+}
+
+void Effects::boxBlur2(QImage &img, int radius)
+{
+/*
+    Super Fast Blur v1.1
+    by Mario Klingemann <http://incubator.quasimondo.com>
 
     Tip: Multiple invovations of this filter with a small
     radius will approximate a gaussian blur quite well.
@@ -956,6 +1187,8 @@ void fastblur(BImage img,int radius){
     QElapsedTimer t;
     t.start();
 
+    bool blurAlpha = true;
+
     int w = img.width();
     int h = img.height();
     if(img.depth() < 8) img = img.convertToFormat(QImage::Format_Indexed8);
@@ -997,6 +1230,7 @@ void fastblur(BImage img,int radius){
         // sum r,g,b for radius at start of row
         for (int i = -radius; i <= radius; i++) {
             p = s[n + MIN(wm, MAX(i, 0))];
+            asum += (p & 0xff000000)>>24;
             rsum += (p & 0x00ff0000)>>16;
             gsum += (p & 0x0000ff00)>>8;
             bsum +=  p & 0x000000ff;
@@ -1008,6 +1242,7 @@ void fastblur(BImage img,int radius){
                 vmax[x] = MAX(x - radius, 0);
             }
 
+            a[n] = dv[asum];
             r[n] = dv[rsum];
             g[n] = dv[gsum];
             b[n] = dv[bsum];
@@ -1015,6 +1250,7 @@ void fastblur(BImage img,int radius){
             p1 = s[yw + vmin[x]];
             p2 = s[yw + vmax[x]];
 //                    asum += (((p1 & 0xff000000) >> 24) - ((p2 & 0xff000000) >> 24));
+            asum += (((p1 & 0xff000000) >> 24) - ((p2 & 0xff000000)>>24));
             rsum += (((p1 & 0x00ff0000) >> 16) - ((p2 & 0x00ff0000)>>16));
             gsum += (((p1 & 0x0000ff00) >> 8) - ((p2 & 0x0000ff00)>>8));
             bsum +=  (p1 & 0x000000ff)-(p2 & 0x000000ff);
@@ -1031,6 +1267,7 @@ void fastblur(BImage img,int radius){
         yp = -radius * w;
         for (int i = -radius; i <= radius; i++) {
             n = MAX(0, yp) + x;
+            asum += a[n];
             rsum += r[n];
             gsum += g[n];
             bsum += b[n];
@@ -1039,6 +1276,7 @@ void fastblur(BImage img,int radius){
         n = x;
         // traverse the column
         for (y = 0; y < h; y++) {
+//            d[n] = (dv[asum]<<24) | (dv[rsum]<<16) | (dv[gsum]<<8) | dv[bsum];
             d[n] = 0xff000000 | (dv[rsum]<<16) | (dv[gsum]<<8) | dv[bsum];
 
             if (x == 0) {
@@ -1049,6 +1287,7 @@ void fastblur(BImage img,int radius){
             p1 = x + vmin[y];
             p2 = x + vmax[y];
 
+            asum += a[p1] - a[p2];
             rsum += r[p1] - r[p2];
             gsum += g[p1] - g[p2];
             bsum += b[p1] - b[p2];
@@ -2117,6 +2356,8 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     int h = img.height();
     int ls = w > h ? w : h;     // long side in pixels
     int m = ls * size;          // emboss width or margin in pixels
+    if (m > w) m = w - 1;
+    if (m > h) m = h - 1;
     double alpha = 1.0;
 
     double ev = 0;
@@ -2165,6 +2406,7 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     for (y = 0; y < m; y++) {
         ev = embossEV(m, y, contrast, exposure, inflection, startEV, midEV, endEV, umbra, isUmbra, isUmbraGradient);
         for (x = y; x < w - y; x++) {
+            if (x >= w) break;
             brightenPixel(s[y][x], ev, alpha);
         }
     }
@@ -2174,6 +2416,7 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     for (x = w - m; x < w; x++) {
         ev = embossEV(m, w-x-1, contrast, exposure, inflection, startEV, midEV, endEV, umbra, isUmbra, isUmbraGradient);
         for (y = w - x; y < h - w + x; y++) {
+            if (y >= h) break;
             brightenPixel(s[y][x], ev, alpha);
         }
     }

@@ -75,7 +75,6 @@ private:
         int area;
     };
     Hole hole;
-//    QVector<Hole> hole;
 
     // Image canvas pixel coordinates
     struct Image {
@@ -90,16 +89,13 @@ private:
         int x, y, w, h, l, r, t, b;     //  l, r, t, b = left, right, top, bottom
         QPoint tl, tc, tr, cl, cc, cr, bl, bc, br;
     };
+
     QList<Border>b;
+
     QList<QGraphicsRectItem*> bItems;
-
-    // Text canvas pixel coordinates
-    struct Text {};
     QList<QGraphicsTextItem*> tItems;
-
     QList<QGraphicsPixmapItem*> gItems;
     QList<QPixmap> graphicPixmaps;
-
     QGraphicsRectItem *flashItem;
 
     int w, h;

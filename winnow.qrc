@@ -135,7 +135,6 @@
         <file>images/icon16/anchor.png</file>
         <file>images/icon16/rectangle.png</file>
         <file>images/icon16/text.png</file>
-        <file>images/icon16/tile.png</file>
         <file>images/icon16/graphic.png</file>
         <file>images/icon16/colorwheel.png</file>
         <file>images/icon16/morevertthin.png</file>
@@ -159,5 +158,7 @@
         <file>Docs/images/EmbelCoordSystem.png</file>
         <file>Docs/embelcoordsystem.html</file>
         <file>images/icon16/lightning.png</file>
+        <file>images/icon16/lightning1.png</file>
+        <file>images/icon16/tile.png</file>
     </qresource>
 </RCC>

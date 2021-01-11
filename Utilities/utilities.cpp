@@ -1,5 +1,29 @@
 #include "utilities.h"
 
+
+
+void Utilities::renameFileIfExists(QString &fPath, QString delimiter)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int count = 0;
+    bool fileAlreadyExists = true;
+    QFileInfo info(fPath);
+    QString folderPath = info.dir().absolutePath() + "/";
+    QString base = info.baseName() + delimiter;
+    QString suffix = "." + info.suffix();
+    do {
+        QFile testFile(fPath);
+        if (testFile.exists()) {
+            fPath = folderPath + base + QString::number(++count) + suffix;
+        }
+        else fileAlreadyExists = false;
+    } while (fileAlreadyExists);
+}
+
 QString Utilities::inputText(QString title, QString description,
                              QStringList doNotUse, QString old)
 {

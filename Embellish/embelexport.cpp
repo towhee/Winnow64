@@ -101,6 +101,9 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     #endif
     }
 //    Utilities::log(__FUNCTION__, fPath);
+    for (int i = 0; i < pathList.length(); i++) {
+        Utilities::log(__FUNCTION__, pathList.at(i));
+    }
 
     // save current embellish template
     QString prevTemplate = embelProperties->templateName;
@@ -144,6 +147,7 @@ void EmbelExport::exportImages(const QStringList &fPathList)
     G::track(__FUNCTION__);
     #endif
     }
+    abort = false;
     int count = fPathList.size();
     if (count == 0) {
         G::popUp->showPopup("No images picked or selected");
@@ -202,12 +206,11 @@ void EmbelExport::exportImages(const QStringList &fPathList)
                   _msperim + " milliseconds per image.<p>" +
                   "<hr>" +
                   "Press <font color=\"red\"><b>Esc</b></font> to continue";
-    G::popUp->showPopup(msg, 0);
+    G::popUp->showPopup(msg, 10000);
 }
 
 void EmbelExport::exportImage(const QString &fPath)
 {
-    abort = false;
     QString extension = embelProperties->exportFileType;
     QFileInfo fileInfo(fPath);
     QString baseName = fileInfo.baseName() + embelProperties->exportSuffix;
@@ -216,17 +219,7 @@ void EmbelExport::exportImage(const QString &fPath)
     QString exportPath = exportFolder + "/" + baseName + "." + extension;
 
     // Check if destination image file already exists
-    if (!embelProperties->overwriteFiles) {
-        int count = 0;
-        bool fileAlreadyExists = true;
-        do {
-            QFile testFile(exportPath);
-            if (testFile.exists()) {
-                exportPath = exportFolder + "/" + baseName + "_" + QString::number(++count) + "." + extension;
-            }
-            else fileAlreadyExists = false;
-        } while (fileAlreadyExists);
-    }
+    if (!embelProperties->overwriteFiles) Utilities::renameFileIfExists(exportPath);
 
     // read the image, add it to the scene and embellish
     if (loadImage(fPath)) {

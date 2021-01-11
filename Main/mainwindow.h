@@ -987,7 +987,7 @@ private:
     bool isValidPath(QString &path);
     QString getSelectedPath();
     void wheelEvent(QWheelEvent *event);
-    bool event(QEvent *event);
+//    bool event(QEvent *event);
     void copy();
     void deleteFiles();
     void showNewImageWarning(QWidget *parent);
