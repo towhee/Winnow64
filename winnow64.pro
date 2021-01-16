@@ -114,6 +114,7 @@ SOURCES += Cache/imagecache.cpp \
    Effects/graphicsitemeventfilter.cpp \
    Main/qtlocalpeer.cpp \
    Main/qtlockedfile.cpp \
+   Main/qtlockedfile_unix.cpp \
    Main/qtlockedfile_win.cpp \
    Main/qtsingleapplication.cpp \
    Utilities/coloranalysis.cpp \
