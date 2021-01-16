@@ -4283,13 +4283,14 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
     G::track(__FUNCTION__);
     #endif
     }
-     /* This is the info displayed on top of the image in loupe view. It is
-     dependent on template data stored in QSettings */
+    /* This is the info displayed on top of the image in loupe view. It is
+       dependent on template data stored in QSettings */
     infoString = new InfoString(this, dm);
     if (isSettings) {
         if (setting->contains("currentInfoTemplate")) infoString->currentInfoTemplate = setting->value("currentInfoTemplate").toString();
         setting->beginGroup("InfoTemplates");
         QStringList keys = setting->childKeys();
+        qDebug() << __FUNCTION__ << keys;
         for (int i = 0; i < keys.size(); ++i) {
             QString key = keys.at(i);
             infoString->infoTemplates[key] = setting->value(key).toString();

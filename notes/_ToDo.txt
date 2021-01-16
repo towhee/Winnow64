@@ -1,8 +1,8 @@
 BUGS
+- Crash after using token editor from text in embelProperties
 - Sometimes effect controls to not trigger effect changes
 - Eliminate shadow blur in sunward direction
 - Focus shift away from Embellish when mouseover central widget or thumbdock
-- FlashObject rectangle wrong depending on text justification
 - Check for multiple signals to trigger Embel processes (challenging)
 - Change access to token editor in view menu
 - Confirm check for updates is working (Andreas)
@@ -39,6 +39,7 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- FlashObject rectangle wrong depending on text justification
 - Trim metadata strings before concatenate
 - Rename metadata template not working
 - N for Do not Embellish

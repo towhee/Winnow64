@@ -275,7 +275,7 @@ void EmbelProperties::initialize()
 
     setContextMenuPolicy(Qt::ActionsContextMenu);
 
-    connect(mw3->infoString, &InfoString::change, this, &EmbelProperties::updateMetadataTemplateList);
+//    connect(mw3->infoString, &InfoString::change, this, &EmbelProperties::updateMetadataTemplateList);
 }
 
 void EmbelProperties::effectContextMenu()
@@ -1935,7 +1935,7 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
     // see PropertyEditor::getItemIndex for details on using itemIndex
     int index = getItemIndex(idx.parent().data(UR_ItemIndex).toInt()).row();
     QString path = templatePath + "Texts/" + parent + "/" + source;
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << "source =" << source
              << "parent =" << parent;
@@ -5266,10 +5266,13 @@ Local information (datamodel, currentImage etc) is available.
     #endif
     }
 //    qDebug() << __FUNCTION__ << "Local" << key;
-    QString tokenString = mw3->infoString->infoTemplates[key];
-    QString path = mw3->imageView->currentImagePath;
-    QModelIndex curIdx = mw3->thumbView->currentIndex();
-    return mw3->infoString->parseTokenString(tokenString, path, curIdx);
+    if (mw3->infoString->infoTemplates.contains(key)) {
+        QString tokenString = mw3->infoString->infoTemplates[key];
+        QString path = mw3->imageView->currentImagePath;
+        QModelIndex curIdx = mw3->thumbView->currentIndex();
+        return mw3->infoString->parseTokenString(tokenString, path, curIdx);
+    }
+    else return "";
 }
 
 QString EmbelProperties::metaString(QString key, QString fPath)
@@ -5955,7 +5958,7 @@ void EmbelProperties::addText(int count)
     i.name = "metadataTemplate";
     i.parIdx = parIdx;
     i.parentName = textName;
-    i.captionText = "Metadata template";
+    i.captionText = "Template";
     i.tooltip = "Select a metadata template.  A template can include multiple metadata \n"
                 "fields and user input text.  Right click in any text field to access\n"
                 "the token editor to create or edit a metadata template.";
@@ -5967,7 +5970,7 @@ void EmbelProperties::addText(int count)
     if (setting->contains(settingRootPath + i.key))
         i.value = setting->value(settingRootPath + i.key);
     else {
-        i.value = "";
+        i.value = "Default info";
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Combo;

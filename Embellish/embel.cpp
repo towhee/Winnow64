@@ -659,8 +659,7 @@ void Embel::updateText(int i)
     }
     // if a metadata template used to build the text string
     else {
-        if (isRemote)
-            // from Embel::Export
+        if (isRemote) // from Embel::Export
             tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate, fPath));
         else
             tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate));
@@ -720,10 +719,7 @@ void Embel::updateText(int i)
             tItems[i]->setGraphicsEffect(effect);
         }
     }
-//    else {
-        tItems[i]->setRotation(rotation);
-//        tItems[i]->setGraphicsEffect(nullptr);
-//    }
+    tItems[i]->setRotation(rotation);
 }
 
 void Embel::updateGraphic(int i)
@@ -941,11 +937,21 @@ void Embel::flashObject(QString type, int index, bool show)
     }
     if (type == "text") {
         flashItem->setRect(tItems[index]->boundingRect());
+        int w = static_cast<int>(tItems[index]->boundingRect().width());
+        int h = static_cast<int>(tItems[index]->boundingRect().height());
+        QPoint offset = anchorPointOffset(p->t[index].anchorPoint, w, h);
+        flashItem->setTransformOriginPoint(offset);
         flashItem->setPos(tItems[index]->pos());
+        flashItem->setRotation(tItems[index]->rotation());
     }
     if (type == "graphic") {
         flashItem->setRect(gItems[index]->boundingRect());
+        int w = static_cast<int>(gItems[index]->boundingRect().width());
+        int h = static_cast<int>(gItems[index]->boundingRect().height());
+        QPoint offset = anchorPointOffset(p->g[index].anchorPoint, w, h);
+        flashItem->setTransformOriginPoint(offset);
         flashItem->setPos(gItems[index]->pos());
+        flashItem->setRotation(gItems[index]->rotation());
     }
     /*
     qDebug() << __FUNCTION__

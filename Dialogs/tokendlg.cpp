@@ -285,6 +285,22 @@ TokenDlg::TokenDlg(QStringList &tokens,
                    index(index),
                    currentKey(currentKey)
 {
+/*
+    The TokenDlg is a tool to aggregate tokens to built larger strings of token data.  A token
+    is a placeholder/variable for a value from metadata and tokens are shown in curly brackets.
+    For example, the token {Filename} will be replaced with the file name for a specific image.
+    In addition to tokens, any other text, not surrounded by {} can also be included in the
+    token string.  For example {YYYY}-{MM} might equal 2021-08.  A token string is referred to
+    as a template.  Each template has a used defined name.  Templates can be deleted or
+    renamed.
+
+    The template token data is stored in a QMap and its keys are used to populate the
+    templateCB dropdown. The values are shown in tokenEdit. Since the keys (descriptions) can
+    be edited in templateCB (renaming) we need something to hold the QMap keys to sync
+    templatesCB, tokenEdit and the QMap. This is accomplished by also saving the keys in the
+    templateCB as tooltips. When the dialog closes via the Ok button the QMap is updated to
+    match any changes made to templatesCB and tokenEdit.
+*/
     ui->setupUi(this);
     this->title = title;
     setWindowTitle(title);
@@ -295,14 +311,6 @@ TokenDlg::TokenDlg(QStringList &tokens,
     // Populate token list
     for (const auto &i : tokens)
         ui->tokenList->addItem(i);
-
-    /* The template token data is stored in a QMap and its keys are used to
-    populate the templateCB dropdown. The values are shown in tokenEdit. Since
-    the keys (descriptions) can be edited in templateCB (renaming) we need
-    something to hold the QMap keys to sync templatesCB, tokenEdit and the
-    QMap. This is accomplished by also saving the keys in the templateCB as
-    tooltips. When the dialog closes via the Ok button the QMap is updated to
-    match any changes made to templatesCB and tokenEdit. */
 
     int row = 0;
     QMap<QString, QString>::iterator i;
@@ -359,10 +367,10 @@ void TokenDlg::updateTemplate()
 void TokenDlg::on_okBtn_clicked()
 {
 /*
-Check if any templates have been renamed. If so, make a new template QMap,
-using templatesCB to supply the new keys. Populate the values from the original
-template QMap, using the old keys which are retained in templatesCB in the
-toolTipRole. Then swap templatesMap with newTemplatesMap.
+    Check if any templates have been renamed. If so, make a new template QMap, using
+    templatesCB to supply the new keys. Populate the values from the original template QMap,
+    using the old keys which are retained in templatesCB in the toolTipRole. Then swap
+    templatesMap with newTemplatesMap.
 */
     QMap<QString, QString> newTemplatesMap;
     for (int i = 0; i < ui->templatesCB->count(); i++) {
@@ -372,7 +380,7 @@ toolTipRole. Then swap templatesMap with newTemplatesMap.
     }
     templatesMap.swap(newTemplatesMap);
     currentKey = ui->templatesCB->currentText();
-    accept();
+//    accept();
 }
 
 void TokenDlg::on_deleteBtn_clicked()
@@ -416,7 +424,7 @@ void TokenDlg::on_newBtn_clicked()
 void TokenDlg::on_renameBtn_clicked()
 {
 /*
-As noted in on_okBtn_clicked, renaming the template changes the QMap key.
+    As noted in on_okBtn_clicked, renaming the template changes the QMap key.
 */
     // current name
     int row = ui->templatesCB->currentIndex();
@@ -443,7 +451,7 @@ As noted in on_okBtn_clicked, renaming the template changes the QMap key.
 void TokenDlg::on_templatesCB_currentIndexChanged(int row)
 {
 /*
-Update tokenEdit with the template token string stored in templatesMap
+    Update tokenEdit with the template token string stored in templatesMap
 */
     QString key = ui->templatesCB->itemData(row, Qt::ToolTipRole).toString();
     if (templatesMap.contains(key))

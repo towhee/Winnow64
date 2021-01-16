@@ -1,0 +1,19 @@
+EMBELLISH INTRODUCTION
+   - Welcome to Winnow and an introduction to the embellish module
+   - Embellish has it's own panel
+   - Embellish allows you to add borders, text and graphics to your images.
+   - Show some examples
+   - Templates are like recipes, holding all the information for a specific set of embellish 
+     instructions
+   - Export supplies the information req'd to create new images with all embellishments
+   - A style is a group of one or more effects.
+   - Effects include shadow, emboss, stoke, brightness, highlight, blur and sharpness.
+   - General defines the final dimensions of the outer border, the direction of the light for 
+     shadows, and the style assigned to the image.
+   - Show borders, textx and graphics
+   - Show Expand all, collapse all, solo and expand recursively
+   - The embellish menu:
+     - Export creates new files for the images that are selected or picked with the embellishments
+     - Tiles are tiny images that are repeated tile-like to provide a pattern or texture to borders
+     - Winnets are small, stand-alone programs that work like droplets in Photoshop, that allow 
+       you to automatically embellish images exported from another program such as Lightroom.
