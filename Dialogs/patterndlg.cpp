@@ -251,12 +251,6 @@ void PatternDlg::updateMsg(QString txt)
 void PatternDlg::save()
 {
     qDebug() << __FUNCTION__ << "tile.size() =" << tile.size();
-//    bool ok;
-//    QInputDialog input;
-//    input.setFixedWidth(500);
-//    QString name = input.getText(this, tr("Tile extractor"),
-//                  tr("Enter tile name"), QLineEdit::Normal,
-//                  "", &ok);
     QStringList doNotUse;
     QString name = Utilities::inputText("Save tile", "Enter tile name", doNotUse);
     emit saveTile(name, &tile);

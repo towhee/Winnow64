@@ -333,6 +333,7 @@ signals:
     void aSyncGo(int);  // rgh req'd?
     void needToShow();
     void abortEmbelExport();
+    void abortHueReport();
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
@@ -586,6 +587,7 @@ private:
     QAction *runDropletAction;
     QAction *reportMetadataAction;
     QAction *mediaReadSpeedAction;
+    QAction *reportHueCountAction;
     QAction *exitAction;
 
     // Open with menu in File menu
@@ -1035,6 +1037,7 @@ private:
     void diagnosticsReport(QString reportString);
 
     void mediaReadSpeed();
+    void reportHueCount();
     void stressTest();
     void test();                    // for debugging
     template<typename T> void test2(T& io, int x);

@@ -8,10 +8,15 @@ class ColorAnalysis : public QObject
     Q_OBJECT
 
 public:
-    ColorAnalysis(QString &fPath, QObject *parent = nullptr);
+    ColorAnalysis(QObject *parent = nullptr);
+    void process(QStringList &fPathList);
+
+public slots:
+    void abortHueReport();
 
 private:
-    QString &fPath;
+//    QString &fPath;
+    bool abort = false;
 };
 
 #endif // COLORANALYSIS_H

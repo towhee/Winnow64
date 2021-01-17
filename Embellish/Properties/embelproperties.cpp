@@ -170,7 +170,7 @@ void EmbelProperties::initialize()
     blurEffectAction->setObjectName("blurEffectAction");
     connect(blurEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
-    sharpenEffectAction = new QAction(tr("Sharpness"), this);
+    sharpenEffectAction = new QAction(tr("Sharpen"), this);
     sharpenEffectAction->setObjectName("sharpenEffectAction");
     connect(sharpenEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
@@ -178,7 +178,7 @@ void EmbelProperties::initialize()
     brightnessEffectAction->setObjectName("brightnessEffectAction");
     connect(brightnessEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
-    highlighterEffectAction = new QAction(tr("Highlight"), this);
+    highlighterEffectAction = new QAction(tr("Highlighter"), this);
     highlighterEffectAction->setObjectName("highlighterEffectAction");
     connect(highlighterEffectAction, &QAction::triggered, this, &EmbelProperties::newEffect);
 
@@ -1953,7 +1953,6 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
         // also hidden on creation using updateHiddenRows(QModelIndex parent)
         if (v.toString() == "Image") {
             setRowHidden(row + 1, idx.parent(), true);  // anchor container
-            t[index].anchorContainer = "";
         }
         else {
             setRowHidden(row + 1, idx.parent(), false);
@@ -3199,6 +3198,9 @@ void EmbelProperties::addStyle(QString name, int n)
     // add to local map used in embel
 //    styleMap[styleName] = effects;
     sortEffectList(styleName);
+
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }
 
 void EmbelProperties::addBorderHeaderButtons()
@@ -3383,6 +3385,9 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
 
 //    effects.append(effect);
     styleMap[styleName].append(effect);
+
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }
 
 void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
@@ -3485,6 +3490,9 @@ void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
 
 //    effects.append(effect);
     styleMap[styleName].append(effect);
+
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }
 
 void EmbelProperties::addHighlighterEffect(QModelIndex parIdx, QString effectName)
@@ -3499,7 +3507,7 @@ void EmbelProperties::addHighlighterEffect(QModelIndex parIdx, QString effectNam
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::highlighter;
-//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
+    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::highlighter, "Highlighter");
     effect.effectName = effectName;
@@ -3698,7 +3706,7 @@ void EmbelProperties::addHighlighterEffect(QModelIndex parIdx, QString effectNam
     i.parentName = effectName;
     i.captionText = "Blend mode";
     i.tooltip = "The way this effect blends with other effects in the style.";
-    i.isIndent = true;;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "blendMode";
@@ -3718,6 +3726,9 @@ void EmbelProperties::addHighlighterEffect(QModelIndex parIdx, QString effectNam
 
 //    effects.append(effect);
     styleMap[styleName].append(effect);
+
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }
 
 void EmbelProperties::addStrokeEffect(QModelIndex parIdx, QString effectName)
@@ -3875,6 +3886,9 @@ void EmbelProperties::addStrokeEffect(QModelIndex parIdx, QString effectName)
 
 //    effects.append(effect);
     styleMap[styleName].append(effect);
+
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }
 
 void EmbelProperties::addGlowEffect(QModelIndex parIdx, QString effectName)
@@ -4056,6 +4070,9 @@ void EmbelProperties::addGlowEffect(QModelIndex parIdx, QString effectName)
 
 //    effects.append(effect);
     styleMap[styleName].append(effect);
+
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }
 
 void EmbelProperties::addBrightnessEffect(QModelIndex parIdx, QString effectName)
@@ -4156,6 +4173,9 @@ void EmbelProperties::addBrightnessEffect(QModelIndex parIdx, QString effectName
     addItem(i);
 
     styleMap[styleName].append(effect);
+
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }
 
 void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
@@ -4479,6 +4499,9 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
     addItem(i);
 
     styleMap[styleName].append(effect);
+
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }
 
 void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
@@ -4660,6 +4683,9 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
 
 //    effects.append(effect);
     styleMap[styleName].append(effect);
+
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }
 
 void EmbelProperties::newBorderFromBtn()
@@ -5324,26 +5350,6 @@ QString EmbelProperties::diagnostics()
     return reportString;
 }
 
-//void EmbelProperties::parseAlignToCorner(QString alignTo, int &iBorder, int &iCorner)
-//{
-///*
-//The string alignTo example: "Border2 BottomLeft".  We need to know the number of the border
-//and the corner.
-//*/
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    iBorder = alignTo.mid(6, 1).toInt() - 1;
-//    QString s = alignTo.right(alignTo.length() - 8);
-//    if (s == "TopLeft") iCorner = 0;
-//    if (s == "TopRight") iCorner = 1;
-//    if (s == "BottomLeft") iCorner = 2;
-//    if (s == "BottomRight") iCorner = 3;
-////    qDebug() << __FUNCTION__ << alignTo << s << iBorder << iCorner;
-//}
-
 void EmbelProperties::expandAllRows()
 {
     {
@@ -5680,6 +5686,9 @@ void EmbelProperties::addBorder(int count, QString borderName)
 
     // add the border info to the vector of borders
     b << border;
+
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }
 
 void EmbelProperties::addText(int count)
@@ -6153,6 +6162,9 @@ void EmbelProperties::addText(int count)
 
     // add the text info to the vector of texts t
     t << text;
+
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }
 
 void EmbelProperties::addGraphic(int count)
@@ -6469,4 +6481,6 @@ void EmbelProperties::addGraphic(int count)
     // add the graphic info to the vector of graphics g
     g << graphic;
 
+    // scoll to last item in new object (PropertyEditor::addItem updates capIdx)
+    scrollTo(capIdx);
 }

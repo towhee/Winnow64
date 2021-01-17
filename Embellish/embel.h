@@ -4,6 +4,7 @@
 #include <QtWidgets>
 //#include "Views/imageview.h"
 //#include "Embellish/embelexport.h"
+#include "Main/global.h"
 #include "Cache/imagecache.h"
 #include "Properties/embelproperties.h"
 #include "Effects/graphicseffect.h"

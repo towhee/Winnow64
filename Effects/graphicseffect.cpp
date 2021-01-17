@@ -166,7 +166,11 @@ void GraphicsEffect::draw(QPainter* painter)
 //    if (!okToDraw) return;
 //    okToDraw = false;
 
-    if (effects->length() == 0) return;
+//    qDebug() << __FUNCTION__ << "effects->length() =" << effects->length();
+
+//    if (effects->length() == 0) return;
+    if (this->sourcePixmap().isNull()) return;
+
     painter->save();
 
     QPoint srcOffset;
@@ -174,13 +178,14 @@ void GraphicsEffect::draw(QPainter* painter)
     // unpadded image is req'd for some effects like emboss
     unpaddedSrcImage = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, NoPad).toImage();
     srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, PadToEffectiveBoundingRect);
-//    srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, NoPad);
     overlay = srcPixmap.toImage();
-//    qDebug() << __FUNCTION__
-//             << "boundingRect =" << boundingRect()
-//             << "boundingRect.x() =" << boundingRect().x()
-//             << "overlay =" << overlay.rect()
-//                ;
+    /*
+    qDebug() << __FUNCTION__
+             << "boundingRect =" << boundingRect()
+             << "boundingRect.x() =" << boundingRect().x()
+             << "overlay =" << overlay.rect()
+                ;
+//                */
     overlay.save("D:/Pictures/Temp/effect/o0.tif");
 
 //    qDebug() << __FUNCTION__ << "draw overlay.width() =" << overlay.width();
@@ -319,7 +324,7 @@ void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 
 void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 {
-//    qDebug() << __FUNCTION__ << QTime::currentTime();
+    qDebug() << __FUNCTION__ << QTime::currentTime();
 
     if (overlay.isNull()) return;
 

@@ -16,26 +16,18 @@ QT += concurrent
 QT += xmlpatterns
 #QT += opengl
 
-HEADERS += Cache/imagecache.h \
-   Dialogs/copystyledlg.h \
-   Dialogs/managetilesdlg.h \
-   Effects/REF_imageblitz_effects.h \
-   Effects/graphicsitemeventfilter.h \
-   Effects/interpolate.h \
-HEADERS += Cache/mdcache.h \
-   Main/qtlocalpeer.h \
-   Main/qtlockedfile.h \
-   Main/qtsingleapplication.h \
-   Utilities/coloranalysis.h \
-   Utilities/htmlwindow.h
+HEADERS += Cache/imagecache.h
+HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/buildfilters.h
 HEADERS += Datamodel/datamodel.h
 HEADERS += Datamodel/filters.h
 HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/appdlg.h
+HEADERS += Dialogs/copystyledlg.h
 HEADERS += Dialogs/ingestdlg.h
 HEADERS += Dialogs/loadusbdlg.h
+HEADERS += Dialogs/managetilesdlg.h
 HEADERS += Dialogs/patterndlg.h
 HEADERS += Dialogs/preferencesdlg.h
 HEADERS += Dialogs/renamedlg.h
@@ -48,6 +40,9 @@ HEADERS += Dialogs/zoomdlg.h
 HEADERS += Effects/effects.h
 HEADERS += Effects/graphicseffect.h
 HEADERS += Embellish/embel.h
+HEADERS += Effects/graphicsitemeventfilter.h
+HEADERS += Effects/interpolate.h
+HEADERS += Effects/REF_imageblitz_effects.h
 HEADERS += Embellish/embelexport.h
 HEADERS += Embellish/Properties/embelproperties.h
 HEADERS += File/bookmarks.h
@@ -73,6 +68,9 @@ HEADERS += ImageFormats/Tiff/tiff.h
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
 HEADERS += Main/mainwindow.h
+HEADERS += Main/qtlocalpeer.h
+HEADERS += Main/qtlockedfile.h
+HEADERS += Main/qtsingleapplication.h
 HEADERS += Main/widgetcss.h
 HEADERS += Metadata/exif.h
 HEADERS += Metadata/irb.h
@@ -89,7 +87,9 @@ HEADERS += PropertyEditor/propertydelegate.h
 HEADERS += PropertyEditor/propertywidgets.h
 HEADERS += Utilities/bit.h
 HEADERS += Utilities/classificationlabel.h
+HEADERS += Utilities/coloranalysis.h
 HEADERS += Utilities/dropshadowlabel.h
+HEADERS += Utilities/htmlwindow.h
 win32:HEADERS += Utilities/icc.h
 mac:HEADERS += Utilities/mac.h
 HEADERS += Utilities/inputdlg.h
@@ -108,25 +108,17 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/imagecache.cpp \
-   Dialogs/copystyledlg.cpp \
-   Dialogs/managetilesdlg.cpp \
-   Effects/graphicsitemeventfilter.cpp \
-   Main/qtlocalpeer.cpp \
-   Main/qtlockedfile.cpp \
-   Main/qtlockedfile_unix.cpp \
-   Main/qtlockedfile_win.cpp \
-   Main/qtsingleapplication.cpp \
-   Utilities/coloranalysis.cpp \
-   Utilities/htmlwindow.cpp
+SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
 SOURCES += Dialogs/aboutdlg.cpp
 SOURCES += Dialogs/appdlg.cpp
+SOURCES += Dialogs/copystyledlg.cpp
 SOURCES += Dialogs/ingestdlg.cpp
 SOURCES += Dialogs/loadusbdlg.cpp
+SOURCES += Dialogs/managetilesdlg.cpp
 SOURCES += Dialogs/patterndlg.cpp
 SOURCES += Dialogs/preferencesdlg.cpp
 SOURCES += Dialogs/renamedlg.cpp
@@ -138,6 +130,7 @@ SOURCES += Dialogs/workspacedlg.cpp
 SOURCES += Dialogs/zoomdlg.cpp
 SOURCES += Effects/effects.cpp
 SOURCES += Effects/graphicseffect.cpp
+SOURCES += Effects/graphicsitemeventfilter.cpp
 SOURCES += Embellish/embel.cpp
 SOURCES += Embellish/Properties/embelproperties.cpp
 SOURCES += Embellish/embelexport.cpp
@@ -162,6 +155,11 @@ SOURCES += Main/dockwidget.cpp
 SOURCES += Main/global.cpp
 SOURCES += Main/main.cpp
 SOURCES += Main/mainwindow.cpp
+SOURCES += Main/qtlocalpeer.cpp
+SOURCES += Main/qtlockedfile.cpp
+SOURCES += Main/qtlockedfile_unix.cpp
+SOURCES += Main/qtlockedfile_win.cpp
+SOURCES += Main/qtsingleapplication.cpp
 SOURCES += Main/widgetcss.cpp
 SOURCES += Metadata/exif.cpp
 SOURCES += Metadata/irb.cpp
@@ -177,7 +175,9 @@ SOURCES += PropertyEditor/propertydelegate.cpp
 SOURCES += PropertyEditor/propertywidgets.cpp
 SOURCES += Utilities/bit.cpp
 SOURCES += Utilities/classificationlabel.cpp
+SOURCES += Utilities/coloranalysis.cpp
 SOURCES += Utilities/dropshadowlabel.cpp
+SOURCES += Utilities/htmlwindow.cpp
 win32:SOURCES += Utilities/icc.cpp
 mac:SOURCES += Utilities/mac.cpp
 SOURCES += Utilities/inputdlg.cpp
@@ -196,17 +196,17 @@ SOURCES += Views/infoview.cpp
 SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
 
-FORMS += Dialogs/aboutdlg.ui \
-   Dialogs/copystyledlg.ui \
-   Dialogs/managetilesdlg.ui \
-   Dialogs/patterndlg.ui \
-   Embellish/embelCoord.ui \
-   Utilities/inputdlg.ui
+FORMS += Dialogs/aboutdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
+FORMS += Dialogs/copystyledlg.ui
+FORMS += Embellish/embelCoord.ui
 FORMS += Dialogs/ingestdlg.ui
-FORMS += Dialogs/ingestdlg_copy.ui
+FORMS += Utilities/inputdlg.ui
+#FORMS += Dialogs/ingestdlg_copy.ui
 FORMS += Dialogs/loadusbdlg.ui
+FORMS += Dialogs/managetilesdlg.ui
+FORMS += Dialogs/patterndlg.ui
 FORMS += Dialogs/renamedlg.ui
 FORMS += Dialogs/saveasdlg.ui
 FORMS += Dialogs/testaligndlg.ui
@@ -230,9 +230,7 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/ingestautopath \
-   notes/ImageMagick \
-   notes/users.txt
+DISTFILES += Docs/ingestautopath
 DISTFILES += Docs/ingestautopath.html
 DISTFILES += Docs/versions
 DISTFILES += Docs/test.html
@@ -243,6 +241,8 @@ DISTFILES += notes/ExiftoolCommands.txt
 DISTFILES += notes/git.txt
 DISTFILES += notes/help_videos_on_mac.txt
 DISTFILES += notes/HelpDocCreation.txt
+DISTFILES += notes/HelpVideoNotes.txt
+DISTFILES += notes/ImageMagick
 DISTFILES += notes/hevcinfo
 DISTFILES += notes/Menu.txt
 DISTFILES += notes/scratch.css
@@ -250,6 +250,7 @@ DISTFILES += notes/scratch.html
 DISTFILES += notes/Scratch.txt
 DISTFILES += notes/Shortcuts.txt
 DISTFILES += notes/snippets.txt
+DISTFILES += notes/users.txt
 DISTFILES += notes/xmp.txt
 
 #include(Lib/zlib/zlib.pri)

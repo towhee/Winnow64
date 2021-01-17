@@ -504,6 +504,8 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // hide a popup message
         if (G::popUp->isVisible()) {
             emit abortEmbelExport();
+            emit abortHueReport();
+            G::popUp->setProgressVisible(false);
             G::popUp->hide();
             return;
         }
@@ -2299,6 +2301,12 @@ void MW::createActions()
     addAction(mediaReadSpeedAction);
     connect(mediaReadSpeedAction, &QAction::triggered, this, &MW::mediaReadSpeed);
 
+    reportHueCountAction = new QAction(tr("Report hue count"), this);
+    reportHueCountAction->setObjectName("reportHueCount");
+    reportHueCountAction->setShortcutVisibleInContextMenu(true);
+    addAction(reportHueCountAction);
+    connect(reportHueCountAction, &QAction::triggered, this, &MW::reportHueCount);
+
     // Appears in Winnow menu in OSX
     exitAction = new QAction(tr("Exit"), this);
     exitAction->setObjectName("exit");
@@ -3378,6 +3386,7 @@ void MW::createMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(reportMetadataAction);
     fileMenu->addAction(mediaReadSpeedAction);
+    fileMenu->addAction(reportHueCountAction);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);    // Appears in Winnow menu in OSX
 
@@ -11285,6 +11294,50 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     return true;
 }
 
+void MW::reportHueCount()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+
+    QStringList picks;
+
+    // build QStringList of picks
+    if (thumbView->isPick()) {
+        for (int row = 0; row < dm->sf->rowCount(); ++row) {
+            QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
+            QModelIndex idx = dm->sf->index(row, 0);
+            // only picks
+            if (pickIdx.data(Qt::EditRole).toString() == "true") {
+                picks << idx.data(G::PathRole).toString();
+            }
+        }
+    }
+
+    // build QStringList of selected images
+    else if (selectionModel->selectedRows().size() > 0) {
+        QModelIndexList idxList = selectionModel->selectedRows();
+        for (int i = 0; i < idxList.size(); ++i) {
+            int row = idxList.at(i).row();
+            QModelIndex idx = dm->sf->index(row, 0);
+            picks << idx.data(G::PathRole).toString();
+        }
+    }
+
+    if (picks.size() == 0)  {
+        QMessageBox::information(this,
+            "Oops", "There are no picks or selected images to report.    ",
+            QMessageBox::Ok);
+        return;
+    }
+
+    ColorAnalysis hueReport;
+    connect(this, &MW::abortHueReport, &hueReport, &ColorAnalysis::abortHueReport);
+    hueReport.process(picks);
+}
+
 void MW::mediaReadSpeed()
 {
     {
@@ -11381,15 +11434,15 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString folderPath = "D:/Pictures/Temp/LightroomExport";
-    QStringList fileFilters;
-    foreach (const QString &str, metadata->supportedFormats)
-            fileFilters.append("*." + str);
-    QDir dir;
-    dir.setNameFilters(fileFilters);
-    dir.setFilter(QDir::Files);
-    dir.setPath(folderPath);
-    qDebug() << __FUNCTION__ << dir.entryInfoList().size();
+//    QString folderPath = "D:/Pictures/Temp/LightroomExport";
+//    QStringList fileFilters;
+//    foreach (const QString &str, metadata->supportedFormats)
+//            fileFilters.append("*." + str);
+//    QDir dir;
+//    dir.setNameFilters(fileFilters);
+//    dir.setFilter(QDir::Files);
+//    dir.setPath(folderPath);
+//    qDebug() << __FUNCTION__ << dir.entryInfoList().size();
 
 
 //    QDebug bug = qDebug().noquote().nospace();
@@ -11398,7 +11451,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    bug << "\n";
 //    bug << "start new line";
 
-//    ColorAnalysis a(dm->currentFilePath);
 //    qDebug() << __FUNCTION__ << t.elapsed();
 
 //    embelProperties->test1();
