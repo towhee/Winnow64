@@ -197,6 +197,8 @@ void Embel::build(QString path, QString src)
     QElapsedTimer t;
     t.start();
 
+    if (G::mode != "Loupe") return;
+
     if (p->templateId == 0) {
         doNotEmbellish();
         return;
@@ -607,7 +609,7 @@ void Embel::updateBorder(int i)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
+    if (G::mode != "Loupe") return;
 
     bItems[i]->setRect(0, 0, b[i].w, b[i].h);
     QColor color;
@@ -629,17 +631,18 @@ void Embel::updateBorder(int i)
     bItems[i]->setPos(b[i].x, b[i].y);
     bItems[i]->setZValue(ZBorder);
 
+    bool isEffects = (p->styleMap[p->b[i].style].size() > 0);
+    bool legalStyle = (p->b[i].style != "No style" && p->b[i].style != "");
+    bool hasStyle = p->styleMap.contains(p->b[i].style);
+
     // graphics effects
-    if (p->b[i].style != "No style" && p->b[i].style != "") {
-        // make sure style exists
-        if (p->styleMap.contains(p->b[i].style)) {
-            GraphicsEffect *effect = new GraphicsEffect();
-            effect->set(p->styleMap[p->b[i].style],
-                        p->lightDirection,
-                        0,  /* rotation */
-                        bItems[i]->boundingRect());
-            bItems[i]->setGraphicsEffect(effect);
-        }
+    if (hasStyle && legalStyle && isEffects) {
+        GraphicsEffect *effect = new GraphicsEffect();
+        effect->set(p->styleMap[p->b[i].style],
+                    p->lightDirection,
+                    0,  /* rotation */
+                    bItems[i]->boundingRect());
+        bItems[i]->setGraphicsEffect(effect);
     }
     else bItems[i]->setGraphicsEffect(nullptr);
 }
@@ -651,7 +654,7 @@ void Embel::updateText(int i)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__/* << QTime::currentTime()*/ << i;
+    if (G::mode != "Loupe") return;
 
     // if a text entry
     if (p->t[i].source == "Text") {
@@ -705,19 +708,20 @@ void Embel::updateText(int i)
     // if style then rotate in GraphicsEffect, else rotate text here
     double rotation = p->t[i].rotation;
 
+    bool isEffects = (p->styleMap[p->t[i].style].size() > 0);
+    bool legalStyle = (p->t[i].style != "No style" && p->t[i].style != "");
+    bool hasStyle = p->styleMap.contains(p->t[i].style);
+
     // graphics effects
     tItems[i]->setGraphicsEffect(nullptr);
-    if (p->t[i].style != "No style" && p->t[i].style != "") {
-        // make sure style exists
-        if (p->styleMap.contains(p->t[i].style)) {
-            GraphicsEffect *effect = new GraphicsEffect();
+    if (hasStyle && legalStyle && isEffects) {
+        GraphicsEffect *effect = new GraphicsEffect();
 //            effect->setObjectName("Text" + QString::number(i));
-            effect->set(p->styleMap[p->t[i].style],
-                    p->lightDirection,
-                    rotation,
-                    tItems[i]->boundingRect());
-            tItems[i]->setGraphicsEffect(effect);
-        }
+        effect->set(p->styleMap[p->t[i].style],
+                p->lightDirection,
+                rotation,
+                tItems[i]->boundingRect());
+        tItems[i]->setGraphicsEffect(effect);
     }
     tItems[i]->setRotation(rotation);
 }
@@ -729,7 +733,7 @@ void Embel::updateGraphic(int i)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << QTime::currentTime() << i;
+    if (G::mode != "Loupe") return;
 
     gItems[i]->setZValue(ZGraphic);
     double opacity = static_cast<double>(p->g[i].opacity)/100;
@@ -773,18 +777,19 @@ void Embel::updateGraphic(int i)
     // if style then rotate in GraphicsEffect, else rotate text here
     double rotation = p->g[i].rotation;
 
+    bool isEffects = (p->styleMap[p->g[i].style].size() > 0);
+    bool legalStyle = (p->g[i].style != "No style" && p->g[i].style != "");
+    bool hasStyle = p->styleMap.contains(p->g[i].style);
+
     // graphics effects
-    if (p->g[i].style != "No style" && p->g[i].style != "") {
-        // make sure style exists
-        if (p->styleMap.contains(p->g[i].style)) {
-            GraphicsEffect *effect = new GraphicsEffect();
+    if (hasStyle && legalStyle && isEffects) {
+        GraphicsEffect *effect = new GraphicsEffect();
 //            effect->setObjectName("Graphic" + QString::number(i));
-            effect->set(p->styleMap[p->g[i].style],
-                    p->lightDirection,
-                    rotation,
-                    gItems[i]->boundingRect());
-            gItems[i]->setGraphicsEffect(effect);
-        }
+        effect->set(p->styleMap[p->g[i].style],
+                p->lightDirection,
+                rotation,
+                gItems[i]->boundingRect());
+        gItems[i]->setGraphicsEffect(effect);
     }
     else {
         gItems[i]->setGraphicsEffect(nullptr);
@@ -799,31 +804,31 @@ void Embel::updateImage()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << QTime::currentTime() << p->image.style;
+    if (G::mode != "Loupe") return;
+
+    bool isEffects = (p->styleMap[p->image.style].size() > 0);
+    bool legalStyle = (p->image.style != "No style" && p->image.style != "");
+    bool hasStyle = p->styleMap.contains(p->image.style);
 
     // graphics effects
-    if (p->image.style != "No style" && p->image.style != "") {
-        // make sure style exists
-        if (p->styleMap.contains(p->image.style)) {
-            // start with a fresh image from the ImageCache
-            if (imCache->imCache.contains(fPath)) {
-                pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
-            }
-//            qDebug() << __FUNCTION__ << "pmItem->pixmap().rect() =" << pmItem->pixmap().rect();
-            GraphicsEffect *effect = new GraphicsEffect();
-            effect->setObjectName("EmbelImageEffect");
-            /*
-            qDebug() << __FUNCTION__
-                     << "effect =" << effect
-                     << "p->image.style =" << p->image.style;
-//                     */
-            effect->set(p->styleMap[p->image.style],
-                    p->lightDirection,
-                    0,
-                    pmItem->pixmap().rect()
-                    );
-            pmItem->setGraphicsEffect(effect);
+    if (hasStyle && legalStyle && isEffects) {
+        // start with a fresh image from the ImageCache
+        if (imCache->imCache.contains(fPath)) {
+            pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
         }
+        GraphicsEffect *effect = new GraphicsEffect();
+        effect->setObjectName("EmbelImageEffect");
+        /*
+        qDebug() << __FUNCTION__
+                 << "effect =" << effect
+                 << "p->image.style =" << p->image.style;
+//                     */
+        effect->set(p->styleMap[p->image.style],
+                p->lightDirection,
+                0,
+                pmItem->pixmap().rect()
+                );
+        pmItem->setGraphicsEffect(effect);
     }
     else pmItem->setGraphicsEffect(nullptr);
 }
@@ -901,6 +906,8 @@ void Embel::updateStyle(QString style)
     G::track(__FUNCTION__);
     #endif
     }
+    if (G::mode != "Loupe") return;
+
     // update any borders with this style
     for (int i = 0; i < bItems.size(); ++i) {
         if (p->b[i].style == style) updateBorder(i);
@@ -927,7 +934,8 @@ void Embel::flashObject(QString type, int index, bool show)
     G::track(__FUNCTION__);
     #endif
     }
-//    if (index < 1) return;
+    if (G::mode != "Loupe") return;
+
     flashItem->setVisible(show);
     if (!show) return;
     if (type == "border") {

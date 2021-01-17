@@ -375,3 +375,13 @@ Makefile.Release
 *.pdb
 Makefile.Debug
 Makefile.Release
+*.exe
+*.exe
+debug/Winnow.exe
+debug/Winnow.pdb
+Dialogs/patterndlg.cpp.autosave
+Main/qtlocalpeer.cpp.autosave
+Makefile.Release
+debug/Winnow.exe
+debug/Winnow.pdb
+Makefile.Release

@@ -1,5 +1,10 @@
 BUGS
-- Crash after using token editor from text in embelProperties
+- If delete all effects for a style the image or object can disappear
+- Highlighter opacity not always used
+- Flash object sometimes flashes wrong object
+- Umbra gradient on Mac weird effect
+- Add graphic when at bottom of dock - may not scroll to see new graphic.
+- When rename a template the menu is not updated
 - Sometimes effect controls to not trigger effect changes
 - Eliminate shadow blur in sunward direction
 - Focus shift away from Embellish when mouseover central widget or thumbdock
@@ -39,6 +44,11 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Add highlighter and sharpness not working
+- Check text if in image then switch to border1 top.  May go to bottom.
+- Token editor text input box not darker than background
+- Embellish will crash when edit if not in Loupe mode
+- Crash after using token editor from text in embelProperties
 - FlashObject rectangle wrong depending on text justification
 - Trim metadata strings before concatenate
 - Rename metadata template not working

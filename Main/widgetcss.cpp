@@ -668,7 +668,7 @@ QString WidgetCSS::lineEdit()
 {
     return
     "QLineEdit {"
-//        "background-color: " + QColor(d10,d10,d10).name() + ";"
+        "background-color: " + QColor(d10,d10,d10).name() + ";"
 //        "border: 1px solid gray;"
         "margin-left: 5px;"   /*Not sure why, but this is required*/
 //        "selection-background-color: darkgray;"

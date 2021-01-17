@@ -183,6 +183,7 @@ void PopUp::setProgressVisible(bool isVisible)
 void PopUp::setProgressMax(int maxProgress)
 {
     progressBar.setMaximum(maxProgress);
+    progressBar.setMinimum(0);
 }
 
 void PopUp::setProgress(int progress)
