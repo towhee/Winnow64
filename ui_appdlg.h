@@ -147,7 +147,7 @@ public:
 #endif // QT_CONFIG(tooltip)
         addBtn->setText(QCoreApplication::translate("Appdlg", "Add Program", nullptr));
 #if QT_CONFIG(tooltip)
-        removeBtn->setToolTip(QCoreApplication::translate("Appdlg", "Remove the selected program form the table", nullptr));
+        removeBtn->setToolTip(QCoreApplication::translate("Appdlg", "Remove the selected program from the table", nullptr));
 #endif // QT_CONFIG(tooltip)
         removeBtn->setText(QCoreApplication::translate("Appdlg", "Remove Program", nullptr));
 #if QT_CONFIG(tooltip)

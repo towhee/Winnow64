@@ -110,7 +110,7 @@ Code examples for model:
     // to edit a value in the model
     dm->sf->setData(index(row, G::RotationColumn), value);
 
-    // edit a isCached role in model based on file path
+    // edit an isCached role in model based on file path
     QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath);
     QModelIndex idx = idxList[0];
     dm->sf->setData(idx, iscached, G::CachedRole);

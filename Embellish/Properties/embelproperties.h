@@ -131,6 +131,7 @@ public slots:
 
 signals:
     void templateChanged(int id);
+    void templateRenamed();
 
 protected:
     void mouseMoveEvent(QMouseEvent *event) override;   // does not work here

@@ -92,14 +92,15 @@ class MW : public QMainWindow
     friend class EmbelProperties;   // mw3
 
 public:
-    MW(/*QApplication &app, */QWidget *parent = nullptr);
+    MW(const QString args, QWidget *parent = nullptr);
 
+    bool isStartupArgs = false;
     bool isReleaseVersion = true;
     bool hideEmbellish = false;
 
-    QString version = "Version: 1.12";
+    QString version = "Version: 1.13 Beta";
 //    QString version = "Version: 1.10 released 2020-06-04";
-    QString winnowWithVersion = "Winnow 1.12";
+    QString winnowWithVersion = "Winnow 1.13 Beta";
     QString website = "Website: "
             "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"
@@ -997,6 +998,7 @@ private:
     void addBookmark(QString path);
     void populateWorkspace(int n, QString name);
     void syncWorkspaceMenu();
+    void syncEmbellishMenu();
     void getSubfolders(QString fPath);
     QString getPosition();
     QString getZoom();

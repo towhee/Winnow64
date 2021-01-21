@@ -132,7 +132,7 @@
      <item>
       <widget class="QPushButton" name="removeBtn">
        <property name="toolTip">
-        <string>Remove the selected program form the table</string>
+        <string>Remove the selected program from the table</string>
        </property>
        <property name="text">
         <string>Remove Program</string>

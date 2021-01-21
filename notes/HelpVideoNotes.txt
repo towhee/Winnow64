@@ -1,8 +1,8 @@
 EMBELLISH INTRODUCTION
    - Welcome to Winnow and an introduction to the embellish module
-   - Embellish has it's own panel
    - Embellish allows you to add borders, text and graphics to your images.
    - Show some examples
+   - Embellish has it's own panel
    - Templates are like recipes, holding all the information for a specific set of embellish 
      instructions
    - Export supplies the information req'd to create new images with all embellishments
@@ -17,3 +17,17 @@ EMBELLISH INTRODUCTION
      - Tiles are tiny images that are repeated tile-like to provide a pattern or texture to borders
      - Winnets are small, stand-alone programs that work like droplets in Photoshop, that allow 
        you to automatically embellish images exported from another program such as Lightroom.
+
+EMBELLISH COORDINATE SYSTEM
+   -
+WELCOME TO WINNOW AND USING THE METADATA TOKEN EDITOR IN EMBELLISH
+
+WELCOME TO WINNOW AND HOW TO USE THE EMBOSS EFFECT
+
+WELCOME TO WINNOW AND HOW TO EMBELLISH AN IMAGE
+   - SUGGEST YOU VIEW THE VIDEOS
+      - INTRODUCTION TO EMBELLISH
+      - EMBELLISH COORDINATE SYSTEM
+      - EMBELLISH TILES
+      - EMBELLISH METADATA TOKEN EDITOR
+      - EMBELLISH EMBOSS EFFECT
