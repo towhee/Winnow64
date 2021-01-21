@@ -844,6 +844,8 @@ void EmbelProperties::renameCurrentTemplate()
     readTemplateList();
     templateListEditor->refresh(templateList);
     templateListEditor->setValue(name);
+    // sync the embellish menu
+    emit templateRenamed();
 }
 
 void EmbelProperties::setCurrentTemplate(QString name)
@@ -3651,7 +3653,7 @@ void EmbelProperties::addHighlighterEffect(QModelIndex parIdx, QString effectNam
     i.parentName = effectName;
     i.captionText = "Opacity";
     i.tooltip = "The opacity of the highlighter.";
-    i.isIndent = true;;
+    i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "opacity";
@@ -4887,7 +4889,10 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
 
     if (parName == "Texts") {
         e->removeText(row);
-         if (row < t.size()) t.remove(row);
+         if (row < t.size()) {
+             t.remove(row);
+             textMetadataTemplateObjectEditor.remove(row);
+         }
     }
 
     if (parName == "Graphics") {
@@ -5080,12 +5085,17 @@ void EmbelProperties::mouseMoveEvent(QMouseEvent *event)
         idx.parent().parent() == graphicsIdx
        )
     {
-//        static int count = 0;
-//        qDebug() << __FUNCTION__ << count
-//                 << idx.data().toString()
-//                 << idx.parent().data().toString()
-//                 << idx.parent().parent().data().toString()
-//                    ;
+        /*
+        static int count = 0;
+        qDebug() << __FUNCTION__ << count
+                 << idx.data().toString()
+                 << idx.parent().data().toString()
+                 << idx.parent().parent().data().toString()
+                    ;
+//                    */
+        if (idx.parent().parent() == bordersIdx) idx = idx.parent();
+        if (idx.parent().parent() == textsIdx) idx = idx.parent();
+        if (idx.parent().parent() == graphicsIdx) idx = idx.parent();
         flash(idx);
     }
 }

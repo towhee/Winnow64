@@ -110,10 +110,12 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     // set the embellish template, which updates all the parameters
     embelProperties->setCurrentTemplate(templateName);
 
-    // export the file(s)
-    for (int i = 0; i < pathList.length(); i++) {
-        exportImage(pathList.at(i));
-    }
+//    // export the file(s)
+//    for (int i = 0; i < pathList.length(); i++) {
+//        exportImage(pathList.at(i));
+//    }
+
+    exportImages(pathList);
 
     int n = pathList.length() - 1;
     QString fPath = pathList.at(n);
@@ -130,7 +132,7 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     Utilities::log(__FUNCTION__, "fPath =" + fPath);
     Utilities::log(__FUNCTION__, "exportFolderPath(fPath) =" + exportFolderPath(fPath));
     */
-    delete embellish;
+//    delete embellish;
 
     return lastFileExportedPath;
 }

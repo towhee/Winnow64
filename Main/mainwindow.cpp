@@ -195,7 +195,7 @@ there does not appear to be any signal or event when ListView is finished hence 
 
 */
 
-MW::MW(QWidget *parent) : QMainWindow(parent)
+MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
     {
     #ifdef ISDEBUG
@@ -211,6 +211,12 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
         G::isEmbellish = false;
         qDebug() << __FUNCTION__ << "isShift == true";
     }
+
+    // check args to see if program was started by another process (winnet)
+    QString delimiter = "\n";
+    QStringList argList = args.split(delimiter);
+    if (argList.length() > 1) isStartupArgs = true;
+    Utilities::log(__FUNCTION__, QString::number(argList.length()) + " arguments");
 
     /* TESTING / DEBUGGING FLAGS
        Note ISDEBUG is in globals.h
@@ -232,7 +238,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     setting = new QSettings("Winnow", "winnow_100");
     if (setting->contains("cacheSizeMB") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
-    loadSettings();             //dependent on bookmarks, actions, infoView
+    loadSettings();             // except settings with dependencies ie for actions not created yet
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
     setting->setValue("appPath", qApp->applicationDirPath());
 
@@ -260,7 +266,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     createActions();            // dependent on above
     createMenus();              // dependent on createActions and loadSettings
 
-    loadShortcuts(true);            // dependent on createActions
+    loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
     setActualDevicePixelRatio();
 
@@ -270,7 +276,7 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     // intercept events to thumbView to monitor splitter resize of thumbDock
     qApp->installEventFilter(this);
 
-    // if isShift then set "Do not Embellish".  Note other isShift in MW::showEvent.
+    // if isShift then set "Do not Embellish".  Note isShift also used in MW::showEvent.
     if (isShift) {
         embelTemplatesActions.at(0)->setChecked(true);
         embelProperties->doNotEmbellish();
@@ -282,30 +288,30 @@ MW::MW(QWidget *parent) : QMainWindow(parent)
     else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
 //    if (sortColumn > 0) sortChange();
 
-    // process the persistant folder if available
-    if (rememberLastDir && !isShift) {
-        if (isFolderValid(lastDir, true, true)) {
-            fsTree->select(lastDir);
-            folderSelectionChange();
-        }
-    }
-
-//    handleStartupArgs();
-
-    if (!isSettings) centralLayout->setCurrentIndex(StartTab);
-    else {
-        QString msg = "Select a folder or bookmark to get started.";
-        setCentralMessage(msg);
-        prevMode = "Loupe";
-    }
-
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
-#ifdef ISDEBUG
-G::track(__FUNCTION__);
-#endif
 
-    show();
+    if (isStartupArgs) {
+        handleStartupArgs(args);
+    }
+    else {
+        // process the persistant folder if available
+        if (rememberLastDir && !isShift) {
+            if (isFolderValid(lastDir, true, true)) {
+                fsTree->select(lastDir);
+                folderSelectionChange();
+            }
+        }
+
+        if (!isSettings) centralLayout->setCurrentIndex(StartTab);
+        else {
+            QString msg = "Select a folder or bookmark to get started.";
+            setCentralMessage(msg);
+            prevMode = "Loupe";
+        }
+
+        show();
+    }
 }
 
 void MW::initialize()
@@ -394,7 +400,7 @@ void MW::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
 
     // check for updates
-    if(checkIfUpdate) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
+    if(checkIfUpdate && !isStartupArgs) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
 
     // show image count in folder panel if no folder selected
     if (!rememberLastDir) QTimer::singleShot(50, fsTree, SLOT(getImageCount()));
@@ -407,8 +413,6 @@ void MW::showEvent(QShowEvent *event)
 
     // set initial visibility
     embelTemplateChange(embelProperties->templateId);
-
-//    sortChange();
 
     G::isInitializing = false;
 }
@@ -890,7 +894,7 @@ void MW::handleStartupArgs(const QString &args)
 /*
     Argument options:
 
-    arg[0] = system parameter - usually path to executing program (Winnow)
+    arg[0]     = system parameter - usually path to executing program (Winnow)
 
     if arg[1]  = "Embellish" then
        arg[2]  = templateName (also name on Winnet used to send to Winnow)
@@ -914,11 +918,13 @@ void MW::handleStartupArgs(const QString &args)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << args;
-
     if (args.length() < 2) return;
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
+
+    Utilities::log(__FUNCTION__, QString::number(argList.length()) + " arguments");
+    Utilities::log(__FUNCTION__, args);
+
     /*
     QString msg;
     for (int i = 1; i < argList.length(); ++i) {
@@ -932,17 +938,23 @@ void MW::handleStartupArgs(const QString &args)
     QStringList pathList;
     QString templateName;
     if (argList.at(1) == "Embellish") {
+        /* show main window now.  If we don't, then the update progress popup will not be
+        visible.  If there is a significant delay, when a lot of images have to be processed,
+        this would be confusing for the user.  */
+        show();
+        qApp->processEvents();
+
         // check if any image path sent, if not, return
         if (argList.length() < 4) return;
+        // get the embellish template to use
         templateName = argList.at(2);
-        /* get lastModified time for first file, then choose all files in the folder that
-           are Winnow supported formats and have been modified after the first file.  This
-           allows unlimited files to be received, getting around the command argument buffer
-           limited size.  */
+
+        Utilities::log(__FUNCTION__, "Template to use: " + templateName);
+
+        // get the folder where the files to embellish are located
         QFileInfo info(argList.at(3));
         QString folderPath = info.dir().absolutePath();
-        // time first file last modified
-        QDateTime t = info.lastModified();
+
         // list of all supported files in the folder
         QStringList fileFilters;
         foreach (const QString &str, metadata->supportedFormats)
@@ -950,30 +962,84 @@ void MW::handleStartupArgs(const QString &args)
         QDir dir;
         dir.setNameFilters(fileFilters);
         dir.setFilter(QDir::Files);
+        dir.setSorting(QDir::Time /*| QDir::Reversed*/);
         dir.setPath(folderPath);
-        Utilities::log(__FUNCTION__, QString::number(dir.entryInfoList().size()) + " files " +
-                       folderPath + "  " + t.toString("yyyy-MM-dd hh:mm:ss"));
+
+        /* Get earliest lastModified time (t) for incoming files, then choose all files in the
+        folder that are Winnow supported formats and have been modified after (t). This allows
+        unlimited files to be received, getting around the command argument buffer limited
+        size. */
+
+        /* The earliest modified date for incoming files is a little bit tricky.  The incoming
+        files have been saved to the folder folderPath by the exporting program (ie lightroom).
+        However, this folder might already have existing files.  If the command argument
+        buffer has been exceeded then the argument list may not contain the earliest modified
+        file.  To determine which files are part of the incoming the modified date of the first
+        file in the command argument buffer is used as a seed value, and any file with a
+        modified date up to 10 seconds earlier becomes the new seed value.  After reviewing all
+        the eligible files in folderPath the seed value will be the earliest modified incoming
+        file.   */
+
+        // get seed time (t) to start
+        info = dir.entryInfoList().at(0);
+        QDateTime t = info.lastModified();
+        // tMinus10 is ten seconds earlier
+        QDateTime tMinus10;
         for (int i = 0; i < dir.entryInfoList().size(); ++i) {
-            QFileInfo f = dir.entryInfoList().at(i);
-//            Utilities::log(__FUNCTION__, f.filePath() + "  " +
-//                           f.lastModified().toString("yyyy-MM-dd hh:mm:ss"));
-//            // only add files just modified
-            if (f.lastModified() >= t) {
-                pathList << f.filePath();
-                QString msg = "Adding " + QString::number(i) + " " + f.absolutePath() +
-                        "  " + f.lastModified().toString("yyyy-MM-dd hh:mm:ss");
+            QString fPath = dir.entryInfoList().at(i).absoluteFilePath();
+            info.setFile(fPath);
+            QDateTime tThis = info.lastModified();
+            QDateTime tOld = t;
+            // time first file last modified
+            tMinus10 = t.addSecs(-10);
+            if (tThis < t && tThis > tMinus10) t = tThis;
+            /*
+            qDebug() << __FUNCTION__
+                     << i
+                     << "tOld =" << tOld.toString("yyyy-MM-dd hh:mm:ss")
+                     << "tMinus10 =" << tMinus10.toString("yyyy-MM-dd hh:mm:ss")
+                     << "tThis =" << tThis.toString("yyyy-MM-dd hh:mm:ss")
+                     << "t =" << t.toString("yyyy-MM-dd hh:mm:ss")
+                     << fPath
+                        ;
+//                        */
+            QString msg = QString::number(i).rightJustified(3) +
+                          " tOld = " + tOld.toString("yyyy-MM-dd hh:mm:ss") +
+                          " tMinus10 = " + tMinus10.toString("yyyy-MM-dd hh:mm:ss") +
+                          " tThis = " + tThis.toString("yyyy-MM-dd hh:mm:ss") +
+                          " t = " + t.toString("yyyy-MM-dd hh:mm:ss") +
+                          "  " + fPath
+                          ;
+            Utilities::log(__FUNCTION__, msg);
+        }
+
+        Utilities::log(__FUNCTION__, QString::number(dir.entryInfoList().size()) + " files " +
+                       folderPath + "  Cutoff = " + t.toString("yyyy-MM-dd hh:mm:ss"));
+
+        // add the recently modified incoming files to pathList
+        for (int i = 0; i < dir.entryInfoList().size(); ++i) {
+            info = dir.entryInfoList().at(i);
+            // only add files just modified
+            if (info.lastModified() >= t) {
+                pathList << info.filePath();
+                QString msg = QString::number(i) +
+                        " Adding " + info.lastModified().toString("yyyy-MM-dd hh:mm:ss") +
+                        " " + info.filePath();
                 Utilities::log(__FUNCTION__, msg);
             }
         }
 
-//        for (int i = 3; i < argList.length(); i++) {
-//            pathList << argList.at(i);
-//            Utilities::log(__FUNCTION__, argList.at(i));
-//        }
+        // create an instance of EmbelExport and process the incoming
         EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
 
+        // get the location for the embellished files
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
+        info.setFile(fPath);
+        QString fDir = info.dir().absolutePath();
+        // go there ...
+        fsTree->select(fDir);
         folderAndFileSelectionChange(fPath);
+        loupeDisplay();
     }
     else {
         QFileInfo f(argList.at(1));
@@ -981,6 +1047,7 @@ void MW::handleStartupArgs(const QString &args)
         fsTree->select(f.dir().path());
         folderSelectionChange();
     }
+    return;
 }
 
 void MW::folderSelectionChange()
@@ -4299,7 +4366,6 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
         if (setting->contains("currentInfoTemplate")) infoString->currentInfoTemplate = setting->value("currentInfoTemplate").toString();
         setting->beginGroup("InfoTemplates");
         QStringList keys = setting->childKeys();
-        qDebug() << __FUNCTION__ << keys;
         for (int i = 0; i < keys.size(); ++i) {
             QString key = keys.at(i);
             infoString->infoTemplates[key] = setting->value(key).toString();
@@ -4744,6 +4810,7 @@ void MW::createEmbelDock()
     embelProperties = new EmbelProperties(this, setting);
 
     connect (embelProperties, &EmbelProperties::templateChanged, this, &MW::embelTemplateChange);
+    connect (embelProperties, &EmbelProperties::templateRenamed, this, &MW::syncEmbellishMenu);
 
     embelDock = new DockWidget(tr("  Embellish  "), this);
     embelDock->setObjectName("embelDock");
@@ -4898,10 +4965,35 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
 
 void MW::embelTemplateChange(int id)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
 //    qDebug() << __FUNCTION__ << id;
     embelTemplatesActions.at(id)->setChecked(true);
     if (id == 0) embelRunBtn->setVisible(false);
     else embelRunBtn->setVisible(true);
+}
+
+void MW::syncEmbellishMenu()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int count = embelProperties->templateList.length();
+    for (int i = 0; i < 30; i++) {
+        if (i < count) {
+            embelTemplatesActions.at(i)->setText(embelProperties->templateList.at(i));
+            embelTemplatesActions.at(i)->setVisible(true);
+        }
+        else {
+            embelTemplatesActions.at(i)->setText("Future Template"  + QString::number(i));
+            embelTemplatesActions.at(i)->setVisible(false);
+        }
+    }
 }
 
 void MW::createEmbel()
@@ -6462,7 +6554,7 @@ void MW::syncWorkspaceMenu()
     #endif
     }
     int count = workspaces->count();
-    for (int i=0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
         if (i < count) {
             workspaceActions.at(i)->setText(workspaces->at(i).name);
             workspaceActions.at(i)->setShortcut(QKeySequence("Ctrl+" + QString::number(i)));
@@ -11053,6 +11145,9 @@ ImageCache and update the image cache status bar.
 //        fsTree->fsModel->fetchMore(idx); // nada
         bookmarks->count();
     }
+
+    // if all images in folder deleted then refresh folder
+    if (dm->rowCount() == 0) folderSelectionChange();
 }
 
 void MW::openUsbFolder()
@@ -11434,25 +11529,53 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    QString folderPath = "D:/Pictures/Temp/LightroomExport";
-//    QStringList fileFilters;
-//    foreach (const QString &str, metadata->supportedFormats)
-//            fileFilters.append("*." + str);
-//    QDir dir;
-//    dir.setNameFilters(fileFilters);
-//    dir.setFilter(QDir::Files);
-//    dir.setPath(folderPath);
-//    qDebug() << __FUNCTION__ << dir.entryInfoList().size();
-
-
-//    QDebug bug = qDebug().noquote().nospace();
-//    bug << "Test";
-//    bug << " this out";
-//    bug << "\n";
-//    bug << "start new line";
-
-//    qDebug() << __FUNCTION__ << t.elapsed();
-
-//    embelProperties->test1();
+    QStringList pathList;
+    QString fPath; // = "D:/Pictures/BadBoysPhoto/2021-01-06_0001.jpg";
+    QString folderPath = "D:/Pictures/BadBoysPhoto";
+    QFileInfo info; //(fPath);
+    // list of all supported files in the folder
+    QStringList fileFilters;
+    foreach (const QString &str, metadata->supportedFormats)
+            fileFilters.append("*." + str);
+    QDir dir;
+    dir.setNameFilters(fileFilters);
+    dir.setFilter(QDir::Files);
+    dir.setSorting(QDir::Time /*| QDir::Reversed*/);
+    dir.setPath(folderPath);
+    // get seed time (t) to start
+    info = dir.entryInfoList().at(0);
+    QDateTime t = info.lastModified();
+//    QDateTime t = info.lastModified();
+    // t1 is ten seconds earlier
+    QDateTime tMinus10;
+    for (int i = 0; i < dir.entryInfoList().size(); ++i) {
+        fPath = dir.entryInfoList().at(i).absoluteFilePath();
+        info.setFile(fPath);
+        QDateTime tThis = info.lastModified();
+//        qDebug() << __FUNCTION__ << fPath << tThis.toString("yyyy-MM-dd hh:mm:ss");
+        QDateTime tOld = t;
+        // time first file last modified
+        tMinus10 = t.addSecs(-10);
+        if (tThis < t && tThis > tMinus10) t = tThis;
+        qDebug() << __FUNCTION__
+                 << i
+                 << "tOld =" << tOld.toString("yyyy-MM-dd hh:mm:ss")
+                 << "tMinus10 =" << tMinus10.toString("yyyy-MM-dd hh:mm:ss")
+                 << "tThis =" << tThis.toString("yyyy-MM-dd hh:mm:ss")
+                 << "t =" << t.toString("yyyy-MM-dd hh:mm:ss")
+                 << fPath
+                    ;
+    }
+    // add the recently modified incoming files to pathList
+    for (int i = 0; i < dir.entryInfoList().size(); ++i) {
+        info = dir.entryInfoList().at(i);
+        // only add files just modified
+        if (info.lastModified() >= t) {
+            pathList << info.filePath();
+        }
+    }
+    qDebug() << __FUNCTION__ << "t =" << t;
+    qDebug() << __FUNCTION__ << pathList;
+    qDebug() << __FUNCTION__ << pathList.length();
 }
 // End MW
