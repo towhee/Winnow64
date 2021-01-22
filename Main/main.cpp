@@ -16,13 +16,17 @@ int main(int argc, char *argv[])
 
     // instance already running
     if (instance.sendMessage(args)) {
+        /* log
         Utilities::log(__FUNCTION__, "Instance already running");
+//        */
         return 0;
     }
 
     // start program
     QCoreApplication::addLibraryPath("./");
+    /* log
     Utilities::log(__FUNCTION__, "Start Winnow");
+//    */
     MW mw(args);
     mw.show();
 

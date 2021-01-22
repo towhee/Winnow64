@@ -100,20 +100,16 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     G::track(__FUNCTION__);
     #endif
     }
-//    Utilities::log(__FUNCTION__, fPath);
+    /* log
     for (int i = 0; i < pathList.length(); i++) {
         Utilities::log(__FUNCTION__, pathList.at(i));
     }
+//    */
 
     // save current embellish template
     QString prevTemplate = embelProperties->templateName;
     // set the embellish template, which updates all the parameters
     embelProperties->setCurrentTemplate(templateName);
-
-//    // export the file(s)
-//    for (int i = 0; i < pathList.length(); i++) {
-//        exportImage(pathList.at(i));
-//    }
 
     exportImages(pathList);
 
@@ -122,17 +118,6 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     QString exportFolder = exportFolderPath(fPath);
     QFileInfo info(fPath);
     QString exportPathToLastFile = exportFolder + "/" + info.fileName();
-
-    // cleanup (open export folder??)
-    /*
-    embelProperties->setCurrentTemplate(prevTemplate);
-    qDebug() << __FUNCTION__
-             << "exportFolderPath(fPath) ="
-             << exportFolderPath(fPath);
-    Utilities::log(__FUNCTION__, "fPath =" + fPath);
-    Utilities::log(__FUNCTION__, "exportFolderPath(fPath) =" + exportFolderPath(fPath));
-    */
-//    delete embellish;
 
     return lastFileExportedPath;
 }

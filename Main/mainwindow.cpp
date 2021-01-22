@@ -922,17 +922,9 @@ void MW::handleStartupArgs(const QString &args)
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
 
+    /* log
     Utilities::log(__FUNCTION__, QString::number(argList.length()) + " arguments");
     Utilities::log(__FUNCTION__, args);
-
-    /*
-    QString msg;
-    for (int i = 1; i < argList.length(); ++i) {
-        msg += argList.at(i) + "\n";
-    }
-
-    QMessageBox::information(nullptr, "Args", msg, QMessageBox::Ok);
-    return;
 //    */
 
     QStringList pathList;
@@ -943,13 +935,21 @@ void MW::handleStartupArgs(const QString &args)
         this would be confusing for the user.  */
         show();
         qApp->processEvents();
+        /* activate Winnow when receiving arguments - not working ...
+        raise();
+        setWindowFlags(Qt::WindowStaysOnTopHint);
+        this->activateWindow();
+        this->setFocus();
+        */
 
         // check if any image path sent, if not, return
         if (argList.length() < 4) return;
         // get the embellish template to use
         templateName = argList.at(2);
 
+        /* log
         Utilities::log(__FUNCTION__, "Template to use: " + templateName);
+//      */
 
         // get the folder where the files to embellish are located
         QFileInfo info(argList.at(3));
@@ -993,7 +993,7 @@ void MW::handleStartupArgs(const QString &args)
             // time first file last modified
             tMinus10 = t.addSecs(-10);
             if (tThis < t && tThis > tMinus10) t = tThis;
-            /*
+            /* log
             qDebug() << __FUNCTION__
                      << i
                      << "tOld =" << tOld.toString("yyyy-MM-dd hh:mm:ss")
@@ -1002,7 +1002,6 @@ void MW::handleStartupArgs(const QString &args)
                      << "t =" << t.toString("yyyy-MM-dd hh:mm:ss")
                      << fPath
                         ;
-//                        */
             QString msg = QString::number(i).rightJustified(3) +
                           " tOld = " + tOld.toString("yyyy-MM-dd hh:mm:ss") +
                           " tMinus10 = " + tMinus10.toString("yyyy-MM-dd hh:mm:ss") +
@@ -1011,10 +1010,13 @@ void MW::handleStartupArgs(const QString &args)
                           "  " + fPath
                           ;
             Utilities::log(__FUNCTION__, msg);
+//                        */
         }
 
+        /* log
         Utilities::log(__FUNCTION__, QString::number(dir.entryInfoList().size()) + " files " +
                        folderPath + "  Cutoff = " + t.toString("yyyy-MM-dd hh:mm:ss"));
+//                       */
 
         // add the recently modified incoming files to pathList
         for (int i = 0; i < dir.entryInfoList().size(); ++i) {
@@ -1022,10 +1024,12 @@ void MW::handleStartupArgs(const QString &args)
             // only add files just modified
             if (info.lastModified() >= t) {
                 pathList << info.filePath();
+                /* log
                 QString msg = QString::number(i) +
                         " Adding " + info.lastModified().toString("yyyy-MM-dd hh:mm:ss") +
                         " " + info.filePath();
                 Utilities::log(__FUNCTION__, msg);
+//                */
             }
         }
 
