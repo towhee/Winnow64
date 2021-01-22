@@ -18,7 +18,7 @@ BarBtn::BarBtn(/*QWidget *parent*/) : QToolButton()
     btnHover = QColor(bg,bg,bg);
 }
 
-QSize BarBtn::sizeHint()
+QSize BarBtn::sizeHint() const
 {
     return QSize(16,16);
 }
