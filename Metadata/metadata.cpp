@@ -780,6 +780,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         if (ext == "heic") fileOpened = parseHEIF();
         if (ext == "hif")  fileOpened = parseHEIF();
         if (ext == "jpg")  fileOpened = parseJPG(0);
+        if (ext == "jpeg") fileOpened = parseJPG(0);
         if (ext == "nef")  fileOpened = parseNikon();
         if (ext == "orf")  fileOpened = parseOlympus();
         if (ext == "raf")  fileOpened = parseFuji();

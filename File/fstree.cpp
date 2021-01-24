@@ -116,9 +116,9 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
 {
-    /* Return image count for each folder by looking it up in the QHash count which is
-       built in FSTree::getImageCount and referenced here.  This is much faster than
-       performing the image count "on-the-fly" here, which causes scroll latency. */
+    /* Return image count for each folder by looking it up in the QHash count which is built
+    in FSTree::getImageCount and referenced here. This is much faster than performing the
+    image count "on-the-fly" here, which causes scroll latency. */
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
             QString path = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
@@ -193,8 +193,8 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 void FSTree::createModel()
 {
 /*
-Create the model and filter in a separate function as it is also used to refresh
-the folders by deleting the model and re-creating it.
+    Create the model and filter in a separate function as it is also used to refresh
+    the folders by deleting the model and re-creating it.
 */
     fsModel = new FSModel(this, metadata, count, combineCount, combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
@@ -212,7 +212,7 @@ the folders by deleting the model and re-creating it.
                  << "storage.isValid()" << storage.isValid()
                  << "storage.isReady()" << storage.isReady()
                  << "storage.isReadOnly()" << storage.isReadOnly();
-                 */
+//                 */
         if (storage.isValid() && storage.isReady()) {
             if (!storage.isReadOnly()) {
                 mountedDrives << storage.rootPath();
@@ -238,8 +238,8 @@ the folders by deleting the model and re-creating it.
 void FSTree::refreshModel()
 {
 /*
-Most common use is to refresh the folder panel after inserting a USB connected
-media card.
+    Most common use is to refresh the folder panel after inserting a USB connected
+    media card.
 */
     delete fsModel;
     createModel();
@@ -277,14 +277,12 @@ bool FSTree::select(QString dirPath)
     #endif
     }
     QDir test(dirPath);
-//    QModelIndexList idx = fsModel->match(fsModel->index(0,0), Qt::DisplayRole, dirPath);
     if (test.exists()) {
-//        qDebug() << __FUNCTION__ << "Selecting" << dirPath;
         setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
+        scrollToCurrent();
         return true;
     }
     else {
-//        qDebug() << __FUNCTION__ << "Error:" << dirPath << "does not exist";
         G::popUp->showPopup("The folder path " + dirPath + " was not found.", 2000);
         return false;
     }
@@ -331,53 +329,63 @@ void FSTree::expand(const QModelIndex &idx)
     QTimer::singleShot(50, this, SLOT(getImageCount()));
 }
 
-void FSTree::getImageCount()
+void FSTree::getImageCount(bool changed)
 {
 /*
-This function stores the image count (that winnow can read) for each folder that is visible
-(expanded) in the TreeView in a QHash. The QHash is referenced in the FSModel and displayed in
-a subclass of QFileSystemModel data, where the image count has been added as column 4.
+    This function stores the image count (that winnow can read) for each folder that is
+    visible (expanded) in the TreeView in a QHash. The QHash is referenced in the FSModel and
+    displayed in a subclass of QFileSystemModel data, where the image count has been added as
+    column 4.
 
-Two QHash are updated: count for the total eligible image files and combineCount for when
-raw+jpg are combined.
+    Two QHash are updated: count for the total eligible image files and combineCount for when
+    raw+jpg are combined.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     QModelIndex idx = indexAt(rect().topLeft());  // delta
     while (idx.isValid())
     {
-        QString path = idx.data(QFileSystemModel::FilePathRole).toString();
-
-        // counts is combineRawJpg
-        if (!combineCount.contains(path)) {
-            dir->setPath(path);
-            int n = 0;
-            QListIterator<QFileInfo> i(dir->entryInfoList());
-            while (i.hasNext()) {
-                QFileInfo info = i.next();
-                QString fPath = info.path();
-                QString baseName = info.baseName();
-                QString suffix = info.suffix().toLower();
-                QString jpgPath = fPath + "/" + baseName + ".jpg";
-                if (metadata->hasJpg.contains(suffix)) {
-                    if (dir->entryInfoList().contains(jpgPath)) continue;
-                }
-                n++;
-            }
-            combineCount[path] = QString::number(n, 'f', 0);
-        }
-
-        // counts if not combineRawJpg
-        if (!count.contains(path)) {
-            dir->setPath(path);
-            int n = dir->entryInfoList().size();
-            count[path] = QString::number(n, 'f', 0);
-        }
-
+        QString dirPath = idx.data(QFileSystemModel::FilePathRole).toString();
+        getImageCount(dirPath, changed);
         idx = indexBelow(idx);
+    }
+}
+
+void FSTree::getImageCount(QString const dirPath, bool changed)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // counts is combineRawJpg
+    if (!combineCount.contains(dirPath) || changed) {
+        dir->setPath(dirPath);
+        int n = 0;
+        QListIterator<QFileInfo> i(dir->entryInfoList());
+        while (i.hasNext()) {
+            QFileInfo info = i.next();
+            QString fPath = info.path();
+            QString baseName = info.baseName();
+            QString suffix = info.suffix().toLower();
+            QString jpgPath = fPath + "/" + baseName + ".jpg";
+            if (metadata->hasJpg.contains(suffix)) {
+                if (dir->entryInfoList().contains(jpgPath)) continue;
+            }
+            n++;
+        }
+        combineCount[dirPath] = QString::number(n, 'f', 0);
+    }
+
+    // counts if not combineRawJpg
+    if (!count.contains(dirPath) || changed) {
+        dir->setPath(dirPath);
+        int n = dir->entryInfoList().size();
+        count[dirPath] = QString::number(n, 'f', 0);
     }
 }
 

@@ -738,8 +738,12 @@ void Embel::updateGraphic(int i)
     gItems[i]->setZValue(ZGraphic);
     double opacity = static_cast<double>(p->g[i].opacity)/100;
     gItems[i]->setOpacity(opacity);
-    if (p->g[i].anchorContainer == "Left" || p->g[i].anchorContainer == "Right") stu = h;
-    else stu = w;
+    // workaround until add shapes and use line
+    if (p->templateName == "Zen2048") {
+        if (p->g[i].anchorContainer == "Left" || p->g[i].anchorContainer == "Right") stu = h;
+        else stu = w;
+    }
+    else stu = ls;
     int dim = static_cast<int>(static_cast<double>(p->g[i].size) / 100 * stu);
 
     gItems[i]->setPixmap(graphicPixmaps.at(i).scaled(QSize(dim, dim), Qt::KeepAspectRatio));
