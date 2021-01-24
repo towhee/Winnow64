@@ -66,7 +66,8 @@ public:
 public slots:
     void resizeColumns();
     void expand(const QModelIndex &idx);
-    void getImageCount();
+    void getImageCount(bool changed = false);
+    void getImageCount(const QString dirPath, bool changed = false);
 
 private slots:
 

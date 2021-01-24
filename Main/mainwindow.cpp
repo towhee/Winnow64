@@ -1040,6 +1040,7 @@ void MW::handleStartupArgs(const QString &args)
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
         info.setFile(fPath);
         QString fDir = info.dir().absolutePath();
+         fsTree->getImageCount(fDir, true);
         // go there ...
         fsTree->select(fDir);
         folderAndFileSelectionChange(fPath);
@@ -2002,7 +2003,7 @@ memory has been consumed or all the images are cached.
     // have to wait until image caching thread running before setting flag
     metadataLoaded = true;
 
-    // tell image cache new position
+    // tell image cache new position and start the image cache thread
     imageCacheThread->updateImageCachePosition(/*fPath*/);
 
     G::isNewFolderLoaded = true;
@@ -11103,13 +11104,14 @@ ImageCache and update the image cache status bar.
         }
     }
 
-    qDebug() << __FUNCTION__ << "lowRow =" << lowRow;
-
     // convert selection to stringlist
-    QStringList sl, sldm;
+    QStringList sl, sldm, slDir;
     for (int i = 0; i < selection.count(); ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
         sl.append(fPath);
+        QFileInfo info(fPath);
+        QString dirPath = info.dir().path();
+        if (!slDir.contains(dirPath)) slDir.append(dirPath);
     }
     thumbView->selectionModel()->clearSelection();
 
@@ -11134,19 +11136,14 @@ ImageCache and update the image cache status bar.
 
     // update current index
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
-    qDebug() << __FUNCTION__ << sfIdx.data() << "Calling fileSelectionChange(sfIdx, sfIdx)";
     thumbView->setCurrentIndex(sfIdx);
     fileSelectionChange(sfIdx, sfIdx);
 
     // refresh image count in folders and bookmarks
     if (sldm.count()) {
-        fsTree->getImageCount();
-//        fsTree->refreshModel();  // nada
-//        fsTree->fsFilter->invalidate();  // nada
-        QModelIndex idx = fsTree->getCurrentIndex();
-        QModelIndex countIdx = fsTree->fsModel->index(idx.row(), 4, idx.parent());
-//        fsTree->fsModel->setData(countIdx, 99);  // nada
-//        fsTree->fsModel->fetchMore(idx); // nada
+        for (int i = 0; i < slDir.length(); ++i) {
+            fsTree->getImageCount(slDir.at(i), true);
+        }
         bookmarks->count();
     }
 
@@ -11533,53 +11530,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QStringList pathList;
-    QString fPath; // = "D:/Pictures/BadBoysPhoto/2021-01-06_0001.jpg";
-    QString folderPath = "D:/Pictures/BadBoysPhoto";
-    QFileInfo info; //(fPath);
-    // list of all supported files in the folder
-    QStringList fileFilters;
-    foreach (const QString &str, metadata->supportedFormats)
-            fileFilters.append("*." + str);
-    QDir dir;
-    dir.setNameFilters(fileFilters);
-    dir.setFilter(QDir::Files);
-    dir.setSorting(QDir::Time /*| QDir::Reversed*/);
-    dir.setPath(folderPath);
-    // get seed time (t) to start
-    info = dir.entryInfoList().at(0);
-    QDateTime t = info.lastModified();
-//    QDateTime t = info.lastModified();
-    // t1 is ten seconds earlier
-    QDateTime tMinus10;
-    for (int i = 0; i < dir.entryInfoList().size(); ++i) {
-        fPath = dir.entryInfoList().at(i).absoluteFilePath();
-        info.setFile(fPath);
-        QDateTime tThis = info.lastModified();
-//        qDebug() << __FUNCTION__ << fPath << tThis.toString("yyyy-MM-dd hh:mm:ss");
-        QDateTime tOld = t;
-        // time first file last modified
-        tMinus10 = t.addSecs(-10);
-        if (tThis < t && tThis > tMinus10) t = tThis;
-        qDebug() << __FUNCTION__
-                 << i
-                 << "tOld =" << tOld.toString("yyyy-MM-dd hh:mm:ss")
-                 << "tMinus10 =" << tMinus10.toString("yyyy-MM-dd hh:mm:ss")
-                 << "tThis =" << tThis.toString("yyyy-MM-dd hh:mm:ss")
-                 << "t =" << t.toString("yyyy-MM-dd hh:mm:ss")
-                 << fPath
-                    ;
-    }
-    // add the recently modified incoming files to pathList
-    for (int i = 0; i < dir.entryInfoList().size(); ++i) {
-        info = dir.entryInfoList().at(i);
-        // only add files just modified
-        if (info.lastModified() >= t) {
-            pathList << info.filePath();
-        }
-    }
-    qDebug() << __FUNCTION__ << "t =" << t;
-    qDebug() << __FUNCTION__ << pathList;
-    qDebug() << __FUNCTION__ << pathList.length();
+     fsTree->getImageCount(currentViewDir);
+    qDebug() << __FUNCTION__ << currentViewDir << fsTree->combineCount.value(currentViewDir);
+
+//    fsTree->combineCount[currentViewDir] = "99";
+//    qDebug() << __FUNCTION__ << fsTree->combineCount[currentViewDir];
+//    fsTree->refreshModel();
+//    fsTree->select(currentViewDir);
 }
 // End MW

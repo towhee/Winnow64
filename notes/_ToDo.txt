@@ -1,4 +1,5 @@
 BUGS
+- Sometimes one thumb is not rendered after embellish export
 - Text disappears at certain font sizes
 - Highlighter opacity not always used
 - Sometimes effect controls do not trigger effect changes
@@ -22,13 +23,13 @@ BUGS
 - Open with ... (doesn't work on macOS)
 PERFORMANCE
 - Delay when caching large files
+- HEIF files are slow
 CODE IMPROVEMENTS
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - Tweak panning in compareView (eliminate incremental scrolling)
 - cleanup imageview rubberband
 ENHANCEMENTS
-- File/Bookmark count not refresh when filecount changes see QFileSystemWatcher
-- changing template does not force redraw to new template until select new image
+- Add EXIF data back to embellished image
 - Add fade and alias to stroke
 - Add glow (inner/outer)
 - Add guassian blur (inner/outer)
@@ -41,6 +42,9 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Added extension JPEG (vs JPG)
+- Embellish graphic scaling wrong depending on aspect
+- File/Bookmark count not refresh when filecount changes
 - Delete all images in folder crashing
 - Export from Lightroom failing
 - When delete last image in a folder refresh loupe
@@ -49,6 +53,7 @@ DONE/FIXED
 - Flash object sometimes flashes wrong object
 - If delete all effects for a style the image or object can disappear
 - Add highlighter and sharpness not working
+- changing template does not force redraw to new template until select new image
 - Check text if in image then switch to border1 top.  May go to bottom.
 - Token editor text input box not darker than background
 - Embellish will crash when edit if not in Loupe mode

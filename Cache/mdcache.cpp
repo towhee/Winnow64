@@ -800,10 +800,10 @@ If there has been a file selection change and not a new folder then update image
         emit updateIsRunning(true, true, __FUNCTION__);
         qApp->processEvents();
 
-//        mutex.lock();     // rgh mutex
+        mutex.lock();     // rgh mutex
         int rowCount = dm->rowCount();
         dm->loadingModel = true;
-//        mutex.unlock();   // rgh mutex
+        mutex.unlock();   // rgh mutex
 
         // pause image caching if it was running
         bool imageCachePaused = false;

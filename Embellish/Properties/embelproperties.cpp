@@ -197,7 +197,7 @@ void EmbelProperties::initialize()
     effectMenu->addAction(highlighterEffectAction);
     effectMenu->addAction(brightnessEffectAction);
     effectMenu->addAction(blurEffectAction);
-    effectMenu->addAction(sharpenEffectAction);
+//    effectMenu->addAction(sharpenEffectAction);
 //    effectMenu->addAction(glowEffectAction);
 
     // CONTEXT MENU
