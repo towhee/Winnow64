@@ -21,7 +21,8 @@ namespace G
 {
     enum UserRoles {
         PathRole = Qt::UserRole + 1,
-        ThumbRectRole,
+        IconRectRole,
+        IconLoadedRole,
         CachedRole,
         DupIsJpgRole,
         DupOtherIdxRole,
@@ -39,6 +40,7 @@ namespace G
         // items available for TableView in order
         // items read when new folder (core fields)
         PathColumn,
+        IconLoadedColumn,
         NameColumn,
         RefineColumn,
         PickColumn,

@@ -24,6 +24,7 @@ public:
                Jpeg *jpeg);
 private:
     QHash<quint32, QString> sonyMakerHash;
+    QHash<int, int> sonyCypherHash;
 };
 
 #endif // SONY_H

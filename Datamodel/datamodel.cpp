@@ -156,8 +156,9 @@ DataModel::DataModel(QWidget *parent,
     setSortRole(Qt::EditRole);
 
     // must include all prior Global dataModelColumns (any order okay)
-    setHorizontalHeaderItem(G::PathColumn, new QStandardItem(QString("Icon"))); horizontalHeaderItem(G::PathColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::NameColumn, new QStandardItem(QString("File Name"))); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::PathColumn, new QStandardItem("Icon")); horizontalHeaderItem(G::PathColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::IconLoadedColumn, new QStandardItem("Icon Loaded")); horizontalHeaderItem(G::IconLoadedColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::NameColumn, new QStandardItem("File Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::RefineColumn, new QStandardItem("Refine")); horizontalHeaderItem(G::RefineColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
@@ -484,10 +485,11 @@ bool DataModel::addFileData()
         setData(index(row, G::PathColumn), fPath, G::PathRole);
         QString tip = QString::number(row) + ": " + fileInfo.absoluteFilePath();
         setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
-        setData(index(row, G::PathColumn), QRect(), G::ThumbRectRole);
+        setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
         setData(index(row, G::PathColumn), false, G::CachedRole);
         setData(index(row, G::PathColumn), false, G::DupHideRawRole);
 
+        setData(index(row, G::IconLoadedColumn), false);
         setData(index(row, G::NameColumn), fileInfo.fileName());
         setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
         setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
@@ -565,6 +567,7 @@ bool DataModel::addFileData()
 
     }
     loadingModel = false;
+    qDebug() << __FUNCTION__ << "model loaded for all images";
     return true;
 }
 
@@ -749,7 +752,7 @@ to run as a separate thread and can be executed directly.
 bool DataModel::readMetadataForItem(int row)
 {
 /*
-Reads the image metadata into the datamodel for the row.
+    Reads the image metadata into the datamodel for the row.
 */
     {
     #ifdef ISDEBUG
@@ -907,7 +910,7 @@ the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo, Qt::ToolTipRole);
     search += m.shootingInfo;
-    setData(index(row, G::MetadataLoadedColumn), true);
+    setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
     setData(index(row, G::ErrColumn), m.err);

@@ -345,7 +345,7 @@ void FSTree::getImageCount(bool changed)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     QModelIndex idx = indexAt(rect().topLeft());  // delta
     while (idx.isValid())
     {

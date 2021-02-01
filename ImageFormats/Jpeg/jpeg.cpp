@@ -126,11 +126,15 @@ bool Jpeg::parse(MetadataParameters &p,
     //file.open happens in readMetadata
     bool isBigEnd = true;
 
+//    qDebug() << __FUNCTION__ << "BEFORE" << p.file.fileName();
+
     if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
         m.err << "JPG does not start with 0xFFD8. ";
         qDebug() << __FUNCTION__ << err;
         return false;
     }
+
+//    qDebug() << __FUNCTION__ << "AFTER " << p.file.fileName();
 
     // build a hash of jpg segment offsets
     p.offset = static_cast<quint32>(p.file.pos());

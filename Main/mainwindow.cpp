@@ -1045,6 +1045,7 @@ void MW::handleStartupArgs(const QString &args)
         fsTree->select(fDir);
         folderAndFileSelectionChange(fPath);
         loupeDisplay();
+        thumbView->selectThumb(fPath);
     }
     else {
         QFileInfo f(argList.at(1));
@@ -1228,6 +1229,7 @@ void MW::folderSelectionChange()
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
 
+    qDebug() << __FUNCTION__ << "Commencing metadataCacheThread->loadNewFolder(isRefreshingDM)";
     metadataCacheThread->loadNewFolder(isRefreshingDM);
 
     // format pickMemSize as bytes, KB, MB or GB
@@ -1256,7 +1258,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     G::track(__FUNCTION__, current.data(G::PathRole).toString());
     #endif
     }
-    /*
+
+//   /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
@@ -1294,6 +1297,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     // user clicks outside thumb but inside treeView dock
     QModelIndexList selected = selectionModel->selectedIndexes();
     if (selected.isEmpty() && !G::isInitializing) return;
+
+    // confirm thumbnail was found and rendered
+
 
     // record current proxy row (dm->sf) as it is used to sync everything
     currentRow = current.row();
@@ -1349,6 +1355,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     /* check metadata loaded for current image (might not be if random slideshow)
        to prevent a conflict with the metadataCacheThread*/
     int dmRow = dm->fPathRow[fPath];
+    qDebug() << __FUNCTION__ << "Is metadata loaded:"
+             << dm->index(dmRow, G::MetadataLoadedColumn).data().toBool();
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
         QString ext = fileInfo.suffix().toLower();
@@ -2022,7 +2030,7 @@ memory has been consumed or all the images are cached.
 void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
 {
 /*
-   Called by signal itemClicked in bookmark.
+    Called by signal itemClicked in bookmark.
 */
     {
     #ifdef ISDEBUG
@@ -10495,6 +10503,7 @@ void MW::keyHome()
     G::track(__FUNCTION__);
     #endif
     }
+//    if (!dm->basicFileInfoLoaded) return;
     if (G::mode == "Compare") compareImages->go("Home");
     if (G::mode == "Grid") gridView->selectFirst();
     else {
@@ -10512,6 +10521,10 @@ void MW::keyEnd()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
+//    if (!G::isNewFolderLoaded) return;
+//    if (dm->loadingModel) return;
+//    metadataCacheThread->stopMetadateCache();
     if (G::mode == "Compare") compareImages->go("End");
     if (G::mode == "Grid") gridView->selectLast();
     else {
@@ -11530,12 +11543,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-     fsTree->getImageCount(currentViewDir);
-    qDebug() << __FUNCTION__ << currentViewDir << fsTree->combineCount.value(currentViewDir);
-
-//    fsTree->combineCount[currentViewDir] = "99";
-//    qDebug() << __FUNCTION__ << fsTree->combineCount[currentViewDir];
-//    fsTree->refreshModel();
-//    fsTree->select(currentViewDir);
+     int b = 141;
+     qDebug() << __FUNCTION__ << b*b*b % 249;
 }
 // End MW

@@ -84,26 +84,26 @@ bool CanonCR3::nextHeifBox(quint32 &length, QString &type)
     length = Utilities::get32(p.file.read(4), true);
 //    if (length < 2) length = static_cast<quint32>(eof - offset);
     type = p.file.read(4);
-//    if (p.report) {
-//        p.rpt << "\n";
-//        p.rpt.setFieldWidth(6);
-//        p.rpt.setFieldAlignment(QTextStream::AlignLeft);
-//        p.rpt << type;
-//        p.rpt.setFieldWidth(9);
-//        p.rpt.setFieldAlignment(QTextStream::AlignRight);
-//        p.rpt << QString::number(offset, 10).toUpper();
-//        p.rpt.setFieldWidth(7);
-//        p.rpt.setFieldAlignment(QTextStream::AlignRight);
-//        p.rpt << QString::number(offset, 16).toUpper();
-//        p.rpt.setFieldWidth(9);
-//        p.rpt.setFieldAlignment(QTextStream::AlignRight);
-//        p.rpt << QString::number(length, 10).toUpper();
-//        p.rpt.setFieldWidth(7);
-//        p.rpt.setFieldAlignment(QTextStream::AlignRight);
-//        p.rpt << QString::number(length, 16).toUpper();
-//        p.rpt.setFieldWidth(2);
-//        p.rpt << " ";
-//    }
+    if (p.report) {
+        p.rpt << "\n";
+        p.rpt.setFieldWidth(6);
+        p.rpt.setFieldAlignment(QTextStream::AlignLeft);
+        p.rpt << type;
+        p.rpt.setFieldWidth(9);
+        p.rpt.setFieldAlignment(QTextStream::AlignRight);
+        p.rpt << QString::number(offset, 10).toUpper();
+        p.rpt.setFieldWidth(7);
+        p.rpt.setFieldAlignment(QTextStream::AlignRight);
+        p.rpt << QString::number(offset, 16).toUpper();
+        p.rpt.setFieldWidth(9);
+        p.rpt.setFieldAlignment(QTextStream::AlignRight);
+        p.rpt << QString::number(length, 10).toUpper();
+        p.rpt.setFieldWidth(7);
+        p.rpt.setFieldAlignment(QTextStream::AlignRight);
+        p.rpt << QString::number(length, 16).toUpper();
+        p.rpt.setFieldWidth(2);
+        p.rpt << " ";
+    }
     return (length > 0);
 }
 
