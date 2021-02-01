@@ -1241,7 +1241,7 @@ click position that is then sent to imageView to zoom to the same spot
 //  G::track(__FUNCTION__);
     #endif
     }
-    dm->sf->setData(index, iconRect, G::ThumbRectRole);
+    dm->sf->setData(index, iconRect, G::IconRectRole);
 }
 
 void IconView::resizeEvent(QResizeEvent *event)
@@ -1814,7 +1814,7 @@ different position than the current image.
         /* Capture the percent coordinates of the mouse click within the thumbnail
            so that the full scale image can be zoomed to the same point.  */
         QModelIndex idx = currentIndex();
-        QRect iconRect = idx.data(G::ThumbRectRole).toRect();
+        QRect iconRect = idx.data(G::IconRectRole).toRect();
         QPoint mousePt = event->pos();
         QPoint iconPt = mousePt - iconRect.topLeft();
         float xPct = static_cast<float>(iconPt.x()) / iconRect.width();
@@ -1941,7 +1941,7 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     qreal hScale = static_cast<qreal>(cW) / imW;
     qreal vScale = static_cast<qreal>(cH) / imH;
 
-    iconRect = idx.data(G::ThumbRectRole).toRect();
+    iconRect = idx.data(G::IconRectRole).toRect();
     int w, h;       // zoom frame width and height in pixels
 
     if (hScale < 1 || vScale <= 1 ) {

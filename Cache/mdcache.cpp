@@ -377,10 +377,8 @@ added to the datamodel. The image cache is updated.
     #endif
     }
     if (isRunning()) {
-        // !! rgh removed mutex.lock) to improve preformance - monitor this works
         mutex.lock();
         abort = true;
-//        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
@@ -622,41 +620,113 @@ sort/filter change and all metadata has been loaded, but the icons visible have 
              << "rowCount =" << dm->sf->rowCount()
              << "action =" << action;
 //    */
-    for (int row = start; row < end; ++row) {
-        if (abort) {
-            emit updateIsRunning(false, true, __FUNCTION__);
-            return;
-        }
 
-        // load icon
-        mutex.lock();
-        QModelIndex idx = dm->sf->index(row, 0);
-        if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
-            int dmRow = dm->sf->mapToSource(idx).row();
-            QImage image;
-            QString fPath = idx.data(G::PathRole).toString();
+    // process visible icons first
+    bool tryAgain = false;
+    for (int attempt = 0; attempt < 2; attempt++) {
+        for (int row = firstIconVisible; row <= lastIconVisible; ++row) {
+            if (abort) {
+                emit updateIsRunning(false, true, __FUNCTION__);
+                return;
+            }
 
-            if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
-            bool thumbLoaded = thumb->loadThumb(fPath, image);
-            if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
+            // load icon
+            mutex.lock();
+            QModelIndex idx = dm->sf->index(row, 0);
+            QModelIndex idxIconLoaded = dm->sf->index(row, G::IconLoadedColumn);
+//            if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
+            bool failedToLoad = !idxIconLoaded.data().toBool();
+            bool nullIcon = idx.data(Qt::DecorationRole).isNull();
+            if (idx.isValid() && (failedToLoad || nullIcon)) {
+                int dmRow = dm->sf->mapToSource(idx).row();
+                QImage image;
+                QString fPath = idx.data(G::PathRole).toString();
 
-            QPixmap pm;
-            if (thumbLoaded) {
-                pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
+                bool thumbLoaded = thumb->loadThumb(fPath, image);
+                if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
+
+                QPixmap pm;
+                if (thumbLoaded) {
+                    pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                    dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+                    iconMax(pm);
+                    iconsCached.append(dmRow);
+                    dm->sf->setData(idxIconLoaded, true);
+//                    qDebug() << __FUNCTION__
+//                             << fPath;
+                }
+                else {
+                    if (attempt == 0) {
+                        tryAgain = true;
+                    }
+                    if (attempt == 1) {
+                        pm = QPixmap(":/images/badImage1.png");
+                    }
+                }
                 dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
                 iconMax(pm);
                 iconsCached.append(dmRow);
             }
-            else {
-                pm = QPixmap(":/images/badImage1.png");
-            }
-            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
-            iconMax(pm);
-            iconsCached.append(dmRow);
+            mutex.unlock();
+            if (row == lastIconVisible) qApp->processEvents();
         }
-        mutex.unlock();
-        if (row == lastIconVisible) qApp->processEvents();
+        if (!tryAgain) break;
     }
+
+    qApp->processEvents();
+    return;
+
+    // process entire range
+    tryAgain = false;
+    for (int attempt = 0; attempt < 2; attempt++) {
+        for (int row = start; row < end; ++row) {
+            if (abort) {
+                emit updateIsRunning(false, true, __FUNCTION__);
+                return;
+            }
+
+            // load icon
+            mutex.lock();
+            QModelIndex idx = dm->sf->index(row, 0);
+            QModelIndex idxIconLoaded = dm->sf->index(row, G::IconLoadedColumn);
+//            if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
+            if (idx.isValid() && !idxIconLoaded.data().toBool()) {
+                int dmRow = dm->sf->mapToSource(idx).row();
+                QImage image;
+                QString fPath = idx.data(G::PathRole).toString();
+
+                if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
+                bool thumbLoaded = thumb->loadThumb(fPath, image);
+                if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
+
+                QPixmap pm;
+                if (thumbLoaded) {
+                    pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                    dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+                    iconMax(pm);
+                    iconsCached.append(dmRow);
+                    dm->sf->setData(idxIconLoaded, true);
+                }
+                else {
+                    if (attempt == 0) {
+                        tryAgain = true;
+                    }
+                    if (attempt == 1) {
+                        pm = QPixmap(":/images/badImage1.png");
+                        dm->sf->setData(idx, fPath + " BAD ICON", Qt::ToolTipRole);
+                    }
+                }
+                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+                iconMax(pm);
+                iconsCached.append(dmRow);
+            }
+            mutex.unlock();
+            if (row == lastIconVisible) qApp->processEvents();
+        }
+        if (!tryAgain) break;
+    }
+
     // reset after a filter change
 //    emit updateIconBestFit();
 }
@@ -665,7 +735,7 @@ void MetadataCache::readMetadataChunk()
 {
 /*
 Load the thumb (icon) for all the image files in the target range.  This is called after a
-sort/filter change and all metadata has been loaded, but the icons visible havew changed.
+sort/filter change and all metadata has been loaded, but the icons visible have changed.
 */
     {
     #ifdef ISDEBUG
@@ -687,14 +757,14 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
 //        */
     for (int row = start; row < end; ++row) {
         if (abort) {
-//            /*
+            mutex.lock();
             qDebug() << __FUNCTION__ << "Aborting on row" << row;
-            // */
+            mutex.unlock();
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
         // file path and dm source row in case filtered or sorted
-//        mutex.lock();     // rgh mutex
+        mutex.lock();     // rgh mutex
         QModelIndex idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
 
@@ -725,7 +795,7 @@ sort/filter change and all metadata has been loaded, but the icons visible havew
             }
         }
         */
-//        mutex.unlock();   // rgh mutex
+        mutex.unlock();   // rgh mutex
         qApp->processEvents();
     }
 }
@@ -831,7 +901,7 @@ If there has been a file selection change and not a new folder then update image
         }
 
         if (abort) {
-//            mutex.unlock();
+            dm->loadingModel = false;
 //            qDebug() << "!!!!  Aborting MetadataCache::run  ";
             return;
         }
@@ -871,9 +941,9 @@ If there has been a file selection change and not a new folder then update image
         // resume image caching if it was interrupted
         if (imageCachePaused) imageCacheThread->resumeImageCache();
 
-//        mutex.lock();     // rgh mutex
+        mutex.lock();     // rgh mutex
         dm->loadingModel = false;
-//        mutex.unlock();   // rgh mutex
+        mutex.unlock();   // rgh mutex
 
     }
     /*

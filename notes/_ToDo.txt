@@ -1,5 +1,5 @@
 BUGS
-- Sometimes one thumb is not rendered after embellish export
+- Settings Show Label in grid not syncing
 - Text disappears at certain font sizes
 - Highlighter opacity not always used
 - Sometimes effect controls do not trigger effect changes
@@ -42,6 +42,10 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Added shutter count for Sony cameras
+- Jumping to end when new folder can crash
+- Sometimes one thumb is not rendered after embellish export
+- Added second try load thumbnail in case of lockout
 - Added extension JPEG (vs JPG)
 - Embellish graphic scaling wrong depending on aspect
 - File/Bookmark count not refresh when filecount changes

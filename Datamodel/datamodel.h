@@ -69,6 +69,7 @@ public:
     int currentRow;                     // used in caching to check if new image selected
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
+    bool basicFileInfoLoaded = false;   // do not navigate until basic info loaded in datamodel
 
     // rgh check if reqd still
     bool forceBuildFilters = false;     // ignore buildFiltersMaxDelay if true

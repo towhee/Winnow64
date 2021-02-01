@@ -126,6 +126,7 @@ int TableView::sizeHintForColumn(int column) const
 {
     QFontMetrics fm(this->font());
     if (column == G::PathColumn) return fm.boundingRect("Icon").width();
+    if (column == G::IconLoadedColumn) return fm.boundingRect("=Icon Loaded=").width();
     if (column == G::NameColumn) return fm.boundingRect("2019-02-25_0001.jpg========").width();
     if (column == G::RefineColumn) return fm.boundingRect("=Refine=").width();
     if (column == G::PickColumn) return fm.boundingRect("=Pick=").width();

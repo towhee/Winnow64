@@ -755,18 +755,20 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     }
     clearMetadata();
 
-    p.file.setFileName(path);
     if (p.file.isOpen()) {
         m.err += "File is already open";
         qDebug() << __FUNCTION__ << m.err;
         return false;
     }
+    p.file.setFileName(path);
+    if (p.file.isOpen()) p.file.close();
     if (p.report) {
         p.rpt << "\nFile name = " << path << "\n";
     }
     QFileInfo fileInfo(path);
     QString ext = fileInfo.suffix().toLower();
     bool fileOpened = false;
+    qDebug() << __FUNCTION__ << "Open" << path;
     if (p.file.open(QIODevice::ReadOnly)) {
         if (jpeg == nullptr) jpeg = new Jpeg;
         if (ifd == nullptr) ifd = new IFD;
@@ -776,8 +778,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         if (ext == "cr2")  fileOpened = parseCanon();
         if (ext == "cr3")  fileOpened = parseCanonCR3();
         if (ext == "dng")  fileOpened = parseDNG();
-        // rgh remove heic
-        if (ext == "heic") fileOpened = parseHEIF();
+        if (ext == "heic") fileOpened = parseHEIF();   // rgh remove heic ??
         if (ext == "hif")  fileOpened = parseHEIF();
         if (ext == "jpg")  fileOpened = parseJPG(0);
         if (ext == "jpeg") fileOpened = parseJPG(0);
@@ -794,6 +795,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         }
     }
     else {
+        if (p.file.isOpen()) p.file.close();
         qDebug() << __FUNCTION__ << "Could not open " << path;
         m.err += "Could not open p.file to read metadata. ";
         return false;
@@ -852,10 +854,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     okToReadXmp = true;
 
     // read metadata
-    bool result = readMetadata(isReport, fPath);
-    if (!result) {
+    m.metadataLoaded = readMetadata(isReport, fPath);
+    if (!m.metadataLoaded) {
         qDebug() << __FUNCTION__ << m.err << source;
-        m.metadataLoaded = result;
         return false;
     }
 
@@ -874,8 +875,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     m.thumbUnavailable = thumbUnavailable;
     m.imageUnavailable = imageUnavailable;
 
-    m.metadataLoaded = result;
-    return result;
+    return m.metadataLoaded;
 }
 
 // End Metadata
