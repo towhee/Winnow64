@@ -1229,7 +1229,6 @@ void MW::folderSelectionChange()
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
 
-    qDebug() << __FUNCTION__ << "Commencing metadataCacheThread->loadNewFolder(isRefreshingDM)";
     metadataCacheThread->loadNewFolder(isRefreshingDM);
 
     // format pickMemSize as bytes, KB, MB or GB
@@ -1266,7 +1265,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     #endif
     }
 
-//   /*
+   /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
@@ -1535,7 +1534,6 @@ void MW::updateIconsVisible(bool useCurrentRow)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     int first = dm->sf->rowCount();
     int last = 0;
 
@@ -1661,8 +1659,6 @@ to work all the time.
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-//        if (gridView->isVisible())
-        qDebug() << __FUNCTION__;
         updateIconsVisible(false);
         gridView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         updateIconsVisible(false);
@@ -1712,9 +1708,7 @@ within the cache range.
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        qDebug() << __FUNCTION__;
         updateIconsVisible(false);
-//        if (thumbView->isVisible())
         thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
         metadataCacheThread->scrollChange(__FUNCTION__);
     }
@@ -10519,7 +10513,6 @@ void MW::keyHome()
     G::track(__FUNCTION__);
     #endif
     }
-//    if (!dm->basicFileInfoLoaded) return;
     if (G::mode == "Compare") compareImages->go("Home");
     if (G::mode == "Grid") gridView->selectFirst();
     else {
@@ -10537,17 +10530,7 @@ void MW::keyEnd()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
-//    metadataCacheThread->stopMetadateCache();
-//    imageCacheThread->stopImageCache();
-    qDebug() << __FUNCTION__
-             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
-             << "thumbView->okToScroll() =" << thumbView->okToScroll()
-             << "G::mode =" << G::mode
-                ;
     if (G::isNewFolderLoaded) {
-//    if (dm->loadingModel) return;
-//    metadataCacheThread->stopMetadateCache();
         if (G::mode == "Compare") compareImages->go("End");
         if (G::mode == "Grid") gridView->selectLast();
         else {

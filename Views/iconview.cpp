@@ -695,7 +695,7 @@ void IconView::scannedViewportRange()
     midVisibleCell = firstVisibleCell + visibleCells / 2;
 
 
-//    /*
+    /*
    qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
              << "isInitializing =" << G::isInitializing
              << "isVisible =" << isVisible()
@@ -907,7 +907,7 @@ void IconView::selectThumb(QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << idx;
+//    qDebug() << __FUNCTION__ << idx;
     if (idx.isValid()) {
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
@@ -921,7 +921,7 @@ void IconView::selectThumb(int row)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << "row =" << row;
+//    qDebug() << __FUNCTION__ << "row =" << row;
     // some operations assign row = -1 if not found
     if (row < 0) return;
     setFocus();
@@ -937,7 +937,6 @@ void IconView::selectThumb(QString &fPath)
     #endif
     }
     // rgh use dm->fPathRow[fPath] instead - much faster
-    qDebug() << __FUNCTION__ << fPath;
 //    int dmRow = dm->fPathRow[fPath];
 //    QModelIndex sfIdx =
 //    selectThumb(dm->fPathRow[fPath]);
@@ -1036,7 +1035,6 @@ void IconView::selectLast()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
     selectThumb(getLastRow());
 }
 
@@ -1546,7 +1544,7 @@ void IconView::scrollToRow(int row, QString source)
     G::track(__FUNCTION__);
     #endif
     }
-//    /*
+    /*
     qDebug() << __FUNCTION__ << objectName() << "row =" << row
              << "requested by" << source;
 //    */

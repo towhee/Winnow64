@@ -126,23 +126,11 @@ bool Jpeg::parse(MetadataParameters &p,
     //file.open happens in readMetadata
     bool isBigEnd = true;
 
-    qDebug() << __FUNCTION__
-             << "p.file.fileName() =" << p.file.fileName()
-             << "p.file.isOpen() =" << p.file.isOpen()
-                ;
-    p.file.seek(0);
-    qDebug() << __FUNCTION__ << "Utilities::get16(p.file.read(2)";
-    quint16 ba = Utilities::get16(p.file.read(2), isBigEnd);
-    qDebug() << __FUNCTION__ << "ba =" << QString::number(ba, 16);
-//    p.file.seek(0);
-//    if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-    if (ba != 0xFFD8) {
+    if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
         m.err << "JPG does not start with 0xFFD8. ";
         qDebug() << __FUNCTION__ << err;
         return false;
     }
-
-//    qDebug() << __FUNCTION__ << "AFTER " << p.file.fileName();
 
     // build a hash of jpg segment offsets
     p.offset = static_cast<quint32>(p.file.pos());

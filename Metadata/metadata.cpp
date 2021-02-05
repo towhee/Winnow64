@@ -750,7 +750,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     G::track(__FUNCTION__, path);
     #endif
     }
-    qDebug() << __FUNCTION__ << "called by" << source << path << "p.report =" << p.report;
+//    qDebug() << __FUNCTION__ << "called by" << source << path << "p.report =" << p.report;
 //    isReport = true;
     p.report = isReport;
 
@@ -763,13 +763,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     }
     clearMetadata();
 
-//    if (p.file.isOpen()) {
-//        m.err += "File is already open";
-//        qDebug() << __FUNCTION__ << m.err;
-//        return false;
-//    }
     if (p.file.isOpen()) p.file.close();
-//    p.file.close();
     p.file.setFileName(path);
     if (p.file.isOpen()) return false;
 
@@ -780,10 +774,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     QFileInfo fileInfo(path);
     QString ext = fileInfo.suffix().toLower();
     bool fileOpened = false;
-//    qDebug() << __FUNCTION__ << "Open" << path;
-    bool okay = p.file.open(QIODevice::ReadOnly);
-//    if (p.file.open(QIODevice::ReadOnly)) {
-    if (okay) {
+    if (p.file.open(QIODevice::ReadOnly)) {
         if (jpeg == nullptr) jpeg = new Jpeg;
         if (ifd == nullptr) ifd = new IFD;
         if (exif == nullptr) exif = new Exif;

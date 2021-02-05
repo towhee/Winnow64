@@ -20,19 +20,13 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     #endif
     }
     // check orientation and rotate if portrait
-//    #ifdef ISPROFILE
-//    G::track(__FUNCTION__, "About to QTransform trans");
-//    #endif
     QTransform trans;
     int row = dm->fPathRow[fPath];
-    qDebug() << __FUNCTION__ << "row =" << row;
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
-    qDebug() << __FUNCTION__ << "orientation = =" << orientation;
     switch(orientation) {
         case 6:
             trans.rotate(90);
             image = image.transformed(trans, Qt::SmoothTransformation);
-            qDebug() << __FUNCTION__ << "After orientation 6";
             break;
         case 8:
             trans.rotate(270);
@@ -96,7 +90,6 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
          qDebug() << __FUNCTION__ << fPath << "is already open - return";
          return false;
      }
-//    if (imFile.isOpen()) imFile.close();
     int row = dm->fPathRow[fPath];
 
     // Check if metadata has been cached for this image
@@ -124,34 +117,19 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
         if (imFile.seek(offsetThumb)) {
             QByteArray buf = imFile.read(lengthThumb);
             if (image.loadFromData(buf, "JPEG")) {
-                qDebug() << __FUNCTION__
-                         << "image.loadFromData succeeded for" << fPath
-                         << "isReadable =" << imFile.isReadable()
-                            ;
-//                imFile.close();
-                qDebug() << __FUNCTION__ << "1";
                 if (image.isNull())
                     dm->error(row, "Empty thumb.", __FUNCTION__);
-                qDebug() << __FUNCTION__ << "2";
                 image = image.scaled(thumbMax, Qt::KeepAspectRatio);
-                qDebug() << __FUNCTION__ << "3";
                 success = true;
-            }
-            else {
-                qDebug() << __FUNCTION__ << "image.loadFromData failed for" << fPath
-                         << "isReadable =" << imFile.isReadable();
-//                imFile.close();
             }
         }
         else {
-//            imFile.close();
             dm->error(row, "Illegal offset to thumb.", __FUNCTION__);
         }
         imFile.close();
     }
     else {
         // file busy, wait a bit and try again
-        qDebug() << __FUNCTION__ << "Could not open file for thumb.";
         dm->error(row, "Could not open file for thumb.", __FUNCTION__);
     }
     if (err != "") qDebug() << __FUNCTION__ << err;
