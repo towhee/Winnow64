@@ -412,6 +412,7 @@ void Xmp::report()
     // Set up the output device
     QByteArray outArray;
     QBuffer buffer(&outArray);
+    if (buffer.isOpen()) buffer.close();
     buffer.open(QIODevice::ReadWrite);
 
     // format xmp
@@ -424,6 +425,7 @@ void Xmp::report()
     msg.setText(metaAsString());
 //    msg.setText(xmpString);
     msg.exec();
+    buffer.close();
 }
 
 QString Xmp::diagnostics()

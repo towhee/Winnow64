@@ -96,84 +96,40 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
                                                  void* out_data);
 
 
-"     30,364,300"   "MW::keyEnd........................................"   ""
-MW::keyEnd
-"        156,300"   "IconView::selectLast.............................."   ""
-"         36,100"   "IconView::getLastRow.............................."   ""
-"         90,800"   "IconView::selectThumb............................."   ""
-"         35,900"   "IconView::selectThumb............................."   ""
-"         38,000"   "IconView::selectionChanged........................"   ""
-"        132,900"   "MW::updateStatus.................................."   ""
-"         33,200"   "IconView::getCurrentFilePath......................"   ""
-"         86,700"   "Win::availableMemory.............................."   ""
-"         46,000"   "MW::getZoom......................................."   ""
-"         30,500"   "MW::getPosition..................................."   ""
-"         29,000"   "IconView::getSelectedCount........................"   ""
-"         58,600"   "MW::getPicked....................................."   ""
-"        335,400"   "MW::updateStatusBar..............................."   ""
-"        250,800"   "Filters::isAnyFilter.............................."   ""
-"        782,700"   "MW::updateProgressBarWidth........................"   ""
-"         44,600"   "MW::availableSpaceForProgressBar.................."   ""
-"         76,100"   "MW::getPosition..................................."   ""
-"         37,400"   "MW::metadataChanged..............................."   ""
-"         28,200"   "InfoView::showOrHide.............................."   ""
-"         39,700"   "MW::getZoom......................................."   ""
-"         28,500"   "MW::getSelectedFileSize..........................."   ""
-"         33,900"   "MW::memoryReqdForSelection........................"   ""
-"         35,300"   "MW::getPicked....................................."   ""
-"        381,300"   "IconView::selectionChanged........................"   ""
-"        726,200"   "\n-----------------------------------------------------------------------------"   ""
-"         46,700"   "MW::fileSelectionChange..........................."   "D:/Pictures/iphone11/IMG_0361.HEIC"
-MW::fileSelectionChange G::isInitializing = false G::isNewFolderLoaded = true isFirstImageNewFolder = false isFilterChange = false current = QModelIndex(557,0,0x217a573b740,SortFilter(0x217a572a770))
-"         79,200"   "MW::enableSelectionDependentMenus................."   ""
-"         51,900"   "IconView::scrollToRow............................."   ""
-"         79,800"   "MW::thumbHasScrolled.............................."   ""
-"         33,300"   "MW::updateIconsVisible............................"   ""
-"         42,200"   "IconView::scannedViewportRange...................."   ""
-"        101,000"   "MetadataCache::sizeChange........................."   ""
-"         28,900"   "MetadataCache::setRange..........................."   ""
-"         90,300"   "IconView::scrollToRow............................."   ""
-"         63,700"   "MW::gridHasScrolled..............................."   ""
-"         41,200"   "MetadataCache::run................................"   ""
-"         16,300"   "MW::updateIconsVisible............................"   ""
-"         72,700"   "IconView::scannedViewportRange...................."   ""
-"        156,400"   "MetadataCache::sizeChange........................."   ""
-"        181,100"   "ImageCache::pauseImageCache......................."   ""
-"     36,448,400"   "Pixmap::load......................................"   "Loaded D:/Pictures/iphone11/IMG_1213.JPG"
-"         73,500"   "ICC::setInProfile................................."   ""
-"        116,400"   "ICC::transform...................................."   ""
-"    113,695,100"   "Pixmap::load......................................"   "Completed load image"
-"         73,300"   "ImageCache::getImCacheSize........................"   ""
-"        114,700"   "ImageCache::nextToCache..........................."   ""
-"        179,700"   "MetadataCache::readMetadataChunk.................."   ""
-MetadataCache::readMetadataChunk Aborting on row 452
-"        168,300"   "MetadataCache::readIconChunk......................"   ""
-"        888,200"   "MetadataCache::setRange..........................."   ""
-"         92,100"   "MetadataCache::scrollChange......................."   ""
-"         90,500"   "MetadataCache::run................................"   ""
-"        694,500"   "MetadataCache::readMetadataChunk.................."   ""
-MetadataCache::readMetadataChunk Aborting on row 452
-"        120,900"   "MetadataCache::readIconChunk......................"   ""
-"        625,800"   "MetadataCache::setRange..........................."   ""
-MW::fileSelectionChange Is metadata loaded: false
-"        150,000"   "Metadata::loadImageMetadata......................."   "D:/Pictures/iphone11/IMG_0361.HEIC"
-"            500"   "Metadata::readMetadata............................"   "D:/Pictures/iphone11/IMG_0361.HEIC"
-"         26,100"   "MetadataCache::run................................"   ""
-"         33,200"   "Metadata::clearMetadata..........................."   ""
-Metadata::readMetadata Open "D:/Pictures/iphone11/IMG_0361.HEIC"
-"        215,200"   "Metadata::parseHEIF..............................."   ""
-"        115,600"   "MetadataCache::readMetadataChunk.................."   ""
-"         40,500"   "DataModel::readMetadataForItem...................."   "D:/Pictures/iphone11/IMG_0632.HEIC"
-"         31,700"   "Metadata::loadImageMetadata......................."   "D:/Pictures/iphone11/IMG_0632.HEIC"
-"         27,300"   "Metadata::readMetadata............................"   "D:/Pictures/iphone11/IMG_0632.HEIC"
-"         28,700"   "Metadata::clearMetadata..........................."   ""
-QFile::setFileName: File (D:/Pictures/iphone11/IMG_0361.HEIC) is already opened
-Metadata::readMetadata Open "D:/Pictures/iphone11/IMG_0632.HEIC"
-"        131,800"   "Metadata::parseHEIF..............................."   ""
-QBuffer::setBuffer: Buffer is open
-"      3,869,200"   "Metadata::reportMetadata.........................."   ""
-"        944,700"   "DataModel::addMetadataForItem....................."   ""
-"      1,177,900"   "ImageView::loadImage.............................."   ""
-"         56,800"   "Pixmap::load......................................"   "D:/Pictures/iphone11/IMG_0361.HEIC"
-"         79,600"   "DataModel::imMetadata............................."   ""
-18:45:33: The program has unexpectedly finished.
+Go to last image
+IconView::selectLast
+IconView::getLastRow
+IconView::selectThumb
+IconView::selectionChanged
+MW::updateStatus
+IconView::getCurrentFilePath
+Filters::isAnyFilter
+MW::metadataChanged
+IconView::selectionChanged
+MW::fileSelectionChange
+IconView::scrollToRow
+MW::thumbHasScrolled
+MW::updateIconsVisible
+IconView::scannedViewportRange
+MetadataCache::sizeChange
+MetadataCache::setRange
+IconView::scrollToRow
+MetadataCache::run
+MW::gridHasScrolled
+MW::updateIconsVisible
+IconView::scannedViewportRange
+MetadataCache::readIconChunk
+MetadataCache::sizeChange
+Thumb::loadThumb
+
+    QElapsedTimer profileTimer; profileTimer.restart();
+    {
+    #ifdef ISPROFILE
+    profileTimer.restart();
+    #endif
+    }
+    {
+    #ifdef ISPROFILE
+    G::t.elapsed();
+    #endif
+    }

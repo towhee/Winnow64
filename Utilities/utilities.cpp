@@ -36,6 +36,7 @@ QString Utilities::inputText(QString title, QString description,
 void Utilities::log(QString function, QString msg)
 {
     QFile fLog("C:/Users/Rory/Documents/WinnowLog.txt");
+    if (fLog.isOpen()) fLog.close();
     if (fLog.open(QIODevice::ReadWrite)) {
         fLog.readAll();
         QString t = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");

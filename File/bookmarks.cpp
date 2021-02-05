@@ -132,13 +132,14 @@ the FSTree folders view.
     G::track(__FUNCTION__);
     #endif
     }
+//    return;
     if (bookmarkPaths.contains(fPath)) {
         QList <QTreeWidgetItem *> items;
         items = findItems(QFileInfo(fPath).fileName(), Qt::MatchExactly);
         if (items.length() > 0) {
             setCurrentItem(items[0]);
             setCurrentIndex(selectedIndexes().at(0));
-            count();
+//            count();  // big slowdown
         }
 
     }

@@ -270,6 +270,7 @@ void Metadata::reportMetadata()
         // Set up the output device
         QByteArray outArray;
         QBuffer buffer(&outArray);
+        if (buffer.isOpen()) buffer.close();
         buffer.open(QIODevice::ReadWrite);
 
         // format xmp
@@ -283,7 +284,7 @@ void Metadata::reportMetadata()
 
 QString Metadata::diagnostics(QString fPath)
 {
-    readMetadata(true, fPath);
+    readMetadata(true, fPath, __FUNCTION__);
     return reportString;
 }
 
@@ -350,6 +351,7 @@ buffer and the original image file is copied unchanged.
     // data edited, open image file
     p.file.setFileName(fPath);
     // rgh error trap file operation
+    if (p.file.isOpen()) p.file.close();
     p.file.open(QIODevice::ReadOnly);
 
     // update xmp data
@@ -640,6 +642,10 @@ bool Metadata::parseJPG(quint32 startOffset)
     G::track(__FUNCTION__);
     #endif
     }
+    if (!p.file.isOpen()) {
+        qDebug() << __FUNCTION__ << p.file.fileName() << "is not open";
+        return false;
+    }
     if (jpeg == nullptr) jpeg = new Jpeg;
     if (ifd == nullptr) ifd = new IFD;
     if (exif == nullptr) exif = new Exif;
@@ -729,6 +735,7 @@ void Metadata::testNewFileFormat(const QString &path)
     }
     clearMetadata();
     p.file.setFileName(path);
+    if (p.file.isOpen()) p.file.close();
     p.file.open(QIODevice::ReadOnly);
 
     // edit test format to use:
@@ -736,14 +743,15 @@ void Metadata::testNewFileFormat(const QString &path)
 //    reportMetadata();
 }
 
-bool Metadata::readMetadata(bool isReport, const QString &path)
+bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__, path);
     #endif
     }
-    isReport = true;
+    qDebug() << __FUNCTION__ << "called by" << source << path << "p.report =" << p.report;
+//    isReport = true;
     p.report = isReport;
 
     if (p.report) {
@@ -755,21 +763,27 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
     }
     clearMetadata();
 
-    if (p.file.isOpen()) {
-        m.err += "File is already open";
-        qDebug() << __FUNCTION__ << m.err;
-        return false;
-    }
-    p.file.setFileName(path);
+//    if (p.file.isOpen()) {
+//        m.err += "File is already open";
+//        qDebug() << __FUNCTION__ << m.err;
+//        return false;
+//    }
     if (p.file.isOpen()) p.file.close();
+//    p.file.close();
+    p.file.setFileName(path);
+    if (p.file.isOpen()) return false;
+
+//    if (p.file.isOpen()) p.file.close();
     if (p.report) {
         p.rpt << "\nFile name = " << path << "\n";
     }
     QFileInfo fileInfo(path);
     QString ext = fileInfo.suffix().toLower();
     bool fileOpened = false;
-    qDebug() << __FUNCTION__ << "Open" << path;
-    if (p.file.open(QIODevice::ReadOnly)) {
+//    qDebug() << __FUNCTION__ << "Open" << path;
+    bool okay = p.file.open(QIODevice::ReadOnly);
+//    if (p.file.open(QIODevice::ReadOnly)) {
+    if (okay) {
         if (jpeg == nullptr) jpeg = new Jpeg;
         if (ifd == nullptr) ifd = new IFD;
         if (exif == nullptr) exif = new Exif;
@@ -789,6 +803,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path)
         if (ext == "tif")  fileOpened = parseTIF();
         p.file.close();
         if (!fileOpened) {
+            p.file.close();
             m.err += "Unable to read format for " + path + ". ";
             qDebug() << __FUNCTION__ << m.err;
             return false;
@@ -839,6 +854,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     G::track(__FUNCTION__, fileInfo.filePath());
     #endif
     }
+//    qDebug() << __FUNCTION__ << "called by" << source;
     // check if already loaded
     QString fPath = fileInfo.filePath();
     if (fPath == "") {
@@ -854,7 +870,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     okToReadXmp = true;
 
     // read metadata
-    m.metadataLoaded = readMetadata(isReport, fPath);
+    m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
         qDebug() << __FUNCTION__ << m.err << source;
         return false;
