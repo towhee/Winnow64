@@ -196,6 +196,11 @@ void FSTree::createModel()
     Create the model and filter in a separate function as it is also used to refresh
     the folders by deleting the model and re-creating it.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     fsModel = new FSModel(this, metadata, count, combineCount, combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     fsModel->setRootPath("");
@@ -241,12 +246,22 @@ void FSTree::refreshModel()
     Most common use is to refresh the folder panel after inserting a USB connected
     media card.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     delete fsModel;
     createModel();
 }
 
 bool FSTree::getShowImageCount()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     return fsModel->showImageCount;
 }
 
@@ -305,6 +320,11 @@ QModelIndex FSTree::getCurrentIndex()
 
 void FSTree::resizeColumns()
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     if (fsModel->showImageCount) {
 //        imageCountColumnWidth = 45;
         QFont font = this->font();
@@ -318,12 +338,17 @@ void FSTree::resizeColumns()
         imageCountColumnWidth = 0;
         hideColumn(4);
     }
-    // have to include the width of the decoration foler png
+    // have to include the width of the decoration folder png
     setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth - 10);
 }
 
 void FSTree::expand(const QModelIndex &idx)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QTreeView::expand(idx);
     // slight delay calling getImageCount to allow the tree node to expand
     QTimer::singleShot(50, this, SLOT(getImageCount()));
@@ -342,9 +367,10 @@ void FSTree::getImageCount(bool changed)
 */
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, "bool changed");
     #endif
     }
+    return;
 //    qDebug() << __FUNCTION__;
     QModelIndex idx = indexAt(rect().topLeft());  // delta
     while (idx.isValid())
@@ -359,9 +385,10 @@ void FSTree::getImageCount(QString const dirPath, bool changed)
 {
     {
     #ifdef ISDEBUG
-    G::track(__FUNCTION__);
+    G::track(__FUNCTION__, "QString const dirPath, bool changed");
     #endif
     }
+    return;
     // counts is combineRawJpg
     if (!combineCount.contains(dirPath) || changed) {
         dir->setPath(dirPath);
@@ -402,6 +429,11 @@ void FSTree::paintEvent(QPaintEvent *event)
 
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) return;
     QTreeView::mousePressEvent(event);
@@ -409,6 +441,11 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
 void FSTree::mouseReleaseEvent(QMouseEvent *event)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QTreeView::mouseReleaseEvent(event);
 }
 

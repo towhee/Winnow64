@@ -70,6 +70,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
     QFile imFile(fPath);
+//    if (imFile.isOpen()) imFile.close();
     int dmRow = dm->fPathRow[fPath];
 
     QString err = dm->index(dmRow, G::ErrColumn).data().toString();
@@ -94,6 +95,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
+        imFile.close();
         err += "Could not open file for image" + fPath + ". ";
         qDebug() << __FUNCTION__ << err;
         dm->setData(dm->index(dmRow, G::ErrColumn), err);

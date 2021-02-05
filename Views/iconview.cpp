@@ -666,9 +666,9 @@ bool IconView::allPageIconsLoaded()
 void IconView::scannedViewportRange()
 {
 /*
-Set the firstVisibleRow, midVisible, RowlastVisibleRow and thumbsPerPage. This is called when
-the application show event occurs, when there is a viewport scroll event or when an icon
-justification happens.
+    Set the firstVisibleRow, midVisibleRow, lastVisibleRow and thumbsPerPage. This is called
+    when the application show event occurs, when there is a viewport scroll event or when an
+    icon justification happens.
 */
     {
     #ifdef ISDEBUG
@@ -695,14 +695,15 @@ justification happens.
     midVisibleCell = firstVisibleCell + visibleCells / 2;
 
 
-/*    qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
+//    /*
+   qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
              << "isInitializing =" << G::isInitializing
              << "isVisible =" << isVisible()
              << "firstVisibleRow =" << firstVisibleCell
              << "lastVisibleRow =" << lastVisibleCell
              << "midVisibleRow =" << midVisibleCell
              << "thumbsPerPage =" << visibleCells;
-*/
+//            */
 }
 
 bool IconView::isRowVisible(int row)
@@ -906,6 +907,7 @@ void IconView::selectThumb(QModelIndex idx)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << idx;
     if (idx.isValid()) {
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
@@ -919,6 +921,7 @@ void IconView::selectThumb(int row)
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << "row =" << row;
     // some operations assign row = -1 if not found
     if (row < 0) return;
     setFocus();
@@ -1033,6 +1036,7 @@ void IconView::selectLast()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     selectThumb(getLastRow());
 }
 
@@ -1528,24 +1532,24 @@ void IconView::scrollPageUp(int /*step*/)
 void IconView::scrollToRow(int row, QString source)
 {
 /*
-This is called to scroll to the current image or to sync the other views (thumbView, gridView
-and tableView). When the user switches views (loupe, grid and table) the thumbView, gridView
-or tableView is made visible. Hidden widgets cannot be updated. It takes time for the view to
-be rendered, so we have to query it to make sure it is ready to accept a scrollto request.
-This is done by testing the actual maximum size of the scrollbars compared to a calculated
-amount in the okToScroll function.
+    This is called to scroll to the current image or to sync the other views (thumbView,
+    gridView and tableView). When the user switches views (loupe, grid and table) the
+    thumbView, gridView or tableView is made visible. Hidden widgets cannot be updated. It
+    takes time for the view to be rendered, so we have to query it to make sure it is ready to
+    accept a scrollto request. This is done by testing the actual maximum size of the
+    scrollbars compared to a calculated amount in the okToScroll function.
 
-source is the calling function and is used for debugging.
+    source is the calling function and is used for debugging.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    /*
+//    /*
     qDebug() << __FUNCTION__ << objectName() << "row =" << row
              << "requested by" << source;
-    */
+//    */
     source = "";    // suppress compiler warning
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
@@ -1579,6 +1583,7 @@ bool IconView::okToScroll()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     if (objectName() == "Thumbnails") {
         /*
         qDebug() << __FUNCTION__ << objectName()

@@ -34,8 +34,8 @@ public:
 
     void loadNewFolder(bool isRefresh = false);
     void loadNewFolder2ndPass();
-    void scrollChange();
-    void sizeChange();
+    void scrollChange(QString source);
+    void sizeChange(QString source);
     void fileSelectionChange(bool okayToImageCache);
     void loadAllMetadata();
     void readMetadataIcon(const QModelIndex &idx);

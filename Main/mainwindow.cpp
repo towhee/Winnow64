@@ -1040,7 +1040,7 @@ void MW::handleStartupArgs(const QString &args)
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
         info.setFile(fPath);
         QString fDir = info.dir().absolutePath();
-         fsTree->getImageCount(fDir, true);
+        fsTree->getImageCount(fDir, true);
         // go there ...
         fsTree->select(fDir);
         folderAndFileSelectionChange(fPath);
@@ -1259,6 +1259,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     #endif
     }
 
+    QElapsedTimer profileTimer; profileTimer.restart();
+    {
+    #ifdef ISPROFILE
+    profileTimer.restart();
+    #endif
+    }
+
 //   /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
@@ -1297,9 +1304,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     // user clicks outside thumb but inside treeView dock
     QModelIndexList selected = selectionModel->selectedIndexes();
     if (selected.isEmpty() && !G::isInitializing) return;
-
-    // confirm thumbnail was found and rendered
-
 
     // record current proxy row (dm->sf) as it is used to sync everything
     currentRow = current.row();
@@ -1354,20 +1358,20 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     /* check metadata loaded for current image (might not be if random slideshow)
        to prevent a conflict with the metadataCacheThread*/
-    int dmRow = dm->fPathRow[fPath];
-    qDebug() << __FUNCTION__ << "Is metadata loaded:"
-             << dm->index(dmRow, G::MetadataLoadedColumn).data().toBool();
-    if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
-        QFileInfo fileInfo(fPath);
-        QString ext = fileInfo.suffix().toLower();
-        if (metadata->getMetadataFormats.contains(ext)) {
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__))
-            {
-                metadata->m.row = dmRow;
-                dm->addMetadataForItem(metadata->m);
-            }
-        }
-    }
+//    int dmRow = dm->fPathRow[fPath];
+//    qDebug() << __FUNCTION__ << "is metadata loaded:"
+//             << dm->index(dmRow, G::MetadataLoadedColumn).data().toBool();
+//    if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
+//        QFileInfo fileInfo(fPath);
+//        QString ext = fileInfo.suffix().toLower();
+//        if (metadata->getMetadataFormats.contains(ext)) {
+//            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__))
+//            {
+//                metadata->m.row = dmRow;
+//                dm->addMetadataForItem(metadata->m);
+//            }
+//        }
+//    }
 
     // updates ********************************************************************************
 
@@ -1422,6 +1426,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     // update cursor position on progressBar
     updateImageCacheStatus("Update cursor", currentRow, "MW::fileSelectionChange");
+    {
+    #ifdef ISPROFILE
+    qDebug() << __FUNCTION__ << profileTimer.elapsed();
+    #endif
+    }
 }
 
 void MW::folderAndFileSelectionChange(QString fPath)
@@ -1517,14 +1526,16 @@ metadata caching.
 void MW::updateIconsVisible(bool useCurrentRow)
 {
 /*
-This function polls both thumbView and gridView to determine the first, mid and last thumbnail
-visible.  This is used in the metadataCacheThread to determine the range of files to cache.
+    This function polls both thumbView and gridView to determine the first, mid and last
+    thumbnail visible. This is used in the metadataCacheThread to determine the range of files
+    to cache.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
     int first = dm->sf->rowCount();
     int last = 0;
 
@@ -1559,24 +1570,25 @@ visible.  This is used in the metadataCacheThread to determine the range of file
         if (tableView->lastVisibleRow > last) last = tableView->lastVisibleRow;
     }
 
-        /*
-        qDebug() << __FUNCTION__
-             << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
-             << "thumbView->lastVisibleCell =" << thumbView->lastVisibleCell
-             << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
-             << "gridView->lastVisibleCell =" << gridView->lastVisibleCell
-             << "\n\ttableView->firstVisibleCell =" << tableView->firstVisibleRow
-             << "tableView->lastVisibleCell =" << tableView->lastVisibleRow
-             << "\n\tfirst =" << first
+    /* qDebug()
+         << __FUNCTION__
+         << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
+         << "thumbView->lastVisibleCell =" << thumbView->lastVisibleCell
+         << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
+         << "gridView->lastVisibleCell =" << gridView->lastVisibleCell
+         << "\n\ttableView->firstVisibleCell =" << tableView->firstVisibleRow
+         << "tableView->lastVisibleCell =" << tableView->lastVisibleRow
+         << "\n\tfirst =" << first
              << "last =" << last;
 //        */
+
     metadataCacheThread->firstIconVisible = first;
     metadataCacheThread->midIconVisible = (first + last) / 2;// rgh qCeil ??
     metadataCacheThread->lastIconVisible = last;
     metadataCacheThread->visibleIcons = last - first + 1;
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-    metadataCacheThread->sizeChange();
+    metadataCacheThread->sizeChange(__FUNCTION__);
 }
 
 void MW::updateImageCachePositionAfterDelay()
@@ -1650,12 +1662,13 @@ to work all the time.
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
 //        if (gridView->isVisible())
+        qDebug() << __FUNCTION__;
         updateIconsVisible(false);
         gridView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         updateIconsVisible(false);
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
-        metadataCacheThread->scrollChange();
+        metadataCacheThread->scrollChange(__FUNCTION__);
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
         if (idx.isValid()) {
@@ -1699,10 +1712,11 @@ within the cache range.
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
+        qDebug() << __FUNCTION__;
         updateIconsVisible(false);
 //        if (thumbView->isVisible())
         thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
-        metadataCacheThread->scrollChange();
+        metadataCacheThread->scrollChange(__FUNCTION__);
     }
     G::ignoreScrollSignal = false;
 }
@@ -1742,10 +1756,11 @@ within the cache range.
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
+        qDebug() << __FUNCTION__;
         updateIconsVisible(false);
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, __FUNCTION__);
-        metadataCacheThread->scrollChange();
+        metadataCacheThread->scrollChange(__FUNCTION__);
     }
     G::ignoreScrollSignal = false;
 }
@@ -1753,8 +1768,9 @@ within the cache range.
 void MW::numberIconsVisibleChange()
 {
 /*
-If there has not been another call to this function in cacheDelay ms then the
-metadataCacheThread is restarted at the row of the first visible thumb after the scrolling.
+    If there has not been another call to this function in cacheDelay ms then the
+    metadataCacheThread is restarted at the row of the first visible thumb after the
+    scrolling.
 */
     {
     #ifdef ISDEBUG
@@ -1763,7 +1779,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
     }
     if (G::isInitializing || !G::isNewFolderLoaded) return;
     updateIconsVisible(true);
-    metadataCacheThread->sizeChange();
+    metadataCacheThread->sizeChange(__FUNCTION__);
 }
 
 void MW::loadMetadataCacheAfterDelay()
@@ -1816,7 +1832,7 @@ metadataCacheThread is restarted at the row of the first visible thumb after the
 //    if (/*G::isInitializing || */dm->sf->rowCount() == 0/* || !G::isNewFolderLoaded*/) return;
 //    if (dm->sf->rowCount() == 0) return;
 //    updateMetadataCacheIconviewState();
-    metadataCacheThread->scrollChange();
+    metadataCacheThread->scrollChange(__FUNCTION__);
 }
 
 void MW::loadEntireMetadataCache(QString source)
@@ -6199,7 +6215,7 @@ hence need to scroll to the current row.
     G::ignoreScrollSignal = false;
 
     updateIconsVisible(true);
-    metadataCacheThread->scrollChange();
+    metadataCacheThread->scrollChange(__FUNCTION__);
 }
 
 void MW::showHiddenFiles()
@@ -10522,13 +10538,21 @@ void MW::keyEnd()
     #endif
     }
     qDebug() << __FUNCTION__;
-//    if (!G::isNewFolderLoaded) return;
+//    metadataCacheThread->stopMetadateCache();
+//    imageCacheThread->stopImageCache();
+    qDebug() << __FUNCTION__
+             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "thumbView->okToScroll() =" << thumbView->okToScroll()
+             << "G::mode =" << G::mode
+                ;
+    if (G::isNewFolderLoaded) {
 //    if (dm->loadingModel) return;
 //    metadataCacheThread->stopMetadateCache();
-    if (G::mode == "Compare") compareImages->go("End");
-    if (G::mode == "Grid") gridView->selectLast();
-    else {
-        thumbView->selectLast();
+        if (G::mode == "Compare") compareImages->go("End");
+        if (G::mode == "Grid") gridView->selectLast();
+        else {
+            thumbView->selectLast();
+        }
     }
 }
 

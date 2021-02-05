@@ -39,7 +39,7 @@ class Metadata : public QObject
     Q_OBJECT
 public:
     Metadata(QObject *parent = nullptr);
-    bool readMetadata(bool report, const QString &path);
+    bool readMetadata(bool report, const QString &path, QString source);
     QString diagnostics(QString fPath);
     void reportMetadata();
     void testNewFileFormat(const QString &path);
