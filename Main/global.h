@@ -22,7 +22,6 @@ namespace G
     enum UserRoles {
         PathRole = Qt::UserRole + 1,
         IconRectRole,
-        IconLoadedRole,
         CachedRole,
         DupIsJpgRole,
         DupOtherIdxRole,

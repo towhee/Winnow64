@@ -134,11 +134,10 @@ void MetadataCache::stopMetadateCache()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
-//        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
@@ -210,7 +209,7 @@ void MetadataCache::loadNewFolder(bool isRefresh)
         mutex.unlock();
         wait();
     }
-    qDebug() << "\n@@@" << __FUNCTION__;
+//    qDebug() << "\n@@@" << __FUNCTION__;
     abort = false;
     G::allMetadataLoaded = false;
     isRefreshFolder = isRefresh;
@@ -254,12 +253,11 @@ metadata and icons are loaded into the datamodel.
     if (isRunning()) {
         mutex.lock();
         abort = true;
-//        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
     }
-    qDebug() << "\n@@@"  << __FUNCTION__;
+//    qDebug() << "\n@@@"  << __FUNCTION__;
     abort = false;
     action = Action::NewFolder2ndPass;
     setRange();
@@ -267,12 +265,13 @@ metadata and icons are loaded into the datamodel.
     for (int i = startRow; i < endRow; ++i) {
         if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
             foundItemsToLoad = true;
-        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
-            foundItemsToLoad = true;
+//        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
+//            foundItemsToLoad = true;
         if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
             foundItemsToLoad = true;
         if (foundItemsToLoad) break;
     }
+//    qDebug() << "\n@@@"  << __FUNCTION__ << "foundItemsToLoad =" << foundItemsToLoad;
     start(TimeCriticalPriority);
 }
 
@@ -296,12 +295,11 @@ progress bar update is more important then use the datamodel function dm::addAll
     if (isRunning()) {
         mutex.lock();
         abort = true;
-//        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
     }
-    qDebug() << "\n@@@"  << __FUNCTION__;
+//    qDebug() << "\n@@@"  << __FUNCTION__;
     abort = false;
     startRow = 0;
     endRow = dm->sf->rowCount();
@@ -331,7 +329,7 @@ limits are removed (not visible and not with chunk range)
             wait();
     }
     if (G::isInitializing) return;
-    qDebug() << "\n@@@"  << __FUNCTION__ << "called by =" << source;
+//    qDebug() << "\n@@@"  << __FUNCTION__ << "called by =" << source;
     abort = false;
     action = Action::Scroll;
     setRange();
@@ -339,12 +337,13 @@ limits are removed (not visible and not with chunk range)
     for (int i = startRow; i < endRow; ++i) {
         if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
             foundItemsToLoad = true;
-        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
-            foundItemsToLoad = true;
+//        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
+//            foundItemsToLoad = true;
         if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
             foundItemsToLoad = true;
         if (foundItemsToLoad) break;
     }
+//    qDebug() << "\n@@@"  << __FUNCTION__ << "called by =" << source << "foundItemsToLoad =" << foundItemsToLoad;
     start(TimeCriticalPriority);
 }
 
@@ -362,12 +361,11 @@ size or the viewport change size.
     if (isRunning()) {
         mutex.lock();
         abort = true;
-//        qDebug() << "abort = true : " << __FUNCTION__;
         condition.wakeOne();
         mutex.unlock();
         wait();
     }
-    qDebug() << "\n@@@"  << __FUNCTION__ << "called by =" << source;
+//    qDebug() << "\n@@@"  << __FUNCTION__ << "called by =" << source;
     abort = false;
     action = Action::Resize;
     foundItemsToLoad = false;
@@ -375,8 +373,8 @@ size or the viewport change size.
     for (int i = startRow; i < endRow; ++i) {
         if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
             foundItemsToLoad = true;
-        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
-            foundItemsToLoad = true;
+//        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
+//            foundItemsToLoad = true;
         if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
             foundItemsToLoad = true;
         if (foundItemsToLoad) break;
@@ -402,7 +400,7 @@ void MetadataCache::fileSelectionChange(bool okayToImageCache)
         mutex.unlock();
         wait();
     }
-    qDebug() << "\n@@@"  << __FUNCTION__;
+//    qDebug() << "\n@@@"  << __FUNCTION__;
     abort = false;
     updateImageCache = okayToImageCache;
     action = Action::NewFileSelected;
@@ -411,8 +409,8 @@ void MetadataCache::fileSelectionChange(bool okayToImageCache)
     for (int i = startRow; i < endRow; ++i) {
         if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
             foundItemsToLoad = true;
-        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
-            foundItemsToLoad = true;
+//        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
+//            foundItemsToLoad = true;
         if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
             foundItemsToLoad = true;
         if (foundItemsToLoad) break;
@@ -455,7 +453,7 @@ void MetadataCache::setRange()
     prevFirstIconVisible = firstIconVisible;
     prevLastIconVisible = lastIconVisible;
 
-//    /*
+    /*
     qDebug()  <<  __FUNCTION__
               << "source =" << actionList.at(action)
               << "firstIconVisible =" << firstIconVisible
@@ -633,7 +631,7 @@ void MetadataCache::readIconChunk()
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
+//    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
 
     int start = startRow;
     int end = endRow;
@@ -649,118 +647,65 @@ void MetadataCache::readIconChunk()
 //    */
 
     // process visible icons first
-    bool tryAgain = false;
-    for (int attempt = 0; attempt < 2; attempt++) {
-        for (int row = firstIconVisible; row <= lastIconVisible; ++row) {
-//        for (int row = start; row < end; ++row) {
-            if (abort) {
-                emit updateIsRunning(false, true, __FUNCTION__);
-                return;
-            }
-
-            // load icon
-            mutex.lock();
-            QModelIndex idx = dm->sf->index(row, 0);
-            QModelIndex idxIconLoaded = dm->sf->index(row, G::IconLoadedColumn);
-            if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
-//            bool failedToLoad = !idxIconLoaded.data().toBool();
-//            bool nullIcon = idx.data(Qt::DecorationRole).isNull();
-//            qDebug() << __FUNCTION__ << row
-//                     << "failedToLoad =" << failedToLoad
-//                     << "nullIcon =" << nullIcon
-//                     << "idx.isValid() =" << idx.isValid()
-//                     << "firstIconVisible =" << firstIconVisible
-//                     << "lastIconVisible =" << lastIconVisible
-//                     ;
-
-//            if (idx.isValid() && (failedToLoad || nullIcon)) {
-                int dmRow = dm->sf->mapToSource(idx).row();
-                QImage image;
-                QString fPath = idx.data(G::PathRole).toString();
-
-                if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
-                bool thumbLoaded = thumb->loadThumb(fPath, image);
-                if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
-
-                QPixmap pm;
-                if (thumbLoaded) {
-//                    qDebug() << __FUNCTION__
-//                             << "thumbLoaded = true"
-//                             << "dmRow =" << dmRow
-//                                ;
-                    pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-//                    qDebug() << __FUNCTION__ << "1";
-                    dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
-//                    qDebug() << __FUNCTION__ << "2";
-                    iconMax(pm);
-                    iconsCached.append(dmRow);
-                    dm->sf->setData(idxIconLoaded, true);
-//                    qDebug() << __FUNCTION__ << "Success" << fPath;
-                }
-                else {
-                    if (attempt == 0) {
-                        tryAgain = true;
-//                        qDebug() << __FUNCTION__ << "Try again" << fPath;
-                    }
-                    if (attempt == 1) {
-//                        pm = QPixmap(":/images/badImage1.png");
-//                        dm->sf->setData(idx, fPath + " BAD ICON", Qt::ToolTipRole);
-//                        qDebug() << __FUNCTION__ << "Failed 2nd attempt" << fPath;
-                    }
-                }
-//                qDebug() << __FUNCTION__ << "row =" << row;
-            }
-            mutex.unlock();
-//            if (row == lastIconVisible) qApp->processEvents();
+    for (int row = firstIconVisible; row <= lastIconVisible; ++row) {
+        if (abort) {
+            emit updateIsRunning(false, true, __FUNCTION__);
+            return;
         }
-        if (!tryAgain) break;
+
+        // load icon
+        mutex.lock();
+        QModelIndex idx = dm->sf->index(row, 0);
+        if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
+            int dmRow = dm->sf->mapToSource(idx).row();
+            QImage image;
+            QString fPath = idx.data(G::PathRole).toString();
+            /*
+            if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
+            bool thumbLoaded = thumb->loadThumb(fPath, image);
+            if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
+            */
+            bool thumbLoaded = thumb->loadThumb(fPath, image);
+            QPixmap pm;
+            if (thumbLoaded) {
+                pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+                iconMax(pm);
+                iconsCached.append(dmRow);
+            }
+        }
+        mutex.unlock();
     }
 
-//    qApp->processEvents();
-    return;
-
     // process entire range
-    tryAgain = false;
-    for (int attempt = 0; attempt < 2; attempt++) {
-        for (int row = start; row < end; ++row) {
-            if (abort) {
-                emit updateIsRunning(false, true, __FUNCTION__);
-                return;
-            }
-
-            // load icon
-            mutex.lock();
-            QModelIndex idx = dm->sf->index(row, 0);
-            QModelIndex idxIconLoaded = dm->sf->index(row, G::IconLoadedColumn);
-            bool failedToLoad = !idxIconLoaded.data().toBool();
-            bool nullIcon = idx.data(Qt::DecorationRole).isNull();
-            if (idx.isValid() && (failedToLoad || nullIcon)) {
-                int dmRow = dm->sf->mapToSource(idx).row();
-                QImage image;
-                QString fPath = idx.data(G::PathRole).toString();
-                bool thumbLoaded = thumb->loadThumb(fPath, image);
-                QPixmap pm;
-                if (thumbLoaded) {
-                    pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                    dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
-                    iconMax(pm);
-                    iconsCached.append(dmRow);
-                    dm->sf->setData(idxIconLoaded, true);
-                }
-                else {
-                    if (attempt == 0) {
-                        tryAgain = true;
-                    }
-                    if (attempt == 1) {
-//                        pm = QPixmap(":/images/badImage1.png");
-//                        dm->sf->setData(idx, fPath + " BAD ICON", Qt::ToolTipRole);
-                    }
-                }
-            }
-            mutex.unlock();
-            if (row == lastIconVisible) qApp->processEvents();
+    for (int row = start; row <= end; ++row) {
+        if (abort) {
+            emit updateIsRunning(false, true, __FUNCTION__);
+            return;
         }
-        if (!tryAgain) break;
+
+        // load icon
+        mutex.lock();
+        QModelIndex idx = dm->sf->index(row, 0);
+        if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
+            int dmRow = dm->sf->mapToSource(idx).row();
+            QImage image;
+            QString fPath = idx.data(G::PathRole).toString();
+            /*
+            if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
+            bool thumbLoaded = thumb->loadThumb(fPath, image);
+            if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
+            */
+            bool thumbLoaded = thumb->loadThumb(fPath, image);
+            QPixmap pm;
+            if (thumbLoaded) {
+                pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+                iconMax(pm);
+                iconsCached.append(dmRow);
+            }
+        }
+        mutex.unlock();
     }
 
     // reset after a filter change
@@ -778,7 +723,7 @@ sort/filter change and all metadata has been loaded, but the icons visible have 
     mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
     #endif
     }
-    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
+//    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
     int start = startRow;
     int end = endRow;
     if (cacheAllMetadata) {

@@ -488,8 +488,6 @@ bool DataModel::addFileData()
         setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
         setData(index(row, G::PathColumn), false, G::CachedRole);
         setData(index(row, G::PathColumn), false, G::DupHideRawRole);
-
-        setData(index(row, G::IconLoadedColumn), false);
         setData(index(row, G::NameColumn), fileInfo.fileName());
         setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
         setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
@@ -567,7 +565,7 @@ bool DataModel::addFileData()
 
     }
     loadingModel = false;
-    qDebug() << __FUNCTION__ << "model loaded for all images";
+//    qDebug() << __FUNCTION__ << "model loaded for all images";
     return true;
 }
 
