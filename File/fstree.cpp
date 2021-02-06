@@ -370,8 +370,6 @@ void FSTree::getImageCount(bool changed)
     G::track(__FUNCTION__, "bool changed");
     #endif
     }
-    return;
-//    qDebug() << __FUNCTION__;
     QModelIndex idx = indexAt(rect().topLeft());  // delta
     while (idx.isValid())
     {
@@ -388,7 +386,6 @@ void FSTree::getImageCount(QString const dirPath, bool changed)
     G::track(__FUNCTION__, "QString const dirPath, bool changed");
     #endif
     }
-    return;
     // counts is combineRawJpg
     if (!combineCount.contains(dirPath) || changed) {
         dir->setPath(dirPath);
