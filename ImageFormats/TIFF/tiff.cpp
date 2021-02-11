@@ -415,13 +415,14 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
     parseForDecoding(p, m, ifd);
 
     // cancel if there is compression or planar format
-    if (compression > 1 || planarConfiguration > 1 || samplesPerPixel > 3) return false;
+    if (compression > 1 || planarConfiguration > 1 /*|| samplesPerPixel > 3*/) return false;
 
     // width and height of thumbnail to be created
     int w = m.width;                      // width of thumb to create
     int h = m.height;                     // height of thumb to create
     int nth = 1;
 
+    // newSize = sample from every nth pixel ie to create thumbnail
     if (newSize) {
         if (m.width > m.height) {
             if (newSize > m.width) newSize = m.width;
@@ -438,6 +439,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
 
     int bytesPerPixel = bitsPerSample / 8 * samplesPerPixel;
     int bytesPerLine = bytesPerPixel * m.width;
+    int rgbBytesPerPixel = bitsPerSample / 8 * 3;
 
     QImage *im;
 
@@ -462,6 +464,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
         return false;
     }
 
+    // read every nth pixel
     if (newSize) {
         int newBytesPerLine = w * bytesPerPixel;
         QByteArray ba;
@@ -476,6 +479,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
                     ba.clear();
                     for (int x = 0; x < w; x++) {
                         p.file.seek(fOffset);
+//                        ba += p.file.read(rgbBytesPerPixel);  // samplesPerPixel > 3 then only use first 3
                         ba += p.file.read(bytesPerPixel);
                         fOffset += static_cast<uint>(nth * bytesPerPixel);
                     }

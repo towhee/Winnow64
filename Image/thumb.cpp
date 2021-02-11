@@ -24,6 +24,10 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     int row = dm->fPathRow[fPath];
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
     switch(orientation) {
+        case 3:
+            trans.rotate(180);
+            image = image.transformed(trans, Qt::SmoothTransformation);
+            break;
         case 6:
             trans.rotate(90);
             image = image.transformed(trans, Qt::SmoothTransformation);

@@ -162,6 +162,9 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
 
 void GraphicsEffect::draw(QPainter* painter)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
 //    qDebug() << __FUNCTION__ << okToDraw << QTime::currentTime() << painter;
 //    if (!okToDraw) return;
 //    okToDraw = false;
@@ -300,6 +303,9 @@ QT_END_NAMESPACE
 
 void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
 //    qDebug() << __FUNCTION__ << QTime::currentTime();
 
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
@@ -324,6 +330,9 @@ void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 
 void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
     qDebug() << __FUNCTION__ << QTime::currentTime();
 
     if (overlay.isNull()) return;
@@ -340,6 +349,9 @@ void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 void GraphicsEffect::shadowEffect(double length, double radius, QColor color, double opacity,
                                   QPainter::CompositionMode mode)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
 //    qDebug() << __FUNCTION__ << QTime::currentTime();
 
     if (overlay.isNull()) return;
@@ -389,6 +401,9 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color, do
 void GraphicsEffect::shadowEffect1(double length, double radius, QColor color, double opacity,
                                   QPainter::CompositionMode mode)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
     /*
     qDebug() << __FUNCTION__ << QTime::currentTime();
     qDebug() << __FUNCTION__
@@ -514,6 +529,9 @@ void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::Com
 void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
 {
 //    qDebug() << __FUNCTION__ << QTime::currentTime();
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
     effect.raise(temp, margin, 0.2, false);
@@ -526,6 +544,9 @@ void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
 
 void GraphicsEffect::brightnessEffect(qreal evDelta, QPainter::CompositionMode mode)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
 //    qDebug() << __FUNCTION__ << QTime::currentTime();
     if (overlay.isNull()) return;
 
@@ -548,6 +569,9 @@ void GraphicsEffect::brightnessEffect(qreal evDelta, QPainter::CompositionMode m
 void GraphicsEffect::strokeEffect(double width, QColor color, double opacity,
                                   QPainter::CompositionMode mode)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
 //    qDebug() << __FUNCTION__ /*<< QTime::currentTime()*/
 //             << "boundingRect =" << boundingRect();
 
@@ -572,6 +596,9 @@ void GraphicsEffect::strokeEffect(double width, QColor color, double opacity,
 
 void GraphicsEffect::glowEffect(double width, QColor color, double blurRadius, QPainter::CompositionMode mode)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
 //    qDebug() << __FUNCTION__ << QTime::currentTime();
     if (overlay.isNull()) return;
 
@@ -596,6 +623,9 @@ void GraphicsEffect::embossEffect(double size, double exposure,
                                   bool isUmbraGradient,
                                   double contrast, QPainter::CompositionMode mode)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
 //    qDebug() << __FUNCTION__ << QTime::currentTime();
     if (overlay.isNull()) return;
 

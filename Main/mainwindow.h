@@ -186,6 +186,7 @@ public:
     int displayHorizontalPixels;
     int displayVerticalPixels;
     bool checkIfUpdate = true;
+    bool autoAdvance = false;
 
     // appearance
     bool isImageInfoVisible;

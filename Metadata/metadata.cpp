@@ -99,6 +99,21 @@ void Metadata::initSupportedFiles()
                         << "tif"
                            ;
 
+    // rotate based on metadata for orientation (heif/hif rotated by library)
+    rotateFormats       << "arw"
+                        << "cr2"
+                        << "cr3"
+                        << "dng"
+                        << "nef"
+                        << "orf"
+                        << "raf"
+                        << "sr2"
+                        << "rw2"
+                        << "jpg"
+                        << "jpeg"
+                        << "tif"
+                           ;
+
     embeddedICCFormats  << "jpg"
                         << "jpeg"
                            ;
