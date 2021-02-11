@@ -67,6 +67,7 @@ public:
     QStringList hasHeic;
     QStringList sidecarFormats;
     QStringList getMetadataFormats;
+    QStringList rotateFormats;
     QStringList embeddedICCFormats;
     QStringList internalXmpFormats;
     QStringList xmpWriteFormats;

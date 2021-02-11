@@ -172,7 +172,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
         }
 
         // use Qt tiff library to decode
-        bool useTIFFLib = true;
+        bool useTIFFLib = false;
         if (useTIFFLib) {
             // try to decode
             if (!image.load(fPath)) {
@@ -218,13 +218,19 @@ bool Pixmap::load(QString &fPath, QImage &image)
     G::track(__FUNCTION__, "Loaded " + fPath);
     #endif
 
-    if (metadata->getMetadataFormats.contains(ext)) {
+    if (metadata->rotateFormats.contains(ext)) {
         QTransform trans;
         int orientation = dm->index(dmRow, G::OrientationColumn).data().toInt();
         int rotationDegrees = dm->index(dmRow, G::RotationDegreesColumn).data().toInt();
         int degrees;
         if (orientation) {
             switch(orientation) {
+                case 3:
+                    degrees = rotationDegrees + 180;
+                    if (degrees > 360) degrees = degrees - 360;
+                    trans.rotate(degrees);
+                    image = image.transformed(trans, Qt::SmoothTransformation);
+                    break;
                 case 6:
                     degrees = rotationDegrees + 90;
                     if (degrees > 360) degrees = degrees - 360;

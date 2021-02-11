@@ -145,6 +145,9 @@ void Embel::clear()
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
     }
     // remove borders
     for (int i = bItems.size() - 1; i >= 0; --i) {
@@ -178,6 +181,10 @@ void Embel::build(QString path, QString src)
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    QString s = "path = " + path + " src = " + src;
+    Utilities::log(__FUNCTION__, s);
     #endif
     }
     /*
@@ -246,6 +253,9 @@ void Embel::borderImageCoordinates()
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
     #endif
     }
     //
@@ -348,6 +358,9 @@ QPoint Embel::canvasCoord(double x, double y,
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
     #endif
     }
     /*
@@ -453,6 +466,9 @@ QPoint Embel::anchorPointOffset(QString anchorPoint, int w, int h)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
     }
 //    qDebug() << __FUNCTION__ << anchorPoint << w << h;
     int w2 = static_cast<int>(w/2);
@@ -480,6 +496,9 @@ illusion of border margins using the painters algorithm.
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
     }
     for (int i = 0; i < p->b.size(); ++i) {
         Border x;
@@ -497,6 +516,9 @@ void Embel::createTexts()
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
     }
     for (int i = 0; i < p->t.size(); ++i) {
         QGraphicsTextItem *item = new QGraphicsTextItem;
@@ -510,6 +532,9 @@ void Embel::createGraphics()
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
     #endif
     }
     for (int i = 0; i < p->g.size(); ++i) {
@@ -526,6 +551,9 @@ void Embel::addBordersToScene()
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
     #endif
     }
     for (int i = 0; i < b.size(); ++i) {
@@ -547,6 +575,9 @@ void Embel::addTextsToScene()
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
     }
     for (int i = 0; i < p->t.size(); ++i) {
         updateText(i);
@@ -561,6 +592,9 @@ void Embel::addGraphicsToScene()
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
     }
     for (int i = 0; i < p->g.size(); ++i) {
         updateGraphic(i);
@@ -573,6 +607,9 @@ void Embel::addImageToScene()
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
     #endif
     }
     // scale the image to fit inside the borders
@@ -598,6 +635,9 @@ void Embel::addFlashToScene()
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
     }
     scene->addItem(flashItem);
 }
@@ -607,6 +647,9 @@ void Embel::updateBorder(int i)
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
     #endif
     }
     if (G::mode != "Loupe") return;
@@ -652,6 +695,9 @@ void Embel::updateText(int i)
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
     #endif
     }
     if (G::mode != "Loupe") return;
@@ -732,6 +778,9 @@ void Embel::updateGraphic(int i)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
     }
     if (G::mode != "Loupe") return;
 
@@ -807,6 +856,9 @@ void Embel::updateImage()
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
     }
     if (G::mode != "Loupe") return;
 
@@ -843,6 +895,9 @@ void Embel::refreshTexts()
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
     }
     for (int i = 0; i < tItems.size(); ++i) {
         updateText(i);
@@ -856,6 +911,9 @@ void Embel::removeBorder(int i)
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "i = " + QString::number(i));
     #endif
     }
 //    qDebug() << __FUNCTION__ << "i =" << i << "bItems.size() =" << bItems.size();
@@ -875,6 +933,9 @@ void Embel::removeText(int i)
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "i = " + QString::number(i));
+    #endif
     }
     if (i >= tItems.size()) return;
     if (scene->items().contains(tItems[i]))
@@ -890,6 +951,9 @@ void Embel::removeGraphic(int i)
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "i = " + QString::number(i));
     #endif
     }
     if (i >= gItems.size()) return;
@@ -908,6 +972,9 @@ void Embel::updateStyle(QString style)
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "style = " + style);
     #endif
     }
     if (G::mode != "Loupe") return;
@@ -936,6 +1003,9 @@ void Embel::flashObject(QString type, int index, bool show)
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
     #endif
     }
     if (G::mode != "Loupe") return;

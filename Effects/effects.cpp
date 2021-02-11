@@ -111,6 +111,9 @@ void Effects::transparentEdgeMap(QImage &img, int depth,
     int w = img.width();
     int h = img.height();
     int x, y;
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
 
 //    qDebug() << __FUNCTION__ << "w =" << w << "h = "<< h;
 
@@ -278,6 +281,9 @@ void Effects::transparentEdgeMap(QImage &img, int depth,
 
 void Effects::setOpacity(QImage &img, double opacity)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
     // pointer to source image pixels
     quint32 *p = reinterpret_cast<quint32*>(img.scanLine(0));
     int pixels = img.width() * img.height();
@@ -543,6 +549,9 @@ void Effects::vector2DToImage(QImage &img, QVector<QVector<QRgb> > &v)
 
 void Effects::zeroVector(QImage &img, QVector<QVector<QRgb>> &v)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
     QRgb zero = 0;
     for (int y = 0; y < img.height(); ++y) {
 //        memset(&v[y], 0, static_cast<uint>(img.width()) * sizeof(int));
@@ -589,6 +598,9 @@ void Effects::hueCount(QImage &img, QVector<int> &hues)
 
 QImage Effects::convolve(QImage &img, int mDim, double *matrix)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
     // matrix descriptors
     int i, mX, mY;
 
@@ -733,6 +745,9 @@ QImage Effects::convolve(QImage &img, int mDim, double *matrix)
 void Effects::blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
                        const int &w, const int &h, const int &width)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
     if (p1.x > p2.x) swapPoints(p1, p2);
 
     // define line y = mx + b;
@@ -931,6 +946,9 @@ void fastblur(BImage img,int radius){
     G::track(__FUNCTION__);
     #endif
     }
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
     qDebug() << __FUNCTION__ << QTime::currentTime();
 
     if (radius < 1) return;
@@ -1772,6 +1790,9 @@ void Effects::boxBlur2D(QImage &img, int radius)
 
 void Effects::blurOriginal(QImage &img, int radius)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
     qDebug() << __FUNCTION__;
     QElapsedTimer t;
     t.start();
@@ -2192,6 +2213,9 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
 
 void Effects::brightness(QImage &img, qreal evDelta)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
     qDebug() << __FUNCTION__ << QTime::currentTime();
 //    qDebug() << __FUNCTION__ << "delta =" << evDelta;
     QElapsedTimer t;
@@ -2284,6 +2308,9 @@ double Effects::embossEV(int &m, int d, double &contrast, double exposure,
     isUmbra  = not exposed directly to light source (see light direction = azimuth)
     isUmbraGradient = create a smooth gradient between startEv to midEV to endEV
     */
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
 
     double ev = exposure;
     double x = static_cast<double>(d) / m;
@@ -2349,6 +2376,9 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
 
     For each pixel, Effects::embossEV is called.
     */
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
 
     // border or graphics object with no transparent pixels along outer border
     size /= 100;                // emboss distance from edge (% of long side)
@@ -2448,6 +2478,9 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
 /*
     Draws a solid boundary around an object in an image, where the boundary is transparency.
 */
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
 
 //    qDebug() << __FUNCTION__ << QTime::currentTime() << "opacity =" << opacity;
     // create QVector (s) of img for pixel wrangling
@@ -2550,6 +2583,9 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
 
 void Effects::glow(QImage &img, double width, QColor color, double blurRadius)
 {
+#ifdef ISLOGGER
+Utilities::log(__FUNCTION__, "");
+#endif
     // create QVector (s) of img for pixel wrangling
     QVector<QVector<QRgb>> s(img.height());
     imageToVector2D(img, s);

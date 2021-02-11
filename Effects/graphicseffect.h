@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QGraphicsEffect>
 #include "Main/global.h"
+#include "Utilities/utilities.h"
 #include "effects.h"
 
 namespace winnow_effects

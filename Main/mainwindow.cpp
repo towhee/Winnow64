@@ -7903,6 +7903,7 @@ re-established when the application is re-opened.
     setting->setValue("limitFit100Pct", imageView->limitFit100Pct);
     setting->setValue("sortColumn", sortColumn);
     setting->setValue("sortReverse", sortReverseAction->isChecked());
+    setting->setValue("autoAdvance", autoAdvance);
 
     // datamodel
     setting->setValue("maxIconSize", G::maxIconSize);
@@ -8279,6 +8280,7 @@ Preferences are located in the prefdlg class and updated here.
     // general
     sortColumn = setting->value("sortColumn").toInt();
     sortReverse = setting->value("sortReverse").toBool();
+    autoAdvance = setting->value("autoAdvance").toBool();
 
     // appearance
     if (setting->contains("backgroundShade")) {
@@ -9750,7 +9752,7 @@ Push the changes onto the pick history stack.
     buildFilters->updateCountFiltered();
 
     // auto advance
-//    if (idxList.length() == 1) thumbView->selectNext();
+    if (autoAdvance) thumbView->selectNext();
 }
 
 void MW::pushPick(QString fPath, QString status)

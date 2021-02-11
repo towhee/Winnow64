@@ -73,7 +73,7 @@ DONE/FIXED
 - Stop an export
 - Switching between templates sometimes screws up the scale and position of the scene (not lately)
 - Brightness has boundary weirdness
-- changing template does not force redraw to new template until select new image
+- Changing template does not force redraw to new template until select new image
 - If add a new style and then cancel a blank style is created
 - Sometimes style effect up/down arrows not working
 - Sometimes all docks except embellish are locked (not lately)

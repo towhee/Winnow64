@@ -195,6 +195,10 @@ itemChange, which is subclassed here.
         mw->setClassificationBadgeThumbDiam(value);
     }
 
+    if (source == "autoAdvance") {
+        mw->autoAdvance = v.toBool();
+    }
+
     if (source == "colorManage") {
         G::colorManage = v.toBool();
     }
@@ -347,6 +351,19 @@ void Preferences::addItems()
     i.captionIsEditable = false;
     i.value = mw->imageView->limitFit100Pct;
     i.key = "limitFit100Pct";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Auto advance
+    i.name = "autoAdvance";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Auto advance";
+    i.tooltip = "Advance to next image after pick.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->autoAdvance;
+    i.key = "autoAdvance";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
