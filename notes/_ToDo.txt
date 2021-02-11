@@ -42,6 +42,12 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Release 1.14
+- Fix embellish flash object crash
+- Render 16bit TIF
+- Rotate if EXIF orientation = 3 (180 degrees)
+- Auto advance
+- Release 1.13
 - Added shutter count for Sony cameras
 - Jumping to end when new folder can crash
 - Sometimes one thumb is not rendered after embellish export
