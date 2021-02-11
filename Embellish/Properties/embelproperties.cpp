@@ -5276,6 +5276,8 @@ void EmbelProperties::flash(QModelIndex idx)
     // check index range (triggered by mouse movement while tree painting)
     if (idx.row() < 0) return;
 
+    // check if an image has been selected.  if not then nothing to flash
+
     QString type;
     if (idx.parent() == bordersIdx) {
         type = "border";
