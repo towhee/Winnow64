@@ -10901,6 +10901,9 @@ release\moc_graphicseffect.cpp: Effects\graphicseffect.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
+		Utilities\utilities.h \
+		Utilities\inputdlg.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
 		Effects\effects.h \
 		release\moc_predefs.h \
 		C:\Qt\5.13.1\msvc2015_64\bin\moc.exe
@@ -43676,7 +43679,10 @@ release\effects.obj: Effects\effects.cpp Effects\effects.h \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QProgressBar \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
-		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
+		Utilities\utilities.h \
+		Utilities\inputdlg.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\effects.obj Effects\effects.cpp
 
 release\graphicseffect.obj: Effects\graphicseffect.cpp Effects\graphicseffect.h \
@@ -44158,6 +44164,9 @@ release\graphicseffect.obj: Effects\graphicseffect.cpp Effects\graphicseffect.h 
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
+		Utilities\utilities.h \
+		Utilities\inputdlg.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog \
 		Effects\effects.h \
 		Effects\REF_imageblitz_effects.h \
 		Effects\interpolate.h
@@ -65689,7 +65698,10 @@ release\coloranalysis.obj: Utilities\coloranalysis.cpp Utilities\coloranalysis.h
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QProgressBar \
 		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QPropertyAnimation \
-		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer
+		C:\Qt\5.13.1\msvc2015_64\include\QtCore\QTimer \
+		Utilities\utilities.h \
+		Utilities\inputdlg.h \
+		C:\Qt\5.13.1\msvc2015_64\include\QtWidgets\QDialog
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\coloranalysis.obj Utilities\coloranalysis.cpp
 
 release\dropshadowlabel.obj: Utilities\dropshadowlabel.cpp Utilities\dropshadowlabel.h \
