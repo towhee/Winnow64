@@ -653,7 +653,8 @@ void Embel::updateBorder(int i)
     #endif
     }
     if (G::mode != "Loupe") return;
-
+    // index guard
+    if (bItems.count() < i + 1) return;
     bItems[i]->setRect(0, 0, b[i].w, b[i].h);
     QColor color;
     QPen pen;
@@ -661,6 +662,8 @@ void Embel::updateBorder(int i)
     pen.setColor(Qt::transparent);
     bItems[i]->setPen(pen);
     color.setNamedColor(p->b[i].color);
+    // index guard
+    if (p->b.count() < i + 1) return;
     // tile or color background
     if (p->b[i].tile.isEmpty()) {
         bItems[i]->setBrush(color);
@@ -701,6 +704,10 @@ void Embel::updateText(int i)
     #endif
     }
     if (G::mode != "Loupe") return;
+
+    // index guard
+    if (p->t.count() < i + 1) return;
+    if (tItems.count() < i + 1) return;
 
     // if a text entry
     if (p->t[i].source == "Text") {
@@ -783,6 +790,10 @@ void Embel::updateGraphic(int i)
     #endif
     }
     if (G::mode != "Loupe") return;
+
+    // index guard
+    if (p->g.count() < i + 1) return;
+    if (gItems.count() < i + 1) return;
 
     gItems[i]->setZValue(ZGraphic);
     double opacity = static_cast<double>(p->g[i].opacity)/100;
@@ -917,6 +928,10 @@ void Embel::removeBorder(int i)
     #endif
     }
 //    qDebug() << __FUNCTION__ << "i =" << i << "bItems.size() =" << bItems.size();
+    // index guard
+    if (b.count() < i + 1) return;
+    if (bItems.count() < i + 1) return;
+
     if (i >= bItems.size() || i >= b.size()) return;
     if (scene->items().contains(bItems[i]))
         scene->removeItem(bItems[i]);
@@ -937,6 +952,9 @@ void Embel::removeText(int i)
     Utilities::log(__FUNCTION__, "i = " + QString::number(i));
     #endif
     }
+    // index guard
+    if (tItems.count() < i + 1) return;
+
     if (i >= tItems.size()) return;
     if (scene->items().contains(tItems[i]))
         scene->removeItem(tItems[i]);
@@ -956,6 +974,9 @@ void Embel::removeGraphic(int i)
     Utilities::log(__FUNCTION__, "i = " + QString::number(i));
     #endif
     }
+    // index guard
+    if (gItems.count() < i + 1) return;
+
     if (i >= gItems.size()) return;
     if (scene->items().contains(gItems[i]))
         scene->removeItem(gItems[i]);
@@ -1012,12 +1033,17 @@ void Embel::flashObject(QString type, int index, bool show)
 
     flashItem->setVisible(show);
     if (!show) return;
+
     if (type == "border") {
+        // index guard (triggered if no image has been selected in loupe view
+        if (bItems.count() < index + 1) return;
         flashItem->setRect(bItems[index]->boundingRect());
         flashItem->setPos(bItems[index]->pos());
 //        qDebug() << __FUNCTION__ << bItems[index]->boundingRect();
     }
     if (type == "text") {
+        // index guard (triggered if no image has been selected in loupe view
+        if (tItems.count() < index + 1) return;
         flashItem->setRect(tItems[index]->boundingRect());
         int w = static_cast<int>(tItems[index]->boundingRect().width());
         int h = static_cast<int>(tItems[index]->boundingRect().height());
@@ -1027,6 +1053,8 @@ void Embel::flashObject(QString type, int index, bool show)
         flashItem->setRotation(tItems[index]->rotation());
     }
     if (type == "graphic") {
+        // index guard (triggered if no image has been selected in loupe view
+        if (gItems.count() < index + 1) return;
         flashItem->setRect(gItems[index]->boundingRect());
         int w = static_cast<int>(gItems[index]->boundingRect().width());
         int h = static_cast<int>(gItems[index]->boundingRect().height());
