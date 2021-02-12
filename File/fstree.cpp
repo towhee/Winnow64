@@ -342,19 +342,26 @@ void FSTree::resizeColumns()
     setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth - 10);
 }
 
-void FSTree::expand(const QModelIndex &idx)
+void FSTree::expand(const QModelIndex &/*idx*/)
 {
+/*
+    Get the image count when a user expands the folder hierarchy.  This can also occur when a
+    bookmark is selected and the matching folder is shown in the FSTree.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    QTreeView::expand(idx);
-    // slight delay calling getImageCount to allow the tree node to expand
-    QTimer::singleShot(50, this, SLOT(getImageCount()));
+//    qDebug() << __FUNCTION__ << idx << t.elapsed();
+    if (t.elapsed() > 25) {
+        QString src = __FUNCTION__;
+        QTimer::singleShot(50, [this, src]() {getVisibleImageCount(src);});
+    }
+    t.restart();
 }
 
-void FSTree::getImageCount(bool changed)
+void FSTree::getVisibleImageCount(QString src)
 {
 /*
     This function stores the image count (that winnow can read) for each folder that is
@@ -374,18 +381,19 @@ void FSTree::getImageCount(bool changed)
     while (idx.isValid())
     {
         QString dirPath = idx.data(QFileSystemModel::FilePathRole).toString();
-        getImageCount(dirPath, changed);
+        getImageCount(dirPath, false, src);
         idx = indexBelow(idx);
     }
 }
 
-void FSTree::getImageCount(QString const dirPath, bool changed)
+void FSTree::getImageCount(QString const dirPath, bool changed, QString src)
 {
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__, "QString const dirPath, bool changed");
     #endif
     }
+    qDebug() << __FUNCTION__ << src << dirPath;
     // counts is combineRawJpg
     if (!combineCount.contains(dirPath) || changed) {
         dir->setPath(dirPath);

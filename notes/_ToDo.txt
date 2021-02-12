@@ -1,4 +1,4 @@
-BUGS
+BUGS / TO DO
 - Settings Show Label in grid not syncing
 - Text disappears at certain font sizes
 - Highlighter opacity not always used
@@ -29,19 +29,22 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - cleanup imageview rubberband
 ENHANCEMENTS
+- Import/export Embellish templates
 - Add EXIF data back to embellished image
 - Add fade and alias to stroke
 - Add glow (inner/outer)
 - Add guassian blur (inner/outer)
 - Copy files between folders using drag'n'drop
 - Reset to defaults
-- Remove Windows Registry settings during uninstall
+- Remove Windows Registry settings and during uninstall
 - Read keywords
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Prevent double getVisibleImageCount when first open Winnow
+- Save log in data area instead of desktop
 - Release 1.14
 - Fix embellish flash object crash
 - Render 16bit TIF
