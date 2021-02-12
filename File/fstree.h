@@ -65,9 +65,9 @@ public:
 
 public slots:
     void resizeColumns();
-    void expand(const QModelIndex &idx);
-    void getImageCount(bool changed = false);
-    void getImageCount(const QString dirPath, bool changed = false);
+    void expand(const QModelIndex &);
+    void getVisibleImageCount(QString src);
+    void getImageCount(const QString dirPath, bool changed = false, QString src = "");
 
 private slots:
 
@@ -92,6 +92,7 @@ private:
     QDir *dir;
     QStringList *fileFilters;
     int imageCountColumnWidth;
+    QElapsedTimer t;
 };
 
 #endif // FSTREE_H

@@ -403,7 +403,10 @@ void MW::showEvent(QShowEvent *event)
     if(checkIfUpdate && !isStartupArgs) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
 
     // show image count in folder panel if no folder selected
-    if (!rememberLastDir) QTimer::singleShot(50, fsTree, SLOT(getImageCount()));
+    if (!rememberLastDir) {
+        QString src = __FUNCTION__;
+        QTimer::singleShot(50, [this, src]() {fsTree->getVisibleImageCount(src);});
+    }
 
     // get the monitor screen for testing against movement to an new screen in setDisplayResolution()
     QPoint loc = centralWidget->window()->geometry().center();
@@ -1040,7 +1043,7 @@ void MW::handleStartupArgs(const QString &args)
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
         info.setFile(fPath);
         QString fDir = info.dir().absolutePath();
-        fsTree->getImageCount(fDir, true);
+        fsTree->getImageCount(fDir, true, __FUNCTION__);
         // go there ...
         fsTree->select(fDir);
         folderAndFileSelectionChange(fPath);
@@ -3060,8 +3063,11 @@ void MW::createActions()
     ratingBadgeVisibleAction->setObjectName("toggleRatingBadge");
     ratingBadgeVisibleAction->setShortcutVisibleInContextMenu(true);
     ratingBadgeVisibleAction->setCheckable(true);
-    if (isSettings && setting->contains("isRatingBadgeVisible")) ratingBadgeVisibleAction->setChecked(setting->value("isRatingBadgeVisible").toBool());
-    else ratingBadgeVisibleAction->setChecked(false);
+    ratingBadgeVisibleAction->setChecked(false);
+    // isRatingBadgeVisible = false by default, loadSettings updates value before createActions
+    ratingBadgeVisibleAction->setChecked(isRatingBadgeVisible);
+//    if (isRatingBadgeVisible) ratingBadgeVisibleAction->setChecked(true);
+//    else ratingBadgeVisibleAction->setChecked(false);
     addAction(ratingBadgeVisibleAction);
     connect(ratingBadgeVisibleAction, &QAction::triggered, this, &MW::setRatingBadgeVisibility);
 
@@ -4402,8 +4408,8 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
     // prep pass values: first use of program vs settings have been saved
     if (isSettings) {
         if (setting->contains("isImageInfoVisible")) isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-        if (setting->contains("isRatingBadgeVisible")) isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
-        if (setting->contains("classificationBadgeInImageDiameter")) classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
+//        if (setting->contains("isRatingBadgeVisible")) isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
+//        if (setting->contains("classificationBadgeInImageDiameter")) classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
         if (setting->contains("infoOverlayFontSize")) infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
     }
     else {
@@ -11164,7 +11170,7 @@ ImageCache and update the image cache status bar.
     // refresh image count in folders and bookmarks
     if (sldm.count()) {
         for (int i = 0; i < slDir.length(); ++i) {
-            fsTree->getImageCount(slDir.at(i), true);
+            fsTree->getImageCount(slDir.at(i), true, __FUNCTION__);
         }
         bookmarks->count();
     }
