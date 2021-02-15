@@ -122,7 +122,7 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     return lastFileExportedPath;
 }
 
-void EmbelExport::exportImages(const QStringList &fPathList)
+void EmbelExport::exportImages(const QStringList &srcList)
 {
 /*
     Images within the current filtration that are picked or selected are rendered with
@@ -134,8 +134,9 @@ void EmbelExport::exportImages(const QStringList &fPathList)
     G::track(__FUNCTION__);
     #endif
     }
+
     abort = false;
-    int count = fPathList.size();
+    int count = srcList.size();
     if (count == 0) {
         G::popUp->showPopup("No images picked or selected");
         return;
@@ -152,7 +153,7 @@ void EmbelExport::exportImages(const QStringList &fPathList)
     QElapsedTimer t;
     t.start();
 
-    QFileInfo filedir(fPathList.at(0));
+    QFileInfo filedir(srcList.at(0));
     QString folderPath = filedir.dir().path();
 
     G::popUp->setProgressVisible(true);
@@ -162,11 +163,19 @@ void EmbelExport::exportImages(const QStringList &fPathList)
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
     G::popUp->showPopup(txt, 0, true, 1);
 
-    for (int i=0; i < count; i++) {
+    QStringList dstList;
+    for (int i = 0; i < count; i++) {
+        G::popUp->setProgress(i+1);
         qApp->processEvents();
         if (abort) break;
-        exportImage(fPathList.at(i));
-        G::popUp->setProgress(i+1);
+        exportImage(srcList.at(i));
+        dstList << lastFileExportedPath;
+    }
+
+    if (embelProperties->copyMetadata) {
+        ExifTool et;
+        int exitCode = et.copyAll(srcList, dstList);
+        if (exitCode != 0 && G::isLogger) Utilities::log(__FUNCTION__, "ExifTool exit code = " + QString::number(exitCode));
     }
 
     G::popUp->setProgressVisible(false);
@@ -193,7 +202,7 @@ void EmbelExport::exportImages(const QStringList &fPathList)
                   _msperim + " milliseconds per image.<p>" +
                   "<hr>" +
                   "Press <font color=\"red\"><b>Esc</b></font> to continue";
-    G::popUp->showPopup(msg, 10000);
+    G::popUp->showPopup(msg, 2000);
 }
 
 void EmbelExport::exportImage(const QString &fPath)

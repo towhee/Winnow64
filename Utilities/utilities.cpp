@@ -35,8 +35,10 @@ QString Utilities::inputText(QString title, QString description,
 
 void Utilities::log(QString function, QString msg)
 {
-    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QFile fLog(path + "/Log/WinnowLog.txt");
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
+    QDir dir(path);
+    if (!dir.exists()) dir.mkdir(path);
+    QFile fLog(path + "/WinnowLog.txt");
     if (fLog.isOpen()) fLog.close();
     if (fLog.open(QIODevice::ReadWrite)) {
         fLog.readAll();

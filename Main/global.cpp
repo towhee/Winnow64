@@ -2,6 +2,8 @@
 
 namespace G
 {
+    bool isLogger;                      // Writes error messages to WinnowLog.txt
+
     QPoint mousePos;                    // local mouse position used to locate mouse press custom button in qtreeview
     QString fontSize;                   // app font point size
     qreal dpi;                          // current logical screen dots per inch

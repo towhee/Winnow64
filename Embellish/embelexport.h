@@ -2,10 +2,12 @@
 #define EMBELEXPORT_H
 
 #include <QtWidgets>
+#include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Cache/imagecache.h"
 #include "Properties/embelproperties.h"
 #include "Embellish/embel.h"
+#include "Metadata/exiftool.h"
 
 class EmbelExport : public QGraphicsView
 {
@@ -19,7 +21,7 @@ public:
                 QWidget *parent = nullptr);
     ~EmbelExport();
 
-    void exportImages(const QStringList &fPathList);
+    void exportImages(const QStringList &srcList);
     QString exportRemoteFiles(QString templateName, QStringList &pathList);
     void exportImage(const QString &fPath);
     QString exportFolderPath(QString folderPath = "");

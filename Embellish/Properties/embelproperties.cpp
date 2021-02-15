@@ -1921,6 +1921,11 @@ void EmbelProperties::itemChangeExport(QModelIndex idx, QVariant v, QString sour
         exportSubfolder = v.toString();
     }
 
+    if (source == "copyMetadata") {
+        setting->setValue(path, v.toBool());
+        copyMetadata = v.toBool();
+    }
+
     if (source == "overwriteFiles") {
         setting->setValue(path, v.toBool());
         overwriteFiles = v.toBool();
@@ -2962,6 +2967,32 @@ void EmbelProperties::addExport()
     i.delegateType = DT_LineEdit;
     i.type = "QString";
     exportSuffix = i.value.toString();
+    addItem(i);
+
+    // EXPORT Copy metadata
+    i.name = "copyMetadata";
+    i.parIdx = parIdx;
+    i.parentName = "ExportHeader";
+    i.captionText = "Copy metadata";
+    i.tooltip = "Copy metadata from source to export file.\n"
+                "Note that this significantly slows down \n"
+                "the export process.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "copyMetadata";
+    i.path = settingRootPath + i.key;
+    i.defaultValue = false;
+    i.path = settingRootPath + i.key;
+    if (setting->contains(settingRootPath + i.key)) {
+        i.value = setting->value(settingRootPath + i.key);
+    }
+    else {
+        i.value = i.defaultValue;
+    }
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    copyMetadata = i.value.toBool();
     addItem(i);
 
     // EXPORT Overwrite existing files

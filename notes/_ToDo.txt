@@ -1,4 +1,8 @@
 BUGS / TO DO
+- Visual C++ Studio installation req'd
+- New workspace crashed
+- Image count does not update when scroll FSTree
+- Improve err recording and showing to user
 - Settings Show Label in grid not syncing
 - Text disappears at certain font sizes
 - Highlighter opacity not always used
@@ -30,7 +34,6 @@ CODE IMPROVEMENTS
 - cleanup imageview rubberband
 ENHANCEMENTS
 - Import/export Embellish templates
-- Add EXIF data back to embellished image
 - Add fade and alias to stroke
 - Add glow (inner/outer)
 - Add guassian blur (inner/outer)
@@ -43,6 +46,8 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Make delete warning optional.
+- Add EXIF data back to embellished image
 - Prevent double getVisibleImageCount when first open Winnow
 - Save log in data area instead of desktop
 - Release 1.14

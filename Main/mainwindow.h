@@ -67,9 +67,9 @@
 #include "ui_message.h"
 #include "ui_test12.h"
 
+#include "Metadata/exiftool.h"
 //#include "Image/tiffhandler.h";
 //#include "Lib/zlib/zlib.h"
-
 
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
@@ -98,11 +98,12 @@ public:
     bool isReleaseVersion = true;
     bool hideEmbellish = false;
 
-    QString version = "Version: 1.14";
+    QString version = "Version: 1.15";
 //    QString version = "Version: 1.10 released 2020-06-04";
-    QString winnowWithVersion = "Winnow 1.14";
+    QString winnowWithVersion = "Winnow 1.15";
     QString website = "Website: "
-            "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
+//            "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
+            "<a href=\"winnow.ca\">"
             "<span style=\" text-decoration: underline; color:#e5e5e5;\">"
             "Winnow main page</span></a>.  "
             "Includes links to download and video tutorials.</p></body></html>";
@@ -187,6 +188,7 @@ public:
     int displayVerticalPixels;
     bool checkIfUpdate = true;
     bool autoAdvance = false;
+    bool deleteWarning = true;
 
     // appearance
     bool isImageInfoVisible;

@@ -17,14 +17,20 @@ Just a dmg:
 -  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
 -  Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
    download url for the archived version.
+Updating ExifTool:
+- Download top version (not windows or mac)
+- Double click to uncompress to another folder
+- Copy exiftool and lib folder to Winnow project releaseDate
+	(build-winnow64-Desktop_Qt_5_15_2_clang_64bit-Release)
 
 Using an installer: (as of 2021-01-01)
-1. Duplicate current on http://165.227.46.158/winnow_mac as version number
-2. Update version in mainwindow.h
-3. Compile Winnow in /Users/roryhill/Projects/Winnow64
-4. Update version in /Users/roryhill/Projects/WinnowInstall/Config/config.xml
-5. Run /Users/roryhill/Projects/WinnowInstall/Batch/WinnowInstallerScript.command
-6. Done.
+- Update ExifTool (see above).
+- Duplicate current on http://165.227.46.158/winnow_mac as version number
+- Update version in mainwindow.h
+- Compile Winnow in /Users/roryhill/Projects/Winnow64
+- Update version in /Users/roryhill/Projects/WinnowInstall/Config/config.xml
+- Run /Users/roryhill/Projects/WinnowInstall/Batch/WinnowInstallerScript.command
+- Done.
 
 Notes:
 Mac Deployment: (located in /Users/roryhill/Projects/WinnowInstall/Batch/DeployOnMac)

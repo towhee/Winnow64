@@ -37,6 +37,7 @@ public:
     QString exportFolderPath;
     QString exportSubfolder;
     QString exportSuffix;
+    bool copyMetadata;
     bool overwriteFiles;
 
     struct Image {

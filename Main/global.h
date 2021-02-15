@@ -120,6 +120,7 @@ namespace G
         QImage image;
     };
 
+    extern bool isLogger;
     extern QPoint mousePos;
 
     extern int availableMemoryMB;
