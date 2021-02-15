@@ -321,7 +321,7 @@ void MW::initialize()
     G::track(__FUNCTION__);
     #endif
     }
-    this->setWindowTitle("Winnow");
+    this->setWindowTitle(winnowWithVersion);
     G::isInitializing = true;
     isNormalScreen = true;
     G::isSlideShow = false;
@@ -1076,6 +1076,7 @@ void MW::folderSelectionChange()
     metadataCacheThread->stopMetadateCache();
     buildFilters->stop();
     G::allMetadataLoaded = false;
+    setWindowTitle(winnowWithVersion);
 //    G::track(__FUNCTION__, "0");
 
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
@@ -1126,6 +1127,7 @@ void MW::folderSelectionChange()
     if (!isFolderValid(currentViewDir, true /*report*/, false /*isRemembered*/)) {
         clearAll();
         G::isInitializing = false;
+        setWindowTitle(winnowWithVersion);
         return;
     }
 
@@ -2062,6 +2064,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     }
     else {
         clearAll();
+        setWindowTitle(winnowWithVersion);
         enableSelectionDependentMenus();
     }
 }
@@ -7910,6 +7913,7 @@ re-established when the application is re-opened.
     setting->setValue("sortColumn", sortColumn);
     setting->setValue("sortReverse", sortReverseAction->isChecked());
     setting->setValue("autoAdvance", autoAdvance);
+    setting->setValue("deleteWarning", deleteWarning);
 
     // datamodel
     setting->setValue("maxIconSize", G::maxIconSize);
@@ -8245,6 +8249,7 @@ Preferences are located in the prefdlg class and updated here.
         rememberLastDir = false;
         checkIfUpdate = true;
         lastDir = "";
+        deleteWarning = true;
 
         // ingest
         autoIngestFolderPath = false;
@@ -8287,6 +8292,10 @@ Preferences are located in the prefdlg class and updated here.
     sortColumn = setting->value("sortColumn").toInt();
     sortReverse = setting->value("sortReverse").toBool();
     autoAdvance = setting->value("autoAdvance").toBool();
+    if (setting->contains("deleteWarning"))
+        deleteWarning = setting->value("deleteWarning").toBool();
+    else
+        deleteWarning = true;
 
     // appearance
     if (setting->contains("backgroundShade")) {
@@ -11102,22 +11111,24 @@ ImageCache and update the image cache status bar.
     G::track(__FUNCTION__);
     #endif
     }
-    QMessageBox msgBox;
-    int msgBoxWidth = 300;
-    msgBox.setWindowTitle("Delete Images");
-    msgBox.setText("This operation will delete all selected images.");
-    msgBox.setInformativeText("Do you want continue?");
-    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-    msgBox.setDefaultButton(QMessageBox::Cancel);
-    msgBox.setIcon(QMessageBox::Warning);
-    QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-                "QPushButton:default {background-color: rgb(68,95,118);}";
-    msgBox.setStyleSheet(css);
-    QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
-    QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
-    layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
-    int ret = msgBox.exec();
-    if (ret == QMessageBox::Cancel) return;
+    if (deleteWarning) {
+        QMessageBox msgBox;
+        int msgBoxWidth = 300;
+        msgBox.setWindowTitle("Delete Images");
+        msgBox.setText("This operation will delete all selected images.");
+        msgBox.setInformativeText("Do you want continue?");
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        msgBox.setDefaultButton(QMessageBox::Cancel);
+        msgBox.setIcon(QMessageBox::Warning);
+        QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
+                    "QPushButton:default {background-color: rgb(68,95,118);}";
+        msgBox.setStyleSheet(css);
+        QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
+        layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+        int ret = msgBox.exec();
+        if (ret == QMessageBox::Cancel) return;
+    }
 
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     if (selection.isEmpty()) return;
@@ -11244,6 +11255,9 @@ void MW::openUsbFolder()
         folderSelectionChange();
         subFoldersAction->setChecked(false);
         updateStatusBar();
+    }
+    else {
+        setWindowTitle(winnowWithVersion);
     }
 }
 
@@ -11558,7 +11572,110 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-     int b = 141;
-     qDebug() << __FUNCTION__ << b*b*b % 249;
+    qDebug() << __FUNCTION__ << "deleteWarning =" << deleteWarning;
+    /* This works: Yes
+    ExifTool et;
+    et.copyAll("D:/Pictures/Zenfolio/2021-02-12_0006.jpg",
+               "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.JPG");
+//    */
+
+    /* this works: Yes
+    QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
+    QString src = "D:/Pictures/Zenfolio/2021-02-12_0006.jpg";
+    QString dst = "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.JPG";
+    QStringList args;
+    args << "-TagsFromFile";
+    args << src;
+    args << "-all:all";
+    args << dst;
+    QProcess::execute(exifToolPath, args);
+    return;
+//    */
+
+    /* this works
+    QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
+    QProcess et;
+    QStringList args;
+    args << "-CreateDate";
+    args << "D:/Pictures/Zenfolio/2021-02-12_0006.jpg";
+    et.setArguments(args);
+    et.setProgram(exifToolPath);
+    bool started = et.startDetached();
+    qDebug() << __FUNCTION__ << args << started;
+    return;
+//    */
+
+    /* this works
+    QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
+    QProcess *et = new QProcess;
+    QStringList args;
+    args += "-TagsFromFile";
+    args += "D:/Pictures/Zenfolio/2021-02-12_0006.jpg";
+    args += "-all:all";
+    args += "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.jpg";
+    et->setArguments(args);
+    et->setProgram(exifToolPath);
+    et->setStandardOutputFile("D:/output.txt");
+    et->start();
+    qDebug() << __FUNCTION__ << args;
+    bool success = et->waitForFinished(3000);
+    qDebug() << __FUNCTION__ << "success =" << success;
+    delete et;
+    return;
+//    */
+
+    /* This works
+    QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
+    QProcess et;
+    QByteArray args;
+    args += "-TagsFromFile\n";
+    args += "D:/Pictures/Zenfolio/2021-02-12_0006.jpg\n";
+    args += "-all:all\n";
+    args += "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.jpg\n";
+    args += "-execute\n";
+    args += "-stay_open\n";
+    args += "False\n";
+
+    QStringList stayOpen;
+    stayOpen << "-stay_open";
+    stayOpen << "True";
+    stayOpen << "-@";
+    stayOpen << "-";
+
+//    et->setArguments(stayOpen);
+//    et->setProgram(exifToolPath);
+    et.start(exifToolPath, stayOpen);
+    et.waitForStarted(3000);
+    et.write(args);
+    if (et.waitForFinished(3000)) qDebug() << __FUNCTION__ << "ExifTool exit code =" << et.exitCode();
+    else qDebug() << __FUNCTION__ << "et.waitForFinished failed";
+//    */
+
+        /* This works
+    QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
+    QProcess *et = new QProcess;
+    QByteArray args;
+    args += "-TagsFromFile\n";
+    args += "D:/Pictures/Zenfolio/2021-02-12_0006.jpg\n";
+    args += "-all:all\n";
+    args += "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.jpg\n";
+    args += "-execute\n";
+    args += "-stay_open\n";
+    args += "False\n";
+
+    QStringList stayOpen;
+    stayOpen << "-stay_open";
+    stayOpen << "True";
+    stayOpen << "-@";
+    stayOpen << "-";
+
+    //    et->setArguments(stayOpen);
+    //    et->setProgram(exifToolPath);
+    et->start(exifToolPath, stayOpen);
+    et->waitForStarted(3000);
+    et->write(args);
+    if (et->waitForFinished(3000)) qDebug() << __FUNCTION__ << "ExifTool exit code =" << et->exitCode();
+    else qDebug() << __FUNCTION__ << "et.waitForFinished failed";
+    //    */
 }
 // End MW

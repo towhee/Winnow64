@@ -199,6 +199,10 @@ itemChange, which is subclassed here.
         mw->autoAdvance = v.toBool();
     }
 
+    if (source == "deleteWarning") {
+        mw->deleteWarning = v.toBool();
+    }
+
     if (source == "colorManage") {
         G::colorManage = v.toBool();
     }
@@ -364,6 +368,20 @@ void Preferences::addItems()
     i.captionIsEditable = false;
     i.value = mw->autoAdvance;
     i.key = "autoAdvance";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Delete waring
+    i.name = "deleteWarning";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Warn before delete";
+    i.tooltip = "Turn this off to prevent a warning dialog every time"
+                "you delete a file or group of files.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->deleteWarning;
+    i.key = "deleteWarning";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
