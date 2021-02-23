@@ -334,7 +334,12 @@ Each picked image is copied from the source to the destination.
     t.restart();
     for (int i = 0; i < pickList.size(); ++i) {
         qint64 fileBytesToCopy = 0;
-        int progress = (i + 1) * 100 * n / (pickList.size() + 1);
+//        int progress = (i + 1) * 100 * n / (pickList.size() + 1);
+        int progress = (i + 1) * 100 * n / (pickList.size());
+        qDebug() << __FUNCTION__
+                 << "progress =" << progress
+                 << "ui->progressBar->minimum() = " << ui->progressBar->minimum()
+                 << "ui->progressBar->maximum() = " << ui->progressBar->maximum();
         ui->progressBar->setValue(progress);
         qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);

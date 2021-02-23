@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <QDialog>
+#include "Main/global.h"
 #include "Utilities/utilities.h"
 
 class PatternDlgView : public QGraphicsView

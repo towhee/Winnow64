@@ -528,7 +528,7 @@ void Effects::vectorToImage(QImage &img, QVector<QRgb> &v)
     int bpl = img.bytesPerLine();
     int w = img.width();
     for (int y = 0; y < img.height(); ++y) {
-        memcpy(img.scanLine(y), &v[y * w], bpl);
+        memcpy(img.scanLine(y), &v[y * w], static_cast<size_t>(bpl));
     }
 }
 
@@ -536,14 +536,14 @@ void Effects::imageToVector2D(QImage &img, QVector<QVector<QRgb>> &v)
 {
     for (int y = 0; y < img.height(); ++y) {
         v[y].resize(img.width());         // source = img
-        memcpy(&v[y][0], img.scanLine(y), img.bytesPerLine());
+        memcpy(&v[y][0], img.scanLine(y), static_cast<size_t>(img.bytesPerLine()));
     }
 }
 
 void Effects::vector2DToImage(QImage &img, QVector<QVector<QRgb> > &v)
 {
     for (int y = 0; y < img.height(); ++y) {
-        memcpy(img.scanLine(y), &v[y][0], img.bytesPerLine());
+        memcpy(img.scanLine(y), &v[y][0], static_cast<size_t>(img.bytesPerLine()));
     }
 }
 
@@ -552,10 +552,10 @@ void Effects::zeroVector(QImage &img, QVector<QVector<QRgb>> &v)
 #ifdef ISLOGGER
 Utilities::log(__FUNCTION__, "");
 #endif
-    QRgb zero = 0;
+//    QRgb zero = 0;
     for (int y = 0; y < img.height(); ++y) {
 //        memset(&v[y], 0, static_cast<uint>(img.width()) * sizeof(int));
-        memset(&v[y], 0, img.bytesPerLine());
+        memset(&v[y], 0, static_cast<size_t>(img.bytesPerLine()));
     }
 }
 

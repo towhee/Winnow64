@@ -41,6 +41,7 @@ int ExifTool::copyAll(const QStringList &src, QStringList &dst)
         args += "-TagsFromFile\n";
         args += src.at(i) + "\n";       // src = path of source file
         args += "-all:all\n";
+        args += "-icc_profile\n";
         args += dst.at(i) + "\n";       // dst = path of destination file
         args += "-execute\n";
     }
@@ -59,3 +60,101 @@ int ExifTool::copyAll(const QStringList &src, QStringList &dst)
     return et.exitCode();
 }
 
+/* this works: Yes
+QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
+QString src = "D:/Pictures/Zenfolio/2021-02-12_0006.jpg";
+QString dst = "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.JPG";
+QStringList args;
+args << "-TagsFromFile";
+args << src;
+args << "-all:all";
+args << dst;
+QProcess::execute(exifToolPath, args);
+return;
+//    */
+
+/* this works
+QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
+QProcess et;
+QStringList args;
+args << "-CreateDate";
+args << "D:/Pictures/Zenfolio/2021-02-12_0006.jpg";
+et.setArguments(args);
+et.setProgram(exifToolPath);
+bool started = et.startDetached();
+qDebug() << __FUNCTION__ << args << started;
+return;
+//    */
+
+/* this works
+QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
+QProcess *et = new QProcess;
+QStringList args;
+args += "-TagsFromFile";
+args += "D:/Pictures/Zenfolio/2021-02-12_0006.jpg";
+args += "-all:all";
+args += "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.jpg";
+et->setArguments(args);
+et->setProgram(exifToolPath);
+et->setStandardOutputFile("D:/output.txt");
+et->start();
+qDebug() << __FUNCTION__ << args;
+bool success = et->waitForFinished(3000);
+qDebug() << __FUNCTION__ << "success =" << success;
+delete et;
+return;
+//    */
+
+/* This works
+QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
+QProcess et;
+QByteArray args;
+args += "-TagsFromFile\n";
+args += "D:/Pictures/Zenfolio/2021-02-12_0006.jpg\n";
+args += "-all:all\n";
+args += "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.jpg\n";
+args += "-execute\n";
+args += "-stay_open\n";
+args += "False\n";
+
+QStringList stayOpen;
+stayOpen << "-stay_open";
+stayOpen << "True";
+stayOpen << "-@";
+stayOpen << "-";
+
+//    et->setArguments(stayOpen);
+//    et->setProgram(exifToolPath);
+et.start(exifToolPath, stayOpen);
+et.waitForStarted(3000);
+et.write(args);
+if (et.waitForFinished(3000)) qDebug() << __FUNCTION__ << "ExifTool exit code =" << et.exitCode();
+else qDebug() << __FUNCTION__ << "et.waitForFinished failed";
+//    */
+
+    /* This works
+QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
+QProcess *et = new QProcess;
+QByteArray args;
+args += "-TagsFromFile\n";
+args += "D:/Pictures/Zenfolio/2021-02-12_0006.jpg\n";
+args += "-all:all\n";
+args += "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.jpg\n";
+args += "-execute\n";
+args += "-stay_open\n";
+args += "False\n";
+
+QStringList stayOpen;
+stayOpen << "-stay_open";
+stayOpen << "True";
+stayOpen << "-@";
+stayOpen << "-";
+
+//    et->setArguments(stayOpen);
+//    et->setProgram(exifToolPath);
+et->start(exifToolPath, stayOpen);
+et->waitForStarted(3000);
+et->write(args);
+if (et->waitForFinished(3000)) qDebug() << __FUNCTION__ << "ExifTool exit code =" << et->exitCode();
+else qDebug() << __FUNCTION__ << "et.waitForFinished failed";
+//    */

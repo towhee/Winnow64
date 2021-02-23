@@ -98,9 +98,9 @@ public:
     bool isReleaseVersion = true;
     bool hideEmbellish = false;
 
-    QString version = "Version: 1.15";
+    QString version = "Version: 1.15.17";
 //    QString version = "Version: 1.10 released 2020-06-04";
-    QString winnowWithVersion = "Winnow 1.15";
+    QString winnowWithVersion = "Winnow 1.15.17";
     QString website = "Website: "
 //            "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<a href=\"winnow.ca\">"
@@ -183,12 +183,13 @@ public:
 
     // general
     int lastPrefPage;
-//    bool mouseClickScroll;      // positionAtCenter scrolling when mouse click?
-    int displayHorizontalPixels;
-    int displayVerticalPixels;
+//    bool mouseClickScroll;       // positionAtCenter scrolling when mouse click?
+//    int displayHorizontalPixels; // move to global
+//    int displayVerticalPixels;   // move to global
     bool checkIfUpdate = true;
     bool autoAdvance = false;
     bool deleteWarning = true;
+    bool isStartingWhileUpdating = true;
 
     // appearance
     bool isImageInfoVisible;
@@ -341,7 +342,7 @@ signals:
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
-    bool checkForUpdate();
+    void checkForUpdate();
     void setShowImageCount();
     void about();
     void ingest();
@@ -915,7 +916,6 @@ private:
 
     bool simulateJustInstalled;
     bool isSettings = false;
-    bool isStartSilentCheckForUpdates = true;    // flag true until startup check for updates has been completed
     bool isStressTest;
     bool hasGridBeenActivated;
     bool isSlideshowPaused;
@@ -1047,7 +1047,7 @@ private:
     void test();                    // for debugging
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging
-    QTime testTime;
+    QElapsedTimer testTime;
 
     //    void setCopyCutActions(bool setEnabled);
     //    void setDeleteAction(bool setEnabled);

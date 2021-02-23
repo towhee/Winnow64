@@ -225,24 +225,24 @@ bool Pixmap::load(QString &fPath, QImage &image)
         int degrees;
         if (orientation) {
             switch(orientation) {
-                case 3:
-                    degrees = rotationDegrees + 180;
-                    if (degrees > 360) degrees = degrees - 360;
-                    trans.rotate(degrees);
-                    image = image.transformed(trans, Qt::SmoothTransformation);
-                    break;
-                case 6:
-                    degrees = rotationDegrees + 90;
-                    if (degrees > 360) degrees = degrees - 360;
-                    trans.rotate(degrees);
-                    image = image.transformed(trans, Qt::SmoothTransformation);
-                    break;
-                case 8:
-                    degrees = rotationDegrees + 270;
-                    if (degrees > 360) degrees = degrees - 360;
-                    trans.rotate(degrees);
-                    image = image.transformed(trans, Qt::SmoothTransformation);
-                    break;
+            case 3:
+                degrees = rotationDegrees + 180;
+                if (degrees > 360) degrees = degrees - 360;
+                trans.rotate(degrees);
+                image = image.transformed(trans, Qt::SmoothTransformation);
+                break;
+            case 6:
+                degrees = rotationDegrees + 90;
+                if (degrees > 360) degrees = degrees - 360;
+                trans.rotate(degrees);
+                image = image.transformed(trans, Qt::SmoothTransformation);
+                break;
+            case 8:
+                degrees = rotationDegrees + 270;
+                if (degrees > 360) degrees = degrees - 360;
+                trans.rotate(degrees);
+                image = image.transformed(trans, Qt::SmoothTransformation);
+                break;
             }
         }
         else if (rotationDegrees){
@@ -255,10 +255,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
     #ifdef Q_OS_WIN
     if (G::colorManage && metadata->iccFormats.contains(ext)) {
         QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
-        if (!ba.isEmpty()) {
-            ICC::setInProfile(ba);
-            ICC::transform(image);
-        }
+        ICC::setInProfile(ba);   // if ba.isEmpty then sRGB used
+        ICC::transform(image);
     }
     #endif
 

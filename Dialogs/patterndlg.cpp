@@ -179,10 +179,13 @@ PatternDlg::PatternDlg(QWidget *parent, QPixmap &pm)
     : QDialog(parent),
       pm(pm)
 {
-    qDebug() << __FUNCTION__ << pm.size();
-    int h;
-    pm.height() > 600 ? h = 600 : h = pm.height();
-    resize(800, h + 150);
+    QSize r = Utilities::fitScreen(QSize(800, 750));
+    resize(r.width(), r.height());
+    int imageWindowH;
+
+    pm.height() > 600 ? imageWindowH = 600 : imageWindowH = pm.height();
+    r.height() < 750 ? imageWindowH = r.height() - 150 : imageWindowH = 600;
+
     setWindowTitle("Tile Extractor");
     setMouseTracking(true);
 
@@ -196,8 +199,9 @@ PatternDlg::PatternDlg(QWidget *parent, QPixmap &pm)
     vLayout = new QHBoxLayout;
     vLayout->addWidget(v);
     vFrame = new QFrame;
-    vFrame->setMinimumHeight(h);
-    vFrame->setMaximumHeight(h);
+//    vFrame->setMinimumHeight(h);
+//    vFrame->setMaximumHeight(300);
+//    vFrame->setMaximumHeight(imageWindowH);
     vFrame->setLayout(vLayout);
 
     // message area

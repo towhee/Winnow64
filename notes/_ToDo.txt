@@ -1,7 +1,9 @@
 BUGS / TO DO
-- Visual C++ Studio installation req'd
-- New workspace crashed
+- Update infoview monitor tooltip when drag winnow to different monitor
 - Image count does not update when scroll FSTree
+- Check Monitor effective resolution when creating dialogs (Ingest, Tile, Report metadata...)
+- Quick start loupe first image in folder
+- New workspace crashed
 - Improve err recording and showing to user
 - Settings Show Label in grid not syncing
 - Text disappears at certain font sizes
@@ -46,6 +48,8 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Make Winnow fit when dragged to smaller screen dimensions
+- Visual C++ Studio installation req'd
 - Make delete warning optional.
 - Add EXIF data back to embellished image
 - Prevent double getVisibleImageCount when first open Winnow
