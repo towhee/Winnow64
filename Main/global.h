@@ -135,6 +135,9 @@ namespace G
     };
     extern QHash<QString, WinScreen> winScreenHash;
     extern QString winOutProfilePath;
+    extern int displayHorizontalPixels;         // current monitor
+    extern int displayVerticalPixels;           // current monitor
+    extern qreal devicePixelRatio;              // current monitor
 
     extern int maxIconSize;
     extern int minIconSize;

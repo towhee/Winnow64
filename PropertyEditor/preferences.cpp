@@ -203,6 +203,10 @@ itemChange, which is subclassed here.
         mw->deleteWarning = v.toBool();
     }
 
+    if (source == "isLogger") {
+        G::isLogger = v.toBool();
+    }
+
     if (source == "colorManage") {
         G::colorManage = v.toBool();
     }
@@ -372,7 +376,7 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
-    // Delete waring
+    // Delete warning
     i.name = "deleteWarning";
     i.parentName = "GeneralHeader";
     i.captionText = "Warn before delete";
@@ -382,6 +386,21 @@ void Preferences::addItems()
     i.captionIsEditable = false;
     i.value = mw->deleteWarning;
     i.key = "deleteWarning";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Logger
+    i.name = "isLogger";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Log errors";
+    i.tooltip = "Turn this on to write errors to a log file."
+                "Warning: this will impact performance.  Use"
+                "to help resolve bugs and crashes.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::isLogger;
+    i.key = "isLogger";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

@@ -6,18 +6,17 @@ INCLUDEPATH += .
 INCLUDEPATH += Dialogs
 INCLUDEPATH += Utilities
 INCLUDEPATH += MacOS
-#INCLUDEPATH += Lib/libtiff
-#INCLUDEPATH += Lib/zlib
+#INCLUDEPATH += "C:/Program Files (x86)/Visual Leak Detector/include/"
+#LIBS += -L"C:/Program Files (x86)/Visual Leak Detector/lib/Win64"
 
-UI_DIR = $$PWD
+UI_DIR = $$PWD/UI
 
 QT += widgets
 QT += concurrent
 QT += xmlpatterns
 #QT += opengl
 
-HEADERS += Cache/imagecache.h \
-    Metadata/exiftool.h
+HEADERS += Cache/imagecache.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/buildfilters.h
@@ -74,6 +73,7 @@ HEADERS += Main/qtlockedfile.h
 HEADERS += Main/qtsingleapplication.h
 HEADERS += Main/widgetcss.h
 HEADERS += Metadata/exif.h
+HEADERS += Metadata/exiftool.h
 HEADERS += Metadata/irb.h
 HEADERS += Metadata/gps.h
 HEADERS += Metadata/ifd.h
@@ -112,8 +112,7 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/imagecache.cpp \
-    Metadata/exiftool.cpp
+SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp
@@ -167,6 +166,7 @@ win32:SOURCES += Main/qtlockedfile_win.cpp
 SOURCES += Main/qtsingleapplication.cpp
 SOURCES += Main/widgetcss.cpp
 SOURCES += Metadata/exif.cpp
+SOURCES += Metadata/exiftool.cpp
 SOURCES += Metadata/irb.cpp
 SOURCES += Metadata/gps.cpp
 SOURCES += Metadata/ifd.cpp

@@ -207,7 +207,7 @@ xmp:ModifyDate="2017-12-21T16:51:02-08:00"
     if (startPos == -1) return "";
 
     // tag exists, check if schema is xmp or dc
-    int endPos;
+    int endPos = 0;
     bool foundItem = false;
     startPos += searchItem.length() - 1;
     QByteArray temp = xmpBa.mid(startPos, 100);
@@ -230,12 +230,11 @@ xmp:ModifyDate="2017-12-21T16:51:02-08:00"
     }
 
     if (foundItem) {
-        QByteArray result = xmpBa.mid(startPos, endPos - startPos);
-        // use QTextEdit to convert xmp escape coded characters ie &#39; = apostrophe
-        QTextEdit textEdit(QTextCodec::codecForMib(106)->toUnicode(result));
-        return textEdit.toPlainText();
+        // use QTextDocument to convert xmp escape coded characters ie &#39; = apostrophe
+        QTextDocument d;
+        d.setHtml(xmpBa.mid(startPos, endPos - startPos));
+        return d.toPlainText();
 
-        // above fails in DEBUG cannot create QTextEdit outside main gui thread
         // this works, but fails with html escape codes
 //        return QTextCodec::codecForMib(106)->toUnicode(result);
     }

@@ -762,12 +762,12 @@ defaults to 1.0
 void ImageView::rotate(int degrees)
 {
 /*
-This is called from MW::setRotation and rotates the image currently shown in
-loupe view.  Loupe view is a QGraphicsView of the QGraphicsScene scene.  The
-scene contains one QGraphicsItem pmItem, which in turn, contains the pixmap.
-When the pixmap is rotated the scene bounding rectangle must be adjusted and
-the zoom factor to fit recalculated.  Finally, scale() is called to fit the
-image if the image was not zoomed.
+    This is called from MW::setRotation and rotates the image currently shown in
+    loupe view.  Loupe view is a QGraphicsView of the QGraphicsScene scene.  The
+    scene contains one QGraphicsItem pmItem, which in turn, contains the pixmap.
+    When the pixmap is rotated the scene bounding rectangle must be adjusted and
+    the zoom factor to fit recalculated.  Finally, scale() is called to fit the
+    image if the image was not zoomed.
 */
     // extract pixmap, rotate and reset to pmItem
     QPixmap pm = pmItem->pixmap();
@@ -967,38 +967,14 @@ void ImageView::setCursorHiding(bool hide)
 void ImageView::hideCursor()
 {
 /*
-Called from mouse move event in a delay if in slideshow mode.
+    Called from mouse move event in a delay if in slideshow mode.
 */
     setCursor(Qt::BlankCursor);
 }
 
-//void ImageView::compareZoomAtCoord(QPointF coord, bool isZoom)
-//{
-///* Same as when user mouse clicks on the image.  Called from compareView to
-//replicate zoom in all compare images.
-//*/
-//    {
-//    #ifdef ISDEBUG
-//    qDebug() << G::t.restart() << "\t" << "ImageView::compareZoomAtCoord";
-//    #endif
-//    }
-////    qDebug() << G::t.restart() << "\t" << "\n" << currentImagePath;
-////    qDebug() << G::t.restart() << "\t" << "ImageView::compareZoomAtCoord" << coord;
-//    zoom = toggleZoom;     // if zoomToFit then zoom reset in resize
-////    mouseZoomFit = !mouseZoomFit;
-//    f.w = imageLabel->geometry().width();
-//    f.h = imageLabel->geometry().height();
-//    mouse.x = imageLabel->geometry().topLeft().x() + coord.x() * f.w;
-//    mouse.y = imageLabel->geometry().topLeft().y() + coord.y() * f.h;
-////    qDebug() << G::t.restart() << "\t" << "imageLabel->geometry().topLeft().x()" << imageLabel->geometry().topLeft().x()
-////             << "imageLabel->geometry().topLeft().y()" << imageLabel->geometry().topLeft().y()
-////             << "w, h, mouse.x, mouse.y" << f.w << f.h
-////             << mouse.x << mouse.y << "\n";
-////    resizeImage();
-//}
-
 // EVENTS
 
+///*
 void ImageView::paintEvent(QPaintEvent *event)
 {
     QGraphicsView::paintEvent(event); // paint contents normally
@@ -1013,6 +989,7 @@ void ImageView::paintEvent(QPaintEvent *event)
 
 //    p.end();
 }
+//*/
 
 void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
 {

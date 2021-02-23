@@ -400,7 +400,8 @@ void MW::showEvent(QShowEvent *event)
     QMainWindow::showEvent(event);
 
     // check for updates
-    if(checkIfUpdate && !isStartupArgs) QTimer::singleShot(50, this, SLOT(checkForUpdate()));
+//    if(checkIfUpdate && !isStartupArgs) checkForUpdate();
+    if(checkIfUpdate && !isStartupArgs) QTimer::singleShot(100, this, SLOT(checkForUpdate()));
 
     // show image count in folder panel if no folder selected
     if (!rememberLastDir) {
@@ -452,10 +453,11 @@ dimensions and a different icc profile (win only).
     QMainWindow::moveEvent(event);
     emit resizeMW(this->geometry(), centralWidget->geometry());
     setDisplayResolution();
-    QString dimensions = QString::number(displayHorizontalPixels) + "x"
-            + QString::number(displayVerticalPixels);
+    QString dimensions = QString::number(G::displayHorizontalPixels) + "x"
+            + QString::number(G::displayVerticalPixels);
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), dimensions);
+    k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), dimensions, Qt::ToolTipRole);
 }
 
 void MW::resizeEvent(QResizeEvent *event)
@@ -607,6 +609,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         G::track(__FUNCTION__, "Performance profiling");
         qDebug() << event <<  obj;
     }
+//    */
 
     /* Specific event
     if (event->type() == QEvent::FocusIn) {
@@ -816,9 +819,9 @@ void MW::handleDrop(const QMimeData *mimeData)
     }
 }
 
-bool MW::checkForUpdate()
+void MW::checkForUpdate()
 {
-/* Called from the help menu and from the main window show event if (ifCheckUpdate = true)
+/* Called from the help menu and from the main window show event if (isCheckUpdate = true)
    The Qt maintenancetool, an executable in the Winnow folder, checks to see if there is an
    update on the Winnow server.  If there is then Winnow is closed and the maintenancetool
    performs the install of the update.  When that is completed the maintenancetool opens
@@ -829,6 +832,21 @@ bool MW::checkForUpdate()
     G::track(__FUNCTION__);
     #endif
     }
+    /* Checking for updates requires the maintenancetool.exe to be in the Winnow.exe folder,
+       which is only true for the installed version of Winnow in the "Program Files".  In
+       order to simulate for testing during development, the maintenancetool.exe path must
+       be set to "c:/program files/winnow/maintenancetool.exe".
+      */
+    QString maintanceToolPath = qApp->applicationDirPath() + "/maintenancetool";
+    QString maintenancePathToUse;
+    if (qApp->applicationDirPath().toLower().contains("release")) {
+        maintenancePathToUse = "c:/program files/winnow/maintenancetool";
+        // RETURN UNLESS TESTING UPDATER IN DEV
+        return;
+    }
+    else
+        maintenancePathToUse = maintanceToolPath;
+    qDebug() << __FUNCTION__ << "maintenancePathToUse" << maintenancePathToUse;
 
 #ifdef Q_OS_MAC
     return false;
@@ -840,55 +858,69 @@ bool MW::checkForUpdate()
 
 #ifdef Q_OS_WIN
     QProcess process;
-    process.start("maintenancetool --checkupdates");
+    process.setProgram(maintenancePathToUse);
+    QStringList chkArgs("check-updates");
+    process.setArguments(chkArgs);
+    process.start();
+    // Wait op to 3 seconds for the update tool to finish
+    process.waitForFinished(3000);
 
-    // Wait until the update tool is finished
-    process.waitForFinished();
-
-    if(process.error() != QProcess::UnknownError)
+    // bail if failed
+    if (process.error() != QProcess::UnknownError)
     {
         QString msg = "Error checking for updates";
-        G::popUp->showPopup(msg, 1500);
-        isStartSilentCheckForUpdates = false;
-        return false;
+        if (!isStartingWhileUpdating) G::popUp->showPopup(msg, 1500);
+        isStartingWhileUpdating = false;
+        return;
     }
 
     // Read the output
     QByteArray data = process.readAllStandardOutput();
+    QVariant noUpdataAvailable = data.contains("no updates available");
+    /*
+    qDebug() << __FUNCTION__ << "process.error() =" << process.error();
+    qDebug() << __FUNCTION__ << "noUpdataAvailable =" << noUpdataAvailable;
+    qDebug() << __FUNCTION__ << "data =" << data;
+    qDebug() << __FUNCTION__ << "exitCode() =" << process.exitCode();
+    qDebug() << __FUNCTION__ << "readAllStandardError() =" << process.readAllStandardError();
 
-    /* No output means no updates available
-     Note that the exit code will also be 1, but we don't use that
-     Also note that we should parse the output instead of just checking if it is empty if we want specific update info
-    */
-    if(data.isEmpty())
+    Utilities::log(__FUNCTION__, "process.error() = " + QString::number(process.error()));
+    Utilities::log(__FUNCTION__, "noUpdataAvailable = " + noUpdataAvailable.toString());
+    Utilities::log(__FUNCTION__, "data = " + data);
+    Utilities::log(__FUNCTION__, "readAllStandardError() = " + process.readAllStandardError());
+    Utilities::log(__FUNCTION__, "exitCode() = " + QString::number(process.exitCode()));
+//    */
+
+    if (noUpdataAvailable.toBool())
     {
         QString msg = "No updates available";
-        if(!isStartSilentCheckForUpdates) G::popUp->showPopup(msg, 1500);
-        isStartSilentCheckForUpdates = false;
-        return false;
+        if(!isStartingWhileUpdating) G::popUp->showPopup(msg, 1500);
+        return;
     }
 
     updateAppDlg = new UpdateApp(version, css);
     int ret = updateAppDlg->exec();
-    if(ret == QDialog::Rejected) {
+    if (ret == QDialog::Rejected) {
         process.close();
-        return false;
+        return;
     }
 
-    // Call the maintenance tool binary
-    // Note: we start it detached because this application needs to close for the update
+    /* Call the maintenance tool binary
+       Note: we start it detached because this application needs to close for the update
+       */
     QStringList args("--updater");
-    bool startMaintenanceTool = QProcess::startDetached("maintenancetool", args);
+    bool startMaintenanceTool = QProcess::startDetached(maintenancePathToUse, args);
 
     // Close Winnow
-    if (startMaintenanceTool) qApp->closeAllWindows();
-    else if(!isStartSilentCheckForUpdates)
+    if (startMaintenanceTool) {
+        QString msg = "Updating Winnow.  Winnow will reopen when update is completed.";
+        G::popUp->showPopup(msg, 2000);
+        G::wait(2000);
+        qApp->closeAllWindows();
+    }
+    else if(!isStartingWhileUpdating)
         G::popUp->showPopup("The maintenance tool failed to open", 2000);
 
-    isStartSilentCheckForUpdates = false;
-
-    // prevent compiler warning
-    return false;
 #endif
 }
 
@@ -1128,6 +1160,7 @@ void MW::folderSelectionChange()
         clearAll();
         G::isInitializing = false;
         setWindowTitle(winnowWithVersion);
+        if (G::isLogger) Utilities::log(__FUNCTION__, "Invalid folder " + currentViewDir);
         return;
     }
 
@@ -5327,7 +5360,7 @@ parameters.  Any visibility changes are executed.
     int netCacheMBSize = cacheSizeMB - static_cast<int>( G::metaCacheMB);
     imageCacheThread->updateImageCacheParam(netCacheMBSize,
              isShowCacheStatus, cacheWtAhead, isCachePreview,
-             displayHorizontalPixels, displayVerticalPixels);
+             G::displayHorizontalPixels, G::displayVerticalPixels);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     if (fPath.length())
@@ -6916,8 +6949,8 @@ QString MW::diagnostics()
     rpt << "\n" << "ignoreSelectionChange = " << G::s(ignoreSelectionChange);
     rpt << "\n" << "lastPrefPage = " << G::s(lastPrefPage);
 //    rpt << "\n" << "mouseClickScroll = " << G::s(mouseClickScroll);
-    rpt << "\n" << "displayHorizontalPixels = " << G::s(displayHorizontalPixels);
-    rpt << "\n" << "displayVerticalPixels = " << G::s(displayVerticalPixels);
+    rpt << "\n" << "displayHorizontalPixels = " << G::s(G::displayHorizontalPixels);
+    rpt << "\n" << "displayVerticalPixels = " << G::s(G::displayVerticalPixels);
     rpt << "\n" << "checkIfUpdate = " << G::s(checkIfUpdate);
     rpt << "\n" << "isRatingBadgeVisible = " << G::s(isRatingBadgeVisible);
     rpt << "\n" << "classificationBadgeInImageDiameter = " << G::s(classificationBadgeInImageDiameter);
@@ -6985,7 +7018,6 @@ QString MW::diagnostics()
     rpt << "\n" << "refreshCurrentPath = " << G::s(refreshCurrentPath);
     rpt << "\n" << "simulateJustInstalled = " << G::s(simulateJustInstalled);
     rpt << "\n" << "isSettings = " << G::s(isSettings);
-    rpt << "\n" << "isStartSilentCheckForUpdates = " << G::s(isStartSilentCheckForUpdates);
     rpt << "\n" << "isStressTest = " << G::s(isStressTest);
     rpt << "\n" << "hasGridBeenActivated = " << G::s(hasGridBeenActivated);
     rpt << "\n" << "isLeftMouseBtnPressed = " << G::s(isLeftMouseBtnPressed);
@@ -7444,14 +7476,46 @@ resolution is used to calculate and report the zoom in ImageView.
     // make sure the centroid is on a screen
     if(screen != nullptr && screen->name() != prevScreen) {
         prevScreen = screen->name();
-        displayHorizontalPixels = screen->geometry().width();
-        displayVerticalPixels = screen->geometry().height();
-#ifdef Q_OS_WIN
+        G::displayHorizontalPixels = screen->geometry().width();
+        G::displayVerticalPixels = screen->geometry().height();
+        G::devicePixelRatio = screen->devicePixelRatio();
+        // resize if winnow window too big for new screen
+        int w = this->geometry().width();
+        int h = this->geometry().height();
+        double fitW = w * 1.0 / G::displayHorizontalPixels;
+        double fitH = h * 1.0 / G::displayVerticalPixels;
+        /*
+        qDebug() << __FUNCTION__
+                 << "w =" << w
+                 << "ScreenW =" << G::displayHorizontalPixels
+                 << "fitW =" << fitW
+                 << "hw =" << h
+                 << "ScreenH=" << G::displayVerticalPixels
+                 << "fitH =" << fitH
+                    ;
+//                    */
+        // does winnow fit in new screen?
+        if (fitW > 1.0 || fitH > 1.0) {
+            // does not fit, does width or height require the larger adjustment?
+            if (fitW < fitH) {
+                // width is larger adjustment
+                w = static_cast<int>(w * 0.75 / fitW);
+                h = static_cast<int>(h * 0.75 / fitW);
+            }
+            else {
+                // height is larger adjustment
+                w = static_cast<int>(w * 0.75 / fitH);
+                h = static_cast<int>(h * 0.75 / fitH);
+            }
+            resize(w, h);
+        }
+
+        #ifdef Q_OS_WIN
         if (G::winScreenHash.contains(screen->name()))
             G::winOutProfilePath = "C:/Windows/System32/spool/drivers/color/" +
                 G::winScreenHash[screen->name()].profile;
         ICC::setOutProfile();
-#endif
+        #endif
     }
 //#endif
 
@@ -7477,13 +7541,13 @@ resolution is used to calculate and report the zoom in ImageView.
         mode = static_cast<CGDisplayModeRef>(const_cast<void *>(CFArrayGetValueAtIndex(modes, c)));
         int w = static_cast<int>(CGDisplayModeGetWidth(mode));
         int h = static_cast<int>(CGDisplayModeGetHeight(mode));
-        if (w > displayHorizontalPixels) displayHorizontalPixels = w;
-        if (h > displayVerticalPixels) displayVerticalPixels = h;
+        if (w > G::displayHorizontalPixels) G::displayHorizontalPixels = w;
+        if (h > G::displayVerticalPixels) G::displayVerticalPixels = h;
     }
 #endif
 
-    cachePreviewWidth = displayHorizontalPixels;
-    cachePreviewHeight = displayVerticalPixels;
+    cachePreviewWidth = G::displayHorizontalPixels;
+    cachePreviewHeight = G::displayVerticalPixels;
     setActualDevicePixelRatio();
 }
 
@@ -7508,8 +7572,8 @@ void MW::setActualDevicePixelRatio()
                static_cast<int>(0.75 * desktop.height()));
         setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
             size(), desktop));
-        qDebug() <<  "screen == nullptr && G::isInitializing"
-                  << desktop;
+        qDebug() << "screen == nullptr && G::isInitializing"
+                 << desktop;
         return;
     }
 
@@ -7520,7 +7584,7 @@ void MW::setActualDevicePixelRatio()
 
     if (virtualWidth > 0)
         G::actualDevicePixelRatio =
-            static_cast<int>(static_cast<float>(displayHorizontalPixels) / virtualWidth);
+            static_cast<int>(static_cast<double>(G::displayHorizontalPixels) / virtualWidth);
     else
         G::actualDevicePixelRatio = QPaintDevice::devicePixelRatio();
 
@@ -7698,7 +7762,7 @@ are not applicable.
     // if view change other than loupe then close zoomDlg
     connect(this, SIGNAL(closeZoomDlg()), zoomDlg, SLOT(close()));
 
-    // use show so dialog will be non-modal
+    // use show() so dialog will be non-modal
     zoomDlg->show();
 }
 
@@ -7914,6 +7978,7 @@ re-established when the application is re-opened.
     setting->setValue("sortReverse", sortReverseAction->isChecked());
     setting->setValue("autoAdvance", autoAdvance);
     setting->setValue("deleteWarning", deleteWarning);
+    setting->setValue("isLogger", G::isLogger);
 
     // datamodel
     setting->setValue("maxIconSize", G::maxIconSize);
@@ -8232,6 +8297,7 @@ Preferences are located in the prefdlg class and updated here.
         combineRawJpg = true;
         prevMode = "Loupe";
         G::mode = "Loupe";
+        G::isLogger = false;
 
         // appearance
         G::backgroundShade = 50;
@@ -8292,6 +8358,7 @@ Preferences are located in the prefdlg class and updated here.
     sortColumn = setting->value("sortColumn").toInt();
     sortReverse = setting->value("sortReverse").toBool();
     autoAdvance = setting->value("autoAdvance").toBool();
+    G::isLogger = setting->value("isLogger").toBool();
     if (setting->contains("deleteWarning"))
         deleteWarning = setting->value("deleteWarning").toBool();
     else
@@ -10589,7 +10656,8 @@ void MW::stressTest()
     }
     getSubfolders("/users/roryhill/pictures");
     QString fPath;
-    fPath = subfolders->at(qrand() % (subfolders->count()));
+    int r = static_cast<int>(QRandomGenerator::global()->generate());
+    fPath = subfolders->at(r % (subfolders->count()));
 }
 
 void MW::slideShow()
@@ -11572,110 +11640,27 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << "deleteWarning =" << deleteWarning;
-    /* This works: Yes
-    ExifTool et;
-    et.copyAll("D:/Pictures/Zenfolio/2021-02-12_0006.jpg",
-               "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.JPG");
-//    */
-
-    /* this works: Yes
-    QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
-    QString src = "D:/Pictures/Zenfolio/2021-02-12_0006.jpg";
-    QString dst = "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.JPG";
-    QStringList args;
-    args << "-TagsFromFile";
-    args << src;
-    args << "-all:all";
-    args << dst;
-    QProcess::execute(exifToolPath, args);
+    qDebug() << __FUNCTION__
+             << "G::devicePixelRatio =" << G::devicePixelRatio
+             << "G::actualDevicePixelRatio =" << G::actualDevicePixelRatio
+             << "G::dpi =" << G::dpi
+             << "G::ptToPx =" << G::ptToPx
+             << "G::displayHorizontalPixels =" << G::displayHorizontalPixels
+             << "G::displayVerticalPixels =" << G::displayVerticalPixels
+                ;
     return;
-//    */
 
-    /* this works
-    QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
-    QProcess et;
-    QStringList args;
-    args << "-CreateDate";
-    args << "D:/Pictures/Zenfolio/2021-02-12_0006.jpg";
-    et.setArguments(args);
-    et.setProgram(exifToolPath);
-    bool started = et.startDetached();
-    qDebug() << __FUNCTION__ << args << started;
-    return;
-//    */
-
-    /* this works
-    QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
-    QProcess *et = new QProcess;
-    QStringList args;
-    args += "-TagsFromFile";
-    args += "D:/Pictures/Zenfolio/2021-02-12_0006.jpg";
-    args += "-all:all";
-    args += "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.jpg";
-    et->setArguments(args);
-    et->setProgram(exifToolPath);
-    et->setStandardOutputFile("D:/output.txt");
-    et->start();
-    qDebug() << __FUNCTION__ << args;
-    bool success = et->waitForFinished(3000);
-    qDebug() << __FUNCTION__ << "success =" << success;
-    delete et;
-    return;
-//    */
-
-    /* This works
-    QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
-    QProcess et;
-    QByteArray args;
-    args += "-TagsFromFile\n";
-    args += "D:/Pictures/Zenfolio/2021-02-12_0006.jpg\n";
-    args += "-all:all\n";
-    args += "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.jpg\n";
-    args += "-execute\n";
-    args += "-stay_open\n";
-    args += "False\n";
-
-    QStringList stayOpen;
-    stayOpen << "-stay_open";
-    stayOpen << "True";
-    stayOpen << "-@";
-    stayOpen << "-";
-
-//    et->setArguments(stayOpen);
-//    et->setProgram(exifToolPath);
-    et.start(exifToolPath, stayOpen);
-    et.waitForStarted(3000);
-    et.write(args);
-    if (et.waitForFinished(3000)) qDebug() << __FUNCTION__ << "ExifTool exit code =" << et.exitCode();
-    else qDebug() << __FUNCTION__ << "et.waitForFinished failed";
-//    */
-
-        /* This works
-    QString exifToolPath = qApp->applicationDirPath() + "/et.exe";
-    QProcess *et = new QProcess;
-    QByteArray args;
-    args += "-TagsFromFile\n";
-    args += "D:/Pictures/Zenfolio/2021-02-12_0006.jpg\n";
-    args += "-all:all\n";
-    args += "D:/Pictures/Zenfolio/pbase2048/2021-02-12_0006_Zen2048.jpg\n";
-    args += "-execute\n";
-    args += "-stay_open\n";
-    args += "False\n";
-
-    QStringList stayOpen;
-    stayOpen << "-stay_open";
-    stayOpen << "True";
-    stayOpen << "-@";
-    stayOpen << "-";
-
-    //    et->setArguments(stayOpen);
-    //    et->setProgram(exifToolPath);
-    et->start(exifToolPath, stayOpen);
-    et->waitForStarted(3000);
-    et->write(args);
-    if (et->waitForFinished(3000)) qDebug() << __FUNCTION__ << "ExifTool exit code =" << et->exitCode();
-    else qDebug() << __FUNCTION__ << "et.waitForFinished failed";
-    //    */
+    QPoint loc = centralWidget->window()->geometry().center();
+    QScreen *screen = qApp->screenAt(loc);
+    G::displayHorizontalPixels = screen->geometry().width();
+    G::displayVerticalPixels = screen->geometry().height();
+    G::devicePixelRatio = screen->devicePixelRatio();
+    qDebug() << __FUNCTION__
+             << "ScreenW =" << G::displayHorizontalPixels
+             << "ScreenH =" << G::displayVerticalPixels
+             << "devicePixelRatio =" << screen->devicePixelRatio()
+             << "physicalDotsPerInch =" << screen->physicalDotsPerInch()
+             << "logicalDotsPerInch =" << screen->logicalDotsPerInch()
+                ;
 }
 // End MW

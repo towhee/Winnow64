@@ -49,5 +49,9 @@ namespace ICC
             cmsDoTransform(hTransform, image.constBits(), image.bits(),
                  static_cast<uint>(image.width()*image.height()));
         }
+        else {
+            qDebug() << __FUNCTION__ << "ICC hTransform failed.";
+//            Utilities::log
+        }
     }
 }

@@ -1,6 +1,16 @@
 #include "utilities.h"
 
-
+QSize Utilities::fitScreen(QSize preferred)
+{
+    int w = preferred.width();
+    int h = preferred.height();
+    int headerH = static_cast<int>(30 * G::devicePixelRatio);
+    int screenW = static_cast<int>(G::displayHorizontalPixels * 0.95);
+    int screenH = static_cast<int>(G::displayVerticalPixels * 0.95 - headerH);
+    if (screenW < w) w = screenW;
+    if (screenH < h) h = screenH;
+    return QSize(w, h);
+}
 
 void Utilities::renameFileIfExists(QString &fPath, QString delimiter)
 {
