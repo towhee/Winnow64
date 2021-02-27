@@ -1,5 +1,6 @@
 BUGS / TO DO
-- Update infoview monitor tooltip when drag winnow to different monitor
+- Write qDebug to logger file
+- Try using busy flag in threads
 - Image count does not update when scroll FSTree
 - Check Monitor effective resolution when creating dialogs (Ingest, Tile, Report metadata...)
 - Quick start loupe first image in folder
@@ -48,6 +49,10 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Fix device pixel ratio rendering issues
+- Spacebar not toggling zoom
+- Loupe view uses device pixel ratio of 1.0
+- Update infoview monitor tooltip when drag winnow to different monitor
 - Make Winnow fit when dragged to smaller screen dimensions
 - Visual C++ Studio installation req'd
 - Make delete warning optional.
@@ -505,7 +510,7 @@ DONE/FIXED
 - Show cache status in thumbnails
 - Add filters activated status (red text on image?)
 - Change hard coded min/max thumbnail size
-- Get actual monitor resolution for actualDevicePixelRatio calculation
+- Get actual monitor resolution for devicePixelRatio calculation
 - Add complete for ingest description
 - Refresh folder panel
 - Not showing all folders in folders panel on Linix

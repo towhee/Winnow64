@@ -323,6 +323,7 @@ void MW::initialize()
     }
     this->setWindowTitle(winnowWithVersion);
     G::isInitializing = true;
+    G::devicePixelRatio = 1;
     isNormalScreen = true;
     G::isSlideShow = false;
     workspaces = new QList<workspaceData>;
@@ -411,12 +412,16 @@ void MW::showEvent(QShowEvent *event)
 
     // get the monitor screen for testing against movement to an new screen in setDisplayResolution()
     QPoint loc = centralWidget->window()->geometry().center();
-    prevScreen = qApp->screenAt(loc)->name();
+    prevScreenName = qApp->screenAt(loc)->name();
+//    currScreen = qApp->screenAt(loc);
+//    connect(currScreen, &QScreen::logicalDotsPerInchChanged, this, &MW::setDisplayResolution);
 
     if (isShift) refreshFolders();
 
     // set initial visibility
     embelTemplateChange(embelProperties->templateId);
+    // size columns after show if device pixel ratio > 1
+    embelProperties->resizeColumns();
 
     G::isInitializing = false;
 }
@@ -451,10 +456,12 @@ Also we need to know if the app has been dragged onto another monitor, which may
 dimensions and a different icc profile (win only).
 */
     QMainWindow::moveEvent(event);
-    emit resizeMW(this->geometry(), centralWidget->geometry());
     setDisplayResolution();
+    emit resizeMW(this->geometry(), centralWidget->geometry());
+    QString monitorScale = QString::number(G::devicePixelRatio * 100) + "%";
     QString dimensions = QString::number(G::displayHorizontalPixels) + "x"
-            + QString::number(G::displayVerticalPixels);
+            + QString::number(G::displayVerticalPixels)
+            + "  " + monitorScale;
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), dimensions);
     k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), dimensions, Qt::ToolTipRole);
@@ -4469,13 +4476,13 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
         if (setting->contains("infoOverlayFontSize")) imageView->infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
         if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
         qreal tempZoom = setting->value("toggleZoomValue").toReal();
-        if (tempZoom > 3) tempZoom = 1;
-        if (tempZoom < 0.25) tempZoom = 1;
+        if (tempZoom > 3) tempZoom = 1.0;
+        if (tempZoom < 0.25) tempZoom = 1.0;
         imageView->toggleZoom = tempZoom;
     }
     else {
         imageView->limitFit100Pct = true;
-        imageView->toggleZoom = 1;
+        imageView->toggleZoom = 1.0;
         imageView->infoOverlayFontSize = infoOverlayFontSize;   // defined in loadSettings
     }
 
@@ -4510,7 +4517,7 @@ void MW::createCompareView()
         compareImages->toggleZoom = tempZoom;
     }
     else {
-        imageView->toggleZoom = 1;
+        imageView->toggleZoom = 1.0;
     }
 
     connect(compareImages, &CompareImages::updateStatus, this, &MW::updateStatus);
@@ -5414,7 +5421,7 @@ QString MW::getZoom()
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
     if (zoom <= 0 || zoom > 10) return "";
-    zoom *= G::actualDevicePixelRatio;
+    zoom *= G::devicePixelRatio;
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
 
@@ -7461,62 +7468,100 @@ void MW::setPrefPage(int page)
 void MW::setDisplayResolution()
 {
 /*
-This is called at startup and when the app window is dragged to another monitor.  The screen
-resolution is used to calculate and report the zoom in ImageView.
+    This is triggered by the mainwindow move event at startup and when the app window is
+    dragged to another monitor. The loupe view always shows native pixel resolution (one image
+    pixel = one physical monitor pixel), therefore the zoom has to be factored by the device
+    pixel ratio.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "0";
+    if (G::isInitializing) return;
     QPoint loc = centralWidget->window()->geometry().center();
+//    if (loc == prevScreenLoc) return;
+    prevScreenLoc = loc;
 
 //#ifdef Q_OS_WIN
     QScreen *screen = qApp->screenAt(loc);
-    // make sure the centroid is on a screen
-    if(screen != nullptr && screen->name() != prevScreen) {
-        prevScreen = screen->name();
-        G::displayHorizontalPixels = screen->geometry().width();
-        G::displayVerticalPixels = screen->geometry().height();
-        G::devicePixelRatio = screen->devicePixelRatio();
-        // resize if winnow window too big for new screen
-        int w = this->geometry().width();
-        int h = this->geometry().height();
-        double fitW = w * 1.0 / G::displayHorizontalPixels;
-        double fitH = h * 1.0 / G::displayVerticalPixels;
-        /*
-        qDebug() << __FUNCTION__
-                 << "w =" << w
-                 << "ScreenW =" << G::displayHorizontalPixels
-                 << "fitW =" << fitW
-                 << "hw =" << h
-                 << "ScreenH=" << G::displayVerticalPixels
-                 << "fitH =" << fitH
-                    ;
-//                    */
-        // does winnow fit in new screen?
-        if (fitW > 1.0 || fitH > 1.0) {
-            // does not fit, does width or height require the larger adjustment?
-            if (fitW < fitH) {
-                // width is larger adjustment
-                w = static_cast<int>(w * 0.75 / fitW);
-                h = static_cast<int>(h * 0.75 / fitW);
-            }
-            else {
-                // height is larger adjustment
-                w = static_cast<int>(w * 0.75 / fitH);
-                h = static_cast<int>(h * 0.75 / fitH);
-            }
-            resize(w, h);
-        }
+    if (screen == nullptr) return;
+    bool monitorChanged = screen->name() != prevScreenName;
+    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "1";
 
-        #ifdef Q_OS_WIN
-        if (G::winScreenHash.contains(screen->name()))
-            G::winOutProfilePath = "C:/Windows/System32/spool/drivers/color/" +
-                G::winScreenHash[screen->name()].profile;
-        ICC::setOutProfile();
-        #endif
+    G::devicePixelRatio = screen->devicePixelRatio();
+    bool devicePixelRatioChanged = !qFuzzyCompare(G::devicePixelRatio, prevDevicePixelRatio);
+    qDebug() << __FUNCTION__
+             << "G::devicePixelRatio =" << G::devicePixelRatio
+             << "prevDevicePixelRatio =" << prevDevicePixelRatio
+             << "devicePixelRatioChanged =" << devicePixelRatioChanged
+                ;
+    prevDevicePixelRatio = G::devicePixelRatio;
+
+    if (!monitorChanged && !devicePixelRatioChanged) return;
+    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "2";
+
+    // Device Pixel Ratio or Monitor change has occurred
+    G::dpi = screen->logicalDotsPerInch();
+    G::ptToPx = G::dpi / 72;
+    G::displayHorizontalPixels = screen->geometry().width();
+    G::displayVerticalPixels = screen->geometry().height();
+
+    if (devicePixelRatioChanged) {
+        // refresh loupe / compare views to new scale
+        qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "3";
+        if (G::mode == "Loupe") {
+            // reload to force complete refresh
+            imageView->loadImage(dm->currentFilePath, "DivicePixelRatioChange");
+        }
+        if (G::mode == "Compare") compareImages->zoomTo(imageView->zoom/* / G::devicePixelRatio*/);
     }
+
+    // if monitor has not changed then only scale change, return
+    if (!monitorChanged) return;
+
+    // monitor has changed
+    prevScreenName = screen->name();
+
+    // resize if winnow window too big for new screen
+    int w = this->geometry().width();
+    int h = this->geometry().height();
+    double fitW = w * 1.0 / G::displayHorizontalPixels;
+    double fitH = h * 1.0 / G::displayVerticalPixels;
+    /*
+    qDebug() << __FUNCTION__
+             << "w =" << w
+             << "ScreenW =" << G::displayHorizontalPixels
+             << "fitW =" << fitW
+             << "hw =" << h
+             << "ScreenH=" << G::displayVerticalPixels
+             << "fitH =" << fitH
+                ;
+//                    */
+    // does winnow fit in new screen?
+    if (fitW > 1.0 || fitH > 1.0) {
+        // does not fit, does width or height require the larger adjustment?
+        if (fitW < fitH) {
+            // width is larger adjustment
+            w = static_cast<int>(w * 0.75 / fitW);
+            h = static_cast<int>(h * 0.75 / fitW);
+        }
+        else {
+            // height is larger adjustment
+            w = static_cast<int>(w * 0.75 / fitH);
+            h = static_cast<int>(h * 0.75 / fitH);
+        }
+        resize(w, h);
+    }
+
+    // color manage for new monitor
+    #ifdef Q_OS_WIN
+    if (G::winScreenHash.contains(screen->name()))
+        G::winOutProfilePath = "C:/Windows/System32/spool/drivers/color/" +
+            G::winScreenHash[screen->name()].profile;
+    ICC::setOutProfile();
+    #endif
 //#endif
 
 #ifdef Q_OS_MAC
@@ -7548,11 +7593,27 @@ resolution is used to calculate and report the zoom in ImageView.
 
     cachePreviewWidth = G::displayHorizontalPixels;
     cachePreviewHeight = G::displayVerticalPixels;
-    setActualDevicePixelRatio();
+//    setActualDevicePixelRatio();
+
+    qDebug() << __FUNCTION__
+             << "screen->name() =" << screen->name()
+             << "G::devicePixelRatio =" << G::devicePixelRatio
+             << "loc =" << loc
+             << "G::dpi =" << G::dpi
+             << "G::ptToPx =" << G::ptToPx
+             << "G::displayHorizontalPixels =" << G::displayHorizontalPixels
+             << "G::displayVerticalPixels =" << G::displayVerticalPixels
+                ;
+
+    screen = nullptr;
+
 }
 
 void MW::setActualDevicePixelRatio()
 {
+/*
+   Not used anymore.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -7560,13 +7621,14 @@ void MW::setActualDevicePixelRatio()
     }
 
     QPoint loc = centralWidget->window()->geometry().center();
+//    currScreen = qApp->screenAt(loc);
     QScreen *screen = qApp->screenAt(loc);
 
     /* If the previous session was closed with the window mostly off screen, or a previous
        screen (monitor) is no longer available, then relocate the app to the center of the
        desktop */
     if (screen == nullptr && G::isInitializing) {
-        G::actualDevicePixelRatio = 1;
+        G::devicePixelRatio = 1;
         QRect desktop = QGuiApplication::screens().first()->geometry();
         resize(static_cast<int>(0.75 * desktop.width()),
                static_cast<int>(0.75 * desktop.height()));
@@ -7583,12 +7645,12 @@ void MW::setActualDevicePixelRatio()
     int virtualWidth = qApp->screenAt(loc)->geometry().width();
 
     if (virtualWidth > 0)
-        G::actualDevicePixelRatio =
+        G::devicePixelRatio =
             static_cast<int>(static_cast<double>(G::displayHorizontalPixels) / virtualWidth);
     else
-        G::actualDevicePixelRatio = QPaintDevice::devicePixelRatio();
+        G::devicePixelRatio = QPaintDevice::devicePixelRatio();
 
-    if (G::actualDevicePixelRatio == 0) G::actualDevicePixelRatio = 1;
+    if (G::devicePixelRatio == 0) G::devicePixelRatio = 1;
 
     // get dpi and font pixels to points conversion factor
     G::dpi = screen->logicalDotsPerInch();
@@ -7609,8 +7671,8 @@ void MW::setActualDevicePixelRatio()
         QRect rect = QGuiApplication::primaryScreen()->geometry();
         qreal screenMax = qMax(rect.width(), rect.height());
 
-        G::actualDevicePixelRatio = 1;
-        G::actualDevicePixelRatio = 2880 / screenMax;
+        G::devicePixelRatio = 1;
+        G::devicePixelRatio = 2880 / screenMax;
 
         int realScreenMax = QGuiApplication::primaryScreen()->physicalSize().width();
         qreal logicalDpi = QGuiApplication::primaryScreen()->logicalDotsPerInch();
@@ -8704,7 +8766,8 @@ void MW::loadShortcuts(bool defaultShortcuts)
         zoomToAction->setShortcut(QKeySequence("Z"));
         zoomInAction->setShortcut(QKeySequence("+"));
         zoomOutAction->setShortcut(QKeySequence("-"));
-        zoomToggleAction->setShortcut(QKeySequence("Space"));
+//        zoomToggleAction->setShortcut(QKeySequence("Space"));
+        zoomToggleAction->setShortcut(Qt::Key_Space);
 
 //        thumbsFitAction->setShortcut(QKeySequence("Alt+]"));
         thumbsEnlargeAction->setShortcut(QKeySequence("]"));
@@ -8796,6 +8859,9 @@ void MW::refreshFolders()
         sortChange(__FUNCTION__);
         reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
     }
+
+    // do not embellish
+    embelProperties->invokeFromAction(embelTemplatesActions.at(0));
 }
 
 /*****************************************************************************************
@@ -11640,15 +11706,17 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    embelProperties->resizeColumns();
+    return;
     qDebug() << __FUNCTION__
              << "G::devicePixelRatio =" << G::devicePixelRatio
-             << "G::actualDevicePixelRatio =" << G::actualDevicePixelRatio
+             << "G::devicePixelRatio =" << G::devicePixelRatio
              << "G::dpi =" << G::dpi
              << "G::ptToPx =" << G::ptToPx
              << "G::displayHorizontalPixels =" << G::displayHorizontalPixels
              << "G::displayVerticalPixels =" << G::displayVerticalPixels
                 ;
-    return;
+//    return;
 
     QPoint loc = centralWidget->window()->geometry().center();
     QScreen *screen = qApp->screenAt(loc);
@@ -11656,11 +11724,9 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     G::displayVerticalPixels = screen->geometry().height();
     G::devicePixelRatio = screen->devicePixelRatio();
     qDebug() << __FUNCTION__
-             << "ScreenW =" << G::displayHorizontalPixels
-             << "ScreenH =" << G::displayVerticalPixels
-             << "devicePixelRatio =" << screen->devicePixelRatio()
-             << "physicalDotsPerInch =" << screen->physicalDotsPerInch()
-             << "logicalDotsPerInch =" << screen->logicalDotsPerInch()
+             << "screen->devicePixelRatio() =" << screen->devicePixelRatio()
+             << "screen->physicalDotsPerInch() =" << screen->physicalDotsPerInch()
+             << "screen->logicalDotsPerInch() =" << screen->logicalDotsPerInch()
                 ;
 }
 // End MW

@@ -80,7 +80,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                 break;
             }
             case blur: {
-                int r = static_cast<int>(ef.blur.radius);
+//                int r = static_cast<int>(ef.blur.radius);
 //                if (ef.blur.outer) {
 //                    if (m.top < r) m.top = r;
 //                    if (m.left < r) m.left = r;
@@ -189,11 +189,7 @@ Utilities::log(__FUNCTION__, "");
              << "overlay =" << overlay.rect()
                 ;
 //                */
-    overlay.save("D:/Pictures/Temp/effect/o0.tif");
-
-//    qDebug() << __FUNCTION__ << "draw overlay.width() =" << overlay.width();
-//  overlay.setDevicePixelRatio(srcPixmap.devicePixelRatioF());
-//    srcPixmap.save("D:/Pictures/Temp/effect/srcPixmap.tif");
+//    overlay.save("D:/Pictures/Temp/effect/o0.tif");
 
     // iterate effects in style
     using namespace winnow_effects;
@@ -201,7 +197,10 @@ Utilities::log(__FUNCTION__, "");
     std::sort(effects.begin(), effects.end(), [](Effect const &l, Effect const &r) {
               return l.effectOrder < r.effectOrder; });
 //              */
-//    qDebug() << "\n" << __FUNCTION__ << painter << effects->length();
+
+    // Winnow shows images at real scale so render effects using real device pixels
+    overlay.setDevicePixelRatio(1.0);
+
     for (int i = 0; i < effects->length(); ++i) {
         const Effect &ef = effects->at(i);
         QColor color;
@@ -253,6 +252,9 @@ Utilities::log(__FUNCTION__, "");
             break;
         }
     }
+
+    // Go back to device pixel ratio
+    overlay.setDevicePixelRatio(G::devicePixelRatio);
 
     // world transform required for object rotation
     painter->setWorldTransform(QTransform());
@@ -338,7 +340,7 @@ Utilities::log(__FUNCTION__, "");
     if (overlay.isNull()) return;
 
     QImage sharpened = WinnowGraphicEffect::sharpen(overlay, radius);
-    sharpened.save("D:/Pictures/Temp/effect/sharpened.tif");
+//    sharpened.save("D:/Pictures/Temp/effect/sharpened.tif");
 
     QPainter overlayPainter(&overlay);
     overlayPainter.setCompositionMode(mode);
@@ -450,7 +452,7 @@ Utilities::log(__FUNCTION__, "");
 //  */
     blurPainter.end();
 
-    blurred.save("D:/Pictures/Temp/effect/blurred.tif");
+//    blurred.save("D:/Pictures/Temp/effect/blurred.tif");
     // move the shadow back to the shadow image
     shadIm = std::move(blurred);
 
@@ -482,7 +484,7 @@ Utilities::log(__FUNCTION__, "");
     shadPainter.fillRect(bottom, Qt::darkMagenta);
 //  */
     shadPainter.end();
-    shadIm.save("D:/Pictures/Temp/effect/shadIm.tif");
+//    shadIm.save("D:/Pictures/Temp/effect/shadIm.tif");
 
     // compose adjusted image
     QPainter overlayPainter(&overlay);
@@ -515,7 +517,7 @@ void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::Com
 //    */
 
 //    overlay.save("D:/Pictures/Temp/effect/_stroked1.tif");
-    highlighterBackgroundImage.save("D:/Pictures/Temp/effect/hl.tif");
+//    highlighterBackgroundImage.save("D:/Pictures/Temp/effect/hl.tif");
 
     QPainter overlayPainter(&overlay);
     overlayPainter.translate(-highlighterOffset);
@@ -566,7 +568,9 @@ Utilities::log(__FUNCTION__, "");
     overlayPainter.end();
 }
 
-void GraphicsEffect::strokeEffect(double width, QColor color, double opacity,
+void GraphicsEffect::strokeEffect(double width,
+                                  QColor color,
+                                  double opacity,
                                   QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
@@ -576,7 +580,6 @@ Utilities::log(__FUNCTION__, "");
 //             << "boundingRect =" << boundingRect();
 
     if (overlay.isNull() || width < 1) return;
-//    overlay.save("D:/Pictures/Temp/effect/o1.tif");
 
     QImage temp(overlay.size(), QImage::Format_ARGB32);
     QPainter tempPainter(&temp);
@@ -585,7 +588,7 @@ Utilities::log(__FUNCTION__, "");
     tempPainter.end();
     Effects effect;
     if (effect.stroke(temp, width, color, opacity, true)) {
-        temp.save("D:/Pictures/Temp/effect/stroke.tif");
+//        temp.save("D:/Pictures/Temp/effect/stroke.tif");
         QPainter overlayPainter(&overlay);
         overlayPainter.setCompositionMode(mode);
         overlayPainter.drawImage(0, 0, temp);
@@ -607,7 +610,7 @@ Utilities::log(__FUNCTION__, "");
     Effects effect;
     QImage edgeMap;
     effect.stroke(temp, width, color, 0.5, true);
-    temp.save("D:/Pictures/Temp/effect/_transparentEdgeMap.tif");
+//    temp.save("D:/Pictures/Temp/effect/_transparentEdgeMap.tif");
 
 
 
@@ -617,11 +620,16 @@ Utilities::log(__FUNCTION__, "");
     overlayPainter.end();
 }
 
-void GraphicsEffect::embossEffect(double size, double exposure,
-                                  double umbra, double inflection,
-                                  double startEV, double midEV, double endEV,
+void GraphicsEffect::embossEffect(double size,
+                                  double exposure,
+                                  double umbra,
+                                  double inflection,
+                                  double startEV,
+                                  double midEV,
+                                  double endEV,
                                   bool isUmbraGradient,
-                                  double contrast, QPainter::CompositionMode mode)
+                                  double contrast,
+                                  QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
 Utilities::log(__FUNCTION__, "");
@@ -629,9 +637,6 @@ Utilities::log(__FUNCTION__, "");
 //    qDebug() << __FUNCTION__ << QTime::currentTime();
     if (overlay.isNull()) return;
 
-    // do not use overlay, which may have padding
-//    QImage temp = overlay;
-//    QImage temp = unpaddedSrcImage;
     QImage temp(overlay.size(), QImage::Format_ARGB32);
     QPainter tempPainter(&temp);
     // transparency not working unless add overlay in a painter
@@ -641,13 +646,15 @@ Utilities::log(__FUNCTION__, "");
     effect.emboss(temp, lightDirection, size, exposure, contrast,
                   inflection, startEV, midEV, endEV,
                   umbra, isUmbraGradient);
-//    temp.save("D:/Pictures/Temp/effect/embossed.tif");
+
+//    temp.save("D:/Pictures/Temp/effect/embossed1.tif");
 
     QPainter overlayPainter(&overlay);
     // any mode other than source causes a crash.  Don't know why
     overlayPainter.setCompositionMode(mode);
     overlayPainter.drawImage(0,0, temp);
     overlayPainter.end();
+//    overlay.save("D:/Pictures/Temp/effect/overlay.tif");
 }
 
 /* bool GraphicsEffect::eventFilter(QObject *obj, QEvent *event)

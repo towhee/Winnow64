@@ -60,7 +60,7 @@ void Win::collectScreensInfo()
     std::wstring adaptorString;
     LPCWSTR adaptorStringW;
     DWORD adaptorIndex = 0;
-    while (/*::*/EnumDisplayDevicesW(nullptr, adaptorIndex++, &displayDevice, EDD_GET_DEVICE_INTERFACE_NAME))
+    while (EnumDisplayDevicesW(nullptr, adaptorIndex++, &displayDevice, EDD_GET_DEVICE_INTERFACE_NAME))
     {
 //        if (displayDevice.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP &&
 //            displayDevice.StateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE)

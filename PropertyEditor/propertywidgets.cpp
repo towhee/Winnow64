@@ -910,7 +910,7 @@ BarBtnEditor::BarBtnEditor(const QModelIndex, QWidget *parent)
     #endif
     }
     QHBoxLayout* layout = new QHBoxLayout(this);
-    layout->setContentsMargins(0,0,0,0);
+    layout->setContentsMargins(0,2,0,2);
     layout->setSpacing(0);
     layout->setAlignment(Qt::AlignRight);
     for (int i = 0; i < btns.size(); ++i) {

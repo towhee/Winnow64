@@ -549,7 +549,7 @@ void CompareView::zoomOut()
 
 void CompareView::zoomToFit()
 /*
-Called from MW menu action to CompareImages and then to each compare instance
+    Called from MW menu action to CompareImages and then to each compare instance
 */
 {
     {
@@ -565,9 +565,11 @@ Called from MW menu action to CompareImages and then to each compare instance
 void CompareView::zoomTo(qreal zoomTo)
 {
 /*
-Called from CompareImages::zoomTo, which in turn receives a signal from ZoomDlg
-when the zoom is changed. When scale(false) is called with the new zoom it will
-signal back to ZoomDlg (which is reqd when scale changes occur locally).
+    Called from CompareImages::zoomTo, which in turn receives a signal from ZoomDlg when the
+    zoom is changed. When scale(false) is called with the new zoom it will signal back to
+    ZoomDlg (which is reqd when scale changes occur locally).
+
+    Also called from MW::setDisplayResolution when there is a operating system scale change.
 */
     {
     #ifdef ISDEBUG
@@ -588,7 +590,7 @@ Called from MW menu action to CompareImages and then to each compare instance
     G::track(__FUNCTION__);
     #endif
     }
-    if (!isZoom) zoom = toggleZoom;
+    if (!isZoom) zoom = toggleZoom * 1.0 / G::devicePixelRatio;
 }
 
 // EVENTS
