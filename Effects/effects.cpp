@@ -115,8 +115,6 @@ void Effects::transparentEdgeMap(QImage &img, int depth,
 Utilities::log(__FUNCTION__, "");
 #endif
 
-//    qDebug() << __FUNCTION__ << "w =" << w << "h = "<< h;
-
     // create QVector edge map (em) used to tally pixels added to QMultiMap edge
     QVector<QVector<int>> em(h);
     for (y = 0; y < h; y++) {
@@ -134,8 +132,8 @@ Utilities::log(__FUNCTION__, "");
         // outside img is "transparent"
         prevTransparent = true;
         for (x = 0; x < w; x++) {
-            pt.x= x;
-            pt.y= y;
+            pt.x = x;
+            pt.y = y;
             // transparent to opaque edge
             if (qAlpha(s[y][x]) > 0 && prevTransparent)  {
                 edge.insertMulti(d, pt);
@@ -2216,7 +2214,7 @@ void Effects::brightness(QImage &img, qreal evDelta)
 #ifdef ISLOGGER
 Utilities::log(__FUNCTION__, "");
 #endif
-    qDebug() << __FUNCTION__ << QTime::currentTime();
+//    qDebug() << __FUNCTION__ << QTime::currentTime();
 //    qDebug() << __FUNCTION__ << "delta =" << evDelta;
     QElapsedTimer t;
     t.start();
@@ -2376,16 +2374,16 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
 
     For each pixel, Effects::embossEV is called.
     */
-#ifdef ISLOGGER
-Utilities::log(__FUNCTION__, "");
-#endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
 
     // border or graphics object with no transparent pixels along outer border
-    size /= 100;                // emboss distance from edge (% of long side)
+    size /= 100;                            // emboss distance from edge (% of long side)
     int w = img.width();
     int h = img.height();
-    int ls = w > h ? w : h;     // long side in pixels
-    int m = ls * size;          // emboss width or margin in pixels
+    int ls = w > h ? w : h;                 // long side in pixels
+    int m = static_cast<int>(ls * size);    // emboss width or margin in pixels
     if (m > w) m = w - 1;
     if (m > h) m = h - 1;
     double alpha = 1.0;
@@ -2397,35 +2395,12 @@ Utilities::log(__FUNCTION__, "");
 
     /*
     qDebug() << __FUNCTION__
-             << "size =" << size
-             << "w =" << w
-             << "h =" << h
+             << "w   =" << w
+             << "h   =" << h
              << "ls =" << ls
              << "m =" << m
-             << "highlight =" << highlight
-             << "shadow =" << shadow
-             << "contour =" << contour
-             << "white =" << white
-             << "black =" << black
                 ;
-                if (x==200)
-                qDebug().noquote()
-                     << __FUNCTION__
-                     << "x =" << QString::number(x).leftJustified(4)
-                     << "y =" << QString::number(y).leftJustified(4)
-                     << "h =" << QString::number(h).leftJustified(4)
-                     << "w =" << QString::number(w).leftJustified(4)
-                     << "m =" << QString::number(m).leftJustified(3)
-                     << "dd =" << QString::number(dd).leftJustified(3)
-                     << "sft =" << QString::number(sft).leftJustified(3)
-                     << "evTop  =" << QString::number(evTop, 'f', 3).rightJustified(6)
-                     << "ev =" << QString::number(ev, 'f', 3).rightJustified(6)
-//                      << "(dd)/sft =" << static_cast<double>(dd)/sft
-                     << "(s[y][x] =" << QString::number(s[y][x], 16)
-                     << "white =" << QString::number(white, 'f', 3).rightJustified(6)
-                     << "black =" << QString::number(black, 'f', 3).rightJustified(6)
-                        ;
-    */
+//    */
 
     // create QVector of img for pixel wrangling
     QVector<QVector<QRgb>> s(h);
@@ -2478,13 +2453,15 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
 /*
     Draws a solid boundary around an object in an image, where the boundary is transparency.
 */
-#ifdef ISLOGGER
-Utilities::log(__FUNCTION__, "");
-#endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
 
-//    qDebug() << __FUNCTION__ << QTime::currentTime() << "opacity =" << opacity;
+    int imW = img.width();
+    int imH = img.height();
+
     // create QVector (s) of img for pixel wrangling
-    QVector<QVector<QRgb>> s(img.height());
+    QVector<QVector<QRgb>> s(imH);
     imageToVector2D(img, s);
 
     // get edge map for img
@@ -2493,8 +2470,8 @@ Utilities::log(__FUNCTION__, "");
     transparentEdgeMap(img, depth, s, edge);
 
     // erase vector s so can paint back effect only
-    for (int y = 0; y < img.height(); y++)
-        for (int x = 0; x < img.width(); x++)
+    for (int y = 0; y < imH; y++)
+        for (int x = 0; x < imW; x++)
             s[y][x] = 0;
 
     // erase img so can paint back effect only
@@ -2504,7 +2481,6 @@ Utilities::log(__FUNCTION__, "");
      if (edge.size() == 0) {
         qDebug() << __FUNCTION__ << "Failed to find edge";
         // timed popUps do not work here - cause crash
-//        G::popUp->showPopup("Failed to find edge in stroke effect", 2000);
         return false;
     }
 
@@ -2572,13 +2548,8 @@ Utilities::log(__FUNCTION__, "");
     }
     */
 
-//    img.save("D:/Pictures/Temp/effect/temp.tif");
-
     vector2DToImage(img, s);
-
-//    img.save("D:/Pictures/Temp/effect/temp.tif");
     return true;
-
 }
 
 void Effects::glow(QImage &img, double width, QColor color, double blurRadius)

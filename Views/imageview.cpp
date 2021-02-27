@@ -257,6 +257,7 @@ perceived scale by the user.
             setFitZoom();
         }
         scale();
+//        qDebug() << __FUNCTION__ << src;
         /* send signal to Embel::build (with new image), blank first parameter means
            local vs remote (ie exported from lightroom to embellish)  */
         if (G::isEmbellish) emit embellish("", __FUNCTION__);
@@ -728,7 +729,7 @@ void ImageView::resetFitZoom()
 //    */
     zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
     zoom = zoomFit;
-    if (limitFit100Pct  && zoom > 1) zoom = 1;
+    if (limitFit100Pct  && zoom > 1) zoom = 1.0 / G::devicePixelRatio;
     scale();
 }
 
@@ -740,7 +741,7 @@ void ImageView::setFitZoom()
     #endif
     }
     zoom = zoomFit;
-    if (limitFit100Pct  && zoom > 1) zoom = 1;
+    if (limitFit100Pct  && zoom > 1.0 / G::devicePixelRatio) zoom = 1.0 / G::devicePixelRatio;
 }
 
 void ImageView::zoomToggle()
@@ -756,7 +757,8 @@ defaults to 1.0
     #endif
     }
     isFit = !isFit;
-    isFit ? zoom = zoomFit : zoom = toggleZoom;
+    isFit ? zoom = zoomFit : zoom = toggleZoom * 1.0 / G::devicePixelRatio;
+    scale();
 }
 
 void ImageView::rotate(int degrees)
@@ -1186,27 +1188,27 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-
-    // rubberband
-//    if (isRubberBand) {
-//        setCursor(Qt::ArrowCursor);
-//        QRect rb = rubberBand->geometry();
-//        rubberBand->hide();
-//        QPoint p0 = mapToScene(rb.topLeft()).toPoint();
-//        QPoint p1 = mapToScene(rb.bottomRight()).toPoint();
-//        QRect r(p0, p1);
-//        QPixmap pm = pmItem->pixmap().copy(r);
-//        isRubberBand = false;
-//        QPixmap tile;
-//        PatternDlg *patternDlg = new PatternDlg(this, pm, tile, tileName);
-//        patternDlg->exec();
-//        QBuffer buffer(&tileBa);
-//        buffer.open(QIODevice::WriteOnly);
-//        tile.save(&buffer, "PNG");
-//        qDebug() << __FUNCTION__ << "new tile";
-////        emit newTile();
-//        return;
-//    }
+    /* rubberband
+    if (isRubberBand) {
+        setCursor(Qt::ArrowCursor);
+        QRect rb = rubberBand->geometry();
+        rubberBand->hide();
+        QPoint p0 = mapToScene(rb.topLeft()).toPoint();
+        QPoint p1 = mapToScene(rb.bottomRight()).toPoint();
+        QRect r(p0, p1);
+        QPixmap pm = pmItem->pixmap().copy(r);
+        isRubberBand = false;
+        QPixmap tile;
+        PatternDlg *patternDlg = new PatternDlg(this, pm, tile, tileName);
+        patternDlg->exec();
+        QBuffer buffer(&tileBa);
+        buffer.open(QIODevice::WriteOnly);
+        tile.save(&buffer, "PNG");
+        qDebug() << __FUNCTION__ << "new tile";
+//        emit newTile();
+        return;
+    }
+//    */
 
     // prevent zooming when right click for context menu
     if (event->button() == Qt::RightButton) {

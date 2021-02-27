@@ -111,6 +111,8 @@ public:
     bool isShift;               // used when opening if shift key pressed
     bool ignoreSelectionChange = false;
 
+//    QScreen *currScreen;
+
     int copyCutCount;   // rgh req'd?
     QTextStream rpt;
 
@@ -901,7 +903,9 @@ private:
     // used in visibility and focus setting for docks
     enum {SetFocus, SetVisible, SetInvisible} dockToggle;
 
-    QString prevScreen;                 // the monitor being used be winnow
+    QString prevScreenName;                 // the monitor being used be winnow
+    QPoint prevScreenLoc = QPoint(-1,-1);   // the centroid of Winnow window in monitor
+    qreal prevDevicePixelRatio = -1;
 
     bool metadataLoaded;
     bool ignoreDockResize;

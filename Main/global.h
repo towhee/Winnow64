@@ -177,7 +177,6 @@ namespace G
     extern int disabledShade;
     extern QString css;
 
-    extern int actualDevicePixelRatio;
     extern bool allMetadataLoaded;
 //    extern bool buildingFilters;
     extern bool ignoreScrollSignal;

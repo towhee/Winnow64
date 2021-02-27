@@ -2,15 +2,17 @@
 
 namespace G
 {
+    // system messaging
     bool isLogger;                      // Writes error messages to WinnowLog.txt
 
+    // system display
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitor
     QString winOutProfilePath;
     int displayHorizontalPixels;        // current monitor
     int displayVerticalPixels;          // current monitor
     qreal devicePixelRatio;             // current monitor
-    int actualDevicePixelRatio;
 
+    // application parameters
     QPoint mousePos;                    // local mouse position used to locate mouse press custom button in qtreeview
     QString fontSize;                   // app font point size
     qreal dpi;                          // current logical screen dots per inch
@@ -40,23 +42,26 @@ namespace G
 
     double iconOpacity = 0.4;
 
+    // caching
     int availableMemoryMB;
     int winnowMemoryBeforeCacheMB;
     int metaCacheMB;
     bool memTest;
 
+    // view
     QString mode;                       // In MW: Loupe, Grid, Table or Compare
     QString fileSelectionChangeSource;  // GridMouseClick, ThumbMouseClick, TableMouseClick
 
+    // icons
     int maxIconSize;
     int minIconSize = 40;
     int iconWMax;                       // widest icon found in datamodel
     int iconHMax;                       // highest icon found in datamodel
 
+    // status
     bool allMetadataLoaded;
     bool ignoreScrollSignal;
     bool isSlideShow;
-
     bool isEmbellish;
 
     bool colorManage;
