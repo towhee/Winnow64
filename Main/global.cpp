@@ -8,8 +8,10 @@ namespace G
     // system display
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitor
     QString winOutProfilePath;
-    int displayHorizontalPixels;        // current monitor
-    int displayVerticalPixels;          // current monitor
+    int displayPhysicalHorizontalPixels;// current monitor
+    int displayPhysicalVerticalPixels;  // current monitor
+    int displayVirtualHorizontalPixels; // current monitor
+    int displayVirtualVerticalPixels;   // current monitor
     qreal devicePixelRatio;             // current monitor
 
     // application parameters

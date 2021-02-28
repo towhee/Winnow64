@@ -85,7 +85,7 @@ controls are updated to the current scale.
     }
 //    qDebug() << "ZoomDlg::zoomChange" << zoom << G::devicePixelRatio;
     // convert to percentage for persentation
-    zoom *= (100 * G::devicePixelRatio);
+    zoom *= 100;        //(100 * G::devicePixelRatio);
 
     // update controls
     ui->zoomSB->setValue(qRound(zoom));
@@ -107,7 +107,7 @@ to only changes made lacally via the isActiveWindow flag.
     G::track(__FUNCTION__);
     #endif
     }
-    if (isActiveWindow()) emit zoom((qreal)value / 100 / G::devicePixelRatio);
+    if (isActiveWindow()) emit zoom((qreal)value / 100/* / G::devicePixelRatio*/);
 }
 
 void ZoomDlg::on_toggleZoomAmountBtn_clicked()
@@ -115,7 +115,7 @@ void ZoomDlg::on_toggleZoomAmountBtn_clicked()
     QString msg = "Toggle zoom amount changed to " +
                   QString::number(ui->zoomSB->value()) + "%";
     G::popUp->showPopup(msg, 1500);
-    qreal zoomVal = (qreal)ui->zoomSB->value() / 100 / G::devicePixelRatio;
+    qreal zoomVal = (qreal)ui->zoomSB->value() / 100/* / G::devicePixelRatio*/;
     emit updateToggleZoom(zoomVal);
 //    QDialog::accept();
 }
@@ -128,27 +128,27 @@ void ZoomDlg::on_radio25Button_clicked()
 
 void ZoomDlg::on_radio50Button_clicked()
 {
-    emit zoom(0.50 / G::devicePixelRatio);
+    emit zoom(0.50 /*/ G::devicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio66Button_clicked()
 {
-    emit zoom(0.666667 / G::devicePixelRatio);
+    emit zoom(0.666667/* / G::devicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio100Button_clicked()
 {
-    emit zoom(1.0 / G::devicePixelRatio);
+    emit zoom(1.0/* / G::devicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio133Button_clicked()
 {
-    emit zoom(1.33333333 / G::devicePixelRatio);
+    emit zoom(1.33333333/* / G::devicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio200Button_clicked()
 {
-    emit zoom(2.0 / G::devicePixelRatio);
+    emit zoom(2.0/* / G::devicePixelRatio*/);
 }
 
 void ZoomDlg::enterEvent(QEvent* /*event*/)
