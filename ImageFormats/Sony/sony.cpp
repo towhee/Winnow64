@@ -333,6 +333,7 @@ bool Sony::parse(MetadataParameters &p,
     quint32 nextIFDOffset = ifd->readIFD(p, m);
 
     // pull data reqd from IFD0
+    // cameras earlier than a1 referenced downsized preview here
     m.offsetFull = ifd->ifdDataHash.value(513).tagValue;
     m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
     // get jpeg full size preview dimensions
@@ -363,11 +364,23 @@ bool Sony::parse(MetadataParameters &p,
     // IFD 1:
     p.hdr = "IFD1";
     p.offset = nextIFDOffset;
-    if (nextIFDOffset) ifd->readIFD(p, m);
-
-    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue;
-    m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
+    if (nextIFDOffset) {
+        nextIFDOffset = ifd->readIFD(p, m);
+        m.offsetThumb = ifd->ifdDataHash.value(513).tagValue;
+        m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
+    }
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
+
+    // IFD 2:
+    p.hdr = "IFD2";
+    p.offset = nextIFDOffset;
+    if (nextIFDOffset) {
+        nextIFDOffset = ifd->readIFD(p, m);
+        m.offsetFull = ifd->ifdDataHash.value(513).tagValue;
+        m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
+        p.offset = m.offsetFull;
+        jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
+    }
 
     // get the offset for ExifIFD and read it
     p.hdr = "IFD Exif";

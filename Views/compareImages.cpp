@@ -142,8 +142,8 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
                 this, SLOT(cleanupAfterPan(QPointF,QModelIndex)));
 
         // get zoom factor to report status and send zoomChange to ZoomDlg
-        connect(imList->at(i), SIGNAL(zoomChange(qreal)),
-                this, SLOT(zoomChangeFromView(qreal)));
+        connect(imList->at(i), SIGNAL(zoomChange(qreal,bool)),
+                this, SLOT(zoomChangeFromView(qreal,bool)));
 
         // when select a compareView make sure all others hav been deselected
         connect(imList->at(i), SIGNAL(deselectAll()), this, SLOT(deselectAll()));
@@ -487,7 +487,7 @@ clicks on the unzoomed image.
         imList->at(i)->toggleZoom = toggleZoomValue;
 }
 
-void CompareImages::zoomChangeFromView(qreal zoomValue)
+void CompareImages::zoomChangeFromView(qreal zoomValue, bool hasfocus)
 {
 /*
     Signal zoom changes from CompareImages to simplify connections as the
@@ -505,9 +505,10 @@ void CompareImages::zoomChangeFromView(qreal zoomValue)
     this->zoomValue = zoomValue;       // used by MW::updateStatus
 
     // update ZoomDlg
-    emit zoomChange(zoomValue);
-
-    emit updateStatus(true, "", __FUNCTION__);
+    if (hasfocus) {
+        emit zoomChange(zoomValue);
+        emit updateStatus(true, "", __FUNCTION__);
+    }
 }
 
 void CompareImages::zoomIn()

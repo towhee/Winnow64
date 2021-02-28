@@ -324,18 +324,18 @@ void ImageView::noJpgAvailable()
 void ImageView::scale()
 {
 /*
-Scales the pixmap to zoom.  Panning is automatically to the cursor position
-because setTransformationAnchor(QGraphicsView::AnchorUnderMouse).
+    Scales the pixmap to zoom.  Panning is automatically to the cursor position
+    because setTransformationAnchor(QGraphicsView::AnchorUnderMouse).
 
-● The scroll percentage is stored so it can be matched in the next image if it
-  is zoomed.
-● Flags are set for the zoom condition.
-● The cursor to set to pointer if not zoomed and hand if zoomed.
-● The pick icon and shooting info text are relocated as necessary.
-● The app status is updated.
-● The zoom amount is updated in ZoomDlg if it is open.
+    ● The scroll percentage is stored so it can be matched in the next image if it
+      is zoomed.
+    ● Flags are set for the zoom condition.
+    ● The cursor to set to pointer if not zoomed and hand if zoomed.
+    ● The pick icon and shooting info text are relocated as necessary.
+    ● The app status is updated.
+    ● The zoom amount is updated in ZoomDlg if it is open.
 
-If isSlideshow then hide mouse cursor unless is moves.
+    If isSlideshow then hide mouse cursor unless is moves.
 */
     {
     #ifdef ISDEBUG
@@ -353,13 +353,15 @@ If isSlideshow then hide mouse cursor unless is moves.
              << "sceneRect().width() =" << sceneRect().width();
     //  */
 
+//    qDebug() << __FUNCTION__ << zoom;
     matrix.reset();
     if (G::isSlideShow) {
         setFitZoom();
     }
 
     if (isFit) setFitZoom();
-    matrix.scale(zoom, zoom);
+    double highDpiZoom = zoom / G::devicePixelRatio;
+    matrix.scale(highDpiZoom, highDpiZoom);
     // when resize before first image zoom == inf
     if (zoom > 10) return;
     setMatrix(matrix);
@@ -453,8 +455,8 @@ qreal ImageView::getFitScaleFactor(QRectF container, QRectF content)
     #endif
     }
 //    qDebug() << __FUNCTION__ << container << content;
-    qreal hScale = static_cast<qreal>(container.width() - 2) / content.width();
-    qreal vScale = static_cast<qreal>(container.height() - 2) / content.height();
+    qreal hScale = static_cast<qreal>(container.width() - 2) / content.width() * G::devicePixelRatio;
+    qreal vScale = static_cast<qreal>(container.height() - 2) / content.height() * G::devicePixelRatio;
     return (hScale < vScale) ? hScale : vScale;
 }
 
@@ -729,7 +731,8 @@ void ImageView::resetFitZoom()
 //    */
     zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
     zoom = zoomFit;
-    if (limitFit100Pct  && zoom > 1) zoom = 1.0 / G::devicePixelRatio;
+    if (limitFit100Pct  && zoom > toggleZoom) zoom = toggleZoom;
+//    if (limitFit100Pct  && zoom > 1) zoom = 1.0 / G::devicePixelRatio;
     scale();
 }
 
@@ -741,7 +744,8 @@ void ImageView::setFitZoom()
     #endif
     }
     zoom = zoomFit;
-    if (limitFit100Pct  && zoom > 1.0 / G::devicePixelRatio) zoom = 1.0 / G::devicePixelRatio;
+    if (limitFit100Pct  && zoom > toggleZoom) zoom = toggleZoom;
+//    if (limitFit100Pct  && zoom > 1.0 / G::devicePixelRatio) zoom = 1.0 / G::devicePixelRatio;
 }
 
 void ImageView::zoomToggle()
@@ -756,8 +760,10 @@ void ImageView::zoomToggle()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << "toggleZoom =" << toggleZoom;
     isFit = !isFit;
-    isFit ? zoom = zoomFit : zoom = toggleZoom * 1.0 / G::devicePixelRatio;
+    isFit ? zoom = zoomFit : zoom = toggleZoom;
+//    isFit ? zoom = zoomFit : zoom = toggleZoom * 1.0 / G::devicePixelRatio;
     scale();
 }
 

@@ -29,7 +29,7 @@ protected:
     void resizeEvent(QResizeEvent *event);
 
 public slots:
-    void zoomChangeFromView(qreal zoomValue);
+    void zoomChangeFromView(qreal zoomValue, bool hasfocus);
     void updateToggleZoom(qreal toggleZoomValue);
 
     void go(QString key);

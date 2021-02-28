@@ -417,8 +417,8 @@ Return the scale factor (or zoom) to fit the image inside the viewport.
     G::track(__FUNCTION__);
     #endif
     }
-    qreal hScale = ((qreal)container.width() - 2) / content.width();
-    qreal vScale = ((qreal)container.height() - 2) / content.height();
+    qreal hScale = static_cast<qreal>(container.width() - 2) / content.width() * G::devicePixelRatio;
+    qreal vScale = static_cast<qreal>(container.height() - 2) / content.height() * G::devicePixelRatio;
     return (hScale < vScale) ? hScale : vScale;
 }
 
@@ -446,12 +446,13 @@ void CompareView::scale(bool okayToPropagate)
     }
     // rescale to new zoom factor
     matrix.reset();
-    matrix.scale(zoom, zoom);
+    double highDpiZoom = zoom / G::devicePixelRatio;
+    matrix.scale(highDpiZoom, highDpiZoom);
     setMatrix(matrix);
 
     // notify ZoomDlg of change in scale
     qDebug() << __FUNCTION__ << zoom << "zoomChange";
-    emit zoomChange(zoom);
+    emit zoomChange(zoom, hasFocus());
 
     // if focus instance (originator of scale change)
     if (okayToPropagate) {
@@ -592,7 +593,7 @@ void CompareView::zoomToggle()
     #endif
     }
     qDebug() << __FUNCTION__ << toggleZoom << G::devicePixelRatio;
-    if (!isZoom) zoom = toggleZoom * 1.0 / G::devicePixelRatio;
+    if (!isZoom) zoom = toggleZoom;
 }
 
 // EVENTS
@@ -722,8 +723,7 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     if (!isZoom && zoom < zoomFit * 0.98)
         zoom = zoomFit;
     else
-        isZoom ? zoom = zoomFit : zoom = toggleZoom / G::devicePixelRatio;
-//    zoom /= G::devicePixelRatio;
+        isZoom ? zoom = zoomFit : zoom = toggleZoom;
     propagate = false;
     scale(true);
     propagate = true;
@@ -740,7 +740,7 @@ void CompareView::enterEvent(QEvent *event)
     }
     select();
     // zoomToFit zoom factor can be different so do update
-    emit zoomChange(zoom);
+    emit zoomChange(zoom, /* hasFocus */ true);
     QGraphicsView::enterEvent(event);
 }
 
