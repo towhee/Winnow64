@@ -364,7 +364,7 @@ void MW::setupPlatform()
     #endif
     }
     #ifdef Q_OS_LINIX
-//        G::devicePixelRatio = 1;
+        G::devicePixelRatio = 1;
     #endif
     #ifdef Q_OS_WIN
         setWindowIcon(QIcon(":/images/winnow.png"));
@@ -387,6 +387,7 @@ void MW::showEvent(QShowEvent *event)
     #endif
     }
     QMainWindow::showEvent(event);
+
     if (isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
         // correct for highdpi
@@ -466,12 +467,13 @@ dimensions and a different icc profile (win only).
     setDisplayResolution();
     emit resizeMW(this->geometry(), centralWidget->geometry());
     QString monitorScale = QString::number(G::devicePixelRatio * 100) + "%";
-    QString dimensions = QString::number(G::displayHorizontalPixels) + "x"
-            + QString::number(G::displayVerticalPixels)
-            + "  " + monitorScale;
+    QString dimensions = QString::number(G::displayPhysicalHorizontalPixels) + "x"
+            + QString::number(G::displayPhysicalVerticalPixels)
+            + " @ " + monitorScale;
+    QString toolTip = dimensions + " (Monitor is scaled to " + monitorScale + ")";
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), dimensions);
-    k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), dimensions, Qt::ToolTipRole);
+    k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), toolTip, Qt::ToolTipRole);
 }
 
 void MW::resizeEvent(QResizeEvent *event)
@@ -4483,6 +4485,7 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
         if (setting->contains("infoOverlayFontSize")) imageView->infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
         if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
         qreal tempZoom = setting->value("toggleZoomValue").toReal();
+        qDebug() << __FUNCTION__ << "tempZoom =" << tempZoom;
         if (tempZoom > 3) tempZoom = 1.0;
         if (tempZoom < 0.25) tempZoom = 1.0;
         imageView->toggleZoom = tempZoom;
@@ -5374,7 +5377,7 @@ parameters.  Any visibility changes are executed.
     int netCacheMBSize = cacheSizeMB - static_cast<int>( G::metaCacheMB);
     imageCacheThread->updateImageCacheParam(netCacheMBSize,
              isShowCacheStatus, cacheWtAhead, isCachePreview,
-             G::displayHorizontalPixels, G::displayVerticalPixels);
+             G::displayPhysicalHorizontalPixels, G::displayPhysicalVerticalPixels);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     if (fPath.length())
@@ -5428,8 +5431,7 @@ QString MW::getZoom()
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
     if (zoom <= 0 || zoom > 10) return "";
-    zoom *= G::devicePixelRatio;
-    qDebug() << __FUNCTION__ << zoom;
+//    qDebug() << __FUNCTION__ << zoom;
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
 
@@ -5478,7 +5480,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << s << source;
+//    qDebug() << __FUNCTION__ << s << source;
     // check if null filter
     if (dm->sf->rowCount() == 0) {
         statusLabel->setText("");
@@ -6964,8 +6966,8 @@ QString MW::diagnostics()
     rpt << "\n" << "ignoreSelectionChange = " << G::s(ignoreSelectionChange);
     rpt << "\n" << "lastPrefPage = " << G::s(lastPrefPage);
 //    rpt << "\n" << "mouseClickScroll = " << G::s(mouseClickScroll);
-    rpt << "\n" << "displayHorizontalPixels = " << G::s(G::displayHorizontalPixels);
-    rpt << "\n" << "displayVerticalPixels = " << G::s(G::displayVerticalPixels);
+    rpt << "\n" << "displayPhysicalHorizontalPixels = " << G::s(G::displayPhysicalHorizontalPixels);
+    rpt << "\n" << "displayPhysicalVerticalPixels = " << G::s(G::displayPhysicalVerticalPixels);
     rpt << "\n" << "checkIfUpdate = " << G::s(checkIfUpdate);
     rpt << "\n" << "isRatingBadgeVisible = " << G::s(isRatingBadgeVisible);
     rpt << "\n" << "classificationBadgeInImageDiameter = " << G::s(classificationBadgeInImageDiameter);
@@ -7496,7 +7498,8 @@ void MW::setDisplayResolution()
     QScreen *screen = qApp->screenAt(loc);
     if (screen == nullptr) return;
     bool monitorChanged = screen->name() != prevScreenName;
-//    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "1";
+    prevScreenName = screen->name();
+//    qDebug() << __FUNCTION__ << "monitorChanged =" << monitorChanged;
 
     G::devicePixelRatio = screen->devicePixelRatio();
     bool devicePixelRatioChanged = !qFuzzyCompare(G::devicePixelRatio, prevDevicePixelRatio);
@@ -7513,15 +7516,17 @@ void MW::setDisplayResolution()
     // Device Pixel Ratio or Monitor change has occurred
     G::dpi = screen->logicalDotsPerInch();
     G::ptToPx = G::dpi / 72;
-    G::displayHorizontalPixels = screen->geometry().width();
-    G::displayVerticalPixels = screen->geometry().height();
+    G::displayVirtualHorizontalPixels = screen->geometry().width();
+    G::displayVirtualVerticalPixels = screen->geometry().height();
+    G::displayPhysicalHorizontalPixels = screen->geometry().width() * G::devicePixelRatio;
+    G::displayPhysicalVerticalPixels = screen->geometry().height() * G::devicePixelRatio;
 
     if (devicePixelRatioChanged) {
         // refresh loupe / compare views to new scale
 //        qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "3";
         if (G::mode == "Loupe") {
             // reload to force complete refresh
-            imageView->loadImage(dm->currentFilePath, "DivicePixelRatioChange");
+            imageView->loadImage(dm->currentFilePath, "DevicePixelRatioChange");
         }
         if (G::mode == "Compare") compareImages->zoomTo(imageView->zoom/* / G::devicePixelRatio*/);
     }
@@ -7530,20 +7535,19 @@ void MW::setDisplayResolution()
     if (!monitorChanged) return;
 
     // monitor has changed
-    prevScreenName = screen->name();
 
     // resize if winnow window too big for new screen
     int w = this->geometry().width();
     int h = this->geometry().height();
-    double fitW = w * 1.0 / G::displayHorizontalPixels;
-    double fitH = h * 1.0 / G::displayVerticalPixels;
-    /*
-    qDebug() << __FUNCTION__
+    double fitW = w * 1.0 / screen->geometry().width();
+    double fitH = h * 1.0 / screen->geometry().height();
+//    /*
+    qDebug() << __FUNCTION__ << "MONITOR HAS CHANGED"
              << "w =" << w
-             << "ScreenW =" << G::displayHorizontalPixels
+             << "ScreenW =" << screen->geometry().width()
              << "fitW =" << fitW
-             << "hw =" << h
-             << "ScreenH=" << G::displayVerticalPixels
+             << "h =" << h
+             << "ScreenH=" << screen->geometry().height()
              << "fitH =" << fitH
                 ;
 //                    */
@@ -7560,6 +7564,7 @@ void MW::setDisplayResolution()
             w = static_cast<int>(w * 0.75 / fitH);
             h = static_cast<int>(h * 0.75 / fitH);
         }
+        qDebug() << __FUNCTION__ << "RESIZE TO:" << w << h;
         resize(w, h);
     }
 
@@ -7594,13 +7599,13 @@ void MW::setDisplayResolution()
         mode = static_cast<CGDisplayModeRef>(const_cast<void *>(CFArrayGetValueAtIndex(modes, c)));
         int w = static_cast<int>(CGDisplayModeGetWidth(mode));
         int h = static_cast<int>(CGDisplayModeGetHeight(mode));
-        if (w > G::displayHorizontalPixels) G::displayHorizontalPixels = w;
-        if (h > G::displayVerticalPixels) G::displayVerticalPixels = h;
+        if (w > G::displayVirtualHorizontalPixels) G::displayHorizontalPixels = w;
+        if (h > G::displayVirtualVerticalPixels) G::displayVerticalPixels = h;
     }
 #endif
 
-    cachePreviewWidth = G::displayHorizontalPixels;
-    cachePreviewHeight = G::displayVerticalPixels;
+    cachePreviewWidth = G::displayPhysicalHorizontalPixels;
+    cachePreviewHeight = G::displayPhysicalVerticalPixels;
 //    setActualDevicePixelRatio();
     /*
     qDebug() << __FUNCTION__
@@ -7609,8 +7614,8 @@ void MW::setDisplayResolution()
              << "loc =" << loc
              << "G::dpi =" << G::dpi
              << "G::ptToPx =" << G::ptToPx
-             << "G::displayHorizontalPixels =" << G::displayHorizontalPixels
-             << "G::displayVerticalPixels =" << G::displayVerticalPixels
+             << "G::displayVirtualHorizontalPixels =" << G::displayVirtualHorizontalPixels
+             << "G::displayVirtualVerticalPixels =" << G::displayVirtualVerticalPixels
                 ;
 //                */
 
@@ -7628,9 +7633,9 @@ void MW::setActualDevicePixelRatio()
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__;
 
     QPoint loc = centralWidget->window()->geometry().center();
-//    currScreen = qApp->screenAt(loc);
     QScreen *screen = qApp->screenAt(loc);
 
     /* If the previous session was closed with the window mostly off screen, or a previous
@@ -7641,10 +7646,7 @@ void MW::setActualDevicePixelRatio()
         QRect desktop = QGuiApplication::screens().first()->geometry();
         resize(static_cast<int>(0.75 * desktop.width()),
                static_cast<int>(0.75 * desktop.height()));
-        setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
-            size(), desktop));
-        qDebug() << "screen == nullptr && G::isInitializing"
-                 << desktop;
+        setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), desktop));
         return;
     }
 
@@ -7652,10 +7654,11 @@ void MW::setActualDevicePixelRatio()
     if (screen == nullptr) return;
 
     int virtualWidth = qApp->screenAt(loc)->geometry().width();
-
     if (virtualWidth > 0)
-        G::devicePixelRatio =
-            static_cast<int>(static_cast<double>(G::displayHorizontalPixels) / virtualWidth);
+        G::devicePixelRatio = static_cast<int>(G::displayPhysicalHorizontalPixels * 1.0 / virtualWidth);
+
+//    G::devicePixelRatio =
+//            static_cast<int>(static_cast<double>(G::displayHorizontalPixels) / virtualWidth);
     else
         G::devicePixelRatio = QPaintDevice::devicePixelRatio();
 
@@ -11715,6 +11718,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    resize(800, 600);
+    return;
     embelProperties->resizeColumns();
     return;
     qDebug() << __FUNCTION__
@@ -11722,15 +11727,15 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
              << "G::devicePixelRatio =" << G::devicePixelRatio
              << "G::dpi =" << G::dpi
              << "G::ptToPx =" << G::ptToPx
-             << "G::displayHorizontalPixels =" << G::displayHorizontalPixels
-             << "G::displayVerticalPixels =" << G::displayVerticalPixels
+             << "G::displayVirtualHorizontalPixels =" << G::displayVirtualHorizontalPixels
+             << "G::displayVirtualVerticalPixels =" << G::displayVirtualVerticalPixels
                 ;
 //    return;
 
     QPoint loc = centralWidget->window()->geometry().center();
     QScreen *screen = qApp->screenAt(loc);
-    G::displayHorizontalPixels = screen->geometry().width();
-    G::displayVerticalPixels = screen->geometry().height();
+    G::displayVirtualHorizontalPixels = screen->geometry().width();
+    G::displayVirtualVerticalPixels = screen->geometry().height();
     G::devicePixelRatio = screen->devicePixelRatio();
     qDebug() << __FUNCTION__
              << "screen->devicePixelRatio() =" << screen->devicePixelRatio()
