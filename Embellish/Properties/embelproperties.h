@@ -157,6 +157,7 @@ private:
     void renameCurrentTemplate();
     void copyStyle();
     void copyTemplate();
+    void saveTemplate();
     QString uniqueTemplateName(QString name);
     void syncWinnets();
 

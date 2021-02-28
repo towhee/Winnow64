@@ -747,9 +747,9 @@ void ImageView::setFitZoom()
 void ImageView::zoomToggle()
 {
 /*
-Alternate between zoom-to-fit and another zoom value (typically 100% to check
-detail).  The other zoom value (toggleZoom) can be assigned in ZoomDlg and
-defaults to 1.0
+    Alternate between zoom-to-fit and another zoom value (typically 100% to check
+    detail).  The other zoom value (toggleZoom) can be assigned in ZoomDlg and
+    defaults to 1.0
 */
     {
     #ifdef ISDEBUG

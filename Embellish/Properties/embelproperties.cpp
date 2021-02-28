@@ -85,6 +85,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     setIndentation(10);
     setAlternatingRowColors(false);
     setMouseTracking(false);
+    header()->setFixedHeight(2);
 
     ignoreFontSizeChangeSignals = false;
 
@@ -1046,7 +1047,6 @@ void EmbelProperties::copyTemplate()
     }
     QString path = "Embel/Templates/" + templateName + "/";
     QString copyName = uniqueTemplateName(templateName + " copy");
-    qDebug() << __FUNCTION__ << copyName;
     QString copyPath = "Embel/Templates/" + copyName + "/";
     setting->beginGroup(path);
     QStringList keys = setting->allKeys();
@@ -1060,6 +1060,34 @@ void EmbelProperties::copyTemplate()
     templateListEditor->refresh(templateList);
     templateName = copyName;
     templateListEditor->setValue(templateName);
+}
+
+void EmbelProperties::saveTemplate()
+{
+/*
+    Protype.  Not as easy as I hoped.  Not currently working.  Do not use.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    // path to source template in setting
+    QString srcPath = "Embel/Templates/" + templateName + "/";
+    // file to receive copy of template
+    QFile file("d:/temp/" + templateName + ".ini");
+
+    // new QSettings in ini format
+    QSettings ini(file.fileName(), QSettings::IniFormat);
+    QString dstName = uniqueTemplateName(templateName + " copy");
+    QString copyPath = "d:/temp/" + templateName;
+    setting->beginGroup(srcPath);
+    QStringList keys = setting->allKeys();
+    setting->endGroup();
+    for (int i = 0; i < keys.length(); ++i) {
+        QString key = srcPath + keys.at(i);
+        setting->setValue(copyPath + keys.at(i), setting->value(key));
+    }
 }
 
 void EmbelProperties::extractTile()
@@ -1865,8 +1893,8 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     collapseAll();
     expand(model->index(_templates, 0));
     isTemplateChange = false;
-    qDebug() << __FUNCTION__ << "loadImage..."
-             << "mw3->dm->currentFilePath =" << mw3->dm->currentFilePath;
+//    qDebug() << __FUNCTION__ << "loadImage..."
+//             << "mw3->dm->currentFilePath =" << mw3->dm->currentFilePath;
     mw3->imageView->loadImage(mw3->dm->currentFilePath, __FUNCTION__);
 }
 

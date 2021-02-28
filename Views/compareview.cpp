@@ -425,19 +425,19 @@ Return the scale factor (or zoom) to fit the image inside the viewport.
 void CompareView::scale(bool okayToPropagate)
 {
 /*
-See overview at top of this file explaining multiple instances of compareView.
+    See overview at top of this file explaining multiple instances of compareView.
 
-CompareView::scale is called after a mouse click executes a toggle zoom in one
-of the compareViews. The image iscaled to the current zoom factor. The
-okayToPropagate flag prevents additional scaling in the focus instance of
-compareView.
+    CompareView::scale is called after a mouse click executes a toggle zoom in one
+    of the compareViews. The image is scaled to the current zoom factor. The
+    okayToPropagate flag prevents additional scaling in the focus instance of
+    compareView.
 
-If called from mouse release with mouseDrag then panning is automatic because
-setTransformationAnchor(QGraphicsView::AnchorUnderMouse). A signal is sent to
-ZoomDlg in case it is open and can sync with local scale change.
+    If called from mouse release with mouseDrag then panning is automatic because
+    setTransformationAnchor(QGraphicsView::AnchorUnderMouse). A signal is sent to
+    ZoomDlg in case it is open and can sync with local scale change.
 
-ZoomDlg also signals changes in scale to CompareImages::zoomTo and then to the
-local zoomTo.
+    ZoomDlg also signals changes in scale to CompareImages::zoomTo and then to the
+    local zoomTo.
 */
     {
     #ifdef ISDEBUG
@@ -450,6 +450,7 @@ local zoomTo.
     setMatrix(matrix);
 
     // notify ZoomDlg of change in scale
+    qDebug() << __FUNCTION__ << zoom << "zoomChange";
     emit zoomChange(zoom);
 
     // if focus instance (originator of scale change)
@@ -583,13 +584,14 @@ void CompareView::zoomTo(qreal zoomTo)
 void CompareView::zoomToggle()
 {
 /*
-Called from MW menu action to CompareImages and then to each compare instance
+    Called from MW menu action to CompareImages and then to each compare instance
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << toggleZoom << G::devicePixelRatio;
     if (!isZoom) zoom = toggleZoom * 1.0 / G::devicePixelRatio;
 }
 
@@ -720,7 +722,8 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     if (!isZoom && zoom < zoomFit * 0.98)
         zoom = zoomFit;
     else
-        isZoom ? zoom = zoomFit : zoom = toggleZoom;
+        isZoom ? zoom = zoomFit : zoom = toggleZoom / G::devicePixelRatio;
+//    zoom /= G::devicePixelRatio;
     propagate = false;
     scale(true);
     propagate = true;

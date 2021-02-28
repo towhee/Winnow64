@@ -386,8 +386,12 @@ void MW::showEvent(QShowEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
+    QMainWindow::showEvent(event);
     if (isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
+        // correct for highdpi
+        double dpiFactor = 1.0 / G::devicePixelRatio;
+        resize(width() * dpiFactor, height() * dpiFactor);
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
         updateState();
@@ -398,7 +402,10 @@ void MW::showEvent(QShowEvent *event)
         defaultWorkspace();
     }
 
-    QMainWindow::showEvent(event);
+    // set initial visibility
+    embelTemplateChange(embelProperties->templateId);
+    // size columns after show if device pixel ratio > 1
+    embelProperties->resizeColumns();
 
     // check for updates
 //    if(checkIfUpdate && !isStartupArgs) checkForUpdate();
@@ -418,10 +425,10 @@ void MW::showEvent(QShowEvent *event)
 
     if (isShift) refreshFolders();
 
-    // set initial visibility
-    embelTemplateChange(embelProperties->templateId);
-    // size columns after show if device pixel ratio > 1
-    embelProperties->resizeColumns();
+//    // set initial visibility
+//    embelTemplateChange(embelProperties->templateId);
+//    // size columns after show if device pixel ratio > 1
+//    embelProperties->resizeColumns();
 
     G::isInitializing = false;
 }
@@ -798,7 +805,7 @@ void MW::dragEnterEvent(QDragEnterEvent *event)
     QDir incoming = info.dir();
     QDir current(currentViewDir);
     bool isSameFolder = incoming == current;
-    qDebug() << __FUNCTION__ << incoming << current;
+//    qDebug() << __FUNCTION__ << incoming << current;
     if (!isSameFolder) event->acceptProposedAction();
 }
 
@@ -5422,13 +5429,14 @@ QString MW::getZoom()
     else zoom = imageView->zoom;
     if (zoom <= 0 || zoom > 10) return "";
     zoom *= G::devicePixelRatio;
+    qDebug() << __FUNCTION__ << zoom;
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
 
 QString MW::getPicked()
 {
 /*
-Returns a string like "16 (38MB)"
+    Returns a string like "16 (38MB)"
 */
     {
     #ifdef ISDEBUG
@@ -5462,15 +5470,15 @@ Returns a string like "12 (165 MB)"
 void MW::updateStatus(bool keepBase, QString s, QString source)
 {
 /*
-Reports status information on the status bar and in InfoView.  If keepBase = true
-then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message.
+    Reports status information on the status bar and in InfoView.  If keepBase = true
+    then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message s.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << s << source;
+    qDebug() << __FUNCTION__ << s << source;
     // check if null filter
     if (dm->sf->rowCount() == 0) {
         statusLabel->setText("");
@@ -7468,17 +7476,17 @@ void MW::setPrefPage(int page)
 void MW::setDisplayResolution()
 {
 /*
-    This is triggered by the mainwindow move event at startup and when the app window is
-    dragged to another monitor. The loupe view always shows native pixel resolution (one image
-    pixel = one physical monitor pixel), therefore the zoom has to be factored by the device
-    pixel ratio.
+    This is triggered by the mainwindow move event at startup, when the operating system
+    display scale is changed and when the app window is dragged to another monitor. The loupe
+    view always shows native pixel resolution (one image pixel = one physical monitor pixel),
+    therefore the zoom has to be factored by the device pixel ratio.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "0";
+//    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "0";
     if (G::isInitializing) return;
     QPoint loc = centralWidget->window()->geometry().center();
 //    if (loc == prevScreenLoc) return;
@@ -7488,19 +7496,19 @@ void MW::setDisplayResolution()
     QScreen *screen = qApp->screenAt(loc);
     if (screen == nullptr) return;
     bool monitorChanged = screen->name() != prevScreenName;
-    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "1";
+//    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "1";
 
     G::devicePixelRatio = screen->devicePixelRatio();
     bool devicePixelRatioChanged = !qFuzzyCompare(G::devicePixelRatio, prevDevicePixelRatio);
-    qDebug() << __FUNCTION__
-             << "G::devicePixelRatio =" << G::devicePixelRatio
-             << "prevDevicePixelRatio =" << prevDevicePixelRatio
-             << "devicePixelRatioChanged =" << devicePixelRatioChanged
-                ;
+//    qDebug() << __FUNCTION__
+//             << "G::devicePixelRatio =" << G::devicePixelRatio
+//             << "prevDevicePixelRatio =" << prevDevicePixelRatio
+//             << "devicePixelRatioChanged =" << devicePixelRatioChanged
+//                ;
     prevDevicePixelRatio = G::devicePixelRatio;
 
     if (!monitorChanged && !devicePixelRatioChanged) return;
-    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "2";
+//    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "2";
 
     // Device Pixel Ratio or Monitor change has occurred
     G::dpi = screen->logicalDotsPerInch();
@@ -7510,7 +7518,7 @@ void MW::setDisplayResolution()
 
     if (devicePixelRatioChanged) {
         // refresh loupe / compare views to new scale
-        qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "3";
+//        qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "3";
         if (G::mode == "Loupe") {
             // reload to force complete refresh
             imageView->loadImage(dm->currentFilePath, "DivicePixelRatioChange");
@@ -7594,7 +7602,7 @@ void MW::setDisplayResolution()
     cachePreviewWidth = G::displayHorizontalPixels;
     cachePreviewHeight = G::displayVerticalPixels;
 //    setActualDevicePixelRatio();
-
+    /*
     qDebug() << __FUNCTION__
              << "screen->name() =" << screen->name()
              << "G::devicePixelRatio =" << G::devicePixelRatio
@@ -7604,6 +7612,7 @@ void MW::setDisplayResolution()
              << "G::displayHorizontalPixels =" << G::displayHorizontalPixels
              << "G::displayVerticalPixels =" << G::displayVerticalPixels
                 ;
+//                */
 
     screen = nullptr;
 
@@ -10580,7 +10589,7 @@ void MW::keyRight()
     }
     static int n = 0;
     G::t1.restart();
-    qDebug() << __FUNCTION__ << n++;
+//    qDebug() << __FUNCTION__ << n++;
     if (G::mode == "Compare") compareImages->go("Right");
     else thumbView->selectNext();
 }
