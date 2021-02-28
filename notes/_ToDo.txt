@@ -1,12 +1,10 @@
 BUGS / TO DO
-- Write qDebug to logger file
 - Try using busy flag in threads
 - Image count does not update when scroll FSTree
-- Check Monitor effective resolution when creating dialogs (Ingest, Tile, Report metadata...)
 - Quick start loupe first image in folder
 - New workspace crashed
+- Write qDebug to logger file
 - Improve err recording and showing to user
-- Settings Show Label in grid not syncing
 - Text disappears at certain font sizes
 - Highlighter opacity not always used
 - Sometimes effect controls do not trigger effect changes
@@ -49,6 +47,7 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Settings Show Label in grid not syncing with preferences
 - Fix device pixel ratio rendering issues
 - Spacebar not toggling zoom
 - Loupe view uses device pixel ratio of 1.0

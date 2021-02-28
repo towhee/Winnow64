@@ -235,7 +235,6 @@ void CompareImages::configureGrid()
         }
         break;
     case 4:
-        qDebug() << __FUNCTION__ << "1";
         area1 = area(2, 2);
         area2 = area(1, 4);
         area3 = area(4, 1);
@@ -491,16 +490,18 @@ clicks on the unzoomed image.
 void CompareImages::zoomChangeFromView(qreal zoomValue)
 {
 /*
-Signal zoom changes from CompareImages to simplify connections as the
-CompareView instances will not have been created when connections are
-assigned im MW.  However, CompareImages does exist and communicates with
-CompareView instances.
+    Signal zoom changes from CompareImages to simplify connections as the
+    CompareView instances will not have been created when connections are
+    assigned im MW.  However, CompareImages does exist and communicates with
+    CompareView instances.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << "zoomValue =" << zoomValue;
+//    zoomValue /= G::devicePixelRatio;
     this->zoomValue = zoomValue;       // used by MW::updateStatus
 
     // update ZoomDlg

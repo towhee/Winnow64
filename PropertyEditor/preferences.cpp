@@ -628,7 +628,7 @@ void Preferences::addItems()
     i.tooltip = "Show or hide the label with the file name at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = mw->thumbView->showIconLabels;
+    i.value = mw->gridView->showIconLabels;
     i.key = "gridViewShowLabel";
     i.delegateType = DT_Checkbox;
     i.type = "bool";

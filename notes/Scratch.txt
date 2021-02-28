@@ -96,31 +96,33 @@ struct heif_error heif_image_handle_get_metadata(const struct heif_image_handle*
                                                  void* out_data);
 
 
-Go to last image
-IconView::selectLast
-IconView::getLastRow
-IconView::selectThumb
-IconView::selectionChanged
-MW::updateStatus
-IconView::getCurrentFilePath
-Filters::isAnyFilter
-MW::metadataChanged
-IconView::selectionChanged
-MW::fileSelectionChange
-IconView::scrollToRow
-MW::thumbHasScrolled
-MW::updateIconsVisible
-IconView::scannedViewportRange
-MetadataCache::sizeChange
-MetadataCache::setRange
-IconView::scrollToRow
-MetadataCache::run
-MW::gridHasScrolled
-MW::updateIconsVisible
-IconView::scannedViewportRange
-MetadataCache::readIconChunk
-MetadataCache::sizeChange
-Thumb::loadThumb
+"  4,839,492,000"   "CompareView::enterEvent..........................."   ""
+"         61,800"   "CompareView::select..............................."   ""
+"        131,800"   "CompareImages::deselectAll........................"   ""
+"        162,400"   "CompareView::deselect............................."   ""
+"      1,523,600"   "CompareView::deselect............................."   ""
+"      1,364,300"   "CompareView::deselect............................."   ""
+"      2,272,800"   "CompareView::deselect............................."   ""
+"      2,752,600"   "CompareImages::zoomChangeFromView................."   ""
+CompareImages::zoomChangeFromView zoomValue = 0.171087
+"        134,100"   "MW::updateStatus.................................."   ""
+"         60,700"   "IconView::getCurrentFilePath......................"   ""
+"         54,900"   "Win::availableMemory.............................."   ""
+"         40,100"   "MW::getZoom......................................."   ""
+"         40,600"   "MW::getPosition..................................."   ""
+"         32,000"   "IconView::getSelectedCount........................"   ""
+"         70,600"   "MW::getPicked....................................."   ""
+"         55,500"   "MW::updateStatusBar..............................."   ""
+"        243,900"   "Filters::isAnyFilter.............................."   ""
+"        679,500"   "MW::updateProgressBarWidth........................"   ""
+"         36,000"   "MW::availableSpaceForProgressBar.................."   ""
+"        151,300"   "MW::getPosition..................................."   ""
+"         39,100"   "MW::getZoom......................................."   ""
+"         42,900"   "MW::metadataChanged..............................."   ""
+"         87,800"   "InfoView::showOrHide.............................."   ""
+"         49,400"   "MW::getSelectedFileSize..........................."   ""
+"         39,200"   "MW::memoryReqdForSelection........................"   ""
+"         36,300"   "MW::getPicked....................................."   ""
 
     QElapsedTimer profileTimer; profileTimer.restart();
     {
