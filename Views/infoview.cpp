@@ -223,7 +223,7 @@ void InfoView::setColumn0Width()
     QFont ft = this->font();
     ft.setPixelSize(static_cast<int>(G::fontSize.toInt() * 1.333/* * G::ptToPx*/));
     QFontMetrics fm(ft);
-    setColumnWidth(0, fm.boundingRect("--Exposure compensation--").width());
+    setColumnWidth(0, fm.boundingRect("--Shutter speed--").width());
 }
 
 void InfoView::setupOk()
@@ -291,7 +291,7 @@ If any of the editable fields change then MW::metadataChanged is triggered.
     ok->setData(ok->index(ShutterSpeedRow, 0, imageInfoIdx), "Shutter speed");
     ok->setData(ok->index(ApertureRow, 0, imageInfoIdx), "Aperture");
     ok->setData(ok->index(ISORow, 0, imageInfoIdx), "ISO");
-    ok->setData(ok->index(ExposureCompensationRow, 0, imageInfoIdx), "Exposure Compensation");
+    ok->setData(ok->index(ExposureCompensationRow, 0, imageInfoIdx), "EC");
     ok->setData(ok->index(FocalLengthRow, 0, imageInfoIdx), "Focal length");
     ok->setData(ok->index(TitleRow, 0, tagInfoIdx), "Title");
     ok->setData(ok->index(CreatorRow, 0, tagInfoIdx), "Creator");
@@ -304,6 +304,9 @@ If any of the editable fields change then MW::metadataChanged is triggered.
     ok->setData(ok->index(PickedRow, 0, statusInfoIdx), "Picked");
     ok->setData(ok->index(CacheRow, 0, statusInfoIdx), "Cache");
     ok->setData(ok->index(MonitorRow, 0, statusInfoIdx), "Monitor");
+
+    // tooltip for EC
+    ok->setData(ok->index(ExposureCompensationRow, 0, imageInfoIdx), "Exposure Compensation", Qt::ToolTipRole);
 
     // set default to show all rows - overridden in preferences
     // set all items not editable

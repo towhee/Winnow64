@@ -268,7 +268,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
-    setActualDevicePixelRatio();
+
+    G::devicePixelRatio = 1.5;
 
     // recall previous thumbDock state in case last closed in Grid mode
     if (wasThumbDockVisible) thumbDockVisibleAction->setChecked(wasThumbDockVisible);
@@ -865,7 +866,7 @@ void MW::checkForUpdate()
     qDebug() << __FUNCTION__ << "maintenancePathToUse" << maintenancePathToUse;
 
 #ifdef Q_OS_MAC
-    return false;
+//    return false;
 #endif
 
 #ifdef Q_OS_LINIX
@@ -3656,7 +3657,9 @@ void MW::createMenus()
     embelMenu->addAction(embelExportAction);
 //    embelMenu->addAction(embelTileAction);
     embelMenu->addAction(embelManageTilesAction);
+    #ifdef Q_OS_WIN
     embelMenu->addAction(embelRevealWinnetsAction);
+    #endif
     embelMenu->addSeparator();
     embelMenu->addActions(embelGroupAction->actions());
 //    // add 10 dummy menu items for embellish template choice
@@ -7488,30 +7491,36 @@ void MW::setDisplayResolution()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "0";
     if (G::isInitializing) return;
     QPoint loc = centralWidget->window()->geometry().center();
 //    if (loc == prevScreenLoc) return;
     prevScreenLoc = loc;
 
-//#ifdef Q_OS_WIN
     QScreen *screen = qApp->screenAt(loc);
     if (screen == nullptr) return;
     bool monitorChanged = screen->name() != prevScreenName;
     prevScreenName = screen->name();
 //    qDebug() << __FUNCTION__ << "monitorChanged =" << monitorChanged;
 
+    #ifdef Q_OS_WIN
     G::devicePixelRatio = screen->devicePixelRatio();
+    #endif
+
+    #ifdef Q_OS_MAC
+    G::devicePixelRatio = macDevicePixelRatio(loc, screen);
+    #endif
+
     bool devicePixelRatioChanged = !qFuzzyCompare(G::devicePixelRatio, prevDevicePixelRatio);
-//    qDebug() << __FUNCTION__
-//             << "G::devicePixelRatio =" << G::devicePixelRatio
-//             << "prevDevicePixelRatio =" << prevDevicePixelRatio
-//             << "devicePixelRatioChanged =" << devicePixelRatioChanged
-//                ;
+    /*
+    qDebug() << __FUNCTION__
+             << "G::devicePixelRatio =" << G::devicePixelRatio
+             << "prevDevicePixelRatio =" << prevDevicePixelRatio
+             << "devicePixelRatioChanged =" << devicePixelRatioChanged
+                ;
+//    */
     prevDevicePixelRatio = G::devicePixelRatio;
 
     if (!monitorChanged && !devicePixelRatioChanged) return;
-//    qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "2";
 
     // Device Pixel Ratio or Monitor change has occurred
     G::dpi = screen->logicalDotsPerInch();
@@ -7541,7 +7550,7 @@ void MW::setDisplayResolution()
     int h = this->geometry().height();
     double fitW = w * 1.0 / screen->geometry().width();
     double fitH = h * 1.0 / screen->geometry().height();
-//    /*
+    /*
     qDebug() << __FUNCTION__ << "MONITOR HAS CHANGED"
              << "w =" << w
              << "ScreenW =" << screen->geometry().width()
@@ -7575,38 +7584,9 @@ void MW::setDisplayResolution()
             G::winScreenHash[screen->name()].profile;
     ICC::setOutProfile();
     #endif
-//#endif
-
-#ifdef Q_OS_MAC
-    CGPoint point = loc.toCGPoint();
-
-    // get displayID for monitor at point
-    const int maxDisplays = 64;                     // 64 should be enough for any system
-    CGDisplayCount displayCount;                    // Total number of display IDs
-    CGDirectDisplayID displayIDs[maxDisplays];      // Array of display IDs
-    CGGetDisplaysWithPoint (point, maxDisplays, displayIDs, &displayCount);
-    auto displayID = displayIDs[0];
-    if (displayCount != 1) displayID = CGMainDisplayID();
-
-    // get list of all display modes for the monitor
-    auto modes = CGDisplayCopyAllDisplayModes(displayID, nullptr);
-    auto count = CFArrayGetCount(modes);
-    CGDisplayModeRef mode;
-
-    // the native resolution is the largest display mode
-    for (long c = count; c--;) {
-//        mode = *(static_cast<const CGDisplayModeRef>(CFArrayGetValueAtIndex(modes, c)));
-        mode = static_cast<CGDisplayModeRef>(const_cast<void *>(CFArrayGetValueAtIndex(modes, c)));
-        int w = static_cast<int>(CGDisplayModeGetWidth(mode));
-        int h = static_cast<int>(CGDisplayModeGetHeight(mode));
-        if (w > G::displayVirtualHorizontalPixels) G::displayHorizontalPixels = w;
-        if (h > G::displayVirtualVerticalPixels) G::displayVerticalPixels = h;
-    }
-#endif
 
     cachePreviewWidth = G::displayPhysicalHorizontalPixels;
     cachePreviewHeight = G::displayPhysicalVerticalPixels;
-//    setActualDevicePixelRatio();
     /*
     qDebug() << __FUNCTION__
              << "screen->name() =" << screen->name()
@@ -7620,58 +7600,54 @@ void MW::setDisplayResolution()
 //                */
 
     screen = nullptr;
-
 }
 
-void MW::setActualDevicePixelRatio()
+double MW::macDevicePixelRatio(QPoint loc, QScreen *screen)
 {
 /*
-   Not used anymore.
+    Apple makes it hard to get the display native pixel resolution, which is necessary
+    to determine the true device pixel ratio to ensure images at 100% are 1:1 image and
+    display pixels.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__;
+    // get displayID for monitor at point
+    const int maxDisplays = 64;                     // 64 should be enough for any system
+    CGDisplayCount displayCount;                    // Total number of display IDs
+    CGDirectDisplayID displayIDs[maxDisplays];      // Array of display IDs
+    CGPoint point = loc.toCGPoint();
+    CGGetDisplaysWithPoint(point, maxDisplays, displayIDs, &displayCount);
+    auto displayID = displayIDs[0];
+    if (displayCount != 1) displayID = CGMainDisplayID();
 
-    QPoint loc = centralWidget->window()->geometry().center();
-    QScreen *screen = qApp->screenAt(loc);
+    // get list of all display modes for the monitor
+    auto modes = CGDisplayCopyAllDisplayModes(displayID, nullptr);
+    auto count = CFArrayGetCount(modes);
+    CGDisplayModeRef mode;
 
-    /* If the previous session was closed with the window mostly off screen, or a previous
-       screen (monitor) is no longer available, then relocate the app to the center of the
-       desktop */
-    if (screen == nullptr && G::isInitializing) {
-        G::devicePixelRatio = 1;
-        QRect desktop = QGuiApplication::screens().first()->geometry();
-        resize(static_cast<int>(0.75 * desktop.width()),
-               static_cast<int>(0.75 * desktop.height()));
-        setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), desktop));
-        return;
+    // start with virtual pixel width from QScreen (does not know actual width in pixels)
+    int screenW = screen->geometry().width();
+    int screenH = screen->geometry().height();
+
+    // the native resolution is the largest display mode
+    for (long c = count; c--;) {
+        mode = static_cast<CGDisplayModeRef>(const_cast<void *>(CFArrayGetValueAtIndex(modes, c)));
+        int w = static_cast<int>(CGDisplayModeGetWidth(mode));
+        int h = static_cast<int>(CGDisplayModeGetHeight(mode));
+        if (w > screenW) screenW = w;
+        if (h > screenH) screenH = h;
     }
 
-    // Prevent calculations while moving the app between and off monitors
-    if (screen == nullptr) return;
+    // The device pixel ratio
+    return screenW * 1.0 / screen->geometry().width();
 
-    int virtualWidth = qApp->screenAt(loc)->geometry().width();
-    if (virtualWidth > 0)
-        G::devicePixelRatio = static_cast<int>(G::displayPhysicalHorizontalPixels * 1.0 / virtualWidth);
-
-//    G::devicePixelRatio =
-//            static_cast<int>(static_cast<double>(G::displayHorizontalPixels) / virtualWidth);
-    else
-        G::devicePixelRatio = QPaintDevice::devicePixelRatio();
-
-    if (G::devicePixelRatio == 0) G::devicePixelRatio = 1;
-
-    // get dpi and font pixels to points conversion factor
-    G::dpi = screen->logicalDotsPerInch();
-    G::ptToPx = G::dpi / 72;
-
-/*  MacOS Screen information
+  /*  MacOS Screen information
 #if defined(Q_OS_MAC)
        int screenWidth = CGDisplayPixelsWide(CGMainDisplayID());
-       qDebug() << G::t.restart() << "\t" << "screenWidth" << screenWidth << QPaintDevice::devicePixelRatio();
+       qDebug() << "screenWidth" << screenWidth << QPaintDevice::devicePixelRatio();
         float bSF = QtMac::macBackingScaleFactor();
         qDebug() << G::t.restart() << "\t" << "QtMac::BackingScaleFactor()" << bSF;
 #endif
@@ -7699,7 +7675,7 @@ void MW::setActualDevicePixelRatio()
                  << "\nphysicalSize" << QGuiApplication::primaryScreen()->physicalSize()
                  << "\nQApplication::desktop()->availableGeometry(this)"<< QApplication::desktop()->availableGeometry(this)
                  << "\n";
-                 */
+//                 */
 }
 
 void MW::escapeFullScreen()
@@ -11718,6 +11694,21 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QPoint loc = centralWidget->window()->geometry().center();
+    QScreen *screen = qApp->screenAt(loc);
+    G::displayVirtualHorizontalPixels = screen->geometry().width();
+    G::displayVirtualVerticalPixels = screen->geometry().height();
+    G::devicePixelRatio = screen->devicePixelRatio();
+    qDebug() << __FUNCTION__
+             << "\nscreen->devicePixelRatio() =" << screen->devicePixelRatio()
+             << "\nscreen->physicalDotsPerInch() =" << screen->physicalDotsPerInch()
+             << "\nscreen->logicalDotsPerInch() =" << screen->logicalDotsPerInch()
+             << "\nscreen->geometry().width() =" << screen->geometry().width()
+             << "\nphysicalSize() =" << screen->physicalSize()
+             << "\nvirtualSize() =" << screen->virtualSize()
+                ;
+    return;
+
     resize(800, 600);
     return;
     embelProperties->resizeColumns();
@@ -11731,16 +11722,5 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
              << "G::displayVirtualVerticalPixels =" << G::displayVirtualVerticalPixels
                 ;
 //    return;
-
-    QPoint loc = centralWidget->window()->geometry().center();
-    QScreen *screen = qApp->screenAt(loc);
-    G::displayVirtualHorizontalPixels = screen->geometry().width();
-    G::displayVirtualVerticalPixels = screen->geometry().height();
-    G::devicePixelRatio = screen->devicePixelRatio();
-    qDebug() << __FUNCTION__
-             << "screen->devicePixelRatio() =" << screen->devicePixelRatio()
-             << "screen->physicalDotsPerInch() =" << screen->physicalDotsPerInch()
-             << "screen->logicalDotsPerInch() =" << screen->logicalDotsPerInch()
-                ;
 }
 // End MW
