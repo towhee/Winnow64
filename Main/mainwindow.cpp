@@ -7614,6 +7614,7 @@ double MW::macDevicePixelRatio(QPoint loc, QScreen *screen)
     G::track(__FUNCTION__);
     #endif
     }
+    #ifdef Q_OS_MAC
     // get displayID for monitor at point
     const int maxDisplays = 64;                     // 64 should be enough for any system
     CGDisplayCount displayCount;                    // Total number of display IDs
@@ -7643,6 +7644,9 @@ double MW::macDevicePixelRatio(QPoint loc, QScreen *screen)
 
     // The device pixel ratio
     return screenW * 1.0 / screen->geometry().width();
+    #endif
+    // dummy return to satisfy compileron PC
+    return 0;
 
   /*  MacOS Screen information
 #if defined(Q_OS_MAC)
