@@ -269,7 +269,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
 
-    G::actDevicePixelRatio = 1.5;
+//    G::actDevicePixelRatio = 1.5;
 
     // recall previous thumbDock state in case last closed in Grid mode
     if (wasThumbDockVisible) thumbDockVisibleAction->setChecked(wasThumbDockVisible);
@@ -7487,6 +7487,12 @@ void MW::setDisplayResolution()
     display scale is changed and when the app window is dragged to another monitor. The loupe
     view always shows native pixel resolution (one image pixel = one physical monitor pixel),
     therefore the zoom has to be factored by the device pixel ratio.
+
+    However, on Mac the device pixel ratio is arbitrary, mostly = 2.0 no matter which display
+    scaling is selected, so there are two ratios defined here:
+
+    G::actDevicePixelRatio - the actual ratio from actual to vertual pixels
+    G::sysDevicePixelRatio - the system reported device pixel ratio
 */
     {
     #ifdef ISDEBUG
@@ -7506,7 +7512,7 @@ void MW::setDisplayResolution()
 
     G::sysDevicePixelRatio = screen->devicePixelRatio();
     #ifdef Q_OS_WIN
-    G::actDevicePixelRatio = screen->actDevicePixelRatio();
+    G::actDevicePixelRatio = screen->devicePixelRatio();
     #endif
     #ifdef Q_OS_MAC
     G::actDevicePixelRatio = macDevicePixelRatio(loc, screen);
@@ -7525,7 +7531,7 @@ void MW::setDisplayResolution()
     G::displayPhysicalHorizontalPixels = screen->geometry().width() * G::actDevicePixelRatio;
     G::displayPhysicalVerticalPixels = screen->geometry().height() * G::actDevicePixelRatio;
 
-//    /*
+    /*
     double physicalWidth = screen->physicalSize().width();
     double dpmm = G::displayPhysicalHorizontalPixels * 1.0 / physicalWidth ;
     qDebug() << __FUNCTION__
@@ -7540,7 +7546,6 @@ void MW::setDisplayResolution()
 
     if (devicePixelRatioChanged) {
         // refresh loupe / compare views to new scale
-//        qDebug() << __FUNCTION__ << "G::mode =" << G::mode << "3";
         if (G::mode == "Loupe") {
             // reload to force complete refresh
             imageView->loadImage(dm->currentFilePath, "DevicePixelRatioChange");
@@ -7610,7 +7615,7 @@ void MW::setDisplayResolution()
     screen = nullptr;
 }
 
-double MW::macDevicePixelRatio(QPoint loc, QScreen *screen)
+double MW::macActualDevicePixelRatio(QPoint loc, QScreen *screen)
 {
 /*
     Apple makes it hard to get the display native pixel resolution, which is necessary

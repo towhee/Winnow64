@@ -185,7 +185,6 @@ Utilities::log(__FUNCTION__, "");
     // unpadded image is req'd for some effects like emboss
     unpaddedSrcImage = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, NoPad).toImage();
     srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, PadToEffectiveBoundingRect);
-//    srcPixmap.setDevicePixelRatio(1.0);
     qDebug() << __FUNCTION__ << "srcPixmap.width() =" << srcPixmap.width();
     overlay = srcPixmap.toImage();
     /*
@@ -195,7 +194,6 @@ Utilities::log(__FUNCTION__, "");
              << "overlay =" << overlay.rect()
                 ;
 //                */
-//    overlay.save("D:/Pictures/Temp/effect/o0.tif");
 
     // iterate effects in style
     using namespace winnow_effects;
@@ -261,7 +259,6 @@ Utilities::log(__FUNCTION__, "");
 
     // Go back to device pixel ratio
     overlay.setDevicePixelRatio(G::sysDevicePixelRatio);
-//    overlay.setDevicePixelRatio(G::actDevicePixelRatio);
 
     // world transform required for object rotation
     painter->setWorldTransform(QTransform());
