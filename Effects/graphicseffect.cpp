@@ -165,22 +165,28 @@ void GraphicsEffect::draw(QPainter* painter)
 #ifdef ISLOGGER
 Utilities::log(__FUNCTION__, "");
 #endif
-//    qDebug() << __FUNCTION__ << okToDraw << QTime::currentTime() << painter;
-//    if (!okToDraw) return;
-//    okToDraw = false;
+    /*
+    qDebug() << __FUNCTION__ << okToDraw << QTime::currentTime() << painter;
+    if (!okToDraw) return;
+    okToDraw = false;
 
-//    qDebug() << __FUNCTION__ << "effects->length() =" << effects->length();
+    qDebug() << __FUNCTION__ << "effects->length() =" << effects->length();
 
-//    if (effects->length() == 0) return;
+    if (effects->length() == 0) return;
+    */
     if (this->sourcePixmap().isNull()) return;
 
     painter->save();
 
     QPoint srcOffset;
-//    PixmapPadMode mode = PadToEffectiveBoundingRect;
+    /*
+    PixmapPadMode mode = PadToEffectiveBoundingRect;
+    */
     // unpadded image is req'd for some effects like emboss
     unpaddedSrcImage = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, NoPad).toImage();
     srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, PadToEffectiveBoundingRect);
+//    srcPixmap.setDevicePixelRatio(1.0);
+    qDebug() << __FUNCTION__ << "srcPixmap.width() =" << srcPixmap.width();
     overlay = srcPixmap.toImage();
     /*
     qDebug() << __FUNCTION__
@@ -254,7 +260,8 @@ Utilities::log(__FUNCTION__, "");
     }
 
     // Go back to device pixel ratio
-    overlay.setDevicePixelRatio(G::devicePixelRatio);
+    overlay.setDevicePixelRatio(G::sysDevicePixelRatio);
+//    overlay.setDevicePixelRatio(G::actDevicePixelRatio);
 
     // world transform required for object rotation
     painter->setWorldTransform(QTransform());

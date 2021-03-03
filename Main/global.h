@@ -139,7 +139,8 @@ namespace G
     extern int displayPhysicalVerticalPixels;   // current monitor
     extern int displayVirtualHorizontalPixels;  // current monitor
     extern int displayVirtualVerticalPixels;    // current monitor
-    extern qreal devicePixelRatio;              // current monitor
+    extern qreal actDevicePixelRatio;           // current monitor
+    extern qreal sysDevicePixelRatio;           // current monitor
 
     extern int maxIconSize;
     extern int minIconSize;
@@ -195,7 +196,7 @@ namespace G
     extern int scrollBarThickness;
     extern int propertyWidgetMarginLeft;
     extern int propertyWidgetMarginRight;
-//    extern qreal devicePixelRatio;
+//    extern qreal actDevicePixelRatio;
     extern QModelIndexList copyCutIdxList;  // req'd?
     extern QStringList copyCutFileList;     // req'd?
 

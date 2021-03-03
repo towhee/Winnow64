@@ -360,7 +360,7 @@ void ImageView::scale()
     }
 
     if (isFit) setFitZoom();
-    double highDpiZoom = zoom / G::devicePixelRatio;
+    double highDpiZoom = zoom / G::actDevicePixelRatio;
     matrix.scale(highDpiZoom, highDpiZoom);
     // when resize before first image zoom == inf
     if (zoom > 10) return;
@@ -455,8 +455,8 @@ qreal ImageView::getFitScaleFactor(QRectF container, QRectF content)
     #endif
     }
 //    qDebug() << __FUNCTION__ << container << content;
-    qreal hScale = static_cast<qreal>(container.width() - 2) / content.width() * G::devicePixelRatio;
-    qreal vScale = static_cast<qreal>(container.height() - 2) / content.height() * G::devicePixelRatio;
+    qreal hScale = static_cast<qreal>(container.width() - 2) / content.width() * G::actDevicePixelRatio;
+    qreal vScale = static_cast<qreal>(container.height() - 2) / content.height() * G::actDevicePixelRatio;
     return (hScale < vScale) ? hScale : vScale;
 }
 
@@ -732,7 +732,7 @@ void ImageView::resetFitZoom()
     zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > toggleZoom) zoom = toggleZoom;
-//    if (limitFit100Pct  && zoom > 1) zoom = 1.0 / G::devicePixelRatio;
+//    if (limitFit100Pct  && zoom > 1) zoom = 1.0 / G::actDevicePixelRatio;
     scale();
 }
 
@@ -745,7 +745,7 @@ void ImageView::setFitZoom()
     }
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > toggleZoom) zoom = toggleZoom;
-//    if (limitFit100Pct  && zoom > 1.0 / G::devicePixelRatio) zoom = 1.0 / G::devicePixelRatio;
+//    if (limitFit100Pct  && zoom > 1.0 / G::actDevicePixelRatio) zoom = 1.0 / G::actDevicePixelRatio;
 }
 
 void ImageView::zoomToggle()
@@ -763,7 +763,7 @@ void ImageView::zoomToggle()
     qDebug() << __FUNCTION__ << "toggleZoom =" << toggleZoom;
     isFit = !isFit;
     isFit ? zoom = zoomFit : zoom = toggleZoom;
-//    isFit ? zoom = zoomFit : zoom = toggleZoom * 1.0 / G::devicePixelRatio;
+//    isFit ? zoom = zoomFit : zoom = toggleZoom * 1.0 / G::actDevicePixelRatio;
     scale();
 }
 

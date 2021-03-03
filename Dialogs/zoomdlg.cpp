@@ -83,9 +83,9 @@ controls are updated to the current scale.
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << "ZoomDlg::zoomChange" << zoom << G::devicePixelRatio;
+//    qDebug() << "ZoomDlg::zoomChange" << zoom << G::actDevicePixelRatio;
     // convert to percentage for persentation
-    zoom *= 100;        //(100 * G::devicePixelRatio);
+    zoom *= 100;        //(100 * G::actDevicePixelRatio);
 
     // update controls
     ui->zoomSB->setValue(qRound(zoom));
@@ -107,7 +107,7 @@ to only changes made lacally via the isActiveWindow flag.
     G::track(__FUNCTION__);
     #endif
     }
-    if (isActiveWindow()) emit zoom((qreal)value / 100/* / G::devicePixelRatio*/);
+    if (isActiveWindow()) emit zoom((qreal)value / 100/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_toggleZoomAmountBtn_clicked()
@@ -115,7 +115,7 @@ void ZoomDlg::on_toggleZoomAmountBtn_clicked()
     QString msg = "Toggle zoom amount changed to " +
                   QString::number(ui->zoomSB->value()) + "%";
     G::popUp->showPopup(msg, 1500);
-    qreal zoomVal = (qreal)ui->zoomSB->value() / 100/* / G::devicePixelRatio*/;
+    qreal zoomVal = (qreal)ui->zoomSB->value() / 100/* / G::actDevicePixelRatio*/;
     emit updateToggleZoom(zoomVal);
 //    QDialog::accept();
 }
@@ -123,32 +123,32 @@ void ZoomDlg::on_toggleZoomAmountBtn_clicked()
 // radio buttons for quick zoom setting at popular scales
 void ZoomDlg::on_radio25Button_clicked()
 {
-    emit zoom(0.25 / G::devicePixelRatio);
+    emit zoom(0.25 / G::actDevicePixelRatio);
 }
 
 void ZoomDlg::on_radio50Button_clicked()
 {
-    emit zoom(0.50 /*/ G::devicePixelRatio*/);
+    emit zoom(0.50 /*/ G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio66Button_clicked()
 {
-    emit zoom(0.666667/* / G::devicePixelRatio*/);
+    emit zoom(0.666667/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio100Button_clicked()
 {
-    emit zoom(1.0/* / G::devicePixelRatio*/);
+    emit zoom(1.0/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio133Button_clicked()
 {
-    emit zoom(1.33333333/* / G::devicePixelRatio*/);
+    emit zoom(1.33333333/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio200Button_clicked()
 {
-    emit zoom(2.0/* / G::devicePixelRatio*/);
+    emit zoom(2.0/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::enterEvent(QEvent* /*event*/)

@@ -223,7 +223,12 @@ void InfoView::setColumn0Width()
     QFont ft = this->font();
     ft.setPixelSize(static_cast<int>(G::fontSize.toInt() * 1.333/* * G::ptToPx*/));
     QFontMetrics fm(ft);
-    setColumnWidth(0, fm.boundingRect("--Shutter speed--").width());
+    #ifdef Q_OS_WIN
+    setColumnWidth(0, fm.boundingRect("---Shutter speed---").width());
+    #endif
+    #ifdef Q_OS_MAC
+    setColumnWidth(0, fm.boundingRect("Shutter speed").width());
+    #endif
 }
 
 void InfoView::setupOk()
