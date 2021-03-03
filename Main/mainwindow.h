@@ -98,9 +98,9 @@ public:
     bool isReleaseVersion = true;
     bool hideEmbellish = false;
 
-    QString version = "Version: 1.15.17";
+    QString version = "Version: 1.16";
 //    QString version = "Version: 1.10 released 2020-06-04";
-    QString winnowWithVersion = "Winnow 1.15.17";
+    QString winnowWithVersion = "Winnow 1.16";
     QString website = "Website: "
 //            "<a href=\"http://165.227.46.158/winnow/winnow.html\">"
             "<a href=\"winnow.ca\">"
