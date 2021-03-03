@@ -1011,7 +1011,7 @@ private:
     QString getZoom();
     QString getPicked();
     QString getSelectedFileSize();
-    double macDevicePixelRatio(QPoint loc, QScreen *screen);
+    double macActualDevicePixelRatio(QPoint loc, QScreen *screen);
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
     void addRecentFolder(QString fPath);
 
