@@ -501,7 +501,7 @@ void CompareImages::zoomChangeFromView(qreal zoomValue, bool hasfocus)
     #endif
     }
     qDebug() << __FUNCTION__ << "zoomValue =" << zoomValue;
-//    zoomValue /= G::devicePixelRatio;
+//    zoomValue /= G::actDevicePixelRatio;
     this->zoomValue = zoomValue;       // used by MW::updateStatus
 
     // update ZoomDlg

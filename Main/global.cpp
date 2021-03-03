@@ -12,7 +12,8 @@ namespace G
     int displayPhysicalVerticalPixels;  // current monitor
     int displayVirtualHorizontalPixels; // current monitor
     int displayVirtualVerticalPixels;   // current monitor
-    qreal devicePixelRatio;             // current monitor
+    qreal actDevicePixelRatio;             // current monitor
+    qreal sysDevicePixelRatio;          // current monitor
 
     // application parameters
     QPoint mousePos;                    // local mouse position used to locate mouse press custom button in qtreeview

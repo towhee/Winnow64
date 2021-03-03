@@ -4,7 +4,7 @@ QSize Utilities::fitScreen(QSize preferred)
 {
     int w = preferred.width();
     int h = preferred.height();
-    int headerH = static_cast<int>(30 * G::devicePixelRatio);
+    int headerH = static_cast<int>(30 * G::actDevicePixelRatio);
     int screenW = static_cast<int>(G::displayVirtualHorizontalPixels * 0.95);
     int screenH = static_cast<int>(G::displayVirtualVerticalPixels * 0.95 - headerH);
     if (screenW < w) w = screenW;

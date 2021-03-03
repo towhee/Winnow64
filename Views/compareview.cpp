@@ -417,8 +417,8 @@ Return the scale factor (or zoom) to fit the image inside the viewport.
     G::track(__FUNCTION__);
     #endif
     }
-    qreal hScale = static_cast<qreal>(container.width() - 2) / content.width() * G::devicePixelRatio;
-    qreal vScale = static_cast<qreal>(container.height() - 2) / content.height() * G::devicePixelRatio;
+    qreal hScale = static_cast<qreal>(container.width() - 2) / content.width() * G::actDevicePixelRatio;
+    qreal vScale = static_cast<qreal>(container.height() - 2) / content.height() * G::actDevicePixelRatio;
     return (hScale < vScale) ? hScale : vScale;
 }
 
@@ -446,7 +446,7 @@ void CompareView::scale(bool okayToPropagate)
     }
     // rescale to new zoom factor
     matrix.reset();
-    double highDpiZoom = zoom / G::devicePixelRatio;
+    double highDpiZoom = zoom / G::actDevicePixelRatio;
     matrix.scale(highDpiZoom, highDpiZoom);
     setMatrix(matrix);
 
@@ -592,7 +592,7 @@ void CompareView::zoomToggle()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << toggleZoom << G::devicePixelRatio;
+    qDebug() << __FUNCTION__ << toggleZoom << G::actDevicePixelRatio;
     if (!isZoom) zoom = toggleZoom;
 }
 

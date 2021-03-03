@@ -509,7 +509,7 @@ DONE/FIXED
 - Show cache status in thumbnails
 - Add filters activated status (red text on image?)
 - Change hard coded min/max thumbnail size
-- Get actual monitor resolution for devicePixelRatio calculation
+- Get actual monitor resolution for actDevicePixelRatio calculation
 - Add complete for ingest description
 - Refresh folder panel
 - Not showing all folders in folders panel on Linix
