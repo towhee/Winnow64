@@ -12,7 +12,8 @@ Export converts the scene, with any borders, texts and graphics, into a QImage.
 */
 
 Embel::Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
-             EmbelProperties *p, ImageCache *imCache, QObject *)
+             EmbelProperties *p, ImageCache *imCache, QString src,
+             QObject *)
 {
     {
     #ifdef ISDEBUG
@@ -23,6 +24,8 @@ Embel::Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
     this->pmItem = pmItem;
     this->p = p;
     this->imCache = imCache;
+    this->src = src;
+    qDebug() << __FUNCTION__ << "src =" << src;
     flashItem = new QGraphicsRectItem;
     itemEventFilter = new GraphicsItemEventFilter;
 //    scene->addItem(itemEventFilter);
@@ -460,7 +463,7 @@ QPoint Embel::canvasCoord(double x, double y,
     return QPoint(x0, y0);
 }
 
-QPoint Embel::anchorPointOffset(QString anchorPoint, int w, int h)
+QPoint Embel::anchorPointOffset(QString anchorPoint, int w, int h, double rotation)
 {
     {
     #ifdef ISDEBUG
@@ -473,6 +476,7 @@ QPoint Embel::anchorPointOffset(QString anchorPoint, int w, int h)
 //    qDebug() << __FUNCTION__ << anchorPoint << w << h;
     int w2 = static_cast<int>(w/2);
     int h2 = static_cast<int>(h/2);
+    anchorPoint = anchorPointRotationEquivalent(anchorPoint, rotation);
     if (anchorPoint == "Top Left") return QPoint(0, 0);
     else if (anchorPoint == "Top Center") return QPoint(w2, 0);
     else if (anchorPoint == "Top Right") return QPoint(w, 0);
@@ -484,6 +488,63 @@ QPoint Embel::anchorPointOffset(QString anchorPoint, int w, int h)
     else if (anchorPoint == "Bottom Right") return QPoint(w, h);
     // error anchor point not found
     else return QPoint(0, 0);
+}
+
+QString Embel::anchorPointRotationEquivalent(QString anchorPoint, double rotation)
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    if (anchorPoint == "Middle Center") return anchorPoint;
+    int rot = static_cast<int>(rotation);
+    // East
+    if (rot == 0) {
+        qDebug() << __FUNCTION__ << "East";
+        return anchorPoint;
+    }
+    // north
+    if ((rot >= -135 && rot <= -45 ) ||
+        (rot >=  225 && rot <=  315)) {
+        qDebug() << __FUNCTION__ << "North";
+        if      (anchorPoint == "Top Left") return "Top Right";
+        else if (anchorPoint == "Top Center") return "Middle Right";
+        else if (anchorPoint == "Top Right") return "Bottom Right";
+        else if (anchorPoint == "Middle Left") return "Top Center";
+        else if (anchorPoint == "Middle Right") return "Bottom Center";
+        else if (anchorPoint == "Bottom Left") return "Top Left";
+        else if (anchorPoint == "Bottom Center") return "Middle Left";
+        else if (anchorPoint == "Bottom Right") return "Bottom Left";
+    }
+    // west
+    if ((rot >= -225 && rot <= -135) ||
+        (rot >=  135 && rot <=  225)) {
+        qDebug() << __FUNCTION__ << "West";
+        if      (anchorPoint == "Top Left") return "Bottom Right";
+        else if (anchorPoint == "Top Center") return "Bottom Center";
+        else if (anchorPoint == "Top Right") return "Bottom Left";
+        else if (anchorPoint == "Middle Left") return "Middle Right";
+        else if (anchorPoint == "Middle Right") return "Middle Left";
+        else if (anchorPoint == "Bottom Left") return "Top Right";
+        else if (anchorPoint == "Bottom Center") return "Top Center";
+        else if (anchorPoint == "Bottom Right") return "Top Left";
+    }
+    // south
+    if ((rot >= -315 && rot <= -225) ||
+        (rot >=   45 && rot <=  315)) {
+        qDebug() << __FUNCTION__ << "South";
+        if      (anchorPoint == "Top Left") return "Bottom Left";
+        else if (anchorPoint == "Top Center") return "Middle Left";
+        else if (anchorPoint == "Top Right") return "Top Left";
+        else if (anchorPoint == "Middle Left") return "Bottom Center";
+        else if (anchorPoint == "Middle Right") return "Top Center";
+        else if (anchorPoint == "Bottom Left") return "Bottom Right";
+        else if (anchorPoint == "Bottom Center") return "Middle Right";
+        else if (anchorPoint == "Bottom Right") return "Top Right";
+    }
+    // east
+    return anchorPoint;
 }
 
 void Embel::createBorders()
@@ -683,7 +744,7 @@ void Embel::updateBorder(int i)
 
     // graphics effects
     if (hasStyle && legalStyle && isEffects) {
-        GraphicsEffect *effect = new GraphicsEffect();
+        GraphicsEffect *effect = new GraphicsEffect(src);
         effect->set(p->styleMap[p->b[i].style],
                     p->lightDirection,
                     0,  /* rotation */
@@ -732,6 +793,8 @@ void Embel::updateText(int i)
     double opacity = static_cast<double>(p->t[i].opacity)/100;
     tItems[i]->setOpacity(opacity);
     tItems[i]->setZValue(ZText);
+    double rotation = p->t[i].rotation;
+    tItems[i]->setRotation(rotation);
 
     // position text
     /*
@@ -753,22 +816,22 @@ void Embel::updateText(int i)
                                     p->t[i].anchorObject,
                                     p->t[i].anchorContainer,
                                     p->t[i].align);
-        QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h);
+        QPoint offset = anchorPointOffset(p->t[i].anchorPoint, w, h, rotation);
         tItems[i]->setTransformOriginPoint(offset);
         tItems[i]->setPos(canvas - offset);
     }
 
     // if style then rotate in GraphicsEffect, else rotate text here
-    double rotation = p->t[i].rotation;
 
     bool isEffects = (p->styleMap[p->t[i].style].size() > 0);
     bool legalStyle = (p->t[i].style != "No style" && p->t[i].style != "");
     bool hasStyle = p->styleMap.contains(p->t[i].style);
+//    tItems[i]->setRotation(rotation);
 
     // graphics effects
     tItems[i]->setGraphicsEffect(nullptr);
     if (hasStyle && legalStyle && isEffects) {
-        GraphicsEffect *effect = new GraphicsEffect();
+        GraphicsEffect *effect = new GraphicsEffect(src);
 //            effect->setObjectName("Text" + QString::number(i));
         effect->set(p->styleMap[p->t[i].style],
                 p->lightDirection,
@@ -776,7 +839,9 @@ void Embel::updateText(int i)
                 tItems[i]->boundingRect());
         tItems[i]->setGraphicsEffect(effect);
     }
-    tItems[i]->setRotation(rotation);
+    else {
+//        tItems[i]->setRotation(rotation);
+    }
 }
 
 void Embel::updateGraphic(int i)
@@ -817,6 +882,8 @@ void Embel::updateGraphic(int i)
         gItems[i]->setPixmap(graphicPixmaps.at(i).scaledToWidth(dim));
         */
     }
+    double rotation = p->g[i].rotation;
+    gItems[i]->setRotation(rotation);
 
     /* Range check - make sure embel borders synced with embelProperties borders.  A graphic
        update could be triggered before a new border has been processed.  */
@@ -833,13 +900,12 @@ void Embel::updateGraphic(int i)
                                     p->g[i].anchorObject,
                                     p->g[i].anchorContainer,
                                     p->g[i].align);
-        QPoint offset = anchorPointOffset(p->g[i].anchorPoint, w, h);
+        QPoint offset = anchorPointOffset(p->g[i].anchorPoint, w, h, rotation);
         gItems[i]->setTransformOriginPoint(offset);
         gItems[i]->setPos(canvas - offset);
     }
 
     // if style then rotate in GraphicsEffect, else rotate text here
-    double rotation = p->g[i].rotation;
 
     bool isEffects = (p->styleMap[p->g[i].style].size() > 0);
     bool legalStyle = (p->g[i].style != "No style" && p->g[i].style != "");
@@ -847,7 +913,7 @@ void Embel::updateGraphic(int i)
 
     // graphics effects
     if (hasStyle && legalStyle && isEffects) {
-        GraphicsEffect *effect = new GraphicsEffect();
+        GraphicsEffect *effect = new GraphicsEffect(src);
 //            effect->setObjectName("Graphic" + QString::number(i));
         effect->set(p->styleMap[p->g[i].style],
                 p->lightDirection,
@@ -857,7 +923,7 @@ void Embel::updateGraphic(int i)
     }
     else {
         gItems[i]->setGraphicsEffect(nullptr);
-        gItems[i]->setRotation(rotation);
+//        gItems[i]->setRotation(rotation);
     }
 }
 
@@ -883,7 +949,7 @@ void Embel::updateImage()
         if (imCache->imCache.contains(fPath)) {
             pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
         }
-        GraphicsEffect *effect = new GraphicsEffect();
+        GraphicsEffect *effect = new GraphicsEffect(src);
         effect->setObjectName("EmbelImageEffect");
         /*
         qDebug() << __FUNCTION__
@@ -1047,7 +1113,7 @@ void Embel::flashObject(QString type, int index, bool show)
         flashItem->setRect(tItems[index]->boundingRect());
         int w = static_cast<int>(tItems[index]->boundingRect().width());
         int h = static_cast<int>(tItems[index]->boundingRect().height());
-        QPoint offset = anchorPointOffset(p->t[index].anchorPoint, w, h);
+        QPoint offset = anchorPointOffset(p->t[index].anchorPoint, w, h, p->t[index].rotation);
         flashItem->setTransformOriginPoint(offset);
         flashItem->setPos(tItems[index]->pos());
         flashItem->setRotation(tItems[index]->rotation());
@@ -1058,7 +1124,7 @@ void Embel::flashObject(QString type, int index, bool show)
         flashItem->setRect(gItems[index]->boundingRect());
         int w = static_cast<int>(gItems[index]->boundingRect().width());
         int h = static_cast<int>(gItems[index]->boundingRect().height());
-        QPoint offset = anchorPointOffset(p->g[index].anchorPoint, w, h);
+        QPoint offset = anchorPointOffset(p->g[index].anchorPoint, w, h, p->g[index].rotation);
         flashItem->setTransformOriginPoint(offset);
         flashItem->setPos(gItems[index]->pos());
         flashItem->setRotation(gItems[index]->rotation());

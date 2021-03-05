@@ -439,7 +439,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
 
     int bytesPerPixel = bitsPerSample / 8 * samplesPerPixel;
     int bytesPerLine = bytesPerPixel * m.width;
-    int rgbBytesPerPixel = bitsPerSample / 8 * 3;
+    quint32 fSize = static_cast<quint32>(p.file.size());
 
     QImage *im;
 
@@ -480,10 +480,18 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
                     for (int x = 0; x < w; x++) {
                         p.file.seek(fOffset);
 //                        ba += p.file.read(rgbBytesPerPixel);  // samplesPerPixel > 3 then only use first 3
+                        if (fOffset + static_cast<size_t>(bytesPerPixel) > fSize) {
+                            qDebug() << __FUNCTION__ << "Read nth pixel - ATTEMPTING TO READ PAST END OF FILE";
+                            break;
+                        }
                         ba += p.file.read(bytesPerPixel);
                         fOffset += static_cast<uint>(nth * bytesPerPixel);
                     }
                     if (line < h) {
+                        if (fOffset + static_cast<size_t>(newBytesPerLine) > fSize) {
+                            qDebug() << __FUNCTION__ << "Read scanline - ATTEMPTING TO READ PAST END OF FILE";
+                            break;
+                        }
                         std::memcpy(im->scanLine(line), ba, static_cast<size_t>(newBytesPerLine));
                     }
                     line++;
@@ -509,6 +517,10 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
     for (int strip = 0; strip < stripOffsets.count(); ++strip) {
         for (int row = 0; row < rowsPerStrip; row++) {
             fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerLine);
+            if (fOffset + static_cast<size_t>(bytesPerLine) > fSize) {
+                qDebug() << __FUNCTION__ << "Read entire image - ATTEMPTING TO READ PAST END OF FILE";
+                break;
+            }
             p.file.seek(fOffset);
             std::memcpy(im->scanLine(line),
                         p.file.read(bytesPerLine),

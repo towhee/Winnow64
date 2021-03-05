@@ -21,7 +21,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
     scene->addItem(pmItem);
     setScene(scene);
 
-    embellish = new Embel(scene, pmItem, embelProperties, imageCacheThread);
+    embellish = new Embel(scene, pmItem, embelProperties, imageCacheThread, "Export");
 }
 
 EmbelExport::~EmbelExport()
@@ -188,21 +188,21 @@ void EmbelExport::exportImages(const QStringList &srcList)
         return;
     }
 
-    qint64 ms = t.elapsed();
-    QString _ms = QString("%L1").arg(ms);
-    double sec = ms * 1.0 / 1000;
-    QString _sec = QString::number(sec, 'g', 2);
-    QString second;
-    sec > 1 ? second = " seconds." : second = " second.";
-    int msperim = static_cast<int>(ms * 1.0 / count);
-    QString _msperim = QString("%L1").arg(msperim);
-    QString msg = "Rendered and exported " +
-                  QString::number(count) + " images.<p>"
-                  "Elapsed time " + _sec + second + "<p>" +
-                  _msperim + " milliseconds per image.<p>" +
-                  "<hr>" +
-                  "Press <font color=\"red\"><b>Esc</b></font> to continue";
-    G::popUp->showPopup(msg, 2000);
+//    qint64 ms = t.elapsed();
+//    QString _ms = QString("%L1").arg(ms);
+//    double sec = ms * 1.0 / 1000;
+//    QString _sec = QString::number(sec, 'g', 2);
+//    QString second;
+//    sec > 1 ? second = " seconds." : second = " second.";
+//    int msperim = static_cast<int>(ms * 1.0 / count);
+//    QString _msperim = QString("%L1").arg(msperim);
+//    QString msg = "Rendered and exported " +
+//                  QString::number(count) + " images.<p>"
+//                  "Elapsed time " + _sec + second + "<p>" +
+//                  _msperim + " milliseconds per image.<p>" +
+//                  "<hr>" +
+//                  "Press <font color=\"red\"><b>Esc</b></font> to continue";
+//    G::popUp->showPopup(msg, 2000);
 }
 
 void EmbelExport::exportImage(const QString &fPath)
@@ -224,9 +224,17 @@ void EmbelExport::exportImage(const QString &fPath)
         setSceneRect(scene->itemsBoundingRect());
     }
 
-    // create image to show rendering with embellish
-    QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
-    image.fill(Qt::transparent);                                              // Start all pixels transparent
+    // Create the image with the exact size of the shrunk scene
+    QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);
+//    image.setDevicePixelRatio(G::sysDevicePixelRatio);
+//    image.setDevicePixelRatio(1.0);
+    qDebug() << __FUNCTION__
+             << "image.width() =" << image.width()
+             << "sceneRect() =" << sceneRect()
+                ;
+    // Start all pixels transparent
+    image.fill(Qt::transparent);
+
     QPainter painter(&image);
     scene->render(&painter);
 
