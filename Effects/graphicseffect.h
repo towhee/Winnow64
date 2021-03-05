@@ -152,7 +152,8 @@ class GraphicsEffect : public QGraphicsEffect
 {
     Q_OBJECT
 public:
-    GraphicsEffect(QObject *parent = nullptr);
+    GraphicsEffect(QString src = "Internal", QObject *parent = nullptr);
+    QString src;
     void set(QList<winnow_effects::Effect> &effects,
              int globalLightDirection,
              double rotation,

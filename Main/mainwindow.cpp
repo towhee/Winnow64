@@ -5090,6 +5090,7 @@ void MW::createEmbel()
     G::track(__FUNCTION__);
     #endif
     }
+    QString src = "Internal";
     embel = new Embel(imageView->scene, imageView->pmItem, embelProperties, imageCacheThread);
     connect(imageView, &ImageView::embellish, embel, &Embel::build);
     connect(embel, &Embel::done, imageView, &ImageView::resetFitZoom);
@@ -6938,6 +6939,7 @@ void MW::diagnosticsAll()
     rpt << gridView->diagnostics();
     rpt << thumbView->diagnostics();
     rpt << imageView->diagnostics();
+    rpt << embelProperties->diagnostics();
     rpt << metadata->diagnostics(dm->currentFilePath);
     rpt << dm->diagnostics();
     diagnosticsReport(reportString);
@@ -7531,7 +7533,7 @@ void MW::setDisplayResolution()
     G::displayPhysicalHorizontalPixels = screen->geometry().width() * G::actDevicePixelRatio;
     G::displayPhysicalVerticalPixels = screen->geometry().height() * G::actDevicePixelRatio;
 
-    /*
+//    /*
     double physicalWidth = screen->physicalSize().width();
     double dpmm = G::displayPhysicalHorizontalPixels * 1.0 / physicalWidth ;
     qDebug() << __FUNCTION__

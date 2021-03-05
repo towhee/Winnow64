@@ -17,10 +17,11 @@ class Embel : public QObject
 
 public:
     Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
-          EmbelProperties *p, ImageCache *imCache, QObject *object = nullptr);
+          EmbelProperties *p, ImageCache *imCache, QString src = "Internal",
+          QObject *object = nullptr);
 //    Embel(ImageView *gv, EmbelProperties *p);
 //    Embel(EmbelExport *ee, EmbelProperties *p);
-    ~Embel();
+    ~Embel() override;
     void updateBorder(int i);
     void updateText(int i);
     void updateGraphic(int i);
@@ -35,6 +36,7 @@ public:
     int ls;     // long side
     int ss;     // short side
     int stu;    // side to use for relative measures
+    QString src;
 
 public slots:
     void build(QString fPath = "", QString src = "");
@@ -107,7 +109,8 @@ private:
     void fitAspect(double aspect, Hole &size);
     QPoint canvasCoord(double x, double y, QString anchorObject,
                        QString anchorContainer, bool alignWithImageEdge);
-    QPoint anchorPointOffset(QString anchorPoint, int w, int h);
+    QPoint anchorPointOffset(QString anchorPoint, int w, int h, double rotation);
+    QString anchorPointRotationEquivalent(QString anchorPoint, double rotation);
     void createBorders();
     void createTexts();
     void createGraphics();

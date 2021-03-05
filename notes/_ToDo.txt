@@ -47,6 +47,8 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Version 1.16
+- Read full size jpg in Sony A1 raw files
 - Settings Show Label in grid not syncing with preferences
 - Fix device pixel ratio rendering issues
 - Spacebar not toggling zoom
@@ -54,6 +56,7 @@ DONE/FIXED
 - Update infoview monitor tooltip when drag winnow to different monitor
 - Make Winnow fit when dragged to smaller screen dimensions
 - Visual C++ Studio installation req'd
+- Version 1.15
 - Make delete warning optional.
 - Add EXIF data back to embellished image
 - Prevent double getVisibleImageCount when first open Winnow

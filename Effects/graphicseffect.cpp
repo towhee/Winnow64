@@ -1,16 +1,16 @@
 #include "graphicseffect.h"
 #include "REF_imageblitz_effects.h"
 
-GraphicsEffect::GraphicsEffect(QObject *parent)
+GraphicsEffect::GraphicsEffect(QString src, QObject *parent)
 {
 //    qDebug() << __FUNCTION__;
     this->objectName() = "GraphicsEffect";
-
+    this->src = src;
 }
 
 QRectF GraphicsEffect::boundingRectFor(const QRectF& rect) const
 {
-            /*
+    /*
     qDebug() << __FUNCTION__
              << "rect =" << rect
              << "offset =" << offset
@@ -185,7 +185,7 @@ Utilities::log(__FUNCTION__, "");
     // unpadded image is req'd for some effects like emboss
     unpaddedSrcImage = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, NoPad).toImage();
     srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, PadToEffectiveBoundingRect);
-    qDebug() << __FUNCTION__ << "srcPixmap.width() =" << srcPixmap.width();
+//    qDebug() << __FUNCTION__ << "srcPixmap.width() =" << srcPixmap.width();
     overlay = srcPixmap.toImage();
     /*
     qDebug() << __FUNCTION__
@@ -203,7 +203,8 @@ Utilities::log(__FUNCTION__, "");
 //              */
 
     // Winnow shows images at real scale so render effects using real device pixels
-    overlay.setDevicePixelRatio(1.0);
+    qDebug() << __FUNCTION__ << "src =" << src;
+    if (src == "Internal") overlay.setDevicePixelRatio(1.0);
 
     for (int i = 0; i < effects->length(); ++i) {
         const Effect &ef = effects->at(i);
@@ -258,10 +259,14 @@ Utilities::log(__FUNCTION__, "");
     }
 
     // Go back to device pixel ratio
-    overlay.setDevicePixelRatio(G::sysDevicePixelRatio);
+    if (src == "Internal") overlay.setDevicePixelRatio(G::sysDevicePixelRatio);
 
     // world transform required for object rotation
     painter->setWorldTransform(QTransform());
+
+    painter->drawImage(srcOffset, overlay);
+    painter->restore();
+    return;
 
     if (rotation != 0.0) {
         qDebug() << __FUNCTION__ << "rotation =" << rotation;
