@@ -1,25 +1,31 @@
 #include "Views/infostring.h"
 
-/* InfoString is called from MW to display or edit the info text displayed on top of an
-ImageView.
+/*
+    InfoString is called from MW to display or edit the info text displayed on top of an
+    ImageView.
 
-InfoString provides the token information to build token strings in
-TokenDlg. TokenDlg requires two QStringLists: a token list and token examples list.
+    InfoString provides the token information to build token strings in
+    TokenDlg. TokenDlg requires two QStringLists: a token list and token examples list.
 
-InfoString includes a token parser, required to return the text string to MW.  For example,
-if the selected token string was:
+    InfoString includes a token parser, required to return the text string to MW.  For example,
+    if the selected token string was:
 
-    {MODEL} | {ShutterSpeed} sec at f/{Aperture}
+        {MODEL} | {ShutterSpeed} sec at f/{Aperture}
 
-the function parseTokenString would get the token information from the datamodel and/or
-metadata and return the string (example):
+    the function parseTokenString would get the token information from the datamodel and/or
+    metadata and return the string (example):
 
-    Nikon D5 | 1/250 sec at f/5.6
+        Nikon D5 | 1/250 sec at f/5.6
 */
 
 InfoString::InfoString(QWidget *parent, DataModel *dm) :
                        QWidget(parent)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     this->dm = dm;
     initTokenList();
     initExampleMap();
@@ -33,14 +39,12 @@ void InfoString::editTemplates()
                       currentInfoTemplate, "Token Editor", this);
     tokenDlg.exec();
 //    qDebug() << __FUNCTION__ << infoTemplates;
-//    emit change();
-//    qDebug() << __FUNCTION__ << infoTemplates;
 }
 
 int InfoString::getIndex()
 {
 /*
-The currentInfoTemplate index in the TokenDlg template combo.
+    The currentInfoTemplate index in the TokenDlg template combo.
 */
     QMap<QString, QString>::iterator i;
     int index = 0;

@@ -25,7 +25,6 @@ Embel::Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
     this->p = p;
     this->imCache = imCache;
     this->src = src;
-    qDebug() << __FUNCTION__ << "src =" << src;
     flashItem = new QGraphicsRectItem;
     itemEventFilter = new GraphicsItemEventFilter;
 //    scene->addItem(itemEventFilter);
@@ -503,13 +502,11 @@ QString Embel::anchorPointRotationEquivalent(QString anchorPoint, double rotatio
     int rot = static_cast<int>(rotation);
     // East
     if (rot == 0) {
-        qDebug() << __FUNCTION__ << "East";
         return anchorPoint;
     }
     // north
     if ((rot >= -135 && rot <= -45 ) ||
         (rot >=  225 && rot <=  315)) {
-        qDebug() << __FUNCTION__ << "North";
         if      (anchorPoint == "Top Left") return "Top Right";
         else if (anchorPoint == "Top Center") return "Middle Right";
         else if (anchorPoint == "Top Right") return "Bottom Right";
@@ -522,7 +519,6 @@ QString Embel::anchorPointRotationEquivalent(QString anchorPoint, double rotatio
     // west
     if ((rot >= -225 && rot <= -135) ||
         (rot >=  135 && rot <=  225)) {
-        qDebug() << __FUNCTION__ << "West";
         if      (anchorPoint == "Top Left") return "Bottom Right";
         else if (anchorPoint == "Top Center") return "Bottom Center";
         else if (anchorPoint == "Top Right") return "Bottom Left";
@@ -535,7 +531,6 @@ QString Embel::anchorPointRotationEquivalent(QString anchorPoint, double rotatio
     // south
     if ((rot >= -315 && rot <= -225) ||
         (rot >=   45 && rot <=  315)) {
-        qDebug() << __FUNCTION__ << "South";
         if      (anchorPoint == "Top Left") return "Bottom Left";
         else if (anchorPoint == "Top Center") return "Middle Left";
         else if (anchorPoint == "Top Right") return "Top Left";
@@ -552,8 +547,8 @@ QString Embel::anchorPointRotationEquivalent(QString anchorPoint, double rotatio
 void Embel::createBorders()
 {
 /*
-Create the QGraphicsRectItem for each border.  Overlapping rectangles and the image create the
-illusion of border margins using the painters algorithm.
+    Create the QGraphicsRectItem for each border. Overlapping rectangles and the image create
+    the illusion of border margins using the painters algorithm.
 */
     {
     #ifdef ISDEBUG
