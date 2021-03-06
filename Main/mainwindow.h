@@ -442,7 +442,7 @@ private slots:
     void bookmarkClicked(QTreeWidgetItem *item, int col);
     void setRatingBadgeVisibility();
     void setShootingInfoVisibility();
-    void selectShootingInfo();
+    void selectTokenString();
 //    void toggleThumbWrap();
     void setIngested();
     void togglePick();

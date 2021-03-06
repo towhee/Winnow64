@@ -3139,7 +3139,7 @@ void MW::createActions()
     if (isSettings && setting->contains("isImageInfoVisible")) infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());
     else infoVisibleAction->setChecked(false);
     addAction(infoSelectAction);
-    connect(infoSelectAction, &QAction::triggered, this, &MW::selectShootingInfo);
+    connect(infoSelectAction, &QAction::triggered, this, &MW::selectTokenString);
 
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setShortcutVisibleInContextMenu(true);
@@ -4490,7 +4490,6 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
         if (setting->contains("infoOverlayFontSize")) imageView->infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
         if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
         qreal tempZoom = setting->value("toggleZoomValue").toReal();
-        qDebug() << __FUNCTION__ << "tempZoom =" << tempZoom;
         if (tempZoom > 3) tempZoom = 1.0;
         if (tempZoom < 0.25) tempZoom = 1.0;
         imageView->toggleZoom = tempZoom;
@@ -4911,8 +4910,10 @@ void MW::createEmbelDock()
     QHBoxLayout *embelTitleLayout = new QHBoxLayout();
     embelTitleLayout->setContentsMargins(0, 0, 0, 0);
     embelTitleLayout->setSpacing(0);
-//    embelTitleBar = new DockTitleBar("", embelTitleLayout);
-    embelTitleBar = new DockTitleBar("Embellish", embelTitleLayout);
+
+    // add spaces to create a minimum width for the embel dock so control buttons in
+    // embellish tree are always visible
+    embelTitleBar = new DockTitleBar("Embellish                           ", embelTitleLayout);
     embelDock->setTitleBarWidget(embelTitleBar);
 
     // add widgets to the right side of the title bar layout
@@ -7536,6 +7537,7 @@ void MW::setDisplayResolution()
 //    /*
     double physicalWidth = screen->physicalSize().width();
     double dpmm = G::displayPhysicalHorizontalPixels * 1.0 / physicalWidth ;
+    /*
     qDebug() << __FUNCTION__
              << "G::actDevicePixelRatio =" << G::actDevicePixelRatio
              << "screen->actDevicePixelRatio() =" << screen->devicePixelRatio()
@@ -9337,7 +9339,7 @@ void MW::setCentralView()
     }
 }
 
-void MW::selectShootingInfo()
+void MW::selectTokenString()
 {
     {
     #ifdef ISDEBUG
@@ -9353,6 +9355,7 @@ void MW::selectShootingInfo()
                                         fPath, idx);
     imageView->moveShootingInfo(info);
     embelProperties->updateMetadataTemplateList();
+    qDebug() << __FUNCTION__ << "return";
 }
 
 void MW::setRatingBadgeVisibility() {

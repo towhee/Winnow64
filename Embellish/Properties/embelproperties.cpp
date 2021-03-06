@@ -253,7 +253,7 @@ void EmbelProperties::initialize()
 
     tokenEditorAction = new QAction(tr("Token Editor"), this);
     addAction(tokenEditorAction);
-    connect(tokenEditorAction, &QAction::triggered, mw3, &MW::selectShootingInfo);
+    connect(tokenEditorAction, &QAction::triggered, mw3, &MW::selectTokenString);
 
     manageTilesAction = new QAction(tr("Manage tiles"), this);
     addAction(manageTilesAction);
@@ -1217,6 +1217,8 @@ void EmbelProperties::readMetadataTemplateList()
         i.next();
         metadataTemplatesList << i.key();
     }
+    metadataTemplatesList.sort(Qt::CaseInsensitive);
+    qDebug() << __FUNCTION__ << metadataTemplatesList << mw3->infoString->infoTemplates;
 }
 
 void EmbelProperties::updateMetadataTemplateList()
@@ -1238,14 +1240,22 @@ void EmbelProperties::updateMetadataTemplateList()
     readMetadataTemplateList();
 
     // update text metadataTemplate lists
+    int n = textMetadataTemplateObjectEditor.size() - 1;
     for (int i = 0; i < t.size(); ++i) {
+        // ignore if the source in not a metadata template (cause crash)
+        if (t.at(i).source == "Text") continue;
+        // to be super safe check if textMetadataTemplateObjectEditor.at(i) is out of bounds
+        if (i > n) {
+            qDebug() << __FUNCTION__ << "textMetadataTemplateObjectEditor OUT OF BOUNDS";
+            break;
+        }
         QString oldTemplateName = textMetadataTemplateObjectEditor.at(i)->value();
         textMetadataTemplateObjectEditor.at(i)->refresh(metadataTemplatesList);
         // refreshing metadataTemplatesList removes old value for the text - reassign textMetadataTemplate object
         if (metadataTemplatesList.contains(oldTemplateName))
             textMetadataTemplateObjectEditor.at(i)->setValue(oldTemplateName);
-        else
-            textMetadataTemplateObjectEditor.at(i)->setValue("Default Info");
+//        else
+//            textMetadataTemplateObjectEditor.at(i)->setValue("Default Info");
     }
 }
 
@@ -2173,7 +2183,6 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
         QString key = v.toString();
         setting->setValue(path, key);
         t[index].metadataTemplate = key;
-//        t[index].text = metaString(key);
     }
 
     if (source == "font") {
@@ -5414,9 +5423,9 @@ void EmbelProperties::mouseMoveEvent(QMouseEvent *event)
 void EmbelProperties::mousePressEvent(QMouseEvent *event)
 {
 /*
-Set the current index and expand/collapse when click anywhere on a row that has children.
-Do not pass on to QTreeView as this will enable QTreeView expanding and collapsing when the
-decoration is clicked.
+    Set the current index and expand/collapse when click anywhere on a row that has children.
+    Do not pass on to QTreeView as this will enable QTreeView expanding and collapsing when
+    the decoration is clicked.
 */
     {
     #ifdef ISDEBUG
@@ -5599,7 +5608,7 @@ bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
 QString EmbelProperties::metaString(QString key)
 {
 /*
-Local information (datamodel, currentImage etc) is available.
+    Local information (datamodel, currentImage etc) is available.
 */
     {
     #ifdef ISDEBUG
@@ -5609,7 +5618,6 @@ Local information (datamodel, currentImage etc) is available.
     Utilities::log(__FUNCTION__, "");
     #endif
     }
-//    qDebug() << __FUNCTION__ << "Local" << key;
     if (mw3->infoString->infoTemplates.contains(key)) {
         QString tokenString = mw3->infoString->infoTemplates[key];
         QString path = mw3->imageView->currentImagePath;
@@ -5622,8 +5630,8 @@ Local information (datamodel, currentImage etc) is available.
 QString EmbelProperties::metaString(QString key, QString fPath)
 {
 /*
-Look up information using Metadata if the image will not be active
-in Winnow (ie triggered by EmbelExport).
+    Look up information using Metadata if the image will not be active
+    in Winnow (ie triggered by EmbelExport).
 */
     {
     #ifdef ISDEBUG
@@ -5633,7 +5641,6 @@ in Winnow (ie triggered by EmbelExport).
     Utilities::log(__FUNCTION__, "");
     #endif
     }
-//    qDebug() << __FUNCTION__ << "Remote" << key;
     QString tokenString = mw3->infoString->infoTemplates[key];
     return mw3->infoString->parseTokenString(tokenString, fPath);
 }
