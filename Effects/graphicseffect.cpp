@@ -203,7 +203,6 @@ Utilities::log(__FUNCTION__, "");
 //              */
 
     // Winnow shows images at real scale so render effects using real device pixels
-    qDebug() << __FUNCTION__ << "src =" << src;
     if (src == "Internal") overlay.setDevicePixelRatio(1.0);
 
     for (int i = 0; i < effects->length(); ++i) {
@@ -267,7 +266,7 @@ Utilities::log(__FUNCTION__, "");
     painter->drawImage(srcOffset, overlay);
     painter->restore();
     return;
-
+    /*
     if (rotation != 0.0) {
         qDebug() << __FUNCTION__ << "rotation =" << rotation;
         // Rotate the overlay
@@ -306,6 +305,7 @@ Utilities::log(__FUNCTION__, "");
     }
 
     painter->restore();
+    */
 }
 
 QT_BEGIN_NAMESPACE

@@ -208,12 +208,13 @@ PatternDlg::PatternDlg(QWidget *parent, QPixmap &pm)
     msg = new QLabel;
     msg->setWordWrap(true);
     msg->setAlignment(Qt::AlignTop);
-    QString msgText = "INSTRUCTIONS:  Mouse click and drag to make a selection.<p>" //  \n\n"
+    QString msgText = "INSTRUCTIONS:  Mouse click and drag to make a selection.  " //  \n\n"
             "To extract a repeating pattern, the selection must be within the "
-            "pattern area and be double the size of a tile.<p>To select a texture "
+            "pattern area and be double the size of a tile.  To select a texture "
             "with no repeating pattern just make a selection and save.  Note that this "
             "may not create a seamless texture.";
     msg->setText(msgText);
+    msg->setToolTip(msgText);
     msg->setMinimumHeight(100);
     msg->setMaximumHeight(100);
     msgLayout = new QVBoxLayout;

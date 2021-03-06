@@ -50,9 +50,8 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     setRootIsDecorated(true);
     setAlternatingRowColors(true);
     setSelectionBehavior(QAbstractItemView::SelectRows);
-    setEditTriggers(QAbstractItemView::AllEditTriggers);
-    setSelectionBehavior(QAbstractItemView::SelectRows);
     setSelectionMode(QAbstractItemView::SingleSelection);
+    setEditTriggers(QAbstractItemView::AllEditTriggers);
     setSortingEnabled(true);
     setObjectName("EmbelProperties");
 
@@ -536,7 +535,7 @@ void PropertyEditor::mouseReleaseEvent(QMouseEvent */*event*/)
 */
 }
 
-void PropertyEditor::resizeColumns(/*QString stringToFitCaptions, QString stringToFitValues*/)
+void PropertyEditor::resizeColumns()
 {
     QFont fnt = this->font();
     int px = static_cast<int>(G::fontSize.toInt() * G::ptToPx);
@@ -546,7 +545,7 @@ void PropertyEditor::resizeColumns(/*QString stringToFitCaptions, QString string
     valueColumnWidth = fm.boundingRect(stringToFitValues).width();
     setColumnWidth(CapColumn, captionColumnWidth);
 //    setColumnWidth(OrdColumn, 25);
-    setColumnWidth(ValColumn, valueColumnWidth);
+//    setColumnWidth(ValColumn, valueColumnWidth);
     hideColumn(OrdColumn);
 }
 
