@@ -85,13 +85,14 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     setIndentation(10);
     setAlternatingRowColors(false);
     setMouseTracking(false);
-    header()->setFixedHeight(2);
+    header()->setFixedHeight(0);
 
     ignoreFontSizeChangeSignals = false;
 
-    stringToFitCaptions = "====captions column====";
+    stringToFitCaptions = "===captions column===";
     stringToFitValues   = "====values column====";
     resizeColumns();
+    this->header()->setMinimumSectionSize(50);
 
     QModelIndex root = model->invisibleRootItem()->index();
 
@@ -1985,7 +1986,7 @@ void EmbelProperties::itemChangeGeneral(QVariant v, QString source)
         horizontalFitPx > verticalFitPx ? longSidePx = horizontalFitPx : longSidePx = verticalFitPx;
     }
 
-    if (source == "globalLightDirection") {
+    if (source == "lightDirection") {
         setting->setValue(path, v.toString());
         lightDirection = v.toInt();
     }

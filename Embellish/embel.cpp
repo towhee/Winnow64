@@ -193,7 +193,9 @@ void Embel::build(QString path, QString src)
     /*
     qDebug() << __FUNCTION__ << QTime::currentTime()
              << "path =" << path
-             << "src =" << src;
+             << "src =" << src
+             << "p->lightDirection =" << p->lightDirection
+                ;
 //             */
 
     QString msg = "src = " + src + "  path = " + path;
@@ -821,26 +823,20 @@ void Embel::updateText(int i)
         tItems[i]->setPos(canvas - offset);
     }
 
-    // if style then rotate in GraphicsEffect, else rotate text here
-
+    // set effects flags
     bool isEffects = (p->styleMap[p->t[i].style].size() > 0);
     bool legalStyle = (p->t[i].style != "No style" && p->t[i].style != "");
     bool hasStyle = p->styleMap.contains(p->t[i].style);
-//    tItems[i]->setRotation(rotation);
 
     // graphics effects
     tItems[i]->setGraphicsEffect(nullptr);
     if (hasStyle && legalStyle && isEffects) {
         GraphicsEffect *effect = new GraphicsEffect(src);
-//            effect->setObjectName("Text" + QString::number(i));
         effect->set(p->styleMap[p->t[i].style],
-                p->lightDirection,
-                rotation,
-                tItems[i]->boundingRect());
+                    p->lightDirection,
+                    rotation,
+                    tItems[i]->boundingRect());
         tItems[i]->setGraphicsEffect(effect);
-    }
-    else {
-//        tItems[i]->setRotation(rotation);
     }
 }
 
