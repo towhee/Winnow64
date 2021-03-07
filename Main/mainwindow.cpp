@@ -4913,7 +4913,8 @@ void MW::createEmbelDock()
 
     // add spaces to create a minimum width for the embel dock so control buttons in
     // embellish tree are always visible
-    embelTitleBar = new DockTitleBar("Embellish                             ", embelTitleLayout);
+    embelTitleBar = new DockTitleBar("Embellish", embelTitleLayout);
+//    embelTitleBar = new DockTitleBar("Embellish                             ", embelTitleLayout);
     embelDock->setTitleBarWidget(embelTitleBar);
 
     // add widgets to the right side of the title bar layout
