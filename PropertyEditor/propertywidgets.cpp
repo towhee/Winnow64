@@ -669,28 +669,17 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
                             "}"
                             "QComboBox:focus {"
                                 "color: white;"
-//                                "color:" + clr + ";"
-//                                "background: red;"
                                 "background: transparent;"
                                 "padding: 0px 0px 0px 0px;"
                                 "border: none;"
-//                                "border: 1 solid, green;"
                             "}"
                             "QComboBox::item:selected {"
                                 "background-color: rgb(68,95,118);"
                             "}"
-//                            "QComboBox::item:focus {"
-//                                "border: 1 solid, gray;"
-//                            "}"
-//                            "QComboBox QAbstractItemView::item {"
-//                                "height: 20px;"
-//                                "background-color: rgb(77,77,77);"
-//                            "}"
                             "QComboBox::drop-down {"
                                 "border:none;"
                             "}"
                             "QComboBox::QAbstractItemView {"
-//                                "height:1000px;"
                             "}"
                             );
 
@@ -795,6 +784,7 @@ void ComboBoxEditor::refresh(QStringList items)
 Called when a template is renamed or deleted to rebuild the dropdown list
 */
     comboBox->clear();
+//    items.sort(Qt::CaseInsensitive);
     comboBox->addItems(items);
 }
 
