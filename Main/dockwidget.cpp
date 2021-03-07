@@ -157,10 +157,7 @@ void DockWidget::resizeEvent(QResizeEvent *event)
 
 QSize DockWidget::sizeHint() const
 {
-    QSize size = dw.size;
-    if (dw.size.width() < 300) size.setWidth(300);
-    return size;
-//    return dw.size;
+    return dw.size;
 }
 
 void DockWidget::moveEvent(QMoveEvent *event)
