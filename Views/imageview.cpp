@@ -1258,7 +1258,7 @@ void ImageView::enterEvent(QEvent *event)
     #endif
     }
     QVariant x = event->type();     // suppress compiler warning
-    this->setFocus();
+//    this->setFocus();
 }
 
 // DRAG AND DROP

@@ -1752,7 +1752,7 @@ void IconView::enterEvent(QEvent *event)
     G::track(__FUNCTION__);
     #endif
     }
-    setFocus();
+//    setFocus();
     QListView::enterEvent(event);
 }
 
