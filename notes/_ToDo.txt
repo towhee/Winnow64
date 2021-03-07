@@ -46,10 +46,12 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Version 1.17
 - Focus shifts away from Embellish when mouseover central widget or thumbdock
 - Token editor sometimes crashes
 - Embellish scale / rotation issue
 - Version 1.16
+- TIF file cause crash
 - Read full size jpg in Sony A1 raw files
 - Settings Show Label in grid not syncing with preferences
 - Fix device pixel ratio rendering issues
