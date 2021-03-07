@@ -305,7 +305,7 @@ TokenDlg::TokenDlg(QStringList &tokens,
     this->title = title;
     setWindowTitle(title);
     setAcceptDrops(true);
-    ui->templatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
+    ui->templatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
     ui->templatesCB->setMaxCount(100);
 
     // Populate token list
@@ -345,8 +345,8 @@ TokenDlg::~TokenDlg()
 
 void TokenDlg::updateUniqueFileNameWarning(bool isProbablyUnique)
 {
-    if(title == "Token Editor - Destination File Name") {
-        if(isProbablyUnique)
+    if (title == "Token Editor - Destination File Name") {
+        if (isProbablyUnique)
             ui->uniqueWarningLabel->setVisible(false);
         else
             ui->uniqueWarningLabel->setVisible(true);
@@ -372,6 +372,11 @@ void TokenDlg::on_okBtn_clicked()
     using the old keys which are retained in templatesCB in the toolTipRole. Then swap
     templatesMap with newTemplatesMap.
 */
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QMap<QString, QString> newTemplatesMap;
     for (int i = 0; i < ui->templatesCB->count(); i++) {
         QString key = ui->templatesCB->itemText(i);
@@ -413,6 +418,9 @@ void TokenDlg::on_newBtn_clicked()
         return;
     }
     delete nameDlg;
+
+    qDebug() << __FUNCTION__ << newTemplate << existing;
+//    if (newTemplate)
 
     ui->templatesCB->addItem(newTemplate);
     int i = ui->templatesCB->findText(newTemplate);
