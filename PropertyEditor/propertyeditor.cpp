@@ -544,8 +544,6 @@ void PropertyEditor::resizeColumns()
     captionColumnWidth = fm.boundingRect(stringToFitCaptions).width();
     valueColumnWidth = fm.boundingRect(stringToFitValues).width();
     setColumnWidth(CapColumn, captionColumnWidth);
-//    setColumnWidth(OrdColumn, 25);
-//    setColumnWidth(ValColumn, valueColumnWidth);
     hideColumn(OrdColumn);
 }
 

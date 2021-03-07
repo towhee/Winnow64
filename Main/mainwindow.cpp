@@ -4903,6 +4903,8 @@ void MW::createEmbelDock()
     embelDock->setWidget(embelProperties);
     embelDock->setFloating(false);
     embelDock->setVisible(true);
+    // prevent MW splitter resizing embelDock so cannot see header - and + buttons in embellish
+    embelDock->setMinimumWidth(275);
 
     connect(embelDock, &QDockWidget::visibilityChanged, this, &MW::embelDockVisibilityChange);
 

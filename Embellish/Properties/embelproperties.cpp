@@ -89,10 +89,12 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
 
     ignoreFontSizeChangeSignals = false;
 
+    /* Set column widths.  Note that the minimum width of the container dock widget is set in
+       MW::createEmbelDock embelDock->setMinimumWidth(275) to make sure the - and + buttons
+       in the header rows are always visible.  */
     stringToFitCaptions = "===captions column===";
     stringToFitValues   = "====values column====";
     resizeColumns();
-    this->header()->setMinimumSectionSize(50);
 
     QModelIndex root = model->invisibleRootItem()->index();
 
