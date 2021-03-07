@@ -94,10 +94,6 @@ void DockTitleBar::setStyle()
                 "padding-left: 2px;"
                 "padding-bottom: 2px;"
                 "border: none;"
-//                "border: 1px solid " + QColor(c,c,c).name() + ";"
-//                "border-bottom: 0px;"
-//                "border-right: 1px solid " + QColor(c,c,c).name() + ";"
-//                "border-top:   1px solid " + QColor(c,c,c).name() + ";"
                 "font-size:" + G::fontSize + "pt;";
     setStyleSheet(s);
 }
@@ -161,7 +157,10 @@ void DockWidget::resizeEvent(QResizeEvent *event)
 
 QSize DockWidget::sizeHint() const
 {
-    return dw.size;
+    QSize size = dw.size;
+    if (dw.size.width() < 300) size.setWidth(300);
+    return size;
+//    return dw.size;
 }
 
 void DockWidget::moveEvent(QMoveEvent *event)
