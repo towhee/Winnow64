@@ -33,3 +33,22 @@ git rm debug/Winnow.exe       // removes Winnow.exe from repository if accidentl
 // removes debug/Winnow.exe from entire repository history
 git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch debug/Winnow.exe' HEAD
 git push origin --force --all
+
+// How to make Git “forget” about a file that was tracked but is now in .gitignore?
+https://stackoverflow.com/questions/1274057/how-to-make-git-forget-about-a-file-that-was-tracked-but-is-now-in-gitignore
+
+// To untrack a file that has already been added/initialized to your repository,
+// ie stop tracking the file but not delete it from your system use:
+git rm --cached filename
+git rm --cached debug/Winnow.exe
+// !! git statusDO NOT untrack all files using git rm -r --cached .
+
+
+// Tell GIT to assume a file is unchanged (not delete file)
+git update-index --assume-unchanged filename
+git update-index --assume-unchanged debug/Winnow.exe
+
+
+
+
+git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch release/moc_aboutdlg.cpp' HEAD

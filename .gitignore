@@ -25,7 +25,7 @@ Winnow.app/Contents/Resources/winnow.icns
 bin/
 c/
 exiv2/
-exiftool/debug/
+exiftool/
 Lib/
 UI/
 x64/
