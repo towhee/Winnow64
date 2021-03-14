@@ -85,7 +85,8 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     setIndentation(10);
     setAlternatingRowColors(false);
     setMouseTracking(false);
-    header()->setFixedHeight(0);
+    setHeaderHidden(true);
+//    header()->setFixedHeight(0);
 
     ignoreFontSizeChangeSignals = false;
 
@@ -248,6 +249,14 @@ void EmbelProperties::initialize()
     copyTemplateAction = new QAction(tr("Copy"), this);
     addAction(copyTemplateAction);
     connect(copyTemplateAction, &QAction::triggered, this, &EmbelProperties::copyTemplate);
+
+    exportTemplateAction = new QAction(tr("Export"), this);
+    addAction(exportTemplateAction);
+    connect(exportTemplateAction, &QAction::triggered, this, &EmbelProperties::exportTemplate);
+
+    importTemplateAction = new QAction(tr("Import"), this);
+    addAction(importTemplateAction);
+    connect(importTemplateAction, &QAction::triggered, this, &EmbelProperties::importTemplate);
 
     copyStyleAction = new QAction(tr("Copy"), this);
     addAction(copyStyleAction);
@@ -875,8 +884,7 @@ void EmbelProperties::renameCurrentTemplate()
     readTemplateList();
     templateListEditor->refresh(templateList);
     templateListEditor->setValue(name);
-    // sync the embellish menu
-    emit templateRenamed();
+    emit syncEmbellishMenu();
 }
 
 void EmbelProperties::setCurrentTemplate(QString name)
@@ -1004,7 +1012,7 @@ QString EmbelProperties::uniqueTemplateName(QString name)
     QString newName = name;
     int count = 0;
     while (nameExists) {
-        if (keys.contains(newName)) newName = name + QString::number(++count);
+        if (keys.contains(newName)) newName = name + "_" + QString::number(++count);
         else nameExists = false;
     }
     return newName;
@@ -1065,32 +1073,120 @@ void EmbelProperties::copyTemplate()
     templateListEditor->setValue(templateName);
 }
 
-void EmbelProperties::saveTemplate()
+bool EmbelProperties::exportTemplate()
 {
 /*
-    Protype.  Not as easy as I hoped.  Not currently working.  Do not use.
+    Save template to a file.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << templateName;
     // path to source template in setting
     QString srcPath = "Embel/Templates/" + templateName + "/";
-    // file to receive copy of template
-    QFile file("d:/temp/" + templateName + ".ini");
 
-    // new QSettings in ini format
-    QSettings ini(file.fileName(), QSettings::IniFormat);
-    QString dstName = uniqueTemplateName(templateName + " copy");
-    QString copyPath = "d:/temp/" + templateName;
+    // get all QSettings keys
     setting->beginGroup(srcPath);
     QStringList keys = setting->allKeys();
     setting->endGroup();
+
+    // QMap to hold key/value pairs
+    QMap<QString, QVariant> keysMap;
+
+    // QSettings to QMap
     for (int i = 0; i < keys.length(); ++i) {
         QString key = srcPath + keys.at(i);
-        setting->setValue(copyPath + keys.at(i), setting->value(key));
+        keysMap.insert(key, setting->value(key));
     }
+
+    // QMap to json
+    QJsonObject keysJson = QJsonObject::fromVariantMap(keysMap);
+
+    // create a folder to hold the template json, tiles and graphics
+    QString locPath = QFileDialog::getExistingDirectory(this, tr("Select Folder"),
+         "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    QString dPath = locPath + "/" + templateName;
+    // rename folder (named as template name) does not exist
+    Utilities::uniqueFolder(dPath);
+    QDir dir(dPath);
+
+    // create a file for the json encoded template settings
+    QString fName = dPath + "/" + templateName + ".template";
+    QFile file(fName);
+    if (!file.open(QIODevice::WriteOnly)) {
+        qWarning("Couldn't open save file.");
+        return false;
+    }
+
+    // write json to file
+    file.write(QJsonDocument(keysJson).toJson());
+
+    // copy tiles (if any)
+    for (int i = 0; i < model->rowCount(bordersIdx); ++i) {
+        QModelIndex bIdx = model->index(i, 0, bordersIdx);
+        QString tileName = getItemValue("tile", bIdx).toString();
+        QFile file(dPath + "/" + tileName + ".tile");
+        if (tileName != "Do not tile" && !file.exists()) {
+            QSaveFile f(dPath + "/" + tileName + ".tile");
+            f.open(QIODevice::WriteOnly);
+            f.write(b[i].tile);
+            f.commit();
+        }
+    }
+
+    // copy graphics (if any)
+
+    return true;
+}
+
+bool EmbelProperties::importTemplate()
+{
+/*
+
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    QString fPath = QFileDialog::getOpenFileName(this, tr("Select template"),
+                                                 "/home", "*.template");
+    QFile file(fPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+            qWarning("Couldn't open save file.");
+            return false;
+        }
+    // get importedTemplateName
+    QFileInfo info(fPath);
+    QString name = info.baseName();
+    QString uniqueName = uniqueTemplateName(name);
+    QByteArray ba = file.readAll();
+    // if this template name already exists then replace in json
+    if (name != uniqueName) {
+        // add "/" to replace in case name also exists in the template values
+        QString a = "/" + name;
+        QString b = "/" + uniqueName;
+        ba.replace(a.toUtf8(), b.toUtf8());
+     }
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(ba);
+
+    // QMap to hold key/value pairs
+    QMap<QString, QVariant> keysMap;
+    keysMap = jsonDoc.object().toVariantMap();
+
+    // QMap to QSettings
+    QMapIterator<QString, QVariant> i(keysMap);
+    while (i.hasNext()) {
+        i.next();
+        setting->setValue(i.key(), i.value());
+    }
+
+    // new Template
+    newTemplateFromImport(uniqueName);
+
+    return true;
 }
 
 void EmbelProperties::extractTile()
@@ -1220,7 +1316,6 @@ void EmbelProperties::readMetadataTemplateList()
         metadataTemplatesList << i.key();
     }
     metadataTemplatesList.sort(Qt::CaseInsensitive);
-    qDebug() << __FUNCTION__ << metadataTemplatesList << mw3->infoString->infoTemplates;
 }
 
 void EmbelProperties::updateMetadataTemplateList()
@@ -1281,8 +1376,24 @@ void EmbelProperties::newTemplate()
     templateList << templateName;
     templateListEditor->addItem(templateName);
     templateListEditor->setValue(templateName);
-    // add the File, Image, Borders, Textsand Graphics items for the template
-//    addTemplateItems();
+    syncWinnets();
+}
+
+void EmbelProperties::newTemplateFromImport(QString name)
+{
+    if (name == "") return;
+    templateName = name;
+    templateId = templateList.count();
+    // set all templates except templateName isCurrent = false
+    templateList << name;
+    // sort so the new template item is in order
+    sortTemplateList();
+    // refresh dropdown with appended and sorted list
+    templateListEditor->refresh(templateList);
+    // select the imported template, which triggers itemChange
+    qDebug() << __FUNCTION__ << "templateListEditor->setValue(templateName)" << name;
+    templateListEditor->setValue(name);
+    emit syncEmbellishMenu();
     syncWinnets();
 }
 
@@ -1819,8 +1930,8 @@ itemChange, which is subclassed here.
     QModelIndex grandparentIdx = idx.parent().parent();
 
     templatePath = "Embel/Templates/" + templateName + "/";
-//    QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
     /*
+//    QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
     qDebug() << __FUNCTION__
              << " =" << templateId
              << "idx.isValid() =" << idx.isValid()
@@ -3775,7 +3886,7 @@ void EmbelProperties::addHighlighterEffect(QModelIndex parIdx, QString effectNam
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::highlighter;
-    qDebug() << __FUNCTION__ << "effectName =" << effectName;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::highlighter, "Highlighter");
     effect.effectName = effectName;
@@ -5454,6 +5565,8 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::RightButton) {
         renameAction->setVisible(false);
         copyTemplateAction->setVisible(false);
+        importTemplateAction->setVisible(false);
+        exportTemplateAction->setVisible(false);
         copyStyleAction->setVisible(false);
         tokenEditorAction->setVisible(false);
         manageTilesAction->setVisible(false);
@@ -5473,6 +5586,8 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
         if (currentIdx.parent() == templateIdx || currentIdx == templateIdx) {
             renameAction->setVisible(true);
             copyTemplateAction->setVisible(true);
+            importTemplateAction->setVisible(true);
+            exportTemplateAction->setVisible(true);
         }
 
         if (currentIdx.parent() == stylesIdx) {
@@ -6562,10 +6677,8 @@ void EmbelProperties::addGraphic(int count)
     }
     else {
         i.value = "";
-//        i.value = ":/images/icon16/winnow288.png";
         setting->setValue(settingRootPath + i.key, i.value);
     }
-//    i.value = setting->value(settingRootPath + i.key);
     i.delegateType = DT_SelectFile;
     i.type = "string";
     graphic.filePath = i.value.toString();

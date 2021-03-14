@@ -781,7 +781,7 @@ This is used to when a style is renamed and all the style lists need to be updat
 void ComboBoxEditor::refresh(QStringList items)
 {
 /*
-Called when a template is renamed or deleted to rebuild the dropdown list
+    Called when a template is renamed or deleted to rebuild the dropdown list
 */
     comboBox->clear();
 //    items.sort(Qt::CaseInsensitive);

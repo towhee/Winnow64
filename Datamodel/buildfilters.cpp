@@ -79,7 +79,7 @@ void BuildFilters::done()
     #endif
     }
     if (!abort) emit finishedBuildFilters();
-    qint64 msec = buildFiltersTimer.elapsed();
+//    qint64 msec = buildFiltersTimer.elapsed();
 //    qDebug() << __FUNCTION__ << QString("%L1").arg(msec) << "msec";
 }
 

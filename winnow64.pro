@@ -16,7 +16,9 @@ QT += concurrent
 QT += xmlpatterns
 #QT += opengl
 
-HEADERS += Cache/imagecache.h
+HEADERS += Cache/imagecache.h \
+    Dialogs/managegraphicsdlg.h \
+    Utilities/foldercompressor.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
 HEADERS += Datamodel/buildfilters.h
@@ -112,7 +114,9 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/imagecache.cpp
+SOURCES += Cache/imagecache.cpp \
+    Dialogs/managegraphicsdlg.cpp \
+    Utilities/foldercompressor.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp
@@ -204,7 +208,8 @@ SOURCES += Views/infoview.cpp
 SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
 
-FORMS += Dialogs/aboutdlg.ui
+FORMS += Dialogs/aboutdlg.ui \
+    Dialogs/managegraphicsdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/copystyledlg.ui

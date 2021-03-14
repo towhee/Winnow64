@@ -67,7 +67,7 @@ namespace G
     bool isSlideShow;
     bool isEmbellish;
 
-    bool colorManage;
+//    bool colorManage;
 
     // not persistent
     bool isThreadTrackingOn;

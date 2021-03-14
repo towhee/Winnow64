@@ -9,9 +9,9 @@
     instantiated the tiles are read from QSettings and two objects are populated with the
     tile list: QStringList tiles and QComboBox ui->tileBox;
 
-    The QStringList tiles function is to maintain the prior status of ui->tileBox.  When a
-    tile name (text) in ui->tileBox is edited, comparing to the same index in tiles determines
-    if the tile name has changed.
+    The QStringList tiles function maintains the prior status of ui->tileBox. When a tile name
+    (text) in ui->tileBox is edited, comparing to the same index in tiles determines if the
+    tile name has changed.
 
     If the tile name has changed then the QSettings tile copied to the new name and the old
     QSettings tile is deleted.  The QStringList tiles is updated to match the ui->tileBox
@@ -200,5 +200,4 @@ void ManageTilesDlg::on_newBtn_clicked()
     ui->tileBox->clear();
     ui->tileBox->addItems(tiles);
     ui->tileBox->setCurrentText(currentTile);
-
 }

@@ -1,4 +1,8 @@
 BUGS / TO DO
+- Import/export Embellish templates
+- Get rid of G::colorManage - always color manage
+- When reverse sort the cache progress bar does not reverse to match
+- Handle winnets on Mac
 - Quick start loupe first image in folder
 - Slow startup if a drive is sleeping
 - New workspace crashed
@@ -33,7 +37,6 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - cleanup imageview rubberband
 ENHANCEMENTS
-- Import/export Embellish templates
 - Add fade and alias to stroke
 - Add glow (inner/outer)
 - Add guassian blur (inner/outer)
@@ -46,6 +49,9 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Replaced Thumbnails with Appearance in Preferences
+- Initial font size not being assigned, resulting in squashed rows in QTreeviews
+- EmbelExport not assigning color profile
 - Version 1.17
 - Focus shifts away from Embellish when mouseover central widget or thumbdock
 - Token editor sometimes crashes

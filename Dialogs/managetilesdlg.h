@@ -13,7 +13,7 @@ class ManageTilesDlg : public QDialog
 
 public:
     explicit ManageTilesDlg(QSettings *setting, QWidget *parent = nullptr);
-    ~ManageTilesDlg();
+    ~ManageTilesDlg() override;
 
 signals:
     void extractTile();

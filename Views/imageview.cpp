@@ -732,7 +732,6 @@ void ImageView::resetFitZoom()
     zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > toggleZoom) zoom = toggleZoom;
-//    if (limitFit100Pct  && zoom > 1) zoom = 1.0 / G::actDevicePixelRatio;
     scale();
 }
 
@@ -745,7 +744,6 @@ void ImageView::setFitZoom()
     }
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > toggleZoom) zoom = toggleZoom;
-//    if (limitFit100Pct  && zoom > 1.0 / G::actDevicePixelRatio) zoom = 1.0 / G::actDevicePixelRatio;
 }
 
 void ImageView::zoomToggle()
@@ -760,10 +758,8 @@ void ImageView::zoomToggle()
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << "toggleZoom =" << toggleZoom;
     isFit = !isFit;
     isFit ? zoom = zoomFit : zoom = toggleZoom;
-//    isFit ? zoom = zoomFit : zoom = toggleZoom * 1.0 / G::actDevicePixelRatio;
     scale();
 }
 

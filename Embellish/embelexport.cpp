@@ -4,8 +4,28 @@ EmbelExport::EmbelExport(Metadata *metadata,
                          DataModel *dm,
                          ImageCache *imageCacheThread,
                          EmbelProperties *embelProperties,
-                         QWidget *parent)
+                         QWidget * /*parent*/)
 {
+/*
+    Create a new, embellished jpg, png or tif from a source image(s).  The source image(s) can
+    be local (selected in Winnow) or remote (sent from another program).
+
+    If the source is remote, then some housekeeping has to occur before the embellish export
+    process can take place. Remote exports launch Winnow and are initially processed by
+    MW::handleStartupArgs, which in turn, calls EmbelExport::exportRemoteFiles, which saves
+    the current embellish template, the remote defined template is set, and then
+    EmbelExport::exportImages is called.
+
+    Local exports call EmbelExport::exportImages.
+
+    EmbelExport::exportImages cycles through the list of images to be processed, reporting the
+    progress and calling EmbelExport::exportImage for each image.
+
+    In EmbelExport::exportImage the image file is read and embellished. The resulting graphics
+    scene is copied to a new QImage and saved to the assigned image format (jpg, png or tif).
+    The metadata is copied from the source image file to the exported image file. Finally, the
+    ICC color space is updated.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -38,6 +58,10 @@ EmbelExport::~EmbelExport()
 
 bool EmbelExport::loadImage(QString fPath)
 {
+/*
+    Read the image file, extract metadata, apply ICC profile and convert to
+    QGraphicsPixmapItem.
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -57,7 +81,20 @@ bool EmbelExport::loadImage(QString fPath)
         }
         else return false;
     }
-    pmItem->setPixmap(QPixmap(fPath));
+    // load QImage
+    QImage im(fPath);
+    // color manage if available
+    #ifdef Q_OS_WIN
+    QString ext = metadata->m.type.toLower();
+    if (metadata->iccFormats.contains(ext)) {
+        QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
+        ICC::setInProfile(ba);   // if ba.isEmpty then sRGB used
+        ICC::transform(im);
+    }
+    #endif
+    // convert QImage to QGraphicsPixmapItem
+    pmItem->setPixmap(QPixmap::fromImage(im));
+
     return true;
 }
 
@@ -65,8 +102,8 @@ QString EmbelExport::exportFolderPath(QString fPath)
 {
 /*
     The incoming fPath is the file path for one of the images being exported.  Its folder is
-    fromFolderPath.  If the export folder save method == Subfolder, then the subfolder name
-    is used, otherwise, all this is ignored then embelProperties->exportSubfolder is used.
+    fromFolderPath.  If the export folder save method == "Subfolder", then the subfolder name
+    is used, otherwise, all this is ignored and embelProperties->exportSubfolder is used.
 */
     {
     #ifdef ISDEBUG
@@ -207,6 +244,17 @@ void EmbelExport::exportImages(const QStringList &srcList)
 
 void EmbelExport::exportImage(const QString &fPath)
 {
+/*
+    The image file is read and embellished.  The resulting graphics scene is copied to a new
+    QImage and saved to the assigned image format (jpg, png or tif).  The metadata is copied
+    from the source image file to the exported image file.  Finally, the ICC color space is
+    updated.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     QString extension = embelProperties->exportFileType;
     QFileInfo fileInfo(fPath);
     QString baseName = fileInfo.baseName() + embelProperties->exportSuffix;
@@ -215,26 +263,20 @@ void EmbelExport::exportImage(const QString &fPath)
     QString exportPath = exportFolder + "/" + baseName + "." + extension;
 
     // Check if destination image file already exists
-    if (!embelProperties->overwriteFiles) Utilities::renameFileIfExists(exportPath);
+    if (!embelProperties->overwriteFiles) Utilities::uniqueFile(exportPath);
 
-    // read the image, add it to the scene and embellish
+    // read the image, add it to the graphics scene and embellish
     if (loadImage(fPath)) {
         // embellish
         embellish->build(fPath, __FUNCTION__);
         setSceneRect(scene->itemsBoundingRect());
     }
 
-    // Create the image with the exact size of the shrunk scene
+    // Create QImage with the exact size of the scene
     QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);
-//    image.setDevicePixelRatio(G::sysDevicePixelRatio);
-//    image.setDevicePixelRatio(1.0);
-    qDebug() << __FUNCTION__
-             << "image.width() =" << image.width()
-             << "sceneRect() =" << sceneRect()
-                ;
     // Start all pixels transparent
     image.fill(Qt::transparent);
-
+    // Copy the scene to the QImage
     QPainter painter(&image);
     scene->render(&painter);
 
@@ -242,6 +284,12 @@ void EmbelExport::exportImage(const QString &fPath)
     if (extension == "JPG") image.save(exportPath, "JPG", 100);
     if (extension == "PNG") image.save(exportPath, "PNG", 100);
     if (extension == "TIF") image.save(exportPath, "TIF");
+
+    // Copy the metadata from the source image to the embellished image
+
+
+    // Update the ICC color profile
+
 
     lastFileExportedPath = exportPath;
 }

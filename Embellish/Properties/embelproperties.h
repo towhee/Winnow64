@@ -111,6 +111,7 @@ public:
     QMap<QString, QList<winnow_effects::Effect>> styleMap;
 
     void newTemplate();
+    void newTemplateFromImport(QString name);
     void doNotEmbellish();
     QString metaString(QString key);
     QString metaString(QString key, QString fPath);
@@ -132,7 +133,7 @@ public slots:
 
 signals:
     void templateChanged(int id);
-    void templateRenamed();
+    void syncEmbellishMenu();
 
 protected:
     void mouseMoveEvent(QMouseEvent *event) override;   // does not work here
@@ -157,7 +158,8 @@ private:
     void renameCurrentTemplate();
     void copyStyle();
     void copyTemplate();
-    void saveTemplate();
+    bool exportTemplate();
+    bool importTemplate();
     QString uniqueTemplateName(QString name);
     void syncWinnets();
 
@@ -274,6 +276,8 @@ private:
     QAction *soloAction;
     QAction *expandRecursivelyAction;
     QAction *renameAction;
+    QAction *importTemplateAction;
+    QAction *exportTemplateAction;
     QAction *copyTemplateAction;
     QAction *copyStyleAction;
     QAction *tokenEditorAction;
