@@ -5,7 +5,7 @@
    in Embellish QSettings to be used to create a border texture in Embellish.
 */
 
-PatternDlgView::PatternDlgView(QPixmap &pm, QPixmap &tile, QWidget *parent)
+PatternDlgView::PatternDlgView(QPixmap &pm, QPixmap &tile, QWidget * /*parent*/)
     : pm(pm), tile(tile)
 {
     scene = new QGraphicsScene;
@@ -45,7 +45,7 @@ void PatternDlgView::mouseMoveEvent(QMouseEvent *event)
     rubberBand->setGeometry(QRect(origin, event->pos()).normalized());
 }
 
-void PatternDlgView::mouseReleaseEvent(QMouseEvent *event)
+void PatternDlgView::mouseReleaseEvent(QMouseEvent * /*event*/)
 {
     setCursor(Qt::ArrowCursor);
     QRect rb = rubberBand->geometry();

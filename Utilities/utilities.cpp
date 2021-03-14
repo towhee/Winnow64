@@ -12,8 +12,42 @@ QSize Utilities::fitScreen(QSize preferred)
     return QSize(w, h);
 }
 
-void Utilities::renameFileIfExists(QString &fPath, QString delimiter)
+void Utilities::uniqueFolder(QString &path, QString delimiter)
 {
+/*
+    Checks to see if the folder pointed to by path exists.  If so, the delimiter and a
+    number are appended to the path, repeating until a unique name is found.
+
+    Usage:  Utilities::uniqueFolder(dPath);
+    if dPath = ".../zen2048" exists then dPath changed to ".../zen2048_1"
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    int count = 0;
+    bool folderAlreadyExists = true;
+    QFileInfo info(path);
+    QString folderPath = info.dir().absolutePath();
+    do {
+        QDir testFile(path);
+        if (testFile.exists()) {
+            path = folderPath + delimiter + QString::number(++count);
+        }
+        else folderAlreadyExists = false;
+    } while (folderAlreadyExists);
+}
+
+void Utilities::uniqueFile(QString &path, QString delimiter)
+{
+/*
+    Checks to see if the file pointed to by path exists.  If so, the delimiter and a
+    number are appended to the path, repeating until a unique name is found.
+
+    Usage:  Utilities::uniqueFolder(fPath);
+    if fPath = ".../zen2048.json" exists then fPath changed to ".../zen2048_1.json"
+*/
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
@@ -21,14 +55,14 @@ void Utilities::renameFileIfExists(QString &fPath, QString delimiter)
     }
     int count = 0;
     bool fileAlreadyExists = true;
-    QFileInfo info(fPath);
+    QFileInfo info(path);
     QString folderPath = info.dir().absolutePath() + "/";
     QString base = info.baseName() + delimiter;
     QString suffix = "." + info.suffix();
     do {
-        QFile testFile(fPath);
+        QFile testFile(path);
         if (testFile.exists()) {
-            fPath = folderPath + base + QString::number(++count) + suffix;
+            path = folderPath + base + QString::number(++count) + suffix;
         }
         else fileAlreadyExists = false;
     } while (fileAlreadyExists);

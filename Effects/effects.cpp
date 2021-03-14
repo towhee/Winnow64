@@ -1203,7 +1203,7 @@ void fastblur(BImage img,int radius){
     QElapsedTimer t;
     t.start();
 
-    bool blurAlpha = true;
+//    bool blurAlpha = true;
 
     int w = img.width();
     int h = img.height();

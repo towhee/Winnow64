@@ -3,11 +3,16 @@
 
 #include <QtWidgets>
 #include "Main/global.h"
+#include "Metadata/metadata.h"
+#include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
 #include "Cache/imagecache.h"
 #include "Properties/embelproperties.h"
 #include "Embellish/embel.h"
 #include "Metadata/exiftool.h"
+#ifdef Q_OS_WIN
+#include "Utilities/icc.h"
+#endif
 
 class EmbelExport : public QGraphicsView
 {

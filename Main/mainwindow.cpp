@@ -325,6 +325,8 @@ void MW::initialize()
     this->setWindowTitle(winnowWithVersion);
     G::isInitializing = true;
     G::actDevicePixelRatio = 1;
+    G::dpi = 96;
+    G::ptToPx = G::dpi / 72;
     isNormalScreen = true;
     G::isSlideShow = false;
     workspaces = new QList<workspaceData>;
@@ -3653,8 +3655,6 @@ void MW::createMenus()
     // Embellish Menu
     QMenu *embelMenu = new QMenu(this);
 //    embelMenu->setIcon(QIcon(":/images/icon16/lightning.png"));
-    QAction *embelGroupAct = new QAction("Embellish", this);
-    embelGroupAct->setMenu(embelMenu);
     embelMenu->addAction(embelNewTemplateAction);
     embelMenu->addAction(embelExportAction);
 //    embelMenu->addAction(embelTileAction);
@@ -3662,13 +3662,10 @@ void MW::createMenus()
     #ifdef Q_OS_WIN
     embelMenu->addAction(embelRevealWinnetsAction);
     #endif
+    QAction *embelGroupAct = new QAction("Embellish", this);
+    embelGroupAct->setMenu(embelMenu);
     embelMenu->addSeparator();
     embelMenu->addActions(embelGroupAction->actions());
-//    // add 10 dummy menu items for embellish template choice
-//    for (int i = 0; i < 10; i++) {
-//        embelMenu->addAction(embelTemplatesActions.at(i));
-//        if (i == 0) viewMenu->addSeparator();
-//    }
     connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
 
     // View Menu
@@ -4896,7 +4893,7 @@ void MW::createEmbelDock()
     embelProperties = new EmbelProperties(this, setting);
 
     connect (embelProperties, &EmbelProperties::templateChanged, this, &MW::embelTemplateChange);
-    connect (embelProperties, &EmbelProperties::templateRenamed, this, &MW::syncEmbellishMenu);
+    connect (embelProperties, &EmbelProperties::syncEmbellishMenu, this, &MW::syncEmbellishMenu);
 
     embelDock = new DockWidget(tr("  Embellish  "), this);
     embelDock->setObjectName("embelDock");
@@ -7505,17 +7502,33 @@ void MW::setDisplayResolution()
     G::track(__FUNCTION__);
     #endif
     }
-    if (G::isInitializing) return;
-    QPoint loc = centralWidget->window()->geometry().center();
-//    if (loc == prevScreenLoc) return;
-    prevScreenLoc = loc;
+    bool monitorChanged = false;
+    bool devicePixelRatioChanged = false;
+    // ignore until show event
+    if (!isVisible()) return;
 
+    // Screen info
+    QPoint loc = centralWidget->window()->geometry().center();
+    /*
+    if (loc == prevScreenLoc) return;
+    prevScreenLoc = loc;
+//    */
     QScreen *screen = qApp->screenAt(loc);
     if (screen == nullptr) return;
-    bool monitorChanged = screen->name() != prevScreenName;
+    monitorChanged = screen->name() != prevScreenName;
+    /*
+    qDebug() << __FUNCTION__ << "1"
+             << "G::isInitializing  =" << G::isInitializing
+             << "isVisible()  =" << isVisible()
+             << "prevDevicePixelRatio =" << prevDevicePixelRatio
+             << "screen->name() =" << screen->name()
+             << "prevScreenName =" << prevScreenName
+             << "monitorChanged =" << monitorChanged
+             << "devicePixelRatioChanged =" << devicePixelRatioChanged;
+//             */
     prevScreenName = screen->name();
-//    qDebug() << __FUNCTION__ << "monitorChanged =" << monitorChanged;
 
+    // Device Pixel Ratios
     G::sysDevicePixelRatio = screen->devicePixelRatio();
     #ifdef Q_OS_WIN
     G::actDevicePixelRatio = screen->devicePixelRatio();
@@ -7523,13 +7536,22 @@ void MW::setDisplayResolution()
     #ifdef Q_OS_MAC
     G::actDevicePixelRatio = macActualDevicePixelRatio(loc, screen);
     #endif
-
-    bool devicePixelRatioChanged = !qFuzzyCompare(G::actDevicePixelRatio, prevDevicePixelRatio);
+    devicePixelRatioChanged = !qFuzzyCompare(G::actDevicePixelRatio, prevDevicePixelRatio);
+    /*
+    qDebug() << __FUNCTION__ << "2"
+             << "G::isInitializing  =" << G::isInitializing
+             << "isVisible()  =" << isVisible()
+             << "prevDevicePixelRatio =" << prevDevicePixelRatio
+             << "screen->name() =" << screen->name()
+             << "prevScreenName =" << prevScreenName
+             << "monitorChanged =" << monitorChanged
+             << "devicePixelRatioChanged =" << devicePixelRatioChanged;
+//             */
     prevDevicePixelRatio = G::actDevicePixelRatio;
 
     if (!monitorChanged && !devicePixelRatioChanged) return;
 
-    // Device Pixel Ratio or Monitor change has occurred
+    // Device Pixel Ratio or Monitor change has occurred (default set in initialize())
     G::dpi = screen->logicalDotsPerInch();
     G::ptToPx = G::dpi / 72;
     G::displayVirtualHorizontalPixels = screen->geometry().width();
@@ -7537,10 +7559,9 @@ void MW::setDisplayResolution()
     G::displayPhysicalHorizontalPixels = screen->geometry().width() * G::actDevicePixelRatio;
     G::displayPhysicalVerticalPixels = screen->geometry().height() * G::actDevicePixelRatio;
 
-//    /*
+    /*
     double physicalWidth = screen->physicalSize().width();
     double dpmm = G::displayPhysicalHorizontalPixels * 1.0 / physicalWidth ;
-    /*
     qDebug() << __FUNCTION__
              << "G::actDevicePixelRatio =" << G::actDevicePixelRatio
              << "screen->actDevicePixelRatio() =" << screen->devicePixelRatio()
@@ -7593,7 +7614,7 @@ void MW::setDisplayResolution()
             w = static_cast<int>(w * 0.75 / fitH);
             h = static_cast<int>(h * 0.75 / fitH);
         }
-        qDebug() << __FUNCTION__ << "RESIZE TO:" << w << h;
+//        qDebug() << __FUNCTION__ << "RESIZE TO:" << w << h;
         resize(w, h);
     }
 
@@ -8065,7 +8086,7 @@ re-established when the application is re-opened.
     setting->setValue("infoOverlayFontSize", imageView->infoOverlayFontSize);
 
     // files
-    setting->setValue("colorManage", G::colorManage);
+//    setting->setValue("colorManage", G::colorManage);
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("checkIfUpdate", checkIfUpdate);
     setting->setValue("lastDir", currentViewDir);
@@ -8367,6 +8388,7 @@ Preferences are located in the prefdlg class and updated here.
        sure the default value is assigned for first time use of the new setting.
     */
 
+//    if (!isSettings || simulateJustInstalled) {
         // general
         combineRawJpg = true;
         prevMode = "Loupe";
@@ -8385,7 +8407,7 @@ Preferences are located in the prefdlg class and updated here.
         G::maxIconSize = 256;
 
         // files
-        G::colorManage = true;
+//        G::colorManage = true;
         rememberLastDir = false;
         checkIfUpdate = true;
         lastDir = "";
@@ -8423,7 +8445,7 @@ Preferences are located in the prefdlg class and updated here.
         cachePreviewHeight = 1600;
 
         if (!isSettings || simulateJustInstalled) return true;
-
+//    }
     // end default settings
 
     // Get settings saved from last session
@@ -8460,7 +8482,7 @@ Preferences are located in the prefdlg class and updated here.
     if (setting->contains("maxIconSize")) G::maxIconSize = setting->value("maxIconSize").toInt();
 
     // files
-    if (setting->contains("colorManage")) G::colorManage = setting->value("colorManage").toBool();
+//    if (setting->contains("colorManage")) G::colorManage = setting->value("colorManage").toBool();
     if (setting->contains("rememberLastDir")) rememberLastDir = setting->value("rememberLastDir").toBool();
     if (setting->contains("checkIfUpdate")) checkIfUpdate = setting->value("checkIfUpdate").toBool();
     if (setting->contains("lastDir")) lastDir = setting->value("lastDir").toString();
@@ -11630,7 +11652,10 @@ void MW::mediaReadSpeed()
     G::track(__FUNCTION__);
     #endif
     }
-    QString fPath = QFileDialog::getOpenFileName(this, tr("Select file for speed test"), "/home");
+    QString fPath = QFileDialog::getOpenFileName(this,
+                                                 tr("Select file for speed test"),
+                                                 "/home"
+                                                 );
     QFile file(fPath);
     double gbs = Performance::mediaReadSpeed(file);
     if (static_cast<int>(gbs) == -1) return;  // err
@@ -11719,29 +11744,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    QPoint loc = centralWidget->window()->geometry().center();
-//    QScreen *screen = qApp->screenAt(loc);
-//    G::displayVirtualHorizontalPixels = screen->geometry().width();
-//    G::displayVirtualVerticalPixels = screen->geometry().height();
-//    G::actDevicePixelRatio = screen->actDevicePixelRatio();
-    qDebug() << __FUNCTION__
-             << "G::actDevicePixelRatio =" << G::actDevicePixelRatio
-             << "G::displayVirtualHorizontalPixels =" << G::displayVirtualHorizontalPixels
-             << "G::displayPhysicalHorizontalPixels =" << G::displayPhysicalHorizontalPixels
-                ;
-    return;
-
-    resize(800, 600);
-    return;
-    embelProperties->resizeColumns();
-    return;
-    qDebug() << __FUNCTION__
-             << "G::actDevicePixelRatio =" << G::actDevicePixelRatio
-             << "G::dpi =" << G::dpi
-             << "G::ptToPx =" << G::ptToPx
-             << "G::displayVirtualHorizontalPixels =" << G::displayVirtualHorizontalPixels
-             << "G::displayVirtualVerticalPixels =" << G::displayVirtualVerticalPixels
-                ;
-//    return;
+    qDebug() << __FUNCTION__ << "G::dpi =" << G::dpi;
+    qDebug() << __FUNCTION__ << "G::ptToPx =" << G::ptToPx;
 }
 // End MW

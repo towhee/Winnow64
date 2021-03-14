@@ -187,7 +187,7 @@ namespace G
 
     extern bool isEmbellish;
 
-    extern bool colorManage;
+//    extern bool colorManage;
 
     extern bool isThreadTrackingOn;
     extern bool showAllTableColumns;

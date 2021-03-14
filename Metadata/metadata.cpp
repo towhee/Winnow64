@@ -789,6 +789,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     QFileInfo fileInfo(path);
     QString ext = fileInfo.suffix().toLower();
     bool fileOpened = false;
+    // rgh next triggers crash sometimes when skip to end of thumbnails
     if (p.file.open(QIODevice::ReadOnly)) {
         if (jpeg == nullptr) jpeg = new Jpeg;
         if (ifd == nullptr) ifd = new IFD;

@@ -176,7 +176,7 @@ associated with the correct border even when the border is resorted.
     }
 }
 
-QModelIndex PropertyEditor::getItemIndex(int itemIndex, QModelIndex parentIdx)
+QModelIndex PropertyEditor::getItemIndex(int itemIndex, QModelIndex /*parentIdx*/)
 {
 /*
 Returns the QModelIndex for the itemIndex. itemIndex is unique for every row in the model.
@@ -289,6 +289,8 @@ SliderEditor, LineEditor etc).
         capIdx = model->index(row, CapColumn, parIdx);
         valIdx = model->index(row, ValColumn, parIdx);
     }
+
+//    qDebug() << __FUNCTION__ << i.captionText;
 
     // caption
     model->setData(capIdx, i.hasValue, UR_hasValue);
@@ -527,7 +529,7 @@ void PropertyEditor::mousePressEvent(QMouseEvent *event)
     }
 }
 
-void PropertyEditor::mouseReleaseEvent(QMouseEvent */*event*/)
+void PropertyEditor::mouseReleaseEvent(QMouseEvent * /*event*/)
 {
 /*
     Do not pass on to QTreeView as this will enable QTreeView expanding and collapsing when the

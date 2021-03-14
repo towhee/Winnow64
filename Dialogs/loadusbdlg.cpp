@@ -45,7 +45,7 @@ void LoadUsbDlg::keyPressEvent(QKeyEvent *event)
     }
 }
 
-void LoadUsbDlg::paintEvent(QPaintEvent *event)
+void LoadUsbDlg::paintEvent(QPaintEvent * /*event*/)
 {
     setScreenDependencies();
 //    QDialog::paintEvent(event);
