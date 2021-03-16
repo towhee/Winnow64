@@ -12,6 +12,28 @@ QSize Utilities::fitScreen(QSize preferred)
     return QSize(w, h);
 }
 
+void Utilities::uniqueInList(QString &name, const QStringList &list, QString delimiter)
+{
+    /*
+        Checks to see if the name already exists in the list.  If so, the delimiter and a
+        number are appended to the name, repeating until a unique name is found.
+
+        Usage:  Utilities::uniqueInList(name, list);
+    */
+        {
+        #ifdef ISDEBUG
+        G::track(__FUNCTION__);
+        #endif
+        }
+        int count = 0;
+        QString originalName = name;
+        do {
+            if (list.contains(name)) {
+                name = originalName + delimiter + QString::number(++count);
+            }
+        } while (list.contains(name));
+}
+
 void Utilities::uniqueFolder(QString &path, QString delimiter)
 {
 /*

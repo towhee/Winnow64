@@ -12,6 +12,7 @@
 #include "Dialogs/copystyledlg.h"
 #include "Dialogs/patterndlg.h"
 #include "Dialogs/managetilesdlg.h"
+#include "Dialogs/managegraphicsdlg.h"
 #include "ui_embelCoord.h"
 
 class EmbelProperties : public PropertyEditor
@@ -87,6 +88,7 @@ public:
     struct Graphic {
         int index;
         QString name;
+        QByteArray graphic;
         QString caption;
         QString parent;
         QString filePath;
@@ -124,6 +126,8 @@ public slots:
     void extractTile();
     void saveTile(QString name, QPixmap *tile);
     void manageTiles();
+    void manageGraphics();
+    void getGraphic();
     void invokeFromAction(QAction *embelAction);
     void setCurrentTemplate(QString name);
 //    void diagnosticModel(QModelIndex parent = QModelIndex());
@@ -134,6 +138,7 @@ public slots:
 signals:
     void templateChanged(int id);
     void syncEmbellishMenu();
+    void updateGraphicsList();
 
 protected:
     void mouseMoveEvent(QMouseEvent *event) override;   // does not work here
@@ -152,6 +157,7 @@ private:
     void readTemplateList();
     void readTileList();
     void updateTileList();
+    void updateGraphicList();
     void readTile(QStringList tileName);
     void readMetadataTemplateList();
     void renameCurrentStyle();
@@ -307,6 +313,7 @@ private:
     QSettings *setting;
     ComboBoxEditor *templateListEditor;
     QVector<ComboBoxEditor*> borderTileObjectEditor;
+    QVector<ComboBoxEditor*> graphicsObjectEditor;
     QVector<ComboBoxEditor*> textAnchorObjectEditor;
     QVector<ComboBoxEditor*> textMetadataTemplateObjectEditor;
     QVector<ComboBoxEditor*> graphicAnchorObjectEditor;
@@ -333,6 +340,7 @@ private:
     QStringList anchorContainerList;
     QStringList fontWeights;
     QStringList tileList;
+    QStringList graphicList;
     QStringList metadataTemplatesList;
     QStringList styleList;
     QStringList effectList;

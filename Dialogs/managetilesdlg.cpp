@@ -187,7 +187,7 @@ void ManageTilesDlg::on_closeBtn_clicked()
 
 void ManageTilesDlg::on_newBtn_clicked()
 {
-    extractTile();
+    emit extractTile();
 
     QString currentTile = ui->tileBox->currentText();
     tiles.clear();
