@@ -1,4 +1,5 @@
 BUGS / TO DO
+- Full path for file name in external program
 - Import/export Embellish templates
 - Get rid of G::colorManage - always color manage
 - When reverse sort the cache progress bar does not reverse to match

@@ -16,7 +16,10 @@ public:
     ~ManageGraphicsDlg() override;
 
 signals:
-    void extractTile();
+    void getGraphic();
+
+public slots:
+    void updateList();
 
 private slots:
     void on_deleteBtn_clicked();

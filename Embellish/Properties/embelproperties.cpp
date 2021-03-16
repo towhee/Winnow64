@@ -1270,6 +1270,7 @@ void EmbelProperties::manageTiles()
     updateTileList();
 }
 
+
 void EmbelProperties::updateTileList()
 {
     {
@@ -1296,6 +1297,104 @@ void EmbelProperties::updateTileList()
             borderTileObjectEditor.at(i)->setValue(oldTileName);
         else
             borderTileObjectEditor.at(i)->setValue("Do not tile");
+    }
+}
+
+void EmbelProperties::manageGraphics()
+{
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
+    }
+    ManageGraphicsDlg manageGraphicsDlg(setting);
+    connect(&manageGraphicsDlg, &ManageGraphicsDlg::getGraphic,
+            this, &EmbelProperties::getGraphic);
+    connect(this, &EmbelProperties::updateGraphicsList,
+            &manageGraphicsDlg, &ManageGraphicsDlg::updateList);
+    manageGraphicsDlg.exec();
+    updateGraphicList();
+}
+
+void EmbelProperties::getGraphic()
+{
+/*
+    Signaled from ManageGraphicsDlg
+
+    Load an image the user chooses as a QPixmap, convert it to a QByteArray, make sure the name
+    is unique in the QSettings Embel/Graphics items, add to QByteArray to settings and finally,
+    update graphicList.
+
+    Signal back to ManageGraphicsDlg to sync graphics list.
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    #ifdef ISLOGGER
+    Utilities::log(__FUNCTION__, "");
+    #endif
+    }
+    // Get an image
+    QString fPath = QFileDialog::getOpenFileName(this, tr("Select graphic"), "/home",
+                                                "Images (*.png *.tif *.jpg)");
+    QFile file(fPath);
+    if (!file.exists()) return;
+    if (file.isOpen()) {
+        QString msg = "Whoops.  The file is already open in another process.  \n"
+                      "Close the file and try again.  Press ESC to continue.";
+        G::popUp->showPopup(msg, 0);
+        return;
+    }
+    QPixmap graphic(fPath);
+    if (graphic.isNull()) {
+        QString msg = "Whoops.  Unable to process image file.\n"
+                      "Press ESC to continue.";
+        G::popUp->showPopup(msg, 0);
+        return;
+    }
+
+    // Assign a unique name to the graphic
+    QFileInfo info(fPath);
+    QString name = info.baseName();
+    QByteArray graphicBa;
+    QBuffer buffer(&graphicBa);
+    buffer.open(QIODevice::WriteOnly);
+    graphic.save(&buffer, "PNG");
+    setting->beginGroup("Embel/Graphics");
+        QStringList list = setting->allKeys();
+        Utilities::uniqueInList(name, list);
+        qDebug() << __FUNCTION__ << "Name to use =" << name;
+        setting->setValue(name, graphicBa);
+    setting->endGroup();
+
+    // Sync graphicList for all Graphics items
+    updateGraphicList();
+
+    // Sync ManageGraphicsDlg
+    emit updateGraphicsList();
+}
+
+void EmbelProperties::updateGraphicList()
+{
+    graphicList.clear();
+    setting->beginGroup("Embel/Graphics");
+    graphicList << setting->allKeys();
+    setting->endGroup();
+    graphicList.sort();
+    qDebug() << __FUNCTION__ << graphicList;
+    // update graphicList in each graphic item
+    for (int i = 0; i < g.size(); ++i) {
+        QString oldGraphicName = graphicsObjectEditor.at(i)->value();
+        graphicsObjectEditor.at(i)->refresh(graphicList);
+        // refreshing anchorObjectList removes old value for the text - reassign anchor object
+        if (graphicList.contains(oldGraphicName))
+            graphicsObjectEditor.at(i)->setValue(oldGraphicName);
+//        else
+//            graphicsObjectEditor.at(i)->setValue("Do not tile");
     }
 }
 
@@ -2366,9 +2465,10 @@ void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString sou
     QString path = templatePath + "Graphics/" + parent + "/" + source;
 //    qDebug() << __FUNCTION__ << "row =" << index << path << source << v.toInt();
 
-    if (source == "filePath") {
+    if (source == "graphic") {
         setting->setValue(path, v.toString());
-        g[index].filePath = v.toString();
+        g[index].name = v.toString();
+        g[index].graphic = setting->value("Embel/Graphics/" + v.toString()).toByteArray();
         e->build("", __FUNCTION__);
         return;
     }
@@ -6663,26 +6763,28 @@ void EmbelProperties::addGraphic(int count)
     // get index to use as parent when update tree depending on source
     graphic.name = graphicName;
 
-    i.name = "filePath";
+    i.name = "graphic";
     i.parIdx = parIdx;
     i.parentName = graphicName;
-    i.captionText = "File path";
-    i.tooltip = "Enter the file path for the graphic.";
+    i.captionText = "Graphic";
+    i.tooltip = "Select the graphic to use.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.key = "filePath";
+    i.key = "graphic";
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
+        graphic.graphic = setting->value("Embel/Graphics/" + i.value.toString()).toByteArray();
     }
-    else {
-        i.value = "";
-        setting->setValue(settingRootPath + i.key, i.value);
-    }
-    i.delegateType = DT_SelectFile;
+//    else {
+//        i.value = "";
+//        setting->setValue(settingRootPath + i.key, i.value);
+//    }
+    i.delegateType = DT_Combo;
     i.type = "string";
-    graphic.filePath = i.value.toString();
-    addItem(i);
+    graphic.name = i.value.toString();
+    i.dropList << graphicList;
+    graphicsObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
 
     i.name = "anchorObject";
     i.parIdx = parIdx;

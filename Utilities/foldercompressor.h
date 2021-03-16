@@ -4,12 +4,13 @@
 #include <QFile>
 #include <QObject>
 #include <QDir>
+#include <QDataStream>
 
 class FolderCompressor : public QObject
 {
     Q_OBJECT
 public:
-    explicit FolderCompressor(QObject *parent = 0);
+    explicit FolderCompressor(QObject *parent = nullptr);
 
     //A recursive function that scans all files inside the source folder
     //and serializes all files in a row of file names and compressed

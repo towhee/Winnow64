@@ -3029,6 +3029,12 @@ void MW::createActions()
     addAction(embelManageTilesAction);
     connect(embelManageTilesAction, &QAction::triggered, embelProperties, &EmbelProperties::manageTiles);
 
+    embelManageGraphicsAction = new QAction(tr("Manage graphics"), this);
+    embelManageGraphicsAction->setObjectName("embelManageGraphicsAct");
+    embelManageGraphicsAction->setShortcutVisibleInContextMenu(true);
+    addAction(embelManageGraphicsAction);
+    connect(embelManageGraphicsAction, &QAction::triggered, embelProperties, &EmbelProperties::manageGraphics);
+
     embelExportAction = new QAction(tr("Export"), this);
     embelExportAction->setObjectName("embelExportAct");
     embelExportAction->setShortcutVisibleInContextMenu(true);
@@ -3653,12 +3659,14 @@ void MW::createMenus()
     sortMenu->addAction(sortReverseAction);
 
     // Embellish Menu
+
     QMenu *embelMenu = new QMenu(this);
 //    embelMenu->setIcon(QIcon(":/images/icon16/lightning.png"));
     embelMenu->addAction(embelNewTemplateAction);
     embelMenu->addAction(embelExportAction);
 //    embelMenu->addAction(embelTileAction);
     embelMenu->addAction(embelManageTilesAction);
+    embelMenu->addAction(embelManageGraphicsAction);
     #ifdef Q_OS_WIN
     embelMenu->addAction(embelRevealWinnetsAction);
     #endif

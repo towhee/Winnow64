@@ -702,6 +702,7 @@ private:
     QAction *embelExportAction;
     QAction *embelTileAction;
     QAction *embelManageTilesAction;
+    QAction *embelManageGraphicsAction;
     QAction *embelRevealWinnetsAction;
     QActionGroup *embelGroupAction;
     QList<QAction *> embelTemplatesActions;

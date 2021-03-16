@@ -32,8 +32,10 @@ ManageGraphicsDlg::ManageGraphicsDlg(QSettings *setting, QWidget *parent) :
     // read list of graphics from QSettings
     this->setting = setting;
     setting->beginGroup("Embel/Graphics");
+    qDebug() << __FUNCTION__ << setting->allKeys();
     graphicsList << setting->allKeys();
     setting->endGroup();
+    qDebug() << __FUNCTION__ << graphicsList;
 
     // load combobox with list of graphics
     ui->graphicsBox->addItems(graphicsList);
@@ -91,10 +93,10 @@ void ManageGraphicsDlg::editingFinished()
 void ManageGraphicsDlg::textChange(QString text)
 {
 /*
-    Triggered when the graphicsBox text changes, either when a new item is selected or when the
-    text is edited. If it is a new item then the text in graphics and graphicsBox for the index will
-    be the same. If it is not then set a flag (textHasBeenEdited = false) and the slots
-    "activate" and "editingFinished" will ignore signals.
+    Triggered when the graphicsBox text changes, either when a new item is selected or when
+    the text is edited. If it is a new item then the text in graphics and graphicsBox for the
+    index will be the same. If it is not then set a flag (textHasBeenEdited = false) and the
+    slots "activate" and "editingFinished" will ignore signals.
 */
     // if extract new graphic then index may not have been built
     if (ui->graphicsBox->count() <= 0) return;
@@ -130,7 +132,8 @@ void ManageGraphicsDlg::activate(int index)
     Show pixmap when the graphicsBox selection changes.
 */
     // if trigged be textChange but the text is being edited then not a new graphic selection
-    if (textHasBeenEdited) return;
+qDebug() << __FUNCTION__ << "textHasBeenEdited =" << textHasBeenEdited;
+//    if (textHasBeenEdited) return;
     if (index >= graphicsList.size()) {
         qDebug() << __FUNCTION__
                  << "Invalidindex =" << index;
@@ -178,6 +181,9 @@ void ManageGraphicsDlg::on_deleteBtn_clicked()
     graphicsList.removeAt(index);
     setting->remove(sKey);
     ui->graphicsBox->removeItem(index);
+
+    index = ui->graphicsBox->currentIndex();
+    activate(index);
 }
 
 void ManageGraphicsDlg::on_closeBtn_clicked()
@@ -187,16 +193,26 @@ void ManageGraphicsDlg::on_closeBtn_clicked()
 
 void ManageGraphicsDlg::on_newBtn_clicked()
 {
-    QString path = QFileDialog::getOpenFileName(this, tr("Select graphic"), "/home");
+    /* In EmbelProperties get new graphic, add to settings and update all Grapices items.
+       Signal back to ManageGraphicsDlg::updateList()  */
+    emit getGraphic();
 
+//    updateList();
+}
 
+void ManageGraphicsDlg::updateList()
+{
     QString currentTile = ui->graphicsBox->currentText();
     graphicsList.clear();
+    int count = graphicsBoxModel->rowCount();
+    graphicsBoxModel->removeRows(0, count);
 
     // reread list of graphics from QSettings in case new graphics
     setting->beginGroup("Embel/Graphics");
     graphicsList << setting->allKeys();
     setting->endGroup();
+
+    qDebug() << __FUNCTION__ << graphicsList;
 
     ui->graphicsBox->clear();
     ui->graphicsBox->addItems(graphicsList);
