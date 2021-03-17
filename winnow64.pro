@@ -18,6 +18,7 @@ QT += xmlpatterns
 
 HEADERS += Cache/imagecache.h \
     Dialogs/managegraphicsdlg.h \
+    Dialogs/manageimagesdlg.h \
     Utilities/foldercompressor.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
@@ -116,6 +117,7 @@ HEADERS += Views/tableview.h
 
 SOURCES += Cache/imagecache.cpp \
     Dialogs/managegraphicsdlg.cpp \
+    Dialogs/manageimagesdlg.cpp \
     Utilities/foldercompressor.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
@@ -209,7 +211,8 @@ SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/managegraphicsdlg.ui
+    Dialogs/managegraphicsdlg.ui \
+    Dialogs/manageimagesdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/copystyledlg.ui

@@ -13,6 +13,7 @@
 #include "Dialogs/patterndlg.h"
 #include "Dialogs/managetilesdlg.h"
 #include "Dialogs/managegraphicsdlg.h"
+#include "Dialogs/manageimagesdlg.h"
 #include "ui_embelCoord.h"
 
 class EmbelProperties : public PropertyEditor
