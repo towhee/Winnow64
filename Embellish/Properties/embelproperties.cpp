@@ -1310,13 +1310,21 @@ void EmbelProperties::manageGraphics()
     Utilities::log(__FUNCTION__, "");
     #endif
     }
-    ManageGraphicsDlg manageGraphicsDlg(setting);
-    connect(&manageGraphicsDlg, &ManageGraphicsDlg::getGraphic,
-            this, &EmbelProperties::getGraphic);
-    connect(this, &EmbelProperties::updateGraphicsList,
-            &manageGraphicsDlg, &ManageGraphicsDlg::updateList);
+    ManageImagesDlg manageGraphicsDlg("Manage Embellish Graphics",
+                                      setting,
+                                      "Embel/Graphics");
     manageGraphicsDlg.exec();
-    updateGraphicList();
+
+    // Sync graphicList for all Graphics items
+//    updateGraphicList();
+
+//    ManageGraphicsDlg manageGraphicsDlg(setting);
+//    connect(&manageGraphicsDlg, &ManageGraphicsDlg::getGraphic,
+//            this, &EmbelProperties::getGraphic);
+//    connect(this, &EmbelProperties::updateGraphicsList,
+//            &manageGraphicsDlg, &ManageGraphicsDlg::updateList);
+//    manageGraphicsDlg.exec();
+//    updateGraphicList();
 }
 
 void EmbelProperties::getGraphic()

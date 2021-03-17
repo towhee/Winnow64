@@ -31,7 +31,7 @@ private slots:
 
 private:
     Ui::ManageGraphicsDlg *ui;
-    QStringListModel *graphicsBoxModel;
+//    QStringListModel *graphicsBoxModel;
     QStringList graphicsList;
     QSettings *setting;
     bool textHasBeenEdited;

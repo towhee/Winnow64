@@ -26,8 +26,8 @@ ManageGraphicsDlg::ManageGraphicsDlg(QSettings *setting, QWidget *parent) :
     setStyleSheet(G::css);
 
     // change ui->graphicsBox model to QStringList to facilitate debugging
-    graphicsBoxModel = new QStringListModel;
-    ui->graphicsBox->setModel(graphicsBoxModel);
+//    graphicsBoxModel = new QStringListModel;
+//    ui->graphicsBox->setModel(graphicsBoxModel);
 
     // read list of graphics from QSettings
     this->setting = setting;
@@ -68,7 +68,7 @@ void ManageGraphicsDlg::editingFinished()
     QString oldKey = graphicsList.at(textEditedIndex);
     QString newKey = ui->graphicsBox->lineEdit()->text();
     qDebug() << __FUNCTION__ << "graphicss   " << graphicsList;
-    qDebug() << __FUNCTION__ << "graphicsBox " << graphicsBoxModel->stringList();
+//    qDebug() << __FUNCTION__ << "graphicsBox " << graphicsBoxModel->stringList();
     qDebug() << __FUNCTION__
              << "oldKey =" << oldKey
              << "newKey =" << newKey
@@ -204,8 +204,8 @@ void ManageGraphicsDlg::updateList()
 {
     QString currentTile = ui->graphicsBox->currentText();
     graphicsList.clear();
-    int count = graphicsBoxModel->rowCount();
-    graphicsBoxModel->removeRows(0, count);
+//    int count = graphicsBoxModel->rowCount();
+//    graphicsBoxModel->removeRows(0, count);
 
     // reread list of graphics from QSettings in case new graphics
     setting->beginGroup("Embel/Graphics");
