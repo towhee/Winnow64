@@ -862,11 +862,15 @@ void Embel::updateGraphic(int i)
     else stu = ls;
     int dim = static_cast<int>(static_cast<double>(p->g[i].size) / 100 * stu);
 
-    gItems[i]->setPixmap(graphicPixmaps.at(i).scaled(QSize(dim, dim), Qt::KeepAspectRatio));
+    QPixmap pm;
+    pm.loadFromData(p->g[i].graphic);
+    gItems[i]->setPixmap(pm.scaled(QSize(dim, dim), Qt::KeepAspectRatio));
+//    gItems[i]->setPixmap(graphicPixmaps.at(i).scaled(QSize(dim, dim), Qt::KeepAspectRatio));
     // check if squished to zero height (to make line work in Zen2048 template - real fix is
     // to add shapes (oval, arc, rectangle, polygon and line)
     if (gItems[i]->pixmap().height() < 2) {
-        gItems[i]->setPixmap(graphicPixmaps.at(i).scaled(dim, 2));
+        gItems[i]->setPixmap(pm.scaled(dim, 2));
+//        gItems[i]->setPixmap(graphicPixmaps.at(i).scaled(dim, 2));
         /*
         gItems[i]->setPixmap(graphicPixmaps.at(i).scaledToWidth(dim));
         gItems[i]->setPixmap(graphicPixmaps.at(i).scaledToHeight(2));

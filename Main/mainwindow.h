@@ -190,6 +190,7 @@ public:
 //    int displayVerticalPixels;   // move to global
     bool checkIfUpdate = true;
     bool autoAdvance = false;
+    bool turnOffEmbellish = true;
     bool deleteWarning = true;
     bool isStartingWhileUpdating = true;
 

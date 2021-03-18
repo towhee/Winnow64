@@ -149,6 +149,7 @@ void EmbelProperties::initialize()
                           << ":/images/icon16/emboss_offset_ridge.png"
                           << ":/images/icon16/emboss_offset_trough.png"
                              ;
+    readGraphicsList();
     readTileList();
     readMetadataTemplateList();
     // EFFECTS
@@ -1212,7 +1213,7 @@ void EmbelProperties::extractTile()
     QPixmap tile;
     QString tileName;
     patternDlg = new PatternDlg(this, src);
-    connect(patternDlg, &PatternDlg::saveTile, this, &EmbelProperties::saveTile);
+//    connect(patternDlg, &PatternDlg::saveTile, this, &EmbelProperties::saveTile);
     patternDlg->exec();
 }
 
@@ -1254,6 +1255,22 @@ void EmbelProperties::readTileList()
     setting->endGroup();
 }
 
+void EmbelProperties::readGraphicsList()
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+#ifdef ISLOGGER
+        Utilities::log(__FUNCTION__, "");
+#endif
+    }
+    graphicList.clear();
+    setting->beginGroup("Embel/Graphics");
+    graphicList << setting->allKeys();
+    setting->endGroup();
+}
+
 void EmbelProperties::manageTiles()
 {
     {
@@ -1264,10 +1281,18 @@ void EmbelProperties::manageTiles()
     Utilities::log(__FUNCTION__, "");
     #endif
     }
-    ManageTilesDlg manageTilesDlg(setting);
-    connect(&manageTilesDlg, &ManageTilesDlg::extractTile, this, &EmbelProperties::extractTile);
-    manageTilesDlg.exec();
+    ManageImagesDlg manageGraphicsDlg("Manage Embellish Tiles",
+                                      setting,
+                                      "Embel/Tiles");
+    manageGraphicsDlg.exec();
     updateTileList();
+
+    // Sync graphicList for all Graphics items
+//    updateGraphicList();
+//    ManageTilesDlg manageTilesDlg(setting);
+//    connect(&manageTilesDlg, &ManageTilesDlg::extractTile, this, &EmbelProperties::extractTile);
+//    manageTilesDlg.exec();
+//    updateTileList();
 }
 
 
@@ -1316,7 +1341,7 @@ void EmbelProperties::manageGraphics()
     manageGraphicsDlg.exec();
 
     // Sync graphicList for all Graphics items
-//    updateGraphicList();
+    updateGraphicList();
 
 //    ManageGraphicsDlg manageGraphicsDlg(setting);
 //    connect(&manageGraphicsDlg, &ManageGraphicsDlg::getGraphic,
@@ -6149,7 +6174,10 @@ void EmbelProperties::addBorder(int count, QString borderName)
     i.parIdx = parIdx;
     i.parentName = borderName;
     i.captionText = "Tile";
-    i.tooltip = "Select a tile that will be used to fill the border area.";
+    i.tooltip = "Select a tile that will be used to fill the border area.\n"
+                "Use the menu option 'Manage Tiles' to create, delete and\n"
+                "rename tiles."
+                ;
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -6775,7 +6803,9 @@ void EmbelProperties::addGraphic(int count)
     i.parIdx = parIdx;
     i.parentName = graphicName;
     i.captionText = "Graphic";
-    i.tooltip = "Select the graphic to use.";
+    i.tooltip = "Select the graphic to use.\n"
+                "Use the menu option 'Manage Graphics' to create, delete and\n"
+                "rename graphics.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;

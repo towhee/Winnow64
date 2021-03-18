@@ -43,16 +43,18 @@ class PatternDlg : public QDialog
 
 public:
     explicit PatternDlg(QWidget *parent, QPixmap &pm);
-    ~PatternDlg();
+    ~PatternDlg() override;
     QPixmap tile;
+    void save();
+
+public slots:
 
 private slots:
     void updateMsg(QString txt);
-    void save();
     void quit();
 
 signals:
-    void saveTile(QString name, QPixmap *tile);
+    void saveTile(QPixmap *tile);
 
 private:
     QPixmap pm;

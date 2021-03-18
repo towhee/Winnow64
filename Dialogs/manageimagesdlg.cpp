@@ -50,11 +50,7 @@ ManageImagesDlg::ManageImagesDlg(QString title,
         QByteArray ba = setting->value(key).toByteArray();
         QPixmap pm;
         pm.loadFromData(ba);
-//        QPixmap pm80 = pm.scaledToHeight(ht);
-        QIcon icon(pm.scaledToWidth(ht));
-//        qDebug() << __FUNCTION__
-//                 << "pm80 height =" << pm80.height()
-//                 << "icon size =" << icon.actualSize(QSize(80,80));
+        QIcon icon(pm/*.scaledToWidth(ht)*/);
         QTableWidgetItem *item = new QTableWidgetItem();
         item->setIcon(icon);
         item->setText(imageList.at(row));
@@ -71,34 +67,19 @@ ManageImagesDlg::~ManageImagesDlg()
 void ManageImagesDlg::extractTile(QPixmap &src)
 {
     PatternDlg patternDlg(this, src);
+
 }
 
-void ManageImagesDlg::on_newBtn_clicked()
+void ManageImagesDlg::save(QPixmap *pm)
 {
-    QString fPath = QFileDialog::getOpenFileName(this, tr("Select an image"), "/home");
-    QFile file(fPath);
-    if (!file.exists()) return;
-    if (file.isOpen()) {
-        QString msg = "Whoops.  The file is already open in another process.  \n"
-                      "Close the file and try again.  Press ESC to continue.";
-        G::popUp->showPopup(msg, 0);
-        return;
-    }
-    QPixmap src(fPath);
-
-    // Graphics
-    if (settingPath == "Embel/Tiles") {
-
-    }
-
     // Assign a unique name to the image and save in QSettings
     QFileInfo info(fPath);
     QString name = info.baseName();
     QByteArray graphicBa;
     QBuffer buffer(&graphicBa);
     buffer.open(QIODevice::WriteOnly);
-    src.save(&buffer, "PNG");
-    setting->beginGroup("Embel/Graphics");
+    pm->save(&buffer, "PNG");
+    setting->beginGroup(settingPath);
         QStringList list = setting->allKeys();
         Utilities::uniqueInList(name, list);
         qDebug() << __FUNCTION__ << "Name to use =" << name;
@@ -106,7 +87,7 @@ void ManageImagesDlg::on_newBtn_clicked()
     setting->endGroup();
 
     // add to imageTable
-    QIcon icon(src.scaledToWidth(ht));
+    QIcon icon(pm->scaledToWidth(ht));
     QTableWidgetItem *item = new QTableWidgetItem();
     item->setIcon(icon);
     item->setText(name);
@@ -122,13 +103,37 @@ void ManageImagesDlg::on_newBtn_clicked()
     ui->imageTable->sortItems(0);
 }
 
+void ManageImagesDlg::on_newBtn_clicked()
+{
+    fPath = QFileDialog::getOpenFileName(this, tr("Select an image"), "/home");
+    QFile file(fPath);
+    if (!file.exists()) return;
+    if (file.isOpen()) {
+        QString msg = "Whoops.  The file is already open in another process.  \n"
+                      "Close the file and try again.  Press ESC to continue.";
+        G::popUp->showPopup(msg, 0);
+        return;
+    }
+    QPixmap src(fPath);
+
+    // If a tile
+    if (settingPath == "Embel/Tiles") {
+        PatternDlg *patternDlg = new PatternDlg(this, src);
+        connect(patternDlg, &PatternDlg::saveTile, this, &ManageImagesDlg::save);
+        patternDlg->exec();
+    }
+    else save(&src);
+}
+
 void ManageImagesDlg::on_deleteBtn_clicked()
 {
     qDebug() << __FUNCTION__ << ui->imageTable->selectedItems();
-    for (int i = 0; i < ui->imageTable->selectedItems().length(); ++i) {
-        QString name = ui->imageTable->selectedItems().at(i)->text();
+    QList<QTableWidgetItem *> toDeleteList;
+    toDeleteList << ui->imageTable->selectedItems();
+    for (int i = 0; i < toDeleteList.length(); ++i) {
+        QString name = toDeleteList.at(i)->text();
         QString sKey = settingPath + "/" + name;
-        int row = ui->imageTable->selectedItems().at(i)->row();
+        int row = toDeleteList.at(i)->row();
         qDebug() << __FUNCTION__ << i
                  << name
                  << row

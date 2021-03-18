@@ -16,20 +16,22 @@ class ManageImagesDlg : public QDialog
 public:
     explicit ManageImagesDlg(QString title, QSettings *setting, QString settingPath,
                              QWidget *parent = nullptr);
-    ~ManageImagesDlg();
+    ~ManageImagesDlg() override;
+
+public slots:
+    void save(QPixmap *src);
 
 private slots:
     void on_newBtn_clicked();
-
     void on_deleteBtn_clicked();
-
     void on_doneBtn_clicked();
 
 private:
+    void extractTile(QPixmap &src);
     Ui::ManageImagesDlg *ui;
     QSettings *setting;
     QString settingPath;
-    void extractTile(QPixmap &src);
+    QString fPath;
     int ht;
 };
 

@@ -255,10 +255,11 @@ void PatternDlg::updateMsg(QString txt)
 
 void PatternDlg::save()
 {
-    qDebug() << __FUNCTION__ << "tile.size() =" << tile.size();
-    QStringList doNotUse;
-    QString name = Utilities::inputText("Save tile", "Enter tile name", doNotUse);
-    emit saveTile(name, &tile);
+//    qDebug() << __FUNCTION__ << "tile.size() =" << tile.size();
+//    QStringList doNotUse;
+//    QString name = Utilities::inputText("Save tile", "Enter tile name", doNotUse);
+    emit saveTile(&tile);
+//    emit saveTile(name, &tile);
 }
 
 void PatternDlg::quit()
