@@ -1132,6 +1132,9 @@ void MW::folderSelectionChange()
     setWindowTitle(winnowWithVersion);
 //    G::track(__FUNCTION__, "0");
 
+    // do not embellish
+    if (turnOffEmbellish)  embelProperties->invokeFromAction(embelTemplatesActions.at(0));
+
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
     qApp->processEvents();
 
@@ -8080,6 +8083,7 @@ re-established when the application is re-opened.
     setting->setValue("sortColumn", sortColumn);
     setting->setValue("sortReverse", sortReverseAction->isChecked());
     setting->setValue("autoAdvance", autoAdvance);
+    setting->setValue("turnOffEmbellish", turnOffEmbellish);
     setting->setValue("deleteWarning", deleteWarning);
     setting->setValue("isLogger", G::isLogger);
 
@@ -8462,6 +8466,7 @@ Preferences are located in the prefdlg class and updated here.
     sortColumn = setting->value("sortColumn").toInt();
     sortReverse = setting->value("sortReverse").toBool();
     autoAdvance = setting->value("autoAdvance").toBool();
+    turnOffEmbellish = setting->value("turnOffEmbellish").toBool();
     G::isLogger = setting->value("isLogger").toBool();
     if (setting->contains("deleteWarning"))
         deleteWarning = setting->value("deleteWarning").toBool();

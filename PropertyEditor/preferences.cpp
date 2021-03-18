@@ -199,6 +199,10 @@ itemChange, which is subclassed here.
         mw->autoAdvance = v.toBool();
     }
 
+    if (source == "turnOffEmbellish") {
+        mw->turnOffEmbellish = v.toBool();
+    }
+
     if (source == "deleteWarning") {
         mw->deleteWarning = v.toBool();
     }
@@ -372,6 +376,19 @@ void Preferences::addItems()
     i.captionIsEditable = false;
     i.value = mw->autoAdvance;
     i.key = "autoAdvance";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Do not Embellish when folder change
+    i.name = "turnOffEmbellish";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Turn off embellish when change folder";
+    i.tooltip = "Turn off embellishwhen change folder.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->turnOffEmbellish;
+    i.key = "turnOffEmbellish";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

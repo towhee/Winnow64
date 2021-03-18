@@ -157,6 +157,7 @@ private:
     void sortTemplateList();
     void readTemplateList();
     void readTileList();
+    void readGraphicsList();
     void updateTileList();
     void updateGraphicList();
     void readTile(QStringList tileName);
