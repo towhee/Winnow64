@@ -251,13 +251,13 @@ void EmbelProperties::initialize()
     addAction(copyTemplateAction);
     connect(copyTemplateAction, &QAction::triggered, this, &EmbelProperties::copyTemplate);
 
-    exportTemplateAction = new QAction(tr("Export"), this);
-    addAction(exportTemplateAction);
-    connect(exportTemplateAction, &QAction::triggered, this, &EmbelProperties::exportTemplate);
+    saveTemplateToFileAction = new QAction(tr("Save template to file"), this);
+    addAction(saveTemplateToFileAction);
+    connect(saveTemplateToFileAction, &QAction::triggered, this, &EmbelProperties::saveTemplateToFile);
 
-    importTemplateAction = new QAction(tr("Import"), this);
-    addAction(importTemplateAction);
-    connect(importTemplateAction, &QAction::triggered, this, &EmbelProperties::importTemplate);
+    readTemplateFromFileAction = new QAction(tr("Read template from file"), this);
+    addAction(readTemplateFromFileAction);
+    connect(readTemplateFromFileAction, &QAction::triggered, this, &EmbelProperties::readTemplateFromFile);
 
     copyStyleAction = new QAction(tr("Copy"), this);
     addAction(copyStyleAction);
@@ -1019,6 +1019,53 @@ QString EmbelProperties::uniqueTemplateName(QString name)
     return newName;
 }
 
+QString EmbelProperties::uniqueTileName(QString name)
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+#ifdef ISLOGGER
+        Utilities::log(__FUNCTION__, "");
+#endif
+    }
+    setting->beginGroup("Embel/Tiles");
+    QStringList keys = setting->childKeys();
+    setting->endGroup();
+    qDebug() << __FUNCTION__ << name << keys;
+    bool nameExists = true;
+    QString newName = name;
+    int count = 0;
+    while (nameExists) {
+        if (keys.contains(newName)) newName = name + "_" + QString::number(++count);
+        else nameExists = false;
+    }
+    return newName;
+}
+
+QString EmbelProperties::uniqueGraphicName(QString name)
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+#ifdef ISLOGGER
+        Utilities::log(__FUNCTION__, "");
+#endif
+    }
+    setting->beginGroup("Embel/Graphics");
+    QStringList keys = setting->childKeys();
+    setting->endGroup();
+    bool nameExists = true;
+    QString newName = name;
+    int count = 0;
+    while (nameExists) {
+        if (keys.contains(newName)) newName = name + "_" + QString::number(++count);
+        else nameExists = false;
+    }
+    return newName;
+}
+
 void EmbelProperties::copyStyle()
 {
     {
@@ -1074,7 +1121,7 @@ void EmbelProperties::copyTemplate()
     templateListEditor->setValue(templateName);
 }
 
-bool EmbelProperties::exportTemplate()
+bool EmbelProperties::saveTemplateToFile()
 {
 /*
     Save template to a file.
@@ -1110,8 +1157,10 @@ bool EmbelProperties::exportTemplate()
          "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     QString dPath = locPath + "/" + templateName;
     // rename folder (named as template name) does not exist
-    Utilities::uniqueFolder(dPath);
-    QDir dir(dPath);
+    Utilities::uniqueFolderPath(dPath);
+    QDir dir;
+    dir.mkdir(dPath);
+    dir.setPath(dPath);
 
     // create a file for the json encoded template settings
     QString fName = dPath + "/" + templateName + ".template";
@@ -1123,6 +1172,7 @@ bool EmbelProperties::exportTemplate()
 
     // write json to file
     file.write(QJsonDocument(keysJson).toJson());
+    file.close();
 
     // copy tiles (if any)
     for (int i = 0; i < model->rowCount(bordersIdx); ++i) {
@@ -1138,11 +1188,29 @@ bool EmbelProperties::exportTemplate()
     }
 
     // copy graphics (if any)
+    for (int i = 0; i < model->rowCount(graphicsIdx); ++i) {
+        QModelIndex gIdx = model->index(i, 0, graphicsIdx);
+        QString graphicName = getItemValue("graphic", gIdx).toString();
+        qDebug() << __FUNCTION__ << "graphicName =" << graphicName;
+        QFile file(dPath + "/" + graphicName + ".graphic");
+        if (graphicName != "Do not tile" && !file.exists()) {
+            QSaveFile f(dPath + "/" + graphicName + ".graphic");
+            f.open(QIODevice::WriteOnly);
+            f.write(g[i].graphic);
+            f.commit();
+        }
+    }
+
+    // compress into one binary file
+    QString compressed = dPath + ".embeltemplate";
+    FolderCompressor fc;
+    fc.compressFolder(dPath, compressed);
+    dir.removeRecursively();
 
     return true;
 }
 
-bool EmbelProperties::importTemplate()
+bool EmbelProperties::readTemplateFromFile()
 {
 /*
 
@@ -1152,8 +1220,84 @@ bool EmbelProperties::importTemplate()
     G::track(__FUNCTION__);
     #endif
     }
-    QString fPath = QFileDialog::getOpenFileName(this, tr("Select template"),
-                                                 "/home", "*.template");
+    // select compressed temple file
+    QString srcPath = QFileDialog::getOpenFileName(this, tr("Select template"),
+                                                 "/home", "*.embeltemplate");
+    QFileInfo srcInfo(srcPath);
+    // get template name (make sure it is unique)
+    QString srcTemplateName = srcInfo.baseName();
+    QString tName = uniqueTemplateName(srcTemplateName);
+    bool dupTemplateName = srcTemplateName != tName;
+    QString dstPath = srcInfo.absolutePath() + "/" + tName;
+    qDebug() << __FUNCTION__ << dstPath;
+    Utilities::uniqueFolderPath(dstPath);
+    qDebug() << __FUNCTION__ << dstPath;
+    FolderCompressor fc;
+    // decompress template file into folder named after template name
+    fc.decompressFolder(srcPath, dstPath);
+
+    // read json template file
+    QString tPath = dstPath + "/" + srcTemplateName + ".template";
+    qDebug() << __FUNCTION__ << tPath;
+    QFile tFile(tPath);
+    if (!tFile.open(QIODevice::ReadOnly)) {
+        qDebug() << __FUNCTION__ << "Could not open template file.";
+        qWarning("Couldn't open template file.");
+        return false;
+    }
+    QByteArray ba = tFile.readAll();
+
+    // rename template in template json file if already exists in embellish
+    if (dupTemplateName) {
+        QString a = "Templates/" + srcTemplateName;
+        QString b = "Templates/" + tName;
+        qDebug() << __FUNCTION__ << a << b;
+        ba.replace(a.toUtf8(), b.toUtf8());
+//        qDebug() << __FUNCTION__ << QString(ba);
+    }
+
+    // Prep for reading tiles and graphics
+    QDir dir(dstPath + "/");
+    QStringList fileFilters;
+
+    // checking if tile files already exist in embellish
+    fileFilters << "*.tile";
+    dir.setNameFilters(fileFilters);
+    dir.setFilter(QDir::Files);
+    for (int i = 0; i < dir.entryInfoList().length(); ++i) {
+        QString name = dir.entryInfoList().at(i).baseName();
+        QString uniqueName = uniqueTileName(name);
+        qDebug() << __FUNCTION__ << "tile name:" << name << uniqueName;
+        if (name != uniqueName) {
+            QFile f(dir.entryInfoList().at(i).filePath());
+            qDebug() << __FUNCTION__ << "f.fileName() =" << f.fileName();
+            f.rename(dstPath + "/" + uniqueName + ".tile");
+            QString a = "/tile\": \"" + name;
+            QString b = "/tile\": \"" + uniqueName;
+            ba.replace(a.toUtf8(), b.toUtf8());
+        }
+    }
+
+    // checking if graphic files already exist in embellish
+    fileFilters.clear();
+    fileFilters << "*.graphic";
+    dir.setNameFilters(fileFilters);
+    dir.setFilter(QDir::Files);
+    for (int i = 0; i < dir.entryInfoList().length(); ++i) {
+        QString name = dir.entryInfoList().at(i).baseName();
+        QString uniqueName = uniqueGraphicName(name);
+        qDebug() << __FUNCTION__ << "graphic name:" << name << uniqueName;
+        if (name != uniqueName) {
+            QFile f(dir.entryInfoList().at(i).filePath());
+            f.rename(dstPath + "/" + uniqueName + ".graphic");
+            QString a = "/graphic\": \"" + name;
+            QString b = "/graphic\": \"" + uniqueName;
+            ba.replace(a.toUtf8(), b.toUtf8());
+        }
+    }
+
+/*
+    QString fPath;
     QFile file(fPath);
     if (!file.open(QIODevice::ReadOnly)) {
             qWarning("Couldn't open save file.");
@@ -1186,56 +1330,9 @@ bool EmbelProperties::importTemplate()
 
     // new Template
     newTemplateFromImport(uniqueName);
+    */
 
     return true;
-}
-
-void EmbelProperties::extractTile()
-{
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
-    QString fPath = QFileDialog::getOpenFileName(this, tr("Select image containing tile pattern"), "/home");
-    QFile file(fPath);
-    if (!file.exists()) return;
-    if (file.isOpen()) {
-        QString msg = "Whoops.  The file is already open in another process.  \n"
-                      "Close the file and try again.  Press ESC to continue.";
-        G::popUp->showPopup(msg, 0);
-        return;
-    }
-    QPixmap src(fPath);
-    QPixmap tile;
-    QString tileName;
-    patternDlg = new PatternDlg(this, src);
-//    connect(patternDlg, &PatternDlg::saveTile, this, &EmbelProperties::saveTile);
-    patternDlg->exec();
-}
-
-void EmbelProperties::saveTile(QString name, QPixmap *tile)
-{
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    qDebug() << __FUNCTION__ << tile->size();
-    if (tile->size() == QSize(0,0)) {
-        qDebug() << __FUNCTION__ << "No tile!!";
-        return;
-    }
-
-    QByteArray tileBa;
-    QBuffer buffer(&tileBa);
-    buffer.open(QIODevice::WriteOnly);
-    tile->save(&buffer, "PNG");
-    setting->beginGroup("Embel/Tiles");
-    setting->setValue(name, tileBa);
-    setting->endGroup();
-    updateTileList();
 }
 
 void EmbelProperties::readTileList()
@@ -1281,22 +1378,14 @@ void EmbelProperties::manageTiles()
     Utilities::log(__FUNCTION__, "");
     #endif
     }
-    ManageImagesDlg manageGraphicsDlg("Manage Embellish Tiles",
-                                      setting,
-                                      "Embel/Tiles");
-    manageGraphicsDlg.exec();
+    ManageImagesDlg dlg("Manage Embellish Tiles", setting, "Embel/Tiles");
+    connect(&dlg, &ManageImagesDlg::itemRenamed, this, &EmbelProperties::updateTileList);
+    dlg.exec();
     updateTileList();
-
-    // Sync graphicList for all Graphics items
-//    updateGraphicList();
-//    ManageTilesDlg manageTilesDlg(setting);
-//    connect(&manageTilesDlg, &ManageTilesDlg::extractTile, this, &EmbelProperties::extractTile);
-//    manageTilesDlg.exec();
-//    updateTileList();
 }
 
 
-void EmbelProperties::updateTileList()
+void EmbelProperties::updateTileList(QString oldName, QString newName)
 {
     {
     #ifdef ISDEBUG
@@ -1316,6 +1405,7 @@ void EmbelProperties::updateTileList()
     // update tileList in each border
     for (int i = 0; i < b.size(); ++i) {
         QString oldTileName = borderTileObjectEditor.at(i)->value();
+        if (oldTileName == oldName) oldTileName = newName;
         borderTileObjectEditor.at(i)->refresh(tileList);
         // refreshing anchorObjectList removes old value for the text - reassign anchor object
         if (tileList.contains(oldTileName))
@@ -1335,83 +1425,13 @@ void EmbelProperties::manageGraphics()
     Utilities::log(__FUNCTION__, "");
     #endif
     }
-    ManageImagesDlg manageGraphicsDlg("Manage Embellish Graphics",
-                                      setting,
-                                      "Embel/Graphics");
-    manageGraphicsDlg.exec();
-
-    // Sync graphicList for all Graphics items
-    updateGraphicList();
-
-//    ManageGraphicsDlg manageGraphicsDlg(setting);
-//    connect(&manageGraphicsDlg, &ManageGraphicsDlg::getGraphic,
-//            this, &EmbelProperties::getGraphic);
-//    connect(this, &EmbelProperties::updateGraphicsList,
-//            &manageGraphicsDlg, &ManageGraphicsDlg::updateList);
-//    manageGraphicsDlg.exec();
-//    updateGraphicList();
+    ManageImagesDlg dlg("Manage Embellish Graphics", setting, "Embel/Graphics");
+    connect(&dlg, &ManageImagesDlg::itemRenamed, this, &EmbelProperties::updateGraphicList);
+    dlg.exec();
+    updateGraphicsList();
 }
 
-void EmbelProperties::getGraphic()
-{
-/*
-    Signaled from ManageGraphicsDlg
-
-    Load an image the user chooses as a QPixmap, convert it to a QByteArray, make sure the name
-    is unique in the QSettings Embel/Graphics items, add to QByteArray to settings and finally,
-    update graphicList.
-
-    Signal back to ManageGraphicsDlg to sync graphics list.
-*/
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
-    // Get an image
-    QString fPath = QFileDialog::getOpenFileName(this, tr("Select graphic"), "/home",
-                                                "Images (*.png *.tif *.jpg)");
-    QFile file(fPath);
-    if (!file.exists()) return;
-    if (file.isOpen()) {
-        QString msg = "Whoops.  The file is already open in another process.  \n"
-                      "Close the file and try again.  Press ESC to continue.";
-        G::popUp->showPopup(msg, 0);
-        return;
-    }
-    QPixmap graphic(fPath);
-    if (graphic.isNull()) {
-        QString msg = "Whoops.  Unable to process image file.\n"
-                      "Press ESC to continue.";
-        G::popUp->showPopup(msg, 0);
-        return;
-    }
-
-    // Assign a unique name to the graphic
-    QFileInfo info(fPath);
-    QString name = info.baseName();
-    QByteArray graphicBa;
-    QBuffer buffer(&graphicBa);
-    buffer.open(QIODevice::WriteOnly);
-    graphic.save(&buffer, "PNG");
-    setting->beginGroup("Embel/Graphics");
-        QStringList list = setting->allKeys();
-        Utilities::uniqueInList(name, list);
-        qDebug() << __FUNCTION__ << "Name to use =" << name;
-        setting->setValue(name, graphicBa);
-    setting->endGroup();
-
-    // Sync graphicList for all Graphics items
-    updateGraphicList();
-
-    // Sync ManageGraphicsDlg
-    emit updateGraphicsList();
-}
-
-void EmbelProperties::updateGraphicList()
+void EmbelProperties::updateGraphicList(QString oldName, QString newName)
 {
     graphicList.clear();
     setting->beginGroup("Embel/Graphics");
@@ -1422,12 +1442,11 @@ void EmbelProperties::updateGraphicList()
     // update graphicList in each graphic item
     for (int i = 0; i < g.size(); ++i) {
         QString oldGraphicName = graphicsObjectEditor.at(i)->value();
+        if (oldGraphicName == oldName) oldGraphicName = newName;
         graphicsObjectEditor.at(i)->refresh(graphicList);
         // refreshing anchorObjectList removes old value for the text - reassign anchor object
         if (graphicList.contains(oldGraphicName))
             graphicsObjectEditor.at(i)->setValue(oldGraphicName);
-//        else
-//            graphicsObjectEditor.at(i)->setValue("Do not tile");
     }
 }
 
@@ -5698,8 +5717,8 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::RightButton) {
         renameAction->setVisible(false);
         copyTemplateAction->setVisible(false);
-        importTemplateAction->setVisible(false);
-        exportTemplateAction->setVisible(false);
+        readTemplateFromFileAction->setVisible(false);
+        saveTemplateToFileAction->setVisible(false);
         copyStyleAction->setVisible(false);
         tokenEditorAction->setVisible(false);
         manageTilesAction->setVisible(false);
@@ -5719,8 +5738,8 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
         if (currentIdx.parent() == templateIdx || currentIdx == templateIdx) {
             renameAction->setVisible(true);
             copyTemplateAction->setVisible(true);
-            importTemplateAction->setVisible(true);
-            exportTemplateAction->setVisible(true);
+            readTemplateFromFileAction->setVisible(true);
+            saveTemplateToFileAction->setVisible(true);
         }
 
         if (currentIdx.parent() == stylesIdx) {
@@ -6810,8 +6829,10 @@ void EmbelProperties::addGraphic(int count)
     i.hasValue = true;
     i.captionIsEditable = false;
     i.key = "graphic";
+    i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
+//        qDebug() << __FUNCTION__ << i.value;
         graphic.graphic = setting->value("Embel/Graphics/" + i.value.toString()).toByteArray();
     }
 //    else {

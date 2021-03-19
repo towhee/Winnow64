@@ -6,6 +6,7 @@
 #include "Datamodel/datamodel.h"
 #include "Utilities/utilities.h"
 #include "Utilities/htmlwindow.h"
+#include "Utilities/foldercompressor.h"
 #include "PropertyEditor/propertyeditor.h"
 #include "Effects/graphicseffect.h"
 #include "Views/infostring.h"
@@ -124,11 +125,11 @@ public:
 public slots:
     void itemChange(QModelIndex idx) override;
 //    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
-    void extractTile();
-    void saveTile(QString name, QPixmap *tile);
+//    void extractTile();
+//    void saveTile(QString name, QPixmap *tile);
     void manageTiles();
     void manageGraphics();
-    void getGraphic();
+//    void getGraphic();
     void invokeFromAction(QAction *embelAction);
     void setCurrentTemplate(QString name);
 //    void diagnosticModel(QModelIndex parent = QModelIndex());
@@ -158,17 +159,19 @@ private:
     void readTemplateList();
     void readTileList();
     void readGraphicsList();
-    void updateTileList();
-    void updateGraphicList();
+    void updateTileList(QString oldName = "", QString newName = "");
+    void updateGraphicList(QString oldName = "", QString newName = "");
     void readTile(QStringList tileName);
     void readMetadataTemplateList();
     void renameCurrentStyle();
     void renameCurrentTemplate();
     void copyStyle();
     void copyTemplate();
-    bool exportTemplate();
-    bool importTemplate();
+    bool saveTemplateToFile();
+    bool readTemplateFromFile();
     QString uniqueTemplateName(QString name);
+    QString uniqueTileName(QString name);
+    QString uniqueGraphicName(QString name);
     void syncWinnets();
 
     void addTemplateHeader();
@@ -284,8 +287,8 @@ private:
     QAction *soloAction;
     QAction *expandRecursivelyAction;
     QAction *renameAction;
-    QAction *importTemplateAction;
-    QAction *exportTemplateAction;
+    QAction *readTemplateFromFileAction;
+    QAction *saveTemplateToFileAction;
     QAction *copyTemplateAction;
     QAction *copyStyleAction;
     QAction *tokenEditorAction;

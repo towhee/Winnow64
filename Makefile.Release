@@ -2368,6 +2368,21 @@ release\moc_manageimagesdlg.cpp: Dialogs\manageimagesdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h \
+		Dialogs\patterndlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
+		Main\global.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QColor \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QModelIndexList \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QElapsedTimer \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMutex \
+		Utilities\popup.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QProgressBar \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
+		Utilities\utilities.h \
+		Utilities\inputdlg.h \
 		release\moc_predefs.h \
 		C:\Qt\5.15.2\msvc2019_64\bin\moc.exe
 	C:\Qt\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/moc_predefs.h" -IC:/Qt/5.15.2/msvc2019_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.15.2/msvc2019_64/include -IC:/Qt/5.15.2/msvc2019_64/include/QtWidgets -IC:/Qt/5.15.2/msvc2019_64/include/QtGui -IC:/Qt/5.15.2/msvc2019_64/include/QtANGLE -IC:/Qt/5.15.2/msvc2019_64/include/QtConcurrent -IC:/Qt/5.15.2/msvc2019_64/include/QtXmlPatterns -IC:/Qt/5.15.2/msvc2019_64/include/QtNetwork -IC:/Qt/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Dialogs\manageimagesdlg.h -o release\moc_manageimagesdlg.cpp
@@ -36681,7 +36696,30 @@ release\manageimagesdlg.obj: Dialogs\manageimagesdlg.cpp Dialogs\manageimagesdlg
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h \
-		UI\ui_manageimagesdlg.h
+		Dialogs\patterndlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
+		Main\global.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QColor \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QModelIndexList \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QElapsedTimer \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMutex \
+		Utilities\popup.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QProgressBar \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
+		Utilities\utilities.h \
+		Utilities\inputdlg.h \
+		UI\ui_manageimagesdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTableWidget \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\manageimagesdlg.obj Dialogs\manageimagesdlg.cpp
 
 release\foldercompressor.obj: Utilities\foldercompressor.cpp Utilities\FolderCompressor.h \

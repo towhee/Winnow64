@@ -34,7 +34,7 @@ void Utilities::uniqueInList(QString &name, const QStringList &list, QString del
         } while (list.contains(name));
 }
 
-void Utilities::uniqueFolder(QString &path, QString delimiter)
+void Utilities::uniqueFolderPath(QString &path, QString delimiter)
 {
 /*
     Checks to see if the folder pointed to by path exists.  If so, the delimiter and a
@@ -50,6 +50,7 @@ void Utilities::uniqueFolder(QString &path, QString delimiter)
     }
     int count = 0;
     bool folderAlreadyExists = true;
+    if (path.right(1) != "/") path += "/";
     QFileInfo info(path);
     QString folderPath = info.dir().absolutePath();
     do {
@@ -61,7 +62,7 @@ void Utilities::uniqueFolder(QString &path, QString delimiter)
     } while (folderAlreadyExists);
 }
 
-void Utilities::uniqueFile(QString &path, QString delimiter)
+void Utilities::uniqueFilePath(QString &path, QString delimiter)
 {
 /*
     Checks to see if the file pointed to by path exists.  If so, the delimiter and a

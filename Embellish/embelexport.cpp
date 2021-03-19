@@ -263,7 +263,7 @@ void EmbelExport::exportImage(const QString &fPath)
     QString exportPath = exportFolder + "/" + baseName + "." + extension;
 
     // Check if destination image file already exists
-    if (!embelProperties->overwriteFiles) Utilities::uniqueFile(exportPath);
+    if (!embelProperties->overwriteFiles) Utilities::uniqueFilePath(exportPath);
 
     // read the image, add it to the graphics scene and embellish
     if (loadImage(fPath)) {

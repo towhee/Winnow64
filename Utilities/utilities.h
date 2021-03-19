@@ -10,8 +10,8 @@ class Utilities
 {
 public:
     static QSize fitScreen(QSize preferred);
-    static void uniqueFolder(QString &path, QString delimiter = "_");
-    static void uniqueFile(QString &path, QString delimiter = "_");
+    static void uniqueFolderPath(QString &path, QString delimiter = "_");
+    static void uniqueFilePath(QString &path, QString delimiter = "_");
     static void uniqueInList(QString &name, const QStringList &list, QString delimiter = "_");
     static QString inputText(QString title, QString description,
                              QStringList doNotUse, QString input = "");

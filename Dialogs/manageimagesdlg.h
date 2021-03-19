@@ -18,10 +18,15 @@ public:
                              QWidget *parent = nullptr);
     ~ManageImagesDlg() override;
 
+signals:
+    void itemRenamed(QString oldName, QString newName);
+
 public slots:
     void save(QPixmap *src);
 
 private slots:
+    void itemDoubleClicked(QTableWidgetItem *item);
+    void itemChanged(QTableWidgetItem *item);
     void on_newBtn_clicked();
     void on_deleteBtn_clicked();
     void on_doneBtn_clicked();
@@ -33,6 +38,8 @@ private:
     QString settingPath;
     QString fPath;
     int ht;
+    bool isInitializing = true;
+    QString prevName;
 };
 
 #endif // MANAGEIMAGESDLG_H
