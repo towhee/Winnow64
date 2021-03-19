@@ -32,6 +32,14 @@ PatternDlgView::PatternDlgView(QPixmap &pm, QPixmap &tile, QWidget * /*parent*/)
     imageRect->show();
 }
 
+void PatternDlgView::hideSelection()
+/*
+   Used by PatternDlg to hide selection after a save operation.
+*/
+{
+    rubberBand->hide();
+}
+
 void PatternDlgView::mousePressEvent(QMouseEvent *event)
 {
     setCursor(Qt::CrossCursor);
@@ -255,11 +263,22 @@ void PatternDlg::updateMsg(QString txt)
 
 void PatternDlg::save()
 {
-//    qDebug() << __FUNCTION__ << "tile.size() =" << tile.size();
-//    QStringList doNotUse;
-//    QString name = Utilities::inputText("Save tile", "Enter tile name", doNotUse);
+    // confirm a pixmap has been selected
+    if (tile.isNull()) {
+        QString msg = "A selection from the source image must be made prior to saving.";
+        G::popUp->showPopup(msg, 2000);
+        return;
+    }
+
+    // signal ManageImagesDlg::save(QPixmap *pm)
     emit saveTile(&tile);
-//    emit saveTile(name, &tile);
+
+    // reset tile
+    QPixmap pm;     // null pixmap
+    tile = pm;
+
+    // hide selection
+    v->hideSelection();
 }
 
 void PatternDlg::quit()

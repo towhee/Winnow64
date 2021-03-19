@@ -13,6 +13,7 @@ class PatternDlgView : public QGraphicsView
 public:
     PatternDlgView(QPixmap &pm, QPixmap &tile, QWidget *parent = nullptr);
     void findPatternInSample(QPixmap &sample, QRect &sampleRect);
+    void hideSelection();
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
@@ -66,7 +67,7 @@ private:
     QFrame *btnFrame;
     QFrame *msgFrame;
     QPushButton *saveBtn = new QPushButton("Save Tile");
-    QPushButton *exitBtn = new QPushButton("Quit");
+    QPushButton *exitBtn = new QPushButton("Done");
     PatternDlgView *v;
     QLabel *msg;
 };

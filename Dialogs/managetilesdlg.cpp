@@ -129,7 +129,7 @@ void ManageTilesDlg::activate(int index)
 /*
     Show pixmap when the tileBox selection changes.
 */
-    // if trigged be textChange but the text is being edited then not a new tile selection
+    // if trigged by textChange but the text is being edited then not a new tile selection
     if (textHasBeenEdited) return;
     if (index >= tiles.size()) {
         qDebug() << __FUNCTION__

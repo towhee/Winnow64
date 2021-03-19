@@ -41,12 +41,9 @@ ManageImagesDlg::ManageImagesDlg(QString title,
     imageList << setting->allKeys();
     setting->endGroup();
 
-    qDebug() << __FUNCTION__ << settingPath << imageList;
-
     // populate table with QSettings existing data
     for (int row = 0; row < imageList.length(); ++row) {
         QString key = settingPath + "/" + imageList.at(row);
-        qDebug() << __FUNCTION__ << key;
         QByteArray ba = setting->value(key).toByteArray();
         QPixmap pm;
         pm.loadFromData(ba);
@@ -57,6 +54,14 @@ ManageImagesDlg::ManageImagesDlg(QString title,
         ui->imageTable->insertRow(row);
         ui->imageTable->setItem(row, 0, item);
     }
+
+    connect(ui->imageTable, &QTableWidget::itemDoubleClicked,
+            this, &ManageImagesDlg::itemDoubleClicked);
+
+    connect(ui->imageTable, &QTableWidget::itemChanged,
+            this, &ManageImagesDlg::itemChanged);
+
+    isInitializing = false;
 }
 
 ManageImagesDlg::~ManageImagesDlg()
@@ -82,7 +87,6 @@ void ManageImagesDlg::save(QPixmap *pm)
     setting->beginGroup(settingPath);
         QStringList list = setting->allKeys();
         Utilities::uniqueInList(name, list);
-        qDebug() << __FUNCTION__ << "Name to use =" << name;
         setting->setValue(name, graphicBa);
     setting->endGroup();
 
@@ -95,12 +99,56 @@ void ManageImagesDlg::save(QPixmap *pm)
     ui->imageTable->insertRow(row);
     ui->imageTable->setItem(row, 0, item);
 
-    // select new item row
-    ui->imageTable->selectRow(row);
-
     // sort table
     ui->imageTable->setSortingEnabled(true);
     ui->imageTable->sortItems(0);
+
+    // select new item row
+    ui->imageTable->selectRow(item->row());
+
+    // let user know
+    QString msg = "Image has been saved as " + name + ".";
+    G::popUp->showPopup(msg, 1000);
+}
+
+void ManageImagesDlg::itemDoubleClicked(QTableWidgetItem *item)
+{
+/*
+    itemDoubleClicked initiates editing.  The text is preserved prior to edit changes.
+*/
+    if (isInitializing) return;
+    prevName = item->text();
+    qDebug() << __FUNCTION__ << item << prevName;
+}
+
+void ManageImagesDlg::itemChanged(QTableWidgetItem *item)
+{
+/*
+    This is triggered after editing item text by Enter Key or focus leaving the item.
+
+    Updates required:
+        QSettings
+        EmbelProperties::updateTileList updates
+            EmbelProperties::tileList
+            EmbelProperties::borderTileObjectEditor
+        EmbelProperties::updateGraphicList updates
+            EmbelProperties::graphicList
+            EmbelProperties::borderTileObjectEditor
+*/
+    if (isInitializing) return;
+
+    // Update QSettings
+    QString oldKey = settingPath + "/" + prevName;
+    QString newKey = settingPath + "/" + item->text();
+    // get QSettings value (QByteArray of tile image) from old key
+    QByteArray ba = setting->value(oldKey).toByteArray();
+    // QSettings copy to new key
+    setting->setValue(newKey, ba);
+    // QSettings remove old key
+    setting->remove(oldKey);
+
+    // Updates in EmbelProperties (updateTileList or updateGraphicList)
+    emit itemRenamed(prevName, item->text());
 }
 
 void ManageImagesDlg::on_newBtn_clicked()
@@ -127,18 +175,29 @@ void ManageImagesDlg::on_newBtn_clicked()
 
 void ManageImagesDlg::on_deleteBtn_clicked()
 {
-    qDebug() << __FUNCTION__ << ui->imageTable->selectedItems();
     QList<QTableWidgetItem *> toDeleteList;
     toDeleteList << ui->imageTable->selectedItems();
+
+    QString deleteMsg;
+    for (int i = 0; i < toDeleteList.length(); ++i) {
+        deleteMsg += toDeleteList.at(i)->text() + "\n";
+    }
+    deleteMsg += "                                    ";
+    int ret = (QMessageBox::warning(this, "Delete these item(s)?", deleteMsg,
+                             QMessageBox::Cancel | QMessageBox::Ok));
+    if (ret == QMessageBox::Cancel) return;
+
     for (int i = 0; i < toDeleteList.length(); ++i) {
         QString name = toDeleteList.at(i)->text();
         QString sKey = settingPath + "/" + name;
         int row = toDeleteList.at(i)->row();
+        /*
         qDebug() << __FUNCTION__ << i
                  << name
                  << row
                  << sKey
                     ;
+//                    */
 
         // remove from QSettings
         setting->remove(sKey);

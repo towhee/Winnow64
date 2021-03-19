@@ -3038,7 +3038,7 @@ void MW::createActions()
     addAction(embelManageGraphicsAction);
     connect(embelManageGraphicsAction, &QAction::triggered, embelProperties, &EmbelProperties::manageGraphics);
 
-    embelExportAction = new QAction(tr("Export"), this);
+    embelExportAction = new QAction(tr("Export embellished image"), this);
     embelExportAction->setObjectName("embelExportAct");
     embelExportAction->setShortcutVisibleInContextMenu(true);
     addAction(embelExportAction);
@@ -3057,9 +3057,15 @@ void MW::createActions()
     addAction(embelRevealWinnetsAction);
     connect(embelRevealWinnetsAction, &QAction::triggered, this, &MW::revealWinnets);
 
-    // general connection to handle invoking new embellish templates
-    // MacOS will not allow runtime menu insertions.  Cludge workaround
-    // add 30 dummy menu items and then hide until use.
+    /* general connection to handle invoking new embellish templates
+     MacOS will not allow runtime menu insertions.  Cludge workaround
+     add 30 dummy menu items and then hide until use.
+
+     embelTemplatesActions are executed by
+     EmbelProperties::invokeFromAction(QAction *embelAction)
+     ie to execute "Do not embellish" (always the first action)
+        EmbelProperties::invokeFromAction(embelTemplatesActions.at(0))
+    */
     embelGroupAction = new QActionGroup(this);
     embelGroupAction->setExclusive(true);
     n = embelProperties->templateList.count();
@@ -11757,7 +11763,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << "G::dpi =" << G::dpi;
-    qDebug() << __FUNCTION__ << "G::ptToPx =" << G::ptToPx;
+    FolderCompressor fc;
+    QString src = "D:/temp/Test3";
+    QString compressed = "D:/temp/Test3.compressed";
+    fc.compressFolder(src, compressed);
+    QString decompressed = "D:/temp/Test3.decompressed";
+    fc.decompressFolder(compressed, decompressed);
 }
 // End MW
