@@ -1,10 +1,5 @@
 BUGS / TO DO
-- Check tile or graphic exists
-- Check if tile or graphic is being used prior to deletion
 - Full path for file name in external program
-- Import/export Embellish templates
-- Delay opening if USB drive "asleep"
-- Get rid of G::colorManage - always color manage
 - When reverse sort the cache progress bar does not reverse to match
 - Handle winnets on Mac
 - Quick start loupe first image in folder
@@ -53,9 +48,12 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Import/export Embellish templates
+- Check if tile or graphic is being used prior to deletion
 - Replaced Thumbnails with Appearance in Preferences
 - Initial font size not being assigned, resulting in squashed rows in QTreeviews
 - EmbelExport not assigning color profile
+- Get rid of G::colorManage - always color manage
 - Version 1.17
 - Focus shifts away from Embellish when mouseover central widget or thumbdock
 - Token editor sometimes crashes

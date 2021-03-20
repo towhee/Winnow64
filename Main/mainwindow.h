@@ -701,7 +701,8 @@ private:
     // Embellish
     QAction *embelNewTemplateAction;
     QAction *embelExportAction;
-    QAction *embelTileAction;
+    QAction *embelSaveTemplateAction;
+    QAction *embelReadTemplateAction;
     QAction *embelManageTilesAction;
     QAction *embelManageGraphicsAction;
     QAction *embelRevealWinnetsAction;

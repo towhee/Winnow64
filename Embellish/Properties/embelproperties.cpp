@@ -251,6 +251,10 @@ void EmbelProperties::initialize()
     addAction(copyTemplateAction);
     connect(copyTemplateAction, &QAction::triggered, this, &EmbelProperties::copyTemplate);
 
+    newTemplateAction = new QAction(tr("New"), this);
+    addAction(newTemplateAction);
+    connect(newTemplateAction, &QAction::triggered, this, &EmbelProperties::newTemplate);
+
     saveTemplateToFileAction = new QAction(tr("Save current template to file"), this);
     addAction(saveTemplateToFileAction);
     connect(saveTemplateToFileAction, &QAction::triggered, this, &EmbelProperties::saveTemplateToFile);
@@ -5770,6 +5774,7 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::RightButton) {
         renameAction->setVisible(false);
         copyTemplateAction->setVisible(false);
+        newTemplateAction->setVisible(false);
         readTemplateFromFileAction->setVisible(false);
         saveTemplateToFileAction->setVisible(false);
         copyStyleAction->setVisible(false);
@@ -5791,6 +5796,7 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
         if (currentIdx.parent() == templateIdx || currentIdx == templateIdx) {
             renameAction->setVisible(true);
             copyTemplateAction->setVisible(true);
+            newTemplateAction->setVisible(true);
             readTemplateFromFileAction->setVisible(true);
             saveTemplateToFileAction->setVisible(true);
         }
