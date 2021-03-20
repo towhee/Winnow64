@@ -12734,6 +12734,10 @@ release\moc_embel.cpp: Embellish\embel.h \
 		Utilities\mac.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		PropertyEditor\propertyeditor.h \
 		Main\dockwidget.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDockWidget \
@@ -13377,6 +13381,10 @@ release\moc_embelexport.cpp: Embellish\embelexport.h \
 		Utilities\mac.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		PropertyEditor\propertyeditor.h \
 		Main\dockwidget.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDockWidget \
@@ -14011,6 +14019,10 @@ release\moc_embelproperties.cpp: Embellish\Properties\embelproperties.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		PropertyEditor\propertyeditor.h \
 		Main\dockwidget.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDockWidget \
@@ -22423,6 +22435,10 @@ release\moc_mainwindow.cpp: Main\mainwindow.h \
 		Embellish\embel.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		Effects\graphicseffect.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGraphicsEffect \
 		Effects\effects.h \
@@ -31636,6 +31652,10 @@ release\moc_imageview.cpp: Views\imageview.h \
 		Embellish\embel.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		PropertyEditor\propertyeditor.h \
 		Main\dockwidget.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDockWidget \
@@ -48492,6 +48512,10 @@ release\embel.obj: Embellish\embel.cpp Embellish\embel.h \
 		Utilities\mac.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		PropertyEditor\propertyeditor.h \
 		Main\dockwidget.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDockWidget \
@@ -49122,6 +49146,10 @@ release\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embellish\
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		PropertyEditor\propertyeditor.h \
 		Main\dockwidget.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDockWidget \
@@ -49831,6 +49859,10 @@ release\embelexport.obj: Embellish\embelexport.cpp Embellish\embelexport.h \
 		Utilities\mac.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		PropertyEditor\propertyeditor.h \
 		Main\dockwidget.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDockWidget \
@@ -60837,6 +60869,10 @@ release\main.obj: Main\main.cpp Main\mainwindow.h \
 		Embellish\embel.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		Effects\graphicseffect.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGraphicsEffect \
 		Effects\effects.h \
@@ -61536,6 +61572,10 @@ release\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		Embellish\embel.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		Effects\graphicseffect.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGraphicsEffect \
 		Effects\effects.h \
@@ -66971,6 +67011,10 @@ release\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\preferenc
 		Embellish\embel.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		Effects\graphicseffect.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGraphicsEffect \
 		Effects\effects.h \
@@ -67669,6 +67713,10 @@ release\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEditor\pro
 		Embellish\embel.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		Effects\graphicseffect.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGraphicsEffect \
 		Effects\effects.h \
@@ -72586,6 +72634,10 @@ release\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h \
 		Embellish\embel.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		Effects\graphicseffect.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGraphicsEffect \
 		Effects\effects.h \
@@ -76000,6 +76052,10 @@ release\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		Embellish\embel.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		Effects\graphicseffect.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGraphicsEffect \
 		Effects\effects.h \
@@ -77170,6 +77226,10 @@ release\imageview.obj: Views\imageview.cpp C:\Qt\5.15.2\msvc2019_64\include\QtWi
 		Embellish\embel.h \
 		Embellish\Properties\embelproperties.h \
 		Utilities\htmlwindow.h \
+		Utilities\foldercompressor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDir \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		PropertyEditor\propertyeditor.h \
 		Main\dockwidget.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDockWidget \

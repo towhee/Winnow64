@@ -3014,17 +3014,29 @@ void MW::createActions()
 
     // Embellish menu
 
+    embelExportAction = new QAction(tr("Export embellished image"), this);
+    embelExportAction->setObjectName("embelExportAct");
+    embelExportAction->setShortcutVisibleInContextMenu(true);
+    addAction(embelExportAction);
+    connect(embelExportAction, &QAction::triggered, this, &MW::exportEmbel);
+
     embelNewTemplateAction = new QAction(tr("New template"), this);
     embelNewTemplateAction->setObjectName("newEmbelTemplateAct");
     embelNewTemplateAction->setShortcutVisibleInContextMenu(true);
     addAction(embelNewTemplateAction);
     connect(embelNewTemplateAction, &QAction::triggered, this, &MW::newEmbelTemplate);
 
-//    embelTileAction = new QAction(tr("Extract tile"), this);
-//    embelTileAction->setObjectName("embelExportAct");
-//    embelTileAction->setShortcutVisibleInContextMenu(true);
-//    addAction(embelTileAction);
-//    connect(embelTileAction, &QAction::triggered, embelProperties, &EmbelProperties::extractTile);
+    embelReadTemplateAction = new QAction(tr("Read template from file"), this);
+    embelReadTemplateAction->setObjectName("embelExportAct");
+    embelReadTemplateAction->setShortcutVisibleInContextMenu(true);
+    addAction(embelReadTemplateAction);
+    connect(embelReadTemplateAction, &QAction::triggered, embelProperties, &EmbelProperties::readTemplateFromFile);
+
+    embelSaveTemplateAction = new QAction(tr("Save current template to file"), this);
+    embelSaveTemplateAction->setObjectName("embelExportAct");
+    embelSaveTemplateAction->setShortcutVisibleInContextMenu(true);
+    addAction(embelSaveTemplateAction);
+    connect(embelSaveTemplateAction, &QAction::triggered, embelProperties, &EmbelProperties::saveTemplateToFile);
 
     embelManageTilesAction = new QAction(tr("Manage tiles"), this);
     embelManageTilesAction->setObjectName("embelManageTilesAct");
@@ -3037,12 +3049,6 @@ void MW::createActions()
     embelManageGraphicsAction->setShortcutVisibleInContextMenu(true);
     addAction(embelManageGraphicsAction);
     connect(embelManageGraphicsAction, &QAction::triggered, embelProperties, &EmbelProperties::manageGraphics);
-
-    embelExportAction = new QAction(tr("Export embellished image"), this);
-    embelExportAction->setObjectName("embelExportAct");
-    embelExportAction->setShortcutVisibleInContextMenu(true);
-    addAction(embelExportAction);
-    connect(embelExportAction, &QAction::triggered, this, &MW::exportEmbel);
 
     #ifdef Q_OS_WIN
         revealText = "Show Winnets in Explorer";
@@ -3671,12 +3677,17 @@ void MW::createMenus()
 
     QMenu *embelMenu = new QMenu(this);
 //    embelMenu->setIcon(QIcon(":/images/icon16/lightning.png"));
-    embelMenu->addAction(embelNewTemplateAction);
     embelMenu->addAction(embelExportAction);
+    embelMenu->addSeparator();
+    embelMenu->addAction(embelNewTemplateAction);
+    embelMenu->addAction(embelReadTemplateAction);
+    embelMenu->addAction(embelSaveTemplateAction);
+    embelMenu->addSeparator();
 //    embelMenu->addAction(embelTileAction);
     embelMenu->addAction(embelManageTilesAction);
     embelMenu->addAction(embelManageGraphicsAction);
     #ifdef Q_OS_WIN
+    embelMenu->addSeparator();
     embelMenu->addAction(embelRevealWinnetsAction);
     #endif
     QAction *embelGroupAct = new QAction("Embellish", this);

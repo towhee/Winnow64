@@ -124,18 +124,15 @@ public:
 
 public slots:
     void itemChange(QModelIndex idx) override;
-//    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
-//    void extractTile();
-//    void saveTile(QString name, QPixmap *tile);
     void manageTiles();
     void manageGraphics();
-//    void getGraphic();
     void invokeFromAction(QAction *embelAction);
     void setCurrentTemplate(QString name);
-//    void diagnosticModel(QModelIndex parent = QModelIndex());
     void coordHelp();
     QString diagnostics();
     void updateMetadataTemplateList();
+    bool saveTemplateToFile();
+    bool readTemplateFromFile();
 
 signals:
     void templateChanged(int id);
@@ -167,8 +164,6 @@ private:
     void renameCurrentTemplate();
     void copyStyle();
     void copyTemplate();
-    bool saveTemplateToFile();
-    bool readTemplateFromFile();
     QString uniqueTemplateName(QString name);
     QString uniqueTileName(QString name);
     QString uniqueGraphicName(QString name);
@@ -289,6 +284,7 @@ private:
     QAction *renameAction;
     QAction *readTemplateFromFileAction;
     QAction *saveTemplateToFileAction;
+    QAction *newTemplateAction;
     QAction *copyTemplateAction;
     QAction *copyStyleAction;
     QAction *tokenEditorAction;
