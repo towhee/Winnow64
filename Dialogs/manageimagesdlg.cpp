@@ -75,6 +75,58 @@ void ManageImagesDlg::extractTile(QPixmap &src)
 
 }
 
+QString ManageImagesDlg::templatesUsingTile(QString name)
+{
+    QString msg = "";
+    setting->beginGroup("Embel/Templates");
+    QStringList templates = setting->childGroups();
+    setting->endGroup();
+    for (int i = 0; i < templates.length(); ++i) {
+        QString templateName = templates.at(i);
+        QString templateBorderPath = "Embel/Templates/" + templateName + "/Borders";
+        setting->beginGroup(templateBorderPath);
+        QStringList borders = setting->childGroups();
+        setting->endGroup();
+        for (int b = 0; b < borders.length(); ++b) {
+            QString tileKey = templateBorderPath + "/" + borders.at(b) + "/tile";
+            QString tileName = setting->value(tileKey).toString();
+            qDebug() << __FUNCTION__ << tileKey << tileName << name;
+            if (tileName == name) {
+                msg += "Warning: " + name + " is being used by template "
+                       + templateName + "\n";
+            }
+        }
+    }
+    return msg;
+}
+
+QString ManageImagesDlg::templatesUsingGraphic(QString name)
+{
+    qDebug() << __FUNCTION__ << name;
+    QString msg = "";
+    setting->beginGroup("Embel/Templates");
+    QStringList templates = setting->childGroups();
+    setting->endGroup();
+    for (int i = 0; i < templates.length(); ++i) {
+        QString templateName = templates.at(i);
+        QString templateGraphicPath = "Embel/Templates/" + templateName + "/Graphics";
+        qDebug() << __FUNCTION__ << templateName << templateGraphicPath;
+        setting->beginGroup(templateGraphicPath);
+        QStringList graphics = setting->childGroups();
+        setting->endGroup();
+        for (int g = 0; g < graphics.length(); ++g) {
+            QString graphicKey = templateGraphicPath + "/" + graphics.at(g) + "/graphic";
+            QString graphicName = setting->value(graphicKey).toString();
+            qDebug() << __FUNCTION__ << graphicKey << graphicName << name;
+            if (graphicName == name) {
+                msg += "Warning: " + name + " is being used by template "
+                       + templateName + "\n";
+            }
+        }
+    }
+    return msg;
+}
+
 void ManageImagesDlg::save(QPixmap *pm)
 {
     // Assign a unique name to the image and save in QSettings
@@ -182,7 +234,16 @@ void ManageImagesDlg::on_deleteBtn_clicked()
     for (int i = 0; i < toDeleteList.length(); ++i) {
         deleteMsg += toDeleteList.at(i)->text() + "\n";
     }
-    deleteMsg += "                                    ";
+    deleteMsg += "                                    \n";
+    for (int i = 0; i < toDeleteList.length(); ++i) {
+        if (settingPath == "Embel/Tiles") {
+            deleteMsg += templatesUsingTile(toDeleteList.at(i)->text());
+        }
+        else {
+            deleteMsg += templatesUsingGraphic(toDeleteList.at(i)->text());
+        }
+    }
+
     int ret = (QMessageBox::warning(this, "Delete these item(s)?", deleteMsg,
                              QMessageBox::Cancel | QMessageBox::Ok));
     if (ret == QMessageBox::Cancel) return;

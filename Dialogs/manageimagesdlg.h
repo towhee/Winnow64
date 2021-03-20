@@ -33,6 +33,8 @@ private slots:
 
 private:
     void extractTile(QPixmap &src);
+    QString templatesUsingTile(QString name);
+    QString templatesUsingGraphic(QString name);
     Ui::ManageImagesDlg *ui;
     QSettings *setting;
     QString settingPath;
