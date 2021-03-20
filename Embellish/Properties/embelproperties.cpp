@@ -251,7 +251,7 @@ void EmbelProperties::initialize()
     addAction(copyTemplateAction);
     connect(copyTemplateAction, &QAction::triggered, this, &EmbelProperties::copyTemplate);
 
-    saveTemplateToFileAction = new QAction(tr("Save template to file"), this);
+    saveTemplateToFileAction = new QAction(tr("Save current template to file"), this);
     addAction(saveTemplateToFileAction);
     connect(saveTemplateToFileAction, &QAction::triggered, this, &EmbelProperties::saveTemplateToFile);
 
@@ -1124,14 +1124,32 @@ void EmbelProperties::copyTemplate()
 bool EmbelProperties::saveTemplateToFile()
 {
 /*
-    Save template to a file.
+    Save the current template to a file.
+
+    Load all the template QSettings keys into a QMap.  Convert the QMap to a json document.
+
+    User selects a folder. Create a unique temporary subfolder using the template name. Write
+    the json document to templateName.template in the subfolder.
+
+    Write any tiles used by the template as tileName.tile (QByteArray) in the subfolder. Same
+    thing for any graphics used by the template as graphicName.graphic (QByteArray).
+
+    Compress the subfolder into one binary file.
+
+    Remove the temporary subfolder.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    qDebug() << __FUNCTION__ << templateName;
+    // cannot save "Do not Embellish"
+    if (templateName == "Do not Embellish") {
+        QString msg = "Cannot save template 'Do not Embellish'";
+        G::popUp->showPopup(msg, 2000);
+        return false;
+    }
+
     // path to source template in setting
     QString srcPath = "Embel/Templates/" + templateName + "/";
 
@@ -1153,8 +1171,11 @@ bool EmbelProperties::saveTemplateToFile()
     QJsonObject keysJson = QJsonObject::fromVariantMap(keysMap);
 
     // create a folder to hold the template json, tiles and graphics
-    QString locPath = QFileDialog::getExistingDirectory(this, tr("Select Folder"),
+    QString msg = "Select folder to save template " + templateName;
+    QString locPath = QFileDialog::getExistingDirectory(this, msg,
          "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    // cancel?
+    if (locPath == "") return false;
     QString dPath = locPath + "/" + templateName;
     // rename folder (named as template name) does not exist
     Utilities::uniqueFolderPath(dPath);
@@ -1202,7 +1223,8 @@ bool EmbelProperties::saveTemplateToFile()
     }
 
     // compress into one binary file
-    QString compressed = dPath + ".embeltemplate";
+    QString compressed = locPath + "/" + templateName + ".embeltemplate";
+    Utilities::uniqueFilePath(compressed);
     FolderCompressor fc;
     fc.compressFolder(dPath, compressed);
     dir.removeRecursively();
@@ -1213,6 +1235,29 @@ bool EmbelProperties::saveTemplateToFile()
 bool EmbelProperties::readTemplateFromFile()
 {
 /*
+    Read a embeltemplate file that contains all the information required to recreate a
+    template in embellish.
+
+    Locate and select a template file, ending in .embeltemplate
+
+    Decompress the .embeltemplate file into a temporary folder with a unique name in the same
+    folder. The folder will contain:
+        - one xxx.template file where xxx = the template name that was saved
+        - one or more .tile files (QByteArrays of tile PNG files)
+        - one or more .graphic files (QByteArrays of tile PNG files)
+
+    Make sure the xxx template name does not exist. If it does, get a unique template name.
+    Read the template file and replace all references to the xxx template name with the unique
+    name.
+
+    Read all the tile files, make sure tile names are unique, and add them to QSettings.
+
+    Read all the graphic files, make sure tile names are unique, and add them to QSettings.
+
+    Decode the QByteArray template (from file read) to a json document.  Convert the json
+    document to a QMap.  Use the QMap to add the template to QSettings.
+
+    Load the new template.
 
 */
     {
@@ -1224,21 +1269,38 @@ bool EmbelProperties::readTemplateFromFile()
     QString srcPath = QFileDialog::getOpenFileName(this, tr("Select template"),
                                                  "/home", "*.embeltemplate");
     QFileInfo srcInfo(srcPath);
-    // get template name (make sure it is unique)
-    QString srcTemplateName = srcInfo.baseName();
-    QString tName = uniqueTemplateName(srcTemplateName);
-    bool dupTemplateName = srcTemplateName != tName;
-    QString dstPath = srcInfo.absolutePath() + "/" + tName;
-    qDebug() << __FUNCTION__ << dstPath;
+
+    // geta unique folder name for the decompressed information
+    QString srcFileName = srcInfo.baseName();
+    QString dstPath = srcInfo.absolutePath() + "/" + srcFileName;
     Utilities::uniqueFolderPath(dstPath);
-    qDebug() << __FUNCTION__ << dstPath;
     FolderCompressor fc;
-    // decompress template file into folder named after template name
+
+    // decompress template file into folder named after src name
     fc.decompressFolder(srcPath, dstPath);
 
+    // Prep for filtering and reading template, tiles and graphics
+    QDir dir(dstPath);
+    QStringList fileFilters;
+
+    // filter on the template file
+    fileFilters << "*.template";
+    dir.setNameFilters(fileFilters);
+    dir.setFilter(QDir::Files);
+
+    // there should only be one .template file
+    if (dir.entryInfoList().length() != 1) return false;
+
+    // the source template name is the base name of the .template file
+    QString srcTName = dir.entryInfoList().at(0).baseName();
+
+    // make sure the template does not already exist, get unique name
+    QString uniqueTName  = uniqueTemplateName(srcTName);
+    bool dupTemplateName = uniqueTName != srcTName;
+
     // read json template file
-    QString tPath = dstPath + "/" + srcTemplateName + ".template";
-    qDebug() << __FUNCTION__ << tPath;
+    QString tPath = dir.entryInfoList().at(0).absoluteFilePath();
+//    QString tPath = dstPath + "/" + srcTemplateName + ".template";
     QFile tFile(tPath);
     if (!tFile.open(QIODevice::ReadOnly)) {
         qDebug() << __FUNCTION__ << "Could not open template file.";
@@ -1246,36 +1308,37 @@ bool EmbelProperties::readTemplateFromFile()
         return false;
     }
     QByteArray ba = tFile.readAll();
+    tFile.close();
 
     // rename template in template json file if already exists in embellish
     if (dupTemplateName) {
-        QString a = "Templates/" + srcTemplateName;
-        QString b = "Templates/" + tName;
+        QString a = "Templates/" + srcTName;
+        QString b = "Templates/" + uniqueTName;
         qDebug() << __FUNCTION__ << a << b;
         ba.replace(a.toUtf8(), b.toUtf8());
-//        qDebug() << __FUNCTION__ << QString(ba);
     }
 
-    // Prep for reading tiles and graphics
-    QDir dir(dstPath + "/");
-    QStringList fileFilters;
-
     // checking if tile files already exist in embellish
+    fileFilters.clear();
     fileFilters << "*.tile";
     dir.setNameFilters(fileFilters);
     dir.setFilter(QDir::Files);
     for (int i = 0; i < dir.entryInfoList().length(); ++i) {
+        // get unique name
         QString name = dir.entryInfoList().at(i).baseName();
         QString uniqueName = uniqueTileName(name);
-        qDebug() << __FUNCTION__ << "tile name:" << name << uniqueName;
         if (name != uniqueName) {
-            QFile f(dir.entryInfoList().at(i).filePath());
-            qDebug() << __FUNCTION__ << "f.fileName() =" << f.fileName();
-            f.rename(dstPath + "/" + uniqueName + ".tile");
             QString a = "/tile\": \"" + name;
             QString b = "/tile\": \"" + uniqueName;
             ba.replace(a.toUtf8(), b.toUtf8());
         }
+        // add tile to QSettings
+        QFile f(dir.entryInfoList().at(i).filePath());
+        f.open(QIODevice::ReadOnly);
+        QByteArray tileBa = f.readAll();
+        f.close();
+        QString settingPath = "Embel/Tiles/" + uniqueName;
+        setting->setValue(settingPath, tileBa);
     }
 
     // checking if graphic files already exist in embellish
@@ -1284,37 +1347,24 @@ bool EmbelProperties::readTemplateFromFile()
     dir.setNameFilters(fileFilters);
     dir.setFilter(QDir::Files);
     for (int i = 0; i < dir.entryInfoList().length(); ++i) {
+        // get unique name
         QString name = dir.entryInfoList().at(i).baseName();
         QString uniqueName = uniqueGraphicName(name);
-        qDebug() << __FUNCTION__ << "graphic name:" << name << uniqueName;
         if (name != uniqueName) {
-            QFile f(dir.entryInfoList().at(i).filePath());
-            f.rename(dstPath + "/" + uniqueName + ".graphic");
             QString a = "/graphic\": \"" + name;
             QString b = "/graphic\": \"" + uniqueName;
             ba.replace(a.toUtf8(), b.toUtf8());
         }
+        // add graphic to QSettings
+        QFile f(dir.entryInfoList().at(i).filePath());
+        f.open(QIODevice::ReadOnly);
+        QByteArray tileBa = f.readAll();
+        f.close();
+        QString settingPath = "Embel/Graphics/" + uniqueName;
+        setting->setValue(settingPath, tileBa);
     }
 
-/*
-    QString fPath;
-    QFile file(fPath);
-    if (!file.open(QIODevice::ReadOnly)) {
-            qWarning("Couldn't open save file.");
-            return false;
-        }
-    // get importedTemplateName
-    QFileInfo info(fPath);
-    QString name = info.baseName();
-    QString uniqueName = uniqueTemplateName(name);
-    QByteArray ba = file.readAll();
-    // if this template name already exists then replace in json
-    if (name != uniqueName) {
-        // add "/" to replace in case name also exists in the template values
-        QString a = "/" + name;
-        QString b = "/" + uniqueName;
-        ba.replace(a.toUtf8(), b.toUtf8());
-     }
+    // recreate jsonDoc from QByteArray
     QJsonDocument jsonDoc = QJsonDocument::fromJson(ba);
 
     // QMap to hold key/value pairs
@@ -1329,8 +1379,11 @@ bool EmbelProperties::readTemplateFromFile()
     }
 
     // new Template
-    newTemplateFromImport(uniqueName);
-    */
+    newTemplateFromImport(uniqueTName);
+
+    // cleanup temp folder created
+    qDebug() << __FUNCTION__ << dir.absolutePath();
+    dir.removeRecursively();
 
     return true;
 }

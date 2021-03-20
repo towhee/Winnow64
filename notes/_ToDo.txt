@@ -1,5 +1,6 @@
 BUGS / TO DO
 - Check tile or graphic exists
+- Check if tile or graphic is being used prior to deletion
 - Full path for file name in external program
 - Import/export Embellish templates
 - Delay opening if USB drive "asleep"
