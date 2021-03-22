@@ -104,8 +104,6 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
     readTemplateList();
     // add the template header, which then selects the last active template
     addTemplateHeader();
-//    // add styles, which are independent of templates, and hide if templateId == 0
-//    addStyles();
 
     if (templateId > 0) setRowHidden(1, root, false);
     else setRowHidden(1, root, true);
@@ -1599,6 +1597,18 @@ void EmbelProperties::readMetadataTemplateList()
 void EmbelProperties::renameMetadataTemplateList(QString oldName, QString newName)
 {
     qDebug() << __FUNCTION__ << oldName << newName;
+    qDebug() << __FUNCTION__ << t.size() << textTokenObjectEditor.size();
+
+    // update model (triggers itemChangeText which updates QSettings and vector)
+    for (int i = 0; i < textTokenObjectEditor.size(); ++i) {
+        // guard
+        if (i >= t.size()) break;
+        // ignore if the source is a text string
+        qDebug() << __FUNCTION__ << i << "t.at(i).source =" << t.at(i).source;
+        if (t.at(i).source == "Text") continue;
+        qDebug() << __FUNCTION__ << i << t.at(i).metadataTemplate;
+        textTokenObjectEditor.at(i)->renameItem(oldName, newName);
+    }
 }
 
 void EmbelProperties::updateMetadataTemplateList()
@@ -1619,17 +1629,11 @@ void EmbelProperties::updateMetadataTemplateList()
     readMetadataTemplateList();
 
     // update text metadataTemplate lists
-    int n = textMetadataTemplateObjectEditor.size() - 1;
+    int n = textTokenObjectEditor.size() - 1;
     for (int i = 0; i < t.size(); ++i) {
         // ignore if the source in not a metadata template (cause crash)
         if (t.at(i).source == "Text") continue;
-        // to be super safe check if textMetadataTemplateObjectEditor.at(i) is out of bounds
-//        if (i > n) {
-//            qDebug() << __FUNCTION__ << "textMetadataTemplateObjectEditor OUT OF BOUNDS";
-//            break;
-//        }
-//        QString oldTemplateName = t.at(i).metadataTemplate;
-        textMetadataTemplateObjectEditor.at(i)->refresh(metadataTemplatesList);
+        textTokenObjectEditor.at(i)->refresh(metadataTemplatesList);
         // refreshing metadataTemplatesList removes old value for the text - reassign textMetadataTemplate object
 //        if (metadataTemplatesList.contains(oldTemplateName))
 //            textMetadataTemplateObjectEditor.at(i)->setValue(oldTemplateName);
@@ -2273,8 +2277,10 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
 
     // clear comboBoxEditors
     borderTileObjectEditor.clear();
-    textAnchorObjectEditor.clear();
+    graphicsObjectEditor.clear();
     graphicAnchorObjectEditor.clear();
+    textAnchorObjectEditor.clear();
+    textTokenObjectEditor.clear();
     styleListObjectEditor.clear();
     styleEditor.clear();
 //    anchorContainerList.clear();
@@ -2574,6 +2580,7 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
 
     if (source == "metadataTemplate") {
         QString value = v.toString();
+        qDebug() << __FUNCTION__ << "metadataTemplate" << value;
         setting->setValue(path, value);
         t[index].metadataTemplate = value;
     }
@@ -5579,7 +5586,7 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
         e->removeText(row);
          if (row < t.size()) {
              t.remove(row);
-             textMetadataTemplateObjectEditor.remove(row);
+             textTokenObjectEditor.remove(row);
          }
     }
 
@@ -6724,7 +6731,7 @@ void EmbelProperties::addText(int count)
     i.dropList << metadataTemplatesList;
     QString key = i.value.toString();
     text.metadataTemplate = key;
-    textMetadataTemplateObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
+    textTokenObjectEditor.append(static_cast<ComboBoxEditor*>(addItem(i)));
 
     // update tree based on source
     if (text.source == "Text") {

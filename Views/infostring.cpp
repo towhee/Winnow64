@@ -61,11 +61,9 @@ void InfoString::usingToken()
             if (sourceKey == "Test") continue;
             QString tokenKey = path + "/metadataTemplate";
             QString token = setting->value(tokenKey).toString();
-//            qDebug() << __FUNCTION__ << token << templateName;
             usingTokenMap[token] = "Embellish template: " + templateName;
         }
     }
-    qDebug() << __FUNCTION__ << usingTokenMap;
 }
 
 QString InfoString::uniqueTokenName(QString name)
@@ -99,7 +97,6 @@ void InfoString::add(QMap<QString, QVariant> items)
             if (existingValue == i.value()) continue;
             uniqueKey = uniqueTokenName(i.key());
         }
-        qDebug() << __FUNCTION__ << uniqueKey << i.value();
         setting->setValue("InfoTemplates/" + uniqueKey, i.value());
         infoTemplates[uniqueKey] = i.value().toString();
     }

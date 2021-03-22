@@ -317,9 +317,9 @@ private:
     ComboBoxEditor *templateListEditor;
     QVector<ComboBoxEditor*> borderTileObjectEditor;
     QVector<ComboBoxEditor*> graphicsObjectEditor;
-    QVector<ComboBoxEditor*> textAnchorObjectEditor;
-    QVector<ComboBoxEditor*> textMetadataTemplateObjectEditor;
     QVector<ComboBoxEditor*> graphicAnchorObjectEditor;
+    QVector<ComboBoxEditor*> textAnchorObjectEditor;
+    QVector<ComboBoxEditor*> textTokenObjectEditor;
     QVector<ComboBoxEditor*> styleListObjectEditor;
     QVector<BarBtnEditor*> styleEditor;
 

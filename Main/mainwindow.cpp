@@ -9426,9 +9426,9 @@ void MW::tokenEditor()
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
     imageView->moveShootingInfo(info);
-    qDebug() << __FUNCTION__ << "call  updateMetadataTemplateList";
-    embelProperties->updateMetadataTemplateList();
-    qDebug() << __FUNCTION__ << "updateMetadataTemplateList did not crash";
+//    qDebug() << __FUNCTION__ << "call  updateMetadataTemplateList";
+//    embelProperties->updateMetadataTemplateList();
+//    qDebug() << __FUNCTION__ << "updateMetadataTemplateList did not crash";
 }
 
 void MW::setRatingBadgeVisibility() {
