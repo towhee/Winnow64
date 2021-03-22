@@ -752,8 +752,8 @@ border, text and graphic dropdown lists
 void ComboBoxEditor::removeItem(QString item)
 {
 /*
-This is used to remove deleted templates from the template drop list, styles from
-the style dropdowns
+    This is used to remove deleted templates from the template drop list, styles from
+    the style dropdowns
 */
     {
     #ifdef ISDEBUG
@@ -767,13 +767,14 @@ the style dropdowns
 void ComboBoxEditor::renameItem(QString oldText, QString newText)
 {
 /*
-This is used to when a style is renamed and all the style lists need to be updated.
+    This is used to when a style is renamed and all the style lists need to be updated.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
+    qDebug() << __FUNCTION__ << oldText << newText;
     int i = comboBox->findText(oldText);
     comboBox->setItemText(i, newText);
     change(i);
