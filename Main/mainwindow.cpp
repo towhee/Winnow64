@@ -252,13 +252,15 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createGridView();           // dependent on QSetting, filterView
     createTableView();          // dependent on centralWidget
     createSelectionModel();     // dependent on ThumbView, ImageView
+    createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
     createCaching();            // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
     createBookmarks();          // dependent on loadSettings
-    createDocks();              // dependent on FSTree, Bookmarks, ThumbView, Metadata, InfoView
+    createDocks();              // dependent on FSTree, Bookmarks, ThumbView, Metadata,
+                                //              InfoView, EmbelProperties
     createEmbel();              // dependent on EmbelView, EmbelDock
     createStatusBar();
     createMessageView();
@@ -3156,13 +3158,13 @@ void MW::createActions()
     addAction(infoVisibleAction);
     connect(infoVisibleAction, &QAction::triggered, this, &MW::setShootingInfoVisibility);
 
-    infoSelectAction = new QAction(tr("Select or edit Shooting Info"), this);
+    infoSelectAction = new QAction(tr("Token editor"), this);
     infoSelectAction->setShortcutVisibleInContextMenu(true);
     infoSelectAction->setObjectName("selectInfo");
     if (isSettings && setting->contains("isImageInfoVisible")) infoVisibleAction->setChecked(setting->value("isImageInfoVisible").toBool());
     else infoVisibleAction->setChecked(false);
     addAction(infoSelectAction);
-    connect(infoSelectAction, &QAction::triggered, this, &MW::selectTokenString);
+    connect(infoSelectAction, &QAction::triggered, this, &MW::tokenEditor);
 
     asLoupeAction = new QAction(tr("Loupe"), this);
     asLoupeAction->setShortcutVisibleInContextMenu(true);
@@ -4470,9 +4472,9 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
     G::track(__FUNCTION__);
     #endif
     }
-    /* This is the info displayed on top of the image in loupe view. It is
-       dependent on template data stored in QSettings */
-    infoString = new InfoString(this, dm);
+//    /* This is the info displayed on top of the image in loupe view. It is
+//       dependent on template data stored in QSettings */
+//    infoString = new InfoString(this, dm, setting, embelProperties);
     if (isSettings) {
         if (setting->contains("currentInfoTemplate")) infoString->currentInfoTemplate = setting->value("currentInfoTemplate").toString();
         setting->beginGroup("InfoTemplates");
@@ -4562,6 +4564,21 @@ void MW::createCompareView()
     connect(compareImages, &CompareImages::updateStatus, this, &MW::updateStatus);
 
     connect(compareImages, &CompareImages::togglePick, this, &MW::togglePick);
+}
+
+void MW::createInfoString()
+{
+/*
+    This is the info displayed on top of the image in loupe view. It is
+    dependent on template data stored in QSettings
+*/
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
+    infoString = new InfoString(this, dm, setting/*, embelProperties*/);
+
 }
 
 void MW::createInfoView()
@@ -8301,12 +8318,12 @@ re-established when the application is re-opened.
     /* Token templates used for shooting information shown in ImageView */
     setting->setValue("currentInfoTemplate", infoString->currentInfoTemplate);
     setting->beginGroup("InfoTemplates");
-    setting->remove("");
-    QMapIterator<QString, QString> infoIter(infoString->infoTemplates);
-    while (infoIter.hasNext()) {
-        infoIter.next();
-        setting->setValue(infoIter.key(), infoIter.value());
-    }
+        setting->remove("");
+        QMapIterator<QString, QString> infoIter(infoString->infoTemplates);
+        while (infoIter.hasNext()) {
+            infoIter.next();
+            setting->setValue(infoIter.key(), infoIter.value());
+        }
     setting->endGroup();
 
     /* External apps */
@@ -9394,7 +9411,7 @@ void MW::setCentralView()
     }
 }
 
-void MW::selectTokenString()
+void MW::tokenEditor()
 {
     {
     #ifdef ISDEBUG
@@ -9409,8 +9426,9 @@ void MW::selectTokenString()
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
     imageView->moveShootingInfo(info);
+    qDebug() << __FUNCTION__ << "call  updateMetadataTemplateList";
     embelProperties->updateMetadataTemplateList();
-    qDebug() << __FUNCTION__ << "return";
+    qDebug() << __FUNCTION__ << "updateMetadataTemplateList did not crash";
 }
 
 void MW::setRatingBadgeVisibility() {
@@ -11774,11 +11792,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    FolderCompressor fc;
-    QString src = "D:/temp/Test3";
-    QString compressed = "D:/temp/Test3.compressed";
-    fc.compressFolder(src, compressed);
-    QString decompressed = "D:/temp/Test3.decompressed";
-    fc.decompressFolder(compressed, decompressed);
+
 }
 // End MW

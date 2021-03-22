@@ -273,6 +273,7 @@ the result.
 TokenDlg::TokenDlg(QStringList &tokens,
                    QMap<QString, QString> &exampleMap,
                    QMap<QString, QString> &templatesMap,
+                   QMap<QString, QString> &usingTokenMap,
                    int &index,
                    QString &currentKey,
                    QString title,
@@ -282,6 +283,7 @@ TokenDlg::TokenDlg(QStringList &tokens,
                    ui(new Ui::TokenDlg),
                    exampleMap(exampleMap),
                    templatesMap(templatesMap),
+                   usingTokenMap(usingTokenMap),
                    index(index),
                    currentKey(currentKey)
 {
@@ -391,6 +393,24 @@ void TokenDlg::on_okBtn_clicked()
 void TokenDlg::on_deleteBtn_clicked()
 {
     QString key = ui->templatesCB->currentData(Qt::ToolTipRole).toString();
+
+    // check to see if the token template is being used
+    QString msg = "";
+    QMapIterator<QString, QString> i(usingTokenMap);
+    while (i.hasNext()) {
+        i.next();
+        if (i.key() == key) msg += i.value() + "\n";
+    }
+
+    // if being used explain to user and return without deleting
+    if (msg != "") {
+        msg = "The token template " + key + " is being used by:\n\n" + msg +
+              "\nUnable to delete.";
+        QMessageBox::warning(this, "Delete token template", msg, QMessageBox::Ok);
+        return;
+    }
+    return;
+    // okay to delete
     ui->templatesCB->removeItem(ui->templatesCB->currentIndex());
     templatesMap.remove(key);
 }
@@ -447,7 +467,10 @@ void TokenDlg::on_renameBtn_clicked()
         return;
     }
     // update dialog token template name
-    ui->templatesCB->setItemText(row, name);
+    if (name != oldName) {
+        ui->templatesCB->setItemText(row, name);
+        emit rename(oldName, name);
+    }
     /* update in QSettings done when Winnow closes
     QSettings *setting = new QSettings("Winnow", "winnow_100");
     QString tokenString = setting->value("InfoTemplates/" + oldName).toString();

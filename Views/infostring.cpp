@@ -18,7 +18,13 @@
         Nikon D5 | 1/250 sec at f/5.6
 */
 
-InfoString::InfoString(QWidget *parent, DataModel *dm) :
+#include "Main/mainwindow.h"
+extern MW *mw4;
+MW *mw4;
+#define ep mw4->embelProperties
+
+InfoString::InfoString(QWidget *parent, DataModel *dm, QSettings *setting/*,
+                       EmbelProperties *embelProperties*/) :
                        QWidget(parent)
 {
     {
@@ -26,19 +32,97 @@ InfoString::InfoString(QWidget *parent, DataModel *dm) :
     G::track(__FUNCTION__);
     #endif
     }
+    mw4 = qobject_cast<MW*>(parent);
     this->dm = dm;
+    this->setting = setting;
     initTokenList();
     initExampleMap();
     infoTemplates["Default info"] = "{Model} {FocalLength}  {ShutterSpeed} at {Aperture}, ISO {ISO}\n{Title}";
 }
 
+void InfoString::usingToken()
+{
+    usingTokenMap.clear();
+    usingTokenMap[currentInfoTemplate] = "Shooting info template (view menu)";
+    setting->beginGroup("Embel/Templates");
+    QStringList templates = setting->childGroups();
+    setting->endGroup();
+    for (int i = 0; i < templates.length(); ++i) {
+        QString templateName = templates.at(i);
+        QString templateTextPath = "Embel/Templates/" + templateName + "/Texts";
+//        qDebug() << __FUNCTION__ << templateName << templateTextPath;
+        setting->beginGroup(templateTextPath);
+        QStringList texts = setting->childGroups();
+        setting->endGroup();
+        for (int j = 0; j < texts.length(); ++j) {
+            QString path = templateTextPath + "/" + texts.at(j);
+            QString sourceKey = path + "/source";
+            QString source = setting->value(sourceKey).toString();
+            if (sourceKey == "Test") continue;
+            QString tokenKey = path + "/metadataTemplate";
+            QString token = setting->value(tokenKey).toString();
+//            qDebug() << __FUNCTION__ << token << templateName;
+            usingTokenMap[token] = "Embellish template: " + templateName;
+        }
+    }
+    qDebug() << __FUNCTION__ << usingTokenMap;
+}
+
+QString InfoString::uniqueTokenName(QString name)
+{
+    setting->beginGroup("InfoTemplates");
+    QStringList keys = setting->childKeys();
+    setting->endGroup();
+    bool nameExists = true;
+    QString newName = name;
+    int count = 0;
+    while (nameExists) {
+        if (keys.contains(newName)) newName = name + "_" + QString::number(++count);
+        else nameExists = false;
+    }
+    return newName;
+}
+
+void InfoString::add(QMap<QString, QVariant> items)
+{
+    // get list of existing token keys in QSettings
+    setting->beginGroup("InfoTemplates");
+        QStringList existingTokenKeys = setting->childKeys();
+    setting->endGroup();
+    QMapIterator<QString, QVariant> i(items);
+    while (i.hasNext()) {
+        i.next();
+        QString uniqueKey = i.key();
+        // check if already exists
+        if (existingTokenKeys.contains(i.key())) {
+            QString existingValue = setting->value(i.key()).toString();
+            if (existingValue == i.value()) continue;
+            uniqueKey = uniqueTokenName(i.key());
+        }
+        qDebug() << __FUNCTION__ << uniqueKey << i.value();
+        setting->setValue("InfoTemplates/" + uniqueKey, i.value());
+        infoTemplates[uniqueKey] = i.value().toString();
+    }
+}
+
 void InfoString::editTemplates()
 {
+    usingToken();
     int index = getIndex();
-    TokenDlg tokenDlg(tokens, exampleMap, infoTemplates, index,
+    TokenDlg tokenDlg(tokens, exampleMap, infoTemplates, usingTokenMap, index,
                       currentInfoTemplate, "Token Editor", this);
+    connect(&tokenDlg, &TokenDlg::rename, ep, &EmbelProperties::renameMetadataTemplateList);
     tokenDlg.exec();
-//    qDebug() << __FUNCTION__ << infoTemplates;
+
+    // save any edits to QSettings
+    setting->beginGroup("InfoTemplates");
+        setting->remove("");
+        QMapIterator<QString, QString> infoIter(infoTemplates);
+        while (infoIter.hasNext()) {
+            infoIter.next();
+            setting->setValue(infoIter.key(), infoIter.value());
+        }
+    setting->endGroup();
 }
 
 int InfoString::getIndex()

@@ -75,11 +75,15 @@ public:
     explicit TokenDlg(QStringList &tokens,
                       QMap<QString, QString> &exampleMap,
                       QMap<QString, QString> &templatesMap,
+                      QMap<QString, QString> &usingTokenMap,
                       int &index,
                       QString &currentKey,
                       QString title,
                       QWidget *parent = 0);
     ~TokenDlg();
+
+signals:
+    void rename(QString oldName, QString newName);
 
 public slots:
     void updateExample(QString s);
@@ -98,6 +102,7 @@ private:
     Ui::TokenDlg *ui;
     QMap<QString, QString>& exampleMap;
     QMap<QString, QString>& templatesMap;
+    QMap<QString, QString>& usingTokenMap;
     int &index;
     QString &currentKey;
     QString title;

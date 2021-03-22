@@ -1,5 +1,4 @@
 #include "embelproperties.h"
-#include "Main/mainwindow.h"
 
 /*
 This class holds the template information used by Embel to create borders, add text,
@@ -67,6 +66,7 @@ Associated classes
 
 */
 
+#include "Main/mainwindow.h"
 extern MW *mw3;
 MW *mw3;
 #define e mw3->embel
@@ -243,15 +243,15 @@ void EmbelProperties::initialize()
     separatorAction0->setSeparator(true);
     addAction(separatorAction0);
 
-    renameAction = new QAction(tr("Rename"), this);
+    renameAction = new QAction(tr("Rename template"), this);
     addAction(renameAction);
     connect(renameAction, &QAction::triggered, this, &EmbelProperties::rename);
 
-    copyTemplateAction = new QAction(tr("Copy"), this);
+    copyTemplateAction = new QAction(tr("Copy template"), this);
     addAction(copyTemplateAction);
     connect(copyTemplateAction, &QAction::triggered, this, &EmbelProperties::copyTemplate);
 
-    newTemplateAction = new QAction(tr("New"), this);
+    newTemplateAction = new QAction(tr("New template"), this);
     addAction(newTemplateAction);
     connect(newTemplateAction, &QAction::triggered, this, &EmbelProperties::newTemplate);
 
@@ -263,13 +263,13 @@ void EmbelProperties::initialize()
     addAction(readTemplateFromFileAction);
     connect(readTemplateFromFileAction, &QAction::triggered, this, &EmbelProperties::readTemplateFromFile);
 
-    copyStyleAction = new QAction(tr("Copy"), this);
+    copyStyleAction = new QAction(tr("Copy style"), this);
     addAction(copyStyleAction);
     connect(copyStyleAction, &QAction::triggered, this, &EmbelProperties::copyStyle);
 
     tokenEditorAction = new QAction(tr("Token Editor"), this);
     addAction(tokenEditorAction);
-    connect(tokenEditorAction, &QAction::triggered, mw3, &MW::selectTokenString);
+    connect(tokenEditorAction, &QAction::triggered, mw3, &MW::tokenEditor);
 
     manageTilesAction = new QAction(tr("Manage tiles"), this);
     addAction(manageTilesAction);
@@ -292,8 +292,6 @@ void EmbelProperties::initialize()
     addAction(separatorAction2);
 
     setContextMenuPolicy(Qt::ActionsContextMenu);
-
-//    connect(mw3->infoString, &InfoString::change, this, &EmbelProperties::updateMetadataTemplateList);
 }
 
 void EmbelProperties::effectContextMenu()
@@ -1070,6 +1068,29 @@ QString EmbelProperties::uniqueGraphicName(QString name)
     return newName;
 }
 
+QString EmbelProperties::uniqueTokenName(QString name)
+{
+    {
+#ifdef ISDEBUG
+        G::track(__FUNCTION__);
+#endif
+#ifdef ISLOGGER
+        Utilities::log(__FUNCTION__, "");
+#endif
+    }
+    setting->beginGroup("InfoTemplates");
+    QStringList keys = setting->childKeys();
+    setting->endGroup();
+    bool nameExists = true;
+    QString newName = name;
+    int count = 0;
+    while (nameExists) {
+        if (keys.contains(newName)) newName = name + "_" + QString::number(++count);
+        else nameExists = false;
+    }
+    return newName;
+}
+
 void EmbelProperties::copyStyle()
 {
     {
@@ -1128,7 +1149,7 @@ void EmbelProperties::copyTemplate()
 bool EmbelProperties::saveTemplateToFile()
 {
 /*
-    Save the current template to a file.
+    Saves the current template to a file:
 
     Load all the template QSettings keys into a QMap.  Convert the QMap to a json document.
 
@@ -1137,6 +1158,8 @@ bool EmbelProperties::saveTemplateToFile()
 
     Write any tiles used by the template as tileName.tile (QByteArray) in the subfolder. Same
     thing for any graphics used by the template as graphicName.graphic (QByteArray).
+
+    Save any tokens used by texts using the QSettings > QMap > json process.
 
     Compress the subfolder into one binary file.
 
@@ -1157,7 +1180,7 @@ bool EmbelProperties::saveTemplateToFile()
     // path to source template in setting
     QString srcPath = "Embel/Templates/" + templateName + "/";
 
-    // get all QSettings keys
+    // get all QSettings keys for the template
     setting->beginGroup(srcPath);
     QStringList keys = setting->allKeys();
     setting->endGroup();
@@ -1195,7 +1218,7 @@ bool EmbelProperties::saveTemplateToFile()
         return false;
     }
 
-    // write json to file
+    // write template json to file
     file.write(QJsonDocument(keysJson).toJson());
     file.close();
 
@@ -1216,7 +1239,6 @@ bool EmbelProperties::saveTemplateToFile()
     for (int i = 0; i < model->rowCount(graphicsIdx); ++i) {
         QModelIndex gIdx = model->index(i, 0, graphicsIdx);
         QString graphicName = getItemValue("graphic", gIdx).toString();
-        qDebug() << __FUNCTION__ << "graphicName =" << graphicName;
         QFile file(dPath + "/" + graphicName + ".graphic");
         if (graphicName != "Do not tile" && !file.exists()) {
             QSaveFile f(dPath + "/" + graphicName + ".graphic");
@@ -1226,7 +1248,36 @@ bool EmbelProperties::saveTemplateToFile()
         }
     }
 
-    // compress into one binary file
+    // copy tokens (if any)
+    keys.clear();
+    keysMap.clear();
+    for (int i = 0; i < model->rowCount(textsIdx); ++i) {
+        QModelIndex tIdx = model->index(i, 0, textsIdx);
+        keys << getItemValue("metadataTemplate", tIdx).toString();
+    }
+//    qDebug() << __FUNCTION__ << keys; return true;
+    /*
+    setting->beginGroup("InfoTemplates");
+        keys = setting->allKeys();
+    setting->endGroup();
+//    */
+    if (keys.length() > 0) {
+        for (int i = 0; i < keys.length(); ++i) {
+            QString key = "InfoTemplates/" + keys.at(i);
+            keysMap.insert(keys.at(i), setting->value(key));
+        }
+        keysJson = QJsonObject::fromVariantMap(keysMap);
+        fName = dPath + "/tokens.json";
+        QFile fTokens(fName);
+        if (!fTokens.open(QIODevice::WriteOnly)) {
+            qWarning("Couldn't open file to save tokens.");
+            return false;
+        }
+        fTokens.write(QJsonDocument(keysJson).toJson());
+        fTokens.close();
+    }
+
+    // compress folder into one binary file
     QString compressed = locPath + "/" + templateName + ".embeltemplate";
     Utilities::uniqueFilePath(compressed);
     FolderCompressor fc;
@@ -1257,6 +1308,10 @@ bool EmbelProperties::readTemplateFromFile()
     Read all the tile files, make sure tile names are unique, and add them to QSettings.
 
     Read all the graphic files, make sure tile names are unique, and add them to QSettings.
+
+    Decode the QByteArray tokens (from file read) to a json document.  Convert the json
+    document to a QMap.  Use the QMap to add the tokens to QSettings if they do not already
+    exist.
 
     Decode the QByteArray template (from file read) to a json document.  Convert the json
     document to a QMap.  Use the QMap to add the template to QSettings.
@@ -1368,6 +1423,21 @@ bool EmbelProperties::readTemplateFromFile()
         setting->setValue(settingPath, tileBa);
     }
 
+    // Get tokens
+    QFile tokenFile(dstPath + "/tokens.json");
+    if (tokenFile.exists()) {
+        // QFile > QByteArray > JsonDocument > QMap > QSettings
+        tokenFile.open(QIODevice::ReadOnly);
+        QByteArray tokenArray = tokenFile.readAll();
+        QJsonDocument tokenJsonDoc = QJsonDocument::fromJson(tokenArray);
+        QMap<QString, QVariant> tokensMap;
+        tokensMap = tokenJsonDoc.object().toVariantMap();
+        // add token templates and save in QSettings
+        mw3->infoString->add(tokensMap);
+    }
+    tokenFile.close();
+
+    // Recover the template settings
     // recreate jsonDoc from QByteArray
     QJsonDocument jsonDoc = QJsonDocument::fromJson(ba);
 
@@ -1526,10 +1596,14 @@ void EmbelProperties::readMetadataTemplateList()
     metadataTemplatesList.sort(Qt::CaseInsensitive);
 }
 
+void EmbelProperties::renameMetadataTemplateList(QString oldName, QString newName)
+{
+    qDebug() << __FUNCTION__ << oldName << newName;
+}
+
 void EmbelProperties::updateMetadataTemplateList()
 {
 /*
-
     After the token editor has been invoked and closed the text metadataTemplate lists
     are updated in case the template list has changed.
 */
@@ -1550,17 +1624,15 @@ void EmbelProperties::updateMetadataTemplateList()
         // ignore if the source in not a metadata template (cause crash)
         if (t.at(i).source == "Text") continue;
         // to be super safe check if textMetadataTemplateObjectEditor.at(i) is out of bounds
-        if (i > n) {
-            qDebug() << __FUNCTION__ << "textMetadataTemplateObjectEditor OUT OF BOUNDS";
-            break;
-        }
-        QString oldTemplateName = textMetadataTemplateObjectEditor.at(i)->value();
+//        if (i > n) {
+//            qDebug() << __FUNCTION__ << "textMetadataTemplateObjectEditor OUT OF BOUNDS";
+//            break;
+//        }
+//        QString oldTemplateName = t.at(i).metadataTemplate;
         textMetadataTemplateObjectEditor.at(i)->refresh(metadataTemplatesList);
         // refreshing metadataTemplatesList removes old value for the text - reassign textMetadataTemplate object
-        if (metadataTemplatesList.contains(oldTemplateName))
-            textMetadataTemplateObjectEditor.at(i)->setValue(oldTemplateName);
-//        else
-//            textMetadataTemplateObjectEditor.at(i)->setValue("Default Info");
+//        if (metadataTemplatesList.contains(oldTemplateName))
+//            textMetadataTemplateObjectEditor.at(i)->setValue(oldTemplateName);
     }
 }
 
@@ -2501,9 +2573,9 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
     }
 
     if (source == "metadataTemplate") {
-        QString key = v.toString();
-        setting->setValue(path, key);
-        t[index].metadataTemplate = key;
+        QString value = v.toString();
+        setting->setValue(path, value);
+        t[index].metadataTemplate = value;
     }
 
     if (source == "font") {

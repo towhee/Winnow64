@@ -1,4 +1,10 @@
 BUGS / TO DO
+- Info token editor rename not working properly
+- Info token editor can crash
+- When delete embel template also delete from Winnow embellish menu
+- Thumbnail for video files
+- Maintain count when switch folders during the same ingest
+- Save tokens used in template
 - Full path for file name in external program
 - When reverse sort the cache progress bar does not reverse to match
 - Handle winnets on Mac

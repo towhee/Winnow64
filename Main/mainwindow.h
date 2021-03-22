@@ -90,6 +90,7 @@ class MW : public QMainWindow
     friend class ProgressBar;       // mw1
     friend class IconView;          // mw2
     friend class EmbelProperties;   // mw3
+    friend class InfoString;        // mw4
 
 public:
     MW(const QString args, QWidget *parent = nullptr);
@@ -443,7 +444,8 @@ private slots:
     void bookmarkClicked(QTreeWidgetItem *item, int col);
     void setRatingBadgeVisibility();
     void setShootingInfoVisibility();
-    void selectTokenString();
+//    void selectTokenString();
+    void tokenEditor();
 //    void toggleThumbWrap();
     void setIngested();
     void togglePick();
@@ -976,6 +978,7 @@ private:
     void createFSTree();
     void createImageView();
     void createInfoView();
+    void createInfoString();
     void createMenus();
     void createTableView();
     void createThumbView();
