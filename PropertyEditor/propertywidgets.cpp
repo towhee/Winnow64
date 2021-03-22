@@ -660,7 +660,7 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     comboBox = new QComboBox;
     comboBox->setObjectName("DisableGoActions");  // used in MW::focusChange
     QString clr = idx.data(UR_Color).toString();
-    comboBox->setMaxVisibleItems(20);
+    comboBox->setMaxVisibleItems(30);
     comboBox->setStyleSheet("QComboBox {"
                                 "color:" + clr + ";"
                                 "background: transparent;"
@@ -719,6 +719,7 @@ QString ComboBoxEditor::value()
     G::track(__FUNCTION__);
     #endif
     }
+    // crash here when rename in token editor sometimes
     return comboBox->currentText();
 }
 

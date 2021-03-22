@@ -4,12 +4,12 @@
 #include <QtWidgets>
 #include "Main/global.h"
 #include "Datamodel/datamodel.h"
+#include "PropertyEditor/propertyeditor.h"
 #include "Utilities/utilities.h"
 #include "Utilities/htmlwindow.h"
 #include "Utilities/foldercompressor.h"
-#include "PropertyEditor/propertyeditor.h"
 #include "Effects/graphicseffect.h"
-#include "Views/infostring.h"
+//#include "Views/infostring.h"
 #include "Dialogs/copystyledlg.h"
 #include "Dialogs/patterndlg.h"
 #include "Dialogs/managetilesdlg.h"
@@ -28,7 +28,7 @@ public:
     int templateId;                 // 0 == Do not embellish
     QString styleName;
     int styleId;
-    int lightDirection;             // 0-360 degrees used for shadows etc
+    int lightDirection;             // 0-360 degrees (0 = north) used for shadows etc
     int horizontalFitPx;
     int verticalFitPx;
     int longSidePx;
@@ -130,6 +130,7 @@ public slots:
     void setCurrentTemplate(QString name);
     void coordHelp();
     QString diagnostics();
+    void renameMetadataTemplateList(QString oldName, QString newName);
     void updateMetadataTemplateList();
     bool saveTemplateToFile();
     bool readTemplateFromFile();
@@ -167,6 +168,7 @@ private:
     QString uniqueTemplateName(QString name);
     QString uniqueTileName(QString name);
     QString uniqueGraphicName(QString name);
+    QString uniqueTokenName(QString name);
     void syncWinnets();
 
     void addTemplateHeader();

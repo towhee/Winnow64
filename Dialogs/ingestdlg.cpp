@@ -1226,11 +1226,13 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
     #endif
     }
     // setup TokenDlg
+    QMap<QString,QString> usingTokenMap;
     QString title = "Token Editor - Path from Root to Destination Folder";
     int index = ui->pathTemplatesCB->currentIndex();
     QString currentKey = ui->pathTemplatesCB->currentText();
-    TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, pathTemplatesMap, index,
-                                      currentKey, title, this);
+    TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, pathTemplatesMap, usingTokenMap,
+                                      index, currentKey, title, this);
+
     tokenDlg->exec();
 
     // rebuild template list and set to same item as TokenDlg for user continuity
@@ -1270,10 +1272,11 @@ void IngestDlg::on_filenameTemplatesBtn_clicked()
     // title is also used to filter warnings, so if you change it here also change
     // it in TokenDlg::updateUniqueFileNameWarning
     QString title = "Token Editor - Destination File Name";
+    QMap<QString,QString> usingTokenMap;    // dummy
     int index = ui->filenameTemplatesCB->currentIndex();
     QString currentKey = ui->filenameTemplatesCB->currentText();
-    TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, filenameTemplatesMap, index,
-                                      currentKey, title, this);
+    TokenDlg *tokenDlg = new TokenDlg(tokens, exampleMap, filenameTemplatesMap, usingTokenMap,
+                                      index, currentKey, title, this);
     tokenDlg->exec();
 
     // rebuild template list and set to same item as TokenDlg for user continuity
