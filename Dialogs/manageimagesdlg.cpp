@@ -90,7 +90,7 @@ QString ManageImagesDlg::templatesUsingTile(QString name)
         for (int b = 0; b < borders.length(); ++b) {
             QString tileKey = templateBorderPath + "/" + borders.at(b) + "/tile";
             QString tileName = setting->value(tileKey).toString();
-            qDebug() << __FUNCTION__ << tileKey << tileName << name;
+//            qDebug() << __FUNCTION__ << tileKey << tileName << name;
             if (tileName == name) {
                 msg += "Warning: " + name + " is being used by template "
                        + templateName + "\n";
@@ -102,7 +102,7 @@ QString ManageImagesDlg::templatesUsingTile(QString name)
 
 QString ManageImagesDlg::templatesUsingGraphic(QString name)
 {
-    qDebug() << __FUNCTION__ << name;
+//    qDebug() << __FUNCTION__ << name;
     QString msg = "";
     setting->beginGroup("Embel/Templates");
     QStringList templates = setting->childGroups();
@@ -110,14 +110,14 @@ QString ManageImagesDlg::templatesUsingGraphic(QString name)
     for (int i = 0; i < templates.length(); ++i) {
         QString templateName = templates.at(i);
         QString templateGraphicPath = "Embel/Templates/" + templateName + "/Graphics";
-        qDebug() << __FUNCTION__ << templateName << templateGraphicPath;
+//        qDebug() << __FUNCTION__ << templateName << templateGraphicPath;
         setting->beginGroup(templateGraphicPath);
         QStringList graphics = setting->childGroups();
         setting->endGroup();
         for (int g = 0; g < graphics.length(); ++g) {
             QString graphicKey = templateGraphicPath + "/" + graphics.at(g) + "/graphic";
             QString graphicName = setting->value(graphicKey).toString();
-            qDebug() << __FUNCTION__ << graphicKey << graphicName << name;
+//            qDebug() << __FUNCTION__ << graphicKey << graphicName << name;
             if (graphicName == name) {
                 msg += "Warning: " + name + " is being used by template "
                        + templateName + "\n";
@@ -170,7 +170,7 @@ void ManageImagesDlg::itemDoubleClicked(QTableWidgetItem *item)
 */
     if (isInitializing) return;
     prevName = item->text();
-    qDebug() << __FUNCTION__ << item << prevName;
+//    qDebug() << __FUNCTION__ << item << prevName;
 }
 
 void ManageImagesDlg::itemChanged(QTableWidgetItem *item)

@@ -14,7 +14,7 @@ public:
     explicit InfoString(QWidget *parent, DataModel *dm, QSettings *setting/*,
                         EmbelProperties *embelProperties*/);
     void editTemplates();
-//    void setCurrentInfoTemplate(QString &currentInfoTemplate);
+//    void setCurrentInfoTemplate(QString &loupeInfoTemplate);
     QString getCurrentInfoTemplate();
     QString parseTokenString(QString &tokenString, QString &fPath, QModelIndex &idx);
     QString parseTokenString(QString &tokenString, QString &fPath);
@@ -22,7 +22,7 @@ public:
 
     QStringList tokens;
     QMap<QString, QString> infoTemplates;
-    QString currentInfoTemplate;
+    QString loupeInfoTemplate;
 
 //signals:
 //    void change();
@@ -41,7 +41,7 @@ private:
     bool parseToken(QString &tokenString, int pos, QString &token, int &tokenEnd);
     QString tokenValue(QString &tokenString, QFileInfo &info, QString &fPath, QModelIndex &idx);
     QString tokenValue(QString &tokenString, QFileInfo &info, QString &fPath, ImageMetadata &m);
-    int getIndex();
+    int getCurrentInfoTemplateIndex();
     QString getCurrentInfoTemplate(int index);
     QString uniqueTokenName(QString name);
     void usingToken();

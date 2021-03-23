@@ -1,7 +1,5 @@
 BUGS / TO DO
-- Info token editor rename not working properly
-- Info token editor can crash
-- When delete embel template also delete from Winnow embellish menu
+- Slow program start sometimes (check for updates?)
 - Thumbnail for video files
 - Maintain count when switch folders during the same ingest
 - Save tokens used in template
@@ -54,6 +52,9 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- When delete embel template also delete from Winnow embellish menu
+- Info token editor rename not working properly
+- Info token editor can crash
 - Import/export Embellish templates
 - Check if tile or graphic is being used prior to deletion
 - Replaced Thumbnails with Appearance in Preferences

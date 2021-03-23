@@ -4472,11 +4472,12 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
     G::track(__FUNCTION__);
     #endif
     }
-//    /* This is the info displayed on top of the image in loupe view. It is
-//       dependent on template data stored in QSettings */
-//    infoString = new InfoString(this, dm, setting, embelProperties);
+    /* This is the info displayed on top of the image in loupe view. It is
+       dependent on template data stored in QSettings */
+    // start with defaults
+    infoString->loupeInfoTemplate = "Default info";
     if (isSettings) {
-        if (setting->contains("currentInfoTemplate")) infoString->currentInfoTemplate = setting->value("currentInfoTemplate").toString();
+        // load info templates
         setting->beginGroup("InfoTemplates");
         QStringList keys = setting->childKeys();
         for (int i = 0; i < keys.size(); ++i) {
@@ -4484,16 +4485,17 @@ dependent on metadata, imageCacheThread, thumbView, datamodel and settings.
             infoString->infoTemplates[key] = setting->value(key).toString();
         }
         setting->endGroup();
-    }
-    else {
-        infoString->currentInfoTemplate = "Default info";
+        // if loupeInfoTemplate is in QSettings and info templates then assign
+        if (setting->contains("loupeInfoTemplate")) {
+            QString displayInfoTemplate = setting->value("loupeInfoTemplate").toString();
+            if (infoString->infoTemplates.contains(displayInfoTemplate))
+                infoString->loupeInfoTemplate = displayInfoTemplate;
+        }
     }
 
     // prep pass values: first use of program vs settings have been saved
     if (isSettings) {
         if (setting->contains("isImageInfoVisible")) isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
-//        if (setting->contains("isRatingBadgeVisible")) isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
-//        if (setting->contains("classificationBadgeInImageDiameter")) classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
         if (setting->contains("infoOverlayFontSize")) infoOverlayFontSize = setting->value("infoOverlayFontSize").toInt();
     }
     else {
@@ -8316,7 +8318,7 @@ re-established when the application is re-opened.
     setting->endGroup();
 
     /* Token templates used for shooting information shown in ImageView */
-    setting->setValue("currentInfoTemplate", infoString->currentInfoTemplate);
+    setting->setValue("loupeInfoTemplate", infoString->loupeInfoTemplate);
     setting->beginGroup("InfoTemplates");
         setting->remove("");
         QMapIterator<QString, QString> infoIter(infoString->infoTemplates);
@@ -9426,9 +9428,9 @@ void MW::tokenEditor()
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
     imageView->moveShootingInfo(info);
-//    qDebug() << __FUNCTION__ << "call  updateMetadataTemplateList";
-//    embelProperties->updateMetadataTemplateList();
-//    qDebug() << __FUNCTION__ << "updateMetadataTemplateList did not crash";
+    qDebug() << __FUNCTION__ << "call  updateMetadataTemplateList";
+    embelProperties->updateMetadataTemplateList();
+    qDebug() << __FUNCTION__ << "updateMetadataTemplateList did not crash";
 }
 
 void MW::setRatingBadgeVisibility() {

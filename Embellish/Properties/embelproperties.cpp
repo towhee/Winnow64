@@ -1371,7 +1371,7 @@ bool EmbelProperties::readTemplateFromFile()
     if (dupTemplateName) {
         QString a = "Templates/" + srcTName;
         QString b = "Templates/" + uniqueTName;
-        qDebug() << __FUNCTION__ << a << b;
+//        qDebug() << __FUNCTION__ << a << b;
         ba.replace(a.toUtf8(), b.toUtf8());
     }
 
@@ -1381,21 +1381,27 @@ bool EmbelProperties::readTemplateFromFile()
     dir.setNameFilters(fileFilters);
     dir.setFilter(QDir::Files);
     for (int i = 0; i < dir.entryInfoList().length(); ++i) {
+        // get new tile QByteArray
+        QFile f(dir.entryInfoList().at(i).filePath());
+        f.open(QIODevice::ReadOnly);
+        QByteArray newTileBa = f.readAll();
+        f.close();
         // get unique name
         QString name = dir.entryInfoList().at(i).baseName();
         QString uniqueName = uniqueTileName(name);
         if (name != uniqueName) {
+            // tile name already exists, check if tile QByteArray is also the same
+            QByteArray existingTileBa = setting->value("Embel/Tiles/" + name).toByteArray();
+            // if tile name and tile QByteArray same then do not save again
+            if (newTileBa == existingTileBa) continue;
+            // tiles are diffent, so rename tile in the template settings being read
             QString a = "/tile\": \"" + name;
             QString b = "/tile\": \"" + uniqueName;
             ba.replace(a.toUtf8(), b.toUtf8());
         }
         // add tile to QSettings
-        QFile f(dir.entryInfoList().at(i).filePath());
-        f.open(QIODevice::ReadOnly);
-        QByteArray tileBa = f.readAll();
-        f.close();
         QString settingPath = "Embel/Tiles/" + uniqueName;
-        setting->setValue(settingPath, tileBa);
+        setting->setValue(settingPath, newTileBa);
     }
 
     // checking if graphic files already exist in embellish
@@ -1404,21 +1410,27 @@ bool EmbelProperties::readTemplateFromFile()
     dir.setNameFilters(fileFilters);
     dir.setFilter(QDir::Files);
     for (int i = 0; i < dir.entryInfoList().length(); ++i) {
+        // get new tile QByteArray
+        QFile f(dir.entryInfoList().at(i).filePath());
+        f.open(QIODevice::ReadOnly);
+        QByteArray newGraphicBa = f.readAll();
+        f.close();
         // get unique name
         QString name = dir.entryInfoList().at(i).baseName();
         QString uniqueName = uniqueGraphicName(name);
         if (name != uniqueName) {
+            // graphic name already exists, check if graphic QByteArray is also the same
+            QByteArray existingGraphicBa = setting->value("Embel/Graphics/" + name).toByteArray();
+            // if tile name and tile QByteArray same then do not save again
+            if (newGraphicBa == existingGraphicBa) continue;
+            // the graphics are diffent, so rename graphic in the template settings being read
             QString a = "/graphic\": \"" + name;
             QString b = "/graphic\": \"" + uniqueName;
             ba.replace(a.toUtf8(), b.toUtf8());
         }
         // add graphic to QSettings
-        QFile f(dir.entryInfoList().at(i).filePath());
-        f.open(QIODevice::ReadOnly);
-        QByteArray tileBa = f.readAll();
-        f.close();
         QString settingPath = "Embel/Graphics/" + uniqueName;
-        setting->setValue(settingPath, tileBa);
+        setting->setValue(settingPath, newGraphicBa);
     }
 
     // Get tokens
@@ -1454,7 +1466,6 @@ bool EmbelProperties::readTemplateFromFile()
     newTemplateFromImport(uniqueTName);
 
     // cleanup temp folder created
-    qDebug() << __FUNCTION__ << dir.absolutePath();
     dir.removeRecursively();
 
     return true;
@@ -1596,17 +1607,16 @@ void EmbelProperties::readMetadataTemplateList()
 
 void EmbelProperties::renameMetadataTemplateList(QString oldName, QString newName)
 {
-    qDebug() << __FUNCTION__ << oldName << newName;
-    qDebug() << __FUNCTION__ << t.size() << textTokenObjectEditor.size();
-
+/*
+    When a token template is renamed in TokenDlg, InfoString signals this slot to update the
+    token template name in the Texts Template field combobox list.
+*/
     // update model (triggers itemChangeText which updates QSettings and vector)
     for (int i = 0; i < textTokenObjectEditor.size(); ++i) {
-        // guard
+        // guard index
         if (i >= t.size()) break;
         // ignore if the source is a text string
-        qDebug() << __FUNCTION__ << i << "t.at(i).source =" << t.at(i).source;
         if (t.at(i).source == "Text") continue;
-        qDebug() << __FUNCTION__ << i << t.at(i).metadataTemplate;
         textTokenObjectEditor.at(i)->renameItem(oldName, newName);
     }
 }
@@ -1615,7 +1625,7 @@ void EmbelProperties::updateMetadataTemplateList()
 {
 /*
     After the token editor has been invoked and closed the text metadataTemplate lists
-    are updated in case the template list has changed.
+    are updated in case the template list has changed (new items or deleted items).
 */
     {
     #ifdef ISDEBUG
@@ -1628,15 +1638,20 @@ void EmbelProperties::updateMetadataTemplateList()
     // reread the metadata template list
     readMetadataTemplateList();
 
+    // make sure everything is in sync
+    if (textTokenObjectEditor.size() != t.size()) {
+        return;
+    }
+
     // update text metadataTemplate lists
-    int n = textTokenObjectEditor.size() - 1;
-    for (int i = 0; i < t.size(); ++i) {
+    for (int i = 0; i < textTokenObjectEditor.size(); ++i) {
         // ignore if the source in not a metadata template (cause crash)
         if (t.at(i).source == "Text") continue;
+        QString oldTemplateName = textTokenObjectEditor.at(i)->value();
         textTokenObjectEditor.at(i)->refresh(metadataTemplatesList);
         // refreshing metadataTemplatesList removes old value for the text - reassign textMetadataTemplate object
-//        if (metadataTemplatesList.contains(oldTemplateName))
-//            textMetadataTemplateObjectEditor.at(i)->setValue(oldTemplateName);
+        if (metadataTemplatesList.contains(oldTemplateName))
+            textTokenObjectEditor.at(i)->setValue(oldTemplateName);
     }
 }
 
@@ -5498,6 +5513,7 @@ void EmbelProperties::deleteTemplate()
     // remove from settings
     setting->remove(pathToDelete);
 
+    emit syncEmbellishMenu();
     syncWinnets();
 }
 

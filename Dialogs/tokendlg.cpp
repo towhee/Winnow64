@@ -409,7 +409,6 @@ void TokenDlg::on_deleteBtn_clicked()
         QMessageBox::warning(this, "Delete token template", msg, QMessageBox::Ok);
         return;
     }
-    return;
     // okay to delete
     ui->templatesCB->removeItem(ui->templatesCB->currentIndex());
     templatesMap.remove(key);
