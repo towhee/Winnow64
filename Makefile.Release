@@ -563,525 +563,17 @@ DESTDIR_TARGET = release\Winnow.exe
 
 .SUFFIXES: .c .cpp .cc .cxx
 
-{Dialogs}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
+.cpp.obj:
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Fo$@ $<
 
-{Dialogs}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
+.cc.obj:
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Fo$@ $<
 
-{Dialogs}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
+.cxx.obj:
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Fo$@ $<
 
-{Dialogs}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Olympus}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Olympus}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Olympus}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Olympus}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Image}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Image}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Image}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Image}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Fuji}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Fuji}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Fuji}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Fuji}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Sony}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Sony}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Sony}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Sony}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Canon}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Canon}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Canon}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Canon}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Utilities}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Utilities}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Utilities}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Utilities}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{.}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{.}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{.}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{.}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Embellish\Properties}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Embellish\Properties}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Embellish\Properties}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Embellish\Properties}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{"D:/My Projects/Winnow Project/Winnow64/UI"}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{"D:/My Projects/Winnow Project/Winnow64/UI"}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{"D:/My Projects/Winnow Project/Winnow64/UI"}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{"D:/My Projects/Winnow Project/Winnow64/UI"}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Tiff}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Tiff}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Tiff}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Tiff}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Views}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Views}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Views}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Views}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Datamodel}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Datamodel}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Datamodel}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Datamodel}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{PropertyEditor}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{PropertyEditor}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{PropertyEditor}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{PropertyEditor}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Effects}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Effects}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Effects}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Effects}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Dng}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Dng}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Dng}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Dng}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Cache}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Cache}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Cache}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Cache}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{File}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{File}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{File}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{File}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Metadata}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Metadata}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Metadata}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Metadata}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Panasonic}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Panasonic}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Panasonic}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Panasonic}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{release}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{release}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{release}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{release}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Main}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Main}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Main}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Main}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\jpeg}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\jpeg}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\jpeg}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\jpeg}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Nikon}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Nikon}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Nikon}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Nikon}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Heic}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Heic}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Heic}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{ImageFormats\Heic}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Embellish}.cpp{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Embellish}.cc{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Embellish}.cxx{release\}.obj::
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
-
-{Embellish}.c{release\}.obj::
-	$(CC) -c $(CFLAGS) $(INCPATH) -Forelease\ @<<
-	$<
-<<
+.c.obj:
+	$(CC) -c $(CFLAGS) $(INCPATH) -Fo$@ $<
 
 ####### Build rules
 
@@ -22978,6 +22470,9 @@ release\moc_mainwindow.cpp: Main\mainwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		ui_message.h \
 		UI\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		release\moc_predefs.h \
 		C:\Qt\5.15.2\msvc2019_64\bin\moc.exe
 	C:\Qt\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/moc_predefs.h" -IC:/Qt/5.15.2/msvc2019_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.15.2/msvc2019_64/include -IC:/Qt/5.15.2/msvc2019_64/include/QtWidgets -IC:/Qt/5.15.2/msvc2019_64/include/QtGui -IC:/Qt/5.15.2/msvc2019_64/include/QtANGLE -IC:/Qt/5.15.2/msvc2019_64/include/QtConcurrent -IC:/Qt/5.15.2/msvc2019_64/include/QtXmlPatterns -IC:/Qt/5.15.2/msvc2019_64/include/QtNetwork -IC:/Qt/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Main\mainwindow.h -o release\moc_mainwindow.cpp
@@ -36263,6 +35758,7 @@ release\imagecache.obj: Cache\imagecache.cpp Cache\imagecache.h \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\imagecache.obj Cache\imagecache.cpp
 
 release\managegraphicsdlg.obj: Dialogs\managegraphicsdlg.cpp Dialogs\managegraphicsdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -36739,17 +36235,25 @@ release\managegraphicsdlg.obj: Dialogs\managegraphicsdlg.cpp Dialogs\managegraph
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h \
 		UI\ui_managegraphicsdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QColor \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QModelIndexList \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMutex \
 		Utilities\popup.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QProgressBar \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\managegraphicsdlg.obj Dialogs\managegraphicsdlg.cpp
 
 release\manageimagesdlg.obj: Dialogs\manageimagesdlg.cpp Dialogs\manageimagesdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -37240,7 +36744,16 @@ release\manageimagesdlg.obj: Dialogs\manageimagesdlg.cpp Dialogs\manageimagesdlg
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		Utilities\utilities.h \
 		Utilities\inputdlg.h \
-		UI\ui_manageimagesdlg.h
+		UI\ui_manageimagesdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTableWidget \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\manageimagesdlg.obj Dialogs\manageimagesdlg.cpp
 
 release\foldercompressor.obj: Utilities\foldercompressor.cpp Utilities\FolderCompressor.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
@@ -37307,6 +36820,7 @@ release\foldercompressor.obj: Utilities\foldercompressor.cpp Utilities\FolderCom
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qhash.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDataStream \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qdatastream.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\foldercompressor.obj Utilities\foldercompressor.cpp
 
 release\mdcache.obj: Cache\mdcache.cpp Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -37926,6 +37440,7 @@ release\mdcache.obj: Cache\mdcache.cpp Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
 		Image\thumb.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\mdcache.obj Cache\mdcache.cpp
 
 release\buildfilters.obj: Datamodel\buildfilters.cpp Datamodel\buildfilters.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -38536,6 +38051,7 @@ release\buildfilters.obj: Datamodel\buildfilters.cpp Datamodel\buildfilters.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\buildfilters.obj Datamodel\buildfilters.cpp
 
 release\datamodel.obj: Datamodel\datamodel.cpp Datamodel\datamodel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -39143,6 +38659,7 @@ release\datamodel.obj: Datamodel\datamodel.cpp Datamodel\datamodel.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\datamodel.obj Datamodel\datamodel.cpp
 
 release\filters.obj: Datamodel\filters.cpp Datamodel\filters.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -39632,6 +39149,7 @@ release\filters.obj: Datamodel\filters.cpp Datamodel\filters.h \
 		Utilities\utilities.h \
 		Utilities\inputdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\filters.obj Datamodel\filters.cpp
 
 release\aboutdlg.obj: Dialogs\aboutdlg.cpp Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -40127,6 +39645,7 @@ release\aboutdlg.obj: Dialogs\aboutdlg.cpp Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\aboutdlg.obj Dialogs\aboutdlg.cpp
 
 release\appdlg.obj: Dialogs\appdlg.cpp Dialogs\appdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -40623,6 +40142,7 @@ release\appdlg.obj: Dialogs\appdlg.cpp Dialogs\appdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTableWidget \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\appdlg.obj Dialogs\appdlg.cpp
 
 release\copystyledlg.obj: Dialogs\copystyledlg.cpp Dialogs\copystyledlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -41119,6 +40639,7 @@ release\copystyledlg.obj: Dialogs\copystyledlg.cpp Dialogs\copystyledlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\copystyledlg.obj Dialogs\copystyledlg.cpp
 
 release\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs\ingestdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -41752,6 +41273,7 @@ release\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs\ingestdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpinBox \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTabWidget \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ingestdlg.obj Dialogs\ingestdlg.cpp
 
 release\loadusbdlg.obj: Dialogs\loadusbdlg.cpp Dialogs\loadusbdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -42234,6 +41756,7 @@ release\loadusbdlg.obj: Dialogs\loadusbdlg.cpp Dialogs\loadusbdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QListWidget \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\loadusbdlg.obj Dialogs\loadusbdlg.cpp
 
 release\managetilesdlg.obj: Dialogs\managetilesdlg.cpp Dialogs\managetilesdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -42728,6 +42251,7 @@ release\managetilesdlg.obj: Dialogs\managetilesdlg.cpp Dialogs\managetilesdlg.h 
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\managetilesdlg.obj Dialogs\managetilesdlg.cpp
 
 release\patterndlg.obj: Dialogs\patterndlg.cpp Dialogs\patterndlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -43217,6 +42741,7 @@ release\patterndlg.obj: Dialogs\patterndlg.cpp Dialogs\patterndlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		Utilities\utilities.h \
 		Utilities\inputdlg.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\patterndlg.obj Dialogs\patterndlg.cpp
 
 release\preferencesdlg.obj: Dialogs\preferencesdlg.cpp Dialogs\preferencesdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -43713,6 +43238,7 @@ release\preferencesdlg.obj: Dialogs\preferencesdlg.cpp Dialogs\preferencesdlg.h 
 		PropertyEditor\propertywidgets.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QStyledItemDelegate \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\preferencesdlg.obj Dialogs\preferencesdlg.cpp
 
 release\renamedlg.obj: Dialogs\renamedlg.cpp Dialogs\renamedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -44204,6 +43730,7 @@ release\renamedlg.obj: Dialogs\renamedlg.cpp Dialogs\renamedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\renamedlg.obj Dialogs\renamedlg.cpp
 
 release\saveasdlg.obj: Dialogs\saveasdlg.cpp Dialogs\saveasdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -44822,6 +44349,7 @@ release\saveasdlg.obj: Dialogs\saveasdlg.cpp Dialogs\saveasdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpinBox \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\saveasdlg.obj Dialogs\saveasdlg.cpp
 
 release\testaligndlg.obj: Dialogs\testaligndlg.cpp Dialogs\testaligndlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -44942,6 +44470,7 @@ release\testaligndlg.obj: Dialogs\testaligndlg.cpp Dialogs\testaligndlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qlabel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qframe.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\testaligndlg.obj Dialogs\testaligndlg.cpp
 
 release\tokendlg.obj: Dialogs\tokendlg.cpp Dialogs\tokendlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -45440,6 +44969,7 @@ release\tokendlg.obj: Dialogs\tokendlg.cpp Dialogs\tokendlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\tokendlg.obj Dialogs\tokendlg.cpp
 
 release\updateapp.obj: Dialogs\updateapp.cpp Dialogs\updateapp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -45920,6 +45450,7 @@ release\updateapp.obj: Dialogs\updateapp.cpp Dialogs\updateapp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\updateapp.obj Dialogs\updateapp.cpp
 
 release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -46414,6 +45945,7 @@ release\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\workspacedlg.obj Dialogs\workspacedlg.cpp
 
 release\zoomdlg.obj: Dialogs\zoomdlg.cpp Dialogs\zoomdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -46912,6 +46444,7 @@ release\zoomdlg.obj: Dialogs\zoomdlg.cpp Dialogs\zoomdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpinBox \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\zoomdlg.obj Dialogs\zoomdlg.cpp
 
 release\effects.obj: Effects\effects.cpp Effects\effects.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -47401,6 +46934,7 @@ release\effects.obj: Effects\effects.cpp Effects\effects.h \
 		Utilities\utilities.h \
 		Utilities\inputdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\effects.obj Effects\effects.cpp
 
 release\graphicseffect.obj: Effects\graphicseffect.cpp Effects\graphicseffect.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -47894,6 +47428,7 @@ release\graphicseffect.obj: Effects\graphicseffect.cpp Effects\graphicseffect.h 
 		Effects\effects.h \
 		Effects\REF_imageblitz_effects.h \
 		Effects\interpolate.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\graphicseffect.obj Effects\graphicseffect.cpp
 
 release\graphicsitemeventfilter.obj: Effects\graphicsitemeventfilter.cpp Effects\graphicsitemeventfilter.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -48369,6 +47904,7 @@ release\graphicsitemeventfilter.obj: Effects\graphicsitemeventfilter.cpp Effects
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\graphicsitemeventfilter.obj Effects\graphicsitemeventfilter.cpp
 
 release\embel.obj: Embellish\embel.cpp Embellish\embel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -49010,6 +48546,7 @@ release\embel.obj: Embellish\embel.cpp Embellish\embel.h \
 		Dialogs\manageimagesdlg.h \
 		ui_embelCoord.h \
 		Effects\graphicsitemeventfilter.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\embel.obj Embellish\embel.cpp
 
 release\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embellish\Properties\embelproperties.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -49707,7 +49244,11 @@ release\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embellish\
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		ui_message.h \
-		UI\ui_test12.h
+		UI\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\embelproperties.obj Embellish\Properties\embelproperties.cpp
 
 release\embelexport.obj: Embellish\embelexport.cpp Embellish\embelexport.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -50351,6 +49892,7 @@ release\embelexport.obj: Embellish\embelexport.cpp Embellish\embelexport.h \
 		Embellish\embel.h \
 		Effects\graphicsitemeventfilter.h \
 		Metadata\exiftool.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\embelexport.obj Embellish\embelexport.cpp
 
 release\bookmarks.obj: File\bookmarks.cpp File\bookmarks.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -50954,6 +50496,7 @@ release\bookmarks.obj: File\bookmarks.cpp File\bookmarks.h \
 		ImageFormats\Panasonic\panasonic.h \
 		ImageFormats\Sony\sony.h \
 		ImageFormats\Tiff\tiff.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\bookmarks.obj File\bookmarks.cpp
 
 release\fstree.obj: File\fstree.cpp File\fstree.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -51557,6 +51100,7 @@ release\fstree.obj: File\fstree.cpp File\fstree.h \
 		ImageFormats\Panasonic\panasonic.h \
 		ImageFormats\Sony\sony.h \
 		ImageFormats\Tiff\tiff.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\fstree.obj File\fstree.cpp
 
 release\imagealign.obj: Image\imagealign.cpp Image\imagealign.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QObject \
@@ -52046,6 +51590,7 @@ release\imagealign.obj: Image\imagealign.cpp Image\imagealign.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\imagealign.obj Image\imagealign.cpp
 
 release\pixmap.obj: Image\pixmap.cpp Image\pixmap.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QObject \
@@ -52656,6 +52201,7 @@ release\pixmap.obj: Image\pixmap.cpp Image\pixmap.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\pixmap.obj Image\pixmap.cpp
 
 release\thumb.obj: Image\thumb.cpp Image\thumb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QObject \
@@ -53264,6 +52810,7 @@ release\thumb.obj: Image\thumb.cpp Image\thumb.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\thumb.obj Image\thumb.cpp
 
 release\canon.obj: ImageFormats\Canon\canon.cpp ImageFormats\Canon\canon.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -53848,6 +53395,7 @@ release\canon.obj: ImageFormats\Canon\canon.cpp ImageFormats\Canon\canon.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QRgb \
 		Metadata\iptc.h \
 		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\canon.obj ImageFormats\Canon\canon.cpp
 
 release\canoncr3.obj: ImageFormats\Canon\canoncr3.cpp ImageFormats\Canon\canoncr3.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QObject \
@@ -54432,6 +53980,7 @@ release\canoncr3.obj: ImageFormats\Canon\canoncr3.cpp ImageFormats\Canon\canoncr
 		ImageFormats\Jpeg\jpeg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QRgb \
 		Metadata\iptc.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\canoncr3.obj ImageFormats\Canon\canoncr3.cpp
 
 release\dng.obj: ImageFormats\Dng\dng.cpp ImageFormats\Dng\dng.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -55016,6 +54565,7 @@ release\dng.obj: ImageFormats\Dng\dng.cpp ImageFormats\Dng\dng.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QRgb \
 		Metadata\iptc.h \
 		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\dng.obj ImageFormats\Dng\dng.cpp
 
 release\fuji.obj: ImageFormats\Fuji\fuji.cpp ImageFormats\Fuji\fuji.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -55600,6 +55150,7 @@ release\fuji.obj: ImageFormats\Fuji\fuji.cpp ImageFormats\Fuji\fuji.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QRgb \
 		Metadata\iptc.h \
 		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\fuji.obj ImageFormats\Fuji\fuji.cpp
 
 release\Heic.obj: ImageFormats\Heic\Heic.cpp ImageFormats\Heic\heic.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -56185,6 +55736,7 @@ release\Heic.obj: ImageFormats\Heic\Heic.cpp ImageFormats\Heic\heic.h \
 		Lib\libde265\release\de265-version.h \
 		Lib\libheif\include\heif.h \
 		Lib\libheif\include\heif_version.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\Heic.obj ImageFormats\Heic\Heic.cpp
 
 release\jpeg.obj: ImageFormats\jpeg\jpeg.cpp ImageFormats\jpeg\jpeg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -56769,6 +56321,7 @@ release\jpeg.obj: ImageFormats\jpeg\jpeg.cpp ImageFormats\jpeg\jpeg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\jpeg.obj ImageFormats\jpeg\jpeg.cpp
 
 release\nikon.obj: ImageFormats\Nikon\nikon.cpp ImageFormats\Nikon\nikon.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -57353,6 +56906,7 @@ release\nikon.obj: ImageFormats\Nikon\nikon.cpp ImageFormats\Nikon\nikon.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QRgb \
 		Metadata\iptc.h \
 		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\nikon.obj ImageFormats\Nikon\nikon.cpp
 
 release\olympus.obj: ImageFormats\Olympus\olympus.cpp ImageFormats\Olympus\olympus.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -57937,6 +57491,7 @@ release\olympus.obj: ImageFormats\Olympus\olympus.cpp ImageFormats\Olympus\olymp
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QRgb \
 		Metadata\iptc.h \
 		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\olympus.obj ImageFormats\Olympus\olympus.cpp
 
 release\panasonic.obj: ImageFormats\Panasonic\panasonic.cpp ImageFormats\Panasonic\panasonic.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -58521,6 +58076,7 @@ release\panasonic.obj: ImageFormats\Panasonic\panasonic.cpp ImageFormats\Panason
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QRgb \
 		Metadata\iptc.h \
 		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\panasonic.obj ImageFormats\Panasonic\panasonic.cpp
 
 release\sony.obj: ImageFormats\Sony\sony.cpp ImageFormats\Sony\sony.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -59105,6 +58661,7 @@ release\sony.obj: ImageFormats\Sony\sony.cpp ImageFormats\Sony\sony.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QRgb \
 		Metadata\iptc.h \
 		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\sony.obj ImageFormats\Sony\sony.cpp
 
 release\tiff.obj: ImageFormats\Tiff\tiff.cpp ImageFormats\Tiff\tiff.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -59689,6 +59246,7 @@ release\tiff.obj: ImageFormats\Tiff\tiff.cpp ImageFormats\Tiff\tiff.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QRgb \
 		Metadata\iptc.h \
 		Metadata\gps.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\tiff.obj ImageFormats\Tiff\tiff.cpp
 
 release\dockwidget.obj: Main\dockwidget.cpp Main\dockwidget.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDockWidget \
@@ -60177,6 +59735,7 @@ release\dockwidget.obj: Main\dockwidget.cpp Main\dockwidget.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		Main\widgetcss.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\dockwidget.obj Main\dockwidget.cpp
 
 release\global.obj: Main\global.cpp Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -60662,6 +60221,7 @@ release\global.obj: Main\global.cpp Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\global.obj Main\global.cpp
 
 release\main.obj: Main\main.cpp Main\mainwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -61360,7 +60920,11 @@ release\main.obj: Main\main.cpp Main\mainwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		ui_message.h \
 		UI\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		Main\qtsingleapplication.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\main.obj Main\main.cpp
 
 release\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -62058,7 +61622,11 @@ release\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		ui_message.h \
-		UI\ui_test12.h
+		UI\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\mainwindow.obj Main\mainwindow.cpp
 
 release\qtlocalpeer.obj: Main\qtlocalpeer.cpp Main\qtlocalpeer.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QLocalServer \
@@ -62154,6 +61722,7 @@ release\qtlocalpeer.obj: Main\qtlocalpeer.cpp Main\qtlocalpeer.h \
 		Main\qtlockedfile_win.cpp \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFileInfo \
 		Main\qtlockedfile_unix.cpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\qtlocalpeer.obj Main\qtlocalpeer.cpp
 
 release\qtsingleapplication.obj: Main\qtsingleapplication.cpp Main\qtsingleapplication.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
@@ -62280,6 +61849,7 @@ release\qtsingleapplication.obj: Main\qtsingleapplication.cpp Main\qtsingleappli
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QVector \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QWidget
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\qtsingleapplication.obj Main\qtsingleapplication.cpp
 
 release\widgetcss.obj: Main\widgetcss.cpp Main\widgetcss.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -62766,6 +62336,7 @@ release\widgetcss.obj: Main\widgetcss.cpp Main\widgetcss.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\widgetcss.obj Main\widgetcss.cpp
 
 release\exif.obj: Metadata\exif.cpp Metadata\exif.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QtCore \
@@ -62968,6 +62539,7 @@ release\exif.obj: Metadata\exif.cpp Metadata\exif.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qwineventnotifier.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qxmlstream.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qtcoreversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\exif.obj Metadata\exif.cpp
 
 release\exiftool.obj: Metadata\exiftool.cpp Metadata\exiftool.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -63457,6 +63029,7 @@ release\exiftool.obj: Metadata\exiftool.cpp Metadata\exiftool.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\exiftool.obj Metadata\exiftool.cpp
 
 release\irb.obj: Metadata\irb.cpp Metadata\irb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QtCore \
@@ -63947,6 +63520,7 @@ release\irb.obj: Metadata\irb.cpp Metadata\irb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		Metadata\imagemetadata.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\irb.obj Metadata\irb.cpp
 
 release\gps.obj: Metadata\gps.cpp Metadata\gps.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QtCore \
@@ -64149,6 +63723,7 @@ release\gps.obj: Metadata\gps.cpp Metadata\gps.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qwineventnotifier.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qxmlstream.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qtcoreversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\gps.obj Metadata\gps.cpp
 
 release\ifd.obj: Metadata\ifd.cpp Metadata\ifd.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QtCore \
@@ -64641,6 +64216,7 @@ release\ifd.obj: Metadata\ifd.cpp Metadata\ifd.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		Metadata\imagemetadata.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\ifd.obj Metadata\ifd.cpp
 
 release\iptc.obj: Metadata\iptc.cpp Metadata\iptc.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QtCore \
@@ -65131,6 +64707,7 @@ release\iptc.obj: Metadata\iptc.cpp Metadata\iptc.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		Metadata\imagemetadata.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\iptc.obj Metadata\iptc.cpp
 
 release\metadata.obj: Metadata\metadata.cpp Metadata\metadata.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -65734,6 +65311,7 @@ release\metadata.obj: Metadata\metadata.cpp Metadata\metadata.h \
 		ImageFormats\Sony\sony.h \
 		ImageFormats\Tiff\tiff.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\metadata.obj Metadata\metadata.cpp
 
 release\metareport.obj: Metadata\metareport.cpp Metadata\metareport.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -66209,6 +65787,7 @@ release\metareport.obj: Metadata\metareport.cpp Metadata\metareport.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\metareport.obj Metadata\metareport.cpp
 
 release\xmp.obj: Metadata\xmp.cpp Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QObject \
@@ -66784,6 +66363,7 @@ release\xmp.obj: Metadata\xmp.cpp Metadata\xmp.h \
 		Utilities\utilities.h \
 		Utilities\inputdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\xmp.obj Metadata\xmp.cpp
 
 release\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\preferences.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -67481,7 +67061,11 @@ release\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\preferenc
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		ui_message.h \
-		UI\ui_test12.h
+		UI\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\preferences.obj PropertyEditor\preferences.cpp
 
 release\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEditor\propertyeditor.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -68179,7 +67763,11 @@ release\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEditor\pro
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		ui_message.h \
-		UI\ui_test12.h
+		UI\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\propertyeditor.obj PropertyEditor\propertyeditor.cpp
 
 release\propertydelegate.obj: PropertyEditor\propertydelegate.cpp PropertyEditor\propertydelegate.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -68671,6 +68259,7 @@ release\propertydelegate.obj: PropertyEditor\propertydelegate.cpp PropertyEditor
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDockWidget \
 		Main\widgetcss.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QStyledItemDelegate
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\propertydelegate.obj PropertyEditor\propertydelegate.cpp
 
 release\propertywidgets.obj: PropertyEditor\propertywidgets.cpp PropertyEditor\propertywidgets.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -69160,6 +68749,7 @@ release\propertywidgets.obj: PropertyEditor\propertywidgets.cpp PropertyEditor\p
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		Main\widgetcss.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\propertywidgets.obj PropertyEditor\propertywidgets.cpp
 
 release\bit.obj: Utilities\bit.cpp Utilities\bit.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QCoreApplication \
@@ -69217,6 +68807,7 @@ release\bit.obj: Utilities\bit.cpp Utilities\bit.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcontainerfwd.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qobject_impl.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qeventloop.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\bit.obj Utilities\bit.cpp
 
 release\classificationlabel.obj: Utilities\classificationlabel.cpp Utilities\classificationlabel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -69705,6 +69296,7 @@ release\classificationlabel.obj: Utilities\classificationlabel.cpp Utilities\cla
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\classificationlabel.obj Utilities\classificationlabel.cpp
 
 release\coloranalysis.obj: Utilities\coloranalysis.cpp Utilities\coloranalysis.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -70195,6 +69787,7 @@ release\coloranalysis.obj: Utilities\coloranalysis.cpp Utilities\coloranalysis.h
 		Utilities\utilities.h \
 		Utilities\inputdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\coloranalysis.obj Utilities\coloranalysis.cpp
 
 release\dropshadowlabel.obj: Utilities\dropshadowlabel.cpp Utilities\dropshadowlabel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QObject \
@@ -70309,6 +69902,7 @@ release\dropshadowlabel.obj: Utilities\dropshadowlabel.cpp Utilities\dropshadowl
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtextoption.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpen.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\dropshadowlabel.obj Utilities\dropshadowlabel.cpp
 
 release\htmlwindow.obj: Utilities\htmlwindow.cpp Utilities\htmlwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -70795,6 +70389,7 @@ release\htmlwindow.obj: Utilities\htmlwindow.cpp Utilities\htmlwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\htmlwindow.obj Utilities\htmlwindow.cpp
 
 release\icc.obj: Utilities\icc.cpp Utilities\icc.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -71282,6 +70877,7 @@ release\icc.obj: Utilities\icc.cpp Utilities\icc.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		Lib\lcms2-2.9\include\lcms2.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\icc.obj Utilities\icc.cpp
 
 release\inputdlg.obj: Utilities\inputdlg.cpp Utilities\inputdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -71777,6 +71373,7 @@ release\inputdlg.obj: Utilities\inputdlg.cpp Utilities\inputdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\inputdlg.obj Utilities\inputdlg.cpp
 
 release\performance.obj: Utilities\performance.cpp Utilities\performance.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -72252,6 +71849,7 @@ release\performance.obj: Utilities\performance.cpp Utilities\performance.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\performance.obj Utilities\performance.cpp
 
 release\popup.obj: Utilities\popup.cpp Utilities\popup.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QWidget \
@@ -72388,6 +71986,7 @@ release\popup.obj: Utilities\popup.cpp Utilities\popup.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qinputmethod.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDesktopWidget \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\popup.obj Utilities\popup.cpp
 
 release\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QWidget \
@@ -73085,7 +72684,11 @@ release\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		ui_message.h \
-		UI\ui_test12.h
+		UI\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\progressbar.obj Utilities\progressbar.cpp
 
 release\usb.obj: Utilities\usb.cpp Utilities\usb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -73561,6 +73164,7 @@ release\usb.obj: Utilities\usb.cpp Utilities\usb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\usb.obj Utilities\usb.cpp
 
 release\utilities.obj: Utilities\utilities.cpp Utilities\utilities.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -74049,6 +73653,7 @@ release\utilities.obj: Utilities\utilities.cpp Utilities\utilities.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\utilities.obj Utilities\utilities.cpp
 
 release\win.obj: Utilities\win.cpp Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
@@ -74536,6 +74141,7 @@ release\win.obj: Utilities\win.cpp Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\win.obj Utilities\win.cpp
 
 release\compareImages.obj: Views\compareImages.cpp Views\compareImages.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -75168,6 +74774,7 @@ release\compareImages.obj: Views\compareImages.cpp Views\compareImages.h \
 		Utilities\classificationlabel.h \
 		Image\imagealign.h \
 		Dialogs\testaligndlg.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\compareImages.obj Views\compareImages.cpp
 
 release\compareview.obj: Views\compareview.cpp Views\compareview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -75797,6 +75404,7 @@ release\compareview.obj: Views\compareview.cpp Views\compareview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		Utilities\classificationlabel.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\compareview.obj Views\compareview.cpp
 
 release\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -76494,7 +76102,11 @@ release\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		ui_message.h \
-		UI\ui_test12.h
+		UI\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\iconview.obj Views\iconview.cpp
 
 release\iconviewdelegate.obj: Views\iconviewdelegate.cpp Views\iconviewdelegate.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QtGui \
@@ -76983,6 +76595,7 @@ release\iconviewdelegate.obj: Views\iconviewdelegate.cpp Views\iconviewdelegate.
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\iconviewdelegate.obj Views\iconviewdelegate.cpp
 
 release\imageview.obj: Views\imageview.cpp C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGraphicsDropShadowEffect \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qgraphicseffect.h \
@@ -77641,6 +77254,7 @@ release\imageview.obj: Views\imageview.cpp C:\Qt\5.15.2\msvc2019_64\include\QtWi
 		Utilities\classificationlabel.h \
 		Embellish\embel.h \
 		Effects\graphicsitemeventfilter.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\imageview.obj Views\imageview.cpp
 
 release\infoview.obj: Views\infoview.cpp Views\infoview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -78259,6 +77873,7 @@ release\infoview.obj: Views\infoview.cpp Views\infoview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QReadLocker \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\infoview.obj Views\infoview.cpp
 
 release\tableview.obj: Views\tableview.cpp Views\tableview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -78878,6 +78493,7 @@ release\tableview.obj: Views\tableview.cpp Views\tableview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWriteLocker \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QStyledItemDelegate
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\tableview.obj Views\tableview.cpp
 
 release\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -79509,141 +79125,278 @@ release\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		Dialogs\managetilesdlg.h \
 		Dialogs\managegraphicsdlg.h \
 		Dialogs\manageimagesdlg.h \
-		ui_embelCoord.h
+		ui_embelCoord.h \
+		Main\mainwindow.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDesktopWidget \
+		Dialogs\appdlg.h \
+		Datamodel\buildfilters.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		File\bookmarks.h \
+		File\fstree.h \
+		PropertyEditor\preferences.h \
+		Views\compareImages.h \
+		Views\iconview.h \
+		Views\iconviewdelegate.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QStyleOptionViewItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QFont \
+		Cache\threadsafehash.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QReadWriteLock \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QReadLocker \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWriteLocker \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
+		Views\compareview.h \
+		Cache\imagecache.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
+		Image\pixmap.h \
+		Utilities\icc.h \
+		Lib\lcms2-2.9\include\lcms2.h \
+		Utilities\win.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
+		Utilities\mac.h \
+		Utilities\classificationlabel.h \
+		Image\imagealign.h \
+		Dialogs\testaligndlg.h \
+		Views\tableview.h \
+		Views\imageview.h \
+		Utilities\dropshadowlabel.h \
+		Embellish\embel.h \
+		Effects\graphicsitemeventfilter.h \
+		Views\infoview.h \
+		Embellish\embelexport.h \
+		Metadata\exiftool.h \
+		Cache\mdcache.h \
+		Image\thumb.h \
+		Dialogs\ingestdlg.h \
+		ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\saveasdlg.h \
+		Dialogs\aboutdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QDesktopServices \
+		Dialogs\preferencesdlg.h \
+		Dialogs\updateapp.h \
+		Dialogs\workspacedlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMenu \
+		Dialogs\zoomdlg.h \
+		Dialogs\loadusbdlg.h \
+		Utilities\usb.h \
+		Utilities\coloranalysis.h \
+		Utilities\performance.h \
+		ui_helpform.h \
+		ui_shortcutsform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTreeWidget \
+		ui_welcome.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		ui_message.h \
+		UI\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\infostring.obj Views\infostring.cpp
 
 release\qrc_winnow.obj: release\qrc_winnow.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\qrc_winnow.obj release\qrc_winnow.cpp
 
 release\moc_imagecache.obj: release\moc_imagecache.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_imagecache.obj release\moc_imagecache.cpp
 
 release\moc_managegraphicsdlg.obj: release\moc_managegraphicsdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_managegraphicsdlg.obj release\moc_managegraphicsdlg.cpp
 
 release\moc_manageimagesdlg.obj: release\moc_manageimagesdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_manageimagesdlg.obj release\moc_manageimagesdlg.cpp
 
 release\moc_foldercompressor.obj: release\moc_foldercompressor.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_foldercompressor.obj release\moc_foldercompressor.cpp
 
 release\moc_mdcache.obj: release\moc_mdcache.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_mdcache.obj release\moc_mdcache.cpp
 
 release\moc_buildfilters.obj: release\moc_buildfilters.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_buildfilters.obj release\moc_buildfilters.cpp
 
 release\moc_datamodel.obj: release\moc_datamodel.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_datamodel.obj release\moc_datamodel.cpp
 
 release\moc_filters.obj: release\moc_filters.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_filters.obj release\moc_filters.cpp
 
 release\moc_aboutdlg.obj: release\moc_aboutdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_aboutdlg.obj release\moc_aboutdlg.cpp
 
 release\moc_appdlg.obj: release\moc_appdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_appdlg.obj release\moc_appdlg.cpp
 
 release\moc_copystyledlg.obj: release\moc_copystyledlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_copystyledlg.obj release\moc_copystyledlg.cpp
 
 release\moc_ingestdlg.obj: release\moc_ingestdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_ingestdlg.obj release\moc_ingestdlg.cpp
 
 release\moc_loadusbdlg.obj: release\moc_loadusbdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_loadusbdlg.obj release\moc_loadusbdlg.cpp
 
 release\moc_managetilesdlg.obj: release\moc_managetilesdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_managetilesdlg.obj release\moc_managetilesdlg.cpp
 
 release\moc_patterndlg.obj: release\moc_patterndlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_patterndlg.obj release\moc_patterndlg.cpp
 
 release\moc_preferencesdlg.obj: release\moc_preferencesdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_preferencesdlg.obj release\moc_preferencesdlg.cpp
 
 release\moc_renamedlg.obj: release\moc_renamedlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_renamedlg.obj release\moc_renamedlg.cpp
 
 release\moc_saveasdlg.obj: release\moc_saveasdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_saveasdlg.obj release\moc_saveasdlg.cpp
 
 release\moc_testaligndlg.obj: release\moc_testaligndlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_testaligndlg.obj release\moc_testaligndlg.cpp
 
 release\moc_workspacedlg.obj: release\moc_workspacedlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_workspacedlg.obj release\moc_workspacedlg.cpp
 
 release\moc_tokendlg.obj: release\moc_tokendlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_tokendlg.obj release\moc_tokendlg.cpp
 
 release\moc_updateapp.obj: release\moc_updateapp.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_updateapp.obj release\moc_updateapp.cpp
 
 release\moc_zoomdlg.obj: release\moc_zoomdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_zoomdlg.obj release\moc_zoomdlg.cpp
 
 release\moc_graphicseffect.obj: release\moc_graphicseffect.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_graphicseffect.obj release\moc_graphicseffect.cpp
 
 release\moc_embel.obj: release\moc_embel.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_embel.obj release\moc_embel.cpp
 
 release\moc_embelexport.obj: release\moc_embelexport.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_embelexport.obj release\moc_embelexport.cpp
 
 release\moc_embelproperties.obj: release\moc_embelproperties.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_embelproperties.obj release\moc_embelproperties.cpp
 
 release\moc_bookmarks.obj: release\moc_bookmarks.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_bookmarks.obj release\moc_bookmarks.cpp
 
 release\moc_fstree.obj: release\moc_fstree.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_fstree.obj release\moc_fstree.cpp
 
 release\moc_imagealign.obj: release\moc_imagealign.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_imagealign.obj release\moc_imagealign.cpp
 
 release\moc_pixmap.obj: release\moc_pixmap.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_pixmap.obj release\moc_pixmap.cpp
 
 release\moc_thumb.obj: release\moc_thumb.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_thumb.obj release\moc_thumb.cpp
 
 release\moc_canon.obj: release\moc_canon.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_canon.obj release\moc_canon.cpp
 
 release\moc_heic.obj: release\moc_heic.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_heic.obj release\moc_heic.cpp
 
 release\moc_jpeg.obj: release\moc_jpeg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_jpeg.obj release\moc_jpeg.cpp
 
 release\moc_nikon.obj: release\moc_nikon.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_nikon.obj release\moc_nikon.cpp
 
 release\moc_olympus.obj: release\moc_olympus.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_olympus.obj release\moc_olympus.cpp
 
 release\moc_panasonic.obj: release\moc_panasonic.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_panasonic.obj release\moc_panasonic.cpp
 
 release\moc_sony.obj: release\moc_sony.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_sony.obj release\moc_sony.cpp
 
 release\moc_tiff.obj: release\moc_tiff.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_tiff.obj release\moc_tiff.cpp
 
 release\moc_dockwidget.obj: release\moc_dockwidget.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_dockwidget.obj release\moc_dockwidget.cpp
 
 release\moc_mainwindow.obj: release\moc_mainwindow.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_mainwindow.obj release\moc_mainwindow.cpp
 
 release\moc_qtlocalpeer.obj: release\moc_qtlocalpeer.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_qtlocalpeer.obj release\moc_qtlocalpeer.cpp
 
 release\moc_qtsingleapplication.obj: release\moc_qtsingleapplication.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_qtsingleapplication.obj release\moc_qtsingleapplication.cpp
 
 release\moc_exiftool.obj: release\moc_exiftool.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_exiftool.obj release\moc_exiftool.cpp
 
 release\moc_metadata.obj: release\moc_metadata.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_metadata.obj release\moc_metadata.cpp
 
 release\moc_xmp.obj: release\moc_xmp.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_xmp.obj release\moc_xmp.cpp
 
 release\moc_preferences.obj: release\moc_preferences.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_preferences.obj release\moc_preferences.cpp
 
 release\moc_propertyeditor.obj: release\moc_propertyeditor.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_propertyeditor.obj release\moc_propertyeditor.cpp
 
 release\moc_propertydelegate.obj: release\moc_propertydelegate.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_propertydelegate.obj release\moc_propertydelegate.cpp
 
 release\moc_propertywidgets.obj: release\moc_propertywidgets.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_propertywidgets.obj release\moc_propertywidgets.cpp
 
 release\moc_classificationlabel.obj: release\moc_classificationlabel.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_classificationlabel.obj release\moc_classificationlabel.cpp
 
 release\moc_coloranalysis.obj: release\moc_coloranalysis.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_coloranalysis.obj release\moc_coloranalysis.cpp
 
 release\moc_dropshadowlabel.obj: release\moc_dropshadowlabel.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_dropshadowlabel.obj release\moc_dropshadowlabel.cpp
 
 release\moc_htmlwindow.obj: release\moc_htmlwindow.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_htmlwindow.obj release\moc_htmlwindow.cpp
 
 release\moc_inputdlg.obj: release\moc_inputdlg.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_inputdlg.obj release\moc_inputdlg.cpp
 
 release\moc_popup.obj: release\moc_popup.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_popup.obj release\moc_popup.cpp
 
 release\moc_progressbar.obj: release\moc_progressbar.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_progressbar.obj release\moc_progressbar.cpp
 
 release\moc_compareImages.obj: release\moc_compareImages.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_compareImages.obj release\moc_compareImages.cpp
 
 release\moc_compareview.obj: release\moc_compareview.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_compareview.obj release\moc_compareview.cpp
 
 release\moc_iconview.obj: release\moc_iconview.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_iconview.obj release\moc_iconview.cpp
 
 release\moc_iconviewdelegate.obj: release\moc_iconviewdelegate.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_iconviewdelegate.obj release\moc_iconviewdelegate.cpp
 
 release\moc_imageview.obj: release\moc_imageview.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_imageview.obj release\moc_imageview.cpp
 
 release\moc_infostring.obj: release\moc_infostring.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_infostring.obj release\moc_infostring.cpp
 
 release\moc_infoview.obj: release\moc_infoview.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_infoview.obj release\moc_infoview.cpp
 
 release\moc_tableview.obj: release\moc_tableview.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -Forelease\moc_tableview.obj release\moc_tableview.cpp
 
 ####### Install
 

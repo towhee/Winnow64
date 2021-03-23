@@ -42,8 +42,13 @@ InfoString::InfoString(QWidget *parent, DataModel *dm, QSettings *setting/*,
 
 void InfoString::usingToken()
 {
+/*
+    Creates a list of items using a token template.  This is used to prevent the user deleting
+    a token template that is in use.
+*/
     usingTokenMap.clear();
-    usingTokenMap[currentInfoTemplate] = "Shooting info template (view menu)";
+    usingTokenMap[loupeInfoTemplate] = "Shooting info template (view menu)";
+    usingTokenMap["Default info"] = "Cannot delete default token template";
     setting->beginGroup("Embel/Templates");
     QStringList templates = setting->childGroups();
     setting->endGroup();
@@ -83,31 +88,38 @@ QString InfoString::uniqueTokenName(QString name)
 
 void InfoString::add(QMap<QString, QVariant> items)
 {
+/*
+    Add a new tokenKey and tokenString.  This is used when an embellish template is read that
+    contains new metadata token templates.
+*/
     // get list of existing token keys in QSettings
     setting->beginGroup("InfoTemplates");
         QStringList existingTokenKeys = setting->childKeys();
     setting->endGroup();
+
+    // iterate new items to add
     QMapIterator<QString, QVariant> i(items);
     while (i.hasNext()) {
         i.next();
-        QString uniqueKey = i.key();
+        QString newKey = i.key();
+        QString newValue = setting->value(newKey).toString();
         // check if already exists
-        if (existingTokenKeys.contains(i.key())) {
-            QString existingValue = setting->value(i.key()).toString();
-            if (existingValue == i.value()) continue;
-            uniqueKey = uniqueTokenName(i.key());
+        if (existingTokenKeys.contains(newKey)) {
+            QString existingValue = setting->value(newKey).toString();
+            if (existingValue == newValue) continue;
+            newKey = uniqueTokenName(newKey);
         }
-        setting->setValue("InfoTemplates/" + uniqueKey, i.value());
-        infoTemplates[uniqueKey] = i.value().toString();
+        setting->setValue("InfoTemplates/" + newKey, i.value());
+        infoTemplates[newKey] = i.value().toString();
     }
 }
 
 void InfoString::editTemplates()
 {
     usingToken();
-    int index = getIndex();
+    int index = getCurrentInfoTemplateIndex();
     TokenDlg tokenDlg(tokens, exampleMap, infoTemplates, usingTokenMap, index,
-                      currentInfoTemplate, "Token Editor", this);
+                      loupeInfoTemplate, "Token Editor", this);
     connect(&tokenDlg, &TokenDlg::rename, ep, &EmbelProperties::renameMetadataTemplateList);
     tokenDlg.exec();
 
@@ -122,15 +134,16 @@ void InfoString::editTemplates()
     setting->endGroup();
 }
 
-int InfoString::getIndex()
+int InfoString::getCurrentInfoTemplateIndex()
 {
 /*
-    The currentInfoTemplate index in the TokenDlg template combo.
+    The loupeInfoTemplate index in the TokenDlg template combo. The loupeInfoTemplate is
+    used to show an information overlay on the images (shooting info by default)
 */
     QMap<QString, QString>::iterator i;
     int index = 0;
     for (i = infoTemplates.begin(); i != infoTemplates.end(); ++i) {
-       if (i.key() == currentInfoTemplate) return index;
+       if (i.key() == loupeInfoTemplate) return index;
        index++;
     }
     return 0;
@@ -138,7 +151,7 @@ int InfoString::getIndex()
 
 QString InfoString::getCurrentInfoTemplate()
 {
-    return currentInfoTemplate;
+    return loupeInfoTemplate;
 }
 
 void InfoString::initTokenList()
