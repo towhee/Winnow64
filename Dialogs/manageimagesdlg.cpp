@@ -14,7 +14,6 @@ ManageImagesDlg::ManageImagesDlg(QString title,
     ui->newBtn->setStyleSheet("QPushButton {min-width: 120px;}");
     ui->deleteBtn->setStyleSheet("QPushButton {min-width: 120px;}");
     ui->doneBtn->setStyleSheet("QPushButton {min-width: 120px;}");
-//    ui->newBtn->setMinimumWidth(120);
 
     /* set widths and heights that are dependent on the display screen settings in case the
     user drags the dialog to another screen/monitor.  */
@@ -37,8 +36,8 @@ ManageImagesDlg::ManageImagesDlg(QString title,
     this->setting = setting;
     this->settingPath = settingPath;
     setting->beginGroup(settingPath);
-    QStringList imageList;
-    imageList << setting->allKeys();
+        QStringList imageList;
+        imageList << setting->allKeys();
     setting->endGroup();
 
     // populate table with QSettings existing data
@@ -129,18 +128,25 @@ QString ManageImagesDlg::templatesUsingGraphic(QString name)
 
 void ManageImagesDlg::save(QPixmap *pm)
 {
-    // Assign a unique name to the image and save in QSettings
+    // get file name
     QFileInfo info(fPath);
     QString name = info.baseName();
+
+    // copy the QPixmap to QBytArray
     QByteArray graphicBa;
     QBuffer buffer(&graphicBa);
     buffer.open(QIODevice::WriteOnly);
     pm->save(&buffer, "PNG");
+    buffer.close();
+
+    // Assign a unique name and save in QSettings
     setting->beginGroup(settingPath);
         QStringList list = setting->allKeys();
         Utilities::uniqueInList(name, list);
-        setting->setValue(name, graphicBa);
     setting->endGroup();
+    QString key = settingPath + "/" + name;
+    qDebug() << __FUNCTION__ << "key =" << key << "ht =" << ht;
+    setting->setValue(key, graphicBa);
 
     // add to imageTable
     QIcon icon(pm->scaledToWidth(ht));
@@ -149,7 +155,10 @@ void ManageImagesDlg::save(QPixmap *pm)
     item->setText(name);
     int row = ui->imageTable->model()->rowCount();
     ui->imageTable->insertRow(row);
+    // itemChanged ignore (not renaming item)
+    isInitializing = true;
     ui->imageTable->setItem(row, 0, item);
+    isInitializing = false;
 
     // sort table
     ui->imageTable->setSortingEnabled(true);
@@ -157,6 +166,15 @@ void ManageImagesDlg::save(QPixmap *pm)
 
     // select new item row
     ui->imageTable->selectRow(item->row());
+
+//    // Assign a unique name and save in QSettings
+//    setting->beginGroup(settingPath);
+//        QStringList list = setting->allKeys();
+//        Utilities::uniqueInList(name, list);
+//    setting->endGroup();
+//    QString key = settingPath + "/" + name;
+//    qDebug() << __FUNCTION__ << "key =" << key << "ht =" << ht;
+//    setting->setValue(key, graphicBa);
 
     // let user know
     QString msg = "Image has been saved as " + name + ".";
