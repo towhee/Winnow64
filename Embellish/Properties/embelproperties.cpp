@@ -1403,6 +1403,8 @@ bool EmbelProperties::readTemplateFromFile()
         QString settingPath = "Embel/Tiles/" + uniqueName;
         setting->setValue(settingPath, newTileBa);
     }
+    // update tile lists
+    updateTileList();
 
     // checking if graphic files already exist in embellish
     fileFilters.clear();
@@ -1432,6 +1434,8 @@ bool EmbelProperties::readTemplateFromFile()
         QString settingPath = "Embel/Graphics/" + uniqueName;
         setting->setValue(settingPath, newGraphicBa);
     }
+    // update graphics list
+    updateGraphicList();
 
     // Get tokens
     QFile tokenFile(dstPath + "/tokens.json");
@@ -1564,7 +1568,8 @@ void EmbelProperties::manageGraphics()
     ManageImagesDlg dlg("Manage Embellish Graphics", setting, "Embel/Graphics");
     connect(&dlg, &ManageImagesDlg::itemRenamed, this, &EmbelProperties::updateGraphicList);
     dlg.exec();
-    updateGraphicsList();
+    updateGraphicList();
+    qDebug() << __FUNCTION__ << graphicList;
 }
 
 void EmbelProperties::updateGraphicList(QString oldName, QString newName)
@@ -1576,11 +1581,11 @@ void EmbelProperties::updateGraphicList(QString oldName, QString newName)
     graphicList.sort();
     qDebug() << __FUNCTION__ << graphicList;
     // update graphicList in each graphic item
-    for (int i = 0; i < g.size(); ++i) {
+    for (int i = 0; i < graphicsObjectEditor.size(); ++i) {
         QString oldGraphicName = graphicsObjectEditor.at(i)->value();
         if (oldGraphicName == oldName) oldGraphicName = newName;
         graphicsObjectEditor.at(i)->refresh(graphicList);
-        // refreshing anchorObjectList removes old value for the text - reassign anchor object
+        // refreshing graphicsObjectEditor removes old value for the text
         if (graphicList.contains(oldGraphicName))
             graphicsObjectEditor.at(i)->setValue(oldGraphicName);
     }

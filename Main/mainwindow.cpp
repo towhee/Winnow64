@@ -855,6 +855,7 @@ void MW::checkForUpdate()
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__);
     /* Checking for updates requires the maintenancetool.exe to be in the Winnow.exe folder,
        which is only true for the installed version of Winnow in the "Program Files".  In
        order to simulate for testing during development, the maintenancetool.exe path must
@@ -913,6 +914,7 @@ void MW::checkForUpdate()
     Utilities::log(__FUNCTION__, "readAllStandardError() = " + process.readAllStandardError());
     Utilities::log(__FUNCTION__, "exitCode() = " + QString::number(process.exitCode()));
 //    */
+    G::track(__FUNCTION__, "after check");
 
     if (noUpdataAvailable.toBool())
     {
@@ -5251,7 +5253,9 @@ void MW::createStatusBar()
     // progressBar created in MW::createDataModel, where it is first req'd
 
     // set up pixmap that shows progress in the cache
-    if (isSettings && setting->contains("cacheStatusWidth")) progressWidth = setting->value("cacheStatusWidth").toInt();
+    if (isSettings && setting->contains("cacheStatusWidth"))
+        progressWidth = setting->value("cacheStatusWidth").toInt();
+    if (progressWidth < 100 || progressWidth > 1000) progressWidth = 200;
     progressPixmap = new QPixmap(4000, 25);
     progressPixmap->scaled(progressWidth, 25);
     progressPixmap->fill(widgetCSS.widgetBackgroundColor);

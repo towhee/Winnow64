@@ -138,7 +138,7 @@ public slots:
 signals:
     void templateChanged(int id);
     void syncEmbellishMenu();
-    void updateGraphicsList();
+//    void updateGraphicsList();
 
 protected:
     void mouseMoveEvent(QMouseEvent *event) override;   // does not work here
