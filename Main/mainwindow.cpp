@@ -11798,6 +11798,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-
+    QRectF rScene = imageView->sceneRect();  // setSceneRect...
+    QPointF pSceneCntr = rScene.center();
+    QRect r = imageView->rect();
+    QPoint pCntr = r.center();
+    qDebug() << __FUNCTION__
+             << "r =" << r
+             << "pCntr =" << pCntr
+             << "rScene =" << rScene
+             << "pSceneCntr =" << pSceneCntr
+                ;
+    imageView->setAlignment(Qt::AlignBottom);
 }
 // End MW
