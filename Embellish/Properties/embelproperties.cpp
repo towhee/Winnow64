@@ -2326,6 +2326,7 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
 //    qDebug() << __FUNCTION__ << "loadImage..."
 //             << "mw3->dm->currentFilePath =" << mw3->dm->currentFilePath;
     mw3->imageView->loadImage(mw3->dm->currentFilePath, __FUNCTION__);
+    mw3->imageView->setAlignment(Qt::AlignCenter);
 }
 
 void EmbelProperties::itemChangeExport(QModelIndex idx, QVariant v, QString source)

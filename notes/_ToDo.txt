@@ -52,6 +52,7 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- GraphicsView/GraphicsScene scale/location issue when change embellish templates sometimes
 - When delete embel template also delete from Winnow embellish menu
 - Info token editor rename not working properly
 - Info token editor can crash
@@ -60,6 +61,7 @@ DONE/FIXED
 - Replaced Thumbnails with Appearance in Preferences
 - Initial font size not being assigned, resulting in squashed rows in QTreeviews
 - EmbelExport not assigning color profile
+- Turn off embellish when change folder option
 - Get rid of G::colorManage - always color manage
 - Version 1.17
 - Focus shifts away from Embellish when mouseover central widget or thumbdock
