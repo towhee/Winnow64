@@ -1330,7 +1330,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     profileTimer.restart();
     #endif
     }
-
    /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
@@ -1481,21 +1480,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
         if (thumbDock->isFloating()) thumbView->setWrapping(true);
     }
 
-    // load thumbnail if not cached yet (when loading new folder)
-//    if (!thumbView->isThumb(currentRow)) {
-//        QImage image;
-//        thumb->loadThumb(fPath, image);
-//        thumbView->setIcon(currentRow, image);
-////        updateIconBestFit();
-//    }
-
     // update cursor position on progressBar
     updateImageCacheStatus("Update cursor", currentRow, "MW::fileSelectionChange");
-    {
-    #ifdef ISPROFILE
-    qDebug() << __FUNCTION__ << profileTimer.elapsed();
-    #endif
-    }
 }
 
 void MW::folderAndFileSelectionChange(QString fPath)
@@ -10667,8 +10653,9 @@ void MW::keyRight()
     G::track(__FUNCTION__);
     #endif
     }
+    G::track(__FUNCTION__, "", true);
     static int n = 0;
-    G::t1.restart();
+//    G::t1.restart();
 //    qDebug() << __FUNCTION__ << n++;
     if (G::mode == "Compare") compareImages->go("Right");
     else thumbView->selectNext();
@@ -11798,6 +11785,15 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QFileInfo info("D:/2017-04-23_0210.MOV");
+    qDebug() << __FUNCTION__ << "D:/2017-04-23_0210.MOV"
+             << "\nbirthTime =" << info.birthTime().toString("yyyy-MM-dd hh:mm:ss")
+             << "\nlastModified =" << info.lastModified().toString("yyyy-MM-dd hh:mm:ss")
+             << "\nmetadataChangeTime =" << info.metadataChangeTime().toString("yyyy-MM-dd hh:mm:ss")
+             << "\nlastRead =" << info.lastRead().toString("yyyy-MM-dd hh:mm:ss")
+                ;
+
+    return;
     QRectF rScene = imageView->sceneRect();  // setSceneRect...
     QPointF pSceneCntr = rScene.center();
     QRect r = imageView->rect();

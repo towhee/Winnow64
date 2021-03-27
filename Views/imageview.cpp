@@ -257,21 +257,11 @@ perceived scale by the user.
             setFitZoom();
         }
         scale();
-//        qDebug() << __FUNCTION__ << src;
         /* send signal to Embel::build (with new image), blank first parameter means
            local vs remote (ie exported from lightroom to embellish)  */
         if (G::isEmbellish) emit embellish("", __FUNCTION__);
         else pmItem->setGraphicsEffect(nullptr);
     }
-//    QImage im = pmItem->pixmap().toImage();
-//    imAspect = qreal(im.width()) / im.height();
-    /*
-    static int n;
-    n++;
-    qDebug();
-    qDebug() << "#" << n << G::t1.restart() << "TIME TO LOAD" << fPath;
-    qDebug();
-//    */
     return isLoaded;
 }
 

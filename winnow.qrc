@@ -160,5 +160,6 @@
         <file>images/icon16/lightning.png</file>
         <file>images/icon16/lightning1.png</file>
         <file>images/icon16/tile.png</file>
+        <file>images/video.png</file>
     </qresource>
 </RCC>

@@ -421,11 +421,21 @@ void FSTree::getImageCount(QString const dirPath, bool changed, QString src)
     }
 }
 
-void FSTree::paintEvent(QPaintEvent *event)
+void FSTree::resizeEvent(QResizeEvent *event)
 {
+    {
+    #ifdef ISDEBUG
+    G::track(__FUNCTION__);
+    #endif
+    }
     resizeColumns();
-    QTreeView::paintEvent(event);
 }
+
+//void FSTree::paintEvent(QPaintEvent *event)
+//{
+////    resizeColumns();
+//    QTreeView::paintEvent(event);
+//}
 
 //void FSTree::focusInEvent(QFocusEvent *event)
 //{

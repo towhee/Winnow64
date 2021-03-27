@@ -354,7 +354,7 @@ QString InfoString::tokenValue(QString &token,
                                QModelIndex &idx)
 {
 /*
-Finds the token in the datamodel and returns the datamodel value.
+    Finds the token in the datamodel and returns the datamodel value.
 */
     if (token == "Path")
         return fPath;

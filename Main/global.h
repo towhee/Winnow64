@@ -21,15 +21,16 @@
 namespace G
 {
     enum UserRoles {
-        PathRole = Qt::UserRole + 1,
-        IconRectRole,
-        CachedRole,
-        DupIsJpgRole,
-        DupOtherIdxRole,
-        DupHideRawRole,
-        DupRawTypeRole,
-        ColumnRole,
-        GeekRole
+        PathRole = Qt::UserRole + 1,    // path to image file
+        IconRectRole,                   // used in IconView
+        CachedRole,                     // used in ImageView
+        BusyRole,                       // not used
+        DupIsJpgRole,                   // manage raw/jpg pairs
+        DupOtherIdxRole,                // manage raw/jpg pairs
+        DupHideRawRole,                 // manage raw/jpg pairs
+        DupRawTypeRole,                 // manage raw/jpg pairs
+        ColumnRole,                     // used by Filters
+        GeekRole                        // used in TableView display of columns
     };
 
     /*
@@ -205,7 +206,7 @@ namespace G
     extern bool isTimer;
     extern bool isTest;
 
-    extern void track(QString functionName = "", QString comment = "");
+    extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
     extern void wait(int ms);
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);

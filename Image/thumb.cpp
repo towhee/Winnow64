@@ -181,6 +181,14 @@ is faster than loading the entire full resolution image just to get a thumbnail.
     int dmRow = dm->fPathRow[fPath];
     QString err;
 
+    // If video file then just show video icon
+    if (metadata->videoFormats.contains(ext)) {
+        // show video image png
+        QString path = ":/images/video.png";
+        loadFromEntireFile(path, image, dmRow);
+        return true;
+    }
+
     // The image type might not have metadata we can read, so load entire image and resize
     if (!metadata->getMetadataFormats.contains(ext)) {
         return loadFromEntireFile(fPath, image, dmRow);

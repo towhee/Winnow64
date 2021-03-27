@@ -167,6 +167,34 @@ void Metadata::initSupportedFiles()
                         << "webp"
                         << "xbm"
                         << "xpm"
+                        // video formats
+                        << "asf"
+                        << "amv"
+                        << "avi"
+                        << "flv"
+                        << "gifv"
+                        << "mng"
+                        << "mts"
+                        << "m2ts"
+                        << "ogg"
+                        << "ogv"
+                        << "m2v"
+                        << "m4v"
+                        << "mkv"
+                        << "mov"
+                        << "mp2"
+                        << "mp4"
+                        << "mpg"
+                        << "m4p"
+                        << "mpe"
+                        << "mpeg"
+                        << "mpv"
+                        << "qt"
+                        << "svi"
+                        << "vob"
+                        << "webm"
+                        << "wmv"
+                        << "yuv"
                            ;
 
     supportedFormats    << "arw"
@@ -203,6 +231,63 @@ void Metadata::initSupportedFiles()
                         << "webp"
                         << "xbm"
                         << "xpm"
+                        // video formats (just show thumbnail "Video")
+                        << "asf"
+                        << "amv"
+                        << "avi"
+                        << "flv"
+                        << "gifv"
+                        << "mng"
+                        << "mts"
+                        << "m2ts"
+                        << "ogg"
+                        << "ogv"
+                        << "m2v"
+                        << "m4v"
+                        << "mkv"
+                        << "mov"
+                        << "mp2"
+                        << "mp4"
+                        << "mpg"
+                        << "m4p"
+                        << "mpe"
+                        << "mpeg"
+                        << "mpv"
+                        << "qt"
+                        << "svi"
+                        << "vob"
+                        << "webm"
+                        << "wmv"
+                        << "yuv"
+                           ;
+
+        videoFormats    << "asf"
+                        << "amv"
+                        << "avi"
+                        << "flv"
+                        << "gifv"
+                        << "mng"
+                        << "mts"
+                        << "m2ts"
+                        << "ogg"
+                        << "ogv"
+                        << "m2v"
+                        << "m4v"
+                        << "mkv"
+                        << "mp2"
+                        << "mp4"
+                        << "mpg"
+                        << "mov"
+                        << "m4p"
+                        << "mpe"
+                        << "mpeg"
+                        << "mpv"
+                        << "qt"
+                        << "svi"
+                        << "vob"
+                        << "webm"
+                        << "wmv"
+                        << "yuv"
                            ;
 }
 
@@ -702,6 +787,12 @@ void Metadata::clearMetadata()
     m.lengthThumb = 0;
     m.isBigEnd = false;
     m.ifd0Offset = 0;
+    m.offsetFull = 0;
+    m.lengthFull = 0;
+    m.widthFull = 0;
+    m.heightFull = 0;
+    m.offsetThumb = 0;
+    m.lengthThumb = 0;
     m.xmpSegmentOffset = 0;
     m.orientationOffset = 0;
     m.iccSegmentOffset = 0;
@@ -735,6 +826,7 @@ void Metadata::clearMetadata()
     m.lensSN = "";
     m.rating = "";
     m.label = "";
+    m.loadMsecPerMp = 0;
     nikonLensCode = "";
 }
 
@@ -869,6 +961,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
                  << source;
         return false;
     }
+
+    QString ext = fileInfo.suffix().toLower();
+    if (!getMetadataFormats.contains(ext)) return false;
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load
     readEssentialMetadata = essential;

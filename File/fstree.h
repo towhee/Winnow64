@@ -72,13 +72,14 @@ public slots:
 private slots:
 
 protected:
-    void mousePressEvent(QMouseEvent *event);       // debugging
-    void mouseReleaseEvent(QMouseEvent *event);     // debugging
-    void mouseMoveEvent(QMouseEvent *event);
-    void dragEnterEvent(QDragEnterEvent *event);
-	void dragMoveEvent(QDragMoveEvent *event);
-	void dropEvent(QDropEvent *event);
-    void paintEvent(QPaintEvent *event);
+    void mousePressEvent(QMouseEvent *event) override;       // debugging
+    void mouseReleaseEvent(QMouseEvent *event) override;     // debugging
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dragMoveEvent(QDragMoveEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
+//    void paintEvent(QPaintEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
 //    void focusInEvent(QFocusEvent *event);
 
 signals:

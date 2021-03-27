@@ -667,6 +667,7 @@ release\qrc_winnow.cpp: winnow.qrc \
 		images\pushbutton_hover.png \
 		images\radiobutton_checked.png \
 		images\scale.png \
+		images\video.png \
 		images\down-arrow.png \
 		images\clear.png \
 		images\radiobutton_unchecked_pressed.png \
