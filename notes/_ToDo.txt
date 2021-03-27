@@ -1,4 +1,6 @@
 BUGS / TO DO
+- Not showing image count in folders at startup
+- Shooting data reverting to wrong token string
 - Slow program start sometimes (check for updates?)
 - Thumbnail for video files
 - Maintain count when switch folders during the same ingest

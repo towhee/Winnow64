@@ -74,6 +74,7 @@ public:
     QStringList iccFormats;
     QStringList noMetadataFormats;
     QStringList supportedFormats;
+    QStringList videoFormats;
 
     QStringList ratings;
     QStringList labels;

@@ -104,11 +104,13 @@ namespace G
         while (QTime::currentTime() < t) qApp->processEvents(QEventLoop::AllEvents, 10);
     }
 
-    void track(QString functionName, QString comment)
+    void track(QString functionName, QString comment, bool hideTime)
     {
         QString time = QString("%L1").arg(t.nsecsElapsed());
+        if (hideTime) time = "";
         t.restart();
-        qDebug() << time.rightJustified(15, ' ') << " "
+        qDebug().noquote()
+                 << time.rightJustified(15, ' ') << " "
                  << functionName.leftJustified(50, '.') << " "
                  << comment;
     }
