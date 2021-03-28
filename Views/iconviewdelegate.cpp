@@ -334,14 +334,11 @@ textRect         = a rectangle below itemRect
     // get data from model
     int row = index.row();
     QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
-//    QString fPath = index.model()->index(row, G::PathColumn).data(G::PathRole).toString();
     QString colorClass = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
-
-//    qDebug() << __FUNCTION__ << "row =" << row << "currentRow =" << currentRow;
 
     // Make the item border rect smaller to accommodate the border.
     QRect cellRect(option.rect);
@@ -373,7 +370,6 @@ textRect         = a rectangle below itemRect
 
     QPainterPath iconPath;
     iconPath.addRoundedRect(iconRect, 6, 6);
-//    iconPath.addRoundRect(iconRect, 12, 12);
 
     QRect textRect(frameRect.bottomLeft() - textHtOffset, frameRect.bottomRight());
     QPainterPath textPath;
@@ -436,7 +432,6 @@ textRect         = a rectangle below itemRect
             if (G::labelColors.contains(colorClass)) {
                 if (colorClass == "Red") labelColorToUse = G::labelRedColor;
                 if (colorClass == "Yellow") labelColorToUse = G::labelYellowColor;
-//                if (colorClass == "Yellow") textColor = Qt::black;
                 if (colorClass == "Green") labelColorToUse = G::labelGreenColor;
                 if (colorClass == "Blue") labelColorToUse = G::labelBlueColor;
                 if (colorClass == "Purple") labelColorToUse = G::labelPurpleColor;
@@ -459,7 +454,7 @@ textRect         = a rectangle below itemRect
     }
 
     // draw the cache circle
-    if (!isCached && !G::isSlideShow) {
+    if (!isCached && !G::isSlideShow && G::showCacheStatus) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect);

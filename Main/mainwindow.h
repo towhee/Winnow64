@@ -239,7 +239,7 @@ public:
     QString cacheSizeMethod;
     int cacheSizePercentOfAvailable;
     int cacheSizeMB;
-    bool isShowCacheStatus;
+//    bool isShowCacheStatus;   // replaced with G::showCacheStatus
     int cacheDelay = 100;
     bool isShowCacheThreadActivity;
     int progressWidth;

@@ -49,6 +49,7 @@ namespace G
     int availableMemoryMB;
     int winnowMemoryBeforeCacheMB;
     int metaCacheMB;
+    bool showCacheStatus;
     bool memTest;
 
     // view

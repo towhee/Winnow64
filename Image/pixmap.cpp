@@ -214,10 +214,6 @@ bool Pixmap::load(QString &fPath, QImage &image)
     // Successfully loaded to a QImage
 
     // rotate if portrait image
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, "Loaded " + fPath);
-    #endif
-
     if (metadata->rotateFormats.contains(ext)) {
         QTransform trans;
         int orientation = dm->index(dmRow, G::OrientationColumn).data().toInt();
@@ -253,7 +249,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     // color manage if available
     #ifdef Q_OS_WIN
-    if (/*G::colorManage &&*/ metadata->iccFormats.contains(ext)) {
+    if (metadata->iccFormats.contains(ext)) {
         QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
         ICC::setInProfile(ba);   // if ba.isEmpty then sRGB used
         ICC::transform(image);
@@ -265,10 +261,6 @@ bool Pixmap::load(QString &fPath, QImage &image)
     qint64 msec = t.elapsed();
     int msecPerMp = static_cast<int>(msec / mp);
     dm->setData(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, Qt::EditRole);
-
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, "Completed load image");
-    #endif
 
     return true;
 }

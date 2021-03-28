@@ -127,6 +127,7 @@ namespace G
     extern int availableMemoryMB;
     extern int winnowMemoryBeforeCacheMB;
     extern int metaCacheMB;
+    extern bool showCacheStatus;
     extern bool memTest;
 
     struct WinScreen {
