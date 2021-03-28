@@ -1,4 +1,5 @@
 BUGS / TO DO
+- Sometimes crash when export from LR to winnets
 - Not showing image count in folders at startup
 - Shooting data reverting to wrong token string
 - Slow program start sometimes (check for updates?)

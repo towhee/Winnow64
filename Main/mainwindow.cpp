@@ -1442,7 +1442,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
 
-    if (!G::isSlideShow) progressLabel->setVisible(isShowCacheStatus);
+    if (!G::isSlideShow) progressLabel->setVisible(G::showCacheStatus);
 
     /* update imageView, use cache if image loaded, else read it from file unless a new folder
        is loading and the sort oder != dm order.  */
@@ -1932,7 +1932,7 @@ void MW::updateMetadataCacheStatus(int row, bool clear)
     #endif
     }
 
-    if(!isShowCacheStatus) return;
+    if(!G::showCacheStatus) return;
 
     if(clear) {
         progressBar->clearProgress();
@@ -1974,7 +1974,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
 
-    if(!isShowCacheStatus) return;
+    if(!G::showCacheStatus) return;
 
     // just repaint the progress bar gray and return.
     if(instruction == "Clear") {
@@ -2046,7 +2046,7 @@ memory has been consumed or all the images are cached.
     #endif
     }
     // now that metadata is loaded populate the data model
-    if(isShowCacheStatus) progressBar->clearProgress();
+    if(G::showCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
     updateIconBestFit();
 
@@ -2067,7 +2067,7 @@ memory has been consumed or all the images are cached.
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheSizeMB - G::metaCacheMB;
     imageCacheThread->initImageCache(netCacheMBSize,
-        isShowCacheStatus, cacheWtAhead, isCachePreview,
+        G::showCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
 
     // have to wait until image caching thread running before setting flag
@@ -5308,7 +5308,6 @@ void MW::updateStatusBar()
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__;
     // remove all icons so can add back in proper order // previously used: if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel); // etc
     if(reverseSortBtn->isVisible()) statusBar()->removeWidget(reverseSortBtn);
     if(rawJpgStatusLabel->isVisible()) statusBar()->removeWidget(rawJpgStatusLabel);
@@ -5366,7 +5365,7 @@ void MW::updateStatusBar()
     }
 //    */
 
-    if (updateImageCacheWhenFileSelectionChange) progressLabel->setVisible(true);
+    if (updateImageCacheWhenFileSelectionChange) progressLabel->setVisible(G::showCacheStatus);
     else progressLabel->setVisible(false);
 }
 
@@ -5410,8 +5409,8 @@ void MW::updateProgressBarWidth()
 void MW::setCacheParameters()
 {
 /*
-This slot signalled from the preferences dialog with changes to the cache
-parameters.  Any visibility changes are executed.
+    This slot id signalled from the preferences dialog with changes to the cache
+    parameters.  Any visibility changes are executed.
 */
     {
     #ifdef ISDEBUG
@@ -5420,18 +5419,23 @@ parameters.  Any visibility changes are executed.
     }
     int netCacheMBSize = cacheSizeMB - static_cast<int>( G::metaCacheMB);
     imageCacheThread->updateImageCacheParam(netCacheMBSize,
-             isShowCacheStatus, cacheWtAhead, isCachePreview,
+             G::showCacheStatus, cacheWtAhead, isCachePreview,
              G::displayPhysicalHorizontalPixels, G::displayPhysicalVerticalPixels);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     if (fPath.length())
         imageCacheThread->updateImageCachePosition(/*fPath*/);
 
-    // update visibility if preferences have been changed
+    // cache progress bar
     progressLabel->setVisible(isShowCacheThreadActivity);
 
+    // thread busy indicators
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+
+    // thumbnail cache status indicators
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
 }
 
 QString MW::getPosition()
@@ -7037,7 +7041,7 @@ QString MW::diagnostics()
     rpt << "\n" << "slideShowRandom = " << G::s(isSlideShowRandom);
     rpt << "\n" << "slideShowWrap = " << G::s(isSlideShowWrap);
     rpt << "\n" << "cacheSizeMB = " << G::s(cacheSizeMB);
-    rpt << "\n" << "isShowCacheStatus = " << G::s(isShowCacheStatus);
+    rpt << "\n" << "showCacheStatus = " << G::s(G::showCacheStatus);
     rpt << "\n" << "cacheDelay = " << G::s(cacheDelay);
     rpt << "\n" << "isShowCacheThreadActivity = " << G::s(isShowCacheThreadActivity);
     rpt << "\n" << "progressWidth = " << G::s(progressWidth);
@@ -8174,7 +8178,7 @@ re-established when the application is re-opened.
     setting->setValue("cacheSizeMethod", cacheSizeMethod);
     setting->setValue("cacheSizePercentOfAvailable", cacheSizePercentOfAvailable);
     setting->setValue("cacheSizeMB", cacheSizeMB);
-    setting->setValue("isShowCacheStatus", isShowCacheStatus);
+    setting->setValue("isShowCacheStatus", G::showCacheStatus);
     setting->setValue("cacheDelay", cacheDelay);
     setting->setValue("isShowCacheThreadActivity", isShowCacheThreadActivity);
     setting->setValue("cacheStatusWidth", progressWidth);
@@ -8473,7 +8477,7 @@ Preferences are located in the prefdlg class and updated here.
         cacheSizeMethod = "Moderate";
         cacheSizePercentOfAvailable = 50;
         cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.5);
-        isShowCacheStatus = true;
+        G::showCacheStatus = true;
         isShowCacheThreadActivity = true;
         progressWidth = 200;
         progressWidthBeforeResizeWindow = progressWidth;
@@ -8561,7 +8565,7 @@ Preferences are located in the prefdlg class and updated here.
             cacheSizeMB = (static_cast<int>(G::availableMemoryMB) * cacheSizePercentOfAvailable) / 100;
         if (cacheSizeMethod == "MB") cacheSizeMB = setting->value("cacheSizeMB").toInt();
     }
-    if (setting->contains("isShowCacheStatus")) isShowCacheStatus = setting->value("isShowCacheStatus").toBool();
+    if (setting->contains("isShowCacheStatus")) G::showCacheStatus = setting->value("isShowCacheStatus").toBool();
     if (setting->contains("isShowCacheThreadActivity")) isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
     if (setting->contains("cacheStatusWidth")) progressWidth = setting->value("cacheStatusWidth").toInt();
     progressWidthBeforeResizeWindow = progressWidth;
@@ -9746,7 +9750,7 @@ void MW::setCacheStatusVisibility()
     #endif
     }
     if (isShowCacheThreadActivity && !G::isSlideShow)
-        progressLabel->setVisible(isShowCacheStatus);
+        progressLabel->setVisible(G::showCacheStatus);
     metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
     imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
 }
@@ -10304,18 +10308,16 @@ void MW::setCombineRawJpg()
 void MW::setCachedStatus(QString fPath, bool isCached)
 {
 /*
-When an image is added or removed from the image cache in ImageCache a signal triggers
-this slot to update the datamodel cache status role. After the datamodel update the
-thumbView and gridView thumbnail is refreshed to update the cache badge.
+    When an image is added or removed from the image cache in ImageCache a signal triggers
+    this slot to update the datamodel cache status role. After the datamodel update the
+    thumbView and gridView thumbnail is refreshed to update the cache badge.
 
-Note that the datamodel is used (dm), not the proxy (dm->sf). If the proxy is used and
-the user then sorts or filters the index could go out of range and the app will crash.
+    Note that the datamodel is used (dm), not the proxy (dm->sf). If the proxy is used and
+    the user then sorts or filters the index could go out of range and the app will crash.
 
-Make sure the file path exists in the datamodel. The most likely failure will be if a new
-folder has been selected but the image cache has not been rebuilt.
+    Make sure the file path exists in the datamodel. The most likely failure will be if a new
+    folder has been selected but the image cache has not been rebuilt.
 */
-//    int row = dm->fPathRow[fPath];
-//    QModelIndex idx = dm->sf->mapFromSource(dm->index(row, 0));
     QModelIndex idx = dm->proxyIndexFromPath(fPath);
     if (idx.isValid()) {
         dm->sf->setData(idx, isCached, G::CachedRole);

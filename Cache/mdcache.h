@@ -105,7 +105,7 @@ private:
     Action action;
 
     bool allIconsLoaded;
-    bool isShowCacheStatus;
+//    bool isShowCacheStatus;
     bool cacheIcons;
 
     void createCacheStatus();

@@ -478,7 +478,7 @@ bool DataModel::addFileData()
         QString fPath = fileInfo.filePath();
         // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
         fPathRow[fPath] = row;
-        qDebug() << "\n" << __FUNCTION__ << fPath;
+
         // string to hold aggregated text for searching
         QString search = fPath;
 
@@ -497,11 +497,9 @@ bool DataModel::addFileData()
         setData(index(row, G::SizeColumn), fileInfo.size());
         setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
         s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss");
-        qDebug() << __FUNCTION__ << "Created =" << s;
         search += s;
         setData(index(row, G::CreatedColumn), s);
         s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
-        qDebug() << __FUNCTION__ << "Modified =" << s;
         search += s;
         setData(index(row, G::ModifiedColumn), s);
         setData(index(row, G::RefineColumn), false);

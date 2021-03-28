@@ -15,10 +15,10 @@ public:
     IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible);
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
-               const QModelIndex &index) const;
+               const QModelIndex &index) const override;
 
     QSize sizeHint(const QStyleOptionViewItem &option,
-                   const QModelIndex &/*index*/ ) const;
+                   const QModelIndex &/*index*/ ) const override;
 
     void setThumbDimensions(int thumbWidth, int thumbHeight,
           int labelFontSize, bool showThumbLabels, int badgeSize);

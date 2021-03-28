@@ -564,7 +564,7 @@ Load the thumb (icon) for all the image files in the folder(s).
 //    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
 //    G::t.restart();
     qDebug() << __FUNCTION__;
-    isShowCacheStatus = true;
+//    isShowCacheStatus = true;
     int count = 0;
     int rows = dm->rowCount();
     for (int row = 0; row < rows; ++row) {

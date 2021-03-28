@@ -1005,7 +1005,7 @@ void ImageCache::run()
 //                */
             makeRoom(room, roomRqd);
             imCache.insert(fPath, im);
-            emit updateCacheOnThumbs(fPath, true);
+            if(cache.isShowCacheStatus) emit updateCacheOnThumbs(fPath, true);
 /*            if (cache.usePreview) {
                 imCache.insert(fPath + "_Preview", im.scaled(cache.previewSize,
                    Qt::KeepAspectRatio, Qt::FastTransformation));
@@ -1027,7 +1027,7 @@ void ImageCache::run()
     if(cache.isShowCacheStatus)
         emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
 
-    emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
+    if(cache.isShowCacheStatus) emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
 //    reportCache("Image cache updated for " + cache.dir);
 //    reportCacheManager("Image cache updated for " + cache.dir);
 }

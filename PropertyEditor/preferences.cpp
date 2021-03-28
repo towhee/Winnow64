@@ -99,7 +99,7 @@ itemChange, which is subclassed here.
 
     if (source == "showThreadActivity") {
         mw->isShowCacheThreadActivity = v.toBool();
-        mw->isShowCacheStatus = v.toBool();
+        G::showCacheStatus = v.toBool();
         mw->setCacheParameters();
     }
 
