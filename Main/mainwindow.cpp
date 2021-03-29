@@ -221,6 +221,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     /* TESTING / DEBUGGING FLAGS
        Note ISDEBUG is in globals.h
        Deactivate debug reporting by commenting ISDEBUG  */
+//    G::isLogger = true;
+    G::sendLogToConsole = true;
+
     G::showAllTableColumns = false;     // show all table fields for debugging
     simulateJustInstalled = false;
     isStressTest = false;
@@ -1481,7 +1484,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     }
 
     // update cursor position on progressBar
-    updateImageCacheStatus("Update cursor", currentRow, "MW::fileSelectionChange");
+    if (G::showCacheStatus)
+        updateImageCacheStatus("Update cursor", currentRow, "MW::fileSelectionChange");
+
+    G::log(__FUNCTION__, fPath);
 }
 
 void MW::folderAndFileSelectionChange(QString fPath)
@@ -9422,9 +9428,7 @@ void MW::tokenEditor()
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
     imageView->moveShootingInfo(info);
-    qDebug() << __FUNCTION__ << "call  updateMetadataTemplateList";
     embelProperties->updateMetadataTemplateList();
-    qDebug() << __FUNCTION__ << "updateMetadataTemplateList did not crash";
 }
 
 void MW::setRatingBadgeVisibility() {
@@ -10650,15 +10654,9 @@ void MW::keyRight()
 /*
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    G::track(__FUNCTION__, "", true);
-    static int n = 0;
-//    G::t1.restart();
-//    qDebug() << __FUNCTION__ << n++;
+    if (G::isLogger) G::log(__FUNCTION__);
+//    G::t.restart();
+//    G::track(__FUNCTION__, "", true /*hide time*/);
     if (G::mode == "Compare") compareImages->go("Right");
     else thumbView->selectNext();
 }
@@ -10668,11 +10666,9 @@ void MW::keyLeft()
 /*
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    qDebug() << __FUNCTION__ << G::isLogger << G::sendLogToConsole;
+    if (G::isLogger) G::log(__FUNCTION__);
+//    G::t.restart();
     if (G::mode == "Compare") compareImages->go("Left");
     else thumbView->selectPrev();
 }

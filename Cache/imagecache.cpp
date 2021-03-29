@@ -1016,7 +1016,7 @@ void ImageCache::run()
         if (!toCache.isEmpty()) toCache.removeFirst();
         cache.currMB = getImCacheSize();
         // only update
-        if(cache.isShowCacheStatus && QTime::currentTime() > t) {
+        if (cache.isShowCacheStatus && QTime::currentTime() > t) {
             emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
             t = QTime::currentTime().addMSecs(500);
         }
@@ -1025,7 +1025,7 @@ void ImageCache::run()
     checkForOrphans();
     cache.currMB = getImCacheSize();
     if(cache.isShowCacheStatus)
-        emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
+        emit showCacheStatus("Update all rows", 0, "ImageCache::run after check for orphans");
 
     if(cache.isShowCacheStatus) emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
 //    reportCache("Image cache updated for " + cache.dir);
