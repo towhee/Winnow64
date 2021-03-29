@@ -3,8 +3,7 @@
 namespace G
 {
     // system messaging
-    bool isLogger = false;              // Writes log messages
-    bool sendLogToConsole = false;      // true: console, false: WinnowLog.txt
+    bool isLogger;                      // Writes error messages to WinnowLog.txt
 
     // system display
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitor
@@ -115,20 +114,6 @@ namespace G
                  << time.rightJustified(15, ' ') << " "
                  << functionName.leftJustified(50, '.') << " "
                  << comment;
-    }
-
-    void log(QString functionName, QString comment, bool hideTime)
-    {
-        QString time = QString("%L1").arg(t.nsecsElapsed());
-        if (hideTime) time = "";
-        QString msg = time.rightJustified(15, ' ') + " " +
-                      functionName.leftJustified(50, '.') + " " +
-                      comment;
-        if (sendLogToConsole) qDebug().noquote() << msg;
-        else {
-
-        }
-        t.restart();
     }
 
     PopUp *popUp;

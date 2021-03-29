@@ -2601,6 +2601,7 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
 
     if (source == "metadataTemplate") {
         QString value = v.toString();
+        qDebug() << __FUNCTION__ << "metadataTemplate" << value;
         setting->setValue(path, value);
         t[index].metadataTemplate = value;
     }

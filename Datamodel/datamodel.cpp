@@ -772,6 +772,7 @@ bool DataModel::readMetadataForItem(int row)
         // only read metadata from files that we know how to
         QString ext = fileInfo.suffix().toLower();
         if (metadata->getMetadataFormats.contains(ext)) {
+                qDebug() << __FUNCTION__ << fPath << ext;
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
                 metadata->m.row = row;
                 addMetadataForItem(metadata->m);
@@ -807,7 +808,7 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     G::track(__FUNCTION__);
     #endif
     }
-//    qDebug() << __FUNCTION__ << m.fPath;
+    qDebug() << __FUNCTION__ << m.fPath;
     int row = m.row;
     QString search = index(row, G::SearchTextColumn).data().toString();
     if (!metadata->ratings.contains(m.rating)) m.rating = "";
