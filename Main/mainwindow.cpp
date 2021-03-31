@@ -197,6 +197,8 @@ there does not appear to be any signal or event when ListView is finished hence 
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
+    G::sendLogToConsole = true;
+    G::log(__FUNCTION__, "Start Winnow", true);
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__, "Start Winnow");
@@ -363,11 +365,7 @@ void MW::initialize()
 
 void MW::setupPlatform()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     #ifdef Q_OS_LINIX
         G::actDevicePixelRatio = 1;
     #endif
@@ -386,11 +384,7 @@ void MW::setupPlatform()
 
 void MW::showEvent(QShowEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QMainWindow::showEvent(event);
 
     if (isSettings) {
@@ -443,11 +437,7 @@ void MW::showEvent(QShowEvent *event)
 
 void MW::closeEvent(QCloseEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     metadataCacheThread->stopMetadateCache();
     imageCacheThread->stopImageCache();
     if (!simulateJustInstalled) writeSettings();
@@ -466,9 +456,9 @@ void MW::closeEvent(QCloseEvent *event)
 void MW::moveEvent(QMoveEvent *event)
 {
 /*
-When the main winnow window is moved the zoom dialog, if it is open, must be moved as well.
-Also we need to know if the app has been dragged onto another monitor, which may have different
-dimensions and a different icc profile (win only).
+    When the main winnow window is moved the zoom dialog, if it is open, must be moved as
+    well. Also we need to know if the app has been dragged onto another monitor, which may
+    have different dimensions and a different icc profile (win only).
 */
     QMainWindow::moveEvent(event);
     setDisplayResolution();
@@ -497,6 +487,7 @@ void MW::resizeEvent(QResizeEvent *event)
 
 void MW::keyPressEvent(QKeyEvent *event)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
 
 //    if(event->modifiers() & Qt::ShiftModifier) isShift = true;
 //    else isShift = false;
@@ -532,6 +523,7 @@ void MW::keyPressEvent(QKeyEvent *event)
 
 void MW::keyReleaseEvent(QKeyEvent *event)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     if (event->key() == Qt::Key_Escape) {
         // hide a popup message
         if (G::popUp->isVisible()) {
@@ -788,10 +780,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 
 void MW::focusChange(QWidget *previous, QWidget *current)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
+    if (G::isLogger) {
+        QString s;
+        if (previous != nullptr) s = "Previous = " + previous->objectName();
+        if (current != nullptr) s += " Current = " + current->objectName();
+        G::log(__FUNCTION__, s);
     }
 //    qDebug() << __FUNCTION__ << previous << current;
     if (current == nullptr) return;
@@ -804,11 +797,7 @@ void MW::focusChange(QWidget *previous, QWidget *current)
 
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
 //    QString dir = event->mimeData()->urls().at(0).toLocalFile();
     QFileInfo info(event->mimeData()->urls().at(0).toLocalFile());
     QDir incoming = info.dir();
@@ -820,21 +809,13 @@ void MW::dragEnterEvent(QDragEnterEvent *event)
 
 void MW::dropEvent(QDropEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     handleDrop(event->mimeData());
 }
 
 void MW::handleDrop(const QMimeData *mimeData)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     if (mimeData->hasUrls())
     {
         dragDropFilePath = mimeData->urls().at(0).toLocalFile();
@@ -850,12 +831,7 @@ void MW::checkForUpdate()
    performs the install of the update.  When that is completed the maintenancetool opens
    Winnow again.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    G::track(__FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     /* Checking for updates requires the maintenancetool.exe to be in the Winnow.exe folder,
        which is only true for the installed version of Winnow in the "Program Files".  In
        order to simulate for testing during development, the maintenancetool.exe path must
@@ -870,7 +846,7 @@ void MW::checkForUpdate()
     }
     else
         maintenancePathToUse = maintanceToolPath;
-    qDebug() << __FUNCTION__ << "maintenancePathToUse" << maintenancePathToUse;
+//    qDebug() << __FUNCTION__ << "maintenancePathToUse" << maintenancePathToUse;
 
 #ifdef Q_OS_MAC
 //    return false;
@@ -973,11 +949,8 @@ void MW::handleStartupArgs(const QString &args)
     Winnet (ie Zen2048) receives the list of files, inserts the strings "Embellish" and the
     template name "Zen2048" and then resends to Winnow.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, args);
+
     if (args.length() < 2) return;
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
@@ -1118,11 +1091,9 @@ void MW::handleStartupArgs(const QString &args)
 
 void MW::folderSelectionChange()
 {
-    {
-    #ifdef ISDEBUG
-    G::track("\n======================================================================================================");
-    G::track(__FUNCTION__);
-    #endif
+    if (G::isLogger) {
+        G::log("FOLDER CHANGE");
+        G::log(__FUNCTION__, currentViewDir);
     }
 //    QApplication::setOverrideCursor(Qt::WaitCursor);
 //    if (G::isTest) testTime.restart(); // rgh remove after performance profiling
@@ -1482,6 +1453,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     // update cursor position on progressBar
     updateImageCacheStatus("Update cursor", currentRow, "MW::fileSelectionChange");
+
+    G::log(__FUNCTION__, fPath);
 }
 
 void MW::folderAndFileSelectionChange(QString fPath)
@@ -1641,25 +1614,21 @@ void MW::updateIconsVisible(bool useCurrentRow)
     metadataCacheThread->sizeChange(__FUNCTION__);
 }
 
-void MW::updateImageCachePositionAfterDelay()
+void MW::updateImageCachePosition()
 {
 /*
-Signalled from the imageCacheThread when a new image is selected or on a filtration change.
-
-The imageCacheTimer calls ImageCache::updateImageCachePosition, which updates the cache for
-the current image in the data model. The cache key is set, forward or backward progress is
-determined and the target range is updated. Image caching is reactivated.
-
-THERE IS A PERFORMANCE ISSUE IF THIS IS CALLED DIRECTLY FROM MW::fileSelectionchange.
-Apparently there needs to be a slight delay before calling.
-
+    Signalled from the metadataCacheThread when a new image is selected or on a filtration
+    change. Updates the current position in imageCacheThread, which then updates the image
+    cache.
 */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);
     #endif
     }
-    imageCacheTimer->start(50);
+    imageCacheThread->setCurrentPosition(dm->currentFilePath);
+    // change to ImageCache
+//    imageCacheTimer->start(50);
 }
 
 void MW::loadMetadataCache2ndPass()
@@ -2073,8 +2042,10 @@ memory has been consumed or all the images are cached.
     // have to wait until image caching thread running before setting flag
     metadataLoaded = true;
 
+    // change to ImageCache
     // tell image cache new position and start the image cache thread
-    imageCacheThread->updateImageCachePosition(/*fPath*/);
+    imageCacheThread->setCurrentPosition(dm->currentFilePath);
+//    imageCacheThread->updateImageCachePosition(/*fPath*/);
 
     G::isNewFolderLoaded = true;
 
@@ -4273,8 +4244,8 @@ void MW::createCaching()
             this, SLOT(loadMetadataCache2ndPass()));
 
     // when a new image has been selected trigger a delayed update to image cache
-    connect(metadataCacheThread, SIGNAL(updateImageCachePositionAfterDelay()),
-            this, SLOT(updateImageCachePositionAfterDelay()));
+    connect(metadataCacheThread, SIGNAL(updateImageCachePosition()),
+            this, SLOT(updateImageCachePosition()));
 
     /* This singleshot timer signals the image cache that the position has moved in the
     file selection. The delay is used to queue many quick changes to the image and avoid
@@ -4285,9 +4256,10 @@ void MW::createCaching()
     imageCacheTimer = new QTimer(this);
     imageCacheTimer->setSingleShot(true);
 
+    // change to ImageCache eliminates this
     // connect timer to update image cache position
-    connect(imageCacheTimer, SIGNAL(timeout()), imageCacheThread,
-            SLOT(updateImageCachePosition()));
+//    connect(imageCacheTimer, SIGNAL(timeout()), imageCacheThread,
+//            SLOT(updateImageCachePosition()));
 
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
@@ -5423,8 +5395,10 @@ void MW::setCacheParameters()
              G::displayPhysicalHorizontalPixels, G::displayPhysicalVerticalPixels);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
+    // change to ImageCache
     if (fPath.length())
-        imageCacheThread->updateImageCachePosition(/*fPath*/);
+        imageCacheThread->setCurrentPosition(fPath);
+//        imageCacheThread->updateImageCachePosition(/*fPath*/);
 
     // cache progress bar
     progressLabel->setVisible(isShowCacheThreadActivity);
@@ -5724,7 +5698,9 @@ void MW::resortImageCache()
     QString currentFilePath = currentDmIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(currentFilePath);
 //    imageCacheThread->resortImageCache();
-    imageCacheThread->updateImageCachePosition();
+    // change to ImageCache
+    imageCacheThread->setCurrentPosition(dm->currentFilePath);
+//    imageCacheThread->updateImageCachePosition();
 }
 
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
@@ -10355,18 +10331,18 @@ void MW::searchTextEdit()
 void MW::updateClassification()
 {
 /*
-Each image in the datamodel can be assigned a variety of classifications:
-    - picked
-    - rating (1 - 5)
-    - color class (some programs like lightroom call this "label"
+    Each image in the datamodel can be assigned a variety of classifications:
+        - picked
+        - rating (1 - 5)
+        - color class (some programs like lightroom call this "label"
 
-The classifications are combined in a badge (a circle pixmap).  This function updates
-the badge based on the values in the datamodel.
+    The classifications are combined in a badge (a circle pixmap).  This function updates
+    the badge based on the values in the datamodel.
 
-The function is called when the user changes a classification and when a new folder
-is selected.  If the previous folder active image had a visible classification badge
-and then the user switches to a folder with no images or ejects the drive then make
-sure the classification label is not visible.
+    The function is called when the user changes a classification and when a new folder
+    is selected.  If the previous folder active image had a visible classification badge
+    and then the user switches to a folder with no images or ejects the drive then make
+    sure the classification label is not visible.
 */
     {
     #ifdef ISDEBUG
@@ -10650,15 +10626,9 @@ void MW::keyRight()
 /*
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    G::track(__FUNCTION__, "", true);
-    static int n = 0;
-//    G::t1.restart();
-//    qDebug() << __FUNCTION__ << n++;
+    if (G::isLogger) G::log(__FUNCTION__);
+    G::log(__FUNCTION__);
+
     if (G::mode == "Compare") compareImages->go("Right");
     else thumbView->selectNext();
 }
@@ -10668,11 +10638,9 @@ void MW::keyLeft()
 /*
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
+    G::log(__FUNCTION__);
+//    qDebug() << __FUNCTION__ << "QThread::currentThread()" << QThread::currentThread();
     if (G::mode == "Compare") compareImages->go("Left");
     else thumbView->selectPrev();
 }
@@ -10823,7 +10791,9 @@ void MW::slideShow()
         delete slideShowTimer;
         updateImageCacheWhenFileSelectionChange = true;
         progressBar->setVisible(true);
-        imageCacheThread->updateImageCachePosition();
+        // change to ImageCache
+        imageCacheThread->setCurrentPosition(dm->currentFilePath);
+//        imageCacheThread->updateImageCachePosition();
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
         for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);
@@ -11700,10 +11670,10 @@ void MW::mediaReadSpeed()
                                                  "/home"
                                                  );
     QFile file(fPath);
-    double gbs = Performance::mediaReadSpeed(file);
+    double gbs = Performance::mediaReadSpeed(file) / 8 * 1024;
     if (static_cast<int>(gbs) == -1) return;  // err
-    QString msg = "Media read speed (Gb/sec): " + QString::number(gbs, 'f', 2) +
-                  ".     Press Esc to continue.";
+    QString msg = "Media read speed: : " + QString::number(gbs, 'f', 0) +
+                  " MB/sec.     Press Esc to continue.";
     G::popUp->showPopup(msg, 0);
 }
 

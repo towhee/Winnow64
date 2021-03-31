@@ -162,7 +162,7 @@ perceived scale by the user.
     #endif
     }
 //    qDebug() << __FUNCTION__ << fPath << src;
-
+//    fPath = "G:/Test/_DSC7390.ARW";
     // No folder selected yet
     if (!fPath.length()) return false;
     if (G::memTest) return false;
