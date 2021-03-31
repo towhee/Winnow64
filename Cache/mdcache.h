@@ -72,7 +72,7 @@ protected:
 
 signals:
     void loadImageCache();
-    void updateImageCachePositionAfterDelay();
+    void updateImageCachePosition();
     void pauseImageCache();
     void resumeImageCache();
     void updateIsRunning(bool, bool, QString);

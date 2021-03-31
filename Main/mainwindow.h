@@ -419,7 +419,7 @@ private slots:
     void updateMetadataCacheStatus(int row, bool clear = false);
     void updateImageCacheStatus(QString instruction, int row, QString source);
     // caching
-    void updateImageCachePositionAfterDelay();
+    void updateImageCachePosition();
     void loadMetadataCache2ndPass();
     void refreshCurrentAfterReload();
     void updateIconsVisible(bool useCurrentRow);

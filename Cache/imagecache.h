@@ -16,6 +16,7 @@
 
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
+#include "Utilities/icc.h"
 #endif
 
 #ifdef Q_OS_MAC
@@ -93,17 +94,21 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-    void updateImageCachePosition();
+    // change to ImageCache
+//    void updateImageCachePosition();
+    void setCurrentPosition(QString path);
 
 private:
     QMutex mutex;
     QWaitCondition condition;
     bool restart;
     bool abort;
+    QString currentPath;
 
     DataModel *dm;
     Metadata *metadata;
     Pixmap *getImage;
+    bool getImageLocally(QString &fPath, QImage &image);  // test
 
     QList<int>toCache;
     QList<int>toDecache;

@@ -393,17 +393,17 @@ void MetadataCache::fileSelectionChange(bool okayToImageCache)
     G::track(__FUNCTION__);
     #endif
     }
-    if (isRunning()) {
-        mutex.lock();
-        abort = true;
-        condition.wakeOne();
-        mutex.unlock();
-        wait();
-    }
+//    if (isRunning()) {
+//        mutex.lock();
+//        abort = true;
+//        condition.wakeOne();
+//        mutex.unlock();
+//        wait();
+//    }
 //    qDebug() << "\n@@@"  << __FUNCTION__;
-    abort = false;
-    updateImageCache = okayToImageCache;
-    action = Action::NewFileSelected;
+//    abort = false;
+//    updateImageCache = okayToImageCache;
+//    action = Action::NewFileSelected;
     foundItemsToLoad = false;
     setRange();
     for (int i = startRow; i < endRow; ++i) {
@@ -415,7 +415,22 @@ void MetadataCache::fileSelectionChange(bool okayToImageCache)
             foundItemsToLoad = true;
         if (foundItemsToLoad) break;
     }
-    start(TimeCriticalPriority);
+    if (foundItemsToLoad) {
+        if (isRunning()) {
+            mutex.lock();
+            abort = true;
+            condition.wakeOne();
+            mutex.unlock();
+            wait();
+        }
+        abort = false;
+        updateImageCache = okayToImageCache;
+        action = Action::NewFileSelected;
+        start(TimeCriticalPriority);
+    }
+    else {
+        emit updateImageCachePosition();
+    }
 }
 
 void MetadataCache::setRange()
@@ -950,7 +965,7 @@ void MetadataCache::run()
                  << "updateImageCache =" << updateImageCache;
 //                 */
         if (G::isNewFolderLoaded && updateImageCache) {
-            emit updateImageCachePositionAfterDelay();
+            emit updateImageCachePosition();
         }
     }
 

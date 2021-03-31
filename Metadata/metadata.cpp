@@ -857,6 +857,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     G::track(__FUNCTION__, path);
     #endif
     }
+//    G::log(__FUNCTION__, "Source =" + source + "  " + path);
 //    qDebug() << __FUNCTION__ << "called by" << source << path << "p.report =" << p.report;
 //    isReport = true;
     p.report = isReport;
@@ -874,7 +875,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     p.file.setFileName(path);
     if (p.file.isOpen()) return false;
 
-//    if (p.file.isOpen()) p.file.close();
     if (p.report) {
         p.rpt << "\nFile name = " << path << "\n";
     }

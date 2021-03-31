@@ -1264,6 +1264,7 @@ which isn't pretty at all.
     }
     int mid = midVisibleCell;
 
+    qDebug() << __FUNCTION__ << isFitTopOrBottom;
     static int prevWidth = 0;
 
     // must come after width parameters
@@ -1395,12 +1396,12 @@ loaded.  Both thumbView and gridView have to be called.
 void IconView::thumbsFitTopOrBottom()
 {
 /*
-Called by MW::eventFilter when a thumbDock resize event occurs triggered by the user resizing
-the thumbDock. The thumb size is adjusted to fit the new thumbDock height and scrolled to keep
-the midVisibleThumb in the middle. Other objects visible (docks and central widget) are
-resized.
+    Called by MW::eventFilter when a thumbDock resize event occurs triggered by the user
+    resizing the thumbDock. The thumb size is adjusted to fit the new thumbDock height and
+    scrolled to keep the midVisibleThumb in the middle. Other objects visible (docks and
+    central widget) are resized.
 
-For icon cell anatomy (see diagram at top of IconViewDelegate)
+    For icon cell anatomy (see diagram at top of IconViewDelegate)
 */
     {
     #ifdef ISDEBUG
