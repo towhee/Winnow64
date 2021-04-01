@@ -39,11 +39,7 @@ The actual filtering is executed in SortFilter subclass of QSortFilterProxy (sf)
 datamodel.
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     setRootIsDecorated(true);
     setSelectionMode(QAbstractItemView::NoSelection);
     setColumnCount(5);
@@ -124,11 +120,7 @@ void Filters::createPredefinedFilters()
 {
 /* Predefined filters are edited by the user: Search, Picks, Ratings and Color Class.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     search = new QTreeWidgetItem(this);
     search->setText(0, "Search");
     search->setFont(0, categoryFont);
@@ -255,11 +247,7 @@ file type, camera model etc.  When a new folder is selected each dynamic filter
 column is scanned for unique elements which are added to the dynamic filter
 by addCategoryFromData.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     types = new QTreeWidgetItem(this);
     types->setText(0, "File type");
 //    types->setFont(0, categoryFont);
@@ -307,11 +295,7 @@ void Filters::setCategoryBackground(const int &a, const int &b)
 Sets the background gradient for the category items.  This function is also called when the
 user changes the background shade in preferences.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     categoryBackground.setColorAt(0, QColor(a,a,a));
     categoryBackground.setColorAt(1, QColor(b,b,b));
 
@@ -387,11 +371,7 @@ void Filters::removeChildrenDynamicFilters()
 folder is selected.  This function removes any pre-existing children to
 prevent duplication and orphans.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     types->takeChildren();
     years->takeChildren();
     days->takeChildren();
@@ -404,11 +384,7 @@ prevent duplication and orphans.
 
 void Filters::checkPicks(bool check)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (check) {
         picksFalse->setCheckState(0, Qt::Unchecked);
         picksTrue->setCheckState(0, Qt::Checked);
@@ -422,22 +398,14 @@ void Filters::checkPicks(bool check)
 
 void Filters::setSearchNewFolder()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     searchTrue->setText(0, enterSearchString);
     searchTrue->setCheckState(0, Qt::Checked);
 }
 
 void Filters::disableZeroCountItems(bool disable)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent() && (*it)->parent()->text(0) != "Search") {
@@ -482,11 +450,7 @@ bool Filters::isAnyFilter()
 /*
 This is used to determine the filter status in MW::updateFilterStatus
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QTreeWidgetItemIterator it(this);
     if (searchTrue->checkState(0) == Qt::Checked && searchTrue->text(0) != enterSearchString)
         return true;
@@ -574,11 +538,7 @@ void Filters::clearAll()
 Uncheck all the filter items but do not signal filter change.  This is called when a new
 folder is selected to reset the filter criteria.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent()) {            
@@ -598,11 +558,7 @@ void Filters::uncheckAllFilters()
 {
     /* Uncheck all the filter items
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent()) {
@@ -621,11 +577,7 @@ void Filters::uncheckTypesFilters()
 /*
 Uncheck types.  This is required when raw + jpg are either combined or not combined.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent() == types) {
@@ -675,11 +627,7 @@ folder like JPG and NEF. A QMap object is used so the items can be sorted by key
 order as the tableView. This function should only be used for dynamic categories - see
 createDynamicFilters;
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     static QTreeWidgetItem *item;
     QMap<QVariant, QString> uniqueItems;
     for (auto key : itemMap.keys()) {
@@ -777,11 +725,7 @@ searchStringChange is emitted. DataModel::searchStringChange receives the signal
 the datamodel searchColumn match to true or false for each row. The filteredItemCount is
 updated.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     /*
     qDebug() << "\n" << __FUNCTION__ << "Entering:   "
              << "column =" << column
@@ -824,11 +768,7 @@ updated.
 
 void Filters::resizeColumns()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QFont font = this->font();
 //    font.setPointSize(G::fontSize.toInt());
     QFontMetrics fm(font);
@@ -845,22 +785,14 @@ void Filters::resizeColumns()
 
 void Filters::resizeEvent(QResizeEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     resizeColumns();
     QTreeWidget::resizeEvent(event);
 }
 
 void Filters::paintEvent(QPaintEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    resizeColumns();
     QTreeWidget::paintEvent(event);
 }
@@ -870,11 +802,7 @@ void Filters::mousePressEvent(QMouseEvent *event)
 /*
 Single mouse click on item triggers expand/collapse same as clicking on decoration.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (buildingFilters) return;
     QPoint p = event->pos();
     QModelIndex idx = indexAt(p);

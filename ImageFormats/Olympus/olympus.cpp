@@ -197,11 +197,7 @@ bool Olympus::parse(MetadataParameters &p,
                     Exif *exif,
                     Jpeg *jpeg)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     //file.open in Metadata::readMetadata
     // first two bytes is the endian order (skip next 2 bytes)
     quint16 order = Utilities::get16(p.file.read(4));

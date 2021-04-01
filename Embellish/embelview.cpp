@@ -32,11 +32,7 @@ EmbelView::EmbelView(QWidget *parent,
 
                      QGraphicsView(centralWidget)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
     this->mainWindow = parent;
     this->metadata = metadata;
@@ -109,11 +105,7 @@ Moving from one image to the next, the scenario where the currrent image is
 full scale and the next is a preview, requires the zoom factor to be normalized
 to prevent jarring changes in perceived scale by the user.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // No folder selected yet
     if (!fPath.length()) return false;
     if (G::memTest) return false;
@@ -187,11 +179,7 @@ to prevent jarring changes in perceived scale by the user.
 
 void EmbelView::clear()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QPixmap nullPm;
     pmItem->setPixmap(nullPm);
     pmItem->setVisible(false);
@@ -220,11 +208,7 @@ Geometry
 
     rect() = The container or canvas or entire scene in monitor pixels
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     /*
     qDebug() << __FUNCTION__
              << "isScrollable =" << isScrollable
@@ -277,11 +261,7 @@ Geometry
 
 bool EmbelView::sceneBiggerThanView()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QPoint pTL = mapFromScene(0, 0);
     QPoint pBR = mapFromScene(scene->width(), scene->height());
     int sceneViewWidth = pBR.x() - pTL.x();
@@ -294,11 +274,7 @@ bool EmbelView::sceneBiggerThanView()
 
 qreal EmbelView::getFitScaleFactor(QRectF container, QRectF content)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     qreal hScale = ((qreal)container.width() - 2) / content.width();
     qreal vScale = ((qreal)container.height() - 2) / content.height();
     return (hScale < vScale) ? hScale : vScale;
@@ -306,11 +282,7 @@ qreal EmbelView::getFitScaleFactor(QRectF container, QRectF content)
 
 void EmbelView::setScrollBars(QPointF scrollPct)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     getScrollBarStatus();
     scrl.hVal = scrl.hMin + scrollPct.x() * (scrl.hMax - scrl.hMin);
     scrl.vVal = scrl.vMin + scrollPct.y() * (scrl.vMax - scrl.vMin);
@@ -320,11 +292,7 @@ void EmbelView::setScrollBars(QPointF scrollPct)
 
 void EmbelView::getScrollBarStatus()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     scrl.hMin = horizontalScrollBar()->minimum();
     scrl.hMax = horizontalScrollBar()->maximum();
     scrl.hVal = horizontalScrollBar()->value();
@@ -340,11 +308,7 @@ QPointF EmbelView::getScrollPct()
 /* The view center is defined by the scrollbar values.  The value is converted
 to a percentage to be used to match position in the next image if zoomed.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     getScrollBarStatus();
     return QPointF(scrl.hPct, scrl.vPct);
 }
@@ -376,11 +340,7 @@ void EmbelView::resizeEvent(QResizeEvent *event)
 ● move and size pick icon and shooting info as necessary
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
@@ -406,11 +366,7 @@ zoom amount is maintained and the main image is panned to the same location as
 on the thumb. This makes it quick to check eyes and other details in many
 images.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (zoom > zoomFit) {
         centerOn(QPointF(xPct * sceneRect().width(), yPct * sceneRect().height()));
     }
@@ -434,32 +390,20 @@ void EmbelView::updateToggleZoom(qreal toggleZoomValue)
 Slot for signal from update zoom dialog to set the amount to zoom when user
 clicks on the unzoomed image.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     toggleZoom = toggleZoomValue;
 }
 
 void EmbelView::refresh()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     setFitZoom();
     scale();
 }
 
 void EmbelView::zoomIn()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     zoom *= (1.0 + zoomInc);
     zoom = zoom > zoomMax ? zoomMax: zoom;
     scale();
@@ -467,11 +411,7 @@ void EmbelView::zoomIn()
 
 void EmbelView::zoomOut()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     zoom *= (1.0 - zoomInc);
     zoom = zoom < zoomMin ? zoomMin : zoom;
     scale();
@@ -479,11 +419,7 @@ void EmbelView::zoomOut()
 
 void EmbelView::zoomToFit()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     zoom = zoomFit;
     scale();
 }
@@ -494,11 +430,7 @@ void EmbelView::zoomTo(qreal zoomTo)
 Called from ZoomDlg when the zoom is changed. From here the message is passed
 on to EmbelView::scale(), which in turn makes the proper scale change.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     zoom = zoomTo;
     isFit = false;
     scale();
@@ -506,11 +438,7 @@ on to EmbelView::scale(), which in turn makes the proper scale change.
 
 void EmbelView::resetFitZoom()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     qDebug() << __FUNCTION__
              << "rect() =" << rect()
              << "sceneRect() =" << sceneRect()
@@ -523,11 +451,7 @@ void EmbelView::resetFitZoom()
 
 void EmbelView::setFitZoom()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > 1) zoom = 1;
 }
@@ -539,11 +463,7 @@ Alternate between zoom-to-fit and another zoom value (typically 100% to check
 detail).  The other zoom value (toggleZoom) can be assigned in ZoomDlg and
 defaults to 1.0
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     isFit = !isFit;
     isFit ? zoom = zoomFit : zoom = toggleZoom;
 }
@@ -580,11 +500,7 @@ image if the image was not zoomed.
 
 void EmbelView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     #ifdef ISPROFILE
     G::track(__FUNCTION__, "About to QTransform trans");
     #endif
@@ -627,11 +543,7 @@ void EmbelView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 
 void EmbelView::transform()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QImage displayImage;
     rotateByExifRotation(displayImage, currentImagePath);
 }
@@ -642,11 +554,7 @@ void EmbelView::sceneGeometry(QPoint &sceneOrigin, QRectF &scene_Rect, QRect &cw
 Return the top left corner of the image showing in the central widget in percent.  This is
 used to determine the zoomCursor aspect in ThumbView.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     sceneOrigin = mapFromScene(0.0, 0.0);
     scene_Rect = sceneRect();
     cwRect = rect();
@@ -654,11 +562,7 @@ used to determine the zoomCursor aspect in ThumbView.
 
 void EmbelView::monitorCursorState()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     static QPoint lastPos;
 
     if (QCursor::pos() != lastPos) {
@@ -683,11 +587,7 @@ void EmbelView::setBackgroundColor(QColor bg)
 
 void EmbelView::setCursorHiding(bool hide)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (hide) {
         mouseMovementTimer->start(500);
     } else {
@@ -739,11 +639,7 @@ void EmbelView::scrollContentsBy(int dx, int dy)
 
 void EmbelView::wheelEvent(QWheelEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
     // if trackpad scrolling set in preferences then default behavior
 //    if(useWheelToScroll && isScrollable) {
@@ -772,11 +668,7 @@ void EmbelView::wheelEvent(QWheelEvent *event)
 // not used
 void EmbelView::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // placeholder function pending use
 //    qDebug() << __FUNCTION__ << isFit << zoom << zoomFit;
 //    if (isFit && zoom < zoomFit) {
@@ -790,11 +682,7 @@ void EmbelView::mouseDoubleClickEvent(QMouseEvent *event)
 
 void EmbelView::mousePressEvent(QMouseEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     static int n = 0;
     n++;
     // bad things happen if no image when click
@@ -897,11 +785,7 @@ Set a delay to hide cursor if in slideshow mode
 
 void EmbelView::mouseReleaseEvent(QMouseEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
     // rubberband
     if (isRubberBand) {
@@ -959,11 +843,7 @@ void EmbelView::mouseReleaseEvent(QMouseEvent *event)
 
 void EmbelView::enterEvent(QEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QVariant x = event->type();     // suppress compiler warning
     this->setFocus();
 }
@@ -1023,11 +903,7 @@ QString EmbelView::diagnostics()
 
 void EmbelView::copyImage()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QApplication::clipboard()->setPixmap(pmItem->pixmap(), QClipboard::Clipboard);
     QString msg = "Copied current image to the clipboard";
     G::popUp->showPopup(msg, 1500);

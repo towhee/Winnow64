@@ -96,11 +96,7 @@ Thread management
 MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
                   Metadata *metadata, ImageCache *imageCacheThread) : QThread(parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     this->dm = dm;
     this->metadata = metadata;
     this->imageCacheThread = imageCacheThread;
@@ -129,11 +125,7 @@ MetadataCache::~MetadataCache()
 
 void MetadataCache::stopMetadateCache()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
@@ -148,11 +140,7 @@ void MetadataCache::stopMetadateCache()
 
 bool MetadataCache::isAllMetadataLoaded()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     qDebug() << __FUNCTION__;
     G::allMetadataLoaded = true;
     for (int i = 0; i < dm->rowCount(); ++i) {
@@ -166,11 +154,7 @@ bool MetadataCache::isAllMetadataLoaded()
 
 bool MetadataCache::isAllIconLoaded()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // not used
     qDebug() << __FUNCTION__;
     bool loaded = true;
@@ -197,11 +181,7 @@ void MetadataCache::loadNewFolder(bool isRefresh)
 
     MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -245,11 +225,7 @@ The greater of:
  - maxChunkSize
 metadata and icons are loaded into the datamodel.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -287,11 +263,7 @@ allowing for real time updates to the progress bar.
 Loading all the metadata in a separate high priority thread is slightly faster, but if the
 progress bar update is more important then use the datamodel function dm::addAllMetadata.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -316,11 +288,7 @@ This function is called when there is a scroll event in a view of the datamodel.
 A chunk of metadata and icons are added to the datamodel and icons outside the caching
 limits are removed (not visible and not with chunk range)
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
             mutex.lock();
             abort = true;
@@ -353,11 +321,7 @@ void MetadataCache::sizeChange(QString source)
 This function is called when the number of icons visible in the viewport changes when the icon
 size or the viewport change size.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -388,11 +352,7 @@ void MetadataCache::fileSelectionChange(bool okayToImageCache)
     This function is called from MW::fileSelectionChange. A chunk of metadata and icons are
     added to the datamodel. The image cache is updated.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    if (isRunning()) {
 //        mutex.lock();
 //        abort = true;
@@ -439,11 +399,7 @@ void MetadataCache::setRange()
     Define the range of icons to cache: prev + current + next viewports/pages of icons
     Variables are set in MW::updateIconsVisible
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int rowCount = dm->sf->rowCount();
 
     // default total per page (prev, curr and next pages)
@@ -490,11 +446,7 @@ void MetadataCache::iconCleanup()
     other rows that have icons previously loaded in order to minimize memory consumption. Rows
     that have icons are tracked in the list iconsCached as the dm row (not dm->sf proxy).
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QMutableListIterator<int> i(iconsCached);
     QPixmap nullPm;
     while (i.hasNext()) {
@@ -527,11 +479,7 @@ qint32 MetadataCache::memRequired()
     to store the metadata excluding the icons. The icons are only stored for the part of the
     datamodel about to be viewed. Icon memory = w*h*3 bytes. Return mem reqd in MB.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
     int rowsWithIcons = endRow - startRow;
     quint32 iconMem;
@@ -551,11 +499,7 @@ qint32 MetadataCache::memRequired()
 
 void MetadataCache::iconMax(QPixmap &thumb)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
     if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
 

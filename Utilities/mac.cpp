@@ -2,11 +2,7 @@
 
 void Mac::availableMemory()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     vm_size_t page_size;
     mach_port_t mach_port;
     mach_msg_type_number_t count;

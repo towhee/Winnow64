@@ -73,11 +73,7 @@ MW *mw3;
 
 EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyEditor(parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     mw3 = qobject_cast<MW*>(parent);
     this->setting = setting;
 
@@ -119,11 +115,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
 
 void EmbelProperties::initialize()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (longSidePx < 1) longSidePx = 500;
     anchorPoints << "Top Left" << "Top Center" << "Top Right"
                  << "Middle Left" << "Middle Center" << "Middle Right"
@@ -294,11 +286,7 @@ void EmbelProperties::initialize()
 
 void EmbelProperties::effectContextMenu()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
 //    effectParentIdx = btn->index;
     effectParentIdx = getItemIndex(btn->itemIndex);
@@ -469,11 +457,7 @@ void EmbelProperties::updateAnchorObjects()
 
 void EmbelProperties::diagnosticStyles(QTextStream &rpt)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     using namespace winnow_effects;
     QMapIterator<QString, QList<Effect>> s(styleMap);
     while (s.hasNext()) {
@@ -549,11 +533,7 @@ void EmbelProperties::diagnosticStyles(QTextStream &rpt)
 
 void EmbelProperties::diagnosticVectors(QTextStream &rpt)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     rpt << "\n" << "\nVectors:";
     if (b.length()) rpt << "\n" << "Border(s)";
     for (int i = 0; i < b.length(); ++i) {
@@ -616,11 +596,7 @@ void EmbelProperties::diagnosticVectors(QTextStream &rpt)
 
 void EmbelProperties::diagnosticModel(QTextStream &rpt, QModelIndex parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     static int iteration = 0;
     if (iteration == 0) {
         rpt << "\n\n" "Embellish Properties Model:\n\n";  // << rowCount << " items.\n\n";
@@ -712,11 +688,7 @@ void EmbelProperties::diagnosticModel(QTextStream &rpt, QModelIndex parent)
 
 /* void EmbelProperties::diagnosticModel(QModelIndex parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // model
     // Report headers
     QString c1 = "Idx";
@@ -1163,11 +1135,7 @@ bool EmbelProperties::saveTemplateToFile()
 
     Remove the temporary subfolder.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // cannot save "Do not Embellish"
     if (templateName == "Do not Embellish") {
         QString msg = "Cannot save template 'Do not Embellish'";
@@ -1317,11 +1285,7 @@ bool EmbelProperties::readTemplateFromFile()
     Load the new template.
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // select compressed temple file
     QString srcPath = QFileDialog::getOpenFileName(this, tr("Select template"),
                                                  "/home", "*.embeltemplate");
@@ -5553,11 +5517,7 @@ here. The item (row in model) has to be removed from the data model, local vecto
 items in Embel and from QSettings. Also, if it is referred to elsewhere, such as a style in a
 stylelist for a text or graphic, or an anchorObject, then the lists need to be updated.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
     QModelIndex idx = getItemIndex(btn->itemIndex);
 
@@ -5788,11 +5748,7 @@ void EmbelProperties::flash(QModelIndex idx)
 
 void EmbelProperties::mouseMoveEvent(QMouseEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // nothing to flash
     if (!G::isEmbellish) return;
 
@@ -6076,11 +6032,7 @@ QString EmbelProperties::metaString(QString key, QString fPath)
 
 QString EmbelProperties::diagnostics()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -6109,32 +6061,20 @@ QString EmbelProperties::diagnostics()
 
 void EmbelProperties::expandAllRows()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     expandAll();
 }
 
 void EmbelProperties::collapseAllRows()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     collapseAll();
     expand(model->index(_templates,0));
 }
 
 void EmbelProperties::solo()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     setSolo(soloAction->isChecked());
     setting->setValue("Embel/isSolo", soloAction->isChecked());
 }
@@ -6152,11 +6092,7 @@ void EmbelProperties::expandRecursively()
 
 void EmbelProperties::test1(QIcon icon)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    syncWinnets();
 //    e->test();
 //    diagnosticVectors();
@@ -6165,21 +6101,13 @@ void EmbelProperties::test1(QIcon icon)
 
 void EmbelProperties::test2()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
 }
 
 void EmbelProperties::coordHelp()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     HtmlWindow *w = new HtmlWindow("Winnow - Embel Container and Coordinate System",
                                    ":/Docs/embelcoordsystem.html",
                                    QSize(939,736));
