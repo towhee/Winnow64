@@ -1,17 +1,15 @@
 BUGS / TO DO
-- When resize thumbView icons do not refill new space
+- iphone11 folder image caching not working
 - Sometimes crash when export from LR to winnets
-- Not showing image count in folders at startup
 - Shooting data reverting to wrong token string
 - Slow program start sometimes (check for updates?)
-- Thumbnail for video files
+- Slow startup if a drive is sleeping
 - Maintain count when switch folders during the same ingest
-- Save tokens used in template
 - Full path for file name in external program
 - When reverse sort the cache progress bar does not reverse to match
+- Tap on mac
 - Handle winnets on Mac
 - Quick start loupe first image in folder
-- Slow startup if a drive is sleeping
 - New workspace crashed
 - Write qDebug to logger file
 - Improve err recording and showing to user
@@ -21,11 +19,7 @@ BUGS / TO DO
 - Umbra gradient on Mac weird effect
 - Eliminate shadow blur in sunward direction
 - Check for multiple signals to trigger Embel processes (challenging)
-- Change access to token editor in view menu
-- Confirm check for updates is working (Andreas)
-- Grid does not always stretch to fit central widget
 - DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
-- Is copy image (iconview context menu) working?
 - Sharpen needs TLC
 - Standardize use of G:css
 - Sort out i.name vs i.key in PropertyEditor
@@ -33,13 +27,10 @@ BUGS / TO DO
 - Add hif file format
 - Rotate heic files
 - Mac check for updates not done yet
-- Dmg app missing logo
 - Open with ... (doesn't work on macOS)
 PERFORMANCE
-- Delay when caching large files
 - HEIF files are slow
 CODE IMPROVEMENTS
-- Try using busy flag in threads
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - Tweak panning in compareView (eliminate incremental scrolling)
 - cleanup imageview rubberband
@@ -56,6 +47,14 @@ ENHANCEMENTS
 - When ingesting confirm all files copied correctly (option)
 
 DONE/FIXED
+- Copy image (iconview context menu) fixed
+- Change access to token editor in view menu
+- Not showing image count in folders at startup
+- Delay when caching large files fixed
+- When resize thumbView icons do not refill new space
+- Thumbnail for video files
+- Version 1.18
+- Save tokens used in template
 - GraphicsView/GraphicsScene scale/location issue when change embellish templates sometimes
 - When delete embel template also delete from Winnow embellish menu
 - Info token editor rename not working properly

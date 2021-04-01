@@ -42,11 +42,7 @@ QVariant PropertyModel::data(const QModelIndex &index, int role) const
 
 PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     setRootIsDecorated(true);
     setAlternatingRowColors(true);
     setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -83,11 +79,7 @@ void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
 Sets the custom editor widget for the value column (column 2).
 */
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     setIndexWidget(idx, editor);
     emit propertyDelegate->closeEditor(editor);
 }
@@ -154,11 +146,7 @@ is used to find the item when it has been moved.  For example, if the item is on
 borders which can contain texts, then the ItemIndex can be assigned to the text, and it can be
 associated with the correct border even when the border is resorted.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int index = 100;
     while (true) {
         bool matchFound = false;
@@ -183,11 +171,7 @@ Returns the QModelIndex for the itemIndex. itemIndex is unique for every row in 
 It is assigned in addItem().  Use it to find the correct index when items have been sorted
 or deleted, and the associated settings and vectors have not been adjusted.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QModelIndex start = model->index(0,0,QModelIndex());
     QModelIndexList list = model->match(start, UR_ItemIndex, itemIndex, 1, Qt::MatchExactly | Qt::MatchRecursive);
     if (list.size() > 0) return list.at(0);
@@ -246,11 +230,7 @@ supplied by the calling function.  Each row has two columns: caption and value. 
 a description of the value.  The value is a propertyWidget custom editor (ComboBoxEditor,
 SliderEditor, LineEditor etc).
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int row;
     // capIdx defined in header file
     // valIdx defined in header file
@@ -354,11 +334,7 @@ SliderEditor, LineEditor etc).
 
 void PropertyEditor::clearItemInfo(ItemInfo &i)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     i.itemIndex = 0;                // all
     i.sortOrder = -1;               // all
     i.name = "";                    // all
@@ -392,11 +368,7 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
 
 void PropertyEditor::getItemInfo(QModelIndex &idx, ItemInfo &copy)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     capIdx = idx;
     valIdx = model->index(idx.row(), ValColumn, idx.parent());
     copy.itemIndex = model->data(capIdx, UR_ItemIndex).toInt();
@@ -428,11 +400,7 @@ void PropertyEditor::setItemValue(QModelIndex idx, int type, QVariant value)
 /*
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (value.toString() == "__Ignore__") return;
     if (type == DT_Label) {
         auto editor = static_cast<LabelEditor*>(idx.data(UR_Editor).value<void*>());
@@ -489,11 +457,7 @@ void PropertyEditor::mouseDoubleClickEvent(QMouseEvent *event)
 /*
     Set the value to the default value
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QModelIndex idx = indexAt(event->pos());
     idx = model->index(idx.row(), ValColumn, idx.parent());
     QVariant value = idx.data(UR_DefaultValue);
@@ -586,11 +550,7 @@ void PropertyEditor::collapseAllExcept()
 
 void PropertyEditor::diagnosticProperties(QModelIndex parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     qDebug() << __FUNCTION__ << "PROPERTIES MODEL\n";
     // model
     for (int r = 0; r < model->rowCount(parent); ++r) {

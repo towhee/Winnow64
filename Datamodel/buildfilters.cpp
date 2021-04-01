@@ -8,11 +8,7 @@ BuildFilters::BuildFilters(QObject *parent,
                            QThread(parent),
                            combineRawJpg(combineRawJpg)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     this->dm = dm;
     this->metadata = metadata;
     this->filters = filters;
@@ -43,11 +39,7 @@ void BuildFilters::stop()
 
 void BuildFilters::build()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -73,11 +65,7 @@ void BuildFilters::build()
 
 void BuildFilters::done()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (!abort) emit finishedBuildFilters();
 //    qint64 msec = buildFiltersTimer.elapsed();
 //    qDebug() << __FUNCTION__ << QString("%L1").arg(msec) << "msec";
@@ -92,11 +80,7 @@ if raw+jpg have been combined.  The results as saved in the filters QTreeWidget 
 
 This function is run everytime the search string changes.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__;
     int col = G::SearchColumn;
 

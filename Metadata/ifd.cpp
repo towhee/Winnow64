@@ -122,11 +122,7 @@ quint32 IFD::readIFD(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
 
 QList<quint32> IFD::getSubIfdOffsets(QFile &file, quint32 subIFDaddr, int count, bool isBigEnd)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QList<quint32> offsets;
     file.seek(subIFDaddr);
     for (int i = 0; i < count; i++) {
@@ -247,11 +243,7 @@ quint32 IFD::readIFD_B(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
 
 QList<quint32> IFD::getSubIfdOffsets_B(QFile &file, quint32 subIFDaddr, int count, bool isBigEnd)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QList<quint32> offsets;
     file.seek(subIFDaddr);
     for (int i = 0; i < count; i++) {

@@ -35,11 +35,7 @@ ImageView::ImageView(QWidget *parent,
 
                      QGraphicsView(centralWidget)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
     this->mainWindow = parent;
 //    this->centralWidget = centralWidget;
@@ -135,32 +131,28 @@ ImageView::ImageView(QWidget *parent,
 bool ImageView::loadImage(QString fPath, QString src)
 {
 /*
-There are two sources for the image (pixmap): a file or the cache.
+    There are two sources for the image (pixmap): a file or the cache.
 
-The first choice is the image cache. In the cache two versions of the image are stored: the
-full scale and a preview scaled to dimensions defined in the preferences. The preview is used
-if it is large enough to fit in the window (viewport) without scaling larger than 1. If the
-preview is too small then the full size is used.
+    The first choice is the image cache. In the cache two versions of the image are stored:
+    the full scale and a preview scaled to dimensions defined in the preferences. The preview
+    is used if it is large enough to fit in the window (viewport) without scaling larger than
+    1. If the preview is too small then the full size is used.
 
-If the image has not been cached (usually the case for the first image to be shown, as the
-caching is just starting) then the full size image is read from the file.
+    If the image has not been cached (usually the case for the first image to be shown, as the
+    caching is just starting) then the full size image is read from the file.
 
-Previews are used to maximise performance paging through all the images. However, to examine
-an image in detail, the full scale image is much better. As soon as the preview has been
-loaded a timer is started. If the user moves on to the next image before a timer interval has
-elapsed then the timer is reset. Otherwise, when the timer interval occurs
-(loadFullSizeTimer->setInterval(500)) then the full scale pixmap from the cache is set as the
-item pixmap in the scene.
+    Previews are used to maximise performance paging through all the images. However, to
+    examine an image in detail, the full scale image is much better. As soon as the preview
+    has been loaded a timer is started. If the user moves on to the next image before a timer
+    interval has elapsed then the timer is reset. Otherwise, when the timer interval occurs
+    (loadFullSizeTimer->setInterval(500)) then the full scale pixmap from the cache is set as
+    the item pixmap in the scene.
 
-Moving from one image to the next, the scenario where the currrent image is full scale and the
-next is a preview, requires the zoom factor to be normalized to prevent jarring changes in
-perceived scale by the user.
+    Moving from one image to the next, the scenario where the currrent image is full scale and
+    the next is a preview, requires the zoom factor to be normalized to prevent jarring
+    changes in perceived scale by the user.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__ << fPath << src;
 //    fPath = "G:/Test/_DSC7390.ARW";
     // No folder selected yet
@@ -272,11 +264,7 @@ are matched:
     If zoomed then the relative scroll position is set.
     If zoomFit then zoomFit is recalculated.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     loadFullSizeTimer->stop();
     if(imageCacheThread->imCache.contains(currentImagePath)) {
         pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(currentImagePath)));
@@ -293,11 +281,7 @@ are matched:
 
 void ImageView::clear()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     shootingInfo = "";
     infoOverlay->setText("");
     QPixmap nullPm;
@@ -327,11 +311,7 @@ void ImageView::scale()
 
     If isSlideshow then hide mouse cursor unless is moves.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     /*
     qDebug() << __FUNCTION__
              << "isPreview =" << isPreview
@@ -389,11 +369,7 @@ void ImageView::scale()
 void ImageView::setFullDim()
 {
 /* Sets QSize full from metadata.  Req'd by setPreviewDim */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int row = dm->fPathRow[currentImagePath];
     full.setWidth(dm->index(row, G::WidthColumn).data().toInt());
     full.setHeight(dm->index(row, G::HeightColumn).data().toInt());
@@ -405,11 +381,7 @@ void ImageView::setPreviewDim()
 Req'd in advance to decide if the preview is big enough to use.  Uses full,
 which is defined in setFullDim.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     preview = imageCacheThread->getPreviewSize();
     qreal fullAspectRatio = (qreal)(full.height()) / full.width();
     if (full.width() > full.height()) {
@@ -422,11 +394,7 @@ which is defined in setFullDim.
 
 bool ImageView::sceneBiggerThanView()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QPoint pTL = mapFromScene(0, 0);
     QPoint pBR = mapFromScene(scene->width(), scene->height());
     int sceneViewWidth = pBR.x() - pTL.x();
@@ -439,11 +407,7 @@ bool ImageView::sceneBiggerThanView()
 
 qreal ImageView::getFitScaleFactor(QRectF container, QRectF content)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__ << container << content;
     qreal hScale = static_cast<qreal>(container.width() - 2) / content.width() * G::actDevicePixelRatio;
     qreal vScale = static_cast<qreal>(container.height() - 2) / content.height() * G::actDevicePixelRatio;
@@ -452,11 +416,7 @@ qreal ImageView::getFitScaleFactor(QRectF container, QRectF content)
 
 void ImageView::setScrollBars(QPointF scrollPct)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     getScrollBarStatus();
     scrl.hVal = scrl.hMin + scrollPct.x() * (scrl.hMax - scrl.hMin);
     scrl.vVal = scrl.vMin + scrollPct.y() * (scrl.vMax - scrl.vMin);
@@ -466,11 +426,7 @@ void ImageView::setScrollBars(QPointF scrollPct)
 
 void ImageView::getScrollBarStatus()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     scrl.hMin = horizontalScrollBar()->minimum();
     scrl.hMax = horizontalScrollBar()->maximum();
     scrl.hVal = horizontalScrollBar()->value();
@@ -498,11 +454,7 @@ QPointF ImageView::getScrollPct()
 /* The view center is defined by the scrollbar values.  The value is converted
 to a percentage to be used to match position in the next image if zoomed.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     getScrollBarStatus();
     return QPointF(scrl.hPct, scrl.vPct);
 }
@@ -521,11 +473,7 @@ This function locates the pixmap in the bottom corner of the image label as the
 image is resized and zoomed, adjusting for the aspect ratio of the image and
 size.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QPoint sceneBottomRight = mapFromScene(sceneRect().bottomRight());
 
     int x, y = 0;                       // bottom right coordinates of visible image
@@ -575,11 +523,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
 ● move and size pick icon and shooting info as necessary
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
@@ -606,11 +550,7 @@ zoom amount is maintained and the main image is panned to the same location as
 on the thumb. This makes it quick to check eyes and other details in many
 images.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (zoom > zoomFit) {
         centerOn(QPointF(xPct * sceneRect().width(), yPct * sceneRect().height()));
     }
@@ -634,21 +574,13 @@ void ImageView::updateToggleZoom(qreal toggleZoomValue)
 Slot for signal from update zoom dialog to set the amount to zoom when user
 clicks on the unzoomed image.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     toggleZoom = toggleZoomValue;
 }
 
 void ImageView::refresh()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     qDebug() << __FUNCTION__;
     setFitZoom();
     scale();
@@ -656,11 +588,7 @@ void ImageView::refresh()
 
 void ImageView::zoomIn()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     zoom *= (1.0 + zoomInc);
     zoom = zoom > zoomMax ? zoomMax: zoom;
     scale();
@@ -668,11 +596,7 @@ void ImageView::zoomIn()
 
 void ImageView::zoomOut()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     zoom *= (1.0 - zoomInc);
     zoom = zoom < zoomMin ? zoomMin : zoom;
     scale();
@@ -680,11 +604,7 @@ void ImageView::zoomOut()
 
 void ImageView::zoomToFit()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     zoom = zoomFit;
     scale();
 }
@@ -695,11 +615,7 @@ void ImageView::zoomTo(qreal zoomTo)
 Called from ZoomDlg when the zoom is changed. From here the message is passed
 on to ImageView::scale(), which in turn makes the proper scale change.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     zoom = zoomTo;
     isFit = false;
     scale();
@@ -707,11 +623,7 @@ on to ImageView::scale(), which in turn makes the proper scale change.
 
 void ImageView::resetFitZoom()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     setSceneRect(scene->itemsBoundingRect());
     /*
     qDebug() << __FUNCTION__
@@ -727,11 +639,7 @@ void ImageView::resetFitZoom()
 
 void ImageView::setFitZoom()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > toggleZoom) zoom = toggleZoom;
 }
@@ -743,11 +651,7 @@ void ImageView::zoomToggle()
     detail).  The other zoom value (toggleZoom) can be assigned in ZoomDlg and
     defaults to 1.0
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     isFit = !isFit;
     isFit ? zoom = zoomFit : zoom = toggleZoom;
     scale();
@@ -784,11 +688,7 @@ void ImageView::rotate(int degrees)
 
 void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     #ifdef ISPROFILE
     G::track(__FUNCTION__, "About to QTransform trans");
     #endif
@@ -831,11 +731,7 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 
 void ImageView::transform()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QImage displayImage;
     rotateByExifRotation(displayImage, currentImagePath);
 }
@@ -846,11 +742,7 @@ void ImageView::sceneGeometry(QPoint &sceneOrigin, QRectF &scene_Rect, QRect &cw
 Return the top left corner of the image showing in the central widget in percent.  This is
 used to determine the zoomCursor aspect in ThumbView.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     sceneOrigin = mapFromScene(0.0, 0.0);
     scene_Rect = sceneRect();
     cwRect = rect();
@@ -872,11 +764,7 @@ void ImageView::moveShootingInfo(QString infoString)
 /* Locate and format the info label, which currently displays the shooting
 information in the top left corner of the image.  The text has a drop shadow
 to help make it visible against different coloured backgrounds. */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // window (w) and view (v) sizes are updated during resize
 
     int offset = 10;                        // offset pixels from the edge of image
@@ -913,11 +801,7 @@ to help make it visible against different coloured backgrounds. */
 
 void ImageView::monitorCursorState()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     static QPoint lastPos;
 
     if (QCursor::pos() != lastPos) {
@@ -942,11 +826,7 @@ void ImageView::setBackgroundColor(QColor bg)
 
 void ImageView::setCursorHiding(bool hide)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (hide) {
         mouseMovementTimer->start(500);
     } else {
@@ -1014,11 +894,7 @@ void ImageView::scrollContentsBy(int dx, int dy)
 
 void ImageView::wheelEvent(QWheelEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
     // if trackpad scrolling set in preferences then default behavior
 //    if(useWheelToScroll && isScrollable) {
@@ -1047,11 +923,7 @@ void ImageView::wheelEvent(QWheelEvent *event)
 // not used
 void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // placeholder function pending use
 //    qDebug() << __FUNCTION__ << isFit << zoom << zoomFit;
 //    if (isFit && zoom < zoomFit) {
@@ -1065,11 +937,7 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 
 void ImageView::mousePressEvent(QMouseEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     static int n = 0;
     n++;
     // bad things happen if no image when click
@@ -1175,11 +1043,7 @@ Set a delay to hide cursor if in slideshow mode
 
 void ImageView::mouseReleaseEvent(QMouseEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     /* rubberband
     if (isRubberBand) {
         setCursor(Qt::ArrowCursor);
@@ -1238,11 +1102,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 
 void ImageView::enterEvent(QEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QVariant x = event->type();     // suppress compiler warning
 //    this->setFocus();
 }
@@ -1313,12 +1173,18 @@ void ImageView::exportImage()
 
 void ImageView::copyImage()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
+    if (G::isLogger) G::log(__FUNCTION__); 
+    QPixmap pm = pmItem->pixmap();
+    if (pm.isNull()) {
+        if (imageCacheThread->imCache.contains(dm->currentFilePath)) {
+            pm = QPixmap::fromImage(imageCacheThread->imCache.value(dm->currentFilePath));
+        }
+        else {
+            QString msg = "Could not copy the current image to the clipboard";
+            G::popUp->showPopup(msg, 1500);
+        }
     }
-    QApplication::clipboard()->setPixmap(pmItem->pixmap(), QClipboard::Clipboard);
+    QApplication::clipboard()->setPixmap(pm, QClipboard::Clipboard);
     QString msg = "Copied current image to the clipboard";
     G::popUp->showPopup(msg, 1500);
 }
@@ -1336,11 +1202,7 @@ void ImageView::copyImage()
 
 static inline int hslValue(double n1, double n2, double hue)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     double value;
 
     if (hue > 255) {
@@ -1364,11 +1226,7 @@ static inline int hslValue(double n1, double n2, double hue)
 
 void rgbToHsl(int r, int g, int b, unsigned char *hue, unsigned char *sat, unsigned char *light)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     double h, s, l;
     int		min, max;
     int		delta;
@@ -1419,11 +1277,7 @@ void rgbToHsl(int r, int g, int b, unsigned char *hue, unsigned char *sat, unsig
 void hslToRgb(double h, double s, double l,
                     unsigned char *red, unsigned char *green, unsigned char *blue)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (s == 0) {
         /* achromatic case */
         *red = l;

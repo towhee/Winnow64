@@ -148,11 +148,7 @@ CLASS FSTree subclassing QTreeView
 
 FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     this->metadata = metadata;
     fileFilters = new QStringList;
     dir = new QDir();
@@ -196,11 +192,7 @@ void FSTree::createModel()
     Create the model and filter in a separate function as it is also used to refresh
     the folders by deleting the model and re-creating it.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     fsModel = new FSModel(this, metadata, count, combineCount, combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     fsModel->setRootPath("");
@@ -246,22 +238,14 @@ void FSTree::refreshModel()
     Most common use is to refresh the folder panel after inserting a USB connected
     media card.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     delete fsModel;
     createModel();
 }
 
 bool FSTree::getShowImageCount()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     return fsModel->showImageCount;
 }
 
@@ -275,22 +259,14 @@ void FSTree::scrollToCurrent()
 /*
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QModelIndex idx = getCurrentIndex();
     if (idx.isValid()) scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
 bool FSTree::select(QString dirPath)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QDir test(dirPath);
     if (test.exists()) {
         setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
@@ -305,11 +281,7 @@ bool FSTree::select(QString dirPath)
 
 QModelIndex FSTree::getCurrentIndex()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QModelIndex idx;
     if (selectedIndexes().size() > 0)
 //        idx = fsFilter->mapFromSource(selectedIndexes().first());
@@ -320,11 +292,7 @@ QModelIndex FSTree::getCurrentIndex()
 
 void FSTree::resizeColumns()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (fsModel->showImageCount) {
 //        imageCountColumnWidth = 45;
         QFont font = this->font();
@@ -348,11 +316,7 @@ void FSTree::expand(const QModelIndex &/*idx*/)
     Get the image count when a user expands the folder hierarchy.  This can also occur when a
     bookmark is selected and the matching folder is shown in the FSTree.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__ << idx << t.elapsed();
     if (t.elapsed() > 25) {
         QString src = __FUNCTION__;
@@ -393,7 +357,7 @@ void FSTree::getImageCount(QString const dirPath, bool changed, QString src)
     G::track(__FUNCTION__, "QString const dirPath, bool changed");
     #endif
     }
-//    qDebug() << __FUNCTION__ << src << dirPath;
+    qDebug() << __FUNCTION__ << src << dirPath;
     // counts is combineRawJpg
     if (!combineCount.contains(dirPath) || changed) {
         dir->setPath(dirPath);
@@ -423,11 +387,7 @@ void FSTree::getImageCount(QString const dirPath, bool changed, QString src)
 
 void FSTree::resizeEvent(QResizeEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     resizeColumns();
 }
 
@@ -444,11 +404,7 @@ void FSTree::resizeEvent(QResizeEvent *event)
 
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) return;
     QTreeView::mousePressEvent(event);
@@ -456,11 +412,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
 void FSTree::mouseReleaseEvent(QMouseEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QTreeView::mouseReleaseEvent(event);
 }
 
@@ -472,11 +424,7 @@ void FSTree::mouseMoveEvent(QMouseEvent *event)
 
 void FSTree::dragEnterEvent(QDragEnterEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 	QModelIndexList selectedDirs = selectionModel()->selectedRows();
 	if (selectedDirs.size() > 0) {
 		dndOrigSelection = selectedDirs[0];
@@ -491,11 +439,7 @@ void FSTree::dragMoveEvent(QDragMoveEvent *event)
 
 void FSTree::dropEvent(QDropEvent *event)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 	if (event->source())
 	{
 		QString fstreeStr="FSTree";

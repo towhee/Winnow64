@@ -15,11 +15,7 @@ Embel::Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
              EmbelProperties *p, ImageCache *imCache, QString src,
              QObject *)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     this->scene = scene;
     this->pmItem = pmItem;
     this->p = p;
@@ -37,11 +33,7 @@ Embel::~Embel()
 
 void Embel::exportImage()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     qDebug() << __FUNCTION__;
     scene->clearSelection();
     scene->setSceneRect(scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
@@ -243,11 +235,7 @@ void Embel::build(QString path, QString src)
 
 void Embel::fitAspect(double aspect, Hole &size)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (aspect > 1) size.h = static_cast<int>(qRound(size.w / aspect));
     else size.w = static_cast<int>(size.h * aspect);
 }
@@ -493,11 +481,7 @@ QPoint Embel::anchorPointOffset(QString anchorPoint, int w, int h, double rotati
 
 QString Embel::anchorPointRotationEquivalent(QString anchorPoint, double rotation)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (anchorPoint == "Middle Center") return anchorPoint;
     int rot = static_cast<int>(rotation);
     // East
@@ -1147,11 +1131,7 @@ bool Embel::eventFilter(QObject *object, QEvent *event)
 
 void Embel::diagnostics(QTextStream &rpt)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
     rpt << "\n" << "\nEmbel:";
 

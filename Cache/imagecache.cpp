@@ -2,11 +2,7 @@
 
 ImageCache::ImageCache(QObject *parent, DataModel *dm, Metadata *metadata) : QThread(parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // Pixmap is a class that loads either a QPixmap or QImage from a file
     this->dm = dm;
     this->metadata = metadata;
@@ -18,11 +14,7 @@ ImageCache::ImageCache(QObject *parent, DataModel *dm, Metadata *metadata) : QTh
 
 ImageCache::~ImageCache()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     mutex.lock();
     abort = true;
     condition.wakeOne();
@@ -129,11 +121,7 @@ thread before starting again. Use this function to stop the image caching thread
 one starting when there has been a folder change. The cache status label in the status bar
 will be hidden.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -152,11 +140,7 @@ void ImageCache::pauseImageCache()
 thread before starting again. Use this function to pause the image caching thread without a
 new one starting when there is a change to the datamodel, such as filtration or sorting.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -174,21 +158,13 @@ void ImageCache::resumeImageCache()
 Restart the image cache after it has been paused. This is used by metadataCacheThread after
 scroll events and the imageCacheThread has been paused to resume loading the image cache.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (!isRunning()) start(IdlePriority);
 }
 
 QSize ImageCache::scalePreview(int w, int h)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QSize preview(w, h);
     preview.scale(cache.previewSize.width(), cache.previewSize.height(),
                   Qt::KeepAspectRatio);
@@ -197,22 +173,14 @@ QSize ImageCache::scalePreview(int w, int h)
 
 QSize ImageCache::getPreviewSize()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     return cache.previewSize;
 }
 
 int ImageCache::getImCacheSize()
 {
     // return the current size of the cache
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int cacheMB = 0;
     for (int i = 0; i < cacheItemList.size(); ++i) {
         if (cacheItemList.at(i).isCached) {
@@ -256,11 +224,7 @@ The start and end of the target range are determined (cache.targetFirst and cach
 and the boolean isTarget is assigned for each item in in the cacheItemList.
 */
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     toCache.clear();
     toDecache.clear();
 
@@ -309,11 +273,7 @@ bool ImageCache::nextToCache()
 The images to cache are listed in the list toCache as a stack.  The first one on the list is
 the next to cache.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (toCache.length() > 0) {
         cache.toCacheKey = toCache.first();
         return true;
@@ -327,11 +287,7 @@ bool ImageCache::nextToDecache()
 The images to decache are listed in the list toDeache as a stack.  The first one on the list is
 the next to decache.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (toDecache.length() > 0) {
         cache.toDecacheKey = toDecache.first();
         return true;
@@ -341,11 +297,7 @@ the next to decache.
 
 void ImageCache::setPriorities(int key)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // key = current position = current selected thumbnail
     int aheadAmount = 1;
     int behindAmount = 1;                   // default 50/50 weighting
@@ -423,11 +375,7 @@ void ImageCache::setPriorities(int key)
 
 bool ImageCache::cacheUpToDate()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < cache.totFiles; ++i)
         if (cacheItemList[i].isTarget)
           if (cacheItemList[i].isCached == false) return false;
@@ -496,11 +444,7 @@ sync and leave orphans in the image cache buffer. This function iterates through
 cache, checking that all cached images are in the target. If not, they are removed from the
 cache buffer.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < cache.totFiles; ++i) {
         if (imCache.contains(cacheItemList.at(i).fPath)) {
             if (!cacheItemList.at(i).isTarget) {
@@ -545,11 +489,7 @@ QString ImageCache::diagnostics()
 
 QString ImageCache::reportCache(QString title)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QString reportString;
     QTextStream rpt;
     rpt.flush();
@@ -647,11 +587,7 @@ QString ImageCache::reportImCache()
 
 QString ImageCache::reportCacheProgress(QString action)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QString reportString;
     QTextStream rpt;
     rpt.flush();
@@ -700,11 +636,7 @@ Index Key OrigKey Priority Target Cached  SizeMB  Width Height  File Name
 
 It is built from dm->sf (sorted and/or filtered datamodel).
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__ << "for" << dm->currentFolderPath;
     cacheItemList.clear();
     // the total memory size of all the images in the folder currently selected
@@ -744,11 +676,7 @@ void ImageCache::updateImageCacheList()
 /*
 Update the width, height, size and isMetadata fields in the imageCacheList.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < dm->sf->rowCount(); ++i) {
         if (i >= cacheItemList.length()) {
 /*            qDebug() << __FUNCTION__
@@ -778,11 +706,7 @@ void ImageCache::initImageCache(int &cacheSizeMB,
      bool &isShowCacheStatus, int &cacheWtAhead,
      bool &usePreview, int &previewWidth, int &previewHeight)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
 
@@ -820,11 +744,7 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus
 /*
 When various image cache parameters are changed in preferences they are updated here.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     cache.maxMB = cacheSizeMB;
     cache.isShowCacheStatus = isShowCacheStatus;
     cache.wtAhead = cacheWtAhead;
@@ -932,11 +852,7 @@ surplus cached images (not in the filtered dataset) are removed from imCache.
 
 The image cache is now ready to run by calling updateImageCachePosition().
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if(dm->sf->rowCount() == 0) return;
 //    if(filteredFilePathList.length() == 0) return;
 
@@ -1200,11 +1116,7 @@ void ImageCache::run()
     Finally, iterate through the target range, and insert a QImage extracted from the embedded
     JPG in the file to the hash imCache.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
     // change to ImageCache
     QString prevCurentPath = "";

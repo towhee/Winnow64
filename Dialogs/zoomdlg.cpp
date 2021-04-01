@@ -48,11 +48,7 @@ void ZoomDlg::positionWindow(QRect a, QRect c)
 /*
 This function positions the zoom dialog in the lower center of the central widget
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // a = mainWindow->geometry()
     // c = centralWidget->geometry();
     int w = width();        // width of this dialog
@@ -78,11 +74,7 @@ This slot receives signals from either imageView or compareView when the scale
 changes and the scale dialog (this) is showing.  The zoom slider and spinbox
 controls are updated to the current scale.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << "ZoomDlg::zoomChange" << zoom << G::actDevicePixelRatio;
     // convert to percentage for persentation
     zoom *= 100;        //(100 * G::actDevicePixelRatio);
@@ -102,11 +94,7 @@ Check for circular messaging where an external change of scale was signalled
 to ZoomDlg, which updated this control, and then signals back, by limiting signals
 to only changes made lacally via the isActiveWindow flag.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (isActiveWindow()) emit zoom((qreal)value / 100/* / G::actDevicePixelRatio*/);
 }
 

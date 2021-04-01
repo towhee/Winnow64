@@ -7,11 +7,7 @@ MdCacher::MdCacher(QObject *parent,
                    ImageHash *iconHash)
             : QThread(parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     this->dm = dm;
     this->metadata = metadata;
     this->metaHash = metaHash;
