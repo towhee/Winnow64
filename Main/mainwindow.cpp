@@ -197,8 +197,7 @@ there does not appear to be any signal or event when ListView is finished hence 
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
-    G::sendLogToConsole = true;
-    G::log(__FUNCTION__, "Start Winnow", true);
+    G::log(__FUNCTION__, "Args: " + args, true);
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__, "Start Winnow");
@@ -243,6 +242,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     loadSettings();             // except settings with dependencies ie for actions not created yet
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
     setting->setValue("appPath", qApp->applicationDirPath());
+
+    // Logger
+    if (G::isLogger) openLog();
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
@@ -319,10 +321,18 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     }
 }
 
+bool MW::isDevelopment()
+{
+    if (QCoreApplication::applicationDirPath().contains("Winnow Project/Winnow64/"))
+        return true;
+    else return false;
+}
+
 void MW::initialize()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     this->setWindowTitle(winnowWithVersion);
+    G::isDev = isDevelopment();
     G::isInitializing = true;
     G::actDevicePixelRatio = 1;
     G::dpi = 96;
@@ -1103,6 +1113,7 @@ void MW::folderSelectionChange()
     // do not embellish
     if (turnOffEmbellish)  embelProperties->invokeFromAction(embelTemplatesActions.at(0));
 
+    setCentralMessage("Gathering metadata and thumbnails for images in folder.");
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
     qApp->processEvents();
 
@@ -3246,6 +3257,12 @@ void MW::createActions()
     addAction(helpWelcomeAction);
     connect(helpWelcomeAction, &QAction::triggered, this, &MW::helpWelcome);
 
+    helpRevealLogFileAction = new QAction("Send log file to Rory", this);
+    helpRevealLogFileAction->setObjectName("RevealLogFileAct");
+    helpRevealLogFileAction->setShortcutVisibleInContextMenu(true);
+    addAction(helpRevealLogFileAction);
+    connect(helpRevealLogFileAction, &QAction::triggered, this, &MW::revealLogFile);
+
     // Help Diagnostics
 
     diagnosticsAllAction = new QAction(tr("All Diagnostics"), this);
@@ -3599,7 +3616,9 @@ void MW::createMenus()
     helpMenu->addAction(helpAction);
     helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpWelcomeAction);
-
+    helpMenu->addSeparator();
+    helpMenu->addAction(helpRevealLogFileAction);
+    helpMenu->addSeparator();
     helpDiagnosticsMenu = helpMenu->addMenu(tr("&Diagnostics"));
     helpDiagnosticsMenu->addAction(diagnosticsAllAction);
     helpDiagnosticsMenu->addAction(diagnosticsCurrentAction);
@@ -7486,6 +7505,35 @@ void MW::refreshBookmarks()
     bookmarks->count();
 }
 
+void MW::openLog()
+{
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
+    QDir dir(path);
+    if (!dir.exists()) dir.mkdir(path);
+    if (G::logFile.isOpen()) G::logFile.close();
+    QString fPath = path + "/WinnowLog.txt";
+    G::logFile.setFileName(fPath);
+    // erase content if over one week since last modified
+    QFileInfo info(G::logFile);
+    QDateTime lastModified = info.lastModified();
+    QDateTime oneWeekAgo = QDateTime::currentDateTime().addDays(-7);
+    if (lastModified < oneWeekAgo) clearLog();
+    if (G::logFile.open(QIODevice::ReadWrite)) {
+        G::logFile.readAll();
+    }
+}
+
+void MW::closeLog()
+{
+    if (G::logFile.isOpen()) G::logFile.close();
+}
+
+void MW::clearLog()
+{
+    if (!G::logFile.isOpen()) openLog();
+    G::logFile.resize(0);
+}
+
 /*********************************************************************************************
  * READ/WRITE PREFERENCES
 */
@@ -10515,6 +10563,49 @@ void MW::copyFolderPathFromContext()
     G::popUp->showPopup(msg, 1500);
 }
 
+void MW::revealLogFile()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+
+    // message dialog explaining process to user
+    QMessageBox msgBox;
+    int msgBoxWidth = 300;
+    msgBox.setWindowTitle("Email Log File to Winnow Developer (Rory)");
+    msgBox.setText("If you continue two windows will be opened: \n"
+                   "\n1. File explorer or finder showing the file 'WinnowLog.txt'. "
+                   "\n2. A selection of your email clients."
+                   "\n\nPlease select an email client.  It will open and "
+                   "the 'to:' and 'subject: will be filled.  The body will have some "
+                   "instructions to add 'WinnowLog.txt' as an attachment."
+                  );
+    msgBox.setInformativeText("Do you want continue?");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+    msgBox.setDefaultButton(QMessageBox::Cancel);
+    msgBox.setIcon(QMessageBox::Warning);
+    QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
+                "QPushButton:default {background-color: rgb(68,95,118);}";
+    msgBox.setStyleSheet(css);
+    QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+    QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
+    layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+    int ret = msgBox.exec();
+    if (ret == QMessageBox::Cancel) return;
+
+    // open explorer/finder at WinnowLog.txt location
+    QString dirPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    dirPath += "/Log";
+    revealInFileBrowser(dirPath);
+
+    // open email to send to Rory
+    QString to = "winnowimageviewer@outlook.com";
+    QString subject = "Winnow log file";
+    QString body = "Please add the file 'WinnowLog.txt' that Winnow has revealed in "
+                   "Explorer/Finder to this email as an attachment.  Also, please add some "
+                   "text explaining the issue.  \n\nThanks very much.  \nRory";
+    QDesktopServices::openUrl(QUrl("mailto:" + to + "?subject=" + subject + "&body=" + body, QUrl::TolerantMode));
+
+}
+
 void MW::revealWinnets()
 {
     if (G::isLogger) G::log(__FUNCTION__);
@@ -10757,25 +10848,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QFileInfo info("D:/2017-04-23_0210.MOV");
-    qDebug() << __FUNCTION__ << "D:/2017-04-23_0210.MOV"
-             << "\nbirthTime =" << info.birthTime().toString("yyyy-MM-dd hh:mm:ss")
-             << "\nlastModified =" << info.lastModified().toString("yyyy-MM-dd hh:mm:ss")
-             << "\nmetadataChangeTime =" << info.metadataChangeTime().toString("yyyy-MM-dd hh:mm:ss")
-             << "\nlastRead =" << info.lastRead().toString("yyyy-MM-dd hh:mm:ss")
-                ;
-
-    return;
-    QRectF rScene = imageView->sceneRect();  // setSceneRect...
-    QPointF pSceneCntr = rScene.center();
-    QRect r = imageView->rect();
-    QPoint pCntr = r.center();
-    qDebug() << __FUNCTION__
-             << "r =" << r
-             << "pCntr =" << pCntr
-             << "rScene =" << rScene
-             << "pSceneCntr =" << pSceneCntr
-                ;
-    imageView->setAlignment(Qt::AlignBottom);
+    qDebug() << __FUNCTION__ << QCoreApplication::applicationDirPath() << G::isDev;
 }
 // End MW

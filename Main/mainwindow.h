@@ -511,6 +511,7 @@ private slots:
     void saveAsFile();
     void copyFolderPathFromContext();
     void revealWinnets();
+    void revealLogFile();
     void revealFile();
     void revealFileFromContext();
     void revealInFileBrowser(QString path);
@@ -763,6 +764,7 @@ private:
     QAction *helpAction;
     QAction *helpShortcutsAction;
     QAction *helpWelcomeAction;
+    QAction *helpRevealLogFileAction;
 
     // Help Diagnostics Menu
     QAction *diagnosticsAllAction;
@@ -999,6 +1001,10 @@ private:
     void loadShortcuts(bool defaultShortcuts);
     void saveSelection();
     void recoverSelection();
+    void openLog();
+    void closeLog();
+    void clearLog();
+    bool isDevelopment();
 
     bool isValidPath(QString &path);
     QString getSelectedPath();

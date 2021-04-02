@@ -123,6 +123,8 @@ namespace G
 
     extern bool isLogger;
     extern bool sendLogToConsole;
+    extern QFile logFile;
+    extern bool isDev;
 
     extern QPoint mousePos;
 
@@ -210,7 +212,8 @@ namespace G
     extern bool isTest;
 
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
-    extern void log(QString functionName = "", QString comment = "", bool hideTime = false);
+    extern void log(QString functionName = "", QString comment = "",
+                    bool hideElapsedTime = false);
     extern void wait(int ms);
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);
