@@ -1,4 +1,5 @@
 BUGS / TO DO
+    if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
 - iphone11 folder image caching not working
 - Sometimes crash when export from LR to winnets
 - Shooting data reverting to wrong token string

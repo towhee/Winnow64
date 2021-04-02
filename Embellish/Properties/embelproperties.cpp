@@ -5329,31 +5329,6 @@ void EmbelProperties::treeChange(QModelIndex idx)
     }
 }
 
-//void EmbelProperties::selectionChanged(const QItemSelection &selection,
-//                                      const QItemSelection &prevSelection)
-//{
-///*
-//Check if the new selection is legal (a member of borders, texts, rectangles, graphics or
-//file or image).  If not, if there was a previous selection, revert to that.  Hide all delete
-//buttons except in the selected category.
-//*/
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    if (selection.isEmpty()) return;
-//    QModelIndex idx = selection.indexes().first();
-//    QModelIndex parIdx = idx.parent();
-//    QString selName = idx.data(UR_Name).toString();
-//    if (!okToSelect(idx, selName)) {
-//        selectionModel()->clear();
-//        if (!okToSelect(parIdx, selName)) return;
-//        selectionModel()->select(parIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-//        idx = parIdx;
-//    }
-//}
-
 bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
 {
     if (G::isLogger) G::log(__FUNCTION__);

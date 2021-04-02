@@ -58,11 +58,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
     being properly read or the file is corrupted.  In this case the metadata
     will be updated to show the file is not readable.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, fPath);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
 //    qDebug() << __FUNCTION__ << "fPath =" << fPath;
     QElapsedTimer t;
     t.restart();

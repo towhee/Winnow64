@@ -688,10 +688,7 @@ void ImageView::rotate(int degrees)
 
 void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
-    #ifdef ISPROFILE
-    G::track(__FUNCTION__, "About to QTransform trans");
-    #endif
+    if (G::isLogger) G::log(__FUNCTION__, imageFullPath);
     QTransform trans;
     int row = dm->fPathRow[imageFullPath];
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
@@ -1000,14 +997,9 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 void ImageView::mouseMoveEvent(QMouseEvent *event)
 {
 /*
-Pan the image during a mouse drag operation
-Set a delay to hide cursor if in slideshow mode
+    Pan the image during a mouse drag operation
+    Set a delay to hide cursor if in slideshow mode
 */
-    {
-    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-    #endif
-    }
 //    if (isRubberBand) {
 //        rubberBand->setGeometry(QRect(origin, event->pos()).normalized());
 //        return;
@@ -1192,11 +1184,7 @@ void ImageView::copyImage()
 // not being used, but maybe in the future
 //static inline int bound0To255(int val)
 //{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
+//    if (G::isLogger) G::log(__FUNCTION__);
 //    return ((val > 255)? 255 : (val < 0)? 0 : val);
 //}
 

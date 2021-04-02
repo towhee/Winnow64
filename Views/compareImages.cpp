@@ -311,11 +311,7 @@ int CompareImages::current()
 
 void CompareImages::go(QString key)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, key);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, key);
     if (key == "Right") {
         int i = current();
         imList->at(i)->deselect();

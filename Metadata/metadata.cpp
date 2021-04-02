@@ -380,16 +380,12 @@ int Metadata::getNewOrientation(int orientation, int rotation)
 bool Metadata::writeMetadata(const QString &fPath, ImageMetadata m, QByteArray &buffer)
 {
 /*
-Called from ingest (Ingestdlg). If it is a supported image type a copy of the image file
-is made and any metadata changes are updated in buffer. If it is a raw file in the
-sidecarFormats hash then the xmp data for existing and changed metadata is written to
-buffer and the original image file is copied unchanged.
+    Called from ingest (Ingestdlg). If it is a supported image type a copy of the image file
+    is made and any metadata changes are updated in buffer. If it is a raw file in the
+    sidecarFormats hash then the xmp data for existing and changed metadata is written to
+    buffer and the original image file is copied unchanged.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, fPath);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
@@ -599,13 +595,7 @@ bool Metadata::parseCanon()
 
 bool Metadata::parseCanonCR3()
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-    }
-
-
+    if (G::isLogger) G::log(__FUNCTION__);
     CanonCR3 canonCR3(p, m, ifd, exif, jpeg);
     canonCR3.parse();
     if (p.report) reportMetadata();
@@ -772,11 +762,7 @@ void Metadata::testNewFileFormat(const QString &path)
 
 bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, path);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
 //    G::log(__FUNCTION__, "Source =" + source + "  " + path);
 //    qDebug() << __FUNCTION__ << "called by" << source << path << "p.report =" << p.report;
 //    isReport = true;
@@ -868,11 +854,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
                                  bool essential, bool nonEssential,
                                  bool isReport, bool isLoadXmp, QString source)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, fileInfo.filePath());
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, fileInfo.filePath() + "  Source: " + source);
 //    qDebug() << __FUNCTION__ << "called by" << source;
     // check if already loaded
     QString fPath = fileInfo.filePath();

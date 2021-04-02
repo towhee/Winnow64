@@ -9,11 +9,7 @@ namespace ICC
 
     void setInProfile(const QByteArray &buf)
     {
-        {
-        #ifdef ISDEBUG
-        G::track(__FUNCTION__);
-        #endif
-        }
+        if (G::isLogger) G::log(__FUNCTION__);
         if (buf == nullptr) {
 //            qDebug() << __FUNCTION__ << "null buffer = sRGB";
             hInProfile = cmsCreate_sRGBProfile();
@@ -25,21 +21,13 @@ namespace ICC
 
     void setOutProfile()
     {
-        {
-        #ifdef ISDEBUG
-        G::track(__FUNCTION__);
-        #endif
-        }
+        if (G::isLogger) G::log(__FUNCTION__);
         hOutProfile = cmsOpenProfileFromFile(QFile::encodeName(G::winOutProfilePath).constData(), "r") ;
     }
 
     void transform(QImage &image)
     {
-        {
-        #ifdef ISDEBUG
-        G::track(__FUNCTION__);
-        #endif
-        }
+        if (G::isLogger) G::log(__FUNCTION__);
         hTransform = cmsCreateTransform(hInProfile,
                                         TYPE_BGRA_8,
                                         hOutProfile,
