@@ -421,11 +421,7 @@ void Filters::disableZeroCountItems(bool disable)
 
 void Filters::disableAllItems(bool disable)
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent() && (*it)->parent()->text(0) != "Search") {
@@ -527,9 +523,7 @@ void Filters::finishedBuildFilters()
     disableZeroCountItems(true);
     setEnabled(true);
     expandAll();
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
+    if (G::isLogger) G::log(__FUNCTION__, "Finished");
 }
 
 void Filters::clearAll()

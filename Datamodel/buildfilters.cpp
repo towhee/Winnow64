@@ -117,11 +117,7 @@ This function is run everytime the search string changes.
 
 void BuildFilters::updateCountFiltered()
 {
-    {
-    #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     filters->filtersBuilt = false;
     filters->buildingFilters = true;
     QTreeWidgetItemIterator it(filters);
@@ -151,11 +147,7 @@ void BuildFilters::updateCountFiltered()
 
 void BuildFilters::countFiltered()
 {
-    {
-    #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     // count filtered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
@@ -203,11 +195,7 @@ void BuildFilters::countFiltered()
 
 void BuildFilters::countUnfiltered()
 {
-    {
-    #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     // count unfiltered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
@@ -261,11 +249,7 @@ void BuildFilters::countUnfiltered()
 
 void BuildFilters::loadAllMetadata()
 {
-    {
-    #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     if (!G::allMetadataLoaded) {
         for (int row = 0; row < dmRows; ++row) {
             if (abort) return;
@@ -292,11 +276,7 @@ void BuildFilters::loadAllMetadata()
 
 void BuildFilters::mapUniqueInstances()
 {
-    {
-    #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> typesMap;
     QMap<QVariant, QString> modelMap;
@@ -365,11 +345,7 @@ void BuildFilters::mapUniqueInstances()
 
 void BuildFilters::run()
 {
-    {
-    #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     if (filters->filtersBuilt) return;
 
     if (!abort) loadAllMetadata();

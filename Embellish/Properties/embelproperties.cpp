@@ -295,14 +295,7 @@ void EmbelProperties::effectContextMenu()
 
 void EmbelProperties::newEffect()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString effect = (static_cast<QAction*>(sender()))->text();
     qDebug() << __FUNCTION__ << "effect =" << effect;
     if (effect == "Blur") addBlurEffect(effectParentIdx);
@@ -332,14 +325,7 @@ Before:                 1, 2, 3, 4
 Delete the 2nd row:     1, 3, 4
 Update to:              1, 2, 3
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // Get a standardItem as it supports sorting of the children, and the borders may be sorted
     QStandardItem *effectItem = new QStandardItem;
     effectItem = model->itemFromIndex(parIdx);
@@ -360,14 +346,7 @@ Before:                 1, 2, 3, 4
 Delete the 2nd row:     1, 3, 4
 Update to:              1, 2, 3
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // Get a standardItem as it supports sorting of the children, and the borders may be sorted
     QStandardItem *borders = new QStandardItem;
     borders = model->itemFromIndex(bordersIdx);
@@ -384,14 +363,7 @@ void EmbelProperties::updateBorderLists()
 /*
     Called from new and delete borders to rebuild the lists that have the borders
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     borderList.clear();
     anchorObjectList.clear();
     int borderCount = model->rowCount(bordersIdx);
@@ -424,14 +396,7 @@ void EmbelProperties::updateAnchorObjects()
     graphicAnchorObjectEditor trigger itemChange which in turn updates settings and local
     vectors.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // update texts anchor lists
     for (int i = 0; i < t.size(); ++i) {
         QString oldAnchorName = textAnchorObjectEditor.at(i)->value();
@@ -736,14 +701,7 @@ void EmbelProperties::diagnosticModel(QTextStream &rpt, QModelIndex parent)
 */
 
 void EmbelProperties::rename() {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     if (currentIdx.parent() == templateIdx) renameCurrentTemplate();
     if (currentIdx == templateIdx) renameCurrentTemplate();
     if (currentIdx.parent() == stylesIdx) renameCurrentStyle();
@@ -763,14 +721,7 @@ void EmbelProperties::moveDown() {
 
 void EmbelProperties::renameSettingKey(QString path, QString oldName, QString newName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // if name is blank then could remove all child items in settings
     if (oldName == "") {
         qDebug() << __FUNCTION__ << "Error: Blank name";
@@ -791,14 +742,7 @@ void EmbelProperties::renameSettingKey(QString path, QString oldName, QString ne
 
 void EmbelProperties::renameCurrentStyle()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
 //    BarBtn *btn = qobject_cast<BarBtn*>(sender());
 //    QModelIndex idx = btn->index;
     QModelIndex idx = currentIdx;
@@ -839,15 +783,7 @@ void EmbelProperties::renameCurrentStyle()
 
 void EmbelProperties::renameCurrentTemplate()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
-    qDebug() << __FUNCTION__;
+    if (G::isLogger) G::log(__FUNCTION__);
     QString name = Utilities::inputText("Rename Template",
                                         "Rename template " + templateName,
                                         templateList,
@@ -866,14 +802,7 @@ void EmbelProperties::setCurrentTemplate(QString name)
     Sets the current template to templateName, which must be assigned before calling this
     function. The templatePath and isCurrent are defined. The template is selected.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, name);
     if (name == "") return;
     templateName = name;
     for (int i = 0; i < templateList.length(); ++i) {
@@ -894,19 +823,11 @@ void EmbelProperties::setCurrentTemplate(QString name)
 void EmbelProperties::sortTemplateList()
 {
 /*
-The sort order of the templateList has "Do not Embellish" first, followed by the template
-items in alphabetical order. The template items are read from settings to a temp list, sorted,
-and then appended to templateList.
-
+    The sort order of the templateList has "Do not Embellish" first, followed by the template
+    items in alphabetical order. The template items are read from settings to a temp list,
+    sorted, and then appended to templateList.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     if (templateList.length() < 2) return;
     QStringList list;
     for (int i = 1; i < templateList.length(); ++i) {
@@ -925,14 +846,7 @@ void EmbelProperties::readTemplateList()
     are read from settings to a temp list, sorted, and then appended to templateList.
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     templateList.clear();
     templateId = 0;
     templateName = "Do not Embellish";
@@ -970,14 +884,7 @@ void EmbelProperties::readTemplateList()
 
 QString EmbelProperties::uniqueTemplateName(QString name)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     setting->beginGroup("Embel/Templates");
     QStringList keys = setting->childGroups();
     setting->endGroup();
@@ -993,14 +900,7 @@ QString EmbelProperties::uniqueTemplateName(QString name)
 
 QString EmbelProperties::uniqueTileName(QString name)
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-#ifdef ISLOGGER
-        Utilities::log(__FUNCTION__, "");
-#endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     setting->beginGroup("Embel/Tiles");
     QStringList keys = setting->childKeys();
     setting->endGroup();
@@ -1017,14 +917,7 @@ QString EmbelProperties::uniqueTileName(QString name)
 
 QString EmbelProperties::uniqueGraphicName(QString name)
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-#ifdef ISLOGGER
-        Utilities::log(__FUNCTION__, "");
-#endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     setting->beginGroup("Embel/Graphics");
     QStringList keys = setting->childKeys();
     setting->endGroup();
@@ -1040,14 +933,7 @@ QString EmbelProperties::uniqueGraphicName(QString name)
 
 QString EmbelProperties::uniqueTokenName(QString name)
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-#ifdef ISLOGGER
-        Utilities::log(__FUNCTION__, "");
-#endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     setting->beginGroup("InfoTemplates");
     QStringList keys = setting->childKeys();
     setting->endGroup();
@@ -1063,14 +949,7 @@ QString EmbelProperties::uniqueTokenName(QString name)
 
 void EmbelProperties::copyStyle()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString style = currentIdx.data().toString();
     QString toTemplate = "";
     CopyStyleDlg copyDlg(style, toTemplate, templateList);
@@ -1091,14 +970,7 @@ void EmbelProperties::copyStyle()
 
 void EmbelProperties::copyTemplate()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/";
     QString copyName = uniqueTemplateName(templateName + " copy");
     QString copyPath = "Embel/Templates/" + copyName + "/";
@@ -1441,14 +1313,7 @@ bool EmbelProperties::readTemplateFromFile()
 
 void EmbelProperties::readTileList()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     tileList.clear();
     tileList << "Do not tile";
     setting->beginGroup("Embel/Tiles");
@@ -1458,14 +1323,7 @@ void EmbelProperties::readTileList()
 
 void EmbelProperties::readGraphicsList()
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-#ifdef ISLOGGER
-        Utilities::log(__FUNCTION__, "");
-#endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     graphicList.clear();
     setting->beginGroup("Embel/Graphics");
     graphicList << setting->allKeys();
@@ -1474,14 +1332,7 @@ void EmbelProperties::readGraphicsList()
 
 void EmbelProperties::manageTiles()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     ManageImagesDlg dlg("Manage Embellish Tiles", setting, "Embel/Tiles");
     connect(&dlg, &ManageImagesDlg::itemRenamed, this, &EmbelProperties::updateTileList);
     dlg.exec();
@@ -1491,14 +1342,7 @@ void EmbelProperties::manageTiles()
 
 void EmbelProperties::updateTileList(QString oldName, QString newName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     tileList.clear();
     setting->beginGroup("Embel/Tiles");
     tileList << setting->allKeys();
@@ -1521,14 +1365,7 @@ void EmbelProperties::updateTileList(QString oldName, QString newName)
 
 void EmbelProperties::manageGraphics()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     ManageImagesDlg dlg("Manage Embellish Graphics", setting, "Embel/Graphics");
     connect(&dlg, &ManageImagesDlg::itemRenamed, this, &EmbelProperties::updateGraphicList);
     dlg.exec();
@@ -1557,14 +1394,7 @@ void EmbelProperties::updateGraphicList(QString oldName, QString newName)
 
 void EmbelProperties::readMetadataTemplateList()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     metadataTemplatesList.clear();
     QMapIterator<QString, QString> i(mw3->infoString->infoTemplates);
     while (i.hasNext()) {
@@ -1596,14 +1426,7 @@ void EmbelProperties::updateMetadataTemplateList()
     After the token editor has been invoked and closed the text metadataTemplate lists
     are updated in case the template list has changed (new items or deleted items).
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // reread the metadata template list
     readMetadataTemplateList();
 
@@ -1626,14 +1449,7 @@ void EmbelProperties::updateMetadataTemplateList()
 
 void EmbelProperties::newTemplate()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     templateName = Utilities::inputText("New Template",
                                         "Enter new template name",
                                         templateList);
@@ -1692,14 +1508,7 @@ void EmbelProperties::syncWinnets()
     when a new template is created.  The Winnets need to be synced when templates are created,
     renamed or deleted.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // list of executables that must not be changed
     QStringList criticalExecutables;
     criticalExecutables << "Winnow.exe" << "Winnet.exe";
@@ -1751,14 +1560,7 @@ void EmbelProperties::syncWinnets()
 
 void EmbelProperties::newStyle()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // rgh prevent duplicate style names
     QString name = Utilities::inputText("New Style",
                                         "Enter new style name (not created until you add an effect)",
@@ -1779,14 +1581,7 @@ void EmbelProperties::newStyle()
 
 void EmbelProperties::invokeFromAction(QAction *embelAction)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     if (templateName == embelAction->text()) return;
     for (int i = 0; i < templateList.count(); ++i) {
         if (templateList.at(i)  == embelAction->text()) {
@@ -1797,14 +1592,7 @@ void EmbelProperties::invokeFromAction(QAction *embelAction)
 
 void EmbelProperties::doNotEmbellish()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     templateListEditor->setValue("Do not Embellish");
 }
 
@@ -1821,14 +1609,7 @@ The border vector is rebuilt using syncBorderVector.
 
 The sortOrder is updated in settings.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // swap the current row with the one above
     QStandardItem *item = borders->child(row);
     QStandardItem *swapItem = borders->child(swapRow);
@@ -1862,14 +1643,7 @@ void EmbelProperties::moveBorderUp()
 /*
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
 //    QModelIndex idx = btn->index;
     QModelIndex idx = getItemIndex(btn->itemIndex);
@@ -1894,14 +1668,7 @@ void EmbelProperties::moveBorderUp()
 
 void EmbelProperties::moveBorderDown()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
 //    QModelIndex idx = btn->index;
     QModelIndex idx = getItemIndex(btn->itemIndex);
@@ -1927,29 +1694,22 @@ void EmbelProperties::moveBorderDown()
 void EmbelProperties::swapEffects(QStandardItem *styleItem, int row, int swapRow)
 {
 /*
-A style may contain multiple effects, and the effect order can be changed using the up and
-down arrow command buttons (moveEffectUp and moveEffectDown). When the order is changed, the
-settings, model (tree) and styleMap must be updated. QSettings keeps everything in
-alphabetical order, so the last sort order must be re-established after the settings have been
-read, based on the setting sortOrder. This is done in sortEffectList, which is called by
-addStyle, using the model role UR_SortOrder. The sorting is accomplished using
-QStandardItem::sortChildren. styleItem is the parent and the effects are the children being
-sorted.
+    A style may contain multiple effects, and the effect order can be changed using the up and
+    down arrow command buttons (moveEffectUp and moveEffectDown). When the order is changed,
+    the settings, model (tree) and styleMap must be updated. QSettings keeps everything in
+    alphabetical order, so the last sort order must be re-established after the settings have
+    been read, based on the setting sortOrder. This is done in sortEffectList, which is called
+    by addStyle, using the model role UR_SortOrder. The sorting is accomplished using
+    QStandardItem::sortChildren. styleItem is the parent and the effects are the children
+    being sorted.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // swap the current row with the swap row
     QStandardItem *item = styleItem->child(row);
     QStandardItem *swapItem = styleItem->child(swapRow);
 
     QModelIndex par = styleItem->index();   // for debugging
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << "item->data() =" << item->data()
              << "swapItem->data() =" << swapItem->data()
@@ -2010,14 +1770,7 @@ void EmbelProperties::moveEffectUp()
     Move an effect up one item in a group of effects within a style in the property tree.
     The effects may have been sorted
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
     /*
     QWindow *wBtn = new QWindow;
@@ -2073,14 +1826,7 @@ void EmbelProperties::moveEffectUp()
 
 void EmbelProperties::moveEffectDown()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
     QModelIndex idx = getItemIndex(btn->itemIndex);
 //    QModelIndex idx = btn->index;
@@ -2117,14 +1863,7 @@ void EmbelProperties::moveEffectDown()
 
 void EmbelProperties::syncBorderVector()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     for (int i = 0; i < model->rowCount(bordersIdx); ++i) {
         QModelIndex bIdx = model->index(i, 0, bordersIdx);
         b[i].name = bIdx.data(UR_Name).toString();
@@ -2147,14 +1886,7 @@ void EmbelProperties::syncBorderVector()
 
 bool EmbelProperties::sortEffectList(QString style)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, "Style: " + style);
     if (!styleMap.contains(style)) {
         qDebug() << __FUNCTION__ << style << "not in list";
         return false;
@@ -2168,26 +1900,19 @@ bool EmbelProperties::sortEffectList(QString style)
 void EmbelProperties::itemChange(QModelIndex idx)
 {
 /*
-When the user changes a value in the editor (the control in the value column of the tree)
-this slot is triggered to update the associated value in the application.  The model index
-of the value is used to recall:
+    When the user changes a value in the editor (the control in the value column of the tree)
+    this slot is triggered to update the associated value in the application.  The model index
+    of the value is used to recall:
 
-    v      - the value of the property
-    source - the name of the value, which is used to figure out which associated app value
-             to update with v.
-    index  - is used where the associated value is in another model
+        v      - the value of the property
+        source - the name of the value, which is used to figure out which associated app value
+                 to update with v.
+        index  - is used where the associated value is in another model
 
-The connection is defined in the parent PropertyEditor to fire the virtual function
-itemChange, which is subclassed here.
+    The connection is defined in the parent PropertyEditor to fire the virtual function
+    itemChange, which is subclassed here.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
 
 //    if (!propertyDelegate->submitted) return;
 //    propertyDelegate->submitted = false;
@@ -2231,15 +1956,7 @@ itemChange, which is subclassed here.
 
 void EmbelProperties::itemChangeTemplate(QVariant v)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
-//    qDebug() << __FUNCTION__ << v;
+    if (G::isLogger) G::log(__FUNCTION__);
     isTemplateChange = true;
 
     // save which template is current and set templateId and templateName
@@ -2295,14 +2012,7 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
 
 void EmbelProperties::itemChangeExport(QModelIndex idx, QVariant v, QString source)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // prevent template "Export" is being mysteriously created
     if (source == "") return;
 
@@ -2357,14 +2067,7 @@ void EmbelProperties::itemChangeExport(QModelIndex idx, QVariant v, QString sour
 
 void EmbelProperties::itemChangeGeneral(QVariant v, QString source)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = templatePath + "General/" + source;
 //    qDebug() << __FUNCTION__ << path;
 
@@ -2394,15 +2097,7 @@ void EmbelProperties::itemChangeGeneral(QVariant v, QString source)
 
 void EmbelProperties::itemChangeBorder(QModelIndex idx)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
-//    qDebug() << __FUNCTION__;
+    if (G::isLogger) G::log(__FUNCTION__);
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
     QString parent = idx.parent().data(UR_Name).toString();
@@ -2474,14 +2169,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
 
 void EmbelProperties::itemChangeText(QModelIndex idx)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
     QString parent = idx.parent().data(UR_Name).toString();
@@ -2612,27 +2300,13 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
 
 void EmbelProperties::itemChangeRectangle(QVariant v, QString source, QString parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
 
 }
 
 void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString source, QString parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // see PropertyEditor::getItemIndex for details on using itemIndex
     int index = getItemIndex(idx.parent().data(UR_ItemIndex).toInt()).row();
     QString path = templatePath + "Graphics/" + parent + "/" + source;
@@ -2715,14 +2389,7 @@ void EmbelProperties::itemChangeShadowEffect(QVariant v, QString source, QString
 /*
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
 //    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
@@ -2770,17 +2437,10 @@ void EmbelProperties::itemChangeShadowEffect(QVariant v, QString source, QString
 
 void EmbelProperties::itemChangeStrokeEffect(QVariant v, QString source, QString effectName, QString style)
 {
-    /*
+/*
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
     //    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
@@ -2821,17 +2481,10 @@ void EmbelProperties::itemChangeStrokeEffect(QVariant v, QString source, QString
 
 void EmbelProperties::itemChangeGlowEffect(QVariant v, QString source, QString effectName, QString style)
 {
-    /*
+/*
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
     //    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
@@ -2872,14 +2525,7 @@ void EmbelProperties::itemChangeGlowEffect(QVariant v, QString source, QString e
 
 void EmbelProperties::itemChangeBlurEffect(QVariant v, QString source, QString effectName, QString style)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
     qDebug() << __FUNCTION__ << path << source << v.toInt();
 
@@ -2902,16 +2548,8 @@ void EmbelProperties::itemChangeBlurEffect(QVariant v, QString source, QString e
 
 void EmbelProperties::itemChangeSharpenEffect(QVariant v, QString source, QString effectName, QString style)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
-    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "radius") {
         setting->setValue(path, v.toDouble());
@@ -2932,14 +2570,7 @@ void EmbelProperties::itemChangeSharpenEffect(QVariant v, QString source, QStrin
 
 void EmbelProperties::itemChangeHighlighterEffect(QVariant v, QString source, QString effectName, QString style)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
 //    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
@@ -3001,14 +2632,7 @@ void EmbelProperties::itemChangeHighlighterEffect(QVariant v, QString source, QS
 
 void EmbelProperties::itemChangeBrightnessEffect(QVariant v, QString source, QString effectName, QString style)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
 //    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
@@ -3032,14 +2656,7 @@ void EmbelProperties::itemChangeBrightnessEffect(QVariant v, QString source, QSt
 void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QString source,
                                              QString effectName, QString style)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
 //    qDebug() << __FUNCTION__ << path << source << v.toInt();
     // item 0
@@ -3126,14 +2743,7 @@ void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QStrin
 
 void EmbelProperties::addTemplateHeader()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // Templates header (Root)
     i.name = "TemplatesHeader";
     i.parentName = "???";
@@ -3195,14 +2805,7 @@ void EmbelProperties::addTemplateHeader()
 
 void EmbelProperties::addTemplateItems()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     addExport();
     addStyles();
     addGeneral();
@@ -3213,14 +2816,7 @@ void EmbelProperties::addTemplateItems()
 
 void EmbelProperties::addExport()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // EXPORT File header (Root)
     i.name = "ExportHeader";
     i.parentName = "???";
@@ -3446,14 +3042,7 @@ void EmbelProperties::addExport()
 
 void EmbelProperties::addGeneral()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // IMAGE Image header (Root)
     i.name = "GeneralHeader";
     i.parentName = "???";
@@ -3579,14 +3168,7 @@ void EmbelProperties::addGeneral()
 
 void EmbelProperties::addBorders()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // BORDER header (Borders)
     i.name = "Borders";
     i.parentName = "???";
@@ -3651,14 +3233,7 @@ void EmbelProperties::addBorders()
 
 void EmbelProperties::addTexts()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // Texts header (Root)
     i.name = "Texts";
     i.parentName = "???";
@@ -3687,14 +3262,7 @@ void EmbelProperties::addTexts()
 
 void EmbelProperties::addGraphics()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // Graphics header (Root)
     i.name = "Graphics";
     i.parentName = "???";
@@ -3723,14 +3291,7 @@ void EmbelProperties::addGraphics()
 
 void EmbelProperties::addStyles()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     //    qDebug() << __FUNCTION__;
     // Styles header (Root)
     i.name = "Styles";
@@ -3763,14 +3324,7 @@ void EmbelProperties::addStyles()
 
 void EmbelProperties::addStyle(QString name, int n)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, name);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, name);
     // add the style header
     styleName = name;
     styleId = n;
@@ -3842,14 +3396,7 @@ void EmbelProperties::addStyle(QString name, int n)
 
 void EmbelProperties::addBorderHeaderButtons()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     effectUpBtn = new BarBtn();
     effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
     effectUpBtn->setToolTip("Move border up");
@@ -3886,14 +3433,7 @@ void EmbelProperties::addBorderHeaderButtons()
 
 void EmbelProperties::addEffectBtns()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     effectUpBtn = new BarBtn();
     effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
     effectUpBtn->setToolTip("Move effect up");
@@ -3930,14 +3470,7 @@ void EmbelProperties::addEffectBtns()
 
 void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, effectName);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, effectName);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
@@ -4038,14 +3571,7 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, effectName);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, effectName);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
@@ -4146,14 +3672,7 @@ void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::addHighlighterEffect(QModelIndex parIdx, QString effectName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, effectName);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, effectName);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
@@ -4385,14 +3904,7 @@ void EmbelProperties::addHighlighterEffect(QModelIndex parIdx, QString effectNam
 
 void EmbelProperties::addStrokeEffect(QModelIndex parIdx, QString effectName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, effectName);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, effectName);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
@@ -4548,14 +4060,7 @@ void EmbelProperties::addStrokeEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::addGlowEffect(QModelIndex parIdx, QString effectName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, effectName);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
@@ -4735,14 +4240,7 @@ void EmbelProperties::addGlowEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::addBrightnessEffect(QModelIndex parIdx, QString effectName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, effectName);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
@@ -4841,14 +4339,7 @@ void EmbelProperties::addBrightnessEffect(QModelIndex parIdx, QString effectName
 
 void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, effectName);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
@@ -5170,14 +4661,7 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, effectName);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
@@ -5357,27 +4841,13 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::newBorderFromBtn()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     newBorder("");
 }
 
 void EmbelProperties::newBorder(QString name)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     int rowCount = model->rowCount(bordersIdx);
     QString borderName = "";
     QStack<QString> bNum;
@@ -5415,14 +4885,7 @@ void EmbelProperties::newBorder(QString name)
 
 void EmbelProperties::newText()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     int row = model->rowCount(textsIdx);
     addText(row);
     if (G::isInitializing || isTemplateChange) return;
@@ -5436,14 +4899,7 @@ void EmbelProperties::newText()
 
 void EmbelProperties::newGraphic()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     int row = model->rowCount(graphicsIdx);
     addGraphic(row);
     if (G::isInitializing || isTemplateChange) return;
@@ -5457,14 +4913,7 @@ void EmbelProperties::newGraphic()
 
 void EmbelProperties::deleteTemplate()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // a blank template name could delete all templates
     if (templateName == "") {
         qDebug() << __FUNCTION__ << "Error: Blank template name";
@@ -5486,28 +4935,6 @@ void EmbelProperties::deleteTemplate()
     emit syncEmbellishMenu();
     syncWinnets();
 }
-
-//void EmbelProperties::deleteTile()
-//{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-
-//    QString tileName;
-//    int ret = (QMessageBox::warning(this, "Delete Tile", "Confirm delete tile " + tileName + "                     ",
-//                             QMessageBox::Cancel | QMessageBox::Ok));
-//    if (ret == QMessageBox::Cancel) return;
-
-//    QString pathToDelete = "Embel/Tiles/" + tileName;
-
-//    // remove from tree combo list
-//    tileList.removeOne(tileName);
-////    borderTileObjectEditor->removeItem(tileName);
-//    // remove from settings
-//    setting->remove(pathToDelete);
-//}
 
 void EmbelProperties::deleteItem()
 {
@@ -5655,14 +5082,7 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
 
 QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QString effectName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
 //    using namespace winnow_effects;
     /*
     qDebug();
@@ -5694,14 +5114,7 @@ QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QSt
 
 int EmbelProperties::effectIndex(QString style, QString effectName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, effectName);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     using namespace winnow_effects;
     // effects in style
 //    qDebug() << __FUNCTION__ << style << effectName;
@@ -5717,14 +5130,7 @@ int EmbelProperties::effectIndex(QString style, QString effectName)
 
 void EmbelProperties::flash(QModelIndex idx)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // check index range (triggered by mouse movement while tree painting)
     if (idx.row() < 0) return;
 
@@ -5786,11 +5192,7 @@ void EmbelProperties::mouseMoveEvent(QMouseEvent *event)
 
 //void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
 //{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
+//    if (G::isLogger) G::log(__FUNCTION__);
 //    QModelIndex idx = indexAt(event->pos());
 //    idx = model->index(idx.row(), ValColumn, idx.parent());
 //    QVariant value = idx.data(UR_DefaultValue);
@@ -5806,14 +5208,7 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
     Do not pass on to QTreeView as this will enable QTreeView expanding and collapsing when
     the decoration is clicked.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
 
     QModelIndex idx = indexAt(event->pos());
     currentIdx = model->index(idx.row(), CapColumn, idx.parent());
@@ -5890,15 +5285,7 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
 
 void EmbelProperties::treeChange(QModelIndex idx)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
-//    qDebug() << __FUNCTION__ << idx << idx.isValid();
+    if (G::isLogger) G::log(__FUNCTION__);
     if (!idx.isValid()) return;
 //    return;
     if (idx.column() != 0) idx = model->index(idx.row(), CapColumn, idx.parent());
@@ -5969,15 +5356,7 @@ void EmbelProperties::treeChange(QModelIndex idx)
 
 bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
-    qDebug() << __FUNCTION__ << "selName =" << selName;
+    if (G::isLogger) G::log(__FUNCTION__);
     QModelIndex parIdx = idx.parent();
     if (!parIdx.isValid()) return false;
     if (parIdx == model->index(_borders,0)) return true;
@@ -5995,14 +5374,7 @@ QString EmbelProperties::metaString(QString key)
 /*
     Local information (datamodel, currentImage etc) is available.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     if (mw3->infoString->infoTemplates.contains(key)) {
         QString tokenString = mw3->infoString->infoTemplates[key];
         QString path = mw3->imageView->currentImagePath;
@@ -6018,14 +5390,7 @@ QString EmbelProperties::metaString(QString key, QString fPath)
     Look up information using Metadata if the image will not be active
     in Winnow (ie triggered by EmbelExport).
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     QString tokenString = mw3->infoString->infoTemplates[key];
     return mw3->infoString->parseTokenString(tokenString, fPath);
 }
@@ -6081,11 +5446,7 @@ void EmbelProperties::solo()
 
 void EmbelProperties::expandRecursively()
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     setExpandRecursively(expandRecursivelyAction->isChecked());
     setting->setValue("Embel/expandRecursively", expandRecursivelyAction->isChecked());
 }
@@ -6115,14 +5476,7 @@ void EmbelProperties::coordHelp()
 
 void EmbelProperties::addBorder(int count, QString borderName)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, borderName);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // Name (used as node in settings and treeview)
 //    QString borderName = "Border" + QString::number(count + 1);
     border.name = borderName;
@@ -6384,14 +5738,7 @@ void EmbelProperties::addBorder(int count, QString borderName)
 
 void EmbelProperties::addText(int count)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "Text " + QString::number(count));
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // Name (used as node in settings and treeview)
     QString textName = "Text" + QString::number(count + 1);
     QString settingRootPath = templatePath + "Texts/" + textName + "/";
@@ -6863,14 +6210,7 @@ void EmbelProperties::addText(int count)
 
 void EmbelProperties::addGraphic(int count)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    #ifdef ISLOGGER
-    Utilities::log(__FUNCTION__, "Graphic " + QString::number(count));
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // Name (used as node in settings and treeview)
     QString graphicName = "Graphic" + QString::number(count + 1);
     QString settingRootPath = templatePath + "Graphics/" + graphicName + "/";

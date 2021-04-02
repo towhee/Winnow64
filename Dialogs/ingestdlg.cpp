@@ -1190,11 +1190,7 @@ void IngestDlg::on_ejectChk_stateChanged(int /*arg1*/)
 
 void IngestDlg::on_includeXmpChk_stateChanged(int /*arg1*/)
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     ingestIncludeXmpSidecar = ui->includeXmpChk->isChecked();
 }
 

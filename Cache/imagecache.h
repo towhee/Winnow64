@@ -94,8 +94,6 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-    // change to ImageCache
-//    void updateImageCachePosition();
     void setCurrentPosition(QString path);
 
 private:
@@ -108,7 +106,6 @@ private:
     DataModel *dm;
     Metadata *metadata;
     Pixmap *getImage;
-    bool getImageLocally(QString &fPath, QImage &image);  // test
 
     QList<int>toCache;
     QList<int>toDecache;
