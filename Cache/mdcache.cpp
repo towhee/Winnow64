@@ -513,14 +513,10 @@ void MetadataCache::iconMax(QPixmap &thumb)
 void MetadataCache::readAllMetadata()
 {
 /*
-Load the thumb (icon) for all the image files in the folder(s).
+    Load the thumb (icon) for all the image files in the folder(s).
 */
-    {
-    #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
-//    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+
 //    G::t.restart();
     qDebug() << __FUNCTION__;
 //    isShowCacheStatus = true;
@@ -547,12 +543,8 @@ Load the thumb (icon) for all the image files in the folder(s).
 void MetadataCache::readMetadataIcon(const QModelIndex &idx)
 {
 /* Currently not used */
-    {
-    #ifdef ISDEBUG
-//    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
-//    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+
     int sfRow = idx.row();
     int dmRow = dm->sf->mapToSource(idx).row();
     QString fPath = idx.data(G::PathRole).toString();
@@ -585,12 +577,7 @@ void MetadataCache::readIconChunk()
     Load the thumb (icon) for all the image files in the target range.  This is called after a
     sort/filter change and all metadata has been loaded, but the icons visible have changed.
 */
-    {
-    #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
-//    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
 
     int start = startRow;
     int end = endRow;
@@ -674,14 +661,11 @@ void MetadataCache::readIconChunk()
 void MetadataCache::readMetadataChunk()
 {
 /*
-Load the thumb (icon) for all the image files in the target range.  This is called after a
-sort/filter change and all metadata has been loaded, but the icons visible have changed.
+    Load the thumb (icon) for all the image files in the target range. This is called after a
+    sort/filter change and all metadata has been loaded, but the icons visible have changed.
 */
-    {
-    #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+
 //    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
     int start = startRow;
     int end = endRow;
@@ -742,15 +726,12 @@ sort/filter change and all metadata has been loaded, but the icons visible have 
 
 void MetadataCache::readMetadataIconChunk()
 {
-/* Not being used (replaced by separate reads for metadata and icons
-Load the metadata and thumb (icon) for all the image files in the chunk range defined by
-startRow and endRow.
+/*
+    Not being used (replaced by separate reads for metadata and icons
+    Load the metadata and thumb (icon) for all the image files in the chunk range defined by
+    startRow and endRow.
 */
-    {
-    #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
     if (cacheAllMetadata) endRow = dm->sf->rowCount();
     for (int row = startRow; row < endRow; ++row) {
@@ -801,11 +782,7 @@ void MetadataCache::run()
 
     If there has been a file selection change and not a new folder then update image cache.
 */
-    {
-    #ifdef ISDEBUG
-    mutex.lock(); G::track(__FUNCTION__); mutex.unlock();
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
         qApp->processEvents();

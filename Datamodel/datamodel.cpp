@@ -233,11 +233,7 @@ DataModel::DataModel(QWidget *parent,
 
 void DataModel::clearDataModel()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }    
+    if (G::isLogger) G::log(__FUNCTION__);
     // clear the model
     removeRows(0, rowCount());
     setRowCount(0);
@@ -726,11 +722,7 @@ bool DataModel::readMetadataForItem(int row)
 /*
     Reads the image metadata into the datamodel for the row.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, index(row, 0).data(G::PathRole).toString());
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, index(row, 0).data(G::PathRole).toString());
     QString fPath = index(row, 0).data(G::PathRole).toString();
 
     // load metadata
@@ -1021,11 +1013,7 @@ void DataModel::error(int sfRow, const QString &s, const QString src)
 
 void DataModel::errorList(int sfRow, const QStringList &sl, const QString src)
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, "Source: " + src);
     // get current error list for datamodel row
     QStringList err = sf->index(sfRow, G::ErrColumn).data().toStringList();
     // append new error items in sl
