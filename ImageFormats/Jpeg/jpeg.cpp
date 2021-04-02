@@ -834,7 +834,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
     buffer.seek(scanDataOffset);
     quint32 offset = scanDataOffset;
 
-    G::track(__FUNCTION__, "Starting to decode scan data");
+    G::log(__FUNCTION__, "Starting to decode scan data");
 
     // Iterate through scan data MCU blocks row by row
     int mcuCount = 0;
@@ -1079,7 +1079,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
 
             } // end components and MCU
 
-            if (mcuCount == 10) G::track(__FUNCTION__, "Loaded DCU");
+//            if (mcuCount == 10) G::log(__FUNCTION__, "Loaded DCU");
 
             if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
                 rptMCU(mcuCol, mcuRow);
@@ -1128,7 +1128,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                     }
                 }
             }*/
-            if (mcuCount == 10) G::track(__FUNCTION__, "IDCT transform and level shift");
+//            if (mcuCount == 10) G::log(__FUNCTION__, "IDCT transform and level shift");
 
             // RGB transform
             for (int y = 0; y != 8; ++y) {
@@ -1151,7 +1151,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                 }
             }
 
-            if (mcuCount == 10) G::track(__FUNCTION__, "RGB transform");
+//            if (mcuCount == 10) G::log(__FUNCTION__, "RGB transform");
 
             /* testing: add mcu rgb to QImage image using setPixel
             for (int x = 0; x < 8; x++) {
@@ -1183,7 +1183,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                 }
             }
 
-            if (mcuCount == 10) G::track(__FUNCTION__, "Add mcu pixels to image");
+//            if (mcuCount == 10) G::log(__FUNCTION__, "Add mcu pixels to image");
 
             // Debug reporting
             if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1 && isReport) {
@@ -1195,7 +1195,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
 
             if (mcuCount == 10) G::t.restart();
 //            QString s = QString::number(mcuCount);
-//            G::track(__FUNCTION__, s);
+//            if (G::isLogger) G::log(__FUNCTION__, s);
 
 //            qDebug() << "Processed MCU" << mcuCol << mcuRow;
 

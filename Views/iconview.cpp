@@ -848,11 +848,7 @@ void IconView::selectPageDown()
 
 void IconView::selectFirst()
 {
-    {
-    #ifdef ISDEBUG
-        G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     selectThumb(0);
 }
 
@@ -1031,11 +1027,6 @@ void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
     thumbViewDelegate triggers this to provide rect data to calc thumb mouse
     click position that is then sent to imageView to zoom to the same spot
 */
-    {
-    #ifdef ISDEBUG
-//  G::track(__FUNCTION__);
-    #endif
-    }
     dm->sf->setData(index, iconRect, G::IconRectRole);
 }
 
@@ -1124,70 +1115,6 @@ loaded.  Both thumbView and gridView have to be called.
              << "G::iconHMax =" << G::iconHMax;
 //  */
 }
-
-//void IconView::thumbsFit(Qt::DockWidgetArea area)
-//{
-//    {
-//    #ifdef ISDEBUG
-//    G::track(__FUNCTION__);
-//    #endif
-//    }
-//    qDebug() << __FUNCTION__;
-//    if (G::mode == "Grid") {
-//        return;
-//    }
-//    // all wrapping is row wrapping
-//    if (isWrapping()) {
-//        return;
-
-//        // adjust thumb width
-//        int scrollWidth = G::scrollBarThickness;
-//        int width = viewport()->width() - scrollWidth - 2;
-//        int thumbCellWidth = iconViewDelegate->getCellSize().width() - iconPadding * 2;
-//        int rightSideGap = 99999;
-//        iconPadding = 0;
-//        int remain;
-//        int padding = 0;
-//        bool improving;
-//        do {
-//            improving = false;
-//            int cellWidth = thumbCellWidth + padding * 2;
-//            remain = width % cellWidth;
-//            if (remain < rightSideGap) {
-//                improving = true;
-//                rightSideGap = remain;
-//                iconPadding = padding;
-//            }
-//            padding++;
-//        } while (improving);
-//    }
-//    // no wrapping - must be bottom or top dock area
-//    else if (area == Qt::BottomDockWidgetArea || area == Qt::TopDockWidgetArea
-//             || !isWrapping()){
-//        // set target ht based on space with scrollbar (always on)
-//        int ht = height();
-//        int scrollHeight = G::scrollBarThickness;
-//        ht -= scrollHeight;
-
-//        // adjust thumb height
-//        float aspect = iconWidth / iconHeight;
-
-//        // get the current thumb cell
-//        int cellHeight = iconViewDelegate->getCellSize().height();
-
-//        // padding = noncell space is used to rebuild cell after thumb resize to fit
-//        int padding = cellHeight - iconHeight;
-//        int maxCellHeight = iconViewDelegate->getCellSize(QSize(G::iconWMax, G::iconHMax)).height();
-//        cellHeight = ht < maxCellHeight ? ht : maxCellHeight;
-//        iconHeight = cellHeight - padding;
-//        iconWidth = iconHeight * aspect;
-
-//        // change the thumbnail size in thumbViewDelegate
-//        setSpacing(0);
-//        iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
-//            labelFontSize, showIconLabels, badgeSize);
-//    }
-//}
 
 void IconView::thumbsFitTopOrBottom()
 {

@@ -198,11 +198,6 @@ there does not appear to be any signal or event when ListView is finished hence 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
     G::log(__FUNCTION__, "Args: " + args, true);
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, "Start Winnow");
-    #endif
-    }
     setObjectName("WinnowMainWindow");
 
     // Check if modifier key pressed while program opening
@@ -624,7 +619,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     /* figure out key presses
     if(event->type() == QEvent::ShortcutOverride && obj->objectName() == "MWClassWindow")
     {
-        G::track(__FUNCTION__, "Performance profiling");
+        G::log(__FUNCTION__, "Performance profiling");
         qDebug() << event <<  obj;
     }
 //    */
@@ -893,7 +888,7 @@ void MW::checkForUpdate()
     Utilities::log(__FUNCTION__, "readAllStandardError() = " + process.readAllStandardError());
     Utilities::log(__FUNCTION__, "exitCode() = " + QString::number(process.exitCode()));
 //    */
-    G::track(__FUNCTION__, "after check");
+    G::log(__FUNCTION__, "after check");
 
     if (noUpdataAvailable.toBool())
     {
@@ -1100,7 +1095,6 @@ void MW::folderSelectionChange()
     }
 //    QApplication::setOverrideCursor(Qt::WaitCursor);
 //    if (G::isTest) testTime.restart(); // rgh remove after performance profiling
-//    G::track(__FUNCTION__, "Commence");
 
      // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
@@ -1108,7 +1102,6 @@ void MW::folderSelectionChange()
     buildFilters->stop();
     G::allMetadataLoaded = false;
     setWindowTitle(winnowWithVersion);
-//    G::track(__FUNCTION__, "0");
 
     // do not embellish
     if (turnOffEmbellish)  embelProperties->invokeFromAction(embelTemplatesActions.at(0));
@@ -5371,7 +5364,6 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
         #endif
     }
     imageThreadRunningLabel->setText("◉");
-//    G::track(__FUNCTION__, "tiger");
     if (isShowCacheThreadActivity) progressLabel->setVisible(showCacheLabel);
 }
 

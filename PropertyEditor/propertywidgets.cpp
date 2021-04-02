@@ -972,11 +972,7 @@ void SelectFolderEditor::paintEvent(QPaintEvent *event)
 
 SelectFileEditor::SelectFileEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     lineEdit = new QLineEdit;
     lineEdit->setObjectName("DisableGoActions");                // used in MW::focusChange
     lineEdit->setAlignment(Qt::AlignLeft);

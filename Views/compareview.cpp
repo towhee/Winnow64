@@ -571,11 +571,6 @@ Pan the image during a mouse drag operation.  If the shift key is also pressed
 then the pan will not be signaled to the other instances and only the
 focus instance will pan.  The modifier key test is in the scroll event.
 */
-    {
-    #ifdef ISDEBUG
-//  G::track(__FUNCTION__);
-    #endif
-    }
     if (isLeftMouseBtnPressed) {
         isMouseDrag = true;
         setCursor(Qt::ClosedHandCursor);

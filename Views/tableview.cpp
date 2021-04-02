@@ -181,12 +181,7 @@ int TableView::sizeHintForColumn(int column) const
 
 void TableView::selectPageUp()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    qDebug() << __FUNCTION__;
+    if (G::isLogger) G::log(__FUNCTION__);
     setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
 }
 

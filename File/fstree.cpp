@@ -336,11 +336,7 @@ void FSTree::getVisibleImageCount(QString src)
     Two QHash are updated: count for the total eligible image files and combineCount for when
     raw+jpg are combined.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, "bool changed");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, "Source: " + src);
     QModelIndex idx = indexAt(rect().topLeft());  // delta
     while (idx.isValid())
     {
@@ -352,11 +348,7 @@ void FSTree::getVisibleImageCount(QString src)
 
 void FSTree::getImageCount(QString const dirPath, bool changed, QString src)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, "QString const dirPath, bool changed");
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, dirPath + "  Source: " + src);
 //    qDebug() << __FUNCTION__ << src << dirPath;
     // counts is combineRawJpg
     if (!combineCount.contains(dirPath) || changed) {
