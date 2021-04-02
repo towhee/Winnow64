@@ -209,6 +209,7 @@ itemChange, which is subclassed here.
 
     if (source == "isLogger") {
         G::isLogger = v.toBool();
+        if (G::isLogger) mw->openLog();
     }
 
 //    if (source == "colorManage") {
@@ -410,7 +411,7 @@ void Preferences::addItems()
     // Logger
     i.name = "isLogger";
     i.parentName = "GeneralHeader";
-    i.captionText = "Log errors";
+    i.captionText = "Turn log on";
     i.tooltip = "Turn this on to write errors to a log file."
                 "Warning: this will impact performance.  Use"
                 "to help resolve bugs and crashes.";
