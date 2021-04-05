@@ -298,6 +298,8 @@ QString InfoString::parseTokenString(QString &tokenString,
     image.
 */
     QFileInfo info(fPath);
+    QString ext = info.suffix().toLower();
+    if (mw4->metadata->noMetadataFormats.contains(ext)) return "";
     m = dm->imMetadata(fPath);
     QString s;
     int tokenEnd;

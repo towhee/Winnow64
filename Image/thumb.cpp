@@ -98,7 +98,7 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     QString s = "File size = " + QString::number(imFile.size());
     s += " Offset embedded thumb = " + QString::number(offsetThumb);
     s += " Length embedded thumb = " + QString::number(lengthThumb);
-    G::log(__FUNCTION__, s);
+//    G::log(__FUNCTION__, s);
 
     if (imFile.isOpen()) imFile.close();
     if (imFile.open(QIODevice::ReadOnly)) {

@@ -122,7 +122,7 @@ void ImageCache::stopImageCache()
     new one starting when there has been a folder change. The cache status label in the status
     bar will be hidden.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -142,6 +142,11 @@ void ImageCache::pauseImageCache()
     thread before starting again. Use this function to pause the image caching thread without
     a new one starting when there is a change to the datamodel, such as filtration or sorting.
 */
+    mutex.lock();
+    pause = true;
+    mutex.unlock();
+    return;
+
     if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
         mutex.lock();
@@ -161,8 +166,22 @@ void ImageCache::resumeImageCache()
     after scroll events and the imageCacheThread has been paused to resume loading the image
     cache.
 */
+    mutex.lock();
+    pause = false;
+    mutex.unlock();
+    return;
     if (G::isLogger) G::log(__FUNCTION__); 
-    if (!isRunning()) start(IdlePriority);
+    qDebug() << __FUNCTION__ << "Starting thread" << isRunning();
+    source = __FUNCTION__;
+    if (isRunning()) {
+        mutex.lock();
+        abort = true;
+        condition.wakeOne();
+        mutex.unlock();
+        wait();
+        abort = false;
+    }
+    start(IdlePriority);
 }
 
 QSize ImageCache::scalePreview(int w, int h)
@@ -205,6 +224,58 @@ bool ImageCache::prioritySort(const CacheItem &p1, const CacheItem &p2)
 bool ImageCache::keySort(const CacheItem &k1, const CacheItem &k2)
 {
     return k1.key < k2.key;       // sort by key to return to thumbnail order
+}
+
+void ImageCache::setKey()
+{
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    cache.key = 0;
+    for (int i = 0; i < cacheItemList.count(); i++) {
+        if (cacheItemList.at(i).fPath == dm->currentFilePath) {
+            cache.key = i;
+            return;
+        }
+    }
+}
+
+void ImageCache::setDirection()
+{
+/*
+    if the direction of travel changes then delay reversing the caching direction until a
+    second image is selected in the new direction of travel. This prevents needless caching if
+    the user justs reverses direction to check out the previous image
+*/
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    // current direction
+    bool isLatestForward = cache.key > cache.prevKey;
+
+    // adjacent key
+    bool adjacent = true;
+    if (cache.key > cache.prevKey + 1 || cache.key < cache.prevKey - 1) adjacent = false;
+    qDebug() << __FUNCTION__
+             << "adjacent =" << adjacent
+             << "cache.key =" << cache.key
+             << "cache.prevKey =" << cache.prevKey
+                ;
+
+    if (adjacent) {
+        if (isLatestForward) cache.countAfterDirectionChange++;
+        if (!isLatestForward) cache.countAfterDirectionChange--;
+
+        if (cache.countAfterDirectionChange > 1 || cache.countAfterDirectionChange < -1) {
+            cache.isForward = isLatestForward;
+            cache.countAfterDirectionChange = 0;
+        }
+    }
+    else {
+        cache.isForward = isLatestForward;
+    }
+
+    // start of list
+    if (cache.key == 0) cache.isForward = true;
+
+    // reverse if at end of list
+    if (cache.key == cacheItemList.count() - 1) cache.isForward = false;
 }
 
 void ImageCache::setTargetRange()
@@ -380,7 +451,10 @@ bool ImageCache::cacheUpToDate()
 void ImageCache::makeRoom(int room, int roomRqd)
 {
 /*
-
+    Called from the running thread when a new image from the nextToCache QList is iterated.
+    Remove images from the QHash imCache, based on the order of the QList toDecache, until
+    there is enough room to add the new image. Update toDecache, thumb status indicators, and
+    the current available room in the cache.
 */
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     while (room < roomRqd) {
@@ -388,7 +462,7 @@ void ImageCache::makeRoom(int room, int roomRqd)
         if (nextToDecache()) {
             QString s = cacheItemList[cache.toDecacheKey].fPath;
             imCache.remove(s);
-            emit updateCacheOnThumbs(s, false);
+            if (cache.isShowCacheStatus) emit updateCacheOnThumbs(s, false);
             if (!toDecache.isEmpty()) toDecache.removeFirst();
             cacheItemList[cache.toDecacheKey].isCached = false;
             cache.currMB -= cacheItemList[cache.toDecacheKey].sizeMB;
@@ -437,6 +511,8 @@ void ImageCache::checkForOrphans()
         if (imCache.contains(cacheItemList.at(i).fPath)) {
             if (!cacheItemList.at(i).isTarget) {
                 imCache.remove(cacheItemList.at(i).fPath);
+                if (cache.isShowCacheStatus)
+                    emit updateCacheOnThumbs(cacheItemList.at(i).fPath, false);
                 cacheItemList[i].isCached = false;
             }
         }
@@ -480,6 +556,7 @@ QString ImageCache::diagnostics()
 QString ImageCache::reportCache(QString title)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+    qDebug() << __FUNCTION__;
     QString reportString;
     QTextStream rpt;
     rpt.flush();
@@ -542,8 +619,8 @@ QString ImageCache::reportCache(QString title)
         rpt.setFieldWidth(0);
         rpt << "\n";
 
-//        std::cout << reportString.toStdString() << std::flush;
     }
+    std::cout << reportString.toStdString() << std::flush;
     return reportString;
 }
 
@@ -725,6 +802,11 @@ void ImageCache::initImageCache(int &cacheSizeMB,
     // populate the new folder image list
     buildImageCacheList();
 
+//    setPriorities(cache.key);
+//    setTargetRange();
+//    reportCache(__FUNCTION__);
+    qDebug() << __FUNCTION__ << "Starting thread";
+    source = __FUNCTION__;
     start();
 }
 
@@ -756,6 +838,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath)
 //    if(filteredFilePathList.length() == 0) return;
 
     // just in case stopImageCache not called before this
+    qDebug() << __FUNCTION__ << "Pausing image cache";
     if (isRunning()) pauseImageCache();
 
     // build a new cacheItemList for the filtered/sorted dataset
@@ -789,6 +872,7 @@ void ImageCache::setCurrentPosition(QString path)
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__, path); mutex.unlock();}
     mutex.lock();
     currentPath = path;
+//    qDebug() << __FUNCTION__ << path << pause;
     mutex.unlock();
 }
 
@@ -813,47 +897,39 @@ void ImageCache::run()
     Finally, iterate through the target range, and insert a QImage extracted from the embedded
     JPG in the file to the hash imCache.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
-
+    if (G::isLogger) G::log(__FUNCTION__);
+//    qDebug() << __FUNCTION__ << "Source =" << source;
+    source = "";
     // change to ImageCache
-    QString prevCurentPath = "";
+    static QString prevCurentPath = "";
+//    int count = 0;
     do {
         if (abort) {
+            qDebug() << __FUNCTION__ << "A B O R T I N G";
+            if (G::isLogger) G::log(__FUNCTION__, "A B O R T I N G");
             emit updateIsRunning(/*isRunning*/false, /*showCacheLabel*/false);
+            abort = false;
             return;
         }
 
-        // has there been a file selection change
-        if (prevCurentPath == currentPath) continue;
-        prevCurentPath = currentPath;
+        if (pause) continue;
 
-        // check if any items in cache list
         if (cacheItemList.count() == 0) continue;
 
-        // get cache item key
-        cache.key = 0;
-        for (int i = 0; i < cacheItemList.count(); i++) {
-            if (cacheItemList.at(i).fPath == dm->currentFilePath) {
-                cache.key = i;
-                break;
-            }
-        }
+        // has there been a file selection change
+        if (prevCurentPath == currentPath) continue;
 
-        /* if the direction of travel changes then delay reversing the caching direction
-           until a second image is selected in the new direction of travel.  This prevents
-           needless caching if the user justs reverses direction to check out the previous
-           image */
-        if ( cache.isForward && cache.key <= cache.prevKey) cache.countAfterDirectionChange++;
-        if (!cache.isForward && cache.key >= cache.prevKey) cache.countAfterDirectionChange++;
-
-        if (cache.countAfterDirectionChange > 1) {
-            cache.isForward = !cache.isForward;
-            cache.countAfterDirectionChange = 0;
-        }
-
-        // reverse if at end of list
-        if (cache.key == cacheItemList.count() - 1) cache.isForward = false;
-
+        // prep the cache
+        prevCurentPath = currentPath;
+        setKey();
+        /*
+        qDebug() << __FUNCTION__
+                 << "After file selection change:"
+                 << "dm->currentFilePath =" << dm->currentFilePath
+                 << "cache.key =" << cache.key
+                    ;
+                 // */
+        setDirection();
         cache.prevKey = cache.key;
 
         // may be new metadata for image size
@@ -863,65 +939,78 @@ void ImageCache::run()
         // priorities and target range to cache
         setPriorities(cache.key);
         setTargetRange();
+        /*
+        std::cout << diagnostics().toStdString() << std::flush;
+        //reportCache();
+        // */
 
         // are all images are cached
-        if (cacheUpToDate()) continue;
+        if (cacheUpToDate()) {
+            continue;
+        }
 
-        // LOAD QIMAGES INTO TARGET RANGE OF CACHE
+        // LOAD QIMAGES INTO TARGET RANGE OF CACHE ********************************************
 
         // signal MW cache status
         emit updateIsRunning(true, true);
 
-        // check available memory
+        // check available memory (another app may have used or released some memory)
         memChk();
 
         // fill the cache with images
         QTime t = QTime::currentTime().addMSecs(500);
         while (nextToCache()) {
             if (abort) {
+//                qDebug() << __FUNCTION__ << "A B O R T I N G at nextToCache";
                 emit updateIsRunning(/*isRunning*/false, /*showCacheLabel*/false);
+                abort = false;
                 return;
             }
 
             // if file selection change then restart
-            if (prevCurentPath != currentPath) break;
+            if (prevCurentPath != currentPath || pause) break;
 
-            // check can read image from file
+            // next image to cache
             QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
-
             QImage image;
 
+            // read and decode to QImage image
             if (getImage->load(fPath, image)) {
                 // is there room in cache?
                 int room = cache.maxMB - cache.currMB;
                 int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
+                makeRoom(room, roomRqd);
                 /*
                 qDebug() << __FUNCTION__
+                         << "fPath =" << fPath
                          << "maxMB =" << cache.maxMB
                          << "currMB" << cache.currMB
                          << "room =" << room
                          << "toCache =" << cache.toCacheKey
                          << "roomRqd =" << roomRqd;
     //                */
-                makeRoom(room, roomRqd);
+                // add to cache
                 imCache.insert(fPath, image);
-                if(cache.isShowCacheStatus) emit updateCacheOnThumbs(fPath, true);
+                if (cache.isShowCacheStatus) emit updateCacheOnThumbs(fPath, true);
                 /*
                 if (cache.usePreview) {
                     imCache.insert(fPath + "_Preview", im.scaled(cache.previewSize,
                        Qt::KeepAspectRatio, Qt::FastTransformation));
                 }
     */
+
+                // update the cacheItemList and toCache lists, cache size
+                cacheItemList[cache.toCacheKey].isCached = true;
+                if (!toCache.isEmpty()) toCache.removeFirst();
+                cache.currMB = getImCacheSize();
+
+                // only update status every 500 ms to improve performance
+                if(cache.isShowCacheStatus && QTime::currentTime() > t) {
+                    emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
+                    t = QTime::currentTime().addMSecs(500);
+                }
             }
-            cacheItemList[cache.toCacheKey].isCached = true;
-            if (!toCache.isEmpty()) toCache.removeFirst();
-            cache.currMB = getImCacheSize();
-            // only update
-            if(cache.isShowCacheStatus && QTime::currentTime() > t) {
-                emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
-                t = QTime::currentTime().addMSecs(500);
-            }
-//            prevFileName = fPath;
+            else if (!toCache.isEmpty()) toCache.removeFirst();
         }
 
         // see if any images have the wrong cache status
@@ -929,81 +1018,12 @@ void ImageCache::run()
 
         // update cache status
         cache.currMB = getImCacheSize();
-        if(cache.isShowCacheStatus)
+        if (cache.isShowCacheStatus)
             emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
 
-        if(cache.isShowCacheStatus) emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
+        if (cache.isShowCacheStatus) emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
 
+        msleep(100);
     }
     while (!abort);
-
-//    //        ORIGINAL CODE
-
-//    // signal MW cache status
-//    emit updateIsRunning(true, true);
-
-//    // check available memory
-//    memChk();
-
-//    // fill the cache with images
-//    static QString prevFileName = "";
-//    QTime t = QTime::currentTime().addMSecs(500);
-//    while (nextToCache()) {
-//        if (abort) {
-//            emit updateIsRunning(false, false);
-//            return;
-//        }
-
-//        // check can read image from file
-//        QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
-//        if (fPath == prevFileName) return;
-
-//        QImage image;
-
-//        if (getImage->load(fPath, image)) {
-//            // is there room in cache?
-//            int room = cache.maxMB - cache.currMB;
-//            int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
-//            /*
-//            qDebug() << __FUNCTION__
-//                     << "maxMB =" << cache.maxMB
-//                     << "currMB" << cache.currMB
-//                     << "room =" << room
-//                     << "toCache =" << cache.toCacheKey
-//                     << "roomRqd =" << roomRqd;
-////                */
-//            makeRoom(room, roomRqd);
-//            imCache.insert(fPath, image);
-//            if(cache.isShowCacheStatus) emit updateCacheOnThumbs(fPath, true);
-//            /*
-//            if (cache.usePreview) {
-//                imCache.insert(fPath + "_Preview", im.scaled(cache.previewSize,
-//                   Qt::KeepAspectRatio, Qt::FastTransformation));
-//            }
-//*/
-//        }
-//        cacheItemList[cache.toCacheKey].isCached = true;
-//        if (!toCache.isEmpty()) toCache.removeFirst();
-//        cache.currMB = getImCacheSize();
-//        // only update
-//        if(cache.isShowCacheStatus && QTime::currentTime() > t) {
-//            emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
-//            t = QTime::currentTime().addMSecs(500);
-//        }
-//        prevFileName = fPath;
-//    }
-
-//    // see if any images have the wrong cache status
-//    checkForOrphans();
-
-//    // update cache status
-//    cache.currMB = getImCacheSize();
-//    if(cache.isShowCacheStatus)
-//        emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
-
-//    if(cache.isShowCacheStatus) emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
-    /*
-      reportCache("Image cache updated for " + cache.dir);
-      reportCacheManager("Image cache updated for " + cache.dir);
-//    */
 }

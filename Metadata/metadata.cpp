@@ -138,7 +138,6 @@ void Metadata::initSupportedFiles()
                         << "dds"
                         << "gif"
                         << "hif"
-                        << "heic"
                         << "icns"
                         << "ico"
                         << "jp2"
@@ -866,7 +865,10 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
-    if (!getMetadataFormats.contains(ext)) return false;
+    if (!getMetadataFormats.contains(ext)) {
+        clearMetadata();
+        return false;
+    }
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load
     readEssentialMetadata = essential;

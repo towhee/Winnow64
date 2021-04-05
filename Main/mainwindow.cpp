@@ -1097,6 +1097,7 @@ void MW::folderSelectionChange()
 //    if (G::isTest) testTime.restart(); // rgh remove after performance profiling
 
      // Stop any threads that might be running.
+    qDebug() << __FUNCTION__ << "Stopping image cache";
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
     buildFilters->stop();
@@ -1458,6 +1459,7 @@ a bookmark or ejects a drive and the resulting folder does not have any eligible
 */
     if (G::isLogger) G::log(__FUNCTION__);
     // Stop any threads that might be running.
+    qDebug() << __FUNCTION__ << "Stopping image cache";
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
     G::allMetadataLoaded = false;
@@ -1572,7 +1574,9 @@ void MW::updateImageCachePosition()
     cache.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+//    qDebug() << __FUNCTION__;
     imageCacheThread->setCurrentPosition(dm->currentFilePath);
+//    imageCacheThread->resumeImageCache();
 }
 
 void MW::loadMetadataCache2ndPass()
@@ -1778,6 +1782,7 @@ void MW::loadEntireMetadataCache(QString source)
 
     bool resumeImageCaching = false;
     if (imageCacheThread->isRunning()) {
+        qDebug() << __FUNCTION__ << "Pausing image cache";
         imageCacheThread->pauseImageCache();
         resumeImageCaching = true;
     }
@@ -1792,7 +1797,10 @@ void MW::loadEntireMetadataCache(QString source)
     // metadataCacheThread->loadAllMetadata();
     // metadataCacheThread->wait();
 
-    if (resumeImageCaching) imageCacheThread->resumeImageCache();
+    if (resumeImageCaching) {
+        qDebug() << __FUNCTION__ << "Resuming image cache";
+        imageCacheThread->resumeImageCache();
+    }
     QApplication::restoreOverrideCursor();
 
 }
@@ -9987,6 +9995,7 @@ void MW::slideShow()
 
         // No image caching if random slide show
         if (imageCacheThread->isRunning() && isSlideShowRandom) {
+            qDebug() << __FUNCTION__ << "Pausing image cache";
             imageCacheThread->pauseImageCache();
             imageCacheThread->clearImageCache();
             progressBar->setVisible(false);
@@ -10113,6 +10122,7 @@ void MW::slideShowResetSequence()
     if (isSlideShowRandom) {
         msg = msg + "random";
         if (imageCacheThread->isRunning()) {
+            qDebug() << __FUNCTION__ << "Pausing image cache";
             imageCacheThread->pauseImageCache();
             imageCacheThread->clearImageCache();
         }
@@ -10840,6 +10850,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << QCoreApplication::applicationDirPath() << G::isDev;
+    imageCacheThread->reportCache(__FUNCTION__);
+
 }
 // End MW

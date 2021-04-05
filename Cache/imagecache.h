@@ -50,6 +50,7 @@ public:
     QString reportImCache();
 
     QHash<QString, QImage> imCache;
+    QString source;                 // temp for debugging
 
     // used by MW::updateImageCacheStatus
     struct Cache {
@@ -101,6 +102,7 @@ private:
     QWaitCondition condition;
     bool restart;
     bool abort;
+    bool pause;
     QString currentPath;
 
     DataModel *dm;
@@ -111,6 +113,8 @@ private:
     QList<int>toDecache;
 
     int getImCacheSize();           // add up total MB cached
+    void setKey();                  // cache key from currentFilePath
+    void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
     bool nextToCache();             // find highest priority not cached

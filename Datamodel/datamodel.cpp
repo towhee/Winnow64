@@ -763,7 +763,6 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-//    qDebug() << __FUNCTION__ << m.fPath;
     int row = m.row;
     QString search = index(row, G::SearchTextColumn).data().toString();
     if (!metadata->ratings.contains(m.rating)) m.rating = "";

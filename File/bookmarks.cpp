@@ -165,11 +165,13 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 {
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) {
-//        QTreeWidgetItem *item = itemAt(event->pos());
+        /*
+        QTreeWidgetItem *item = itemAt(event->pos());
         rightClickItem = itemAt(event->pos());
         if (rightClickItem) {
             qDebug() << __FUNCTION__ << rightClickItem->toolTip(0);
         }
+        */
         return;
     }
 //    QApplication::setOverrideCursor(Qt::WaitCursor);
