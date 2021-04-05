@@ -141,7 +141,7 @@ void MetadataCache::stopMetadateCache()
 bool MetadataCache::isAllMetadataLoaded()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     G::allMetadataLoaded = true;
     for (int i = 0; i < dm->rowCount(); ++i) {
         if (!dm->index(i, G::MetadataLoadedColumn).data().toBool()) {
@@ -156,7 +156,7 @@ bool MetadataCache::isAllIconLoaded()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     // not used
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     bool loaded = true;
     for (int i = 0; i < dm->rowCount(); ++i) {
         if (dm->index(i, G::PathColumn).data(Qt::DecorationRole).isNull()) {
@@ -195,7 +195,6 @@ void MetadataCache::loadNewFolder(bool isRefresh)
     isRefreshFolder = isRefresh;
     iconsCached.clear();
     foundItemsToLoad = true;
-//    metadataChunkSize = defaultMetadataChunkSize;
     startRow = 0;
     int rowCount = dm->sf->rowCount();
     if (metadataChunkSize > rowCount) {
@@ -216,14 +215,14 @@ void MetadataCache::loadNewFolder(bool isRefresh)
 void MetadataCache::loadNewFolder2ndPass()
 {
 /*
-This function is initiated after MetadataCache::loadNewFolder has called run.  A signal is
-emitted back to MW, which in turn calculates the best aspect and number of cells visible in
-the gridview, based on the metadata read in the first pass.
+    This function is initiated after MetadataCache::loadNewFolder has called run. A signal is
+    emitted back to MW, which in turn calculates the best aspect and number of cells visible
+    in the gridview, based on the metadata read in the first pass.
 
-The greater of:
- - the number of visible cells in the gridView or
- - maxChunkSize
-metadata and icons are loaded into the datamodel.
+    The greater of:
+     - the number of visible cells in the gridView or
+     - maxChunkSize
+    metadata and icons are loaded into the datamodel.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
@@ -233,21 +232,11 @@ metadata and icons are loaded into the datamodel.
         mutex.unlock();
         wait();
     }
-//    qDebug() << "\n@@@"  << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     abort = false;
     action = Action::NewFolder2ndPass;
     setRange();
-    foundItemsToLoad = false;
-    for (int i = startRow; i < endRow; ++i) {
-        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
-            foundItemsToLoad = true;
-//        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
-//            foundItemsToLoad = true;
-        if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
-            foundItemsToLoad = true;
-        if (foundItemsToLoad) break;
-    }
-//    qDebug() << "\n@@@"  << __FUNCTION__ << "foundItemsToLoad =" << foundItemsToLoad;
+    foundItemsToLoad = anyItemsToLoad();
     start(TimeCriticalPriority);
 }
 
@@ -271,7 +260,7 @@ progress bar update is more important then use the datamodel function dm::addAll
         mutex.unlock();
         wait();
     }
-//    qDebug() << "\n@@@"  << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     abort = false;
     startRow = 0;
     endRow = dm->sf->rowCount();
@@ -297,29 +286,19 @@ limits are removed (not visible and not with chunk range)
             wait();
     }
     if (G::isInitializing) return;
-//    qDebug() << "\n@@@"  << __FUNCTION__ << "called by =" << source;
+//    qDebug() << __FUNCTION__ << "called by =" << source;
     abort = false;
     action = Action::Scroll;
     setRange();
-    foundItemsToLoad = false;
-    for (int i = startRow; i < endRow; ++i) {
-        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
-            foundItemsToLoad = true;
-//        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
-//            foundItemsToLoad = true;
-        if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
-            foundItemsToLoad = true;
-        if (foundItemsToLoad) break;
-    }
-//    qDebug() << "\n@@@"  << __FUNCTION__ << "called by =" << source << "foundItemsToLoad =" << foundItemsToLoad;
+    foundItemsToLoad = anyItemsToLoad();
     start(TimeCriticalPriority);
 }
 
 void MetadataCache::sizeChange(QString source)
 {
 /*
-This function is called when the number of icons visible in the viewport changes when the icon
-size or the viewport change size.
+    This function is called when the number of icons visible in the viewport changes when the
+    icon size or the viewport change size.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
@@ -329,20 +308,11 @@ size or the viewport change size.
         mutex.unlock();
         wait();
     }
-//    qDebug() << "\n@@@"  << __FUNCTION__ << "called by =" << source;
+//    qDebug() << __FUNCTION__ << "called by =" << source;
     abort = false;
     action = Action::Resize;
-    foundItemsToLoad = false;
     setRange();
-    for (int i = startRow; i < endRow; ++i) {
-        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
-            foundItemsToLoad = true;
-//        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
-//            foundItemsToLoad = true;
-        if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
-            foundItemsToLoad = true;
-        if (foundItemsToLoad) break;
-    }
+    foundItemsToLoad = anyItemsToLoad();
     start(TimeCriticalPriority);
 }
 
@@ -353,44 +323,36 @@ void MetadataCache::fileSelectionChange(bool okayToImageCache)
     added to the datamodel. The image cache is updated.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-//    if (isRunning()) {
-//        mutex.lock();
-//        abort = true;
-//        condition.wakeOne();
-//        mutex.unlock();
-//        wait();
-//    }
-//    qDebug() << "\n@@@"  << __FUNCTION__;
-//    abort = false;
-//    updateImageCache = okayToImageCache;
-//    action = Action::NewFileSelected;
-    foundItemsToLoad = false;
+//    qDebug() << __FUNCTION__;
+    if (isRunning()) {
+        mutex.lock();
+        abort = true;
+        condition.wakeOne();
+        mutex.unlock();
+        wait();
+    }
+    abort = false;
+    updateImageCache = okayToImageCache;
+    action = Action::NewFileSelected;
     setRange();
+    foundItemsToLoad = anyItemsToLoad();
+    start(TimeCriticalPriority);
+}
+
+bool MetadataCache::anyItemsToLoad()
+{
     for (int i = startRow; i < endRow; ++i) {
+        // ignore if image does not have metadata
+        QString ext = dm->sf->index(i, G::TypeColumn).data().toString().toLower();
+        if (metadata->noMetadataFormats.contains(ext)) continue;
+        // icon not loaded
         if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
-            foundItemsToLoad = true;
-//        if (!dm->sf->index(i, G::IconLoadedColumn).data().toBool())
-//            foundItemsToLoad = true;
+            return true;
+        // metadata not loaded
         if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
-            foundItemsToLoad = true;
-        if (foundItemsToLoad) break;
+            return true;
     }
-    if (foundItemsToLoad) {
-        if (isRunning()) {
-            mutex.lock();
-            abort = true;
-            condition.wakeOne();
-            mutex.unlock();
-            wait();
-        }
-        abort = false;
-        updateImageCache = okayToImageCache;
-        action = Action::NewFileSelected;
-        start(TimeCriticalPriority);
-    }
-    else {
-        emit updateImageCachePosition();
-    }
+    return false;
 }
 
 void MetadataCache::setRange()
@@ -794,11 +756,12 @@ void MetadataCache::run()
 
         // pause image caching if it was running
         bool imageCachePaused = false;
-        if (imageCacheThread->isRunning()) {
+//        if (imageCacheThread->isRunning()) {
+//            qDebug() << __FUNCTION__ << "Pausing image cache";
             imageCacheThread->pauseImageCache();
-            imageCacheThread->wait();
+//            imageCacheThread->wait();
             imageCachePaused = true;
-        }
+//        }
 
         // read all metadata but no icons
         if (action == Action::AllMetadata) {
@@ -856,7 +819,10 @@ void MetadataCache::run()
         emit updateIsRunning(false, true, __FUNCTION__);
 
         // resume image caching if it was interrupted
-        if (imageCachePaused) imageCacheThread->resumeImageCache();
+        if (imageCachePaused) {
+//            qDebug() << __FUNCTION__ << "Resuming image cache";
+            imageCacheThread->resumeImageCache();
+        }
 
         mutex.lock();     // rgh mutex
         dm->loadingModel = false;
@@ -884,8 +850,9 @@ void MetadataCache::run()
                  << "dm->currentRow" << dm->currentRow
                  << "G::isNewFolderLoaded" << G::isNewFolderLoaded
                  << "updateImageCache =" << updateImageCache;
-//                 */
+                 // */
         if (G::isNewFolderLoaded && updateImageCache) {
+            qDebug() << __FUNCTION__ << "XX";
             emit updateImageCachePosition();
         }
     }

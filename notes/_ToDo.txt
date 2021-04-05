@@ -1,6 +1,7 @@
 BUGS / TO DO
-    if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
-- iphone11 folder image caching not working
+- Ingest manual select destination not showing in Images will be copied and renamed to
+- Not remembering grid mode at opening
+- Does copy / paste files work inside Winnow
 - Sometimes crash when export from LR to winnets
 - Shooting data reverting to wrong token string
 - Slow program start sometimes (check for updates?)
@@ -12,7 +13,6 @@ BUGS / TO DO
 - Handle winnets on Mac
 - Quick start loupe first image in folder
 - New workspace crashed
-- Write qDebug to logger file
 - Improve err recording and showing to user
 - Text disappears at certain font sizes
 - Highlighter opacity not always used
@@ -26,6 +26,7 @@ BUGS / TO DO
 - Sort out i.name vs i.key in PropertyEditor
 - Cannot delete heic files on PC
 - Add hif file format
+- Add HEIC files to Mac
 - Rotate heic files
 - Mac check for updates not done yet
 - Open with ... (doesn't work on macOS)
@@ -46,8 +47,9 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 - When ingesting confirm all files copied correctly (option)
-
 DONE/FIXED
+- Video files showing wrong shooting info
+- Logger
 - Copy image (iconview context menu) fixed
 - Change access to token editor in view menu
 - Not showing image count in folders at startup

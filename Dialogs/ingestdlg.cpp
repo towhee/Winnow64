@@ -229,7 +229,7 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
                         fPath = idx.data(G::PathRole).toString();
                         QFileInfo fileInfo(fPath);
                         pickList.append(fileInfo);
-                        qDebug() << __FUNCTION__ << "appending" << fPath;
+//                        qDebug() << __FUNCTION__ << "appending" << fPath;
                     }
                     // append combined raw file
                     if (idx.data(G::DupIsJpgRole).toBool()) {
@@ -239,7 +239,7 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
                 fPath = idx.data(G::PathRole).toString();
                 QFileInfo fileInfo(fPath);
                 pickList.append(fileInfo);
-                qDebug() << __FUNCTION__ << "appending" << fPath;
+//                qDebug() << __FUNCTION__ << "appending" << fPath;
             }
         }
     }
@@ -261,25 +261,24 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
 
 void IngestDlg::ingest()
 {
-/* The files in pickList are renamed and ingested (copied) from the source
-folder to the destination folder.
+/*
+    The files in pickList are renamed and ingested (copied) from the source folder to the
+    destination folder.
 
-The destination folder path is appended to the ingest folder history (in the
-file menu).
+    The destination folder path is appended to the ingest folder history (in the file menu).
 
-The description, if not "" is appended to the description completer list to
-facilitate future ingests.
+    The description, if not "" is appended to the description completer list to facilitate
+    future ingests.
 
-Each picked image is copied from the source to the destination.
+    Each picked image is copied from the source to the destination.
 
-    The destination file base name is based on the file name template selected.
-    ie YYYY-MM-DD_xxxx would rename the source file test.jpg to
-    2019-01-20_0001.jpg if the seqNum = 1.  The seqNum is incremented with each
-    image in the pickList.  This does not happen if the file name template does
-    not include the sequence numbering ie use original file.
+    The destination file base name is based on the file name template selected. ie
+    YYYY-MM-DD_xxxx would rename the source file test.jpg to 2019-01-20_0001.jpg if the seqNum
+    = 1. The seqNum is incremented with each image in the pickList. This does not happen if
+    the file name template does not include the sequence numbering ie use original file.
 
-    If the destination folder already has a file with the same name then _# is
-    appended to the destination base file name.
+    If the destination folder already has a file with the same name then _# is appended to the
+    destination base file name.
 
     If there is edited metadata it is written to a sidecar xmp file.
 
@@ -320,10 +319,10 @@ Each picked image is copied from the source to the destination.
         qint64 fileBytesToCopy = 0;
 //        int progress = (i + 1) * 100 * n / (pickList.size() + 1);
         int progress = (i + 1) * 100 * n / (pickList.size());
-        qDebug() << __FUNCTION__
-                 << "progress =" << progress
-                 << "ui->progressBar->minimum() = " << ui->progressBar->minimum()
-                 << "ui->progressBar->maximum() = " << ui->progressBar->maximum();
+//        qDebug() << __FUNCTION__
+//                 << "progress =" << progress
+//                 << "ui->progressBar->minimum() = " << ui->progressBar->minimum()
+//                 << "ui->progressBar->maximum() = " << ui->progressBar->maximum();
         ui->progressBar->setValue(progress);
         qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
@@ -372,11 +371,14 @@ Each picked image is copied from the source to the destination.
             }
         }
         ImageMetadata m = dm->imMetadata(metadataChangedSourcePath);
-        qDebug() << __FUNCTION__ << m.label;
-        if (ingestIncludeXmpSidecar &&
-        metadata->writeMetadata(sourcePath, m, buffer) ) {
+//        qDebug() << __FUNCTION__ << m.label;
+        if (ingestIncludeXmpSidecar && metadata->writeMetadata(sourcePath, m, buffer) ) {
             // copy image file
-            QFile::copy(sourcePath, destinationPath);
+            bool copyOk = QFile::copy(sourcePath, destinationPath);
+//            qDebug() << __FUNCTION__ << copyOk << sourcePath;
+            if (!copyOk) {
+                qDebug() << __FUNCTION__ << "Failed to copy" << sourcePath;
+            }
             if(isBackup) QFile::copy(sourcePath, backupPath);
 
             if (metadata->internalXmpFormats.contains(suffix)) {
@@ -384,7 +386,8 @@ Each picked image is copied from the source to the destination.
                 QFile newFile(destinationPath);
                 fileBytesToCopy += newFile.size();
                 newFile.open(QIODevice::WriteOnly);
-                newFile.write(buffer);
+                qint64 bytesWritten = newFile.write(buffer);
+                qDebug() << __FUNCTION__ << bytesWritten << buffer.length();
                 newFile.close();
             }
             else {
@@ -404,8 +407,16 @@ Each picked image is copied from the source to the destination.
         }
         // no xmp data, just copy source to destination
         else {
-            QFile::copy(sourcePath, destinationPath);
-            if(isBackup) QFile::copy(sourcePath, backupPath);
+            bool copyOk = QFile::copy(sourcePath, destinationPath);
+            if (!copyOk) {
+                qDebug() << __FUNCTION__ << "Failed to copy" << sourcePath << "to" << destinationPath;
+            }
+            if(isBackup) {
+                copyOk = QFile::copy(sourcePath, backupPath);
+                if (!copyOk) {
+                    qDebug() << __FUNCTION__ << "Failed to copy" << sourcePath << "to" << backupPath;
+                }
+            }
         }
         if (isBackup) fileBytesToCopy *= 2;
         bytesCopied += fileBytesToCopy;
@@ -762,10 +773,10 @@ void IngestDlg::updateFolderPath()
 
 void IngestDlg::buildFileNameSequence()
 {
-/*  This function displays what the ingested file paths will be for the 1st, 2nd and
-last file.  If the primary location tab is selected the paths to the primary location
-are shown.  If the backup location tab is chosen then the backup location paths are
-shown.
+/*
+    This function displays what the ingested file paths will be for the 1st, 2nd and last
+    file. If the primary location tab is selected the paths to the primary location are shown.
+    If the backup location tab is chosen then the backup location paths are shown.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     if (isInitializing) return;
@@ -783,9 +794,15 @@ shown.
     QString fileName1 =  parseTokenString(pickList.at(0), tokenString) + ext1;
 
     QString dirPath;
-    // folderpath based on primary or backup tab selected
-    if(ui->autoIngestTab->tabBar()->currentIndex() == 0) dirPath = folderPath;
-    else dirPath = folderPath2;
+    // use auto
+    if (ui->autoRadio->isChecked()) {
+        // folderpath based on primary or backup tab selected
+        if(ui->autoIngestTab->tabBar()->currentIndex() == 0) dirPath = folderPath;
+        else dirPath = folderPath2;
+    }
+    else {
+        dirPath = folderPath;
+    }
 
     if(fileCount == 1) {
         ui->folderPathLabel->setText(dirPath + fileName1);

@@ -142,7 +142,6 @@ void BuildFilters::updateCountFiltered()
     filters->disableZeroCountItems(true);
     filters->filtersBuilt = true;
     filters->buildingFilters = false;
-    qDebug() << __FUNCTION__ << "filtersBuilt = " << filters->filtersBuilt;
 }
 
 void BuildFilters::countFiltered()
