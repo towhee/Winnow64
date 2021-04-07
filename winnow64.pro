@@ -1,4 +1,6 @@
 #CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
+
+
 CONFIG += sdk_no_version_check
 TEMPLATE = app
 TARGET = Winnow
@@ -9,7 +11,18 @@ INCLUDEPATH += MacOS
 #INCLUDEPATH += "C:/Program Files (x86)/Visual Leak Detector/include/"
 #LIBS += -L"C:/Program Files (x86)/Visual Leak Detector/lib/Win64"
 
-UI_DIR = $$PWD/UI
+#UI_DIR = $$PWD/UI
+Release:DESTDIR = release
+Release:OBJECTS_DIR = release/.obj
+Release:MOC_DIR = release/.moc
+Release:RCC_DIR = release/.rcc
+Release:UI_DIR = release/.ui
+
+Debug:DESTDIR = debug
+Debug:OBJECTS_DIR = debug/.obj
+Debug:MOC_DIR = debug/.moc
+Debug:RCC_DIR = debug/.rcc
+Debug:UI_DIR = debug/.ui
 
 QT += widgets
 QT += concurrent

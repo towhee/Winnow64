@@ -1,5 +1,4 @@
 BUGS / TO DO
-- Ingest manual select destination not showing in Images will be copied and renamed to
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow
 - Sometimes crash when export from LR to winnets
@@ -48,6 +47,7 @@ ENHANCEMENTS
 - Read xmp sidecars when open folder
 - When ingesting confirm all files copied correctly (option)
 DONE/FIXED
+- Ingest manual select destination not showing in Images will be copied and renamed to
 - Video files showing wrong shooting info
 - Logger
 - Copy image (iconview context menu) fixed

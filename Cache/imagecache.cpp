@@ -226,8 +226,11 @@ bool ImageCache::keySort(const CacheItem &k1, const CacheItem &k2)
     return k1.key < k2.key;       // sort by key to return to thumbnail order
 }
 
-void ImageCache::setKey()
+void ImageCache::setKeyToCurrent()
 {
+/*
+    cache.key is the index of the item in cacheItemList that matches dm->currentFilePath
+*/
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     cache.key = 0;
     for (int i = 0; i < cacheItemList.count(); i++) {
@@ -252,12 +255,13 @@ void ImageCache::setDirection()
     // adjacent key
     bool adjacent = true;
     if (cache.key > cache.prevKey + 1 || cache.key < cache.prevKey - 1) adjacent = false;
+    /*
     qDebug() << __FUNCTION__
              << "adjacent =" << adjacent
              << "cache.key =" << cache.key
              << "cache.prevKey =" << cache.prevKey
                 ;
-
+    // */
     if (adjacent) {
         if (isLatestForward) cache.countAfterDirectionChange++;
         if (!isLatestForward) cache.countAfterDirectionChange--;
@@ -276,6 +280,8 @@ void ImageCache::setDirection()
 
     // reverse if at end of list
     if (cache.key == cacheItemList.count() - 1) cache.isForward = false;
+
+    cache.prevKey = cache.key;
 }
 
 void ImageCache::setTargetRange()
@@ -327,10 +333,17 @@ void ImageCache::setTargetRange()
     for (int j = i; j < cache.totFiles; ++j) {
         if (!cacheItemList.at(j).isTarget) {
             cache.targetLast = j - 1;
-            return;
+            break;
         }
         cache.targetLast = cache.totFiles - 1;
     }
+    /*
+    qDebug() << __FUNCTION__
+             << cache.targetFirst
+             << cache.targetLast
+             << "isForward =" << cache.isForward
+                ;
+             //   */
 }
 
 bool ImageCache::nextToCache()
@@ -870,39 +883,33 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath)
 void ImageCache::setCurrentPosition(QString path)
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__, path); mutex.unlock();}
-    mutex.lock();
     currentPath = path;
-//    qDebug() << __FUNCTION__ << path << pause;
-    mutex.unlock();
 }
 
 void ImageCache::run()
 {
 /*
-    The target range is all the files that will fit into the available cache memory based on
-    the cache priorities and direction of travel. We want to make sure the target range is
-    cached, decaching anything outside the target range to make room as necessary as image
-    selection changes.
-
     This thread runs continuously, checking if there is a new file selection by comparing the
     current path to the prevCurrentPath. The current path is updated by MetadataCache, which
     is executed for every MW::fileSelectionChange. MetadataCache first checks to see if the
     thumbnails require updating and then emits a signal to update setCurrentPosition which is
     continuously polled here.
 
+    The target range is all the files that will fit into the available cache memory based on
+    the cache priorities and direction of travel. We want to make sure the target range is
+    cached, decaching anything outside the target range to make room as necessary as image
+    selection changes.
+
     When there is a new file selection then the cache structure, used to determine what has
-    been cached, ff the direction of travel has changed, reset cache item priorities and reset
+    been cached, if the direction of travel has changed, reset cache item priorities and reset
     the targe range to cache.
 
     Finally, iterate through the target range, and insert a QImage extracted from the embedded
     JPG in the file to the hash imCache.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__ << "Source =" << source;
     source = "";
-    // change to ImageCache
-    static QString prevCurentPath = "";
-//    int count = 0;
+    prevCurrentPath = "";
     do {
         if (abort) {
             qDebug() << __FUNCTION__ << "A B O R T I N G";
@@ -912,31 +919,34 @@ void ImageCache::run()
             return;
         }
 
-        if (pause) continue;
+        if (pause) {
+            msleep(100);
+            continue;
+        }
 
-        if (cacheItemList.count() == 0) continue;
+        if (cacheItemList.count() == 0) {
+            msleep(100);
+            continue;
+        }
 
         // has there been a file selection change
-        if (prevCurentPath == currentPath) continue;
+        if (prevCurrentPath == currentPath) {
+            msleep(100);
+            continue;
+        }
 
         // prep the cache
-        prevCurentPath = currentPath;
-        setKey();
-        /*
-        qDebug() << __FUNCTION__
-                 << "After file selection change:"
-                 << "dm->currentFilePath =" << dm->currentFilePath
-                 << "cache.key =" << cache.key
-                    ;
-                 // */
+        prevCurrentPath = currentPath;
+        setKeyToCurrent();
         setDirection();
-        cache.prevKey = cache.key;
 
         // may be new metadata for image size
         updateImageCacheList();
+
+        // update current size of the image cache imCache
         cache.currMB = getImCacheSize();
 
-        // priorities and target range to cache
+        // set the priorities and target range to cache
         setPriorities(cache.key);
         setTargetRange();
         /*
@@ -944,7 +954,7 @@ void ImageCache::run()
         //reportCache();
         // */
 
-        // are all images are cached
+        // are all images in the target range cached
         if (cacheUpToDate()) {
             continue;
         }
@@ -967,8 +977,8 @@ void ImageCache::run()
                 return;
             }
 
-            // if file selection change then restart
-            if (prevCurentPath != currentPath || pause) break;
+            // if file selection change then back to the main loop to restart filling cache
+            if (prevCurrentPath != currentPath || pause) break;
 
             // next image to cache
             QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
@@ -1022,8 +1032,6 @@ void ImageCache::run()
             emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
 
         if (cache.isShowCacheStatus) emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
-
-        msleep(100);
     }
     while (!abort);
 }
