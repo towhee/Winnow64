@@ -1576,7 +1576,6 @@ void MW::updateImageCachePosition()
     if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__;
     imageCacheThread->setCurrentPosition(dm->currentFilePath);
-//    imageCacheThread->resumeImageCache();
 }
 
 void MW::loadMetadataCache2ndPass()
@@ -9832,7 +9831,6 @@ void MW::keyRight()
 
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    G::log(__FUNCTION__);
 
     if (G::mode == "Compare") compareImages->go("Right");
     else thumbView->selectNext();
@@ -9844,7 +9842,6 @@ void MW::keyLeft()
 
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__ << "QThread::currentThread()" << QThread::currentThread();
     if (G::mode == "Compare") compareImages->go("Left");
     else thumbView->selectPrev();

@@ -198,18 +198,20 @@ void IngestDlg::renameIfExists(QString &destination,
 void IngestDlg::getPicks()
 {
 /*
-This function generates a list of picked images to ingest from the filtered data. The
-datamodel dm, not the proxy dm->sf, is used, as the user may have sorted the view, and we need
-the original datamodel dm order to efficiently deal with the combined raw/jpg scenario.
+    This function generates a list of picked images to ingest from the filtered data. The
+    datamodel dm, not the proxy dm->sf, is used, as the user may have sorted the view, and we
+    need the original datamodel dm order to efficiently deal with the combined raw/jpg
+    scenario.
 
-The datamodel is sorted by file path. Raw files with the same path precede jpg files with
-duplicate names. Two roles track duplicates: G::DupHideRawRole flags jpg files with duplicate
-raws and G::DupRawIdxRole points to the duplicate raw file from the jpg data row. For example:
+    The datamodel is sorted by file path. Raw files with the same path precede jpg files with
+    duplicate names. Two roles track duplicates: G::DupHideRawRole flags jpg files with
+    duplicate raws and G::DupRawIdxRole points to the duplicate raw file from the jpg data
+    row. For example:
 
-Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
-Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(0,0))
-Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
-Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(2,0)
+    Row = 0 "G:/DCIM/100OLYMP/P4020001.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
+    Row = 1 "G:/DCIM/100OLYMP/P4020001.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(0,0))
+    Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
+    Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(2,0)
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     bool inclDupJpg = ui->combinedIncludeJpgChk->isChecked();
@@ -250,6 +252,7 @@ Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole =
 
     qulonglong bytes = 0;
     foreach(QFileInfo info, pickList) bytes += static_cast<qulonglong>(info.size());
+    picksMB = bytes / 1024 / 1024;
     QString s1 = QString::number(fileCount);
     QString s2 = fileCount == 1 ? " file " : " files ";
     QString s3 = Utilities::formatMemory(bytes);
@@ -420,8 +423,9 @@ void IngestDlg::ingest()
         }
         if (isBackup) fileBytesToCopy *= 2;
         bytesCopied += fileBytesToCopy;
-        double gigibitsPerSec = static_cast<double>(bytesCopied) / 131072 / t.elapsed();
-        QString gbs = QString::number(gigibitsPerSec, 'f', 2) + " Gb/sec";
+        double MBPerSec = static_cast<double>(bytesCopied) / 1048.576 / t.elapsed();
+//        double gigibitsPerSec = static_cast<double>(bytesCopied) / 131072 / t.elapsed();
+        QString gbs = QString::number(MBPerSec, 'f', 1) + " MB/sec";
         ui->gbsLabel->setText(gbs);
     }
     qDebug() << __FUNCTION__
@@ -748,10 +752,12 @@ void IngestDlg::updateFolderPath()
     if (ui->autoRadio->isChecked() || isInitializing) {
         baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
                 ? ui->descriptionLineEdit->text() : "";
-//        qDebug() << __FUNCTION__
-//                 << "rootFolderPath =" << rootFolderPath
-//                 << "fromRootToBaseFolder =" << fromRootToBaseFolder
-//                 << "baseFolderDescription =" << baseFolderDescription;
+        /*
+        qDebug() << __FUNCTION__
+                 << "rootFolderPath =" << rootFolderPath
+                 << "fromRootToBaseFolder =" << fromRootToBaseFolder
+                 << "baseFolderDescription =" << baseFolderDescription;
+                 // */
         folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
 
         ui->folderLabel->setText(folderPath);
@@ -766,9 +772,9 @@ void IngestDlg::updateFolderPath()
     else {
         folderPath = ui->manualFolderLabel->text() + "/";
         folderPath2 = ui->manualFolderLabel_2->text() + "/";
-        qDebug() << "folderPath2" << folderPath2;
     }
     updateExistingSequence();
+    getAvailableStorageMB();
 }
 
 void IngestDlg::buildFileNameSequence()
@@ -916,6 +922,36 @@ int IngestDlg::getSequenceStart(const QString &path)
     return sequence;
 }
 
+void IngestDlg::getAvailableStorageMB()
+{
+/*
+    Return how many MB available on the drive pointed that contains path.
+*/
+    QString drive = folderPath.left(folderPath.indexOf("/"));
+    QString drive2 = folderPath2.left(folderPath2.indexOf("/"));
+    QStorageInfo info;
+
+    // destination drive
+    info.setPath(drive);
+    qulonglong bytes = info.bytesAvailable();
+    availableMB = bytes / 1024 / 1024;
+    QString s = drive + " " + Utilities::formatMemory(bytes);
+    if (picksMB > availableMB) ui->drive->setStyleSheet("QLabel {color:red;}");
+    ui->drive->setText(s);
+
+    // backup drive
+    if (isBackup) {
+        ui->drive_2->setVisible(true);
+        info.setPath(drive2);
+        bytes = info.bytesAvailable();
+        availableMB2 = bytes / 1024 / 1024;
+        s = drive2 + " " + Utilities::formatMemory(bytes);
+        if (picksMB > availableMB2) ui->drive_2->setStyleSheet("QLabel {color:red;}");
+        ui->drive_2->setText(s);
+    }
+    else ui->drive_2->setVisible(false);
+}
+
 void IngestDlg::updateEnabledState()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
@@ -1011,6 +1047,7 @@ void IngestDlg::on_manualRadio_toggled(bool /*checked*/)
         buildFileNameSequence();
         updateExistingSequence();
         updateEnabledState();
+        getAvailableStorageMB();
     }
 }
 

@@ -104,6 +104,7 @@ private:
     bool abort;
     bool pause;
     QString currentPath;
+    QString prevCurrentPath;
 
     DataModel *dm;
     Metadata *metadata;
@@ -113,7 +114,7 @@ private:
     QList<int>toDecache;
 
     int getImCacheSize();           // add up total MB cached
-    void setKey();                  // cache key from currentFilePath
+    void setKeyToCurrent();                  // cache key from currentFilePath
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache

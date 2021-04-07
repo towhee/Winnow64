@@ -1499,9 +1499,9 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>820</y>
-     <width>351</width>
-     <height>31</height>
+     <y>810</y>
+     <width>201</width>
+     <height>25</height>
     </rect>
    </property>
    <property name="font">
@@ -1708,14 +1708,56 @@
   <widget class="QLabel" name="gbsLabel">
    <property name="geometry">
     <rect>
-     <x>390</x>
-     <y>820</y>
-     <width>141</width>
-     <height>31</height>
+     <x>20</x>
+     <y>835</y>
+     <width>181</width>
+     <height>25</height>
     </rect>
    </property>
    <property name="text">
     <string>Gb/sec</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="drive">
+   <property name="geometry">
+    <rect>
+     <x>320</x>
+     <y>810</y>
+     <width>141</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>P:/</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="drive_2">
+   <property name="geometry">
+    <rect>
+     <x>320</x>
+     <y>835</y>
+     <width>141</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Q:/</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>810</y>
+     <width>101</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Drive space</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
    </property>
   </widget>
  </widget>

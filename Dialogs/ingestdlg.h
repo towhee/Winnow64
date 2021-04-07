@@ -94,6 +94,7 @@ private:
     void buildFileNameSequence();
     void updateExistingSequence();
     int getSequenceStart(const QString &path);
+    void getAvailableStorageMB();
     void updateEnabledState();
     void renameIfExists(QString &destination, QString &baseName, QString dotSuffix);
     void getPicks();
@@ -137,6 +138,12 @@ private:
     QString &manualFolderPath;
     QString &manualFolderPath2;
 
+    // memory required for picks
+    double picksMB;
+
+    // available MB on destination drive
+    double availableMB;
+    double availableMB2;
 
     // file name creation
     int& filenameTemplateSelected;
