@@ -884,6 +884,8 @@ void ImageCache::setCurrentPosition(QString path)
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__, path); mutex.unlock();}
     currentPath = path;
+    qDebug() << __FUNCTION__ << path << isRunning();
+//    if (!isRunning()) start();
 }
 
 void ImageCache::run()

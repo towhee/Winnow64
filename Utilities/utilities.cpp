@@ -1,7 +1,22 @@
 #include "utilities.h"
 
+bool Utilities::integrityCheck(const QString &path1, const QString &path2)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QFile file1(path1);
+    file1.open(QIODevice::ReadOnly);
+    QByteArray ba1 = file1.readAll();
+    QFile file2(path2);
+    file2.open(QIODevice::ReadOnly);
+    QByteArray ba2 = file2.readAll();
+    file1.close();
+    file2.close();
+    return ba1 == ba2;
+}
+
 QSize Utilities::fitScreen(QSize preferred)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     int w = preferred.width();
     int h = preferred.height();
     int headerH = static_cast<int>(30 * G::actDevicePixelRatio);

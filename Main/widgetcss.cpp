@@ -28,6 +28,12 @@ QString WidgetCSS::css()
     l50 = bg + 50;
     l60 = bg + 60;
 
+    textColor = QColor(fg,fg,fg);
+    disabledColor = QColor(l20,l20,l20);
+    scrollBarHandleBackgroundColor = QColor(90,130,100);
+    selectionColor = QColor(68,95,118);
+    borderColor = QColor(l40,l40,l40);
+
     // heights (mostly used for rows in TreeView etc)
     h15 = QString::number(fontSize * 1.5 * G::ptToPx);
     h17 = QString::number(fontSize * 1.7 * G::ptToPx);
@@ -54,6 +60,7 @@ QString WidgetCSS::css()
             listWidget() +
             progressBar() +
             pushButton() +
+            radioButton() +
             scrollBar() +
             spinBox() +
             stackedWidget() +
@@ -206,7 +213,7 @@ QString WidgetCSS::label()
     "}"
 
     "QLabel:disabled {"
-        "color:" + QColor(l40,l40,l40).name() + ";"
+        "color:" + disabledColor.name() + ";"
     "}"
     ;
 }
@@ -302,13 +309,13 @@ QString WidgetCSS::tabWidget()
     }*/
 
     "QTabBar::tab:selected {"
-        "color:white;"
+        "color: cadetblue;"
         "border-bottom: 0px;"
         "background-color: " + QColor(bg,bg,bg).name() + ";"
    " }"
 
     "QTabBar::tab:disabled {"
-        "color: gray;"
+        "color:" + disabledColor.name() + ";"
     "}";
 }
 
@@ -354,7 +361,7 @@ QString WidgetCSS::treeWidget()
     "}"
 
     "QTreeWidget::item:disabled {"
-        "color:" + QColor(l20,l20,l20).name() + ";"
+        "color:" + disabledColor.name() + ";"
     "}"
 
     "QTreeWidget::item {"
@@ -512,23 +519,37 @@ QString WidgetCSS::scrollBar()
     "}";
 }
 
+QString WidgetCSS::radioButton()
+{
+    return
+    "QRadioButton:checked {"
+        "color: cadetblue;"
+    "}"
+    "QRadioButton:unchecked {"
+        "color:" + textColor.name() + ";"
+    "}";
+}
+
 QString WidgetCSS::pushButton()
 {
     return
     /*PushButton must be before ComboBox*/
     "QPushButton {"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
-//        "border: 1px solid gray;"
+        "border-width: 1px;"
+        "border-style: solid;"
+        "border-color: " + QColor(l10,l10,l10).name() + ";"
+//        "border-color: " + QColor(l5,l5,l5).name() + ";"
         "border-radius: 2px;"
         "padding-left: 5px;"
         "padding-right: 5px;"
         "padding-top: 3px;"
         "padding-bottom: 3px;"
-        "min-width: 50px;"
+        "min-width: 100px;"
     "}"
 
     "QPushButton:default {"
-        "border: 1px solid gray;"
+        "border: 1px solid cadetblue;"
 //        "background-color: rgb(88,124,153);"
 //        "background-color: rgb(68,95,118);"
     "}"
@@ -545,11 +566,16 @@ QString WidgetCSS::pushButton()
     "}"
 
     "QPushButton:flat {"
-        "border: 1px; "/* no border for a flat push button */
+        /* no border for a flat push button by default */
+//        "border: 1px solid gray;"
+//        "border-width: 1px;"
+//        "border-style: solid;"
+//        "border-color: " + QColor(l5,l5,l5).name() + ";"
     "}"
 
     "QPushButton:disabled {"
-        "color: gray;"
+        "background-color: " + QColor(d5,d5,d5).name() + ";"
+        "color:" + disabledColor.name() + ";"
     "}";
 }
 
@@ -558,7 +584,9 @@ QString WidgetCSS::comboBox()
     return
     "QComboBox {"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
-        "border: 1px solid gray;"
+        "border-width: 1px;"
+        "border-style: solid;"
+        "border-color: " + borderColor.name() + ";"
         "border-radius: 2px;"
         "padding: 0px 10px 1px 8px;"  /*text  top, right, bottom, left*/
         "min-width: 6em;"
@@ -568,34 +596,47 @@ QString WidgetCSS::comboBox()
         "border-color: silver;"
     "}"
 
-    "QComboBox QAbstractItemView::item {"
-        "height: 20px;"
-    "}"
-
     "QComboBox:disabled {"
-        "color: gray;"
+        "color:" + disabledColor.name() + ";"
+        "border-color:" + disabledColor.name() + ";"
+        "background-color: " + QColor(d5,d5,d5).name() + ";"
     "}"
 
+    // Arrow button that activates dropdown list
     "QComboBox::drop-down {"
         "subcontrol-origin: padding;"
         "subcontrol-position: top right;"
         "width: 18px;"
-
-        "border-left-width: 1px;"
-        "border-left-color: darkgray;"
-        "border-left-style: solid;" /* just a single line */
+//        "border-left-width: 1px;"
+//        "border-left-color: darkgray;"
+//        "border-left-style: solid;" /* just a single line */
         "border-top-right-radius: 5px;" /* same radius as the QComboBox */
         "border-bottom-right-radius: 5px;"
     "}"
 
+    "QComboBox::drop-down:disabled {"
+        "border-color:" + disabledColor.name() + ";"
+    "}"
+
     "QComboBox::down-arrow {"
         "image: url(:/images/down-arrow3.png);"
+        "border-color: " + borderColor.name() + ";" //nada
+    "}"
+
+    "QComboBox::down-arrow:disabled {"
+         "image: url(:/images/no_image.png);"
     "}"
 
     "QComboBox::down-arrow:on {" /* shift the arrow when popup is open */
         "top: 1px;"
         "left: 1px;"
-    "}";
+    "}"
+
+    // Dropdown list
+    "QComboBox QAbstractItemView::item {"
+        "height: 20px;"
+    "}"
+    ;
 }
 
 QString WidgetCSS::spinBox()
@@ -605,7 +646,10 @@ QString WidgetCSS::spinBox()
     return
     "QSpinBox {"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
-        "border: 1px solid gray;"
+//        "border: 1px solid gray;"
+        "border-width: 1px;"
+        "border-style: solid;"
+        "border-color: " + borderColor.name() + ";"
         "selection-background-color: darkgray;"
         "border-radius: 2px;"
         "padding-left: 4px;"
@@ -616,7 +660,7 @@ QString WidgetCSS::spinBox()
     "}"
 
     "QSpinBox:disabled {"
-        "color: " + QColor(d10,d10,d10).name() + ";"
+        "color:" + disabledColor.name() + ";"
         "background-color: " + QColor(bg,bg,bg).name() + ";"
     "}"
 
@@ -633,7 +677,10 @@ QString WidgetCSS::doubleSpinBox()
     return
     "QDoubleSpinBox {"
     "background-color: " + QColor(d10,d10,d10).name() + ";"
-    "border: 1px solid gray;"
+//    "border: 1px solid gray;"
+    "border-width: 1px;"
+    "border-style: solid;"
+    "border-color: " + borderColor.name() + ";"
     "selection-background-color: darkgray;"
     "border-radius: 2px;"
     "padding-left: 4px;"
@@ -644,7 +691,7 @@ QString WidgetCSS::doubleSpinBox()
     "}"
 
     "QDoubleSpinBox:disabled {"
-    "color: " + QColor(d10,d10,d10).name() + ";"
+    "color:" + disabledColor.name() + ";"
     "background-color: " + QColor(bg,bg,bg).name() + ";"
     "}"
 
@@ -670,6 +717,9 @@ QString WidgetCSS::lineEdit()
     "QLineEdit {"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
 //        "border: 1px solid gray;"
+        "border-width: 1px;"
+        "border-style: solid;"
+        "border-color: " + borderColor.name() + ";"
         "margin-left: 5px;"   /*Not sure why, but this is required*/
 //        "selection-background-color: darkgray;"
         "padding-top: 1px;"
@@ -683,7 +733,8 @@ QString WidgetCSS::lineEdit()
     "}"
 
     "QLineEdit:disabled {"
-        "color:gray;"
+        "color:" + disabledColor.name() + ";"
+        "border-color:" + disabledColor.name() + ";"
     "}";
 }
 

@@ -40,6 +40,7 @@ Files are copied to a destination based on building a file path consisting of:
 IngestDlg::IngestDlg(QWidget *parent,
                      bool &combineRawJpg,
                      bool &autoEjectUsb,
+                     bool &integrityCheck,
                      bool &ingestIncludeXmpSidecar,
                      bool &isBackup,
                      bool &gotoIngestFolder,
@@ -65,6 +66,7 @@ IngestDlg::IngestDlg(QWidget *parent,
                      isAuto(isAuto),
                      combineRawJpg(combineRawJpg),
                      autoEjectUsb(autoEjectUsb),
+                     integrityCheck(integrityCheck),
                      ingestIncludeXmpSidecar(ingestIncludeXmpSidecar),
                      isBackup(isBackup),
                      gotoIngestFolder(gotoIngestFolder),
@@ -83,6 +85,16 @@ IngestDlg::IngestDlg(QWidget *parent,
     if (G::isLogger) G::log(__FUNCTION__); 
     this->dm = dm;
     this->css = css;
+
+    QString radioStyle =
+        "QRadioButton:checked {"
+            "color: yellow;"
+        "}"
+        "QRadioButton:unchecked {"
+            "color: green;"
+        "}";
+//    ui->autoRadio->setStyleSheet(radioStyle);
+//    ui->manualRadio->setStyleSheet(radioStyle);
 
     ui->setupUi(this);
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
@@ -154,6 +166,8 @@ IngestDlg::IngestDlg(QWidget *parent,
 
     // initialize autoEjectUsb
     ui->ejectChk->setChecked(autoEjectUsb);
+    // initialize integrityCheck
+    ui->integrityChk->setChecked(integrityCheck);
     // initialize ingestIncludeXmpSidecar
     ui->includeXmpChk->setChecked(ingestIncludeXmpSidecar);
     // initialize use backup as well as primary ingest
@@ -262,6 +276,42 @@ void IngestDlg::getPicks()
     ui->gbsLabel->setText("");
 }
 
+void IngestDlg::quitIfNotEnoughSpace()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+
+    // check if room on destination drives for images
+    bool isFull = picksMB > availableMB;
+    bool isFull2 = picksMB > availableMB2 && isBackup;
+    if (isFull || isFull2) {
+        QString s;
+        if (isFull) s = drive + " does ";
+        if (isFull2) s = drive2;
+        if (isFull && isFull2) s = drive + " and " + drive2 + " do ";
+        QString title = "Insufficient drive space";
+        QString msg =
+            s + "not have sufficient space available to copy the ingesting images.  No images "
+            "will be ingested.  Please resolve the disk space issue and try again.";
+        //        QMessageBox::warning(this, title, msg, QMessageBox::Ok);
+
+        QMessageBox msgBox;
+        int msgBoxWidth = 300;
+        msgBox.setWindowTitle("Insufficient Drive Space");
+        msgBox.setText(msg);
+//        msgBox.setInformativeText("Do you want continue?");
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        msgBox.setDefaultButton(QMessageBox::Ok);
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.setStyleSheet(css);
+        QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
+        layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+        msgBox.exec();
+        // quit ingest dialog
+        reject();
+    }
+}
+
 void IngestDlg::ingest()
 {
 /*
@@ -287,7 +337,9 @@ void IngestDlg::ingest()
 
     Finally the source file is copied to the renamed destination.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+
+    quitIfNotEnoughSpace();
+
     // get rid of "/" at end of path for history (in file menu)
     QString historyPath = folderPath.left(folderPath.length() - 1);
     emit updateIngestHistory(historyPath);
@@ -316,10 +368,10 @@ void IngestDlg::ingest()
     ui->progressBar->setVisible(true);
     seqNum =  ui->spinBoxStartNumber->value();
     QElapsedTimer t;
-    qint64 bytesCopied = 0;
+    qint64 bytesWritten = 0;
     t.restart();
     for (int i = 0; i < pickList.size(); ++i) {
-        qint64 fileBytesToCopy = 0;
+        qint64 fileBytesToWrite = 0;
 //        int progress = (i + 1) * 100 * n / (pickList.size() + 1);
         int progress = (i + 1) * 100 * n / (pickList.size());
 //        qDebug() << __FUNCTION__
@@ -330,7 +382,7 @@ void IngestDlg::ingest()
         qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
         QString sourcePath = fileInfo.absoluteFilePath();
-        fileBytesToCopy += fileInfo.size();
+//        fileBytesToCopy += fileInfo.size();
 
         // seqNum is required by parseTokenString
         // increase sequence unless dup (raw + jpg)
@@ -342,6 +394,7 @@ void IngestDlg::ingest()
         QString suffix = fileInfo.suffix().toLower();
         QString dotSuffix = "." + suffix;
         QString destFileName = destBaseName + dotSuffix;
+        QString sidecarName = destBaseName + ".xmp";
 
         // buffer to hold file with edited xmp data
         QByteArray buffer;
@@ -349,6 +402,9 @@ void IngestDlg::ingest()
         // check if image already exists at destination folder
         QString destinationPath = folderPath + destFileName;
         QString backupPath = folderPath2 + destFileName;
+        QString sidecarPath = folderPath + sidecarName;
+        QString sidecarBackupPath = folderPath2 + sidecarName;
+
         // rename destination and fileName if already exists
         renameIfExists(destinationPath, destBaseName, dotSuffix);
 
@@ -373,17 +429,61 @@ void IngestDlg::ingest()
                 }
             }
         }
-        ImageMetadata m = dm->imMetadata(metadataChangedSourcePath);
-//        qDebug() << __FUNCTION__ << m.label;
-        if (ingestIncludeXmpSidecar && metadata->writeMetadata(sourcePath, m, buffer) ) {
-            // copy image file
-            bool copyOk = QFile::copy(sourcePath, destinationPath);
-//            qDebug() << __FUNCTION__ << copyOk << sourcePath;
-            if (!copyOk) {
-                qDebug() << __FUNCTION__ << "Failed to copy" << sourcePath;
-            }
-            if(isBackup) QFile::copy(sourcePath, backupPath);
 
+        // copy source image to destination
+        fileBytesToWrite += fileInfo.size();
+        bool copyOk = QFile::copy(sourcePath, destinationPath);
+        if (!copyOk) {
+            qDebug() << __FUNCTION__ << "Failed to copy" << sourcePath << "to" << destinationPath;
+            failedToCopy << sourcePath + " to " + destinationPath;
+        }
+        if (copyOk && integrityCheck) {
+            if (!Utilities::integrityCheck(sourcePath, destinationPath)) {
+                qDebug() << __FUNCTION__ << "Integrity failure" << sourcePath << "not same as" << destinationPath;
+                integrityFailure << sourcePath + " not same as " + destinationPath;
+            }
+        }
+
+        // copy source image to backup
+        if(isBackup) {
+            fileBytesToWrite += fileInfo.size();
+            bool backupCopyOk = QFile::copy(sourcePath, backupPath);
+            if (!backupCopyOk) {
+                qDebug() << __FUNCTION__ << "Failed to copy" << sourcePath << "to" << backupPath;
+                failedToCopy << sourcePath + " to " + backupPath;
+            }
+            if (backupCopyOk && integrityCheck) {
+                if (!Utilities::integrityCheck(sourcePath, backupPath)) {
+                    qDebug() << __FUNCTION__ << "Integrity failure" << sourcePath << "not same as" << backupPath;
+                    integrityFailure << sourcePath + " not same as " + backupPath;
+                }
+            }
+        }
+
+        // write the sidecar xmp file
+        ImageMetadata m = dm->imMetadata(metadataChangedSourcePath);
+        bool okToWriteSidecar = ingestIncludeXmpSidecar &&
+                                copyOk &&
+                                metadata->writeMetadata(sourcePath, m, buffer);
+        if (okToWriteSidecar) {
+            QFile sidecarFile(sidecarPath);
+            fileBytesToWrite += sidecarFile.size();
+            sidecarFile.open(QIODevice::WriteOnly);
+            qint64 bytesWritten = sidecarFile.write(buffer);
+            if (bytesWritten == 0) failedToCopy << sidecarPath;
+            sidecarFile.close();
+            if (isBackup) {
+                QFile sidecarFile(sidecarBackupPath);
+                fileBytesToWrite += sidecarFile.size();
+                sidecarFile.open(QIODevice::WriteOnly);
+                qint64 bytesWritten = sidecarFile.write(buffer);
+                if (bytesWritten == 0) failedToCopy << sidecarBackupPath;
+                sidecarFile.close();
+            }
+        }
+        // write to internal xmp (future enhancement?)
+        /*
+        if (ingestIncludeXmpSidecar && copyOk && metadata->writeMetadata(sourcePath, m, buffer)) {
             if (metadata->internalXmpFormats.contains(suffix)) {
                 // write xmp data into image file       rgh needs some work!!!
                 QFile newFile(destinationPath);
@@ -393,45 +493,27 @@ void IngestDlg::ingest()
                 qDebug() << __FUNCTION__ << bytesWritten << buffer.length();
                 newFile.close();
             }
-            else {
-                // write the sidecar xmp file
-                QFile sidecarFile(folderPath + destBaseName + ".xmp");
-                fileBytesToCopy += sidecarFile.size();
-                sidecarFile.open(QIODevice::WriteOnly);
-                sidecarFile.write(buffer);
-                sidecarFile.close();
-                if(isBackup) {
-                    QFile sidecarFile(folderPath2 + destBaseName + ".xmp");
-                    sidecarFile.open(QIODevice::WriteOnly);
-                    sidecarFile.write(buffer);
-                    sidecarFile.close();
-                }
-            }
         }
-        // no xmp data, just copy source to destination
-        else {
-            bool copyOk = QFile::copy(sourcePath, destinationPath);
-            if (!copyOk) {
-                qDebug() << __FUNCTION__ << "Failed to copy" << sourcePath << "to" << destinationPath;
-            }
-            if(isBackup) {
-                copyOk = QFile::copy(sourcePath, backupPath);
-                if (!copyOk) {
-                    qDebug() << __FUNCTION__ << "Failed to copy" << sourcePath << "to" << backupPath;
-                }
-            }
-        }
-        if (isBackup) fileBytesToCopy *= 2;
-        bytesCopied += fileBytesToCopy;
-        double MBPerSec = static_cast<double>(bytesCopied) / 1048.576 / t.elapsed();
-//        double gigibitsPerSec = static_cast<double>(bytesCopied) / 131072 / t.elapsed();
-        QString gbs = QString::number(MBPerSec, 'f', 1) + " MB/sec";
-        ui->gbsLabel->setText(gbs);
+        */
+
+        // stats
+        bytesWritten += fileBytesToWrite;
+        double MBPerSec = static_cast<double>(bytesWritten) / 1048.576 / static_cast<double>(t.elapsed());
+        QString s = QString::number(MBPerSec, 'f', 1) + " MB/sec";
+        ui->gbsLabel->setText(s);
     }
+    /*
     qDebug() << __FUNCTION__
              << "bytesCopied =" << bytesCopied
              << "msec =" << t.elapsed()
                 ;
+                // */
+    IngestErrors ingestErrors(failedToCopy, integrityFailure);
+    ingestErrors.exec();
+    // show write errors
+//    qDebug() << __FUNCTION__ << failedToCopy << integrityFailure;
+
+
     QDialog::accept();
 }
 
@@ -440,7 +522,7 @@ bool IngestDlg::parametersOk()
     if (G::isLogger) G::log(__FUNCTION__); 
     QString errStr;
     bool err = false;
-    bool backup = ui->backupChk->isChecked();
+//    bool backup = ui->backupChk->isChecked();
 
     if(isAuto) {
         if(rootFolderPath.length() == 0) {
@@ -448,7 +530,7 @@ bool IngestDlg::parametersOk()
             errStr = "The primary location root folder is undefined";
         }
 
-        if(backup) {
+        if(isBackup) {
             if(rootFolderPath2.length() == 0) {
                 err = true;
                 errStr += "\nThe backup location root folder is undefined";
@@ -470,7 +552,7 @@ bool IngestDlg::parametersOk()
             errStr = "The primary location folder is undefined";
         }
 
-        if(backup) {
+        if(isBackup) {
             if(manualFolderPath2.length() == 0) {
                 err = true;
                 errStr += "\nThe backup location folder is undefined";
@@ -927,21 +1009,20 @@ void IngestDlg::getAvailableStorageMB()
 /*
     Return how many MB available on the drive pointed that contains path.
 */
-    QString drive = folderPath.left(folderPath.indexOf("/"));
-    QString drive2 = folderPath2.left(folderPath2.indexOf("/"));
+    drive = folderPath.left(folderPath.indexOf("/"));
+    drive2 = folderPath2.left(folderPath2.indexOf("/"));
     QStorageInfo info;
 
     // destination drive
     info.setPath(drive);
-    qulonglong bytes = info.bytesAvailable();
+    qint64 bytes = info.bytesAvailable();
     availableMB = bytes / 1024 / 1024;
     QString s = drive + " " + Utilities::formatMemory(bytes);
     if (picksMB > availableMB) ui->drive->setStyleSheet("QLabel {color:red;}");
     ui->drive->setText(s);
 
     // backup drive
-    if (isBackup) {
-        ui->drive_2->setVisible(true);
+    if (drive2.length() > 0) {
         info.setPath(drive2);
         bytes = info.bytesAvailable();
         availableMB2 = bytes / 1024 / 1024;
@@ -949,7 +1030,7 @@ void IngestDlg::getAvailableStorageMB()
         if (picksMB > availableMB2) ui->drive_2->setStyleSheet("QLabel {color:red;}");
         ui->drive_2->setText(s);
     }
-    else ui->drive_2->setVisible(false);
+    ui->drive_2->setVisible(isBackup);
 }
 
 void IngestDlg::updateEnabledState()
@@ -1242,6 +1323,12 @@ void IngestDlg::on_ejectChk_stateChanged(int /*arg1*/)
     autoEjectUsb = ui->ejectChk->isChecked();
 }
 
+void IngestDlg::on_integrityChk_stateChanged(int /*arg1*/)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    integrityCheck = ui->integrityChk->isChecked();
+}
+
 void IngestDlg::on_includeXmpChk_stateChanged(int /*arg1*/)
 {
     if (G::isLogger) G::log(__FUNCTION__);
@@ -1252,13 +1339,16 @@ void IngestDlg::on_backupChk_stateChanged(int arg1)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     isBackup = arg1;
+    getAvailableStorageMB();
+    qDebug() << __FUNCTION__ << isBackup;
 }
 
 void IngestDlg::on_isBackupChkBox_stateChanged(int arg1)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     isBackup = arg1;
-    qDebug() << "IngestDlg::on_isBackupChkBox_stateChanged  isBackup =" << isBackup;
+    qDebug() << __FUNCTION__ << isBackup;
+    ui->drive_2->setVisible(true);
 }
 
 void IngestDlg::on_helpBtn_clicked()
@@ -1418,3 +1508,4 @@ void IngestDlg::moveEvent(QMoveEvent *event)
     fontSize();
     QDialog::moveEvent(event);
 }
+

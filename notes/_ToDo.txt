@@ -1,4 +1,5 @@
 BUGS / TO DO
+- Filters not working sometimes
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow
 - Sometimes crash when export from LR to winnets

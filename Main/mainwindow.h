@@ -220,6 +220,7 @@ public:
     bool combineRawJpg;
     bool autoIngestFolderPath;
     bool autoEjectUsb;
+    bool integrityCheck;
     bool ingestIncludeXmpSidecar;
     bool backupIngest;
     bool gotoIngestFolder;
