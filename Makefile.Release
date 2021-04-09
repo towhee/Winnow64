@@ -51,6 +51,7 @@ OBJECTS_DIR   = release\.obj
 ####### Files
 
 SOURCES       = Cache\imagecache.cpp \
+		Dialogs\ingesterrors.cpp \
 		Dialogs\managegraphicsdlg.cpp \
 		Dialogs\manageimagesdlg.cpp \
 		Utilities\foldercompressor.cpp \
@@ -137,6 +138,7 @@ SOURCES       = Cache\imagecache.cpp \
 		Views\tableview.cpp \
 		Views\infostring.cpp release\.rcc\qrc_winnow.cpp \
 		release\.moc\moc_imagecache.cpp \
+		release\.moc\moc_ingesterrors.cpp \
 		release\.moc\moc_managegraphicsdlg.cpp \
 		release\.moc\moc_manageimagesdlg.cpp \
 		release\.moc\moc_foldercompressor.cpp \
@@ -203,6 +205,7 @@ SOURCES       = Cache\imagecache.cpp \
 		release\.moc\moc_infoview.cpp \
 		release\.moc\moc_tableview.cpp
 OBJECTS       = release\.obj\imagecache.obj \
+		release\.obj\ingesterrors.obj \
 		release\.obj\managegraphicsdlg.obj \
 		release\.obj\manageimagesdlg.obj \
 		release\.obj\foldercompressor.obj \
@@ -290,6 +293,7 @@ OBJECTS       = release\.obj\imagecache.obj \
 		release\.obj\infostring.obj \
 		release\.obj\qrc_winnow.obj \
 		release\.obj\moc_imagecache.obj \
+		release\.obj\moc_ingesterrors.obj \
 		release\.obj\moc_managegraphicsdlg.obj \
 		release\.obj\moc_manageimagesdlg.obj \
 		release\.obj\moc_foldercompressor.obj \
@@ -378,6 +382,7 @@ DIST          = Docs/ingestautopath \
 		notes/snippets.txt \
 		notes/users.txt \
 		notes/xmp.txt Cache\imagecache.h \
+		Dialogs\ingesterrors.h \
 		Dialogs\managegraphicsdlg.h \
 		Dialogs\manageimagesdlg.h \
 		Utilities\foldercompressor.h \
@@ -469,6 +474,7 @@ DIST          = Docs/ingestautopath \
 		Views\infostring.h \
 		Views\infoview.h \
 		Views\tableview.h Cache\imagecache.cpp \
+		Dialogs\ingesterrors.cpp \
 		Dialogs\managegraphicsdlg.cpp \
 		Dialogs\manageimagesdlg.cpp \
 		Utilities\foldercompressor.cpp \
@@ -1108,13 +1114,13 @@ DESTDIR_TARGET = release\Winnow.exe
 first: all
 all: Makefile.Release  release\Winnow.exe
 
-release\Winnow.exe: C:\Qt\5.15.2\msvc2019_64\lib\Qt5Widgets.lib C:\Qt\5.15.2\msvc2019_64\lib\Qt5Gui.lib C:\Qt\5.15.2\msvc2019_64\lib\Qt5Concurrent.lib C:\Qt\5.15.2\msvc2019_64\lib\Qt5XmlPatterns.lib C:\Qt\5.15.2\msvc2019_64\lib\Qt5Network.lib C:\Qt\5.15.2\msvc2019_64\lib\Qt5Core.lib C:\Qt\5.15.2\msvc2019_64\lib\qtmain.lib release\.ui\ui_aboutdlg.h release\.ui\ui_managegraphicsdlg.h release\.ui\ui_manageimagesdlg.h release\.ui\ui_aligndlg.h release\.ui\ui_appdlg.h release\.ui\ui_copystyledlg.h release\.ui\ui_embelCoord.h release\.ui\ui_ingestdlg.h release\.ui\ui_inputdlg.h release\.ui\ui_loadusbdlg.h release\.ui\ui_managetilesdlg.h release\.ui\ui_patterndlg.h release\.ui\ui_renamedlg.h release\.ui\ui_saveasdlg.h release\.ui\ui_testaligndlg.h release\.ui\ui_testdlg.h release\.ui\ui_test1.h release\.ui\ui_test12.h release\.ui\ui_tokendlg.h release\.ui\ui_updateapp.h release\.ui\ui_workspacedlg.h release\.ui\ui_zoomdlg.h release\.ui\ui_helpform.h release\.ui\ui_helpingest.h release\.ui\ui_ingestautopath.h release\.ui\ui_introduction.h release\.ui\ui_message.h release\.ui\ui_shortcutsform.h release\.ui\ui_welcome.h release\.ui\ui_metadatareport.h $(OBJECTS) release\.obj\Winnow_resource.res
+release\Winnow.exe: C:\Qt\5.15.2\msvc2019_64\lib\Qt5Widgets.lib C:\Qt\5.15.2\msvc2019_64\lib\Qt5Gui.lib C:\Qt\5.15.2\msvc2019_64\lib\Qt5Concurrent.lib C:\Qt\5.15.2\msvc2019_64\lib\Qt5XmlPatterns.lib C:\Qt\5.15.2\msvc2019_64\lib\Qt5Network.lib C:\Qt\5.15.2\msvc2019_64\lib\Qt5Core.lib C:\Qt\5.15.2\msvc2019_64\lib\qtmain.lib release\.ui\ui_aboutdlg.h release\.ui\ui_ingesterrors.h release\.ui\ui_managegraphicsdlg.h release\.ui\ui_manageimagesdlg.h release\.ui\ui_aligndlg.h release\.ui\ui_appdlg.h release\.ui\ui_copystyledlg.h release\.ui\ui_embelCoord.h release\.ui\ui_ingestdlg.h release\.ui\ui_inputdlg.h release\.ui\ui_loadusbdlg.h release\.ui\ui_managetilesdlg.h release\.ui\ui_patterndlg.h release\.ui\ui_renamedlg.h release\.ui\ui_saveasdlg.h release\.ui\ui_testaligndlg.h release\.ui\ui_testdlg.h release\.ui\ui_test1.h release\.ui\ui_test12.h release\.ui\ui_tokendlg.h release\.ui\ui_updateapp.h release\.ui\ui_workspacedlg.h release\.ui\ui_zoomdlg.h release\.ui\ui_helpform.h release\.ui\ui_helpingest.h release\.ui\ui_ingestautopath.h release\.ui\ui_introduction.h release\.ui\ui_message.h release\.ui\ui_shortcutsform.h release\.ui\ui_welcome.h release\.ui\ui_metadatareport.h $(OBJECTS) release\.obj\Winnow_resource.res
 	$(LINKER) $(LFLAGS) /MANIFEST:embed /OUT:$(DESTDIR_TARGET) @<<
-release\.obj\imagecache.obj release\.obj\managegraphicsdlg.obj release\.obj\manageimagesdlg.obj release\.obj\foldercompressor.obj release\.obj\mdcache.obj release\.obj\buildfilters.obj release\.obj\datamodel.obj release\.obj\filters.obj release\.obj\aboutdlg.obj release\.obj\appdlg.obj release\.obj\copystyledlg.obj release\.obj\ingestdlg.obj release\.obj\loadusbdlg.obj release\.obj\managetilesdlg.obj release\.obj\patterndlg.obj release\.obj\preferencesdlg.obj release\.obj\renamedlg.obj release\.obj\saveasdlg.obj release\.obj\testaligndlg.obj release\.obj\tokendlg.obj release\.obj\updateapp.obj release\.obj\workspacedlg.obj release\.obj\zoomdlg.obj release\.obj\effects.obj release\.obj\graphicseffect.obj release\.obj\graphicsitemeventfilter.obj release\.obj\embel.obj release\.obj\embelproperties.obj release\.obj\embelexport.obj release\.obj\bookmarks.obj release\.obj\fstree.obj release\.obj\imagealign.obj release\.obj\pixmap.obj release\.obj\thumb.obj release\.obj\canon.obj
-release\.obj\canoncr3.obj release\.obj\dng.obj release\.obj\fuji.obj release\.obj\Heic.obj release\.obj\jpeg.obj release\.obj\nikon.obj release\.obj\olympus.obj release\.obj\panasonic.obj release\.obj\sony.obj release\.obj\tiff.obj release\.obj\dockwidget.obj release\.obj\global.obj release\.obj\main.obj release\.obj\mainwindow.obj release\.obj\qtlocalpeer.obj release\.obj\qtsingleapplication.obj release\.obj\widgetcss.obj release\.obj\exif.obj release\.obj\exiftool.obj release\.obj\irb.obj release\.obj\gps.obj release\.obj\ifd.obj release\.obj\iptc.obj release\.obj\metadata.obj release\.obj\metareport.obj release\.obj\xmp.obj release\.obj\preferences.obj release\.obj\propertyeditor.obj release\.obj\propertydelegate.obj release\.obj\propertywidgets.obj release\.obj\bit.obj release\.obj\classificationlabel.obj release\.obj\coloranalysis.obj release\.obj\dropshadowlabel.obj release\.obj\htmlwindow.obj release\.obj\icc.obj release\.obj\inputdlg.obj release\.obj\performance.obj
-release\.obj\popup.obj release\.obj\progressbar.obj release\.obj\usb.obj release\.obj\utilities.obj release\.obj\win.obj release\.obj\compareImages.obj release\.obj\compareview.obj release\.obj\iconview.obj release\.obj\iconviewdelegate.obj release\.obj\imageview.obj release\.obj\infoview.obj release\.obj\tableview.obj release\.obj\infostring.obj release\.obj\qrc_winnow.obj release\.obj\moc_imagecache.obj release\.obj\moc_managegraphicsdlg.obj release\.obj\moc_manageimagesdlg.obj release\.obj\moc_foldercompressor.obj release\.obj\moc_mdcache.obj release\.obj\moc_buildfilters.obj release\.obj\moc_datamodel.obj release\.obj\moc_filters.obj release\.obj\moc_aboutdlg.obj release\.obj\moc_appdlg.obj release\.obj\moc_copystyledlg.obj release\.obj\moc_ingestdlg.obj release\.obj\moc_loadusbdlg.obj release\.obj\moc_managetilesdlg.obj release\.obj\moc_patterndlg.obj release\.obj\moc_preferencesdlg.obj release\.obj\moc_renamedlg.obj release\.obj\moc_saveasdlg.obj release\.obj\moc_testaligndlg.obj
-release\.obj\moc_workspacedlg.obj release\.obj\moc_tokendlg.obj release\.obj\moc_updateapp.obj release\.obj\moc_zoomdlg.obj release\.obj\moc_graphicseffect.obj release\.obj\moc_embel.obj release\.obj\moc_embelexport.obj release\.obj\moc_embelproperties.obj release\.obj\moc_bookmarks.obj release\.obj\moc_fstree.obj release\.obj\moc_imagealign.obj release\.obj\moc_pixmap.obj release\.obj\moc_thumb.obj release\.obj\moc_canon.obj release\.obj\moc_heic.obj release\.obj\moc_jpeg.obj release\.obj\moc_nikon.obj release\.obj\moc_olympus.obj release\.obj\moc_panasonic.obj release\.obj\moc_sony.obj release\.obj\moc_tiff.obj release\.obj\moc_dockwidget.obj release\.obj\moc_mainwindow.obj release\.obj\moc_qtlocalpeer.obj release\.obj\moc_qtsingleapplication.obj release\.obj\moc_exiftool.obj release\.obj\moc_metadata.obj release\.obj\moc_xmp.obj release\.obj\moc_preferences.obj release\.obj\moc_propertyeditor.obj release\.obj\moc_propertydelegate.obj release\.obj\moc_propertywidgets.obj
-release\.obj\moc_classificationlabel.obj release\.obj\moc_coloranalysis.obj release\.obj\moc_dropshadowlabel.obj release\.obj\moc_htmlwindow.obj release\.obj\moc_inputdlg.obj release\.obj\moc_popup.obj release\.obj\moc_progressbar.obj release\.obj\moc_compareImages.obj release\.obj\moc_compareview.obj release\.obj\moc_iconview.obj release\.obj\moc_iconviewdelegate.obj release\.obj\moc_imageview.obj release\.obj\moc_infostring.obj release\.obj\moc_infoview.obj release\.obj\moc_tableview.obj
+release\.obj\imagecache.obj release\.obj\ingesterrors.obj release\.obj\managegraphicsdlg.obj release\.obj\manageimagesdlg.obj release\.obj\foldercompressor.obj release\.obj\mdcache.obj release\.obj\buildfilters.obj release\.obj\datamodel.obj release\.obj\filters.obj release\.obj\aboutdlg.obj release\.obj\appdlg.obj release\.obj\copystyledlg.obj release\.obj\ingestdlg.obj release\.obj\loadusbdlg.obj release\.obj\managetilesdlg.obj release\.obj\patterndlg.obj release\.obj\preferencesdlg.obj release\.obj\renamedlg.obj release\.obj\saveasdlg.obj release\.obj\testaligndlg.obj release\.obj\tokendlg.obj release\.obj\updateapp.obj release\.obj\workspacedlg.obj release\.obj\zoomdlg.obj release\.obj\effects.obj release\.obj\graphicseffect.obj release\.obj\graphicsitemeventfilter.obj release\.obj\embel.obj release\.obj\embelproperties.obj release\.obj\embelexport.obj release\.obj\bookmarks.obj release\.obj\fstree.obj release\.obj\imagealign.obj release\.obj\pixmap.obj release\.obj\thumb.obj
+release\.obj\canon.obj release\.obj\canoncr3.obj release\.obj\dng.obj release\.obj\fuji.obj release\.obj\Heic.obj release\.obj\jpeg.obj release\.obj\nikon.obj release\.obj\olympus.obj release\.obj\panasonic.obj release\.obj\sony.obj release\.obj\tiff.obj release\.obj\dockwidget.obj release\.obj\global.obj release\.obj\main.obj release\.obj\mainwindow.obj release\.obj\qtlocalpeer.obj release\.obj\qtsingleapplication.obj release\.obj\widgetcss.obj release\.obj\exif.obj release\.obj\exiftool.obj release\.obj\irb.obj release\.obj\gps.obj release\.obj\ifd.obj release\.obj\iptc.obj release\.obj\metadata.obj release\.obj\metareport.obj release\.obj\xmp.obj release\.obj\preferences.obj release\.obj\propertyeditor.obj release\.obj\propertydelegate.obj release\.obj\propertywidgets.obj release\.obj\bit.obj release\.obj\classificationlabel.obj release\.obj\coloranalysis.obj release\.obj\dropshadowlabel.obj release\.obj\htmlwindow.obj release\.obj\icc.obj release\.obj\inputdlg.obj
+release\.obj\performance.obj release\.obj\popup.obj release\.obj\progressbar.obj release\.obj\usb.obj release\.obj\utilities.obj release\.obj\win.obj release\.obj\compareImages.obj release\.obj\compareview.obj release\.obj\iconview.obj release\.obj\iconviewdelegate.obj release\.obj\imageview.obj release\.obj\infoview.obj release\.obj\tableview.obj release\.obj\infostring.obj release\.obj\qrc_winnow.obj release\.obj\moc_imagecache.obj release\.obj\moc_ingesterrors.obj release\.obj\moc_managegraphicsdlg.obj release\.obj\moc_manageimagesdlg.obj release\.obj\moc_foldercompressor.obj release\.obj\moc_mdcache.obj release\.obj\moc_buildfilters.obj release\.obj\moc_datamodel.obj release\.obj\moc_filters.obj release\.obj\moc_aboutdlg.obj release\.obj\moc_appdlg.obj release\.obj\moc_copystyledlg.obj release\.obj\moc_ingestdlg.obj release\.obj\moc_loadusbdlg.obj release\.obj\moc_managetilesdlg.obj release\.obj\moc_patterndlg.obj release\.obj\moc_preferencesdlg.obj release\.obj\moc_renamedlg.obj
+release\.obj\moc_saveasdlg.obj release\.obj\moc_testaligndlg.obj release\.obj\moc_workspacedlg.obj release\.obj\moc_tokendlg.obj release\.obj\moc_updateapp.obj release\.obj\moc_zoomdlg.obj release\.obj\moc_graphicseffect.obj release\.obj\moc_embel.obj release\.obj\moc_embelexport.obj release\.obj\moc_embelproperties.obj release\.obj\moc_bookmarks.obj release\.obj\moc_fstree.obj release\.obj\moc_imagealign.obj release\.obj\moc_pixmap.obj release\.obj\moc_thumb.obj release\.obj\moc_canon.obj release\.obj\moc_heic.obj release\.obj\moc_jpeg.obj release\.obj\moc_nikon.obj release\.obj\moc_olympus.obj release\.obj\moc_panasonic.obj release\.obj\moc_sony.obj release\.obj\moc_tiff.obj release\.obj\moc_dockwidget.obj release\.obj\moc_mainwindow.obj release\.obj\moc_qtlocalpeer.obj release\.obj\moc_qtsingleapplication.obj release\.obj\moc_exiftool.obj release\.obj\moc_metadata.obj release\.obj\moc_xmp.obj release\.obj\moc_preferences.obj release\.obj\moc_propertyeditor.obj
+release\.obj\moc_propertydelegate.obj release\.obj\moc_propertywidgets.obj release\.obj\moc_classificationlabel.obj release\.obj\moc_coloranalysis.obj release\.obj\moc_dropshadowlabel.obj release\.obj\moc_htmlwindow.obj release\.obj\moc_inputdlg.obj release\.obj\moc_popup.obj release\.obj\moc_progressbar.obj release\.obj\moc_compareImages.obj release\.obj\moc_compareview.obj release\.obj\moc_iconview.obj release\.obj\moc_iconviewdelegate.obj release\.obj\moc_imageview.obj release\.obj\moc_infostring.obj release\.obj\moc_infoview.obj release\.obj\moc_tableview.obj
 $(LIBS)
 <<
 
@@ -1127,12 +1133,12 @@ qmake: FORCE
 qmake_all: FORCE
 
 dist:
-	$(ZIP) Winnow.zip $(SOURCES) $(DIST) winnow64.pro C:\Qt\5.15.2\msvc2019_64\mkspecs\features\spec_pre.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\common\angle.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\common\windows-desktop.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\win32\windows_vulkan_sdk.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\common\windows-vulkan.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\common\msvc-desktop.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\qconfig.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3danimation.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3danimation_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dcore.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dcore_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dextras.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dextras_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dinput.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dinput_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dlogic.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dlogic_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquick.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquick_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickanimation.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickanimation_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickextras.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickextras_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickinput.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickinput_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickrender.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickrender_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickscene2d.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickscene2d_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3drender.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3drender_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_accessibility_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axbase.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axbase_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axcontainer.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axcontainer_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axserver.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axserver_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_bluetooth.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_bluetooth_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_bootstrap_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_concurrent.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_concurrent_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_core.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_core_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_dbus.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_dbus_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_designer.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_designer_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_designercomponents_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_devicediscovery_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_edid_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_egl_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_eventdispatcher_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_fb_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_fontdatabase_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_gamepad.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_gamepad_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_gui.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_gui_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_help.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_help_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_location.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_location_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_multimedia.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_multimedia_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_multimediawidgets.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_multimediawidgets_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_network.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_network_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_nfc.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_nfc_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_opengl.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_opengl_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_openglextensions.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_openglextensions_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_packetprotocol_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_platformcompositor_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_positioning.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_positioning_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_positioningquick.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_positioningquick_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_printsupport.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_printsupport_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qml.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qml_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmldebug_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmldevtools_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmlmodels.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmlmodels_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmltest.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmltest_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmlworkerscript.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmlworkerscript_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qtmultimediaquicktools_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quick.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quick_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickcontrols2.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickcontrols2_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickparticles_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickshapes_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quicktemplates2.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quicktemplates2_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickwidgets.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickwidgets_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_remoteobjects.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_remoteobjects_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_repparser.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_repparser_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_scxml.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_scxml_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_sensors.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_sensors_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_serialbus.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_serialbus_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_serialport.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_serialport_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_sql.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_sql_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_svg.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_svg_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_testlib.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_testlib_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_texttospeech.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_texttospeech_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_theme_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_uiplugin.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_uitools.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_uitools_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_vulkan_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_webchannel.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_webchannel_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_websockets.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_websockets_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_webview.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_webview_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_widgets.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_widgets_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_windowsuiautomation_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_winextras.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_winextras_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_xml.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_xml_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_xmlpatterns.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_xmlpatterns_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_zlib_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\features\qt_functions.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\qt_config.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\win32-msvc\qmake.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\spec_post.prf .qmake.stash C:\Qt\5.15.2\msvc2019_64\mkspecs\features\exclusive_builds.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\common\msvc-version.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\toolchain.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\default_pre.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\win32\default_pre.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\resolve_config.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\exclusive_builds_post.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\default_post.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\build_pass.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\qtquickcompiler.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\precompile_header.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\warn_on.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\qt.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\resources_functions.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\resources.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\moc.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\win32\opengl.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\uic.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\qmake_use.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\file_copies.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\win32\windows.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\testcase_targets.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\exceptions.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\yacc.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\lex.prf winnow64.pro winnow.qrc C:\Qt\5.15.2\msvc2019_64\lib\Qt5Widgets.prl C:\Qt\5.15.2\msvc2019_64\lib\Qt5Gui.prl C:\Qt\5.15.2\msvc2019_64\lib\Qt5Concurrent.prl C:\Qt\5.15.2\msvc2019_64\lib\Qt5XmlPatterns.prl C:\Qt\5.15.2\msvc2019_64\lib\Qt5Network.prl C:\Qt\5.15.2\msvc2019_64\lib\Qt5Core.prl C:\Qt\5.15.2\msvc2019_64\lib\qtmain.prl   winnow.qrc C:\Qt\5.15.2\msvc2019_64\mkspecs\features\data\dummy.cpp Cache\imagecache.h Dialogs\managegraphicsdlg.h Dialogs\manageimagesdlg.h Utilities\foldercompressor.h Cache\mdcache.h Cache\tshash.h Datamodel\buildfilters.h Datamodel\datamodel.h Datamodel\filters.h Dialogs\aboutdlg.h Dialogs\appdlg.h Dialogs\copystyledlg.h Dialogs\ingestdlg.h Dialogs\loadusbdlg.h Dialogs\managetilesdlg.h Dialogs\patterndlg.h Dialogs\preferencesdlg.h Dialogs\renamedlg.h Dialogs\saveasdlg.h Dialogs\testaligndlg.h Dialogs\workspacedlg.h Dialogs\tokendlg.h Dialogs\updateapp.h Dialogs\zoomdlg.h Effects\effects.h Effects\graphicseffect.h Embellish\embel.h Effects\graphicsitemeventfilter.h Effects\interpolate.h Effects\REF_imageblitz_effects.h Embellish\embelexport.h Embellish\Properties\embelproperties.h File\bookmarks.h File\fstree.h Image\imagealign.h Image\pixmap.h Image\thumb.h ImageFormats\Canon\canon.h ImageFormats\Canon\canoncr3.h ImageFormats\Dng\dng.h ImageFormats\Fuji\fuji.h ImageFormats\Heic\heic.h ImageFormats\Heic\heif.h ImageFormats\Heic\de265.h ImageFormats\Jpeg\jpeg.h ImageFormats\Nikon\nikon.h ImageFormats\Olympus\olympus.h ImageFormats\Panasonic\panasonic.h ImageFormats\Sony\sony.h ImageFormats\Tiff\tiff.h Main\dockwidget.h Main\global.h Main\mainwindow.h Main\qtlocalpeer.h Main\qtlockedfile.h Main\qtsingleapplication.h Main\widgetcss.h Metadata\exif.h Metadata\exiftool.h Metadata\irb.h Metadata\gps.h Metadata\ifd.h Metadata\iptc.h Metadata\imagemetadata.h Metadata\metadata.h Metadata\metareport.h Metadata\xmp.h PropertyEditor\preferences.h PropertyEditor\propertyeditor.h PropertyEditor\propertydelegate.h PropertyEditor\propertywidgets.h Utilities\bit.h Utilities\classificationlabel.h Utilities\coloranalysis.h Utilities\dropshadowlabel.h Utilities\htmlwindow.h Utilities\icc.h Utilities\inputdlg.h Utilities\performance.h Utilities\popup.h Utilities\progressbar.h Utilities\usb.h Utilities\utilities.h Utilities\win.h Views\compareImages.h Views\compareview.h Views\iconview.h Views\iconviewdelegate.h Views\imageview.h Views\infostring.h Views\infoview.h Views\tableview.h  Cache\imagecache.cpp Dialogs\managegraphicsdlg.cpp Dialogs\manageimagesdlg.cpp Utilities\foldercompressor.cpp Cache\mdcache.cpp Datamodel\buildfilters.cpp Datamodel\datamodel.cpp Datamodel\filters.cpp Dialogs\aboutdlg.cpp Dialogs\appdlg.cpp Dialogs\copystyledlg.cpp Dialogs\ingestdlg.cpp Dialogs\loadusbdlg.cpp Dialogs\managetilesdlg.cpp Dialogs\patterndlg.cpp Dialogs\preferencesdlg.cpp Dialogs\renamedlg.cpp Dialogs\saveasdlg.cpp Dialogs\testaligndlg.cpp Dialogs\tokendlg.cpp Dialogs\updateapp.cpp Dialogs\workspacedlg.cpp Dialogs\zoomdlg.cpp Effects\effects.cpp Effects\graphicseffect.cpp Effects\graphicsitemeventfilter.cpp Embellish\embel.cpp Embellish\Properties\embelproperties.cpp Embellish\embelexport.cpp File\bookmarks.cpp File\fstree.cpp Image\imagealign.cpp Image\pixmap.cpp Image\thumb.cpp ImageFormats\Canon\canon.cpp ImageFormats\Canon\canoncr3.cpp ImageFormats\Dng\dng.cpp ImageFormats\Fuji\fuji.cpp ImageFormats\Heic\Heic.cpp ImageFormats\jpeg\jpeg.cpp ImageFormats\Nikon\nikon.cpp ImageFormats\Olympus\olympus.cpp ImageFormats\Panasonic\panasonic.cpp ImageFormats\Sony\sony.cpp ImageFormats\Tiff\tiff.cpp Main\dockwidget.cpp Main\global.cpp Main\main.cpp Main\mainwindow.cpp Main\qtlocalpeer.cpp Main\qtsingleapplication.cpp Main\widgetcss.cpp Metadata\exif.cpp Metadata\exiftool.cpp Metadata\irb.cpp Metadata\gps.cpp Metadata\ifd.cpp Metadata\iptc.cpp Metadata\metadata.cpp Metadata\metareport.cpp Metadata\xmp.cpp PropertyEditor\preferences.cpp PropertyEditor\propertyeditor.cpp PropertyEditor\propertydelegate.cpp PropertyEditor\propertywidgets.cpp Utilities\bit.cpp Utilities\classificationlabel.cpp Utilities\coloranalysis.cpp Utilities\dropshadowlabel.cpp Utilities\htmlwindow.cpp Utilities\icc.cpp Utilities\inputdlg.cpp Utilities\performance.cpp Utilities\popup.cpp Utilities\progressbar.cpp Utilities\usb.cpp Utilities\utilities.cpp Utilities\win.cpp Views\compareImages.cpp Views\compareview.cpp Views\iconview.cpp Views\iconviewdelegate.cpp Views\imageview.cpp Views\infoview.cpp Views\tableview.cpp Views\infostring.cpp Dialogs\aboutdlg.ui Dialogs\managegraphicsdlg.ui Dialogs\manageimagesdlg.ui Dialogs\aligndlg.ui Dialogs\appdlg.ui Dialogs\copystyledlg.ui Embellish\embelCoord.ui Dialogs\ingestdlg.ui Utilities\inputdlg.ui Dialogs\loadusbdlg.ui Dialogs\managetilesdlg.ui Dialogs\patterndlg.ui Dialogs\renamedlg.ui Dialogs\saveasdlg.ui Dialogs\testaligndlg.ui Dialogs\testdlg.ui Dialogs\test1.ui Dialogs\test12.ui Dialogs\tokendlg.ui Dialogs\updateapp.ui Dialogs\workspacedlg.ui Dialogs\zoomdlg.ui Help\helpform.ui Help\helpingest.ui Help\ingestautopath.ui Help\introduction.ui Help\message.ui Help\shortcutsform.ui Help\welcome.ui Metadata\metadatareport.ui    
+	$(ZIP) Winnow.zip $(SOURCES) $(DIST) winnow64.pro C:\Qt\5.15.2\msvc2019_64\mkspecs\features\spec_pre.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\common\angle.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\common\windows-desktop.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\win32\windows_vulkan_sdk.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\common\windows-vulkan.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\common\msvc-desktop.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\qconfig.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3danimation.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3danimation_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dcore.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dcore_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dextras.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dextras_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dinput.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dinput_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dlogic.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dlogic_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquick.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquick_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickanimation.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickanimation_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickextras.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickextras_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickinput.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickinput_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickrender.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickrender_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickscene2d.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3dquickscene2d_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3drender.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_3drender_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_accessibility_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axbase.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axbase_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axcontainer.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axcontainer_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axserver.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_axserver_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_bluetooth.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_bluetooth_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_bootstrap_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_concurrent.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_concurrent_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_core.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_core_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_dbus.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_dbus_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_designer.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_designer_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_designercomponents_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_devicediscovery_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_edid_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_egl_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_eventdispatcher_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_fb_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_fontdatabase_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_gamepad.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_gamepad_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_gui.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_gui_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_help.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_help_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_location.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_location_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_multimedia.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_multimedia_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_multimediawidgets.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_multimediawidgets_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_network.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_network_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_nfc.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_nfc_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_opengl.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_opengl_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_openglextensions.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_openglextensions_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_packetprotocol_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_platformcompositor_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_positioning.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_positioning_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_positioningquick.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_positioningquick_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_printsupport.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_printsupport_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qml.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qml_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmldebug_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmldevtools_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmlmodels.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmlmodels_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmltest.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmltest_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmlworkerscript.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qmlworkerscript_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_qtmultimediaquicktools_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quick.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quick_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickcontrols2.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickcontrols2_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickparticles_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickshapes_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quicktemplates2.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quicktemplates2_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickwidgets.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_quickwidgets_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_remoteobjects.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_remoteobjects_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_repparser.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_repparser_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_scxml.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_scxml_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_sensors.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_sensors_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_serialbus.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_serialbus_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_serialport.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_serialport_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_sql.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_sql_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_svg.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_svg_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_testlib.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_testlib_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_texttospeech.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_texttospeech_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_theme_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_uiplugin.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_uitools.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_uitools_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_vulkan_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_webchannel.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_webchannel_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_websockets.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_websockets_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_webview.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_webview_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_widgets.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_widgets_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_windowsuiautomation_support_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_winextras.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_winextras_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_xml.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_xml_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_xmlpatterns.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_xmlpatterns_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\modules\qt_lib_zlib_private.pri C:\Qt\5.15.2\msvc2019_64\mkspecs\features\qt_functions.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\qt_config.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\win32-msvc\qmake.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\spec_post.prf .qmake.stash C:\Qt\5.15.2\msvc2019_64\mkspecs\features\exclusive_builds.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\common\msvc-version.conf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\toolchain.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\default_pre.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\win32\default_pre.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\resolve_config.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\exclusive_builds_post.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\default_post.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\build_pass.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\qtquickcompiler.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\precompile_header.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\warn_on.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\qt.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\resources_functions.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\resources.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\moc.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\win32\opengl.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\uic.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\qmake_use.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\file_copies.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\win32\windows.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\testcase_targets.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\exceptions.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\yacc.prf C:\Qt\5.15.2\msvc2019_64\mkspecs\features\lex.prf winnow64.pro winnow.qrc C:\Qt\5.15.2\msvc2019_64\lib\Qt5Widgets.prl C:\Qt\5.15.2\msvc2019_64\lib\Qt5Gui.prl C:\Qt\5.15.2\msvc2019_64\lib\Qt5Concurrent.prl C:\Qt\5.15.2\msvc2019_64\lib\Qt5XmlPatterns.prl C:\Qt\5.15.2\msvc2019_64\lib\Qt5Network.prl C:\Qt\5.15.2\msvc2019_64\lib\Qt5Core.prl C:\Qt\5.15.2\msvc2019_64\lib\qtmain.prl   winnow.qrc C:\Qt\5.15.2\msvc2019_64\mkspecs\features\data\dummy.cpp Cache\imagecache.h Dialogs\ingesterrors.h Dialogs\managegraphicsdlg.h Dialogs\manageimagesdlg.h Utilities\foldercompressor.h Cache\mdcache.h Cache\tshash.h Datamodel\buildfilters.h Datamodel\datamodel.h Datamodel\filters.h Dialogs\aboutdlg.h Dialogs\appdlg.h Dialogs\copystyledlg.h Dialogs\ingestdlg.h Dialogs\loadusbdlg.h Dialogs\managetilesdlg.h Dialogs\patterndlg.h Dialogs\preferencesdlg.h Dialogs\renamedlg.h Dialogs\saveasdlg.h Dialogs\testaligndlg.h Dialogs\workspacedlg.h Dialogs\tokendlg.h Dialogs\updateapp.h Dialogs\zoomdlg.h Effects\effects.h Effects\graphicseffect.h Embellish\embel.h Effects\graphicsitemeventfilter.h Effects\interpolate.h Effects\REF_imageblitz_effects.h Embellish\embelexport.h Embellish\Properties\embelproperties.h File\bookmarks.h File\fstree.h Image\imagealign.h Image\pixmap.h Image\thumb.h ImageFormats\Canon\canon.h ImageFormats\Canon\canoncr3.h ImageFormats\Dng\dng.h ImageFormats\Fuji\fuji.h ImageFormats\Heic\heic.h ImageFormats\Heic\heif.h ImageFormats\Heic\de265.h ImageFormats\Jpeg\jpeg.h ImageFormats\Nikon\nikon.h ImageFormats\Olympus\olympus.h ImageFormats\Panasonic\panasonic.h ImageFormats\Sony\sony.h ImageFormats\Tiff\tiff.h Main\dockwidget.h Main\global.h Main\mainwindow.h Main\qtlocalpeer.h Main\qtlockedfile.h Main\qtsingleapplication.h Main\widgetcss.h Metadata\exif.h Metadata\exiftool.h Metadata\irb.h Metadata\gps.h Metadata\ifd.h Metadata\iptc.h Metadata\imagemetadata.h Metadata\metadata.h Metadata\metareport.h Metadata\xmp.h PropertyEditor\preferences.h PropertyEditor\propertyeditor.h PropertyEditor\propertydelegate.h PropertyEditor\propertywidgets.h Utilities\bit.h Utilities\classificationlabel.h Utilities\coloranalysis.h Utilities\dropshadowlabel.h Utilities\htmlwindow.h Utilities\icc.h Utilities\inputdlg.h Utilities\performance.h Utilities\popup.h Utilities\progressbar.h Utilities\usb.h Utilities\utilities.h Utilities\win.h Views\compareImages.h Views\compareview.h Views\iconview.h Views\iconviewdelegate.h Views\imageview.h Views\infostring.h Views\infoview.h Views\tableview.h  Cache\imagecache.cpp Dialogs\ingesterrors.cpp Dialogs\managegraphicsdlg.cpp Dialogs\manageimagesdlg.cpp Utilities\foldercompressor.cpp Cache\mdcache.cpp Datamodel\buildfilters.cpp Datamodel\datamodel.cpp Datamodel\filters.cpp Dialogs\aboutdlg.cpp Dialogs\appdlg.cpp Dialogs\copystyledlg.cpp Dialogs\ingestdlg.cpp Dialogs\loadusbdlg.cpp Dialogs\managetilesdlg.cpp Dialogs\patterndlg.cpp Dialogs\preferencesdlg.cpp Dialogs\renamedlg.cpp Dialogs\saveasdlg.cpp Dialogs\testaligndlg.cpp Dialogs\tokendlg.cpp Dialogs\updateapp.cpp Dialogs\workspacedlg.cpp Dialogs\zoomdlg.cpp Effects\effects.cpp Effects\graphicseffect.cpp Effects\graphicsitemeventfilter.cpp Embellish\embel.cpp Embellish\Properties\embelproperties.cpp Embellish\embelexport.cpp File\bookmarks.cpp File\fstree.cpp Image\imagealign.cpp Image\pixmap.cpp Image\thumb.cpp ImageFormats\Canon\canon.cpp ImageFormats\Canon\canoncr3.cpp ImageFormats\Dng\dng.cpp ImageFormats\Fuji\fuji.cpp ImageFormats\Heic\Heic.cpp ImageFormats\jpeg\jpeg.cpp ImageFormats\Nikon\nikon.cpp ImageFormats\Olympus\olympus.cpp ImageFormats\Panasonic\panasonic.cpp ImageFormats\Sony\sony.cpp ImageFormats\Tiff\tiff.cpp Main\dockwidget.cpp Main\global.cpp Main\main.cpp Main\mainwindow.cpp Main\qtlocalpeer.cpp Main\qtsingleapplication.cpp Main\widgetcss.cpp Metadata\exif.cpp Metadata\exiftool.cpp Metadata\irb.cpp Metadata\gps.cpp Metadata\ifd.cpp Metadata\iptc.cpp Metadata\metadata.cpp Metadata\metareport.cpp Metadata\xmp.cpp PropertyEditor\preferences.cpp PropertyEditor\propertyeditor.cpp PropertyEditor\propertydelegate.cpp PropertyEditor\propertywidgets.cpp Utilities\bit.cpp Utilities\classificationlabel.cpp Utilities\coloranalysis.cpp Utilities\dropshadowlabel.cpp Utilities\htmlwindow.cpp Utilities\icc.cpp Utilities\inputdlg.cpp Utilities\performance.cpp Utilities\popup.cpp Utilities\progressbar.cpp Utilities\usb.cpp Utilities\utilities.cpp Utilities\win.cpp Views\compareImages.cpp Views\compareview.cpp Views\iconview.cpp Views\iconviewdelegate.cpp Views\imageview.cpp Views\infoview.cpp Views\tableview.cpp Views\infostring.cpp Dialogs\aboutdlg.ui Dialogs\ingesterrors.ui Dialogs\managegraphicsdlg.ui Dialogs\manageimagesdlg.ui Dialogs\aligndlg.ui Dialogs\appdlg.ui Dialogs\copystyledlg.ui Embellish\embelCoord.ui Dialogs\ingestdlg.ui Utilities\inputdlg.ui Dialogs\loadusbdlg.ui Dialogs\managetilesdlg.ui Dialogs\patterndlg.ui Dialogs\renamedlg.ui Dialogs\saveasdlg.ui Dialogs\testaligndlg.ui Dialogs\testdlg.ui Dialogs\test1.ui Dialogs\test12.ui Dialogs\tokendlg.ui Dialogs\updateapp.ui Dialogs\workspacedlg.ui Dialogs\zoomdlg.ui Help\helpform.ui Help\helpingest.ui Help\ingestautopath.ui Help\introduction.ui Help\message.ui Help\shortcutsform.ui Help\welcome.ui Metadata\metadatareport.ui    
 
 clean: compiler_clean 
-	-$(DEL_FILE) release\.obj\imagecache.obj release\.obj\managegraphicsdlg.obj release\.obj\manageimagesdlg.obj release\.obj\foldercompressor.obj release\.obj\mdcache.obj release\.obj\buildfilters.obj release\.obj\datamodel.obj release\.obj\filters.obj release\.obj\aboutdlg.obj release\.obj\appdlg.obj release\.obj\copystyledlg.obj release\.obj\ingestdlg.obj release\.obj\loadusbdlg.obj release\.obj\managetilesdlg.obj release\.obj\patterndlg.obj release\.obj\preferencesdlg.obj release\.obj\renamedlg.obj release\.obj\saveasdlg.obj release\.obj\testaligndlg.obj release\.obj\tokendlg.obj release\.obj\updateapp.obj release\.obj\workspacedlg.obj release\.obj\zoomdlg.obj release\.obj\effects.obj release\.obj\graphicseffect.obj release\.obj\graphicsitemeventfilter.obj release\.obj\embel.obj release\.obj\embelproperties.obj release\.obj\embelexport.obj release\.obj\bookmarks.obj release\.obj\fstree.obj release\.obj\imagealign.obj release\.obj\pixmap.obj release\.obj\thumb.obj release\.obj\canon.obj release\.obj\canoncr3.obj release\.obj\dng.obj release\.obj\fuji.obj release\.obj\Heic.obj release\.obj\jpeg.obj release\.obj\nikon.obj release\.obj\olympus.obj release\.obj\panasonic.obj release\.obj\sony.obj release\.obj\tiff.obj release\.obj\dockwidget.obj release\.obj\global.obj release\.obj\main.obj release\.obj\mainwindow.obj release\.obj\qtlocalpeer.obj release\.obj\qtsingleapplication.obj release\.obj\widgetcss.obj release\.obj\exif.obj release\.obj\exiftool.obj release\.obj\irb.obj release\.obj\gps.obj release\.obj\ifd.obj release\.obj\iptc.obj release\.obj\metadata.obj release\.obj\metareport.obj release\.obj\xmp.obj release\.obj\preferences.obj release\.obj\propertyeditor.obj release\.obj\propertydelegate.obj release\.obj\propertywidgets.obj release\.obj\bit.obj release\.obj\classificationlabel.obj release\.obj\coloranalysis.obj release\.obj\dropshadowlabel.obj release\.obj\htmlwindow.obj release\.obj\icc.obj release\.obj\inputdlg.obj release\.obj\performance.obj release\.obj\popup.obj release\.obj\progressbar.obj
-	-$(DEL_FILE) release\.obj\usb.obj release\.obj\utilities.obj release\.obj\win.obj release\.obj\compareImages.obj release\.obj\compareview.obj release\.obj\iconview.obj release\.obj\iconviewdelegate.obj release\.obj\imageview.obj release\.obj\infoview.obj release\.obj\tableview.obj release\.obj\infostring.obj release\.obj\qrc_winnow.obj release\.obj\moc_imagecache.obj release\.obj\moc_managegraphicsdlg.obj release\.obj\moc_manageimagesdlg.obj release\.obj\moc_foldercompressor.obj release\.obj\moc_mdcache.obj release\.obj\moc_buildfilters.obj release\.obj\moc_datamodel.obj release\.obj\moc_filters.obj release\.obj\moc_aboutdlg.obj release\.obj\moc_appdlg.obj release\.obj\moc_copystyledlg.obj release\.obj\moc_ingestdlg.obj release\.obj\moc_loadusbdlg.obj release\.obj\moc_managetilesdlg.obj release\.obj\moc_patterndlg.obj release\.obj\moc_preferencesdlg.obj release\.obj\moc_renamedlg.obj release\.obj\moc_saveasdlg.obj release\.obj\moc_testaligndlg.obj release\.obj\moc_workspacedlg.obj release\.obj\moc_tokendlg.obj release\.obj\moc_updateapp.obj release\.obj\moc_zoomdlg.obj release\.obj\moc_graphicseffect.obj release\.obj\moc_embel.obj release\.obj\moc_embelexport.obj release\.obj\moc_embelproperties.obj release\.obj\moc_bookmarks.obj release\.obj\moc_fstree.obj release\.obj\moc_imagealign.obj release\.obj\moc_pixmap.obj release\.obj\moc_thumb.obj release\.obj\moc_canon.obj release\.obj\moc_heic.obj release\.obj\moc_jpeg.obj release\.obj\moc_nikon.obj release\.obj\moc_olympus.obj release\.obj\moc_panasonic.obj release\.obj\moc_sony.obj release\.obj\moc_tiff.obj release\.obj\moc_dockwidget.obj release\.obj\moc_mainwindow.obj release\.obj\moc_qtlocalpeer.obj release\.obj\moc_qtsingleapplication.obj release\.obj\moc_exiftool.obj release\.obj\moc_metadata.obj release\.obj\moc_xmp.obj release\.obj\moc_preferences.obj release\.obj\moc_propertyeditor.obj release\.obj\moc_propertydelegate.obj release\.obj\moc_propertywidgets.obj release\.obj\moc_classificationlabel.obj release\.obj\moc_coloranalysis.obj
-	-$(DEL_FILE) release\.obj\moc_dropshadowlabel.obj release\.obj\moc_htmlwindow.obj release\.obj\moc_inputdlg.obj release\.obj\moc_popup.obj release\.obj\moc_progressbar.obj release\.obj\moc_compareImages.obj release\.obj\moc_compareview.obj release\.obj\moc_iconview.obj release\.obj\moc_iconviewdelegate.obj release\.obj\moc_imageview.obj release\.obj\moc_infostring.obj release\.obj\moc_infoview.obj release\.obj\moc_tableview.obj
+	-$(DEL_FILE) release\.obj\imagecache.obj release\.obj\ingesterrors.obj release\.obj\managegraphicsdlg.obj release\.obj\manageimagesdlg.obj release\.obj\foldercompressor.obj release\.obj\mdcache.obj release\.obj\buildfilters.obj release\.obj\datamodel.obj release\.obj\filters.obj release\.obj\aboutdlg.obj release\.obj\appdlg.obj release\.obj\copystyledlg.obj release\.obj\ingestdlg.obj release\.obj\loadusbdlg.obj release\.obj\managetilesdlg.obj release\.obj\patterndlg.obj release\.obj\preferencesdlg.obj release\.obj\renamedlg.obj release\.obj\saveasdlg.obj release\.obj\testaligndlg.obj release\.obj\tokendlg.obj release\.obj\updateapp.obj release\.obj\workspacedlg.obj release\.obj\zoomdlg.obj release\.obj\effects.obj release\.obj\graphicseffect.obj release\.obj\graphicsitemeventfilter.obj release\.obj\embel.obj release\.obj\embelproperties.obj release\.obj\embelexport.obj release\.obj\bookmarks.obj release\.obj\fstree.obj release\.obj\imagealign.obj release\.obj\pixmap.obj release\.obj\thumb.obj release\.obj\canon.obj release\.obj\canoncr3.obj release\.obj\dng.obj release\.obj\fuji.obj release\.obj\Heic.obj release\.obj\jpeg.obj release\.obj\nikon.obj release\.obj\olympus.obj release\.obj\panasonic.obj release\.obj\sony.obj release\.obj\tiff.obj release\.obj\dockwidget.obj release\.obj\global.obj release\.obj\main.obj release\.obj\mainwindow.obj release\.obj\qtlocalpeer.obj release\.obj\qtsingleapplication.obj release\.obj\widgetcss.obj release\.obj\exif.obj release\.obj\exiftool.obj release\.obj\irb.obj release\.obj\gps.obj release\.obj\ifd.obj release\.obj\iptc.obj release\.obj\metadata.obj release\.obj\metareport.obj release\.obj\xmp.obj release\.obj\preferences.obj release\.obj\propertyeditor.obj release\.obj\propertydelegate.obj release\.obj\propertywidgets.obj release\.obj\bit.obj release\.obj\classificationlabel.obj release\.obj\coloranalysis.obj release\.obj\dropshadowlabel.obj release\.obj\htmlwindow.obj release\.obj\icc.obj release\.obj\inputdlg.obj release\.obj\performance.obj release\.obj\popup.obj
+	-$(DEL_FILE) release\.obj\progressbar.obj release\.obj\usb.obj release\.obj\utilities.obj release\.obj\win.obj release\.obj\compareImages.obj release\.obj\compareview.obj release\.obj\iconview.obj release\.obj\iconviewdelegate.obj release\.obj\imageview.obj release\.obj\infoview.obj release\.obj\tableview.obj release\.obj\infostring.obj release\.obj\qrc_winnow.obj release\.obj\moc_imagecache.obj release\.obj\moc_ingesterrors.obj release\.obj\moc_managegraphicsdlg.obj release\.obj\moc_manageimagesdlg.obj release\.obj\moc_foldercompressor.obj release\.obj\moc_mdcache.obj release\.obj\moc_buildfilters.obj release\.obj\moc_datamodel.obj release\.obj\moc_filters.obj release\.obj\moc_aboutdlg.obj release\.obj\moc_appdlg.obj release\.obj\moc_copystyledlg.obj release\.obj\moc_ingestdlg.obj release\.obj\moc_loadusbdlg.obj release\.obj\moc_managetilesdlg.obj release\.obj\moc_patterndlg.obj release\.obj\moc_preferencesdlg.obj release\.obj\moc_renamedlg.obj release\.obj\moc_saveasdlg.obj release\.obj\moc_testaligndlg.obj release\.obj\moc_workspacedlg.obj release\.obj\moc_tokendlg.obj release\.obj\moc_updateapp.obj release\.obj\moc_zoomdlg.obj release\.obj\moc_graphicseffect.obj release\.obj\moc_embel.obj release\.obj\moc_embelexport.obj release\.obj\moc_embelproperties.obj release\.obj\moc_bookmarks.obj release\.obj\moc_fstree.obj release\.obj\moc_imagealign.obj release\.obj\moc_pixmap.obj release\.obj\moc_thumb.obj release\.obj\moc_canon.obj release\.obj\moc_heic.obj release\.obj\moc_jpeg.obj release\.obj\moc_nikon.obj release\.obj\moc_olympus.obj release\.obj\moc_panasonic.obj release\.obj\moc_sony.obj release\.obj\moc_tiff.obj release\.obj\moc_dockwidget.obj release\.obj\moc_mainwindow.obj release\.obj\moc_qtlocalpeer.obj release\.obj\moc_qtsingleapplication.obj release\.obj\moc_exiftool.obj release\.obj\moc_metadata.obj release\.obj\moc_xmp.obj release\.obj\moc_preferences.obj release\.obj\moc_propertyeditor.obj release\.obj\moc_propertydelegate.obj release\.obj\moc_propertywidgets.obj
+	-$(DEL_FILE) release\.obj\moc_classificationlabel.obj release\.obj\moc_coloranalysis.obj release\.obj\moc_dropshadowlabel.obj release\.obj\moc_htmlwindow.obj release\.obj\moc_inputdlg.obj release\.obj\moc_popup.obj release\.obj\moc_progressbar.obj release\.obj\moc_compareImages.obj release\.obj\moc_compareview.obj release\.obj\moc_iconview.obj release\.obj\moc_iconviewdelegate.obj release\.obj\moc_imageview.obj release\.obj\moc_infostring.obj release\.obj\moc_infoview.obj release\.obj\moc_tableview.obj
 	-$(DEL_FILE) release\.obj\Winnow_resource.res
 
 distclean: clean 
@@ -1324,10 +1330,10 @@ compiler_moc_predefs_clean:
 release\.moc\moc_predefs.h: C:\Qt\5.15.2\msvc2019_64\mkspecs\features\data\dummy.cpp
 	cl -BxC:\Qt\5.15.2\msvc2019_64\bin\qmake.exe -nologo -Zc:wchar_t -FS -Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding /MD -O2 -MD -W3 -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 -wd4577 -wd4467 -E C:\Qt\5.15.2\msvc2019_64\mkspecs\features\data\dummy.cpp 2>NUL >release\.moc\moc_predefs.h
 
-compiler_moc_header_make_all: release\.moc\moc_imagecache.cpp release\.moc\moc_managegraphicsdlg.cpp release\.moc\moc_manageimagesdlg.cpp release\.moc\moc_foldercompressor.cpp release\.moc\moc_mdcache.cpp release\.moc\moc_buildfilters.cpp release\.moc\moc_datamodel.cpp release\.moc\moc_filters.cpp release\.moc\moc_aboutdlg.cpp release\.moc\moc_appdlg.cpp release\.moc\moc_copystyledlg.cpp release\.moc\moc_ingestdlg.cpp release\.moc\moc_loadusbdlg.cpp release\.moc\moc_managetilesdlg.cpp release\.moc\moc_patterndlg.cpp release\.moc\moc_preferencesdlg.cpp release\.moc\moc_renamedlg.cpp release\.moc\moc_saveasdlg.cpp release\.moc\moc_testaligndlg.cpp release\.moc\moc_workspacedlg.cpp release\.moc\moc_tokendlg.cpp release\.moc\moc_updateapp.cpp release\.moc\moc_zoomdlg.cpp release\.moc\moc_graphicseffect.cpp release\.moc\moc_embel.cpp release\.moc\moc_embelexport.cpp release\.moc\moc_embelproperties.cpp release\.moc\moc_bookmarks.cpp release\.moc\moc_fstree.cpp release\.moc\moc_imagealign.cpp release\.moc\moc_pixmap.cpp release\.moc\moc_thumb.cpp release\.moc\moc_canon.cpp release\.moc\moc_heic.cpp release\.moc\moc_jpeg.cpp release\.moc\moc_nikon.cpp release\.moc\moc_olympus.cpp release\.moc\moc_panasonic.cpp release\.moc\moc_sony.cpp release\.moc\moc_tiff.cpp release\.moc\moc_dockwidget.cpp release\.moc\moc_mainwindow.cpp release\.moc\moc_qtlocalpeer.cpp release\.moc\moc_qtsingleapplication.cpp release\.moc\moc_exiftool.cpp release\.moc\moc_metadata.cpp release\.moc\moc_xmp.cpp release\.moc\moc_preferences.cpp release\.moc\moc_propertyeditor.cpp release\.moc\moc_propertydelegate.cpp release\.moc\moc_propertywidgets.cpp release\.moc\moc_classificationlabel.cpp release\.moc\moc_coloranalysis.cpp release\.moc\moc_dropshadowlabel.cpp release\.moc\moc_htmlwindow.cpp release\.moc\moc_inputdlg.cpp release\.moc\moc_popup.cpp release\.moc\moc_progressbar.cpp release\.moc\moc_compareImages.cpp release\.moc\moc_compareview.cpp release\.moc\moc_iconview.cpp release\.moc\moc_iconviewdelegate.cpp release\.moc\moc_imageview.cpp release\.moc\moc_infostring.cpp release\.moc\moc_infoview.cpp release\.moc\moc_tableview.cpp
+compiler_moc_header_make_all: release\.moc\moc_imagecache.cpp release\.moc\moc_ingesterrors.cpp release\.moc\moc_managegraphicsdlg.cpp release\.moc\moc_manageimagesdlg.cpp release\.moc\moc_foldercompressor.cpp release\.moc\moc_mdcache.cpp release\.moc\moc_buildfilters.cpp release\.moc\moc_datamodel.cpp release\.moc\moc_filters.cpp release\.moc\moc_aboutdlg.cpp release\.moc\moc_appdlg.cpp release\.moc\moc_copystyledlg.cpp release\.moc\moc_ingestdlg.cpp release\.moc\moc_loadusbdlg.cpp release\.moc\moc_managetilesdlg.cpp release\.moc\moc_patterndlg.cpp release\.moc\moc_preferencesdlg.cpp release\.moc\moc_renamedlg.cpp release\.moc\moc_saveasdlg.cpp release\.moc\moc_testaligndlg.cpp release\.moc\moc_workspacedlg.cpp release\.moc\moc_tokendlg.cpp release\.moc\moc_updateapp.cpp release\.moc\moc_zoomdlg.cpp release\.moc\moc_graphicseffect.cpp release\.moc\moc_embel.cpp release\.moc\moc_embelexport.cpp release\.moc\moc_embelproperties.cpp release\.moc\moc_bookmarks.cpp release\.moc\moc_fstree.cpp release\.moc\moc_imagealign.cpp release\.moc\moc_pixmap.cpp release\.moc\moc_thumb.cpp release\.moc\moc_canon.cpp release\.moc\moc_heic.cpp release\.moc\moc_jpeg.cpp release\.moc\moc_nikon.cpp release\.moc\moc_olympus.cpp release\.moc\moc_panasonic.cpp release\.moc\moc_sony.cpp release\.moc\moc_tiff.cpp release\.moc\moc_dockwidget.cpp release\.moc\moc_mainwindow.cpp release\.moc\moc_qtlocalpeer.cpp release\.moc\moc_qtsingleapplication.cpp release\.moc\moc_exiftool.cpp release\.moc\moc_metadata.cpp release\.moc\moc_xmp.cpp release\.moc\moc_preferences.cpp release\.moc\moc_propertyeditor.cpp release\.moc\moc_propertydelegate.cpp release\.moc\moc_propertywidgets.cpp release\.moc\moc_classificationlabel.cpp release\.moc\moc_coloranalysis.cpp release\.moc\moc_dropshadowlabel.cpp release\.moc\moc_htmlwindow.cpp release\.moc\moc_inputdlg.cpp release\.moc\moc_popup.cpp release\.moc\moc_progressbar.cpp release\.moc\moc_compareImages.cpp release\.moc\moc_compareview.cpp release\.moc\moc_iconview.cpp release\.moc\moc_iconviewdelegate.cpp release\.moc\moc_imageview.cpp release\.moc\moc_infostring.cpp release\.moc\moc_infoview.cpp release\.moc\moc_tableview.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) release\.moc\moc_imagecache.cpp release\.moc\moc_managegraphicsdlg.cpp release\.moc\moc_manageimagesdlg.cpp release\.moc\moc_foldercompressor.cpp release\.moc\moc_mdcache.cpp release\.moc\moc_buildfilters.cpp release\.moc\moc_datamodel.cpp release\.moc\moc_filters.cpp release\.moc\moc_aboutdlg.cpp release\.moc\moc_appdlg.cpp release\.moc\moc_copystyledlg.cpp release\.moc\moc_ingestdlg.cpp release\.moc\moc_loadusbdlg.cpp release\.moc\moc_managetilesdlg.cpp release\.moc\moc_patterndlg.cpp release\.moc\moc_preferencesdlg.cpp release\.moc\moc_renamedlg.cpp release\.moc\moc_saveasdlg.cpp release\.moc\moc_testaligndlg.cpp release\.moc\moc_workspacedlg.cpp release\.moc\moc_tokendlg.cpp release\.moc\moc_updateapp.cpp release\.moc\moc_zoomdlg.cpp release\.moc\moc_graphicseffect.cpp release\.moc\moc_embel.cpp release\.moc\moc_embelexport.cpp release\.moc\moc_embelproperties.cpp release\.moc\moc_bookmarks.cpp release\.moc\moc_fstree.cpp release\.moc\moc_imagealign.cpp release\.moc\moc_pixmap.cpp release\.moc\moc_thumb.cpp release\.moc\moc_canon.cpp release\.moc\moc_heic.cpp release\.moc\moc_jpeg.cpp release\.moc\moc_nikon.cpp release\.moc\moc_olympus.cpp release\.moc\moc_panasonic.cpp release\.moc\moc_sony.cpp release\.moc\moc_tiff.cpp release\.moc\moc_dockwidget.cpp release\.moc\moc_mainwindow.cpp release\.moc\moc_qtlocalpeer.cpp release\.moc\moc_qtsingleapplication.cpp release\.moc\moc_exiftool.cpp release\.moc\moc_metadata.cpp release\.moc\moc_xmp.cpp release\.moc\moc_preferences.cpp release\.moc\moc_propertyeditor.cpp release\.moc\moc_propertydelegate.cpp release\.moc\moc_propertywidgets.cpp release\.moc\moc_classificationlabel.cpp release\.moc\moc_coloranalysis.cpp release\.moc\moc_dropshadowlabel.cpp release\.moc\moc_htmlwindow.cpp release\.moc\moc_inputdlg.cpp release\.moc\moc_popup.cpp release\.moc\moc_progressbar.cpp release\.moc\moc_compareImages.cpp release\.moc\moc_compareview.cpp release\.moc\moc_iconview.cpp release\.moc\moc_iconviewdelegate.cpp release\.moc\moc_imageview.cpp
-	-$(DEL_FILE) release\.moc\moc_infostring.cpp release\.moc\moc_infoview.cpp release\.moc\moc_tableview.cpp
+	-$(DEL_FILE) release\.moc\moc_imagecache.cpp release\.moc\moc_ingesterrors.cpp release\.moc\moc_managegraphicsdlg.cpp release\.moc\moc_manageimagesdlg.cpp release\.moc\moc_foldercompressor.cpp release\.moc\moc_mdcache.cpp release\.moc\moc_buildfilters.cpp release\.moc\moc_datamodel.cpp release\.moc\moc_filters.cpp release\.moc\moc_aboutdlg.cpp release\.moc\moc_appdlg.cpp release\.moc\moc_copystyledlg.cpp release\.moc\moc_ingestdlg.cpp release\.moc\moc_loadusbdlg.cpp release\.moc\moc_managetilesdlg.cpp release\.moc\moc_patterndlg.cpp release\.moc\moc_preferencesdlg.cpp release\.moc\moc_renamedlg.cpp release\.moc\moc_saveasdlg.cpp release\.moc\moc_testaligndlg.cpp release\.moc\moc_workspacedlg.cpp release\.moc\moc_tokendlg.cpp release\.moc\moc_updateapp.cpp release\.moc\moc_zoomdlg.cpp release\.moc\moc_graphicseffect.cpp release\.moc\moc_embel.cpp release\.moc\moc_embelexport.cpp release\.moc\moc_embelproperties.cpp release\.moc\moc_bookmarks.cpp release\.moc\moc_fstree.cpp release\.moc\moc_imagealign.cpp release\.moc\moc_pixmap.cpp release\.moc\moc_thumb.cpp release\.moc\moc_canon.cpp release\.moc\moc_heic.cpp release\.moc\moc_jpeg.cpp release\.moc\moc_nikon.cpp release\.moc\moc_olympus.cpp release\.moc\moc_panasonic.cpp release\.moc\moc_sony.cpp release\.moc\moc_tiff.cpp release\.moc\moc_dockwidget.cpp release\.moc\moc_mainwindow.cpp release\.moc\moc_qtlocalpeer.cpp release\.moc\moc_qtsingleapplication.cpp release\.moc\moc_exiftool.cpp release\.moc\moc_metadata.cpp release\.moc\moc_xmp.cpp release\.moc\moc_preferences.cpp release\.moc\moc_propertyeditor.cpp release\.moc\moc_propertydelegate.cpp release\.moc\moc_propertywidgets.cpp release\.moc\moc_classificationlabel.cpp release\.moc\moc_coloranalysis.cpp release\.moc\moc_dropshadowlabel.cpp release\.moc\moc_htmlwindow.cpp release\.moc\moc_inputdlg.cpp release\.moc\moc_popup.cpp release\.moc\moc_progressbar.cpp release\.moc\moc_compareImages.cpp release\.moc\moc_compareview.cpp release\.moc\moc_iconview.cpp release\.moc\moc_iconviewdelegate.cpp
+	-$(DEL_FILE) release\.moc\moc_imageview.cpp release\.moc\moc_infostring.cpp release\.moc\moc_infoview.cpp release\.moc\moc_tableview.cpp
 release\.moc\moc_imagecache.cpp: Cache\imagecache.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgetsDepends \
@@ -1912,6 +1918,9 @@ release\.moc\moc_imagecache.cpp: Cache\imagecache.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -1944,6 +1953,125 @@ release\.moc\moc_imagecache.cpp: Cache\imagecache.h \
 		release\.moc\moc_predefs.h \
 		C:\Qt\5.15.2\msvc2019_64\bin\moc.exe
 	C:\Qt\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/.moc/moc_predefs.h" -IC:/Qt/5.15.2/msvc2019_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.15.2/msvc2019_64/include -IC:/Qt/5.15.2/msvc2019_64/include/QtWidgets -IC:/Qt/5.15.2/msvc2019_64/include/QtGui -IC:/Qt/5.15.2/msvc2019_64/include/QtANGLE -IC:/Qt/5.15.2/msvc2019_64/include/QtConcurrent -IC:/Qt/5.15.2/msvc2019_64/include/QtXmlPatterns -IC:/Qt/5.15.2/msvc2019_64/include/QtNetwork -IC:/Qt/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Cache\imagecache.h -o release\.moc\moc_imagecache.cpp
+
+release\.moc\moc_ingesterrors.cpp: Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qdialog.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsglobal.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtguiglobal.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qglobal.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qconfig-bootstrapped.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qconfig.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qtcore-config.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qsystemdetection.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qprocessordetection.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcompilerdetection.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qtypeinfo.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qsysinfo.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qlogging.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qflags.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qatomic.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qbasicatomic.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qatomic_bootstrap.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qgenericatomic.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qatomic_cxx11.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qatomic_msvc.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qglobalstatic.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qmutex.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qnumeric.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qversiontagging.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtgui-config.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgets-config.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwidget.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qwindowdefs.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qobjectdefs.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qnamespace.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qobjectdefs_impl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qwindowdefs_win.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qobject.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstring.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qchar.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qbytearray.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qrefcount.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qarraydata.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringliteral.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringalgorithms.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringview.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringbuilder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qlist.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qalgorithms.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qiterator.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qhashfunctions.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qpair.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qvector.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcontainertools_impl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qpoint.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qbytearraylist.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringlist.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qregexp.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringmatcher.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcoreevent.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qscopedpointer.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qmetatype.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qvarlengtharray.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcontainerfwd.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qobject_impl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qmargins.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpaintdevice.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qrect.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qsize.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpalette.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qcolor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qrgb.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qrgba64.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qbrush.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qmatrix.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpolygon.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qregion.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qdatastream.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qiodevice.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qline.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtransform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qimage.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpixelformat.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpixmap.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qsharedpointer.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qshareddata.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qhash.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qsharedpointer_impl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qfont.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qfontmetrics.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qfontinfo.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qsizepolicy.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qcursor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qkeysequence.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qevent.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qvariant.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qmap.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qdebug.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qtextstream.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qlocale.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qset.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcontiguouscache.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qurl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qurlquery.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qfile.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qfiledevice.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qvector2d.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtouchdevice.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtextdocument.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtextedit.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractscrollarea.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qframe.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtextoption.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtextcursor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtextformat.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpen.h \
+		release\.moc\moc_predefs.h \
+		C:\Qt\5.15.2\msvc2019_64\bin\moc.exe
+	C:\Qt\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/.moc/moc_predefs.h" -IC:/Qt/5.15.2/msvc2019_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.15.2/msvc2019_64/include -IC:/Qt/5.15.2/msvc2019_64/include/QtWidgets -IC:/Qt/5.15.2/msvc2019_64/include/QtGui -IC:/Qt/5.15.2/msvc2019_64/include/QtANGLE -IC:/Qt/5.15.2/msvc2019_64/include/QtConcurrent -IC:/Qt/5.15.2/msvc2019_64/include/QtXmlPatterns -IC:/Qt/5.15.2/msvc2019_64/include/QtNetwork -IC:/Qt/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Dialogs\ingesterrors.h -o release\.moc\moc_ingesterrors.cpp
 
 release\.moc\moc_managegraphicsdlg.cpp: Dialogs\managegraphicsdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -3571,6 +3699,9 @@ release\.moc\moc_mdcache.cpp: Cache\mdcache.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -4190,6 +4321,9 @@ release\.moc\moc_buildfilters.cpp: Datamodel\buildfilters.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -4797,6 +4931,9 @@ release\.moc\moc_datamodel.cpp: Datamodel\datamodel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -7369,6 +7506,9 @@ release\.moc\moc_ingestdlg.cpp: Dialogs\ingestdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -7401,6 +7541,10 @@ release\.moc\moc_ingestdlg.cpp: Dialogs\ingestdlg.h \
 		Dialogs\tokendlg.h \
 		Dialogs\renamedlg.h \
 		release\.ui\ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		release\.moc\moc_predefs.h \
 		C:\Qt\5.15.2\msvc2019_64\bin\moc.exe
 	C:\Qt\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/.moc/moc_predefs.h" -IC:/Qt/5.15.2/msvc2019_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.15.2/msvc2019_64/include -IC:/Qt/5.15.2/msvc2019_64/include/QtWidgets -IC:/Qt/5.15.2/msvc2019_64/include/QtGui -IC:/Qt/5.15.2/msvc2019_64/include/QtANGLE -IC:/Qt/5.15.2/msvc2019_64/include/QtConcurrent -IC:/Qt/5.15.2/msvc2019_64/include/QtXmlPatterns -IC:/Qt/5.15.2/msvc2019_64/include/QtNetwork -IC:/Qt/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Dialogs\ingestdlg.h -o release\.moc\moc_ingestdlg.cpp
@@ -10425,6 +10569,9 @@ release\.moc\moc_saveasdlg.cpp: Dialogs\saveasdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -13213,6 +13360,9 @@ release\.moc\moc_embel.cpp: Embellish\embel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -13852,6 +14002,9 @@ release\.moc\moc_embelexport.cpp: Embellish\embelexport.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -14496,6 +14649,9 @@ release\.moc\moc_embelproperties.cpp: Embellish\Properties\embelproperties.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -15124,6 +15280,9 @@ release\.moc\moc_bookmarks.cpp: File\bookmarks.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -15727,6 +15886,9 @@ release\.moc\moc_fstree.cpp: File\fstree.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -16443,6 +16605,9 @@ release\.moc\moc_pixmap.cpp: Image\pixmap.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -17053,6 +17218,9 @@ release\.moc\moc_thumb.cpp: Image\thumb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -22852,6 +23020,9 @@ release\.moc\moc_mainwindow.cpp: Main\mainwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -22936,6 +23107,10 @@ release\.moc\moc_mainwindow.cpp: Main\mainwindow.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QDesktopServices \
@@ -22950,9 +23125,16 @@ release\.moc\moc_mainwindow.cpp: Main\mainwindow.h \
 		Utilities\performance.h \
 		release\.ui\ui_helpform.h \
 		release\.ui\ui_shortcutsform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTreeWidget \
 		release\.ui\ui_welcome.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		release\.ui\ui_message.h \
 		release\.ui\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
 		release\.moc\moc_predefs.h \
 		C:\Qt\5.15.2\msvc2019_64\bin\moc.exe
 	C:\Qt\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/.moc/moc_predefs.h" -IC:/Qt/5.15.2/msvc2019_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.15.2/msvc2019_64/include -IC:/Qt/5.15.2/msvc2019_64/include/QtWidgets -IC:/Qt/5.15.2/msvc2019_64/include/QtGui -IC:/Qt/5.15.2/msvc2019_64/include/QtANGLE -IC:/Qt/5.15.2/msvc2019_64/include/QtConcurrent -IC:/Qt/5.15.2/msvc2019_64/include/QtXmlPatterns -IC:/Qt/5.15.2/msvc2019_64/include/QtNetwork -IC:/Qt/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Main\mainwindow.h -o release\.moc\moc_mainwindow.cpp
@@ -24229,6 +24411,9 @@ release\.moc\moc_metadata.cpp: Metadata\metadata.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -30067,6 +30252,9 @@ release\.moc\moc_compareImages.cpp: Views\compareImages.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -30699,6 +30887,9 @@ release\.moc\moc_compareview.cpp: Views\compareview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -31329,6 +31520,9 @@ release\.moc\moc_iconview.cpp: Views\iconview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -32437,6 +32631,9 @@ release\.moc\moc_imageview.cpp: Views\imageview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -33093,6 +33290,9 @@ release\.moc\moc_infostring.cpp: Views\infostring.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -33725,6 +33925,9 @@ release\.moc\moc_infoview.cpp: Views\infoview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -34344,6 +34547,9 @@ release\.moc\moc_tableview.cpp: Views\tableview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -34383,12 +34589,16 @@ compiler_moc_objc_header_make_all:
 compiler_moc_objc_header_clean:
 compiler_moc_source_make_all:
 compiler_moc_source_clean:
-compiler_uic_make_all: release\.ui\ui_aboutdlg.h release\.ui\ui_managegraphicsdlg.h release\.ui\ui_manageimagesdlg.h release\.ui\ui_aligndlg.h release\.ui\ui_appdlg.h release\.ui\ui_copystyledlg.h release\.ui\ui_embelCoord.h release\.ui\ui_ingestdlg.h release\.ui\ui_inputdlg.h release\.ui\ui_loadusbdlg.h release\.ui\ui_managetilesdlg.h release\.ui\ui_patterndlg.h release\.ui\ui_renamedlg.h release\.ui\ui_saveasdlg.h release\.ui\ui_testaligndlg.h release\.ui\ui_testdlg.h release\.ui\ui_test1.h release\.ui\ui_test12.h release\.ui\ui_tokendlg.h release\.ui\ui_updateapp.h release\.ui\ui_workspacedlg.h release\.ui\ui_zoomdlg.h release\.ui\ui_helpform.h release\.ui\ui_helpingest.h release\.ui\ui_ingestautopath.h release\.ui\ui_introduction.h release\.ui\ui_message.h release\.ui\ui_shortcutsform.h release\.ui\ui_welcome.h release\.ui\ui_metadatareport.h
+compiler_uic_make_all: release\.ui\ui_aboutdlg.h release\.ui\ui_ingesterrors.h release\.ui\ui_managegraphicsdlg.h release\.ui\ui_manageimagesdlg.h release\.ui\ui_aligndlg.h release\.ui\ui_appdlg.h release\.ui\ui_copystyledlg.h release\.ui\ui_embelCoord.h release\.ui\ui_ingestdlg.h release\.ui\ui_inputdlg.h release\.ui\ui_loadusbdlg.h release\.ui\ui_managetilesdlg.h release\.ui\ui_patterndlg.h release\.ui\ui_renamedlg.h release\.ui\ui_saveasdlg.h release\.ui\ui_testaligndlg.h release\.ui\ui_testdlg.h release\.ui\ui_test1.h release\.ui\ui_test12.h release\.ui\ui_tokendlg.h release\.ui\ui_updateapp.h release\.ui\ui_workspacedlg.h release\.ui\ui_zoomdlg.h release\.ui\ui_helpform.h release\.ui\ui_helpingest.h release\.ui\ui_ingestautopath.h release\.ui\ui_introduction.h release\.ui\ui_message.h release\.ui\ui_shortcutsform.h release\.ui\ui_welcome.h release\.ui\ui_metadatareport.h
 compiler_uic_clean:
-	-$(DEL_FILE) release\.ui\ui_aboutdlg.h release\.ui\ui_managegraphicsdlg.h release\.ui\ui_manageimagesdlg.h release\.ui\ui_aligndlg.h release\.ui\ui_appdlg.h release\.ui\ui_copystyledlg.h release\.ui\ui_embelCoord.h release\.ui\ui_ingestdlg.h release\.ui\ui_inputdlg.h release\.ui\ui_loadusbdlg.h release\.ui\ui_managetilesdlg.h release\.ui\ui_patterndlg.h release\.ui\ui_renamedlg.h release\.ui\ui_saveasdlg.h release\.ui\ui_testaligndlg.h release\.ui\ui_testdlg.h release\.ui\ui_test1.h release\.ui\ui_test12.h release\.ui\ui_tokendlg.h release\.ui\ui_updateapp.h release\.ui\ui_workspacedlg.h release\.ui\ui_zoomdlg.h release\.ui\ui_helpform.h release\.ui\ui_helpingest.h release\.ui\ui_ingestautopath.h release\.ui\ui_introduction.h release\.ui\ui_message.h release\.ui\ui_shortcutsform.h release\.ui\ui_welcome.h release\.ui\ui_metadatareport.h
+	-$(DEL_FILE) release\.ui\ui_aboutdlg.h release\.ui\ui_ingesterrors.h release\.ui\ui_managegraphicsdlg.h release\.ui\ui_manageimagesdlg.h release\.ui\ui_aligndlg.h release\.ui\ui_appdlg.h release\.ui\ui_copystyledlg.h release\.ui\ui_embelCoord.h release\.ui\ui_ingestdlg.h release\.ui\ui_inputdlg.h release\.ui\ui_loadusbdlg.h release\.ui\ui_managetilesdlg.h release\.ui\ui_patterndlg.h release\.ui\ui_renamedlg.h release\.ui\ui_saveasdlg.h release\.ui\ui_testaligndlg.h release\.ui\ui_testdlg.h release\.ui\ui_test1.h release\.ui\ui_test12.h release\.ui\ui_tokendlg.h release\.ui\ui_updateapp.h release\.ui\ui_workspacedlg.h release\.ui\ui_zoomdlg.h release\.ui\ui_helpform.h release\.ui\ui_helpingest.h release\.ui\ui_ingestautopath.h release\.ui\ui_introduction.h release\.ui\ui_message.h release\.ui\ui_shortcutsform.h release\.ui\ui_welcome.h release\.ui\ui_metadatareport.h
 release\.ui\ui_aboutdlg.h: Dialogs\aboutdlg.ui \
 		C:\Qt\5.15.2\msvc2019_64\bin\uic.exe
 	C:\Qt\5.15.2\msvc2019_64\bin\uic.exe Dialogs\aboutdlg.ui -o release\.ui\ui_aboutdlg.h
+
+release\.ui\ui_ingesterrors.h: Dialogs\ingesterrors.ui \
+		C:\Qt\5.15.2\msvc2019_64\bin\uic.exe
+	C:\Qt\5.15.2\msvc2019_64\bin\uic.exe Dialogs\ingesterrors.ui -o release\.ui\ui_ingesterrors.h
 
 release\.ui\ui_managegraphicsdlg.h: Dialogs\managegraphicsdlg.ui \
 		C:\Qt\5.15.2\msvc2019_64\bin\uic.exe
@@ -36559,6 +36769,9 @@ release\.obj\imagecache.obj: Cache\imagecache.cpp Cache\imagecache.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -36588,6 +36801,123 @@ release\.obj\imagecache.obj: Cache\imagecache.cpp Cache\imagecache.h \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h
+
+release\.obj\ingesterrors.obj: Dialogs\ingesterrors.cpp Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qdialog.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsglobal.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtguiglobal.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qglobal.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qconfig-bootstrapped.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qconfig.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qtcore-config.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qsystemdetection.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qprocessordetection.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcompilerdetection.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qtypeinfo.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qsysinfo.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qlogging.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qflags.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qatomic.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qbasicatomic.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qatomic_bootstrap.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qgenericatomic.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qatomic_cxx11.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qatomic_msvc.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qglobalstatic.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qmutex.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qnumeric.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qversiontagging.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtgui-config.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgets-config.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwidget.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qwindowdefs.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qobjectdefs.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qnamespace.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qobjectdefs_impl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qwindowdefs_win.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qobject.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstring.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qchar.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qbytearray.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qrefcount.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qarraydata.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringliteral.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringalgorithms.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringview.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringbuilder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qlist.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qalgorithms.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qiterator.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qhashfunctions.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qpair.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qvector.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcontainertools_impl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qpoint.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qbytearraylist.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringlist.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qregexp.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qstringmatcher.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcoreevent.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qscopedpointer.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qmetatype.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qvarlengtharray.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcontainerfwd.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qobject_impl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qmargins.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpaintdevice.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qrect.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qsize.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpalette.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qcolor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qrgb.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qrgba64.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qbrush.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qmatrix.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpolygon.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qregion.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qdatastream.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qiodevice.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qline.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtransform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qimage.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpixelformat.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpixmap.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qsharedpointer.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qshareddata.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qhash.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qsharedpointer_impl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qfont.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qfontmetrics.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qfontinfo.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qsizepolicy.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qcursor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qkeysequence.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qevent.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qvariant.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qmap.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qdebug.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qtextstream.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qlocale.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qset.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcontiguouscache.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qurl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qurlquery.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qfile.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qfiledevice.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qvector2d.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtouchdevice.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtextdocument.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtextedit.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractscrollarea.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qframe.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtextoption.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtextcursor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtextformat.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qpen.h \
+		release\.ui\ui_ingesterrors.h
 
 release\.obj\managegraphicsdlg.obj: Dialogs\managegraphicsdlg.cpp Dialogs\managegraphicsdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -37064,13 +37394,20 @@ release\.obj\managegraphicsdlg.obj: Dialogs\managegraphicsdlg.cpp Dialogs\manage
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h \
 		release\.ui\ui_managegraphicsdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QColor \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QModelIndexList \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMutex \
 		Utilities\popup.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QProgressBar \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
@@ -37565,7 +37902,15 @@ release\.obj\manageimagesdlg.obj: Dialogs\manageimagesdlg.cpp Dialogs\manageimag
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		Utilities\utilities.h \
 		Utilities\inputdlg.h \
-		release\.ui\ui_manageimagesdlg.h
+		release\.ui\ui_manageimagesdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTableWidget \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout
 
 release\.obj\foldercompressor.obj: Utilities\foldercompressor.cpp Utilities\FolderCompressor.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFile \
@@ -38219,6 +38564,9 @@ release\.obj\mdcache.obj: Cache\mdcache.cpp Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -38835,6 +39183,9 @@ release\.obj\buildfilters.obj: Datamodel\buildfilters.cpp Datamodel\buildfilters
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -39439,6 +39790,9 @@ release\.obj\datamodel.obj: Datamodel\datamodel.cpp Datamodel\datamodel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -40436,7 +40790,13 @@ release\.obj\aboutdlg.obj: Dialogs\aboutdlg.cpp Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
-		release\.ui\ui_aboutdlg.h
+		release\.ui\ui_aboutdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout
 
 release\.obj\appdlg.obj: Dialogs\appdlg.cpp Dialogs\appdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -40925,6 +41285,13 @@ release\.obj\appdlg.obj: Dialogs\appdlg.cpp Dialogs\appdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		release\.ui\ui_appdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTableWidget \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
 
 release\.obj\copystyledlg.obj: Dialogs\copystyledlg.cpp Dialogs\copystyledlg.h \
@@ -41415,7 +41782,13 @@ release\.obj\copystyledlg.obj: Dialogs\copystyledlg.cpp Dialogs\copystyledlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		Utilities\utilities.h \
 		Utilities\inputdlg.h \
-		release\.ui\ui_copystyledlg.h
+		release\.ui\ui_copystyledlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialogButtonBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout
 
 release\.obj\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs\ingestdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -42002,6 +42375,9 @@ release\.obj\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs\ingestdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -42034,7 +42410,20 @@ release\.obj\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs\ingestdlg.h \
 		Dialogs\tokendlg.h \
 		Dialogs\renamedlg.h \
 		release\.ui\ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		release\.ui\ui_ingestdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QCheckBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLineEdit \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QRadioButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpinBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTabWidget \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
 
 release\.obj\loadusbdlg.obj: Dialogs\loadusbdlg.cpp Dialogs\loadusbdlg.h \
@@ -42513,6 +42902,10 @@ release\.obj\loadusbdlg.obj: Dialogs\loadusbdlg.cpp Dialogs\loadusbdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h \
 		release\.ui\ui_loadusbdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QListWidget \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
 
 release\.obj\managetilesdlg.obj: Dialogs\managetilesdlg.cpp Dialogs\managetilesdlg.h \
@@ -42990,13 +43383,20 @@ release\.obj\managetilesdlg.obj: Dialogs\managetilesdlg.cpp Dialogs\managetilesd
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h \
 		release\.ui\ui_managetilesdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QColor \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QModelIndexList \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMutex \
 		Utilities\popup.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QProgressBar \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
@@ -44472,7 +44872,11 @@ release\.obj\renamedlg.obj: Dialogs\renamedlg.cpp Dialogs\renamedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
-		release\.ui\ui_renamedlg.h
+		release\.ui\ui_renamedlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
 
 release\.obj\saveasdlg.obj: Dialogs\saveasdlg.cpp Dialogs\saveasdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -45058,6 +45462,9 @@ release\.obj\saveasdlg.obj: Dialogs\saveasdlg.cpp Dialogs\saveasdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -45082,6 +45489,11 @@ release\.obj\saveasdlg.obj: Dialogs\saveasdlg.cpp Dialogs\saveasdlg.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
 		release\.ui\ui_saveasdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpinBox \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
 
 release\.obj\testaligndlg.obj: Dialogs\testaligndlg.cpp Dialogs\testaligndlg.h \
@@ -45189,7 +45601,20 @@ release\.obj\testaligndlg.obj: Dialogs\testaligndlg.cpp Dialogs\testaligndlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qfiledevice.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qvector2d.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtouchdevice.h \
-		release\.ui\ui_testaligndlg.h
+		release\.ui\ui_testaligndlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QVariant \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qapplication.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcoreapplication.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qeventloop.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qdesktopwidget.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qguiapplication.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qinputmethod.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialogButtonBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qdialogbuttonbox.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qlabel.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qframe.h
 
 release\.obj\tokendlg.obj: Dialogs\tokendlg.cpp Dialogs\tokendlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -45678,6 +46103,15 @@ release\.obj\tokendlg.obj: Dialogs\tokendlg.cpp Dialogs\tokendlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		release\.ui\ui_tokendlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
 
 release\.obj\updateapp.obj: Dialogs\updateapp.cpp Dialogs\updateapp.h \
@@ -46155,7 +46589,10 @@ release\.obj\updateapp.obj: Dialogs\updateapp.cpp Dialogs\updateapp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h \
-		release\.ui\ui_updateapp.h
+		release\.ui\ui_updateapp.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
 
 release\.obj\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -46268,6 +46705,40 @@ release\.obj\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qaction.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qactiongroup.h \
 		release\.ui\ui_workspacedlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QVariant \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qapplication.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcoreapplication.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qeventloop.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qdesktopwidget.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qguiapplication.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qinputmethod.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QComboBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qcombobox.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractitemdelegate.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qstyleoption.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractspinbox.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qvalidator.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qregularexpression.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qslider.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractslider.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qstyle.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtabbar.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtabwidget.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qrubberband.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qframe.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qabstractitemmodel.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qboxlayout.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qlayout.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qlayoutitem.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qgridlayout.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qlabel.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qpushbutton.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractbutton.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QWidget \
 		Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgetsDepends \
@@ -46275,8 +46746,6 @@ release\.obj\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QtCoreDepends \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qabstractanimation.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qabstracteventdispatcher.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qeventloop.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qabstractitemmodel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qabstractnativeeventfilter.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qabstractproxymodel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qabstractstate.h \
@@ -46294,7 +46763,6 @@ release\.obj\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcborvalue.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qdatetime.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcborcommon.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qregularexpression.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\quuid.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcbormap.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcborstream.h \
@@ -46304,7 +46772,6 @@ release\.obj\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcollator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcommandlineoption.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcommandlineparser.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcoreapplication.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qconcatenatetablesproxymodel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qcryptographichash.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qdeadlinetimer.h \
@@ -46430,8 +46897,6 @@ release\.obj\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qgenericmatrix.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qgenericplugin.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qgenericpluginfactory.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qguiapplication.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qinputmethod.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qiconengine.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qiconengineplugin.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qimageiohandler.h \
@@ -46504,37 +46969,17 @@ release\.obj\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtextdocumentwriter.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtextlist.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtexttable.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qvalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\qtguiversion.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractbutton.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractitemdelegate.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qstyleoption.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractspinbox.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qslider.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractslider.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qstyle.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtabbar.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtabwidget.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qrubberband.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qframe.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractitemview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qabstractscrollarea.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qaccessiblewidget.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qapplication.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qdesktopwidget.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qboxlayout.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qlayout.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qlayoutitem.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qgridlayout.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qbuttongroup.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qcalendarwidget.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qcheckbox.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qcolordialog.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qcolormap.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qcolumnview.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qcombobox.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qcommandlinkbutton.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qpushbutton.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qcommonstyle.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qcompleter.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qdatawidgetmapper.h \
@@ -46579,7 +47024,6 @@ release\.obj\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qitemeditorfactory.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qkeyeventtransition.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qkeysequenceedit.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qlabel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qlcdnumber.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qlistview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qlistwidget.h \
@@ -46590,7 +47034,6 @@ release\.obj\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qmessagebox.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qmouseeventtransition.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qopenglwidget.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QWidget \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qplaintextedit.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtextedit.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qprogressbar.h \
@@ -46604,7 +47047,6 @@ release\.obj\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QScrollerProperties \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qscrollerproperties.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMetaType \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QVariant \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qshortcut.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qsizegrip.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qspinbox.h \
@@ -46640,7 +47082,6 @@ release\.obj\workspacedlg.obj: Dialogs\workspacedlg.cpp Dialogs\workspacedlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QElapsedTimer \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMutex \
 		Utilities\popup.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLabel \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QProgressBar \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
@@ -47134,6 +47575,15 @@ release\.obj\zoomdlg.obj: Dialogs\zoomdlg.cpp Dialogs\zoomdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		release\.ui\ui_zoomdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QRadioButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSlider \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpinBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
 
 release\.obj\effects.obj: Effects\effects.cpp Effects\effects.h \
@@ -49178,6 +49628,9 @@ release\.obj\embel.obj: Embellish\embel.cpp Embellish\embel.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -49815,6 +50268,9 @@ release\.obj\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embel
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -49902,6 +50358,10 @@ release\.obj\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embel
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QDesktopServices \
@@ -49916,9 +50376,16 @@ release\.obj\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embel
 		Utilities\performance.h \
 		release\.ui\ui_helpform.h \
 		release\.ui\ui_shortcutsform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTreeWidget \
 		release\.ui\ui_welcome.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		release\.ui\ui_message.h \
-		release\.ui\ui_test12.h
+		release\.ui\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
 
 release\.obj\embelexport.obj: Embellish\embelexport.cpp Embellish\embelexport.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -50503,6 +50970,9 @@ release\.obj\embelexport.obj: Embellish\embelexport.cpp Embellish\embelexport.h 
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -51143,6 +51613,9 @@ release\.obj\bookmarks.obj: File\bookmarks.cpp File\bookmarks.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -51743,6 +52216,9 @@ release\.obj\fstree.obj: File\fstree.cpp File\fstree.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -52832,6 +53308,9 @@ release\.obj\pixmap.obj: Image\pixmap.cpp Image\pixmap.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -53439,6 +53918,9 @@ release\.obj\thumb.obj: Image\thumb.cpp Image\thumb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -61446,6 +61928,9 @@ release\.obj\main.obj: Main\main.cpp Main\mainwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -61530,6 +62015,10 @@ release\.obj\main.obj: Main\main.cpp Main\mainwindow.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QDesktopServices \
@@ -61544,10 +62033,16 @@ release\.obj\main.obj: Main\main.cpp Main\mainwindow.h \
 		Utilities\performance.h \
 		release\.ui\ui_helpform.h \
 		release\.ui\ui_shortcutsform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTreeWidget \
 		release\.ui\ui_welcome.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		release\.ui\ui_message.h \
 		release\.ui\ui_test12.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
 		Main\qtsingleapplication.h
 
 release\.obj\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
@@ -62137,6 +62632,9 @@ release\.obj\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -62221,6 +62719,10 @@ release\.obj\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QDesktopServices \
@@ -62235,9 +62737,16 @@ release\.obj\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		Utilities\performance.h \
 		release\.ui\ui_helpform.h \
 		release\.ui\ui_shortcutsform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTreeWidget \
 		release\.ui\ui_welcome.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		release\.ui\ui_message.h \
-		release\.ui\ui_test12.h
+		release\.ui\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
 
 release\.obj\qtlocalpeer.obj: Main\qtlocalpeer.cpp Main\qtlocalpeer.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QLocalServer \
@@ -65893,6 +66402,9 @@ release\.obj\metadata.obj: Metadata\metadata.cpp Metadata\metadata.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -67555,6 +68067,9 @@ release\.obj\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\pref
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -67632,6 +68147,10 @@ release\.obj\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\pref
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QDesktopServices \
@@ -67646,9 +68165,16 @@ release\.obj\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\pref
 		Utilities\performance.h \
 		release\.ui\ui_helpform.h \
 		release\.ui\ui_shortcutsform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTreeWidget \
 		release\.ui\ui_welcome.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		release\.ui\ui_message.h \
-		release\.ui\ui_test12.h
+		release\.ui\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
 
 release\.obj\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEditor\propertyeditor.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -68243,6 +68769,9 @@ release\.obj\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEdito
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -68321,6 +68850,10 @@ release\.obj\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEdito
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QDesktopServices \
@@ -68335,9 +68868,16 @@ release\.obj\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEdito
 		Utilities\performance.h \
 		release\.ui\ui_helpform.h \
 		release\.ui\ui_shortcutsform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTreeWidget \
 		release\.ui\ui_welcome.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		release\.ui\ui_message.h \
-		release\.ui\ui_test12.h
+		release\.ui\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
 
 release\.obj\propertydelegate.obj: PropertyEditor\propertydelegate.cpp PropertyEditor\propertydelegate.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -72302,6 +72842,12 @@ release\.obj\inputdlg.obj: Utilities\inputdlg.cpp Utilities\inputdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		release\.ui\ui_inputdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QLineEdit \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug
 
 release\.obj\performance.obj: Utilities\performance.cpp Utilities\performance.h \
@@ -73506,6 +74052,9 @@ release\.obj\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h 
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -73586,6 +74135,10 @@ release\.obj\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h 
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QDesktopServices \
@@ -73600,9 +74153,16 @@ release\.obj\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h 
 		Utilities\performance.h \
 		release\.ui\ui_helpform.h \
 		release\.ui\ui_shortcutsform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTreeWidget \
 		release\.ui\ui_welcome.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		release\.ui\ui_message.h \
-		release\.ui\ui_test12.h
+		release\.ui\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
 
 release\.obj\usb.obj: Utilities\usb.cpp Utilities\usb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -75637,6 +76197,9 @@ release\.obj\compareImages.obj: Views\compareImages.cpp Views\compareImages.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -76266,6 +76829,9 @@ release\.obj\compareview.obj: Views\compareview.cpp Views\compareview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -76893,6 +77459,9 @@ release\.obj\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -76980,6 +77549,10 @@ release\.obj\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QDesktopServices \
@@ -76994,9 +77567,16 @@ release\.obj\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		Utilities\performance.h \
 		release\.ui\ui_helpform.h \
 		release\.ui\ui_shortcutsform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTreeWidget \
 		release\.ui\ui_welcome.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		release\.ui\ui_message.h \
-		release\.ui\ui_test12.h
+		release\.ui\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
 
 release\.obj\iconviewdelegate.obj: Views\iconviewdelegate.cpp Views\iconviewdelegate.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QtGui \
@@ -78071,6 +78651,9 @@ release\.obj\imageview.obj: Views\imageview.cpp C:\Qt\5.15.2\msvc2019_64\include
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -78139,8 +78722,7 @@ release\.obj\imageview.obj: Views\imageview.cpp C:\Qt\5.15.2\msvc2019_64\include
 		Utilities\dropshadowlabel.h \
 		Utilities\classificationlabel.h \
 		Embellish\embel.h \
-		Effects\graphicsitemeventfilter.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication
+		Effects\graphicsitemeventfilter.h
 
 release\.obj\infoview.obj: Views\infoview.cpp Views\infoview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -78725,6 +79307,9 @@ release\.obj\infoview.obj: Views\infoview.cpp Views\infoview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -79341,6 +79926,9 @@ release\.obj\tableview.obj: Views\tableview.cpp Views\tableview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -79956,6 +80544,9 @@ release\.obj\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
 		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
 		ImageFormats\Heic\heic.h \
 		Lib\libde265\include\de265.h \
 		Lib\libde265\release\de265-version.h \
@@ -80044,6 +80635,10 @@ release\.obj\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		Image\thumb.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
+		Dialogs\ingesterrors.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QTextDocument \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextEdit \
 		Dialogs\saveasdlg.h \
 		Dialogs\aboutdlg.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QDesktopServices \
@@ -80058,13 +80653,22 @@ release\.obj\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		Utilities\performance.h \
 		release\.ui\ui_helpform.h \
 		release\.ui\ui_shortcutsform.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHeaderView \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QScrollArea \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTreeWidget \
 		release\.ui\ui_welcome.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QHBoxLayout \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QSpacerItem \
 		release\.ui\ui_message.h \
-		release\.ui\ui_test12.h
+		release\.ui\ui_test12.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
 
 release\.obj\qrc_winnow.obj: release\.rcc\qrc_winnow.cpp 
 
 release\.obj\moc_imagecache.obj: release\.moc\moc_imagecache.cpp 
+
+release\.obj\moc_ingesterrors.obj: release\.moc\moc_ingesterrors.cpp 
 
 release\.obj\moc_managegraphicsdlg.obj: release\.moc\moc_managegraphicsdlg.cpp 
 

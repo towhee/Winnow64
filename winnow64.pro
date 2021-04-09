@@ -30,6 +30,7 @@ QT += xmlpatterns
 #QT += opengl
 
 HEADERS += Cache/imagecache.h \
+    Dialogs/ingesterrors.h \
     Dialogs/managegraphicsdlg.h \
     Dialogs/manageimagesdlg.h \
     Utilities/foldercompressor.h
@@ -129,6 +130,7 @@ HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
 SOURCES += Cache/imagecache.cpp \
+    Dialogs/ingesterrors.cpp \
     Dialogs/managegraphicsdlg.cpp \
     Dialogs/manageimagesdlg.cpp \
     Utilities/foldercompressor.cpp
@@ -224,6 +226,7 @@ SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
 
 FORMS += Dialogs/aboutdlg.ui \
+    Dialogs/ingesterrors.ui \
     Dialogs/managegraphicsdlg.ui \
     Dialogs/manageimagesdlg.ui
 FORMS += Dialogs/aligndlg.ui

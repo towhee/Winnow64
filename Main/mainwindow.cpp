@@ -6566,6 +6566,7 @@ QString MW::diagnostics()
     rpt << "\n" << "combineRawJpg = " << G::s(combineRawJpg);
     rpt << "\n" << "autoIngestFolderPath = " << G::s(autoIngestFolderPath);
     rpt << "\n" << "autoEjectUsb = " << G::s(autoEjectUsb);
+    rpt << "\n" << "integrityCheck = " << G::s(integrityCheck);
     rpt << "\n" << "ingestIncludeXmpSidecar = " << G::s(ingestIncludeXmpSidecar);
     rpt << "\n" << "backupIngest = " << G::s(backupIngest);
     rpt << "\n" << "gotoIngestFolder = " << G::s(gotoIngestFolder);
@@ -7579,6 +7580,7 @@ void MW::writeSettings()
     // ingest
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
     setting->setValue("autoEjectUSB", autoEjectUsb);
+    setting->setValue("integrityCheck", integrityCheck);
     setting->setValue("ingestIncludeXmpSidecar", ingestIncludeXmpSidecar);
     setting->setValue("backupIngest", backupIngest);
     setting->setValue("gotoIngestFolder", gotoIngestFolder);
@@ -7897,6 +7899,7 @@ bool MW::loadSettings()
         // ingest
         autoIngestFolderPath = false;
         autoEjectUsb = false;
+        integrityCheck = false;
         ingestIncludeXmpSidecar = true;
         gotoIngestFolder = false;
         backupIngest = false;
@@ -7972,6 +7975,7 @@ bool MW::loadSettings()
     // ingest
     if (setting->contains("autoIngestFolderPath")) autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
     if (setting->contains("autoEjectUSB")) autoEjectUsb = setting->value("autoEjectUSB").toBool();
+    if (setting->contains("integrityCheck")) integrityCheck = setting->value("integrityCheck").toBool();
     if (setting->contains("ingestIncludeXmpSidecar")) ingestIncludeXmpSidecar = setting->value("ingestIncludeXmpSidecar").toBool();
     if (setting->contains("backupIngest")) backupIngest = setting->value("backupIngest").toBool();
     if (setting->contains("gotoIngestFolder")) gotoIngestFolder = setting->value("gotoIngestFolder").toBool();
@@ -9368,6 +9372,7 @@ void MW::ingest()
         ingestDlg = new IngestDlg(this,
                                   combineRawJpg,
                                   autoEjectUsb,
+                                  integrityCheck,
                                   ingestIncludeXmpSidecar,
                                   backupIngest,
                                   gotoIngestFolder,

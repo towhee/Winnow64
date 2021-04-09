@@ -1499,7 +1499,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>810</y>
+     <y>818</y>
      <width>201</width>
      <height>25</height>
     </rect>
@@ -1709,7 +1709,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>835</y>
+     <y>843</y>
      <width>181</width>
      <height>25</height>
     </rect>
@@ -1722,7 +1722,7 @@
    <property name="geometry">
     <rect>
      <x>320</x>
-     <y>810</y>
+     <y>818</y>
      <width>141</width>
      <height>25</height>
     </rect>
@@ -1735,7 +1735,7 @@
    <property name="geometry">
     <rect>
      <x>320</x>
-     <y>835</y>
+     <y>843</y>
      <width>141</width>
      <height>25</height>
     </rect>
@@ -1748,7 +1748,7 @@
    <property name="geometry">
     <rect>
      <x>210</x>
-     <y>810</y>
+     <y>818</y>
      <width>101</width>
      <height>25</height>
     </rect>
@@ -1758,6 +1758,30 @@
    </property>
    <property name="alignment">
     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="integrityChk">
+   <property name="geometry">
+    <rect>
+     <x>450</x>
+     <y>750</y>
+     <width>391</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Integrity check copied files (slower)</string>
    </property>
   </widget>
  </widget>
