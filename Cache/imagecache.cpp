@@ -882,10 +882,13 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath)
 
 void ImageCache::setCurrentPosition(QString path)
 {
-    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__, path); mutex.unlock();}
+    if (G::isLogger) { G::log(__FUNCTION__, path); }
+    mutex.lock();
+
     currentPath = path;
     qDebug() << __FUNCTION__ << path << isRunning();
-//    if (!isRunning()) start();
+    if (!isRunning()) start();
+    mutex.unlock();
 }
 
 void ImageCache::run()
@@ -912,16 +915,27 @@ void ImageCache::run()
     if (G::isLogger) G::log(__FUNCTION__);
     source = "";
     prevCurrentPath = "";
+    bool okToAbort;
+    bool okToPause;
+    bool positionChanged;
     do {
-        if (abort) {
-            qDebug() << __FUNCTION__ << "A B O R T I N G";
+        // check if abort
+        mutex.lock();
+        okToAbort = abort;
+        abort = false;
+        mutex.unlock();
+        if (okToAbort) {
+//            qDebug() << __FUNCTION__ << "A B O R T I N G";
             if (G::isLogger) G::log(__FUNCTION__, "A B O R T I N G");
             emit updateIsRunning(/*isRunning*/false, /*showCacheLabel*/false);
-            abort = false;
             return;
         }
 
-        if (pause) {
+        // check if pause building cache
+        mutex.lock();
+        okToPause = pause;
+        mutex.unlock();
+        if (okToPause) {
             msleep(100);
             continue;
         }
@@ -932,7 +946,10 @@ void ImageCache::run()
         }
 
         // has there been a file selection change
-        if (prevCurrentPath == currentPath) {
+        mutex.lock();
+        positionChanged = (prevCurrentPath != currentPath);
+        mutex.unlock();
+        if (!positionChanged) {
             msleep(100);
             continue;
         }
@@ -972,15 +989,22 @@ void ImageCache::run()
         // fill the cache with images
         QTime t = QTime::currentTime().addMSecs(500);
         while (nextToCache()) {
-            if (abort) {
+            mutex.lock();
+            okToAbort = abort;
+            abort = false;
+            mutex.unlock();
+            if (okToAbort) {
 //                qDebug() << __FUNCTION__ << "A B O R T I N G at nextToCache";
                 emit updateIsRunning(/*isRunning*/false, /*showCacheLabel*/false);
-                abort = false;
                 return;
             }
 
             // if file selection change then back to the main loop to restart filling cache
-            if (prevCurrentPath != currentPath || pause) break;
+            mutex.lock();
+            okToPause = pause;
+            positionChanged = (prevCurrentPath != currentPath);
+            mutex.unlock();
+            if (positionChanged || okToPause) break;
 
             // next image to cache
             QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
@@ -1034,6 +1058,10 @@ void ImageCache::run()
             emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
 
         if (cache.isShowCacheStatus) emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
+
+        mutex.lock();
+        okToAbort = abort;
+        mutex.unlock();
     }
-    while (!abort);
+    while (!okToAbort);
 }
