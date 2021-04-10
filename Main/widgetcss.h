@@ -35,6 +35,7 @@ public:
     int l60;
 
     // height factors
+    QString h12;    // 1.2x font height
     QString h15;    // 1.5x font height
     QString h17;    // 1.7x font height
     QString h20;    // 2.0x font height

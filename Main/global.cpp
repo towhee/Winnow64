@@ -71,6 +71,10 @@ namespace G
     bool isSlideShow;
     bool isEmbellish;
 
+    // ingest
+    int ingestCount = 0;
+    QDate ingestLastDate;
+
 //    bool colorManage;
 
     // not persistent

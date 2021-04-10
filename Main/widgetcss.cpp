@@ -35,6 +35,7 @@ QString WidgetCSS::css()
     borderColor = QColor(l40,l40,l40);
 
     // heights (mostly used for rows in TreeView etc)
+    h12 = QString::number(fontSize * 1.2 * G::ptToPx);
     h15 = QString::number(fontSize * 1.5 * G::ptToPx);
     h17 = QString::number(fontSize * 1.7 * G::ptToPx);
     h20 = QString::number(fontSize * 2.0 * G::ptToPx);
@@ -546,6 +547,7 @@ QString WidgetCSS::pushButton()
         "padding-top: 3px;"
         "padding-bottom: 3px;"
         "min-width: 100px;"
+        "min-height: " + h12 + "px;"
     "}"
 
     "QPushButton:default {"

@@ -7591,6 +7591,8 @@ void MW::writeSettings()
     setting->setValue("manualFolderPath", manualFolderPath);
     setting->setValue("manualFolderPath2", manualFolderPath2);
     setting->setValue("filenameTemplateSelected", filenameTemplateSelected);
+    setting->setValue("ingestCount", G::ingestCount);
+    setting->setValue("ingestLastDate", G::ingestLastDate);
 
     // thumbs
     setting->setValue("thumbWidth", thumbView->iconWidth);
@@ -7986,6 +7988,9 @@ bool MW::loadSettings()
     if (setting->contains("filenameTemplateSelected")) filenameTemplateSelected = setting->value("filenameTemplateSelected").toInt();
     if (setting->contains("manualFolderPath")) manualFolderPath = setting->value("manualFolderPath").toString();
     if (setting->contains("manualFolderPath2")) manualFolderPath2 = setting->value("manualFolderPath2").toString();
+    if (setting->contains("ingestCount")) G::ingestCount = setting->value("ingestCount").toInt();
+    if (setting->contains("ingestLastDate")) G::ingestLastDate = setting->value("ingestLastDate").toDate();
+    if (G::ingestLastDate != QDate::currentDate()) G::ingestCount = 0;
 
     // preferences
     if (setting->contains("isSoloPrefDlg")) isSoloPrefDlg = setting->value("isSoloPrefDlg").toBool();
