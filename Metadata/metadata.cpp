@@ -415,7 +415,7 @@ bool Metadata::writeMetadata(const QString &fPath, ImageMetadata m, QByteArray &
         && !emailChanged
         && !urlChanged
         && !orientationChanged ) {
-        qDebug() << __FUNCTION__ << "Unable to write xmp buffer. No metadata has been edited.";
+//        qDebug() << __FUNCTION__ << "Unable to write xmp buffer. No metadata has been edited.";
         return false;
     }
 

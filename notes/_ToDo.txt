@@ -46,8 +46,8 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
-- When ingesting confirm all files copied correctly (option)
 DONE/FIXED
+- When ingesting confirm all files copied correctly (option)
 - Ingest manual select destination not showing in Images will be copied and renamed to
 - Video files showing wrong shooting info
 - Logger

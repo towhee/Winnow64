@@ -508,10 +508,16 @@ void IngestDlg::ingest()
              << "msec =" << t.elapsed()
                 ;
                 // */
-    IngestErrors ingestErrors(failedToCopy, integrityFailure);
-    ingestErrors.exec();
-    // show write errors
-//    qDebug() << __FUNCTION__ << failedToCopy << integrityFailure;
+
+    // update ingest count for Winnow session
+    G::ingestCount += pickList.size();
+    G::ingestLastDate = QDate::currentDate();
+
+    // show any ingest errors
+    if (failedToCopy.length() || integrityFailure.length()) {
+        IngestErrors ingestErrors(failedToCopy, integrityFailure);
+        ingestErrors.exec();
+    }
 
 
     QDialog::accept();
@@ -625,9 +631,12 @@ void IngestDlg::on_selectFolderBtn_clicked()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
+    QString path = ui->manualFolderLabel->text();
+    if (path.right(1) == "/") path = path.left(path.length() - 1);
+    if (!QDir(path).exists()) path = root;
     QString s;
     s = QFileDialog::getExistingDirectory
-        (this, tr("Choose Ingest Primary Folder"), root,
+        (this, tr("Choose Ingest Primary Folder"), path,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (s.length() > 0) {
         if(s.right(1) != "/") s += "/";
@@ -646,9 +655,12 @@ void IngestDlg::on_selectFolderBtn_2_clicked()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
+    QString path = ui->manualFolderLabel_2->text();
+    if (path.right(1) == "/") path = path.left(path.length() - 1);
+    if (!QDir(path).exists()) path = root;
     QString s;
     s = QFileDialog::getExistingDirectory
-        (this, tr("Choose Ingest Backup Folder"), root,
+        (this, tr("Choose Ingest Backup Folder"), path,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (s.length() > 0) {
         if(s.right(1) != "/") s += "/";
@@ -956,9 +968,9 @@ void IngestDlg::on_spinBoxStartNumber_valueChanged(const QString /* &arg1 */)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     // updateFolderPath();
-    int sequenceNum = getSequenceStart(folderPath);
-    if(ui->spinBoxStartNumber->value() < sequenceNum)
-        ui->spinBoxStartNumber->setValue(sequenceNum + 1);
+//    int sequenceNum = getSequenceStart(folderPath) + G::ingestCount;
+//    if(ui->spinBoxStartNumber->value() < sequenceNum)
+//        ui->spinBoxStartNumber->setValue(sequenceNum + 1);
     buildFileNameSequence();
 }
 
@@ -1001,6 +1013,8 @@ int IngestDlg::getSequenceStart(const QString &path)
             }
         }
     }
+    if (sequence < G::ingestCount) sequence = G::ingestCount;
+    if (sequence > G::ingestCount) G::ingestCount = sequence;
     return sequence;
 }
 

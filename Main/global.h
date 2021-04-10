@@ -193,6 +193,9 @@ namespace G
 
     extern bool isEmbellish;
 
+    extern int ingestCount;
+    extern QDate ingestLastDate;
+
 //    extern bool colorManage;
 
     extern bool isThreadTrackingOn;
