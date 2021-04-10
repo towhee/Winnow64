@@ -1,4 +1,5 @@
 BUGS / TO DO
+- When change cache amount does not immediately update ImageCache
 - Filters not working sometimes
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow
