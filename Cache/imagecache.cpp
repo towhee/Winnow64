@@ -147,16 +147,16 @@ void ImageCache::pauseImageCache()
     mutex.unlock();
     return;
 
-    if (G::isLogger) G::log(__FUNCTION__); 
-    if (isRunning()) {
-        mutex.lock();
-        abort = true;
-        condition.wakeOne();
-        mutex.unlock();
-        wait();
-        abort = false;
-        emit updateIsRunning(false, true);
-    }
+//    if (G::isLogger) G::log(__FUNCTION__);
+//    if (isRunning()) {
+//        mutex.lock();
+//        abort = true;
+//        condition.wakeOne();
+//        mutex.unlock();
+//        wait();
+//        abort = false;
+//        emit updateIsRunning(false, true);
+//    }
 }
 
 void ImageCache::resumeImageCache()
@@ -548,7 +548,6 @@ void ImageCache::removeFromCache(QStringList &pathList)
 
     // change to ImageCache
     setCurrentPosition(dm->currentFilePath);
-//    updateImageCachePosition();
 }
 
 QString ImageCache::diagnostics()
@@ -737,12 +736,14 @@ void ImageCache::buildImageCacheList()
         float w = dm->sf->index(i, G::WidthColumn).data().toFloat();
         int h = dm->sf->index(i, G::HeightColumn).data().toInt();
         cacheItem.sizeMB = static_cast<int>(w * h / 262144);
-//        if (cache.usePreview) {
-//            QSize p = scalePreview(w, h);
-//            w = p.width();
-//            h = p.height();
-//            cacheItem.sizeMB += (float)w * h / 262144;
-//        }
+        /*
+        if (cache.usePreview) {
+            QSize p = scalePreview(w, h);
+            w = p.width();
+            h = p.height();
+            cacheItem.sizeMB += (float)w * h / 262144;
+        }
+        // */
         cacheItem.isMetadata = w > 0;
         cacheItemList.append(cacheItem);
 
@@ -830,14 +831,16 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus
     When various image cache parameters are changed in preferences they are updated here.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
+    mutex.lock();
     cache.maxMB = cacheSizeMB;
     cache.isShowCacheStatus = isShowCacheStatus;
     cache.wtAhead = cacheWtAhead;
     cache.usePreview = usePreview;
     cache.previewSize = QSize(previewWidth, previewHeight);
+    mutex.unlock();
 }
 
-void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath)
+void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, bool sortChange)
 {
 /*
     When the datamodel is filtered the image cache needs to be updated. The cacheItemList is
@@ -848,11 +851,12 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath)
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     if(dm->sf->rowCount() == 0) return;
-//    if(filteredFilePathList.length() == 0) return;
 
-    // just in case stopImageCache not called before this
-    qDebug() << __FUNCTION__ << "Pausing image cache";
+    // pause caching    rgh perhaps enclose entire rebuild in a mutex??
     if (isRunning()) pauseImageCache();
+
+    qDebug() << __FUNCTION__ << "BEFORE CALL buildImageCacheList";
+//    std::cout << diagnostics().toStdString() << std::flush;
 
     // build a new cacheItemList for the filtered/sorted dataset
     buildImageCacheList();
@@ -863,7 +867,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath)
     QStringList fList;
 
     // assign cache.key and update isCached status in cacheItemList
-    for(int row = 0; row < cache.totFiles; ++row) {
+    for (int row = 0; row < cacheItemList.length(); ++row) {
         QString fPath = cacheItemList.at(row).fPath;
         fList.append(fPath);
         // get key for current image
@@ -872,12 +876,40 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath)
         if (imCache.contains(fPath)) cacheItemList[row].isCached = true;
     }
 
+    // if the sort has been reversed
+    if (sortChange) cache.isForward = !cache.isForward;
+
+    setPriorities(cache.key);
+    setTargetRange();
+//    reportCache("AFTER SORT CHANGE");
+//    std::cout << diagnostics().toStdString() << std::flush;
+
     // remove surplus cached images from imCache if they are not in the filtered dataset
     QHashIterator<QString, QImage> i(imCache);
     while (i.hasNext()) {
         i.next();
         if (!fList.contains(i.key())) imCache.remove(i.key());
     }
+
+    if (cache.isShowCacheStatus)
+        emit showCacheStatus("Update all rows", 0,  "ImageCache::rebuildImageCacheParameters");
+
+    if (isRunning()) {
+        mutex.lock();
+        filterOrSortHasChanged = true;
+        pause = false;
+        mutex.unlock();
+    }
+    else start();
+}
+
+void ImageCache::cacheSizeChange()
+{
+    if (G::isLogger) { G::log(__FUNCTION__); }
+    mutex.lock();
+    cacheSizeHasChanged = true;
+    if (!isRunning()) start();
+    mutex.unlock();
 }
 
 void ImageCache::setCurrentPosition(QString path)
@@ -886,7 +918,7 @@ void ImageCache::setCurrentPosition(QString path)
     mutex.lock();
 
     currentPath = path;
-    qDebug() << __FUNCTION__ << path << isRunning();
+//    qDebug() << __FUNCTION__ << path << isRunning();
     if (!isRunning()) start();
     mutex.unlock();
 }
@@ -915,9 +947,15 @@ void ImageCache::run()
     if (G::isLogger) G::log(__FUNCTION__);
     source = "";
     prevCurrentPath = "";
+
+    // run cache control flags
     bool okToAbort;
     bool okToPause;
     bool positionChanged;
+    bool cacheSizeChange;
+    bool filterSortChange;
+
+    // start run loop
     do {
         // check if abort
         mutex.lock();
@@ -945,11 +983,15 @@ void ImageCache::run()
             continue;
         }
 
-        // has there been a file selection change
+        // has there been a file selection, cache size or sort/filter change
         mutex.lock();
         positionChanged = (prevCurrentPath != currentPath);
+        cacheSizeChange = cacheSizeHasChanged;
+        cacheSizeHasChanged = false;
+        filterSortChange = filterOrSortHasChanged;
+        filterOrSortHasChanged = false;
         mutex.unlock();
-        if (!positionChanged) {
+        if (!positionChanged && !cacheSizeChange &&!filterSortChange) {
             msleep(100);
             continue;
         }
@@ -1003,8 +1045,10 @@ void ImageCache::run()
             mutex.lock();
             okToPause = pause;
             positionChanged = (prevCurrentPath != currentPath);
+            cacheSizeChange = cacheSizeHasChanged;
+            filterSortChange = filterOrSortHasChanged;
             mutex.unlock();
-            if (positionChanged || okToPause) break;
+            if (positionChanged || okToPause || cacheSizeChange || filterSortChange) break;
 
             // next image to cache
             QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
@@ -1041,7 +1085,7 @@ void ImageCache::run()
                 cache.currMB = getImCacheSize();
 
                 // only update status every 500 ms to improve performance
-                if(cache.isShowCacheStatus && QTime::currentTime() > t) {
+                if (cache.isShowCacheStatus /*&& QTime::currentTime() > t*/) {
                     emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
                     t = QTime::currentTime().addMSecs(500);
                 }

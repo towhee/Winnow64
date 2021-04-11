@@ -5137,7 +5137,7 @@ void MW::updateProgressBarWidth()
 void MW::setCacheParameters()
 {
 /*
-    This slot id signalled from the preferences dialog with changes to the cache
+    This slot is signalled from the preferences dialog with changes to the cache
     parameters.  Any visibility changes are executed.
 */
     if (G::isLogger) G::log(__FUNCTION__);
@@ -5162,6 +5162,8 @@ void MW::setCacheParameters()
     // thumbnail cache status indicators
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
+
+    imageCacheThread->cacheSizeChange();
 }
 
 QString MW::getPosition()
@@ -5868,7 +5870,7 @@ void MW::sortChange(QString src)
     updateStatus(true, "", __FUNCTION__);
 
     // sync image cache with datamodel filtered proxy
-    imageCacheThread->rebuildImageCacheParameters(fPath);
+    imageCacheThread->rebuildImageCacheParameters(fPath, true/*sortChange*/);
 
     /* if the previous selected image is also part of the filtered datamodel then the
        selected index does not change and fileSelectionChange will not be signalled.

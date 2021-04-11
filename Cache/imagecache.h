@@ -36,7 +36,7 @@ public:
              bool &usePreview, int &previewWidth, int &previewHeight);
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
              int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
-    void rebuildImageCacheParameters(QString &currentImageFullPath);
+    void rebuildImageCacheParameters(QString &currentImageFullPath, bool sortChange = false);
     void stopImageCache();
     void clearImageCache();
     void pauseImageCache();
@@ -96,6 +96,7 @@ protected:
 
 public slots:
     void setCurrentPosition(QString path);
+    void cacheSizeChange();         // flag when cache size is changed in preferences
 
 private:
     QMutex mutex;
@@ -103,6 +104,8 @@ private:
     bool restart;
     bool abort;
     bool pause;
+    bool cacheSizeHasChanged;
+    bool filterOrSortHasChanged;
     QString currentPath;
     QString prevCurrentPath;
 
@@ -114,7 +117,7 @@ private:
     QList<int>toDecache;
 
     int getImCacheSize();           // add up total MB cached
-    void setKeyToCurrent();                  // cache key from currentFilePath
+    void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
