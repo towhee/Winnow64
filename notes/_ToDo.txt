@@ -1,5 +1,5 @@
 BUGS / TO DO
-- When change cache amount does not immediately update ImageCache
+- Full path for file name in external program
 - Filters not working sometimes
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow
@@ -8,8 +8,6 @@ BUGS / TO DO
 - Slow program start sometimes (check for updates?)
 - Slow startup if a drive is sleeping
 - Maintain count when switch folders during the same ingest
-- Full path for file name in external program
-- When reverse sort the cache progress bar does not reverse to match
 - Tap on mac
 - Handle winnets on Mac
 - Quick start loupe first image in folder
@@ -48,6 +46,8 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- When reverse sort the cache progress bar does not reverse to match
+- When change cache amount does not immediately update ImageCache
 - When ingesting confirm all files copied correctly (option)
 - Ingest manual select destination not showing in Images will be copied and renamed to
 - Video files showing wrong shooting info

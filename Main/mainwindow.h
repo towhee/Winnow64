@@ -467,6 +467,7 @@ private slots:
     void setCombineRawJpg();
     void nextSlide();
     void prevRandomSlide();
+//    void updateImageCacheSize(int mb);
     void setCacheParameters();
     void selectAllThumbs();
     void removeBookmark();
