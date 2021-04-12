@@ -79,11 +79,7 @@ bool Canon::parse(MetadataParameters &p,
                   Exif *exif,
                   Jpeg *jpeg)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     //p.file.open in Metadata::readMetadata
     quint32 startOffset = 0;
 

@@ -77,12 +77,7 @@ It is used to show some file, image and application state information.
 InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView *thumbView)
     : QTreeView(parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    this->dm = dm;
+    if (G::isLogger) G::log(__FUNCTION__);    this->dm = dm;
     this->metadata = metadata;
     this->thumbView = thumbView;        // req'd to update metadata in dm for selections
 
@@ -192,35 +187,20 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex, const QVe
 
 void InfoView::refreshLayout()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    setColumn0Width();
+    if (G::isLogger) G::log(__FUNCTION__);    setColumn0Width();
     scheduleDelayedItemsLayout();
 }
 
 void InfoView::showInfoViewMenu(QPoint pt)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    selectedEntry = indexAt(pt);
+    if (G::isLogger) G::log(__FUNCTION__);    selectedEntry = indexAt(pt);
 	if (selectedEntry.isValid())
     	infoMenu->popup(viewport()->mapToGlobal(pt));
 }
 
 void InfoView::setColumn0Width()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    QFont ft = this->font();
+    if (G::isLogger) G::log(__FUNCTION__);    QFont ft = this->font();
     ft.setPixelSize(static_cast<int>(G::fontSize.toInt() * 1.333/* * G::ptToPx*/));
     QFontMetrics fm(ft);
     #ifdef Q_OS_WIN
@@ -247,12 +227,7 @@ status information, such as number of items picked or current item selected.
 
 If any of the editable fields change then MW::metadataChanged is triggered.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
+    if (G::isLogger) G::log(__FUNCTION__);    ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
     ok->setHorizontalHeaderItem(1, new QStandardItem(QString("Value")));
     ok->setHorizontalHeaderItem(2, new QStandardItem(QString("Show")));
 
@@ -349,12 +324,7 @@ When called, the function iterates through all the metadata items in ok and
 looks for the field in ok. It then shows or hides the table row based on the ok
 show flag.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    bool okToShow;
+    if (G::isLogger) G::log(__FUNCTION__);    bool okToShow;
     for(int row = 0; row < ok->rowCount(); row++) {
         QModelIndex parentIdx = ok->index(row, 0);
         okToShow = ok->index(row, 2).data().toBool();
@@ -371,12 +341,7 @@ void InfoView::clearInfo()
 /*
 Clear all the values but leave the keys and flags alone
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    for(int row = 0; row < ok->rowCount(); row++) {
+    if (G::isLogger) G::log(__FUNCTION__);    for(int row = 0; row < ok->rowCount(); row++) {
         QModelIndex parentIdx = ok->index(row, 0);
         for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
             ok->setData(ok->index(childRow, 1, parentIdx), "");
@@ -386,23 +351,13 @@ Clear all the values but leave the keys and flags alone
 
 void InfoView::copyEntry()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-	if (selectedEntry.isValid())
+    if (G::isLogger) G::log(__FUNCTION__);	if (selectedEntry.isValid())
         QApplication::clipboard()->setText(ok->itemFromIndex(selectedEntry)->toolTip());
 }
 
 void InfoView::updateInfo(const int &row)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    qDebug() << __FUNCTION__ << row;
+    if (G::isLogger) G::log(__FUNCTION__);//    qDebug() << __FUNCTION__ << row;
 
     // flag updates so itemChanged will be ignored in MW::metadataChanged
     isNewImageDataChange = true;

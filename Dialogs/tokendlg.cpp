@@ -374,11 +374,7 @@ void TokenDlg::on_okBtn_clicked()
     using the old keys which are retained in templatesCB in the toolTipRole. Then swap
     templatesMap with newTemplatesMap.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QMap<QString, QString> newTemplatesMap;
     for (int i = 0; i < ui->templatesCB->count(); i++) {
         QString key = ui->templatesCB->itemText(i);

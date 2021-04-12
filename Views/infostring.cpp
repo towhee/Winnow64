@@ -27,11 +27,7 @@ InfoString::InfoString(QWidget *parent, DataModel *dm, QSettings *setting/*,
                        EmbelProperties *embelProperties*/) :
                        QWidget(parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     mw4 = qobject_cast<MW*>(parent);
     this->dm = dm;
     this->setting = setting;
@@ -302,6 +298,8 @@ QString InfoString::parseTokenString(QString &tokenString,
     image.
 */
     QFileInfo info(fPath);
+    QString ext = info.suffix().toLower();
+    if (mw4->metadata->noMetadataFormats.contains(ext)) return "";
     m = dm->imMetadata(fPath);
     QString s;
     int tokenEnd;

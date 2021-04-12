@@ -35,6 +35,7 @@ public:
     int l60;
 
     // height factors
+    QString h12;    // 1.2x font height
     QString h15;    // 1.5x font height
     QString h17;    // 1.7x font height
     QString h20;    // 2.0x font height
@@ -42,11 +43,12 @@ public:
     int fontSize;
     int halfFontSize;
     int scrollBarWidth = 14;
-    QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
-    QColor disabledColor = QColor(G::backgroundShade+20,G::backgroundShade+20,G::backgroundShade+20);
+    QColor textColor; // = QColor(G::textShade,G::textShade,G::textShade);
+    QColor borderColor;
+    QColor disabledColor; // = QColor(G::backgroundShade+20,G::backgroundShade+20,G::backgroundShade+20);
     QColor widgetBackgroundColor;
-    QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
-    QColor selectionColor = QColor(68,95,118);
+    QColor scrollBarHandleBackgroundColor; // = QColor(90,130,100);
+    QColor selectionColor; // = QColor(68,95,118);
 
     QString widget();
     QString mainWindow();
@@ -73,6 +75,7 @@ public:
     QString headerView();
     QString scrollBar();
     QString pushButton();
+    QString radioButton();
     QString comboBox();
     QString spinBox();
     QString textEdit();

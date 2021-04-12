@@ -9,6 +9,7 @@
 #include "ui_ingestautopath.h"
 //#include "ui_helpingest.h"
 #include "Utilities/utilities.h"
+#include "Dialogs/ingesterrors.h"
 
 namespace Ui {
 class IngestDlg;
@@ -22,6 +23,7 @@ public:
     explicit IngestDlg(QWidget *parent,
                        bool &combineRawJpg,
                        bool &autoEjectUsb,
+                       bool &integrityCheck,
                        bool &ingestIncludeXmpSidecar,
                        bool &isBackup,
                        bool &gotoIngestFolder,
@@ -40,7 +42,7 @@ public:
                        QStringList &ingestDescriptionCompleter,
                        bool &isAuto,
                        QString css);
-    ~IngestDlg();
+    ~IngestDlg() override;
 
 private slots:
     void updateFolderPath();
@@ -66,6 +68,7 @@ private slots:
 
     void on_combinedIncludeJpgChk_clicked();
     void on_ejectChk_stateChanged(int);
+    void on_integrityChk_stateChanged(int);
     void on_includeXmpChk_stateChanged(int);
     void on_backupChk_stateChanged(int arg1);
     void on_isBackupChkBox_stateChanged(int arg1);
@@ -94,6 +97,8 @@ private:
     void buildFileNameSequence();
     void updateExistingSequence();
     int getSequenceStart(const QString &path);
+    void getAvailableStorageMB();
+    void quitIfNotEnoughSpace();
     void updateEnabledState();
     void renameIfExists(QString &destination, QString &baseName, QString dotSuffix);
     void getPicks();
@@ -109,6 +114,7 @@ private:
     bool &isAuto;
     bool &combineRawJpg;
     bool &autoEjectUsb;
+    bool &integrityCheck;
     bool &ingestIncludeXmpSidecar;
     bool &isBackup;
     bool &gotoIngestFolder;
@@ -125,6 +131,8 @@ private:
     QString &rootFolderPath;
     QString &rootFolderPath2;
 
+    QString drive;
+    QString drive2;
     QString folderPath; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
     QString folderPath2; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
     QString fromRootToBaseFolder;
@@ -137,6 +145,16 @@ private:
     QString &manualFolderPath;
     QString &manualFolderPath2;
 
+    // memory required for picks
+    double picksMB;
+
+    // available MB on destination drive
+    double availableMB;
+    double availableMB2;
+
+    // list of files not copied
+    QStringList failedToCopy;
+    QStringList integrityFailure;
 
     // file name creation
     int& filenameTemplateSelected;

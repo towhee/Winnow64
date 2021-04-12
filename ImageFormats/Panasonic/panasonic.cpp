@@ -112,11 +112,7 @@ bool Panasonic::parse(MetadataParameters &p,
                       Exif *exif,
                       Jpeg *jpeg)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     /* Panasonic RW2 files
 
       Note TIFF magic word is 0x55 instead of 0x2a.

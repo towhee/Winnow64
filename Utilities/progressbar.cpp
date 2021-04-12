@@ -55,11 +55,7 @@ The pixmap showing progress includes background with the progress bar in the mid
 the app background is changed this function selectively paints the non-progressbar part
 of the pixmap the new background shade.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int w = m1->progressLabel->pixmap()->width();
     int h = m1->progressLabel->pixmap()->height();
     QPainter pnt(m1->progressPixmap);

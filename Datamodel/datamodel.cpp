@@ -143,11 +143,7 @@ DataModel::DataModel(QWidget *parent,
                      combineRawJpg(combineRawJpg)
 {
 
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     mw = parent;
     this->metadata = metadata;
     this->filters = filters;
@@ -237,13 +233,10 @@ DataModel::DataModel(QWidget *parent,
 
 void DataModel::clearDataModel()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }    
+    if (G::isLogger) G::log(__FUNCTION__);
     // clear the model
-    removeRows(0, rowCount());
+    clear();
+//    removeRows(0, rowCount());
     setRowCount(0);
 //    setColumnCount(0);
     // clear the fPath index of datamodel rows
@@ -275,11 +268,7 @@ when combined raw+jpg is activated.
 
 void DataModel::remove(QString fPath)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // remove row from datamodel
     int row;
     for (row = 0; row < rowCount(); ++row) {
@@ -302,11 +291,7 @@ void DataModel::remove(QString fPath)
 
 void DataModel::find(QString text)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int row = 0; row < sf->rowCount(); ++row) {
         QString searchableText = sf->index(row, G::SearchTextColumn).data().toString();
         qDebug() << __FUNCTION__ << searchableText;
@@ -338,11 +323,7 @@ Steps:
 - Note: build QMaps of unique field values for the filters is not done here, but on
   demand when the user selects the filter panel or a menu filter command.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     currentFolderPath = folderPath;
     filters->filtersBuilt = false;
     loadingModel = true;
@@ -447,11 +428,7 @@ bool DataModel::addFileData()
     • SearchColumn
     • ErrColumn
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // make sure if raw+jpg pair that raw file is first to make combining easier
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 
@@ -571,11 +548,7 @@ bool DataModel::addFileData()
 
 bool DataModel::updateFileData(QFileInfo fileInfo)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QString fPath = fileInfo.filePath();
     if (!fPathRow.contains(fPath)) return false;
     int row = fPathRow[fPath];
@@ -591,11 +564,7 @@ ImageMetadata DataModel::imMetadata(QString fPath)
 /*
 Used by InfoString and IngestDlg
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int row = fPathRow[fPath];
     metadata->m.row = row;
     ImageMetadata m;
@@ -703,11 +672,7 @@ datamodel. This information is required for a filter or sort operation, which re
 the entire dataset. Since the program will be waiting for the update this does not need
 to run as a separate thread and can be executed directly.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     G::t.restart();
     timeToQuit = false;
     loadingModel = true;
@@ -758,11 +723,7 @@ bool DataModel::readMetadataForItem(int row)
 /*
     Reads the image metadata into the datamodel for the row.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, index(row, 0).data(G::PathRole).toString());
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, index(row, 0).data(G::PathRole).toString());
     QString fPath = index(row, 0).data(G::PathRole).toString();
 
     // load metadata
@@ -802,12 +763,7 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     been loaded, but editable data, (such as rating, label, title, email, url) may have been
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    qDebug() << __FUNCTION__ << m.fPath;
+    if (G::isLogger) G::log(__FUNCTION__); 
     int row = m.row;
     QString search = index(row, G::SearchTextColumn).data().toString();
     if (!metadata->ratings.contains(m.rating)) m.rating = "";
@@ -928,11 +884,7 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
 
 bool DataModel::hasFolderChanged()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     bool hasChanged = false;
     modifiedFiles.clear();
     QList<QFileInfo> fileInfoList2;
@@ -983,11 +935,7 @@ When the search string in filters is edited a signal is emitted to run this func
 there is a match G::SearchColumn is set to true, otherwise false.  Udate the filtered and
 unfiltered counts.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     qDebug() << __FUNCTION__ << searchString;
     // update datamodel search string match
     for (int row = 0; row < rowCount(); ++row)  {
@@ -1009,11 +957,7 @@ void DataModel::rebuildTypeFilter()
 /*
 When Raw+Jpg is toggled in the main program MW the file type filter must be rebuilt.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     filters->types->takeChildren();
     QMap<QVariant, QString> typesMap;
     int rows = sf->rowCount();
@@ -1033,11 +977,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 The hash table fPathRow {path, row} if build when the datamodel is loaded to provide a
 quick lookup to get the datamodel row from an image path.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int row = fPathRow[fPath];
     QModelIndex idx = sf->mapFromSource(index(row, 0));
     if (idx.isValid()) return idx;
@@ -1053,21 +993,13 @@ quick lookup to get the datamodel row from an image path.
 }
 
 int DataModel::proxyRowFromModelRow(int dmRow) {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     return sf->mapFromSource(index(dmRow, 0)).row();
 }
 
 void DataModel::error(int sfRow, const QString &s, const QString src)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    int dmRow = sf->mapToSource(sf->index(sfRow, 0)).row();
     QStringList err = sf->index(sfRow, G::ErrColumn).data().toStringList();
     err << QString::number(err.size() + 1) + ". " + src + ": " + s;
@@ -1081,11 +1013,7 @@ void DataModel::error(int sfRow, const QString &s, const QString src)
 
 void DataModel::errorList(int sfRow, const QStringList &sl, const QString src)
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, "Source: " + src);
     // get current error list for datamodel row
     QStringList err = sf->index(sfRow, G::ErrColumn).data().toStringList();
     // append new error items in sl
@@ -1107,11 +1035,7 @@ void DataModel::clearPicks()
 /*
 reset all the picks to false.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for(int row = 0; row < sf->rowCount(); row++) {
         setData(index(row, G::PickColumn), "false");
     }
@@ -1119,11 +1043,7 @@ reset all the picks to false.
 
 QString DataModel::diagnosticsErrors()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -1146,11 +1066,7 @@ QString DataModel::diagnosticsErrors()
 
 QString DataModel::diagnostics()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -1173,11 +1089,7 @@ QString DataModel::diagnostics()
 
 QString DataModel::diagnosticsForCurrentRow()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -1198,11 +1110,7 @@ QString DataModel::diagnosticsForCurrentRow()
 
 void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QString s = "";
     rpt << "\n"   << G::sj("DataModel row", 27) << G::s(row);
     rpt << "\n  " << G::sj("FileName", 25) << G::s(index(row, G::NameColumn).data());
@@ -1375,10 +1283,6 @@ widget.
 If the new folder has been loaded and there are user driven changes to the
 filtration then the image cache needs to be reloaded to match the new proxy (sf)
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     invalidateFilter();
 }

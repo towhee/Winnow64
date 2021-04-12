@@ -14,11 +14,7 @@ Thumb::Thumb(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(paren
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, fPath);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
     // check orientation and rotate if portrait
     QTransform trans;
     int row = dm->fPathRow[fPath];
@@ -41,11 +37,7 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
 
 bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, fPath);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
     QFile imFile(fPath);
@@ -79,11 +71,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 
 bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, fPath);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
 //    qDebug() << __FUNCTION__ << fPath;
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
@@ -107,14 +95,10 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     QFileInfo info(imFile);
     QString ext = info.suffix().toLower();
 
-    {
-    #ifdef ISDEBUG
     QString s = "File size = " + QString::number(imFile.size());
     s += " Offset embedded thumb = " + QString::number(offsetThumb);
     s += " Length embedded thumb = " + QString::number(lengthThumb);
-    G::track(__FUNCTION__, s);
-    #endif
-    }
+//    G::log(__FUNCTION__, s);
 
     if (imFile.isOpen()) imFile.close();
     if (imFile.open(QIODevice::ReadOnly)) {
@@ -142,11 +126,7 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
 
 bool Thumb::loadFromTiffData(QString &fPath, QImage &image)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, fPath);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
     QFile imFile(fPath);
     if (imFile.isOpen()) imFile.close();
     // check if file is locked by another process
@@ -168,11 +148,7 @@ Load a thumbnail preview as a decoration icon in the datamodel dm in column 0. R
 tif files can contain smaller previews. Check if they do and load the smaller preview as that
 is faster than loading the entire full resolution image just to get a thumbnail.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, fPath);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
     /*
     qDebug() << __FUNCTION__ << "fPath =" << fPath;
 //    */

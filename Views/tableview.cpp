@@ -5,12 +5,7 @@ TableView::TableView(DataModel *dm)
 /*
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-
+    if (G::isLogger) G::log(__FUNCTION__);    
     this->dm = dm;
 //    int ht = G::fontSize.toInt();
 
@@ -79,12 +74,8 @@ TableView::TableView(DataModel *dm)
 
 void TableView::setViewportParameters()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    firstVisibleRow = rowAt(0);
+    if (G::isLogger) G::log(__FUNCTION__);        
+		firstVisibleRow = rowAt(0);
     midVisibleRow = rowAt(height() / 2);
     lastVisibleRow = rowAt(height());
 
@@ -94,11 +85,7 @@ void TableView::setViewportParameters()
 
 void TableView::scrollToRow(int row, QString source)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);    
 //    qDebug() << __FUNCTION__ << objectName() << "row =" << row
 //             << "source =" << source;
     QModelIndex idx = dm->sf->index(row, 0);
@@ -113,11 +100,7 @@ bool TableView::isRowVisible(int row)
 
 void TableView::scrollToCurrent()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);    		
     QModelIndex idx = dm->sf->index(currentIndex().row(), 1);
     scrollTo(idx, ScrollHint::PositionAtCenter);
 }
@@ -198,23 +181,14 @@ int TableView::sizeHintForColumn(int column) const
 
 void TableView::selectPageUp()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-//    qDebug() << __FUNCTION__;
+    if (G::isLogger) G::log(__FUNCTION__);
     setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
 }
 
 void TableView::selectPageDown()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
-    qDebug() << __FUNCTION__;
+    if (G::isLogger) G::log(__FUNCTION__);       
+		qDebug() << __FUNCTION__;
     setCurrentIndex(moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier));
 }
 
@@ -258,11 +232,7 @@ void TableView::mousePressEvent(QMouseEvent *event)
 
 void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     emit displayLoupe();
 }
 
@@ -282,11 +252,7 @@ Column 0 = TableView column name
 Column 1 = Show/hide TableView column
 Column 2 = Geek role for the TableView column
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     ok = new QStandardItemModel;
 
     ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));

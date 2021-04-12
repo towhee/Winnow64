@@ -26,11 +26,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
     The metadata is copied from the source image file to the exported image file. Finally, the
     ICC color space is updated.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     this->metadata = metadata;
     this->dm = dm;
     this->imageCacheThread = imageCacheThread;
@@ -46,11 +42,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
 
 EmbelExport::~EmbelExport()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    delete embellish;
 //    delete scene;
 //    delete pmItem;
@@ -62,11 +54,7 @@ bool EmbelExport::loadImage(QString fPath)
     Read the image file, extract metadata, apply ICC profile and convert to
     QGraphicsPixmapItem.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (imageCacheThread->imCache.contains(fPath)) {
         pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
         return true;
@@ -105,11 +93,7 @@ QString EmbelExport::exportFolderPath(QString fPath)
     fromFolderPath.  If the export folder save method == "Subfolder", then the subfolder name
     is used, otherwise, all this is ignored and embelProperties->exportSubfolder is used.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QFileInfo filedir(fPath);
     QString fromFolderPath = filedir.dir().path();
     QString exportFolder;
@@ -132,11 +116,7 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     template is re-established, or the exported folder is opened, with the sort order
     set to last modified in reverse.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     /* log
     for (int i = 0; i < pathList.length(); i++) {
         Utilities::log(__FUNCTION__, pathList.at(i));
@@ -166,11 +146,7 @@ void EmbelExport::exportImages(const QStringList &srcList)
     the current embellish template and saved to the template output folder. This is called
     from MW::exportEmbel.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
     abort = false;
     int count = srcList.size();
@@ -250,11 +226,7 @@ void EmbelExport::exportImage(const QString &fPath)
     from the source image file to the exported image file.  Finally, the ICC color space is
     updated.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QString extension = embelProperties->exportFileType;
     QFileInfo fileInfo(fPath);
     QString baseName = fileInfo.baseName() + embelProperties->exportSuffix;

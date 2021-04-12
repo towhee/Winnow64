@@ -14,11 +14,7 @@ CompareImages::CompareImages(QWidget *parent,
                              ImageCache *imageCacheThread)
     : QWidget(parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     this->metadata = metadata;
     this->dm = dm;
     this->thumbView = thumbView;
@@ -42,11 +38,7 @@ CompareImages::CompareImages(QWidget *parent,
 bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisible,
                          QItemSelectionModel *selectionModel)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     cw = centralWidgetSize;
 
     // clear old stuff
@@ -163,11 +155,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 
 void CompareImages::loadGrid()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     /*
     int n = gridLayout->count();
     int c = cols;
@@ -197,11 +185,7 @@ void CompareImages::configureGrid()
 /*  Returns the most efficient number of rows and columns to fit n images (between 2 - 9)
     in a grid, based on the aspect ratios of each image.  The algoritm minimizes the total area.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     long area1, area2, area3;
     switch (count) {
     case 2:
@@ -292,11 +276,7 @@ void CompareImages::configureGrid()
 
 long CompareImages::area(int rows, int cols)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // cw = central widget
     // Define cell size each image must fit into
     QSize cell(cw.width() / cols, cw.height() / rows);
@@ -319,11 +299,7 @@ long CompareImages::area(int rows, int cols)
 
 int CompareImages::current()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QModelIndex idx = thumbView->currentIndex();
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex == idx) {
@@ -335,11 +311,7 @@ int CompareImages::current()
 
 void CompareImages::go(QString key)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, key);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, key);
     if (key == "Right") {
         int i = current();
         imList->at(i)->deselect();
@@ -371,11 +343,7 @@ void CompareImages::go(QString key)
 void CompareImages::updateClassification(bool isPick, QString rating, QString colorClass,
                                          bool isRatingBadgeVisible, QModelIndex idx)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex.row() == idx.row()) {
             imList->at(i)->classificationLabel->setRating(rating);
@@ -389,11 +357,7 @@ void CompareImages::updateClassification(bool isPick, QString rating, QString co
 
 void CompareImages::zoom(QPointF scrollPct, QModelIndex idx, bool isZoom)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slaveZoomToPct(scrollPct, isZoom);
@@ -403,11 +367,7 @@ void CompareImages::zoom(QPointF scrollPct, QModelIndex idx, bool isZoom)
 
 void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slavePanToDeltaPct(scrollPct);
@@ -417,11 +377,7 @@ void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
 
 void CompareImages::startPan(QModelIndex idx)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slaveSetPanStartPct();
@@ -431,11 +387,7 @@ void CompareImages::startPan(QModelIndex idx)
 
 void CompareImages::cleanupAfterPan(QPointF deltaPct, QModelIndex idx)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i) {
         if (imList->at(i)->imageIndex != idx) {
             imList->at(i)->slaveCleanupAfterPan(deltaPct);
@@ -446,11 +398,7 @@ void CompareImages::cleanupAfterPan(QPointF deltaPct, QModelIndex idx)
 // try to find a commmon feature to align all comparison images - not working very well
 void CompareImages::align(QPointF /*basePos*/, QModelIndex idx)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
     int idxRow = 0;
     for (int i = 0; i < imList->count(); ++i) {
@@ -478,11 +426,7 @@ void CompareImages::updateToggleZoom(qreal toggleZoomValue)
 Slot for signal from update zoom dialog to set the amount to zoom when user
 clicks on the unzoomed image.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i)
         imList->at(i)->toggleZoom = toggleZoomValue;
 }
@@ -495,11 +439,7 @@ void CompareImages::zoomChangeFromView(qreal zoomValue, bool hasfocus)
     assigned im MW.  However, CompareImages does exist and communicates with
     CompareView instances.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     qDebug() << __FUNCTION__ << "zoomValue =" << zoomValue;
 //    zoomValue /= G::actDevicePixelRatio;
     this->zoomValue = zoomValue;       // used by MW::updateStatus
@@ -513,11 +453,7 @@ void CompareImages::zoomChangeFromView(qreal zoomValue, bool hasfocus)
 
 void CompareImages::zoomIn()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomIn();
     }
@@ -525,11 +461,7 @@ void CompareImages::zoomIn()
 
 void CompareImages::zoomOut()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomOut();
     }
@@ -537,11 +469,7 @@ void CompareImages::zoomOut()
 
 void CompareImages::zoomToFit()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomToFit();
     }
@@ -553,11 +481,7 @@ void CompareImages::zoomTo(qreal zoomValue)
 Called ZoomDlg when the zoom is changed. From here the message is passed on to
 each instance of CompareView, which in turn makes the proper scale change.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomTo(zoomValue);
     }
@@ -565,11 +489,7 @@ each instance of CompareView, which in turn makes the proper scale change.
 
 void CompareImages::zoomToggle()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomToggle();
     }
@@ -582,11 +502,7 @@ This slot is called when a compareView is entered, either via mouse passover or
 a left/right/home/end keystroke.  All compareViews are deselected to make sure
 there are no selected "orphans".
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->deselect();
     }
@@ -599,11 +515,7 @@ Clicking the forward or back mouse buttons in a CompareView emits a togglePick
 signal.  However, MW does not know about CompareViews created in CompareImages,
 so the signal is relayed on to MW, which does know about CompareImages.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     emit togglePick();
 }
 

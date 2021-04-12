@@ -4,11 +4,7 @@
 
 Metadata::Metadata(QObject *parent) : QObject(parent)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // some initialization
     initOrientationHash();
     initSupportedFiles();
@@ -49,22 +45,14 @@ TIF data types:
 
 void Metadata::initSupportedLabelsRatings()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     ratings << "" << "1" << "2" << "3" << "4" << "5";
     labels << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
 }
 
 void Metadata::initSupportedFiles()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // add raw file types here as they are supported
     hasJpg              << "arw"
                         << "cr2"
@@ -150,7 +138,6 @@ void Metadata::initSupportedFiles()
                         << "dds"
                         << "gif"
                         << "hif"
-                        << "heic"
                         << "icns"
                         << "ico"
                         << "jp2"
@@ -293,11 +280,7 @@ void Metadata::initSupportedFiles()
 
 void Metadata::initOrientationHash()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     orientationDescription[1] = "Horizontal";
     orientationDescription[2] = "Mirrow horizontal";
     orientationDescription[3] = "Rotate 180";
@@ -320,11 +303,7 @@ void Metadata::initOrientationHash()
 
 void Metadata::reportMetadata()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     QString createdExif = m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
     p.rpt << "\n";
     p.rpt.reset();
@@ -390,11 +369,7 @@ QString Metadata::diagnostics(QString fPath)
 
 int Metadata::getNewOrientation(int orientation, int rotation)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int degrees = orientationToDegrees[orientation];
     degrees += rotation;
     if (degrees > 270) degrees -= 360;
@@ -404,16 +379,12 @@ int Metadata::getNewOrientation(int orientation, int rotation)
 bool Metadata::writeMetadata(const QString &fPath, ImageMetadata m, QByteArray &buffer)
 {
 /*
-Called from ingest (Ingestdlg). If it is a supported image type a copy of the image file
-is made and any metadata changes are updated in buffer. If it is a raw file in the
-sidecarFormats hash then the xmp data for existing and changed metadata is written to
-buffer and the original image file is copied unchanged.
+    Called from ingest (Ingestdlg). If it is a supported image type a copy of the image file
+    is made and any metadata changes are updated in buffer. If it is a raw file in the
+    sidecarFormats hash then the xmp data for existing and changed metadata is written to
+    buffer and the original image file is copied unchanged.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, fPath);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
@@ -444,7 +415,7 @@ buffer and the original image file is copied unchanged.
         && !emailChanged
         && !urlChanged
         && !orientationChanged ) {
-        qDebug() << __FUNCTION__ << "Unable to write xmp buffer. No metadata has been edited.";
+//        qDebug() << __FUNCTION__ << "Unable to write xmp buffer. No metadata has been edited.";
         return false;
     }
 
@@ -504,11 +475,7 @@ found returns 0.
 
 QFile p.file must be assigned and open.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     uint firstCharCode = static_cast<unsigned int>(s[0].unicode());
     p.file.seek(offset);
     for (quint32 i = offset; i < offset + range; i++) {
@@ -535,11 +502,7 @@ Read a Image Resource Block looking for embedded thumb
 This is a recursive function, iterating through consecutive resource blocks until
 the embedded jpg preview is found (irbID == 1036)
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
     // Photoshop IRBs use big endian
     quint32 oldOrder = order;
@@ -597,11 +560,7 @@ checked to make sure there is valid data.
 
 ** Not being used **
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     p.file.seek(offset);
     if (Utilities::get16(p.file.peek(2)) == 0xFFD8) {
         p.file.seek(offset + length - 2);
@@ -617,11 +576,7 @@ checked to make sure there is valid data.
 
 bool Metadata::parseNikon()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (nikon == nullptr) nikon = new Nikon;
     nikon->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -630,11 +585,7 @@ bool Metadata::parseNikon()
 
 bool Metadata::parseCanon()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (canon == nullptr) canon = new Canon;
     canon->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -643,13 +594,7 @@ bool Metadata::parseCanon()
 
 bool Metadata::parseCanonCR3()
 {
-    {
-#ifdef ISDEBUG
-        G::track(__FUNCTION__);
-#endif
-    }
-
-
+    if (G::isLogger) G::log(__FUNCTION__);
     CanonCR3 canonCR3(p, m, ifd, exif, jpeg);
     canonCR3.parse();
     if (p.report) reportMetadata();
@@ -658,11 +603,7 @@ bool Metadata::parseCanonCR3()
 
 bool Metadata::parseOlympus()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (olympus == nullptr) olympus = new Olympus;
     olympus->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -671,11 +612,7 @@ bool Metadata::parseOlympus()
 
 bool Metadata::parseSony()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (sony == nullptr) sony = new Sony;
     sony->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -684,11 +621,7 @@ bool Metadata::parseSony()
 
 bool Metadata::parseFuji()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (fuji == nullptr) fuji = new Fuji;
     fuji->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -697,11 +630,7 @@ bool Metadata::parseFuji()
 
 bool Metadata::parseDNG()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (dng == nullptr) dng = new DNG;
     if (iptc == nullptr) iptc = new IPTC;
     dng->parse(p, m, ifd, iptc, exif, jpeg);
@@ -711,11 +640,7 @@ bool Metadata::parseDNG()
 
 bool Metadata::parseTIF()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (tiff == nullptr) tiff = new Tiff;
     tiff->parse(p, m, ifd, iptc, exif, jpeg);
     if (p.report) reportMetadata();
@@ -724,11 +649,7 @@ bool Metadata::parseTIF()
 
 bool Metadata::parsePanasonic()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (panasonic == nullptr) panasonic = new Panasonic;
     panasonic->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -737,11 +658,7 @@ bool Metadata::parsePanasonic()
 
 bool Metadata::parseJPG(quint32 startOffset)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (!p.file.isOpen()) {
         qDebug() << __FUNCTION__ << p.file.fileName() << "is not open";
         return false;
@@ -758,11 +675,7 @@ bool Metadata::parseJPG(quint32 startOffset)
 
 bool Metadata::parseHEIF()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 #ifdef Q_OS_WIN
     // rgh remove heic
     if (heic == nullptr) heic = new Heic;
@@ -774,11 +687,7 @@ bool Metadata::parseHEIF()
 
 void Metadata::clearMetadata()
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     m.offsetFull = 0;
     m.lengthFull = 0;
     m.widthFull = 0;
@@ -852,11 +761,7 @@ void Metadata::testNewFileFormat(const QString &path)
 
 bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, path);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
 //    G::log(__FUNCTION__, "Source =" + source + "  " + path);
 //    qDebug() << __FUNCTION__ << "called by" << source << path << "p.report =" << p.report;
 //    isReport = true;
@@ -948,11 +853,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
                                  bool essential, bool nonEssential,
                                  bool isReport, bool isLoadXmp, QString source)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, fileInfo.filePath());
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, fileInfo.filePath() + "  Source: " + source);
 //    qDebug() << __FUNCTION__ << "called by" << source;
     // check if already loaded
     QString fPath = fileInfo.filePath();
@@ -964,7 +865,10 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
-    if (!getMetadataFormats.contains(ext)) return false;
+    if (!getMetadataFormats.contains(ext)) {
+        clearMetadata();
+        return false;
+    }
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load
     readEssentialMetadata = essential;

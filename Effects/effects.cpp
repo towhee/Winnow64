@@ -939,11 +939,7 @@ void fastblur(BImage img,int radius){
   (0xffu << 24) | ((r & 0xffu) << 16) | ((g & 0xffu) << 8) | (b & 0xffu)
 }
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 #ifdef ISLOGGER
 Utilities::log(__FUNCTION__, "");
 #endif
@@ -1192,11 +1188,7 @@ void fastblur(BImage img,int radius){
 }
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     qDebug() << __FUNCTION__ << QTime::currentTime();
 
     if (radius < 1) return;
@@ -1450,11 +1442,7 @@ void fastblur(BImage img,int radius){
 }
 
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (radius < 1) return;
 
     QElapsedTimer t;

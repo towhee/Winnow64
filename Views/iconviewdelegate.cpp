@@ -141,16 +141,13 @@ IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
 void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight, int labelFontSize, bool showThumbLabels, int badgeSize)
 
 {
-    {
-    #ifdef ISDEBUG
-//  G::track(__FUNCTION__);
-    #endif
-    }
-    /* thumbSpacing not being used at present.  It was initially meant to control the
+/*
+    thumbSpacing not being used at present.  It was initially meant to control the
     QListView->setSpacing(), which is outside of the delegate.  Using it makes it more
     difficult to manage the gridView justification.  If it is decided another layer would be
     useful it would be better to include the cellBorder and thumbPadding suggested in the
-    diagram comments above.  */
+    diagram comments above.
+*/
 
     delegateShowThumbLabels = showThumbLabels;
 //    fPad = thumbPadding;
@@ -285,11 +282,6 @@ void IconViewDelegate::setCurrentRow(int row)
 QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
                               const QModelIndex& /*index*/) const
 {
-    {
-    #ifdef ISDEBUG
-//  G::track(__FUNCTION__);
-    #endif
-    }
 //    qDebug() << "IconViewDelegate::sizeHint  "
 //             << "row =" << index.row();
     QFont font = QApplication::font();
@@ -311,11 +303,6 @@ iconRect         = thumbRect - icon (icon has different aspect so either the
                    width or height will have to be centered inside the thumbRect
 textRect         = a rectangle below itemRect
 */
-    {
-    #ifdef ISDEBUG
-//  G::track(__FUNCTION__);
-    #endif
-    }
     painter->save();
     /*
     qDebug() << "IconViewDelegate::paint  "

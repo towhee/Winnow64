@@ -9,6 +9,7 @@
 class Utilities
 {
 public:
+    static bool integrityCheck(const QString &path1, const QString &path2);
     static QSize fitScreen(QSize preferred);
     static void uniqueFolderPath(QString &path, QString delimiter = "_");
     static void uniqueFilePath(QString &path, QString delimiter = "_");

@@ -30,11 +30,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
                                         const QStyleOptionViewItem &option,
                                         const QModelIndex &index ) const
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0: return nullptr;
@@ -153,11 +149,7 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 void PropertyDelegate::setEditorData(QWidget *editor,
                                     const QModelIndex &index) const
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     switch (index.data(UR_DelegateType).toInt()) {
         case DT_None:
         case DT_Label: {
@@ -215,11 +207,7 @@ void PropertyDelegate::fontSizeChanged(int fontSize)
 
 void PropertyDelegate::commit(QWidget *editor)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__ << submitted;
     emit commitData(editor);
 }
@@ -228,11 +216,7 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
                                    const QModelIndex &index) const
 {
 //    qDebug() << __FUNCTION__ << index;
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0:
