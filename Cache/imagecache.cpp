@@ -840,7 +840,7 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus
     mutex.unlock();
 }
 
-void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, bool sortChange)
+void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QString source)
 {
 /*
     When the datamodel is filtered the image cache needs to be updated. The cacheItemList is
@@ -877,7 +877,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, bool
     }
 
     // if the sort has been reversed
-    if (sortChange) cache.isForward = !cache.isForward;
+    if (source == "SortChange") cache.isForward = !cache.isForward;
 
     setPriorities(cache.key);
     setTargetRange();
@@ -907,7 +907,13 @@ void ImageCache::cacheSizeChange()
 {
     if (G::isLogger) { G::log(__FUNCTION__); }
     mutex.lock();
+    qDebug() << __FUNCTION__ << cache.isForward;
     cacheSizeHasChanged = true;
+    makeRoom(cache.maxMB - cache.currMB, cache.maxMB);
+    setPriorities(cache.key);
+    setTargetRange();
+    if (cache.isShowCacheStatus)
+        emit showCacheStatus("Update all rows", 0, "ImageCache::cacheSizeChange");
     if (!isRunning()) start();
     mutex.unlock();
 }
