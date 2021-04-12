@@ -3331,6 +3331,25 @@ void MW::createActions()
     addAction(diagnosticsEmbellishAction);
     connect(diagnosticsEmbellishAction, &QAction::triggered, this, &MW::diagnosticsEmbellish);
 
+    // Non- Menu actions
+    thriftyCacheAction = new QAction(tr("Thrifty Cache"), this);
+    addAction(thriftyCacheAction);
+    thriftyCacheAction->setShortcut(QKeySequence("F10"));
+    connect(thriftyCacheAction, &QAction::triggered, this, &MW::thriftyCache);
+
+    moderateCacheAction = new QAction(tr("Moderate Cache"), this);
+    addAction(moderateCacheAction);
+    moderateCacheAction->setShortcut(QKeySequence("F11"));
+    connect(moderateCacheAction, &QAction::triggered, this, &MW::moderateCache);
+
+    greedyCacheAction = new QAction(tr("Greedy Cache"), this);
+    addAction(greedyCacheAction);
+    greedyCacheAction->setShortcut(QKeySequence("F12"));
+    connect(greedyCacheAction, &QAction::triggered, this, &MW::greedyCache);
+
+
+
+
     // Testing
 
     testAction = new QAction(tr("Test"), this);
@@ -5134,6 +5153,23 @@ void MW::updateProgressBarWidth()
     }
 }
 
+void MW::thriftyCache()
+{
+    cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.10);
+    setCacheParameters();
+}
+
+void MW::moderateCache()
+{
+    cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.50);
+    setCacheParameters();
+}
+void MW::greedyCache()
+{
+    cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.90);
+    setCacheParameters();
+}
+
 void MW::setCacheParameters()
 {
 /*
@@ -5870,7 +5906,7 @@ void MW::sortChange(QString src)
     updateStatus(true, "", __FUNCTION__);
 
     // sync image cache with datamodel filtered proxy
-    imageCacheThread->rebuildImageCacheParameters(fPath, true/*sortChange*/);
+    imageCacheThread->rebuildImageCacheParameters(fPath, "SortChange");
 
     /* if the previous selected image is also part of the filtered datamodel then the
        selected index does not change and fileSelectionChange will not be signalled.

@@ -540,6 +540,10 @@ private slots:
     void helpShortcuts();
     void helpWelcome();
 
+    void thriftyCache();
+    void moderateCache();
+    void greedyCache();
+
 private:
     QApplication *app;
 //    friend class ProgressBar;   // mw1
@@ -798,6 +802,9 @@ private:
     QList<QAction *> *filterActions;
 
     // General
+    QAction *thriftyCacheAction;         // only available via shortcut key "F10"
+    QAction *moderateCacheAction;        // only available via shortcut key "F11"
+    QAction *greedyCacheAction;          // only available via shortcut key "F12"
     QAction *testAction;                 // only available via shortcut key "Shift+Ctrl+Alt+T"
     QAction *testNewFileFormatAction;    // only available via shortcut key "Shift+Ctrl+Alt+F"
 

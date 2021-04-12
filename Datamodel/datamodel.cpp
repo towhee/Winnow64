@@ -235,7 +235,8 @@ void DataModel::clearDataModel()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     // clear the model
-    removeRows(0, rowCount());
+    clear();
+//    removeRows(0, rowCount());
     setRowCount(0);
 //    setColumnCount(0);
     // clear the fPath index of datamodel rows

@@ -47,7 +47,6 @@ public:
 //    QGraphicsTextItem *infoItem;
     QMatrix matrix;
     Pixmap *pixmap;
-    QPixmap  displayPixmap;
     QString currentImagePath;
 
     int cwMargin = 20;

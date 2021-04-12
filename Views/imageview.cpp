@@ -209,6 +209,7 @@ bool ImageView::loadImage(QString fPath, QString src)
         }
 
         if (G::isTest) {QElapsedTimer t; t.restart();}
+        QPixmap displayPixmap;
         isLoaded = pixmap->load(fPath, displayPixmap);
         if (G::isTest) qDebug() << __FUNCTION__ << "Load image =" << t.nsecsElapsed() << fPath;
 

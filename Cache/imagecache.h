@@ -36,7 +36,7 @@ public:
              bool &usePreview, int &previewWidth, int &previewHeight);
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
              int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
-    void rebuildImageCacheParameters(QString &currentImageFullPath, bool sortChange = false);
+    void rebuildImageCacheParameters(QString &currentImageFullPath, QString source = "");
     void stopImageCache();
     void clearImageCache();
     void pauseImageCache();
