@@ -18,11 +18,7 @@ void Win::availableMemory()
         Really good resource for getting memory info for various OS
         https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
     */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     quint32 mb = 1024 *1024;
     MEMORYSTATUSEX statex;
     statex.dwLength = sizeof(statex);
@@ -46,11 +42,7 @@ void Win::collectScreensInfo()
     /*
     Populates G::winScreenHash with the attached adaptors, monitors and icc profiles.
     */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     DISPLAY_DEVICE displayDevice = {};
     displayDevice.cb = sizeof(DISPLAY_DEVICE);
 

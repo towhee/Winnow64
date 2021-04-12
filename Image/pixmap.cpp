@@ -58,17 +58,16 @@ bool Pixmap::load(QString &fPath, QImage &image)
     being properly read or the file is corrupted.  In this case the metadata
     will be updated to show the file is not readable.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__, fPath);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
 //    qDebug() << __FUNCTION__ << "fPath =" << fPath;
     QElapsedTimer t;
     t.restart();
 
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
+
+    if (metadata->videoFormats.contains(ext)) return false;
+
     QFile imFile(fPath);
 //    if (imFile.isOpen()) imFile.close();
     int dmRow = dm->fPathRow[fPath];
@@ -142,19 +141,21 @@ bool Pixmap::load(QString &fPath, QImage &image)
     // HEIC format
     // rgh remove heic
     else if (metadata->hasHeic.contains(ext)) {
+//        qDebug() << __FUNCTION__ << "hasHEIC" << fPath;
         ImageMetadata m = dm->imMetadata(fPath);
         #ifdef Q_OS_WIN
         Heic heic;
 
         // try to decode
         if (!heic.decodePrimaryImage(m, fPath, image)) {
-            imFile.close();
+            if (imFile.isOpen()) imFile.close();
             err += "Unable to decode " + fPath + ". ";
             qDebug() << __FUNCTION__ << err;
             dm->setData(dm->index(dmRow, G::ErrColumn), err);
             return false;
         }
-        imFile.close();
+        if (imFile.isOpen()) imFile.close();
+//        qDebug() << __FUNCTION__ << "HEIC image" << image.width() << image.height();
         #endif
     }
 

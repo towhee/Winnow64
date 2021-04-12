@@ -1499,9 +1499,9 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>820</y>
-     <width>351</width>
-     <height>31</height>
+     <y>818</y>
+     <width>201</width>
+     <height>25</height>
     </rect>
    </property>
    <property name="font">
@@ -1708,14 +1708,80 @@
   <widget class="QLabel" name="gbsLabel">
    <property name="geometry">
     <rect>
-     <x>390</x>
-     <y>820</y>
-     <width>141</width>
-     <height>31</height>
+     <x>20</x>
+     <y>843</y>
+     <width>181</width>
+     <height>25</height>
     </rect>
    </property>
    <property name="text">
     <string>Gb/sec</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="drive">
+   <property name="geometry">
+    <rect>
+     <x>320</x>
+     <y>818</y>
+     <width>141</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>P:/</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="drive_2">
+   <property name="geometry">
+    <rect>
+     <x>320</x>
+     <y>843</y>
+     <width>141</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Q:/</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>818</y>
+     <width>101</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Drive space</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="integrityChk">
+   <property name="geometry">
+    <rect>
+     <x>450</x>
+     <y>750</y>
+     <width>391</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Integrity check copied files (slower)</string>
    </property>
   </widget>
  </widget>

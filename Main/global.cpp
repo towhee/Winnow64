@@ -3,8 +3,10 @@
 namespace G
 {
     // system messaging
-    bool isLogger;                      // Writes error messages
-    bool sendLogToConsole;              // true: console, false: WinnowLog.txt
+    bool isLogger;                      // Writes log messages to file or console
+    bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
+    QFile logFile;                      // MW::openLog(), MW::closeLog()
+    bool isDev;                         // Running from within Winnow Project/Winnow64
 
     // system display
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitor
@@ -13,7 +15,7 @@ namespace G
     int displayPhysicalVerticalPixels;  // current monitor
     int displayVirtualHorizontalPixels; // current monitor
     int displayVirtualVerticalPixels;   // current monitor
-    qreal actDevicePixelRatio;             // current monitor
+    qreal actDevicePixelRatio;          // current monitor
     qreal sysDevicePixelRatio;          // current monitor
 
     // application parameters
@@ -69,6 +71,10 @@ namespace G
     bool isSlideShow;
     bool isEmbellish;
 
+    // ingest
+    int ingestCount = 0;
+    QDate ingestLastDate;
+
 //    bool colorManage;
 
     // not persistent
@@ -117,16 +123,21 @@ namespace G
                  << comment;
     }
 
-    void log(QString functionName, QString comment, bool hideTime)
+    void log(QString functionName, QString comment, bool hideElapsedTime)
     {
-        QString time = QString("%L1").arg(t.nsecsElapsed());
-        if (hideTime) time = "";
-        QString msg = time.rightJustified(15, ' ') + " " +
-                      functionName.leftJustified(50, ' ') + " " +
-                      comment;
-        if (sendLogToConsole) qDebug().noquote() << msg;
+        QString time = QString("%L1").arg(t.nsecsElapsed() / 1000);
+        if (hideElapsedTime) time = "";
+        QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
+        QString e = time.rightJustified(11, ' ') + " ";
+        QString f = functionName.leftJustified(50, ' ') + " ";
+        QString c = comment;
+        if (sendLogToConsole && isDev) {
+            QString msg = e + f + c;
+            qDebug().noquote() << msg;
+        }
         else {
-
+            QString msg = d + e + f + c + "\n";
+            logFile.write(msg.toUtf8());
         }
         t.restart();
     }

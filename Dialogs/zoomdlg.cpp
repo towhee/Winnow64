@@ -5,6 +5,7 @@
 ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent),
     ui(new Ui::ZoomDlg)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     setWindowFlags(Qt::WindowStaysOnTopHint | Qt::Dialog | Qt::FramelessWindowHint);
     ui->setupUi(this);
 
@@ -40,6 +41,7 @@ ZoomDlg::~ZoomDlg()
 
 void ZoomDlg::close()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     accept();
 }
 
@@ -48,11 +50,7 @@ void ZoomDlg::positionWindow(QRect a, QRect c)
 /*
 This function positions the zoom dialog in the lower center of the central widget
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // a = mainWindow->geometry()
     // c = centralWidget->geometry();
     int w = width();        // width of this dialog
@@ -78,11 +76,7 @@ This slot receives signals from either imageView or compareView when the scale
 changes and the scale dialog (this) is showing.  The zoom slider and spinbox
 controls are updated to the current scale.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << "ZoomDlg::zoomChange" << zoom << G::actDevicePixelRatio;
     // convert to percentage for persentation
     zoom *= 100;        //(100 * G::actDevicePixelRatio);
@@ -95,23 +89,20 @@ controls are updated to the current scale.
 void ZoomDlg::on_zoomSB_valueChanged(int value)
 {
 /*
-When the zoom spinbox value changes a signal is emitted to the slots in imageView
-and compareView.
+    When the zoom spinbox value changes a signal is emitted to the slots in imageView
+    and compareView.
 
-Check for circular messaging where an external change of scale was signalled
-to ZoomDlg, which updated this control, and then signals back, by limiting signals
-to only changes made lacally via the isActiveWindow flag.
+    Check for circular messaging where an external change of scale was signalled
+    to ZoomDlg, which updated this control, and then signals back, by limiting signals
+    to only changes made lacally via the isActiveWindow flag.
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (isActiveWindow()) emit zoom((qreal)value / 100/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_toggleZoomAmountBtn_clicked()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QString msg = "Toggle zoom amount changed to " +
                   QString::number(ui->zoomSB->value()) + "%";
     G::popUp->showPopup(msg, 1500);
@@ -123,44 +114,46 @@ void ZoomDlg::on_toggleZoomAmountBtn_clicked()
 // radio buttons for quick zoom setting at popular scales
 void ZoomDlg::on_radio25Button_clicked()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     emit zoom(0.25 / G::actDevicePixelRatio);
 }
 
 void ZoomDlg::on_radio50Button_clicked()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     emit zoom(0.50 /*/ G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio66Button_clicked()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     emit zoom(0.666667/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio100Button_clicked()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     emit zoom(1.0/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio133Button_clicked()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     emit zoom(1.33333333/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio200Button_clicked()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     emit zoom(2.0/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::enterEvent(QEvent* /*event*/)
 {
 /*
-For convenience, set window focus on mouseover
+    For convenience, set window focus on mouseover
 */
-    {
-    #ifdef ISDEBUG
-//    G::track(__FUNCTION__,currentImagePath);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__);
     this->activateWindow();
     this->setFocus();
     this->ui->zoomSlider->setFocus();
@@ -169,8 +162,9 @@ For convenience, set window focus on mouseover
 void ZoomDlg::changeEvent(QEvent *event)
 {
 /*
-Set some formatting to make it clear when the ZoomDlg has focus
+    Set some formatting to make it clear when the ZoomDlg has focus
 */
+    if (G::isLogger) G::log(__FUNCTION__);
     QWidget::changeEvent(event);
     if (event->type() == QEvent::ActivationChange)
     {

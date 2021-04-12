@@ -1,7 +1,22 @@
 #include "utilities.h"
 
+bool Utilities::integrityCheck(const QString &path1, const QString &path2)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QFile file1(path1);
+    file1.open(QIODevice::ReadOnly);
+    QByteArray ba1 = file1.readAll();
+    QFile file2(path2);
+    file2.open(QIODevice::ReadOnly);
+    QByteArray ba2 = file2.readAll();
+    file1.close();
+    file2.close();
+    return ba1 == ba2;
+}
+
 QSize Utilities::fitScreen(QSize preferred)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     int w = preferred.width();
     int h = preferred.height();
     int headerH = static_cast<int>(30 * G::actDevicePixelRatio);
@@ -14,24 +29,20 @@ QSize Utilities::fitScreen(QSize preferred)
 
 void Utilities::uniqueInList(QString &name, const QStringList &list, QString delimiter)
 {
-    /*
-        Checks to see if the name already exists in the list.  If so, the delimiter and a
-        number are appended to the name, repeating until a unique name is found.
+/*
+    Checks to see if the name already exists in the list.  If so, the delimiter and a
+    number are appended to the name, repeating until a unique name is found.
 
-        Usage:  Utilities::uniqueInList(name, list);
-    */
-        {
-        #ifdef ISDEBUG
-        G::track(__FUNCTION__);
-        #endif
+    Usage:  Utilities::uniqueInList(name, list);
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    int count = 0;
+    QString originalName = name;
+    do {
+        if (list.contains(name)) {
+            name = originalName + delimiter + QString::number(++count);
         }
-        int count = 0;
-        QString originalName = name;
-        do {
-            if (list.contains(name)) {
-                name = originalName + delimiter + QString::number(++count);
-            }
-        } while (list.contains(name));
+    } while (list.contains(name));
 }
 
 void Utilities::uniqueFolderPath(QString &path, QString delimiter)
@@ -43,11 +54,7 @@ void Utilities::uniqueFolderPath(QString &path, QString delimiter)
     Usage:  Utilities::uniqueFolder(dPath);
     if dPath = ".../zen2048" exists then dPath changed to ".../zen2048_1"
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int count = 0;
     bool folderAlreadyExists = true;
     if (path.right(1) != "/") path += "/";
@@ -71,11 +78,7 @@ void Utilities::uniqueFilePath(QString &path, QString delimiter)
     Usage:  Utilities::uniqueFolder(fPath);
     if fPath = ".../zen2048.json" exists then fPath changed to ".../zen2048_1.json"
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     int count = 0;
     bool fileAlreadyExists = true;
     QFileInfo info(path);

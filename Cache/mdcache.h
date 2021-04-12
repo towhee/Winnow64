@@ -115,6 +115,7 @@ private:
     void readIconChunk();
     void readMetadataChunk();
     void iconCleanup();
+    bool anyItemsToLoad();
 
     QElapsedTimer t;
 };

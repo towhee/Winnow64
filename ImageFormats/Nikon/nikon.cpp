@@ -1243,11 +1243,7 @@ bool Nikon::parse(MetadataParameters &p,
                   Exif *exif,
                   Jpeg *jpeg)
 {
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
     // moved file.open to readMetadata
     p.file.seek(0);
 

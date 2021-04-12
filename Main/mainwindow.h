@@ -221,6 +221,7 @@ public:
     bool combineRawJpg;
     bool autoIngestFolderPath;
     bool autoEjectUsb;
+    bool integrityCheck;
     bool ingestIncludeXmpSidecar;
     bool backupIngest;
     bool gotoIngestFolder;
@@ -467,6 +468,7 @@ private slots:
     void setCombineRawJpg();
     void nextSlide();
     void prevRandomSlide();
+//    void updateImageCacheSize(int mb);
     void setCacheParameters();
     void selectAllThumbs();
     void removeBookmark();
@@ -512,6 +514,7 @@ private slots:
     void saveAsFile();
     void copyFolderPathFromContext();
     void revealWinnets();
+    void revealLogFile();
     void revealFile();
     void revealFileFromContext();
     void revealInFileBrowser(QString path);
@@ -537,6 +540,10 @@ private slots:
     void help();
     void helpShortcuts();
     void helpWelcome();
+
+    void thriftyCache();
+    void moderateCache();
+    void greedyCache();
 
 private:
     QApplication *app;
@@ -764,6 +771,7 @@ private:
     QAction *helpAction;
     QAction *helpShortcutsAction;
     QAction *helpWelcomeAction;
+    QAction *helpRevealLogFileAction;
 
     // Help Diagnostics Menu
     QAction *diagnosticsAllAction;
@@ -795,6 +803,9 @@ private:
     QList<QAction *> *filterActions;
 
     // General
+    QAction *thriftyCacheAction;         // only available via shortcut key "F10"
+    QAction *moderateCacheAction;        // only available via shortcut key "F11"
+    QAction *greedyCacheAction;          // only available via shortcut key "F12"
     QAction *testAction;                 // only available via shortcut key "Shift+Ctrl+Alt+T"
     QAction *testNewFileFormatAction;    // only available via shortcut key "Shift+Ctrl+Alt+F"
 
@@ -1000,6 +1011,10 @@ private:
     void loadShortcuts(bool defaultShortcuts);
     void saveSelection();
     void recoverSelection();
+    void openLog();
+    void closeLog();
+    void clearLog();
+    bool isDevelopment();
 
     bool isValidPath(QString &path);
     QString getSelectedPath();

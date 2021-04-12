@@ -13,11 +13,7 @@ Read a Image Resource Block looking for embedded thumb
 This is a recursive function, iterating through consecutive resource blocks until
 the embedded jpg preview is found (irbID == 1036)
 */
-    {
-    #ifdef ISDEBUG
-    G::track(__FUNCTION__);
-    #endif
-    }
+    if (G::isLogger) G::log(__FUNCTION__); 
 
         // Photoshop IRBs use big endian
 //        quint32 oldOrder = order;

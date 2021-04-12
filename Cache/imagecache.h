@@ -36,7 +36,7 @@ public:
              bool &usePreview, int &previewWidth, int &previewHeight);
     void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
              int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
-    void rebuildImageCacheParameters(QString &currentImageFullPath);
+    void rebuildImageCacheParameters(QString &currentImageFullPath, QString source = "");
     void stopImageCache();
     void clearImageCache();
     void pauseImageCache();
@@ -50,6 +50,7 @@ public:
     QString reportImCache();
 
     QHash<QString, QImage> imCache;
+    QString source;                 // temp for debugging
 
     // used by MW::updateImageCacheStatus
     struct Cache {
@@ -94,26 +95,30 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-    // change to ImageCache
-//    void updateImageCachePosition();
     void setCurrentPosition(QString path);
+    void cacheSizeChange();         // flag when cache size is changed in preferences
 
 private:
     QMutex mutex;
     QWaitCondition condition;
     bool restart;
     bool abort;
+    bool pause;
+    bool cacheSizeHasChanged;
+    bool filterOrSortHasChanged;
     QString currentPath;
+    QString prevCurrentPath;
 
     DataModel *dm;
     Metadata *metadata;
     Pixmap *getImage;
-    bool getImageLocally(QString &fPath, QImage &image);  // test
 
     QList<int>toCache;
     QList<int>toDecache;
 
     int getImCacheSize();           // add up total MB cached
+    void setKeyToCurrent();         // cache key from currentFilePath
+    void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
     bool nextToCache();             // find highest priority not cached
