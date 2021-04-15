@@ -252,8 +252,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
     #ifdef Q_OS_WIN
     if (metadata->iccFormats.contains(ext)) {
         QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
-        ICC::setInProfile(ba);   // if ba.isEmpty then sRGB used
-        ICC::transform(image);
+//        ICC::setInProfile(ba);   // if ba.isEmpty then sRGB used
+        ICC::transform(ba, image);
     }
     #endif
 

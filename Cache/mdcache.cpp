@@ -852,7 +852,6 @@ void MetadataCache::run()
                  << "updateImageCache =" << updateImageCache;
                  // */
         if (G::isNewFolderLoaded && updateImageCache) {
-//            qDebug() << __FUNCTION__ << "emit updateImageCachePosition" << dm->currentFilePath;
             emit updateImageCachePosition();
         }
     }
