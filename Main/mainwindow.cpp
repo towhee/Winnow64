@@ -193,11 +193,15 @@ thumbs) it can take a number of paint events and 100s of ms to complete. A flag 
 (scrollWhenReady) to show when we need to monitor so not checking needlessly. Unfortunately
 there does not appear to be any signal or event when ListView is finished hence this cludge.
 
+MEMORY LEAK - CHECK
+
+    Pixmap - looks okay
+    Bookmarks
 */
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
-    G::log(__FUNCTION__, "Args: " + args, true);
+    G::log(__FUNCTION__, "START", true);
     setObjectName("WinnowMainWindow");
 
     // Check if modifier key pressed while program opening
@@ -222,7 +226,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     isStressTest = false;
     G::isTimer = true;                  // Global timer
     G::memTest = false;                 // will not load images
-    G::isTest = false;                  // use RGH JPG reader
+    G::isTest = true;                   // use to find memory loss
 
     // Initialize some variables
     initialize();
@@ -360,7 +364,7 @@ void MW::initialize()
     slideshowRandomHistoryStack = new QStack<QString>;
     scrollRow = 0;
     #ifdef Q_OS_WIN
-    ICC::setInProfile(nullptr);
+//    ICC::setInProfile(nullptr);
     #endif
 }
 
@@ -1453,22 +1457,22 @@ void MW::folderAndFileSelectionChange(QString fPath)
 void MW::clearAll()
 {
 /*
-Called when folderSelectionChange and invalid folder (no folder, no eligible images).
-Can be triggered when the user picks a folder in the folder panel or open menu, picks
-a bookmark or ejects a drive and the resulting folder does not have any eligible images.
+    Called when folderSelectionChange and invalid folder (no folder, no eligible images).
+    Can be triggered when the user picks a folder in the folder panel or open menu, picks
+    a bookmark or ejects a drive and the resulting folder does not have any eligible images.
 */
     if (G::isLogger) G::log(__FUNCTION__);
     // Stop any threads that might be running.
     qDebug() << __FUNCTION__ << "Stopping image cache";
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadateCache();
+
     G::allMetadataLoaded = false;
     dm->clearDataModel();
     currentRow = 0;
     infoView->clearInfo();
 //    metadata->clear();
     imageView->clear();
-//    progressLabel->setVisible(false);
     setThreadRunStatusInactive();                      // turn thread activity buttons gray
     isDragDrop = false;
 
@@ -1506,9 +1510,8 @@ bool MW::isCurrentThumbVisible()
 void MW::updateIconsVisible(bool useCurrentRow)
 {
 /*
-    This function polls both thumbView and gridView to determine the first, mid and last
-    thumbnail visible. This is used in the metadataCacheThread to determine the range of files
-    to cache.
+    Polls both thumbView and gridView to determine the first, mid and last thumbnail visible.
+    This is used in the metadataCacheThread to determine the range of files to cache.
 */
     if (G::isLogger) G::log(__FUNCTION__);
     int first = dm->sf->rowCount();
@@ -1851,7 +1854,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     // show cache amount ie "4.2 of 16GB" in info panel
     QString cacheAmount = QString::number(double(imageCacheThread->cache.currMB)/1024,'f',1)
             + " of "
-            + QString::number(imageCacheThread->cache.maxMB/1024) + "GB";
+            + QString::number(imageCacheThread->cache.maxMB/1024,'f',1) + "GB";
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
 
@@ -4522,7 +4525,7 @@ void MW::createInfoView()
 void MW::createFolderDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    folderDock = new DockWidget(tr(" Folders "), this);
+    folderDock = new DockWidget(" 📁 ", this);  // Folders
     folderDock->setObjectName("File System");
     folderDock->setWidget(fsTree);
 
@@ -4564,7 +4567,7 @@ void MW::createFolderDock()
 void MW::createFavDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    favDock = new DockWidget(tr(" Bookmarks  "), this);
+    favDock = new DockWidget(" 📗  ", this);  // Bookmarks
     favDock->setObjectName("Bookmarks");
     favDock->setWidget(bookmarks);
 
@@ -4606,7 +4609,7 @@ void MW::createFavDock()
 void MW::createFilterDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    filterDock = new DockWidget(tr("  Filters  "), this);
+    filterDock = new DockWidget(tr("  🕎  "), this);  //Filters
     filterDock->setObjectName("Filters");
 
     // customize the filterDock titlebar
@@ -4667,7 +4670,7 @@ void MW::createFilterDock()
 void MW::createMetadataDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    metadataDock = new DockWidget(tr("  Metadata  "), this);
+    metadataDock = new DockWidget(tr("  📷  "), this);    // Metadata
     metadataDock->setObjectName("Image Info");
     metadataDock->setWidget(infoView);
 
@@ -4703,10 +4706,10 @@ void MW::createMetadataDock()
 void MW::createThumbDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    thumbDock = new DockWidget(tr("Thumbnails"), this);
+    thumbDock = new DockWidget("  👍  ", this);  // Thumbnails
     thumbDock->setObjectName("thumbDock");
     thumbDock->setWidget(thumbView);
-    thumbDock->setWindowTitle(" Thumbs ");
+    thumbDock->setWindowTitle(" 👍 ");
     thumbDock->installEventFilter(this);
 
     if (isSettings) {
@@ -4733,7 +4736,7 @@ void MW::createEmbelDock()
     connect (embelProperties, &EmbelProperties::templateChanged, this, &MW::embelTemplateChange);
     connect (embelProperties, &EmbelProperties::syncEmbellishMenu, this, &MW::syncEmbellishMenu);
 
-    embelDock = new DockWidget(tr("  Embellish  "), this);
+    embelDock = new DockWidget(tr("  🎨  "), this);  // Embellish
     embelDock->setObjectName("embelDock");
     embelDock->setWidget(embelProperties);
     embelDock->setFloating(false);
@@ -5157,17 +5160,21 @@ void MW::thriftyCache()
 {
     cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.10);
     setCacheParameters();
+//    qDebug() << __FUNCTION__ << "Thrifty Cache" << cacheSizeMB;
 }
 
 void MW::moderateCache()
 {
     cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.50);
     setCacheParameters();
+//    qDebug() << __FUNCTION__ << "Moderate Cache" << cacheSizeMB;
 }
+
 void MW::greedyCache()
 {
     cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.90);
     setCacheParameters();
+//    qDebug() << __FUNCTION__ << "Greedy Cache" << cacheSizeMB;
 }
 
 void MW::setCacheParameters()
@@ -5303,16 +5310,18 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     QString base = "";
     QString spacer = "   ";
 
-/* Possible status info
+    /* Possible status info
 
 QString fName = idx.data(Qt::EditRole).toString();
 QString fPath = idx.data(G::PathRole).toString();
 QString shootingInfo = metadata->getShootingInfo(fPath);
 QString err = metadata->getErr(fPath);
-QString magnify = "🔎";
-QString fileSym = "📁";
-QString fileSym = "📷";
-*/
+QString magnify = "🔎🔍";
+QString fileSym = "📁📂📗📌🔈📎🔗🔑👍🕎🧾🛈";
+QString camera = "📷📈";
+//    https://www.vertex42.com/ExcelTips/unicode-symbols.html
+QString sym = "⚡🌈🌆🌸🍁🍄🎁🎨🎹💥💭🏃🏸💻🔆🔴🔵🔶🔷🔸🔹🔺🔻🖐🧲🛑⛬";
+//        */
 
     // update G::availableMemory
 #ifdef Q_OS_WIN
@@ -7911,7 +7920,7 @@ bool MW::loadSettings()
        sure the default value is assigned for first time use of the new setting.
     */
 
-//    if (!isSettings || simulateJustInstalled) {
+    if (!isSettings || simulateJustInstalled) {
         // general
         combineRawJpg = true;
         prevMode = "Loupe";
@@ -7969,7 +7978,7 @@ bool MW::loadSettings()
         cachePreviewHeight = 1600;
 
         if (!isSettings || simulateJustInstalled) return true;
-//    }
+    }
     // end default settings
 
     // Get settings saved from last session
@@ -7979,7 +7988,10 @@ bool MW::loadSettings()
     sortReverse = setting->value("sortReverse").toBool();
     autoAdvance = setting->value("autoAdvance").toBool();
     turnOffEmbellish = setting->value("turnOffEmbellish").toBool();
-    G::isLogger = setting->value("isLogger").toBool();
+    if (setting->contains("deleteWarning"))
+        G::isLogger = setting->value("isLogger").toBool();
+    else
+        G::isLogger = false;
     if (setting->contains("deleteWarning"))
         deleteWarning = setting->value("deleteWarning").toBool();
     else

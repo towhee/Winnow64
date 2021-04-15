@@ -42,11 +42,13 @@ ENHANCEMENTS
 - Add guassian blur (inner/outer)
 - Copy files between folders using drag'n'drop
 - Reset to defaults
-- Remove Windows Registry settings and during uninstall
+- Remove Windows Registry settings during uninstall
 - Read keywords
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Memory lead in ICC profiles
+- Version 1.19
 - When reverse sort the cache progress bar does not reverse to match
 - When change cache amount does not immediately update ImageCache
 - When ingesting confirm all files copied correctly (option)

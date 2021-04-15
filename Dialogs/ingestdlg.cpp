@@ -433,6 +433,10 @@ void IngestDlg::ingest()
         // copy source image to destination
         fileBytesToWrite += fileInfo.size();
         bool copyOk = QFile::copy(sourcePath, destinationPath);
+        /* for demonstration:
+        failedToCopy << sourcePath + " to " + destinationPath;
+        integrityFailure << sourcePath + " not same as " + destinationPath;
+        // */
         if (!copyOk) {
             qDebug() << __FUNCTION__ << "Failed to copy" << sourcePath << "to" << destinationPath;
             failedToCopy << sourcePath + " to " + destinationPath;

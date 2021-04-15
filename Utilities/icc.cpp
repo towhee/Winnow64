@@ -3,21 +3,7 @@
 namespace ICC
 {
 
-    cmsHPROFILE hInProfile;
     cmsHPROFILE hOutProfile;
-    cmsHTRANSFORM hTransform;
-
-    void setInProfile(const QByteArray &buf)
-    {
-        if (G::isLogger) G::log(__FUNCTION__);
-        if (buf == nullptr) {
-//            qDebug() << __FUNCTION__ << "null buffer = sRGB";
-            hInProfile = cmsCreate_sRGBProfile();
-        }
-        else {
-            hInProfile = cmsOpenProfileFromMem (buf.data(), static_cast<uint32_t>(buf.length()));
-        }
-    }
 
     void setOutProfile()
     {
@@ -25,9 +11,17 @@ namespace ICC
         hOutProfile = cmsOpenProfileFromFile(QFile::encodeName(G::winOutProfilePath).constData(), "r") ;
     }
 
-    void transform(QImage &image)
+    void transform(const QByteArray &buf, QImage &image)
     {
         if (G::isLogger) G::log(__FUNCTION__);
+        cmsHPROFILE hInProfile;
+        if (buf == nullptr) {
+            hInProfile = cmsCreate_sRGBProfile();
+        }
+        else {
+            hInProfile = cmsOpenProfileFromMem(buf.data(), static_cast<uint32_t>(buf.length()));
+        }
+        cmsHTRANSFORM hTransform;
         hTransform = cmsCreateTransform(hInProfile,
                                         TYPE_BGRA_8,
                                         hOutProfile,
@@ -41,5 +35,7 @@ namespace ICC
             qDebug() << __FUNCTION__ << "ICC hTransform failed.";
 //            Utilities::log
         }
+        cmsCloseProfile(hInProfile);
+        cmsDeleteTransform(hTransform);
     }
 }
