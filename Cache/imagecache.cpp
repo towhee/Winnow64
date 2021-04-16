@@ -238,10 +238,6 @@ int ImageCache::getImCacheSize()
     int cacheMB = 0;
     for (int i = 0; i < cacheItemList.size(); ++i) {
         if (cacheItemList.at(i).isCached) {
-            /*
-            qDebug() << __FUNCTION__
-                     << cacheItemList.at(i).fName
-                     << cacheItemList.at(i).sizeMB;*/
             cacheMB += cacheItemList.at(i).sizeMB;
         }
     }
@@ -281,39 +277,59 @@ void ImageCache::setDirection()
     the user justs reverses direction to check out the previous image
 */
 //    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-    // current direction
-    bool isLatestForward = cache.key > cache.prevKey;
 
-    // adjacent key
-    bool adjacent = true;
-    if (cache.key > cache.prevKey + 1 || cache.key < cache.prevKey - 1) adjacent = false;
-    /*
-    qDebug() << __FUNCTION__
-             << "adjacent =" << adjacent
-             << "cache.key =" << cache.key
-             << "cache.prevKey =" << cache.prevKey
-                ;
-    // */
-    if (adjacent) {
-        if (isLatestForward) cache.countAfterDirectionChange++;
-        if (!isLatestForward) cache.countAfterDirectionChange--;
-
-        if (cache.countAfterDirectionChange > 1 || cache.countAfterDirectionChange < -1) {
-            cache.isForward = isLatestForward;
-            cache.countAfterDirectionChange = 0;
-        }
-    }
-    else {
-        cache.isForward = isLatestForward;
-    }
-
-    // start of list
-    if (cache.key == 0) cache.isForward = true;
-
-    // reverse if at end of list
-    if (cache.key == cacheItemList.count() - 1) cache.isForward = false;
-
+    int prevKey = cache.prevKey;
     cache.prevKey = cache.key;
+
+    bool startOrEnd = false;
+    // start of list
+    if (cache.key == 0) {
+        cache.isForward = true;
+        startOrEnd = true;
+    }
+    // reverse if at end of list
+    if (cache.key == cacheItemList.count() - 1) {
+        cache.isForward = false;
+        startOrEnd = true;
+    }
+    if (startOrEnd) {
+        cache.sumStep = 0;
+        cache.maybeDirectionChange = false;
+        return;
+    }
+
+    cache.directionChangeThreshold = 3;
+    int thisStep = cache.key - prevKey;
+    bool maybeDirection = thisStep > 0;
+
+    qDebug() << __FUNCTION__
+             << "cache.maybeDirectionChange =" << cache.maybeDirectionChange
+             << "cache.isForward =" << cache.isForward
+             << "maybeDirection =" << maybeDirection
+             << "thisStep =" << thisStep
+             << "cache.key =" << cache.key
+             << "prevKey =" << prevKey
+                ;
+
+    // if direction has not maybe changed
+    if (!cache.maybeDirectionChange && cache.isForward == maybeDirection) {
+        cache.sumStep = 0;
+        return;
+    }
+
+    // direction maybe changed
+    cache.maybeDirectionChange = true;
+    cache.sumStep += thisStep;
+
+    // maybe direction change gets to threshold then change cache direction
+    if (qFabs(cache.sumStep) >= cache.directionChangeThreshold) {
+        cache.isForward = cache.sumStep > 0;
+        cache.sumStep = 0;
+        cache.maybeDirectionChange = false;
+        qDebug() << __FUNCTION__ << "Cache direction change.  isForward =" << cache.isForward;
+    }
+
+    qDebug() << __FUNCTION__ << thisStep << cache.sumStep << cache.isForward;
 }
 
 void ImageCache::setTargetRange()
@@ -833,7 +849,6 @@ void ImageCache::initImageCache(int &cacheSizeMB,
     cache.prevKey = -1;
     // the cache defaults to the first image and a forward selection direction
     cache.isForward = true;
-    cache.countAfterDirectionChange = 0;
     // the amount of memory to allocate to the cache
     cache.maxMB = cacheSizeMB;
     cache.isShowCacheStatus = isShowCacheStatus;
@@ -848,10 +863,6 @@ void ImageCache::initImageCache(int &cacheSizeMB,
     // populate the new folder image list
     buildImageCacheList();
 
-//    setPriorities(cache.key);
-//    setTargetRange();
-//    reportCache(__FUNCTION__);
-    qDebug() << __FUNCTION__ << "Starting thread";
     source = __FUNCTION__;
     start();
 }
@@ -978,11 +989,13 @@ void ImageCache::run()
     the targe range to cache.
 
     Finally, iterate through the target range, and insert a QImage extracted from the embedded
-    JPG in the file to the hash imCache.
+    JPG to the hash imCache.
 */
 //    if (G::isLogger) G::log(__FUNCTION__);
     source = "";
     prevCurrentPath = "";
+    cache.sumStep = 0;
+    cache.maybeDirectionChange = false;
 
     // run cache control flags
     bool okToAbort;
@@ -1010,12 +1023,12 @@ void ImageCache::run()
         okToPause = pause;
         mutex.unlock();
         if (okToPause) {
-            msleep(100);
+//            msleep(100);
             continue;
         }
 
         if (cacheItemList.count() == 0) {
-            msleep(100);
+            msleep(1000);
             continue;
         }
 
@@ -1027,10 +1040,21 @@ void ImageCache::run()
         filterSortChange = filterOrSortHasChanged;
         filterOrSortHasChanged = false;
         mutex.unlock();
+
         if (!positionChanged && !cacheSizeChange &&!filterSortChange) {
-            msleep(100);
+//            msleep(100);
             continue;
         }
+
+        mutex.lock();
+        qDebug() << __FUNCTION__
+                 << "filterSortChange =" << filterSortChange
+                 << "cacheSizeChange =" << cacheSizeChange
+                 << "positionChanged =" << positionChanged
+                 << "currentPath =" << currentPath
+                 << "prevCurrentPath =" << prevCurrentPath
+                 ;
+        mutex.unlock();
 
         // prep the cache
         prevCurrentPath = currentPath;
@@ -1060,6 +1084,7 @@ void ImageCache::run()
 
         // are all images in the target range cached
         if (cacheUpToDate()) {
+            qDebug() << __FUNCTION__ << "Cache is up-to-date";
             continue;
         }
 

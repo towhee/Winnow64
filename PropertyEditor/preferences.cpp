@@ -694,7 +694,7 @@ void Preferences::addItems()
     i.delegateType = DT_Slider;
     i.type = "int";
     i.min = 100;
-    i.max = 1000;
+    i.max = 4000;
     i.fixedWidth = 50;
     addItem(i);
 
