@@ -1,5 +1,6 @@
 BUGS / TO DO
-- Recover all memory when select empty folder
+- ImageCache target reversing when it shouldn't
+- Slideshow not responding to keystrokes
 - Full path for file name in external program
 - Filters not working sometimes
 - Not remembering grid mode at opening
@@ -47,7 +48,8 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
-- Memory lead in ICC profiles
+- Memory leak in ICC profiles
+- Recover all memory when select empty folder
 - Version 1.19
 - When reverse sort the cache progress bar does not reverse to match
 - When change cache amount does not immediately update ImageCache

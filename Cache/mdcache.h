@@ -75,7 +75,7 @@ signals:
     void updateImageCachePosition();
     void pauseImageCache();
     void resumeImageCache();
-    void updateIsRunning(bool, bool, QString);
+    void updateIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void updateIconBestFit();
     void loadMetadataCache2ndPass();
     void selectFirst();

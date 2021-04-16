@@ -58,8 +58,11 @@ public:
         int prevKey;                // used to establish directionof travel
         int toCacheKey;             // next file to cache
         int toDecacheKey;           // next file to remove from cache
-        bool isForward;             // direction of travel in folder
-        int countAfterDirectionChange; // # images viewed after direction change
+        bool isForward;             // direction of travel for caching algorithm
+        bool maybeDirectionChange;  // direction change but maybe below change threshold
+        int step;                   // difference between key and prevKey
+        int sumStep;                // sum of step until threshold
+        int directionChangeThreshold;//number of steps before change direction of cache
         int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
         int totFiles;               // number of images available
         int currMB;                 // the current MB consumed by the cache

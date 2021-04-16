@@ -352,6 +352,9 @@ bool MetadataCache::anyItemsToLoad()
         if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
             return true;
     }
+    // update status of metadataThreadRunningLabel in statusbar
+    emit updateIsRunning(false, true, __FUNCTION__);
+    qApp->processEvents();
     return false;
 }
 
@@ -754,6 +757,7 @@ void MetadataCache::run()
         dm->loadingModel = true;
         mutex.unlock();   // rgh mutex
 
+        /*
         // pause image caching if it was running
         bool imageCachePaused = false;
 //        if (imageCacheThread->isRunning()) {
@@ -762,6 +766,7 @@ void MetadataCache::run()
 //            imageCacheThread->wait();
             imageCachePaused = true;
 //        }
+        // */
 
         // read all metadata but no icons
         if (action == Action::AllMetadata) {
@@ -781,8 +786,9 @@ void MetadataCache::run()
         }
 
         if (abort) {
+            mutex.lock();     // rgh mutex
             dm->loadingModel = false;
-//            qDebug() << "!!!!  Aborting MetadataCache::run  ";
+            mutex.unlock();   // rgh mutex
             return;
         }
 
@@ -817,12 +823,15 @@ void MetadataCache::run()
 
         // update status of metadataThreadRunningLabel in statusbar
         emit updateIsRunning(false, true, __FUNCTION__);
+        qApp->processEvents();
 
+        /*
         // resume image caching if it was interrupted
         if (imageCachePaused) {
 //            qDebug() << __FUNCTION__ << "Resuming image cache";
             imageCacheThread->resumeImageCache();
         }
+        // */
 
         mutex.lock();     // rgh mutex
         dm->loadingModel = false;

@@ -226,7 +226,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     isStressTest = false;
     G::isTimer = true;                  // Global timer
     G::memTest = false;                 // will not load images
-    G::isTest = true;                   // use to find memory loss
+    G::isTest = false;                   // use to find memory loss
 
     // Initialize some variables
     initialize();
@@ -4706,10 +4706,10 @@ void MW::createMetadataDock()
 void MW::createThumbDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    thumbDock = new DockWidget("  👍  ", this);  // Thumbnails
+    thumbDock = new DockWidget(" 👍", this);  // Thumbnails
     thumbDock->setObjectName("thumbDock");
     thumbDock->setWidget(thumbView);
-    thumbDock->setWindowTitle(" 👍 ");
+//    thumbDock->setWindowTitle(" 👍 ");
     thumbDock->installEventFilter(this);
 
     if (isSettings) {
@@ -4871,10 +4871,11 @@ void MW::embelDockVisibilityChange()
 void MW::embelDockActivated(QDockWidget *dockWidget)
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__ << dockWidget->windowTitle();
 //    if (dockWidget->objectName() == "embelDock") embelDisplay();
     // enable the folder dock (first one in tab)
     embelDockTabActivated = true;
-    QList<QTabBar *> tabList = findChildren<QTabBar *>();
+    QList<QTabBar*> tabList = findChildren<QTabBar*>();
     QTabBar* widgetTabBar = tabList.at(0);
     widgetTabBar->setCurrentIndex(4);
 //    qDebug() << __FUNCTION__ << dockWidget->objectName() << widgetTabBar->currentIndex();
@@ -5317,10 +5318,10 @@ QString fPath = idx.data(G::PathRole).toString();
 QString shootingInfo = metadata->getShootingInfo(fPath);
 QString err = metadata->getErr(fPath);
 QString magnify = "🔎🔍";
-QString fileSym = "📁📂📗📌🔈📎🔗🔑👍🕎🧾🛈";
-QString camera = "📷📈";
+QString fileSym = "📁📂📗🕎📷🎨👍";
+QString camera = "📈📌🔈📎🔗🔑🧾🛈";
 //    https://www.vertex42.com/ExcelTips/unicode-symbols.html
-QString sym = "⚡🌈🌆🌸🍁🍄🎁🎨🎹💥💭🏃🏸💻🔆🔴🔵🔶🔷🔸🔹🔺🔻🖐🧲🛑⛬";
+QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵🔶🔷🔸🔹🔺🔻🖐🧲🛑⛬";
 //        */
 
     // update G::availableMemory
@@ -5407,14 +5408,14 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
     if (isRunning) {
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
         #ifdef Q_OS_WIN
-        imageThreadRunningLabel->setStyleSheet("QLabel {color:Red;font-size: 24px;}");
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Red; font-size: 24px;}");
         #endif
     }
     else {
         if (G::isTest) qDebug() << __FUNCTION__ << "Total time to cache folder =" << testTime.elapsed();
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
         #ifdef Q_OS_WIN
-        imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;font-size: 24px;}");
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Green; font-size: 24px;}");
         #endif
     }
     imageThreadRunningLabel->setText("◉");
