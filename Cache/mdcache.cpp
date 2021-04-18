@@ -354,7 +354,7 @@ bool MetadataCache::anyItemsToLoad()
     }
     // update status of metadataThreadRunningLabel in statusbar
     emit updateIsRunning(false, true, __FUNCTION__);
-    qApp->processEvents();
+//    qApp->processEvents();
     return false;
 }
 
@@ -420,6 +420,7 @@ void MetadataCache::iconCleanup()
         // the datamodel row dmRow
         int dmRow = i.value();
         // the filtered proxy row sfRow
+        mutex.lock();
         int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
         /* mapFromSource returns -1 if dm->index(dmRow, 0) is not in the filtered dataset
         This can happen is the user switches folders and the datamodel is cleared before the
@@ -434,6 +435,7 @@ void MetadataCache::iconCleanup()
 //            qDebug() << __FUNCTION__ << actionList[action]
 //                     << "Removing icon for row" << sfRow;
         }
+        mutex.unlock();
     }
 }
 
@@ -546,11 +548,13 @@ void MetadataCache::readIconChunk()
 
     int start = startRow;
     int end = endRow;
+    mutex.lock();
     if (end > dm->sf->rowCount()) end = dm->sf->rowCount();
     if (cacheAllIcons) {
         start = 0;
         end = dm->sf->rowCount();
     }
+    mutex.unlock();
     /*
     qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
              << "rowCount =" << dm->sf->rowCount()
@@ -636,7 +640,9 @@ void MetadataCache::readMetadataChunk()
     int end = endRow;
     if (cacheAllMetadata) {
         start = 0;
+        mutex.lock();
         end = dm->sf->rowCount();
+        mutex.unlock();
     }
 
     /*
@@ -685,7 +691,7 @@ void MetadataCache::readMetadataChunk()
         }
         */
         mutex.unlock();   // rgh mutex
-        qApp->processEvents();
+//        qApp->processEvents();
     }
 }
 
@@ -706,7 +712,7 @@ void MetadataCache::readMetadataIconChunk()
         }
 
         // file path and dm source row in case filtered or sorted
-//        mutex.lock(); // rgh mutex
+        mutex.lock(); // rgh mutex
         QModelIndex idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
         QString fPath = idx.data(G::PathRole).toString();
@@ -735,7 +741,7 @@ void MetadataCache::readMetadataIconChunk()
                 iconsCached.append(dmRow);
             }
         }
-//        mutex.unlock();   // rgh mutex
+        mutex.unlock();   // rgh mutex
     }
 }
 
@@ -750,13 +756,14 @@ void MetadataCache::run()
     if (G::isLogger) G::log(__FUNCTION__);
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
-        qApp->processEvents();
+//        qApp->processEvents();
 
         mutex.lock();     // rgh mutex
         int rowCount = dm->rowCount();
         dm->loadingModel = true;
         mutex.unlock();   // rgh mutex
 
+        imageCacheThread->pauseImageCache();
         /*
         // pause image caching if it was running
         bool imageCachePaused = false;
@@ -823,8 +830,9 @@ void MetadataCache::run()
 
         // update status of metadataThreadRunningLabel in statusbar
         emit updateIsRunning(false, true, __FUNCTION__);
-        qApp->processEvents();
+//        qApp->processEvents();
 
+        imageCacheThread->resumeImageCache();
         /*
         // resume image caching if it was interrupted
         if (imageCachePaused) {

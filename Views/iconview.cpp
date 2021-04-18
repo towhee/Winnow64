@@ -788,16 +788,13 @@ void IconView::selectThumb(int row)
 void IconView::selectThumb(QString &fPath)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    // rgh use dm->fPathRow[fPath] instead - much faster
-//    int dmRow = dm->fPathRow[fPath];
-//    QModelIndex sfIdx =
-//    selectThumb(dm->fPathRow[fPath]);
+    selectThumb(dm->proxyIndexFromPath(fPath));
+    /*
     QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath,
                                             1, Qt::MatchFixedString);
     if (idxList.length() > 0) selectThumb(idxList[0]);
     else G::popUp->showPopup("Could not find " + fPath + ".  Press Esc to continue.", 0);
-//    qDebug() << G::t.restart() << "\t" << "selectThumb  idx.row()" << idx.row();
-
+    */
 }
 
 void IconView::selectNext()

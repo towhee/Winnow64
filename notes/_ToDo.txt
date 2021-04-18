@@ -48,6 +48,7 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Added crash recovery
 - Memory leak in ICC profiles
 - Recover all memory when select empty folder
 - Version 1.19
