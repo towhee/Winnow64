@@ -317,6 +317,22 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         }
 
         show();
+
+        if (setting->value("hasCrashed").toBool()) {
+            QString msg = "It appears Winnow did not close properly.  Do you want to "
+                 "recover the most recent picks and ratings?";
+            int ret = QMessageBox::warning(this, "Recover Prior State", msg,
+                                           QMessageBox::Yes | QMessageBox::No);
+            if (ret == QMessageBox::Yes) {
+                folderAndFileSelectionChange(lastFileIfCrash);
+                recoverPickLog();
+                recoverRatingLog();
+                recoverColorClassLog();
+            }
+        }
+
+        // crash log
+        setting->setValue("hasCrashed", true);
     }
 }
 
@@ -443,6 +459,11 @@ void MW::closeEvent(QCloseEvent *event)
     metadataCacheThread->stopMetadateCache();
     imageCacheThread->stopImageCache();
     if (!simulateJustInstalled) writeSettings();
+    clearPickLog();
+    clearRatingLog();
+    clearColorClassLog();
+    // crash log
+    setting->setValue("hasCrashed", false);
     G::popUp->close();
     hide();
     if (!QApplication::clipboard()->image().isNull()) {
@@ -1079,8 +1100,8 @@ void MW::handleStartupArgs(const QString &args)
         // go there ...
         fsTree->select(fDir);
         folderAndFileSelectionChange(fPath);
-        loupeDisplay();
-        thumbView->selectThumb(fPath);
+//        loupeDisplay();
+//        thumbView->selectThumb(fPath);
     }
     else {
         QFileInfo f(argList.at(1));
@@ -1155,6 +1176,7 @@ void MW::folderSelectionChange()
     }
 
     currentViewDir = getSelectedPath();
+    setting->setValue("lastDir", currentViewDir);
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(currentViewDir, true /*report*/, false /*isRemembered*/)) {
@@ -1341,6 +1363,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     QString fPath = currentSfIdx.data(G::PathRole).toString();
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
+    setting->setValue("lastFileSelection", fPath);
 
     // update delegates so they can highlight the current item
     thumbView->iconViewDelegate->currentRow = currentRow;
@@ -1437,18 +1460,27 @@ void MW::folderAndFileSelectionChange(QString fPath)
     embelProperties->setCurrentTemplate("Do not Embellish");
     QFileInfo info(fPath);
     QString folder = info.dir().absolutePath();
-    if (fsTree->select(folder)) {
+    if (folder != currentViewDir) {
+        if (!fsTree->select(folder)) {
+            // failure
+            return;
+        }
         folderSelectionChange();
-        for (int i = 0; i < 100; i++) {
-            if (G::isNewFolderLoaded) {
-                thumbView->selectionModel()->clear();
-                thumbView->selectThumb(fPath);
-                break;
-            }
-            else {
+    }
+
+    setCentralMessage("Loading " + fPath + " ...");
+
+    // select image with fPath
+    for (int i = 0; i < 100; i++) {
+        if (G::isNewFolderLoaded) {
+            thumbView->selectionModel()->clear();
+            thumbView->selectThumb(fPath);
+            centralLayout->setCurrentIndex(LoupeTab);
+            break;
+        }
+        else {
 //                qDebug() << __FUNCTION__ << "waiting for folder to load:" << i;
-                G::wait(100);
-            }
+            G::wait(100);
         }
     }
 
@@ -7595,6 +7627,7 @@ void MW::writeSettings()
     when the application is re-opened.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+
     // general
     setting->setValue("lastPrefPage", lastPrefPage);
 //    setting->setValue("mouseClickScroll", mouseClickScroll);
@@ -7997,6 +8030,7 @@ bool MW::loadSettings()
         deleteWarning = setting->value("deleteWarning").toBool();
     else
         deleteWarning = true;
+    lastFileIfCrash = setting->value("lastFileSelection").toString();
 
     // appearance
     if (setting->contains("backgroundShade")) {
@@ -9280,6 +9314,7 @@ void MW::togglePick()
         // set pick status
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
+        updatePickLog(fPath, pickStatus);
     }
     if (idxList.length() > 1) pushPick("End multiple select");
 
@@ -9295,6 +9330,68 @@ void MW::togglePick()
 
     // auto advance
     if (autoAdvance) thumbView->selectNext();
+}
+
+int MW::pickLogCount()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    setting->beginGroup("PickLog");
+    int count = setting->allKeys().size();
+    setting->endGroup();
+    return count;
+}
+
+void MW::recoverPickLog()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    setting->beginGroup("PickLog");
+    QStringList keys = setting->allKeys();
+    for (int i = 0; i < keys.length(); ++i) {
+        QString fPath = keys.at(i);
+        fPath.replace("🔸", "/");
+        QString pickStatus = setting->value(keys.at(i)).toString();
+        QModelIndex idx = dm->proxyIndexFromPath(fPath);
+        if (idx.isValid()) {
+            QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
+            dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
+            qDebug() << __FUNCTION__ << pickStatus << fPath << "updated";
+        }
+        else {
+            qDebug() << __FUNCTION__ << fPath << "not found";
+        }
+    }
+    setting->endGroup();
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+}
+
+void MW::clearPickLog()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
+    setting->beginGroup("PickLog");
+    QStringList keys = setting->allKeys();
+    for (int i = 0; i < keys.length(); ++i) {
+        setting->remove(keys.at(i));
+    }
+    setting->endGroup();
+}
+
+void MW::updatePickLog(QString fPath, QString pickStatus)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    setting->beginGroup("PickLog");
+    QString sKey = fPath;
+    sKey.replace("/", "🔸");
+    if (pickStatus == "true") {
+        qDebug() << __FUNCTION__ << "adding" << sKey;
+        setting->setValue(sKey, pickStatus);
+    }
+    else {
+        qDebug() << __FUNCTION__ << "removing" << sKey;
+        setting->remove(sKey);
+    }
+    setting->endGroup();
 }
 
 void MW::pushPick(QString fPath, QString status)
@@ -9697,8 +9794,12 @@ void MW::setRating()
 
     // set the rating in the datamodel
     for (int i = 0; i < selection.count(); ++i) {
-        QModelIndex ratingIdx = dm->sf->index(selection.at(i).row(), G::RatingColumn);
+        int row = selection.at(i).row();
+        QModelIndex ratingIdx = dm->sf->index(row, G::RatingColumn);
         dm->sf->setData(ratingIdx, rating, Qt::EditRole);
+        // update rating crash log
+        QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+        updateRatingLog(fPath, rating);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
@@ -9706,8 +9807,12 @@ void MW::setRating()
             if(idx.data(G::DupIsJpgRole).toBool()) {
                 // set rating for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
-                ratingIdx = dm->index(rawIdx.row(), G::RatingColumn);
+                row = rawIdx.row();
+                ratingIdx = dm->index(row, G::RatingColumn);
                 dm->setData(ratingIdx, rating, Qt::EditRole);
+                // update rating crash log
+                fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+                updateRatingLog(fPath, rating);
             }
         }
     }
@@ -9723,6 +9828,68 @@ void MW::setRating()
 
     // update filter counts
     buildFilters->updateCountFiltered();
+}
+
+int MW::ratingLogCount()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    setting->beginGroup("RatingLog");
+    int count = setting->allKeys().size();
+    setting->endGroup();
+    return count;
+}
+
+void MW::recoverRatingLog()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    setting->beginGroup("RatingLog");
+    QStringList keys = setting->allKeys();
+    for (int i = 0; i < keys.length(); ++i) {
+        QString fPath = keys.at(i);
+        fPath.replace("🔸", "/");
+        QString pickStatus = setting->value(keys.at(i)).toString();
+        QModelIndex idx = dm->proxyIndexFromPath(fPath);
+        if (idx.isValid()) {
+            QModelIndex ratingIdx = dm->sf->index(idx.row(), G::RatingColumn);
+            dm->sf->setData(ratingIdx, pickStatus, Qt::EditRole);
+            qDebug() << __FUNCTION__ << pickStatus << fPath << "updated";
+        }
+        else {
+            qDebug() << __FUNCTION__ << fPath << "not found";
+        }
+    }
+    setting->endGroup();
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+}
+
+void MW::clearRatingLog()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
+    setting->beginGroup("RatingLog");
+    QStringList keys = setting->allKeys();
+    for (int i = 0; i < keys.length(); ++i) {
+        setting->remove(keys.at(i));
+    }
+    setting->endGroup();
+}
+
+void MW::updateRatingLog(QString fPath, QString rating)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    setting->beginGroup("RatingLog");
+    QString sKey = fPath;
+    sKey.replace("/", "🔸");
+    if (rating == "") {
+        qDebug() << __FUNCTION__ << "removing" << sKey;
+        setting->remove(sKey);
+    }
+    else {
+        qDebug() << __FUNCTION__ << "adding" << sKey;
+        setting->setValue(sKey, rating);
+    }
+    setting->endGroup();
 }
 
 void MW::setColorClass()
@@ -9765,8 +9932,12 @@ void MW::setColorClass()
 
     // update the data model
     for (int i = 0; i < selection.count(); ++i) {
-        QModelIndex labelIdx = dm->sf->index(selection.at(i).row(), G::LabelColumn);
+        int row = selection.at(i).row();
+        QModelIndex labelIdx = dm->sf->index(row, G::LabelColumn);
         dm->sf->setData(labelIdx, colorClass, Qt::EditRole);
+        // update color class crash log
+        QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+        updateColorClassLog(fPath, colorClass);
         // check if combined raw+jpg and also set the rating for the hidden raw file
         if (combineRawJpg) {
             QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
@@ -9774,8 +9945,12 @@ void MW::setColorClass()
             if(idx.data(G::DupIsJpgRole).toBool()) {
                 // set color class (label) for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
-                labelIdx = dm->index(rawIdx.row(), G::LabelColumn);
+                row = rawIdx.row();
+                labelIdx = dm->index(row, G::LabelColumn);
                 dm->setData(labelIdx, colorClass, Qt::EditRole);
+                // update color class crash log
+                fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+                updateColorClassLog(fPath, colorClass);
             }
         }
     }
@@ -9792,6 +9967,68 @@ void MW::setColorClass()
 
     // update filter counts
     buildFilters->updateCountFiltered();
+}
+
+int MW::colorClassLogCount()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    setting->beginGroup("ColorClassLog");
+    int count = setting->allKeys().size();
+    setting->endGroup();
+    return count;
+}
+
+void MW::recoverColorClassLog()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    setting->beginGroup("ColorClassLog");
+    QStringList keys = setting->allKeys();
+    for (int i = 0; i < keys.length(); ++i) {
+        QString fPath = keys.at(i);
+        fPath.replace("🔸", "/");
+        QString colorClassStatus = setting->value(keys.at(i)).toString();
+        QModelIndex idx = dm->proxyIndexFromPath(fPath);
+        if (idx.isValid()) {
+            QModelIndex colorClassIdx = dm->sf->index(idx.row(), G::LabelColumn);
+            dm->sf->setData(colorClassIdx, colorClassStatus, Qt::EditRole);
+            qDebug() << __FUNCTION__ << colorClassStatus << fPath << "updated";
+        }
+        else {
+            qDebug() << __FUNCTION__ << fPath << "not found";
+        }
+    }
+    setting->endGroup();
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+}
+
+void MW::clearColorClassLog()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
+    setting->beginGroup("ColorClassLog");
+    QStringList keys = setting->allKeys();
+    for (int i = 0; i < keys.length(); ++i) {
+        setting->remove(keys.at(i));
+    }
+    setting->endGroup();
+}
+
+void MW::updateColorClassLog(QString fPath, QString label)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    setting->beginGroup("ColorClassLog");
+    QString sKey = fPath;
+    sKey.replace("/", "🔸");
+    if (label == "") {
+        qDebug() << __FUNCTION__ << "removing" << sKey;
+        setting->remove(sKey);
+    }
+    else {
+        qDebug() << __FUNCTION__ << "adding" << sKey;
+        setting->setValue(sKey, label);
+    }
+    setting->endGroup();
 }
 
 void MW::metadataChanged(QStandardItem* item)
@@ -10895,6 +11132,7 @@ void MW::helpWelcome()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+    abort();  return;
     qDebug() << __FUNCTION__;
     QString s = "D:/Pictures/Zenfolio/pbase2048";
     dm->load(s, false);
@@ -10908,7 +11146,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    imageCacheThread->reportCache(__FUNCTION__);
+    QString s = "D:/Pictures/Zenfolio/Archive/2015-03-18_0035.jpg";
+    folderAndFileSelectionChange(s);
 
 }
 // End MW

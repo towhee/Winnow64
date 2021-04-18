@@ -99,7 +99,7 @@ public:
     bool isReleaseVersion = true;
     bool hideEmbellish = false;
 
-    QString versionNumber = "1.19";
+    QString versionNumber = "1.20";
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -206,6 +206,7 @@ public:
     // files
     bool rememberLastDir;
     QString lastDir;
+    QString lastFileIfCrash;
 //    bool inclSubfolders;
     int maxRecentFolders = 20;
     int maxIngestHistoryFolders = 20;
@@ -360,8 +361,19 @@ private slots:
     void ejectUsbFromContextMenu();
     void setCachedStatus(QString fPath, bool isCached);
     void searchTextEdit();
+
+    int ratingLogCount();
+    void recoverRatingLog();
+    void clearRatingLog();
+    void updateRatingLog(QString fPath, QString pickStatus);
     void setRating();
+
+    int colorClassLogCount();
+    void recoverColorClassLog();
+    void clearColorClassLog();
+    void updateColorClassLog(QString fPath, QString pickStatus);
     void setColorClass();
+
     void setRotation(int degrees);
     void metadataChanged(QStandardItem* item);
     void filterLastDay();
@@ -453,6 +465,10 @@ private slots:
     void togglePick();
     void togglePickMouseOverItem(QModelIndex idx);
     void togglePickUnlessRejected();
+    int pickLogCount();
+    void recoverPickLog();
+    void clearPickLog();
+    void updatePickLog(QString fPath, QString pickStatus);
     void pushPick(QString fPath, QString status = "true");
     void popPick();
     void updatePickFromHistory(QString fPath, QString status);
@@ -964,6 +980,8 @@ private:
     QString colorClass = "";
     bool isPick;
     bool isReject;
+
+    QFile pickLog;
 
     void createEmbel();
     void createDocks();

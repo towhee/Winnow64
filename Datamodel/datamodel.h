@@ -104,6 +104,8 @@ private:
     QList<QFileInfo> fileInfoList;
     static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
 
+    QMutex mutex;
+
     QDir *dir;
     QStringList *fileFilters;
     QList<QStandardItem*> *thumbList;

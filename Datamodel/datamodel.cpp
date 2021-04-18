@@ -723,6 +723,7 @@ bool DataModel::readMetadataForItem(int row)
 /*
     Reads the image metadata into the datamodel for the row.
 */
+    mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__, index(row, 0).data(G::PathRole).toString());
     QString fPath = index(row, 0).data(G::PathRole).toString();
 
@@ -749,6 +750,7 @@ bool DataModel::readMetadataForItem(int row)
 //            addMetadataForItem(metadata->m);
         }
     }
+    mutex.unlock();
     return true;
 }
 
@@ -974,10 +976,11 @@ When Raw+Jpg is toggled in the main program MW the file type filter must be rebu
 QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 {
 /*
-The hash table fPathRow {path, row} if build when the datamodel is loaded to provide a
-quick lookup to get the datamodel row from an image path.
+    The hash table fPathRow {path, row} if build when the datamodel is loaded to provide a
+    quick lookup to get the datamodel row from an image path.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
+    if (!fPathRow.contains(fPath)) return index(-1, -1);
     int row = fPathRow[fPath];
     QModelIndex idx = sf->mapFromSource(index(row, 0));
     if (idx.isValid()) return idx;
