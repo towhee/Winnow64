@@ -111,6 +111,7 @@ namespace G
         TotalColumns    // insert additional columns before this
     };
 
+    // used to pass externalApps from MW to AppDlg
     struct Pair {
         QString name;
         QString path;
@@ -190,7 +191,8 @@ namespace G
 //    extern bool buildingFilters;
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;
-
+    extern bool isProcessingExportedImages;
+    extern bool isRunningColorAnalysis;
     extern bool isEmbellish;
 
     extern int ingestCount;

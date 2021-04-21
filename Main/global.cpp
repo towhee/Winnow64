@@ -69,6 +69,8 @@ namespace G
     bool allMetadataLoaded;
     bool ignoreScrollSignal;
     bool isSlideShow;
+    bool isProcessingExportedImages;
+    bool isRunningColorAnalysis;
     bool isEmbellish;
 
     // ingest

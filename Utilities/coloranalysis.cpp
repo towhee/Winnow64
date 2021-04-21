@@ -8,7 +8,7 @@ ColorAnalysis::ColorAnalysis(QObject *parent)/* : fPath(fPath)*/
 void ColorAnalysis::process(QStringList &fPathList)
 {
     int count = fPathList.length();
-
+    G::isRunningColorAnalysis = true;
     G::popUp->setProgressVisible(true);
     G::popUp->setProgressMax(count);
     QString txt = "Counting hues in " + QString::number(count) + " images. " +
@@ -59,6 +59,10 @@ void ColorAnalysis::process(QStringList &fPathList)
 void ColorAnalysis::abortHueReport()
 {
     abort = true;
+    G::isRunningColorAnalysis = false;
+    G::popUp->setProgressVisible(false);
+    G::popUp->hide();
+    G::popUp->showPopup("Hue report has been aborted.");
     qDebug() << __FUNCTION__ << abort;
     qApp->processEvents();
 }

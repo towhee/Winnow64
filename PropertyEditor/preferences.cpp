@@ -801,14 +801,14 @@ void Preferences::addItems()
     addItem(i);
 
     // Slideshow delay
-    i.name = "slideshowDelay";
+    i.name = "slideShowDelay";
     i.parentName = "SlideshowHeader";
     i.captionText = "Slideshow delay (sec)";
     i.tooltip = "Enter the slideshow delay in seconds.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->slideShowDelay;
-    i.key = "slideshowDelay";
+    i.key = "slideShowDelay";
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;

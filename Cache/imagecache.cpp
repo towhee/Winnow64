@@ -836,6 +836,7 @@ void ImageCache::initImageCache(int &cacheSizeMB,
      bool &usePreview, int &previewWidth, int &previewHeight)
 {
 //    if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__ << "cacheSizeMB =" << cacheSizeMB;
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
 
@@ -966,6 +967,11 @@ void ImageCache::setCurrentPosition(QString path)
 //    if (G::isLogger) { G::log(__FUNCTION__, path); }
     mutex.lock();
     currentPath = path;             // memory check
+    qDebug() << __FUNCTION__
+             << "filterSortChange =" << filterOrSortHasChanged
+             << "cacheSizeChange =" << cacheSizeHasChanged
+             << "currentPath =" << currentPath
+                ;
     if (!isRunning()) start();
     mutex.unlock();
 }
@@ -1003,6 +1009,7 @@ void ImageCache::run()
     bool positionChanged;
     bool cacheSizeChange;
     bool filterSortChange;
+    qDebug() << __FUNCTION__;
 
     // start run loop
     do {

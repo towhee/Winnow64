@@ -142,26 +142,22 @@ void Appdlg::on_addBtn_clicked()
 
 void Appdlg::on_removeBtn_clicked()
 {
-    int row = ui->appsTable->currentRow();
-    if (row < 0 || ui->appsTable->currentRow() > 9) {
+    int rowToRemove = ui->appsTable->currentRow();
+    if (rowToRemove < 0 || ui->appsTable->currentRow() > 9) {
         G::popUp->showPopup("No row selected");
         return;
     }
 
-    if(ui->appsTable->item(row, 1)->text() == "") return;
+    if(ui->appsTable->item(rowToRemove, 1)->text() == "") return;
 
     QString name;
     QString path;
     int rows = getAppCount() - 1;
-    for (row = 0; row < rows; ++row) {
-        if(row == 9) {
-            name = "";
-            path = "";
-        }
-        else {
-            name = ui->appsTable->item(row + 1, 1)->text();
-            path = ui->appsTable->item(row + 1, 2)->text();
-        }
+    for (int row = 0; row < rows; ++row) {
+        int n = 0;
+        if(row >= rowToRemove) n = 1;
+        name = ui->appsTable->item(row + n, 1)->text();
+        path = ui->appsTable->item(row + n, 2)->text();
         ui->appsTable->item(row, 1)->setText(name);
         ui->appsTable->item(row, 2)->setText(path);
     }
@@ -169,7 +165,10 @@ void Appdlg::on_removeBtn_clicked()
     ui->appsTable->item(rows, 2)->setText("");
 
     setFlags(rows);
-    ui->appsTable->selectRow(rows - 1);
+    int row = rowToRemove;
+    if (row >= rows - 1) --row;
+    if (row < 0) row = 0;
+    ui->appsTable->selectRow(row);
 }
 
 void Appdlg::on_okBtn_clicked()
