@@ -36,7 +36,7 @@ public:
     void loadNewFolder2ndPass();
     void scrollChange(QString source);
     void sizeChange(QString source);
-    void fileSelectionChange(bool okayToImageCache);
+    void fileSelectionChange(/*bool okayToImageCache*/); // rghcachechange
     void loadAllMetadata();
     void readMetadataIcon(const QModelIndex &idx);
     void stopMetadateCache();
@@ -72,7 +72,7 @@ protected:
 
 signals:
     void loadImageCache();
-    void updateImageCachePosition();
+//    void updateImageCachePosition(); // rghcachechange
     void pauseImageCache();
     void resumeImageCache();
     void updateIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
@@ -101,7 +101,7 @@ private:
     QList<int> iconsCached;
 
     bool foundItemsToLoad;
-    bool updateImageCache;
+//    bool updateImageCache; // rghcachechange
     Action action;
 
     bool allIconsLoaded;

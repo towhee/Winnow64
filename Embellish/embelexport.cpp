@@ -148,6 +148,7 @@ void EmbelExport::exportImages(const QStringList &srcList)
 */
     if (G::isLogger) G::log(__FUNCTION__); 
 
+    G::isProcessingExportedImages = true;
     abort = false;
     int count = srcList.size();
     if (count == 0) {
@@ -193,10 +194,12 @@ void EmbelExport::exportImages(const QStringList &srcList)
 
     G::popUp->setProgressVisible(false);
     G::popUp->hide();
+    G::isProcessingExportedImages = false;
     delete embellish;
 
     if (abort) {
         abort = false;
+        G::isProcessingExportedImages = false;
         G::popUp->showPopup("Export has been aborted", 1500);
         return;
     }
@@ -269,6 +272,8 @@ void EmbelExport::exportImage(const QString &fPath)
 void EmbelExport::abortEmbelExport()
 {
     qApp->processEvents();
+    G::isProcessingExportedImages = false;
+    G::popUp->showPopup("Export has been aborted", 1500);
     qDebug() << __FUNCTION__ << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
     abort = true;
 }

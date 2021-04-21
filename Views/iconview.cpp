@@ -1459,6 +1459,16 @@ different position than the current image.
         return;
     }
 
+    // Alt + Shift + Left button
+    if (event->button() == Qt::LeftButton
+    && event->modifiers() == (Qt::ShiftModifier | Qt::AltModifier)) {
+        QModelIndex idx = indexAt(event->pos());
+        if (idx.isValid()) {
+             m2->togglePickMouseOverItem(idx);
+        }
+        return;
+    }
+
     // must finish event to update current index in iconView if mouse press on an icon
     if (indexAt(event->pos()).isValid()) QListView::mousePressEvent(event);
 

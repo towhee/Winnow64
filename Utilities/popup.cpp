@@ -6,7 +6,7 @@
 
 /*
 This class shows a pop up message for a given time with an assigned transparency. The default
-time is 1000 ms and the default transparency is 75%.
+time is 1500 ms and the default transparency is 75%.
 
 The widget will autosize to fit the text message if isAutoSize is true.
 

@@ -1,12 +1,14 @@
 #include "Main/global.h"
 #include "Cache/mdcache.h"
-
+//"C:\Program Files\Adobe\Adobe Photoshop 2021\Photoshop.exe" "2011-10-14_0132.jpg"
+//"C:\Program Files\Adobe\Adobe Photoshop 2021\Photoshop.exe" "D:\Pictures\Coaster\2011-10-14_0132.jpg"
 /*
 The metadata cache reads the relevant metadata and preview thumbnails from the image files and
 stores this information in the datamodel dm. The critical metadata is the offset and length of
 the embedded JPGs and their width and height, which is required by the ImageCache and
 ImageView to display the images and IconView to display the thumbnails. The other metadata is
-in the nice-to-know category.  The full size images are stored in the image cache.
+in the nice-to-know category.  The full size images are stored in the image cache, which is
+managed in another thread, imageCacheThread.
 
 Reading the metadata can become time consuming and the thumbnails or icons can consume a lot
 of memory, so the metadata is read in chunks. Each chunk size (number of image files) is the
@@ -56,11 +58,7 @@ When Winnow is running and a new folder is selected
 
 When the user scrolls through the thumbnails:
 
-    • If it is running the imageCacheThread is paused.
-
-    • A 100ms (MW::cacheDelay) singleShot timer is invoked to call MW::loadMetadataChunk. The
-      delay allows rapid scrolling without firing the metadataCacheThread until the user
-      pauses.
+    • If it is running the imageCacheThread is aborted and restarted.
 
     • As above, the metadata chunk is loaded and the datamodel filter is updated.
 
@@ -316,7 +314,7 @@ void MetadataCache::sizeChange(QString source)
     start(TimeCriticalPriority);
 }
 
-void MetadataCache::fileSelectionChange(bool okayToImageCache)
+void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachechange
 {
 /*
     This function is called from MW::fileSelectionChange. A chunk of metadata and icons are
@@ -332,7 +330,7 @@ void MetadataCache::fileSelectionChange(bool okayToImageCache)
         wait();
     }
     abort = false;
-    updateImageCache = okayToImageCache;
+//    updateImageCache = okayToImageCache; // rghcachechange
     action = Action::NewFileSelected;
     setRange();
     foundItemsToLoad = anyItemsToLoad();
@@ -354,7 +352,6 @@ bool MetadataCache::anyItemsToLoad()
     }
     // update status of metadataThreadRunningLabel in statusbar
     emit updateIsRunning(false, true, __FUNCTION__);
-//    qApp->processEvents();
     return false;
 }
 
@@ -635,7 +632,6 @@ void MetadataCache::readMetadataChunk()
 */
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
 
-//    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
     int start = startRow;
     int end = endRow;
     if (cacheAllMetadata) {
@@ -652,9 +648,6 @@ void MetadataCache::readMetadataChunk()
 //        */
     for (int row = start; row < end; ++row) {
         if (abort) {
-//            mutex.lock();
-//            qDebug() << __FUNCTION__ << "Aborting on row" << row;
-//            mutex.unlock();
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
@@ -691,7 +684,6 @@ void MetadataCache::readMetadataChunk()
         }
         */
         mutex.unlock();   // rgh mutex
-//        qApp->processEvents();
     }
 }
 
@@ -756,24 +748,12 @@ void MetadataCache::run()
     if (G::isLogger) G::log(__FUNCTION__);
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
-//        qApp->processEvents();
-
         mutex.lock();     // rgh mutex
         int rowCount = dm->rowCount();
         dm->loadingModel = true;
         mutex.unlock();   // rgh mutex
 
-        imageCacheThread->pauseImageCache();
-        /*
-        // pause image caching if it was running
-        bool imageCachePaused = false;
-//        if (imageCacheThread->isRunning()) {
-//            qDebug() << __FUNCTION__ << "Pausing image cache";
-            imageCacheThread->pauseImageCache();
-//            imageCacheThread->wait();
-            imageCachePaused = true;
-//        }
-        // */
+//        imageCacheThread->pauseImageCache();
 
         // read all metadata but no icons
         if (action == Action::AllMetadata) {
@@ -832,7 +812,7 @@ void MetadataCache::run()
         emit updateIsRunning(false, true, __FUNCTION__);
 //        qApp->processEvents();
 
-        imageCacheThread->resumeImageCache();
+//        imageCacheThread->resumeImageCache();
         /*
         // resume image caching if it was interrupted
         if (imageCachePaused) {
@@ -859,18 +839,18 @@ void MetadataCache::run()
         emit loadImageCache();
     }
  
+     // rghcachechange
     // if a file selection change and not a new folder then update image cache
-    if (action == Action::NewFileSelected) {
-        /*
-        qDebug() << __FUNCTION__ << "fileSelectionChange"
-                 << "dm->currentFilePath" << dm->currentFilePath
-                 << "dm->currentRow" << dm->currentRow
-                 << "G::isNewFolderLoaded" << G::isNewFolderLoaded
-                 << "updateImageCache =" << updateImageCache;
-                 // */
-        if (G::isNewFolderLoaded && updateImageCache) {
-            emit updateImageCachePosition();
-        }
-    }
+//    if (action == Action::NewFileSelected) {
+//        /*
+//        qDebug() << __FUNCTION__ << "fileSelectionChange"
+//                 << "dm->currentFilePath" << dm->currentFilePath
+//                 << "dm->currentRow" << dm->currentRow
+//                 << "G::isNewFolderLoaded" << G::isNewFolderLoaded
+//                 // */
+//        if (G::isNewFolderLoaded && updateImageCache) {
+////            emit updateImageCachePosition();
+//        }
+//    }
 
 }

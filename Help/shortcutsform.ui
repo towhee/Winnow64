@@ -313,7 +313,7 @@
          <string>P</string>
         </property>
         <property name="text">
-         <string>Toggles alternate shortcut</string>
+         <string>Toggles pick on/off</string>
         </property>
        </item>
        <item>
@@ -324,7 +324,18 @@
          <string>Mouse side button</string>
         </property>
         <property name="text">
-         <string>Toggles alternate shortcut</string>
+         <string>Toggles pick on/off without selecting image</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Pick Image</string>
+        </property>
+        <property name="text">
+         <string>Shift + Alt + Mouse Left Button</string>
+        </property>
+        <property name="text">
+         <string>Toggles pick on/off without selecting image</string>
         </property>
        </item>
        <item>
@@ -548,7 +559,7 @@
           <string>Scroll Left</string>
          </property>
          <property name="text">
-          <string>Opt/Alt + Left</string>
+          <string>Cmd/Ctrl + Left</string>
          </property>
         </item>
         <item>
@@ -556,7 +567,7 @@
           <string>Scroll Right</string>
          </property>
          <property name="text">
-          <string>Opt/Alt + Right</string>
+          <string>Cmd/Ctrl + Right</string>
          </property>
         </item>
         <item>
@@ -564,7 +575,7 @@
           <string>Scroll Up</string>
          </property>
          <property name="text">
-          <string>Opt/Alt + Up</string>
+          <string>Cmd/Ctrl + Up</string>
          </property>
         </item>
         <item>
@@ -572,7 +583,7 @@
           <string>Scroll Down</string>
          </property>
          <property name="text">
-          <string>Opt/Alt + Down</string>
+          <string>Cmd/Ctrl + Down</string>
          </property>
         </item>
         <item>

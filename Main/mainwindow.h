@@ -235,7 +235,7 @@ public:
     int slideShowDelay;
     bool isSlideShowRandom;
     bool isSlideShowWrap = true;
-    bool updateImageCacheWhenFileSelectionChange = true;
+//    bool updateImageCacheWhenFileSelectionChange = true; // rghcachechange
     QStack<QString> *slideshowRandomHistoryStack;
 
     // preferences: cache
@@ -433,7 +433,7 @@ private slots:
     void updateMetadataCacheStatus(int row, bool clear = false);
     void updateImageCacheStatus(QString instruction, int row, QString source);
     // caching
-    void updateImageCachePosition();
+//    void updateImageCachePosition(); // rghcachechange
     void loadMetadataCache2ndPass();
     void refreshCurrentAfterReload();
     void updateIconsVisible(bool useCurrentRow);

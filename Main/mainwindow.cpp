@@ -548,14 +548,10 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     if (event->key() == Qt::Key_Escape) {
-        // hide a popup message
-        if (G::popUp->isVisible()) {
-            emit abortEmbelExport();
-            emit abortHueReport();
-            G::popUp->setProgressVisible(false);
-            G::popUp->hide();
-            return;
-        }
+        // abort Embellish export process
+        if (G::isProcessingExportedImages) emit abortEmbelExport();
+        // abort color analysis
+        if (G::isRunningColorAnalysis) emit abortHueReport();
         // hide preferences
         if (preferencesHasFocus) {
             propertiesDock->setVisible(false);  // rgh not using propertiesDock?
@@ -564,7 +560,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         if (filters->buildingFilters) {
             buildFilters->stop();
         }
-        // quit rubberbanding
+        // quit rubberbanding  // rgh still valid??
         if (imageView->isRubberBand) {
             imageView->quitRubberBand();
         }
@@ -605,11 +601,13 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             else msg = "Sequential selection enabled.";
             G::popUp->showPopup(msg);
         }
-        // change slideshow delay 1 - 9 seconds
+        // quick change slideshow delay 1 - 9 seconds
         else if (n > 0 && n <= 9) {
             isSlideshowPaused = false;
             slideShowDelay = n;
             slideShowResetDelay();
+            QString msg = "Slideshow interval set to " + QString::number(n) + " seconds.";
+            G::popUp->showPopup(msg);
         }
     }
 
@@ -1423,8 +1421,15 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     // update caching when folder has been loaded
     if (G::isNewFolderLoaded) {
+        qDebug() << __FUNCTION__ << qApp->keyboardModifiers();
         updateIconsVisible(true);
-        metadataCacheThread->fileSelectionChange(updateImageCacheWhenFileSelectionChange);
+        metadataCacheThread->fileSelectionChange(/*updateImageCacheWhenFileSelectionChange*/);
+
+        // Do not image cache if there is an active random slide show or Alt key is pressed
+        if (!(G::isSlideShow && isSlideShowRandom)
+//                && !G::doNotCache /* Alt key */
+                && !(qApp->keyboardModifiers() == Qt::AltModifier))
+            imageCacheThread->setCurrentPosition(dm->currentFilePath);
     }
 
     // update the metadata panel
@@ -1601,17 +1606,17 @@ void MW::updateIconsVisible(bool useCurrentRow)
     metadataCacheThread->sizeChange(__FUNCTION__);
 }
 
-void MW::updateImageCachePosition()
-{
-/*
-    Signalled from the metadataCacheThread when a new image is selected or on a filtration
-    change. Updates the current position in imageCacheThread, which then updates the image
-    cache.
-*/
-    if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__;
-    imageCacheThread->setCurrentPosition(dm->currentFilePath);
-}
+//void MW::updateImageCachePosition() // rghcachechange
+//{
+///*
+//    Signalled from the metadataCacheThread when a new image is selected or on a filtration
+//    change. Updates the current position in imageCacheThread, which then updates the image
+//    cache.
+//*/
+//    if (G::isLogger) G::log(__FUNCTION__);
+////    qDebug() << __FUNCTION__;
+//    imageCacheThread->setCurrentPosition(dm->currentFilePath);
+//}
 
 void MW::loadMetadataCache2ndPass()
 {
@@ -4162,8 +4167,8 @@ void MW::createCaching()
             this, SLOT(loadMetadataCache2ndPass()));
 
     // when a new image has been selected trigger a delayed update to image cache
-    connect(metadataCacheThread, SIGNAL(updateImageCachePosition()),
-            this, SLOT(updateImageCachePosition()));
+//    connect(metadataCacheThread, SIGNAL(updateImageCachePosition()),
+//            this, SLOT(updateImageCachePosition())); // rghcachechange
 
     /* This singleshot timer signals the image cache that the position has moved in the
     file selection. The delay is used to queue many quick changes to the image and avoid
@@ -5047,8 +5052,7 @@ void MW::createStatusBar()
     QString progressToolTip = "Image cache status for current folder:\n";
     progressToolTip += "  • LightGray:  \tbackground for all images in folder\n";
     progressToolTip += "  • DarkGray:   \timages targeted to be cached\n";
-    progressToolTip += "  • Green:      \timages cache progress\n";
-    progressToolTip += "  • Purple:     \tmetadata cache progress\n";
+    progressToolTip += "  • Green:      \timages that are cached\n";
     progressToolTip += "  • LightGreen: \tcurrent image";
     progressLabel->setToolTip(progressToolTip);
     progressLabel->setToolTipDuration(100000);
@@ -5104,7 +5108,7 @@ void MW::updateStatusBar()
     if(rawJpgStatusLabel->isVisible()) statusBar()->removeWidget(rawJpgStatusLabel);
     if(filterStatusLabel->isVisible()) statusBar()->removeWidget(filterStatusLabel);
     if(subfolderStatusLabel->isVisible()) statusBar()->removeWidget(subfolderStatusLabel);
-    if(slideShowStatusLabel->isVisible()) statusBar()->removeWidget(slideShowStatusLabel);
+    if(!G::isSlideShow) statusBar()->removeWidget(slideShowStatusLabel);
     if(statusLabel->isVisible()) statusBar()->removeWidget(statusLabel);             // text showing x selected...
 
     // add back relevant icons
@@ -5156,7 +5160,7 @@ void MW::updateStatusBar()
     }
 //    */
 
-    if (updateImageCacheWhenFileSelectionChange) progressLabel->setVisible(G::showCacheStatus);
+    if (!(G::isSlideShow && isSlideShowRandom)) progressLabel->setVisible(G::showCacheStatus);// rghcachechange
     else progressLabel->setVisible(false);
 }
 
@@ -6829,7 +6833,6 @@ void MW::runExternalApp()
             break;
         }
     }
-//    qDebug() << __FUNCTION__ << appName << externalApps << appPath;
     if(appPath == "") return;       // add err handling
     QFileInfo appInfo = appPath;
     QString appExecutable = appInfo.fileName();
@@ -6837,14 +6840,13 @@ void MW::runExternalApp()
 //    app = externalApps[((QAction*) sender())->text()];
     QModelIndexList selectedIdxList = selectionModel->selectedRows();
 
-//    app = "/Applications/Adobe Photoshop CC 2018/Adobe Photoshop CC 2018.app/Contents/MacOS/Adobe Photoshop CC 2018";
-//    app = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app/Contents/MacOS/Adobe Photoshop CS6";
-//    QString x = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app";
-//    app = "\"/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app\"";
-
+    /*
+    app = "/Applications/Adobe Photoshop CC 2018/Adobe Photoshop CC 2018.app/Contents/MacOS/Adobe Photoshop CC 2018";
+    app = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app/Contents/MacOS/Adobe Photoshop CS6";
+    QString x = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app";
+    app = "\"/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app\"";
     std::cout << appPath.toStdString() << std::endl << std::flush;
-//    app = "/Applications/Preview.app";
-//    std::cout << app.toStdString() << std::endl << std::flush;
+    // */
 
     int nFiles = selectedIdxList.size();
 
@@ -6872,13 +6874,16 @@ void MW::runExternalApp()
     }
 
     QStringList arguments;
+    QString folderPath;
     for (int tn = 0; tn < nFiles ; ++tn) {
         QString fPath = selectedIdxList[tn].data(G::PathRole).toString();
         QFileInfo fInfo = fPath;
-        QString folderPath = fInfo.dir().absolutePath() + "/";
+        folderPath = fInfo.dir().absolutePath() + "/";
+        QString fileName = fInfo.fileName();
 
         // Update arguments
-        if(appExecutable == "Photo Mechanic.exe") arguments << folderPath;
+        if (appExecutable == "Photo Mechanic.exe") arguments << folderPath;
+//        else arguments << fileName;
         else arguments << fPath;
 
         // write sidecar in case external app can read the metadata
@@ -6886,29 +6891,31 @@ void MW::runExternalApp()
         QString suffix = fInfo.suffix().toLower();
         QString destinationPath = fPath;
 
+        /*
         // Sidecar being overwritten if it already exists!!  Cancel for now.
 
-//        // buffer to hold file with edited xmp data
-//        QByteArray buffer;
+        // buffer to hold file with edited xmp data
+        QByteArray buffer;
 
-//        if (metadata->writeMetadata(fPath, dm->getMetadata(fPath), buffer)
-//        && metadata->sidecarFormats.contains(suffix)) {
+        if (metadata->writeMetadata(fPath, dm->getMetadata(fPath), buffer)
+        && metadata->sidecarFormats.contains(suffix)) {
 
-//            if (metadata->internalXmpFormats.contains(suffix)) {
-//                // write xmp data into image file
-//                QFile newFile(destinationPath);
-//                newFile.open(QIODevice::WriteOnly);
-//                newFile.write(buffer);
-//                newFile.close();
-//            }
-//            else {
-//                // write the sidecar xmp file
-//                QFile sidecarFile(folderPath + destBaseName + ".xmp");
-//                sidecarFile.open(QIODevice::WriteOnly);
-//                sidecarFile.write(buffer);
-//                sidecarFile.close();
-//            }
-//        }
+            if (metadata->internalXmpFormats.contains(suffix)) {
+                // write xmp data into image file
+                QFile newFile(destinationPath);
+                newFile.open(QIODevice::WriteOnly);
+                newFile.write(buffer);
+                newFile.close();
+            }
+            else {
+                // write the sidecar xmp file
+                QFile sidecarFile(folderPath + destBaseName + ".xmp");
+                sidecarFile.open(QIODevice::WriteOnly);
+                sidecarFile.write(buffer);
+                sidecarFile.close();
+            }
+        }
+        */
     }
 
     QProcess *process = new QProcess();
@@ -6919,14 +6926,9 @@ void MW::runExternalApp()
 
     process->setArguments(arguments);
     process->setProgram(appPath);
+    process->setWorkingDirectory(folderPath);
     process->start();
-
-//    process->start(appPath);
-//     process->start(appPath, arguments);
-//     process->start(appPath, {"/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"});
-
-//    if ( !process->waitForFinished(-1))
-//        qDebug() << G::t.restart() << "\t" << process->readAllStandardError();
+//    QProcess::execute(appExecutable, arguments);
 
     //this works in terminal"
     // open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
@@ -8267,7 +8269,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
         openAction->setShortcut(QKeySequence("O"));
         refreshCurrentAction->setShortcut(QKeySequence("Alt+F5"));
         openUsbAction->setShortcut(QKeySequence("Ctrl+O"));
-        manageAppAction->setShortcut(QKeySequence("Alt+O"));
         ingestAction->setShortcut(QKeySequence("Q"));
         showImageCountAction->setShortcut(QKeySequence("\\"));
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
@@ -8318,10 +8319,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
         keyPageUpAction->setShortcut(QKeySequence("PgUp"));
         keyPageDownAction->setShortcut(QKeySequence("PgDown"));
 
-        keyScrollLeftAction->setShortcut(QKeySequence("Alt+Left"));
-        keyScrollRightAction->setShortcut(QKeySequence("Alt+Right"));
-        keyScrollUpAction->setShortcut(QKeySequence("Alt+Up"));
-        keyScrollDownAction->setShortcut(QKeySequence("Alt+Down"));
+        keyScrollLeftAction->setShortcut(QKeySequence("Ctrl+Left"));
+        keyScrollRightAction->setShortcut(QKeySequence("Ctrl+Right"));
+        keyScrollUpAction->setShortcut(QKeySequence("Ctrl+Up"));
+        keyScrollDownAction->setShortcut(QKeySequence("Ctrl+Down"));
 
         keyScrollPageLeftAction->setShortcut(QKeySequence("Ctrl+Alt+Left"));
         keyScrollPageRightAction->setShortcut(QKeySequence("Ctrl+Alt+Right"));
@@ -10253,34 +10254,36 @@ void MW::slideShow()
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isSlideShow) {
         // stop slideshow
+        G::popUp->showPopup("Slideshow has been terminated.");
+        G::isSlideShow = false;
         imageView->setCursor(Qt::ArrowCursor);
         slideShowStatusLabel->setText("");
-        G::popUp->showPopup("Stopping slideshow", 2000);
         updateStatus(true, "", __FUNCTION__);
         updateStatusBar();
         slideShowAction->setText(tr("Slide Show"));
         slideShowTimer->stop();
         delete slideShowTimer;
-        updateImageCacheWhenFileSelectionChange = true;
+//        updateImageCacheWhenFileSelectionChange = true;// rghcachechange
         progressBar->setVisible(true);
         // change to ImageCache
         imageCacheThread->setCurrentPosition(dm->currentFilePath);
+        imageCacheThread->resumeImageCache();
 //        imageCacheThread->updateImageCachePosition();
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
         for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);
-        G::isSlideShow = false;
     } else {
         // start slideshow
         imageView->setCursor(Qt::BlankCursor);
         G::isSlideShow = true;
         isSlideshowPaused = false;
-        if (isSlideShowRandom) updateImageCacheWhenFileSelectionChange = false;
+//        if (isSlideShowRandom) updateImageCacheWhenFileSelectionChange = false;// rghcachechange
         updateStatusBar();
         QString msg = "<h2>Press <font color=\"red\"><b>Esc</b></font> to exit slideshow</h2><p>";
         msg += "Press <font color=\"red\"><b>H</b></font> during slideshow for tips"
                       "<p>Starting slideshow";
-        msg += "<br>Interval = " + QString::number(slideShowDelay) + " second(s)";
+        msg += "<p>Current settings:<p>";
+        msg += "Interval = " + QString::number(slideShowDelay) + " second(s)";
         if (isSlideShowRandom)  msg += "<br>Random selection";
         else msg += "<br>Sequential selection";
         if (isSlideShowWrap) msg += "<br>Wrap at end of slides";
@@ -10290,9 +10293,7 @@ void MW::slideShow()
 
         // No image caching if random slide show
         if (imageCacheThread->isRunning() && isSlideShowRandom) {
-            qDebug() << __FUNCTION__ << "Pausing image cache";
             imageCacheThread->pauseImageCache();
-            imageCacheThread->clearImageCache();
             progressBar->setVisible(false);
         }
 
@@ -10401,9 +10402,9 @@ void MW::slideShowResetDelay()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     slideShowTimer->setInterval(slideShowDelay * 1000);
-    QString msg = "Reset slideshow interval to ";
-    msg += QString::number(slideShowDelay) + " seconds";
-    G::popUp->showPopup(msg);
+//    QString msg = "Reset slideshow interval to ";
+//    msg += QString::number(slideShowDelay) + " seconds";
+//    G::popUp->showPopup(msg);
 }
 
 void MW::slideShowResetSequence()
@@ -10421,12 +10422,12 @@ void MW::slideShowResetSequence()
             imageCacheThread->pauseImageCache();
             imageCacheThread->clearImageCache();
         }
-        updateImageCacheWhenFileSelectionChange = false;
+//        updateImageCacheWhenFileSelectionChange = false;    // rghcachechange
         progressLabel->setVisible(false);
     }
     else {
         msg = msg + "sequential";
-        updateImageCacheWhenFileSelectionChange = true;
+//        updateImageCacheWhenFileSelectionChange = true; // rghcachechange
         progressLabel->setVisible(true);
     }
     G::popUp->showPopup(msg);
@@ -10445,7 +10446,7 @@ void MW::slideshowHelpMsg()
         "<p><b>Slideshow Shortcuts:</b><br/></p>"
         "<table border=\"0\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\">"
         "<tr><td width=\"120\"><font color=\"red\"><b>Esc</b></font></td><td>Exit slideshow</td></tr>"
-        "<tr><td><font color=\"red\"><b>  1 to 9  </b></font></td><td>Change the slideshow interval (seconds)</td></tr>"
+        "<tr><td><font color=\"red\"><b>  1 to 9  </b></font></td><td>Change the slideshow interval (seconds).  <br>Go to preferences to set longer intervals.</td></tr>"
         "<tr><td><font color=\"red\"><b>  W       </b></font></td><td>Toggle wrapping on and off.</td></tr>"
         "<tr><td><font color=\"red\"><b>  R       </b></font></td><td>Toggle random vs sequential slide selection.</td></tr>"
         "<tr><td><font color=\"red\"><b>Backspace </b></font></td><td>Go back to a previous random slide</td></tr>"
@@ -10458,7 +10459,7 @@ void MW::slideshowHelpMsg()
         "<li>Selection = " + selection + "</li>"
         "<li>Wrap      = " + wrap + "</li>"
         "</ul><p><p>"
-        "Press <font color=\"red\"><b>Esc</b></font> to close this message";
+        "Press <font color=\"red\"><b>Space Bar</b></font> continue slideshow and close this message";
     G::popUp->showPopup(msg, 0, true, 1.0, Qt::AlignLeft);
 }
 
@@ -10603,7 +10604,7 @@ void MW::openFolder()
     if (G::isLogger) G::log(__FUNCTION__);
     QString dirPath = QFileDialog::getExistingDirectory(this, tr("Open Folder"),
          "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-//    fsTree->setCurrentIndex(fsTree->fsFilter->mapFromSource(fsTree->fsModel->index(dirPath)));
+    if (dirPath == "") return;
     fsTree->select(dirPath);
     folderSelectionChange();
 }

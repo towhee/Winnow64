@@ -220,8 +220,6 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Err")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
 
-
-
     sf = new SortFilter(this, filters, combineRawJpg);
     sf->setSourceModel(this);
 
@@ -234,9 +232,8 @@ DataModel::DataModel(QWidget *parent,
 void DataModel::clearDataModel()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    // clear the model
-    clear();
-//    removeRows(0, rowCount());
+    // clear the model:  clear() wipes the headers
+    removeRows(0, rowCount());
     setRowCount(0);
 //    setColumnCount(0);
     // clear the fPath index of datamodel rows

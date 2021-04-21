@@ -38,7 +38,7 @@ protected:
 
 public slots:
     void showPopup(const QString &text,
-              int msDuration = 1000,
+              int msDuration = 1500,
               bool isAutoSize = true,
               float opacity = 0.75,
               Qt::Alignment alignment = Qt::AlignHCenter);
