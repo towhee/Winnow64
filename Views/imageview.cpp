@@ -153,7 +153,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     changes in perceived scale by the user.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-//    qDebug() << __FUNCTION__ << fPath << src;
+    qDebug() << __FUNCTION__ << fPath << src;
 //    fPath = "G:/Test/_DSC7390.ARW";
     // No folder selected yet
     if (!fPath.length()) return false;

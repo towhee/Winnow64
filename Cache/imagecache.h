@@ -47,6 +47,7 @@ public:
     QString diagnostics();
     QString reportCache(QString title = "");
     void reportToCache();
+    void reportRunStatus();
     QString reportImCache();
 
     QHash<QString, QImage> imCache;

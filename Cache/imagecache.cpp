@@ -2,7 +2,7 @@
 
 ImageCache::ImageCache(QObject *parent, DataModel *dm, Metadata *metadata) : QThread(parent)
 {
-    mutex.lock();if (G::isLogger) G::log(__FUNCTION__);mutex.unlock();
+    if (G::isLogger) G::log(__FUNCTION__);
     // Pixmap is a class that loads either a QPixmap or QImage from a file
     this->dm = dm;
     this->metadata = metadata;
@@ -95,12 +95,6 @@ imCache: a hash structure indexed by image file path holding each QImage
 Only functions called from ImageCache::run will run in another thread.  These functions must
 respect potential thread collision issues.  The functions and objects are:
 
-    nextToCache()
-    nextToDecache()
-    checkForOrphans()
-    imCache (the list of QImage that is also used by ImageView)
-    Pixmap  (the class used to load embedded jpgs as QImage from the image files)
-
 Functions that run in thread:
     run
     cacheUpToDate
@@ -129,6 +123,7 @@ Variables used by thread:
     prevCurrentPath
     cacheSizeHasChanged
     filterOrSortHasChanged
+    imCache (the list of QImage that is also used by ImageView)
     getImage
     cache struct
     cacheItemList
@@ -137,6 +132,7 @@ Variables used by thread:
 
 void ImageCache::clearImageCache()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     imCache.clear();
     toCache.clear();
     toDecache.clear();
@@ -154,7 +150,7 @@ void ImageCache::stopImageCache()
     new one starting when there has been a folder change. The cache status label in the status
     bar will be hidden.
 */
-//    mutex.lock();if (G::isLogger) G::log(__FUNCTION__);mutex.unlock();
+    mutex.lock();if (G::isLogger) G::log(__FUNCTION__);mutex.unlock();
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -175,7 +171,8 @@ void ImageCache::pauseImageCache()
     a new one starting when there is a change to the datamodel, such as filtration or sorting.
 */
     mutex.lock();
-    pause = true;
+    if (G::isLogger) G::log(__FUNCTION__);
+//    pause = true;
     mutex.unlock();
     return;
 
@@ -199,11 +196,12 @@ void ImageCache::resumeImageCache()
     cache.
 */
     mutex.lock();
+    if (G::isLogger) G::log(__FUNCTION__);
     pause = false;
     mutex.unlock();
     return;
 //    mutex.lock();if (G::isLogger) G::log(__FUNCTION__);mutex.unlock();
-    qDebug() << __FUNCTION__ << "Starting thread" << isRunning();
+//    qDebug() << __FUNCTION__ << "Starting thread" << isRunning();
     source = __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
@@ -218,7 +216,7 @@ void ImageCache::resumeImageCache()
 
 QSize ImageCache::scalePreview(int w, int h)
 {
-    mutex.lock();if (G::isLogger) G::log(__FUNCTION__);mutex.unlock();
+    if (G::isLogger) G::log(__FUNCTION__);
     QSize preview(w, h);
     preview.scale(cache.previewSize.width(), cache.previewSize.height(),
                   Qt::KeepAspectRatio);
@@ -272,11 +270,11 @@ void ImageCache::setKeyToCurrent()
 void ImageCache::setDirection()
 {
 /*
-    if the direction of travel changes then delay reversing the caching direction until a
-    second image is selected in the new direction of travel. This prevents needless caching if
+    If the direction of travel changes then delay reversing the caching direction until a
+    third image is selected in the new direction of travel. This prevents needless caching if
     the user justs reverses direction to check out the previous image
 */
-//    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
 
     int prevKey = cache.prevKey;
     cache.prevKey = cache.key;
@@ -302,6 +300,7 @@ void ImageCache::setDirection()
     int thisStep = cache.key - prevKey;
     bool maybeDirection = thisStep > 0;
 
+    /*
     qDebug() << __FUNCTION__
              << "cache.maybeDirectionChange =" << cache.maybeDirectionChange
              << "cache.isForward =" << cache.isForward
@@ -310,6 +309,7 @@ void ImageCache::setDirection()
              << "cache.key =" << cache.key
              << "prevKey =" << prevKey
                 ;
+                // */
 
     // if direction has not maybe changed
     if (!cache.maybeDirectionChange && cache.isForward == maybeDirection) {
@@ -326,10 +326,10 @@ void ImageCache::setDirection()
         cache.isForward = cache.sumStep > 0;
         cache.sumStep = 0;
         cache.maybeDirectionChange = false;
-        qDebug() << __FUNCTION__ << "Cache direction change.  isForward =" << cache.isForward;
+//        qDebug() << __FUNCTION__ << "Cache direction change.  isForward =" << cache.isForward;
     }
 
-    qDebug() << __FUNCTION__ << thisStep << cache.sumStep << cache.isForward;
+//    qDebug() << __FUNCTION__ << thisStep << cache.sumStep << cache.isForward;
 }
 
 void ImageCache::setTargetRange()
@@ -568,6 +568,7 @@ void ImageCache::checkForOrphans()
     removed from the cache buffer.
 */
 //    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    return;
     for (int i = 0; i < cache.totFiles; ++i) {
         if (imCache.contains(cacheItemList.at(i).fPath)) {
             if (!cacheItemList.at(i).isTarget) {
@@ -580,6 +581,7 @@ void ImageCache::checkForOrphans()
     }
 }
 
+// rgh cachechange not being used???
 void ImageCache::removeFromCache(QStringList &pathList)
 {
 //    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
@@ -749,6 +751,20 @@ QString ImageCache::reportCacheProgress(QString action)
     return reportString;
 }
 
+void ImageCache::reportRunStatus()
+{
+    mutex.lock();
+    bool isRun = isRunning();
+    qDebug() << __FUNCTION__
+             << "isRunning =" << isRun
+             << "abort =" << abort
+             << "pause =" << pause
+             << "filterSortChange =" << filterOrSortHasChanged
+             << "cacheSizeChange =" << cacheSizeHasChanged
+             << "currentPath =" << currentPath;
+    mutex.unlock();
+}
+
 void ImageCache::buildImageCacheList()
 {
 /*
@@ -835,8 +851,8 @@ void ImageCache::initImageCache(int &cacheSizeMB,
      bool &isShowCacheStatus, int &cacheWtAhead,
      bool &usePreview, int &previewWidth, int &previewHeight)
 {
-//    if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << "cacheSizeMB =" << cacheSizeMB;
+    if (G::isLogger) G::log(__FUNCTION__);
+//    qDebug() << __FUNCTION__ << "cacheSizeMB =" << cacheSizeMB;
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
 
@@ -874,7 +890,7 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus
 /*
     When various image cache parameters are changed in preferences they are updated here.
 */
-//    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     mutex.lock();
     cache.maxMB = cacheSizeMB;
     cache.isShowCacheStatus = isShowCacheStatus;
@@ -893,7 +909,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 
     The image cache is now ready to run by calling updateImageCachePosition().
 */
-//    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     if(dm->sf->rowCount() == 0) return;
 
     // pause caching    rgh perhaps enclose entire rebuild in a mutex??
@@ -949,29 +965,26 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 
 void ImageCache::cacheSizeChange()
 {
-//    if (G::isLogger) { G::log(__FUNCTION__); }
     mutex.lock();
+    if (G::isLogger) { G::log(__FUNCTION__); }
     qDebug() << __FUNCTION__ << cache.isForward;
     cacheSizeHasChanged = true;
-//    makeRoom(cache.maxMB - cache.currMB, cache.maxMB);
-//    setPriorities(cache.key);
-//    setTargetRange();
-//    if (cache.isShowCacheStatus)
-//        emit showCacheStatus("Update all rows", 0, "ImageCache::cacheSizeChange");
     if (!isRunning()) start();
     mutex.unlock();
 }
 
 void ImageCache::setCurrentPosition(QString path)
 {
-//    if (G::isLogger) { G::log(__FUNCTION__, path); }
     mutex.lock();
+    if (G::isLogger) { G::log(__FUNCTION__, path); }
     currentPath = path;             // memory check
+    /*
     qDebug() << __FUNCTION__
              << "filterSortChange =" << filterOrSortHasChanged
              << "cacheSizeChange =" << cacheSizeHasChanged
              << "currentPath =" << currentPath
                 ;
+                // */
     if (!isRunning()) start();
     mutex.unlock();
 }
@@ -997,7 +1010,7 @@ void ImageCache::run()
     Finally, iterate through the target range, and insert a QImage extracted from the embedded
     JPG to the hash imCache.
 */
-//    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     source = "";
     prevCurrentPath = "";
     cache.sumStep = 0;
@@ -1009,7 +1022,7 @@ void ImageCache::run()
     bool positionChanged;
     bool cacheSizeChange;
     bool filterSortChange;
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
 
     // start run loop
     do {
@@ -1053,6 +1066,7 @@ void ImageCache::run()
             continue;
         }
 
+        /*
         mutex.lock();
         qDebug() << __FUNCTION__
                  << "filterSortChange =" << filterSortChange
@@ -1062,6 +1076,7 @@ void ImageCache::run()
                  << "prevCurrentPath =" << prevCurrentPath
                  ;
         mutex.unlock();
+        // */
 
         // prep the cache
         prevCurrentPath = currentPath;
@@ -1079,7 +1094,7 @@ void ImageCache::run()
         setTargetRange();
 
         // if cache size change then make room in new target range
-        makeRoom(cache.maxMB - cache.currMB, cache.maxMB);
+        if (cacheSizeChange) makeRoom(cache.maxMB - cache.currMB, cache.maxMB);
 
         /*
         std::cout << diagnostics().toStdString() << std::flush;
@@ -1169,7 +1184,7 @@ void ImageCache::run()
         }
 
         // see if any images have the wrong cache status
-        checkForOrphans();
+//        checkForOrphans();
 
         // update cache status
         cache.currMB = getImCacheSize();

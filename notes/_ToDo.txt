@@ -1,5 +1,4 @@
 BUGS / TO DO
-- Full path for file name in external program (problem is photoshop)
 - Filters not working sometimes
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow
@@ -46,6 +45,7 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Full path for file name in external program
 - Open new folder cancel not working correctly
 - Mouse Shift + Alt + Left btn toggles pick status
 - Alt prevents image cache updating
