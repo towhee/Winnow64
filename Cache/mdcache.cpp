@@ -802,7 +802,7 @@ void MetadataCache::run()
 
         if (action == Action::NewFolder) {
             if (isRefreshFolder) emit refreshCurrentAfterReload();
-            else emit selectFirst();
+//            else emit selectFirst();
             /* make a second pass if more than 250 thumbs visible in gridView or thumbView and
                so can calc best aspect */
             emit loadMetadataCache2ndPass();

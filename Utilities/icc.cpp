@@ -30,12 +30,12 @@ namespace ICC
         if (hTransform) {
             cmsDoTransform(hTransform, image.constBits(), image.bits(),
                  static_cast<uint>(image.width()*image.height()));
+            cmsCloseProfile(hInProfile);
+            cmsDeleteTransform(hTransform);
         }
         else {
-            qDebug() << __FUNCTION__ << "ICC hTransform failed.";
+            qWarning() << __FUNCTION__ << "ICC hTransform failed.";
 //            Utilities::log
         }
-        cmsCloseProfile(hInProfile);
-        cmsDeleteTransform(hTransform);
     }
 }
