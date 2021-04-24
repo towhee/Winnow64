@@ -757,6 +757,7 @@ void ImageCache::reportRunStatus()
     bool isRun = isRunning();
     qDebug() << __FUNCTION__
              << "isRunning =" << isRun
+             << "isForward =" << cache.isForward
              << "abort =" << abort
              << "pause =" << pause
              << "filterSortChange =" << filterOrSortHasChanged
@@ -907,7 +908,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     rebuilt for the filtered dataset and isCached updated, the current image is set, and any
     surplus cached images (not in the filtered dataset) are removed from imCache.
 
-    The image cache is now ready to run by calling updateImageCachePosition().
+    The image cache is now ready to run by calling setCachePosition().
 */
     if (G::isLogger) G::log(__FUNCTION__);
     if(dm->sf->rowCount() == 0) return;
@@ -977,6 +978,7 @@ void ImageCache::setCurrentPosition(QString path)
 {
     mutex.lock();
     if (G::isLogger) { G::log(__FUNCTION__, path); }
+    pause = false;
     currentPath = path;             // memory check
     /*
     qDebug() << __FUNCTION__
