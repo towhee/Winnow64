@@ -361,6 +361,7 @@ void MW::initialize()
     hasGridBeenActivated = true;
     isDragDrop = false;
     setAcceptDrops(true);
+    setMouseTracking(true);
     reverseSortBtn = new BarBtn();
     reverseSortBtn ->setToolTip("Sort direction.  Shortcut to toggle: Opt/Alt + S");
     connect(reverseSortBtn, &BarBtn::clicked, this, &MW::reverseSortDirection);
@@ -509,6 +510,12 @@ void MW::resizeEvent(QResizeEvent *event)
     updateProgressBarWidth();
 }
 
+void MW::mouseMoveEvent(QMouseEvent *event)
+{
+    QMainWindow::mouseMoveEvent(event);
+//    qDebug() << __FUNCTION__ << event;
+}
+
 void MW::keyPressEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
@@ -624,18 +631,20 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
 {
     /* use to show all events being filtered - handy to figure out which to intercept
     if (event->type()
-//                             != QEvent::Paint
-//            && event->type() != QEvent::UpdateRequest
-//            && event->type() != QEvent::ZeroTimerEvent
-//            && event->type() != QEvent::Timer
+                             != QEvent::Paint
+            && event->type() != QEvent::UpdateRequest
+            && event->type() != QEvent::ZeroTimerEvent
+            && event->type() != QEvent::Timer
 //            && event->type() == QEvent::MouseMove
             )
     {
         qDebug() << __FUNCTION__
-                 << event << "\t"
-                 << event->type() << "\t"
-                 << obj << "\t"
-                 << obj->objectName();
+                 << "event:" <<event << "\t"
+                 << "event->type:" << event->type() << "\t"
+                 << "obj:" << obj << "\t"
+                 << "obj->objectName:" << obj->objectName()
+                 << "object->metaObject()->className:" << obj->metaObject()->className()
+                    ;
 //        return QWidget::eventFilter(obj, event);
     }
 //*/
@@ -743,6 +752,30 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         const QModelIndex idx = thumbView->indexAt(e->pos());
         if (idx.isValid()) {
             thumbView->zoomCursor(idx, /*forceUpdate=*/false, e->pos());
+        }
+    }
+
+    /* DOCK TAB TOOLTIPS *****************************************************************
+    Show a tooltip for docked widget tabs.
+    */
+
+    if (event->type() == QEvent::/*Hover*/MouseMove) {      // HoverMove works too
+        if (QString(obj->metaObject()->className()) == "QTabBar") {
+            QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
+            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+            int i = tabBar->tabAt(e->pos());
+            if (i >= 0) {
+                QString tip = "";
+                if (tabBar->tabText(i) == folderDockTabText) tip = "System Folders Panel";
+                if (tabBar->tabText(i) == favDockTabText) tip = "Bookmarks Panel";
+                if (tabBar->tabText(i) == filterDockTabText) tip = "Filter Panel";
+                if (tabBar->tabText(i) == metadataDockTabText) tip = "Metadata Panel";
+                if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
+                QFontMetrics fm(QToolTip::font());
+                int h = fm.boundingRect(tip).height();
+                QPoint locPos = geometry().topLeft() + e->pos() + QPoint(0, h);
+                QToolTip::showText(locPos, tip, tabBar);
+            }
         }
     }
 
@@ -1995,17 +2028,10 @@ void MW::loadImageCacheForNewFolder()
     // have to wait until image caching thread running before setting flag
     metadataLoaded = true;
 
-    // change to ImageCache
-    // tell image cache new position and start the image cache thread
-//    imageCacheThread->setCurrentPosition(dm->currentFilePath);
-
     G::isNewFolderLoaded = true;
 
     /* req'd to trigger MW::fileSelectionChange.  This must be done to initialize many things
        including current index and file path req'd by mdCache and EmbelProperties...  */
-    qDebug() << __FUNCTION__ << currentRow << dm->currentFilePath;
-    QModelIndex idx = dm->sf->index(0, 0);
-//    fileSelectionChange(idx, idx);
     fileSelectionChange(currentSfIdx, currentSfIdx);
 
     // set focus when program opens
@@ -4572,11 +4598,13 @@ void MW::createInfoView()
 void MW::createFolderDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    folderDock = new DockWidget("  📁  ", this);  // Folders 📁
+    folderDockTabText = "  📁  ";
+//    folderDockTabText = "F";
+    folderDock = new DockWidget(folderDockTabText, this);  // Folders 📁
 //    folderDock = new DockWidget("F", this);  // Folders 📁
     folderDock->setObjectName("FoldersDock");
     folderDock->setWidget(fsTree);
-
+    folderDock->setAttribute(Qt::WA_TransparentForMouseEvents);
     // customize the folderDock titlebar
     QHBoxLayout *folderTitleLayout = new QHBoxLayout();
     folderTitleLayout->setContentsMargins(0, 0, 0, 0);
@@ -4615,7 +4643,8 @@ void MW::createFolderDock()
 void MW::createFavDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    favDock = new DockWidget("  📗  ", this);  // Bookmarks📗
+    favDockTabText = "  🔖  ";
+    favDock = new DockWidget(favDockTabText, this);  // Bookmarks📗 🔖 🏷️ 🗂️
     favDock->setObjectName("Bookmarks");
     favDock->setWidget(bookmarks);
 
@@ -4657,10 +4686,9 @@ void MW::createFavDock()
 void MW::createFilterDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    filterDock = new DockWidget("  ♆  ", this);  // Filters ♆  🕎
+    filterDockTabText = "  🤏  ";
+    filterDock = new DockWidget(filterDockTabText, this);  // Filters 🤏♆🔻 🕎  <font color=\"red\"><b>♆</b></font> does not work
     filterDock->setObjectName("Filters");
-//    filterDock->setToolTip("Filters");
-//    filterDock->setStyleSheet("QDockWidget; {color:cadetblue;}");
 
     // customize the filterDock titlebar
     QHBoxLayout *filterTitleLayout = new QHBoxLayout();
@@ -4720,7 +4748,8 @@ void MW::createFilterDock()
 void MW::createMetadataDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    metadataDock = new DockWidget(tr("  📷  "), this);    // Metadata
+    metadataDockTabText = "  📷  ";
+    metadataDock = new DockWidget(metadataDockTabText, this);    // Metadata
     metadataDock->setObjectName("Image Info");
     metadataDock->setWidget(infoView);
 
@@ -4756,9 +4785,15 @@ void MW::createMetadataDock()
 void MW::createThumbDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    thumbDock = new DockWidget(" 👍", this);  // Thumbnails
+    thumbDock = new DockWidget("Thumbnails", this);  // Thumbnails
+//    thumbDock = new DockWidget(" 👍", this);  // Thumbnails
     thumbDock->setObjectName("thumbDock");
     thumbDock->setWidget(thumbView);
+//    QHBoxLayout *thumbTitleLayout = new QHBoxLayout();
+//    thumbTitleLayout->setContentsMargins(0, 0, 0, 0);
+//    thumbTitleLayout->setSpacing(0);
+//    DockTitleBar *thumbTitleBar = new DockTitleBar("Thumbnails", thumbTitleLayout);
+//    thumbDock->setTitleBarWidget(thumbTitleBar);
 //    thumbDock->setWindowTitle(" 👍 ");
     thumbDock->installEventFilter(this);
 
@@ -4786,7 +4821,8 @@ void MW::createEmbelDock()
     connect (embelProperties, &EmbelProperties::templateChanged, this, &MW::embelTemplateChange);
     connect (embelProperties, &EmbelProperties::syncEmbellishMenu, this, &MW::syncEmbellishMenu);
 
-    embelDock = new DockWidget(tr("  🎨  "), this);  // Embellish
+    embelDockTabText = "  🎨  ";
+    embelDock = new DockWidget(embelDockTabText, this);  // Embellish
     embelDock->setObjectName("embelDock");
     embelDock->setWidget(embelProperties);
     embelDock->setFloating(false);
@@ -5882,7 +5918,6 @@ void MW::sortChange(QString src)
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "prevSortColumn =" << prevSortColumn
              << "sortColumn =" << sortColumn
-             << "sortReverse =" << sortReverse
              << "sortReverseAction->isChecked() =" << sortReverseAction->isChecked()
                 ;
 //                */
@@ -6010,9 +6045,8 @@ void MW::reverseSortDirection()
     if (G::isLogger) G::log(__FUNCTION__);
     if (sortReverseAction->isChecked()) {
         sortReverseAction->setChecked(false);
-        sortReverse = sortReverseAction->isChecked();
-        sortChange(__FUNCTION__);
         reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
+        sortChange(__FUNCTION__);
     }
     else {
         sortReverseAction->setChecked(true);
@@ -8037,7 +8071,6 @@ bool MW::loadSettings()
 
     // general
     sortColumn = setting->value("sortColumn").toInt();
-    sortReverse = setting->value("sortReverse").toBool();
     autoAdvance = setting->value("autoAdvance").toBool();
     turnOffEmbellish = setting->value("turnOffEmbellish").toBool();
     if (setting->contains("deleteWarning"))
@@ -10179,8 +10212,8 @@ void MW::keyDown()
 
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    if (G::mode == "Loupe") thumbView->selectNext();
-    if (G::mode == "Table") thumbView->selectNext();
+    if (G::mode == "Loupe") thumbView->selectDown();
+    if (G::mode == "Table") thumbView->selectDown();
     if (G::mode == "Grid") gridView->selectDown();
 }
 

@@ -45,6 +45,8 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Docked dock widget tab text unicode symbols + tooltips
+- Down arrow not working correctly for thumbs in side dock
 - Full path for file name in external program
 - Open new folder cancel not working correctly
 - Mouse Shift + Alt + Left btn toggles pick status

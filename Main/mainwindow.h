@@ -287,7 +287,6 @@ public:
     bool justUpdatedBestFit;
     int sortColumn = 0;
     int prevSortColumn = 0;
-    bool sortReverse;           // not used (maybe prevent unnecessary sorts?)
     bool preferencesHasFocus = false;
 
     bool remoteAccess = false;
@@ -300,24 +299,22 @@ public:
     int maxThumbSpaceHeight;
     QString pickMemSize;
     WidgetCSS widgetCSS;
+    // rgh make css consistent with G::css
     QString css;                // stylesheet text
     QString css1;               // stylesheet text
     QString cssBase;            // stylesheet text
 
 protected:
-    bool eventFilter(QObject *obj, QEvent *event);
-    void moveEvent(QMoveEvent *event);
-    void resizeEvent(QResizeEvent *event);
-    void closeEvent(QCloseEvent *event);
-    void showEvent(QShowEvent *event);
-    void keyPressEvent(QKeyEvent *event);
-    void keyReleaseEvent(QKeyEvent *event);
-//    void mouseMoveEvent(QMouseEvent *event);
-//    void mousePressEvent(QMouseEvent *event);
-//    void mouseReleaseEvent(QMouseEvent *event);
-//    void mouseDoubleClickEvent(QMouseEvent *event);
-    void dropEvent(QDropEvent *event);
-    void dragEnterEvent(QDragEnterEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event) override;
+    void moveEvent(QMoveEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
+    void showEvent(QShowEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void keyReleaseEvent(QKeyEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
 
 public slots:
     void handleStartupArgs(const QString &msg);
@@ -982,6 +979,12 @@ private:
     bool isReject;
 
     QFile pickLog;
+
+    QString folderDockTabText;
+    QString favDockTabText;
+    QString filterDockTabText;
+    QString metadataDockTabText;
+    QString embelDockTabText;
 
     void createEmbel();
     void createDocks();
