@@ -193,6 +193,7 @@ namespace G
     extern bool isProcessingExportedImages;
     extern bool isRunningColorAnalysis;
     extern bool isEmbellish;
+    extern bool colorManage;
 
     extern int ingestCount;
     extern QDate ingestLastDate;

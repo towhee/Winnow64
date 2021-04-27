@@ -631,15 +631,15 @@ void MetadataCache::readMetadataChunk()
     sort/filter change and all metadata has been loaded, but the icons visible have changed.
 */
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
 
     int start = startRow;
     int end = endRow;
     if (cacheAllMetadata) {
         start = 0;
-        mutex.lock();
+//        mutex.lock();
         end = dm->sf->rowCount();
-        mutex.unlock();
+//        mutex.unlock();
     }
 
     /*
@@ -653,7 +653,7 @@ void MetadataCache::readMetadataChunk()
             return;
         }
         // file path and dm source row in case filtered or sorted
-        mutex.lock();     // rgh mutex
+//        mutex.lock();     // rgh mutex
         QModelIndex idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
 
@@ -684,7 +684,7 @@ void MetadataCache::readMetadataChunk()
             }
         }
         */
-        mutex.unlock();   // rgh mutex
+//        mutex.unlock();   // rgh mutex
     }
 }
 
@@ -696,7 +696,7 @@ void MetadataCache::readMetadataIconChunk()
     startRow and endRow.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
+//    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
     if (cacheAllMetadata) endRow = dm->sf->rowCount();
     for (int row = startRow; row < endRow; ++row) {
         if (abort) {
@@ -706,7 +706,7 @@ void MetadataCache::readMetadataIconChunk()
         }
 
         // file path and dm source row in case filtered or sorted
-        mutex.lock(); // rgh mutex
+//        mutex.lock(); // rgh mutex
         QModelIndex idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
         QString fPath = idx.data(G::PathRole).toString();
@@ -735,7 +735,7 @@ void MetadataCache::readMetadataIconChunk()
                 iconsCached.append(dmRow);
             }
         }
-        mutex.unlock();   // rgh mutex
+//        mutex.unlock();   // rgh mutex
     }
 }
 
@@ -752,10 +752,10 @@ void MetadataCache::run()
 
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
-        mutex.lock();     // rgh mutex
+//        mutex.lock();     // rgh mutex
         int rowCount = dm->rowCount();
         dm->loadingModel = true;
-        mutex.unlock();   // rgh mutex
+//        mutex.unlock();   // rgh mutex
 
         // read all metadata but no icons
         if (action == Action::AllMetadata) {
@@ -782,23 +782,24 @@ void MetadataCache::run()
         }
 
         if (abort) {
-            mutex.lock();
+//            mutex.lock();
             dm->loadingModel = false;
-            mutex.unlock();
+//            mutex.unlock();
+            emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
 
         // update allMetadataLoaded flag if metadata has been loaded for every row in dm
         if (!G::allMetadataLoaded) {
             G::allMetadataLoaded = true;
-            mutex.lock();
+//            mutex.lock();
             for (int i = 0; i < rowCount; ++i) {
                 if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool()) {
                     G::allMetadataLoaded = false;
                     break;
                 }
             }
-            mutex.unlock();
+//            mutex.unlock();
         }
 
         // clean up orphaned icons outside icon range   rgh what about other actions
@@ -814,12 +815,9 @@ void MetadataCache::run()
             emit loadMetadataCache2ndPass();
         }
 
-        // update status of metadataThreadRunningLabel in statusbar
-        emit updateIsRunning(false, true, __FUNCTION__);
-
-        mutex.lock();
+//        mutex.lock();
         dm->loadingModel = false;
-        mutex.unlock();
+//        mutex.unlock();
     }
 
     // after 2nd pass on new folder initiate the image cache
@@ -828,4 +826,7 @@ void MetadataCache::run()
 //        emit finished2ndPass(); // launchBuildFilters req'd
         emit loadImageCache();
     }
+
+    // update status of metadataThreadRunningLabel in statusbar
+    emit updateIsRunning(false, true, __FUNCTION__);
 }

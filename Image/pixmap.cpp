@@ -64,8 +64,10 @@ bool Pixmap::load(QString &fPath, QImage &image)
     t.restart();
 //    QElapsedTimer readTime;
 //    QElapsedTimer decodeTime;
+//    QElapsedTimer ICCTime;
 //    qint64 tRead;
 //    qint64 tDecode;
+//    qint64 tICC;
 //    readTime.start();
 
     QFileInfo fileInfo(fPath);
@@ -142,6 +144,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
             dm->setData(dm->index(dmRow, G::ErrColumn), err);
             return false;
         }
+//        tDecode = decodeTime.elapsed() ;
 
         imFile.close();
     }
@@ -257,26 +260,30 @@ bool Pixmap::load(QString &fPath, QImage &image)
     }
 
     // color manage if available
+//    ICCTime.start();
     #ifdef Q_OS_WIN
-    if (metadata->iccFormats.contains(ext)) {
+    if (G::colorManage && metadata->iccFormats.contains(ext)) {
         QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
-//        ICC::setInProfile(ba);   // if ba.isEmpty then sRGB used
         ICC::transform(ba, image);
     }
     #endif
+//    tICC = ICCTime.elapsed();
 
 //    tDecode = decodeTime.elapsed() ;
 
     // calc read/decode performance
     double mp = dm->index(dmRow, G::MegaPixelsColumn).data().toDouble();
+//    qint64 msec = tDecode;
     qint64 msec = t.elapsed();
     int msecPerMp = static_cast<int>(msec / mp);
     dm->setData(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, Qt::EditRole);
-
-//    qDebug() << __FUNCTION__ << "Read:" << tRead
-//             << "ms  Decode:" << tDecode
-//             << "ms  Total:" << msec
-//                ;
+    /*
+    qDebug() << __FUNCTION__
+             << "Decode:" << tDecode << "ms"
+             << "ICC:" << tICC << "ms"
+             << "Total:" << msec << "ms"
+                ;
+    //*/
 
     return true;
 }

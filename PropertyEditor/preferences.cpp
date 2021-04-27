@@ -212,9 +212,9 @@ itemChange, which is subclassed here.
         if (G::isLogger) mw->openLog();
     }
 
-//    if (source == "colorManage") {
-//        G::colorManage = v.toBool();
-//    }
+    if (source == "colorManage") {
+        G::colorManage = v.toBool();
+    }
 
     if (source == "rememberLastDir") {
         mw->rememberLastDir = v.toBool();
@@ -314,20 +314,20 @@ void Preferences::addItems()
     addItem(i);
 
     {
-//    // Manage color
-//    i.name = "colorManage";
-//    i.parentName = "GeneralHeader";
-//    i.captionText = "Color manage";
-//    i.tooltip = "Turning on color management will ensure consistent color, especially for\n"
-//                "files that have been converted to a color profile other than sRGB.  Color \n"
-//                "management has a small impact on image caching performance.";
-//    i.hasValue = true;
-//    i.captionIsEditable = false;
-//    i.value = G::colorManage;
-//    i.key = "colorManage";
-//    i.delegateType = DT_Checkbox;
-//    i.type = "bool";
-//    addItem(i);
+    // Manage color
+    i.name = "colorManage";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Color manage";
+    i.tooltip = "Turning on color management will ensure consistent color, especially for\n"
+                "files that have been converted to a color profile other than sRGB.  Color \n"
+                "management has a significant impact on image caching performance.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::colorManage;
+    i.key = "colorManage";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
 
     // Remember last folder
     i.name = "rememberLastDir";
