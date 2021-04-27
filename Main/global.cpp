@@ -71,6 +71,7 @@ namespace G
     bool isProcessingExportedImages;
     bool isRunningColorAnalysis;
     bool isEmbellish;
+    bool colorManage;
 
     // ingest
     int ingestCount = 0;

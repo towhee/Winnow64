@@ -3,7 +3,9 @@
 namespace ICC
 {
 
+//    cmsHPROFILE hInProfile;
     cmsHPROFILE hOutProfile;
+//    cmsHTRANSFORM hTransform;
 
     void setOutProfile()
     {
@@ -14,6 +16,7 @@ namespace ICC
     void transform(const QByteArray &buf, QImage &image)
     {
         if (G::isLogger) G::log(__FUNCTION__);
+
         cmsHPROFILE hInProfile;
         if (buf == nullptr) {
             hInProfile = cmsCreate_sRGBProfile();
@@ -21,6 +24,7 @@ namespace ICC
         else {
             hInProfile = cmsOpenProfileFromMem(buf.data(), static_cast<uint32_t>(buf.length()));
         }
+
         cmsHTRANSFORM hTransform;
         hTransform = cmsCreateTransform(hInProfile,
                                         TYPE_BGRA_8,

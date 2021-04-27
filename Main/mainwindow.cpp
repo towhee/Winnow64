@@ -1172,7 +1172,8 @@ void MW::folderSelectionChange()
         G::log("FOLDER CHANGE");
         G::log(__FUNCTION__, currentViewDir);
     }
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
+
 //    QApplication::setOverrideCursor(Qt::WaitCursor);
 //    if (G::isTest) testTime.restart(); // rgh remove after performance profiling
 
@@ -1478,9 +1479,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
         updateIconsVisible(true);
         metadataCacheThread->fileSelectionChange();
 
-        // Do not image cache if there is an active random slide show or Alt key is pressed
+        // Do not image cache if there is an active random slide show or
+        // modifier key is pressed
         if (!(G::isSlideShow && isSlideShowRandom)
-        && !(qApp->keyboardModifiers() == Qt::AltModifier)) {
+            && (qApp->keyboardModifiers() == Qt::NoModifier)
+            && (G::mode != "Compare")
+           )
+        {
             imageCacheThread->setCurrentPosition(dm->currentFilePath);
         }
     }
@@ -1681,7 +1686,7 @@ void MW::updateIconsVisible(bool useCurrentRow)
 void MW::loadMetadataCache2ndPass()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     updateIconBestFit();
     updateIconsVisible(true);
     metadataCacheThread->loadNewFolder2ndPass();
@@ -7726,7 +7731,7 @@ void MW::writeSettings()
     setting->setValue("infoOverlayFontSize", imageView->infoOverlayFontSize);
 
     // files
-//    setting->setValue("colorManage", G::colorManage);
+    setting->setValue("colorManage", G::colorManage);
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("checkIfUpdate", checkIfUpdate);
     setting->setValue("lastDir", currentViewDir);
@@ -8048,7 +8053,7 @@ bool MW::loadSettings()
         G::maxIconSize = 256;
 
         // files
-//        G::colorManage = true;
+        G::colorManage = true;
         rememberLastDir = false;
         checkIfUpdate = true;
         lastDir = "";
@@ -8128,7 +8133,7 @@ bool MW::loadSettings()
     if (setting->contains("maxIconSize")) G::maxIconSize = setting->value("maxIconSize").toInt();
 
     // files
-//    if (setting->contains("colorManage")) G::colorManage = setting->value("colorManage").toBool();
+    if (setting->contains("colorManage")) G::colorManage = setting->value("colorManage").toBool();
     if (setting->contains("rememberLastDir")) rememberLastDir = setting->value("rememberLastDir").toBool();
     if (setting->contains("checkIfUpdate")) checkIfUpdate = setting->value("checkIfUpdate").toBool();
     if (setting->contains("lastDir")) lastDir = setting->value("lastDir").toString();

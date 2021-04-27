@@ -1,5 +1,4 @@
 BUGS / TO DO
-- Turn caching off while in compare mode
 - Slideshow of all images on F drive eventually crashed (85000+ images)
 - Filters not working sometimes
 - Not remembering grid mode at opening
@@ -47,6 +46,7 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Turn caching off while in compare mode
 - Docked dock widget tab text unicode symbols + tooltips
 - Down arrow not working correctly for thumbs in side dock
 - Full path for file name in external program
