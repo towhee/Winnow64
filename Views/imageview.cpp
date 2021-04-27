@@ -153,11 +153,10 @@ bool ImageView::loadImage(QString fPath, QString src)
     changes in perceived scale by the user.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__ << fPath << src;
+//    qDebug() << __FUNCTION__ << fPath << src;
 //    fPath = "G:/Test/_DSC7390.ARW";
     // No folder selected yet
     if (!fPath.length()) return false;
-    if (G::memTest) return false;
 
     /* important to keep currentImagePath.  It is used to check if there isn't
     an image (when currentImagePath.isEmpty() == true) - for example when

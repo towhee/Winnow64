@@ -664,10 +664,10 @@ Used by InfoString and IngestDlg
 void DataModel::addAllMetadata()
 {
 /*
-This function is intended to load metadata (but not the icon) quickly for the entire
-datamodel. This information is required for a filter or sort operation, which requires
-the entire dataset. Since the program will be waiting for the update this does not need
-to run as a separate thread and can be executed directly.
+    This function is intended to load metadata (but not the icon) quickly for the entire
+    datamodel. This information is required for a filter or sort operation, which requires
+    the entire dataset. Since the program will be waiting for the update this does not need
+    to run as a separate thread and can be executed directly.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     G::t.restart();
@@ -883,6 +883,12 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
 
 bool DataModel::hasFolderChanged()
 {
+/*
+    Called from MW::refreshCurrentFolder.  The list of eligible files is read and compared to
+    the datamodel.  If the count has changed then return false.  If the count has not changed
+    compare the last modified datetime for each file.  If a file has been modified since the
+    datamodel was loaded thenit is added to the modifiedFiles list and return false.
+*/
     if (G::isLogger) G::log(__FUNCTION__); 
     bool hasChanged = false;
     modifiedFiles.clear();
@@ -920,8 +926,8 @@ bool DataModel::hasFolderChanged()
             hasChanged = true;
             isFileModification = true;
             modifiedFiles.append(fileInfoList2.at(i));
-            qDebug() << __FUNCTION__ << fileInfoList2.at(i).fileName()
-                     << "modified at" << t2;
+//            qDebug() << __FUNCTION__ << fileInfoList2.at(i).fileName()
+//                     << "modified at" << t2;
         }
     }
     return hasChanged;
@@ -1196,10 +1202,10 @@ SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
 bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
 /*
-The QTreeWidget filters is used to match checked filter items with the proper
-column in data model.  The top level items in the QTreeWidget are referred to
-as categories, and each category has one or more filter items.  Categories
-map to columns in the data model ie Picked, Rating, Label ...
+    The QTreeWidget filters is used to match checked filter items with the proper
+    column in data model.  The top level items in the QTreeWidget are referred to
+    as categories, and each category has one or more filter items.  Categories
+    map to columns in the data model ie Picked, Rating, Label ...
 */
 
     // Check Raw + Jpg
@@ -1215,6 +1221,7 @@ map to columns in the data model ie Picked, Rating, Label ...
     int dataModelColumn = 0;
     bool isMatch = true;                   // overall match
     bool isCategoryUnchecked = true;
+    QString itemCategory;                  // for debugging
 
     // cycle through the filters and identify matches
     QTreeWidgetItemIterator filter(filters);
@@ -1223,7 +1230,7 @@ map to columns in the data model ie Picked, Rating, Label ...
             /* There is a parent therefore not a top level item so this is one of the items to
             match ie rating = one. If the item has been checked then compare the checked
             filter item to the data in the dataModelColumn for the row. If it matches then set
-            isMatch = true. If it does not match them isMatch is still false but the row could
+            isMatch = true. If it does not match then isMatch is still false but the row could
             still be accepted if another item in the same category does match.
             */
             if ((*filter)->checkState(0) != Qt::Unchecked) {
@@ -1236,9 +1243,10 @@ map to columns in the data model ie Picked, Rating, Label ...
                     QModelIndex idx = sourceModel()->index(sourceRow, dataModelColumn, sourceParent);
                     QVariant dataValue = idx.data(Qt::EditRole);
                     QVariant filterValue = (*filter)->data(1, Qt::EditRole);
-                    /*
+//                    /*
                     QString itemName = (*filter)->text(0);      // for debugging
                     qDebug() << G::t.restart() << "\t" << itemCategory << itemName
+                             << "sfRow" << sourceRow
                              << "Comparing" << dataValue << filterValue
                              << (dataValue == filterValue);
 //                    */
@@ -1260,7 +1268,7 @@ map to columns in the data model ie Picked, Rating, Label ...
             dataModelColumn = (*filter)->data(0, G::ColumnRole).toInt();
             isCategoryUnchecked = true;
             isMatch = false;
-//            itemCategory = (*filter)->text(0);      // for debugging
+            itemCategory = (*filter)->text(0);      // for debugging
         }
         ++filter;
     }

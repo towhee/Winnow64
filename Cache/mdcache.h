@@ -72,15 +72,12 @@ protected:
 
 signals:
     void loadImageCache();
-//    void updateImageCachePosition(); // rghcachechange
     void pauseImageCache();
     void resumeImageCache();
     void updateIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void updateIconBestFit();
     void loadMetadataCache2ndPass();
     void selectFirst();
-    void refreshCurrentAfterReload();
-//    void scrollToCurrent();
     void showCacheStatus(int, bool);            // row, clear progress bar
     void finished2ndPass();                     // buildFilters
 

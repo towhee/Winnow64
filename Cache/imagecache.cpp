@@ -853,7 +853,7 @@ void ImageCache::initImageCache(int &cacheSizeMB,
      bool &usePreview, int &previewWidth, int &previewHeight)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__ << "cacheSizeMB =" << cacheSizeMB;
+    qDebug() << __FUNCTION__ << "cacheSizeMB =" << cacheSizeMB;
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
 
@@ -1108,7 +1108,6 @@ void ImageCache::run()
 
         // are all images in the target range cached
         if (cacheUpToDate()) {
-            qDebug() << __FUNCTION__ << "Cache is up-to-date";
             continue;
         }
 

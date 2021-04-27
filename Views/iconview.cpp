@@ -767,7 +767,7 @@ bool IconView::isThumb(int row)
 void IconView::selectThumb(QModelIndex idx)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__ << idx;
+//    qDebug() << __FUNCTION__ << idx;
     if (idx.isValid()) {
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
@@ -777,7 +777,7 @@ void IconView::selectThumb(QModelIndex idx)
 void IconView::selectThumb(int row)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__ << "row =" << row;
+//    qDebug() << __FUNCTION__ << "row =" << row;
     // some operations assign row = -1 if not found
     if (row < 0) return;
     setFocus();
@@ -788,7 +788,7 @@ void IconView::selectThumb(int row)
 void IconView::selectThumb(QString &fPath)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__ << fPath;
+//    qDebug() << __FUNCTION__ << fPath;
     selectThumb(dm->proxyIndexFromPath(fPath));
     /*
     QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath,

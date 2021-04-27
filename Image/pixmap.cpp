@@ -62,6 +62,11 @@ bool Pixmap::load(QString &fPath, QImage &image)
 //    qDebug() << __FUNCTION__ << "fPath =" << fPath;
     QElapsedTimer t;
     t.restart();
+//    QElapsedTimer readTime;
+//    QElapsedTimer decodeTime;
+//    qint64 tRead;
+//    qint64 tDecode;
+//    readTime.start();
 
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
@@ -126,6 +131,9 @@ bool Pixmap::load(QString &fPath, QImage &image)
         }
 
         QByteArray buf = imFile.read(lengthFullJpg);
+
+//        tRead = readTime.elapsed();
+//        decodeTime.start();
 
         // try to decode the jpg data
         if (!image.loadFromData(buf, "JPEG")) {
@@ -257,11 +265,18 @@ bool Pixmap::load(QString &fPath, QImage &image)
     }
     #endif
 
+//    tDecode = decodeTime.elapsed() ;
+
     // calc read/decode performance
     double mp = dm->index(dmRow, G::MegaPixelsColumn).data().toDouble();
     qint64 msec = t.elapsed();
     int msecPerMp = static_cast<int>(msec / mp);
     dm->setData(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, Qt::EditRole);
+
+//    qDebug() << __FUNCTION__ << "Read:" << tRead
+//             << "ms  Decode:" << tDecode
+//             << "ms  Total:" << msec
+//                ;
 
     return true;
 }
