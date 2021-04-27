@@ -74,11 +74,11 @@ void BuildFilters::done()
 void BuildFilters::unfilteredItemSearchCount()
 {
 /*
-This function counts the number of occurences of each unique item in the datamodel, and also
-if raw+jpg have been combined.  The results as saved in the filters QTreeWidget in columns
-3 (all) and 4 (raw+jpg).
+    This function counts the number of occurences of each unique item in the datamodel, and
+    also if raw+jpg have been combined. The results as saved in the filters QTreeWidget in
+    columns 3 (all) and 4 (raw+jpg).
 
-This function is run everytime the search string changes.
+    This function is run everytime the search string changes.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__;
@@ -178,7 +178,7 @@ void BuildFilters::countFiltered()
                          << "total instances =" << totInstances
                          << "itemProgress % =" << itemProgress
                          << "Progress % =" << progress;
-//            */
+              //*/
             }
         }
         ++it;
@@ -233,7 +233,7 @@ void BuildFilters::countUnfiltered()
                          << "total instances =" << totInstances
                          << "itemProgress % =" << itemProgress
                          << "Progress % =" << progress;
-//                         */
+                         //*/
             }
         }
         ++it;
@@ -252,11 +252,11 @@ void BuildFilters::loadAllMetadata()
     if (!G::allMetadataLoaded) {
         for (int row = 0; row < dmRows; ++row) {
             if (abort) return;
+            mutex.lock();
             // is metadata already cached
             if (dm->index(row, G::MetadataLoadedColumn).data().toBool()) continue;
             QString fPath = dm->index(row, 0).data(G::PathRole).toString();
             QFileInfo fileInfo(fPath);
-            mutex.lock();
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
                 metadata->m.row = row;
                 dm->addMetadataForItem(metadata->m);

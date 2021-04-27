@@ -44,15 +44,30 @@ PROGRAM FLOW
 
 A new folder is selected which triggers folderSelectionChange:
 
-• All eligible image files in the folder are added DataModel (dm).
+• All eligible image files (and associated QFileInfo) in the folder are added to the DataModel
+  (dm).
 
-• A thread is started to cache metadata and thumbs for all the images.
+• The first image thumbnail is selected in thumbView.
 
-• A second thread is started by the metadata thread to cache as many full size images as
-  assigned memory permits.
+• metadataCacheThread->loadNewFolder reads all the metadata for the first chunk of images. The
+  signal loadMetadataCache2ndPass is emitted.
 
-• Selecting a new folder also causes the selection of the first image which fires a signal
-  for fileSelectionChange.
+• Based on the data collected in the first metadataCacheThread pass the icon dimension best fit
+  is determined, which is required to calculate the number of icons visible in the thumbView
+  and gridview.
+
+• metadataCacheThread->loadNewFolder2ndPass reads the icons and emits loadImageCache.
+
+• The imageCacheThread is initialized.  fileSelectionChange is called for the current image
+  (the user may have already advanced).
+
+• fileSelectionChange synchronizes the views and starts three processes:
+  1. ImageView::loadImage loads the full size image into the graphicsview scene.
+  2. The metadataCacheThread is started to read the rest of the metadata and icons.   If the
+     number of images in the folder(s) is greater than the threshold only a chunck of metadata
+     is collected.
+  3. The imageCacheThread is started to cache as many full size images as
+     assigned memory permits.
 
 • The first image is loaded. The metadata and thumbnail generation threads will still be
   running, but things should appear to be speedy for the user.
@@ -193,10 +208,6 @@ thumbs) it can take a number of paint events and 100s of ms to complete. A flag 
 (scrollWhenReady) to show when we need to monitor so not checking needlessly. Unfortunately
 there does not appear to be any signal or event when ListView is finished hence this cludge.
 
-MEMORY LEAK - CHECK
-
-    Pixmap - looks okay
-    Bookmarks
 */
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
@@ -225,8 +236,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     simulateJustInstalled = false;
     isStressTest = false;
     G::isTimer = true;                  // Global timer
-    G::memTest = false;                 // will not load images
-    G::isTest = false;                   // use to find memory loss
+    G::isTest = false;                  // use to find memory loss
 
     // Initialize some variables
     initialize();
@@ -418,9 +428,15 @@ void MW::showEvent(QShowEvent *event)
         #endif
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
+        // do not start with filterDock open
+//        if (filterDock->isVisible()) {
+//            folderDock->raise();
+//            folderDockVisibleAction->setChecked(true);
+//        }
+
         updateState();
         // if embel dock visible then set mode to embelView
-        embelDockVisibilityChange();
+        embelDockVisibilityChange();    // rgh not being used
     }
     else {
         defaultWorkspace();
@@ -460,6 +476,10 @@ void MW::closeEvent(QCloseEvent *event)
     setCentralMessage("Closing Winnow ...");
     metadataCacheThread->stopMetadateCache();
     imageCacheThread->stopImageCache();
+    if (filterDock->isVisible()) {
+        folderDock->raise();
+        folderDockVisibleAction->setChecked(true);
+    }
     if (!simulateJustInstalled) writeSettings();
     clearPickLog();
     clearRatingLog();
@@ -471,6 +491,7 @@ void MW::closeEvent(QCloseEvent *event)
     if (!QApplication::clipboard()->image().isNull()) {
         QApplication::clipboard()->clear();
     }
+
     delete workspaces;
     delete recentFolders;
     delete ingestHistoryFolders;
@@ -759,7 +780,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     Show a tooltip for docked widget tabs.
     */
 
-    if (event->type() == QEvent::/*Hover*/MouseMove) {      // HoverMove works too
+    if (event->type() == QEvent::HoverMove/*MouseMove*/) {      // HoverMove works too
         if (QString(obj->metaObject()->className()) == "QTabBar") {
             QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
             QMouseEvent *e = static_cast<QMouseEvent *>(event);
@@ -773,7 +794,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
                 QFontMetrics fm(QToolTip::font());
                 int h = fm.boundingRect(tip).height();
-                QPoint locPos = geometry().topLeft() + e->pos() + QPoint(0, h);
+                QPoint locPos = geometry().topLeft() + e->pos() + QPoint(0, h*2);
+                QToolTip::hideText();
                 QToolTip::showText(locPos, tip, tabBar);
             }
         }
@@ -1150,6 +1172,7 @@ void MW::folderSelectionChange()
         G::log("FOLDER CHANGE");
         G::log(__FUNCTION__, currentViewDir);
     }
+    qDebug() << __FUNCTION__;
 //    QApplication::setOverrideCursor(Qt::WaitCursor);
 //    if (G::isTest) testTime.restart(); // rgh remove after performance profiling
 
@@ -1194,17 +1217,17 @@ void MW::folderSelectionChange()
     }
 
     // if at welcome or message screen and then select a folder
-//    if (centralLayout->currentIndex() == StartTab
-//            || centralLayout->currentIndex() == MessageTab) {
-//        if (prevMode == "Loupe") asLoupeAction->setChecked(true);
-//        else if (prevMode == "Grid") asGridAction->setChecked(true);
-//        else if (prevMode == "Table") asTableAction->setChecked(true);
-//        else if (prevMode == "Compare") asLoupeAction->setChecked(true);
-//        else {
-//            prevMode = "Loupe";
-//            asLoupeAction->setChecked(true);
-//        }
-//    }
+    if (centralLayout->currentIndex() == StartTab
+            || centralLayout->currentIndex() == MessageTab) {
+        if (prevMode == "Loupe") asLoupeAction->setChecked(true);
+        else if (prevMode == "Grid") asGridAction->setChecked(true);
+        else if (prevMode == "Table") asTableAction->setChecked(true);
+        else if (prevMode == "Compare") asLoupeAction->setChecked(true);
+        else {
+            prevMode = "Loupe";
+            asLoupeAction->setChecked(true);
+        }
+    }
 
     currentViewDir = getSelectedPath();
     setting->setValue("lastDir", currentViewDir);
@@ -1306,7 +1329,6 @@ void MW::folderSelectionChange()
     }
 
     if (!dragFileSelected) {
-        qDebug() << __FUNCTION__ << "thumbView->selectThumb(0)";
         thumbView->selectThumb(0);
     }
 
@@ -1322,8 +1344,8 @@ void MW::folderSelectionChange()
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
 
+    // rgh isRefreshingDM ??
     metadataCacheThread->loadNewFolder(isRefreshingDM);
-    qDebug() << __FUNCTION__ << "1";
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -1352,12 +1374,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
              << "isFilterChange =" << isFilterChange
+             << "isCurrentFolderOkay =" << isCurrentFolderOkay
              << "current =" << current;
 //    */
 
 //    qDebug() << G::t.elapsed() << G::t.restart() << "\t" << __FUNCTION__ << 1;
 
-    if (G::memTest) return;
     bool isStart = false;
     if(!isCurrentFolderOkay || G::isInitializing || isFilterChange) return;
 
@@ -1366,7 +1388,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     // if starting program, set first image to display
     if (current.row() == -1) {
         isStart = true;
-        qDebug() << __FUNCTION__ << currentRow;
         thumbView->selectThumb(0);
     }
 
@@ -1383,8 +1404,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     */
 
     // user clicks outside thumb but inside treeView dock
-    QModelIndexList selected = selectionModel->selectedIndexes();
-    if (selected.isEmpty() && !G::isInitializing) return;
+//    QModelIndexList selected = selectionModel->selectedIndexes();
+//    if (selected.isEmpty() && !G::isInitializing) return;
 
     // record current proxy row (dm->sf) as it is used to sync everything
     currentRow = current.row();
@@ -1402,10 +1423,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     // update delegates so they can highlight the current item
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
-
-    qDebug() << __FUNCTION__
-             << "currentRow =" << currentRow
-             << fPath;
 
     // don't scroll mouse click source (screws up double clicks and disorients users)
     if(G::fileSelectionChangeSource == "TableMouseClick") {
@@ -1445,22 +1462,18 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     if (!G::isSlideShow) progressLabel->setVisible(G::showCacheStatus);
 
-    /* update imageView, use cache if image loaded, else read it from file unless a new folder
-       is loading and the sort oder != dm order.  */
-    bool okToLoadImage = false;
-    bool basicSort = sortColumn == 0 && !sortReverseAction->isChecked();
-    if (!G::isNewFolderLoaded && basicSort)  okToLoadImage = true;
-    if (G::isNewFolderLoaded)  okToLoadImage = true;
-    if (G::mode != "Loupe")  okToLoadImage = false;
-
-//    if (okToLoadImage) {
+    // update imageView immediately unless weird sort or folder not loaded yet
+    bool okToLoadImage = sortColumn == G::NameColumn
+                      || sortColumn == G::ModifiedColumn
+                      || G::isNewFolderLoaded;
+    if (okToLoadImage) {
         if (imageView->loadImage(fPath, __FUNCTION__)) {
             updateClassification();
             centralLayout->setCurrentIndex(prevCentralView);
         }
-//    }
+    }
 
-    // update caching when folder has been loaded
+    // update caching if folder has been loaded
     if (G::isNewFolderLoaded) {
         updateIconsVisible(true);
         metadataCacheThread->fileSelectionChange();
@@ -1516,6 +1529,11 @@ void MW::folderAndFileSelectionChange(QString fPath)
     }
 
     setCentralMessage("Loading " + fPath + " ...");
+
+    thumbView->selectionModel()->clear();
+    thumbView->selectThumb(fPath);
+    centralLayout->setCurrentIndex(LoupeTab);
+    return;
 
     // select image with fPath
     for (int i = 0; i < 100; i++) {
@@ -1663,6 +1681,7 @@ void MW::updateIconsVisible(bool useCurrentRow)
 void MW::loadMetadataCache2ndPass()
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
     updateIconBestFit();
     updateIconsVisible(true);
     metadataCacheThread->loadNewFolder2ndPass();
@@ -2000,10 +2019,11 @@ void MW::loadImageCacheForNewFolder()
     of memory has been consumed or all the images are cached.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+//    qDebug() << __FUNCTION__;
     // now that metadata is loaded populate the data model
     if(G::showCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
-    updateIconBestFit();
+//    updateIconBestFit();      // rgh make sure not req'd
 
     // had to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
@@ -4599,12 +4619,9 @@ void MW::createFolderDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     folderDockTabText = "  📁  ";
-//    folderDockTabText = "F";
     folderDock = new DockWidget(folderDockTabText, this);  // Folders 📁
-//    folderDock = new DockWidget("F", this);  // Folders 📁
     folderDock->setObjectName("FoldersDock");
     folderDock->setWidget(fsTree);
-    folderDock->setAttribute(Qt::WA_TransparentForMouseEvents);
     // customize the folderDock titlebar
     QHBoxLayout *folderTitleLayout = new QHBoxLayout();
     folderTitleLayout->setContentsMargins(0, 0, 0, 0);
@@ -4958,7 +4975,6 @@ void MW::embelDockVisibilityChange()
 void MW::embelDockActivated(QDockWidget *dockWidget)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << dockWidget->windowTitle();
 //    if (dockWidget->objectName() == "embelDock") embelDisplay();
     // enable the folder dock (first one in tab)
     embelDockTabActivated = true;
@@ -5154,12 +5170,18 @@ void MW::updateStatusBar()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     // remove all icons so can add back in proper order // previously used: if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel); // etc
-    if(reverseSortBtn->isVisible()) statusBar()->removeWidget(reverseSortBtn);
-    if(rawJpgStatusLabel->isVisible()) statusBar()->removeWidget(rawJpgStatusLabel);
-    if(filterStatusLabel->isVisible()) statusBar()->removeWidget(filterStatusLabel);
-    if(subfolderStatusLabel->isVisible()) statusBar()->removeWidget(subfolderStatusLabel);
-    if(!G::isSlideShow) statusBar()->removeWidget(slideShowStatusLabel);
-    if(statusLabel->isVisible()) statusBar()->removeWidget(statusLabel);             // text showing x selected...
+    if(reverseSortBtn->isVisible())
+        statusBar()->removeWidget(reverseSortBtn);
+    if(rawJpgStatusLabel->isVisible())
+        statusBar()->removeWidget(rawJpgStatusLabel);
+    if(filterStatusLabel->isVisible())
+        statusBar()->removeWidget(filterStatusLabel);
+    if(subfolderStatusLabel->isVisible())
+        statusBar()->removeWidget(subfolderStatusLabel);
+    if(!G::isSlideShow && slideShowStatusLabel->isVisible())
+        statusBar()->removeWidget(slideShowStatusLabel);
+    if(statusLabel->isVisible())
+        statusBar()->removeWidget(statusLabel);             // text showing x selected...
 
     // add back relevant icons
     if (filters->isAnyFilter()) {
@@ -5627,6 +5649,7 @@ void MW::filterDockVisibilityChange(bool isVisible)
 void MW::launchBuildFilters()
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__ << "G::isInitializing =" << G::isInitializing;
     if (G::isInitializing) return;
     if (filterDock->visibleRegion().isNull()) {
 //        G::popUp->showPopup("Filters will only be updated when the filters panel is visible.");
@@ -5654,7 +5677,7 @@ void MW::filterChange(QString source)
     available is set, the thumb and grid first/last/thumbsPerPage parameters are recalculated
     and icons are loaded if necessary.
 */
-    if (G::isLogger) G::log(__FUNCTION__, "Soerce: " + source);
+    if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
 //    qDebug() << __FUNCTION__ << "called from:" << source;
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) return;
@@ -8465,7 +8488,6 @@ void MW::updateState()
     actions sets the visibility of all window components.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
     // set flag so
     isUpdatingState = true;
 //    setWindowsTitleBarVisibility();   // problem with full screen toggling
@@ -8648,7 +8670,6 @@ void MW::loupeDisplay()
     painting itself.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
@@ -8925,7 +8946,6 @@ void MW::recoverSelection()
 void MW::setCentralView()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
     if (!isSettings) return;
     if (asLoupeAction->isChecked()) loupeDisplay();
     if (asGridAction->isChecked()) gridDisplay();
@@ -10837,6 +10857,9 @@ void MW::deleteFiles()
 
 void MW::openUsbFolder()
 {
+/*
+
+*/
     if (G::isLogger) G::log(__FUNCTION__);
     struct  UsbInfo {
         QString rootPath;
@@ -10883,7 +10906,8 @@ void MW::openUsbFolder()
 
     refreshFolders();
     bookmarks->selectionModel()->clear();
-    subFoldersAction->setChecked(true);
+    bool wasSubFoldersChecked = subFoldersAction->isChecked();
+    if (!wasSubFoldersChecked) subFoldersAction->setChecked(true);
     updateStatusBar();
     QString fPath = usbMap[drive].rootPath;
     fsTree->select(fPath);
@@ -10894,7 +10918,8 @@ void MW::openUsbFolder()
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
-        subFoldersAction->setChecked(false);
+        thumbView->selectThumb(0);
+        if (!wasSubFoldersChecked) subFoldersAction->setChecked(false);
         updateStatusBar();
     }
     else {
@@ -11196,53 +11221,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    folderDock->raise();
+    folderDockVisibleAction->setChecked(true);
 
-    imageCacheThread->reportRunStatus();
-    return;
-    // ImageCache::reportRunStatus
-//    isRunning = true abort = false pause = true filterSortChange = true
-//    cacheSizeChange = false currentPath = "D:/Pictures/Coaster/2005-10-11_0082.jpg"
-
-//    return;
-
-    QObjectList oList = children();
-    QObject *object;
-    QTabBar *tabBar = nullptr;
-    foreach (object, oList) {
-        QString objectName = object->objectName();
-        QString className = object->metaObject()->className();
-        qDebug() << __FUNCTION__ << objectName << className;
-        if (className == "QTabBar") {
-            tabBar = qobject_cast<QTabBar *>(object);
-            break;
-        }
-    }
-    if (tabBar == nullptr) {
-        qDebug() << __FUNCTION__ << "nullptr";
-        return;
-    }
-    for (int i = 0; i < tabBar->count(); ++i) {
-        if (tabBar->tabText(i) == "  📁  ") {
-//        if (tabBar->tabText(i) == "F") {
-            qDebug() << __FUNCTION__ << i << tabBar->tabText(i) << tabBar->tabData(i);
-            tabBar->setTabText(i, "Folders");
-            tabBar->setTabToolTip(i, "System Folders");
-            tabBar->setTabTextColor(i, Qt::red);                        // nada
-            tabBar->setTabIcon(i, QIcon(":/images/icon16/Z-A.png"));    // works
-            tabBar->setContentsMargins(20, 0, 20, 0);
-//            tabBar->update();                                         // crash
-//            tabBar->setTabVisible(i, false);                          // works
-        }
-    }
-//    if (tabBar == nullptr) {
-//        qDebug() << __FUNCTION__ << "nullptr";
-//        return;
-//    }
-//    int i = 0;
-////    tabBar->setTabText(i, "Folders");
-////    tabBar->setTabToolTip(i, "System Folders");
-////    tabBar->setTabTextColor(i, Qt::red);                        // nada
-//    tabBar->setTabIcon(i, QIcon(":/images/icon16/Z-A.png"));    // works
-
+//    folderAndFileSelectionChange("D:/Pictures/Zenfolio/pbase2048/2021-04-22_0012_Zen2048.JPG");
+//    imageCacheThread->reportRunStatus();
 }
 // End MW

@@ -133,7 +133,6 @@ namespace G
     extern int winnowMemoryBeforeCacheMB;
     extern int metaCacheMB;
     extern bool showCacheStatus;
-    extern bool memTest;
 
     struct WinScreen {
         QString adaptor;

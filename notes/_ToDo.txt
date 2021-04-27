@@ -1,4 +1,6 @@
 BUGS / TO DO
+- Turn caching off while in compare mode
+- Slideshow of all images on F drive eventually crashed (85000+ images)
 - Filters not working sometimes
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow

@@ -292,8 +292,8 @@ by addCategoryFromData.
 void Filters::setCategoryBackground(const int &a, const int &b)
 {
 /*
-Sets the background gradient for the category items.  This function is also called when the
-user changes the background shade in preferences.
+    Sets the background gradient for the category items. This function is also called when the
+    user changes the background shade in preferences.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     categoryBackground.setColorAt(0, QColor(a,a,a));
@@ -444,7 +444,7 @@ void Filters::setProgressBarStyle()
 bool Filters::isAnyFilter()
 {
 /*
-This is used to determine the filter status in MW::updateFilterStatus
+    This is used to determine the filter status in MW::updateFilterStatus
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     QTreeWidgetItemIterator it(this);
@@ -614,12 +614,13 @@ void Filters::toggleExpansion()
 
 void Filters::addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category)
 {
-/* All the values for a category are collected into a QMap object in DataModel as the model
-data is added from the images in the folder. The list is passed here, where unique values are
-extracted and added to the category. For example, there could be multiple file types in the
-folder like JPG and NEF. A QMap object is used so the items can be sorted by key in the same
-order as the tableView. This function should only be used for dynamic categories - see
-createDynamicFilters;
+/*
+    All the values for a category are collected into a QMap object in DataModel as the model
+    data is added from the images in the folder. The list is passed here, where unique values
+    are extracted and added to the category. For example, there could be multiple file types
+    in the folder like JPG and NEF. A QMap object is used so the items can be sorted by key in
+    the same order as the tableView. This function should only be used for dynamic categories
+    - see createDynamicFilters;
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     static QTreeWidgetItem *item;
@@ -642,24 +643,25 @@ void Filters::dataChanged(const QModelIndex &topLeft,
                           const QVector<int> &roles)
 {
 /*
-If the user clicks on the checkbox indicator of any child item then the checkbox state toggles
-and dataChanged is triggered. The dataChanged function sets the itemCheckStateHasChanged flag
-to true. Next the itemClickedSignal is fired. Since the itemCheckStateHasChanged flag is true
-the function itemClickedSignal only emits a filterChange.
+    If the user clicks on the checkbox indicator of any child item then the checkbox state
+    toggles and dataChanged is triggered. The dataChanged function sets the
+    itemCheckStateHasChanged flag to true. Next the itemClickedSignal is fired. Since the
+    itemCheckStateHasChanged flag is true the function itemClickedSignal only emits a
+    filterChange.
 
-If the user clicks on the text portion of the checkbox (ie "Purple" in the color class
-filters) then the checkbox is not toggled and the dataChanged is not triggered. The
-itemClickedSignal is fired and since the itemCheckStateHasChanged flag is false the checkbox
-checkstate is manually toggled and a filterChange is emitted.
+    If the user clicks on the text portion of the checkbox (ie "Purple" in the color class
+    filters) then the checkbox is not toggled and the dataChanged is not triggered. The
+    itemClickedSignal is fired and since the itemCheckStateHasChanged flag is false the
+    checkbox checkstate is manually toggled and a filterChange is emitted.
 
-If the user clicks on the text portion of the search checkbox then the itemClickedSignal is
-fired and the itemClickedSignal function detects that the item is searchText and
-itemCheckStateHasChanged is false and sets the searchText cell to edit mode. The user makes an
-edit. This fires the itemChangedSignal. The dataChanged function knows the sender is the item
-searchText and the role is Qt::EditMode. The searchString is updated to the new value and
-searchStringChange is emitted. DataModel::searchStringChange receives the signal and updates
-the datamodel searchColumn match to true or false for each row. The filteredItemCount is
-updated.
+    If the user clicks on the text portion of the search checkbox then the itemClickedSignal
+    is fired and the itemClickedSignal function detects that the item is searchText and
+    itemCheckStateHasChanged is false and sets the searchText cell to edit mode. The user
+    makes an edit. This fires the itemChangedSignal. The dataChanged function knows the sender
+    is the item searchText and the role is Qt::EditMode. The searchString is updated to the
+    new value and searchStringChange is emitted. DataModel::searchStringChange receives the
+    signal and updates the datamodel searchColumn match to true or false for each row. The
+    filteredItemCount is updated.
 */
     // checkstate has changed
     if (roles.contains(Qt::CheckStateRole)) {
@@ -700,24 +702,25 @@ updated.
 void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
 {
 /*
-If the user clicks on the checkbox indicator of any child item then the checkbox state toggles
-and dataChanged is triggered. The dataChanged function sets the itemCheckStateHasChanged flag
-to true. Next the itemClickedSignal is fired. Since the itemCheckStateHasChanged flag is true
-the function itemClickedSignal only emits a filterChange.
+    If the user clicks on the checkbox indicator of any child item then the checkbox state
+    toggles and dataChanged is triggered. The dataChanged function sets the
+    itemCheckStateHasChanged flag to true. Next the itemClickedSignal is fired. Since the
+    itemCheckStateHasChanged flag is true the function itemClickedSignal only emits a
+    filterChange.
 
-If the user clicks on the text portion of the checkbox (ie "Purple" in the color class
-filters) then the checkbox is not toggled and the dataChanged is not triggered. The
-itemClickedSignal is fired and since the itemCheckStateHasChanged flag is false the checkbox
-checkstate is manually toggled and a filterChange is emitted.
+    If the user clicks on the text portion of the checkbox (ie "Purple" in the color class
+    filters) then the checkbox is not toggled and the dataChanged is not triggered. The
+    itemClickedSignal is fired and since the itemCheckStateHasChanged flag is false the
+    checkbox checkstate is manually toggled and a filterChange is emitted.
 
-If the user clicks on the text portion of the search checkbox then the itemClickedSignal is
-fired and the itemClickedSignal function detects that the item is searchText and
-itemCheckStateHasChanged is false and sets the searchText cell to edit mode. The user makes an
-edit. This fires the itemChangedSignal. The dataChanged function knows the sender is the item
-searchText and the role is Qt::EditMode. The searchString is updated to the new value and
-searchStringChange is emitted. DataModel::searchStringChange receives the signal and updates
-the datamodel searchColumn match to true or false for each row. The filteredItemCount is
-updated.
+    If the user clicks on the text portion of the search checkbox then the itemClickedSignal
+    is fired and the itemClickedSignal function detects that the item is searchText and
+    itemCheckStateHasChanged is false and sets the searchText cell to edit mode. The user
+    makes an edit. This fires the itemChangedSignal. The dataChanged function knows the sender
+    is the item searchText and the role is Qt::EditMode. The searchString is updated to the
+    new value and searchStringChange is emitted. DataModel::searchStringChange receives the
+    signal and updates the datamodel searchColumn match to true or false for each row. The
+    filteredItemCount is updated.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     /*
@@ -794,7 +797,7 @@ void Filters::paintEvent(QPaintEvent *event)
 void Filters::mousePressEvent(QMouseEvent *event)
 {
 /*
-Single mouse click on item triggers expand/collapse same as clicking on decoration.
+    Single mouse click on item triggers expand/collapse same as clicking on decoration.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     if (buildingFilters) return;
