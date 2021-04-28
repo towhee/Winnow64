@@ -1,4 +1,5 @@
 BUGS / TO DO
+No such signal MetadataCache::refreshCurrentAfterReload() in Main\mainwindow.cpp:4210
 - Slideshow of all images on F drive eventually crashed (85000+ images)
 - Filters not working sometimes
 - Not remembering grid mode at opening
@@ -46,10 +47,11 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
-- Turn caching off while in compare mode
+- Increased image compare from 9 to 16
+- Turn caching off while in compare mode or when modifier key pressed
 - Docked dock widget tab text unicode symbols + tooltips
 - Down arrow not working correctly for thumbs in side dock
-- Full path for file name in external program
+- Full path being sent to external programs (Photoshop does not like this)
 - Open new folder cancel not working correctly
 - Mouse Shift + Alt + Left btn toggles pick status
 - Alt prevents image cache updating

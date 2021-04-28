@@ -853,6 +853,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
                                  bool essential, bool nonEssential,
                                  bool isReport, bool isLoadXmp, QString source)
 {
+//    mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__, fileInfo.filePath() + "  Source: " + source);
 //    qDebug() << __FUNCTION__ << "called by" << source;
     // check if already loaded
@@ -860,6 +861,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     if (fPath == "") {
         qDebug() << __FUNCTION__ << "NULL FILE REQUESTED FROM "
                  << source;
+//        mutex.unlock();
         return false;
     }
 
@@ -867,6 +869,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     QString ext = fileInfo.suffix().toLower();
     if (!getMetadataFormats.contains(ext)) {
         clearMetadata();
+//        mutex.unlock();
         return false;
     }
 
@@ -880,6 +883,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
         qDebug() << __FUNCTION__ << m.err << source;
+//        mutex.unlock();
         return false;
     }
 
@@ -897,6 +901,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
     m.thumbUnavailable = thumbUnavailable;
     m.imageUnavailable = imageUnavailable;
+//    mutex.unlock();
 
     return m.metadataLoaded;
 }

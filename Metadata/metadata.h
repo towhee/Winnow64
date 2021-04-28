@@ -108,6 +108,7 @@ public:
     QString nikonLensCode;
 
 private:
+    QMutex mutex;
     // Exif
     Exif *exif = nullptr;
     GPS *gps = nullptr;

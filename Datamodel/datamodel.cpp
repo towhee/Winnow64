@@ -670,6 +670,7 @@ void DataModel::addAllMetadata()
     to run as a separate thread and can be executed directly.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
+    qDebug() << __FUNCTION__;
     G::t.restart();
     timeToQuit = false;
     loadingModel = true;
@@ -762,6 +763,7 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     been loaded, but editable data, (such as rating, label, title, email, url) may have been
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */
+//    mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__); 
     int row = m.row;
     QString search = index(row, G::SearchTextColumn).data().toString();
@@ -874,6 +876,7 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
     setData(index(row, G::ErrColumn), m.err);
 //    setData(index(row, G::ErrColumn), m.err, Qt::ToolTipRole);
+//    mutex.unlock();
 
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
@@ -1243,13 +1246,13 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
                     QModelIndex idx = sourceModel()->index(sourceRow, dataModelColumn, sourceParent);
                     QVariant dataValue = idx.data(Qt::EditRole);
                     QVariant filterValue = (*filter)->data(1, Qt::EditRole);
-//                    /*
+                    /*
                     QString itemName = (*filter)->text(0);      // for debugging
                     qDebug() << G::t.restart() << "\t" << itemCategory << itemName
                              << "sfRow" << sourceRow
                              << "Comparing" << dataValue << filterValue
                              << (dataValue == filterValue);
-//                    */
+                    //*/
                     if (dataValue == filterValue) isMatch = true;
                 }
             }

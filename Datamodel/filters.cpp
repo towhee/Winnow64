@@ -509,7 +509,7 @@ void Filters::invertFilters()
     // disable items with no filter count
     disableZeroCountItems(true);
 
-    // emit filterChange();  // this is done im MW::invertFilters - which calls this function
+    // emit filterChange();  // this is done in MW::invertFilters - which calls this function
 }
 
 void Filters::finishedBuildFilters()

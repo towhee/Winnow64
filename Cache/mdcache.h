@@ -72,8 +72,8 @@ protected:
 
 signals:
     void loadImageCache();
-    void pauseImageCache();
-    void resumeImageCache();
+//    void pauseImageCache();
+//    void resumeImageCache();
     void updateIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void updateIconBestFit();
     void loadMetadataCache2ndPass();

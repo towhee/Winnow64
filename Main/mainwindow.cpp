@@ -1369,7 +1369,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     delegate use of the current index must check the column.
 */
     if (G::isLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
-   /*
+//   /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
@@ -1880,6 +1880,10 @@ void MW::loadEntireMetadataCache(QString source)
     has been loaded.
 */
     if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
+    qDebug() << __FUNCTION__
+             << "Source: " << source
+             << "G::isInitializing: " << G::isInitializing
+             ;
     if (G::isInitializing) return;
     if (metadataCacheThread->isAllMetadataLoaded()) return;
 
@@ -5648,6 +5652,7 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 void MW::filterDockVisibilityChange(bool isVisible)
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__ << isVisible;
     if (isVisible && !G::isInitializing) launchBuildFilters();
 }
 
@@ -5669,6 +5674,8 @@ void MW::launchBuildFilters()
         return;
     }
 
+    imageCacheThread->pauseImageCache();
+
     filters->msgFrame->setVisible(true);
     buildFilters->build();
 }
@@ -5683,9 +5690,11 @@ void MW::filterChange(QString source)
     and icons are loaded if necessary.
 */
     if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
-//    qDebug() << __FUNCTION__ << "called from:" << source;
+    qDebug() << __FUNCTION__ << "called from:" << source;
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) return;
+
+    imageCacheThread->pauseImageCache();
 
     // Need all metadata loaded before filtering
     if (source != "MW::clearAllFilters") {
@@ -5698,6 +5707,7 @@ void MW::filterChange(QString source)
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
     isFilterChange = true;      // prevent unwanted fileSelectionChange()
+    qDebug() << __FUNCTION__ << "0";
     dm->sf->filterChange();
 
     // update filter panel image count by filter item
@@ -5941,7 +5951,7 @@ void MW::sortChange(QString src)
     be loaded in order to sort on them.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    /*
+//    /*
     qDebug() << __FUNCTION__ << "src =" << src
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "prevSortColumn =" << prevSortColumn
@@ -8039,7 +8049,7 @@ bool MW::loadSettings()
         combineRawJpg = true;
         prevMode = "Loupe";
         G::mode = "Loupe";
-        G::isLogger = false;
+//        G::isLogger = false;
 
         // appearance
         G::backgroundShade = 50;
@@ -8101,10 +8111,10 @@ bool MW::loadSettings()
     sortColumn = setting->value("sortColumn").toInt();
     autoAdvance = setting->value("autoAdvance").toBool();
     turnOffEmbellish = setting->value("turnOffEmbellish").toBool();
-    if (setting->contains("deleteWarning"))
-        G::isLogger = setting->value("isLogger").toBool();
-    else
-        G::isLogger = false;
+//    if (setting->contains("deleteWarning"))
+//        G::isLogger = setting->value("isLogger").toBool();
+//    else
+//        G::isLogger = false;
     if (setting->contains("deleteWarning"))
         deleteWarning = setting->value("deleteWarning").toBool();
     else
@@ -8894,9 +8904,9 @@ void MW::compareDisplay()
         G::popUp->showPopup("Select more than one image to compare.");
         return;
     }
-    if (n > 9) {
+    if (n > 16) {
         QString msg = QString::number(n);
-        msg += " images have been selected.  Only the first 9 will be compared.";
+        msg += " images have been selected.  Only the first 16 will be compared.";
         G::popUp->showPopup(msg, 2000);
     }
 

@@ -3,7 +3,7 @@
 namespace G
 {
     // system messaging
-    bool isLogger;                      // Writes log messages to file or console
+    bool isLogger = true;               // Writes log messages to file or console
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
     QFile logFile;                      // MW::openLog(), MW::closeLog()
     bool isDev;                         // Running from within Winnow Project/Winnow64
