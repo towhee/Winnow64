@@ -421,7 +421,7 @@ void Preferences::addItems()
     i.key = "isLogger";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+//    addItem(i);
 
     // Thumbnails Header (Root) ---------------------------------------------------------------
     i.name = "AppearanceHeader";

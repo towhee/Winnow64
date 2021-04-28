@@ -277,11 +277,11 @@ void MetadataCache::scrollChange(QString source)
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
-            mutex.lock();
-            abort = true;
-            condition.wakeOne();
-            mutex.unlock();
-            wait();
+        mutex.lock();
+        abort = true;
+        condition.wakeOne();
+        mutex.unlock();
+        wait();
     }
     if (G::isInitializing) return;
 //    qDebug() << __FUNCTION__ << "called by =" << source;
@@ -333,6 +333,7 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
 //    updateImageCache = okayToImageCache; // rghcachechange
     action = Action::NewFileSelected;
     setRange();
+    qDebug() << __FUNCTION__ << "0";
     foundItemsToLoad = anyItemsToLoad();
     start(TimeCriticalPriority);
 }
@@ -417,7 +418,7 @@ void MetadataCache::iconCleanup()
         // the datamodel row dmRow
         int dmRow = i.value();
         // the filtered proxy row sfRow
-        mutex.lock();
+//        mutex.lock();
         int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
         /* mapFromSource returns -1 if dm->index(dmRow, 0) is not in the filtered dataset
         This can happen is the user switches folders and the datamodel is cleared before the
@@ -432,7 +433,7 @@ void MetadataCache::iconCleanup()
 //            qDebug() << __FUNCTION__ << actionList[action]
 //                     << "Removing icon for row" << sfRow;
         }
-        mutex.unlock();
+//        mutex.unlock();
     }
 }
 
@@ -545,13 +546,13 @@ void MetadataCache::readIconChunk()
     qDebug() << __FUNCTION__;
     int start = startRow;
     int end = endRow;
-    mutex.lock();
+//    mutex.lock();
     if (end > dm->sf->rowCount()) end = dm->sf->rowCount();
     if (cacheAllIcons) {
         start = 0;
         end = dm->sf->rowCount();
     }
-    mutex.unlock();
+//    mutex.unlock();
     /*
     qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
              << "rowCount =" << dm->sf->rowCount()
@@ -566,7 +567,7 @@ void MetadataCache::readIconChunk()
         }
 
         // load icon
-        mutex.lock();
+//        mutex.lock();
         QModelIndex idx = dm->sf->index(row, 0);
         if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
             int dmRow = dm->sf->mapToSource(idx).row();
@@ -586,7 +587,7 @@ void MetadataCache::readIconChunk()
                 iconsCached.append(dmRow);
             }
         }
-        mutex.unlock();
+//        mutex.unlock();
     }
 
     // process entire range
@@ -597,7 +598,7 @@ void MetadataCache::readIconChunk()
         }
 
         // load icon
-        mutex.lock();
+//        mutex.lock();
         QModelIndex idx = dm->sf->index(row, 0);
         if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
             int dmRow = dm->sf->mapToSource(idx).row();
@@ -617,7 +618,7 @@ void MetadataCache::readIconChunk()
                 iconsCached.append(dmRow);
             }
         }
-        mutex.unlock();
+//        mutex.unlock();
     }
 
     // reset after a filter change
@@ -747,13 +748,15 @@ void MetadataCache::run()
 
     If there has been a file selection change and not a new folder then update image cache.
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    QString msg = "action = " + actionList.at(action) +
+                  " foundItemsToLoad = " + QVariant(foundItemsToLoad).toString();
+    if (G::isLogger) G::log(__FUNCTION__, msg);
 //    qDebug() << __FUNCTION__ << actionList.at(action) << "foundItemsToLoad =" << foundItemsToLoad;
 
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
 //        mutex.lock();     // rgh mutex
-        int rowCount = dm->rowCount();
+        int rowCount = dm->sf->rowCount();
         dm->loadingModel = true;
 //        mutex.unlock();   // rgh mutex
 

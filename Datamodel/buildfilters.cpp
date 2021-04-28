@@ -40,6 +40,7 @@ void BuildFilters::stop()
 void BuildFilters::build()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -66,6 +67,7 @@ void BuildFilters::build()
 void BuildFilters::done()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+    qDebug() << __FUNCTION__;
     if (!abort) emit finishedBuildFilters();
 //    qint64 msec = buildFiltersTimer.elapsed();
 //    qDebug() << __FUNCTION__ << QString("%L1").arg(msec) << "msec";
@@ -81,7 +83,7 @@ void BuildFilters::unfilteredItemSearchCount()
     This function is run everytime the search string changes.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-//    qDebug() << __FUNCTION__;
+    qDebug() << __FUNCTION__;
     int col = G::SearchColumn;
 
     // get total matches for searchTrue
@@ -102,7 +104,7 @@ void BuildFilters::unfilteredItemSearchCount()
     tot = 0;
     totRawJpgCombined = 0;
     matchText = filters->searchFalse->text(1);
-    mutex.lock();
+//    mutex.lock();
     for (int row = 0; row < dmRows; ++row) {
         bool hideRaw = dm->index(row, 0).data(G::DupHideRawRole).toBool();
         if (dm->index(row, col).data().toString() == matchText) {
@@ -110,7 +112,7 @@ void BuildFilters::unfilteredItemSearchCount()
             if (combineRawJpg && !hideRaw) totRawJpgCombined++;
         }
     }
-    mutex.unlock();
+//    mutex.unlock();
     filters->searchFalse->setData(3, Qt::EditRole, QString::number(tot));
     filters->searchFalse->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
 }
@@ -118,6 +120,7 @@ void BuildFilters::unfilteredItemSearchCount()
 void BuildFilters::updateCountFiltered()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    qDebug() << __FUNCTION__;
     filters->filtersBuilt = false;
     filters->buildingFilters = true;
     QTreeWidgetItemIterator it(filters);
@@ -129,11 +132,11 @@ void BuildFilters::updateCountFiltered()
             int col = filters->filterCategoryToDmColumn[cat];
             QString searchValue = (*it)->text(1);
             int tot = 0;
-            mutex.lock();
+//            mutex.lock();
             for (int row = 0; row < sfRows; ++row) {
                 if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
             }
-            mutex.unlock();
+//            mutex.unlock();
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         }
@@ -147,6 +150,7 @@ void BuildFilters::updateCountFiltered()
 void BuildFilters::countFiltered()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    qDebug() << __FUNCTION__;
     // count filtered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
@@ -157,11 +161,11 @@ void BuildFilters::countFiltered()
             int col = filters->filterCategoryToDmColumn[cat];
             QString searchValue = (*it)->text(1);
             int tot = 0;
-            mutex.lock();
+//            mutex.lock();
             for (int row = 0; row < sfRows; ++row) {
                 if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
             }
-            mutex.unlock();
+//            mutex.unlock();
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         }
@@ -195,6 +199,7 @@ void BuildFilters::countFiltered()
 void BuildFilters::countUnfiltered()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    qDebug() << __FUNCTION__;
     // count unfiltered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
@@ -206,7 +211,7 @@ void BuildFilters::countUnfiltered()
             QString searchValue = (*it)->text(1);
             int tot = 0;
             int totRawJpgCombined = 0;
-            mutex.lock();
+//            mutex.lock();
             for (int row = 0; row < dmRows; ++row) {
                 bool hideRaw = dm->index(row, 0).data(G::DupHideRawRole).toBool();
                 if (dm->index(row, col).data().toString() == searchValue) {
@@ -214,7 +219,7 @@ void BuildFilters::countUnfiltered()
                     if (combineRawJpg && !hideRaw) totRawJpgCombined++;
                 }
             }
-            mutex.unlock();
+//            mutex.unlock();
             (*it)->setData(3, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
@@ -249,10 +254,11 @@ void BuildFilters::countUnfiltered()
 void BuildFilters::loadAllMetadata()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    qDebug() << __FUNCTION__;
     if (!G::allMetadataLoaded) {
         for (int row = 0; row < dmRows; ++row) {
             if (abort) return;
-            mutex.lock();
+//            mutex.lock();
             // is metadata already cached
             if (dm->index(row, G::MetadataLoadedColumn).data().toBool()) continue;
             QString fPath = dm->index(row, 0).data(G::PathRole).toString();
@@ -266,7 +272,7 @@ void BuildFilters::loadAllMetadata()
                     qApp->processEvents();
                 }
             }
-            mutex.unlock();
+//            mutex.unlock();
         }
         progress = 20;
         G::allMetadataLoaded = true;
@@ -276,6 +282,7 @@ void BuildFilters::loadAllMetadata()
 void BuildFilters::mapUniqueInstances()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    qDebug() << __FUNCTION__;
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> typesMap;
     QMap<QVariant, QString> modelMap;
@@ -346,6 +353,7 @@ void BuildFilters::run()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     if (filters->filtersBuilt) return;
+    qDebug() << __FUNCTION__;
 
     if (!abort) loadAllMetadata();
     if (!abort) mapUniqueInstances();

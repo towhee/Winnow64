@@ -172,7 +172,7 @@ void ImageCache::pauseImageCache()
 */
     mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__);
-//    pause = true;
+    pause = true;
     mutex.unlock();
     return;
 
@@ -197,6 +197,7 @@ void ImageCache::resumeImageCache()
 */
     mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
     pause = false;
     mutex.unlock();
     return;
@@ -977,10 +978,10 @@ void ImageCache::cacheSizeChange()
 void ImageCache::setCurrentPosition(QString path)
 {
     mutex.lock();
-    if (G::isLogger) { G::log(__FUNCTION__, path); }
+    if (G::isLogger) G::log(__FUNCTION__, path);
     pause = false;
     currentPath = path;             // memory check
-    /*
+//    /*
     qDebug() << __FUNCTION__
              << "filterSortChange =" << filterOrSortHasChanged
              << "cacheSizeChange =" << cacheSizeHasChanged

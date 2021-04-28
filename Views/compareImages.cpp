@@ -79,7 +79,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     count = 0;
     selection = selectionModel->selectedRows();
     count = selection.count();
-    if (count > 9) count = 9;
+    if (count > 16) count = 16;
 
     for (int i = 0; i < count; ++i) {
         QString fPath = selection.at(i).data(G::PathRole).toString();
@@ -182,7 +182,7 @@ void CompareImages::loadGrid()
 
 void CompareImages::configureGrid()
 {
-/*  Returns the most efficient number of rows and columns to fit n images (between 2 - 9)
+/*  Returns the most efficient number of rows and columns to fit n images (between 2 - 16)
     in a grid, based on the aspect ratios of each image.  The algoritm minimizes the total area.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
@@ -271,6 +271,26 @@ void CompareImages::configureGrid()
         }
         break;
     case 9: rows = 3;   cols = 3;   break;
+    case 10:
+    case 11:
+    case 12:
+        area1 = area(3, 4);
+        area2 = area(4, 3);
+        if (area1 >= area2) {
+            rows = 3;
+            cols = 4;
+            break;
+        }
+        else {
+            rows = 4;
+            cols = 3;
+            break;
+        }
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+        rows = 4;   cols = 4;   break;
     }
 }
 
