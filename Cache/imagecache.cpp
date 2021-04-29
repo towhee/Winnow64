@@ -360,12 +360,12 @@ void ImageCache::setTargetRange()
         if (sumMB < cache.maxMB) {
             cacheItemList[i].isTarget = true;
             if (!cacheItemList.at(i).isCached)
-                toCache.append(cacheItemList.at(i).origKey);
+                toCache.append(cacheItemList.at(i).key/*origKey*/);
         }
         else {
             cacheItemList[i].isTarget = false;
             if (cacheItemList.at(i).isCached)
-                toDecache.prepend(cacheItemList.at(i).origKey);
+                toDecache.prepend(cacheItemList.at(i).key/*origKey*/);
         }
     }
 
@@ -917,7 +917,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     // pause caching    rgh perhaps enclose entire rebuild in a mutex??
     if (isRunning()) pauseImageCache();
 
-    qDebug() << __FUNCTION__ << "BEFORE CALL buildImageCacheList";
+    qDebug() << __FUNCTION__ << "Source:" << source;
 //    std::cout << diagnostics().toStdString() << std::flush;
 
     // build a new cacheItemList for the filtered/sorted dataset
@@ -981,7 +981,7 @@ void ImageCache::setCurrentPosition(QString path)
     if (G::isLogger) G::log(__FUNCTION__, path);
     pause = false;
     currentPath = path;             // memory check
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << "filterSortChange =" << filterOrSortHasChanged
              << "cacheSizeChange =" << cacheSizeHasChanged
@@ -1120,6 +1120,9 @@ void ImageCache::run()
         // check available memory (another app may have used or released some memory)
         memChk();
 
+        // total images in cacheItemList for guard checking
+        int totalImages = cacheItemList.length();
+
         // fill the cache with images
         QTime t = QTime::currentTime().addMSecs(500);
         while (nextToCache()) {
@@ -1128,7 +1131,6 @@ void ImageCache::run()
             abort = false;
             mutex.unlock();
             if (okToAbort) {
-//                qDebug() << __FUNCTION__ << "A B O R T I N G at nextToCache";
                 emit updateIsRunning(/*isRunning*/false, /*showCacheLabel*/false);
                 return;
             }
@@ -1142,6 +1144,14 @@ void ImageCache::run()
             mutex.unlock();
             if (positionChanged || okToPause || cacheSizeChange || filterSortChange) break;
 
+            // guard check
+            if (cache.toCacheKey < 0 || cache.toCacheKey >= totalImages) {
+                QString msg = "Bad cache.toCacheKey = " + QString::number(cache.toCacheKey);
+                QByteArray ba = msg.toLocal8Bit();
+                qWarning(ba.data());
+                continue;
+            }
+
             // next image to cache
             QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
             QImage image;
@@ -1150,6 +1160,10 @@ void ImageCache::run()
             if (getImage->load(fPath, image)) {
                 // is there room in cache?
                 int room = cache.maxMB - cache.currMB;
+                qDebug() << __FUNCTION__
+                         << "cache.toCacheKey =" << cache.toCacheKey
+                         << "cacheItemList.count() =" << cacheItemList.count()
+                            ;
                 int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
                 makeRoom(room, roomRqd);
                 /*

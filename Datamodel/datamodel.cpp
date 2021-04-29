@@ -1283,16 +1283,16 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
 void SortFilter::filterChange()
 {
 /*
-Note: required because invalidateFilter is private and cannot be called from
-another class.
+    Note: required because invalidateFilter is private and cannot be called from
+    another class.
 
-This slot is called when data changes in the filters widget.  The proxy (this)
-is invalidated, which forces an update.  This happens with every change in the
-filters widget including when the filters are being created in the filter
-widget.
+    This slot is called when data changes in the filters widget.  The proxy (this)
+    is invalidated, which forces an update.  This happens with every change in the
+    filters widget including when the filters are being created in the filter
+    widget.
 
-If the new folder has been loaded and there are user driven changes to the
-filtration then the image cache needs to be reloaded to match the new proxy (sf)
+    If the new folder has been loaded and there are user driven changes to the
+    filtration then the image cache needs to be reloaded to match the new proxy (sf)
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     invalidateFilter();
