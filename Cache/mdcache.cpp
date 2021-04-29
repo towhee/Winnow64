@@ -333,7 +333,6 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
 //    updateImageCache = okayToImageCache; // rghcachechange
     action = Action::NewFileSelected;
     setRange();
-    qDebug() << __FUNCTION__ << "0";
     foundItemsToLoad = anyItemsToLoad();
     start(TimeCriticalPriority);
 }
@@ -483,7 +482,7 @@ void MetadataCache::readAllMetadata()
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
 
 //    G::t.restart();
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
 //    isShowCacheStatus = true;
     int count = 0;
     int rows = dm->rowCount();
@@ -543,7 +542,7 @@ void MetadataCache::readIconChunk()
     sort/filter change and all metadata has been loaded, but the icons visible have changed.
 */
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     int start = startRow;
     int end = endRow;
 //    mutex.lock();

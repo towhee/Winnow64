@@ -1369,7 +1369,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     delegate use of the current index must check the column.
 */
     if (G::isLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
-//   /*
+   /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
@@ -5557,7 +5557,7 @@ void MW::resortImageCache()
     if (G::isLogger) G::log(__FUNCTION__);
     if (!dm->sf->rowCount()) return;
     QString currentFilePath = currentDmIdx.data(G::PathRole).toString();
-    imageCacheThread->rebuildImageCacheParameters(currentFilePath);
+    imageCacheThread->rebuildImageCacheParameters(currentFilePath, __FUNCTION__);
     // change to ImageCache
     imageCacheThread->setCurrentPosition(dm->currentFilePath);
 }
@@ -5652,14 +5652,14 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 void MW::filterDockVisibilityChange(bool isVisible)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << isVisible;
+//    qDebug() << __FUNCTION__ << isVisible;
     if (isVisible && !G::isInitializing) launchBuildFilters();
 }
 
 void MW::launchBuildFilters()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << "G::isInitializing =" << G::isInitializing;
+//    qDebug() << __FUNCTION__ << "G::isInitializing =" << G::isInitializing;
     if (G::isInitializing) return;
     if (filterDock->visibleRegion().isNull()) {
 //        G::popUp->showPopup("Filters will only be updated when the filters panel is visible.");
@@ -5692,7 +5692,12 @@ void MW::filterChange(QString source)
     if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
     qDebug() << __FUNCTION__ << "called from:" << source;
     // ignore if new folder is being loaded
-    if (!G::isNewFolderLoaded) return;
+    if (!G::isNewFolderLoaded) {
+        G::popUp->showPopup("Please wait for the folder to complete loading...", 2000);
+        return;
+    }
+    // update filter checkbox
+    qApp->processEvents();
 
     imageCacheThread->pauseImageCache();
 
@@ -5704,10 +5709,11 @@ void MW::filterChange(QString source)
         if (!G::allMetadataLoaded) return;
     }
 
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
     // refresh the proxy sort/filter, which updates the selectionIndex, which triggers a
     // scroll event and the metadataCache updates the icons and thumbnails
     isFilterChange = true;      // prevent unwanted fileSelectionChange()
-    qDebug() << __FUNCTION__ << "0";
     dm->sf->filterChange();
 
     // update filter panel image count by filter item
@@ -5715,7 +5721,7 @@ void MW::filterChange(QString source)
     if (source == "Filters::itemChangedSignal search text change") buildFilters->unfilteredItemSearchCount();
 
     // recover sort after filtration
-    sortChange(__FUNCTION__);
+    sortChange("filterChange");
 
     isFilterChange = false;     // allow fileSelectionChange()
 
@@ -5725,6 +5731,7 @@ void MW::filterChange(QString source)
     // if filter has eliminated all rows so nothing to show
     if (!dm->sf->rowCount()) {
         nullFiltration();
+        QApplication::restoreOverrideCursor();
         return;
     }
 
@@ -5742,7 +5749,7 @@ void MW::filterChange(QString source)
     updateStatus(true, "", __FUNCTION__);
 
     // sync image cache with datamodel filtered proxy dm->sf
-    imageCacheThread->rebuildImageCacheParameters(fPath);
+    imageCacheThread->rebuildImageCacheParameters(fPath, __FUNCTION__);
     /*
     if (thumbView->waitUntilOkToScroll()) {
         // setting the selection index also triggers fileSelectionChange()
@@ -5751,8 +5758,10 @@ void MW::filterChange(QString source)
     }
 //    */
 //    qDebug() << __FUNCTION__ << idx.data() << "Calling fileSelectionChange(idx, idx)";
-    fileSelectionChange(idx, idx);
 
+    QApplication::restoreOverrideCursor();
+
+    fileSelectionChange(idx, idx);
     source = "";    // suppress compiler warning
 }
 
@@ -5942,7 +5951,7 @@ void MW::sortChangeFromAction()
     sortChange("Action");
 }
 
-void MW::sortChange(QString src)
+void MW::sortChange(QString source)
 {
 /*
     Triggered by a menu sort item or a new folder.  Core sort items (QFileInfo items) are
@@ -5951,7 +5960,7 @@ void MW::sortChange(QString src)
     be loaded in order to sort on them.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-//    /*
+    /*
     qDebug() << __FUNCTION__ << "src =" << src
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "prevSortColumn =" << prevSortColumn
@@ -6038,8 +6047,10 @@ void MW::sortChange(QString src)
     centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true, "", __FUNCTION__);
 
-    // sync image cache with datamodel filtered proxy
-    imageCacheThread->rebuildImageCacheParameters(fPath, "SortChange");
+    // sync image cache with datamodel filtered proxy unless sort has been triggered by a
+    // filter change, which will do its own rebuildImageCacheParameters
+    if (source != "filterChange")
+        imageCacheThread->rebuildImageCacheParameters(fPath, __FUNCTION__);
 
     /* if the previous selected image is also part of the filtered datamodel then the
        selected index does not change and fileSelectionChange will not be signalled.
@@ -11236,10 +11247,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    folderDock->raise();
-    folderDockVisibleAction->setChecked(true);
-
-//    folderAndFileSelectionChange("D:/Pictures/Zenfolio/pbase2048/2021-04-22_0012_Zen2048.JPG");
+    QString r = imageCacheThread->reportCache();
+//    std::cout << r.toStdString() << std::flush;
 //    imageCacheThread->reportRunStatus();
 }
 // End MW

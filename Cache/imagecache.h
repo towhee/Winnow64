@@ -47,6 +47,7 @@ public:
     QString diagnostics();
     QString reportCache(QString title = "");
     void reportToCache();
+    QString reportCacheProgress(QString action);
     void reportRunStatus();
     QString reportImCache();
 
@@ -135,7 +136,6 @@ private:
     void buildImageCacheList();     //
     void updateImageCacheList();    //
     QSize scalePreview(int w, int h);
-    QString reportCacheProgress(QString action);
 };
 
 #endif // IMAGECACHE_H
