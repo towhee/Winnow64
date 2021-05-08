@@ -118,6 +118,7 @@ bool Jpeg::parse(MetadataParameters &p,
                  Exif *exif,
                  GPS *gps)
 {
+//    qDebug() << __FUNCTION__ << p.file.fileName();
     // init
     m.parseSource = __FUNCTION__;
     initSegCodeHash();

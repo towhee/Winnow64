@@ -1,10 +1,16 @@
-#include "exiftool.h"
+#include "Metadata/ExifTool.h"
 
 ExifTool::ExifTool()
 {
-//    QUrl etUrl(qApp->applicationDirPath() + "/et.exe");
-//    exifToolPath = etUrl.path();
     exifToolPath = qApp->applicationDirPath() + "/et.exe";
+    QStringList startArgs;
+    startArgs << "-stay_open";
+    startArgs << "True";
+    startArgs << "-@";
+    startArgs << "-";
+    startArgs << "-execute";
+    process.start(exifToolPath, startArgs);   // exifToolPath = path to ExifTool.exe or ExifTool.app
+    process.waitForStarted(3000);
 }
 
 int ExifTool::execute(QStringList &args)
@@ -14,6 +20,61 @@ int ExifTool::execute(QStringList &args)
     Utilities::log(__FUNCTION__, exifToolPath);
     qDebug() << __FUNCTION__ << args;
     return QProcess::execute(exifToolPath, args);
+}
+
+void ExifTool::overwrite()
+{
+    isOverWrite = true;
+}
+
+int ExifTool::close()
+{
+    QByteArray closeArgs;
+    closeArgs += "-stay_open\n";
+    closeArgs += "False\n";
+    process.write(closeArgs);
+    if (process.waitForFinished(30000))
+        qDebug() << __FUNCTION__ << "ExifTool exit code =" << process.exitCode();
+    else qWarning("ExifTool::copyAll process.waitForFinished failed");
+
+    return process.exitCode();
+}
+
+void ExifTool::copyAllTags(QString src, QString dst)
+{
+    QByteArray args;
+    args += "-TagsFromFile\n";
+    args += src.toUtf8() + "\n";
+    args += "-all:all\n";
+    if (isOverWrite) args += "-overwrite_original\n";
+    args += dst.toUtf8() + "\n";
+    args += "-execute\n";
+    process.write(args);
+}
+
+void ExifTool::copyICC(QString src, QString dst)
+{
+    QByteArray args;
+    args += "-TagsFromFile\n";
+    args += src.toUtf8() + "\n";
+    args += "-icc_profile\n";
+    if (isOverWrite) args += "-overwrite_original\n";
+    args += dst.toUtf8() + "\n";
+    args += "-execute\n";
+    process.write(args);
+}
+
+void ExifTool::addThumb(QString src, QString dst)
+{
+//    '-ThumbnailImage<=thumb.jpg' dst.jpg
+    QByteArray args;
+//    args += "-thumbnailimage<=:/thumb.jpg\n";
+    args += "-thumbnailimage<=" + src.toUtf8() + "\n";
+    if (isOverWrite) args += "-overwrite_original\n";
+    args += dst.toUtf8() + "\n";
+    args += "-execute\n";
+    process.write(args);
+    process.waitForBytesWritten(1000);
 }
 
 int ExifTool::copyAll(QString src, QString dst)
@@ -28,6 +89,9 @@ int ExifTool::copyAll(QString src, QString dst)
 
 int ExifTool::copyAll(const QStringList &src, QStringList &dst)
 {
+/*
+
+*/
     // initial arguments to keep ExifTool open
     QStringList stayOpen;
     stayOpen << "-stay_open";
@@ -49,15 +113,16 @@ int ExifTool::copyAll(const QStringList &src, QStringList &dst)
     args += "-stay_open\n";
     args += "False\n";
 
-    QProcess et;
-    et.start(exifToolPath, stayOpen);   // exifToolPath = path to ExifTool.exe or ExifTool.app
-    et.waitForStarted(3000);
+    QProcess process;
+    process.start(exifToolPath, stayOpen);   // exifToolPath = path to ExifTool.exe or ExifTool.app
+    process.waitForStarted(3000);
     // stdin
-    et.write(args);
-    if (et.waitForFinished(30000)) qDebug() << __FUNCTION__ << "ExifTool exit code =" << et.exitCode();
-    else qDebug() << __FUNCTION__ << "et.waitForFinished failed";
+    process.write(args);
+    if (process.waitForFinished(30000))
+        qDebug() << __FUNCTION__ << "ExifTool exit code =" << process.exitCode();
+    else qWarning("ExifTool::copyAll process.waitForFinished failed");
 
-    return et.exitCode();
+    return process.exitCode();
 }
 
 /* this works: Yes

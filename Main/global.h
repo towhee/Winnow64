@@ -204,6 +204,7 @@ namespace G
     extern bool showAllTableColumns;
     extern bool isNewFolderLoaded;
     extern bool isInitializing;
+    extern bool isNewSelection;
     extern int scrollBarThickness;
     extern int propertyWidgetMarginLeft;
     extern int propertyWidgetMarginRight;

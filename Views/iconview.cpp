@@ -769,6 +769,7 @@ void IconView::selectThumb(QModelIndex idx)
     if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__ << idx;
     if (idx.isValid()) {
+        G::isNewSelection = true;
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
     }
@@ -853,6 +854,7 @@ void IconView::selectFirst()
 void IconView::selectLast()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+    qDebug() << __FUNCTION__;
     selectThumb(getLastRow());
 }
 

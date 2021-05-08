@@ -1279,40 +1279,47 @@ release\.rcc\qrc_winnow.cpp: winnow.qrc \
 		images\checkbox_unchecked_hover.png \
 		images\radiobutton_checked_pressed.png \
 		images\spindown_hover.png \
-		images\icon16\Z-A.png \
-		images\icon16\link.png \
-		images\icon16\refresh.png \
-		images\icon16\morevertthin.png \
-		images\icon16\close.png \
+		images\icon16\rawjpeg.png \
+		images\icon16\norainbow1.png \
+		images\icon16\moderate.png \
 		images\icon16\swap.png \
-		images\icon16\foldertree.png \
-		images\icon16\anchor.png \
-		images\icon16\delete.png \
-		images\icon16\lightning.png \
-		images\icon16\graphic.png \
-		images\icon16\A-Z.png \
-		images\icon16\filter.png \
-		images\icon16\rectangle.png \
-		images\icon16\slideshow.png \
-		images\icon16\up.png \
-		images\icon16\emboss_ridge.png \
+		images\icon16\thrifty.png \
+		images\icon16\new.png \
+		images\icon16\greedy.png \
 		images\icon16\lightning1.png \
 		images\icon16\subfolders.png \
-		images\icon16\text.png \
-		images\icon16\emboss_gradient_brighter.png \
-		images\icon16\down.png \
-		images\icon16\delta.png \
-		images\icon16\emboss_offset_trough.png \
-		images\icon16\emboss_gradient_darker.png \
 		images\icon16\emboss_offset_ridge.png \
-		images\icon16\questionmark.png \
-		images\icon16\emboss_flat.png \
-		images\icon16\tile.png \
-		images\icon16\colorwheel.png \
-		images\icon16\gear.png \
-		images\icon16\new.png \
+		images\icon16\rainbow.png \
 		images\icon16\emboss_trough.png \
-		images\icon16\rawjpeg.png \
+		images\icon16\emboss_flat.png \
+		images\icon16\emboss_ridge.png \
+		images\icon16\questionmark.png \
+		images\icon16\down.png \
+		images\icon16\gear.png \
+		images\icon16\anchor.png \
+		images\icon16\text.png \
+		images\icon16\emboss_offset_trough.png \
+		images\icon16\filter.png \
+		images\icon16\rainbow1.png \
+		images\icon16\emboss_gradient_brighter.png \
+		images\icon16\lightning.png \
+		images\icon16\delta.png \
+		images\icon16\A-Z.png \
+		images\icon16\graphic.png \
+		images\icon16\norainbow.png \
+		images\icon16\colorwheel.png \
+		images\icon16\Z-A.png \
+		images\icon16\refresh.png \
+		images\icon16\up.png \
+		images\icon16\link.png \
+		images\icon16\morevertthin.png \
+		images\icon16\delete.png \
+		images\icon16\tile.png \
+		images\icon16\emboss_gradient_darker.png \
+		images\icon16\slideshow.png \
+		images\icon16\close.png \
+		images\icon16\rectangle.png \
+		images\icon16\foldertree.png \
 		qss\winnow.css \
 		Docs\versions.html \
 		"Docs\Winnow help.html" \
@@ -1830,6 +1837,7 @@ release\.moc\moc_imagecache.cpp: Cache\imagecache.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -3984,6 +3992,7 @@ release\.moc\moc_mdcache.cpp: Cache\mdcache.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -4104,6 +4113,7 @@ release\.moc\moc_mdcache.cpp: Cache\mdcache.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
 		Image\thumb.h \
+		ImageFormats\TIFF\tiff.h \
 		release\.moc\moc_predefs.h \
 		C:\Qt\5.15.2\msvc2019_64\bin\moc.exe
 	C:\Qt\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/.moc/moc_predefs.h" -IC:/Qt/5.15.2/msvc2019_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.15.2/msvc2019_64/include -IC:/Qt/5.15.2/msvc2019_64/include/QtWidgets -IC:/Qt/5.15.2/msvc2019_64/include/QtGui -IC:/Qt/5.15.2/msvc2019_64/include/QtANGLE -IC:/Qt/5.15.2/msvc2019_64/include/QtConcurrent -IC:/Qt/5.15.2/msvc2019_64/include/QtXmlPatterns -IC:/Qt/5.15.2/msvc2019_64/include/QtNetwork -IC:/Qt/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Cache\mdcache.h -o release\.moc\moc_mdcache.cpp
@@ -4606,6 +4616,7 @@ release\.moc\moc_buildfilters.cpp: Datamodel\buildfilters.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -5216,6 +5227,7 @@ release\.moc\moc_datamodel.cpp: Datamodel\datamodel.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -7791,6 +7803,7 @@ release\.moc\moc_ingestdlg.cpp: Dialogs\ingestdlg.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -10855,6 +10868,7 @@ release\.moc\moc_saveasdlg.cpp: Dialogs\saveasdlg.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -13645,6 +13659,7 @@ release\.moc\moc_embel.cpp: Embellish\embel.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -14287,6 +14302,7 @@ release\.moc\moc_embelexport.cpp: Embellish\embelexport.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -14433,7 +14449,6 @@ release\.moc\moc_embelexport.cpp: Embellish\embelexport.h \
 		release\.ui\ui_embelCoord.h \
 		Embellish\embel.h \
 		Effects\graphicsitemeventfilter.h \
-		Metadata\exiftool.h \
 		release\.moc\moc_predefs.h \
 		C:\Qt\5.15.2\msvc2019_64\bin\moc.exe
 	C:\Qt\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/.moc/moc_predefs.h" -IC:/Qt/5.15.2/msvc2019_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.15.2/msvc2019_64/include -IC:/Qt/5.15.2/msvc2019_64/include/QtWidgets -IC:/Qt/5.15.2/msvc2019_64/include/QtGui -IC:/Qt/5.15.2/msvc2019_64/include/QtANGLE -IC:/Qt/5.15.2/msvc2019_64/include/QtConcurrent -IC:/Qt/5.15.2/msvc2019_64/include/QtXmlPatterns -IC:/Qt/5.15.2/msvc2019_64/include/QtNetwork -IC:/Qt/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Embellish\embelexport.h -o release\.moc\moc_embelexport.cpp
@@ -14934,6 +14949,7 @@ release\.moc\moc_embelproperties.cpp: Embellish\Properties\embelproperties.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -15565,6 +15581,7 @@ release\.moc\moc_bookmarks.cpp: File\bookmarks.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -16171,6 +16188,7 @@ release\.moc\moc_fstree.cpp: File\fstree.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -16891,6 +16909,7 @@ release\.moc\moc_pixmap.cpp: Image\pixmap.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -17482,7 +17501,6 @@ release\.moc\moc_thumb.cpp: Image\thumb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h \
-		Metadata\metadata.h \
 		Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QColor \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QModelIndexList \
@@ -17494,6 +17512,7 @@ release\.moc\moc_thumb.cpp: Image\thumb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
+		Metadata\metadata.h \
 		Metadata\exif.h \
 		Metadata\ifd.h \
 		Metadata\metareport.h \
@@ -17503,6 +17522,7 @@ release\.moc\moc_thumb.cpp: Image\thumb.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -17615,6 +17635,7 @@ release\.moc\moc_thumb.cpp: Image\thumb.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
+		ImageFormats\TIFF\tiff.h \
 		release\.moc\moc_predefs.h \
 		C:\Qt\5.15.2\msvc2019_64\bin\moc.exe
 	C:\Qt\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/.moc/moc_predefs.h" -IC:/Qt/5.15.2/msvc2019_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.15.2/msvc2019_64/include -IC:/Qt/5.15.2/msvc2019_64/include/QtWidgets -IC:/Qt/5.15.2/msvc2019_64/include/QtGui -IC:/Qt/5.15.2/msvc2019_64/include/QtANGLE -IC:/Qt/5.15.2/msvc2019_64/include/QtConcurrent -IC:/Qt/5.15.2/msvc2019_64/include/QtXmlPatterns -IC:/Qt/5.15.2/msvc2019_64/include/QtNetwork -IC:/Qt/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Image\thumb.h -o release\.moc\moc_thumb.cpp
@@ -23305,6 +23326,7 @@ release\.moc\moc_mainwindow.cpp: Main\mainwindow.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -23475,9 +23497,9 @@ release\.moc\moc_mainwindow.cpp: Main\mainwindow.h \
 		Effects\graphicsitemeventfilter.h \
 		Views\infoview.h \
 		Embellish\embelexport.h \
-		Metadata\exiftool.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
+		ImageFormats\TIFF\tiff.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
@@ -23508,6 +23530,7 @@ release\.moc\moc_mainwindow.cpp: Main\mainwindow.h \
 		release\.ui\ui_test12.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		Metadata\exiftool.h \
 		release\.moc\moc_predefs.h \
 		C:\Qt\5.15.2\msvc2019_64\bin\moc.exe
 	C:\Qt\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/.moc/moc_predefs.h" -IC:/Qt/5.15.2/msvc2019_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.15.2/msvc2019_64/include -IC:/Qt/5.15.2/msvc2019_64/include/QtWidgets -IC:/Qt/5.15.2/msvc2019_64/include/QtGui -IC:/Qt/5.15.2/msvc2019_64/include/QtANGLE -IC:/Qt/5.15.2/msvc2019_64/include/QtConcurrent -IC:/Qt/5.15.2/msvc2019_64/include/QtXmlPatterns -IC:/Qt/5.15.2/msvc2019_64/include/QtNetwork -IC:/Qt/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Main\mainwindow.h -o release\.moc\moc_mainwindow.cpp
@@ -24696,6 +24719,7 @@ release\.moc\moc_metadata.cpp: Metadata\metadata.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -30537,6 +30561,7 @@ release\.moc\moc_compareImages.cpp: Views\compareImages.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -31172,6 +31197,7 @@ release\.moc\moc_compareview.cpp: Views\compareview.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -31805,6 +31831,7 @@ release\.moc\moc_iconview.cpp: Views\iconview.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -32917,6 +32944,7 @@ release\.moc\moc_imageview.cpp: Views\imageview.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -33575,6 +33603,7 @@ release\.moc\moc_infostring.cpp: Views\infostring.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -34210,6 +34239,7 @@ release\.moc\moc_infoview.cpp: Views\infoview.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -34832,6 +34862,7 @@ release\.moc\moc_tableview.cpp: Views\tableview.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -37054,6 +37085,7 @@ release\.obj\imagecache.obj: Cache\imagecache.cpp Cache\imagecache.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -39226,6 +39258,7 @@ release\.obj\mdcache.obj: Cache\mdcache.cpp Main\global.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -39345,7 +39378,8 @@ release\.obj\mdcache.obj: Cache\mdcache.cpp Main\global.h \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
-		Image\thumb.h
+		Image\thumb.h \
+		ImageFormats\TIFF\tiff.h
 
 release\.obj\buildfilters.obj: Datamodel\buildfilters.cpp Datamodel\buildfilters.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -39845,6 +39879,7 @@ release\.obj\buildfilters.obj: Datamodel\buildfilters.cpp Datamodel\buildfilters
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -40452,6 +40487,7 @@ release\.obj\datamodel.obj: Datamodel\datamodel.cpp Datamodel\datamodel.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -43037,6 +43073,7 @@ release\.obj\ingestdlg.obj: Dialogs\ingestdlg.cpp Dialogs\ingestdlg.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -46125,6 +46162,7 @@ release\.obj\saveasdlg.obj: Dialogs\saveasdlg.cpp Dialogs\saveasdlg.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -50290,6 +50328,7 @@ release\.obj\embel.obj: Embellish\embel.cpp Embellish\embel.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -50930,6 +50969,7 @@ release\.obj\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embel
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -51103,9 +51143,9 @@ release\.obj\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embel
 		Effects\graphicsitemeventfilter.h \
 		Views\infoview.h \
 		Embellish\embelexport.h \
-		Metadata\exiftool.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
+		ImageFormats\TIFF\tiff.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
@@ -51135,7 +51175,8 @@ release\.obj\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embel
 		release\.ui\ui_message.h \
 		release\.ui\ui_test12.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		Metadata\exiftool.h
 
 release\.obj\embelexport.obj: Embellish\embelexport.cpp Embellish\embelexport.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -51632,6 +51673,7 @@ release\.obj\embelexport.obj: Embellish\embelexport.cpp Embellish\embelexport.h 
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -51777,8 +51819,7 @@ release\.obj\embelexport.obj: Embellish\embelexport.cpp Embellish\embelexport.h 
 		Dialogs\manageimagesdlg.h \
 		release\.ui\ui_embelCoord.h \
 		Embellish\embel.h \
-		Effects\graphicsitemeventfilter.h \
-		Metadata\exiftool.h
+		Effects\graphicsitemeventfilter.h
 
 release\.obj\bookmarks.obj: File\bookmarks.cpp File\bookmarks.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -52275,6 +52316,7 @@ release\.obj\bookmarks.obj: File\bookmarks.cpp File\bookmarks.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -52878,6 +52920,7 @@ release\.obj\fstree.obj: File\fstree.cpp File\fstree.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -53971,6 +54014,7 @@ release\.obj\pixmap.obj: Image\pixmap.cpp Image\pixmap.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -54559,7 +54603,6 @@ release\.obj\thumb.obj: Image\thumb.cpp Image\thumb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwidgetaction.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qwizard.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\qtwidgetsversion.h \
-		Metadata\metadata.h \
 		Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QColor \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QModelIndexList \
@@ -54571,6 +54614,7 @@ release\.obj\thumb.obj: Image\thumb.cpp Image\thumb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
+		Metadata\metadata.h \
 		Metadata\exif.h \
 		Metadata\ifd.h \
 		Metadata\metareport.h \
@@ -54580,6 +54624,7 @@ release\.obj\thumb.obj: Image\thumb.cpp Image\thumb.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -54691,7 +54736,8 @@ release\.obj\thumb.obj: Image\thumb.cpp Image\thumb.h \
 		Datamodel\filters.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
+		ImageFormats\TIFF\tiff.h
 
 release\.obj\canon.obj: ImageFormats\Canon\canon.cpp ImageFormats\Canon\canon.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -62590,6 +62636,7 @@ release\.obj\main.obj: Main\main.cpp Main\mainwindow.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -62760,9 +62807,9 @@ release\.obj\main.obj: Main\main.cpp Main\mainwindow.h \
 		Effects\graphicsitemeventfilter.h \
 		Views\infoview.h \
 		Embellish\embelexport.h \
-		Metadata\exiftool.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
+		ImageFormats\TIFF\tiff.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
@@ -62793,6 +62840,7 @@ release\.obj\main.obj: Main\main.cpp Main\mainwindow.h \
 		release\.ui\ui_test12.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		Metadata\exiftool.h \
 		Main\qtsingleapplication.h
 
 release\.obj\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
@@ -63294,6 +63342,7 @@ release\.obj\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -63464,9 +63513,9 @@ release\.obj\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		Effects\graphicsitemeventfilter.h \
 		Views\infoview.h \
 		Embellish\embelexport.h \
-		Metadata\exiftool.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
+		ImageFormats\TIFF\tiff.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
@@ -63496,7 +63545,8 @@ release\.obj\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		release\.ui\ui_message.h \
 		release\.ui\ui_test12.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		Metadata\exiftool.h
 
 release\.obj\qtlocalpeer.obj: Main\qtlocalpeer.cpp Main\qtlocalpeer.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QLocalServer \
@@ -64407,7 +64457,7 @@ release\.obj\exif.obj: Metadata\exif.cpp Metadata\exif.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qxmlstream.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qtcoreversion.h
 
-release\.obj\exiftool.obj: Metadata\exiftool.cpp Metadata\exiftool.h \
+release\.obj\exiftool.obj: Metadata\exiftool.cpp Metadata\ExifTool.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgetsDepends \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QtCore \
@@ -67064,6 +67114,7 @@ release\.obj\metadata.obj: Metadata\metadata.cpp Metadata\metadata.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -68729,6 +68780,7 @@ release\.obj\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\pref
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -68892,9 +68944,9 @@ release\.obj\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\pref
 		Effects\graphicsitemeventfilter.h \
 		Views\infoview.h \
 		Embellish\embelexport.h \
-		Metadata\exiftool.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
+		ImageFormats\TIFF\tiff.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
@@ -68924,7 +68976,8 @@ release\.obj\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\pref
 		release\.ui\ui_message.h \
 		release\.ui\ui_test12.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		Metadata\exiftool.h
 
 release\.obj\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEditor\propertyeditor.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -69431,6 +69484,7 @@ release\.obj\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEdito
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -69595,9 +69649,9 @@ release\.obj\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEdito
 		Effects\graphicsitemeventfilter.h \
 		Views\infoview.h \
 		Embellish\embelexport.h \
-		Metadata\exiftool.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
+		ImageFormats\TIFF\tiff.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
@@ -69627,7 +69681,8 @@ release\.obj\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEdito
 		release\.ui\ui_message.h \
 		release\.ui\ui_test12.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		Metadata\exiftool.h
 
 release\.obj\propertydelegate.obj: PropertyEditor\propertydelegate.cpp PropertyEditor\propertydelegate.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -74714,6 +74769,7 @@ release\.obj\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h 
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -74880,9 +74936,9 @@ release\.obj\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h 
 		Effects\graphicsitemeventfilter.h \
 		Views\infoview.h \
 		Embellish\embelexport.h \
-		Metadata\exiftool.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
+		ImageFormats\TIFF\tiff.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
@@ -74912,7 +74968,8 @@ release\.obj\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h 
 		release\.ui\ui_message.h \
 		release\.ui\ui_test12.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		Metadata\exiftool.h
 
 release\.obj\usb.obj: Utilities\usb.cpp Utilities\usb.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QtWidgets \
@@ -76859,6 +76916,7 @@ release\.obj\compareImages.obj: Views\compareImages.cpp Views\compareImages.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -77491,6 +77549,7 @@ release\.obj\compareview.obj: Views\compareview.cpp Views\compareview.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -78121,6 +78180,7 @@ release\.obj\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -78294,9 +78354,9 @@ release\.obj\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		Effects\graphicsitemeventfilter.h \
 		Views\infoview.h \
 		Embellish\embelexport.h \
-		Metadata\exiftool.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
+		ImageFormats\TIFF\tiff.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
@@ -78326,7 +78386,8 @@ release\.obj\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		release\.ui\ui_message.h \
 		release\.ui\ui_test12.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		Metadata\exiftool.h
 
 release\.obj\iconviewdelegate.obj: Views\iconviewdelegate.cpp Views\iconviewdelegate.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QtGui \
@@ -79314,6 +79375,7 @@ release\.obj\imageview.obj: Views\imageview.cpp C:\Qt\5.15.2\msvc2019_64\include
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -79969,6 +80031,7 @@ release\.obj\infoview.obj: Views\infoview.cpp Views\infoview.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -80588,6 +80651,7 @@ release\.obj\tableview.obj: Views\tableview.cpp Views\tableview.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -81206,6 +81270,7 @@ release\.obj\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		Metadata\imagemetadata.h \
 		Metadata\iptc.h \
 		Metadata\gps.h \
+		Metadata\ExifTool.h \
 		Metadata\xmp.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
 		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
@@ -81380,9 +81445,9 @@ release\.obj\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		Effects\graphicsitemeventfilter.h \
 		Views\infoview.h \
 		Embellish\embelexport.h \
-		Metadata\exiftool.h \
 		Cache\mdcache.h \
 		Image\thumb.h \
+		ImageFormats\TIFF\tiff.h \
 		Dialogs\ingestdlg.h \
 		release\.ui\ui_ingestautopath.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QFrame \
@@ -81412,7 +81477,8 @@ release\.obj\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		release\.ui\ui_message.h \
 		release\.ui\ui_test12.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGroupBox \
-		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QPushButton \
+		Metadata\exiftool.h
 
 release\.obj\qrc_winnow.obj: release\.rcc\qrc_winnow.cpp 
 

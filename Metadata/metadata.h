@@ -15,6 +15,7 @@
 #include "Metadata/metareport.h"
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
+#include "Metadata/ExifTool.h"
 #include "xmp.h"
 #include "ui_metadatareport.h"
 
@@ -97,7 +98,6 @@ public:
 
     void clearMetadata();
     bool writeMetadata(const QString &imageFileName, ImageMetadata m, QByteArray &buffer);
-
 
     QFile file;
     bool okToReadXmp;

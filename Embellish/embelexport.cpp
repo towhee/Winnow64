@@ -142,9 +142,9 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
 void EmbelExport::exportImages(const QStringList &srcList)
 {
 /*
-    Images within the current filtration that are picked or selected are rendered with
-    the current embellish template and saved to the template output folder. This is called
-    from MW::exportEmbel.
+    Each image in the list is rendered to the assigned embellish template. The metadata is
+    copied from the source image file to the exported image file. Finally, the ICC color space
+    is updated.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
 
@@ -169,6 +169,7 @@ void EmbelExport::exportImages(const QStringList &srcList)
 
     QFileInfo filedir(srcList.at(0));
     QString folderPath = filedir.dir().path();
+    QStringList thumbList;
 
     G::popUp->setProgressVisible(true);
     G::popUp->setProgressMax(count);
@@ -176,21 +177,43 @@ void EmbelExport::exportImages(const QStringList &srcList)
                   " embellished images to " + folderPath +
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
     G::popUp->showPopup(txt, 0, true, 1);
+    exportingEmbellishedImages = true;
 
-    QStringList dstList;
+    ExifTool et;
+    et.overwrite();
+//    QStringList dstList;
     for (int i = 0; i < count; i++) {
         G::popUp->setProgress(i+1);
         qApp->processEvents();
         if (abort) break;
-        exportImage(srcList.at(i));
-        dstList << lastFileExportedPath;
+        QString src = srcList.at(i);
+        // embellish src image
+        exportImage(src);
+        QString dst = lastFileExportedPath;
+        QString dstThumb = lastFileExportedThumbPath;
+        thumbList << dstThumb;
+        // copy all metadata tags from src to dst
+        et.copyAllTags(src, dst);
+        // copy ICC from src to dst
+        et.copyICC(src, dst);
+        // add thumbnail to dst
+        et.addThumb(dstThumb, dst);
+    }
+    et.close();
+    exportingEmbellishedImages = false;
+
+    // delete the thumbnail files
+    for (int i = 0; i < thumbList.length(); ++i) {
+        QFile::remove(thumbList.at(i));
     }
 
-    if (embelProperties->copyMetadata) {
-        ExifTool et;
-        int exitCode = et.copyAll(srcList, dstList);
-        if (exitCode != 0 && G::isLogger) Utilities::log(__FUNCTION__, "ExifTool exit code = " + QString::number(exitCode));
-    }
+//    if (embelProperties->copyMetadata) {
+//        ExifTool et;
+//        // copy all metadata
+//        int exitCode = et.copyAll(srcList, dstList);
+//        if (exitCode != 0 && G::isLogger) Utilities::log(__FUNCTION__, "ExifTool exit code = " + QString::number(exitCode));
+//        // add thumbnail
+//    }
 
     G::popUp->setProgressVisible(false);
     G::popUp->hide();
@@ -203,31 +226,31 @@ void EmbelExport::exportImages(const QStringList &srcList)
         G::popUp->showPopup("Export has been aborted", 1500);
         return;
     }
-
-//    qint64 ms = t.elapsed();
-//    QString _ms = QString("%L1").arg(ms);
-//    double sec = ms * 1.0 / 1000;
-//    QString _sec = QString::number(sec, 'g', 2);
-//    QString second;
-//    sec > 1 ? second = " seconds." : second = " second.";
-//    int msperim = static_cast<int>(ms * 1.0 / count);
-//    QString _msperim = QString("%L1").arg(msperim);
-//    QString msg = "Rendered and exported " +
-//                  QString::number(count) + " images.<p>"
-//                  "Elapsed time " + _sec + second + "<p>" +
-//                  _msperim + " milliseconds per image.<p>" +
-//                  "<hr>" +
-//                  "Press <font color=\"red\"><b>Esc</b></font> to continue";
-//    G::popUp->showPopup(msg, 2000);
+    /*
+    qint64 ms = t.elapsed();
+    QString _ms = QString("%L1").arg(ms);
+    double sec = ms * 1.0 / 1000;
+    QString _sec = QString::number(sec, 'g', 2);
+    QString second;
+    sec > 1 ? second = " seconds." : second = " second.";
+    int msperim = static_cast<int>(ms * 1.0 / count);
+    QString _msperim = QString("%L1").arg(msperim);
+    QString msg = "Rendered and exported " +
+                  QString::number(count) + " images.<p>"
+                  "Elapsed time " + _sec + second + "<p>" +
+                  _msperim + " milliseconds per image.<p>" +
+                  "<hr>" +
+                  "Press <font color=\"red\"><b>Esc</b></font> to continue";
+    G::popUp->showPopup(msg, 2000);
+    //*/
 }
 
 void EmbelExport::exportImage(const QString &fPath)
 {
 /*
     The image file is read and embellished.  The resulting graphics scene is copied to a new
-    QImage and saved to the assigned image format (jpg, png or tif).  The metadata is copied
-    from the source image file to the exported image file.  Finally, the ICC color space is
-    updated.
+    QImage and saved to the assigned image format (jpg, png or tif).  A thumbnail is created
+    and saved to ":/thumb.jpg" in the export folder.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     QString extension = embelProperties->exportFileType;
@@ -236,6 +259,7 @@ void EmbelExport::exportImage(const QString &fPath)
     QString exportFolder = exportFolderPath(fPath);
     qDebug() << __FUNCTION__ << fPath << exportFolder;
     QString exportPath = exportFolder + "/" + baseName + "." + extension;
+    QString exportThumbPath = exportFolder + "/" + baseName + "_thumb." + extension;
 
     // Check if destination image file already exists
     if (!embelProperties->overwriteFiles) Utilities::uniqueFilePath(exportPath);
@@ -260,11 +284,11 @@ void EmbelExport::exportImage(const QString &fPath)
     if (extension == "PNG") image.save(exportPath, "PNG", 100);
     if (extension == "TIF") image.save(exportPath, "TIF");
 
-    // Copy the metadata from the source image to the embellished image
-
-
-    // Update the ICC color profile
-
+    // add thumbnail
+    QImage thumb = image.scaled(160, 160, Qt::KeepAspectRatio);
+    lastFileExportedThumbPath = exportThumbPath;
+    thumb.save(lastFileExportedThumbPath, "JPG", 60);
+//    thumb.save(":/thumb.jpg", "JPG", 60);
 
     lastFileExportedPath = exportPath;
 }

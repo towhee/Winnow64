@@ -84,6 +84,7 @@ namespace G
     bool showAllTableColumns;
     bool isNewFolderLoaded;
     bool isInitializing;
+    bool isNewSelection;
     int scrollBarThickness = 14;        // Also set in winnowstyle.css for vertical and horizontal
     int propertyWidgetMarginLeft = 5;
     int propertyWidgetMarginRight = 2;

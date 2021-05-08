@@ -161,5 +161,12 @@
         <file>images/icon16/lightning1.png</file>
         <file>images/icon16/tile.png</file>
         <file>images/video.png</file>
+        <file>images/icon16/rainbow.png</file>
+        <file>images/icon16/norainbow.png</file>
+        <file>images/icon16/greedy.png</file>
+        <file>images/icon16/moderate.png</file>
+        <file>images/icon16/thrifty.png</file>
+        <file>images/icon16/rainbow1.png</file>
+        <file>images/icon16/norainbow1.png</file>
     </qresource>
 </RCC>
