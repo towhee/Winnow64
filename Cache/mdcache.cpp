@@ -76,19 +76,6 @@ When the user selects a thumbnail or a filter or sort has been invoked.
 
     • Load ImageView either from the cache or directly from the file if not cached.
 
-Thread management
-
-    Thread collisions and preformance degradation occur if metadataCacheThread and
-    imageCacheThread run concurrently. The metadata cache thread is initiated from MW and the
-    image cache thread is always initiated from this thread - metadataCacheThread.
-
-    Both threads are initiated from singleShot timers.  If file selection is changing rapidly
-    (user holding down arrow key) or rapid scrolling is occurring then the timer prevents
-    cache updates until a pause occurs.
-
-    Timers cannot be initiated in another thread, so MW must be signaled to execute a 2nd pass
-    of the metadata cache for a new folder and when the image cache is initiated.
-
 */
 
 MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
@@ -121,7 +108,7 @@ MetadataCache::~MetadataCache()
     wait();
 }
 
-void MetadataCache::stopMetadateCache()
+void MetadataCache::stopMetadataCache()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__;
@@ -275,6 +262,7 @@ void MetadataCache::scrollChange(QString source)
     A chunk of metadata and icons are added to the datamodel and icons outside the caching
     limits are removed (not visible and not with chunk range)
 */
+//    return;
     if (G::isLogger) G::log(__FUNCTION__); 
     if (isRunning()) {
         mutex.lock();
@@ -298,7 +286,8 @@ void MetadataCache::sizeChange(QString source)
     This function is called when the number of icons visible in the viewport changes when the
     icon size or the viewport change size.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+//    return;
+    if (G::isLogger) G::log(__FUNCTION__, "called by = " + source);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -320,6 +309,7 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
     This function is called from MW::fileSelectionChange. A chunk of metadata and icons are
     added to the datamodel. The image cache is updated.
 */
+//    return;
     if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__;
     if (isRunning()) {
@@ -363,6 +353,7 @@ void MetadataCache::setRange()
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     int rowCount = dm->sf->rowCount();
+//    qDebug() << __FUNCTION__ << rowCount;
 
     // default total per page (prev, curr and next pages)
     int dtpp = metadataChunkSize / 3;
@@ -381,7 +372,7 @@ void MetadataCache::setRange()
     // last to cache (endRow)
     endRow = lastIconVisible + tpp;
     if (endRow - startRow < metadataChunkSize) endRow = startRow + metadataChunkSize;
-    if (endRow >= rowCount) endRow = rowCount;
+    if (endRow >= rowCount) endRow = rowCount - 1;
 
     prevFirstIconVisible = firstIconVisible;
     prevLastIconVisible = lastIconVisible;
@@ -545,13 +536,11 @@ void MetadataCache::readIconChunk()
 //    qDebug() << __FUNCTION__;
     int start = startRow;
     int end = endRow;
-//    mutex.lock();
     if (end > dm->sf->rowCount()) end = dm->sf->rowCount();
     if (cacheAllIcons) {
         start = 0;
         end = dm->sf->rowCount();
     }
-//    mutex.unlock();
     /*
     qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
              << "rowCount =" << dm->sf->rowCount()
@@ -566,7 +555,6 @@ void MetadataCache::readIconChunk()
         }
 
         // load icon
-//        mutex.lock();
         QModelIndex idx = dm->sf->index(row, 0);
         if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
             int dmRow = dm->sf->mapToSource(idx).row();
@@ -586,7 +574,6 @@ void MetadataCache::readIconChunk()
                 iconsCached.append(dmRow);
             }
         }
-//        mutex.unlock();
     }
 
     // process entire range
@@ -597,7 +584,6 @@ void MetadataCache::readIconChunk()
         }
 
         // load icon
-//        mutex.lock();
         QModelIndex idx = dm->sf->index(row, 0);
         if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
             int dmRow = dm->sf->mapToSource(idx).row();
@@ -617,7 +603,6 @@ void MetadataCache::readIconChunk()
                 iconsCached.append(dmRow);
             }
         }
-//        mutex.unlock();
     }
 
     // reset after a filter change
@@ -635,11 +620,10 @@ void MetadataCache::readMetadataChunk()
 
     int start = startRow;
     int end = endRow;
+//    qDebug() << __FUNCTION__ << startRow << endRow;
     if (cacheAllMetadata) {
         start = 0;
-//        mutex.lock();
         end = dm->sf->rowCount();
-//        mutex.unlock();
     }
 
     /*
@@ -653,10 +637,9 @@ void MetadataCache::readMetadataChunk()
             return;
         }
         // file path and dm source row in case filtered or sorted
-//        mutex.lock();     // rgh mutex
         QModelIndex idx = dm->sf->index(row, 0);
         int dmRow = dm->sf->mapToSource(idx).row();
-
+//        qDebug() << __FUNCTION__ << "readMetadataForItem row =" << dmRow;
         dm->readMetadataForItem(dmRow);
         /*
         QString fPath = idx.data(G::PathRole).toString();
@@ -684,7 +667,6 @@ void MetadataCache::readMetadataChunk()
             }
         }
         */
-//        mutex.unlock();   // rgh mutex
     }
 }
 

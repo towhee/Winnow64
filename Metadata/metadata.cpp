@@ -658,6 +658,7 @@ bool Metadata::parsePanasonic()
 
 bool Metadata::parseJPG(quint32 startOffset)
 {
+//    qDebug() << __FUNCTION__ << p.file.fileName();
     if (G::isLogger) G::log(__FUNCTION__); 
     if (!p.file.isOpen()) {
         qDebug() << __FUNCTION__ << p.file.fileName() << "is not open";
@@ -668,6 +669,10 @@ bool Metadata::parseJPG(quint32 startOffset)
     if (exif == nullptr) exif = new Exif;
     if (gps == nullptr) gps = new GPS;
     p.offset = startOffset;
+    if (p.file.fileName() == "") {
+        qDebug() << __FUNCTION__ << "Blank file name";
+        return false;
+    }
     bool ok = jpeg->parse(p, m, ifd, iptc, exif, gps);
     if (ok && p.report) reportMetadata();
     return ok;
@@ -763,7 +768,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
     if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
 //    G::log(__FUNCTION__, "Source =" + source + "  " + path);
-//    qDebug() << __FUNCTION__ << "called by" << source << path << "p.report =" << p.report;
+//    qDebug() << __FUNCTION__ << "called by" << source << path;
 //    isReport = true;
     p.report = isReport;
 
@@ -777,8 +782,11 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     clearMetadata();
 
     if (p.file.isOpen()) p.file.close();
+    if (p.file.isOpen()) {
+        qDebug() << __FUNCTION__ << "Could not close" << path;
+        return false;
+    }
     p.file.setFileName(path);
-    if (p.file.isOpen()) return false;
 
     if (p.report) {
         p.rpt << "\nFile name = " << path << "\n";

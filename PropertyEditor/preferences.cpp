@@ -100,7 +100,7 @@ itemChange, which is subclassed here.
     if (source == "showThreadActivity") {
         mw->isShowCacheThreadActivity = v.toBool();
         G::showCacheStatus = v.toBool();
-        mw->setCacheParameters();
+        mw->setImageCacheParameters();
     }
 
     if (source == "metadataChunkSize") {
@@ -122,41 +122,23 @@ itemChange, which is subclassed here.
     }
 
     if (source == "imageCacheSizeMethod") {
-        QString s = v.toString();
-        int mb = 0;
-        if (s == "Thrifty") mb = static_cast<int>(G::availableMemoryMB * 0.10);
-        if (s == "Moderate") mb = static_cast<int>(G::availableMemoryMB * 0.50);
-        if (s == "Greedy") mb = static_cast<int>(G::availableMemoryMB * 0.90);
-        if (mb > 0 && mb < 1000) mb = 1000;
-        /*
-        if (s == "Percent of available") {
-            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(true);
-            int pct = static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->value();
-            mb = static_cast<int>((G::availableMemoryMB * static_cast<uint>(pct)) / 100);
-        }
-        else {
-            static_cast<SpinBoxEditor*>(cacheSizePercentOfAvailable)->setEnabled(false);
-        }
-        if (s == "MB") {
-            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(true);
-            mb = static_cast<SpinBoxEditor*>(cacheSizeMB)->value();
-        }
-        else {
-            static_cast<SpinBoxEditor*>(cacheSizeMB)->setEnabled(false);
-            static_cast<SpinBoxEditor*>(cacheSizeMB)->setValue(mb);
-        }
-        */
-        mw->cacheSizeMethod = s;
-        mw->cacheSizeMB = mb;
-        mw->setCacheParameters();
-        QString availMBMsg = QString::number(mw->cacheSizeMB) + " / " + QString::number(G::availableMemoryMB) + " MB";
+//        QString s = v.toString();
+//        int mb = 0;
+//        if (s == "Thrifty") mb = static_cast<int>(G::availableMemoryMB * 0.10);
+//        if (s == "Moderate") mb = static_cast<int>(G::availableMemoryMB * 0.50);
+//        if (s == "Greedy") mb = static_cast<int>(G::availableMemoryMB * 0.90);
+//        if (mb > 0 && mb < 1000) mb = G::availableMemoryMB;
+        mw->setImageCacheSize(v.toString());
+        mw->setImageCacheParameters();
+        QString availMBMsg = QString::number(mw->cacheMaxMB) + " / " +
+                QString::number(G::availableMemoryMB) + " MB";
         static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
     }
 
     if (source == "cacheSizeMB") {
         qDebug() << __FUNCTION__ << v << source;
-        mw->cacheSizeMB = v.toInt();
-        mw->setCacheParameters();
+        mw->cacheMaxMB = v.toInt();
+        mw->setImageCacheParameters();
     }
 
     if (source == "cacheWtAhead") {
@@ -166,14 +148,14 @@ itemChange, which is subclassed here.
         if (v.toString() == "80% ahead") mw->cacheWtAhead = 8;
         if (v.toString() == "90% ahead") mw->cacheWtAhead = 9;
         if (v.toString() == "100% ahead") mw->cacheWtAhead = 10;
-         mw->setCacheParameters();
+         mw->setImageCacheParameters();
     }
 
     if (source == "progressWidthSlider") {
         mw->progressWidth = v.toInt();
         mw->updateProgressBarWidth();
         mw->progressWidthBeforeResizeWindow = mw->progressWidth;
-        mw->setCacheParameters();
+        mw->setImageCacheParameters();
     }
 
     if (source == "slideShowDelay") {
@@ -763,7 +745,7 @@ void Preferences::addItems()
     i.tooltip = "The total amount of available memory in MB.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = QString::number(mw->cacheSizeMB) + " / " + QString::number(G::availableMemoryMB) + " MB";
+    i.value = QString::number(mw->cacheMaxMB) + " / " + QString::number(G::availableMemoryMB) + " MB";
     i.key = "availableMBToCache";
     i.delegateType = DT_Label;
     i.type = "QString";

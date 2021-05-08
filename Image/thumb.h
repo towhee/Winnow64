@@ -3,10 +3,11 @@
 
 #include <QObject>
 #include <QtWidgets>
+#include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
-#include "ImageFormats/Tiff/tiff.h"
+#include "ImageFormats/TIFF/tiff.h"
 
 class Thumb : public QObject
 {
@@ -14,6 +15,9 @@ class Thumb : public QObject
 public:
     explicit Thumb(QObject *parent, DataModel *dm, Metadata *metadata);
     bool loadThumb(QString &fPath, QImage &image);
+    void insertThumbnails(QModelIndexList &selection);
+    bool insertingThumbnails = false;
+    bool abort = false;
 
 private:
     DataModel *dm;

@@ -39,7 +39,7 @@ public:
     void fileSelectionChange(/*bool okayToImageCache*/); // rghcachechange
     void loadAllMetadata();
     void readMetadataIcon(const QModelIndex &idx);
-    void stopMetadateCache();
+    void stopMetadataCache();
     bool isAllMetadataLoaded();
     bool isAllIconLoaded();
     void setRange();

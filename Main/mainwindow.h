@@ -169,6 +169,8 @@ public:
         bool isTableDisplay;
         bool isCompareDisplay;
         bool isEmbelDisplay;
+        bool isColorManage;
+        QString cacheSizeMethod;
     };
     workspaceData ws;   // hold values for workspace n
     workspaceData *w;
@@ -241,7 +243,7 @@ public:
     // preferences: cache
     QString cacheSizeMethod;
     int cacheSizePercentOfAvailable;
-    int cacheSizeMB;
+    int cacheMaxMB;
 //    bool isShowCacheStatus;   // replaced with G::showCacheStatus
     int cacheDelay = 100;
     bool isShowCacheThreadActivity;
@@ -262,6 +264,9 @@ public:
         bool isStatusBar;
     } fullScreenDocks;
     bool isNormalScreen;
+
+    // tooltip for tabs in docked and tabified panels
+//    int prevTabIndex= -1;
 
     QString currentViewDir;
 
@@ -386,8 +391,11 @@ private slots:
     void sortChange(QString src = "Action");
     void updateSortColumn(int sortColumn);
     void reverseSortDirection();
+    void toggleColorManage();
+    void toggleImageCacheMethod();
     void allPreferences();
     void infoViewPreferences();
+    void cachePreferences();
     void preferences(QString text = "");
     void externalAppManager();
     void toggleFullScreen();
@@ -482,7 +490,8 @@ private slots:
     void nextSlide();
     void prevRandomSlide();
 //    void updateImageCacheSize(int mb);
-    void setCacheParameters();
+    void setImageCacheParameters();
+    void setImageCacheSize(QString method);
     void selectAllThumbs();
     void removeBookmark();
     void refreshBookmarks();
@@ -569,6 +578,8 @@ private:
     QMenu *recentFoldersMenu;
     QMenu *ingestHistoryFoldersMenu;
     QMenu *editMenu;
+    QMenu *ratingsMenu;
+    QMenu *labelsMenu;
     QMenu *goMenu;
     QMenu *filterMenu;
     QMenu *sortMenu;
@@ -636,6 +647,7 @@ private:
     QAction *popPickHistoryAction;
     QAction *pickUnlessRejectedAction;
     QAction *filterPickAction;
+    QAction *addThumbnailsAction;
     QAction *rotateLeftAction;
     QAction *rotateRightAction;
     QAction *prefAction;
@@ -757,6 +769,7 @@ private:
 //    QAction *thumbsFitAction;   // used?? rgh
 //    QAction *showThumbLabelsAction;
     QAction *sortReverseAction;
+    QAction *colorManageToggeAction;
 
     // Window Menu
     QAction *defaultWorkspaceAction;
@@ -839,6 +852,8 @@ private:
     QLineEdit *filterBar;
     QLabel *statusLabel;
     BarBtn *reverseSortBtn;
+    BarBtn *colorManageToggleBtn;
+    BarBtn *cacheMethodBtn;
     QLabel *filterStatusLabel;
     QLabel *subfolderStatusLabel;
     QLabel *rawJpgStatusLabel;
@@ -852,6 +867,7 @@ private:
     QLabel *metadataThreadRunningLabel;
     QLabel *thumbThreadRunningLabel;
     QLabel *imageThreadRunningLabel;
+    QLabel *cacheAmountLabel;
     DockWidget *folderDock;
     DockWidget *favDock;
     DockWidget *filterDock;
@@ -1057,6 +1073,7 @@ private:
     double macActualDevicePixelRatio(QPoint loc, QScreen *screen);
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
     void addRecentFolder(QString fPath);
+    void insertThumbnails();
 
     qulonglong memoryReqdForPicks();
     qulonglong memoryReqdForSelection();

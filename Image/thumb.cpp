@@ -144,9 +144,9 @@ bool Thumb::loadFromTiffData(QString &fPath, QImage &image)
 bool Thumb::loadThumb(QString &fPath, QImage &image)
 {
 /*
-Load a thumbnail preview as a decoration icon in the datamodel dm in column 0. Raw, jpg and
-tif files can contain smaller previews. Check if they do and load the smaller preview as that
-is faster than loading the entire full resolution image just to get a thumbnail.
+    Load a thumbnail preview as a decoration icon in the datamodel dm in column 0. Raw, jpg
+    and tif files can contain smaller previews. Check if they do and load the smaller preview
+    as that is faster than loading the entire full resolution image just to get a thumbnail.
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
     /*
@@ -273,3 +273,88 @@ is faster than loading the entire full resolution image just to get a thumbnail.
     checkOrientation(fPath, image);
     return true;
 }
+
+void Thumb::insertThumbnails(QModelIndexList &selection)
+{
+/*
+
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+
+    int count = selection.count();
+    if (count == 0) {
+        G::popUp->showPopup("No items selected");
+        return;
+    }
+
+
+    // within selection how many missing thumbnails
+    int missingThumbnailCount = 0;
+    for (int i = 0; i < count; ++i) {
+        QModelIndex fullIdx = dm->sf->index(selection.at(i).row(), G::OffsetFullColumn);
+        QModelIndex thumbIdx = dm->sf->index(selection.at(i).row(), G::OffsetThumbColumn);
+        QModelIndex typeIdx = dm->sf->index(selection.at(i).row(), G::TypeColumn);
+        int offsetThumb = thumbIdx.data().toInt();
+        int offsetFull = fullIdx.data().toInt();
+        QString formatType = typeIdx.data().toString().toLower();
+        if (offsetThumb == offsetFull && formatType == "jpg") missingThumbnailCount++;
+    }
+    if (missingThumbnailCount == 0) {
+        G::popUp->showPopup("No jpg with missing thumbnails");
+        return;
+    }
+
+    G::popUp->setProgressVisible(true);
+    G::popUp->setProgressMax(count);
+    QString txt = "Adding thumbnail(s) for " + QString::number(missingThumbnailCount) +
+                  " images <p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+    G::popUp->showPopup(txt, 0, true, 1);
+    insertingThumbnails = true;
+
+    ExifTool et;
+    et.overwrite();
+    QStringList thumbList;
+    for (int i = 0; i < count; ++i) {
+        G::popUp->setProgress(i+1);
+        qApp->processEvents();
+        if (abort) break;
+
+        // check if already a thumbnail
+        int offsetThumb = selection.at(i).data(G::OffsetThumbColumn).toInt();
+        int offsetFull = selection.at(i).data(G::OffsetFullColumn).toInt();
+        if (offsetThumb != offsetFull) continue;
+
+        // collect path information
+        QString fPath = selection.at(i).data(G::PathRole).toString();
+        QFileInfo info(fPath);
+        QString folder = info.dir().path();
+        QString base = info.baseName();
+        QString thumbPath = folder + "/" + base + "_thumb.jpg";
+
+        // add this thumbPath to the list
+        thumbList << thumbPath;
+
+//        qDebug() << __FUNCTION__ << i
+//                 << "fPath =" << fPath
+//                 << "thumbPath =" << thumbPath
+//                 ;
+//        continue;
+
+        // create a thumbnail size jpg
+        QImage thumb = QImage(fPath).scaled(160, 160, Qt::KeepAspectRatio);
+        thumb.save(thumbPath, "JPG", 60);
+
+        // add the thumb.jpg to the source file
+        et.addThumb(thumbPath, fPath);
+    }
+    et.close();
+    insertingThumbnails = false;
+
+    // delete the thumbnail files
+    for (int i = 0; i < thumbList.length(); ++i) {
+        QFile::remove(thumbList.at(i));
+    }
+    G::popUp->setProgressVisible(false);
+    G::popUp->hide();
+}
+

@@ -849,7 +849,7 @@ void ImageCache::updateImageCacheList()
     }
 }
 
-void ImageCache::initImageCache(int &cacheSizeMB,
+void ImageCache::initImageCache(int &cacheMaxMB,
      bool &isShowCacheStatus, int &cacheWtAhead,
      bool &usePreview, int &previewWidth, int &previewHeight)
 {
@@ -869,7 +869,7 @@ void ImageCache::initImageCache(int &cacheSizeMB,
     // the cache defaults to the first image and a forward selection direction
     cache.isForward = true;
     // the amount of memory to allocate to the cache
-    cache.maxMB = cacheSizeMB;
+    cache.maxMB = cacheMaxMB;
     cache.isShowCacheStatus = isShowCacheStatus;
     cache.wtAhead = cacheWtAhead;
     cache.targetFirst = 0;
@@ -917,7 +917,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     // pause caching    rgh perhaps enclose entire rebuild in a mutex??
     if (isRunning()) pauseImageCache();
 
-    qDebug() << __FUNCTION__ << "Source:" << source;
+//    qDebug() << __FUNCTION__ << "Source:" << source;
 //    std::cout << diagnostics().toStdString() << std::flush;
 
     // build a new cacheItemList for the filtered/sorted dataset
@@ -1013,6 +1013,7 @@ void ImageCache::run()
     Finally, iterate through the target range, and insert a QImage extracted from the embedded
     JPG to the hash imCache.
 */
+//    return;
     if (G::isLogger) G::log(__FUNCTION__);
     source = "";
     prevCurrentPath = "";
@@ -1160,10 +1161,12 @@ void ImageCache::run()
             if (getImage->load(fPath, image)) {
                 // is there room in cache?
                 int room = cache.maxMB - cache.currMB;
+                /*
                 qDebug() << __FUNCTION__
                          << "cache.toCacheKey =" << cache.toCacheKey
                          << "cacheItemList.count() =" << cacheItemList.count()
                             ;
+                            //*/
                 int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
                 makeRoom(room, roomRqd);
                 /*

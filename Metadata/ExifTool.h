@@ -11,11 +11,19 @@ class ExifTool : public QObject
 public:
     ExifTool();
     int execute(QStringList &args);
+    void copyAllTags(QString src, QString dst);
+    void copyICC(QString src, QString dst);
+    void addThumb(QString src, QString dst);
     int copyAll(QString src, QString dst);
     int copyAll(const QStringList &src, QStringList &dst);
+    void stayOpen();
+    void overwrite();
+    int close();
 
 private:
     QString exifToolPath;
+    QProcess process;
+    bool isOverWrite = false;
 };
 
 #endif // EXIFTOOL_H

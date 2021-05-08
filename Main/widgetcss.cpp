@@ -300,7 +300,7 @@ QString WidgetCSS::tabWidget()
 
     "QTabBar::tab {"
         "color: silver;"
-        "background-color: " + QColor(l10,l10,l10).name() + ";"
+        "background-color: " + QColor(l20,l20,l20).name() + ";"
         "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
         "padding: 4px 4px;"
     "}"

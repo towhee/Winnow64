@@ -36,5 +36,6 @@ void AboutDlg::on_email_linkActivated(const QString &link)
 void AboutDlg::on_webSite_linkActivated(const QString &link)
 {
     QString preventcompilerWarning = link;
-    QDesktopServices::openUrl(QUrl("http://165.227.46.158/winnow/winnow.html?subject=Winnow&body=Hi Rory"));
+    QDesktopServices::openUrl(QUrl("http://winnow.ca/"));
+//    QDesktopServices::openUrl(QUrl("http://165.227.46.158/winnow/winnow.html?subject=Winnow&body=Hi Rory"));
 }

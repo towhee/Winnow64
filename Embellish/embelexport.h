@@ -9,7 +9,7 @@
 #include "Cache/imagecache.h"
 #include "Properties/embelproperties.h"
 #include "Embellish/embel.h"
-#include "Metadata/exiftool.h"
+#include "Metadata/ExifTool.h"
 #ifdef Q_OS_WIN
 #include "Utilities/icc.h"
 #endif
@@ -31,6 +31,8 @@ public:
     void exportImage(const QString &fPath);
     QString exportFolderPath(QString folderPath = "");
 
+    bool exportingEmbellishedImages = false;
+
 public slots:
     void abortEmbelExport();
 
@@ -44,6 +46,7 @@ private:
     QGraphicsScene *scene;
     QGraphicsPixmapItem *pmItem;
     QString lastFileExportedPath;
+    QString lastFileExportedThumbPath;
     bool abort = false;
 };
 

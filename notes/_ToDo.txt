@@ -1,6 +1,6 @@
 BUGS / TO DO
-- Start ImageCache slow for D:/Pictures/Zenfolio/pbase2048
-- No such signal MetadataCache::refreshCurrentAfterReload() in Main\mainwindow.cpp:4210
+- Geoff Tif folder crashes
+- Export from LR Winnow does not refresh folder
 - Slideshow of all images on F drive eventually crashed (85000+ images)
 - Filters not working sometimes
 - Not remembering grid mode at opening
@@ -48,6 +48,9 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- End key crash (conflict with calling MetadataCache::scrollChange during fileSelectionChange)
+- added stay_open option for ExifTool
+- Embellish export adds thumbnail to image
 - Filter unstable
 - Increased image compare from 9 to 16
 - Turn caching off while in compare mode or when modifier key pressed

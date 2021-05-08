@@ -44,8 +44,19 @@ PROGRAM FLOW
 
 A new folder is selected which triggers folderSelectionChange:
 
-• All eligible image files (and associated QFileInfo) in the folder are added to the DataModel
-  (dm).
+• Housekeeping:
+  - all threads that may be running are stopped.
+  - set flags to start condition.
+  - folders and bookmarks synced.
+  - filters are cleared (uncheckAllFilters).
+
+• All eligible image files (and associated QFileInfo: path, name, type, size, created date and
+  last modified date) in the folder are added to the DataModel (dm).
+
+• Sort to current sort item and forward/reverse, as the datamodel always loads in the order
+  from QFileInfo - by file name in forward order.
+
+• Current row indexes set to 0.
 
 • The first image thumbnail is selected in thumbView.
 
@@ -56,7 +67,8 @@ A new folder is selected which triggers folderSelectionChange:
   is determined, which is required to calculate the number of icons visible in the thumbView
   and gridview.
 
-• metadataCacheThread->loadNewFolder2ndPass reads the icons and emits loadImageCache.
+• metadataCacheThread->loadNewFolder2ndPass reads the requisite number of icons and emits
+  loadImageCache.
 
 • The imageCacheThread is initialized.  fileSelectionChange is called for the current image
   (the user may have already advanced).
@@ -372,6 +384,17 @@ void MW::initialize()
     isDragDrop = false;
     setAcceptDrops(true);
     setMouseTracking(true);
+    QString msg;
+    colorManageToggleBtn = new BarBtn();
+    msg = "Toggle color manage on/off.  Will take effect when additional images\n"
+          "are added to the cache or when a new folder is selected.";
+    colorManageToggleBtn->setToolTip(msg);
+    connect(colorManageToggleBtn, &BarBtn::clicked, this, &MW::toggleColorManage);
+    cacheMethodBtn = new BarBtn();
+    msg = "Toggle cache size Thrifty > Moderate > Greedy > Thrifty... \n"
+          "Ctrl + Click to open cache preferences.";
+    cacheMethodBtn->setToolTip(msg);
+    connect(cacheMethodBtn, &BarBtn::clicked, this, &MW::toggleImageCacheMethod);
     reverseSortBtn = new BarBtn();
     reverseSortBtn ->setToolTip("Sort direction.  Shortcut to toggle: Opt/Alt + S");
     connect(reverseSortBtn, &BarBtn::clicked, this, &MW::reverseSortDirection);
@@ -468,13 +491,14 @@ void MW::showEvent(QShowEvent *event)
 //    embelProperties->resizeColumns();
 
     G::isInitializing = false;
+    thumbView->selectFirst();
 }
 
 void MW::closeEvent(QCloseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     setCentralMessage("Closing Winnow ...");
-    metadataCacheThread->stopMetadateCache();
+    metadataCacheThread->stopMetadataCache();
     imageCacheThread->stopImageCache();
     if (filterDock->isVisible()) {
         folderDock->raise();
@@ -561,12 +585,17 @@ void MW::keyPressEvent(QKeyEvent *event)
             slideShow();     // toggles slideshow off
             return;
         }
-
+        // exit full screen mode
         if(fullScreenAction->isChecked()) {
             escapeFullScreen();
         }
+        // quit loading datamodel
         if (dm->loadingModel) {
             dm->timeToQuit = true;
+        }
+        // quit adding thumbnails
+        if (thumb->insertingThumbnails) {
+            thumb->abort = true;
         }
     }
 
@@ -656,7 +685,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             && event->type() != QEvent::UpdateRequest
             && event->type() != QEvent::ZeroTimerEvent
             && event->type() != QEvent::Timer
-//            && event->type() == QEvent::MouseMove
+            && event->type() != QEvent::MouseMove
+            && event->type() != QEvent::HoverMove
             )
     {
         qDebug() << __FUNCTION__
@@ -779,25 +809,29 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     /* DOCK TAB TOOLTIPS *****************************************************************
     Show a tooltip for docked widget tabs.
     */
-
-    if (event->type() == QEvent::HoverMove/*MouseMove*/) {      // HoverMove works too
-        if (QString(obj->metaObject()->className()) == "QTabBar") {
+    static int prevTabIndex = -1;
+    if (QString(obj->metaObject()->className()) == "QTabBar") {
+        if (event->type() == QEvent::MouseMove) {      // HoverMove / MouseMove work
             QTabBar *tabBar = qobject_cast<QTabBar *>(obj);
             QMouseEvent *e = static_cast<QMouseEvent *>(event);
             int i = tabBar->tabAt(e->pos());
-            if (i >= 0) {
+            if (i >= 0 && i != prevTabIndex) {
                 QString tip = "";
                 if (tabBar->tabText(i) == folderDockTabText) tip = "System Folders Panel";
                 if (tabBar->tabText(i) == favDockTabText) tip = "Bookmarks Panel";
                 if (tabBar->tabText(i) == filterDockTabText) tip = "Filter Panel";
                 if (tabBar->tabText(i) == metadataDockTabText) tip = "Metadata Panel";
                 if (tabBar->tabText(i) == embelDockTabText) tip = "Embellish Panel";
+                prevTabIndex = i;
                 QFontMetrics fm(QToolTip::font());
                 int h = fm.boundingRect(tip).height();
                 QPoint locPos = geometry().topLeft() + e->pos() + QPoint(0, h*2);
                 QToolTip::hideText();
                 QToolTip::showText(locPos, tip, tabBar);
             }
+        }
+        if (event->type() == QEvent::Leave) {
+            prevTabIndex = -1;
         }
     }
 
@@ -1172,17 +1206,16 @@ void MW::folderSelectionChange()
         G::log("FOLDER CHANGE");
         G::log(__FUNCTION__, currentViewDir);
     }
-//    qDebug() << __FUNCTION__;
+    qDebug() << __FUNCTION__;
 
-//    QApplication::setOverrideCursor(Qt::WaitCursor);
-//    if (G::isTest) testTime.restart(); // rgh remove after performance profiling
-
-     // Stop any threads that might be running.
+    // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
-    metadataCacheThread->stopMetadateCache();
+    metadataCacheThread->stopMetadataCache();
     buildFilters->stop();
     G::allMetadataLoaded = false;
     setWindowTitle(winnowWithVersion);
+
+    clearAll();
 
     // do not embellish
     if (turnOffEmbellish)  embelProperties->invokeFromAction(embelTemplatesActions.at(0));
@@ -1297,23 +1330,27 @@ void MW::folderSelectionChange()
         G::isInitializing = false;
         return;
     }
-    else {
-        // datamodel loaded - initialize indexes
-        currentRow = 0;
-        currentSfIdx = dm->sf->index(currentRow, 0);
-        dm->currentRow = currentRow;
-        currentDmIdx = dm->sf->mapToSource(currentSfIdx);
-    }
 
-    // made it this far, folder must have eligible images and is good-to-go
-    isCurrentFolderOkay = true;
+//    dm->addAllMetadata();
 
     /* update sort if necessary
     qDebug() << __FUNCTION__ << "Sort new folder if necessary"
              << "sortColumn =" << sortColumn
              << "sortReverseAction->isChecked() =" << sortReverseAction->isChecked();
     //*/
-    if (sortColumn != G::NameColumn || sortReverseAction->isChecked()) sortChange();
+    if (sortColumn != G::NameColumn || sortReverseAction->isChecked())
+        sortChange("folderSelectionChange");
+
+    // datamodel loaded - initialize indexes
+    currentRow = 0;
+    currentSfIdx = dm->sf->index(currentRow, 0);
+    dm->currentRow = currentRow;
+    currentDmIdx = dm->sf->mapToSource(currentSfIdx);
+
+    // made it this far, folder must have eligible images and is good-to-go
+    isCurrentFolderOkay = true;
+
+//    /* update sort if necessary (moved above initialize indexes)
 
     // folder change triggered by dragdrop event
     bool dragFileSelected = false;
@@ -1454,7 +1491,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     G::fileSelectionChangeSource = "";
     G::ignoreScrollSignal = false;
 
-    if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stopMetadateCache();
+    if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stopMetadataCache();
 
     // updates ********************************************************************************
 
@@ -1479,16 +1516,28 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
         updateIconsVisible(true);
         metadataCacheThread->fileSelectionChange();
 
-        // Do not image cache if there is an active random slide show or
+        // Do not image cache if there is an active random slide show or a
         // modifier key is pressed
+        Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
+        /*
+       qDebug() << __FUNCTION__ << "IMAGECACHE"
+                 << "isNoModifier =" << (key == Qt::NoModifier)
+                 << "isShiftModifier =" << (key == Qt::ShiftModifier)
+                 << "isControlModifier =" << (key == Qt::ControlModifier)
+                 << "isAltModifier =" << (key == Qt::AltModifier)
+                 << "isShiftAltModifier =" << (key == (Qt::AltModifier | Qt::ShiftModifier))
+                    ;
+       //*/
         if (!(G::isSlideShow && isSlideShowRandom)
-            && (qApp->keyboardModifiers() == Qt::NoModifier)
+            && (key == Qt::NoModifier)
             && (G::mode != "Compare")
            )
         {
             imageCacheThread->setCurrentPosition(dm->currentFilePath);
         }
     }
+
+    G::isNewSelection = false;
 
     // update the metadata panel
     infoView->updateInfo(currentRow);
@@ -1522,10 +1571,12 @@ void MW::folderAndFileSelectionChange(QString fPath)
     before the initial metadata has been cached and the image can be selected.
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
+    setCentralMessage("Loading " + fPath + " ...");
+
     embelProperties->setCurrentTemplate("Do not Embellish");
     QFileInfo info(fPath);
     QString folder = info.dir().absolutePath();
-    if (folder != currentViewDir || isStartupArgs) {
+    if (/*folder != currentViewDir ||*/ isStartupArgs) {
         if (!fsTree->select(folder)) {
             // failure
             return;
@@ -1533,7 +1584,6 @@ void MW::folderAndFileSelectionChange(QString fPath)
         folderSelectionChange();
     }
 
-    setCentralMessage("Loading " + fPath + " ...");
 
     thumbView->selectionModel()->clear();
     thumbView->selectThumb(fPath);
@@ -1565,9 +1615,9 @@ void MW::clearAll()
 */
     if (G::isLogger) G::log(__FUNCTION__);
     // Stop any threads that might be running.
-    qDebug() << __FUNCTION__ << "Stopping image cache";
+//    qDebug() << __FUNCTION__ << "Stopping image cache";
     imageCacheThread->stopImageCache();
-    metadataCacheThread->stopMetadateCache();
+    metadataCacheThread->stopMetadataCache();
 
     G::allMetadataLoaded = false;
     dm->clearDataModel();
@@ -1668,7 +1718,7 @@ void MW::updateIconsVisible(bool useCurrentRow)
     metadataCacheThread->visibleIcons = last - first + 1;
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-    metadataCacheThread->sizeChange(__FUNCTION__);
+//    metadataCacheThread->sizeChange(__FUNCTION__);
 }
 
 //void MW::updateImageCachePosition() // rghcachechange
@@ -1728,7 +1778,8 @@ void MW::thumbHasScrolled()
         updateIconsVisible(false);
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
-        metadataCacheThread->scrollChange(__FUNCTION__);
+        // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
+        if (!G::isNewSelection) metadataCacheThread->scrollChange(__FUNCTION__);
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
         if (idx.isValid()) {
@@ -1770,7 +1821,8 @@ void MW::gridHasScrolled()
         G::ignoreScrollSignal = true;
         updateIconsVisible(false);
         thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
-        metadataCacheThread->scrollChange(__FUNCTION__);
+        // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
+        if (!G::isNewSelection) metadataCacheThread->scrollChange(__FUNCTION__);
     }
     G::ignoreScrollSignal = false;
 }
@@ -1810,7 +1862,8 @@ void MW::tableHasScrolled()
         updateIconsVisible(false);
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, __FUNCTION__);
-        metadataCacheThread->scrollChange(__FUNCTION__);
+        // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
+        if (!G::isNewSelection) metadataCacheThread->scrollChange(__FUNCTION__);
     }
     G::ignoreScrollSignal = false;
 }
@@ -2049,7 +2102,7 @@ void MW::loadImageCacheForNewFolder()
     if (fPath == "") return;
 
     // set image cache parameters and build image cacheItemList
-    int netCacheMBSize = cacheSizeMB - G::metaCacheMB;
+    int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     imageCacheThread->initImageCache(netCacheMBSize,
         G::showCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
@@ -2580,6 +2633,12 @@ void MW::createActions()
     addAction(label5Action);
     connect(label5Action, &QAction::triggered, this, &MW::setColorClass);
 
+    addThumbnailsAction = new QAction(tr("Fix missing thumbnails in JPG"), this);
+    addThumbnailsAction->setObjectName("addThumbnails");
+    addThumbnailsAction->setShortcutVisibleInContextMenu(true);
+    addAction(addThumbnailsAction);
+    connect(addThumbnailsAction, &QAction::triggered, this, &MW::insertThumbnails);
+
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
     rotateRightAction->setShortcutVisibleInContextMenu(true);
@@ -2958,7 +3017,6 @@ void MW::createActions()
     sortGroupAction->addAction(sortTitleAction);
     sortGroupAction->addAction(sortCreatorAction);
 
-//    sortFileNameAction->setChecked(true);
     updateSortColumn(sortColumn);
 
     sortReverseAction = new QAction(tr("Reverse sort order"), this);
@@ -3563,19 +3621,22 @@ void MW::createMenus()
     editMenu->addSeparator();
     editMenu->addAction(searchTextEditAction);
     editMenu->addSeparator();
-    editMenu->addAction(rate0Action);
-    editMenu->addAction(rate1Action);
-    editMenu->addAction(rate2Action);
-    editMenu->addAction(rate3Action);
-    editMenu->addAction(rate4Action);
-    editMenu->addAction(rate5Action);
-    editMenu->addSeparator();
-    editMenu->addAction(label0Action);
-    editMenu->addAction(label1Action);
-    editMenu->addAction(label2Action);
-    editMenu->addAction(label3Action);
-    editMenu->addAction(label4Action);
-    editMenu->addAction(label5Action);
+    ratingsMenu = editMenu->addMenu("Ratings");
+    ratingsMenu->addAction(rate0Action);
+    ratingsMenu->addAction(rate1Action);
+    ratingsMenu->addAction(rate2Action);
+    ratingsMenu->addAction(rate3Action);
+    ratingsMenu->addAction(rate4Action);
+    ratingsMenu->addAction(rate5Action);
+//    editMenu->addSeparator();
+    labelsMenu = editMenu->addMenu("Color labels");
+    labelsMenu->addAction(label0Action);
+    labelsMenu->addAction(label1Action);
+    labelsMenu->addAction(label2Action);
+    labelsMenu->addAction(label3Action);
+    labelsMenu->addAction(label4Action);
+    labelsMenu->addAction(label5Action);
+    editMenu->addAction(addThumbnailsAction);
     editMenu->addSeparator();
     editMenu->addAction(rotateRightAction);
     editMenu->addAction(rotateLeftAction);
@@ -3737,11 +3798,11 @@ void MW::createMenus()
     helpMenu->addAction(checkForUpdateAction);
     helpMenu->addSeparator();
     helpMenu->addAction(aboutAction);
-    helpMenu->addAction(helpAction);
+//    helpMenu->addAction(helpAction);
     helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpWelcomeAction);
-    helpMenu->addSeparator();
-    helpMenu->addAction(helpRevealLogFileAction);
+//    helpMenu->addSeparator();
+//    helpMenu->addAction(helpRevealLogFileAction);
     helpMenu->addSeparator();
     helpDiagnosticsMenu = helpMenu->addMenu(tr("&Diagnostics"));
     helpDiagnosticsMenu->addAction(diagnosticsAllAction);
@@ -4211,8 +4272,8 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(finished2ndPass()),
             this, SLOT(launchBuildFilters()));
 
-    connect(metadataCacheThread, SIGNAL(refreshCurrentAfterReload()),
-            this, SLOT(refreshCurrentAfterReload()));
+//    connect(metadataCacheThread, SIGNAL(refreshCurrentAfterReload()),
+//            this, SLOT(refreshCurrentAfterReload()));
 
     // show progress bar when executing loadEntireMetadataCache
     connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
@@ -5142,7 +5203,7 @@ void MW::createStatusBar()
     // label to show metadataThreadRunning status
     int runLabelWidth = 13;
     metadataThreadRunningLabel = new QLabel;
-    QString mtrl = "Turns red when metadata caching in progress";
+    QString mtrl = "Turns red when metadata/icon caching in progress";
     metadataThreadRunningLabel->setToolTip(mtrl);
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
     updateMetadataThreadRunStatus(false, true, __FUNCTION__);
@@ -5155,7 +5216,15 @@ void MW::createStatusBar()
     imageThreadRunningLabel->setToolTip(itrl);
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
 
+    // label to show cache amount
+//    cacheMethodBtn->setIcon(QIcon(":/images/icon16/thrifty.png"));
+    // setImageCacheSize sets icon
+    setImageCacheSize(cacheSizeMethod);
+    statusBar()->addPermanentWidget(cacheMethodBtn);
+    cacheMethodBtn->show();
+
     // labels/buttons to show various status
+    statusBar()->addWidget(colorManageToggleBtn);
     statusBar()->addWidget(reverseSortBtn);
 
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
@@ -5179,6 +5248,8 @@ void MW::updateStatusBar()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     // remove all icons so can add back in proper order // previously used: if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel); // etc
+    if(colorManageToggleBtn->isVisible())
+        statusBar()->removeWidget(colorManageToggleBtn);
     if(reverseSortBtn->isVisible())
         statusBar()->removeWidget(reverseSortBtn);
     if(rawJpgStatusLabel->isVisible())
@@ -5197,6 +5268,11 @@ void MW::updateStatusBar()
         statusBar()->addWidget(filterStatusLabel);
         filterStatusLabel->show();
     }
+
+    if (G::colorManage) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
+    else colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
+    statusBar()->addWidget(colorManageToggleBtn);
+    colorManageToggleBtn->show();
 
     if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
     else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
@@ -5250,6 +5326,7 @@ int MW::availableSpaceForProgressBar()
     if (G::isLogger) G::log(__FUNCTION__);
     int w = 0;
     int s = statusBar()->layout()->spacing();
+    if (colorManageToggleBtn->isVisible()) w += s + colorManageToggleBtn->width();
     if (reverseSortBtn->isVisible()) w += s + reverseSortBtn->width();
     if (rawJpgStatusLabel->isVisible()) w += s + rawJpgStatusLabel->width();
     if (filterStatusLabel->isVisible()) w += s + filterStatusLabel->width();
@@ -5274,35 +5351,92 @@ void MW::updateProgressBarWidth()
     }
 }
 
+void MW::toggleImageCacheMethod()
+{
+/*
+    Called by cacheSizeBtn press
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+
+    if (qApp->keyboardModifiers() == Qt::ControlModifier) {
+        cachePreferences();
+        return;
+    }
+
+    if (cacheSizeMethod == "Thrifty") setImageCacheSize("Moderate");
+    else if (cacheSizeMethod == "Moderate") setImageCacheSize("Greedy");
+    else if (cacheSizeMethod == "Greedy") setImageCacheSize("Thrifty");
+    setImageCacheParameters();
+}
+
 void MW::thriftyCache()
 {
-    cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.10);
-    setCacheParameters();
-//    qDebug() << __FUNCTION__ << "Thrifty Cache" << cacheSizeMB;
+/*
+    Connected to F10
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    setImageCacheSize("Thrifty");
+    setImageCacheParameters();
 }
 
 void MW::moderateCache()
 {
-    cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.50);
-    setCacheParameters();
-//    qDebug() << __FUNCTION__ << "Moderate Cache" << cacheSizeMB;
+/*
+    Connected to F11
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    setImageCacheSize("Moderate");
+    setImageCacheParameters();
 }
 
 void MW::greedyCache()
 {
-    cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.90);
-    setCacheParameters();
-//    qDebug() << __FUNCTION__ << "Greedy Cache" << cacheSizeMB;
+/*
+    Connected to F12
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    setImageCacheSize("Greedy");
+    setImageCacheParameters();
 }
 
-void MW::setCacheParameters()
+void MW::setImageCacheSize(QString method)
 {
 /*
-    This slot is signalled from the preferences dialog with changes to the cache
+
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+//    qDebug() << __FUNCTION__ << method;
+
+    // deal with possible deprecated settings
+    if (method != "Thrifty" && method != "Moderate" && method != "Greedy")
+        method = "Thrifty";
+
+    cacheSizeMethod = method;
+
+    if (cacheSizeMethod == "Thrifty") {
+        cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.10);
+        cacheMethodBtn->setIcon(QIcon(":/images/icon16/thrifty.png"));
+    }
+    if (cacheSizeMethod == "Moderate") {
+        cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.50);
+        cacheMethodBtn->setIcon(QIcon(":/images/icon16/moderate.png"));
+    }
+    if (cacheSizeMethod == "Greedy") {
+        cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.90);
+        cacheMethodBtn->setIcon(QIcon(":/images/icon16/greedy.png"));
+    }
+    if (cacheMaxMB > 0 && cacheMaxMB < 1000) cacheMaxMB = G::availableMemoryMB;
+}
+
+void MW::setImageCacheParameters()
+{
+/*
+    This slot is called from the preferences dialog with changes to the cache
     parameters.  Any visibility changes are executed.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    int netCacheMBSize = cacheSizeMB - static_cast<int>( G::metaCacheMB);
+
+    int netCacheMBSize = cacheMaxMB - static_cast<int>( G::metaCacheMB);
     imageCacheThread->updateImageCacheParam(netCacheMBSize,
              G::showCacheStatus, cacheWtAhead, isCachePreview,
              G::displayPhysicalHorizontalPixels, G::displayPhysicalVerticalPixels);
@@ -5311,7 +5445,6 @@ void MW::setCacheParameters()
     // change to ImageCache
     if (fPath.length())
         imageCacheThread->setCurrentPosition(fPath);
-//        imageCacheThread->updateImageCachePosition(/*fPath*/);
 
     // cache progress bar
     progressLabel->setVisible(isShowCacheThreadActivity);
@@ -5961,8 +6094,9 @@ void MW::sortChange(QString source)
 */
     if (G::isLogger) G::log(__FUNCTION__);
     /*
-    qDebug() << __FUNCTION__ << "src =" << src
+    qDebug() << __FUNCTION__ << "source =" << source
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "G::isInitializing =" << G::isInitializing
              << "prevSortColumn =" << prevSortColumn
              << "sortColumn =" << sortColumn
              << "sortReverseAction->isChecked() =" << sortReverseAction->isChecked()
@@ -5976,11 +6110,16 @@ void MW::sortChange(QString source)
     }
 
     // do not sort conditions
-    bool doNotSearch = false;
-    if (sortMenuUpdateToMatchTable) doNotSearch = true;
-    if (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn) doNotSearch = true;
-    if (!G::isNewFolderLoaded && sortColumn == G::NameColumn && !sortReverseAction->isChecked()) doNotSearch = true;
-    if (doNotSearch) return;
+    bool doNotSort = false;
+    if (sortMenuUpdateToMatchTable)
+        doNotSort = true;
+    if (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn)
+        doNotSort = true;
+    if (!G::isNewFolderLoaded && sortColumn == G::NameColumn && !sortReverseAction->isChecked())
+        doNotSort = true;
+    if (source == "folderSelectionChange")
+        doNotSort = false;
+    if (doNotSort) return;
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;        // core
     if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;        // core
@@ -6024,9 +6163,11 @@ void MW::sortChange(QString source)
              ;
 //             */
 
+    G::popUp->showPopup("Sorting...", 0);
+
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
 
-    if (!G::allMetadataLoaded) return;
+//    if (!G::allMetadataLoaded) return;
 
     // get the current selected item
     currentRow = dm->sf->mapFromSource(currentDmIdx).row();
@@ -6050,7 +6191,7 @@ void MW::sortChange(QString source)
     // sync image cache with datamodel filtered proxy unless sort has been triggered by a
     // filter change, which will do its own rebuildImageCacheParameters
     if (source != "filterChange")
-        imageCacheThread->rebuildImageCacheParameters(fPath, __FUNCTION__);
+        imageCacheThread->rebuildImageCacheParameters(fPath, "SortChange");
 
     /* if the previous selected image is also part of the filtered datamodel then the
        selected index does not change and fileSelectionChange will not be signalled.
@@ -6059,6 +6200,8 @@ void MW::sortChange(QString source)
     fileSelectionChange(idx, idx);
 
     scrollToCurrentRow();
+    G::popUp->hide();
+
 }
 
 void MW::updateSortColumn(int sortColumn)
@@ -6101,6 +6244,19 @@ void MW::reverseSortDirection()
         sortReverseAction->setChecked(true);
         reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
         sortChange(__FUNCTION__);
+    }
+}
+
+void MW::toggleColorManage()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::colorManage) {
+        G::colorManage = false;
+        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
+    }
+    else {
+        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
+        G::colorManage = true;
     }
 }
 
@@ -6355,6 +6511,8 @@ void MW::invokeWorkspace(const workspaceData &w)
     gridView->rejustify();
     thumbView->setThumbParameters();
     gridView->setThumbParameters();
+    G::colorManage = w.isColorManage;
+    cacheSizeMethod = w.cacheSizeMethod;
     updateState();
     // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
 //    setThumbDockVisibity();
@@ -6392,6 +6550,9 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.showThumbLabelsGrid = gridView->showIconLabels;
 
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
+
+    wsd.isColorManage = G::colorManage;
+    wsd.cacheSizeMethod = cacheSizeMethod;
 }
 
 void MW::manageWorkspaces()
@@ -6592,7 +6753,10 @@ void MW::reportWorkspace(int n)
              << "\nisGridDisplay" << ws.isGridDisplay
              << "\nisTableDisplay" << ws.isTableDisplay
              << "\nisCompareDisplay" << ws.isCompareDisplay
-             << "\nisCompareDisplay" << ws.isEmbelDisplay;
+             << "\nisEmbelDisplay" << ws.isEmbelDisplay
+             << "\nisColorManage" << ws.isColorManage
+             << "\ncacheSizeMethod" << ws.cacheSizeMethod
+                ;
 }
 
 void MW::loadWorkspaces()
@@ -6634,6 +6798,8 @@ void MW::loadWorkspaces()
         ws.isTableDisplay = setting->value("isTableDisplay").toBool();
         ws.isCompareDisplay = setting->value("isCompareDisplay").toBool();
         ws.isEmbelDisplay = setting->value("isEmbelDisplay").toBool();
+        ws.isColorManage = setting->value("isColorManage").toBool();
+        ws.cacheSizeMethod = setting->value("cacheSizeMethod").toString();
         workspaces->append(ws);
     }
     setting->endArray();
@@ -6671,7 +6837,10 @@ void MW::reportState()
              << "\nisGridDisplay" << w.isGridDisplay
              << "\nisTableDisplay" << w.isTableDisplay
              << "\nisCompareDisplay" << w.isCompareDisplay
-             << "\nisCompareDisplay" << w.isEmbelDisplay;
+             << "\nisEmbelDisplay" << w.isEmbelDisplay
+             << "\nisColorManage" << ws.isColorManage
+             << "\ncacheSizeMethod" << ws.cacheSizeMethod
+                ;
 }
 
 void MW::reportMetadata()
@@ -6755,7 +6924,7 @@ QString MW::diagnostics()
     rpt << "\n" << "slideShowDelay = " << G::s(slideShowDelay);
     rpt << "\n" << "slideShowRandom = " << G::s(isSlideShowRandom);
     rpt << "\n" << "slideShowWrap = " << G::s(isSlideShowWrap);
-    rpt << "\n" << "cacheSizeMB = " << G::s(cacheSizeMB);
+    rpt << "\n" << "cacheSizeMB = " << G::s(cacheMaxMB);
     rpt << "\n" << "showCacheStatus = " << G::s(G::showCacheStatus);
     rpt << "\n" << "cacheDelay = " << G::s(cacheDelay);
     rpt << "\n" << "isShowCacheThreadActivity = " << G::s(isShowCacheThreadActivity);
@@ -7043,6 +7212,12 @@ void MW::infoViewPreferences()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     preferences("MetadataPanelHeader");
+}
+
+void MW::cachePreferences()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    preferences("CacheHeader");
 }
 
 void MW::preferences(QString text)
@@ -7803,8 +7978,8 @@ void MW::writeSettings()
 
     // image cache
     setting->setValue("cacheSizeMethod", cacheSizeMethod);
-    setting->setValue("cacheSizePercentOfAvailable", cacheSizePercentOfAvailable);
-    setting->setValue("cacheSizeMB", cacheSizeMB);
+//    setting->setValue("cacheSizePercentOfAvailable", cacheSizePercentOfAvailable);
+//    setting->setValue("cacheSizeMB", cacheSizeMB);
     setting->setValue("isShowCacheStatus", G::showCacheStatus);
     setting->setValue("cacheDelay", cacheDelay);
     setting->setValue("isShowCacheThreadActivity", isShowCacheThreadActivity);
@@ -8102,7 +8277,7 @@ bool MW::loadSettings()
         // cache
         cacheSizeMethod = "Moderate";
         cacheSizePercentOfAvailable = 50;
-        cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.5);
+        cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.5);
         G::showCacheStatus = true;
         isShowCacheThreadActivity = true;
         progressWidth = 200;
@@ -8190,13 +8365,19 @@ bool MW::loadSettings()
     // image cache
     if (setting->contains("cacheSizePercentOfAvailable")) cacheSizePercentOfAvailable = setting->value("cacheSizePercentOfAvailable").toInt();
     if (setting->contains("cacheSizeMethod")) {
-        cacheSizeMethod = setting->value("cacheSizeMethod").toString();
-        if (cacheSizeMethod == "Thrifty") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.10);
-        if (cacheSizeMethod == "Moderate") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.50);
-        if (cacheSizeMethod == "Greedy") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.90);
-        if (cacheSizeMethod == "Percent of available")
-            cacheSizeMB = (static_cast<int>(G::availableMemoryMB) * cacheSizePercentOfAvailable) / 100;
-        if (cacheSizeMethod == "MB") cacheSizeMB = setting->value("cacheSizeMB").toInt();
+        setImageCacheSize(setting->value("cacheSizeMethod").toString());
+        /*
+//        cacheSizeMethod = setting->value("cacheSizeMethod").toString();
+//        if (cacheSizeMethod == "Thrifty") cacheSizeBtn->setIcon(QIcon(":/images/icon16/thrifty.png"));
+//        if (cacheSizeMethod == "Moderate") cacheSizeBtn->setIcon(QIcon(":/images/icon16/moderate.png"));
+//        if (cacheSizeMethod == "Greedy") cacheSizeBtn->setIcon(QIcon(":/images/icon16/greedy.png"));
+//        if (cacheSizeMethod == "Thrifty") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.10);
+//        if (cacheSizeMethod == "Moderate") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.50);
+//        if (cacheSizeMethod == "Greedy") cacheSizeMB = static_cast<int>(G::availableMemoryMB * 0.90);
+//        if (cacheSizeMethod == "Percent of available")
+//            cacheSizeMB = (static_cast<int>(G::availableMemoryMB) * cacheSizePercentOfAvailable) / 100;
+//        if (cacheSizeMethod == "MB") cacheSizeMB = setting->value("cacheSizeMB").toInt();
+        //*/
     }
     if (setting->contains("isShowCacheStatus")) G::showCacheStatus = setting->value("isShowCacheStatus").toBool();
     if (setting->contains("isShowCacheThreadActivity")) isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
@@ -8751,6 +8932,10 @@ void MW::loupeDisplay()
         if(gridView->isRowVisible(currentRow)) scrollRow = currentRow;
         else scrollRow = gridView->midVisibleCell;
     }
+    if (prevMode == "Compare") {
+        qDebug() << __FUNCTION__ << currentRow;
+        scrollRow = currentRow;
+    }
     G::ignoreScrollSignal = false;
 //    thumbView->waitUntilOkToScroll();
     thumbView->scrollToRow(scrollRow, __FUNCTION__);
@@ -8944,6 +9129,7 @@ void MW::compareDisplay()
     thumbDockVisibleAction->setChecked(wasThumbDockVisible);
 
     hasGridBeenActivated = false;
+    prevMode = "Compare";
 }
 
 void MW::saveSelection()
@@ -9791,6 +9977,13 @@ void MW::setCachedStatus(QString fPath, bool isCached)
     return;
 }
 
+void MW::insertThumbnails()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QModelIndexList selection = selectionModel->selectedRows();
+    thumb->insertThumbnails(selection);
+}
+
 void MW::searchTextEdit()
 {
     if (G::isLogger) G::log(__FUNCTION__);
@@ -10285,10 +10478,12 @@ void MW::keyHome()
 
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    if (G::mode == "Compare") compareImages->go("Home");
-    if (G::mode == "Grid") gridView->selectFirst();
-    else {
-        thumbView->selectFirst();
+    if (G::isNewFolderLoaded /*&& !G::isInitializing*/) {
+        if (G::mode == "Compare") compareImages->go("Home");
+        if (G::mode == "Grid") gridView->selectFirst();
+        else {
+            thumbView->selectFirst();
+        }
     }
 }
 
@@ -10298,7 +10493,8 @@ void MW::keyEnd()
 
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    if (G::isNewFolderLoaded) {
+    if (G::isNewFolderLoaded /*&& !G::isInitializing*/) {
+        metadataCacheThread->stopMetadataCache();
         if (G::mode == "Compare") compareImages->go("End");
         if (G::mode == "Grid") gridView->selectLast();
         else {
@@ -11233,6 +11429,9 @@ void MW::helpWelcome()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+    thumbView->selectThumb(800);
+    return;
+
     abort();  return;
     qDebug() << __FUNCTION__;
     QString s = "D:/Pictures/Zenfolio/pbase2048";
@@ -11247,8 +11446,14 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString r = imageCacheThread->reportCache();
-//    std::cout << r.toStdString() << std::flush;
-//    imageCacheThread->reportRunStatus();
+    QString fPath = "D:/Pictures/Zenfolio/pbase2048/2021-05-05_0064_Zen2048.JPG";
+    QFileInfo info(fPath);
+    QString fDir = info.dir().absolutePath();
+    fsTree->getImageCount(fDir, true, __FUNCTION__);
+    // go there ...
+    fsTree->select(fDir);
+    folderSelectionChange();
+//    thumbView->selectionModel()->clear();
+//    thumbView->selectThumb(fPath);
 }
 // End MW

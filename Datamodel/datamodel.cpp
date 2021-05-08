@@ -721,7 +721,7 @@ bool DataModel::readMetadataForItem(int row)
 /*
     Reads the image metadata into the datamodel for the row.
 */
-    mutex.lock();
+//    mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__, index(row, 0).data(G::PathRole).toString());
     QString fPath = index(row, 0).data(G::PathRole).toString();
 
@@ -732,23 +732,27 @@ bool DataModel::readMetadataForItem(int row)
         // only read metadata from files that we know how to
         QString ext = fileInfo.suffix().toLower();
         if (metadata->getMetadataFormats.contains(ext)) {
+//            qDebug() << __FUNCTION__ << fPath;
             if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
                 metadata->m.row = row;
                 addMetadataForItem(metadata->m);
             }
             else {
                 qDebug() << __FUNCTION__ << "Failed to load metadata for" << fPath;
+                qDebug() << __FUNCTION__ << "MetadataLoaded ="
+                         << index(row, G::MetadataLoadedColumn).data().toBool();
                 return false;
             }
         }
         // cannot read this file type, load empty metadata
         else {
+            qDebug() << __FUNCTION__ << "cannot read this file type, load empty metadata for" + fPath;
 //            metadata->clearMetadata();
 //            metadata->m.row = row;
 //            addMetadataForItem(metadata->m);
         }
     }
-    mutex.unlock();
+//    mutex.unlock();
     return true;
 }
 
