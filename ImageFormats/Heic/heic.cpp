@@ -82,6 +82,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
         count++;
         if (count > 100) {
             // err endian order not found
+            p.buf.close();
             return false;
         }
     }

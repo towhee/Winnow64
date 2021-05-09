@@ -25,13 +25,14 @@ HtmlWindow::HtmlWindow(const QString &title,
     Note the path syntax within the html to EmbelCoordSystem.png
 */
     setWindowTitle(title);
+    text = new QTextBrowser;
     QFile f(htmlPath);
     f.open(QIODevice::ReadOnly);
-    text = new QTextBrowser;
+    text->setHtml(f.readAll());
+    f.close();
     text->setMinimumWidth(size.width());
     text->setMinimumHeight(size.height());
     text->setContentsMargins(9,9,9,9);
-    text->setHtml(f.readAll());
     text->setStyleSheet(G::css);
     setLayout(new QHBoxLayout);
     layout()->setContentsMargins(0,0,0,0);

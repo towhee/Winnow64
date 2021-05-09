@@ -355,6 +355,7 @@ void Metadata::reportMetadata()
         // format xmp
         QXmlFormatter formatter(query, &buffer);
         query.evaluateTo(&formatter);
+        buffer.close();
 
         QString xmpStr = QTextCodec::codecForMib(106)->toUnicode(outArray);
         p.rpt << xmpStr;
@@ -464,6 +465,7 @@ bool Metadata::writeMetadata(const QString &fPath, ImageMetadata m, QByteArray &
     if (useSidecar)
         xmp.writeSidecar(buffer);
 
+    p.file.close();
     return true;
 }
 
@@ -761,6 +763,7 @@ void Metadata::testNewFileFormat(const QString &path)
 
     // edit test format to use:
     parseDNG();
+    p.file.close();
 //    reportMetadata();
 }
 
@@ -793,28 +796,31 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     }
     QFileInfo fileInfo(path);
     QString ext = fileInfo.suffix().toLower();
-    bool fileOpened = false;
+    bool parsed = false;
     // rgh next triggers crash sometimes when skip to end of thumbnails
     if (p.file.open(QIODevice::ReadOnly)) {
         if (jpeg == nullptr) jpeg = new Jpeg;
         if (ifd == nullptr) ifd = new IFD;
         if (exif == nullptr) exif = new Exif;
         if (gps == nullptr) gps = new GPS;
-        if (ext == "arw")  fileOpened = parseSony();
-        if (ext == "cr2")  fileOpened = parseCanon();
-        if (ext == "cr3")  fileOpened = parseCanonCR3();
-        if (ext == "dng")  fileOpened = parseDNG();
-        if (ext == "heic") fileOpened = parseHEIF();   // rgh remove heic ??
-        if (ext == "hif")  fileOpened = parseHEIF();
-        if (ext == "jpg")  fileOpened = parseJPG(0);
-        if (ext == "jpeg") fileOpened = parseJPG(0);
-        if (ext == "nef")  fileOpened = parseNikon();
-        if (ext == "orf")  fileOpened = parseOlympus();
-        if (ext == "raf")  fileOpened = parseFuji();
-        if (ext == "rw2")  fileOpened = parsePanasonic();
-        if (ext == "tif")  fileOpened = parseTIF();
+        if (ext == "arw")  parsed = parseSony();
+        if (ext == "cr2")  parsed = parseCanon();
+        if (ext == "cr3")  parsed = parseCanonCR3();
+        if (ext == "dng")  parsed = parseDNG();
+        if (ext == "heic") parsed = parseHEIF();   // rgh remove heic ??
+        if (ext == "hif")  parsed = parseHEIF();
+        if (ext == "jpg")  parsed = parseJPG(0);
+        if (ext == "jpeg") parsed = parseJPG(0);
+        if (ext == "nef")  parsed = parseNikon();
+        if (ext == "orf")  parsed = parseOlympus();
+        if (ext == "raf")  parsed = parseFuji();
+        if (ext == "rw2")  parsed = parsePanasonic();
+        if (ext == "tif")  parsed = parseTIF();
         p.file.close();
-        if (!fileOpened) {
+        if (p.file.isOpen()) {
+            qDebug() << __FUNCTION__ << "Could not close" << path << "after format was read";
+        }
+        if (!parsed) {
             p.file.close();
             m.err += "Unable to read format for " + path + ". ";
             qDebug() << __FUNCTION__ << m.err;
@@ -829,7 +835,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     }
 
     // not all files have thumb or small jpg embedded
-    if (m.offsetFull == 0 && ext != "jpg" && fileOpened) {
+    if (m.offsetFull == 0 && ext != "jpg" && parsed) {
         m.err += "No embedded JPG found. ";
     }
 
