@@ -18,7 +18,7 @@ bool Pixmap::load(QString &fPath, QPixmap &pm)
 bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
 {
     QFile imFile(fPath);
-    // check if file is locked by another process
+    // check if file is locked by another process   rgh why not just imFile.isOpen
      if (imFile.open(QIODevice::ReadOnly)) {
         // close it to allow qt load to work
         imFile.close();
@@ -183,23 +183,27 @@ bool Pixmap::load(QString &fPath, QImage &image)
             return false;
         }
 
-        // use Qt tiff library to decode
-        bool useTIFFLib = false;
-        if (useTIFFLib) {
-            // try to decode
+//        // use Qt tiff library to decode
+//        bool useTIFFLib = false;
+//        if (useTIFFLib) {
+//            // try to decode
+//            if (!image.load(fPath)) {
+//                imFile.close();
+//                err += "Could not decode " + fPath + ". ";
+//                qDebug() << __FUNCTION__ << err;
+//                dm->setData(dm->index(dmRow, G::ErrColumn), err);
+//                return false;
+//            }
+//        }
+        // use Winnow decoder
+        ImageMetadata m = dm->imMetadata(fPath);
+        Tiff tiff;
+        if (!tiff.decode(m, fPath, image)) {
+            imFile.close();
+//            err += "Could not decode " + fPath + ". ";
+            qDebug() << __FUNCTION__ << "Could not decode using Winnow Tiff decoder.  Trying Qt tiff library to decode" + fPath + ". ";
+            // use Qt tiff library to decode
             if (!image.load(fPath)) {
-                imFile.close();
-                err += "Could not decode " + fPath + ". ";
-                qDebug() << __FUNCTION__ << err;
-                dm->setData(dm->index(dmRow, G::ErrColumn), err);
-                return false;
-            }
-        }
-        // use Winnow decoder (only for thumbnails at this time)
-        else {
-            ImageMetadata m = dm->imMetadata(fPath);
-            Tiff tiff;
-            if (!tiff.decode(m, fPath, image)) {
                 imFile.close();
                 err += "Could not decode " + fPath + ". ";
                 qDebug() << __FUNCTION__ << err;

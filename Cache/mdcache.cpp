@@ -217,11 +217,11 @@ void MetadataCache::loadNewFolder2ndPass()
         mutex.unlock();
         wait();
     }
-//    qDebug() << __FUNCTION__;
     abort = false;
     action = Action::NewFolder2ndPass;
     setRange();
     foundItemsToLoad = anyItemsToLoad();
+    qDebug() << __FUNCTION__ << foundItemsToLoad;
     start(TimeCriticalPriority);
 }
 
@@ -263,16 +263,23 @@ void MetadataCache::scrollChange(QString source)
     limits are removed (not visible and not with chunk range)
 */
 //    return;
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__, "called by =" + source);
+    G::log(__FUNCTION__, "called by =" + source);
     if (isRunning()) {
         mutex.lock();
         abort = true;
         condition.wakeOne();
         mutex.unlock();
         wait();
+        if (isRunning()) {
+            qDebug() << __FUNCTION__ << "ABORT FAILED";
+            return;
+        }
     }
-    if (G::isInitializing) return;
-//    qDebug() << __FUNCTION__ << "called by =" << source;
+    if (G::isInitializing || !G::isNewFolderLoaded) return;
+    qDebug() << "\nXXX" << __FUNCTION__ << "called by =" << source
+             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "\n";
     abort = false;
     action = Action::Scroll;
     setRange();
@@ -330,9 +337,9 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
 bool MetadataCache::anyItemsToLoad()
 {
     for (int i = startRow; i < endRow; ++i) {
-        // ignore if image does not have metadata
-        QString ext = dm->sf->index(i, G::TypeColumn).data().toString().toLower();
-        if (metadata->noMetadataFormats.contains(ext)) continue;
+        // ignore if image does not have metadata  (rgh include so can show video thumbs)
+//        QString ext = dm->sf->index(i, G::TypeColumn).data().toString().toLower();
+//        if (metadata->noMetadataFormats.contains(ext)) continue;
         // icon not loaded
         if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
             return true;
@@ -372,7 +379,7 @@ void MetadataCache::setRange()
     // last to cache (endRow)
     endRow = lastIconVisible + tpp;
     if (endRow - startRow < metadataChunkSize) endRow = startRow + metadataChunkSize;
-    if (endRow >= rowCount) endRow = rowCount - 1;
+    if (endRow >= rowCount) endRow = rowCount;
 
     prevFirstIconVisible = firstIconVisible;
     prevLastIconVisible = lastIconVisible;
@@ -736,10 +743,8 @@ void MetadataCache::run()
 
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
-//        mutex.lock();     // rgh mutex
         int rowCount = dm->sf->rowCount();
         dm->loadingModel = true;
-//        mutex.unlock();   // rgh mutex
 
         // read all metadata but no icons
         if (action == Action::AllMetadata) {
@@ -766,9 +771,7 @@ void MetadataCache::run()
         }
 
         if (abort) {
-//            mutex.lock();
             dm->loadingModel = false;
-//            mutex.unlock();
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
@@ -776,21 +779,22 @@ void MetadataCache::run()
         // update allMetadataLoaded flag if metadata has been loaded for every row in dm
         if (!G::allMetadataLoaded) {
             G::allMetadataLoaded = true;
-//            mutex.lock();
             for (int i = 0; i < rowCount; ++i) {
                 if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool()) {
                     G::allMetadataLoaded = false;
                     break;
                 }
             }
-//            mutex.unlock();
         }
 
         // clean up orphaned icons outside icon range   rgh what about other actions
         if (!cacheAllIcons) {
             if (action == Action::NewFileSelected || action == Action::Scroll)  {
                 iconCleanup();
-                if (abort) return;
+                if (abort) {
+                    dm->loadingModel = false;
+                    return;
+                }
             }
         }
 
@@ -799,9 +803,7 @@ void MetadataCache::run()
             emit loadMetadataCache2ndPass();
         }
 
-//        mutex.lock();
         dm->loadingModel = false;
-//        mutex.unlock();
     }
 
     // after 2nd pass on new folder initiate the image cache

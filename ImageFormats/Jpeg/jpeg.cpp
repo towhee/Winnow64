@@ -756,6 +756,7 @@ void Jpeg::decodeScan(QFile &file, QImage &image)
         if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
             err = "JPG does not start with 0xFFD8";
             qDebug() << __FUNCTION__ << err;
+            p.file.close();
             return;
         }
         p.offset = static_cast<quint32>(p.file.pos());
@@ -1222,6 +1223,8 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
         }
 
     } // end all rows of MCUs
+
+    buffer.close();
 
     // assign im to image
     image.operator=(im);

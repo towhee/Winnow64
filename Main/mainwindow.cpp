@@ -1206,7 +1206,7 @@ void MW::folderSelectionChange()
         G::log("FOLDER CHANGE");
         G::log(__FUNCTION__, currentViewDir);
     }
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
 
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();

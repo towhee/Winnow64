@@ -345,7 +345,11 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
             }
         }
     }
-    else return false;
+    else {
+        m.err += "No strip offsets for " + m.fPath + ". ";
+        qDebug() << __FUNCTION__ << m.err;
+        return false;
+    }
 
     if (ifd->ifdDataHash.contains(279)) {
         int offsetCount = ifd->ifdDataHash.value(279).tagCount;
@@ -361,14 +365,22 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
             }
         }
     }
-    else return false;
+    else {
+        m.err += "No StripByteCounts for " + m.fPath + ". ";
+        qDebug() << __FUNCTION__ << m.err;
+        return false;
+    }
 
     // IFD0: bitsPerSample
     if (ifd->ifdDataHash.contains(258)) {
         p.file.seek(static_cast<int>(ifd->ifdDataHash.value(258).tagValue));
         bitsPerSample = Utilities::get16(p.file.read(2), m.isBigEnd);
     }
-    else return false;
+    else {
+        m.err += "No BitsPerSample for " + m.fPath + ". ";
+        qDebug() << __FUNCTION__ << m.err;
+        return false;
+    }
 
     // IFD0: photoInterp
     (ifd->ifdDataHash.contains(262))
@@ -406,16 +418,23 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
     MetadataParameters p;
     Exif *exif = new Exif;
     IFD *ifd = new IFD;
-    p.file.setFileName(fPath);
-    p.file.open(QIODevice::ReadOnly);
     p.report = false;
     p.hdr = "IFD0";
     p.offset = m.ifd0Offset;
     p.hash = &exif->hash;
+    p.file.setFileName(fPath);
+    if (!p.file.open(QIODevice::ReadOnly)) {
+        m.err += "Unable to open file " + fPath + ". ";
+        qDebug() << __FUNCTION__ << m.err;
+        return false;
+    }
     parseForDecoding(p, m, ifd);
 
     // cancel if there is compression or planar format
-    if (compression > 1 || planarConfiguration > 1 /*|| samplesPerPixel > 3*/) return false;
+    if (compression > 1 || planarConfiguration > 1 /*|| samplesPerPixel > 3*/) {
+        qDebug() << __FUNCTION__ << "compression > 1 || planarConfiguration > 1";
+        return false;
+    }
 
     // width and height of thumbnail to be created
     int w = m.width;                      // width of thumb to create
@@ -451,7 +470,10 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
             im = new QImage(w, h, QImage::Format_RGBX64);
         }
         else {
-            qDebug() << __FUNCTION__ << "Failed m.planarConfiguration != 1" << p.file.fileName();
+            m.err += "Failed m.planarConfiguration != 1 " + fPath + ". ";
+            qDebug() << __FUNCTION__ << m.err;
+//            qDebug() << __FUNCTION__ << "Failed m.planarConfiguration != 1" << p.file.fileName();
+            p.file.close();
             return false;
         }
     }
@@ -460,7 +482,10 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
         im = new QImage(w, h, QImage::Format_RGB888);
     }
     else {
-        qDebug() << __FUNCTION__ << "bitsPerSample =" << bitsPerSample << p.file.fileName();
+        m.err += "bitsPerSample =" + QString::number(bitsPerSample) + fPath + ". ";
+        qDebug() << __FUNCTION__ << m.err;
+//        qDebug() << __FUNCTION__ << "bitsPerSample =" << bitsPerSample << p.file.fileName();
+        p.file.close();
         return false;
     }
 
@@ -505,6 +530,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
             if (m.isBigEnd) invertEndian16(im);
             toRRGGBBAA(im);
         }
+        p.file.close();
         // convert to standard QImage format for display in Winnow
         im->convertTo(QImage::Format_RGB32);
         image.operator=(*im);
@@ -532,6 +558,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
         if (m.isBigEnd) invertEndian16(im);
         toRRGGBBAA(im);
     }
+    p.file.close();
     // convert to standard QImage format for display in Winnow
     im->convertTo(QImage::Format_RGB32);
     image.operator=(*im);

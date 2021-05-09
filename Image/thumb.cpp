@@ -43,12 +43,12 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     QFile imFile(fPath);
     if (imFile.isOpen()) imFile.close();
     QImageReader thumbReader;
-    if (!imFile.open(QIODevice::ReadOnly)) {
-        dm->error(row, "Unable to open file.", __FUNCTION__);
-        return false;
-    }
-    // close file to allow qt thumbReader to work
-    imFile.close();
+//    if (!imFile.open(QIODevice::ReadOnly)) {
+//        dm->error(row, "Unable to open file.", __FUNCTION__);
+//        return false;
+//    }
+//    // close file to allow qt thumbReader to work
+//    imFile.close();
     // let thumbReader do its thing
     thumbReader.setFileName(fPath);
     QSize size = thumbReader.size();
