@@ -183,18 +183,6 @@ bool Pixmap::load(QString &fPath, QImage &image)
             return false;
         }
 
-//        // use Qt tiff library to decode
-//        bool useTIFFLib = false;
-//        if (useTIFFLib) {
-//            // try to decode
-//            if (!image.load(fPath)) {
-//                imFile.close();
-//                err += "Could not decode " + fPath + ". ";
-//                qDebug() << __FUNCTION__ << err;
-//                dm->setData(dm->index(dmRow, G::ErrColumn), err);
-//                return false;
-//            }
-//        }
         // use Winnow decoder
         ImageMetadata m = dm->imMetadata(fPath);
         Tiff tiff;
@@ -202,6 +190,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
             imFile.close();
 //            err += "Could not decode " + fPath + ". ";
             qDebug() << __FUNCTION__ << "Could not decode using Winnow Tiff decoder.  Trying Qt tiff library to decode" + fPath + ". ";
+
             // use Qt tiff library to decode
             if (!image.load(fPath)) {
                 imFile.close();

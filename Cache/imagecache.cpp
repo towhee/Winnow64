@@ -130,15 +130,17 @@ Variables used by thread:
 
 */
 
-void ImageCache::clearImageCache()
+void ImageCache::clearImageCache(bool includeList)
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    mutex.lock();
     imCache.clear();
     toCache.clear();
     toDecache.clear();
     cache.currMB = 0;
     // do not clear cacheItemList if called from start slideshow
-    if (!G::isSlideShow) cacheItemList.clear();
+    if (includeList) cacheItemList.clear();
+    mutex.unlock();
     emit showCacheStatus("Clear Image Cache", 0, __FUNCTION__);
 }
 
@@ -160,7 +162,7 @@ void ImageCache::stopImageCache()
         abort = false;
     }
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
-    clearImageCache();
+    clearImageCache(true);
 }
 
 void ImageCache::pauseImageCache()
@@ -263,6 +265,7 @@ void ImageCache::setKeyToCurrent()
     for (int i = 0; i < cacheItemList.count(); i++) {
         if (cacheItemList.at(i).fPath == dm->currentFilePath) {
             cache.key = i;
+            qDebug() << __FUNCTION__ << i;
             return;
         }
     }
@@ -965,6 +968,32 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     else start();
 }
 
+void ImageCache::refreshImageCache()
+{
+/*
+    Reload all images in the cache.
+*/
+    mutex.lock();
+    // make all isCached = false
+    for (int i = 0; i < cache.totFiles; ++i) {
+        if (cacheItemList[i].isCached == true) {
+            cacheItemList[i].isCached = false;
+        }
+    }
+    refreshCache = true;
+    if (!isRunning()) start();
+    mutex.unlock();
+}
+
+void ImageCache::colorManageChange()
+{
+/*
+    Called when color manage is turned on.  Reload all images in the cache.
+*/
+    if (G::isLogger) { G::log(__FUNCTION__); }
+    refreshImageCache();
+}
+
 void ImageCache::cacheSizeChange()
 {
     mutex.lock();
@@ -981,7 +1010,7 @@ void ImageCache::setCurrentPosition(QString path)
     if (G::isLogger) G::log(__FUNCTION__, path);
     pause = false;
     currentPath = path;             // memory check
-    /*
+//    /*
     qDebug() << __FUNCTION__
              << "filterSortChange =" << filterOrSortHasChanged
              << "cacheSizeChange =" << cacheSizeHasChanged
@@ -1025,6 +1054,7 @@ void ImageCache::run()
     bool okToPause;
     bool positionChanged;
     bool cacheSizeChange;
+    bool refresh;
     bool filterSortChange;
 //    qDebug() << __FUNCTION__;
 
@@ -1036,8 +1066,6 @@ void ImageCache::run()
         abort = false;
         mutex.unlock();
         if (okToAbort) {
-//            qDebug() << __FUNCTION__ << "A B O R T I N G";
-//            if (G::isLogger) G::log(__FUNCTION__, "A B O R T I N G");
             emit updateIsRunning(/*isRunning*/false, /*showCacheLabel*/false);
             return;
         }
@@ -1056,16 +1084,18 @@ void ImageCache::run()
             continue;
         }
 
-        // has there been a file selection, cache size or sort/filter change
+        // has there been a file selection, cache size, color manage or sort/filter change
         mutex.lock();
         positionChanged = (prevCurrentPath != currentPath);
         cacheSizeChange = cacheSizeHasChanged;
         cacheSizeHasChanged = false;
         filterSortChange = filterOrSortHasChanged;
         filterOrSortHasChanged = false;
+        refresh = refreshCache;
+        refreshCache = false;
         mutex.unlock();
 
-        if (!positionChanged && !cacheSizeChange &&!filterSortChange) {
+        if (!positionChanged && !cacheSizeChange &&!filterSortChange &&!refresh) {
 //            msleep(100);
             continue;
         }
@@ -1082,8 +1112,8 @@ void ImageCache::run()
         mutex.unlock();
         // */
 
-        // prep the cache
         prevCurrentPath = currentPath;
+        // prep the cache
         setKeyToCurrent();
         setDirection();
 
@@ -1092,6 +1122,8 @@ void ImageCache::run()
 
         // update current size of the image cache imCache
         cache.currMB = getImCacheSize();
+
+//        qDebug() << __FUNCTION__ << "Chk colorManage working cache.currMB =" << cache.currMB;
 
         // set the priorities and target range to cache
         setPriorities(cache.key);
@@ -1141,6 +1173,7 @@ void ImageCache::run()
             okToPause = pause;
             positionChanged = (prevCurrentPath != currentPath);
             cacheSizeChange = cacheSizeHasChanged;
+            refresh = refreshCache;
             filterSortChange = filterOrSortHasChanged;
             mutex.unlock();
             if (positionChanged || okToPause || cacheSizeChange || filterSortChange) break;
@@ -1152,6 +1185,8 @@ void ImageCache::run()
                 qWarning(ba.data());
                 continue;
             }
+
+//            qDebug() << __FUNCTION__ << "Chk colorManage working 1...";
 
             // next image to cache
             QString fPath = cacheItemList.at(cache.toCacheKey).fPath;

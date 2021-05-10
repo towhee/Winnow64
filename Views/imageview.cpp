@@ -128,7 +128,7 @@ ImageView::ImageView(QWidget *parent,
     isFirstImageNewFolder = true;
 }
 
-bool ImageView::loadImage(QString fPath, QString src)
+bool ImageView::loadImage(QString fPath, QString src, bool refresh)
 {
 /*
     There are two sources for the image (pixmap): a file or the cache.
@@ -166,7 +166,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     bool isLoaded = false;
     pmItem->setVisible(true);
 
-    if (imageCacheThread->imCache.contains(fPath)) {
+    if (!refresh && imageCacheThread->imCache.contains(fPath)) {
         // load preview from cache
         bool tryPreview = true;     // for testing
         loadFullSizeTimer->stop();
