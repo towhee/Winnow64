@@ -38,7 +38,7 @@ public:
              int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
     void rebuildImageCacheParameters(QString &currentImageFullPath, QString source = "");
     void stopImageCache();
-    void clearImageCache();
+    void clearImageCache(bool includeList = true);
     void pauseImageCache();
     void resumeImageCache();
     bool cacheUpToDate();           // target range all cached
@@ -102,6 +102,7 @@ protected:
 public slots:
     void setCurrentPosition(QString path);
     void cacheSizeChange();         // flag when cache size is changed in preferences
+    void colorManageChange();
 
 private:
     QMutex mutex;
@@ -111,6 +112,7 @@ private:
     bool pause;
     bool cacheSizeHasChanged;
     bool filterOrSortHasChanged;
+    bool refreshCache;
     QString currentPath;
     QString prevCurrentPath;
 
@@ -135,6 +137,7 @@ private:
     static bool keySort(const CacheItem &k1, const CacheItem &k2);
     void buildImageCacheList();     //
     void updateImageCacheList();    //
+    void refreshImageCache();
     QSize scalePreview(int w, int h);
 };
 

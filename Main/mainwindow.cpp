@@ -2036,6 +2036,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     }
 
     if(instruction == "Update all rows") {
+//        qDebug() << __FUNCTION__ << "Update all rows";
         // clear progress
         progressBar->clearProgress();
         // target range
@@ -6249,6 +6250,9 @@ void MW::reverseSortDirection()
 
 void MW::toggleColorManage()
 {
+/*
+    If the toggle turns color manage on then the image cache is rebuilt.
+*/
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::colorManage) {
         G::colorManage = false;
@@ -6258,6 +6262,16 @@ void MW::toggleColorManage()
         colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
         G::colorManage = true;
     }
+
+    imageView->loadImage(dm->currentFilePath, __FUNCTION__, true/*refresh*/);
+
+    // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
+    for (int row = 0; row < dm->rowCount(); ++row) {
+        QString fPath = dm->index(row, G::PathColumn).data(G::PathRole).toString();
+        setCachedStatus(fPath, false);
+    }
+    // reload image cache
+    imageCacheThread->colorManageChange();
 }
 
 void MW::scrollToCurrentRow()
@@ -9973,6 +9987,7 @@ void MW::setCachedStatus(QString fPath, bool isCached)
         dm->sf->setData(idx, isCached, G::CachedRole);
         thumbView->refreshThumb(idx, G::CachedRole);
         gridView->refreshThumb(idx, G::CachedRole);
+//        qDebug() << __FUNCTION__ << idx.row() << fPath << isCached;
     }
     return;
 }
@@ -10711,7 +10726,7 @@ void MW::slideShowResetSequence()
         if (imageCacheThread->isRunning()) {
             qDebug() << __FUNCTION__ << "Pausing image cache";
             imageCacheThread->pauseImageCache();
-            imageCacheThread->clearImageCache();
+            imageCacheThread->clearImageCache(false);
         }
 //        updateImageCacheWhenFileSelectionChange = false;    // rghcachechange
         progressLabel->setVisible(false);
@@ -11446,6 +11461,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    imageCacheThread->reportCache("");
+    return;
+
     QString fPath = "D:/Pictures/Zenfolio/pbase2048/2021-05-05_0064_Zen2048.JPG";
     QFileInfo info(fPath);
     QString fDir = info.dir().absolutePath();

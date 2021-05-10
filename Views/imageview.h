@@ -64,7 +64,7 @@ public:
     QByteArray tileBa;
     QString tileName;
 
-    bool loadImage(QString fPath, QString src);
+    bool loadImage(QString fPath, QString src, bool refresh = false);
     void exportImage();
     qreal getFitScaleFactor(QRectF container, QRectF content);
     void clear();

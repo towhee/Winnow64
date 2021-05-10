@@ -277,9 +277,9 @@ void MetadataCache::scrollChange(QString source)
         }
     }
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-    qDebug() << "\nXXX" << __FUNCTION__ << "called by =" << source
-             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
-             << "\n";
+//    qDebug() << "\nXXX" << __FUNCTION__ << "called by =" << source
+//             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+//             << "\n";
     abort = false;
     action = Action::Scroll;
     setRange();
