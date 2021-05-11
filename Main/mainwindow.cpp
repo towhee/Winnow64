@@ -1529,7 +1529,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
                     ;
        //*/
         if (!(G::isSlideShow && isSlideShowRandom)
-            && (key == Qt::NoModifier)
+            && (key == Qt::NoModifier || key == Qt::KeypadModifier)
             && (G::mode != "Compare")
            )
         {
@@ -2011,10 +2011,10 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
              << "source =" << source;
 //             */
 
-    // show cache amount ie "4.2 of 16GB" in info panel
+    // show cache amount ie "4.2 of 16.1GB" in info panel
     QString cacheAmount = QString::number(double(imageCacheThread->cache.currMB)/1024,'f',1)
             + " of "
-            + QString::number(imageCacheThread->cache.maxMB/1024,'f',1) + "GB";
+            + QString::number(double(imageCacheThread->cache.maxMB)/1024,'f',1) + "GB";
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
 
@@ -5225,7 +5225,10 @@ void MW::createStatusBar()
     cacheMethodBtn->show();
 
     // labels/buttons to show various status
+#ifdef Q_OS_WIN
     statusBar()->addWidget(colorManageToggleBtn);
+    qDebug() << __FUNCTION__ << "addWidget(colorManageToggleBtn)";
+#endif
     statusBar()->addWidget(reverseSortBtn);
 
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
@@ -5249,8 +5252,10 @@ void MW::updateStatusBar()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     // remove all icons so can add back in proper order // previously used: if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel); // etc
+#ifdef Q_OS_WIN
     if(colorManageToggleBtn->isVisible())
         statusBar()->removeWidget(colorManageToggleBtn);
+#endif
     if(reverseSortBtn->isVisible())
         statusBar()->removeWidget(reverseSortBtn);
     if(rawJpgStatusLabel->isVisible())
@@ -5272,9 +5277,10 @@ void MW::updateStatusBar()
 
     if (G::colorManage) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
     else colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
+#ifdef Q_OS_WIN
     statusBar()->addWidget(colorManageToggleBtn);
     colorManageToggleBtn->show();
-
+#endif
     if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
     else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
     statusBar()->addWidget(reverseSortBtn);
@@ -5426,7 +5432,7 @@ void MW::setImageCacheSize(QString method)
         cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.90);
         cacheMethodBtn->setIcon(QIcon(":/images/icon16/greedy.png"));
     }
-    if (cacheMaxMB > 0 && cacheMaxMB < 1000) cacheMaxMB = G::availableMemoryMB;
+//    if (cacheMaxMB > 0 && cacheMaxMB < 1000) cacheMaxMB = G::availableMemoryMB;
 }
 
 void MW::setImageCacheParameters()

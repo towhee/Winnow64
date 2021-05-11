@@ -265,7 +265,6 @@ void ImageCache::setKeyToCurrent()
     for (int i = 0; i < cacheItemList.count(); i++) {
         if (cacheItemList.at(i).fPath == dm->currentFilePath) {
             cache.key = i;
-            qDebug() << __FUNCTION__ << i;
             return;
         }
     }
@@ -1010,11 +1009,13 @@ void ImageCache::setCurrentPosition(QString path)
     if (G::isLogger) G::log(__FUNCTION__, path);
     pause = false;
     currentPath = path;             // memory check
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << "filterSortChange =" << filterOrSortHasChanged
              << "cacheSizeChange =" << cacheSizeHasChanged
+             << "refreshCache =" << refreshCache
              << "currentPath =" << currentPath
+             << "G::availableMemoryMB =" << G::availableMemoryMB
                 ;
                 // */
     if (!isRunning()) start();
