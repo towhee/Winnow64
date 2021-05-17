@@ -327,7 +327,9 @@ public slots:
     void fileSelectionChange(QModelIndex current, QModelIndex);
     void folderAndFileSelectionChange(QString fPath);
     void nullFiltration();
-    void handleDrop(const QMimeData *mimeData);
+    void handleDrop(QString fPath);
+//    void handleDrop(QDropEvent *event);
+//    void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setStatus(QString state);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);

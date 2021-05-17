@@ -310,6 +310,12 @@ TokenDlg::TokenDlg(QStringList &tokens,
     ui->templatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
     ui->templatesCB->setMaxCount(100);
 
+    // minimum button size override G::css (widgetcss)
+    ui->renameBtn->setStyleSheet("QPushButton {min-width: 60px;}");
+    ui->newBtn->setStyleSheet("QPushButton {min-width: 60px;}");
+    ui->deleteBtn->setStyleSheet("QPushButton {min-width: 60px;}");
+    ui->closeBtn->setStyleSheet("QPushButton {min-width: 60px;}");
+
     // Populate token list
     for (const auto &i : tokens)
         ui->tokenList->addItem(i);

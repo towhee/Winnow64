@@ -1103,12 +1103,15 @@ void ImageView::enterEvent(QEvent *event)
 
 void ImageView::dragEnterEvent(QDragEnterEvent *event)
 {
-    event->acceptProposedAction();
+    qDebug() << "ImageView::" << __FUNCTION__;
+//    event->acceptProposedAction();
 }
 
 void ImageView::dropEvent(QDropEvent *event)
 {
-    emit handleDrop(event->mimeData());
+//    QFileInfo info(event->mimeData()->urls().at(0).toLocalFile());
+//    emit handleDrop(event->mimeData()->urls().at(0).toLocalFile());
+//    emit handleDrop(event->mimeData());
 }
 
 QString ImageView::diagnostics()

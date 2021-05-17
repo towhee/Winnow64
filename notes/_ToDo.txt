@@ -12,8 +12,6 @@ BUGS / TO DO
 - Maintain count when switch folders during the same ingest
 - Tap on mac
 - Handle winnets on Mac
-- Quick start loupe first image in folder
-- New workspace crashed
 - Improve err recording and showing to user
 - Text disappears at certain font sizes
 - Highlighter opacity not always used
