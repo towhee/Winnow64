@@ -31,7 +31,7 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
     modifier = "Alt + ";
 #endif
 #ifdef Q_OS_MAC
-    modifier = "Opt + ";;
+    modifier = "Opt + ";
 #endif
 
     }
@@ -68,7 +68,7 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
 
     // second pass to enter the existing external apps
     int rows = xApps.length();
-    for(int row = 0; row < rows; ++row) {
+    for (int row = 0; row < rows; ++row) {
         QString name = xApps.at(row).name;
         QString path = xApps.at(row).path;
         QFileInfo info(path);
@@ -78,7 +78,7 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
         setFlags(row);
     }
 
-    if(rows > 0) ui->appsTable->selectRow(0);
+    if (rows > 0) ui->appsTable->selectRow(0);
 }
 
 Appdlg::~Appdlg()
@@ -92,7 +92,7 @@ void Appdlg::setFlags(int row)
     QTableWidgetItem *item1 = ui->appsTable->item(row, 1);
     QTableWidgetItem *item2 = ui->appsTable->item(row, 2);
 
-    if(ui->appsTable->item(row, 1)->text() == "") {
+    if (ui->appsTable->item(row, 1)->text() == "") {
         item0->setFlags(Qt::NoItemFlags); // disabled
         item1->setFlags(Qt::NoItemFlags); // disabled
         item2->setFlags(Qt::NoItemFlags); // disabled
@@ -106,9 +106,7 @@ void Appdlg::setFlags(int row)
 
 void Appdlg::updateShortcuts()
 {
-    /*
-       */
-    for(int row = 0; row < 10; ++row) {
+    for (int row = 0; row < 10; ++row) {
         QTableWidgetItem *item0 = new QTableWidgetItem(modifier + shortcut[row]);
         ui->appsTable->setItem(row, 0, item0);
     }
@@ -118,7 +116,7 @@ int Appdlg::getAppCount()
 {
     int row;
     for(row = 0; row < 10; ++row) {
-        if(ui->appsTable->item(row, 1)->text() == "") break;
+        if (ui->appsTable->item(row, 1)->text() == "") break;
     }
     return row;
 }

@@ -97,6 +97,8 @@ IngestDlg::IngestDlg(QWidget *parent,
 //    ui->manualRadio->setStyleSheet(radioStyle);
 
     ui->setupUi(this);
+    setStyleSheet(css);
+
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
 
@@ -1453,7 +1455,8 @@ void IngestDlg::fontSize()
     int fontPxSize = static_cast<int>(fontPtSize * G::ptToPx);
     QString titleShift = QString::number(fontPxSize * screenScaling / 2);
 
-    QString fs = "QWidget {font-size: " + QString::number(fontPtSize) + "pt;}";
+    QString fs = "QWidget {font-size: " + G::fontSize + "pt;}";
+//    QString fs = "QWidget {font-size: " + QString::number(fontPtSize) + "pt;}";
     /*
     qDebug() << __FUNCTION__
              << "G::fontSize" << G::fontSize

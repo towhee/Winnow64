@@ -379,7 +379,7 @@ void Preferences::addItems()
     // Delete warning
     i.name = "deleteWarning";
     i.parentName = "GeneralHeader";
-    i.captionText = "Warn before delete";
+    i.captionText = "Warn before delete image files";
     i.tooltip = "Turn this off to prevent a warning dialog every time"
                 "you delete a file or group of files.";
     i.hasValue = true;

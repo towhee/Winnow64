@@ -909,29 +909,32 @@ void MW::focusChange(QWidget *previous, QWidget *current)
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-//    QString dir = event->mimeData()->urls().at(0).toLocalFile();
-    QFileInfo info(event->mimeData()->urls().at(0).toLocalFile());
-    QDir incoming = info.dir();
-    QDir current(currentViewDir);
-    bool isSameFolder = incoming == current;
-//    qDebug() << __FUNCTION__ << incoming << current;
-    if (!isSameFolder) event->acceptProposedAction();
+    event->acceptProposedAction();
 }
 
 void MW::dropEvent(QDropEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    handleDrop(event->mimeData());
+    QString fPath = event->mimeData()->urls().at(0).toLocalFile();
+    folderAndFileSelectionChange(fPath);
 }
 
-void MW::handleDrop(const QMimeData *mimeData)
+void MW::handleDrop(QString fPath)
+//void MW::handleDrop(QDropEvent *event)
+//void MW::handleDrop(const QMimeData *mimeData)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    if (mimeData->hasUrls())
-    {
-        dragDropFilePath = mimeData->urls().at(0).toLocalFile();
-        folderAndFileSelectionChange(dragDropFilePath);
-    }
+//    QFileInfo info(event->mimeData()->urls().at(0).toLocalFile());
+    QFileInfo info(fPath);
+    QDir incoming = info.dir();
+    QDir current(currentViewDir);
+    qDebug() << __FUNCTION__ << fPath;
+//    bool isSameFolder = incoming == current;
+//    if (event->mimeData()->hasUrls())
+//    {
+//        dragDropFilePath = event->mimeData()->urls().at(0).toLocalFile();
+        folderAndFileSelectionChange(fPath);
+//    }
 }
 
 void MW::checkForUpdate()
@@ -1571,38 +1574,39 @@ void MW::folderAndFileSelectionChange(QString fPath)
     before the initial metadata has been cached and the image can be selected.
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
+    qDebug() << __FUNCTION__ << fPath;
     setCentralMessage("Loading " + fPath + " ...");
 
     embelProperties->setCurrentTemplate("Do not Embellish");
     QFileInfo info(fPath);
     QString folder = info.dir().absolutePath();
-    if (/*folder != currentViewDir ||*/ isStartupArgs) {
-        if (!fsTree->select(folder)) {
-            // failure
-            return;
-        }
-        folderSelectionChange();
+    if (!isStartupArgs && (folder == currentViewDir)) return;
+
+    if (!fsTree->select(folder)) {
+        // failure
+        return;
     }
 
+    folderSelectionChange();
 
     thumbView->selectionModel()->clear();
     thumbView->selectThumb(fPath);
     centralLayout->setCurrentIndex(LoupeTab);
     return;
 
-    // select image with fPath
-    for (int i = 0; i < 100; i++) {
-        if (G::isNewFolderLoaded) {
-            thumbView->selectionModel()->clear();
-            thumbView->selectThumb(fPath);
-            centralLayout->setCurrentIndex(LoupeTab);
-            break;
-        }
-        else {
-//                qDebug() << __FUNCTION__ << "waiting for folder to load:" << i;
-            G::wait(100);
-        }
-    }
+//    // select image with fPath
+//    for (int i = 0; i < 100; i++) {
+//        if (G::isNewFolderLoaded) {
+//            thumbView->selectionModel()->clear();
+//            thumbView->selectThumb(fPath);
+//            centralLayout->setCurrentIndex(LoupeTab);
+//            break;
+//        }
+//        else {
+////                qDebug() << __FUNCTION__ << "waiting for folder to load:" << i;
+//            G::wait(100);
+//        }
+//    }
 
 }
 
@@ -4530,8 +4534,11 @@ void MW::createImageView()
     connect(thumbView, SIGNAL(thumbClick(float,float)),
             imageView, SLOT(thumbClick(float,float)));
 
-    connect(imageView, SIGNAL(handleDrop(const QMimeData*)),
-            this, SLOT(handleDrop(const QMimeData*)));
+    connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
+//    connect(imageView, SIGNAL(handleDrop(QDropEvent *event)),
+//            this, SLOT(handleDrop(QDropEvent *event)));
+//    connect(imageView, SIGNAL(handleDrop(const QMimeData*)),
+//            this, SLOT(handleDrop(const QMimeData*)));
 
     connect(imageView, SIGNAL(killSlideshow()),
             this, SLOT(slideShow()));
