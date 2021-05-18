@@ -74,7 +74,8 @@ public:
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
     void rotate(int degrees);
-    void moveShootingInfo(QString infoString);
+    void setShootingInfo(QString infoString);
+    void updateShootingInfo();
     void sceneGeometry(QPoint &sceneOrigin, QRectF &sceneR, QRect &centralWidgetRect);
     QString shootingInfo;
     int infoOverlayFontSize;

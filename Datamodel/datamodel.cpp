@@ -559,7 +559,7 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
 ImageMetadata DataModel::imMetadata(QString fPath)
 {
 /*
-Used by InfoString and IngestDlg
+    Used by InfoString and IngestDlg
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     int row = fPathRow[fPath];
@@ -595,6 +595,7 @@ Used by InfoString and IngestDlg
 //    ImageMetadata m;
     if (!success) {
         // rgh to finish err proofing this
+        qDebug() << __FUNCTION__ << "Metadata not loaded to model for" << fPath;
         return m;
     }
 

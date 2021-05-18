@@ -920,4 +920,21 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     return m.metadataLoaded;
 }
 
+bool Metadata::writeMetadata(QStringList &paths, const QString tag, const QString tagValue)
+{
+    if (G::isLogger) G::log(__FUNCTION__, tag);
+    QString tagName;
+    if (tag == "Title") tagName = "XMP-dc:Title";
+    if (tag == "Creator") tagName = "XMP-dc:creator";
+    if (tag == "Copyright") tagName = "";
+    if (tag == "Email") tagName = "";
+    if (tag == "Url") tagName = "";
+    ExifTool et;
+    et.overwrite();
+    for (int i = 0; i < paths.length(); ++i) {
+
+    }
+    return true;
+}
+
 // End Metadata

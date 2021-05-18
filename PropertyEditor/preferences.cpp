@@ -647,7 +647,7 @@ void Preferences::addItems()
     addItem(i);
 
     {
-    // Show thumbnail label
+    // Show caching activity
     i.name = "showThreadActivity";
     i.parentName = "CacheHeader";
     i.captionText = "Show caching activity";

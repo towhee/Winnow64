@@ -697,16 +697,18 @@ PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWid
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
+    int maxHt = 12;
+
     minusBtn = new QPushButton;
-    minusBtn->setStyleSheet(G::css);
+//    minusBtn->setStyleSheet(G::css);
     minusBtn->setObjectName("DisableGoActions");  // used in MW::focusChange
-    minusBtn->setMaximumHeight(16);
+    minusBtn->setMaximumHeight(maxHt);
     minusBtn->setText("-");
 
     plusBtn = new QPushButton;
-    plusBtn->setStyleSheet(G::css);
+//    plusBtn->setStyleSheet(G::css);
     plusBtn->setObjectName("DisableGoActions");  // used in MW::focusChange
-    plusBtn->setMaximumHeight(16);
+    plusBtn->setMaximumHeight(maxHt);
     plusBtn->setText("+");
 
     connect(minusBtn, &QPushButton::clicked, this, &PlusMinusEditor::minusChange);

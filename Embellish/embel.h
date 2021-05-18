@@ -31,6 +31,7 @@ public:
     void removeGraphic(int i);
     void updateStyle(QString style);
     void exportImage();
+    void setRemote(bool remote = false);
     void test();
     void diagnostics(QTextStream &rpt);
     int ls;     // long side

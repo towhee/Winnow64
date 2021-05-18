@@ -1,5 +1,5 @@
 BUGS / TO DO
-- Not showing image for D:/Pictures/Gigapixel trial/2018-11-02_0012-Giga trial_Giga4x.tif
+- PlusMinusEditor not sizing to contents in preferences thumbnail button size
 - Export from LR Winnow does not refresh folder
 - Slideshow of all images on F drive eventually crashed (85000+ images)
 - Filters not working sometimes
