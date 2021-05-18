@@ -293,9 +293,8 @@ QString InfoString::parseTokenString(QString &tokenString,
                                      QModelIndex &idx)
 {
 /*
-    Use when datamodel is available.
-    setMetadata must be called first to set metadata variables for the current
-    image.
+    Use when datamodel is available. setMetadata must be called first to set metadata
+    variables for the current image.
 */
     QFileInfo info(fPath);
     QString ext = info.suffix().toLower();

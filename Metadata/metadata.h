@@ -33,7 +33,7 @@
 #include "ImageFormats/Olympus/olympus.h"
 #include "ImageFormats/Panasonic/panasonic.h"
 #include "ImageFormats/Sony/sony.h"
-#include "ImageFormats/Tiff/tiff.h"
+#include "ImageFormats/TIFF/tiff.h"
 
 class Metadata : public QObject
 {
@@ -41,6 +41,7 @@ class Metadata : public QObject
 public:
     Metadata(QObject *parent = nullptr);
     bool readMetadata(bool report, const QString &path, QString source);
+    bool writeMetadata(QStringList &paths, const QString tag, const QString tagValue);
     QString diagnostics(QString fPath);
     void reportMetadata();
     void testNewFileFormat(const QString &path);

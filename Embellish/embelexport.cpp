@@ -115,20 +115,22 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     template is set, the images are embellished and exported, and the original
     template is re-established, or the exported folder is opened, with the sort order
     set to last modified in reverse.
+
+    In Embel it is important to call setRemote(true).  If Embel::isRemote == false then the
+    datamodel is expected to be loaded and up-to-date.  For remote situations, the data model
+    may not be loaded, and Embel will call Metadata to load the image data.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-    /* log
-    for (int i = 0; i < pathList.length(); i++) {
-        Utilities::log(__FUNCTION__, pathList.at(i));
-    }
-//    */
 
     // save current embellish template
     QString prevTemplate = embelProperties->templateName;
     // set the embellish template, which updates all the parameters
     embelProperties->setCurrentTemplate(templateName);
+    embellish->setRemote(true);
 
     exportImages(pathList);
+
+    embellish->setRemote(false);
 
     int n = pathList.length() - 1;
     QString fPath = pathList.at(n);
@@ -206,14 +208,6 @@ void EmbelExport::exportImages(const QStringList &srcList)
     for (int i = 0; i < thumbList.length(); ++i) {
         QFile::remove(thumbList.at(i));
     }
-
-//    if (embelProperties->copyMetadata) {
-//        ExifTool et;
-//        // copy all metadata
-//        int exitCode = et.copyAll(srcList, dstList);
-//        if (exitCode != 0 && G::isLogger) Utilities::log(__FUNCTION__, "ExifTool exit code = " + QString::number(exitCode));
-//        // add thumbnail
-//    }
 
     G::popUp->setProgressVisible(false);
     G::popUp->hide();

@@ -232,10 +232,7 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
 
-        QModelIndex idx = thumbView->currentIndex();
-        QString current = infoString->getCurrentInfoTemplate();
-        shootingInfo = infoString->parseTokenString(infoString->infoTemplates[current],
-                                                    currentImagePath, idx);
+        updateShootingInfo();
 
         /* If this is the first image in a new folder, and the image is smaller than the
         canvas (central widget window) set the scale to fit window, do not scale the
@@ -349,7 +346,7 @@ void ImageView::scale()
     }
 
     placeClassificationBadge();
-    moveShootingInfo(shootingInfo);
+    setShootingInfo(shootingInfo);
     emit updateStatus(true, "", __FUNCTION__);
 
     isMouseDoubleClick = false;
@@ -539,7 +536,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
         scale();
     }
     placeClassificationBadge();
-    moveShootingInfo(shootingInfo);
+    setShootingInfo(shootingInfo);
 }
 
 void ImageView::thumbClick(float xPct, float yPct)
@@ -756,11 +753,24 @@ used to determine the zoomCursor aspect in ThumbView.
 //    return QSizeF(xPct, yPct);
 }
 
-void ImageView::moveShootingInfo(QString infoString)
+void ImageView::updateShootingInfo()
 {
-/* Locate and format the info label, which currently displays the shooting
-information in the top left corner of the image.  The text has a drop shadow
-to help make it visible against different coloured backgrounds. */
+    QModelIndex idx = thumbView->currentIndex();
+    QString current = infoString->getCurrentInfoTemplate();
+    shootingInfo = infoString->parseTokenString(infoString->infoTemplates[current],
+                                                currentImagePath, idx);
+    infoOverlay->setText(shootingInfo);
+//    moveShootingInfo(shootingInfo);
+//    qDebug() << __FUNCTION__ << shootingInfo;
+}
+
+void ImageView::setShootingInfo(QString infoString)
+{
+/*
+    Locate and format the info label, which currently displays the shooting
+    information in the top left corner of the image.  The text has a drop shadow
+    to help make it visible against different coloured backgrounds.
+*/
     if (G::isLogger) G::log(__FUNCTION__); 
     // window (w) and view (v) sizes are updated during resize
 

@@ -196,7 +196,7 @@ void Embel::build(QString path, QString src)
        not have loaded the folder, and therefore no datamodel.  */
     isRemote = false;
     if (path != "") {
-        isRemote = true;
+//        isRemote = true;
         fPath = path;
     }
 //    qDebug() << __FUNCTION__ << "isRemote =" << isRemote << "path =" << path << "src =" << src;
@@ -216,6 +216,11 @@ void Embel::build(QString path, QString src)
 //    qDebug() << __FUNCTION__
 //             << "Elapsed time (ms) =" << QString("%L1").arg(t.elapsed());
 //    diagnostic();
+}
+
+void Embel::setRemote(bool remote)
+{
+    isRemote = remote;
 }
 
 void Embel::fitAspect(double aspect, Hole &size)

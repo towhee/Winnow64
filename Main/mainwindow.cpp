@@ -7362,7 +7362,7 @@ void MW::setInfoFontSize()
     if (G::isLogger) G::log(__FUNCTION__);
     /* imageView->infoOverlayFontSize already defined in preferences - just call
        so can redraw  */
-    imageView->moveShootingInfo(imageView->shootingInfo);
+    imageView->setShootingInfo(imageView->shootingInfo);
 }
 
 void MW::setClassificationBadgeImageDiam(int d)
@@ -9207,10 +9207,10 @@ void MW::tokenEditor()
     QString sel = infoString->getCurrentInfoTemplate();
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
-    imageView->moveShootingInfo(info);
-    qDebug() << __FUNCTION__ << "call  updateMetadataTemplateList";
+    imageView->setShootingInfo(info);
+//    qDebug() << __FUNCTION__ << "call  updateMetadataTemplateList";
     embelProperties->updateMetadataTemplateList();
-    qDebug() << __FUNCTION__ << "updateMetadataTemplateList did not crash";
+//    qDebug() << __FUNCTION__ << "updateMetadataTemplateList did not crash";
 }
 
 void MW::setRatingBadgeVisibility() {
@@ -10374,6 +10374,7 @@ void MW::metadataChanged(QStandardItem* item)
     int row = item->index().row();
     QModelIndex tagIdx = infoView->ok->index(row, 0, par);
     QString tagName = tagIdx.data().toString();
+    qDebug() << __FUNCTION__ << tagName;
 
     QHash<QString,int> col;
     col["Title"] = G::TitleColumn;
@@ -10382,9 +10383,15 @@ void MW::metadataChanged(QStandardItem* item)
     col["Email"] = G::EmailColumn;
     col["Url"] = G::UrlColumn;
 
+    // list of file paths to send to Metadata::writeMetadata
+    QStringList paths;
+
     for (int i = 0; i < selection.count(); ++i) {
+        int row = selection.at(i).row();
+        // build list of files to send to Metadata::writeMetadata
+        paths << dm->sf->index(row, G::PathColumn).data().toString();
         // update data model
-        QModelIndex idx = dm->sf->index(selection.at(i).row(), col[tagName]);
+        QModelIndex idx = dm->sf->index(row, col[tagName]);
         dm->sf->setData(idx, tagValue, Qt::EditRole);
         // check if combined raw+jpg and also set the tag item for the hidden raw file
         if (combineRawJpg) {
@@ -10398,6 +10405,9 @@ void MW::metadataChanged(QStandardItem* item)
             }
         }
     }
+
+    // update shooting info
+    imageView->updateShootingInfo();
 }
 
 void MW::getSubfolders(QString fPath)

@@ -64,6 +64,12 @@ void ExifTool::copyICC(QString src, QString dst)
     process.write(args);
 }
 
+void ExifTool::writeTitle(QString dst, QString val)
+{
+    QByteArray args;
+
+}
+
 void ExifTool::addThumb(QString src, QString dst)
 {
 //    '-ThumbnailImage<=thumb.jpg' dst.jpg

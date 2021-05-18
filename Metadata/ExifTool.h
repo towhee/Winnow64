@@ -13,6 +13,7 @@ public:
     int execute(QStringList &args);
     void copyAllTags(QString src, QString dst);
     void copyICC(QString src, QString dst);
+    void writeTitle(QString dst, QString val);
     void addThumb(QString src, QString dst);
     int copyAll(QString src, QString dst);
     int copyAll(const QStringList &src, QStringList &dst);
