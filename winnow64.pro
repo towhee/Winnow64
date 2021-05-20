@@ -30,9 +30,11 @@ QT += xmlpatterns
 #QT += opengl
 
 HEADERS += Cache/imagecache.h \
+    Cache/imagedecoder.h \
     Dialogs/ingesterrors.h \
     Dialogs/managegraphicsdlg.h \
     Dialogs/manageimagesdlg.h \
+    Image/cacheimage.h \
     Utilities/foldercompressor.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
@@ -130,9 +132,11 @@ HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
 SOURCES += Cache/imagecache.cpp \
+    Cache/imagedecoder.cpp \
     Dialogs/ingesterrors.cpp \
     Dialogs/managegraphicsdlg.cpp \
     Dialogs/manageimagesdlg.cpp \
+    Image/cacheimage.cpp \
     Utilities/foldercompressor.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp

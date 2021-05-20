@@ -6,13 +6,15 @@
 #include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
+#include "Image/pixmap.h"
+#include "Image/cacheimage.h"
+#include "Cache/imagedecoder.h"
 #include <algorithm>         // reqd to sort cache
 #include <QMutex>
 #include <QSize>
 #include <QThread>
 #include <QWaitCondition>
 #include <QGradient>
-#include "Image/pixmap.h"
 
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
@@ -100,6 +102,8 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
+//    void fillCache(QImage *image = nullptr, QString fPath = "");
+    void fillCache(int id = -1);
     void setCurrentPosition(QString path);
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();
@@ -119,6 +123,9 @@ private:
     DataModel *dm;
     Metadata *metadata;
     Pixmap *getImage;
+    CacheImage *cacheImage;
+    QVector<ImageDecoder*> decoder;
+    int decoderCount = 4;
 
     QList<int>toCache;
     QList<int>toDecache;
