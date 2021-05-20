@@ -111,6 +111,13 @@ namespace G
         TotalColumns    // insert additional columns before this
     };
 
+    enum ImageFormat {
+        UseQt,
+        Jpg,
+        Tif,
+        Heic
+    };
+
     // used to pass externalApps from MW to AppDlg
     struct Pair {
         QString name;

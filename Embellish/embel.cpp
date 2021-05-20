@@ -163,7 +163,13 @@ void Embel::clear()
 void Embel::build(QString path, QString src)
 {
 /*
+    The image created by following the embellish template happenes here. The path to the
+    current image is not required if the source is the main Winnow program. However, if the
+    source is an EmbelExort then path will be defined, and the data model will not have
+    been loaded, requiring a call Metadata to load the image data.
 
+    isRemote == true when build is called by EmbelExport and the source is an external program.
+    It is used in in updateText when a token string is applied.
 */
     if (G::isLogger) G::log(__FUNCTION__, "Source: " + src);
     /*
@@ -174,13 +180,10 @@ void Embel::build(QString path, QString src)
                 ;
 //             */
 
-    QString msg = "src = " + src + "  path = " + path;
-//    Utilities::log(__FUNCTION__, msg);
     /*
-    qDebug() << __FUNCTION__
-             << "src =" << src
-             << "path =" << path;
-//           */
+    QString msg = "src = " + src + "  path = " + path;
+    Utilities::log(__FUNCTION__, msg);
+    */
 
     QElapsedTimer t;
     t.start();
@@ -191,15 +194,9 @@ void Embel::build(QString path, QString src)
         doNotEmbellish();
         return;
     }
-    /* file path for the current image (req'd to update styles applied to pmItem).  If it is
-       blank then source is main Winnow program, otherwise called from EmbelExport, which will
-       not have loaded the folder, and therefore no datamodel.  */
-    isRemote = false;
     if (path != "") {
-//        isRemote = true;
         fPath = path;
     }
-//    qDebug() << __FUNCTION__ << "isRemote =" << isRemote << "path =" << path << "src =" << src;
     clear();
     createBorders();
     createTexts();
@@ -213,9 +210,6 @@ void Embel::build(QString path, QString src)
     addFlashToScene();
 
     emit done();    // call imageView->resetFitZoom() (not req'd when exporting)
-//    qDebug() << __FUNCTION__
-//             << "Elapsed time (ms) =" << QString("%L1").arg(t.elapsed());
-//    diagnostic();
 }
 
 void Embel::setRemote(bool remote)
