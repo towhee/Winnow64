@@ -117,6 +117,7 @@ private:
     bool cacheSizeHasChanged;
     bool filterOrSortHasChanged;
     bool refreshCache;
+    bool stopFillingCache;
     QString currentPath;
     QString prevCurrentPath;
 
@@ -146,6 +147,8 @@ private:
     void updateImageCacheList();    //
     void refreshImageCache();
     QSize scalePreview(int w, int h);
+
+    QElapsedTimer t;
 };
 
 #endif // IMAGECACHE_H

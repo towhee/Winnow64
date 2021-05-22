@@ -1961,12 +1961,14 @@ release\.moc\moc_imagecache.cpp: Cache\imagecache.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -2460,6 +2462,131 @@ release\.moc\moc_imagedecoder.cpp: Cache\imagedecoder.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
+		Metadata\metadata.h \
+		Metadata\exif.h \
+		Metadata\ifd.h \
+		Metadata\metareport.h \
+		Utilities\utilities.h \
+		Utilities\inputdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
+		Metadata\imagemetadata.h \
+		Metadata\iptc.h \
+		Metadata\gps.h \
+		Metadata\ExifTool.h \
+		Metadata\xmp.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QtNetwork \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QtNetworkDepends \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qtnetworkglobal.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qtnetwork-config.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qabstractnetworkcache.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkrequest.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QString \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QUrl \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qabstractsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qauthenticator.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qdnslookup.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qdtls.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qtcpsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslerror.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslcertificate.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qssl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFlags \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qhostaddress.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qhostinfo.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qhstspolicy.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qhttp2configuration.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qhttpmultipart.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QByteArray \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QIODevice \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QNetworkRequest \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qlocalserver.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qlocalsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkaccessmanager.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QVector \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QSslConfiguration \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslconfiguration.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QSslPreSharedKeyAuthenticator \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslpresharedkeyauthenticator.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkconfigmanager.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkconfiguration.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkcookie.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkcookiejar.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkdatagram.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkdiskcache.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkinterface.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkproxy.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkreply.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QNetworkAccessManager \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworksession.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qocspresponse.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qpassworddigestor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QCryptographicHash \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsctpserver.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qtcpserver.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsctpsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslcertificateextension.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslcipher.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qssldiffiehellmanparameters.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslellipticcurve.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QHash \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslkey.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qudpsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qtnetworkversion.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsglobal.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qabstractmessagehandler.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QSourceLocation \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qsourcelocation.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qabstracturiresolver.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qabstractxmlnodemodel.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QXmlName \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlname.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QSharedData \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qabstractxmlreceiver.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QXmlNodeModelIndex \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qsimplexmlnodemodel.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QAbstractXmlNodeModel \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QXmlQuery \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlquery.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QAbstractXmlReceiver \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QXmlNamePool \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlnamepool.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlformatter.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QXmlSerializer \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlserializer.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlresultitems.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschema.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
+		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
+		ImageFormats\Heic\heic.h \
+		Lib\libde265\include\de265.h \
+		Lib\libde265\release\de265-version.h \
+		Lib\libheif\include\heif.h \
+		Lib\libheif\include\heif_version.h \
+		ImageFormats\Jpeg\jpeg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QRgb \
+		ImageFormats\Canon\canon.h \
+		ImageFormats\Canon\canoncr3.h \
+		ImageFormats\Dng\dng.h \
+		ImageFormats\Fuji\fuji.h \
+		ImageFormats\Nikon\nikon.h \
+		ImageFormats\Olympus\olympus.h \
+		ImageFormats\Panasonic\panasonic.h \
+		ImageFormats\Sony\sony.h \
+		ImageFormats\TIFF\tiff.h \
+		Datamodel\datamodel.h \
+		Datamodel\filters.h \
+		Utilities\progressbar.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
+		Utilities\icc.h \
+		Lib\lcms2-2.9\include\lcms2.h \
 		release\.moc\moc_predefs.h \
 		C:\Qt\5.15.2\msvc2019_64\bin\moc.exe
 	C:\Qt\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "D:/My Projects/Winnow Project/Winnow64/release/.moc/moc_predefs.h" -IC:/Qt/5.15.2/msvc2019_64/mkspecs/win32-msvc -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64" -I"D:/My Projects/Winnow Project/Winnow64/Dialogs" -I"D:/My Projects/Winnow Project/Winnow64/Utilities" -I"D:/My Projects/Winnow Project/Winnow64/MacOS" -I"D:/My Projects/Winnow Project/Winnow64/Lib/zlib" -I"D:/My Projects/Winnow Project/Winnow64/Lib/lcms2-2.9/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libde265/include" -I"D:/My Projects/Winnow Project/Winnow64/Lib/libheif/include" -IC:/Qt/5.15.2/msvc2019_64/include -IC:/Qt/5.15.2/msvc2019_64/include/QtWidgets -IC:/Qt/5.15.2/msvc2019_64/include/QtGui -IC:/Qt/5.15.2/msvc2019_64/include/QtANGLE -IC:/Qt/5.15.2/msvc2019_64/include/QtConcurrent -IC:/Qt/5.15.2/msvc2019_64/include/QtXmlPatterns -IC:/Qt/5.15.2/msvc2019_64/include/QtNetwork -IC:/Qt/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Tools\MSVC\14.12.25827\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6.1\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.16299.0\winrt" Cache\imagedecoder.h -o release\.moc\moc_imagedecoder.cpp
@@ -5223,10 +5350,12 @@ release\.moc\moc_mdcache.cpp: Cache\mdcache.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -14888,12 +15017,14 @@ release\.moc\moc_embel.cpp: Embellish\embel.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -15533,12 +15664,14 @@ release\.moc\moc_embelexport.cpp: Embellish\embelexport.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -24578,10 +24711,12 @@ release\.moc\moc_mainwindow.cpp: Main\mainwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		Views\compareview.h \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -31801,12 +31936,14 @@ release\.moc\moc_compareImages.cpp: Views\compareImages.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		Views\compareview.h \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -32426,12 +32563,14 @@ release\.moc\moc_compareview.cpp: Views\compareview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -34171,12 +34310,14 @@ release\.moc\moc_imageview.cpp: Views\imageview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -38312,12 +38453,14 @@ release\.obj\imagecache.obj: Cache\imagecache.cpp Cache\imagecache.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h
@@ -38807,7 +38950,132 @@ release\.obj\imagedecoder.obj: Cache\imagedecoder.cpp Cache\imagedecoder.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QProgressBar \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QGridLayout \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QPropertyAnimation \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QTimer \
+		Metadata\metadata.h \
+		Metadata\exif.h \
+		Metadata\ifd.h \
+		Metadata\metareport.h \
+		Utilities\utilities.h \
+		Utilities\inputdlg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
+		Metadata\imagemetadata.h \
+		Metadata\iptc.h \
+		Metadata\gps.h \
+		Metadata\ExifTool.h \
+		Metadata\xmp.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatterns \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QtXmlPatternsDepends \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QtNetwork \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QtNetworkDepends \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qtnetworkglobal.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qtnetwork-config.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qabstractnetworkcache.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkrequest.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QString \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QUrl \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qabstractsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qauthenticator.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qdnslookup.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qdtls.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qtcpsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslerror.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslcertificate.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qssl.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QFlags \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qhostaddress.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qhostinfo.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qhstspolicy.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qhttp2configuration.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qhttpmultipart.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QByteArray \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QIODevice \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QNetworkRequest \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qlocalserver.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qlocalsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkaccessmanager.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QVector \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QSslConfiguration \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslconfiguration.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QSslPreSharedKeyAuthenticator \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslpresharedkeyauthenticator.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkconfigmanager.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkconfiguration.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkcookie.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkcookiejar.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkdatagram.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkdiskcache.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkinterface.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkproxy.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworkreply.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\QNetworkAccessManager \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qnetworksession.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qocspresponse.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qpassworddigestor.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QCryptographicHash \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsctpserver.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qtcpserver.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsctpsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslcertificateextension.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslcipher.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qssldiffiehellmanparameters.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslellipticcurve.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QHash \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qsslkey.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qudpsocket.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtNetwork\qtnetworkversion.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsglobal.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qabstractmessagehandler.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QSourceLocation \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qsourcelocation.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qabstracturiresolver.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qabstractxmlnodemodel.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QXmlName \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlname.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QSharedData \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qabstractxmlreceiver.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QXmlNodeModelIndex \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qsimplexmlnodemodel.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QAbstractXmlNodeModel \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QXmlQuery \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlquery.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QAbstractXmlReceiver \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QXmlNamePool \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlnamepool.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlformatter.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\QXmlSerializer \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlserializer.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlresultitems.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschema.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qxmlschemavalidator.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtXmlPatterns\qtxmlpatternsversion.h \
+		release\.ui\ui_metadatareport.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QApplication \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTextBrowser \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout \
+		ImageFormats\Heic\heic.h \
+		Lib\libde265\include\de265.h \
+		Lib\libde265\release\de265-version.h \
+		Lib\libheif\include\heif.h \
+		Lib\libheif\include\heif_version.h \
+		ImageFormats\Jpeg\jpeg.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QRgb \
+		ImageFormats\Canon\canon.h \
+		ImageFormats\Canon\canoncr3.h \
+		ImageFormats\Dng\dng.h \
+		ImageFormats\Fuji\fuji.h \
+		ImageFormats\Nikon\nikon.h \
+		ImageFormats\Olympus\olympus.h \
+		ImageFormats\Panasonic\panasonic.h \
+		ImageFormats\Sony\sony.h \
+		ImageFormats\TIFF\tiff.h \
+		Datamodel\datamodel.h \
+		Datamodel\filters.h \
+		Utilities\progressbar.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
+		Utilities\icc.h \
+		Lib\lcms2-2.9\include\lcms2.h
 
 release\.obj\ingesterrors.obj: Dialogs\ingesterrors.cpp Dialogs\ingesterrors.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QDialog \
@@ -40296,7 +40564,7 @@ release\.obj\manageimagesdlg.obj: Dialogs\manageimagesdlg.cpp Dialogs\manageimag
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QTableWidget \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QVBoxLayout
 
-release\.obj\cacheimage.obj: Image\cacheimage.cpp Image\pixmap.h \
+release\.obj\cacheimage.obj: Image\cacheimage.cpp Image\cacheimage.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QObject \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qobject.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\qobjectdefs.h \
@@ -40904,6 +41172,8 @@ release\.obj\cacheimage.obj: Image\cacheimage.cpp Image\pixmap.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h
 
@@ -41584,10 +41854,12 @@ release\.obj\mdcache.obj: Cache\mdcache.cpp Main\global.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -52652,12 +52924,14 @@ release\.obj\embel.obj: Embellish\embel.cpp Embellish\embel.h \
 		Utilities\progressbar.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -53335,10 +53609,12 @@ release\.obj\embelproperties.obj: Embellish\Properties\embelproperties.cpp Embel
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		Views\compareview.h \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -53998,12 +54274,14 @@ release\.obj\embelexport.obj: Embellish\embelexport.cpp Embellish\embelexport.h 
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -64982,10 +65260,12 @@ release\.obj\main.obj: Main\main.cpp Main\mainwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		Views\compareview.h \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -65687,10 +65967,12 @@ release\.obj\mainwindow.obj: Main\mainwindow.cpp Main\mainwindow.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		Views\compareview.h \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -71117,10 +71399,12 @@ release\.obj\preferences.obj: PropertyEditor\preferences.cpp PropertyEditor\pref
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		Views\compareview.h \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -71821,10 +72105,12 @@ release\.obj\propertyeditor.obj: PropertyEditor\propertyeditor.cpp PropertyEdito
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		Views\compareview.h \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -77108,10 +77394,12 @@ release\.obj\progressbar.obj: Utilities\progressbar.cpp Utilities\progressbar.h 
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		Views\compareview.h \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		Utilities\mac.h \
 		Utilities\classificationlabel.h \
@@ -79246,12 +79534,14 @@ release\.obj\compareImages.obj: Views\compareImages.cpp Views\compareImages.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		Views\compareview.h \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -79868,12 +80158,14 @@ release\.obj\compareview.obj: Views\compareview.cpp Views\compareview.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -80524,10 +80816,12 @@ release\.obj\iconview.obj: Views\iconview.cpp Views\iconview.h \
 		Views\compareImages.h \
 		Views\compareview.h \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -81691,12 +81985,14 @@ release\.obj\imageview.obj: Views\imageview.cpp C:\Qt\5.15.2\msvc2019_64\include
 		C:\Qt\5.15.2\msvc2019_64\include\QtWidgets\QMainWindow \
 		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QPainter \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
-		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QThread \
+		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QWaitCondition \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
@@ -83632,10 +83928,12 @@ release\.obj\infostring.obj: Views\infostring.cpp Views\infostring.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QMultiHash \
 		Views\compareview.h \
 		Cache\imagecache.h \
-		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Image\pixmap.h \
 		Utilities\icc.h \
 		Lib\lcms2-2.9\include\lcms2.h \
+		Image\cacheimage.h \
+		Cache\imagedecoder.h \
+		C:\Qt\5.15.2\msvc2019_64\include\QtGui\QGradient \
 		Utilities\win.h \
 		C:\Qt\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		Utilities\mac.h \
