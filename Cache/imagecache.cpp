@@ -10,7 +10,9 @@ ImageCache::ImageCache(QObject *parent, DataModel *dm, Metadata *metadata) : QTh
     cacheImage = new CacheImage(this, dm, metadata);
     // create n decoder threads
     for (int id = 0; id < decoderCount; ++id) {
-        decoder[id] = new ImageDecoder(this, id);
+        qDebug() << __FUNCTION__ << id;
+        ImageDecoder *d = new ImageDecoder(this, id, metadata);
+        decoder.append(d);
         connect(decoder[id], &ImageDecoder::done, this, &ImageCache::fillCache);
     }
     restart = false;
@@ -1054,18 +1056,12 @@ void ImageCache::setCurrentPosition(QString path)
 
 void ImageCache::fillCache(int id)
 {
-    /*
-    static int threadNum = 0;
-    */
     mutex.lock();
+    qDebug() << __FUNCTION__ << id;
     // ImageDecoder thread returning a QImage
     if (decoder[id]->status == ImageDecoder::Status::Done) {
-        int room = cache.maxMB - cache.currMB;
-        int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
-        makeRoom(room, roomRqd);
+        qDebug() << __FUNCTION__ << "Inserting" << id << decoder[id]->fPath;
         imCache.insert(decoder[id]->fPath, decoder[id]->image);
-        cacheItemList[cache.toCacheKey].isCached = true;
-        if (!toCache.isEmpty()) toCache.removeFirst();
         cache.currMB = getImCacheSize();
         if (cache.isShowCacheStatus) {
             emit updateCacheOnThumbs(decoder[id]->fPath, true);
@@ -1073,54 +1069,86 @@ void ImageCache::fillCache(int id)
         }
         decoder[id]->setReady();
     }
+    /*
+    if (stopFillingCache) {
+        mutex.unlock();
+        return;
+    }*/
 
     // get next image to cache
-    if (nextToCache()) {
+    if (!stopFillingCache && nextToCache()) {
         QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
+        int room = cache.maxMB - cache.currMB;
+        int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
+        makeRoom(room, roomRqd);
+        cacheItemList[cache.toCacheKey].isCached = true;
+        if (!toCache.isEmpty()) toCache.removeFirst();
         cacheImage->load(fPath, decoder[id]);
     }
     else {
         if (cache.isShowCacheStatus) {
             emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
             emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
+            /*
+            qDebug() << __FUNCTION__
+                     << "decoderCount =" << decoderCount
+                     << "Filled Cache in " << t.elapsed() << "ms";
+                     */
         }
     }
     mutex.unlock();
-
-    /*
-    if (nextToCache()) {
-        QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
-        if (id < 0) {
-            id = threadNum;
-            decoder[id] = new ImageDecoder(this, id);
-            threadNum++;
-        }
-    }
-    */
 }
 
 void ImageCache::run()
 {
 /*
-    This thread runs continuously, checking if there is a new file selection by comparing the
-    current path to the prevCurrentPath. The current path is updated by MetadataCache, which
-    is executed for every MW::fileSelectionChange. MetadataCache first checks to see if the
-    thumbnails require updating and then emits a signal to update setCurrentPosition which is
-    continuously polled here.
+    This thread runs continuously, checking if there has there been a file selection, cache
+    size, color manage or sort/filter change, which all trigger a change to the image cache.
 
     The target range is all the files that will fit into the available cache memory based on
     the cache priorities and direction of travel. We want to make sure the target range is
-    cached, decaching anything outside the target range to make room as necessary as image
-    selection changes.
+    cached, decaching anything outside the target range to make room as necessary.
 
-    When there is a new file selection then the cache structure, used to determine what has
-    been cached, if the direction of travel has changed, reset cache item priorities and reset
-    the targe range to cache.
+    New file selection is confirmed by comparing the current path to the prevCurrentPath. The
+    current path is updated by MetadataCache, which is executed for every
+    MW::fileSelectionChange. MetadataCache first checks to see if the thumbnails require
+    updating and then emits a signal to update setCurrentPosition which is continuously polled
+    here.  Changing to position may require rebuilding the target range to cache.
 
-    Finally, iterate through the target range, and insert a QImage extracted from the embedded
-    JPG to the hash imCache.
+    When the cache size is changed MW::setImageCacheParameters calls cacheSizeChange which sets
+    cacheSizeHasChanged, which is continuously polled.  Changing the cache size will change the
+    target range.
+
+    If color manage is toggled from MW::toggleColorManage then all the cached images are
+    refreshed (decoded again).
+
+    If there is a sort or filter change to the datamodel then the entire cache list has to be
+    updated and the cache rebuilt. This is triggered from MW::resortImageCache or
+    MW::filterChange, which call rebuildImageCacheParameters.
+
+    When one of the above triggers occur and there is a change to the image cache, the
+    continuous polling activates these actions:
+
+    - Wait for all decoder threads to finish
+    - Set the cache key to the current image
+    - Determine the direction of travel
+    - Update the image cache list in case metadata has changed
+    - Update the current size of the image cache
+    - Set image cache priorities (toCache and toDecache)
+    - Set the target range
+    - If the cache size has changed make room by deleting excess images
+    - Update statusBar cache progress
+    - If the cache is up-to-date then return to continuous polling
+    - Update cache is running light in statusBar
+    - Check available memory in case another app has acquired mem
+    - Fill the cache by calling fillCache for each decoder thread which iterate through the
+      toCache list until the cache is full
+        - If decoder has loaded a QImage then insert into the image cache
+        - If the decoder is ready then get next QImage and signal fillCache
+    - Continue polling for another cache change trigger.
+
 */
-//    return;
+
     if (G::isLogger) G::log(__FUNCTION__);
     source = "";
     prevCurrentPath = "";
@@ -1177,7 +1205,6 @@ void ImageCache::run()
 //            msleep(100);
             continue;
         }
-
         /*
         mutex.lock();
         qDebug() << __FUNCTION__
@@ -1189,6 +1216,28 @@ void ImageCache::run()
                  ;
         mutex.unlock();
         // */
+        t.restart();
+
+        // wait for all decoder threads to complete
+        mutex.lock();
+        stopFillingCache = true;
+        mutex.unlock();
+        bool allDecodersfinished;
+        do {
+            allDecodersfinished = true;
+            for (int id = 0; id < decoderCount; ++id) {
+                /* Do not use decoder[id]->isRunning() as it requires a mutex which causes
+                   delays in image to image progress as the main thread waits for all the
+                   decoders to finish  */
+                if (decoder[id]->status == ImageDecoder::Busy) {
+                    allDecodersfinished = false;
+                    break;
+                }
+            }
+        } while (!allDecodersfinished);
+        mutex.lock();
+        stopFillingCache = false;
+        mutex.unlock();
 
         prevCurrentPath = currentPath;
         // prep the cache
@@ -1201,8 +1250,6 @@ void ImageCache::run()
         // update current size of the image cache imCache
         cache.currMB = getImCacheSize();
 
-//        qDebug() << __FUNCTION__ << "Chk colorManage working cache.currMB =" << cache.currMB;
-
         // set the priorities and target range to cache
         setPriorities(cache.key);
         setTargetRange();
@@ -1214,7 +1261,6 @@ void ImageCache::run()
         std::cout << diagnostics().toStdString() << std::flush;
         //reportCache();
         // */
-
         if (cache.isShowCacheStatus)
             emit showCacheStatus("Update all rows", 0, "ImageCache::run outer loop");
 
@@ -1223,19 +1269,15 @@ void ImageCache::run()
             continue;
         }
 
-        // LOAD QIMAGES INTO TARGET RANGE OF CACHE ********************************************
-
         // signal MW cache status
         emit updateIsRunning(true, true);
 
         // check available memory (another app may have used or released some memory)
         memChk();
 
-        // total images in cacheItemList for guard checking
-        int totalImages = cacheItemList.length();
-
         // fill the cache with images
         for (int id = 0; id < decoderCount; ++id) {
+            qDebug() << __FUNCTION__ << id;
             if (decoder[id]->status == ImageDecoder::Status::Ready) {
                 fillCache(id);
             }

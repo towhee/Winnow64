@@ -54,7 +54,7 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
     will be updated to show the file is not readable.
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
-//    qDebug() << __FUNCTION__ << "fPath =" << fPath;
+    qDebug() << __FUNCTION__ << "fPath =" << fPath;
     QElapsedTimer t;
     t.restart();
 
@@ -97,7 +97,7 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
     }
 
     // JPG format (including embedded in raw files)
-    if (metadata->hasJpg.contains(ext)) {
+    if (metadata->hasJpg.contains(ext) || ext == "jpg") {
         // get offset and length of embedded Jpg from the datamodel
         uint offsetFullJpg = dm->index(dmRow, G::OffsetFullColumn).data().toUInt();
         uint lengthFullJpg = dm->index(dmRow, G::LengthFullColumn).data().toUInt();
@@ -124,6 +124,7 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
 
         // try to decode the jpg data
         ImageMetadata m;
+        qDebug() << __FUNCTION__ << "launch decoder G::Jpg =" << G::Jpg;
         decoder->decode(G::Jpg, fPath, m, buf);
         /*
         if (!image.loadFromData(buf, "JPEG")) {
@@ -200,7 +201,8 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
     // All other formats
     else {
         // try to decode
-        decoder->decode(G::UseQt, fPath);
+        ImageMetadata m;
+        decoder->decode(G::UseQt, fPath, m);
         /*
         if (!image.load(fPath)) {
             imFile.close();

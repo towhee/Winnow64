@@ -658,7 +658,6 @@ ImageMetadata DataModel::imMetadata(QString fPath)
     m.iccSegmentLength = index(row, G::ICCSegmentLengthColumn).data().toUInt();
     m.iccBuf = index(row, G::ICCBufColumn).data().toByteArray();
     m.iccSpace = index(row, G::ICCSegmentOffsetColumn).data().toString();
-//     = index(row, G::RotationDegreesColumn), m.rotationDegrees
     return m;
 }
 

@@ -18,10 +18,10 @@ class ImageDecoder : public QThread
     Q_OBJECT
 
 public:
-    ImageDecoder(QObject *parent, int id);
+    ImageDecoder(QObject *parent, int id, Metadata *metadata);
     void decode(G::ImageFormat format,
                 QString fPath,
-                ImageMetadata m = mNull,
+                ImageMetadata m,
                 QByteArray ba = nullptr);
     void setReady();
 
@@ -47,12 +47,13 @@ private:
     void decodeTif();
     void decodeHeic();
     void decodeUsingQt();
-    void afterDecode();
-    static ImageMetadata mNull;
+    void rotate();
+    void colorManage();
     DataModel *dm;
     Metadata *metadata;
     QByteArray ba;
     ImageMetadata m;
+    QString ext;
 };
 
 #endif // IMAGEDECODER_H
