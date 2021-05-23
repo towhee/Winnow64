@@ -1032,9 +1032,10 @@ void IngestDlg::getAvailableStorageMB()
     QStorageInfo info(rootFolderPath);
     if (info.isValid()) {
         drive = info.displayName();
+        QString name = info.rootPath();
         qint64 bytes = info.bytesAvailable();
         availableMB = bytes / 1024 / 1024;
-        QString s = drive + " " + Utilities::formatMemory(bytes);
+        QString s = name + " (" + drive + ") " + Utilities::formatMemory(bytes);
         if (picksMB > availableMB) ui->drive->setStyleSheet("QLabel {color:red;}");
         ui->drive->setText(s);
     }
