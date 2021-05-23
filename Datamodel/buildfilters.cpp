@@ -150,7 +150,7 @@ void BuildFilters::updateCountFiltered()
 void BuildFilters::countFiltered()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     // count filtered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc

@@ -1029,24 +1029,23 @@ void IngestDlg::getAvailableStorageMB()
 /*
     Return how many MB available on the drive pointed that contains path.
 */
-    drive = folderPath.left(folderPath.indexOf("/"));
-    drive2 = folderPath2.left(folderPath2.indexOf("/"));
-    QStorageInfo info;
-
-    // destination drive
-    info.setPath(drive);
-    qint64 bytes = info.bytesAvailable();
-    availableMB = bytes / 1024 / 1024;
-    QString s = drive + " " + Utilities::formatMemory(bytes);
-    if (picksMB > availableMB) ui->drive->setStyleSheet("QLabel {color:red;}");
-    ui->drive->setText(s);
+    QStorageInfo info(rootFolderPath);
+    if (info.isValid()) {
+        drive = info.displayName();
+        qint64 bytes = info.bytesAvailable();
+        availableMB = bytes / 1024 / 1024;
+        QString s = drive + " " + Utilities::formatMemory(bytes);
+        if (picksMB > availableMB) ui->drive->setStyleSheet("QLabel {color:red;}");
+        ui->drive->setText(s);
+    }
 
     // backup drive
-    if (drive2.length() > 0) {
-        info.setPath(drive2);
-        bytes = info.bytesAvailable();
+    info.setPath(rootFolderPath2);
+    if (info.isValid() && isBackup) {
+        drive2 = info.displayName();
+        qint64 bytes = info.bytesAvailable();
         availableMB2 = bytes / 1024 / 1024;
-        s = drive2 + " " + Utilities::formatMemory(bytes);
+        QString s = drive2 + " " + Utilities::formatMemory(bytes);
         if (picksMB > availableMB2) ui->drive_2->setStyleSheet("QLabel {color:red;}");
         ui->drive_2->setText(s);
     }
@@ -1360,7 +1359,6 @@ void IngestDlg::on_backupChk_stateChanged(int arg1)
     if (G::isLogger) G::log(__FUNCTION__); 
     isBackup = arg1;
     getAvailableStorageMB();
-    qDebug() << __FUNCTION__ << isBackup;
 }
 
 void IngestDlg::on_isBackupChkBox_stateChanged(int arg1)
