@@ -270,7 +270,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
         image.convertTo(QImage::Format_RGB32);
     }
 
-    checkOrientation(fPath, image);
+    if (metadata->rotateFormats.contains(ext)) checkOrientation(fPath, image);
     return true;
 }
 

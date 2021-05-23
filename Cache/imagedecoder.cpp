@@ -7,6 +7,7 @@
 
 ImageDecoder::ImageDecoder(QObject *parent, int id, Metadata *metadata) : QThread(parent)
 {
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(id));
     threadId = id;
     status = Status::Ready;
     this->metadata = metadata;
@@ -17,10 +18,10 @@ void ImageDecoder::decode(G::ImageFormat format,
                           ImageMetadata m,
                           QByteArray ba)
 {
-    qDebug() << __FUNCTION__
-             << "threadId =" << threadId
-             << fPath
-             << format;
+//    qDebug() << __FUNCTION__
+//             << "threadId =" << threadId
+//             << fPath
+//             << format;
     status = Status::Busy;
     imageFormat = format;
     this->fPath = fPath;
@@ -28,9 +29,9 @@ void ImageDecoder::decode(G::ImageFormat format,
     this->ba = ba;
     QFileInfo fileInfo(fPath);
     ext = fileInfo.completeSuffix().toLower();
-    if (isRunning()) {
-        qDebug() << __FUNCTION__ << "threadId =" << threadId << "is Running";
-    }
+//    if (isRunning()) {
+//        qDebug() << __FUNCTION__ << "threadId =" << threadId << "is Running";
+//    }
     start();
 }
 
@@ -38,6 +39,7 @@ void ImageDecoder::decode(G::ImageFormat format,
 
 void ImageDecoder::setReady()
 {
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     status = Status::Ready;
     ba = nullptr;
     fPath = "";
@@ -45,13 +47,15 @@ void ImageDecoder::setReady()
 
 void ImageDecoder::decodeJpg()
 {
-    qDebug() << __FUNCTION__ << "threadId =" << threadId;
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
+//    qDebug() << __FUNCTION__ << "threadId =" << threadId;
     // chk nullptr
     image.loadFromData(ba, "JPEG");
 }
 
 void ImageDecoder::decodeTif()
 {
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     Tiff tiff;
     if (!tiff.decode(m, fPath, image)) {
         decodeUsingQt();
@@ -60,20 +64,24 @@ void ImageDecoder::decodeTif()
 
 void ImageDecoder::decodeHeic()
 {
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     Heic heic;
     bool success = heic.decodePrimaryImage(m, fPath, image);
 }
 
 void ImageDecoder::decodeUsingQt()
 {
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     bool success = image.load(fPath);
 }
 
 void ImageDecoder::rotate()
 {
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
+    qDebug() << __FUNCTION__ << fPath << m.orientation << m.rotationDegrees;
     QTransform trans;
     int degrees;
-    if (m.orientation) {
+    if (m.orientation > 0) {
         switch(m.orientation) {
         case 3:
             degrees = m.rotationDegrees + 180;
@@ -95,7 +103,7 @@ void ImageDecoder::rotate()
             break;
         }
     }
-    else if (m.rotationDegrees){
+    else if (m.rotationDegrees > 0){
         trans.rotate(m.rotationDegrees);
         image = image.transformed(trans, Qt::SmoothTransformation);
     }
@@ -104,6 +112,7 @@ void ImageDecoder::rotate()
 void ImageDecoder::colorManage()
 {
 #ifdef Q_OS_WIN
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     if (metadata->iccFormats.contains(ext)) {
         ICC::transform(m.iccBuf, image);
     }
@@ -112,10 +121,11 @@ void ImageDecoder::colorManage()
 
 void ImageDecoder::run()
 {
-    qDebug() << __FUNCTION__ << "threadId =" << threadId;
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
+//    qDebug() << __FUNCTION__ << "threadId =" << threadId;
     switch(imageFormat) {
     case G::Jpg:
-        qDebug() << __FUNCTION__ << "threadId =" << threadId << "case G::Jpg";
+//        qDebug() << __FUNCTION__ << "threadId =" << threadId << "case G::Jpg";
         decodeJpg();
         break;
     case G::Tif:
@@ -127,7 +137,8 @@ void ImageDecoder::run()
     case G::UseQt:
         decodeUsingQt();
     }
-    if (m.orientation || m.rotationDegrees) rotate();
+    if (metadata->rotateFormats.contains(ext) && (m.orientation > 0 || m.rotationDegrees > 0))
+        rotate();
     if (G::colorManage) colorManage();
     status = Status::Done;
 //    qDebug() << __FUNCTION__ << "threadId =" << threadId << "Emitting done";

@@ -169,7 +169,7 @@ void Embel::build(QString path, QString src)
     been loaded, requiring a call Metadata to load the image data.
 
     isRemote == true when build is called by EmbelExport and the source is an external program.
-    It is used in in updateText when a token string is applied.
+    It is used in updateText when a token string is applied.
 */
     if (G::isLogger) G::log(__FUNCTION__, "Source: " + src);
     /*

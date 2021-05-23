@@ -5234,7 +5234,6 @@ void MW::createStatusBar()
     // labels/buttons to show various status
 #ifdef Q_OS_WIN
     statusBar()->addWidget(colorManageToggleBtn);
-    qDebug() << __FUNCTION__ << "addWidget(colorManageToggleBtn)";
 #endif
     statusBar()->addWidget(reverseSortBtn);
 
