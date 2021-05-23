@@ -12,6 +12,7 @@ CacheImage::CacheImage(QObject *parent,
 
 bool CacheImage::loadFromHeic(QString &fPath, QImage &image)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QFile imFile(fPath);
     // check if file is locked by another process   rgh why not just imFile.isOpen
      if (imFile.open(QIODevice::ReadOnly)) {
@@ -54,7 +55,7 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
     will be updated to show the file is not readable.
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
-    qDebug() << __FUNCTION__ << "fPath =" << fPath;
+//    qDebug() << __FUNCTION__ << "fPath =" << fPath;
     QElapsedTimer t;
     t.restart();
 
@@ -124,7 +125,7 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
 
         // try to decode the jpg data
         ImageMetadata m;
-        qDebug() << __FUNCTION__ << "launch decoder G::Jpg =" << G::Jpg;
+//        qDebug() << __FUNCTION__ << "launch decoder G::Jpg =" << G::Jpg;
         decoder->decode(G::Jpg, fPath, m, buf);
         /*
         if (!image.loadFromData(buf, "JPEG")) {

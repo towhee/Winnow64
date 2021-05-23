@@ -221,7 +221,7 @@ void MetadataCache::loadNewFolder2ndPass()
     action = Action::NewFolder2ndPass;
     setRange();
     foundItemsToLoad = anyItemsToLoad();
-    qDebug() << __FUNCTION__ << foundItemsToLoad;
+//    qDebug() << __FUNCTION__ << foundItemsToLoad;
     start(TimeCriticalPriority);
 }
 
@@ -264,7 +264,6 @@ void MetadataCache::scrollChange(QString source)
 */
 //    return;
     if (G::isLogger) G::log(__FUNCTION__, "called by =" + source);
-    G::log(__FUNCTION__, "called by =" + source);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -277,9 +276,6 @@ void MetadataCache::scrollChange(QString source)
         }
     }
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-//    qDebug() << "\nXXX" << __FUNCTION__ << "called by =" << source
-//             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
-//             << "\n";
     abort = false;
     action = Action::Scroll;
     setRange();
