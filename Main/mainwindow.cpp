@@ -2015,10 +2015,14 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
              << "source =" << source;
 //             */
 
-    // show cache amount ie "4.2 of 16.1GB" in info panel
+    // show cache amount ie "4.2 of 16.1GB (4 threads)" in info panel
     QString cacheAmount = QString::number(double(imageCacheThread->cache.currMB)/1024,'f',1)
             + " of "
-            + QString::number(double(imageCacheThread->cache.maxMB)/1024,'f',1) + "GB";
+            + QString::number(double(imageCacheThread->cache.maxMB)/1024,'f',1)
+            + "GB ("
+            + QString::number(imageCacheThread->decoderCount)
+            + " threads)"
+            ;
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
 

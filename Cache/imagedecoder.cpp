@@ -65,8 +65,10 @@ void ImageDecoder::decodeTif()
 void ImageDecoder::decodeHeic()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
+    #ifdef Q_OS_WIN
     Heic heic;
     bool success = heic.decodePrimaryImage(m, fPath, image);
+    #endif
 }
 
 void ImageDecoder::decodeUsingQt()
@@ -78,7 +80,7 @@ void ImageDecoder::decodeUsingQt()
 void ImageDecoder::rotate()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
-    qDebug() << __FUNCTION__ << fPath << m.orientation << m.rotationDegrees;
+//    qDebug() << __FUNCTION__ << fPath << m.orientation << m.rotationDegrees;
     QTransform trans;
     int degrees;
     if (m.orientation > 0) {
@@ -137,8 +139,9 @@ void ImageDecoder::run()
     case G::UseQt:
         decodeUsingQt();
     }
-    if (metadata->rotateFormats.contains(ext) && (m.orientation > 0 || m.rotationDegrees > 0))
-        rotate();
+//    if (metadata->rotateFormats.contains(ext) && (m.orientation > 0 || m.rotationDegrees > 0))
+    if (metadata->rotateFormats.contains(ext)) rotate();
+
     if (G::colorManage) colorManage();
     status = Status::Done;
 //    qDebug() << __FUNCTION__ << "threadId =" << threadId << "Emitting done";

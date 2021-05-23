@@ -124,7 +124,7 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
         QByteArray buf = imFile.read(lengthFullJpg);
 
         // try to decode the jpg data
-        ImageMetadata m;
+        ImageMetadata m = dm->imMetadata(fPath);
 //        qDebug() << __FUNCTION__ << "launch decoder G::Jpg =" << G::Jpg;
         decoder->decode(G::Jpg, fPath, m, buf);
         /*

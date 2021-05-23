@@ -53,6 +53,8 @@ public:
     void reportRunStatus();
     QString reportImCache();
 
+    int decoderCount = 1;
+
     QHash<QString, QImage> imCache;
     QString source;                 // temp for debugging
 
@@ -126,7 +128,6 @@ private:
     Pixmap *getImage;
     CacheImage *cacheImage;
     QVector<ImageDecoder*> decoder;
-    int decoderCount = 4;
 
     QList<int>toCache;
     QList<int>toDecache;
