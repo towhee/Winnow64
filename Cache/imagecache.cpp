@@ -9,8 +9,9 @@ ImageCache::ImageCache(QObject *parent, DataModel *dm, Metadata *metadata) : QTh
 //    getImage = new Pixmap(this, dm, metadata);
     cacheImage = new CacheImage(this, dm, metadata);
     // create n decoder threads
+    decoderCount = QThread::idealThreadCount();
     for (int id = 0; id < decoderCount; ++id) {
-        qDebug() << __FUNCTION__ << id;
+//        qDebug() << __FUNCTION__ << id;
         ImageDecoder *d = new ImageDecoder(this, id, metadata);
         decoder.append(d);
         connect(decoder[id], &ImageDecoder::done, this, &ImageCache::fillCache);
@@ -1248,7 +1249,7 @@ void ImageCache::run()
         // wait for all decoder threads to complete
         mutex.lock();
         stopFillingCache = true;
-//        mutex.unlock();
+        mutex.unlock();
         bool allDecodersfinished;
         do {
             allDecodersfinished = true;
@@ -1256,13 +1257,16 @@ void ImageCache::run()
                 /* Do not use decoder[id]->isRunning() as it requires a mutex which causes
                    delays in image to image progress as the main thread waits for all the
                    decoders to finish  */
-                if (decoder[id]->status == ImageDecoder::Busy) {
+                mutex.lock();
+                bool isBusy = decoder[id]->status == ImageDecoder::Busy;
+                mutex.unlock();
+                if (isBusy) {
                     allDecodersfinished = false;
                     break;
                 }
             }
         } while (!allDecodersfinished && t.elapsed() < 2000);
-//        mutex.lock();
+        mutex.lock();
         stopFillingCache = false;
         mutex.unlock();
 
@@ -1300,7 +1304,7 @@ void ImageCache::run()
         emit updateIsRunning(true, true);
 
         // check available memory (another app may have used or released some memory)
-        memChk();
+//        memChk();
 
         // fill the cache with images
         for (int id = 0; id < decoderCount; ++id) {
