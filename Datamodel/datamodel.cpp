@@ -568,6 +568,7 @@ ImageMetadata DataModel::imMetadata(QString fPath)
 
     // file info (calling Metadata not required)
     m.row = row;
+    m.fPath = fPath;
     m.size = index(row, G::SizeColumn).data().toInt();
     m.label = index(row, G::LabelColumn).data().toString();
     m._label = index(row, G::_LabelColumn).data().toString();

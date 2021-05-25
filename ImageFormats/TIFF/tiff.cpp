@@ -412,22 +412,32 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 
 bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
 {
-    QElapsedTimer t;
-    t.restart();
-
+/*
+    Decode using unmapped QFile
+*/
+//    qDebug() << __FUNCTION__ << "using unmapped QFile";
     MetadataParameters p;
-    Exif *exif = new Exif;
-    IFD *ifd = new IFD;
-    p.report = false;
-    p.hdr = "IFD0";
-    p.offset = m.ifd0Offset;
-    p.hash = &exif->hash;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
         m.err += "Unable to open file " + fPath + ". ";
         qDebug() << __FUNCTION__ << m.err;
         return false;
     }
+    return decode(m, p, image, newSize);
+}
+
+bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int newSize)
+{
+//    qDebug() << __FUNCTION__;
+    QElapsedTimer t;
+    t.restart();
+
+    Exif *exif = new Exif;
+    IFD *ifd = new IFD;
+    p.report = false;
+    p.hdr = "IFD0";
+    p.offset = m.ifd0Offset;
+    p.hash = &exif->hash;
     parseForDecoding(p, m, ifd);
 
     // cancel if there is compression or planar format
@@ -470,7 +480,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
             im = new QImage(w, h, QImage::Format_RGBX64);
         }
         else {
-            m.err += "Failed m.planarConfiguration != 1 " + fPath + ". ";
+            m.err += "Failed m.planarConfiguration != 1 " + m.fPath + ". ";
             qDebug() << __FUNCTION__ << m.err;
 //            qDebug() << __FUNCTION__ << "Failed m.planarConfiguration != 1" << p.file.fileName();
             p.file.close();
@@ -482,7 +492,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
         im = new QImage(w, h, QImage::Format_RGB888);
     }
     else {
-        m.err += "bitsPerSample =" + QString::number(bitsPerSample) + fPath + ". ";
+        m.err += "bitsPerSample =" + QString::number(bitsPerSample) + m.fPath + ". ";
         qDebug() << __FUNCTION__ << m.err;
 //        qDebug() << __FUNCTION__ << "bitsPerSample =" << bitsPerSample << p.file.fileName();
         p.file.close();

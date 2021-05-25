@@ -25,7 +25,12 @@ public:
                Exif *exif,
                Jpeg *jpeg);
     bool parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
+    // decode using unmapped QFile
     bool decode(ImageMetadata &m, QString &fPath, QImage &image, int maxDim = 0);
+    // decode using QFile mapped to memory
+//    bool decode(ImageMetadata &m, QFile &file, QImage &image, int maxDim = 0);
+    // decoding happens here
+    bool decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int maxDim = 0);
 
 private:
     int bitsPerSample = 0;

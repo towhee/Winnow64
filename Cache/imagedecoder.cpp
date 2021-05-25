@@ -1,8 +1,18 @@
 #include "imagedecoder.h"
 
 /*
-   - maybe eliminate datamodel and metadata, passing all req'd info ie ICC and rotation
-   - change tif to read file separate from decoding (QIODevice?)
+   This class decouples the asyncronous image reading (in CacheImage) from the synchronous
+   image decoding, which is executed in multiple ImageDecoder threads.
+
+   CacheImage::decode receives the file information and metadata.  Depending on the type of
+   image, either a QByteArray buffer is loaded (JPG and other Qt library formats), the QFile
+   is mapped to memory (TIF) or the file path is used (HEIC).  Using a buffer or mapping the
+   QFile improves performance.  ImageDecoder::run is started.
+
+   The appropriate decoder: decodeJpg, decodeTif, decodeHeic or decodeUsingQt is called.  The
+   resulting QImage rotation and color manage are checked.  Done is emitted, signalling
+   ImageCache::fillCache, where the QImage is inserted into the Image cache, and if there are
+   still more images to cache, CacheImage is called and the cycle continues.
 */
 
 ImageDecoder::ImageDecoder(QObject *parent, int id, Metadata *metadata) : QThread(parent)
@@ -26,9 +36,15 @@ void ImageDecoder::decode(G::ImageFormat format,
     imageFormat = format;
     this->fPath = fPath;
     this->m = m;
+    this->ba.clear();
     this->ba = ba;
     QFileInfo fileInfo(fPath);
     ext = fileInfo.completeSuffix().toLower();
+    if (format == G::Tif) {
+        p.file.setFileName(fPath);
+        p.file.open(QIODevice::ReadOnly);
+        buf = p.file.map(0, p.file.size());
+    }
 //    if (isRunning()) {
 //        qDebug() << __FUNCTION__ << "threadId =" << threadId << "is Running";
 //    }
@@ -57,8 +73,11 @@ void ImageDecoder::decodeTif()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     Tiff tiff;
-    if (!tiff.decode(m, fPath, image)) {
+    if (!tiff.decode(m, p, image)) {
         decodeUsingQt();
+    }
+    else {
+        p.file.unmap(buf);
     }
 }
 

@@ -47,3 +47,5 @@ debug/
 *.pdb
 *.autosave
 Cache/imagecache - Copy (2).cpp
+ImageFormats/TIFF/tiff - Copy.cpp
+ImageFormats/TIFF/tiff - Copy.h
