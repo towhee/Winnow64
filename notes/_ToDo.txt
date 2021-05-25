@@ -10,7 +10,6 @@ BUGS / TO DO
 - Slow program start sometimes (check for updates?)
 - Slow startup if a drive is sleeping
 - Maintain count when switch folders during the same ingest
-- Tap on mac
 - Handle winnets on Mac
 - Improve err recording and showing to user
 - Text disappears at certain font sizes
@@ -46,6 +45,13 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+-
+- Fixed ingest dialog available space on drives bug on mac
+- Separated file read and decode for performance improvement
+- Added multiple decoder threads to improved image caching performance
+- Release 1.21
+- Fixed issue with tken editor for Winnow edited metadata
+- Release 1.20
 - End key crash (conflict with calling MetadataCache::scrollChange during fileSelectionChange)
 - added stay_open option for ExifTool
 - Embellish export adds thumbnail to image

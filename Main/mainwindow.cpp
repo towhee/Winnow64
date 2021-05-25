@@ -1221,7 +1221,7 @@ void MW::folderSelectionChange()
     clearAll();
 
     // do not embellish
-    if (turnOffEmbellish)  embelProperties->invokeFromAction(embelTemplatesActions.at(0));
+    if (turnOffEmbellish) embelProperties->invokeFromAction(embelTemplatesActions.at(0));
 
     setCentralMessage("Gathering metadata and thumbnails for images in folder.");
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
@@ -1580,33 +1580,43 @@ void MW::folderAndFileSelectionChange(QString fPath)
     embelProperties->setCurrentTemplate("Do not Embellish");
     QFileInfo info(fPath);
     QString folder = info.dir().absolutePath();
-    if (!isStartupArgs && (folder == currentViewDir)) return;
+    qDebug() << __FUNCTION__
+             << "isStartupArgs =" << isStartupArgs
+             << "folder =" << folder
+             << "currentViewDir =" << currentViewDir
+                ;
+//    if (!isStartupArgs && (folder == currentViewDir)) {
+//        qDebug() << __FUNCTION__ << "returning: isStartupArgs =" << isStartupArgs;
+//        return;
+//    }
 
     if (!fsTree->select(folder)) {
         // failure
+        qDebug() << __FUNCTION__ << "fsTree failed to select" << fPath;
         return;
     }
 
+    qDebug() << __FUNCTION__ << "folderSelectionChange()";
     folderSelectionChange();
 
-    thumbView->selectionModel()->clear();
-    thumbView->selectThumb(fPath);
     centralLayout->setCurrentIndex(LoupeTab);
-    return;
+    thumbView->selectionModel()->clear();
+//    thumbView->selectThumb(fPath);
 
-//    // select image with fPath
-//    for (int i = 0; i < 100; i++) {
-//        if (G::isNewFolderLoaded) {
-//            thumbView->selectionModel()->clear();
-//            thumbView->selectThumb(fPath);
-//            centralLayout->setCurrentIndex(LoupeTab);
-//            break;
-//        }
-//        else {
-////                qDebug() << __FUNCTION__ << "waiting for folder to load:" << i;
-//            G::wait(100);
-//        }
-//    }
+    // select image with fPath
+    for (int i = 0; i < 100; i++) {
+        if (G::isNewFolderLoaded) {
+            thumbView->selectionModel()->clear();
+            thumbView->selectThumb(fPath);
+            centralLayout->setCurrentIndex(LoupeTab);
+            break;
+        }
+        else {
+            qDebug() << __FUNCTION__ << "waiting for folder to load:" << i;
+            G::wait(100);
+        }
+    }
+    return;
 
 }
 

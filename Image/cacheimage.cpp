@@ -4,10 +4,10 @@
 /*
    CacheImage is used by ImageCache to read image files and then decode them in a separate
    ImageDecoder thread.  This decouples the file read from the image decoding, as the files
-   have to be read asyncronously, while they can be decoded syncronously in multiple
+   have to be read asyncronously, while they can be decoded synchronously in multiple
    ImageDecoder threads.
 
-   Pixmap does
+   Pixmap does the same thing, but combines the reading and decoding.
 
 
 */
