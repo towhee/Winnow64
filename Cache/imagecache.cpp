@@ -1119,7 +1119,7 @@ void ImageCache::fillCache(int id)
             emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
             /*
             qDebug() << __FUNCTION__
-                     << "decoderCount =" << decoderCount
+                     << "decoder id =" << id
                      << "Filled Cache in " << t.elapsed() << "ms";
                      //*/
         }

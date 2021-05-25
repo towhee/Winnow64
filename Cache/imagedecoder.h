@@ -27,6 +27,7 @@ public:
 
     int threadId;
     QImage image;
+    QByteArray ba;
     QString fPath;
     G::ImageFormat imageFormat;
 
@@ -51,8 +52,9 @@ private:
     void colorManage();
     DataModel *dm;
     Metadata *metadata;
-    QByteArray ba;
     ImageMetadata m;
+    MetadataParameters p;
+    unsigned char *buf;
     QString ext;
 };
 

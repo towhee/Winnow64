@@ -1,6 +1,17 @@
 #include "Image/cacheimage.h"
 #include "Main/global.h"
 
+/*
+   CacheImage is used by ImageCache to read image files and then decode them in a separate
+   ImageDecoder thread.  This decouples the file read from the image decoding, as the files
+   have to be read asyncronously, while they can be decoded syncronously in multiple
+   ImageDecoder threads.
+
+   Pixmap does
+
+
+*/
+
 CacheImage::CacheImage(QObject *parent,
                        DataModel *dm,
                        Metadata *metadata)
@@ -56,16 +67,12 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
 //    qDebug() << __FUNCTION__ << "fPath =" << fPath;
-    QElapsedTimer t;
-    t.restart();
-
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
 
     if (metadata->videoFormats.contains(ext)) return false;
 
     QFile imFile(fPath);
-//    if (imFile.isOpen()) imFile.close();
     int dmRow = dm->fPathRow[fPath];
 
     QString err = dm->index(dmRow, G::ErrColumn).data().toString();
@@ -125,24 +132,13 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
 
         // try to decode the jpg data
         ImageMetadata m = dm->imMetadata(fPath);
-//        qDebug() << __FUNCTION__ << "launch decoder G::Jpg =" << G::Jpg;
         decoder->decode(G::Jpg, fPath, m, buf);
-        /*
-        if (!image.loadFromData(buf, "JPEG")) {
-            imFile.close();
-            err += "Could not read image from buffer" + fPath + ". ";
-            dm->setData(dm->index(dmRow, G::ErrColumn), err);
-            return false;
-        }
-        */
-
         imFile.close();
     }
 
     // HEIC format
-    // rgh remove heic
+    // rgh remove heic (why?)
     else if (metadata->hasHeic.contains(ext)) {
-//        qDebug() << __FUNCTION__ << "hasHEIC" << fPath;
         ImageMetadata m = dm->imMetadata(fPath);
         #ifdef Q_OS_WIN
         decoder->decode(G::Heic, fPath, m);
@@ -179,23 +175,6 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
         // use Winnow decoder
         ImageMetadata m = dm->imMetadata(fPath);
         decoder->decode(G::Tif, fPath, m);
-        /*
-        Tiff tiff;
-        if (!tiff.decode(m, fPath, image)) {
-            imFile.close();
-//            err += "Could not decode " + fPath + ". ";
-            qDebug() << __FUNCTION__ << "Could not decode using Winnow Tiff decoder.  Trying Qt tiff library to decode" + fPath + ". ";
-
-            // use Qt tiff library to decode
-            if (!image.load(fPath)) {
-                imFile.close();
-                err += "Could not decode " + fPath + ". ";
-                qDebug() << __FUNCTION__ << err;
-                dm->setData(dm->index(dmRow, G::ErrColumn), err);
-                return false;
-            }
-        }
-        */
         imFile.close();
     }
 
@@ -204,15 +183,6 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
         // try to decode
         ImageMetadata m;
         decoder->decode(G::UseQt, fPath, m);
-        /*
-        if (!image.load(fPath)) {
-            imFile.close();
-            err += "Could not decode " + fPath + ". ";
-            qDebug() << __FUNCTION__ << err;
-            dm->setData(dm->index(dmRow, G::ErrColumn), err);
-            return false;
-        }
-        */
         imFile.close();
     }
     return true;

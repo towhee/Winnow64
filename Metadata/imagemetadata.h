@@ -6,8 +6,9 @@
 class ImageMetadata
 {
 /*
-This structure of all the fields in metadata is used to insert a new item
-into the datamodel dm->addMetadataForItem(ImageMetadata m).
+    This structure, of all the fields in metadata, is used to insert a new item
+    into the datamodel dm->addMetadataForItem(ImageMetadata m) and to pass metadata
+    to other classes such as the image parsing routines.
 */
 public:
     int row = 0;                            // datamodel row
@@ -99,8 +100,8 @@ Q_DECLARE_METATYPE(ImageMetadata)
 class MetadataParameters
 {
 /*
-This structure holds the parameters that are passed from Metadata to each of the
-image file parsing classes ie parseSony.
+    This structure holds the parameters that are passed from Metadata to each of the
+    image file parsing classes ie parseSony.
 */
 public:
     QFile file;

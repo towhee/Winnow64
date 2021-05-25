@@ -1044,9 +1044,10 @@ void IngestDlg::getAvailableStorageMB()
     info.setPath(rootFolderPath2);
     if (info.isValid() && isBackup) {
         drive2 = info.displayName();
+        QString name = info.rootPath();
         qint64 bytes = info.bytesAvailable();
         availableMB2 = bytes / 1024 / 1024;
-        QString s = drive2 + " " + Utilities::formatMemory(bytes);
+        QString s = name + " (" + drive2 + ") " + " " + Utilities::formatMemory(bytes);
         if (picksMB > availableMB2) ui->drive_2->setStyleSheet("QLabel {color:red;}");
         ui->drive_2->setText(s);
     }
