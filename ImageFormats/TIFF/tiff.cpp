@@ -11,6 +11,7 @@ bool Tiff::parse(MetadataParameters &p,
            Exif *exif,
            Jpeg *jpeg)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     //file.open happens in readMetadata
 
     quint32 startOffset = 0;
@@ -330,6 +331,7 @@ bool Tiff::parse(MetadataParameters &p,
 
 bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     ifd->readIFD(p, m, m.isBigEnd);
     if (ifd->ifdDataHash.contains(273)) {
         int offsetCount = ifd->ifdDataHash.value(273).tagCount;
@@ -413,9 +415,10 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
 {
 /*
-    Decode using unmapped QFile
+    Decode using unmapped QFile.  Set p.file and call main decode.
 */
 //    qDebug() << __FUNCTION__ << "using unmapped QFile";
+    if (G::isLogger) G::log(__FUNCTION__, " load file from fPath");
     MetadataParameters p;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
@@ -428,6 +431,11 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
 
 bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int newSize)
 {
+/*
+    Decoding the Tif occurs here.  p.file must be set and opened.  If called from ImageDecoder
+    then p.file will be mapped to memory
+*/
+    if (G::isLogger) G::log(__FUNCTION__, "Main decode with p.file assigned");
 //    qDebug() << __FUNCTION__;
     QElapsedTimer t;
     t.restart();
