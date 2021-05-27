@@ -1,10 +1,23 @@
 #include "Main/mainwindow.h"
 #include <QApplication>
 #include "qtsingleapplication.h"
-//#include <vld.h>        // Visual Leak Detection
 
 int main(int argc, char *argv[])
 {
+    /* Original multi instance version
+    QApplication QApp(argc, argv);
+        if (QCoreApplication::arguments().size() > 2)
+        {
+            qDebug() << QObject::tr("Usage: Winnow [FILE or DIRECTORY]...");
+            return -1;
+        }
+        QCoreApplication::addLibraryPath("./");
+        MW MW;
+        MW.show();
+        return QApp.exec();
+        //*/
+
+//    /* Single instance version
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
                 Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
@@ -19,17 +32,12 @@ int main(int argc, char *argv[])
 
     // instance already running
     if (instance.sendMessage(args)) {
-        /* log
-        Utilities::log(__FUNCTION__, "Instance already running");
-//        */
+//        Utilities::log(__FUNCTION__, "Instance already running");
         return 0;
     }
 
     // start program
     QCoreApplication::addLibraryPath("./");
-    /* log
-    Utilities::log(__FUNCTION__, "Start Winnow");
-//    */
     MW mw(args);
     mw.show();
 
@@ -41,4 +49,5 @@ int main(int argc, char *argv[])
     QObject::connect(&mw, SIGNAL(needToShow()), &instance, SLOT(activateWindow()));
 
     return instance.exec();             //    return QApp.exec();
+    //*/
 }
