@@ -1580,15 +1580,19 @@ void MW::folderAndFileSelectionChange(QString fPath)
     embelProperties->setCurrentTemplate("Do not Embellish");
     QFileInfo info(fPath);
     QString folder = info.dir().absolutePath();
+    /*
     qDebug() << __FUNCTION__
              << "isStartupArgs =" << isStartupArgs
              << "folder =" << folder
              << "currentViewDir =" << currentViewDir
                 ;
-//    if (!isStartupArgs && (folder == currentViewDir)) {
-//        qDebug() << __FUNCTION__ << "returning: isStartupArgs =" << isStartupArgs;
-//        return;
-//    }
+                //*/
+    /*
+    if (!isStartupArgs && (folder == currentViewDir)) {
+        qDebug() << __FUNCTION__ << "returning: isStartupArgs =" << isStartupArgs;
+        return;
+    }
+    //*/
 
     if (!fsTree->select(folder)) {
         // failure

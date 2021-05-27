@@ -28,10 +28,12 @@ void ImageDecoder::decode(G::ImageFormat format,
                           ImageMetadata m,
                           QByteArray ba)
 {
-//    qDebug() << __FUNCTION__
-//             << "threadId =" << threadId
-//             << fPath
-//             << format;
+    /*
+    qDebug() << __FUNCTION__
+             << "threadId =" << threadId
+             << fPath
+             << format;
+             //*/
     status = Status::Busy;
     imageFormat = format;
     this->fPath = fPath;
@@ -57,7 +59,8 @@ void ImageDecoder::setReady()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     status = Status::Ready;
-    ba = nullptr;
+//    ba = nullptr;
+    ba.clear();
     fPath = "";
 }
 
