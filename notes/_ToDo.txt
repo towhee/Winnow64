@@ -39,6 +39,7 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - cleanup imageview rubberband
 ENHANCEMENTS
+- Use QColorSpace?
 - Add fade and alias to stroke
 - Add glow (inner/outer)
 - Add guassian blur (inner/outer)
