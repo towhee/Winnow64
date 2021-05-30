@@ -8,9 +8,9 @@
 #include "Datamodel/datamodel.h"
 #include "Metadata/imagemetadata.h"
 #include "Cache/imagedecoder.h"
-#ifdef Q_OS_WIN
+//#ifdef Q_OS_WIN
 #include "Utilities/icc.h"
-#endif
+//#endif
 #include "ImageFormats/Jpeg/jpeg.h"
 #ifdef Q_OS_WIN
 // rgh remove heic

@@ -132,12 +132,12 @@ void ImageDecoder::rotate()
 
 void ImageDecoder::colorManage()
 {
-#ifdef Q_OS_WIN
+//#ifdef Q_OS_WIN
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     if (metadata->iccFormats.contains(ext)) {
         ICC::transform(m.iccBuf, image);
     }
-#endif
+//#endif
 }
 
 void ImageDecoder::run()

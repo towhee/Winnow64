@@ -72,14 +72,14 @@ bool EmbelExport::loadImage(QString fPath)
     // load QImage
     QImage im(fPath);
     // color manage if available
-    #ifdef Q_OS_WIN
+//    #ifdef Q_OS_WIN
     QString ext = metadata->m.type.toLower();
     if (metadata->iccFormats.contains(ext)) {
         QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
 //        ICC::setInProfile(ba);   // if ba.isEmpty then sRGB used
         ICC::transform(ba, im);
     }
-    #endif
+//    #endif
     // convert QImage to QGraphicsPixmapItem
     pmItem->setPixmap(QPixmap::fromImage(im));
 

@@ -10,9 +10,9 @@
 #include "Properties/embelproperties.h"
 #include "Embellish/embel.h"
 #include "Metadata/ExifTool.h"
-#ifdef Q_OS_WIN
+//#ifdef Q_OS_WIN
 #include "Utilities/icc.h"
-#endif
+//#endif
 
 class EmbelExport : public QGraphicsView
 {

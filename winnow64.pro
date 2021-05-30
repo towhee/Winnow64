@@ -295,6 +295,13 @@ DISTFILES += notes/xmp.txt
 mac:LIBS += -framework ApplicationServices
 mac:LIBS += -framework AppKit
 
+# lcms
+#mac:LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2
+#mac:INCLUDEPATH += $$PWD/Lib/lcms2/include
+#mac:DEPENDPATH += $$PWD/Lib/lcms2/include
+#mac:PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/liblcms2.a
+
+
 win32:QMAKE_CXXFLAGS += /MD
 #win32:QMAKE_CXXFLAGS += /MDd
 #win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../LIBRARYNAME/Lib/ -lLIBRARY /NODEFAULTLIB:library
@@ -322,27 +329,16 @@ else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -lli
 win32:INCLUDEPATH += $$PWD/Lib/libheif/include
 win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
 
-# old stuff
+macx: LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2
 
-# use imagemagic libs
-#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -lCORE_RL_libde265_
-#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ -lCORE_DB_libde265_
+INCLUDEPATH += $$PWD/Lib/lcms2/include
+DEPENDPATH += $$PWD/Lib/lcms2/include
 
-##else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libde265/debug/ libde265.lib
-#win32:INCLUDEPATH += $$PWD/Lib/libde265/include
-#win32:DEPENDPATH += $$PWD/Lib/libde265/debug
-#win32:DEPENDPATH += $$PWD/Lib/libde265/release
+macx: PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/liblcms2.a
 
-# use imagemagic libs
-#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libheif/release/ -lCORE_RL_libheif_
-#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -lCORE_DB_libheif_
+macx: LIBS += -L$$PWD/Lib/lcms2/release/ -lfast_float_plugin
 
-#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ libheif.lib
-#win32:INCLUDEPATH += $$PWD/Lib/libheif/include
-#win32:DEPENDPATH += $$PWD/Lib/libheif
+INCLUDEPATH += $$PWD/Lib/lcms2/include
+DEPENDPATH += $$PWD/Lib/lcms2/include
 
-# attempt to use dll
-#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/bin/ -llcms2
-#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/bin/ -llcms2d
-
-#DEPENDPATH += $$PWD/Lib/lcms2-2.9/bin
+macx: PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/libfast_float_plugin.a
