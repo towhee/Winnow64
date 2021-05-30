@@ -12,16 +12,6 @@
 #include "Image/pixmap.h"
 #include "Embellish/embel.h"
 
-//#include "Views/imagescene.h"
-//#include "Effects/openglframe.h"
-
-//#include "Dialogs/patterndlg.h"
-
-//#ifdef Q_OS_WIN
-//#include "Utilities/icc.h"
-//#endif
-
-
 class ImageView : public QGraphicsView
 {
     Q_OBJECT

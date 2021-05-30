@@ -386,8 +386,7 @@ void MW::initialize()
     setMouseTracking(true);
     QString msg;
     colorManageToggleBtn = new BarBtn();
-    msg = "Toggle color manage on/off.  Will take effect when additional images\n"
-          "are added to the cache or when a new folder is selected.";
+    msg = "Toggle color manage on/off.";
     colorManageToggleBtn->setToolTip(msg);
     connect(colorManageToggleBtn, &BarBtn::clicked, this, &MW::toggleColorManage);
     cacheMethodBtn = new BarBtn();

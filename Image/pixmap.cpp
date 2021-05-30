@@ -254,12 +254,12 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     // color manage if available
 //    ICCTime.start();
-    #ifdef Q_OS_WIN
+//    #ifdef Q_OS_WIN
     if (G::colorManage && metadata->iccFormats.contains(ext)) {
         QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
         ICC::transform(ba, image);
     }
-    #endif
+//    #endif
 //    tICC = ICCTime.elapsed();
 
 //    tDecode = decodeTime.elapsed() ;

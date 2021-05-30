@@ -8,8 +8,8 @@
 #include "Datamodel/datamodel.h"
 #include "Metadata/imagemetadata.h"
 #include "ImageFormats/Jpeg/jpeg.h"
-#ifdef Q_OS_WIN
 #include "Utilities/icc.h"
+#ifdef Q_OS_WIN
 #include "ImageFormats/Heic/heic.h"
 #endif
 

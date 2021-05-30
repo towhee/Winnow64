@@ -294,7 +294,8 @@ QString WidgetCSS::tabWidget()
 {
     return
     "QTabWidget::tab-bar {"
-        "alignment: left;"
+//        "left: 0;"
+//        "alignment: left;"
 /*        "border: 1px solid red;"                      nada */
     "}"
 

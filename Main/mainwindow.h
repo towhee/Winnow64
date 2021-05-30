@@ -39,9 +39,9 @@
 
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
-#ifdef Q_OS_WIN
+//#ifdef Q_OS_WIN
 #include "Utilities/icc.h"
-#endif
+//#endif
 
 #include "ingestdlg.h"
 #include "saveasdlg.h"
