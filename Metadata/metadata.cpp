@@ -785,9 +785,10 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     }
     clearMetadata();
 
-    if (p.file.isOpen()) p.file.close();
+//    if (p.file.isOpen()) p.file.close();
     if (p.file.isOpen()) {
-        qDebug() << __FUNCTION__ << "Could not close" << path;
+        qDebug() << __FUNCTION__ << "File already open" << path;
+//        qDebug() << __FUNCTION__ << "Could not close" << path;
         return false;
     }
     p.file.setFileName(path);
