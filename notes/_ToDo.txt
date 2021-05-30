@@ -1,4 +1,8 @@
 BUGS / TO DO
+QIODevice::read (QFile, "D:\Pictures\Coaster\2005-10-11_0082.jpg"): device not open
+Using QByteRef with an index pointing outside the valid range of a QByteArray. The corresponding behavior is deprecated, and will be changed in a future version of Qt.
+ASSERT: "head() + size() + offset <= capacity()" in file C:\Users\qt\work\qt\qtbase\include\QtCore\5.15.2\QtCore\private\../../../../../src/corelib/tools/qringbuffer_p.h, line 158
+
 - PlusMinusEditor not sizing to contents in preferences thumbnail button size
 - Export from LR Winnow does not refresh folder
 - Slideshow of all images on F drive eventually crashed (85000+ images)
@@ -45,7 +49,9 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
--
+- Release 1.23
+- Possibly fixed "Device not open" issue
+- Release 1.22
 - Fixed ingest dialog available space on drives bug on mac
 - Separated file read and decode for performance improvement
 - Added multiple decoder threads to improved image caching performance
