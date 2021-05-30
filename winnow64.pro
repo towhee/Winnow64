@@ -35,6 +35,9 @@ HEADERS += Cache/imagecache.h \
     Dialogs/managegraphicsdlg.h \
     Dialogs/manageimagesdlg.h \
     Image/cacheimage.h \
+    Lcms2/lcms2.h \
+    Lcms2/lcms2_internal.h \
+    Lcms2/lcms2_plugin.h \
     Utilities/foldercompressor.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
@@ -137,6 +140,32 @@ SOURCES += Cache/imagecache.cpp \
     Dialogs/managegraphicsdlg.cpp \
     Dialogs/manageimagesdlg.cpp \
     Image/cacheimage.cpp \
+    Lcms2/cmsalpha.c \
+    Lcms2/cmscam02.c \
+    Lcms2/cmscgats.c \
+    Lcms2/cmscnvrt.c \
+    Lcms2/cmserr.c \
+    Lcms2/cmsgamma.c \
+    Lcms2/cmsgmt.c \
+    Lcms2/cmshalf.c \
+    Lcms2/cmsintrp.c \
+    Lcms2/cmsio0.c \
+    Lcms2/cmsio1.c \
+    Lcms2/cmslut.c \
+    Lcms2/cmsmd5.c \
+    Lcms2/cmsmtrx.c \
+    Lcms2/cmsnamed.c \
+    Lcms2/cmsopt.c \
+    Lcms2/cmspack.c \
+    Lcms2/cmspcs.c \
+    Lcms2/cmsplugin.c \
+    Lcms2/cmsps2.c \
+    Lcms2/cmssamp.c \
+    Lcms2/cmssm.c \
+    Lcms2/cmstypes.c \
+    Lcms2/cmsvirt.c \
+    Lcms2/cmswtpnt.c \
+    Lcms2/cmsxform.c \
     Utilities/foldercompressor.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
@@ -266,7 +295,8 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/ingestautopath
+DISTFILES += Docs/ingestautopath \
+    Lcms2/lcms2.def
 DISTFILES += Docs/ingestautopath.html
 DISTFILES += Docs/versions
 DISTFILES += Docs/test.html
@@ -296,10 +326,10 @@ mac:LIBS += -framework ApplicationServices
 mac:LIBS += -framework AppKit
 
 # lcms
-#mac:LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2
-#mac:INCLUDEPATH += $$PWD/Lib/lcms2/include
-#mac:DEPENDPATH += $$PWD/Lib/lcms2/include
-#mac:PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/liblcms2.a
+#macx: LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2
+#macx: INCLUDEPATH += $$PWD/Lib/lcms2/include
+#macx: DEPENDPATH += $$PWD/Lib/lcms2/include
+#macx: PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/liblcms2.a
 
 
 win32:QMAKE_CXXFLAGS += /MD
@@ -312,10 +342,10 @@ win32:INCLUDEPATH += $$PWD/Lib/zlib
 win32:DEPENDPATH += $$PWD/Lib/zlib
 
 # lcms
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -lCORE_RL_lcms_
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
-win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
-win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
+#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -lCORE_RL_lcms_
+#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
+#win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
+#win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
 
 # libde265 (frame parallel)
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
@@ -329,16 +359,3 @@ else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/libheif/debug/ -lli
 win32:INCLUDEPATH += $$PWD/Lib/libheif/include
 win32:DEPENDPATH +=  $$PWD/Lib/libheif/release
 
-macx: LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2
-
-INCLUDEPATH += $$PWD/Lib/lcms2/include
-DEPENDPATH += $$PWD/Lib/lcms2/include
-
-macx: PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/liblcms2.a
-
-macx: LIBS += -L$$PWD/Lib/lcms2/release/ -lfast_float_plugin
-
-INCLUDEPATH += $$PWD/Lib/lcms2/include
-DEPENDPATH += $$PWD/Lib/lcms2/include
-
-macx: PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/libfast_float_plugin.a

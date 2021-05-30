@@ -3,11 +3,8 @@
 
 #include <QtWidgets>
 #include "Main/global.h"
-#include "lcms2.h"                      // little color management system
-#include "lcms2_fast_float.h"
-#include "lcms2_internal.h"
-#include "lcms2_plugin.h"
-//#include "fast_float_internal.h"
+#include "Lcms2/lcms2.h"                      // little color management system
+#include "Lcms2/lcms2_plugin.h"
 
 namespace ICC
 {
