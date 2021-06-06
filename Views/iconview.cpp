@@ -763,9 +763,11 @@ bool IconView::isThumb(int row)
     return dm->sf->index(row, 0).data(Qt::DecorationRole).isNull();
 }
 
-// Used by thumbnail navigation (left, right, up, down etc)
 void IconView::selectThumb(QModelIndex idx)
 {
+/*
+    Used for thumbnail navigation (left, right, up, down etc)
+*/
     if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__ << idx;
     if (idx.isValid()) {
@@ -1755,7 +1757,7 @@ void IconView::copyThumbs()
 void IconView::startDrag(Qt::DropActions)
 {
 /*
-Drag and drop thumbs to another program.
+    Drag and drop thumbs to another program.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
 

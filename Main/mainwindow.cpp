@@ -912,7 +912,11 @@ void MW::dropEvent(QDropEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     QString fPath = event->mimeData()->urls().at(0).toLocalFile();
-    folderAndFileSelectionChange(fPath);
+    QFileInfo info(fPath);
+    QDir incoming = info.dir();
+    qDebug() << __FUNCTION__ << fPath;
+    if (incoming != currentViewDir && event->mimeData()->hasUrls())
+        folderAndFileSelectionChange(fPath);
 }
 
 void MW::handleDrop(QString fPath)
@@ -925,12 +929,8 @@ void MW::handleDrop(QString fPath)
     QDir incoming = info.dir();
     QDir current(currentViewDir);
     qDebug() << __FUNCTION__ << fPath;
-//    bool isSameFolder = incoming == current;
-//    if (event->mimeData()->hasUrls())
-//    {
-//        dragDropFilePath = event->mimeData()->urls().at(0).toLocalFile();
-        folderAndFileSelectionChange(fPath);
-//    }
+    bool isSameFolder = incoming == current;
+    if (!isSameFolder) folderAndFileSelectionChange(fPath);
 }
 
 void MW::checkForUpdate()
@@ -2378,13 +2378,13 @@ void MW::createActions()
     addBookmarkAction->setObjectName("addBookmark");
     addBookmarkAction->setShortcutVisibleInContextMenu(true);
     addAction(addBookmarkAction);
-    connect(addBookmarkAction, &QAction::triggered, this, &MW::addNewBookmark);
+    connect(addBookmarkAction, &QAction::triggered, this, &MW::addNewBookmarkFromMenu);
 
     addBookmarkActionFromContext = new QAction(tr("Add Bookmark"), this);
     addBookmarkActionFromContext->setObjectName("addBookmark");
     addBookmarkActionFromContext->setShortcutVisibleInContextMenu(true);
     addAction(addBookmarkActionFromContext);
-    connect(addBookmarkActionFromContext, &QAction::triggered, this, &MW::addNewBookmarkFromContext);
+    connect(addBookmarkActionFromContext, &QAction::triggered, this, &MW::addNewBookmarkFromContextMenu);
 
     removeBookmarkAction = new QAction(tr("Remove Bookmark"), this);
     removeBookmarkAction->setObjectName("removeBookmark");
@@ -4549,13 +4549,8 @@ void MW::createImageView()
             imageView, SLOT(thumbClick(float,float)));
 
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
-//    connect(imageView, SIGNAL(handleDrop(QDropEvent *event)),
-//            this, SLOT(handleDrop(QDropEvent *event)));
-//    connect(imageView, SIGNAL(handleDrop(const QMimeData*)),
-//            this, SLOT(handleDrop(const QMimeData*)));
 
-    connect(imageView, SIGNAL(killSlideshow()),
-            this, SLOT(slideShow()));
+    connect(imageView, SIGNAL(killSlideshow()), this, SLOT(slideShow()));
 }
 
 void MW::createCompareView()
@@ -10926,13 +10921,13 @@ void MW::showNewImageWarning(QWidget *parent)
     msgBox.warning(parent, tr("Warning"), tr("Cannot perform action with temporary image."));
 }
 
-void MW::addNewBookmark()
+void MW::addNewBookmarkFromMenu()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     addBookmark(currentViewDir);
 }
 
-void MW::addNewBookmarkFromContext()
+void MW::addNewBookmarkFromContextMenu()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     addBookmark(mouseOverFolder);
@@ -11501,7 +11496,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << Mac::getDisplayProfileURL();
+
 
 }
 // End MW

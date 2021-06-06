@@ -1,8 +1,4 @@
 BUGS / TO DO
-QIODevice::read (QFile, "D:\Pictures\Coaster\2005-10-11_0082.jpg"): device not open
-Using QByteRef with an index pointing outside the valid range of a QByteArray. The corresponding behavior is deprecated, and will be changed in a future version of Qt.
-ASSERT: "head() + size() + offset <= capacity()" in file C:\Users\qt\work\qt\qtbase\include\QtCore\5.15.2\QtCore\private\../../../../../src/corelib/tools/qringbuffer_p.h, line 158
-
 - PlusMinusEditor not sizing to contents in preferences thumbnail button size
 - Export from LR Winnow does not refresh folder
 - Slideshow of all images on F drive eventually crashed (85000+ images)
@@ -39,17 +35,20 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - cleanup imageview rubberband
 ENHANCEMENTS
-- Use QColorSpace?
 - Add fade and alias to stroke
 - Add glow (inner/outer)
 - Add guassian blur (inner/outer)
 - Copy files between folders using drag'n'drop
+- Delete a folder
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 - Read keywords
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Prevent duplicate bookmarks from drag event
+- Prevent drag and drop on film strip while ingesting
+- Added color manage for mac
 - Release 1.23
 - Possibly fixed "Device not open" issue
 - Release 1.22

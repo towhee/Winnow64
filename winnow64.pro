@@ -24,18 +24,13 @@ QT += concurrent
 QT += xmlpatterns
 #QT += opengl
 
-HEADERS += Cache/imagecache.h \
-    Cache/imagedecoder.h \
-    Dialogs/ingesterrors.h \
-    Dialogs/managegraphicsdlg.h \
-    Dialogs/manageimagesdlg.h \
-    Image/cacheimage.h \
-    Lcms2/lcms2.h \
-#    Lcms2/lcms2_internal.h \
-    Lcms2/lcms2_plugin.h \
-    Utilities/foldercompressor.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/tshash.h
+HEADERS += Cache/imagecache.h
+HEADERS += Cache/imagedecoder.h
+HEADERS += Dialogs/ingesterrors.h
+HEADERS += Dialogs/managegraphicsdlg.h
+HEADERS += Dialogs/manageimagesdlg.h
 HEADERS += Datamodel/buildfilters.h
 HEADERS += Datamodel/datamodel.h
 HEADERS += Datamodel/filters.h
@@ -64,6 +59,7 @@ HEADERS += Embellish/embelexport.h
 HEADERS += Embellish/Properties/embelproperties.h
 HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
+HEADERS += Image/cacheimage.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
 HEADERS += Image/thumb.h
@@ -82,6 +78,8 @@ HEADERS += ImageFormats/Olympus/olympus.h
 HEADERS += ImageFormats/Panasonic/panasonic.h
 HEADERS += ImageFormats/Sony/sony.h
 HEADERS += ImageFormats/Tiff/tiff.h
+#HEADERS += Lcms2/lcms2.h
+#HEADERS += Lcms2/lcms2_plugin.h
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
 HEADERS += Main/mainwindow.h
@@ -110,6 +108,7 @@ HEADERS += Utilities/bit.h
 HEADERS += Utilities/classificationlabel.h
 HEADERS += Utilities/coloranalysis.h
 HEADERS += Utilities/dropshadowlabel.h
+HEADERS += Utilities/foldercompressor.h
 HEADERS += Utilities/htmlwindow.h
 HEADERS += Utilities/icc.h
 mac:HEADERS += Utilities/mac.h
@@ -129,39 +128,8 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/imagecache.cpp \
-    Cache/imagedecoder.cpp \
-    Dialogs/ingesterrors.cpp \
-    Dialogs/managegraphicsdlg.cpp \
-    Dialogs/manageimagesdlg.cpp \
-    Image/cacheimage.cpp \
-    Lcms2/cmsalpha.c \
-    Lcms2/cmscam02.c \
-    Lcms2/cmscgats.c \
-    Lcms2/cmscnvrt.c \
-    Lcms2/cmserr.c \
-    Lcms2/cmsgamma.c \
-    Lcms2/cmsgmt.c \
-    Lcms2/cmshalf.c \
-    Lcms2/cmsintrp.c \
-    Lcms2/cmsio0.c \
-    Lcms2/cmsio1.c \
-    Lcms2/cmslut.c \
-    Lcms2/cmsmd5.c \
-    Lcms2/cmsmtrx.c \
-    Lcms2/cmsnamed.c \
-    Lcms2/cmsopt.c \
-    Lcms2/cmspack.c \
-    Lcms2/cmspcs.c \
-    Lcms2/cmsplugin.c \
-    Lcms2/cmsps2.c \
-    Lcms2/cmssamp.c \
-    Lcms2/cmssm.c \
-    Lcms2/cmstypes.c \
-    Lcms2/cmsvirt.c \
-    Lcms2/cmswtpnt.c \
-    Lcms2/cmsxform.c \
-    Utilities/foldercompressor.cpp
+SOURCES += Cache/imagecache.cpp
+SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/mdcache.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp
@@ -170,7 +138,10 @@ SOURCES += Dialogs/aboutdlg.cpp
 SOURCES += Dialogs/appdlg.cpp
 SOURCES += Dialogs/copystyledlg.cpp
 SOURCES += Dialogs/ingestdlg.cpp
+SOURCES += Dialogs/ingesterrors.cpp
 SOURCES += Dialogs/loadusbdlg.cpp
+SOURCES += Dialogs/managegraphicsdlg.cpp
+SOURCES += Dialogs/manageimagesdlg.cpp
 SOURCES += Dialogs/managetilesdlg.cpp
 SOURCES += Dialogs/patterndlg.cpp
 SOURCES += Dialogs/preferencesdlg.cpp
@@ -189,6 +160,7 @@ SOURCES += Embellish/Properties/embelproperties.cpp
 SOURCES += Embellish/embelexport.cpp
 SOURCES += File/bookmarks.cpp
 SOURCES += File/fstree.cpp
+SOURCES += Image/cacheimage.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
 SOURCES += Image/thumb.cpp
@@ -204,6 +176,32 @@ SOURCES += ImageFormats/Olympus/olympus.cpp
 SOURCES += ImageFormats/Panasonic/panasonic.cpp
 SOURCES += ImageFormats/Sony/sony.cpp
 SOURCES += ImageFormats/Tiff/tiff.cpp
+#SOURCES += Lcms2/cmsalpha.c
+#SOURCES += Lcms2/cmscam02.c
+#SOURCES += Lcms2/cmscgats.c
+#SOURCES += Lcms2/cmscnvrt.c
+#SOURCES += Lcms2/cmserr.c
+#SOURCES += Lcms2/cmsgamma.c
+#SOURCES += Lcms2/cmsgmt.c
+#SOURCES += Lcms2/cmshalf.c
+#SOURCES += Lcms2/cmsintrp.c
+#SOURCES += Lcms2/cmsio0.c
+#SOURCES += Lcms2/cmsio1.c
+#SOURCES += Lcms2/cmslut.c
+#SOURCES += Lcms2/cmsmd5.c
+#SOURCES += Lcms2/cmsmtrx.c
+#SOURCES += Lcms2/cmsnamed.c
+#SOURCES += Lcms2/cmsopt.c
+#SOURCES += Lcms2/cmspack.c
+#SOURCES += Lcms2/cmspcs.c
+#SOURCES += Lcms2/cmsplugin.c
+#SOURCES += Lcms2/cmsps2.c
+#SOURCES += Lcms2/cmssamp.c
+#SOURCES += Lcms2/cmssm.c
+#SOURCES += Lcms2/cmstypes.c
+#SOURCES += Lcms2/cmsvirt.c
+#SOURCES += Lcms2/cmswtpnt.c
+#SOURCES += Lcms2/cmsxform.c
 SOURCES += Main/dockwidget.cpp
 SOURCES += Main/global.cpp
 SOURCES += Main/main.cpp
@@ -234,6 +232,7 @@ SOURCES += Utilities/bit.cpp
 SOURCES += Utilities/classificationlabel.cpp
 SOURCES += Utilities/coloranalysis.cpp
 SOURCES += Utilities/dropshadowlabel.cpp
+SOURCES += Utilities/foldercompressor.cpp
 SOURCES += Utilities/htmlwindow.cpp
 SOURCES += Utilities/icc.cpp
 mac:SOURCES += Utilities/mac.cpp
@@ -325,10 +324,10 @@ macx:LIBS += -framework ColorSync
 #macx:LIBS += -framework Foundation
 
 # lcms
-#macx: LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2
-#macx: INCLUDEPATH += $$PWD/Lib/lcms2/include
-#macx: DEPENDPATH += $$PWD/Lib/lcms2/include
-#macx: PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/liblcms2.a
+macx: LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2
+macx: INCLUDEPATH += $$PWD/Lib/lcms2/include
+macx: DEPENDPATH += $$PWD/Lib/lcms2/include
+macx: PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/liblcms2.a
 
 
 win32:QMAKE_CXXFLAGS += /MD
@@ -341,10 +340,10 @@ win32:INCLUDEPATH += $$PWD/Lib/zlib
 win32:DEPENDPATH += $$PWD/Lib/zlib
 
 # lcms
-#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -lCORE_RL_lcms_
-#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
-#win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
-#win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -lCORE_RL_lcms_
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
+win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
+win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
 
 # libde265 (frame parallel)
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
