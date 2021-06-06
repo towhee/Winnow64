@@ -458,8 +458,8 @@ private slots:
     void loadImageCacheForNewFolder();
     void launchBuildFilters();
 //    void loadFilteredImageCache();
-    void addNewBookmark();
-    void addNewBookmarkFromContext();
+    void addNewBookmarkFromMenu();
+    void addNewBookmarkFromContextMenu();
     void reportMetadata();
     void checkDirState(const QModelIndex &, int, int);
     void bookmarkClicked(QTreeWidgetItem *item, int col);

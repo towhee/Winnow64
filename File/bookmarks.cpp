@@ -77,6 +77,7 @@ void BookMarks::reloadBookmarks()
 
 void BookMarks::addBookmark(QString itemPath)
 {
+    qDebug() << __FUNCTION__ << itemPath;
     QTreeWidgetItem *item = new QTreeWidgetItem(this);
     item->setText(0, QFileInfo(itemPath).fileName());
     item->setIcon(0, QIcon(":/images/bookmarks.png"));
@@ -165,25 +166,27 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 {
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) {
-        /*
-        QTreeWidgetItem *item = itemAt(event->pos());
+//        /*
+//        QTreeWidgetItem *item = itemAt(event->pos());
         rightClickItem = itemAt(event->pos());
         if (rightClickItem) {
             qDebug() << __FUNCTION__ << rightClickItem->toolTip(0);
         }
-        */
+        //*/
         return;
     }
-//    QApplication::setOverrideCursor(Qt::WaitCursor);
     QTreeWidget::mousePressEvent(event);
 }
 
 void BookMarks::removeBookmark()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__;
-    bookmarkPaths.remove(rightClickItem->toolTip(0));
-    reloadBookmarks();
+    if (rightClickItem) {
+        qDebug() << __FUNCTION__<< rightClickItem->toolTip(0);
+        bookmarkPaths.remove(rightClickItem->toolTip(0));
+        reloadBookmarks();
+    }
+
 //	if (selectedItems().size() == 1) {
 //        bookmarkPaths.remove(selectedItems().at(0)->toolTip(0));
 //		reloadBookmarks();
@@ -219,21 +222,14 @@ void BookMarks::dropEvent(QDropEvent *event)
     const QMimeData *mimeData = event->mimeData();
     if (mimeData->hasUrls())
     {
-        QString fPath;      // path to folder
+        QString dPath;      // path to folder
         QFileInfo fInfo = QFileInfo(mimeData->urls().at(0).toLocalFile());
-        if (fInfo.isDir()) fPath = fInfo.absoluteFilePath();
-        else fPath = fInfo.absoluteDir().absolutePath();
-        addBookmark(fPath);
+        if (fInfo.isDir()) dPath = fInfo.absoluteFilePath();
+        else dPath = fInfo.absoluteDir().absolutePath();
+        if (!bookmarkPaths.contains(dPath)) {
+            bookmarkPaths.insert(dPath);
+            reloadBookmarks();
+//            count();
+        }
     }
 }
-
-//bool BookMarks::event(QEvent *event)
-//{
-//    qDebug() << __FUNCTION__
-//             << event << "\t"
-//             << event->type()
-//                ;
-//    return  QTreeWidget::event(event);
-//}
-
-
