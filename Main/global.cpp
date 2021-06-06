@@ -72,6 +72,7 @@ namespace G
     bool isRunningColorAnalysis;
     bool isEmbellish;
     bool colorManage;
+    bool isColorManagement;
 
     // ingest
     int ingestCount = 0;

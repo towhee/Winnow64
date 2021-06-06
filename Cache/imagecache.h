@@ -18,8 +18,8 @@
 
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
-#include "Utilities/icc.h"
 #endif
+#include "Utilities/icc.h"
 
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"

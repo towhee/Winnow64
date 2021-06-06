@@ -22,3 +22,61 @@ void Mac::availableMemory()
         G::availableMemoryMB = static_cast<quint32>(free_memory / (1024 * 1024));
     }
 }
+
+bool Mac::colorSyncIterateCallback(CFDictionaryRef dict, void *data)
+{
+    ColorSyncIteratorData *iterData = (ColorSyncIteratorData *)data;
+    CFStringRef str;
+    CFUUIDRef uuid;
+    CFBooleanRef iscur;
+
+    if (!CFDictionaryGetValueIfPresent(dict, kColorSyncDeviceClass, (const void**)&str))
+    {
+        qWarning("kColorSyncDeviceClass failed");
+        return true;
+    }
+    if (!CFEqual(str, kColorSyncDisplayDeviceClass))
+    {
+        return true;
+    }
+    if (!CFDictionaryGetValueIfPresent(dict, kColorSyncDeviceID, (const void**)&uuid))
+    {
+        qWarning("kColorSyncDeviceID failed");
+        return true;
+    }
+    if (!CFEqual(uuid, iterData->dispuuid))
+    {
+        return true;
+    }
+    if (!CFDictionaryGetValueIfPresent(dict, kColorSyncDeviceProfileIsCurrent, (const void**)&iscur))
+    {
+        qWarning("kColorSyncDeviceProfileIsCurrent failed");
+        return true;
+    }
+    if (!CFBooleanGetValue(iscur))
+    {
+        return true;
+    }
+    if (!CFDictionaryGetValueIfPresent(dict, kColorSyncDeviceProfileURL, (const void**)&(iterData->url)))
+    {
+        qWarning("Could not get current profile URL");
+        return true;
+    }
+
+    CFRetain(iterData->url);
+    return false;
+}
+
+QString Mac::getDisplayProfileURL()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    ColorSyncIteratorData data;
+    data.dispuuid = CGDisplayCreateUUIDFromDisplayID(CGMainDisplayID());
+    data.url = nullptr;//NULL;
+    ColorSyncIterateDeviceProfiles(colorSyncIterateCallback, (void *)&data);
+    CFRelease(data.dispuuid);
+    CFStringRef urlstr = CFURLCopyFileSystemPath(data.url, kCFURLPOSIXPathStyle);
+    CFRelease(data.url);
+    return QString::fromCFString(urlstr);
+}
+

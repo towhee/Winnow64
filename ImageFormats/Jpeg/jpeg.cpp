@@ -371,15 +371,15 @@ bool Jpeg::parse(MetadataParameters &p,
 void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
 {
 /*
-The JPG file structure is based around a series of file segments.  The marker at
-the start of each segment is FFC0 to FFFE (see initSegCodeHash). The next two
-bytes are the incremental offset to the next segment.
+    The JPG file structure is based around a series of file segments.  The marker at
+    the start of each segment is FFC0 to FFFE (see initSegCodeHash). The next two
+    bytes are the incremental offset to the next segment.
 
-This function walks through all the segments and records their global offsets in
-segmentHash.  segmentHash is used by parseJPG to access the EXIF, IPTC and XMP
-segments.
+    This function walks through all the segments and records their global offsets in
+    segmentHash.  segmentHash is used by parseJPG to access the EXIF, IPTC, ICC and XMP
+    segments.
 
-In addition, the XMP offset and nextOffset are set to facilitate editing XMP data.
+    In addition, the XMP offset and nextOffset are set to facilitate editing XMP data.
 */
     segmentHash.clear();
     isXmp = false;

@@ -201,6 +201,7 @@ namespace G
     extern bool isRunningColorAnalysis;
     extern bool isEmbellish;
     extern bool colorManage;
+    extern bool isColorManagement;
 
     extern int ingestCount;
     extern QDate ingestLastDate;

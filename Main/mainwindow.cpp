@@ -412,9 +412,6 @@ void MW::initialize()
     pickStack = new QStack<Pick>;
     slideshowRandomHistoryStack = new QStack<QString>;
     scrollRow = 0;
-    #ifdef Q_OS_WIN
-//    ICC::setInProfile(nullptr);
-    #endif
 }
 
 void MW::setupPlatform()
@@ -5249,9 +5246,7 @@ void MW::createStatusBar()
     cacheMethodBtn->show();
 
     // labels/buttons to show various status
-#ifdef Q_OS_WIN
-    statusBar()->addWidget(colorManageToggleBtn);
-#endif
+    if (G::colorManage) statusBar()->addWidget(colorManageToggleBtn);
     statusBar()->addWidget(reverseSortBtn);
 
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
@@ -5275,10 +5270,8 @@ void MW::updateStatusBar()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     // remove all icons so can add back in proper order // previously used: if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel); // etc
-#ifdef Q_OS_WIN
     if(colorManageToggleBtn->isVisible())
         statusBar()->removeWidget(colorManageToggleBtn);
-#endif
     if(reverseSortBtn->isVisible())
         statusBar()->removeWidget(reverseSortBtn);
     if(rawJpgStatusLabel->isVisible())
@@ -5298,12 +5291,12 @@ void MW::updateStatusBar()
         filterStatusLabel->show();
     }
 
-    if (G::colorManage) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
-    else colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
-#ifdef Q_OS_WIN
-    statusBar()->addWidget(colorManageToggleBtn);
-    colorManageToggleBtn->show();
-#endif
+    if (G::isColorManagement) {
+        if (G::colorManage) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
+        else colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
+        statusBar()->addWidget(colorManageToggleBtn);
+        colorManageToggleBtn->show();
+    }
     if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
     else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
     statusBar()->addWidget(reverseSortBtn);
@@ -7544,6 +7537,11 @@ void MW::setDisplayResolution()
             G::winScreenHash[screen->name()].profile;
     ICC::setOutProfile();
     #endif
+    #ifdef Q_OS_MAC
+    G::winOutProfilePath = Mac::getDisplayProfileURL();
+//    G::winOutProfilePath = "/users/roryhill/Library/ColorSync/Profiles/MacBook LCD_06-02-2021.icc";
+    ICC::setOutProfile();
+    #endif
 
     cachePreviewWidth = G::displayPhysicalHorizontalPixels;
     cachePreviewHeight = G::displayPhysicalVerticalPixels;
@@ -7971,6 +7969,7 @@ void MW::writeSettings()
 
     // files
     setting->setValue("colorManage", G::colorManage);
+    setting->setValue("isColorManagement", G::isColorManagement);
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("checkIfUpdate", checkIfUpdate);
     setting->setValue("lastDir", currentViewDir);
@@ -8293,6 +8292,7 @@ bool MW::loadSettings()
 
         // files
         G::colorManage = true;
+        G::isColorManagement = true;
         rememberLastDir = false;
         checkIfUpdate = true;
         lastDir = "";
@@ -8373,6 +8373,7 @@ bool MW::loadSettings()
 
     // files
     if (setting->contains("colorManage")) G::colorManage = setting->value("colorManage").toBool();
+    if (setting->contains("isColorManagement")) G::isColorManagement = setting->value("isColorManagement").toBool();
     if (setting->contains("rememberLastDir")) rememberLastDir = setting->value("rememberLastDir").toBool();
     if (setting->contains("checkIfUpdate")) checkIfUpdate = setting->value("checkIfUpdate").toBool();
     if (setting->contains("lastDir")) lastDir = setting->value("lastDir").toString();
@@ -11500,17 +11501,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    imageCacheThread->reportCache("");
-    return;
+    qDebug() << __FUNCTION__ << Mac::getDisplayProfileURL();
 
-    QString fPath = "D:/Pictures/Zenfolio/pbase2048/2021-05-05_0064_Zen2048.JPG";
-    QFileInfo info(fPath);
-    QString fDir = info.dir().absolutePath();
-    fsTree->getImageCount(fDir, true, __FUNCTION__);
-    // go there ...
-    fsTree->select(fDir);
-    folderSelectionChange();
-//    thumbView->selectionModel()->clear();
-//    thumbView->selectThumb(fPath);
 }
 // End MW
