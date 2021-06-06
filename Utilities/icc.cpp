@@ -3,9 +3,7 @@
 namespace ICC
 {
 
-//    cmsHPROFILE hInProfile;
     cmsHPROFILE hOutProfile;
-//    cmsHTRANSFORM hTransform;
 
     void setOutProfile()
     {

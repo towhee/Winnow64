@@ -194,8 +194,9 @@ itemChange, which is subclassed here.
         if (G::isLogger) mw->openLog();
     }
 
-    if (source == "colorManage") {
-        G::colorManage = v.toBool();
+    if (source == "isColorManagement") {
+        G::isColorManagement = v.toBool();
+        mw->updateStatusBar();
     }
 
     if (source == "rememberLastDir") {
@@ -297,7 +298,7 @@ void Preferences::addItems()
 
     {
     // Manage color
-    i.name = "colorManage";
+    i.name = "isColorManagement";
     i.parentName = "GeneralHeader";
     i.captionText = "Color manage";
     i.tooltip = "Turning on color management will ensure consistent color, especially for\n"
@@ -305,8 +306,8 @@ void Preferences::addItems()
                 "management has a significant impact on image caching performance.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = G::colorManage;
-    i.key = "colorManage";
+    i.value = G::isColorManagement;
+    i.key = "isColorManagement";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

@@ -10,10 +10,7 @@ namespace ICC
 {
     extern void setOutProfile();
     extern void transform(const QByteArray &buf, QImage &image);
-
-//    extern cmsHPROFILE hInProfile;
     extern cmsHPROFILE hOutProfile;
-//    extern cmsHTRANSFORM hTransform;
 }
 
 #endif // ICC_H

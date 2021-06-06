@@ -1,6 +1,4 @@
 #CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
-
-
 CONFIG += sdk_no_version_check
 TEMPLATE = app
 TARGET = Winnow
@@ -8,10 +6,7 @@ INCLUDEPATH += .
 INCLUDEPATH += Dialogs
 INCLUDEPATH += Utilities
 INCLUDEPATH += MacOS
-#INCLUDEPATH += "C:/Program Files (x86)/Visual Leak Detector/include/"
-#LIBS += -L"C:/Program Files (x86)/Visual Leak Detector/lib/Win64"
 
-#UI_DIR = $$PWD/UI
 Release:DESTDIR = release
 Release:OBJECTS_DIR = release/.obj
 Release:MOC_DIR = release/.moc
@@ -36,7 +31,7 @@ HEADERS += Cache/imagecache.h \
     Dialogs/manageimagesdlg.h \
     Image/cacheimage.h \
     Lcms2/lcms2.h \
-    Lcms2/lcms2_internal.h \
+#    Lcms2/lcms2_internal.h \
     Lcms2/lcms2_plugin.h \
     Utilities/foldercompressor.h
 HEADERS += Cache/mdcache.h
@@ -116,7 +111,7 @@ HEADERS += Utilities/classificationlabel.h
 HEADERS += Utilities/coloranalysis.h
 HEADERS += Utilities/dropshadowlabel.h
 HEADERS += Utilities/htmlwindow.h
-win32:HEADERS += Utilities/icc.h
+HEADERS += Utilities/icc.h
 mac:HEADERS += Utilities/mac.h
 HEADERS += Utilities/inputdlg.h
 HEADERS += Utilities/performance.h
@@ -240,7 +235,7 @@ SOURCES += Utilities/classificationlabel.cpp
 SOURCES += Utilities/coloranalysis.cpp
 SOURCES += Utilities/dropshadowlabel.cpp
 SOURCES += Utilities/htmlwindow.cpp
-win32:SOURCES += Utilities/icc.cpp
+SOURCES += Utilities/icc.cpp
 mac:SOURCES += Utilities/mac.cpp
 SOURCES += Utilities/inputdlg.cpp
 SOURCES += Utilities/performance.cpp
@@ -322,8 +317,12 @@ DISTFILES += notes/xmp.txt
 #include(Lib/zlib/zlib.pri)
 #include(Lib/libtiff/libtiff.pri)
 
-mac:LIBS += -framework ApplicationServices
-mac:LIBS += -framework AppKit
+#macx:QMAKE_MAC_SDK = macosx10.14
+#macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.14
+macx:LIBS += -framework ApplicationServices
+macx:LIBS += -framework AppKit
+macx:LIBS += -framework ColorSync
+#macx:LIBS += -framework Foundation
 
 # lcms
 #macx: LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2

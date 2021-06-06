@@ -67,7 +67,7 @@
 #include "ui_message.h"
 #include "ui_test12.h"
 
-#include "Metadata/exiftool.h"
+#include "Metadata/Exiftool.h"
 //#include "Image/tiffhandler.h";
 //#include "Lib/zlib/zlib.h"
 
