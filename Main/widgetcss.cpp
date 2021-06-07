@@ -541,25 +541,20 @@ QString WidgetCSS::pushButton()
         "border-width: 1px;"
         "border-style: solid;"
         "border-color: " + QColor(l10,l10,l10).name() + ";"
-//        "border-color: " + QColor(l5,l5,l5).name() + ";"
         "border-radius: 2px;"
         "padding-left: 5px;"
         "padding-right: 5px;"
         "padding-top: 3px;"
         "padding-bottom: 3px;"
         "min-width: 100px;"
-        "min-height: " + h12 + "px;"
+//        "min-height: " + h12 + "px;"  // screws up height in PlusMinusEditor
     "}"
 
     "QPushButton:default {"
         "border: 1px solid cadetblue;"
-//        "background-color: rgb(88,124,153);"
-//        "background-color: rgb(68,95,118);"
     "}"
 
     "QPushButton:pressed {"
-        /*background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                          stop: 0 #dadbde, stop: 1 #f6f7fa);*/
         "background-color: gray;"
     "}"
 

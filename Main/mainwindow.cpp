@@ -340,21 +340,21 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
         show();
 
-//        if (setting->value("hasCrashed").toBool()) {
-//            QString msg = "It appears Winnow did not close properly.  Do you want to "
-//                 "recover the most recent picks and ratings?";
-//            int ret = QMessageBox::warning(this, "Recover Prior State", msg,
-//                                           QMessageBox::Yes | QMessageBox::No);
-//            if (ret == QMessageBox::Yes) {
-//                folderAndFileSelectionChange(lastFileIfCrash);
-//                recoverPickLog();
-//                recoverRatingLog();
-//                recoverColorClassLog();
-//            }
-//        }
+        if (setting->value("hasCrashed").toBool()) {
+            QString msg = "It appears Winnow did not close properly.  Do you want to "
+                 "recover the most recent picks and ratings?";
+            int ret = QMessageBox::warning(this, "Recover Prior State", msg,
+                                           QMessageBox::Yes | QMessageBox::No);
+            if (ret == QMessageBox::Yes) {
+                folderAndFileSelectionChange(lastFileIfCrash);
+                recoverPickLog();
+                recoverRatingLog();
+                recoverColorClassLog();
+            }
+        }
 
-//        // crash log
-//        setting->setValue("hasCrashed", true);
+        // crash log
+        setting->setValue("hasCrashed", true);
     }
 }
 
@@ -11496,7 +11496,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-
+    qDebug() << __FUNCTION__ << G::fontSize << G::ptToPx;
 
 }
 // End MW

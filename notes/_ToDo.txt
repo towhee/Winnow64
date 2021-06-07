@@ -1,40 +1,34 @@
 BUGS / TO DO
-- PlusMinusEditor not sizing to contents in preferences thumbnail button size
-- Export from LR Winnow does not refresh folder
-- Slideshow of all images on F drive eventually crashed (85000+ images)
 - Filters not working sometimes
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow
-- Sometimes crash when export from LR to winnets
-- Shooting data reverting to wrong token string
-- Slow program start sometimes (check for updates?)
-- Slow startup if a drive is sleeping
 - Maintain count when switch folders during the same ingest
-- Handle winnets on Mac
 - Improve err recording and showing to user
-- Text disappears at certain font sizes
-- Highlighter opacity not always used
-- Sometimes effect controls do not trigger effect changes
-- Umbra gradient on Mac weird effect
-- Eliminate shadow blur in sunward direction
-- Check for multiple signals to trigger Embel processes (challenging)
-- DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
-- Sharpen needs TLC
-- Standardize use of G:css
-- Sort out i.name vs i.key in PropertyEditor
 - Cannot delete heic files on PC
 - Add hif file format
-- Add HEIC files to Mac
 - Rotate heic files
+- Slideshow of all images on F drive eventually crashed (85000+ images)
+EMBELLISH
+- Highlighter opacity not always used
+- Sometimes effect controls do not trigger effect changes
+- Eliminate shadow blur in sunward direction
+- Sharpen needs TLC
+MAC
+- Add HEIC files to Mac
+- DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
+- Handle winnets on Mac
 - Mac check for updates not done yet
 - Open with ... (doesn't work on macOS)
 PERFORMANCE
 - HEIF files are slow
 CODE IMPROVEMENTS
+- Standardize use of G:css
+- Sort out i.name vs i.key in PropertyEditor
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - Tweak panning in compareView (eliminate incremental scrolling)
-- cleanup imageview rubberband
+- Cleanup imageview rubberband
 ENHANCEMENTS
+- https://github.com/wang-bin/qdevicewatcher
 - Add fade and alias to stroke
 - Add glow (inner/outer)
 - Add guassian blur (inner/outer)
@@ -46,6 +40,9 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- PlusMinusEditor not sizing to contents in preferences thumbnail button size
+- Version 1.24
+- Fixed several bookmarks bugs
 - Prevent duplicate bookmarks from drag event
 - Prevent drag and drop on film strip while ingesting
 - Added color manage for mac

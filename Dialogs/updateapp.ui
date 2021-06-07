@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>544</width>
-    <height>248</height>
+    <width>568</width>
+    <height>319</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,7 +23,7 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>130</y>
+     <y>200</y>
      <width>391</width>
      <height>31</height>
     </rect>
@@ -118,7 +118,7 @@
    <property name="geometry">
     <rect>
      <x>320</x>
-     <y>200</y>
+     <y>270</y>
      <width>93</width>
      <height>28</height>
     </rect>
@@ -134,7 +134,7 @@
    <property name="geometry">
     <rect>
      <x>430</x>
-     <y>200</y>
+     <y>270</y>
      <width>100</width>
      <height>28</height>
     </rect>
@@ -143,6 +143,30 @@
     <string>Proceed</string>
    </property>
    <property name="default">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="proceedLabel_2">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>130</y>
+     <width>411</width>
+     <height>71</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>The update process will close Winnow, download the current release, and finally, open the new version.  There will be a delay of a few seconds for the new version to open.</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+   </property>
+   <property name="wordWrap">
     <bool>true</bool>
    </property>
   </widget>

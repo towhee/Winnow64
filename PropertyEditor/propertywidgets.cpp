@@ -697,16 +697,21 @@ PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWid
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
-    int maxHt = 12;
+    int maxHt = G::fontSize.toInt() * G::ptToPx + 4;  // font size plus space in button
 
+    QString pushBtnStyle =
+        "QPushButton {"
+            "min-width: 25px;"
+        "}"
+        ;
     minusBtn = new QPushButton;
-//    minusBtn->setStyleSheet(G::css);
+    minusBtn->setStyleSheet(pushBtnStyle);
     minusBtn->setObjectName("DisableGoActions");  // used in MW::focusChange
     minusBtn->setMaximumHeight(maxHt);
     minusBtn->setText("-");
 
     plusBtn = new QPushButton;
-//    plusBtn->setStyleSheet(G::css);
+    plusBtn->setStyleSheet(pushBtnStyle);
     plusBtn->setObjectName("DisableGoActions");  // used in MW::focusChange
     plusBtn->setMaximumHeight(maxHt);
     plusBtn->setText("+");
@@ -718,7 +723,7 @@ PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWid
     layout->addWidget(minusBtn, Qt::AlignLeft);
     layout->addWidget(plusBtn, Qt::AlignLeft);
     layout->addSpacing(55);
-    layout->setContentsMargins(G::propertyWidgetMarginLeft,2,G::propertyWidgetMarginRight,2);
+    layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
     setLayout(layout);
 }
 
@@ -749,8 +754,6 @@ void PlusMinusEditor::fontSizeChanged(int fontSize)
 
 void PlusMinusEditor::paintEvent(QPaintEvent *event)
 {
-//    setStyleSheet("font-size: " + G::fontSize + "pt;");
-//    QWidget::paintEvent(event);
 }
 
 /* BARBTN EDITOR **************************************************************************/
