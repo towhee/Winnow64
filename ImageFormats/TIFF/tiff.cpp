@@ -162,6 +162,7 @@ bool Tiff::parse(MetadataParameters &p,
     // IFD0: XMP offset
     quint32 ifdXMPOffset = 0;
     if (ifd->ifdDataHash.contains(700)) {
+        m.isXmp = true;
         ifdXMPOffset = ifd->ifdDataHash.value(700).tagValue;
         m.xmpSegmentOffset = static_cast<uint>(ifdXMPOffset);
         int xmpSegmentLength = static_cast<int>(ifd->ifdDataHash.value(700).tagCount);
@@ -305,6 +306,7 @@ bool Tiff::parse(MetadataParameters &p,
 
     // read XMP
     bool okToReadXmp = true;
+    qDebug() << __FUNCTION__ << "m.isXmp" << m.isXmp;
     if (m.isXmp && okToReadXmp) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
@@ -581,6 +583,34 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
     im->convertTo(QImage::Format_RGB32);
     image.operator=(*im);
     return true;
+}
+
+bool Tiff::encodeThumbnail()
+{
+/*
+    - little/big endian put functions to write 8, 16, 24, 32, 64, real, CString
+    - add new IFD at end of chain
+        - replace last nextIFDOffset with offset to current EOF
+        - add IFD items:
+            Num  tagId tagType  tagCount    tagValue   tagDescription
+              0    254       4         1           1   SubfileType
+              1    256       3         1               ImageWidth
+              2    257       3         1               ImageHeight
+              3    258       3         3      offset   BitsPerSample
+              4    259       3         1           1   Compression
+              5    262       3         1           2   PhotometricInterpretation
+              6    273       4         1      offset   StripOffsets
+              7    274       3         1           1   Orientation
+              8    277       3         1           3   SamplesPerPixel
+              9    278       3         1        1728   RowsPerStrip
+             10    279       4         1    11943936   StripByteCounts
+             11    282       5         1      offset   XResolution
+             12    283       5         1      offset   YResolution
+             13    284       3         1           1   PlanarConfiguration
+             14    296       3         1           2   ResolutionUnit
+    - subsample image down to thumbnail resolution
+    - write strip pixels rgb at offset StripOffsets
+*/
 }
 
 void Tiff::toRRGGBBAA(QImage *im)

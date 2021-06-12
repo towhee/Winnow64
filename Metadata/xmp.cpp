@@ -42,6 +42,7 @@ Xmp::Xmp(QFile &file, uint &offset, uint &nextOffset, bool useSidecar,
     else {
         xmpSegmentOffset = offset;
         ulong xmpLength = nextOffset - offset;
+        qDebug() << __FUNCTION__ << offset << xmpLength;
         file.seek(offset);
         xmpBa = file.read(xmpLength);
         xmpmetaStart = xmpBa.indexOf("<x:xmpmeta");

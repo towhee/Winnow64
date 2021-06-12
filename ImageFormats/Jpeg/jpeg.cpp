@@ -165,9 +165,11 @@ bool Jpeg::parse(MetadataParameters &p,
             // therefore must adjust all offsets found in tagValue
             startOffset = static_cast<quint32>(p.file.pos()) - 2;
             foundEndian = true;
-//            qDebug() << __FUNCTION__ << p.file.fileName()
-//                     << "isBigEnd =" << isBigEnd
-//                     << "startOffset =" << startOffset;
+            /*
+            qDebug() << __FUNCTION__ << p.file.fileName()
+                     << "isBigEnd =" << isBigEnd
+                     << "startOffset =" << startOffset;
+            //*/
         }
         // add condition to check for EOF
         count++;

@@ -77,6 +77,7 @@ QString Mac::getDisplayProfileURL()
     CFRelease(data.dispuuid);
     CFStringRef urlstr = CFURLCopyFileSystemPath(data.url, kCFURLPOSIXPathStyle);
     CFRelease(data.url);
+    qDebug() << __FUNCTION__ << QString::fromCFString(urlstr);
     return QString::fromCFString(urlstr);
 }
 
