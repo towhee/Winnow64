@@ -209,6 +209,13 @@ quint8 Utilities::get8(QByteArray c)
     return c[0]&0xFF;
 }
 
+QByteArray Utilities::put8(quint8 x)
+{
+    QByteArray c;
+    c[0] = static_cast<char>(x);
+    return c;
+}
+
 quint16 Utilities::get16(QByteArray c, bool isBigEnd)
 {
     if (isBigEnd) {
@@ -224,6 +231,20 @@ quint16 Utilities::get16(QByteArray c, bool isBigEnd)
         x = static_cast<quint16>((x << 8) | (c[0]&0xFF));
         return x;
     }
+}
+
+QByteArray Utilities::put16(quint16 x, bool isBigEnd)
+{
+    QByteArray c;
+    if (isBigEnd) {
+        c[0] = static_cast<char>(x >> 8);
+        c[1] = static_cast<char>(x & 0x00FF);
+    }
+    else {
+        c[0] = static_cast<char>(x & 0x00FF);
+        c[1] = static_cast<char>(x >> 8);
+    }
+    return c;
 }
 
 quint32 Utilities::get24(QByteArray c, bool isBigEnd)
@@ -258,6 +279,24 @@ quint32 Utilities::get32(QByteArray c, bool isBigEnd)
         x = static_cast<quint32>((x << 8) | (c[0]&0xFF));
         return x;
     }
+}
+
+QByteArray Utilities::put32(quint32 x, bool isBigEnd)
+{
+    QByteArray c;
+    if (isBigEnd) {
+        c[0] = static_cast<char>(x >> 24);
+        c[1] = static_cast<char>(x >> 16);
+        c[2] = static_cast<char>(x >> 8);
+        c[3] = static_cast<char>(x & 0x000000FF);
+    }
+    else {
+        c[0] = static_cast<char>(x & 0x000000FF);
+        c[1] = static_cast<char>(x >> 8);
+        c[2] = static_cast<char>(x >> 16);
+        c[3] = static_cast<char>(x >> 24);
+    }
+    return c;
 }
 
 quint64 Utilities::get40(QByteArray c, bool isBigEnd)
@@ -358,6 +397,8 @@ double Utilities::getReal_s(T &io, quint32 offset, bool isBigEnd)
 }
 template double Utilities::getReal_s<QFile>(QFile&, quint32 offset, bool isBigEnd);
 template double Utilities::getReal_s<QBuffer>(QBuffer&, quint32 offset, bool isBigEnd);
+
+
 
 QString Utilities::getCString(QFile &file)
 {

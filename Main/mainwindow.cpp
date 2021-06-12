@@ -11496,7 +11496,23 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << G::fontSize << G::ptToPx;
-
+    qDebug() << __FUNCTION__;
+    QFile test("/Users/roryhill/Pictures/_TIFF/test.tif");
+    test.open(QIODevice::ReadWrite);
+    QByteArray ba /*= Utilities::put16(25798)*/;
+    test.seek(0);
+    test.write(Utilities::put16(25798));  // 64C6
+    test.write(Utilities::put16(2400));   // 0960
+    test.write(Utilities::put32(2882400070));   // ABCDEF46
+    test.write(Utilities::put8(146));   // 92
+    test.write("Once upon an time");
+    test.seek(0);
+    qDebug() << __FUNCTION__
+             << Utilities::get16(test.read(2))
+             << Utilities::get16(test.read(2))
+             << Utilities::get32(test.read(4))
+             << Utilities::get8(test.read(1))
+                ;
+    test.close();
 }
 // End MW

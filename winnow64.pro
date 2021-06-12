@@ -78,8 +78,10 @@ HEADERS += ImageFormats/Olympus/olympus.h
 HEADERS += ImageFormats/Panasonic/panasonic.h
 HEADERS += ImageFormats/Sony/sony.h
 HEADERS += ImageFormats/Tiff/tiff.h
+
 #HEADERS += Lcms2/lcms2.h
 #HEADERS += Lcms2/lcms2_plugin.h
+
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
 HEADERS += Main/mainwindow.h
@@ -176,6 +178,7 @@ SOURCES += ImageFormats/Olympus/olympus.cpp
 SOURCES += ImageFormats/Panasonic/panasonic.cpp
 SOURCES += ImageFormats/Sony/sony.cpp
 SOURCES += ImageFormats/Tiff/tiff.cpp
+
 #SOURCES += Lcms2/cmsalpha.c
 #SOURCES += Lcms2/cmscam02.c
 #SOURCES += Lcms2/cmscgats.c
@@ -202,6 +205,7 @@ SOURCES += ImageFormats/Tiff/tiff.cpp
 #SOURCES += Lcms2/cmsvirt.c
 #SOURCES += Lcms2/cmswtpnt.c
 #SOURCES += Lcms2/cmsxform.c
+
 SOURCES += Main/dockwidget.cpp
 SOURCES += Main/global.cpp
 SOURCES += Main/main.cpp
@@ -320,7 +324,7 @@ DISTFILES += notes/xmp.txt
 #macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.14
 macx:LIBS += -framework ApplicationServices
 macx:LIBS += -framework AppKit
-macx:LIBS += -framework ColorSync
+#macx:LIBS += -framework ColorSync
 #macx:LIBS += -framework Foundation
 
 # lcms

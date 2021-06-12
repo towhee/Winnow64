@@ -77,7 +77,6 @@ void BookMarks::reloadBookmarks()
 
 void BookMarks::addBookmark(QString itemPath)
 {
-    qDebug() << __FUNCTION__ << itemPath;
     QTreeWidgetItem *item = new QTreeWidgetItem(this);
     item->setText(0, QFileInfo(itemPath).fileName());
     item->setIcon(0, QIcon(":/images/bookmarks.png"));
@@ -117,11 +116,11 @@ void BookMarks::count()
 
 void BookMarks::select(QString fPath)
 {
-/* This is called from MW::folderSelectionChange to attempt to sync bookmarks with
-the FSTree folders view.
+/*
+    This is called from MW::folderSelectionChange to attempt to sync bookmarks with
+    the FSTree folders view.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-//    return;
     if (bookmarkPaths.contains(fPath)) {
         QList <QTreeWidgetItem *> items;
         items = findItems(QFileInfo(fPath).fileName(), Qt::MatchExactly);
@@ -166,13 +165,10 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 {
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) {
-//        /*
-//        QTreeWidgetItem *item = itemAt(event->pos());
         rightClickItem = itemAt(event->pos());
         if (rightClickItem) {
             qDebug() << __FUNCTION__ << rightClickItem->toolTip(0);
         }
-        //*/
         return;
     }
     QTreeWidget::mousePressEvent(event);
@@ -229,7 +225,6 @@ void BookMarks::dropEvent(QDropEvent *event)
         if (!bookmarkPaths.contains(dPath)) {
             bookmarkPaths.insert(dPath);
             reloadBookmarks();
-//            count();
         }
     }
 }

@@ -31,6 +31,7 @@ public:
 //    bool decode(ImageMetadata &m, QFile &file, QImage &image, int maxDim = 0);
     // decoding happens here
     bool decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int maxDim = 0);
+    bool encodeThumbnail();
 
 private:
     int bitsPerSample = 0;
