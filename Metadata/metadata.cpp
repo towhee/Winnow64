@@ -421,6 +421,10 @@ bool Metadata::writeMetadata(const QString &fPath, ImageMetadata m, QByteArray &
         return false;
     }
 
+    // make sure file is available ie usb drive has been ejected
+    QFileInfo fileInfo(fPath);
+    if (!fileInfo.exists()) return false;
+
     // data edited, open image file
     p.file.setFileName(fPath);
     // rgh error trap file operation
@@ -774,8 +778,12 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 //    G::log(__FUNCTION__, "Source =" + source + "  " + path);
 //    qDebug() << __FUNCTION__ << "called by" << source << path;
 //    isReport = true;
-    p.report = isReport;
 
+    // make sure file is available ie usb drive has been ejected
+    QFileInfo fileInfo(path);
+    if (!fileInfo.exists()) return false;
+
+    p.report = isReport;
     if (p.report) {
         p.rpt.flush();
         reportString = "";
@@ -796,7 +804,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     if (p.report) {
         p.rpt << "\nFile name = " << path << "\n";
     }
-    QFileInfo fileInfo(path);
     QString ext = fileInfo.suffix().toLower();
     bool parsed = false;
     // rgh next triggers crash sometimes when skip to end of thumbnails

@@ -421,6 +421,9 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
 */
 //    qDebug() << __FUNCTION__ << "using unmapped QFile";
     if (G::isLogger) G::log(__FUNCTION__, " load file from fPath");
+    QFileInfo fileInfo(fPath);
+    if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
+
     MetadataParameters p;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {

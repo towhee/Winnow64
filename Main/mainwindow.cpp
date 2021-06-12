@@ -9907,11 +9907,11 @@ void MW::ejectUsb(QString path)
              << currentDrive.name()
              << ejectDrive.name()
                 ;
-    return;
-    imageCacheThread->stopImageCache();
-    metadataCacheThread->stopMetadataCache();
-    buildFilters->stop();
-
+    if (currentDrive.name() == currentDrive.name()) {
+        imageCacheThread->stopImageCache();
+        metadataCacheThread->stopMetadataCache();
+        buildFilters->stop();
+    }
 
     QString driveRoot;      // ie WIN "D:\" or MAC "Untitled"
 #if defined(Q_OS_WIN)
@@ -11493,15 +11493,6 @@ void MW::helpWelcome()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    thumbView->selectThumb(800);
-    return;
-
-    abort();  return;
-    qDebug() << __FUNCTION__;
-    QString s = "D:/Pictures/Zenfolio/pbase2048";
-    dm->load(s, false);
-    G::isInitializing = false;
-
     return;
 
     QString fPath = "D:/Pictures/_DNG/DngNikonD850FromLightroom.dng";
@@ -11510,6 +11501,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QString fPath = "P:/DCIM/100MSDCF/_DSC3817.ARW";
+    QFileInfo info(fPath);
+    qDebug() << __FUNCTION__ << info.exists();
+    return;
+
+
     qDebug() << __FUNCTION__;
     QFile test("/Users/roryhill/Pictures/_TIFF/test.tif");
     test.open(QIODevice::ReadWrite);

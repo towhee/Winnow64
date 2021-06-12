@@ -750,6 +750,8 @@ void Jpeg::decodeScan(MetadataParameters &p)
 void Jpeg::decodeScan(QFile &file, QImage &image)
 {
 //    qDebug() << __FUNCTION__ << file.fileName();
+    if (!file.exists()) return;                 // guard for usb drive ejection
+
     MetadataParameters p;
     p.file.setFileName(file.fileName());
     if (p.file.isOpen()) p.file.close();
