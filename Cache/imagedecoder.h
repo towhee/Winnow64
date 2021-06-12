@@ -24,6 +24,7 @@ public:
                 ImageMetadata m,
                 QByteArray ba = nullptr);
     void setReady();
+    void stop();
 
     int threadId;
     QImage image;
@@ -50,6 +51,7 @@ private:
     void decodeUsingQt();
     void rotate();
     void colorManage();
+    bool abort = false;
     DataModel *dm;
     Metadata *metadata;
     ImageMetadata m;

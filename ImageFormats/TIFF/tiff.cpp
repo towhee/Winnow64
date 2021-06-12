@@ -611,6 +611,7 @@ bool Tiff::encodeThumbnail()
     - subsample image down to thumbnail resolution
     - write strip pixels rgb at offset StripOffsets
 */
+    return true;
 }
 
 void Tiff::toRRGGBBAA(QImage *im)
