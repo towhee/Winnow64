@@ -23,6 +23,11 @@ ImageDecoder::ImageDecoder(QObject *parent, int id, Metadata *metadata) : QThrea
     this->metadata = metadata;
 }
 
+void ImageDecoder::stop()
+{
+    abort = true;
+}
+
 void ImageDecoder::decode(G::ImageFormat format,
                           QString fPath,
                           ImageMetadata m,
@@ -59,7 +64,6 @@ void ImageDecoder::setReady()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     status = Status::Ready;
-//    ba = nullptr;
     ba.clear();
     fPath = "";
 }
@@ -67,7 +71,6 @@ void ImageDecoder::setReady()
 void ImageDecoder::decodeJpg()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
-//    qDebug() << __FUNCTION__ << "threadId =" << threadId;
     // chk nullptr
     image.loadFromData(ba, "JPEG");
 }
@@ -82,6 +85,7 @@ void ImageDecoder::decodeTif()
     else {
         p.file.unmap(buf);
     }
+    p.file.close();
 }
 
 void ImageDecoder::decodeHeic()
@@ -144,10 +148,8 @@ void ImageDecoder::colorManage()
 void ImageDecoder::run()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
-//    qDebug() << __FUNCTION__ << "threadId =" << threadId;
     switch(imageFormat) {
     case G::Jpg:
-//        qDebug() << __FUNCTION__ << "threadId =" << threadId << "case G::Jpg";
         decodeJpg();
         break;
     case G::Tif:
@@ -159,11 +161,8 @@ void ImageDecoder::run()
     case G::UseQt:
         decodeUsingQt();
     }
-//    if (metadata->rotateFormats.contains(ext) && (m.orientation > 0 || m.rotationDegrees > 0))
-    if (metadata->rotateFormats.contains(ext)) rotate();
-
-    if (G::colorManage) colorManage();
+    if (metadata->rotateFormats.contains(ext) && !abort) rotate();
+    if (G::colorManage && !abort) colorManage();
     status = Status::Done;
-//    qDebug() << __FUNCTION__ << "threadId =" << threadId << "Emitting done";
     emit done(threadId);
 }

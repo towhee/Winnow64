@@ -1085,10 +1085,8 @@ void ImageCache::fillCache(int id)
 */
     if (G::isLogger) G::log(__FUNCTION__);
     mutex.lock();
-//    qDebug() << __FUNCTION__ << id;
     // ImageDecoder thread returning a QImage
     if (decoder[id]->status == ImageDecoder::Status::Done) {
-//        qDebug() << __FUNCTION__ << "Inserting" << id << decoder[id]->fPath;
         imCache.insert(decoder[id]->fPath, decoder[id]->image);
         cache.currMB = getImCacheSize();
         if (cache.isShowCacheStatus) {
@@ -1097,14 +1095,9 @@ void ImageCache::fillCache(int id)
         }
         decoder[id]->setReady();
     }
-    /*
-    if (stopFillingCache) {
-        mutex.unlock();
-        return;
-    }*/
 
     // get next image to cache
-    if (!stopFillingCache && nextToCache()) {
+    if (!stopFillingCache&& !abort && nextToCache()) {
         QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
         int room = cache.maxMB - cache.currMB;
         int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
@@ -1195,11 +1188,11 @@ void ImageCache::run()
     // start run loop
     do {
         // check if abort
-        mutex.lock();
-        okToAbort = abort;
-        abort = false;
-        mutex.unlock();
-        if (okToAbort) {
+//        mutex.lock();
+//        okToAbort = abort;
+//        abort = false;
+//        mutex.unlock();
+        if (abort) {
             emit updateIsRunning(/*isRunning*/false, /*showCacheLabel*/false);
             return;
         }
@@ -1261,6 +1254,7 @@ void ImageCache::run()
                 bool isBusy = decoder[id]->status == ImageDecoder::Busy;
                 mutex.unlock();
                 if (isBusy) {
+                    decoder[id]->stop();
                     allDecodersfinished = false;
                     break;
                 }
@@ -1296,7 +1290,7 @@ void ImageCache::run()
             emit showCacheStatus("Update all rows", 0, "ImageCache::run outer loop");
 
         // are all images in the target range cached
-        if (cacheUpToDate()) {
+        if (cacheUpToDate() || abort) {
             continue;
         }
 
@@ -1308,97 +1302,14 @@ void ImageCache::run()
 
         // fill the cache with images
         for (int id = 0; id < decoderCount; ++id) {
-//            qDebug() << __FUNCTION__ << id;
             if (decoder[id]->status == ImageDecoder::Status::Ready) {
-                fillCache(id);
+                if (!abort) fillCache(id);
             }
         }
 
-/*
-        QTime t = QTime::currentTime().addMSecs(500);
-        while (nextToCache()) {
-            mutex.lock();
-            okToAbort = abort;
-            abort = false;
-            mutex.unlock();
-            if (okToAbort) {
-                emit updateIsRunning(false, false); // isRunning, showCacheLabel
-                return;
-            }
-
-            // if file selection change then back to the main loop to restart filling cache
-            mutex.lock();
-            okToPause = pause;
-            positionChanged = (prevCurrentPath != currentPath);
-            cacheSizeChange = cacheSizeHasChanged;
-            refresh = refreshCache;
-            filterSortChange = filterOrSortHasChanged;
-            mutex.unlock();
-            if (positionChanged || okToPause || cacheSizeChange || filterSortChange) break;
-
-            // guard check
-            if (cache.toCacheKey < 0 || cache.toCacheKey >= totalImages) {
-                QString msg = "Bad cache.toCacheKey = " + QString::number(cache.toCacheKey);
-                QByteArray ba = msg.toLocal8Bit();
-                qWarning(ba.data());
-                continue;
-            }
-
-            // next image to cache
-            QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
-            QImage image;
-
-            // read and decode to QImage image
-            if (getImage->load(fPath, image)) {
-                // is there room in cache?
-                int room = cache.maxMB - cache.currMB;
-
-//                qDebug() << __FUNCTION__
-//                         << "cache.toCacheKey =" << cache.toCacheKey
-//                         << "cacheItemList.count() =" << cacheItemList.count()
-//                            ;
-
-                int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
-                makeRoom(room, roomRqd);
-
-//                qDebug() << __FUNCTION__
-//                         << "fPath =" << fPath
-//                         << "maxMB =" << cache.maxMB
-//                         << "currMB" << cache.currMB
-//                         << "room =" << room
-//                         << "toCache =" << cache.toCacheKey
-//                         << "roomRqd =" << roomRqd;
-
-                // add to cache
-                imCache.insert(fPath, image);
-                if (cache.isShowCacheStatus) emit updateCacheOnThumbs(fPath, true);
-
-                // update the cacheItemList and toCache lists, cache size
-                cacheItemList[cache.toCacheKey].isCached = true;
-                if (!toCache.isEmpty()) toCache.removeFirst();
-                cache.currMB = getImCacheSize();
-
-                // only update status every 500 ms to improve performance
-                if (cache.isShowCacheStatus) {
-                    emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
-                }
-            }
-            else if (!toCache.isEmpty()) toCache.removeFirst();
-        }
-
-        // see if any images have the wrong cache status
-//        checkForOrphans();
-
-        // update cache status
-        cache.currMB = getImCacheSize();
-        if (cache.isShowCacheStatus)
-            emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
-
-        if (cache.isShowCacheStatus) emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
-*/
-        mutex.lock();
-        okToAbort = abort;
-        mutex.unlock();
+//        mutex.lock();
+//        okToAbort = abort;
+//        mutex.unlock();
     }
-    while (!okToAbort);
+    while (!abort);
 }
