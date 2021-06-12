@@ -46,15 +46,13 @@ void ImageDecoder::decode(G::ImageFormat format,
     this->ba.clear();
     this->ba = ba;
     QFileInfo fileInfo(fPath);
+    if (!fileInfo.exists()) return;                 // guard for usb drive ejection
     ext = fileInfo.completeSuffix().toLower();
     if (format == G::Tif) {
         p.file.setFileName(fPath);
-        p.file.open(QIODevice::ReadOnly);
-        buf = p.file.map(0, p.file.size());
+        if (p.file.open(QIODevice::ReadOnly)) buf = p.file.map(0, p.file.size());
+        else return;
     }
-//    if (isRunning()) {
-//        qDebug() << __FUNCTION__ << "threadId =" << threadId << "is Running";
-//    }
     start();
 }
 

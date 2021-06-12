@@ -17,6 +17,7 @@
 
 #define ICON_MIN	40
 #define ICON_MAX	480  // 256 is default
+#define EXISTS if(p.file.exists())
 
 namespace G
 {
