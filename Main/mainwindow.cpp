@@ -9899,6 +9899,20 @@ void MW::ingest()
 void MW::ejectUsb(QString path)
 {
     if (G::isLogger) G::log(__FUNCTION__);
+
+    // if current folder is on USB drive to be ejected then stop caching
+    QStorageInfo ejectDrive(path);
+    QStorageInfo currentDrive(currentViewDir);
+    qDebug() << __FUNCTION__ << currentViewDir << path
+             << currentDrive.name()
+             << ejectDrive.name()
+                ;
+    return;
+    imageCacheThread->stopImageCache();
+    metadataCacheThread->stopMetadataCache();
+    buildFilters->stop();
+
+
     QString driveRoot;      // ie WIN "D:\" or MAC "Untitled"
 #if defined(Q_OS_WIN)
     driveRoot = path.left(3);
