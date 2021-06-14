@@ -383,6 +383,12 @@ void FSTree::resizeEvent(QResizeEvent *event)
     resizeColumns();
 }
 
+void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+    QTreeView::selectionChanged(selected, deselected);
+    emit selectionChange();
+}
+
 //void FSTree::paintEvent(QPaintEvent *event)
 //{
 ////    resizeColumns();
