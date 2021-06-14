@@ -78,12 +78,13 @@ protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
-//    void paintEvent(QPaintEvent *event);
     void resizeEvent(QResizeEvent *event) override;
+    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
 //    void focusInEvent(QFocusEvent *event);
 
 signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
+    void selectionChange();
 
 private:
 //    void walkTree(const QModelIndex &row);

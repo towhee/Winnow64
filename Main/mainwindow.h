@@ -323,6 +323,7 @@ protected:
 
 public slots:
     void handleStartupArgs(const QString &msg);
+    void watchCurrentFolder();
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex);
     void folderAndFileSelectionChange(QString fPath);

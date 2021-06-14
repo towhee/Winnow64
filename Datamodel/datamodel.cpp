@@ -232,6 +232,7 @@ DataModel::DataModel(QWidget *parent,
 void DataModel::clearDataModel()
 {
     if (G::isLogger) G::log(__FUNCTION__);
+//    if (rowCount() == 0) return;
     // clear the model:  clear() wipes the headers
     removeRows(0, rowCount());
     setRowCount(0);
@@ -249,9 +250,9 @@ void DataModel::clearDataModel()
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
 {
 /*
-The datamodel is sorted by absolute path, except jpg extensions follow all
-other image extensions. This makes it easier to determine duplicate images
-when combined raw+jpg is activated.
+    The datamodel is sorted by absolute path, except jpg extensions follow all
+    other image extensions. This makes it easier to determine duplicate images
+    when combined raw+jpg is activated.
 */
     QString s1 = i1.absoluteFilePath().toLower();
     QString s2 = i2.absoluteFilePath().toLower();

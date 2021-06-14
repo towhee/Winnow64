@@ -1199,6 +1199,20 @@ void MW::handleStartupArgs(const QString &args)
     return;
 }
 
+void MW::watchCurrentFolder()
+{
+/*
+    This slot is signalled from FSTree when a folder selection changes.  We are interested
+    in selection changes caused by a drive being ejected.  If the current folder being
+    cached no longer exists (ejected) then make a folderSelectionChange.
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (currentViewDir == "") return;
+    QFileInfo info(currentViewDir);
+    if (info.exists()) return;
+    folderSelectionChange();
+}
+
 void MW::folderSelectionChange()
 {
     if (G::isLogger) {
@@ -1414,8 +1428,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
              << "isCurrentFolderOkay =" << isCurrentFolderOkay
              << "current =" << current;
 //    */
-
-//    qDebug() << G::t.elapsed() << G::t.restart() << "\t" << __FUNCTION__ << 1;
 
     bool isStart = false;
     if(!isCurrentFolderOkay || G::isInitializing || isFilterChange) return;
@@ -5114,6 +5126,9 @@ void MW::createFSTree()
     fsTree->setMaximumWidth(folderMaxWidth);
     fsTree->setShowImageCount(true);
     fsTree->combineRawJpg = combineRawJpg;
+
+    // selection change check if triggered by ejecting USB drive
+    connect(fsTree, &FSTree::selectionChange, this, &MW::watchCurrentFolder);
 
     // this works for touchpad tap
     connect(fsTree, SIGNAL(pressed(const QModelIndex&)), this, SLOT(folderSelectionChange()));
@@ -9898,15 +9913,29 @@ void MW::ingest()
 
 void MW::ejectUsb(QString path)
 {
+/*
+    If the current folder is on the drive to be ejectedW attempts to read subsequent
+    files will cause a crash. This is avoided by stopping any further activity in the
+    metadataCacheThread and imageCacheThread, preventing any file reading attempts to a
+    non-existent drive.
+
+    This works fine here, but not if the drive is ejected externally ie from Finder.
+    FSTree emits a signal selectionChange that is connected to MW::watchCurrentFolder
+    each time the FSTree QTreeView selection changes.  If the current folder being
+    cached no longer exists (ejected) then make a folderSelectionChange in
+    MW::watchCurrentFolder.
+*/
     if (G::isLogger) G::log(__FUNCTION__);
 
     // if current folder is on USB drive to be ejected then stop caching
     QStorageInfo ejectDrive(path);
     QStorageInfo currentDrive(currentViewDir);
+    /*
     qDebug() << __FUNCTION__ << currentViewDir << path
              << currentDrive.name()
              << ejectDrive.name()
                 ;
+                //*/
     if (currentDrive.name() == currentDrive.name()) {
         imageCacheThread->stopImageCache();
         metadataCacheThread->stopMetadataCache();
@@ -9924,15 +9953,13 @@ void MW::ejectUsb(QString path)
     if(pos == -1) pos = path.length();
     driveRoot = path.mid(9, pos - 9);
 #endif
-    if(Usb::isUsb(path)) {
+    if (Usb::isUsb(path)) {
         dm->load(driveRoot, false);
         refreshFolders();
         int result = Usb::eject(driveRoot);
-        if(result < 2) {
+        if (result < 2) {
             G::popUp->showPopup("Ejecting drive " + driveRoot, 2000);
             folderSelectionChange();
-//            noFolderSelected();
-//            currentViewDir = "";
         }
         else
             G::popUp->showPopup("Failed to eject drive " + driveRoot, 2000);
@@ -10400,7 +10427,6 @@ void MW::metadataChanged(QStandardItem* item)
     int row = item->index().row();
     QModelIndex tagIdx = infoView->ok->index(row, 0, par);
     QString tagName = tagIdx.data().toString();
-    qDebug() << __FUNCTION__ << tagName;
 
     QHash<QString,int> col;
     col["Title"] = G::TitleColumn;
@@ -11501,6 +11527,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+//    folderSelectionChange();
+    return;
+
     QString fPath = "P:/DCIM/100MSDCF/_DSC3817.ARW";
     QFileInfo info(fPath);
     qDebug() << __FUNCTION__ << info.exists();
