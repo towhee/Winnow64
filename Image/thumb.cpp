@@ -130,15 +130,16 @@ bool Thumb::loadFromTiffData(QString &fPath, QImage &image)
     QFile imFile(fPath);
     if (imFile.isOpen()) imFile.close();
     // check if file is locked by another process
-     if (imFile.open(QIODevice::ReadOnly)) {
-        // close it to allow qt load to work
-        imFile.close();
-     }
+    if (imFile.open(QIODevice::ReadOnly)) {
+    // close it to allow qt load to work
+    imFile.close();
+    }
 
-     // Attempt to decode tiff thumbnail by sampling tiff raw data
-     ImageMetadata m = dm->imMetadata(fPath);
-     Tiff tiff;
-     return tiff.decode(m, fPath, image, G::maxIconSize);
+    // Attempt to decode tiff thumbnail by sampling tiff raw data
+    ImageMetadata m = dm->imMetadata(fPath);
+    Tiff tiff;
+    bool getThumb = true;
+    return tiff.decode(m, fPath, image, getThumb, G::maxIconSize);
 }
 
 bool Thumb::loadThumb(QString &fPath, QImage &image)
