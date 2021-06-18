@@ -1,50 +1,262 @@
-   602 FOLDER CHANGE
-     1 MW::folderSelectionChange
-     4 ImageCache::stopImageCache
-     2 MW::updateImageCachingThreadRunStatus
-   249 ImageCache::clearImageCache
-     3 MW::updateImageCacheStatus                         Instruction: Clear Image Cache  Source: ImageCache::clearImageCache
-    12 MW::metadataChanged
-    39 MetadataCache::stopMetadateCache
-     6 MW::setCentralMessage
-22,035 MW::setThreadRunStatusInactive
-     9 DataModel::load
-   196 MW::sortChange
-     2 IconView::sortThumbs
-    14 IconView::selectThumb
-     3 IconView::selectThumb
-     7 IconView::selectionChanged
-     1 IconView::selectionChanged
+========================  Metadata Diagnostics for Current Image  ========================
 
-    84 MW::fileSelectionChange                            C:/Users/Rory/wizard with a dash.jpg
-    11 MetadataCache::loadNewFolder
-     2 MetadataCache::run
-     9 MetadataCache::readMetadataChunk
-     8 MetadataCache::readIconChunk
-     8 Thumb::loadFromEntireFile                          C:/Users/Rory/wizard with a dash.jpg
-     7 MW::setCentralMessage
-   176 MW::updateState
-    39 MW::setCentralView
-    91 MW::loupeDisplay
-    14 ImageView::loadImage
-     4 MetadataCache::loadNewFolder2ndPass
-   183 MetadataCache::run
-13,584 MW::launchBuildFilters
-     7 MW::loadImageCacheForNewFolder
-   317 MW::checkForUpdate
- 8,914 ImageCache::initImageCache
-   107 ImageCache::buildImageCacheList
-    95 ImageCache::setCurrentPosition
+File name = D:/Pictures/_TIFF_thumb/Tiff.tif
 
-    47 MW::fileSelectionChange                            C:/Users/Rory/wizard with a dash.jpg
-    75 ImageCache::run
-   246 ImageView::loadImage
-     1 MetadataCache::sizeChange
-     0 MetadataCache::setRange
-   194 MetadataCache::fileSelectionChange
-    43 MetadataCache::run
-    62 MetadataCache::setRange
-     4 MW::updateMetadataThreadRunStatus
-   158 ImageCache::setCurrentPosition                     C:/Users/Rory/wizard with a dash.jpg
-   195 MetadataCache::run
-   190 MW::fileSelectionChange                            Finished C:/Users/Rory/wizard with a dash.jpg
+File byte order = Little Endian II
+
+-----------------------------------------  IFD0  -----------------------------------------
+IFDOffset  Hex: 8   Dec: 8   Tag count: 25
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0        10         A    256   100        3         1        4608   ImageWidth
+  1        22        16    257   101        3         1        3456   ImageHeight
+  2        34        22    258   102        3         3         314   BitsPerSample
+  3        46        2E    259   103        3         1           1   Compression
+  4        58        3A    262   106        3         1           2   PhotometricInterpretation
+  5        70        46    270   10E        2        23         320   ImageDescription
+  6        82        52    271   10F        2        22         344   Make
+  7        94        5E    272   110        2         5         366   Model
+  8       106        6A    273   111        4       432         372   StripOffsets
+  9       118        76    277   115        3         1           3   SamplesPerPixel
+ 10       130        82    278   116        3         1           8   RowsPerStrip
+ 11       142        8E    279   117        4       432        2100   StripByteCounts
+ 12       154        9A    282   11A        5         1        3828   XResolution
+ 13       166        A6    283   11B        5         1        3836   YResolution
+ 14       178        B2    296   128        3         1           2   ResolutionUnit
+ 15       190        BE    305   131        2        42        3844   Software
+ 16       202        CA    306   132        2        20        3886   ModifyDate
+ 17       214        D6    315   13B        2        10        3906   Artist
+ 18       226        E2    339   153        3         3        3916   SampleFormat
+ 19       238        EE    700   2BC        1     12863        3922   ApplicationNotes / XMP
+ 20       250        FA  33432  8298        2        15       16786   Copyright
+ 21       262       106  33723  83BB        4        32       16802   IPTC-NAA
+ 22       274       112  34377  8649        7        14       16930   PhotoshopSettings
+ 23       286       11E  34665  8769        4         1       17884   ExifIFDOffset
+ 24       298       12A  34675  8773        7       940       16944   ICC_Profile
+          310       136    nextIFDOffset = 0 / 0
+
+Decode TIFF parameters:
+1st StripOffset          18538
+1st StripByteCount       221184
+BitsPerSample            16
+PhotometricInterpation   2
+SamplesPerPixel          3
+RowsPerStrip             8
+Compression              1
+PlanarConfiguration      1
+
+
+========================  Metadata Diagnostics for Current Image  ========================
+
+File name = D:/Pictures/_TIFF_thumb/Tiff_Pyramid.tif
+
+File byte order = Little Endian II
+
+-----------------------------------------  IFD0  -----------------------------------------
+IFDOffset  Hex: 8   Dec: 8   Tag count: 28
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0        10         A    254    FE        4         1           0   SubfileType
+  1        22        16    256   100        3         1        4608   ImageWidth
+  2        34        22    257   101        3         1        3456   ImageHeight
+  3        46        2E    258   102        3         3         350   BitsPerSample
+  4        58        3A    259   103        3         1           1   Compression
+  5        70        46    262   106        3         1           2   PhotometricInterpretation
+  6        82        52    270   10E        2        23         356   ImageDescription
+  7        94        5E    271   10F        2        22         380   Make
+  8       106        6A    272   110        2         5         402   Model
+  9       118        76    273   111        4         1       34466   StripOffsets
+ 10       130        82    274   112        3         1           1   Orientation
+ 11       142        8E    277   115        3         1           3   SamplesPerPixel
+ 12       154        9A    278   116        3         1        3456   RowsPerStrip
+ 13       166        A6    279   117        4         1    95551488   StripByteCounts
+ 14       178        B2    282   11A        5         1         408   XResolution
+ 15       190        BE    283   11B        5         1         416   YResolution
+ 16       202        CA    284   11C        3         1           1   PlanarConfiguration
+ 17       214        D6    296   128        3         1           2   ResolutionUnit
+ 18       226        E2    305   131        2        32         424   Software
+ 19       238        EE    306   132        2        20         456   ModifyDate
+ 20       250        FA    315   13B        2        10         476   Artist
+ 21       262       106    330   14A       13         1    95586648   SubIFDs
+ 22       274       112    700   2BC        1     24699         486   ApplicationNotes / XMP
+ 23       286       11E  33432  8298        2        15       25186   Copyright
+ 24       298       12A  33723  83BB        7       133       25202   IPTC-NAA
+ 25       310       136  34377  8649        1      8190       25336   PhotoshopSettings
+ 26       322       142  34665  8769        4         1    95585956   ExifIFDOffset
+ 27       334       14E  34675  8773        7       940       33526   ICC_Profile
+          346       15A    nextIFDOffset = 0 / 0
+
+Decode TIFF parameters:
+1st StripOffset          34466
+1st StripByteCount       95551488
+BitsPerSample            16
+PhotometricInterpation   2
+SamplesPerPixel          3
+RowsPerStrip             3456
+Compression              1
+PlanarConfiguration      1
+
+---------------------------------------  SubIFD 1  ---------------------------------------
+IFDOffset  Hex: 5B28958   Dec: 95586648   Tag count: 15
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0  95586650   5B2895A    254    FE        4         1           1   SubfileType
+  1  95586662   5B28966    256   100        3         1        2304   ImageWidth
+  2  95586674   5B28972    257   101        3         1        1728   ImageHeight
+  3  95586686   5B2897E    258   102        3         3    95586834   BitsPerSample
+  4  95586698   5B2898A    259   103        3         1           1   Compression
+  5  95586710   5B28996    262   106        3         1           2   PhotometricInterpretation
+  6  95586722   5B289A2    273   111        4         1    95586856   StripOffsets
+  7  95586734   5B289AE    274   112        3         1           1   Orientation
+  8  95586746   5B289BA    277   115        3         1           3   SamplesPerPixel
+  9  95586758   5B289C6    278   116        3         1        1728   RowsPerStrip
+ 10  95586770   5B289D2    279   117        4         1    11943936   StripByteCounts
+ 11  95586782   5B289DE    282   11A        5         1    95586840   XResolution
+ 12  95586794   5B289EA    283   11B        5         1    95586848   YResolution
+ 13  95586806   5B289F6    284   11C        3         1           1   PlanarConfiguration
+ 14  95586818   5B28A02    296   128        3         1           2   ResolutionUnit
+     95586830   5B28A0E    nextIFDOffset = 107530792 / 668CA28
+
+Decode TIFF parameters:
+1st StripOffset          95586856
+1st StripByteCount       11943936
+BitsPerSample            8
+PhotometricInterpation   2
+SamplesPerPixel          3
+RowsPerStrip             1728
+Compression              1
+PlanarConfiguration      1
+
+---------------------------------------  SubIFD 2  ---------------------------------------
+IFDOffset  Hex: 668CA28   Dec: 107530792   Tag count: 15
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0 107530794   668CA2A    254    FE        4         1           1   SubfileType
+  1 107530806   668CA36    256   100        3         1        1152   ImageWidth
+  2 107530818   668CA42    257   101        3         1         864   ImageHeight
+  3 107530830   668CA4E    258   102        3         3   107530978   BitsPerSample
+  4 107530842   668CA5A    259   103        3         1           1   Compression
+  5 107530854   668CA66    262   106        3         1           2   PhotometricInterpretation
+  6 107530866   668CA72    273   111        4         1   107531000   StripOffsets
+  7 107530878   668CA7E    274   112        3         1           1   Orientation
+  8 107530890   668CA8A    277   115        3         1           3   SamplesPerPixel
+  9 107530902   668CA96    278   116        3         1         864   RowsPerStrip
+ 10 107530914   668CAA2    279   117        4         1     2985984   StripByteCounts
+ 11 107530926   668CAAE    282   11A        5         1   107530984   XResolution
+ 12 107530938   668CABA    283   11B        5         1   107530992   YResolution
+ 13 107530950   668CAC6    284   11C        3         1           1   PlanarConfiguration
+ 14 107530962   668CAD2    296   128        3         1           2   ResolutionUnit
+    107530974   668CADE    nextIFDOffset = 110516984 / 6965AF8
+
+Decode TIFF parameters:
+1st StripOffset          107531000
+1st StripByteCount       2985984
+BitsPerSample            8
+PhotometricInterpation   2
+SamplesPerPixel          3
+RowsPerStrip             864
+Compression              1
+PlanarConfiguration      1
+
+---------------------------------------  SubIFD 3  ---------------------------------------
+IFDOffset  Hex: 6965AF8   Dec: 110516984   Tag count: 15
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0 110516986   6965AFA    254    FE        4         1           1   SubfileType
+  1 110516998   6965B06    256   100        3         1         576   ImageWidth
+  2 110517010   6965B12    257   101        3         1         432   ImageHeight
+  3 110517022   6965B1E    258   102        3         3   110517170   BitsPerSample
+  4 110517034   6965B2A    259   103        3         1           1   Compression
+  5 110517046   6965B36    262   106        3         1           2   PhotometricInterpretation
+  6 110517058   6965B42    273   111        4         1   110517192   StripOffsets
+  7 110517070   6965B4E    274   112        3         1           1   Orientation
+  8 110517082   6965B5A    277   115        3         1           3   SamplesPerPixel
+  9 110517094   6965B66    278   116        3         1         432   RowsPerStrip
+ 10 110517106   6965B72    279   117        4         1      746496   StripByteCounts
+ 11 110517118   6965B7E    282   11A        5         1   110517176   XResolution
+ 12 110517130   6965B8A    283   11B        5         1   110517184   YResolution
+ 13 110517142   6965B96    284   11C        3         1           1   PlanarConfiguration
+ 14 110517154   6965BA2    296   128        3         1           2   ResolutionUnit
+    110517166   6965BAE    nextIFDOffset = 0 / 0
+
+Decode TIFF parameters:
+1st StripOffset          110517192
+1st StripByteCount       746496
+BitsPerSample            8
+PhotometricInterpation   2
+SamplesPerPixel          3
+RowsPerStrip             432
+Compression              1
+PlanarConfiguration      1
+
+
+========================  Metadata Diagnostics for Current Image  ========================
+
+File name = D:/Pictures/_TIFF_thumb/Tiff - Copy.tif
+
+File byte order = Little Endian II
+
+-----------------------------------------  IFD0  -----------------------------------------
+IFDOffset  Hex: 8   Dec: 8   Tag count: 25
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0        10         A    256   100        3         1        4608   ImageWidth
+  1        22        16    257   101        3         1        3456   ImageHeight
+  2        34        22    258   102        3         3         314   BitsPerSample
+  3        46        2E    259   103        3         1           1   Compression
+  4        58        3A    262   106        3         1           2   PhotometricInterpretation
+  5        70        46    270   10E        2        23         320   ImageDescription
+  6        82        52    271   10F        2        22         344   Make
+  7        94        5E    272   110        2         5         366   Model
+  8       106        6A    273   111        4       432         372   StripOffsets
+  9       118        76    277   115        3         1           3   SamplesPerPixel
+ 10       130        82    278   116        3         1           8   RowsPerStrip
+ 11       142        8E    279   117        4       432        2100   StripByteCounts
+ 12       154        9A    282   11A        5         1        3828   XResolution
+ 13       166        A6    283   11B        5         1        3836   YResolution
+ 14       178        B2    296   128        3         1           2   ResolutionUnit
+ 15       190        BE    305   131        2        42        3844   Software
+ 16       202        CA    306   132        2        20        3886   ModifyDate
+ 17       214        D6    315   13B        2        10        3906   Artist
+ 18       226        E2    339   153        3         3        3916   SampleFormat
+ 19       238        EE    700   2BC        1     12863        3922   ApplicationNotes / XMP
+ 20       250        FA  33432  8298        2        15       16786   Copyright
+ 21       262       106  33723  83BB        4        32       16802   IPTC-NAA
+ 22       274       112  34377  8649        7        14       16930   PhotoshopSettings
+ 23       286       11E  34665  8769        4         1       17884   ExifIFDOffset
+ 24       298       12A  34675  8773        7       940       16944   ICC_Profile
+          310       136    nextIFDOffset = 95570026 / 5B2486A
+
+Decode TIFF parameter valuess:
+1st StripOffset          18538
+1st StripByteCount       221184
+BitsPerSample            16
+PhotometricInterpation   2
+SamplesPerPixel          3
+RowsPerStrip             8
+Compression              1
+PlanarConfiguration      1
+
+-----------------------------------------  IFD1  -----------------------------------------
+IFDOffset  Hex: 5B2486A   Dec: 95570026   Tag count: 15
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0  95570028   5B2486C    254    FE        4         1           1   SubfileType
+  1  95570040   5B24878    256   100        3         1         160   ImageWidth
+  2  95570052   5B24884    257   101        3         1         120   ImageHeight
+  3  95570064   5B24890    258   102        3         3    95570212   BitsPerSample
+  4  95570076   5B2489C    259   103        3         1           1   Compression
+  5  95570088   5B248A8    262   106        3         1           2   PhotometricInterpretation
+  6  95570100   5B248B4    273   111        4         1    95570234   StripOffsets
+  7  95570112   5B248C0    274   112        3         1           1   Orientation
+  8  95570124   5B248CC    277   115        3         1           3   SamplesPerPixel
+  9  95570136   5B248D8    278   116        4         1         120   RowsPerStrip
+ 10  95570148   5B248E4    279   117        4         1       57600   StripByteCounts
+ 11  95570160   5B248F0    282   11A        5         1    95570218   XResolution
+ 12  95570172   5B248FC    283   11B        5         1    95570226   YResolution
+ 13  95570184   5B24908    284   11C        3         1           1   PlanarConfiguration
+ 14  95570196   5B24914    296   128        3         1           2   ResolutionUnit
+     95570208   5B24920    nextIFDOffset = 0 / 0
+
+Decode TIFF parameter valuess:
+1st StripOffset          95570234
+1st StripByteCount       57600
+BitsPerSample            8
+PhotometricInterpation   2
+SamplesPerPixel          3
+RowsPerStrip             120
+Compression              1
+PlanarConfiguration      1

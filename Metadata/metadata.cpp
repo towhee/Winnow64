@@ -500,63 +500,6 @@ QFile p.file must be assigned and open.
     return 0;
 }
 
-// rgh where is this used?  Should it be a separate class like ifd and iptc?
-bool Metadata::readIRB(quint32 offset)
-{
-/*
-Read a Image Resource Block looking for embedded thumb
-    - see https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/
-This is a recursive function, iterating through consecutive resource blocks until
-the embedded jpg preview is found (irbID == 1036)
-*/
-    if (G::isLogger) G::log(__FUNCTION__); 
-
-    // Photoshop IRBs use big endian
-    quint32 oldOrder = order;
-    order = 0x4D4D;
-
-    // check signature to make sure this is the start of an IRB
-    p.file.seek(offset);
-    QByteArray irbSignature("8BIM");
-    QByteArray signature = p.file.read(4);
-    if (signature != irbSignature) {
-        order = oldOrder;
-        return foundTifThumb;
-    }
-
-    // Get the IRB ID (we're looking for 1036 = thumb)
-    uint irbID = static_cast<uint>(Utilities::get16(p.file.read(2)));
-    if (irbID == 1036) foundTifThumb = true;
-//    qDebug() << __FUNCTION__ << fPath << "irbID =" << irbID;
-
-    // read the pascal string which we don't care about
-    uint pascalStringLength = static_cast<uint>(Utilities::get16(p.file.read(2)));
-    if (pascalStringLength > 0) p.file.read(pascalStringLength);
-
-    // get the length of the IRB data block
-    quint32 dataBlockLength = Utilities::get32(p.file.read(4));
-    // round to even 2 bytes
-    dataBlockLength % 2 == 0 ? dataBlockLength : dataBlockLength++;
-
-    // reset order as going to return or recurse next
-    order = oldOrder;
-
-    // found the thumb, collect offsets and return
-    if (foundTifThumb) {
-        m.offsetThumb = static_cast<quint32>(p.file.pos()) + 28;
-        m.lengthThumb = dataBlockLength - 28;
-        return foundTifThumb;
-    }
-
-    // did not find the thumb, try again
-    p.file.read(dataBlockLength);
-    offset = static_cast<quint32>(p.file.pos());
-    readIRB(offset);
-
-    // make the compiler happy
-    return false;
-}
-
 void Metadata::verifyEmbeddedJpg(quint32 &offset, quint32 &length)
 {
 /*
@@ -649,7 +592,8 @@ bool Metadata::parseTIF()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     if (tiff == nullptr) tiff = new Tiff;
-    tiff->parse(p, m, ifd, iptc, exif, jpeg);
+    if (irb == nullptr) irb = new IRB;
+    tiff->parse(p, m, ifd, irb, iptc, exif, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
@@ -671,10 +615,10 @@ bool Metadata::parseJPG(quint32 startOffset)
         qDebug() << __FUNCTION__ << p.file.fileName() << "is not open";
         return false;
     }
-    if (jpeg == nullptr) jpeg = new Jpeg;
-    if (ifd == nullptr) ifd = new IFD;
-    if (exif == nullptr) exif = new Exif;
-    if (gps == nullptr) gps = new GPS;
+//    if (jpeg == nullptr) jpeg = new Jpeg;
+//    if (ifd == nullptr) ifd = new IFD;
+//    if (exif == nullptr) exif = new Exif;
+//    if (gps == nullptr) gps = new GPS;
     p.offset = startOffset;
     if (p.file.fileName() == "") {
         qDebug() << __FUNCTION__ << "Blank file name";
@@ -792,6 +736,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         p.rpt << "\n";
     }
     clearMetadata();
+    m.fPath = path;
 
 //    if (p.file.isOpen()) p.file.close();
     if (p.file.isOpen()) {
@@ -807,7 +752,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     QString ext = fileInfo.suffix().toLower();
     bool parsed = false;
     // rgh next triggers crash sometimes when skip to end of thumbnails
-    if (p.file.open(QIODevice::ReadOnly)) {
+    if (p.file.open(QIODevice::ReadWrite)) {
         if (jpeg == nullptr) jpeg = new Jpeg;
         if (ifd == nullptr) ifd = new IFD;
         if (exif == nullptr) exif = new Exif;

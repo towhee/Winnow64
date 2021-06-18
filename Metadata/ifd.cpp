@@ -28,7 +28,7 @@ quint32 IFD::readIFD(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
             << "   Dec: " << p.offset
             << "   Tag count: " << QString::number(tags)
             << "\n"
-            << "Num    Offset   /   hex  tagId   hex  tagType  tagCount    tagValue   tagDescription\n";
+            << "Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription\n";
     }
     quint32 pos;
     QString tagDescription;
@@ -103,18 +103,19 @@ quint32 IFD::readIFD(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
         // quit if more than 200 tags - prob error
         if (i>200) break;
     }
+    quint32 offset = p.file.pos();
     quint32 nextIFDOffset = Utilities::get32(p.file.read(4), isBigEnd);
     if (p.report) {
         p.rpt << "   ";
         p.rpt.setFieldWidth(10);
         p.rpt.setFieldAlignment(QTextStream::AlignRight);
-        p.rpt << QString::number(p.file.pos(), 10).toUpper();
-        p.rpt << QString::number(p.file.pos(), 16).toUpper();
+        p.rpt << QString::number(offset, 10).toUpper();
+        p.rpt << QString::number(offset, 16).toUpper();
         p.rpt.reset();
         p.rpt << "    nextIFDOffset = ";
         p.rpt << QString::number(nextIFDOffset, 10).toUpper();
         p.rpt << " / " << QString::number(nextIFDOffset, 16).toUpper();
-        p.rpt << " (+ start offset)";
+        if (m.type == "JPG") p.rpt << " (+ start offset)";
         p.rpt << "\n";
     }
     return(nextIFDOffset);
@@ -239,6 +240,37 @@ quint32 IFD::readIFD_B(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
         p.rpt << "\n";
     }
     return(nextIFDOffset);
+}
+
+bool IFD::writeIFDCount(MetadataParameters &p, ImageMetadata &m, quint16 count)
+{
+    // p.offset has been set to the next IFD offset
+    p.file.seek(p.offset);
+    qint64 ret = p.file.write(Utilities::put16(count, m.isBigEnd));
+    if (ret == 2) return true;
+    else {
+        QString msg = "IFD::writeIFDCount failed. ";
+        msg += QString::number(ret) + "bytes written (should be 4) for " + m.fPath;
+        qWarning(msg.toLatin1());
+        return false;
+    }
+}
+
+bool IFD::writeIFDItem(MetadataParameters &p, ImageMetadata &m,
+                       quint16 tagId, quint16 tagType, quint32 tagCount, quint32 tagValue)
+{
+    // p.offset has been set to the next IFD offset
+//    p.file.seek(p.offset);
+    qint64 ret;
+    ret = p.file.write(Utilities::put16(tagId, m.isBigEnd));
+    if (ret != 2) return false;
+    ret = p.file.write(Utilities::put16(tagType, m.isBigEnd));
+    if (ret != 2) return false;
+    ret = p.file.write(Utilities::put32(tagCount, m.isBigEnd));
+    if (ret != 4) return false;
+    ret = p.file.write(Utilities::put32(tagValue, m.isBigEnd));
+    if (ret != 4) return false;
+    return true;
 }
 
 QList<quint32> IFD::getSubIfdOffsets_B(QFile &file, quint32 subIFDaddr, int count, bool isBigEnd)
