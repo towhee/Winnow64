@@ -203,6 +203,7 @@ namespace G
     extern bool isEmbellish;
     extern bool colorManage;
     extern bool isColorManagement;
+    extern bool embedTifThumb;
 
     extern int ingestCount;
     extern QDate ingestLastDate;

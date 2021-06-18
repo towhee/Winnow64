@@ -2,6 +2,7 @@
 #define IMAGEMETADATA_H
 
 #include <QtCore>
+#include "Main/global.h"
 
 class ImageMetadata
 {
@@ -23,8 +24,8 @@ public:
     QString label = "";
     QString type = "";
     int size = 0;
-    int width = 0;
-    int height = 0;
+    int width = 0;                          // width of raw image
+    int height = 0;                         // height of raw image
     QString dimensions = "";
     QDateTime createdDate;
     QDateTime modifiedDate;
@@ -77,11 +78,15 @@ public:
 
     quint32 offsetFull = 0;
     quint32 lengthFull = 0;
-    int widthFull = 0;
-    int heightFull = 0;
+    int widthFull = 0;                      // width of preview (ImageView image width)
+    int heightFull = 0;                     // height of preview (ImageView image height)
     quint32 offsetThumb = 0;
     quint32 lengthThumb = 0;
-    int samplesPerPixel = 0;                // reqd for TIFF
+    // reqd for TIFF
+    int thumbFormat = G::ImageFormat::Tif;  // G::ImageFormat::Jpg if in IRB
+    int widthThumb = 0;                     // width of thumbnail
+    int heightThumb = 0;                    // height of thumbnail
+    int samplesPerPixel = 0;
 
     bool isBigEnd = false;
     quint32 ifd0Offset = 0;

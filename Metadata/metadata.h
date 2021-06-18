@@ -10,6 +10,7 @@
 #include "Main/global.h"
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
+#include "Metadata/irb.h"
 #include "Metadata/iptc.h"
 #include "Metadata/gps.h"
 #include "Metadata/metareport.h"
@@ -114,6 +115,7 @@ private:
     Exif *exif = nullptr;
     GPS *gps = nullptr;
     IFD *ifd = nullptr;
+    IRB *irb = nullptr;
     IPTC *iptc = nullptr;
 
     // formats
@@ -163,7 +165,6 @@ private:
     void initSonyAFAreaModeHash();
 
     quint32 findInFile(QString s, quint32 offset, quint32 range);
-    bool readIRB(quint32 offset);
     void verifyEmbeddedJpg(quint32 &offset, quint32 &length);
     int getNewOrientation(int orientation, int rotation);
 

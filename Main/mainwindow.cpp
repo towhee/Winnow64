@@ -11527,15 +11527,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    folderSelectionChange();
-    return;
-
-    QString fPath = "P:/DCIM/100MSDCF/_DSC3817.ARW";
-    QFileInfo info(fPath);
-    qDebug() << __FUNCTION__ << info.exists();
-    return;
-
-
     qDebug() << __FUNCTION__;
     QFile test("/Users/roryhill/Pictures/_TIFF/test.tif");
     test.open(QIODevice::ReadWrite);

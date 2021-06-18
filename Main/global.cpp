@@ -73,6 +73,7 @@ namespace G
     bool isEmbellish;
     bool colorManage;
     bool isColorManagement;
+    bool embedTifThumb;
 
     // ingest
     int ingestCount = 0;
