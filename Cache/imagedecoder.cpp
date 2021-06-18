@@ -77,6 +77,7 @@ void ImageDecoder::decodeTif()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     Tiff tiff;
+    p.offset = m.offsetFull;
     if (!tiff.decode(m, p, image)) {
         decodeUsingQt();
     }

@@ -28,7 +28,8 @@ public:
                Jpeg *jpeg);
     bool parseForDecoding(MetadataParameters &p, ImageMetadata &m);
     // decode using unmapped QFile
-    bool decode(ImageMetadata &m, QString &fPath, QImage &image, int maxDim = 0);
+    bool decode(ImageMetadata &m, QString &fPath, QImage &image,
+                bool thumb = false, int maxDim = 0);
     // decode using QFile mapped to memory
 //    bool decode(ImageMetadata &m, QFile &file, QImage &image, int maxDim = 0);
     // decoding happens here

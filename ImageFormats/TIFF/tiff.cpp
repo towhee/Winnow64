@@ -35,6 +35,8 @@ bool Tiff::parse(MetadataParameters &p,
     // read offset to first IFD
     quint32 ifdOffset = Utilities::get32(p.file.read(4), isBigEnd);
     m.ifd0Offset = ifdOffset;
+    m.offsetFull = ifdOffset;
+    m.offsetThumb = ifdOffset;
     p.hdr = "IFD0";
     p.offset = ifdOffset;
     p.hash = &exif->hash;
@@ -48,10 +50,10 @@ bool Tiff::parse(MetadataParameters &p,
     // IFD0: *******************************************************************
 
     // IFD0: Offset to main image byte stream
-    (ifd->ifdDataHash.contains(273))
-        ? m.offsetFull = static_cast<uint>(ifd->ifdDataHash.value(273).tagValue)
-        : m.offsetFull = 0;
-    m.offsetThumb = m.offsetFull;       // For now.  Add search for smaller frame in tif
+//    (ifd->ifdDataHash.contains(273))
+//        ? m.offsetFull = static_cast<uint>(ifd->ifdDataHash.value(273).tagValue)
+//        : m.offsetFull = 0;
+//    m.offsetThumb = m.offsetFull;       // For now.  Add search for smaller frame in tif
 
     // IFD0: Length of main image byte stream
     (ifd->ifdDataHash.contains(279))
@@ -238,6 +240,7 @@ bool Tiff::parse(MetadataParameters &p,
                     ;
         p.offset = lastIFDOffset;
         encodeThumbnail(p, m, ifd);
+        qDebug() << __FUNCTION__ << "m.offsetThumb =" << m.offsetThumb;
     }
 
     // EXIF: *******************************************************************
@@ -477,7 +480,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m)
     return true;
 }
 
-bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
+bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, int newSize)
 {
 /*
     Decode using unmapped QFile.  Set p.file and call main decode.
@@ -493,6 +496,9 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, int newSize)
         qDebug() << __FUNCTION__ << m.err;
         return false;
     }
+
+    if (thumb && m.offsetThumb != m.offsetFull) p.offset = m.offsetThumb;
+    else p.offset = m.offsetFull;
     return decode(m, p, image, newSize);
 }
 
@@ -500,13 +506,22 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
 {
 /*
     Decoding the Tif occurs here.  p.file must be set and opened.  If called from ImageDecoder
-    then p.file will be mapped to memory
+    then p.file will be mapped to memory.
+
+    NOTE: p.offset must be set to ifdOffset that describes the image to be decoded within the
+    tif before calling this function.
 */
     if (G::isLogger) G::log(__FUNCTION__, "Main decode with p.file assigned");
 //    QElapsedTimer t;
 //    t.restart();
 
-    p.offset = m.ifd0Offset;
+    qDebug() << __FUNCTION__
+             << "p.offset =" << p.offset
+             << "m.ifd0Offset =" << m.ifd0Offset
+             << "m.offsetFull =" << m.offsetFull
+             << "m.offsetThumb =" << m.offsetThumb
+                ;
+//    p.offset = m.ifd0Offset;
     parseForDecoding(p, m);
     if (unableToDecode()) return false;
 
@@ -611,11 +626,11 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
               3    258       3         3      offset   BitsPerSample
               4    259       3         1           1   Compression
               5    262       3         1           2   PhotometricInterpretation
-              6    273       4         1      offset   StripOffsets
+              6    273       4         1       value   StripOffsets
               7    274       3         1           1   Orientation
               8    277       3         1           3   SamplesPerPixel
               9    278       3         1        1728   RowsPerStrip
-             10    279       4         1    11943936   StripByteCounts
+             10    279       4         1       value   StripByteCounts
              11    282       5         1      offset   XResolution
              12    283       5         1      offset   YResolution
              13    284       3         1           1   PlanarConfiguration
@@ -763,9 +778,10 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 
     // thumb metadata - point to IFD we just created
     m.offsetThumb = thumbIFDOffset;
-    m.lengthThumb = 0;  // temp to prevent loadThumb thumbFound
+    m.lengthThumb = eopOffset - sopOffset;
     qDebug() << __FUNCTION__
              << "thumbIFDOffset =" << thumbIFDOffset
+             << "m.offsetThumb =" << m.offsetThumb
              << "line =" << line
              << "h =" << h
              << "bytesPerPixel =" << bytesPerPixel

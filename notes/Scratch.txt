@@ -34,7 +34,7 @@ Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescrip
  24       298       12A  34675  8773        7       940       16944   ICC_Profile
           310       136    nextIFDOffset = 0 / 0
 
-Decode TIFF parameters:
+Decode TIFF parameter valuess:
 1st StripOffset          18538
 1st StripByteCount       221184
 BitsPerSample            16
@@ -84,7 +84,7 @@ Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescrip
  27       334       14E  34675  8773        7       940       33526   ICC_Profile
           346       15A    nextIFDOffset = 0 / 0
 
-Decode TIFF parameters:
+Decode TIFF parameter valuess:
 1st StripOffset          34466
 1st StripByteCount       95551488
 BitsPerSample            16
@@ -114,7 +114,7 @@ Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescrip
  14  95586818   5B28A02    296   128        3         1           2   ResolutionUnit
      95586830   5B28A0E    nextIFDOffset = 107530792 / 668CA28
 
-Decode TIFF parameters:
+Decode TIFF parameter valuess:
 1st StripOffset          95586856
 1st StripByteCount       11943936
 BitsPerSample            8
@@ -144,7 +144,7 @@ Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescrip
  14 107530962   668CAD2    296   128        3         1           2   ResolutionUnit
     107530974   668CADE    nextIFDOffset = 110516984 / 6965AF8
 
-Decode TIFF parameters:
+Decode TIFF parameter valuess:
 1st StripOffset          107531000
 1st StripByteCount       2985984
 BitsPerSample            8
@@ -174,7 +174,7 @@ Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescrip
  14 110517154   6965BA2    296   128        3         1           2   ResolutionUnit
     110517166   6965BAE    nextIFDOffset = 0 / 0
 
-Decode TIFF parameters:
+Decode TIFF parameter valuess:
 1st StripOffset          110517192
 1st StripByteCount       746496
 BitsPerSample            8
