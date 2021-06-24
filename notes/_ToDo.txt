@@ -1,4 +1,7 @@
 BUGS / TO DO
+- If folder empty toggle color manage causes crash
+- If eject, cache status not updated in status bar
+- When starting app first folder loadMetadata with path == "" 5 times
 - Filters not working sometimes
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow

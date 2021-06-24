@@ -224,7 +224,7 @@ there does not appear to be any signal or event when ListView is finished hence 
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
-    G::log(__FUNCTION__, "START", true);
+    G::log(__FUNCTION__, "START APPLICATION", true);
     setObjectName("WinnowMainWindow");
 
     // Check if modifier key pressed while program opening
@@ -263,9 +263,10 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     loadSettings();             // except settings with dependencies ie for actions not created yet
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
     setting->setValue("appPath", qApp->applicationDirPath());
+    G::embedTifThumb = false;
 
     // Logger
-    if (G::isLogger) openLog();
+    if (G::isLogger && G::sendLogToConsole == false) openLog();
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
@@ -360,7 +361,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
 bool MW::isDevelopment()
 {
-    if (QCoreApplication::applicationDirPath().contains("Winnow Project/Winnow64/"))
+//    qDebug() << __FUNCTION__ << QCoreApplication::applicationDirPath();
+    if (QCoreApplication::applicationDirPath().contains("Winnow64"))
         return true;
     else return false;
 }
@@ -5579,8 +5581,8 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     // check for file error first
     QString fPath = thumbView->getCurrentFilePath();
     int row = dm->fPathRow[fPath];
-    bool imageUnavailable = dm->index(row, G::LengthFullColumn).data() == 0;
-    bool thumbUnavailable = dm->index(row, G::LengthThumbColumn).data() == 0;
+    bool imageUnavailable = dm->index(row, G::OffsetFullColumn).data() == 0;
+    bool thumbUnavailable = dm->index(row, G::OffsetThumbColumn).data() == 0;
     if (imageUnavailable || thumbUnavailable) {
         // rgh may want to set the error here as well as report
 //        QString err = dm->index(row, G::ErrColumn).data().toString();
@@ -7965,6 +7967,7 @@ void MW::writeSettings()
     setting->setValue("autoAdvance", autoAdvance);
     setting->setValue("turnOffEmbellish", turnOffEmbellish);
     setting->setValue("deleteWarning", deleteWarning);
+    setting->setValue("embedTifThumb", G::embedTifThumb);
     setting->setValue("isLogger", G::isLogger);
 
     // datamodel
@@ -8307,6 +8310,7 @@ bool MW::loadSettings()
         checkIfUpdate = true;
         lastDir = "";
         deleteWarning = true;
+        G::embedTifThumb = false;
 
         // ingest
         autoIngestFolderPath = false;
@@ -8350,7 +8354,7 @@ bool MW::loadSettings()
     sortColumn = setting->value("sortColumn").toInt();
     autoAdvance = setting->value("autoAdvance").toBool();
     turnOffEmbellish = setting->value("turnOffEmbellish").toBool();
-//    if (setting->contains("deleteWarning"))
+//    if (setting->contains("isLogger"))
 //        G::isLogger = setting->value("isLogger").toBool();
 //    else
 //        G::isLogger = false;
@@ -8358,6 +8362,10 @@ bool MW::loadSettings()
         deleteWarning = setting->value("deleteWarning").toBool();
     else
         deleteWarning = true;
+    if (setting->contains("embedTifThumb"))
+        G::embedTifThumb = setting->value("embedTifThumb").toBool();
+    else
+        G::embedTifThumb = false;
     lastFileIfCrash = setting->value("lastFileSelection").toString();
 
     // appearance

@@ -189,6 +189,10 @@ itemChange, which is subclassed here.
         mw->deleteWarning = v.toBool();
     }
 
+    if (source == "addMissingThumbnailToTif") {
+        G::embedTifThumb = v.toBool();
+    }
+
     if (source == "isLogger") {
         G::isLogger = v.toBool();
         if (G::isLogger) mw->openLog();
@@ -368,7 +372,8 @@ void Preferences::addItems()
     i.name = "turnOffEmbellish";
     i.parentName = "GeneralHeader";
     i.captionText = "Turn off embellish when change folder";
-    i.tooltip = "Turn off embellishwhen change folder.";
+    i.tooltip = "Turn off embellish when change folder. This helps\n"
+                "to avoid confusion.  ;^)";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->turnOffEmbellish;
@@ -381,12 +386,29 @@ void Preferences::addItems()
     i.name = "deleteWarning";
     i.parentName = "GeneralHeader";
     i.captionText = "Warn before delete image files";
-    i.tooltip = "Turn this off to prevent a warning dialog every time"
+    i.tooltip = "Turn this off to prevent a warning dialog every time\n"
                 "you delete a file or group of files.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->deleteWarning;
     i.key = "deleteWarning";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Add missing thumbnails to TIFF files
+    i.name = "addMissingThumbnailToTif";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Add missing thumbnails to TIFF files";
+    i.tooltip = "WARNING: this will change your TIFF file.  Please make \n"
+                "sure you have backups until you are sure this does not \n"
+                "corrupt your images.\n\n"
+                "Turning this on will dramatically improve future thumbnail\n"
+                "load times.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::embedTifThumb;
+    i.key = "addMissingThumbnailToTif";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
