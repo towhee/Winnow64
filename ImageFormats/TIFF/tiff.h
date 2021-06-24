@@ -26,7 +26,8 @@ public:
                IPTC *iptc,
                Exif *exif,
                Jpeg *jpeg);
-    bool parseForDecoding(MetadataParameters &p, ImageMetadata &m);
+    bool parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
+    void reportDecodingParamters(MetadataParameters &p);
     // decode using unmapped QFile
     bool decode(ImageMetadata &m, QString &fPath, QImage &image,
                 bool thumb = false, int maxDim = 0);
@@ -41,6 +42,8 @@ private:
     quint32 thumbIFDOffset = 0;
 
     // from tiff ifd
+    int width;
+    int height;
     int bitsPerSample = 0;
     int photoInterp = 0;
     int samplesPerPixel = 0;

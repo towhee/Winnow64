@@ -798,10 +798,10 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         m.lengthFull = m.lengthThumb;
     }
 
-    if (m.lengthThumb == 0 && m.lengthFull > 0) {
-        m.offsetThumb = m.offsetFull;
-        m.lengthThumb = m.lengthFull;
-    }
+//    if (m.lengthThumb == 0 && m.lengthFull > 0) {
+//        m.offsetThumb = m.offsetFull;
+//        m.lengthThumb = m.lengthFull;
+//    }
 
     // error flags
     thumbUnavailable = imageUnavailable = false;
@@ -821,7 +821,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
                                  bool essential, bool nonEssential,
                                  bool isReport, bool isLoadXmp, QString source)
 {
-//    mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__, fileInfo.filePath() + "  Source: " + source);
 //    qDebug() << __FUNCTION__ << "called by" << source;
     // check if already loaded
@@ -829,7 +828,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     if (fPath == "") {
         qDebug() << __FUNCTION__ << "NULL FILE REQUESTED FROM "
                  << source;
-//        mutex.unlock();
         return false;
     }
 

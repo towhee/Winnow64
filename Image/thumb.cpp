@@ -189,32 +189,14 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
     // Is there an embedded thumbnail?
     uint offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
     uint lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
-    bool thumbFound = (offsetThumb && lengthThumb) || ext == "heic";
+    bool thumbFound = (offsetThumb/* && lengthThumb*/) || ext == "heic";
+//    if (ext == "tif" && dm->index(dmRow, G::LengthThumbColumn).data().toString() == "");
 
-    // A raw file may not have any embedded jpg or be corrupted.  Try read entire image.
-    // rgh should we be trying to read the entire image and reduce to thumb in this case?
-    /*
-    if (!thumbFound) {
-        QString path = ":/images/badImage1.png";
-        loadFromEntireFile(path, image, dmRow);
-        err += "No embedded thumbnail" + fPath + ". ";
-        dm->setData(dm->index(dmRow, G::ErrColumn), err);
-        qDebug() << __FUNCTION__ << err << fPath;
-        return false;
-    } */
-    /*
-    if (metadata->hasJpg.contains(ext) && !thumbFound) {
-        QString path = ":/images/badImage1.png";
-        loadFromEntireFile(path, image, dmRow);
-        return false;
-    } */
-
-    /* Reading the thumb directly from the image file is faster than using
-    QImageReader (thumbReader) to read the entire image and then scaling it
-    down. However, not all images have embedded thumbs so make a quick check.
-    */
+    /* Reading the thumb directly from the image file is faster than using QImageReader
+    (thumbReader) to read the entire image and then scaling it down. However, not all
+    images have embedded thumbs so make a quick check.*/
     if (thumbFound) {
-        if (ext == "tif") {
+        if (ext == "tif" && lengthThumb == 0) {
             // test for too many samples which causes libTiff to crash
             int samplesPerPixel = dm->index(dmRow, G::samplesPerPixelColumn).data().toInt();
             if (samplesPerPixel > 3) {

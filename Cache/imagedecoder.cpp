@@ -105,7 +105,6 @@ void ImageDecoder::decodeUsingQt()
 void ImageDecoder::rotate()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
-//    qDebug() << __FUNCTION__ << fPath << m.orientation << m.rotationDegrees;
     QTransform trans;
     int degrees;
     if (m.orientation > 0) {
@@ -160,7 +159,7 @@ void ImageDecoder::run()
     case G::UseQt:
         decodeUsingQt();
     }
-    if (metadata->rotateFormats.contains(ext) && !abort) rotate();
+    if (metadata->rotateFormats.contains(ext) /*&& !abort*/) rotate();
     if (G::colorManage && !abort) colorManage();
     status = Status::Done;
     emit done(threadId);
