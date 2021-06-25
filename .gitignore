@@ -404,3 +404,4 @@ ui_welcome.h
 ui_workspacedlg.h
 ui_zoomdlg.h
 qrc_winnow.cpp
+Winnow_resource.rc

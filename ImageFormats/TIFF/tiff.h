@@ -27,7 +27,7 @@ public:
                Exif *exif,
                Jpeg *jpeg);
     bool parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
-    void reportDecodingParamters(MetadataParameters &p);
+//    void reportDecodingParamters(MetadataParameters &p);
     // decode using unmapped QFile
     bool decode(ImageMetadata &m, QString &fPath, QImage &image,
                 bool thumb = false, int maxDim = 0);
