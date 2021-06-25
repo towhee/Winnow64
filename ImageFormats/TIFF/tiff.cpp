@@ -160,51 +160,78 @@ bool Tiff::parse(MetadataParameters &p,
     if (p.report) parseForDecoding(p, m, ifd);
 
     // search for thumbnail in chained IFDs, IRB and subIFDs
-    bool foundTifThumb = false;
 
     // IRB:  Get embedded JPG thumbnail if available
-//    if (ifdPhotoshopOffset && !foundTifThumb && !p.report) {
-//        p.offset = ifdPhotoshopOffset;
-//        irb->readThumb(p, m);    // rgh need to add IRB for DNG
-//        foundTifThumb = irb->foundTifThumb;
-//    }
+    bool foundIrbThumb = false;
+    if (ifdPhotoshopOffset) {
+        p.offset = ifdPhotoshopOffset;
+        irb->readThumb(p, m);    // rgh need to add IRB for DNG
+        if (m.lengthThumb) foundIrbThumb = true;
+    }
 
     // Chained IFDs ************************************************************
-
     // search for lastIFDOffset and existing thumbnail
     int count = 0;
-    while (nextIFDOffset > 0 && (!foundTifThumb || p.report)) {
-        count++;
-        p.hdr = "IFD" + QString::number(count);
-        p.offset = nextIFDOffset;
-        p.hash = &exif->hash;
-        nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
-        // check if IFD is a reduced resolution main image ie maybe the thumbnail
-        // SubFileType == 1 (tagid == 254)
-        if (!ifd->ifdDataHash.contains(254)) continue;
-        if (ifd->ifdDataHash.value(254).tagValue != 1) continue;
-        // is image width small then full size and less than 640 pixels?
-        if (!ifd->ifdDataHash.contains(256)) continue;
-        int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
-        if (w > 640 && w >= m.widthThumb) continue;
-        // smaller, so update thumb
-        m.widthThumb = w;
-        m.heightThumb = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
-        thumbIFDOffset = p.offset;
-        m.offsetThumb = thumbIFDOffset;
-        foundTifThumb = true;
-        if (p.report) parseForDecoding(p, m, ifd);
+    if (p.report) {
+        while (nextIFDOffset) {
+            count++;
+            p.hdr = "IFD" + QString::number(count);
+            p.offset = nextIFDOffset;
+            p.hash = &exif->hash;
+            nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
+            parseForDecoding(p, m, ifd);
+            if (!ifd->ifdDataHash.contains(256)) continue;
+            int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
+            if (w >= m.widthThumb) continue;
+            m.widthThumb = w;
+            m.offsetThumb = p.offset;
+        }
     }
-    if (!lastIFDOffset) lastIFDOffset = p.file.pos() - 4;
+    else {
+        while (nextIFDOffset > 0 && !foundIrbThumb) {
+            count++;
+            p.hdr = "IFD" + QString::number(count);
+            p.offset = nextIFDOffset;
+            p.hash = &exif->hash;
+            nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
+            // check if IFD is a reduced resolution main image ie maybe the thumbnail
+            // SubFileType == 1 (tagid == 254)
+            if (!ifd->ifdDataHash.contains(254)) continue;
+            if (ifd->ifdDataHash.value(254).tagValue != 1) continue;
+            // is image width small then full size and less than 640 pixels?
+            if (!ifd->ifdDataHash.contains(256)) continue;
+            int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
+            if (w >= m.widthThumb) continue;
+            // smaller, so update thumb
+            m.widthThumb = w;
+            m.heightThumb = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
+//            thumbIFDOffset = p.offset;
+            m.offsetThumb = p.offset;
+        }
+        if (!lastIFDOffset) lastIFDOffset = p.file.pos() - 4;
+    }
 
     // subIFDs: ****************************************************************
-
     /* If save tiff with save pyramid in photoshop then subIFDs created. Iterate to report and
        possibly read smallest for thumbnail. */
-    qDebug() << __FUNCTION__ << "subIFDs  foundTifThumb =" << foundTifThumb;
-    if (ifdsubIFDOffset && (!foundTifThumb || p.report)) {
-        quint32 nextIFDOffset = ifdsubIFDOffset;
-        int count = 0;
+    nextIFDOffset = ifdsubIFDOffset;
+    count = 0;
+    if (p.report && ifdsubIFDOffset) {
+        while (nextIFDOffset && count < 10) {
+            count ++;
+            p.hdr = "SubIFD " + QString::number(count);
+            p.offset = nextIFDOffset;
+            nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
+            parseForDecoding(p, m, ifd);
+            if (!ifd->ifdDataHash.contains(256)) continue;
+            int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
+            if (w >= m.widthThumb) continue;
+            m.widthThumb = w;
+            m.offsetThumb = p.offset;
+        }
+
+    }
+    if (!p.report && ifdsubIFDOffset && !foundIrbThumb) {
         while (nextIFDOffset && count < 10) {
             count ++;
             p.hdr = "SubIFD " + QString::number(count);
@@ -217,24 +244,22 @@ bool Tiff::parse(MetadataParameters &p,
             // is image width small then full size and less than 640 pixels?
             if (!ifd->ifdDataHash.contains(256)) continue;
             int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
-            if (w > 640 && w >= m.widthThumb) continue;
+            if (w >= m.widthThumb) continue;
 
             // Qualifies to use as a thumb
             m.widthThumb = w;
             m.heightThumb = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
-            thumbIFDOffset = p.offset;
-            m.offsetThumb = thumbIFDOffset;
-            foundTifThumb = true;
-            qDebug() << __FUNCTION__ << p.hdr << "m.offsetThumb =" << m.offsetThumb;
-            if (p.report) parseForDecoding(p, m, ifd);
+//            thumbIFDOffset = p.offset;
+            m.offsetThumb = p.offset;
         }
     }
 
     // Add a thumbnail if missing
-//    G::embedTifThumb = m.fPath == "D:/Pictures/_TIFF_thumb/Tiff - Copy.tif";
-//    G::embedTifThumb = false;
-    qDebug() << __FUNCTION__ << m.fPath << "foundTifThumb =" << foundTifThumb;
-    if (!foundTifThumb && G::embedTifThumb) {
+    qDebug() << __FUNCTION__ << m.fPath
+             << "foundIrbThumb =" << foundIrbThumb
+             << "m.offsetThumb =" << m.offsetThumb
+                ;
+    if (!foundIrbThumb && G::embedTifThumb) {
         qDebug() << __FUNCTION__ << "encodeThumbnail " << m.fPath
                  << "lastIFDOffset =" << lastIFDOffset
                     ;
@@ -500,20 +525,20 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     return true;
 }
 
-void Tiff::reportDecodingParamters(MetadataParameters &p)
-{
-    int w1 = 25;
-    p.rpt << "\n" << "Decode TIFF parameter values:" << "\n";
-    p.rpt.setFieldAlignment(QTextStream::AlignLeft);
-    p.rpt.setFieldWidth(w1); p.rpt << "1st StripOffset" << stripOffsets[0]; p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(w1); p.rpt << "1st StripByteCount" << stripByteCounts[0]; p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(w1); p.rpt << "BitsPerSample" << bitsPerSample; p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(w1); p.rpt << "PhotometricInterpation" << photoInterp; p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(w1); p.rpt << "SamplesPerPixel" << samplesPerPixel; p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(w1); p.rpt << "RowsPerStrip" << rowsPerStrip; p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(w1); p.rpt << "Compression" << compression; p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(w1); p.rpt << "PlanarConfiguration" << planarConfiguration; p.rpt.setFieldWidth(0); p.rpt << "\n";
-}
+//void Tiff::reportDecodingParamters(MetadataParameters &p)
+//{
+//    int w1 = 25;
+//    p.rpt << "\n" << "Decode TIFF parameter values:" << "\n";
+//    p.rpt.setFieldAlignment(QTextStream::AlignLeft);
+//    p.rpt.setFieldWidth(w1); p.rpt << "1st StripOffset" << stripOffsets[0]; p.rpt.setFieldWidth(0); p.rpt << "\n";
+//    p.rpt.setFieldWidth(w1); p.rpt << "1st StripByteCount" << stripByteCounts[0]; p.rpt.setFieldWidth(0); p.rpt << "\n";
+//    p.rpt.setFieldWidth(w1); p.rpt << "BitsPerSample" << bitsPerSample; p.rpt.setFieldWidth(0); p.rpt << "\n";
+//    p.rpt.setFieldWidth(w1); p.rpt << "PhotometricInterpation" << photoInterp; p.rpt.setFieldWidth(0); p.rpt << "\n";
+//    p.rpt.setFieldWidth(w1); p.rpt << "SamplesPerPixel" << samplesPerPixel; p.rpt.setFieldWidth(0); p.rpt << "\n";
+//    p.rpt.setFieldWidth(w1); p.rpt << "RowsPerStrip" << rowsPerStrip; p.rpt.setFieldWidth(0); p.rpt << "\n";
+//    p.rpt.setFieldWidth(w1); p.rpt << "Compression" << compression; p.rpt.setFieldWidth(0); p.rpt << "\n";
+//    p.rpt.setFieldWidth(w1); p.rpt << "PlanarConfiguration" << planarConfiguration; p.rpt.setFieldWidth(0); p.rpt << "\n";
+//}
 
 bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, int newSize)
 {
@@ -531,6 +556,12 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
         qDebug() << __FUNCTION__ << m.err;
         return false;
     }
+
+    qDebug() << __FUNCTION__
+             << "isThumb =" << thumb
+             << "newSize =" << newSize
+             << "m.offsetThumb =" << m.offsetThumb
+                ;
 
     if (thumb && m.offsetThumb != m.offsetFull) p.offset = m.offsetThumb;
     else p.offset = m.offsetFull;
@@ -553,22 +584,24 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
 //    QElapsedTimer t;
 //    t.restart();
 
-    qDebug() << __FUNCTION__
-             << "newSize =" << newSize
-             << "m.offsetThumb =" << m.offsetThumb
-                ;
-//    p.offset = m.ifd0Offset;
     IFD *ifd = new IFD;
     p.report = false;
     parseForDecoding(p, m, ifd);
     if (unableToDecode()) return false;
 
+    qDebug() << __FUNCTION__
+             << "IFD width =" << width
+             << "IFD height =" << height
+                ;
+
     // width and height are for the IFD (not necessarily the full image) from parseForDecoding
-    int w = width, h = height, nth;
+    int w = width;
+    int h = height;
+    int nth;
     sample(m, newSize, nth, w, h);
 
     bytesPerPixel = bitsPerSample / 8 * samplesPerPixel;
-    bytesPerLine = bytesPerPixel * m.width;
+    bytesPerLine = bytesPerPixel * width;
     quint32 fSize = static_cast<quint32>(p.file.size());
 
     QImage *im;
@@ -589,35 +622,53 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
         quint32 fOffset = 0;
         // read every nth pixel to create new smaller image (thumbnail)
         int y = 0;
-        int line = 0;
+        int sampleY = 0;
         for (int strip = 0; strip < stripOffsets.count();++strip) {
             for (int row = 0; row < rowsPerStrip; row++) {
                 if (y % nth == 0) {
                     fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerLine);
                     ba.clear();
+                    int sampleX = 0;
                     for (int x = 0; x < w; x++) {
                         p.file.seek(fOffset);
-//                        ba += p.file.read(rgbBytesPerPixel);  // samplesPerPixel > 3 then only use first 3
                         if (fOffset + static_cast<size_t>(bytesPerPixel) > fSize) {
-                            qDebug() << __FUNCTION__ << "Read nth pixel - ATTEMPTING TO READ PAST END OF FILE";
+                            qDebug() << __FUNCTION__
+                                     << "Read nth pixel - ATTEMPTING TO READ PAST END OF FILE"
+                                     << "row =" << row
+                                     << "x =" << x
+                                     << "sampleY =" << sampleY
+                                     << "sampleX =" << sampleX
+                                     << "startOffset =" << stripOffsets.at(0)
+                                     << "fOffset =" << fOffset
+                                     << "Bytes =" << fOffset - stripOffsets.at(0)
+                                        ;
                             break;
                         }
-                        ba += p.file.read(bytesPerPixel);
+                        sampleX++;
+                        if (sampleX < w) ba += p.file.read(bytesPerPixel);
                         fOffset += static_cast<uint>(nth * bytesPerPixel);
                     }
-                    if (line < h) {
+                    if (sampleY < h) {
                         if (fOffset + static_cast<size_t>(newBytesPerLine) > fSize) {
-                            qDebug() << __FUNCTION__ << "Read scanline - ATTEMPTING TO READ PAST END OF FILE";
+                            qDebug() << __FUNCTION__
+                                     << "Read scanline - ATTEMPTING TO READ PAST END OF FILE"
+                                     << "row =" << row
+                                     << "sampleY =" << sampleY
+                                     << "sampleX =" << sampleX
+                                     << "startOffset =" << stripOffsets.at(0)
+                                     << "fOffset =" << fOffset
+                                     << "Bytes =" << fOffset - stripOffsets.at(0)
+                                        ;
                             break;
                         }
-                        std::memcpy(im->scanLine(line), ba, static_cast<size_t>(newBytesPerLine));
+                        std::memcpy(im->scanLine(sampleY), ba, static_cast<size_t>(newBytesPerLine));
                     }
-                    line++;
+                    sampleY++;
                 }
                 y++;
-                if (line > h) break;
+                if (sampleY >= h) break;
             }
-            if (line > h) break;
+            if (sampleY >= h) break;
         }
         if (bitsPerSample == 16) {
             if (m.isBigEnd) invertEndian16(im);
@@ -694,12 +745,12 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     if (unableToDecode()) return false;
 
     // go to last main IFD offset and replace with offset to new IFD
-    quint32 thumbIFDOffset = p.file.size();
+    m.offsetThumb = p.file.size();
     p.file.seek(lastIFDOffset);
     p.file.write(Utilities::put32(thumbIFDOffset, m.isBigEnd));
 
     // Go to new thumbIFDOffset and write the count of IFD entries (15)
-    p.offset = thumbIFDOffset;
+    p.offset = m.offsetThumb;
     ifd->writeIFDCount(p, m, 15);
 
     // thumbnail size and sample increment (nth)
@@ -742,25 +793,7 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     p.file.write(Utilities::put32(1200000, m.isBigEnd));        // YResolution Numerator
     p.file.write(Utilities::put32(10000, m.isBigEnd));          // YResolution Denominator
 
-    /*
-    qDebug() << __FUNCTION__ << "write image rgb";
-    // write image rgb
-    QImage img(QSize(w,h), QImage::Format_ARGB32_Premultiplied);
-    decode(m, p, img, longside);
-        return true;
-    int bpl = img.bytesPerLine();
-    QByteArray data;
-    data.resize(bpl);
-    char *rawdata = data.data();
-    for (quint32 y = 0; y < h; ++y) {
-//        char *scanline = reinterpret_cast<char *>(img.scanLine(y));
-//        memcpy(rawdata, img.scanLine(y), bpl);
-//        if (y==0) qDebug() << __FUNCTION__ << data;
-//        p.file.write(data);
-    }
-    //*/
-
-    quint32 sopOffset = p.file.pos();
+    quint32 sopOffset = p.file.pos();   // for debugging
 
     // create sampled full size rgb to thumbnail
     bytesPerPixel = bitsPerSample / 8 * samplesPerPixel;
@@ -781,7 +814,7 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
                 for (int x = 0; x < w; x++) {
                     if (x==0&&row==0&&strip==0) qDebug() << __FUNCTION__ << "1st read at" << fOffset;
                     p.file.seek(fOffset);
-                    if (fOffset + static_cast<size_t>(bytesPerPixel) > thumbIFDOffset) {
+                    if (fOffset + static_cast<size_t>(bytesPerPixel) > m.offsetThumb) {
                         qDebug() << __FUNCTION__ << "Read nth pixel - ATTEMPTING TO READ PAST END OF FILE";
                         break;
                     }
@@ -808,7 +841,7 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
                 p.file.seek(eof);
                 p.file.write(ba);
                 if (line < h) {
-                    if (fOffset + static_cast<size_t>(newBytesPerLine) > thumbIFDOffset) {
+                    if (fOffset + static_cast<size_t>(newBytesPerLine) > m.offsetThumb) {
                         qDebug() << __FUNCTION__ << "Read scanline - ATTEMPTING TO READ PAST END OF FILE";
                         break;
                     }
@@ -822,11 +855,8 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     }
     quint32 eopOffset = p.file.pos();
 
-    // thumb metadata - point to IFD we just created
-    m.offsetThumb = thumbIFDOffset;
-    m.lengthThumb = eopOffset - sopOffset;
     qDebug() << __FUNCTION__
-             << "thumbIFDOffset =" << thumbIFDOffset
+//             << "thumbIFDOffset =" << thumbIFDOffset
              << "m.offsetThumb =" << m.offsetThumb
              << "line =" << line
              << "h =" << h
@@ -881,23 +911,44 @@ void Tiff::invertEndian16(QImage *im)
 void Tiff::sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h)
 {
 /*
-    return sample every nth horizontal pixel
+    Define nth = sample every nth horizontal pixel.
+
+    width       = width of the IFD image chosen
+    height      = height of the IFD image chosen
+    newLongside = length of the long side of the thumb
+    w           = width of the thumbnail
+    h           = height of the thumbnail
 */
-    w = m.width;                      // width of thumb to create
-    h = m.height;                     // height of thumb to create
+    w = width;                      // width of thumb to create
+    h = height;                     // height of thumb to create
     nth = 1;
     if (!newLongside) return;
-    if (m.width > m.height) {
-        if (newLongside > m.width) newLongside = m.width;
+    if (width > height) {
+        if (newLongside > width) newLongside = width;
         w = newLongside;
-        h = w * m.height / m.width;
+        h = w * height / width;
     }
     else {
-        if (newLongside > m.height) newLongside = m.height;
+        if (newLongside > height) newLongside = height;
         h = newLongside;
-        w = h * m.width / m.height;
+        w = h * width / height;
     }
-    nth = m.width / w;
+    nth = width / w;
+//    w = m.width;                      // width of thumb to create
+//    h = m.height;                     // height of thumb to create
+//    nth = 1;
+//    if (!newLongside) return;
+//    if (m.width > m.height) {
+//        if (newLongside > m.width) newLongside = m.width;
+//        w = newLongside;
+//        h = w * m.height / m.width;
+//    }
+//    else {
+//        if (newLongside > m.height) newLongside = m.height;
+//        h = newLongside;
+//        w = h * m.width / m.height;
+//    }
+//    nth = m.width / w;
 }
 
 bool Tiff::unableToDecode()

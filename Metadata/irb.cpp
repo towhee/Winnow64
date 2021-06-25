@@ -28,7 +28,7 @@ void IRB::readThumb(MetadataParameters &p,  ImageMetadata &m)
         // Get the IRB ID (we're looking for 1036 = thumb)
         uint irbID = static_cast<uint>(Utilities::get16(p.file.read(2)));
         if (irbID == 1036) foundTifThumb = true;
-        /*
+//        /*
         qDebug() << __FUNCTION__ << m.fPath
                  << "p.offset =" << p.offset
                  << "irbID =" << irbID

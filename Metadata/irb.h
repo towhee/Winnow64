@@ -11,7 +11,7 @@ class IRB
 {
 public:
     IRB();
-    void readThumb(MetadataParameters &p, ImageMetadata &m);
+    void readThumb(MetadataParameters &p,  ImageMetadata &m);
     bool foundTifThumb = false;
 };
 
