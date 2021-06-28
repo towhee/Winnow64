@@ -186,6 +186,7 @@ bool Pixmap::load(QString &fPath, QImage &image)
         // use Winnow decoder
         ImageMetadata m = dm->imMetadata(fPath);
         Tiff tiff;
+//        qDebug() << __FUNCTION__ << "Calling tiff.decode(m, fPath, image)";
         if (!tiff.decode(m, fPath, image)) {
             imFile.close();
 //            err += "Could not decode " + fPath + ". ";

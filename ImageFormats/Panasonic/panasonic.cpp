@@ -121,7 +121,7 @@ bool Panasonic::parse(MetadataParameters &p,
     0000 - 0004     4      Endian
     0005 - 0008     4      Offset to IFD0   // 18 from start of file
 
-    Panasonic starts with an single unchained IFD, which included offsets for an Exif IFD
+    Panasonic starts with an single unchained IFD, which includes offsets for an Exif IFD
     and an XMP segment.  It also has an offset to the embedded Jpg.  The Jpg has its own
     IFD0 and IFD1.  The IFD0 has an offset to another Exit IFD which, in turn, has an offset
     to the maker notes IFD.
@@ -152,6 +152,9 @@ bool Panasonic::parse(MetadataParameters &p,
     m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
     m.offsetFull = ifd->ifdDataHash.value(46).tagValue;
     m.lengthFull = ifd->ifdDataHash.value(46).tagCount;
+    // default values for thumbnail
+    m.offsetThumb = m.offsetFull;
+    m.lengthThumb =  m.lengthFull;
     p.offset = m.offsetFull;
     jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
     m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;

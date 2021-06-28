@@ -593,7 +593,7 @@ bool Metadata::parseTIF()
     if (G::isLogger) G::log(__FUNCTION__); 
     if (tiff == nullptr) tiff = new Tiff;
     if (irb == nullptr) irb = new IRB;
-    tiff->parse(p, m, ifd, irb, iptc, exif, jpeg);
+    tiff->parse(p, m, ifd, irb, iptc, exif, gps, jpeg);
     if (p.report) reportMetadata();
     return true;
 }
@@ -615,10 +615,6 @@ bool Metadata::parseJPG(quint32 startOffset)
         qDebug() << __FUNCTION__ << p.file.fileName() << "is not open";
         return false;
     }
-//    if (jpeg == nullptr) jpeg = new Jpeg;
-//    if (ifd == nullptr) ifd = new IFD;
-//    if (exif == nullptr) exif = new Exif;
-//    if (gps == nullptr) gps = new GPS;
     p.offset = startOffset;
     if (p.file.fileName() == "") {
         qDebug() << __FUNCTION__ << "Blank file name";
@@ -787,6 +783,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         m.err += "Could not open p.file to read metadata. ";
         return false;
     }
+
+    return true;
 
     // not all files have thumb or small jpg embedded
     if (m.offsetFull == 0 && ext != "jpg" && parsed) {

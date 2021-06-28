@@ -342,15 +342,23 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         show();
 
         if (setting->value("hasCrashed").toBool()) {
-            QString msg = "It appears Winnow did not close properly.  Do you want to "
-                 "recover the most recent picks and ratings?";
-            int ret = QMessageBox::warning(this, "Recover Prior State", msg,
-                                           QMessageBox::Yes | QMessageBox::No);
-            if (ret == QMessageBox::Yes) {
-                folderAndFileSelectionChange(lastFileIfCrash);
-                recoverPickLog();
-                recoverRatingLog();
-                recoverColorClassLog();
+            int picks = pickLogCount();
+            int ratings = ratingLogCount();
+            int colors = colorClassLogCount();
+            if (picks || ratings || colors) {
+                QString msg = "It appears Winnow did not close properly.  Do you want to "
+                     "recover the most recent picks and ratings?\n";
+                if (picks) msg += "\n" + QString::number(picks) + " picks recoverable";
+                if (ratings) msg += "\n" + QString::number(ratings) + " ratings recoverable";
+                if (colors) msg += "\n" + QString::number(colors) + " color labels recoverable";
+                int ret = QMessageBox::warning(this, "Recover Prior State", msg,
+                                               QMessageBox::Yes | QMessageBox::No);
+                if (ret == QMessageBox::Yes) {
+                    folderAndFileSelectionChange(lastFileIfCrash);
+                    recoverPickLog();
+                    recoverRatingLog();
+                    recoverColorClassLog();
+                }
             }
         }
 
@@ -11535,23 +11543,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__;
-    QFile test("/Users/roryhill/Pictures/_TIFF/test.tif");
-    test.open(QIODevice::ReadWrite);
-    QByteArray ba /*= Utilities::put16(25798)*/;
-    test.seek(0);
-    test.write(Utilities::put16(25798));  // 64C6
-    test.write(Utilities::put16(2400));   // 0960
-    test.write(Utilities::put32(2882400070));   // ABCDEF46
-    test.write(Utilities::put8(146));   // 92
-    test.write("Once upon an time");
-    test.seek(0);
-    qDebug() << __FUNCTION__
-             << Utilities::get16(test.read(2))
-             << Utilities::get16(test.read(2))
-             << Utilities::get32(test.read(4))
-             << Utilities::get8(test.read(1))
-                ;
-    test.close();
+    int x = 0 % 160;
+    qDebug() << __FUNCTION__ << 1 % 16 << 16 % 16 << 32 % 16;
 }
 // End MW

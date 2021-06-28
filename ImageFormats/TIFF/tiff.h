@@ -9,6 +9,7 @@
 #include "Metadata/ifd.h"
 #include "Metadata/irb.h"
 #include "Metadata/xmp.h"
+#include "Metadata/gps.h"
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "Metadata/metareport.h"
 //#include "Datamodel/datamodel.h"
@@ -25,6 +26,7 @@ public:
                IRB *irb,
                IPTC *iptc,
                Exif *exif,
+               GPS *gps,
                Jpeg *jpeg);
     bool parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
 //    void reportDecodingParamters(MetadataParameters &p);
@@ -38,7 +40,7 @@ public:
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
 
 private:
-    quint32 lastIFDOffset = 0;      // used to add thumbnail IFD to IFD chain
+    quint32 lastIFDOffsetPosition = 0;      // used to add thumbnail IFD to IFD chain
     quint32 thumbIFDOffset = 0;
 
     // from tiff ifd
@@ -62,7 +64,8 @@ private:
         tiff8bit,
         tiff16bit
     };
-//    typedef TiffType;
+
+    QString err;
 
     void toRRGGBBAA(QImage *im);
     void invertEndian16(QImage *im);

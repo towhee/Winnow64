@@ -115,6 +115,9 @@ bool Fuji::parse(MetadataParameters &p,
     p.file.seek(84);
     m.offsetFull = Utilities::get32(p.file.read(4));
     m.lengthFull = Utilities::get32(p.file.read(4));
+    // default values for thumbnail
+    m.offsetThumb = m.offsetFull;
+    m.lengthThumb =  m.lengthFull;
     p.file.seek(m.offsetFull);
 
     // start on embedded JPEG
