@@ -6305,6 +6305,8 @@ void MW::toggleColorManage()
         G::colorManage = true;
     }
 
+    if (dm->rowCount() == 0) return;
+
     imageView->loadImage(dm->currentFilePath, __FUNCTION__, true/*refresh*/);
 
     // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
