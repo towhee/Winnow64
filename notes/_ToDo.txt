@@ -1,7 +1,4 @@
 BUGS / TO DO
-- If folder empty toggle color manage causes crash
-- If eject, cache status not updated in status bar
-- When starting app first folder loadMetadata with path == "" 5 times
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
 - Tiff with compression = 8
 - Filters not working sometimes
@@ -45,6 +42,9 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- If eject, cache status not updated in status bar
+- Crash if eject USB drive that has a folder selected in Winnow
+- If folder empty toggle color manage causes crash on mac
 - PlusMinusEditor not sizing to contents in preferences thumbnail button size
 - Version 1.24
 - Fixed several bookmarks bugs
