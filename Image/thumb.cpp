@@ -139,6 +139,7 @@ bool Thumb::loadFromTiffData(QString &fPath, QImage &image)
     ImageMetadata m = dm->imMetadata(fPath);
     Tiff tiff;
     bool getThumb = true;
+//    qDebug() << __FUNCTION__ << "Calling tiff.decode(m, fPath, image, getThumb, G::maxIconSize)";
     return tiff.decode(m, fPath, image, getThumb, G::maxIconSize);
 }
 
@@ -189,7 +190,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
     // Is there an embedded thumbnail?
     uint offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
     uint lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
-    bool thumbFound = (offsetThumb/* && lengthThumb*/) || ext == "heic";
+    bool thumbFound = (offsetThumb) || ext == "heic";
 //    if (ext == "tif" && dm->index(dmRow, G::LengthThumbColumn).data().toString() == "");
 
     /* Reading the thumb directly from the image file is faster than using QImageReader

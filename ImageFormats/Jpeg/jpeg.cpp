@@ -189,6 +189,9 @@ bool Jpeg::parse(MetadataParameters &p,
     // it's a jpg so the whole thing is the full length jpg
     m.offsetFull = 0;
     m.lengthFull = static_cast<uint>(p.file.size());
+    // default values for thumbnail
+    m.offsetThumb = m.offsetFull;
+    m.lengthThumb =  m.lengthFull;
 
     // read IFD0
     p.hdr = "IFD0";
@@ -213,14 +216,17 @@ bool Jpeg::parse(MetadataParameters &p,
                           ifd->ifdDataHash.value(33432).tagCount);
 
     // read IFD1
+    ifd->ifdDataHash.clear();
     if (nextIFDOffset) {
         p.hdr = "IFD1";
         p.offset = nextIFDOffset;
         nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
     }
     // IFD1: thumbnail offset and length
-    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + startOffset/*12*/;
-    m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
+    if (ifd->ifdDataHash.contains(513)) {
+        m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + startOffset/*12*/;
+        m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
+    }
 
     // read EXIF
     p.hdr = "IFD Exif";

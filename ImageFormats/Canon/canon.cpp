@@ -98,6 +98,9 @@ bool Canon::parse(MetadataParameters &p,
     // pull data reqd from IFD0
     m.offsetFull = ifd->ifdDataHash.value(273).tagValue;
     m.lengthFull = ifd->ifdDataHash.value(279).tagValue;
+    // default values for thumbnail
+    m.offsetThumb = m.offsetFull;
+    m.lengthThumb =  m.lengthFull;
 
     m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
     m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);

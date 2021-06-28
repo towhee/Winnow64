@@ -212,6 +212,7 @@ quint8 Utilities::get8(QByteArray c)
 QByteArray Utilities::put8(quint8 x)
 {
     QByteArray c;
+    c.resize(1);
     c[0] = static_cast<char>(x);
     return c;
 }
@@ -236,6 +237,7 @@ quint16 Utilities::get16(QByteArray c, bool isBigEnd)
 QByteArray Utilities::put16(quint16 x, bool isBigEnd)
 {
     QByteArray c;
+    c.resize(2);
     if (isBigEnd) {
         c[0] = static_cast<char>(x >> 8);
         c[1] = static_cast<char>(x & 0x00FF);
@@ -284,6 +286,7 @@ quint32 Utilities::get32(QByteArray c, bool isBigEnd)
 QByteArray Utilities::put32(quint32 x, bool isBigEnd)
 {
     QByteArray c;
+    c.resize(4);
     if (isBigEnd) {
         c[0] = static_cast<char>(x >> 24);
         c[1] = static_cast<char>(x >> 16);

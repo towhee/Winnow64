@@ -13,7 +13,6 @@ void IRB::readThumb(MetadataParameters &p,  ImageMetadata &m)
     This is a recursive function, iterating through consecutive resource blocks until
     the embedded jpg preview is found (irbID == 1036)
 */
-//    if (G::isLogger) G::log(__FUNCTION__);
 
         // Photoshop IRBs use big endian
 
@@ -28,7 +27,18 @@ void IRB::readThumb(MetadataParameters &p,  ImageMetadata &m)
         // Get the IRB ID (we're looking for 1036 = thumb)
         uint irbID = static_cast<uint>(Utilities::get16(p.file.read(2)));
         if (irbID == 1036) foundTifThumb = true;
-//        /*
+
+        if (p.report) {
+            p.rpt.setFieldAlignment(QTextStream::AlignLeft);
+            p.rpt.setFieldWidth(14);
+            p.rpt << p.offset;
+            p.rpt.setFieldAlignment(QTextStream::AlignRight);
+            p.rpt.setFieldWidth(6);
+            p.rpt << irbID;
+            p.rpt.reset();
+            p.rpt << "\n";
+        }
+        /*
         qDebug() << __FUNCTION__ << m.fPath
                  << "p.offset =" << p.offset
                  << "irbID =" << irbID
@@ -49,6 +59,7 @@ void IRB::readThumb(MetadataParameters &p,  ImageMetadata &m)
             m.offsetThumb = static_cast<quint32>(p.file.pos()) + 28;
             m.lengthThumb = dataBlockLength - 28;
             m.thumbFormat = G::ImageFormat::Jpg;
+            if (p.report) p.rpt << "Embedded IRB Jpg found.\n";
             /*
             qDebug() << __FUNCTION__
                      << "m.offsetThumb =" << m.offsetThumb
