@@ -1,5 +1,105 @@
 #include "tiff.h"
 
+const unsigned int CLEAR_CODE = 256;
+const unsigned int EOF_CODE = 257;
+const unsigned int MAXCODE = 4093;      // 12 bit max
+
+bool showDebug = false;
+
+class parseInStream
+{
+/*
+    The incoming stream is read 8 bits at a time into a bit buffer called pending. The buffer
+    is consumed (most significant) n bits at a time (inCode), where n = codesize. currCode
+    starts at 258 and is incremented each time an inCode is consumed. codeSize starts at 9
+    bits, and is incremented each time currCode exceeds the bit capacity. codeSize maximum is
+    12 bits.
+
+*/
+public :
+    parseInStream(QDataStream &in)
+        :
+          codeSize(9),
+          input( in ),
+          availBits(0),
+          pending(0),
+          currCode(256),
+          nextBump(512)
+    {}
+    bool operator>>(quint32 &inCode)
+    {
+        /*
+            pending = 32bit buffer                    00000000 00000000 0XXXXXXX XXXXXXXX
+            availBits ie 15                                              XXXXXXX XXXXXXXX
+            codeSize  ie 9 bits                                          XXXXXXX XX
+            availBits -= codeSize                                                  XXXXXX
+            mask (1 << availBits) - 1                                              111111
+        */
+        /* debugging
+        QDebug debug = qDebug();
+        debug.noquote();
+        //*/
+        while (availBits < codeSize)
+        {
+            char c;                                 // 00111011 (example)
+            if (!input.readRawData(&c, 1))          // 00000000 00000000 00000000 00XXXXXX
+                return false;
+            /* debugging
+            if (showDebug) {
+            debug << "\n" << n << ":";
+            debug << "  Incoming char =" ;
+            debug << QString::number((quint8)c, 16).toUpper().rightJustified(2, '0') << "h"
+                  << QString::number(quint8(c), 10).rightJustified(3)
+                  << QString::number((quint8)c, 2).rightJustified(8, '0')
+                     ;
+            }
+                  //*/
+            pending <<= 8;                          // 00000000 00000000 00XXXXXX 00000000
+            pending |= (c & 0xff);                  // 00000000 00000000 00XXXXXX 00111011
+            availBits += 8;
+            n++;
+        }
+        inCode = pending >> (availBits - codeSize);
+        /* debugging
+        if (showDebug) {
+        debug
+            << "\npending:" << QString::number(pending, 2).rightJustified(32, '0')
+            << "availBits =" << availBits
+            << "codeSize =" << codeSize
+            << "code =" <<  QString::number(inCode, 2).rightJustified(codeSize, '0') << inCode
+            << "\n         ^32     ^24     ^16     ^8              code =" << inCode
+            ;
+        }
+            //*/
+        availBits -= codeSize;
+        pending &= (1 << availBits) - 1;     // apply mask
+        if (inCode == CLEAR_CODE) {
+            codeSize = 9;
+            currCode = 256;
+            nextBump = 512;
+        }
+        if (currCode < MAXCODE) {
+            currCode++;
+            if (currCode == nextBump - 1) {
+                nextBump *= 2;
+                codeSize++;
+            }
+        }
+        if (inCode == EOF_CODE)
+            return false;
+        else
+            return true;
+    }
+private :
+    int codeSize;
+    QDataStream & input;
+    int availBits;
+    quint32 pending;
+    quint32 currCode;
+    quint32 nextBump;
+    quint32 n = 0;
+};
+
 Tiff::Tiff()
 {
 }
@@ -10,8 +110,7 @@ bool Tiff::parse(MetadataParameters &p,
            IRB *irb,
            IPTC *iptc,
            Exif *exif,
-           GPS *gps,
-           Jpeg *jpeg)
+           GPS *gps)
 {
 /*
     This function reads the metadata from a tiff file.  If the tiff file does not contains a
@@ -155,15 +254,17 @@ bool Tiff::parse(MetadataParameters &p,
     p.offset = m.ifd0Offset;
     if (p.report) parseForDecoding(p, m, ifd);
 
-    // search for thumbnail in chained IFDs, IRB and subIFDs
-
+    /* Search for thumbnail in chained IFDs, IRB and subIFDs.
+       - if no thumbnail found then:    m.offsetThumb == m.offsetFull
+       - if IRB Jpg thumb found then:   m.lengthThumb > 0
+       - if IFD tiff thumb found then:  m.offsetThumb != m.offsetFull
+    */
     // IRB:  Get embedded JPG thumbnail if available
     bool foundJpgThumb = false;
     if (ifdPhotoshopOffset) {
         if (p.report) {
             p.hdr = "IRB";
             MetaReport::header(p.hdr, p.rpt);
-//            p.rpt.setFieldAlignment(QTextStream::AlignLeft);
             p.rpt.reset();
             p.rpt << "Offset        IRB Id   (1036 = embedded jpg thumbnail)\n";
         }
@@ -209,15 +310,6 @@ bool Tiff::parse(MetadataParameters &p,
             p.offset = nextIFDOffset;
             p.hash = &exif->hash;
             nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
-//            // Embedded JPG (513)
-//            if (ifd->ifdDataHash.contains(513) && ifd->ifdDataHash.contains(513)) {
-//                m.offsetThumb = ifd->ifdDataHash.value(513).tagValue;
-//                m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
-//                foundJpgThumb = true;
-//                // assign arbitrary value to thumbLongside less than 512
-//                thumbLongside = 256;
-//                break;
-//            }
             // check if IFD is a reduced resolution main image ie maybe the thumbnail
             // SubFileType == 1 (tagid == 254)
             if (!ifd->ifdDataHash.contains(254)) continue;
@@ -282,13 +374,7 @@ bool Tiff::parse(MetadataParameters &p,
 
     // Add a thumbnail if missing
     if (G::embedTifThumb && m.offsetThumb == m.offsetFull && thumbLongside > 512) {
-//        /*
-        qDebug() << __FUNCTION__ << "encodeThumbnail " << m.fPath
-                 << "lastIFDOffsetPosition =" << lastIFDOffsetPosition
-                 << "thumbLongside =" << thumbLongside
-                    ;
-                    //*/
-        p.offset = m.offsetFull;        // change to best offset if smaller preview to use
+        p.offset = m.offsetThumb;        // Smallest preview to use
         encodeThumbnail(p, m, ifd);
     }
 
@@ -440,6 +526,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     p.report = isReport;
     err = "";
 
+    // strip offsets
     if (ifd->ifdDataHash.contains(273)) {
         int offsetCount = ifd->ifdDataHash.value(273).tagCount;
         stripOffsets.resize(offsetCount);
@@ -456,22 +543,19 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     }
     else {
         err += "No strip offsets.  ";
-//        qDebug() << __FUNCTION__
-//                 << "No strip offsets for " + m.fPath + ". "
-//                 << "IFD offset =" << p.offset
-//                    ;
     }
 
+    // strip byte counts
     if (ifd->ifdDataHash.contains(279)) {
-        int offsetCount = ifd->ifdDataHash.value(279).tagCount;
-        stripByteCounts.resize(offsetCount);
-        if (offsetCount == 1) {
+        int stripCount = ifd->ifdDataHash.value(279).tagCount;
+        stripByteCounts.resize(stripCount);
+        if (stripCount == 1) {
             stripByteCounts[0] = static_cast<uint>(ifd->ifdDataHash.value(279).tagValue);
         }
         else {
             quint32 offset = ifd->ifdDataHash.value(279).tagValue;
             p.file.seek(offset);
-            for (int i = 0; i < offsetCount; ++i) {
+            for (int i = 0; i < stripCount; ++i) {
                 stripByteCounts[i] = Utilities::get32(p.file.read(4), m.isBigEnd);
             }
         }
@@ -489,12 +573,28 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
        err += "No BitsPerSample.  ";
     }
 
+    // IFD: predictor
+    (ifd->ifdDataHash.contains(317))
+            ? predictor = ifd->ifdDataHash.value(317).tagValue
+            : predictor = 0;
+
     // IFD: compression
     (ifd->ifdDataHash.contains(259))
             ? compression = static_cast<int>(ifd->ifdDataHash.value(259).tagValue)
             : compression = 1;
-    if (compression !=1) {
-        err += "Compression != 1.  ";
+    if (!(compression == 1  || compression == 5)) {
+        err += "Compression != 1 0r 5.  ";
+    }
+    switch (compression) {
+    case 1:
+        compressionType = NoCompression;
+        break;
+    case 5:
+        if (predictor == 2) compressionType = LzwPredictorCompression;
+        else compressionType = LzwCompression;
+        break;
+    case 8:
+        compressionType = ZipCompression;
     }
 
     // IFD: width
@@ -536,7 +636,13 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
             ? planarConfiguration = ifd->ifdDataHash.value(284).tagValue
             : planarConfiguration = 1;
 
-    if (err != "") return false;
+    if (err != "" && !isReport) return false;
+
+    G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
+                  " Compression:" + QString::number(compression) +
+                  " Predictor:" + QString::number(predictor) +
+                  " PlanarConfiguration:" + QString::number(planarConfiguration)
+                    ;
 
     if (p.report) {
         int w1 = 25;
@@ -550,31 +656,42 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         p.rpt.setFieldWidth(w1); p.rpt << "RowsPerStrip" << rowsPerStrip; p.rpt.setFieldWidth(0); p.rpt << "\n";
         p.rpt.setFieldWidth(w1); p.rpt << "Compression" << compression; p.rpt.setFieldWidth(0); p.rpt << "\n";
         p.rpt.setFieldWidth(w1); p.rpt << "PlanarConfiguration" << planarConfiguration; p.rpt.setFieldWidth(0); p.rpt << "\n";
+        p.rpt.setFieldWidth(w1); p.rpt << "Predictor" << predictor; p.rpt.setFieldWidth(0); p.rpt << "\n";
     }
 
     return true;
 }
 
-//void Tiff::reportDecodingParamters(MetadataParameters &p)
-//{
-//    int w1 = 25;
-//    p.rpt << "\n" << "Decode TIFF parameter values:" << "\n";
-//    p.rpt.setFieldAlignment(QTextStream::AlignLeft);
-//    p.rpt.setFieldWidth(w1); p.rpt << "1st StripOffset" << stripOffsets[0]; p.rpt.setFieldWidth(0); p.rpt << "\n";
-//    p.rpt.setFieldWidth(w1); p.rpt << "1st StripByteCount" << stripByteCounts[0]; p.rpt.setFieldWidth(0); p.rpt << "\n";
-//    p.rpt.setFieldWidth(w1); p.rpt << "BitsPerSample" << bitsPerSample; p.rpt.setFieldWidth(0); p.rpt << "\n";
-//    p.rpt.setFieldWidth(w1); p.rpt << "PhotometricInterpation" << photoInterp; p.rpt.setFieldWidth(0); p.rpt << "\n";
-//    p.rpt.setFieldWidth(w1); p.rpt << "SamplesPerPixel" << samplesPerPixel; p.rpt.setFieldWidth(0); p.rpt << "\n";
-//    p.rpt.setFieldWidth(w1); p.rpt << "RowsPerStrip" << rowsPerStrip; p.rpt.setFieldWidth(0); p.rpt << "\n";
-//    p.rpt.setFieldWidth(w1); p.rpt << "Compression" << compression; p.rpt.setFieldWidth(0); p.rpt << "\n";
-//    p.rpt.setFieldWidth(w1); p.rpt << "PlanarConfiguration" << planarConfiguration; p.rpt.setFieldWidth(0); p.rpt << "\n";
-//}
+void Tiff::decompressStrip(int strip, MetadataParameters &p, QByteArray &ba)
+{
+    QByteArray inBa;
+    quint32 stripBytes = stripByteCounts.at(strip);
+    p.file.seek(stripOffsets.at(strip));
+//    qDebug() << __FUNCTION__ << "compressionType" << compressionType;
+    switch (compressionType) {
+    case NoCompression:
+//        qDebug() << __FUNCTION__ << "using no compression";
+        ba = p.file.read(stripBytes);
+        break;
+    case LzwCompression:
+//        qDebug() << __FUNCTION__ << "using LZW compression";
+        inBa = p.file.read(stripBytes);
+        lzwDecompress(inBa, ba);
+        break;
+    case LzwPredictorCompression:
+//        qDebug() << __FUNCTION__ << "using LZW Prediction compression";
+        inBa = p.file.read(stripBytes);
+        lzwPredictorDecompress(inBa, ba);
+        break;
+    }
+}
 
 bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, int newSize)
 {
 /*
     Decode using unmapped QFile.  Set p.file, p.offset and call main decode.
 */
+//    qDebug() << __FUNCTION__ << fPath << "unmapped";
     if (G::isLogger) G::log(__FUNCTION__, " load file from fPath");
     QFileInfo fileInfo(fPath);
     if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
@@ -583,7 +700,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
         m.err += "Unable to open file " + fPath + ". ";
-        qDebug() << __FUNCTION__ << m.err;
+        qWarning() << __FUNCTION__ << m.err;
         return false;
     }
 
@@ -603,26 +720,29 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
 bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int newSize)
 {
 /*
-    Decoding the Tif occurs here.
+    Decode tiff into QImage &image.
 
     p.file must be set and opened. If called from ImageDecoder then p.file will be mapped
     to memory.
 
     p.offset must be set to ifdOffset that describes the image to be decoded within the
-    tif before calling this function (either m.offsetFull or m.offsetThumb).
+    tiff before calling this function (either m.offsetFull or m.offsetThumb).
+
+    newSize is the resized long side in pixels.  If newSize = 0 then no resizing.
 
 */
     if (G::isLogger) G::log(__FUNCTION__, "Main decode with p.file assigned");
-//    QElapsedTimer t;
-//    t.restart();
-
+    /* timer
+    QElapsedTimer t;
+    t.restart();
+    //*/
+//    qDebug() << __FUNCTION__ << m.fPath;
     IFD *ifd = new IFD;
     p.report = false;
     if (!parseForDecoding(p, m, ifd)) {
         qWarning() << err + m.fPath;
         return false;
     }
-//    if (unableToDecode()) return false;
 
     /*
     qDebug() << __FUNCTION__
@@ -634,12 +754,16 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
     // width and height are for the IFD (not necessarily the full image) from parseForDecoding
     int w = width;
     int h = height;
-    int nth;
-    sample(m, newSize, nth, w, h);
+    int nth = 1;
+    // if newSize <= thumbnail then do not sample and resize
+    if (newSize > G::maxIconSize)
+        sample(m, newSize, nth, w, h);
+    else
+        newSize = 0;
 
     bytesPerPixel = bitsPerSample / 8 * samplesPerPixel;
-    bytesPerLine = bytesPerPixel * width;
-    quint32 fSize = static_cast<quint32>(p.file.size());
+    bytesPerRow = bytesPerPixel * w;
+    scanBytesAvail = w * h * bytesPerPixel;
 
     QImage *im;
     if (bitsPerSample == 16) im = new QImage(w, h, QImage::Format_RGBX64);
@@ -654,7 +778,64 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
                 ;
                 //*/
 
-    // read every nth pixel
+    // read every nth pixel to create new smaller image (thumbnail)
+    if (newSize) {
+        qDebug() << __FUNCTION__ << m.fPath << "Resampling tiff";
+        int newBytesPerLine = w * bytesPerPixel;
+        QByteArray newLine;
+        // y is every line in the image (row = every line in the strip)
+        int y = 0;
+        // sampleY is every nth line in the image
+        int sampleY = 0;
+        // sampleX is every nth pixel in a row (less one just read)
+        int sampleX = static_cast<int>((nth - 1) * bytesPerPixel);
+        int strips = stripOffsets.count();
+        for (int strip = 0; strip < strips; ++strip) {
+//            qDebug() << __FUNCTION__ << "Processing strip" << strip;
+            QByteArray ba;      // strip byte array after decompression
+            decompressStrip(strip, p, ba);
+            QBuffer bufStrip(&ba);
+            bufStrip.open(QBuffer::ReadOnly);
+            // iterate rows in this strip
+            for (int row = 0; row < rowsPerStrip; row++) {
+                // last strip may have less than rowsPerStrip rows
+                if ((row + 1) * bytesPerRow > ba.length()) break;
+
+                // sample row
+                if (y % nth == 0) {
+                    bufStrip.seek(row * bytesPerRow);
+                    newLine.clear();
+                    // sample nth pixel in row, where w = new width of image
+                    for (int x = 0; x < w; x++) {
+                        newLine += bufStrip.read(bytesPerPixel);
+                        bufStrip.skip(sampleX);
+                    }
+                    if (sampleY < h) {
+                        std::memcpy(im->scanLine(sampleY),
+                                    newLine,
+                                    static_cast<size_t>(newBytesPerLine));
+                    }
+                    sampleY++;
+                }
+                y++;
+                if (sampleY >= h) break;
+            }
+            if (sampleY >= h) break;
+        }
+        p.file.close();
+        if (bitsPerSample == 16) {
+            if (m.isBigEnd) invertEndian16(im);
+            toRRGGBBAA(im);
+        }
+        // convert to standard QImage format for display in Winnow
+        im->convertTo(QImage::Format_RGB32);
+        image.operator=(*im);
+        qDebug() << __FUNCTION__ << m.fPath << "Resampling entire tiff";
+        return true;
+    }
+
+    /*
+    // read every nth pixel (old code)
     if (newSize) {
         int newBytesPerLine = w * bytesPerPixel;
         QByteArray ba;
@@ -665,13 +846,14 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
         for (int strip = 0; strip < stripOffsets.count();++strip) {
             for (int row = 0; row < rowsPerStrip; row++) {
                 if (y % nth == 0) {
-                    fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerLine);
+                    fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerRow);
                     ba.clear();
                     for (int x = 0; x < w; x++) {
                         p.file.seek(fOffset);
                         if (fOffset + static_cast<size_t>(bytesPerPixel) > fSize) {
                             qDebug() << __FUNCTION__
                                      << "Read nth pixel - ATTEMPTING TO READ PAST END OF FILE"
+                                     << "nth =" << nth
                                      << "row =" << row
                                      << "x =" << x
                                      << "sampleY =" << sampleY
@@ -687,19 +869,6 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
                         fOffset += static_cast<uint>(nth * bytesPerPixel);
                     }
                     if (sampleY < h) {
-                        if (fOffset + static_cast<size_t>(newBytesPerLine) > fSize) {
-                            qDebug() << __FUNCTION__
-                                     << "Read scanline - ATTEMPTING TO READ PAST END OF FILE"
-                                     << "row =" << row
-                                     << "sampleY =" << sampleY
-                                     << "startOffset =" << stripOffsets.at(0)
-                                     << "fOffset =" << fOffset
-                                     << "Bytes =" << fOffset - stripOffsets.at(0)
-                                     << m.fPath
-                                        ;
-                            break;
-                        }
-//                        std::memcpy(im->scanLine(sampleY), ba, static_cast<size_t>(ba.length()));
                         std::memcpy(im->scanLine(sampleY), ba, static_cast<size_t>(newBytesPerLine));
                     }
                     sampleY++;
@@ -719,15 +888,74 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
         image.operator=(*im);
         return true;
     }
+    */
 
     // read entire image
-    quint32 fOffset = 0;
+//    qDebug() << __FUNCTION__ << m.fPath << "Decoding entire tiff";
     int line = 0;
+    quint32 scanBytes = 0;
+    int strips = stripOffsets.count();
+//    G::track("Start stipts");
+    for (int strip = 0; strip < strips; ++strip) {
+//        G::track("Strip " + QString::number(strip));
+//        if (strip > 3) continue;
+//        qDebug() << __FUNCTION__ << "Processing strip" << strip;
+        QByteArray ba;      // strip byte array after decompression
+        decompressStrip(strip, p, ba);
+//        G::track("decompressStrip");
+//        qDebug() << __FUNCTION__
+//                 << "Strip #" << strip
+////                 << Utilities::hexFromByteArray(ba, 50, 0, 500)
+//                    ;
+//        if (strip == 0) Utilities::hexFromByteArray(ba, 50, 16250, 16300);
+        QBuffer buf(&ba);
+        buf.open(QBuffer::ReadOnly);
+        for (int row = 0; row < rowsPerStrip; row++) {
+            /*
+            qDebug() << __FUNCTION__
+                     << "strip =" << strip
+                     << "row =" << row
+                     << "buf.pos() =" << buf.pos()
+                     << "bytesPerRow =" << bytesPerRow
+                     << "buf.pos() + bytesPerRow =" << buf.pos() + bytesPerRow
+                     << "ba.length() =" << ba.length()
+                     << "scanBytes =" << scanBytes
+                     << "scanBytesAvail =" << scanBytesAvail
+                        ;
+                        //*/
+            // last strip may have less than rowsPerStrip rows
+//            if ((row + 1) * bytesPerRow > ba.length()) break;
+            if ((buf.pos() + bytesPerRow) > ba.length()) break;
+            if (scanBytes + bytesPerRow > scanBytesAvail) break;
+            std::memcpy(im->scanLine(line++),
+                        buf.read(bytesPerRow),
+                        static_cast<size_t>(bytesPerRow));
+            scanBytes += bytesPerRow;
+        }
+//        G::track("scan strip");
+    }
+//    qDebug() << __FUNCTION__ << "Processed all strips";
+    p.file.close();
+
+    /*
+    // read entire image old code
+    int line = 0;
+    int fOffset = 0;
+    p.file.seek(stripOffsets.at(0));
     for (int strip = 0; strip < stripOffsets.count(); ++strip) {
         for (int row = 0; row < rowsPerStrip; row++) {
             fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerLine);
             if (fOffset + static_cast<size_t>(bytesPerLine) > fSize) {
-                qDebug() << __FUNCTION__ << "Read entire image - ATTEMPTING TO READ PAST END OF FILE";
+                qWarning() << __FUNCTION__
+                           << "Read entire image - ATTEMPTING TO READ PAST END OF FILE"
+                         << "fOffset =" << fOffset
+                         << "strip =" << strip
+                         << "row =" << row
+                         << "stripOffsets.at(strip) =" << stripOffsets.at(strip)
+                         << "bytesPerLine =" << bytesPerLine
+                         << "w =" << w
+                         << m.fPath
+                            ;
                 break;
             }
             p.file.seek(fOffset);
@@ -737,52 +965,56 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
             line++;
         }
     }
+    */
     if (bitsPerSample == 16) {
         if (m.isBigEnd) invertEndian16(im);
         toRRGGBBAA(im);
     }
-    p.file.close();
     // convert to standard QImage format for display in Winnow
     im->convertTo(QImage::Format_RGB32);
     image.operator=(*im);
+//    qDebug() << __FUNCTION__ << m.fPath << "Decoded entire tiff";
     return true;
 }
 
 bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 {
 /*
-    - little/big endian put functions to write 8, 16, 24, 32, 64, real, CString
-    - add new IFD at end of chain
-        - replace last nextIFDOffset with offset to current EOF
+    If an image preview (thumbnail) with a longside <= 512px does not exist, then add a
+    thumbnail with a longside of G::maxIconSize to the tiff file.  This involves appending an
+    IFD to the end of the IFD chain and sampling the smallest existing IFD preview (source) to
+    the new thumbnail.
+
+    Steps:
+        - replace last nextIFDOffset with offset to current EOF, where the thumbnail IFD will
+          be appended.
+        - add new IFD at end of chain, starting with the number of IFD items (15).
         - add IFD items:
             Num  tagId tagType  tagCount    tagValue   tagDescription
               0    254       4         1           1   SubfileType
-              1    256       3         1               ImageWidth
-              2    257       3         1               ImageHeight
+              1    256       3         1               ImageWidth (thumbnail)
+              2    257       3         1               ImageHeight (thumbnail)
               3    258       3         3      offset   BitsPerSample
               4    259       3         1           1   Compression
               5    262       3         1           2   PhotometricInterpretation
               6    273       4         1       value   StripOffsets
               7    274       3         1           1   Orientation
               8    277       3         1           3   SamplesPerPixel
-              9    278       3         1        1728   RowsPerStrip
+              9    278       3         1      height   RowsPerStrip
              10    279       4         1       value   StripByteCounts
              11    282       5         1      offset   XResolution
              12    283       5         1      offset   YResolution
              13    284       3         1           1   PlanarConfiguration
              14    296       3         1           2   ResolutionUnit
-    - subsample image down to thumbnail resolution
-    - write strip pixels rgb at offset StripOffsets
-*/
-    // p.offset = offset to the last IFD nextIFDOffset and will be changed in parseForDecoding
-//    quint32 lastIFDOffset = p.offset;
-//    if (m.height == 0) return false;
+        - subsample image down to thumbnail resolution
+        - write strip pixels rgb at offset StripOffsets
 
-    // get decoding parameters from IFD0 (the main image)
-//    p.offset = m.ifd0Offset;
-    parseForDecoding(p, m, ifd);
-    if (unableToDecode()) {
-        qDebug() << __FUNCTION__ << "Unable to decode";
+    p.offset must be set to ifdOffset that describes the source image to be sampled to create
+    the thumbnail before calling this function.
+*/
+    // get decoding parameters from source IFD (p.offset must be preset)
+    if (!parseForDecoding(p, m, ifd)) {
+        qWarning() << err + m.fPath;
         return false;
     }
 
@@ -790,7 +1022,6 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     m.offsetThumb = p.file.size();
     p.file.seek(lastIFDOffsetPosition);
     p.file.write(Utilities::put32(m.offsetThumb, m.isBigEnd));
-    qDebug() << __FUNCTION__ << "1";
 
     // Go to new thumbIFDOffset and write the count of IFD entries (15)
     p.offset = m.offsetThumb;
@@ -798,7 +1029,7 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 
     // thumbnail size and sample increment (nth)
     int w, h, nth;
-    sample(m, G::maxIconSize, nth, w, h);      // sample to thumbnail with longside = 240
+    sample(m, G::maxIconSize, nth, w, h);
 
     /* First offset in IFD is BitsPerSample (bpsOffset) located at end of IFD.
        Length of IFD = 15 entries * 12 bytes per entry + 4 bytes nextIFDOffset.
@@ -838,56 +1069,51 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 
     quint32 sopOffset = p.file.pos();   // for debugging
 
-    // create sampled full size rgb to thumbnail
+    // sample existing tiff in IFD to create new thumbnail IFD
     bytesPerPixel = bitsPerSample / 8 * samplesPerPixel;
-    bytesPerLine = bytesPerPixel * m.width;
-    qDebug() << __FUNCTION__ << "Adding thumbnail for" << m.fPath;
-    int newBytesPerLine = w * bytesPerPixel;
+    bytesPerRow = bytesPerPixel * m.width;
     quint32 fOffset = 0;
     // read every nth pixel to create new smaller image (thumbnail)
     int y = 0;          // every line in source image scan
     int line = 0;       // lines sampled and written to new image scan
-    QByteArray ba;
+    QByteArray bat;     // byte array thumb
     for (int strip = 0; strip < stripOffsets.count(); ++strip) {
         for (int row = 0; row < rowsPerStrip; row++) {
             if (y % nth == 0) {
-                fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerLine);
-                ba.clear();
+                fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerRow);
+                bat.clear();
                 for (int x = 0; x < w; x++) {
-//                    if (x==0&&row==0&&strip==0) qDebug() << __FUNCTION__ << "1st read at" << fOffset;
+                    /*
+                    if (x==0&&row==0&&strip==0) qDebug() << __FUNCTION__ << "1st read at" << fOffset;
+                    //*/
                     p.file.seek(fOffset);
                     if (fOffset + static_cast<size_t>(bytesPerPixel) > m.offsetThumb) {
-                        qDebug() << __FUNCTION__ << "Read nth pixel - ATTEMPTING TO READ PAST END OF SCAN";
+                        qWarning() << __FUNCTION__ << "Read nth pixel - ATTEMPTING TO READ PAST END OF SCAN";
                         break;
                     }
                     if (bitsPerSample == 8)
-                        ba += p.file.read(bytesPerPixel);
+                        bat += p.file.read(bytesPerPixel);
                     else {
                         if (m.isBigEnd) {
-                            ba += p.file.read(1);  p.file.skip(1);
-                            ba += p.file.read(1);  p.file.skip(1);
-                            ba += p.file.read(1);  p.file.skip(1);
+                            bat += p.file.read(1);  p.file.skip(1);
+                            bat += p.file.read(1);  p.file.skip(1);
+                            bat += p.file.read(1);  p.file.skip(1);
                         }
                         else {
-                            p.file.skip(1);  ba += p.file.read(1);
-                            p.file.skip(1);  ba += p.file.read(1);
-                            p.file.skip(1);  ba += p.file.read(1);
+                            p.file.skip(1);  bat += p.file.read(1);
+                            p.file.skip(1);  bat += p.file.read(1);
+                            p.file.skip(1);  bat += p.file.read(1);
                         }
                     }
-//                    if (x == 0 && row == 0 && strip == 0) qDebug() << ba.toHex();
+                    /*
+                    if (x == 0 && row == 0 && strip == 0) qDebug() << bat.toHex();
+                    //*/
                     fOffset += static_cast<uint>(nth * bytesPerPixel);
                 }
                 // write thumb at EOF
                 qint64 eof = p.file.size();
-//                qDebug() << __FUNCTION__ << "eof =" << eof << "line =" << line;
                 p.file.seek(eof);
-                p.file.write(ba);
-//                if (line < h) {
-//                    if (fOffset + static_cast<size_t>(newBytesPerLine) > m.offsetThumb) {
-//                        qDebug() << __FUNCTION__ << "Read scanline - ATTEMPTING TO READ PAST END OF FILE";
-//                        break;
-//                    }
-//                }
+                p.file.write(bat);
                 line++;
             }
             if (line > h) break;
@@ -895,7 +1121,7 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         }
         if (line > h) break;
     }
-    quint32 eopOffset = p.file.pos();
+    quint32 eopOffset = p.file.pos();   // for debugging
 
     /*
     qDebug() << __FUNCTION__
@@ -976,7 +1202,9 @@ void Tiff::sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h)
         h = newLongside;
         w = h * width / height;
     }
-    nth = width / w;
+    int nthW = width / w;
+    int nthH = height / h;
+    nthW < nthH ? nth = nthW : nth = nthH;
     /*
     qDebug() << __FUNCTION__
              << "width =" << width
@@ -989,23 +1217,203 @@ void Tiff::sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h)
                 //*/
 }
 
-bool Tiff::unableToDecode()
-{
-    // cancel if there is compression or planar format
-    if (compression > 1 || planarConfiguration > 1 /*|| samplesPerPixel > 3*/) {
-        qWarning() << __FUNCTION__ << "compression > 1 || planarConfiguration > 1";
-        return true;
-    }
-    if (bitsPerSample != 16 && bitsPerSample != 8) {
-        qWarning() << __FUNCTION__ << "bitsPerSample =" << bitsPerSample;
-        return true;
-    }
-    return false;
-}
-
 Tiff::TiffType Tiff::getTiffType()
+/*
+    Not used.  Left as example for using enum
+*/
 {
     if (bitsPerSample == 16) return TiffType::tiff16bit;
     else if (bitsPerSample == 8) return TiffType::tiff16bit;
     else return TiffType::unknown;
+}
+
+void Tiff::lzwReset(QHash<quint32, QByteArray> &dictionary,
+                    QByteArray &prevString,
+                    quint32 &nextCode
+                    )
+{
+    // initialize dictionary
+    dictionary.clear();
+    for (uint i = 0 ; i < 256 ; i++ ) {
+        dictionary[i] = QByteArray(1, (char)i);
+    }
+    nextCode = 258;
+    prevString.clear();
+}
+
+void Tiff::lzwDecompress(QByteArray &inBa, QByteArray &outBa)
+{
+//    qDebug() << __FUNCTION__;
+    QBuffer inBuf(&inBa);
+    QBuffer outBuf(&outBa);
+    inBuf.open(QIODevice::ReadOnly);
+    outBuf.open(QIODevice::WriteOnly);
+    QDataStream inStream(&inBuf);
+    QDataStream out(&outBuf);
+
+    parseInStream in(inStream);
+    /* debugging
+    //
+        QFile f1("D:/Pictures/_TIFF_lzw1/ps_8_big_800px.tif");
+        f1.open(QIODevice::ReadOnly);
+        f1.seek(34296);
+        QByteArray baPs = f1.read(1080000);
+        f1.close();
+    //*/
+    int n = 0;      // for debugging
+
+    // hash of code => byte array (string of char)
+    QHash<quint32,QByteArray> dictionary;
+    // the value of the prior code in the in stream
+    QByteArray prevString;
+    // code is the index (key) in the dictionary hash
+    quint32 code;
+    quint32 nextCode = 258;
+    while (in >> code) {
+        // reset if clear code = 256. Occurs at start and before dictionary code 4094 (<13 bits)
+        if (code == CLEAR_CODE) {
+            lzwReset(dictionary, prevString, nextCode);
+            continue;
+        }
+        // if code not found then add to dictionary
+        /*
+        if (dictionary.find(code) == dictionary.end()) {
+        //*/
+        if (!dictionary.contains(code)) {
+            dictionary[code] = prevString + prevString[0];
+        }
+
+        // output entire dictionary code value
+        for (auto& ch : dictionary[code])
+            out << ch;
+        //
+        if (prevString.size() && nextCode <= MAXCODE)
+            dictionary[nextCode++] = prevString + dictionary[code][0];
+        /*
+        // debug
+//        if (debug) {
+//            quint8 baPsX = (0xff & (unsigned int)baPs.at(n));
+//    //        bool isOkay = dictionary[code].at(0) == baPs.at(n);
+//    //        if (!isOkay) {
+//                qDebug().noquote()
+//                << "n =" << QString::number(n).leftJustified(5)
+//                << "code =" << QString::number(code).leftJustified(5)
+//                         << QString::number(code, 16).toUpper().leftJustified(5)
+//                << "dict[code] =" << dictionary[code].toHex().toUpper().leftJustified(12)
+//                << "dictionary[code][0] =" << QString::number(quint8(dictionary[code][0]), 16)
+//                << "baPsX = " << QString::number(baPsX, 16).toUpper().leftJustified(5)
+//                << "nextCode =" << QString::number(nextCode).leftJustified(4)
+//                << "dict[nextCode] =" << dictionary[nextCode].toHex().toUpper().leftJustified(12)
+//                << "prevString =" << prevString.toHex().toUpper().leftJustified(12)
+//                << "prevString.size() =" << QString::number(prevString.size()).leftJustified(6)
+//                << "dictionary[code][0] =" << QString::number(0xff & (unsigned int)dictionary[code][0], 16).toUpper().leftJustified(5)
+//    //            << isOkay
+//                ;
+//    //            break;
+//    //        }
+        // end debug
+        //*/
+
+//        n += dictionary[code].length();
+//        if (n > 1000000) break;
+
+        // update prevString
+        prevString = dictionary[code];
+    }
+}
+
+void Tiff::lzwPredictorDecompress(QByteArray &inBa, QByteArray &outBa)
+{
+//    qDebug() << __FUNCTION__;
+    QBuffer inBuf(&inBa);
+    QBuffer outBuf(&outBa);
+    inBuf.open(QIODevice::ReadOnly);
+    outBuf.open(QIODevice::WriteOnly);
+    QDataStream inStream(&inBuf);
+    QDataStream out(&outBuf);
+
+    parseInStream in(inStream);
+    /* debugging
+        QFile f1("D:/Pictures/_TIFF_lzw1/ps_8_big_800px.tif");
+        f1.open(QIODevice::ReadOnly);
+        f1.seek(34296);
+        QByteArray baPs = f1.read(1080000);
+        f1.close();
+    //*/
+    int n = 0;      // for debugging
+
+    // bytes per row (reset predictor at end of row)
+    int rowLength = width * samplesPerPixel;
+    // hash of code => byte array (string of char)
+    QHash<quint32,QByteArray> dictionary;
+    // the value of the prior code in the in stream
+    QByteArray prevString;
+    // code is the index (key) in the dictionary hash
+    quint32 code;
+    quint32 nextCode = 258;
+    // rgb iterator: 0,1,2,0,1,2...
+    int m = 0;
+    rgb[0] = rgb[1] = rgb[2] = 0;
+    while (in >> code) {
+//        G::track(QString::number(n), "Start of loop");
+        // reset if clear code = 256. Occurs at start and before dictionary code 4094 (<13 bits)
+        if (code == CLEAR_CODE) {
+//            lzwReset(dictionary, prevString, nextCode);
+            dictionary.clear();
+            for (uint i = 0 ; i < 256 ; i++ ) {
+                dictionary[i] = QByteArray(1, (char)i);
+            }
+            nextCode = 258;
+            prevString.clear();
+            continue;
+        }
+        // if code not found then add to dictionary
+        if (!dictionary.contains(code)) {
+            dictionary[code] = prevString + prevString[0];
+        }
+
+        // if predictor add to previous RGB value
+        for (auto& ch : dictionary[code]) {
+            if (n % rowLength == 0) rgb[0] = rgb[1] = rgb[2] = 0;
+            quint8 b = (quint8)ch + rgb[m];
+                /* debugging
+            bool ok = b == (quint8)baPs[n];
+//                if (!ok) qDebug().noquote()
+            if (showDebug) qDebug().noquote()
+                 << "n =" << QString::number(n).leftJustified(10)
+                 << "x =" << QString::number(n % rowLength).leftJustified(4)
+                 << "y =" << QString::number(n / rowLength).leftJustified(4)
+                 << "nextCode =" << QString::number(nextCode).leftJustified(4)
+                 << "code =" << QString::number(code).leftJustified(4)
+                 << "string =" << dictionary[code].toHex().toUpper().leftJustified(24)
+                 << "ch =" << QString::number((quint8)ch).leftJustified(4)
+                 << "m =" << m
+                 << "prev =" << QString::number(rgb[m],16).toUpper().leftJustified(2)
+                 << "out =" << QString::number(b,16).toUpper().leftJustified(2)
+                 << QString::number((quint8)baPs[n],16).toUpper()
+                 << "diff = " << QString::number(b - (quint8)baPs[n]).leftJustified(4)
+                 << ok
+                    ;
+//            if (!ok) return;
+                        //*/
+            out << (quint8)b;
+            rgb[m] = b;
+            m++;
+            n++;
+            if (m > 2) m = 0;
+        }
+
+        if (prevString.size() && nextCode <= MAXCODE)
+        dictionary[nextCode++] = prevString + dictionary[code][0];
+        prevString = dictionary[code];
+
+//        G::track(QString::number(n), "End of loop");
+//        if (n > 100) break;
+
+        /* debugging
+        if (n > 16275 && n < 16300) showDebug = true;
+        else showDebug = false;
+        if (n > 16300) break;
+        //*/
+    }
 }

@@ -78,7 +78,7 @@ void SaveAsDlg::on_saveBtn_clicked()
 
         Pixmap *getImage = new Pixmap(this, dm, metadata);
         QImage image;
-        getImage->load(fPath, image);
+        getImage->load(fPath, image, "SaveAsDlg::on_saveBtn_clicked");
         image.save(newFilePath, imageType, compression);
         delete getImage;
     }

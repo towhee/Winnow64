@@ -93,6 +93,8 @@ namespace G
     QModelIndexList copyCutIdxList;
     QStringList copyCutFileList;
 
+    QString tiffData;                   // temp for testing tiff decoder performance
+
     QElapsedTimer t;
     QElapsedTimer t1;
     bool isTimer;
@@ -119,13 +121,14 @@ namespace G
 
     void track(QString functionName, QString comment, bool hideTime)
     {
-        QString time = QString("%L1").arg(t.nsecsElapsed());
+        qint64 nsecsElapsed = t.nsecsElapsed();
+        QString time = QString("%L1").arg(nsecsElapsed);
         if (hideTime) time = "";
-        t.restart();
         qDebug().noquote()
                  << time.rightJustified(15, ' ') << " "
                  << functionName.leftJustified(50, '.') << " "
                  << comment;
+        t.restart();
     }
 
     void log(QString functionName, QString comment, bool hideElapsedTime)

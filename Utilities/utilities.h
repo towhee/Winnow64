@@ -56,6 +56,9 @@ public:
 //    static void bytes2Bitset32(QByteArray bytes, std::bitset<32> &bits);
 //    static uint bits2Int(QBitArray bits, int length);
 //    static uint extractBits(std::bitset<32> &buf, uint n);
+
+    // Formatted strings from binary data
+    static void hexFromByteArray(QByteArray &ba, int cols = 0, int start = 0, int end = 0);
 public slots:
     static void hideCursor();
 };

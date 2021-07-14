@@ -411,7 +411,7 @@ void Preferences::addItems()
     i.key = "addMissingThumbnailToTif";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-//    addItem(i);
+    addItem(i);
 
     // Logger
     i.name = "isLogger";

@@ -173,8 +173,11 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
         }
 
         // use Winnow decoder
+        qDebug() << __FUNCTION__ << "Decode tiff";
         ImageMetadata m = dm->imMetadata(fPath);
         decoder->decode(G::Tif, fPath, m);
+        qDebug() << __FUNCTION__ << "Decoded tiff";
+
         imFile.close();
     }
 

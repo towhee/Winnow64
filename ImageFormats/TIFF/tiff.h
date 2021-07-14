@@ -12,7 +12,8 @@
 #include "Metadata/gps.h"
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "Metadata/metareport.h"
-//#include "Datamodel/datamodel.h"
+
+extern bool showDebug;
 
 class Tiff : public QObject
 {
@@ -26,16 +27,12 @@ public:
                IRB *irb,
                IPTC *iptc,
                Exif *exif,
-               GPS *gps,
-               Jpeg *jpeg);
+               GPS *gps);
     bool parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
-//    void reportDecodingParamters(MetadataParameters &p);
     // decode using unmapped QFile
     bool decode(ImageMetadata &m, QString &fPath, QImage &image,
                 bool thumb = false, int maxDim = 0);
     // decode using QFile mapped to memory
-//    bool decode(ImageMetadata &m, QFile &file, QImage &image, int maxDim = 0);
-    // decoding happens here
     bool decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int maxDim = 0);
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
 
@@ -51,13 +48,15 @@ private:
     int samplesPerPixel = 0;
     int rowsPerStrip = 0;
     int compression = 0;
+    int predictor = 0;
+    int planarConfiguration = 1;
     QVector<quint32> stripOffsets;
     QVector<quint32> stripByteCounts;
-    int planarConfiguration = 1;
 
     // used to decode
     int bytesPerPixel;
-    int bytesPerLine;
+    int bytesPerRow;
+    quint32 scanBytesAvail;                 // Maximum bytes in QImage im
 
     enum TiffType {
         unknown,
@@ -65,13 +64,28 @@ private:
         tiff16bit
     };
 
+    enum {
+        NoCompression,
+        LzwCompression,
+        LzwPredictorCompression,
+        ZipCompression
+    };
+    int compressionType;
+    quint8 rgb[3];
+
     QString err;
 
     void toRRGGBBAA(QImage *im);
     void invertEndian16(QImage *im);
     void sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h);
-    bool unableToDecode();
     TiffType getTiffType();
+    void decompressStrip(int strip, MetadataParameters &p, QByteArray &ba);
+    void lzwDecompress(QByteArray &inBa, QByteArray &outBa);
+    void lzwPredictorDecompress(QByteArray &inBa, QByteArray &outBa);
+    void lzwReset(QHash<quint32,QByteArray> &dictionary,
+                  QByteArray &prevString,
+                  quint32 &nextCode);
+
 };
 
 #endif // TIFF_H

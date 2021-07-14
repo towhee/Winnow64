@@ -43,16 +43,6 @@ quint32 IFD::readIFD(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
             tagValue = Utilities::get16(p.file.read(2), isBigEnd);
             p.file.read(2);
         }
-        /* if (tagType == 3) {
-            if (isBigEnd && tagCount > 1){
-                p.file.read(2);
-                tagValue = Utilities::get16(p.file.read(2), isBigEnd);
-            }
-            else {
-                tagValue = Utilities::get16(p.file.read(2), isBigEnd);
-                p.file.read(2);
-            }
-        } */
         else tagValue = Utilities::get32(p.file.read(4), isBigEnd);
 
         ifdData.tagType = tagType;
@@ -268,7 +258,14 @@ bool IFD::writeIFDItem(MetadataParameters &p, ImageMetadata &m,
     if (ret != 2) return false;
     ret = p.file.write(Utilities::put32(tagCount, m.isBigEnd));
     if (ret != 4) return false;
-    ret = p.file.write(Utilities::put32(tagValue, m.isBigEnd));
+    if (tagType == 3 && tagCount == 1) {
+        ret = p.file.write(Utilities::put16(tagValue, m.isBigEnd));
+        if (ret != 2) return false;
+        ret = p.file.write(Utilities::put16(0, m.isBigEnd));
+        if (ret != 2) return false;
+    }
+    else
+        ret = p.file.write(Utilities::put32(tagValue, m.isBigEnd));
     if (ret != 4) return false;
     return true;
 }

@@ -36,6 +36,7 @@ ENHANCEMENTS
 - Add guassian blur (inner/outer)
 - Copy files between folders using drag'n'drop
 - Delete a folder
+- Rename file(s)
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 - Read keywords

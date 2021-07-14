@@ -139,11 +139,10 @@ bool Thumb::loadFromTiffData(QString &fPath, QImage &image)
     ImageMetadata m = dm->imMetadata(fPath);
     Tiff tiff;
     bool getThumb = true;
-//    qDebug() << __FUNCTION__ << "Calling tiff.decode(m, fPath, image, getThumb, G::maxIconSize)";
     return tiff.decode(m, fPath, image, getThumb, G::maxIconSize);
 }
 
-bool Thumb::loadThumb(QString &fPath, QImage &image)
+bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
 {
 /*
     Load a thumbnail preview as a decoration icon in the datamodel dm in column 0. Raw, jpg
@@ -152,7 +151,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
     /*
-    qDebug() << __FUNCTION__ << "fPath =" << fPath;
+    qDebug() << __FUNCTION__ << "fPath =" << fPath << "src =" << src;
 //    */
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.suffix().toLower();
@@ -220,7 +219,9 @@ bool Thumb::loadThumb(QString &fPath, QImage &image)
                     loadFromEntireFile(path, image, dmRow);
                     return false;
                 }
+                qDebug() << __FUNCTION__ << fPath << "Loaded thumb using Qt";
             }
+//            qDebug() << __FUNCTION__ << fPath << "Loaded thumb by resampling tiff";
         }
         // rgh remove heic
         else if (ext == "heic") {
