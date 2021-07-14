@@ -1440,7 +1440,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 //    */
 
     bool isStart = false;
-    if(!isCurrentFolderOkay || G::isInitializing || isFilterChange) return;
+    if(!isCurrentFolderOkay
+            || G::isInitializing
+            || isFilterChange
+            || !G::isNewFolderLoaded)
+        return;
 
     if (imageView->isFirstImageNewFolder && G::mode == "Loupe") thumbView->selectThumb(0);
 
@@ -1554,7 +1558,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
             && (G::mode != "Compare")
            )
         {
-            imageCacheThread->setCurrentPosition(dm->currentFilePath);
+//            imageCacheThread->setCurrentPosition(dm->currentFilePath);  //lzwrgh
         }
     }
 
@@ -6136,7 +6140,7 @@ void MW::sortChange(QString source)
     be loaded in order to sort on them.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    /*
+//    /*
     qDebug() << __FUNCTION__ << "source =" << source
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "G::isInitializing =" << G::isInitializing
@@ -8978,10 +8982,11 @@ void MW::loupeDisplay()
     thumbView->setCurrentIndex(idx);
 
     // update imageView, use cache if image loaded, else read it from file
-    QString fPath = idx.data(G::PathRole).toString();
-    if (imageView->isVisible() && fPath.length() > 0) {
-        imageView->loadImage(fPath, __FUNCTION__);
-    }
+//lzwrgh
+//    QString fPath = idx.data(G::PathRole).toString();
+//    if (imageView->isVisible() && fPath.length() > 0) {
+//        imageView->loadImage(fPath, __FUNCTION__);
+//    }
     // do not show classification badge if no folder or nothing selected
     updateClassification();
 
@@ -9419,6 +9424,7 @@ void MW::toggleThumbDockVisibity()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing) return;
+    qDebug() << __FUNCTION__;
 
     if (thumbDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
@@ -11045,7 +11051,7 @@ void MW::refreshCurrentFolder()
 
             // update thumbnail in case image has changed
             QImage image;
-            bool thumbLoaded = thumb->loadThumb(fPath, image);
+            bool thumbLoaded = thumb->loadThumb(fPath, image, "MW::refreshCurrentFolder");
             if (thumbLoaded) {
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
                 dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
@@ -11545,7 +11551,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    int x = 0 % 160;
-    qDebug() << __FUNCTION__ << 1 % 16 << 16 % 16 << 32 % 16;
+    QElapsedTimer tn;
+    tn.restart();
+    for (int i = 0; i < 100; i++) {
+        G::track(QString::number(i));
+    }
 }
 // End MW

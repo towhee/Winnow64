@@ -519,7 +519,7 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
     if (idx.data(Qt::DecorationRole).isNull()) {
         QImage image;
 //        qDebug() << __FUNCTION__ << "row =" << sfRow << fPath;
-        bool thumbLoaded = thumb->loadThumb(fPath, image);
+        bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readMetadataIcon");
         if (thumbLoaded) {
             QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
             dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
@@ -568,7 +568,7 @@ void MetadataCache::readIconChunk()
             bool thumbLoaded = thumb->loadThumb(fPath, image);
             if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
             */
-            bool thumbLoaded = thumb->loadThumb(fPath, image);
+            bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIconChunk");
             QPixmap pm;
             if (thumbLoaded) {
                 pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
@@ -597,7 +597,7 @@ void MetadataCache::readIconChunk()
             bool thumbLoaded = thumb->loadThumb(fPath, image);
             if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
             */
-            bool thumbLoaded = thumb->loadThumb(fPath, image);
+            bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIconChunk");
             QPixmap pm;
             if (thumbLoaded) {
                 pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
@@ -712,7 +712,7 @@ void MetadataCache::readMetadataIconChunk()
         if (idx.data(Qt::DecorationRole).isNull()) {
             QImage image;
 //            qDebug() << __FUNCTION__ << "row =" << row << fPath;
-            bool thumbLoaded = thumb->loadThumb(fPath, image);
+            bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readMetadataIconChunk");
             if (thumbLoaded) {
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
                 dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
@@ -754,7 +754,7 @@ void MetadataCache::run()
 
         // read the icons
         if (action == Action::NewFolder2ndPass) {
-            readIconChunk();
+        readIconChunk();    //lzwrgh
         }
 
         // read next metadata and icon chunk

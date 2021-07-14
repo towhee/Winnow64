@@ -99,7 +99,7 @@ public:
     bool isReleaseVersion = true;
     bool hideEmbellish = false;
 
-    QString versionNumber = "1.25";
+    QString versionNumber = "1.26";
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;

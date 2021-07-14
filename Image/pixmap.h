@@ -21,8 +21,8 @@ class Pixmap : public QObject
     Q_OBJECT
 public:
     explicit Pixmap(QObject *parent, DataModel *dm, Metadata *metadata);
-    bool load(QString &fPath, QPixmap &pm);
-    bool load(QString &fPath, QImage &image);
+    bool load(QString &fPath, QPixmap &pm, QString src);
+    bool load(QString &fPath, QImage &image, QString src);
 
 private:
     DataModel *dm;

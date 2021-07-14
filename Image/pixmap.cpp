@@ -7,10 +7,10 @@ Pixmap::Pixmap(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(par
     this->metadata = metadata;
 }
 
-bool Pixmap::load(QString &fPath, QPixmap &pm)
+bool Pixmap::load(QString &fPath, QPixmap &pm, QString src)
 {
     QImage image;
-    bool success = load(fPath, image);
+    bool success = load(fPath, image, src);
     pm = QPixmap::fromImage(image);
     return success;
 }
@@ -33,7 +33,7 @@ bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
      #endif
 }
 
-bool Pixmap::load(QString &fPath, QImage &image)
+bool Pixmap::load(QString &fPath, QImage &image, QString src)
 {
 /*  Reads the embedded jpg (known offset and length) and converts it into a
     QImage.
@@ -59,14 +59,14 @@ bool Pixmap::load(QString &fPath, QImage &image)
     will be updated to show the file is not readable.
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
-//    qDebug() << __FUNCTION__ << "fPath =" << fPath;
+//    qDebug() << __FUNCTION__ << "fPath =" << fPath << "src =" << src;
     QElapsedTimer t;
     t.restart();
 //    QElapsedTimer readTime;
-//    QElapsedTimer decodeTime;
+    QElapsedTimer decodeTime;
 //    QElapsedTimer ICCTime;
 //    qint64 tRead;
-//    qint64 tDecode;
+    qint64 tDecode;
 //    qint64 tICC;
 //    readTime.start();
 
@@ -172,6 +172,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
 
     // TIFF format
     else if (ext == "tif") {
+        QString decoderUsed = "Winnow";
+        decodeTime.start();
         // check for sampling format we cannot read
         int samplesPerPixel = dm->index(dmRow, G::samplesPerPixelColumn).data().toInt();
         if (samplesPerPixel > 3) {
@@ -186,13 +188,45 @@ bool Pixmap::load(QString &fPath, QImage &image)
         // use Winnow decoder
         ImageMetadata m = dm->imMetadata(fPath);
         Tiff tiff;
-//        qDebug() << __FUNCTION__ << "Calling tiff.decode(m, fPath, image)";
+
+//        /*
+        decodeTime.restart();
+        bool useWinnow = false;
+        if (useWinnow) {
+            tiff.decode(m, fPath, image);
+            decoderUsed = "Winnow";
+        }
+        else {
+            image.load(fPath);
+            decoderUsed = "Qt";
+        }
+        qint64 ms = decodeTime.elapsed();
+        double secs = (double)ms / 1000;
+        int w = dm->index(dmRow, G::WidthColumn).data().toInt();
+        int h = dm->index(dmRow, G::HeightColumn).data().toInt();
+        double mp = double(w * h) / 1024 / 1024;
+        double pxPerMs = mp / secs;
+        qDebug().noquote()
+                 << __FUNCTION__ << fPath << "decoded full size using" << decoderUsed
+                 << "ms =" << ms
+                 << "MP =" << QString::number(mp, 'g', 2)
+                 << "MP/sec ="
+                 << QLocale(QLocale::English).toString((int)pxPerMs)
+                 << G::tiffData
+                    ;
+                    //*/
+
+
+        /*
         if (!tiff.decode(m, fPath, image)) {
             imFile.close();
 //            err += "Could not decode " + fPath + ". ";
-            qDebug() << __FUNCTION__ << "Could not decode using Winnow Tiff decoder.  Trying Qt tiff library to decode" + fPath + ". ";
+            qDebug() << __FUNCTION__
+                     << "Could not decode using Winnow Tiff decoder.  "
+                        "Trying Qt tiff library to decode" + fPath + ". ";
 
             // use Qt tiff library to decode
+            decoderUsed = "Qt";
             if (!image.load(fPath)) {
                 imFile.close();
                 err += "Could not decode " + fPath + ". ";
@@ -201,6 +235,8 @@ bool Pixmap::load(QString &fPath, QImage &image)
                 return false;
             }
         }
+        //*/
+
         imFile.close();
     }
 

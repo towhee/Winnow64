@@ -593,7 +593,7 @@ bool Metadata::parseTIF()
     if (G::isLogger) G::log(__FUNCTION__); 
     if (tiff == nullptr) tiff = new Tiff;
     if (irb == nullptr) irb = new IRB;
-    tiff->parse(p, m, ifd, irb, iptc, exif, gps, jpeg);
+    tiff->parse(p, m, ifd, irb, iptc, exif, gps);
     if (p.report) reportMetadata();
     return true;
 }

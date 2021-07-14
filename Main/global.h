@@ -222,6 +222,8 @@ namespace G
     extern QModelIndexList copyCutIdxList;  // req'd?
     extern QStringList copyCutFileList;     // req'd?
 
+    extern QString tiffData;
+
     extern QElapsedTimer t;
     extern QElapsedTimer t1;
     extern bool isTimer;
