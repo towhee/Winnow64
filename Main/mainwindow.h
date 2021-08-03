@@ -98,6 +98,7 @@ public:
     bool isStartupArgs = false;
     bool isReleaseVersion = true;
     bool hideEmbellish = false;
+    bool useImageCache = true;
 
     QString versionNumber = "1.26";
 

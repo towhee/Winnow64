@@ -2,6 +2,7 @@
 #define TIFF_H
 
 #include <QtWidgets>
+#include <QtConcurrent>
 #include "Main/global.h"
 #include "Utilities/utilities.h"
 #include "Metadata/imagemetadata.h"
@@ -37,8 +38,12 @@ public:
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
 
 private:
+    QImage *im;
+    QImage *image;  // being used?
+
     quint32 lastIFDOffsetPosition = 0;      // used to add thumbnail IFD to IFD chain
     quint32 thumbIFDOffset = 0;
+    bool isBigEnd;  // not used
 
     // from tiff ifd
     int width;
@@ -55,7 +60,7 @@ private:
 
     // used to decode
     int bytesPerPixel;
-    int bytesPerRow;
+    uint bytesPerRow;
     quint32 scanBytesAvail;                 // Maximum bytes in QImage im
 
     enum TiffType {
@@ -71,7 +76,24 @@ private:
         ZipCompression
     };
     int compressionType;
-    quint8 rgb[3];
+    quint8 rgb[3];  // being used?
+
+    struct TiffStrip {
+        int strip;
+        char* in;
+        int incoming;
+        uchar* out;
+        int bitsPerSample;
+        uint bytesPerRow;
+        quint32 stripBytes;
+        bool predictor = false;
+        /* for debugging
+        QString fName;
+        int rowsPerStrip;
+        */
+    };
+    typedef QVector<TiffStrip> TiffStrips;
+    QVector<QByteArray> inBa;
 
     QString err;
 
@@ -79,9 +101,9 @@ private:
     void invertEndian16(QImage *im);
     void sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h);
     TiffType getTiffType();
-    void decompressStrip(int strip, MetadataParameters &p, QByteArray &ba);
-    void lzwDecompress(QByteArray &inBa, QByteArray &outBa);
-    void lzwPredictorDecompress(QByteArray &inBa, QByteArray &outBa);
+
+    // LZW compression
+    static TiffStrips lzwDecompress(TiffStrip t);
     void lzwReset(QHash<quint32,QByteArray> &dictionary,
                   QByteArray &prevString,
                   quint32 &nextCode);

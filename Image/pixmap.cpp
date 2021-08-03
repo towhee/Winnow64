@@ -191,7 +191,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 
 //        /*
         decodeTime.restart();
-        bool useWinnow = false;
+        bool useWinnow = true;
         if (useWinnow) {
             tiff.decode(m, fPath, image);
             decoderUsed = "Winnow";

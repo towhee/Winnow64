@@ -1,9 +1,5 @@
 #include "tiff.h"
 
-const unsigned int CLEAR_CODE = 256;
-const unsigned int EOF_CODE = 257;
-const unsigned int MAXCODE = 4093;      // 12 bit max
-
 bool showDebug = false;
 
 class parseInStream
@@ -73,19 +69,19 @@ public :
             //*/
         availBits -= codeSize;
         pending &= (1 << availBits) - 1;     // apply mask
-        if (inCode == CLEAR_CODE) {
+        if (inCode == clearCode) {
             codeSize = 9;
             currCode = 256;
             nextBump = 512;
         }
-        if (currCode < MAXCODE) {
+        if (currCode < maxCode) {
             currCode++;
             if (currCode == nextBump - 1) {
                 nextBump *= 2;
                 codeSize++;
             }
         }
-        if (inCode == EOF_CODE)
+        if (inCode == EOFCode)
             return false;
         else
             return true;
@@ -98,6 +94,9 @@ private :
     quint32 currCode;
     quint32 nextBump;
     quint32 n = 0;
+    const unsigned int clearCode = 256;
+    const unsigned int EOFCode = 257;
+    const unsigned int maxCode = 4093;      // 12 bit max
 };
 
 Tiff::Tiff()
@@ -662,30 +661,6 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     return true;
 }
 
-void Tiff::decompressStrip(int strip, MetadataParameters &p, QByteArray &ba)
-{
-    QByteArray inBa;
-    quint32 stripBytes = stripByteCounts.at(strip);
-    p.file.seek(stripOffsets.at(strip));
-//    qDebug() << __FUNCTION__ << "compressionType" << compressionType;
-    switch (compressionType) {
-    case NoCompression:
-//        qDebug() << __FUNCTION__ << "using no compression";
-        ba = p.file.read(stripBytes);
-        break;
-    case LzwCompression:
-//        qDebug() << __FUNCTION__ << "using LZW compression";
-        inBa = p.file.read(stripBytes);
-        lzwDecompress(inBa, ba);
-        break;
-    case LzwPredictorCompression:
-//        qDebug() << __FUNCTION__ << "using LZW Prediction compression";
-        inBa = p.file.read(stripBytes);
-        lzwPredictorDecompress(inBa, ba);
-        break;
-    }
-}
-
 bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, int newSize)
 {
 /*
@@ -737,6 +712,8 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
     t.restart();
     //*/
 //    qDebug() << __FUNCTION__ << m.fPath;
+    this->image = &image;
+    isBigEnd = m.isBigEnd;
     IFD *ifd = new IFD;
     p.report = false;
     if (!parseForDecoding(p, m, ifd)) {
@@ -765,7 +742,7 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
     bytesPerRow = bytesPerPixel * w;
     scanBytesAvail = w * h * bytesPerPixel;
 
-    QImage *im;
+//    QImage *im;
     if (bitsPerSample == 16) im = new QImage(w, h, QImage::Format_RGBX64);
     if (bitsPerSample == 8)  im = new QImage(w, h, QImage::Format_RGB888);
 
@@ -779,7 +756,7 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
                 //*/
 
     // read every nth pixel to create new smaller image (thumbnail)
-    if (newSize) {
+    if (newSize && compression == 0) {
         qDebug() << __FUNCTION__ << m.fPath << "Resampling tiff";
         int newBytesPerLine = w * bytesPerPixel;
         QByteArray newLine;
@@ -791,9 +768,9 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
         int sampleX = static_cast<int>((nth - 1) * bytesPerPixel);
         int strips = stripOffsets.count();
         for (int strip = 0; strip < strips; ++strip) {
-//            qDebug() << __FUNCTION__ << "Processing strip" << strip;
-            QByteArray ba;      // strip byte array after decompression
-            decompressStrip(strip, p, ba);
+            quint32 stripBytes = stripByteCounts.at(strip);
+            QByteArray ba;
+            ba = p.file.read(stripBytes);
             QBuffer bufStrip(&ba);
             bufStrip.open(QBuffer::ReadOnly);
             // iterate rows in this strip
@@ -834,138 +811,73 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
         return true;
     }
 
-    /*
-    // read every nth pixel (old code)
-    if (newSize) {
-        int newBytesPerLine = w * bytesPerPixel;
-        QByteArray ba;
-        quint32 fOffset = 0;
-        // read every nth pixel to create new smaller image (thumbnail)
-        int y = 0;
-        int sampleY = 0;
-        for (int strip = 0; strip < stripOffsets.count();++strip) {
-            for (int row = 0; row < rowsPerStrip; row++) {
-                if (y % nth == 0) {
-                    fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerRow);
-                    ba.clear();
-                    for (int x = 0; x < w; x++) {
-                        p.file.seek(fOffset);
-                        if (fOffset + static_cast<size_t>(bytesPerPixel) > fSize) {
-                            qDebug() << __FUNCTION__
-                                     << "Read nth pixel - ATTEMPTING TO READ PAST END OF FILE"
-                                     << "nth =" << nth
-                                     << "row =" << row
-                                     << "x =" << x
-                                     << "sampleY =" << sampleY
-                                     << "startOffset =" << stripOffsets.at(0)
-                                     << "fOffset =" << fOffset
-                                     << "Bytes =" << fOffset - stripOffsets.at(0)
-                                     << m.fPath
-                                        ;
-                            break;
-                        }
-                        ba += p.file.read(bytesPerPixel);
-                        // jump to next nth sample
-                        fOffset += static_cast<uint>(nth * bytesPerPixel);
-                    }
-                    if (sampleY < h) {
-                        std::memcpy(im->scanLine(sampleY), ba, static_cast<size_t>(newBytesPerLine));
-                    }
-                    sampleY++;
-                }
-                y++;
-                if (sampleY >= h) break;
-            }
-            if (sampleY >= h) break;
-        }
-        if (bitsPerSample == 16) {
-            if (m.isBigEnd) invertEndian16(im);
-            toRRGGBBAA(im);
-        }
-        p.file.close();
-        // convert to standard QImage format for display in Winnow
-        im->convertTo(QImage::Format_RGB32);
-        image.operator=(*im);
-        return true;
-    }
-    */
-
     // read entire image
-//    qDebug() << __FUNCTION__ << m.fPath << "Decoding entire tiff";
-    int line = 0;
-    quint32 scanBytes = 0;
     int strips = stripOffsets.count();
-//    G::track("Start stipts");
-    for (int strip = 0; strip < strips; ++strip) {
-//        G::track("Strip " + QString::number(strip));
-//        if (strip > 3) continue;
-//        qDebug() << __FUNCTION__ << "Processing strip" << strip;
-        QByteArray ba;      // strip byte array after decompression
-        decompressStrip(strip, p, ba);
-//        G::track("decompressStrip");
-//        qDebug() << __FUNCTION__
-//                 << "Strip #" << strip
-////                 << Utilities::hexFromByteArray(ba, 50, 0, 500)
-//                    ;
-//        if (strip == 0) Utilities::hexFromByteArray(ba, 50, 16250, 16300);
-        QBuffer buf(&ba);
-        buf.open(QBuffer::ReadOnly);
-        for (int row = 0; row < rowsPerStrip; row++) {
-            /*
-            qDebug() << __FUNCTION__
-                     << "strip =" << strip
-                     << "row =" << row
-                     << "buf.pos() =" << buf.pos()
-                     << "bytesPerRow =" << bytesPerRow
-                     << "buf.pos() + bytesPerRow =" << buf.pos() + bytesPerRow
-                     << "ba.length() =" << ba.length()
-                     << "scanBytes =" << scanBytes
-                     << "scanBytesAvail =" << scanBytesAvail
-                        ;
-                        //*/
-            // last strip may have less than rowsPerStrip rows
-//            if ((row + 1) * bytesPerRow > ba.length()) break;
-            if ((buf.pos() + bytesPerRow) > ba.length()) break;
-            if (scanBytes + bytesPerRow > scanBytesAvail) break;
-            std::memcpy(im->scanLine(line++),
-                        buf.read(bytesPerRow),
-                        static_cast<size_t>(bytesPerRow));
-            scanBytes += bytesPerRow;
+    if (compression == 5) {
+        TiffStrips tiffStrips;
+        QFuture<void> future;
+        // pass info to concurrent threads via TiffStrip for each strip
+        TiffStrip tiffStrip;
+        for (int strip = 0; strip < strips; ++strip) {
+            tiffStrip.strip = strip;
+            tiffStrip.bitsPerSample = bitsPerSample;
+            tiffStrip.bytesPerRow = bytesPerRow;
+            tiffStrip.stripBytes = stripByteCounts.at(strip);
+            if (predictor == 2) tiffStrip.predictor = true;
+            // read tiff strip into QByteArray
+            p.file.seek(stripOffsets.at(strip));
+            inBa.append(p.file.read(stripByteCounts.at(strip)));
+            // ptr to start of strip QByteArray
+            tiffStrip.in = inBa[strip].data();
+            // length of incoming strip in bytes
+            tiffStrip.incoming = inBa[strip].size();
+            tiffStrip.out = im->scanLine(strip * rowsPerStrip);
+            /* debugging
+            tiffStrip.fName = p.file.fileName();
+            tiffStrip.rowsPerStrip = rowsPerStrip;
+            */
+            tiffStrips.append(tiffStrip);
         }
-//        G::track("scan strip");
-    }
-//    qDebug() << __FUNCTION__ << "Processed all strips";
-    p.file.close();
+        future = QtConcurrent::map(tiffStrips, lzwDecompress);
+        future.waitForFinished();
+    } // end compression == 5
 
-    /*
-    // read entire image old code
-    int line = 0;
-    int fOffset = 0;
-    p.file.seek(stripOffsets.at(0));
-    for (int strip = 0; strip < stripOffsets.count(); ++strip) {
-        for (int row = 0; row < rowsPerStrip; row++) {
-            fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerLine);
-            if (fOffset + static_cast<size_t>(bytesPerLine) > fSize) {
-                qWarning() << __FUNCTION__
-                           << "Read entire image - ATTEMPTING TO READ PAST END OF FILE"
-                         << "fOffset =" << fOffset
+    else { // uncompressed tiff
+        int line = 0;
+        quint32 scanBytes = 0;
+        for (int strip = 0; strip < strips; ++strip) {
+            quint32 stripBytes = stripByteCounts.at(strip);
+            QByteArray ba;
+            p.file.seek(stripOffsets.at(strip));
+            ba = p.file.read(stripBytes);
+            QBuffer buf(&ba);
+            buf.open(QBuffer::ReadOnly);
+            for (int row = 0; row < rowsPerStrip; row++) {
+                /*
+                qDebug() << __FUNCTION__
                          << "strip =" << strip
                          << "row =" << row
-                         << "stripOffsets.at(strip) =" << stripOffsets.at(strip)
-                         << "bytesPerLine =" << bytesPerLine
-                         << "w =" << w
-                         << m.fPath
+                         << "buf.pos() =" << buf.pos()
+                         << "bytesPerRow =" << bytesPerRow
+                         << "buf.pos() + bytesPerRow =" << buf.pos() + bytesPerRow
+                         << "ba.length() =" << ba.length()
+                         << "scanBytes =" << scanBytes
+                         << "scanBytesAvail =" << scanBytesAvail
                             ;
-                break;
+                            //*/
+                // last strip may have less than rowsPerStrip rows
+                if ((buf.pos() + bytesPerRow) > ba.length()) break;
+                if (scanBytes + bytesPerRow > scanBytesAvail) break;
+                std::memcpy(im->scanLine(line++),
+                            buf.read(bytesPerRow),
+                            static_cast<size_t>(bytesPerRow));
+                scanBytes += bytesPerRow;
             }
-            p.file.seek(fOffset);
-            std::memcpy(im->scanLine(line),
-                        p.file.read(bytesPerLine),
-                        static_cast<size_t>(bytesPerLine));
-            line++;
         }
-    }
-    */
+    } // end else (no compression)
+
+    p.file.close();
+
     if (bitsPerSample == 16) {
         if (m.isBigEnd) invertEndian16(im);
         toRRGGBBAA(im);
@@ -973,7 +885,6 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
     // convert to standard QImage format for display in Winnow
     im->convertTo(QImage::Format_RGB32);
     image.operator=(*im);
-//    qDebug() << __FUNCTION__ << m.fPath << "Decoded entire tiff";
     return true;
 }
 
@@ -1241,179 +1152,294 @@ void Tiff::lzwReset(QHash<quint32, QByteArray> &dictionary,
     prevString.clear();
 }
 
-void Tiff::lzwDecompress(QByteArray &inBa, QByteArray &outBa)
+Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
 {
-//    qDebug() << __FUNCTION__;
-    QBuffer inBuf(&inBa);
-    QBuffer outBuf(&outBa);
-    inBuf.open(QIODevice::ReadOnly);
-    outBuf.open(QIODevice::WriteOnly);
-    QDataStream inStream(&inBuf);
-    QDataStream out(&outBuf);
+/*
+    Decompress a tiff strip that has LZW Prediction compression.
 
-    parseInStream in(inStream);
-    /* debugging
-    //
-        QFile f1("D:/Pictures/_TIFF_lzw1/ps_8_big_800px.tif");
-        f1.open(QIODevice::ReadOnly);
-        f1.seek(34296);
-        QByteArray baPs = f1.read(1080000);
-        f1.close();
-    //*/
-    int n = 0;      // for debugging
+    The algorithm to decompress LZW (from TIFF6 Specification):
 
-    // hash of code => byte array (string of char)
-    QHash<quint32,QByteArray> dictionary;
-    // the value of the prior code in the in stream
-    QByteArray prevString;
-    // code is the index (key) in the dictionary hash
-    quint32 code;
-    quint32 nextCode = 258;
-    while (in >> code) {
-        // reset if clear code = 256. Occurs at start and before dictionary code 4094 (<13 bits)
-        if (code == CLEAR_CODE) {
-            lzwReset(dictionary, prevString, nextCode);
-            continue;
-        }
-        // if code not found then add to dictionary
-        /*
-        if (dictionary.find(code) == dictionary.end()) {
-        //*/
-        if (!dictionary.contains(code)) {
-            dictionary[code] = prevString + prevString[0];
-        }
-
-        // output entire dictionary code value
-        for (auto& ch : dictionary[code])
-            out << ch;
-        //
-        if (prevString.size() && nextCode <= MAXCODE)
-            dictionary[nextCode++] = prevString + dictionary[code][0];
-        /*
-        // debug
-//        if (debug) {
-//            quint8 baPsX = (0xff & (unsigned int)baPs.at(n));
-//    //        bool isOkay = dictionary[code].at(0) == baPs.at(n);
-//    //        if (!isOkay) {
-//                qDebug().noquote()
-//                << "n =" << QString::number(n).leftJustified(5)
-//                << "code =" << QString::number(code).leftJustified(5)
-//                         << QString::number(code, 16).toUpper().leftJustified(5)
-//                << "dict[code] =" << dictionary[code].toHex().toUpper().leftJustified(12)
-//                << "dictionary[code][0] =" << QString::number(quint8(dictionary[code][0]), 16)
-//                << "baPsX = " << QString::number(baPsX, 16).toUpper().leftJustified(5)
-//                << "nextCode =" << QString::number(nextCode).leftJustified(4)
-//                << "dict[nextCode] =" << dictionary[nextCode].toHex().toUpper().leftJustified(12)
-//                << "prevString =" << prevString.toHex().toUpper().leftJustified(12)
-//                << "prevString.size() =" << QString::number(prevString.size()).leftJustified(6)
-//                << "dictionary[code][0] =" << QString::number(0xff & (unsigned int)dictionary[code][0], 16).toUpper().leftJustified(5)
-//    //            << isOkay
-//                ;
-//    //            break;
-//    //        }
-        // end debug
-        //*/
-
-//        n += dictionary[code].length();
-//        if (n > 1000000) break;
-
-        // update prevString
-        prevString = dictionary[code];
-    }
-}
-
-void Tiff::lzwPredictorDecompress(QByteArray &inBa, QByteArray &outBa)
-{
-//    qDebug() << __FUNCTION__;
-    QBuffer inBuf(&inBa);
-    QBuffer outBuf(&outBa);
-    inBuf.open(QIODevice::ReadOnly);
-    outBuf.open(QIODevice::WriteOnly);
-    QDataStream inStream(&inBuf);
-    QDataStream out(&outBuf);
-
-    parseInStream in(inStream);
-    /* debugging
-        QFile f1("D:/Pictures/_TIFF_lzw1/ps_8_big_800px.tif");
-        f1.open(QIODevice::ReadOnly);
-        f1.seek(34296);
-        QByteArray baPs = f1.read(1080000);
-        f1.close();
-    //*/
-    int n = 0;      // for debugging
-
-    // bytes per row (reset predictor at end of row)
-    int rowLength = width * samplesPerPixel;
-    // hash of code => byte array (string of char)
-    QHash<quint32,QByteArray> dictionary;
-    // the value of the prior code in the in stream
-    QByteArray prevString;
-    // code is the index (key) in the dictionary hash
-    quint32 code;
-    quint32 nextCode = 258;
-    // rgb iterator: 0,1,2,0,1,2...
-    int m = 0;
-    rgb[0] = rgb[1] = rgb[2] = 0;
-    while (in >> code) {
-//        G::track(QString::number(n), "Start of loop");
-        // reset if clear code = 256. Occurs at start and before dictionary code 4094 (<13 bits)
-        if (code == CLEAR_CODE) {
-//            lzwReset(dictionary, prevString, nextCode);
-            dictionary.clear();
-            for (uint i = 0 ; i < 256 ; i++ ) {
-                dictionary[i] = QByteArray(1, (char)i);
+    while ((Code = GetNextCode()) != EoiCode) {
+        if (Code == ClearCode) {
+            InitializeTable();
+            Code = GetNextCode();
+            if (Code == EoiCode)
+                break;
+            WriteString(StringFromCode(Code));
+            OldCode = Code;
+        } // end of ClearCode case
+        else {
+            if (IsInTable(Code)) {
+                WriteString(StringFromCode(Code));
+                AddStringToTable(StringFromCode(OldCode)+FirstChar(StringFromCode(Code)));
+                OldCode = Code;
+            } else {
+                OutString = StringFromCode(OldCode) + FirstChar(StringFromCode(OldCode));
+                WriteString(OutString);
+                AddStringToTable(OutString);
+                OldCode = Code;
             }
+        } // end of not-ClearCode case
+    } // end of while loop
+
+    The prediction variant uses the difference between row pixels of the same color channel
+    for the code value.
+
+    Alternatives to std::memcpy to improve performance.
+
+        // option for byte-by-byte
+
+        char* pDst = s[nextCode];
+        char* pSrc = (char*)&ps;
+        for (size_t i = 0; i != psLen; ++i) pDst[i] = pSrc[i];
+
+        // or
+
+        char* pDst = s[nextCode];
+        char* pSrc = (char*)&ps;
+        size_t len = psLen;
+        while (len--)
+        {
+            *pDst++ = *pSrc++;
+        }
+
+        // option for 4 bytes at a time
+
+        uint32_t* pDst = (uint32_t*)s[nextCode];
+        uint32_t* pSrc = (uint32_t*)&ps;
+        size_t len = psLen / 4 + 1;
+        for (size_t i = 0; i != len; ++i) pDst[i] = pSrc[i];
+*/
+    TiffStrips tiffStrips;
+    int alphaRowComponent = t.bytesPerRow / 3;
+    /*
+    qDebug() << __FUNCTION__
+             << "t.predictor =" << t.predictor
+             << "t.bytesPerRow =" << t.bytesPerRow
+             << "t.fName =" << t.fName
+                ;
+                //*/
+
+    const unsigned int clearCode = 256;
+    const unsigned int EOFCode = 257;
+    const unsigned int maxCode = 4095;              // 12 bit max
+
+    // input and output pointers
+    char* c = t.in;
+    uchar* out = t.out;
+
+    char* s[4096];                                  // ptrs in strings for each possible code
+    int8_t sLen[4096];                              // code string length
+    std::memset(&sLen, 1, 256);                     // 0-255 one char strings
+
+    char strings[128000];
+    // initialize first 256 code strings
+    for (int i = 0 ; i != 256 ; i++ ) {
+        strings[i] = (char)i;
+        s[i] = &strings[i];
+    }
+    strings[256] = 0;  s[256] = &strings[256];      // Clear code
+    strings[257] = 0;  s[257] = &strings[257];      // EOF code
+    char* sEnd;                                     // ptr to current end of strings
+
+    char ps[256];                                   // previous string
+    size_t psLen = 0;                               // length of prevString
+    uint32_t code;                                  // key to string for code
+    uint32_t nextCode = 258;                        // used to preset string for next
+    uint n = 0;                                     // output byte counter
+    uint32_t iBuf = 0;                              // incoming bit buffer
+    int32_t nBits = 0;                              // incoming bits in the buffer
+    int32_t codeBits = 9;                           // number of bits to make code (9-12)
+    uint32_t nextBump = 511;                        // when to increment code size 1st time
+    uint32_t pBuf = 0;                              // previous out bit buffer
+    uint32_t mask = (1 << codeBits) - 1;            // extract code from iBuf
+
+    uint32_t* pSrc;                                 // ptr to src for word copies
+    uint32_t* pDst;                                 // ptr to dst for word copies
+
+
+    // read incoming bytes into the bit buffer (iBuf) using the char pointer c
+    while (t.incoming) {
+        /*
+        The incoming stream is read 8 bits at a time into a bit buffer called iBuf. The buffer
+        is consumed (most significant) codeBits at a time (code). codeBits starts at 9 bits,
+        and is incremented each time nextCode exceeds the bit capacity. codeSize maximum is 12
+        bits. nextCode starts at 258 and is incremented each time an code is consumed.
+        */
+        // GetNextCode
+        iBuf = (iBuf << 8) | (uint8_t)*c++;         // make room in bit buf for char
+        nBits += 8;
+        --t.incoming;
+        if (nBits < codeBits) {
+            iBuf = (iBuf << 8) | (uint8_t)*c++;     // make room in bit buf for char
+            nBits += 8;
+            --t.incoming;
+        }
+        code = (iBuf >> (nBits - codeBits)) & mask; // extract code from buffer
+        nBits -= codeBits;                          // update available bits to process
+
+        // reset at start and when codes = max ~ 4094
+        if (code == clearCode) {
+            codeBits = 9;
+            mask = (1 << codeBits) - 1;
+            nextBump = 511;
+            sEnd = s[257];
             nextCode = 258;
-            prevString.clear();
+            psLen = 0;
             continue;
         }
-        // if code not found then add to dictionary
-        if (!dictionary.contains(code)) {
-            dictionary[code] = prevString + prevString[0];
+
+        // finished (should not need as incoming counts down to zero)
+        if (code == EOFCode) {
+            return tiffStrips;
         }
 
-        // if predictor add to previous RGB value
-        for (auto& ch : dictionary[code]) {
-            if (n % rowLength == 0) rgb[0] = rgb[1] = rgb[2] = 0;
-            quint8 b = (quint8)ch + rgb[m];
-                /* debugging
-            bool ok = b == (quint8)baPs[n];
-//                if (!ok) qDebug().noquote()
-            if (showDebug) qDebug().noquote()
-                 << "n =" << QString::number(n).leftJustified(10)
-                 << "x =" << QString::number(n % rowLength).leftJustified(4)
-                 << "y =" << QString::number(n / rowLength).leftJustified(4)
-                 << "nextCode =" << QString::number(nextCode).leftJustified(4)
-                 << "code =" << QString::number(code).leftJustified(4)
-                 << "string =" << dictionary[code].toHex().toUpper().leftJustified(24)
-                 << "ch =" << QString::number((quint8)ch).leftJustified(4)
-                 << "m =" << m
-                 << "prev =" << QString::number(rgb[m],16).toUpper().leftJustified(2)
-                 << "out =" << QString::number(b,16).toUpper().leftJustified(2)
-                 << QString::number((quint8)baPs[n],16).toUpper()
-                 << "diff = " << QString::number(b - (quint8)baPs[n]).leftJustified(4)
-                 << ok
-                    ;
-//            if (!ok) return;
-                        //*/
-            out << (quint8)b;
-            rgb[m] = b;
-            m++;
-            n++;
-            if (m > 2) m = 0;
+        // new code then add prevString + prevString[0]
+        // copy prevString
+        if (code == nextCode) {
+            s[code] = sEnd;
+            switch(psLen) {
+            case 1:
+                *s[code] = ps[0];
+                break;
+            case 2:
+                *s[code] = ps[0];
+                *(s[code]+1) = ps[1];
+                break;
+            case 4:
+                pDst = (uint32_t*)s[code];
+                pSrc = (uint32_t*)&ps;
+                *pDst = *pSrc;
+                break;
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+                pDst = (uint32_t*)s[nextCode];
+                pSrc = (uint32_t*)&ps;
+                *pDst = *pSrc;
+                *(pDst+1) = *(pSrc+1);
+                break;
+            default:
+                std::memcpy(s[code], &ps, psLen);
+            }
+
+            // copy prevString[0]
+            *(s[code] + psLen) = ps[0];
+            sLen[code] = (int8_t)psLen + 1;
+            sEnd = s[code] + psLen + 1;
         }
 
-        if (prevString.size() && nextCode <= MAXCODE)
-        dictionary[nextCode++] = prevString + dictionary[code][0];
-        prevString = dictionary[code];
+        if (t.predictor) {
+            // output char string for code (add from left)
+            // pBuf   00000000 11111111 22222222 33333333
+            for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
+                if (n % t.bytesPerRow < 3) *out++ = *(s[code] + i);
+                else *out++ = (*(s[code] + i) + *(out - 3));
+                ++n;
+            }
+        }
+        else if (t.bitsPerSample == 8) {
+            for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
+                *out++ = (uchar)*(s[code] + i);
+            }
+        }
+        else if (t.bitsPerSample == 16) {
+            for (uint32_t i = 0; i != (uint32_t)sLen[code]; i++) {
+//                if (n > 0 && n % t.bytesPerRow == 0) out += alphaRowComponent;
+                *out++ = (uchar)*(s[code] + i);
+                ++n;
+                if (n % t.bytesPerRow == 0) out += alphaRowComponent;
+            }
+        }
 
-//        G::track(QString::number(n), "End of loop");
-//        if (n > 100) break;
+        // add string to nextCode (prevString + strings[code][0])
+        // copy prevString
+        if (psLen/* && nextCode <= MAXCODE*/) {
+            s[nextCode] = sEnd;
+            switch(psLen) {
+            case 1:
+                *s[nextCode] = ps[0];
+                break;
+            case 2:
+                *s[nextCode] = ps[0];
+                *(s[nextCode]+1) = ps[1];
+                break;
+            case 4:
+                pDst = (uint32_t*)s[nextCode];
+                pSrc = (uint32_t*)&ps;
+                *pDst = *pSrc;
+                break;
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+                pDst = (uint32_t*)s[nextCode];
+                pSrc = (uint32_t*)&ps;
+                *pDst = *pSrc;
+                *(pDst+1) = *(pSrc+1);
+                break;
+            default:
+                std::memcpy(s[nextCode], &ps, psLen);
+            }
 
-        /* debugging
-        if (n > 16275 && n < 16300) showDebug = true;
-        else showDebug = false;
-        if (n > 16300) break;
-        //*/
-    }
+            // copy strings[code][0]
+            *(s[nextCode] + psLen) = *s[code];
+
+            sLen[nextCode] = (int8_t)(psLen + 1);
+            sEnd = s[nextCode] + psLen + 1;
+            ++nextCode;
+        }
+
+        // strings[code][0] copy
+        switch(sLen[code]) {
+        case 1:
+            ps[0] = *s[code];
+            break;
+        case 2:
+            ps[0] = *s[code];
+            ps[1] = *(s[code]+1);
+            break;
+        case 4:
+            pSrc = (uint32_t*)s[code];
+            pDst = (uint32_t*)&ps;
+            *pDst = *pSrc;
+            break;
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+            pSrc = (uint32_t*)s[code];
+            pDst = (uint32_t*)&ps;
+            *pDst = *pSrc;
+            *(pDst+1) = *(pSrc+1);
+            break;
+        default:
+            memcpy(&ps, s[code], (size_t)sLen[code]);
+        }
+
+        psLen = (size_t)sLen[code];
+
+        // codeBits change
+        if (nextCode == nextBump) {
+            if (nextCode < maxCode) {
+                nextBump = (nextBump << 1) + 1;
+                ++codeBits;
+                mask = (1 << codeBits) - 1;
+            }
+            else if (nextCode == maxCode) continue;
+            else {
+                codeBits = 9;
+                mask = (1 << codeBits) - 1;
+                nextBump = 511;
+                sEnd = s[257];
+                nextCode = 258;
+                psLen = 0;
+            }
+        }
+
+    } // end while
+    qDebug() << __FUNCTION__ "finish thread" << QThread::currentThreadId();
+
+    return tiffStrips;
 }

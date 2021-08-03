@@ -1553,12 +1553,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
                  << "isShiftAltModifier =" << (key == (Qt::AltModifier | Qt::ShiftModifier))
                     ;
        //*/
+        // image caching (turn off for testing with useImageCache - set in header)
         if (!(G::isSlideShow && isSlideShowRandom)
             && (key == Qt::NoModifier || key == Qt::KeypadModifier)
             && (G::mode != "Compare")
+            && (useImageCache)
            )
         {
-//            imageCacheThread->setCurrentPosition(dm->currentFilePath);  //lzwrgh
+            imageCacheThread->setCurrentPosition(dm->currentFilePath);
         }
     }
 

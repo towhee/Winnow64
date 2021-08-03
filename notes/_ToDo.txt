@@ -1,6 +1,7 @@
 BUGS / TO DO
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
 - Tiff with compression = 8
+- TIFF with planarConfiguration = 2
 - Filters not working sometimes
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow
