@@ -1039,7 +1039,7 @@ void ImageCache::cacheSizeChange()
 
 void ImageCache::setCurrentPosition(QString path)
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__, path);
     pause = false;
