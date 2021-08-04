@@ -359,7 +359,7 @@ bool Tiff::parse(MetadataParameters &p,
             // SubFileType == 1 (tagid == 254)
             if (!ifd->ifdDataHash.contains(254)) continue;
             if (ifd->ifdDataHash.value(254).tagValue != 1) continue;
-            // is image width small then full size and less than 640 pixels?
+            // is image width smaller then full size and less than 640 pixels?
             if (!ifd->ifdDataHash.contains(256)) continue;
             int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
             int h = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
@@ -661,12 +661,22 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     return true;
 }
 
+/*  DECODING is required to produce a QImage from the tiff file.
+
+    The QImage may be the full scale or a reduced scale for a thumbnail.  If the tiff is
+    uncompressed the thumbnail scale can be sampled directly, which is the fastest.  If the
+    tiff is compressed then the entire full scale QImage must be produced and then scaled
+    down to the thumbnail size.
+
+    If the "add missing thumbnails" preference is set, then the scaled QImage is added to the
+    tiff to facilitate faster thumb loading in the future.
+*/
+
 bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, int newSize)
 {
 /*
     Decode using unmapped QFile.  Set p.file, p.offset and call main decode.
 */
-//    qDebug() << __FUNCTION__ << fPath << "unmapped";
     if (G::isLogger) G::log(__FUNCTION__, " load file from fPath");
     QFileInfo fileInfo(fPath);
     if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
@@ -707,13 +717,6 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
 
 */
     if (G::isLogger) G::log(__FUNCTION__, "Main decode with p.file assigned");
-    /* timer
-    QElapsedTimer t;
-    t.restart();
-    //*/
-//    qDebug() << __FUNCTION__ << m.fPath;
-    this->image = &image;
-    isBigEnd = m.isBigEnd;
     IFD *ifd = new IFD;
     p.report = false;
     if (!parseForDecoding(p, m, ifd)) {
@@ -721,160 +724,15 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
         return false;
     }
 
-    /*
-    qDebug() << __FUNCTION__
-             << "IFD width =" << width
-             << "IFD height =" << height
-                ;
-                //*/
-
-    // width and height are for the IFD (not necessarily the full image) from parseForDecoding
-    int w = width;
-    int h = height;
-    int nth = 1;
-    // if newSize <= thumbnail then do not sample and resize
-    if (newSize > G::maxIconSize)
-        sample(m, newSize, nth, w, h);
-    else
-        newSize = 0;
-
     bytesPerPixel = bitsPerSample / 8 * samplesPerPixel;
-    bytesPerRow = bytesPerPixel * w;
-    scanBytesAvail = w * h * bytesPerPixel;
+    bytesPerRow = (uint)(bytesPerPixel * width);
+    scanBytesAvail = (uint)(width * height * bytesPerPixel);
 
-//    QImage *im;
-    if (bitsPerSample == 16) im = new QImage(w, h, QImage::Format_RGBX64);
-    if (bitsPerSample == 8)  im = new QImage(w, h, QImage::Format_RGB888);
+    if (bitsPerSample == 16) im = new QImage(width, height, QImage::Format_RGBX64);
+    if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
 
-    /*
-    qDebug() << __FUNCTION__
-             << "w =" << w
-             << "h =" << h
-             << "nth =" << nth
-             << "bytesPerPixel =" << bytesPerPixel
-                ;
-                //*/
-
-    // read every nth pixel to create new smaller image (thumbnail)
-    if (newSize && compression == 0) {
-        qDebug() << __FUNCTION__ << m.fPath << "Resampling tiff";
-        int newBytesPerLine = w * bytesPerPixel;
-        QByteArray newLine;
-        // y is every line in the image (row = every line in the strip)
-        int y = 0;
-        // sampleY is every nth line in the image
-        int sampleY = 0;
-        // sampleX is every nth pixel in a row (less one just read)
-        int sampleX = static_cast<int>((nth - 1) * bytesPerPixel);
-        int strips = stripOffsets.count();
-        for (int strip = 0; strip < strips; ++strip) {
-            quint32 stripBytes = stripByteCounts.at(strip);
-            QByteArray ba;
-            ba = p.file.read(stripBytes);
-            QBuffer bufStrip(&ba);
-            bufStrip.open(QBuffer::ReadOnly);
-            // iterate rows in this strip
-            for (int row = 0; row < rowsPerStrip; row++) {
-                // last strip may have less than rowsPerStrip rows
-                if ((row + 1) * bytesPerRow > ba.length()) break;
-
-                // sample row
-                if (y % nth == 0) {
-                    bufStrip.seek(row * bytesPerRow);
-                    newLine.clear();
-                    // sample nth pixel in row, where w = new width of image
-                    for (int x = 0; x < w; x++) {
-                        newLine += bufStrip.read(bytesPerPixel);
-                        bufStrip.skip(sampleX);
-                    }
-                    if (sampleY < h) {
-                        std::memcpy(im->scanLine(sampleY),
-                                    newLine,
-                                    static_cast<size_t>(newBytesPerLine));
-                    }
-                    sampleY++;
-                }
-                y++;
-                if (sampleY >= h) break;
-            }
-            if (sampleY >= h) break;
-        }
-        p.file.close();
-        if (bitsPerSample == 16) {
-            if (m.isBigEnd) invertEndian16(im);
-            toRRGGBBAA(im);
-        }
-        // convert to standard QImage format for display in Winnow
-        im->convertTo(QImage::Format_RGB32);
-        image.operator=(*im);
-        qDebug() << __FUNCTION__ << m.fPath << "Resampling entire tiff";
-        return true;
-    }
-
-    // read entire image
-    int strips = stripOffsets.count();
-    if (compression == 5) {
-        TiffStrips tiffStrips;
-        QFuture<void> future;
-        // pass info to concurrent threads via TiffStrip for each strip
-        TiffStrip tiffStrip;
-        for (int strip = 0; strip < strips; ++strip) {
-            tiffStrip.strip = strip;
-            tiffStrip.bitsPerSample = bitsPerSample;
-            tiffStrip.bytesPerRow = bytesPerRow;
-            tiffStrip.stripBytes = stripByteCounts.at(strip);
-            if (predictor == 2) tiffStrip.predictor = true;
-            // read tiff strip into QByteArray
-            p.file.seek(stripOffsets.at(strip));
-            inBa.append(p.file.read(stripByteCounts.at(strip)));
-            // ptr to start of strip QByteArray
-            tiffStrip.in = inBa[strip].data();
-            // length of incoming strip in bytes
-            tiffStrip.incoming = inBa[strip].size();
-            tiffStrip.out = im->scanLine(strip * rowsPerStrip);
-            /* debugging
-            tiffStrip.fName = p.file.fileName();
-            tiffStrip.rowsPerStrip = rowsPerStrip;
-            */
-            tiffStrips.append(tiffStrip);
-        }
-        future = QtConcurrent::map(tiffStrips, lzwDecompress);
-        future.waitForFinished();
-    } // end compression == 5
-
-    else { // uncompressed tiff
-        int line = 0;
-        quint32 scanBytes = 0;
-        for (int strip = 0; strip < strips; ++strip) {
-            quint32 stripBytes = stripByteCounts.at(strip);
-            QByteArray ba;
-            p.file.seek(stripOffsets.at(strip));
-            ba = p.file.read(stripBytes);
-            QBuffer buf(&ba);
-            buf.open(QBuffer::ReadOnly);
-            for (int row = 0; row < rowsPerStrip; row++) {
-                /*
-                qDebug() << __FUNCTION__
-                         << "strip =" << strip
-                         << "row =" << row
-                         << "buf.pos() =" << buf.pos()
-                         << "bytesPerRow =" << bytesPerRow
-                         << "buf.pos() + bytesPerRow =" << buf.pos() + bytesPerRow
-                         << "ba.length() =" << ba.length()
-                         << "scanBytes =" << scanBytes
-                         << "scanBytesAvail =" << scanBytesAvail
-                            ;
-                            //*/
-                // last strip may have less than rowsPerStrip rows
-                if ((buf.pos() + bytesPerRow) > ba.length()) break;
-                if (scanBytes + bytesPerRow > scanBytesAvail) break;
-                std::memcpy(im->scanLine(line++),
-                            buf.read(bytesPerRow),
-                            static_cast<size_t>(bytesPerRow));
-                scanBytes += bytesPerRow;
-            }
-        }
-    } // end else (no compression)
+    if (compression == 1) decodeBase(m, p, image);
+    if (compression == 5) decodeLZW(m, p, image);
 
     p.file.close();
 
@@ -884,7 +742,81 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
     }
     // convert to standard QImage format for display in Winnow
     im->convertTo(QImage::Format_RGB32);
+
+    // scale
+    if (newSize) {
+        *im = im->scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
+    }
+
     image.operator=(*im);
+    return true;
+}
+
+void Tiff::decodeBase(ImageMetadata &m, MetadataParameters &p, QImage &image)
+{
+    int strips = stripOffsets.count();
+    int line = 0;
+    quint32 scanBytes = 0;
+    for (int strip = 0; strip < strips; ++strip) {
+        quint32 stripBytes = stripByteCounts.at(strip);
+        QByteArray ba;
+        p.file.seek(stripOffsets.at(strip));
+        ba = p.file.read(stripBytes);
+        QBuffer buf(&ba);
+        buf.open(QBuffer::ReadOnly);
+        for (int row = 0; row < rowsPerStrip; row++) {
+            /*
+            qDebug() << __FUNCTION__
+                     << "strip =" << strip
+                     << "row =" << row
+                     << "buf.pos() =" << buf.pos()
+                     << "bytesPerRow =" << bytesPerRow
+                     << "buf.pos() + bytesPerRow =" << buf.pos() + bytesPerRow
+                     << "ba.length() =" << ba.length()
+                     << "scanBytes =" << scanBytes
+                     << "scanBytesAvail =" << scanBytesAvail
+                        ;
+                        //*/
+            // last strip may have less than rowsPerStrip rows
+            if ((buf.pos() + bytesPerRow) > ba.length()) break;
+            if (scanBytes + bytesPerRow > scanBytesAvail) break;
+            std::memcpy(im->scanLine(line++),
+                        buf.read(bytesPerRow),
+                        static_cast<size_t>(bytesPerRow));
+            scanBytes += bytesPerRow;
+        }
+    }
+}
+
+bool Tiff::decodeLZW(ImageMetadata &m, MetadataParameters &p, QImage &image)
+{
+    int strips = stripOffsets.count();
+    TiffStrips tiffStrips;
+    QFuture<void> future;
+    // pass info to concurrent threads via TiffStrip for each strip
+    TiffStrip tiffStrip;
+    for (int strip = 0; strip < strips; ++strip) {
+        tiffStrip.strip = strip;
+        tiffStrip.bitsPerSample = bitsPerSample;
+        tiffStrip.bytesPerRow = bytesPerRow;
+        tiffStrip.stripBytes = stripByteCounts.at(strip);
+        if (predictor == 2) tiffStrip.predictor = true;
+        // read tiff strip into QByteArray
+        p.file.seek(stripOffsets.at(strip));
+        inBa.append(p.file.read(stripByteCounts.at(strip)));
+        // ptr to start of strip QByteArray
+        tiffStrip.in = inBa[strip].data();
+        // length of incoming strip in bytes
+        tiffStrip.incoming = inBa[strip].size();
+        tiffStrip.out = im->scanLine(strip * rowsPerStrip);
+        /* debugging
+        tiffStrip.fName = p.file.fileName();
+        tiffStrip.rowsPerStrip = rowsPerStrip;
+        */
+        tiffStrips.append(tiffStrip);
+    }
+    future = QtConcurrent::map(tiffStrips, lzwDecompress);
+    future.waitForFinished();
     return true;
 }
 
@@ -978,76 +910,40 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     p.file.write(Utilities::put32(1200000, m.isBigEnd));        // YResolution Numerator
     p.file.write(Utilities::put32(10000, m.isBigEnd));          // YResolution Denominator
 
-    quint32 sopOffset = p.file.pos();   // for debugging
-
-    // sample existing tiff in IFD to create new thumbnail IFD
     bytesPerPixel = bitsPerSample / 8 * samplesPerPixel;
-    bytesPerRow = bytesPerPixel * m.width;
-    quint32 fOffset = 0;
-    // read every nth pixel to create new smaller image (thumbnail)
-    int y = 0;          // every line in source image scan
-    int line = 0;       // lines sampled and written to new image scan
-    QByteArray bat;     // byte array thumb
-    for (int strip = 0; strip < stripOffsets.count(); ++strip) {
-        for (int row = 0; row < rowsPerStrip; row++) {
-            if (y % nth == 0) {
-                fOffset = stripOffsets.at(strip) + static_cast<quint32>(row * bytesPerRow);
-                bat.clear();
-                for (int x = 0; x < w; x++) {
-                    /*
-                    if (x==0&&row==0&&strip==0) qDebug() << __FUNCTION__ << "1st read at" << fOffset;
-                    //*/
-                    p.file.seek(fOffset);
-                    if (fOffset + static_cast<size_t>(bytesPerPixel) > m.offsetThumb) {
-                        qWarning() << __FUNCTION__ << "Read nth pixel - ATTEMPTING TO READ PAST END OF SCAN";
-                        break;
-                    }
-                    if (bitsPerSample == 8)
-                        bat += p.file.read(bytesPerPixel);
-                    else {
-                        if (m.isBigEnd) {
-                            bat += p.file.read(1);  p.file.skip(1);
-                            bat += p.file.read(1);  p.file.skip(1);
-                            bat += p.file.read(1);  p.file.skip(1);
-                        }
-                        else {
-                            p.file.skip(1);  bat += p.file.read(1);
-                            p.file.skip(1);  bat += p.file.read(1);
-                            p.file.skip(1);  bat += p.file.read(1);
-                        }
-                    }
-                    /*
-                    if (x == 0 && row == 0 && strip == 0) qDebug() << bat.toHex();
-                    //*/
-                    fOffset += static_cast<uint>(nth * bytesPerPixel);
-                }
-                // write thumb at EOF
-                qint64 eof = p.file.size();
-                p.file.seek(eof);
-                p.file.write(bat);
-                line++;
-            }
-            if (line > h) break;
-            y++;
-        }
-        if (line > h) break;
-    }
-    quint32 eopOffset = p.file.pos();   // for debugging
+    bytesPerRow = (uint)(bytesPerPixel * width);
+    scanBytesAvail = (uint)(width * height * bytesPerPixel);
 
-    /*
-    qDebug() << __FUNCTION__
-             << "m.offsetThumb =" << m.offsetThumb
-             << "line =" << line
-             << "h =" << h
-             << "bytesPerPixel =" << bytesPerPixel
-             << "bytesPerLine =" << bytesPerLine
-             << "rowsPerStrip =" << rowsPerStrip
-             << "stripOffsets.count() =" << stripOffsets.count()
-             << "pixelsOffset =" << pixelsOffset
-             << "sopOffset =" << sopOffset
-             << "eopOffset =" << eopOffset
-                ;
-                //*/
+    if (bitsPerSample == 16) im = new QImage(width, height, QImage::Format_RGBX64);
+    if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
+
+    if (compression == 1) decodeBase(m, p, *im);
+    if (compression == 5) decodeLZW(m, p, *im);
+
+    if (bitsPerSample == 16) {
+        if (m.isBigEnd) invertEndian16(im);
+        toRRGGBBAA(im);
+        im->convertTo(QImage::Format_RGB888);
+    }
+
+    QImage image = im->scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
+
+    // byte array thumb
+    QByteArray bat;
+    bat.resize(image.width() * image.height() * 3);
+    int scanWidth = image.width() * 3;
+    int batPos = 0;
+    // copy QImage (scanline padded to even 4 bytes) to bat line by line
+    for (int y = 0; y < image.height(); ++y) {
+        std::memcpy(bat.data() + batPos, image.scanLine(y), (size_t)scanWidth);
+        batPos += scanWidth;
+    }
+
+    delete im;
+
+    // write thumb at EOF
+    p.file.seek(p.file.size());
+    p.file.write(bat);
 
     return true;
 }
@@ -1126,6 +1022,17 @@ void Tiff::sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h)
              << "nth =" << nth
                 ;
                 //*/
+}
+
+void Tiff::scaleFromQImage(QImage &im, QByteArray &bas, int newLongSide)
+{
+    int nth;
+    bas.clear();
+    for (int y = 0; y < im.height(); ++y) {
+        if (y % nth == 0) {
+
+        }
+    }
 }
 
 Tiff::TiffType Tiff::getTiffType()
