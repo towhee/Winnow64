@@ -34,16 +34,14 @@ public:
     bool decode(ImageMetadata &m, QString &fPath, QImage &image,
                 bool thumb = false, int maxDim = 0);
     // decode using QFile mapped to memory
-    bool decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int maxDim = 0);
+    bool decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int newSize = 0);
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
 
 private:
     QImage *im;
-    QImage *image;  // being used?
 
     quint32 lastIFDOffsetPosition = 0;      // used to add thumbnail IFD to IFD chain
     quint32 thumbIFDOffset = 0;
-    bool isBigEnd;  // not used
 
     // from tiff ifd
     int width;
@@ -97,9 +95,13 @@ private:
 
     QString err;
 
+    void decodeBase(ImageMetadata &m, MetadataParameters &p, QImage &image);
+    bool decodeLZW(ImageMetadata &m, MetadataParameters &p, QImage &image);
+
     void toRRGGBBAA(QImage *im);
     void invertEndian16(QImage *im);
     void sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h);
+    void scaleFromQImage(QImage &im, QByteArray &bas, int newLongSide);
     TiffType getTiffType();
 
     // LZW compression
