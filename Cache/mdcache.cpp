@@ -734,7 +734,7 @@ void MetadataCache::run()
 */
     QString msg = "action = " + actionList.at(action) +
                   " foundItemsToLoad = " + QVariant(foundItemsToLoad).toString();
-    if (G::isLogger) G::log(__FUNCTION__, msg);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, msg);
 //    qDebug() << __FUNCTION__ << actionList.at(action) << "foundItemsToLoad =" << foundItemsToLoad;
 
     if (foundItemsToLoad) {

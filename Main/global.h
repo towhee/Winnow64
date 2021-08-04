@@ -3,6 +3,7 @@
 #define GLOBAL_H
 
 //#define ISDEBUG        // Uncomment this line to show debugging output
+//#define ISFLOW         // Uncomment this line to show debugging output
 //#define ISLOGGER       // Uncomment this line to show debugging output
 
 #include <QtWidgets>
@@ -131,6 +132,7 @@ namespace G
     };
 
     extern bool isLogger;
+    extern bool isFlowLogger;
     extern bool sendLogToConsole;
     extern QFile logFile;
     extern bool isDev;

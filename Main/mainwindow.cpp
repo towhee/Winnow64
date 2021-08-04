@@ -1225,7 +1225,15 @@ void MW::watchCurrentFolder()
 
 void MW::folderSelectionChange()
 {
-    if (G::isLogger) {
+    /* used by SortFilter/filterChange, set true when ImageCacheThread starts.  Must be first
+       to flag before selection change event fires, so MW::fileSelectionChange knows not to
+       run.  */
+    G::isNewFolderLoaded = false;
+
+    currentViewDir = getSelectedPath();
+    setting->setValue("lastDir", currentViewDir);
+
+    if (G::isLogger || G::isFlowLogger) {
         G::log("FOLDER CHANGE");
         G::log(__FUNCTION__, currentViewDir);
     }
@@ -1247,7 +1255,6 @@ void MW::folderSelectionChange()
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
     qApp->processEvents();
 
-    // used by SortFilter/filterChange, set true when ImageCacheThread starts
     G::isNewFolderLoaded = false;
 
     // ImageView set zoom = fit for the first image of a new folder
@@ -1285,9 +1292,6 @@ void MW::folderSelectionChange()
             asLoupeAction->setChecked(true);
         }
     }
-
-    currentViewDir = getSelectedPath();
-    setting->setValue("lastDir", currentViewDir);
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(currentViewDir, true /*report*/, false /*isRemembered*/)) {
@@ -1428,8 +1432,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo and
     delegate use of the current index must check the column.
 */
-    if (G::isLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
-   /*
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
+//   /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
@@ -1777,7 +1781,7 @@ void MW::updateIconsVisible(bool useCurrentRow)
 
 void MW::loadMetadataCache2ndPass()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__;
     updateIconBestFit();
     updateIconsVisible(true);
@@ -2127,7 +2131,7 @@ void MW::loadImageCacheForNewFolder()
     loaded for a new folder selection. The imageCache loads images until the assigned amount
     of memory has been consumed or all the images are cached.
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__;
     // now that metadata is loaded populate the data model
     if(G::showCacheStatus) progressBar->clearProgress();
@@ -5871,7 +5875,7 @@ void MW::filterChange(QString source)
     available is set, the thumb and grid first/last/thumbsPerPage parameters are recalculated
     and icons are loaded if necessary.
 */
-    if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Src: " + source);
     qDebug() << __FUNCTION__ << "called from:" << source;
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) {
@@ -6141,7 +6145,7 @@ void MW::sortChange(QString source)
     read from the image file metadata, are only loaded on demand.  All non-core items must
     be loaded in order to sort on them.
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Src: " + source);
 //    /*
     qDebug() << __FUNCTION__ << "source =" << source
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded

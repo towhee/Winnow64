@@ -152,7 +152,7 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
     the next is a preview, requires the zoom factor to be normalized to prevent jarring
     changes in perceived scale by the user.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, fPath + " Src:" + src);
 //    qDebug() << __FUNCTION__ << fPath << src;
 //    fPath = "G:/Test/_DSC7390.ARW";
     // No folder selected yet
