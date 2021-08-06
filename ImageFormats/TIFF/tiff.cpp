@@ -1379,7 +1379,7 @@ Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
         }
 
     } // end while
-    qDebug() << __FUNCTION__ "finish thread" << QThread::currentThreadId();
+    qDebug() << __FUNCTION__ << "finish thread" << QThread::currentThreadId();
 
     return tiffStrips;
 }
