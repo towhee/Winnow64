@@ -189,7 +189,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         ImageMetadata m = dm->imMetadata(fPath);
         Tiff tiff;
 
-//        /*
+        /*
         decodeTime.restart();
         bool useWinnow = true;
         if (useWinnow) {
@@ -217,7 +217,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
                     //*/
 
 
-        /*
+//        /*
         if (!tiff.decode(m, fPath, image)) {
             imFile.close();
 //            err += "Could not decode " + fPath + ". ";

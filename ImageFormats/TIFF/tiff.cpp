@@ -541,7 +541,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         }
     }
     else {
-        err += "No strip offsets.  ";
+        err += "No strip offsets.  \n";
     }
 
     // strip byte counts
@@ -560,7 +560,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         }
     }
     else {
-        err += "No StripByteCounts.  ";
+        err += "No StripByteCounts.  \n";
     }
 
     // IFD: bitsPerSample
@@ -569,7 +569,10 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         bitsPerSample = Utilities::get16(p.file.read(2), m.isBigEnd);
     }
     else {
-       err += "No BitsPerSample.  ";
+       err += "No BitsPerSample.  \n";
+    }
+    if (bitsPerSample != 8 && bitsPerSample != 16) {
+        err += "BitsPerSample = " + QString::number(bitsPerSample) + ". Only 8 and 16 supported.";
     }
 
     // IFD: predictor
@@ -582,7 +585,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
             ? compression = static_cast<int>(ifd->ifdDataHash.value(259).tagValue)
             : compression = 1;
     if (!(compression == 1  || compression == 5)) {
-        err += "Compression != 1 0r 5.  ";
+        err += "Compression != 1 or 5.  \n";
     }
     switch (compression) {
     case 1:
@@ -601,7 +604,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         ? width = static_cast<int>(ifd->ifdDataHash.value(256).tagValue)
         : width = 0;
     if (width == 0) {
-        err += "Width = 0.  ";
+        err += "Width = 0.  \n";
     }
 
     // IFD: height
@@ -609,7 +612,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         ? height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue)
         : height = 0;
     if (height == 0) {
-        err += "Height = 0.  ";
+        err += "Height = 0.  \n";
     }
 
     // IFD: photoInterp
@@ -622,7 +625,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
             ? samplesPerPixel = static_cast<int>(ifd->ifdDataHash.value(277).tagValue)
             : samplesPerPixel = 0;
     if (samplesPerPixel == 0) {
-        err += "SamplesPerPixel is undefined.  ";
+        err += "SamplesPerPixel is undefined.  \n";
     }
 
     // IFD: rowsPerStrip
@@ -634,7 +637,11 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     (ifd->ifdDataHash.contains(284))
             ? planarConfiguration = ifd->ifdDataHash.value(284).tagValue
             : planarConfiguration = 1;
-
+    if (planarConfiguration == 2 && compression == 5) {
+        err += "LZW compression not supported for per channel planar configuration.  \n";
+    }
+    if (err != "") qDebug() << __FUNCTION__ << m.fName << err;
+    m.err += err;
     if (err != "" && !isReport) return false;
 
     G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
@@ -740,6 +747,13 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
         if (m.isBigEnd) invertEndian16(im);
         toRRGGBBAA(im);
     }
+
+    // if per channel convert to interleaved
+    if (planarConfiguration == 2) {
+        im->convertTo(QImage::Format_RGB888);
+        perChannelToInterleave(im);
+    }
+
     // convert to standard QImage format for display in Winnow
     im->convertTo(QImage::Format_RGB32);
 
@@ -933,7 +947,7 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     bat.resize(image.width() * image.height() * 3);
     int scanWidth = image.width() * 3;
     int batPos = 0;
-    // copy QImage (scanline padded to even 4 bytes) to bat line by line
+    // copy QImage (scanline 32-bit aligned) to bat line by line
     for (int y = 0; y < image.height(); ++y) {
         std::memcpy(bat.data() + batPos, image.scanLine(y), (size_t)scanWidth);
         batPos += scanWidth;
@@ -946,6 +960,25 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     p.file.write(bat);
 
     return true;
+}
+
+void Tiff::perChannelToInterleave(QImage *im1)
+{
+    // copy image
+    QImage im2;
+    im2.operator=(*im1);
+    // ptrs to both images
+    uchar *nn = im2.scanLine(0);
+    uchar *n = im2.bits();
+    uchar *o = im1->bits();
+    int bc = im2.byteCount();
+    int a = im2.bitPlaneCount();
+    const int p = im2.height() * im2.width();
+    for (int i = 0; i < p; ++i) {
+        o[i*3+0] = n[i+0*p];
+        o[i*3+1] = n[i+1*p];
+        o[i*3+2] = n[i+2*p];
+    }
 }
 
 void Tiff::toRRGGBBAA(QImage *im)
