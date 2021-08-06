@@ -100,7 +100,7 @@ public:
     bool hideEmbellish = false;
     bool useImageCache = true;
 
-    QString versionNumber = "1.26";
+    QString versionNumber = "1.26" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
