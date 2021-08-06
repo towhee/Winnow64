@@ -759,6 +759,11 @@ QString WidgetCSS::progressBar()
 
 QString WidgetCSS::checkBox()
 {
+#ifdef Q_OS_MAC
+    return "";
+#endif
+
+#ifdef Q_OS_WIN
     return
     "QCheckBox {"
         "spacing: 5px;"
@@ -778,4 +783,5 @@ QString WidgetCSS::checkBox()
     "}"
 
      ;
+#endif
 }
