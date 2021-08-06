@@ -196,6 +196,7 @@ void InfoString::initTokenList()
             << "Copyright"
             << "Email"
             << "Url"
+            << "Err"
                ;
 }
 
@@ -245,6 +246,7 @@ void InfoString::initExampleMap()
     exampleMap["Copyright"] = "2018 Rory Hill";
     exampleMap["Email"] = "roryhill@something.com";
     exampleMap["Url"] = "roryhill.somewhere.com";
+    exampleMap["Err"] = "Winnow failed to something.";
 }
 
 bool InfoString::parseToken(QString &tokenString, int pos,
@@ -452,6 +454,11 @@ QString InfoString::tokenValue(QString &token,
         return m.email.trimmed();
     if (token == "Url")
         return m.url.trimmed();
+    if (token == "Err") {
+        QString err = "";
+        for (const auto& s : m.err) err += s + "\n";
+        return err;
+    }
     return "";
 }
 
@@ -561,6 +568,11 @@ Finds the token in the datamodel and returns the datamodel value.
         return m.email;
     if (token == "Url")
         return m.url;
+    if (token == "Err") {
+        QString err = "";
+        for (const auto& s : m.err) err += s + "\n";
+        return err;
+    }
     return "";
 }
 // END InfoString

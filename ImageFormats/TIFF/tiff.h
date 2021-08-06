@@ -98,6 +98,7 @@ private:
     void decodeBase(ImageMetadata &m, MetadataParameters &p, QImage &image);
     bool decodeLZW(ImageMetadata &m, MetadataParameters &p, QImage &image);
 
+    void perChannelToInterleave(QImage *im1);
     void toRRGGBBAA(QImage *im);
     void invertEndian16(QImage *im);
     void sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h);

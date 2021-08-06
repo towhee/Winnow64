@@ -758,6 +758,11 @@ bool DataModel::readMetadataForItem(int row)
     return true;
 }
 
+void DataModel::addErrorForItem(ImageMetadata m)
+{
+    setData(index(m.row, G::ErrColumn), m.err);
+}
+
 bool DataModel:: addMetadataForItem(ImageMetadata m)
 {
 /*

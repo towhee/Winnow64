@@ -92,6 +92,7 @@ public slots:
 //    void unfilteredItemSearchCount();
     void addAllMetadata();
     bool addMetadataForItem(ImageMetadata m);
+    void addErrorForItem(ImageMetadata m);
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
 

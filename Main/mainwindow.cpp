@@ -263,7 +263,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     loadSettings();             // except settings with dependencies ie for actions not created yet
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
     setting->setValue("appPath", qApp->applicationDirPath());
-    G::embedTifThumb = false;
 
     // Logger
     if (G::isLogger && G::sendLogToConsole == false) openLog();
@@ -1433,7 +1432,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     delegate use of the current index must check the column.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
-//   /*
+   /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded

@@ -1,7 +1,7 @@
 BUGS / TO DO
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
-- Tiff with compression = 8
-- TIFF with planarConfiguration = 2
+- Tiff with compression = 7, 8
+- TIFF PhotometricInterpretation <> 2 https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html
 - Filters not working sometimes
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow
@@ -44,6 +44,8 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- TIFF with planarConfiguration = 2
+- Version 1.25
 - If eject, cache status not updated in status bar
 - Crash if eject USB drive that has a folder selected in Winnow
 - If folder empty toggle color manage causes crash on mac
