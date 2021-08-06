@@ -148,6 +148,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     Load a thumbnail preview as a decoration icon in the datamodel dm in column 0. Raw, jpg
     and tif files can contain smaller previews. Check if they do and load the smaller preview
     as that is faster than loading the entire full resolution image just to get a thumbnail.
+    This thumbnail is used by the grid and filmstrip views.
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
     /*

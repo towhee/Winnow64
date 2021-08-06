@@ -402,7 +402,7 @@ bool Sony::parse(MetadataParameters &p,
         double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue,
                                       isBigEnd);
-        if (x <1 ) {
+        if (x < 1) {
             int t = qRound(1/x);
             m.exposureTime = "1/" + QString::number(t);
             m.exposureTimeNum = x;

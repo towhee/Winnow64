@@ -371,8 +371,17 @@ QString WidgetCSS::treeWidget()
         "margin-left: -1px;"  // aligns edit box with cell contents
     "}"
 
+    "QTreeWidget::indicator {"
+        "width: 15px;"
+        "height: 15px;"
+    "}"
+
     "QTreeWidget::indicator:disabled {"
         "image: url(:/images/checkbox_disabled.png);"
+    "}"
+
+    "QTreeWidget::indicator:checked {"
+        "image: url(:/images/checkbox_checked_blue.png);"
     "}"
 
     ;
@@ -750,28 +759,23 @@ QString WidgetCSS::progressBar()
 
 QString WidgetCSS::checkBox()
 {
-//    return "";
     return
     "QCheckBox {"
-//        "color: blue;"
-    "}";
-//    "QCheckBox::indicator {"
-//        "background-color: " + textColor.name() + ";"
-////        "background-color: " + QColor(l30,l30,l30).name() + ";"
-////        "image: url(:/images/checkmark.png);"
-//    "}"
-//    ;
-//    "QCheckBox::indicator:checked {"
-//        "background-color: " + QColor(l30,l30,l30).name() + ";"
-//    "}"
-//    "QCheckBox::indicator:checked:disabled {"
-//        "background-color: " + QColor(l30,l30,l30).name() + ";"
-////        "image: url(:/images/checkmark.png);"
-////        "border: 1px solid red;"
-//    "}"
-////        "QCheckBox::indicator:indeterminate {"
-////    //        "image: url(:/images/checkmark.png);"
-////            "border: 3px solid blue;"
-////        "}"
-//     ;
+        "spacing: 5px;"
+    "}"
+
+    "QCheckBox::indicator {"
+        "width: 15px;"
+        "height: 15px;"
+    "}"
+
+    "QCheckBox::indicator:unchecked {"
+        "image: url(:/images/checkbox_unchecked_blue.png);"
+    "}"
+
+    "QCheckBox::indicator:checked {"
+        "image: url(:/images/checkbox_checked_blue.png);"
+    "}"
+
+     ;
 }
