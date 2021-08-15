@@ -100,7 +100,7 @@ public:
     bool hideEmbellish = false;
     bool useImageCache = true;
 
-    QString versionNumber = "1.26" ;
+    QString versionNumber = "1.27" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -243,7 +243,9 @@ public:
 
     // preferences: cache
     QString cacheSizeMethod;
+    QString cacheMinSize;
     int cacheSizePercentOfAvailable;
+    int cacheMinMB = 2000;
     int cacheMaxMB;
 //    bool isShowCacheStatus;   // replaced with G::showCacheStatus
     int cacheDelay = 100;
@@ -442,7 +444,7 @@ private slots:
     void updateMetadataCacheStatus(int row, bool clear = false);
     void updateImageCacheStatus(QString instruction, int row, QString source);
     // caching
-//    void updateImageCachePosition(); // rghcachechange
+    void updateImageCachePositionAfterDelay(); // rghcachechange
     void loadMetadataCache2ndPass();
     void refreshCurrentAfterReload();
     void updateIconsVisible(bool useCurrentRow);
@@ -495,6 +497,7 @@ private slots:
     void prevRandomSlide();
 //    void updateImageCacheSize(int mb);
     void setImageCacheParameters();
+    void setImageCacheMinSize(QString size);
     void setImageCacheSize(QString method);
     void selectAllThumbs();
     void removeBookmark();

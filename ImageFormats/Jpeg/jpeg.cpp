@@ -794,6 +794,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
     - Convert to RGB
 
     */
+    qDebug() << __FUNCTION__;
 
     QBuffer buffer(&ba);
     buffer.open(QIODevice::ReadOnly);
@@ -1093,9 +1094,9 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
 
 //            if (mcuCount == 10) G::log(__FUNCTION__, "Loaded DCU");
 
-            if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
-                rptMCU(mcuCol, mcuRow);
-            }
+//            if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
+//                rptMCU(mcuCol, mcuRow);
+//            }
 
             // DC records difference from previous MCU
             for (int c = 0; c != 3; ++c) {
@@ -1220,7 +1221,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
             for (auto x : scanLine[y])
                 stream << x;
             int line = mcuRow * 8 + y;
-            if (line < 40)
+//            if (line < 40)
             qDebug() << __FUNCTION__
                      << "mcuRow =" << mcuRow
                      << "y =" << y
@@ -1231,6 +1232,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
             std::memcpy(im.scanLine(line), data, im.bytesPerLine());
             scanLine[y].clear();
         }
+//        qDebug() << __FUNCTION__ << mcuRow;
 
     } // end all rows of MCUs
 
@@ -1240,7 +1242,8 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
     image.operator=(im);
 
     // write image for review
-//    image.save("D:/Pictures/_Jpg/test/test.jpg", "JPG");
+    qDebug() << __FUNCTION__ << *image.scanLine(0);
+    image.save("D:/Pictures/_Jpg/test/test.jpg", "JPG");
 }
 
 void Jpeg::bufAppend(uint &buf, quint8 byte, int &consumed)

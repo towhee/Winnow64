@@ -573,7 +573,7 @@ void ImageCache::memChk()
 /*
     Check to make sure there is still room in system memory (heap) for the image cache. If
     something else (another program) has used the system memory then reduce the size of the
-    cache until it still fits.
+    cache so it still fits.
 */
     if (G::isLogger) G::log(__FUNCTION__);
 
@@ -591,6 +591,7 @@ void ImageCache::memChk()
     if (G::availableMemoryMB < roomInCache) {
         cache.maxMB = cache.currMB + G::availableMemoryMB;
     }
+    if (cache.maxMB < cache.minMB) cache.maxMB = cache.minMB;
 }
 
 void ImageCache::checkForOrphans()
@@ -883,7 +884,7 @@ void ImageCache::updateImageCacheList()
     }
 }
 
-void ImageCache::initImageCache(int &cacheMaxMB,
+void ImageCache::initImageCache(int &cacheMaxMB, int &cacheMinMB,
      bool &isShowCacheStatus, int &cacheWtAhead,
      bool &usePreview, int &previewWidth, int &previewHeight)
 {
@@ -904,6 +905,7 @@ void ImageCache::initImageCache(int &cacheMaxMB,
     cache.isForward = true;
     // the amount of memory to allocate to the cache
     cache.maxMB = cacheMaxMB;
+    cache.minMB = cacheMinMB;
     cache.isShowCacheStatus = isShowCacheStatus;
     cache.wtAhead = cacheWtAhead;
     cache.targetFirst = 0;
@@ -920,8 +922,13 @@ void ImageCache::initImageCache(int &cacheMaxMB,
     start();
 }
 
-void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
-               int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight)
+void ImageCache::updateImageCacheParam(int &cacheSizeMB,
+                                       int &cacheMinMB,
+                                       bool &isShowCacheStatus,
+                                       int &cacheWtAhead,
+                                       bool &usePreview,
+                                       int &previewWidth,
+                                       int &previewHeight)
 {
 /*
     When various image cache parameters are changed in preferences they are updated here.
@@ -929,11 +936,13 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus
     if (G::isLogger) G::log(__FUNCTION__);
     mutex.lock();
     cache.maxMB = cacheSizeMB;
+    cache.minMB = cacheMinMB;
     cache.isShowCacheStatus = isShowCacheStatus;
     cache.wtAhead = cacheWtAhead;
     cache.usePreview = usePreview;
     cache.previewSize = QSize(previewWidth, previewHeight);
     mutex.unlock();
+    qDebug() << __FUNCTION__ << "cache.minMB" << cache.minMB;
 }
 
 void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QString source)
@@ -1030,8 +1039,6 @@ void ImageCache::cacheSizeChange()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     mutex.lock();
-    if (G::isLogger) { G::log(__FUNCTION__); }
-    qDebug() << __FUNCTION__ << cache.isForward;
     cacheSizeHasChanged = true;
     if (!isRunning()) start();
     mutex.unlock();
@@ -1075,7 +1082,7 @@ void ImageCache::fillCache(int id)
     when the decoder finishes the decoding in ImageDecoder::run the status is set to Done.
 
     Every time the ImageCache::run function encounters a change trigger (file selection change,
-    cache size, color manage or sort/filter change) The image cache parameters are updated and
+    cache size, color manage or sort/filter change) the image cache parameters are updated and
     the Busy ImageDecoders are completed but not reseeded with a new image file, so they are
     all at Ready status.  Then this function is called for each ImageDecoder to refill the
     altered image cache (usually because the target range has changed).
@@ -1083,11 +1090,15 @@ void ImageCache::fillCache(int id)
     This function is protected with a mutex as it could be signalled simultaneously by several
     ImageDecoders.
 */
+//    QBasicMutex mtx;
+//    mtx.lock();
     if (G::isLogger) G::log(__FUNCTION__);
     mutex.lock();
     // ImageDecoder thread returning a QImage
     if (decoder[id]->status == ImageDecoder::Status::Done) {
         imCache.insert(decoder[id]->fPath, decoder[id]->image);
+//        const QImage &im = imCache.value(decoder[id]->fPath);
+//        dm->imCache.insert(decoder[id]->fPath, &im);
         cache.currMB = getImCacheSize();
         if (cache.isShowCacheStatus) {
             emit updateCacheOnThumbs(decoder[id]->fPath, true);
@@ -1102,9 +1113,10 @@ void ImageCache::fillCache(int id)
         int room = cache.maxMB - cache.currMB;
         int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
         makeRoom(room, roomRqd);
-        cacheItemList[cache.toCacheKey].isCached = true;
-        if (!toCache.isEmpty()) toCache.removeFirst();
-        cacheImage->load(fPath, decoder[id]);
+        if (cacheImage->load(fPath, decoder[id])) {
+            cacheItemList[cache.toCacheKey].isCached = true;
+            if (!toCache.isEmpty()) toCache.removeFirst();
+        }
     }
     else {
         if (cache.isShowCacheStatus) {
@@ -1118,6 +1130,7 @@ void ImageCache::fillCache(int id)
         }
     }
     mutex.unlock();
+//    mtx.unlock();
 }
 
 void ImageCache::run()
@@ -1160,7 +1173,7 @@ void ImageCache::run()
     - If the cache size has changed make room by deleting excess images
     - Update statusBar cache progress
     - If the cache is up-to-date then return to continuous polling
-    - Update cache is running light in statusBar
+    - Update cache isRunning light in statusBar
     - Check available memory in case another app has acquired mem
     - Fill the cache by calling fillCache for each decoder thread which iterate through the
       toCache list until the cache is full
@@ -1298,7 +1311,7 @@ void ImageCache::run()
         emit updateIsRunning(true, true);
 
         // check available memory (another app may have used or released some memory)
-//        memChk();
+        memChk();
 
         // fill the cache with images
         for (int id = 0; id < decoderCount; ++id) {

@@ -1563,6 +1563,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
             && (useImageCache)
            )
         {
+//            QTimer::singleShot(100, this, &MW::updateImageCachePositionAfterDelay);
+//            imageCacheTimer->start(100);
             imageCacheThread->setCurrentPosition(dm->currentFilePath);
         }
     }
@@ -2036,6 +2038,11 @@ void MW::updateMetadataCacheStatus(int row, bool clear)
     return;
 }
 
+void MW::updateImageCachePositionAfterDelay()
+{
+    imageCacheThread->setCurrentPosition(dm->currentFilePath);
+}
+
 void MW::updateImageCacheStatus(QString instruction, int row, QString source)
 {
 /*
@@ -2047,6 +2054,11 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
         G::log(__FUNCTION__, s);
     }
     if (G::isSlideShow && isSlideShowRandom) return;
+
+    QString msg = "   currMB: " + QString::number(imageCacheThread->cache.currMB) +
+                  "   minMB: "  + QString::number(imageCacheThread->cache.minMB) +
+                  "   maxMB: "  + QString::number(imageCacheThread->cache.maxMB);
+    updateStatus(true, msg);
 
     source = "";    // suppress compiler warning
     /*
@@ -2153,7 +2165,8 @@ void MW::loadImageCacheForNewFolder()
 
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
-    imageCacheThread->initImageCache(netCacheMBSize,
+    if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
+    imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
         G::showCacheStatus, cacheWtAhead, isCachePreview,
         cachePreviewWidth, cachePreviewHeight);
 
@@ -4357,8 +4370,8 @@ void MW::createCaching()
 
     // change to ImageCache eliminates this
     // connect timer to update image cache position
-//    connect(imageCacheTimer, SIGNAL(timeout()), imageCacheThread,
-//            SLOT(updateImageCachePosition()));
+//    connect(imageCacheTimer, SIGNAL(timeout()), this,
+//            SLOT(updateImageCachePositionAfterDelay()));
 
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
@@ -5451,6 +5464,24 @@ void MW::greedyCache()
     setImageCacheParameters();
 }
 
+void MW::setImageCacheMinSize(QString size)
+{
+/*
+
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    cacheMinSize = size;
+    if (size == "500 MB") cacheMinMB = 500;
+    else if (size == "1000 MB") cacheMinMB = 1000;
+    else if (size == "2000 MB") cacheMinMB = 2000;
+    else if (size == "4000 MB") cacheMinMB = 4000;
+    else if (size == "8000 MB") cacheMinMB = 8000;
+    else if (size == "16000 MB") cacheMinMB = 16000;
+    else if (size == "32000 MB") cacheMinMB = 32000;
+
+    if (cacheMaxMB < cacheMinMB) cacheMaxMB = cacheMinMB;
+}
+
 void MW::setImageCacheSize(QString method)
 {
 /*
@@ -5458,6 +5489,7 @@ void MW::setImageCacheSize(QString method)
 */
     if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__ << method;
+
 
     // deal with possible deprecated settings
     if (method != "Thrifty" && method != "Moderate" && method != "Greedy")
@@ -5477,6 +5509,9 @@ void MW::setImageCacheSize(QString method)
         cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.90);
         cacheMethodBtn->setIcon(QIcon(":/images/icon16/greedy.png"));
     }
+
+    if (cacheMaxMB < cacheMinMB) cacheMaxMB = cacheMinMB;
+
 //    if (cacheMaxMB > 0 && cacheMaxMB < 1000) cacheMaxMB = G::availableMemoryMB;
 }
 
@@ -5488,8 +5523,10 @@ void MW::setImageCacheParameters()
 */
     if (G::isLogger) G::log(__FUNCTION__);
 
-    int netCacheMBSize = cacheMaxMB - static_cast<int>( G::metaCacheMB);
-    imageCacheThread->updateImageCacheParam(netCacheMBSize,
+    int cacheNetMB = cacheMaxMB - static_cast<int>(G::metaCacheMB);
+    if (cacheNetMB < cacheMinMB) cacheNetMB = cacheMinMB;
+
+    imageCacheThread->updateImageCacheParam(cacheNetMB, cacheMinMB,
              G::showCacheStatus, cacheWtAhead, isCachePreview,
              G::displayPhysicalHorizontalPixels, G::displayPhysicalVerticalPixels);
 
@@ -5604,7 +5641,8 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
         // rgh may want to set the error here as well as report
 //        QString err = dm->index(row, G::ErrColumn).data().toString();
 //        statusLabel->setText(err);
-        return;
+//        qWarning("Image or thumb unavailable");
+//        return;
     }
 
     QString status;
@@ -7897,6 +7935,7 @@ void MW::setRotation(int degrees)
         QApplication::processEvents();
 
         // rotate selected cached full size images
+//        if (imageCacheThread->imCache.contains(fPath)) {
         if (imageCacheThread->imCache.contains(fPath)) {
             QImage *image = &imageCacheThread->imCache[fPath];
             *image = image->transformed(trans, Qt::SmoothTransformation);
@@ -8052,6 +8091,7 @@ void MW::writeSettings()
 
     // image cache
     setting->setValue("cacheSizeMethod", cacheSizeMethod);
+    setting->setValue("cacheMinSize", cacheMinSize);
 //    setting->setValue("cacheSizePercentOfAvailable", cacheSizePercentOfAvailable);
 //    setting->setValue("cacheSizeMB", cacheSizeMB);
     setting->setValue("isShowCacheStatus", G::showCacheStatus);
@@ -8352,6 +8392,7 @@ bool MW::loadSettings()
 
         // cache
         cacheSizeMethod = "Moderate";
+        cacheMinSize = "2000 MB";
         cacheSizePercentOfAvailable = 50;
         cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.5);
         G::showCacheStatus = true;
@@ -8445,8 +8486,10 @@ bool MW::loadSettings()
 
     // image cache
     if (setting->contains("cacheSizePercentOfAvailable")) cacheSizePercentOfAvailable = setting->value("cacheSizePercentOfAvailable").toInt();
-    if (setting->contains("cacheSizeMethod")) {
-        setImageCacheSize(setting->value("cacheSizeMethod").toString());
+    if (setting->contains("cacheSizeMethod")) setImageCacheSize(setting->value("cacheSizeMethod").toString());
+    else setImageCacheSize("Moderate");
+    if (setting->contains("cacheMinSize")) setImageCacheMinSize(setting->value("cacheMinSize").toString());
+    else setImageCacheMinSize("2000 MB");
         /*
 //        cacheSizeMethod = setting->value("cacheSizeMethod").toString();
 //        if (cacheSizeMethod == "Thrifty") cacheSizeBtn->setIcon(QIcon(":/images/icon16/thrifty.png"));
@@ -8459,7 +8502,6 @@ bool MW::loadSettings()
 //            cacheSizeMB = (static_cast<int>(G::availableMemoryMB) * cacheSizePercentOfAvailable) / 100;
 //        if (cacheSizeMethod == "MB") cacheSizeMB = setting->value("cacheSizeMB").toInt();
         //*/
-    }
     if (setting->contains("isShowCacheStatus")) G::showCacheStatus = setting->value("isShowCacheStatus").toBool();
     if (setting->contains("isShowCacheThreadActivity")) isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
     if (setting->contains("cacheStatusWidth")) progressWidth = setting->value("cacheStatusWidth").toInt();
@@ -11556,10 +11598,43 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QElapsedTimer tn;
-    tn.restart();
-    for (int i = 0; i < 100; i++) {
-        G::track(QString::number(i));
+    QString fPath = dm->currentFilePath;
+    const QImage &im = imageCacheThread->imCache.value(fPath);
+    const QImage *imPtr = &im;
+    qDebug() << "imageCacheThread->imCache.value(fPath) =" << imageCacheThread->imCache.value(fPath);
+    qDebug() << "im =" << im;
+    qDebug() << "imPtr =" << imPtr;
+    qDebug() << "*imPtr =" << *imPtr;
+//    qDebug() << dm->imCache;
+
+    return;
+
+    ImageCache* ict = imageCacheThread;
+    bool uncachedFound = false;
+    for (int i = 0; i < ict->cacheItemList.length(); ++i) {
+        if (ict->cacheItemList.at(i).isTarget && !ict->cacheItemList.at(i).isCached) {
+            qDebug() << __FUNCTION__ << ict->cacheItemList.at(i).fPath
+                     << "is targeted but not cached";
+            uncachedFound = true;
+        }
     }
+    return;
+
+    qDebug() << __FUNCTION__ << "use decodeScan";
+    QString jpgfile  = "/Users/roryhill/Pictures/_JPG/base.jpg";
+    QFile f(jpgfile);
+    f.open(QIODevice::ReadOnly);
+    QImage image;
+    Jpeg jpg;
+    jpg.decodeScan(f, image);
+    image.convertTo(QImage::Format_RGB888);
+    uchar* v = image.scanLine(0);
+    int n = 0;
+    for (unsigned long i = 0; i < 100; i++) {
+        int x = (0xff & *v++);
+        std::cout << std::hex << std::uppercase << std::setw(2) << x << " ";
+        if (++n % 25 == 0) std::cout << " " << std::dec << n + (int)0 << '\n';
+    }
+    std::cout << '\n';
 }
 // End MW

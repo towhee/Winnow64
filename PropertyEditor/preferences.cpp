@@ -122,16 +122,37 @@ itemChange, which is subclassed here.
     }
 
     if (source == "imageCacheSizeMethod") {
-//        QString s = v.toString();
-//        int mb = 0;
-//        if (s == "Thrifty") mb = static_cast<int>(G::availableMemoryMB * 0.10);
-//        if (s == "Moderate") mb = static_cast<int>(G::availableMemoryMB * 0.50);
-//        if (s == "Greedy") mb = static_cast<int>(G::availableMemoryMB * 0.90);
-//        if (mb > 0 && mb < 1000) mb = G::availableMemoryMB;
         mw->setImageCacheSize(v.toString());
         mw->setImageCacheParameters();
-        QString availMBMsg = QString::number(mw->cacheMaxMB) + " / " +
-                QString::number(G::availableMemoryMB) + " MB";
+        // get available memory
+        #ifdef Q_OS_WIN
+        Win::availableMemory();     // sets G::availableMemoryMB
+        #endif
+
+        #ifdef Q_OS_MAC
+        Mac::availableMemory();     // sets G::availableMemoryMB
+        #endif
+
+        int memAvail = mw->imageCacheThread->cache.currMB + G::availableMemoryMB;
+        QString availMBMsg = QString::number(mw->cacheMaxMB) + " of " +
+                QString::number(memAvail) + " available MB";
+        static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
+    }
+
+    if (source == "imageCacheMinSize") {
+        mw->setImageCacheMinSize(v.toString());
+        mw->setImageCacheParameters();
+        // get available memory
+        #ifdef Q_OS_WIN
+        Win::availableMemory();     // sets G::availableMemoryMB
+        #endif
+        #ifdef Q_OS_MAC
+        Mac::availableMemory();     // sets G::availableMemoryMB
+        #endif
+
+        int memAvail = mw->imageCacheThread->cache.currMB + G::availableMemoryMB;
+        QString availMBMsg = QString::number(mw->cacheMaxMB) + " of " +
+                QString::number(memAvail) + " available MB";
         static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
     }
 
@@ -761,6 +782,20 @@ void Preferences::addItems()
     i.captionIsEditable = false;
     addItem(i);
 
+    // Memory required for the metadata cache (includes thumbnails)
+    i.name = "metaCacheReqd";
+    i.parentName = "CacheImagesHeader";
+    i.captionText = "Metadata and thumb memory";
+    i.tooltip = "Memory required for the metadata cache (includes thumbnails).";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = QString::number(G::metaCacheMB) + " MB";
+    i.key = "availableMBToCache";
+    i.delegateType = DT_Label;
+    i.type = "QString";
+    i.color = "#1b8a83";
+    availMBMsgWidget = addItem(i);
+
     // Available memory for caching
     i.name = "availableMBToCache";
     i.parentName = "CacheImagesHeader";
@@ -768,7 +803,18 @@ void Preferences::addItems()
     i.tooltip = "The total amount of available memory in MB.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = QString::number(mw->cacheMaxMB) + " / " + QString::number(G::availableMemoryMB) + " MB";
+    // get available memory
+    #ifdef Q_OS_WIN
+    Win::availableMemory();     // sets G::availableMemoryMB
+    #endif
+    #ifdef Q_OS_MAC
+    Mac::availableMemory();     // sets G::availableMemoryMB
+    #endif
+    int memAvail = mw->imageCacheThread->cache.currMB + G::availableMemoryMB;
+    i.value = QString::number(mw->cacheMaxMB) + " of " +
+            QString::number(memAvail) + " available MB";
+
+//    i.value = QString::number(mw->cacheMaxMB) + " of " + QString::number(G::availableMemoryMB) + " MB";
     i.key = "availableMBToCache";
     i.delegateType = DT_Label;
     i.type = "QString";
@@ -780,7 +826,7 @@ void Preferences::addItems()
     i.parentName = "CacheImagesHeader";
     i.captionText = "Choose cache size method";
     i.tooltip = "Select method of determining the size of the image cache\n"
-                "Thrifty  = larger of 10% of available memory\n"
+                "Thrifty  = larger of 10% of available memory or 2GB\n"
                 "Moderate = 50% of available memory\n"
                 "Greedy   = 90% of available memory";
     i.hasValue = true;
@@ -789,7 +835,29 @@ void Preferences::addItems()
     i.key = "imageCacheSizeMethod";
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << "Thrifty" << "Moderate" << "Greedy";
+    i.dropList << "Thrifty"
+               << "Moderate"
+               << "Greedy";
+    addItem(i);
+
+    // Image cache minimum size excluding metadata cache
+    i.name = "imageCacheMinSize";
+    i.parentName = "CacheImagesHeader";
+    i.captionText = "Choose cache minimum size";
+    i.tooltip = "Select the minimum size of the image cache in MB\n";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->cacheMinSize;
+    i.key = "imageCacheMinSize";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "500 MB"
+               << "1000 MB"
+               << "2000 MB"
+               << "4000 MB"
+               << "8000 MB"
+               << "16000 MB"
+               << "32000 MB";
     addItem(i);
 
     // Slideshow Header (Root)

@@ -167,6 +167,7 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
     pmItem->setVisible(true);
 
     if (!refresh && imageCacheThread->imCache.contains(fPath)) {
+//    if (!refresh && dm->imCache.contains(fPath)) {
         // load preview from cache
         bool tryPreview = true;     // for testing
         loadFullSizeTimer->stop();
@@ -192,6 +193,7 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
         // otherwise load full size image from cache
         else {
             pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
+//            pmItem->setPixmap(QPixmap::fromImage(*dm->imCache.value(fPath)));
             isPreview = false;
             isLoaded = true;
         }
