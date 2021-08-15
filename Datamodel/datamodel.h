@@ -60,6 +60,8 @@ public:
     void error(int sfRow, const QString &s, const QString src);
     void errorList(int sfRow, const QStringList &sl, const QString src);
 
+//    QHash<QString, const QImage*> imCache;
+
     SortFilter *sf;
     QHash<QString, int> fPathRow;
     QStringList imageFilePathList;

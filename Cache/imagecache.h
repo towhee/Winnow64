@@ -33,10 +33,10 @@ public:
     ImageCache(QObject *parent, DataModel *dm, Metadata *metadata);
     ~ImageCache() override;
 
-    void initImageCache(int &cacheSizeMB,
+    void initImageCache(int &cacheSizeMB, int &cacheMinMB,
              bool &isShowCacheStatus, int &cacheWtAhead,
              bool &usePreview, int &previewWidth, int &previewHeight);
-    void updateImageCacheParam(int &cacheSizeMB, bool &isShowCacheStatus,
+    void updateImageCacheParam(int &cacheSizeMB, int &cacheMinMB, bool &isShowCacheStatus,
              int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
     void rebuildImageCacheParameters(QString &currentImageFullPath, QString source = "");
     void stopImageCache();
@@ -73,6 +73,7 @@ public:
         int totFiles;               // number of images available
         int currMB;                 // the current MB consumed by the cache
         int maxMB;                  // maximum MB available to cache
+        int minMB;                  // minimum MB available to cache
         int folderMB;               // MB required for all files in folder
         int targetFirst;            // beginning of target range to cache
         int targetLast;             // end of the target range to cache
@@ -111,7 +112,8 @@ public slots:
     void colorManageChange();
 
 private:
-    QMutex mutex;
+    QBasicMutex mutex;
+//    QMutex mutex;
     QWaitCondition condition;
     bool restart;
     bool abort;
