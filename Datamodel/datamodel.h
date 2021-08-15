@@ -6,6 +6,8 @@
 #include "Datamodel/filters.h"
 #include "progressbar.h"
 #include "Main/global.h"
+#include "Datamodel/HashMap.h"
+#include "Datamodel/HashNode.h"
 #include <algorithm>                // req'd for sorting fileInfoList
 
 class SortFilter : public QSortFilterProxyModel
@@ -57,10 +59,6 @@ public:
     QString diagnosticsForCurrentRow();
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
-    void error(int sfRow, const QString &s, const QString src);
-    void errorList(int sfRow, const QStringList &sl, const QString src);
-
-//    QHash<QString, const QImage*> imCache;
 
     SortFilter *sf;
     QHash<QString, int> fPathRow;
@@ -85,6 +83,9 @@ public:
     bool timeToQuit;
     bool alt;
 
+    // concurrent image cache hash
+    CTSL::HashMap<QString, QImage> imCache;
+
 signals:
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
     void msg(QString message);
@@ -94,7 +95,6 @@ public slots:
 //    void unfilteredItemSearchCount();
     void addAllMetadata();
     bool addMetadataForItem(ImageMetadata m);
-    void addErrorForItem(ImageMetadata m);
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
 

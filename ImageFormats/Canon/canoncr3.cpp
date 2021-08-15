@@ -167,7 +167,8 @@ bool CanonCR3::getHeifBox(QString &type, quint32 &offset, quint32 &length)
 //             << "length:" << length
 //             << "type:" << type
 //             << "(Undefined)"
-                ;
+//                ;
+    G::error(__FUNCTION__, m.fPath, "Box type " + type + " unknown.");
     offset += length;
     return true;
 //    return false;
@@ -178,6 +179,7 @@ bool CanonCR3::ftypBox(quint32 &offset, quint32 &length)
     if (G::isLogger) G::log(__FUNCTION__); 
     if (length == 0) {
         // err
+        G::error(__FUNCTION__, m.fPath, "ftyp not found.");
         qDebug() << __FUNCTION__ << "ftyp not found";
         return false;
     }
@@ -196,6 +198,7 @@ bool CanonCR3::ftypBox(quint32 &offset, quint32 &length)
     }
     if (!isCR3) {
         // err
+        G::error(__FUNCTION__, m.fPath, "crx not found");
         qDebug() << __FUNCTION__ << "crx not found";
         return false;
     }
@@ -324,7 +327,7 @@ bool CanonCR3::colrBox(quint32 &offset, quint32 &length)
     }
     else {
         // err
-        qDebug() << __FUNCTION__ << "*** color type" << colrType << "is not recognized";
+        G::error(__FUNCTION__, m.fPath, "Color type " + colrType + " is not recognized");
         offset += length;
         return false;
     }
@@ -409,7 +412,10 @@ bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
                  << "base_offset" << base_offset
                  << "extent_count" << extent_count;
         if (extent_count > 100) {
-            qDebug() << __FUNCTION__ << "*** Quiting because extent_count =" << extent_count;
+            QString err = "Quiting because extent_count has reached = " +
+                    QString::number(extent_count);
+            G::error(__FUNCTION__, m.fPath, err);
+            qDebug() << __FUNCTION__ << err;
             offset += length;
             return false;
         }
@@ -469,7 +475,8 @@ bool CanonCR3::iinfBox(quint32 &offset, quint32 &length)
 //    qDebug() << __FUNCTION__ << "iint entry count =" << entry_count << p.file.pos();
     if (entry_count == 0) {
         // err
-//        qDebug() << __FUNCTION__ << "No iint entries found";
+        QString err = "No iint entries found.";
+        G::error(__FUNCTION__, m.fPath, err);
         offset += length;
         return false;
     }
@@ -819,6 +826,8 @@ bool CanonCR3::iprpBox(quint32 &offset, quint32 &length)
 
     if (ipcoType != "ipco") {
         // err
+        QString err = "ipco not found in iprp box";
+        G::error(__FUNCTION__, m.fPath, err);
         qDebug() << __FUNCTION__ << "ipco not found in iprp box";
         return false;
     }

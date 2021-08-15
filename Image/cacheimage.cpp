@@ -75,32 +75,24 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
     QFile imFile(fPath);
     int dmRow = dm->fPathRow[fPath];
 
-    QString err = dm->index(dmRow, G::ErrColumn).data().toString();
-
     // is metadata loaded
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
         if (!dm->readMetadataForItem(dmRow)) {
-            err += "Could not load metadata" + fPath + ". ";
-            dm->setData(dm->index(dmRow, G::ErrColumn), err);
-            qDebug() << __FUNCTION__ << err << fPath;
+            G::error(__FUNCTION__, fPath, "Could not load metadata.");
             return false;
         }
     }
 
     // is file already open by another process
     if (imFile.isOpen()) {
-        err += "File already open" + fPath + ". ";
-        qDebug() << __FUNCTION__ << err;
-        dm->setData(dm->index(dmRow, G::ErrColumn), err);
+        G::error(__FUNCTION__, fPath, "File already open.");
         return false;
     }
 
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
         imFile.close();
-        err += "Could not open file for image" + fPath + ". ";
-        qDebug() << __FUNCTION__ << err;
-        dm->setData(dm->index(dmRow, G::ErrColumn), err);
+        G::error(__FUNCTION__, fPath, "Could not open file for image.");
         return false;
     }
 
@@ -113,18 +105,14 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
         // make sure legal offset by checking the length
         if (lengthFullJpg == 0) {
             imFile.close();
-            err += "Jpg length = zero " + fPath + ". ";
-            qDebug() << __FUNCTION__ << err;
-            dm->setData(dm->index(dmRow, G::ErrColumn), err);
+            G::error(__FUNCTION__, fPath, "Jpg length = zero.");
             return false;
         }
 
         // try to read the data
         if (!imFile.seek(offsetFullJpg)) {
             imFile.close();
-            err += "Illegal offset to image" + fPath + ". ";
-            qDebug() << __FUNCTION__ << err;
-            dm->setData(dm->index(dmRow, G::ErrColumn), err);
+            G::error(__FUNCTION__, fPath, "Illegal offset to image.");
             return false;
         }
 
@@ -150,7 +138,6 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
             if (imFile.isOpen()) imFile.close();
             err += "Unable to decode " + fPath + ". ";
             qDebug() << __FUNCTION__ << err;
-            dm->setData(dm->index(dmRow, G::ErrColumn), err);
             return false;
         }
         if (imFile.isOpen()) imFile.close();
@@ -165,10 +152,9 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
         int samplesPerPixel = dm->index(dmRow, G::samplesPerPixelColumn).data().toInt();
         if (samplesPerPixel > 3) {
             imFile.close();
-            err += "Could not read tiff because " + QString::number(samplesPerPixel)
-                  + " samplesPerPixel > 3. " + fPath + ". ";
-            qDebug() << __FUNCTION__ << err;
-            dm->setData(dm->index(dmRow, G::ErrColumn), err);
+            QString err = "Could not read tiff because " + QString::number(samplesPerPixel)
+                    + " samplesPerPixel > 3.";
+            G::error(__FUNCTION__, fPath, err);
             return false;
         }
 

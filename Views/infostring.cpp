@@ -456,7 +456,7 @@ QString InfoString::tokenValue(QString &token,
         return m.url.trimmed();
     if (token == "Err") {
         QString err = "";
-        for (const auto& s : m.err) err += s + "\n";
+        for (const auto& s : G::err[m.fPath]) err += s + "\n";
         return err;
     }
     return "";
@@ -570,7 +570,7 @@ Finds the token in the datamodel and returns the datamodel value.
         return m.url;
     if (token == "Err") {
         QString err = "";
-        for (const auto& s : m.err) err += s + "\n";
+        for (const auto& s : G::err[m.fPath]) err += s + "\n";
         return err;
     }
     return "";

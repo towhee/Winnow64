@@ -267,6 +267,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // Logger
     if (G::isLogger && G::sendLogToConsole == false) openLog();
 
+    // Error Logger
+    openErrLog();
+
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
 
@@ -510,6 +513,8 @@ void MW::closeEvent(QCloseEvent *event)
         folderDockVisibleAction->setChecked(true);
     }
     if (!simulateJustInstalled) writeSettings();
+    closeLog();
+    closeErrLog();
     clearPickLog();
     clearRatingLog();
     clearColorClassLog();
@@ -1668,6 +1673,7 @@ void MW::clearAll()
 
     G::allMetadataLoaded = false;
     dm->clearDataModel();
+    G::err.clear();
     currentRow = 0;
     infoView->clearInfo();
 //    metadata->clear();
@@ -7999,6 +8005,35 @@ void MW::clearLog()
 {
     if (!G::logFile.isOpen()) openLog();
     G::logFile.resize(0);
+}
+
+void MW::openErrLog()
+{
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
+    QDir dir(path);
+    if (!dir.exists()) dir.mkdir(path);
+    if (G::errlogFile.isOpen()) G::errlogFile.close();
+    QString fPath = path + "/WinnowErrorLog.txt";
+    G::errlogFile.setFileName(fPath);
+    // erase content if over one week since last modified
+    QFileInfo info(G::errlogFile);
+    QDateTime lastModified = info.lastModified();
+    QDateTime oneWeekAgo = QDateTime::currentDateTime().addDays(-7);
+    if (lastModified < oneWeekAgo) clearErrLog();
+    if (G::errlogFile.open(QIODevice::ReadWrite)) {
+        G::errlogFile.readAll();
+    }
+}
+
+void MW::closeErrLog()
+{
+    if (G::errlogFile.isOpen()) G::errlogFile.close();
+}
+
+void MW::clearErrLog()
+{
+    if (!G::errlogFile.isOpen()) openLog();
+    G::errlogFile.resize(0);
 }
 
 /*********************************************************************************************

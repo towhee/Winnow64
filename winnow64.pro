@@ -24,7 +24,9 @@ QT += concurrent
 QT += xmlpatterns
 #QT += opengl
 
-HEADERS += Cache/mdcache.h
+HEADERS += Cache/mdcache.h \
+    Datamodel/HashMap.h \
+    Datamodel/HashNode.h
 HEADERS += Cache/tshash.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h

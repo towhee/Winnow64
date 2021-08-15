@@ -62,8 +62,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     thumbReader.setScaledSize(size);
     image = thumbReader.read();
     if (image.isNull()) {
-//        qDebug() << __FUNCTION__ << "Could not read thumb using thumbReader.";
-        dm->error(row, "Could not read thumb using thumbReader.", __FUNCTION__);
+        G::error(__FUNCTION__, fPath, "Could not read thumb using thumbReader.");
         return false;
     }
     return true;
@@ -76,7 +75,6 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
     bool success = false;
-    err = "";
     QFile imFile(fPath);
      if (imFile.isOpen()) {
          qDebug() << __FUNCTION__ << fPath << "is already open - return";
@@ -106,21 +104,20 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
             QByteArray buf = imFile.read(lengthThumb);
             if (image.loadFromData(buf, "JPEG")) {
                 if (image.isNull())
-                    dm->error(row, "Empty thumb.", __FUNCTION__);
+                    G::error(__FUNCTION__, fPath, "Empty thumb.");
                 image = image.scaled(thumbMax, Qt::KeepAspectRatio);
                 success = true;
             }
         }
         else {
-            dm->error(row, "Illegal offset to thumb.", __FUNCTION__);
+            G::error(__FUNCTION__, fPath, "Could not open file for thumb.");
         }
         imFile.close();
     }
     else {
         // file busy, wait a bit and try again
-        dm->error(row, "Could not open file for thumb.", __FUNCTION__);
+        G::error(__FUNCTION__, fPath, "Could not open file for thumb.");
     }
-    if (err != "") qDebug() << __FUNCTION__ << err;
     return success;
 }
 
@@ -157,7 +154,6 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.suffix().toLower();
     int dmRow = dm->fPathRow[fPath];
-    QString err;
 
     // If video file then just show video icon
     if (metadata->videoFormats.contains(ext)) {
@@ -175,9 +171,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     // Check if metadata has been loaded for this image
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
         if (!dm->readMetadataForItem(dmRow)) {
-            dm->error(dmRow, "Could not load metadata.", __FUNCTION__);
-            dm->setData(dm->index(dmRow, G::ErrColumn), err);
-            qDebug() << __FUNCTION__ << "Could not load metadata." << fPath;
+            G::error(__FUNCTION__, fPath, "Could not load metadata.");
             return false;
         }
     }
@@ -201,20 +195,17 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
             // test for too many samples which causes libTiff to crash
             int samplesPerPixel = dm->index(dmRow, G::samplesPerPixelColumn).data().toInt();
             if (samplesPerPixel > 3) {
-                err = "Could not read tiff because " + QString::number(samplesPerPixel)
-                      + " samplesPerPixel > 3. ";
-                dm->error(dmRow, err, __FUNCTION__);
-                qDebug() << __FUNCTION__ << err;
+                QString err = "Could not read tiff because " + QString::number(samplesPerPixel)
+                      + " samplesPerPixel > 3.";
+                G::error(__FUNCTION__, fPath, err);
                 return false;
             }
             // try to get thumb ourselves
             if (!loadFromTiffData(fPath, image)) {
-                qDebug() << __FUNCTION__ << "loadFromTiffData Failed, trying loadFromEntireFile" << fPath;
-                dm->error(dmRow, "loadFromTiffData Failed, trying loadFromEntireFile.", __FUNCTION__);
+                G::error(__FUNCTION__, fPath, "loadFromTiffData Failed, trying loadFromEntireFile.");
                 // no thumb, try read entire full size image
                 if (!loadFromEntireFile(fPath, image, dmRow)) {
-                    dm->error(dmRow, "Failed to load thumb from loadFromEntireFile.", __FUNCTION__);
-                    qDebug() << __FUNCTION__ << "Failed to load thumb from loadFromEntireFile.";
+                    G::error(__FUNCTION__, fPath, "Failed to load thumb from loadFromEntireFile.");
                     // show bad image png
                     QString path = ":/images/badImage1.png";
                     loadFromEntireFile(path, image, dmRow);
@@ -231,16 +222,14 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
             Heic heic;
             // try to read heic thumbnail
             if (!heic.decodeThumbnail(m, fPath, image)) {
-                qDebug() << __FUNCTION__ << "Unable to read heic thumbnail";
-                dm->error(dmRow, "Unable to read heic thumbnail.", __FUNCTION__);
+                G::error(__FUNCTION__, fPath, "Unable to read heic thumbnail.");
                 return false;
             }
             #endif
         }
         // all other cases where embedded thumbnail - most raw file formats
         else if (!loadFromJpgData(fPath, image)) {
-            dm->error(dmRow, "Failed to load thumb.", __FUNCTION__);
-            qDebug() << __FUNCTION__ << "Failed to load thumb." << fPath;
+            G::error(__FUNCTION__, fPath, "Failed to load thumb.");
             // rgh should we be trying to read the full size thumb in this case?
             return false;
         }
@@ -248,8 +237,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     else  {
         // read the image file (supported by Qt), scaling to thumbnail size
         if (!loadFromEntireFile(fPath, image, dmRow)) {
-            err += "Could not load thumb. ";
-            dm->setData(dm->index(dmRow, G::ErrColumn), err);
+            G::error(__FUNCTION__, fPath, "Could not load thumb.");
             qDebug() << __FUNCTION__ << err << fPath;
             return false;
         }

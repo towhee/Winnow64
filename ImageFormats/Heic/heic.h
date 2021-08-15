@@ -91,6 +91,7 @@ private:
 
 //    QFile &file;      // used in constructor before managed to compile libheif
     QFile file;         // temp until decide what to do with constructor
+    QString fPath;
     qint64 eof;
 };
 

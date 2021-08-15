@@ -109,9 +109,11 @@ namespace G
         RotationDegreesColumn,
         ShootingInfoColumn,
         SearchTextColumn,
-        ErrColumn,
         TotalColumns    // insert additional columns before this
     };
+
+    // Errors
+    extern QMap<QString,QStringList> err;
 
     enum ImageFormat {
         UseQt,
@@ -135,6 +137,7 @@ namespace G
     extern bool isFlowLogger;
     extern bool sendLogToConsole;
     extern QFile logFile;
+    extern QFile errlogFile;
     extern bool isDev;
 
     extern QPoint mousePos;
@@ -234,6 +237,8 @@ namespace G
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
     extern void log(QString functionName = "", QString comment = "",
                     bool hideElapsedTime = false);
+    extern void errlog(QString functionName, QString fPath, QString err);
+    extern void error(QString functionName, QString fPath, QString err);
     extern void wait(int ms);
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);

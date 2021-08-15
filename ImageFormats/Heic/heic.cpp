@@ -25,7 +25,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
 {
     heif_context* ctx = heif_context_alloc();
     QFileInfo info(p.file);
-    QString fPath = info.filePath();
+    fPath = info.filePath();
 
     QElapsedTimer t; t.restart();
     auto error = heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
@@ -82,6 +82,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
         count++;
         if (count > 100) {
             // err endian order not found
+            G::error(__FUNCTION__, fPath, "Endian order not found.");
             p.buf.close();
             return false;
         }
@@ -462,6 +463,8 @@ bool Heic::getHeifBox(QString &type, quint32 &offset, quint32 &length)
     if (type == "pixi") return pixiBox(offset, length);
 
     // err
+    QString err = "Box type " + type + " is unknown";
+    G::error(__FUNCTION__, fPath, err);
     qDebug();
     qDebug() << __FUNCTION__
              << "**************************************** Failed to get box for type ="
@@ -493,6 +496,8 @@ bool Heic::ftypBox(quint32 &offset, quint32 &length)
     }
     if (!isHeic) {
         // err
+        QString err = "Brand heic or HEIC not found.";
+        G::error(__FUNCTION__, fPath, err);
         qDebug() << __FUNCTION__ << "heic not found";
         return false;
     }
@@ -717,6 +722,8 @@ bool Heic::ilocBox(quint32 &offset, quint32 &length)
                  << "base_offset" << base_offset
                  << "extent_count" << extent_count;
         if (extent_count > 100) {
+            QString err = "Quiting because extent_count has reached " + extent_count;
+            G::error(__FUNCTION__, fPath, err);
             qDebug() << __FUNCTION__ << "*** Quiting because extent_count =" << extent_count;
             offset += length;
             return false;
@@ -1002,6 +1009,8 @@ bool Heic::iprpBox(quint32 &offset, quint32 &length)
 
     if (ipcoType != "ipco") {
         // err
+        QString err = "Type ipco not found in iprp box.";
+        G::error(__FUNCTION__, fPath, err);
         qDebug() << __FUNCTION__ << "ipco not found in iprp box";
         return false;
     }
