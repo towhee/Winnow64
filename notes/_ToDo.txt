@@ -6,7 +6,6 @@ BUGS / TO DO
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow
 - Maintain count when switch folders during the same ingest
-- Improve err recording and showing to user
 - Cannot delete heic files on PC
 - Add hif file format
 - Rotate heic files
@@ -44,6 +43,8 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Improve err recording and showing to user
+- Version 1.26
 - TIFF with planarConfiguration = 2
 - Version 1.25
 - If eject, cache status not updated in status bar

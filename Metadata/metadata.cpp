@@ -681,7 +681,6 @@ void Metadata::clearMetadata()
     m.copyright = "";
     m.email = "";
     m.url = "";
-    m.err.clear();
     m.shutterCount = 0;
     m.cameraSN = "";
     m.lensSN = "";
@@ -779,8 +778,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     }
     else {
         if (p.file.isOpen()) p.file.close();
-        qDebug() << __FUNCTION__ << "Could not open " << path;
-        m.err += "Could not open p.file to read metadata. ";
+        G::error(__FUNCTION__, path, "Could not open p.file to read metadata.");
         return false;
     }
 
@@ -788,7 +786,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 
     // not all files have thumb or small jpg embedded
     if (m.offsetFull == 0 && ext != "jpg" && parsed) {
-        m.err += "No embedded JPG found. ";
+        G::error(__FUNCTION__, path, "No embedded JPG found.");
     }
 
     if (m.lengthFull == 0 && m.lengthThumb > 0) {
@@ -805,11 +803,11 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     thumbUnavailable = imageUnavailable = false;
     if (m.lengthFull == 0) {
         imageUnavailable = true;
-        m.err += "No embedded preview found. ";
+        G::error(__FUNCTION__, path, "No embedded preview found.");
     }
     if (m.lengthThumb == 0) {
         thumbUnavailable = true;
-        m.err += "No embedded thumbnail or preview found. ";
+        G::error(__FUNCTION__, path, "No embedded thumbnail or preview found.");
     }
 
     return true;
@@ -833,7 +831,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     QString ext = fileInfo.suffix().toLower();
     if (!getMetadataFormats.contains(ext)) {
         clearMetadata();
-//        mutex.unlock();
         return false;
     }
 
@@ -846,8 +843,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     // read metadata
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
-        qDebug() << __FUNCTION__ << m.err << source;
-//        mutex.unlock();
+//        G::error(__FUNCTION__, fPath, "Failed to read metadata.");
         return false;
     }
 

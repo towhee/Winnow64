@@ -128,8 +128,7 @@ bool Jpeg::parse(MetadataParameters &p,
     bool isBigEnd = true;
 
     if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-        m.err << "JPG does not start with 0xFFD8. ";
-        qDebug() << __FUNCTION__ << err;
+        G::error(__FUNCTION__, m.fPath, "JPG does not start with 0xFFD8.");
         return false;
     }
 
@@ -149,8 +148,7 @@ bool Jpeg::parse(MetadataParameters &p,
         return true;
     }
     else {
-        m.err << "JPG does not contain EXIF information. ";
-        qDebug() << __FUNCTION__ << err;
+        G::error(__FUNCTION__, m.fPath, "JPG does not contain EXIF information.");
         return false;
     }
 
@@ -175,7 +173,7 @@ bool Jpeg::parse(MetadataParameters &p,
         count++;
         if (count > 100) {
             // err endian order not found
-            m.err << "Endian order not found. ";
+            G::error(__FUNCTION__, m.fPath, "Endian order not found.");
             return false;
         }
     }
@@ -764,8 +762,7 @@ void Jpeg::decodeScan(QFile &file, QImage &image)
     if (p.file.open(QIODevice::ReadOnly)) {
         bool isBigEnd = true;
         if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-            err = "JPG does not start with 0xFFD8";
-            qDebug() << __FUNCTION__ << err;
+            G::error(__FUNCTION__, file.fileName(), "JPG does not start with 0xFFD8.");
             p.file.close();
             return;
         }

@@ -541,7 +541,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         }
     }
     else {
-        err += "No strip offsets.  \n";
+        err = "No strip offsets.  \n";
     }
 
     // strip byte counts
@@ -560,7 +560,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         }
     }
     else {
-        err += "No StripByteCounts.  \n";
+        err = "No StripByteCounts.  \n";
     }
 
     // IFD: bitsPerSample
@@ -569,10 +569,10 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         bitsPerSample = Utilities::get16(p.file.read(2), m.isBigEnd);
     }
     else {
-       err += "No BitsPerSample.  \n";
+       err = "No BitsPerSample.  \n";
     }
     if (bitsPerSample != 8 && bitsPerSample != 16) {
-        err += "BitsPerSample = " + QString::number(bitsPerSample) + ". Only 8 and 16 supported.";
+        err = "BitsPerSample = " + QString::number(bitsPerSample) + ". Only 8 and 16 supported.";
     }
 
     // IFD: predictor
@@ -585,7 +585,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
             ? compression = static_cast<int>(ifd->ifdDataHash.value(259).tagValue)
             : compression = 1;
     if (!(compression == 1  || compression == 5)) {
-        err += "Compression != 1 or 5.  \n";
+        err = "Compression != 1 or 5.  \n";
     }
     switch (compression) {
     case 1:
@@ -604,7 +604,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         ? width = static_cast<int>(ifd->ifdDataHash.value(256).tagValue)
         : width = 0;
     if (width == 0) {
-        err += "Width = 0.  \n";
+        err = "Width = 0.  \n";
     }
 
     // IFD: height
@@ -612,7 +612,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         ? height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue)
         : height = 0;
     if (height == 0) {
-        err += "Height = 0.  \n";
+        err = "Height = 0.  \n";
     }
 
     // IFD: photoInterp
@@ -625,7 +625,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
             ? samplesPerPixel = static_cast<int>(ifd->ifdDataHash.value(277).tagValue)
             : samplesPerPixel = 0;
     if (samplesPerPixel == 0) {
-        err += "SamplesPerPixel is undefined.  \n";
+        err = "SamplesPerPixel is undefined.  \n";
     }
 
     // IFD: rowsPerStrip
@@ -638,12 +638,12 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
             ? planarConfiguration = ifd->ifdDataHash.value(284).tagValue
             : planarConfiguration = 1;
     if (planarConfiguration == 2 && compression == 5) {
-        err += "LZW compression not supported for per channel planar configuration.  \n";
+        err = "LZW compression not supported for per channel planar configuration.  \n";
     }
     if (err != "") qDebug() << __FUNCTION__ << m.fName << err;
-    m.err += err;
     if (err != "" && !isReport) return false;
 
+    // rgh used for debugging - req'd?
     G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
                   " Compression:" + QString::number(compression) +
                   " Predictor:" + QString::number(predictor) +
@@ -691,8 +691,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
     MetadataParameters p;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
-        m.err += "Unable to open file " + fPath + ". ";
-        qWarning() << __FUNCTION__ << m.err;
+        G::error(__FUNCTION__, m.fPath, "Unable to open file.");
         return false;
     }
 
@@ -727,7 +726,6 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
     IFD *ifd = new IFD;
     p.report = false;
     if (!parseForDecoding(p, m, ifd)) {
-        qWarning() << err + m.fPath;
         return false;
     }
 
@@ -871,7 +869,6 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
 */
     // get decoding parameters from source IFD (p.offset must be preset)
     if (!parseForDecoding(p, m, ifd)) {
-        qWarning() << err + m.fPath;
         return false;
     }
 

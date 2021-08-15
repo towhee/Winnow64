@@ -1058,6 +1058,9 @@ private:
     void openLog();
     void closeLog();
     void clearLog();
+    void openErrLog();
+    void closeErrLog();
+    void clearErrLog();
     bool isDevelopment();
 
     bool isValidPath(QString &path);

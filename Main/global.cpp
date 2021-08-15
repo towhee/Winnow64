@@ -7,7 +7,11 @@ namespace G
     bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
     QFile logFile;                      // MW::openLog(), MW::closeLog()
+    QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
     bool isDev;                         // Running from within Winnow Project/Winnow64
+
+    // Errors
+    QMap<QString,QStringList> err;
 
     // system display
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitor
@@ -149,6 +153,27 @@ namespace G
             if (logFile.isOpen()) logFile.write(msg.toUtf8());
         }
         t.restart();
+    }
+
+    void errlog(QString functionName, QString fPath, QString err)
+    {
+        QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
+        QString f = functionName.leftJustified(40, '.') + " ";
+        QString p = fPath;
+        QString e = err.leftJustified(75, '.') + " ";
+        QString msg = d + e + f + p + "\n";
+        if (errlogFile.isOpen()) {
+            errlogFile.write(msg.toUtf8());
+            errlogFile.flush();
+        }
+    }
+
+    void error(QString functionName, QString fPath, QString err)
+    {
+        QString errMsg = functionName + " Error: " + err;
+        G::err[fPath].append(errMsg);
+        // add to errorLog ...
+        errlog(functionName, fPath, err);
     }
 
     PopUp *popUp;

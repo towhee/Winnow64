@@ -218,7 +218,6 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::RotationDegreesColumn, new QStandardItem("RotationDegrees")); horizontalHeaderItem(G::RotationDegreesColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo")); horizontalHeaderItem(G::ShootingInfoColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::ErrColumn, new QStandardItem("Err")); horizontalHeaderItem(G::ErrColumn)->setData(true, G::GeekRole);
 
     sf = new SortFilter(this, filters, combineRawJpg);
     sf->setSourceModel(this);
@@ -488,7 +487,6 @@ bool DataModel::addFileData()
         setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
         setData(index(row, G::SearchTextColumn), search);
         setData(index(row, G::SearchTextColumn), search, Qt::ToolTipRole);
-        setData(index(row, G::ErrColumn), "");
 
         /* Save info for duplicated raw and jpg files, which generally are the result of
         setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
@@ -758,11 +756,6 @@ bool DataModel::readMetadataForItem(int row)
     return true;
 }
 
-void DataModel::addErrorForItem(ImageMetadata m)
-{
-    setData(index(m.row, G::ErrColumn), m.err);
-}
-
 bool DataModel:: addMetadataForItem(ImageMetadata m)
 {
 /*
@@ -885,9 +878,6 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
-    setData(index(row, G::ErrColumn), m.err);
-//    setData(index(row, G::ErrColumn), m.err, Qt::ToolTipRole);
-//    mutex.unlock();
 
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
@@ -1017,39 +1007,6 @@ int DataModel::proxyRowFromModelRow(int dmRow) {
     return sf->mapFromSource(index(dmRow, 0)).row();
 }
 
-void DataModel::error(int sfRow, const QString &s, const QString src)
-{
-    if (G::isLogger) G::log(__FUNCTION__); 
-//    int dmRow = sf->mapToSource(sf->index(sfRow, 0)).row();
-    QStringList err = sf->index(sfRow, G::ErrColumn).data().toStringList();
-    err << QString::number(err.size() + 1) + ". " + src + ": " + s;
-    sf->setData(sf->index(sfRow, G::ErrColumn), err);
-    QString tip = "";
-    for (int i = 0; i < err.size(); ++i) {
-        tip += err.at(i) + "\n";
-    }
-    sf->setData(sf->index(sfRow, G::ErrColumn), tip, Qt::ToolTipRole);
-}
-
-void DataModel::errorList(int sfRow, const QStringList &sl, const QString src)
-{
-    if (G::isLogger) G::log(__FUNCTION__, "Source: " + src);
-    // get current error list for datamodel row
-    QStringList err = sf->index(sfRow, G::ErrColumn).data().toStringList();
-    // append new error items in sl
-    for (int i = 0; i < sl.size(); ++i) {
-        err << QString::number(err.size() + i + 1) + ". " + src + ": " + sl.at(i);
-    }
-    // update datamodel
-    sf->setData(sf->index(sfRow, G::ErrColumn), err);
-    // rebuild the tooltip text
-    QString tip = "";
-    for (int i = 0; i < err.size(); ++i) {
-        tip += sl.at(i) + "\n";
-    }
-    sf->setData(sf->index(sfRow, G::ErrColumn), tip, Qt::ToolTipRole);
-}
-
 void DataModel::clearPicks()
 {
 /*
@@ -1067,17 +1024,22 @@ QString DataModel::diagnosticsErrors()
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
-    rpt << Utilities::centeredRptHdr('=', "DataModel Error Listing");
-    rpt << "\n";
-    QStringList err;
-    for(int row = 0; row < sf->rowCount(); row++) {
-        err.clear();
-        err = sf->index(row, G::ErrColumn).data().toStringList();
-        if (err.size() == 0) continue;
-        QString fPath = sf->index(row, G::PathColumn).data(G::PathRole).toString();
-        rpt << fPath + "\n";
-        for (int i = 0; i < err.size(); ++i) {
-            rpt << "    " << err.at(i) + "\n";
+    rpt << Utilities::centeredRptHdr('=', "Error Listing");
+    rpt << "\n\n";
+    if (G::err.isEmpty()) {
+        rpt << "No errors" << "\n";
+        rpt << "\n\n" ;
+        return reportString;
+    }
+    QMapIterator<QString,QStringList> item(G::err);
+    while (item.hasNext()) {
+        item.next();
+        if (item.value().size() == 0) continue;
+        // key = file path
+        rpt << item.key() + "\n";
+        // value = QStringList of errors for the key
+        for (int error = 0; error < item.value().size(); ++error) {
+            rpt << "  " << item.value().at(error) + "\n";
         }
     }
     rpt << "\n\n" ;
@@ -1194,12 +1156,6 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("shootingInfo", 25) << G::s(index(row, G::ShootingInfoColumn).data());
     rpt << "\n  " << G::sj("loadMsecPerMp", 25) << G::s(index(row, G::LoadMsecPerMpColumn).data());
     rpt << "\n  " << G::sj("searchText", 25) << G::s(index(row, G::SearchTextColumn).data());
-//    QStringList sl = index(row, G::ErrColumn).data().toStringList();
-//    rpt << "\n  " << G::sj("err", 25) << sl.at(0);
-//    QString whitespace = "";
-//    for (int i = 1; i < sl.size(); ++i) {
-//        rpt << "\n  " << whitespace.leftJustified(26, ' ') << sl.at(i);
-//    }
 }
 
 // --------------------------------------------------------------------------------------------
