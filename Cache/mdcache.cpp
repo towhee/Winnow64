@@ -84,7 +84,8 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
     if (G::isLogger) G::log(__FUNCTION__); 
     this->dm = dm;
     this->metadata = metadata;
-    this->imageCacheThread = imageCacheThread;
+    // rgh req'd used??
+//    this->imageCacheThread = imageCacheThread;
     thumb = new Thumb(this, dm, metadata);
     abort = false;
 
@@ -140,8 +141,7 @@ bool MetadataCache::isAllMetadataLoaded()
 bool MetadataCache::isAllIconLoaded()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    // not used
-//    qDebug() << __FUNCTION__;
+    // not being used
     bool loaded = true;
     for (int i = 0; i < dm->rowCount(); ++i) {
         if (dm->index(i, G::PathColumn).data(Qt::DecorationRole).isNull()) {
@@ -228,7 +228,7 @@ void MetadataCache::loadNewFolder2ndPass()
 void MetadataCache::loadAllMetadata()
 {
 /*
-    Using dm::addAllMetadata instead (see why below)
+    Using dm::addAllMetadata instead (see why below) so not being used
 
     All the metadata if loaded into the datamodel. This is called prior to filtering or
     sorting the datamodel. This is duplicated in the datamodel, where is can be run in the
@@ -312,9 +312,7 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
     This function is called from MW::fileSelectionChange. A chunk of metadata and icons are
     added to the datamodel. The image cache is updated.
 */
-//    return;
     if (G::isLogger) G::log(__FUNCTION__); 
-//    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -323,7 +321,6 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
         wait();
     }
     abort = false;
-//    updateImageCache = okayToImageCache; // rghcachechange
     action = Action::NewFileSelected;
     setRange();
     foundItemsToLoad = anyItemsToLoad();
@@ -356,7 +353,6 @@ void MetadataCache::setRange()
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     int rowCount = dm->sf->rowCount();
-//    qDebug() << __FUNCTION__ << rowCount;
 
     // default total per page (prev, curr and next pages)
     int dtpp = metadataChunkSize / 3;
@@ -411,7 +407,6 @@ void MetadataCache::iconCleanup()
         // the datamodel row dmRow
         int dmRow = i.value();
         // the filtered proxy row sfRow
-//        mutex.lock();
         int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
         /* mapFromSource returns -1 if dm->index(dmRow, 0) is not in the filtered dataset
         This can happen is the user switches folders and the datamodel is cleared before the
@@ -426,7 +421,6 @@ void MetadataCache::iconCleanup()
 //            qDebug() << __FUNCTION__ << actionList[action]
 //                     << "Removing icon for row" << sfRow;
         }
-//        mutex.unlock();
     }
 }
 
@@ -474,10 +468,6 @@ void MetadataCache::readAllMetadata()
     Load the thumb (icon) for all the image files in the folder(s).
 */
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-
-//    G::t.restart();
-//    qDebug() << __FUNCTION__;
-//    isShowCacheStatus = true;
     int count = 0;
     int rows = dm->rowCount();
     for (int row = 0; row < rows; ++row) {
@@ -493,14 +483,11 @@ void MetadataCache::readAllMetadata()
         }
     }
     G::allMetadataLoaded = true;
-//    qint64 ms = G::t.elapsed();
-//    qreal msperfile = (float)ms / count;
-//    qDebug() << "MetadataCache::readAllMetadata for" << count << "files" << ms << "ms" << msperfile << "ms per file;";
 }
 
 void MetadataCache::readMetadataIcon(const QModelIndex &idx)
 {
-/* Currently not used */
+/* rgh Currently not used */
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
 
     int sfRow = idx.row();
@@ -615,113 +602,50 @@ void MetadataCache::readIconChunk()
 void MetadataCache::readMetadataChunk()
 {
 /*
-    Load the thumb (icon) for all the image files in the target range. This is called after a
-    sort/filter change and all metadata has been loaded, but the icons visible have changed.
+    Load the metadata for all the image files in the target range.
 */
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-//    qDebug() << __FUNCTION__;
 
-    int start = startRow;
-    int end = endRow;
-//    qDebug() << __FUNCTION__ << startRow << endRow;
-    if (cacheAllMetadata) {
-        start = 0;
-        end = dm->sf->rowCount();
-    }
+    int tryAgain = 0;
+    bool metadataLoadFailed;
+    do {
+        metadataLoadFailed = false;
+        int start = startRow;
+        int end = endRow;
+        if (cacheAllMetadata) {
+            start = 0;
+            end = dm->sf->rowCount();
+        }
+
+        for (int row = start; row < end; ++row) {
+            if (abort) {
+                emit updateIsRunning(false, true, __FUNCTION__);
+                return;
+            }
+            if (dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) continue;
+            // file path and dm source row in case filtered or sorted
+            QModelIndex idx = dm->sf->index(row, 0);
+            int dmRow = dm->sf->mapToSource(idx).row();
+            if (!dm->readMetadataForItem(dmRow)) {
+                metadataLoadFailed = true;
+                /*
+                qDebug() << __FUNCTION__
+                         << "tryAgain =" << tryAgain
+                         << "row =" << row
+                            ;
+                            //*/
+            }
+        }
+    } while (metadataLoadFailed && metadataTry > tryAgain++);
 
     /*
-    qDebug() << __FUNCTION__ << "startRow =" << startRow
-             << "endRow =" << endRow
-             << "cacheAllMetadata =" << cacheAllMetadata;
-//        */
-    for (int row = start; row < end; ++row) {
-        if (abort) {
-            emit updateIsRunning(false, true, __FUNCTION__);
-            return;
-        }
-        // file path and dm source row in case filtered or sorted
-        QModelIndex idx = dm->sf->index(row, 0);
-        int dmRow = dm->sf->mapToSource(idx).row();
-//        qDebug() << __FUNCTION__ << "readMetadataForItem row =" << dmRow;
-        dm->readMetadataForItem(dmRow);
-        /*
-        QString fPath = idx.data(G::PathRole).toString();
-
-        // load metadata
-        if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
-            QFileInfo fileInfo(fPath);
-
-            // only read metadata from files that we know how to
-            QString ext = fileInfo.suffix().toLower();
-            if (metadata->getMetadataFormats.contains(ext)) {
-                if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-                    metadata->imageMetadata.row = dmRow;
-                    dm->addMetadataForItem(metadata->imageMetadata);
-                }
-                else {
-                    qDebug() << __FUNCTION__ << "Failed to load metadata for" << fPath;
-                }
-            }
-            // cannot read this file type, load empty metadata
-            else {
-                metadata->clearMetadata();
-                metadata->imageMetadata.row = dmRow;
-                dm->addMetadataForItem(metadata->imageMetadata);
-            }
-        }
-        */
-    }
-}
-
-void MetadataCache::readMetadataIconChunk()
-{
-/*
-    Not being used (replaced by separate reads for metadata and icons
-    Load the metadata and thumb (icon) for all the image files in the chunk range defined by
-    startRow and endRow.
-*/
-    if (G::isLogger) G::log(__FUNCTION__);
-//    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
-    if (cacheAllMetadata) endRow = dm->sf->rowCount();
-    for (int row = startRow; row < endRow; ++row) {
-        if (abort) {
-            qDebug() << __FUNCTION__ << "aborting";
-            emit updateIsRunning(false, true, __FUNCTION__);
-            return;
-        }
-
-        // file path and dm source row in case filtered or sorted
-//        mutex.lock(); // rgh mutex
-        QModelIndex idx = dm->sf->index(row, 0);
-        int dmRow = dm->sf->mapToSource(idx).row();
-        QString fPath = idx.data(G::PathRole).toString();
-
-        // load metadata
-        if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
-            QFileInfo fileInfo(fPath);
-            /*
-               tried emit signal to metadata but really slow
-               emit loadImageMetadata(fileInfo, true, true, false);  */
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-                metadata->m.row = dmRow;
-                dm->addMetadataForItem(metadata->m);
-            }
-        }
-
-        // load icon
-        if (idx.data(Qt::DecorationRole).isNull()) {
-            QImage image;
-//            qDebug() << __FUNCTION__ << "row =" << row << fPath;
-            bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readMetadataIconChunk");
-            if (thumbLoaded) {
-                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
-                iconMax(pm);
-                iconsCached.append(dmRow);
-            }
-        }
-//        mutex.unlock();   // rgh mutex
-    }
+    if (tryAgain == metadataTry)
+        qDebug() << __FUNCTION__ << "Failed to read all metadata.";
+    else
+        qDebug() << __FUNCTION__ << "All metadata in chunk read."
+                 << "tryAgain =" << tryAgain
+                    ;
+                    //*/
 }
 
 void MetadataCache::run()

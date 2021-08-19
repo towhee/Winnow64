@@ -348,6 +348,7 @@ public slots:
     void slideshowHelpMsg();
 
 signals:
+    void setImageCachePosition(QString);
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     void closeZoomDlg();
     void aSyncGo(int);  // rgh req'd?

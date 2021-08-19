@@ -167,7 +167,8 @@ void ImageCache::clearImageCache(bool includeList)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     mutex.lock();
-    imCache.clear();
+//    imCache.clear();
+    dm->imCache.clear();
     toCache.clear();
     toDecache.clear();
     cache.currMB = 0;
@@ -196,6 +197,19 @@ void ImageCache::stopImageCache()
     }
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
     clearImageCache(true);
+
+    /* confirm all decoders finished
+    for (int id = 0; id < decoderCount; ++id) {
+        mutex.lock();
+        if (decoder[id]->isRunning()) {
+            qDebug() << __FUNCTION__ << "decoder" << id << "is still running.";
+        }
+        else {
+            qDebug() << __FUNCTION__ << "decoder" << id << "is finished.";
+        }
+        mutex.unlock();
+    }
+    */
 }
 
 void ImageCache::pauseImageCache()
@@ -446,7 +460,7 @@ bool ImageCache::nextToCache()
 bool ImageCache::nextToDecache()
 {
 /*
-    The images to decache are listed in the list toDeache as a stack. The first one on the
+    The images to decache are listed in the list toDecache as a stack. The first one on the
     list is the next to decache.
 */
     if (G::isLogger) G::log(__FUNCTION__);
@@ -557,7 +571,8 @@ void ImageCache::makeRoom(int room, int roomRqd)
         // make some room by removing lowest priority cached image
         if (nextToDecache()) {
             QString s = cacheItemList[cache.toDecacheKey].fPath;
-            imCache.remove(s);
+//            imCache.remove(s);
+            dm->imCache.remove(s);
             if (cache.isShowCacheStatus) emit updateCacheOnThumbs(s, false);
             if (!toDecache.isEmpty()) toDecache.removeFirst();
             cacheItemList[cache.toDecacheKey].isCached = false;
@@ -602,9 +617,12 @@ void ImageCache::checkForOrphans()
     out of sync and leave orphans in the image cache buffer. This function iterates through
     the image cache, checking that all cached images are in the target. If not, they are
     removed from the cache buffer.
+
+    NOT USED.  rgh chk if keep
 */
     if (G::isLogger) G::log(__FUNCTION__);
     return;
+    /*
     for (int i = 0; i < cache.totFiles; ++i) {
         if (imCache.contains(cacheItemList.at(i).fPath)) {
             if (!cacheItemList.at(i).isTarget) {
@@ -615,6 +633,7 @@ void ImageCache::checkForOrphans()
             }
         }
     }
+    */
 }
 
 // rgh cachechange not being used???
@@ -623,7 +642,8 @@ void ImageCache::removeFromCache(QStringList &pathList)
     if (G::isLogger) G::log(__FUNCTION__);
     for (int i = 0; i < pathList.count(); ++i) {
         QString fPath = pathList.at(i);
-        imCache.remove(fPath);
+//        imCache.remove(fPath);
+        dm->imCache.remove(fPath);
         for (int j = 0; j < cacheItemList.count(); ++j) {
             if (cacheItemList.at(j).fPath == fPath) {
                 cacheItemList.removeAt(j);
@@ -691,6 +711,7 @@ QString ImageCache::reportCache(QString title)
     rpt << "\n";
 //    std::cout << reportString.toStdString() << std::flush;
 
+    int cachedCount = 0;
     for (int i = 0; i < cache.totFiles; ++i) {
         int row = dm->fPathRow[cacheItemList.at(i).fPath];
 //        rpt.flush();
@@ -716,8 +737,9 @@ QString ImageCache::reportCache(QString title)
         rpt << cacheItemList.at(i).fPath;
         rpt.setFieldWidth(0);
         rpt << "\n";
-
+        if (cacheItemList.at(i).isCached) cachedCount++;
     }
+    rpt << cachedCount << " images reported as cached." << "\n";
     std::cout << reportString.toStdString() << std::flush;
     return reportString;
 }
@@ -738,16 +760,25 @@ QString ImageCache::reportImCache()
     rpt.setString(&reportString);
     rpt << "\nimCache hash:";
     QHash<QString, QImage>::iterator i;
+    // replace with new HashMap dm->imCache
+    /*
     for (i = imCache.begin(); i != imCache.end(); ++i) {
         rpt << "\n";
         rpt << G::s(i.key());
         rpt << ": image width = " << G::s(i.value().width());
         rpt << " height = " << G::s(i.value().height());
     }
+    */
+    QVector<QString> keys;
+    // rgh check when imCache is empty
+    dm->imCache.getKeys(keys);
+    for (int i = 0; i < keys.length(); ++i) {
+        rpt << "\n";
+        rpt << keys.at(i);
+    }
+    rpt << "\n" << keys.length() << " images in image cache.";
+
     return reportString;
-//        qDebug() << i.key() << ": "
-//                 << "width =" << i.value().width()
-//                 << "height =" << i.value().height();
 }
 
 QString ImageCache::reportCacheProgress(QString action)
@@ -952,7 +983,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     rebuilt for the filtered dataset and isCached updated, the current image is set, and any
     surplus cached images (not in the filtered dataset) are removed from imCache.
 
-    The image cache is now ready to run by calling setCachePosition().
+    The image cache is now ready to run by callin(fPath)) cacg setCachePosition().
 */
     if (G::isLogger) G::log(__FUNCTION__);
     if(dm->sf->rowCount() == 0) return;
@@ -969,16 +1000,17 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     // update cacheItemList
     cache.key = 0;
     // list of files in cacheItemList (all the filtered files) used to check for surplus
-    QStringList fList;
+    QStringList filteredList;
 
     // assign cache.key and update isCached status in cacheItemList
     for (int row = 0; row < cacheItemList.length(); ++row) {
         QString fPath = cacheItemList.at(row).fPath;
-        fList.append(fPath);
+        filteredList.append(fPath);
         // get key for current image
         if (fPath == currentImageFullPath) cache.key = row;
         // update cacheItemList for images already cached
-        if (imCache.contains(fPath)) cacheItemList[row].isCached = true;
+//        if (imCache.contains(fPath)) cacheItemList[row].isCached = true;
+        if (dm->imCache.contains(fPath)) cacheItemList[row].isCached = true;
     }
 
     // if the sort has been reversed
@@ -990,16 +1022,23 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 //    std::cout << diagnostics().toStdString() << std::flush;
 
     // remove surplus cached images from imCache if they are not in the filtered dataset
+    /*
     QHashIterator<QString, QImage> i(imCache);
     while (i.hasNext()) {
         i.next();
         if (!fList.contains(i.key())) imCache.remove(i.key());
     }
+    */
+    QVector<QString> keys;
+    dm->imCache.getKeys(keys);
+    for (int i = 0; i < keys.length(); ++i) {
+        if (!filteredList.contains(keys.at(i))) dm->imCache.remove(keys.at(i));
+    }
 
     if (cache.isShowCacheStatus)
         emit showCacheStatus("Update all rows", 0,  "ImageCache::rebuildImageCacheParameters");
 
-    if (isRunning()) {
+    if (isRunning() && G::isNewFolderLoaded) {
         mutex.lock();
         filterOrSortHasChanged = true;
         pause = false;
@@ -1090,15 +1129,22 @@ void ImageCache::fillCache(int id)
     This function is protected with a mutex as it could be signalled simultaneously by several
     ImageDecoders.
 */
-//    QBasicMutex mtx;
-//    mtx.lock();
-    if (G::isLogger) G::log(__FUNCTION__);
     mutex.lock();
+    if (G::isLogger) G::log(__FUNCTION__);
     // ImageDecoder thread returning a QImage
+    /*
+    if (decoder[id]->status > 0) qDebug()
+         << __FUNCTION__
+         << "decoder =" << id
+         << "decoder[id]->status =" << decoder[id]->status
+         << "stopFillingCache =" << stopFillingCache
+         << "abort =" << abort
+         << "nextToCache() =" << nextToCache()
+         << "decoder[id]->fPath =" << decoder[id]->fPath
+            ;
+            //*/
     if (decoder[id]->status == ImageDecoder::Status::Done) {
-        imCache.insert(decoder[id]->fPath, decoder[id]->image);
-//        const QImage &im = imCache.value(decoder[id]->fPath);
-//        dm->imCache.insert(decoder[id]->fPath, &im);
+        dm->imCache.insert(decoder[id]->fPath, decoder[id]->image);
         cache.currMB = getImCacheSize();
         if (cache.isShowCacheStatus) {
             emit updateCacheOnThumbs(decoder[id]->fPath, true);
@@ -1108,7 +1154,7 @@ void ImageCache::fillCache(int id)
     }
 
     // get next image to cache
-    if (!stopFillingCache&& !abort && nextToCache()) {
+    if (!stopFillingCache && !abort && nextToCache()) {
         QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
         int room = cache.maxMB - cache.currMB;
         int roomRqd = cacheItemList.at(cache.toCacheKey).sizeMB;
@@ -1130,7 +1176,6 @@ void ImageCache::fillCache(int id)
         }
     }
     mutex.unlock();
-//    mtx.unlock();
 }
 
 void ImageCache::run()
@@ -1190,7 +1235,6 @@ void ImageCache::run()
     cache.maybeDirectionChange = false;
 
     // run cache control flags
-    bool okToAbort;
     bool okToPause;
     bool positionChanged;
     bool cacheSizeChange;
@@ -1201,10 +1245,6 @@ void ImageCache::run()
     // start run loop
     do {
         // check if abort
-//        mutex.lock();
-//        okToAbort = abort;
-//        abort = false;
-//        mutex.unlock();
         if (abort) {
             emit updateIsRunning(/*isRunning*/false, /*showCacheLabel*/false);
             return;
@@ -1235,7 +1275,7 @@ void ImageCache::run()
         refreshCache = false;
         mutex.unlock();
 
-        if (!positionChanged && !cacheSizeChange &&!filterSortChange &&!refresh) {
+        if (!positionChanged && !cacheSizeChange && !filterSortChange && !refresh) {
 //            msleep(100);
             continue;
         }
@@ -1245,6 +1285,7 @@ void ImageCache::run()
                  << "filterSortChange =" << filterSortChange
                  << "cacheSizeChange =" << cacheSizeChange
                  << "positionChanged =" << positionChanged
+                 << "refresh =" << refresh
                  << "currentPath =" << currentPath
                  << "prevCurrentPath =" << prevCurrentPath
                  ;
@@ -1318,11 +1359,13 @@ void ImageCache::run()
             if (decoder[id]->status == ImageDecoder::Status::Ready) {
                 if (!abort) fillCache(id);
             }
+            else {
+                /*
+                qDebug() << __FUNCTION__
+                         << "decoder" << id << "not ready";
+                         //*/
+            }
         }
-
-//        mutex.lock();
-//        okToAbort = abort;
-//        mutex.unlock();
     }
     while (!abort);
 }

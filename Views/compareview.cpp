@@ -130,13 +130,21 @@ or loads the file otherwise.
     bool isLoaded = false;
 
     // load the image from the image cache if available
+    /*
+    // before changed imCache to concurrent dm->imCache
     if (imageCacheThread->imCache.contains(fPath)) {
         pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
         isLoaded = true;
     }
+    */
+    QImage image;
+    if (dm->imCache.find(fPath, image)) {
+        pmItem->setPixmap(QPixmap::fromImage(image));
+        isLoaded = true;
+    }
     else {
         // load the image from the image file, may need to wait a bit if another thread
-        // reading file
+        // reading file  rgh req'd to iterate
         for (int i=0; i<100000; i++) {
             isLoaded = pixmap->load(fPath, displayPixmap, "CompareView::loadImage");
             if (isLoaded) break;

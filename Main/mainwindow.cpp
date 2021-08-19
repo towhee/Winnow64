@@ -1241,7 +1241,7 @@ void MW::folderSelectionChange()
         G::log("FOLDER CHANGE");
         G::log(__FUNCTION__, currentViewDir);
     }
-//    qDebug() << __FUNCTION__;
+    qDebug() << __FUNCTION__;
 
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
@@ -1258,8 +1258,6 @@ void MW::folderSelectionChange()
     setCentralMessage("Gathering metadata and thumbnails for images in folder.");
     statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
     qApp->processEvents();
-
-    G::isNewFolderLoaded = false;
 
     // ImageView set zoom = fit for the first image of a new folder
     imageView->isFirstImageNewFolder = true;
@@ -1490,6 +1488,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
     setting->setValue("lastFileSelection", fPath);
+//    G::track(__FUNCTION__, "dm->imCache.find(fPath, image) " + fPath);
 
     // update delegates so they can highlight the current item
     thumbView->iconViewDelegate->currentRow = currentRow;
@@ -1543,14 +1542,16 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
             centralLayout->setCurrentIndex(prevCentralView);
         }
     }
-
+//    G::track(__FUNCTION__, "Return from imageView->loadImage " + fPath);
     // update caching if folder has been loaded
     if (G::isNewFolderLoaded) {
         updateIconsVisible(true);
         metadataCacheThread->fileSelectionChange();
+//        G::track(__FUNCTION__, "Return from metadataCacheThread->fileSelectionChange() " + fPath);
 
         // Do not image cache if there is an active random slide show or a
         // modifier key is pressed
+        // (turn off image caching for testing with useImageCache = false. set in header)
         Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
         /*
        qDebug() << __FUNCTION__ << "IMAGECACHE"
@@ -1561,16 +1562,22 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
                  << "isShiftAltModifier =" << (key == (Qt::AltModifier | Qt::ShiftModifier))
                     ;
        //*/
-        // image caching (turn off for testing with useImageCache - set in header)
-        if (!(G::isSlideShow && isSlideShowRandom)
+        if (G::isNewFolderLoaded
+            && !(G::isSlideShow && isSlideShowRandom)
             && (key == Qt::NoModifier || key == Qt::KeypadModifier)
             && (G::mode != "Compare")
-            && (useImageCache)
+            && useImageCache
            )
         {
-//            QTimer::singleShot(100, this, &MW::updateImageCachePositionAfterDelay);
-//            imageCacheTimer->start(100);
+            /*
+            // other methods used. Sending signal avoids mutex delay in ImageCache
+            QTimer::singleShot(100, this, &MW::updateImageCachePositionAfterDelay);
+            imageCacheTimer->start(100);
+            G::track(__FUNCTION__, "call setCurrentPosition ImageCache " + fPath);
             imageCacheThread->setCurrentPosition(dm->currentFilePath);
+            */
+//            qDebug() << __FUNCTION__ << "emit setImageCachePosition(dm->currentFilePath)";
+            emit setImageCachePosition(dm->currentFilePath);
         }
     }
 
@@ -1598,6 +1605,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 //    if (!G::isInitializing) centralLayout->setCurrentIndex(prevCentralView);
 
     if (G::isLogger) G::log(__FUNCTION__, "Finished " + fPath);
+//    G::track(__FUNCTION__, "Finished " + fPath);
 }
 
 void MW::folderAndFileSelectionChange(QString fPath)
@@ -1673,6 +1681,7 @@ void MW::clearAll()
 
     G::allMetadataLoaded = false;
     dm->clearDataModel();
+//    dm->imCache.clear();
     G::err.clear();
     currentRow = 0;
     infoView->clearInfo();
@@ -2044,9 +2053,11 @@ void MW::updateMetadataCacheStatus(int row, bool clear)
     return;
 }
 
+// rgh req'd??
 void MW::updateImageCachePositionAfterDelay()
 {
-    imageCacheThread->setCurrentPosition(dm->currentFilePath);
+//    imageCacheThread->setCurrentPosition(dm->currentFilePath);
+    emit setImageCachePosition(dm->currentFilePath);
 }
 
 void MW::updateImageCacheStatus(QString instruction, int row, QString source)
@@ -2054,7 +2065,12 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
 /*
     Displays a statusbar showing the metadata cache status.  Also shows the cache
     size in the info panel.
+
+    cache
+    cacheItemList
+
 */
+//    return;
     if (G::isLogger) {
         QString s = "Instruction: " + instruction + "  Source: " + source;
         G::log(__FUNCTION__, s);
@@ -2180,7 +2196,7 @@ void MW::loadImageCacheForNewFolder()
     metadataLoaded = true;
 
     G::isNewFolderLoaded = true;
-
+    qDebug() << __FUNCTION__ << "Metadata loaded";
     /* req'd to trigger MW::fileSelectionChange.  This must be done to initialize many things
        including current index and file path req'd by mdCache and EmbelProperties...  */
     fileSelectionChange(currentSfIdx, currentSfIdx);
@@ -4389,7 +4405,11 @@ void MW::createCaching()
     // Signal from ImageCache::run() to update cache status in datamodel
     connect(imageCacheThread, SIGNAL(updateCacheOnThumbs(QString,bool)),
             this, SLOT(setCachedStatus(QString,bool)));
-    }
+
+    // Signal to ImageCache new image selection
+    connect(this, SIGNAL(setImageCachePosition(QString)),
+            imageCacheThread, SLOT(setCurrentPosition(QString)));
+}
 
 void MW::createThumbView()
 {
@@ -5150,7 +5170,7 @@ void MW::createEmbel()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     QString src = "Internal";
-    embel = new Embel(imageView->scene, imageView->pmItem, embelProperties, imageCacheThread);
+    embel = new Embel(imageView->scene, imageView->pmItem, embelProperties, dm);
     connect(imageView, &ImageView::embellish, embel, &Embel::build);
     connect(embel, &Embel::done, imageView, &ImageView::resetFitZoom);
     connect(infoView, &InfoView::dataEdited, embel, &Embel::refreshTexts);
@@ -5552,7 +5572,7 @@ void MW::setImageCacheParameters()
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 
-    imageCacheThread->cacheSizeChange();
+    if (G::isNewFolderLoaded) imageCacheThread->cacheSizeChange();
 }
 
 QString MW::getPosition()
@@ -6189,7 +6209,7 @@ void MW::sortChange(QString source)
     be loaded in order to sort on them.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Src: " + source);
-//    /*
+    /*
     qDebug() << __FUNCTION__ << "source =" << source
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "G::isInitializing =" << G::isInitializing
@@ -7941,10 +7961,17 @@ void MW::setRotation(int degrees)
         QApplication::processEvents();
 
         // rotate selected cached full size images
-//        if (imageCacheThread->imCache.contains(fPath)) {
+        /*
+        // before changed imCache to concurrent dm->imCache
         if (imageCacheThread->imCache.contains(fPath)) {
             QImage *image = &imageCacheThread->imCache[fPath];
             *image = image->transformed(trans, Qt::SmoothTransformation);
+        }
+        */
+        //        if (imageCacheThread->imCache.contains(fPath)) {
+        QImage image;
+        if (dm->imCache.find(fPath, image)) {
+            image = image.transformed(trans, Qt::SmoothTransformation);
         }
     }
 }
@@ -10613,6 +10640,7 @@ void MW::keyRight()
 /*
 
 */
+//    G::track(__FUNCTION__);
     if (G::isLogger) G::log(__FUNCTION__);
 
     if (G::mode == "Compare") compareImages->go("Right");
@@ -11124,7 +11152,11 @@ void MW::refreshCurrentFolder()
             }
 
             // update image cache in case image has changed
+            /*
+            // before changed imCache to concurrent dm->imCache
             if (imageCacheThread->imCache.contains(fPath)) imageCacheThread->imCache.remove(fPath);
+            */
+            if (dm->imCache.contains(fPath)) dm->imCache.remove(fPath);
             if (dm->currentFilePath == fPath) {
                 if (imageView->loadImage(fPath, __FUNCTION__)) {
                     updateClassification();
@@ -11633,15 +11665,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString fPath = dm->currentFilePath;
-    const QImage &im = imageCacheThread->imCache.value(fPath);
-    const QImage *imPtr = &im;
-    qDebug() << "imageCacheThread->imCache.value(fPath) =" << imageCacheThread->imCache.value(fPath);
-    qDebug() << "im =" << im;
-    qDebug() << "imPtr =" << imPtr;
-    qDebug() << "*imPtr =" << *imPtr;
-//    qDebug() << dm->imCache;
-
+    qDebug() << __FUNCTION__;
+    QVector<QString> keys;
+    dm->imCache.getKeys(keys);
+    qDebug() << __FUNCTION__ << "keys.length() =" << keys.length();
+    for (int i = 0; i < keys.length(); ++i) {
+        qDebug() << i << keys.at(i);
+    }
     return;
 
     ImageCache* ict = imageCacheThread;

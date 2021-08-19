@@ -18,7 +18,7 @@ class Embel : public QObject
 
 public:
     Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
-          EmbelProperties *p, ImageCache *imCache, QString src = "Internal",
+          EmbelProperties *p, DataModel *dm, QString src = "Internal",
           QObject *object = nullptr);
 //    Embel(ImageView *gv, EmbelProperties *p);
 //    Embel(EmbelExport *ee, EmbelProperties *p);
@@ -57,7 +57,7 @@ private:
     QGraphicsPixmapItem *pmItem;
     GraphicsItemEventFilter *itemEventFilter;
     EmbelProperties *p;
-    ImageCache *imCache;
+    DataModel *dm;
     QString fPath;
 
     // set true when called from EmbelExport (see explanation in EmBel::build)

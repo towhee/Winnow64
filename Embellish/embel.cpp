@@ -12,14 +12,14 @@ Export converts the scene, with any borders, texts and graphics, into a QImage.
 */
 
 Embel::Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
-             EmbelProperties *p, ImageCache *imCache, QString src,
+             EmbelProperties *p, DataModel *dm, QString src,
              QObject *)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     this->scene = scene;
     this->pmItem = pmItem;
     this->p = p;
-    this->imCache = imCache;
+    this->dm = dm;
     this->src = src;
     flashItem = new QGraphicsRectItem;
     itemEventFilter = new GraphicsItemEventFilter;
@@ -568,8 +568,9 @@ void Embel::addImageToScene()
     if (G::isLogger) G::log(__FUNCTION__);
     // scale the image to fit inside the borders
     QPixmap pm;
-    if (imCache->imCache.contains(fPath))
-        pm = QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w);
+    QImage im;
+    if (dm->imCache.find(fPath, im))
+        pm = QPixmap::fromImage(im).scaledToWidth(image.w);
     else
         pm = pmItem->pixmap().scaledToWidth(image.w);
     // add the image to the scene
@@ -802,8 +803,9 @@ void Embel::updateImage()
     // graphics effects
     if (hasStyle && legalStyle && isEffects) {
         // start with a fresh image from the ImageCache
-        if (imCache->imCache.contains(fPath)) {
-            pmItem->setPixmap(QPixmap::fromImage(imCache->imCache.value(fPath)).scaledToWidth(image.w));
+        QImage im;
+        if (dm->imCache.find(fPath, im)) {
+            pmItem->setPixmap(QPixmap::fromImage(im).scaledToWidth(image.w));
         }
         GraphicsEffect *effect = new GraphicsEffect(src);
         effect->setObjectName("EmbelImageEffect");

@@ -59,7 +59,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     will be updated to show the file is not readable.
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
-    qDebug() << __FUNCTION__ << "fPath =" << fPath << "src =" << src;
+//    qDebug() << __FUNCTION__ << "fPath =" << fPath << "src =" << src;
     QElapsedTimer t;
     t.restart();
 //    QElapsedTimer readTime;
