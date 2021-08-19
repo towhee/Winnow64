@@ -37,7 +37,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
     scene->addItem(pmItem);
     setScene(scene);
 
-    embellish = new Embel(scene, pmItem, embelProperties, imageCacheThread, "Export");
+    embellish = new Embel(scene, pmItem, embelProperties, dm, "Export");
 }
 
 EmbelExport::~EmbelExport()
@@ -55,8 +55,9 @@ bool EmbelExport::loadImage(QString fPath)
     QGraphicsPixmapItem.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-    if (imageCacheThread->imCache.contains(fPath)) {
-        pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
+    QImage image;
+    if (dm->imCache.find(fPath, image)) {
+        pmItem->setPixmap(QPixmap::fromImage(image));
         return true;
     }
     // check metadata loaded for image

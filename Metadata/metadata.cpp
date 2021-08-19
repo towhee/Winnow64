@@ -818,12 +818,11 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
                                  bool isReport, bool isLoadXmp, QString source)
 {
     if (G::isLogger) G::log(__FUNCTION__, fileInfo.filePath() + "  Source: " + source);
-//    qDebug() << __FUNCTION__ << "called by" << source;
     // check if already loaded
     QString fPath = fileInfo.filePath();
     if (fPath == "") {
-        qDebug() << __FUNCTION__ << "NULL FILE REQUESTED FROM "
-                 << source;
+        qWarning() << __FUNCTION__ << "NULL FILE REQUESTED FROM "
+                   << source;
         return false;
     }
 

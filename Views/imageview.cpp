@@ -166,37 +166,12 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
     bool isLoaded = false;
     pmItem->setVisible(true);
 
-    if (!refresh && imageCacheThread->imCache.contains(fPath)) {
-//    if (!refresh && dm->imCache.contains(fPath)) {
-        // load preview from cache
-        bool tryPreview = true;     // for testing
-        loadFullSizeTimer->stop();
-
-        // get preview size from stored metadata to decide if load preview or full
+    QImage image;
+    if (!refresh && dm->imCache.find(fPath, image)) {
         setFullDim();               // req'd by setPreviewDim()
-        setPreviewDim();            // defines QSize preview
-        qreal previewFit = getFitScaleFactor(rect(), QRect(QPoint(0,0), preview));
-        bool previewBigEnough = previewFit > zoom;
-
-        // initially load a preview if available and big enough
-        if (tryPreview && imageCacheThread->imCache.contains(fPath + "_Preview")
-        && previewBigEnough) {
-            pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath + "_Preview")));
-            isPreview = true;
-            /* if preview smaller than view then next image should also be smaller
-            since each image may be different sizes have to equalize scale
-            zoomFit is still for prev image and previewFit is for current preview */
-            if (!isFit) zoom *= previewFit / zoomFit;
-            isLoaded = true;
-            loadFullSizeTimer->start();
-        }
-        // otherwise load full size image from cache
-        else {
-            pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
-//            pmItem->setPixmap(QPixmap::fromImage(*dm->imCache.value(fPath)));
-            isPreview = false;
-            isLoaded = true;
-        }
+        pmItem->setPixmap(QPixmap::fromImage(image));
+        isPreview = false;
+        isLoaded = true;
     }
     else {
         // check metadata loaded for image (might not be if random slideshow)
@@ -209,10 +184,8 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
             }
         }
 
-        if (G::isTest) {QElapsedTimer t; t.restart();}
         QPixmap displayPixmap;
         isLoaded = pixmap->load(fPath, displayPixmap, "ImageView::loadImage");
-        if (G::isTest) qDebug() << __FUNCTION__ << "Load image =" << t.nsecsElapsed() << fPath;
 
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
@@ -265,8 +238,9 @@ are matched:
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     loadFullSizeTimer->stop();
-    if(imageCacheThread->imCache.contains(currentImagePath)) {
-        pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(currentImagePath)));
+    QImage image;
+    if(dm->imCache.find(currentImagePath, image)) {
+        pmItem->setPixmap(QPixmap::fromImage(image));
         setSceneRect(scene->itemsBoundingRect());
         isPreview = false;
         qreal prevZoomFit = zoomFit;
@@ -1183,8 +1157,9 @@ void ImageView::copyImage()
     if (G::isLogger) G::log(__FUNCTION__); 
     QPixmap pm = pmItem->pixmap();
     if (pm.isNull()) {
-        if (imageCacheThread->imCache.contains(dm->currentFilePath)) {
-            pm = QPixmap::fromImage(imageCacheThread->imCache.value(dm->currentFilePath));
+        QImage image;
+        if (dm->imCache.find(dm->currentFilePath, image)) {
+            pm = QPixmap::fromImage(image);
         }
         else {
             QString msg = "Could not copy the current image to the clipboard";

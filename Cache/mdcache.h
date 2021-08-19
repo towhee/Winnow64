@@ -87,7 +87,7 @@ private:
     bool abort;
     DataModel *dm;
     Metadata *metadata;
-    ImageCache * imageCacheThread;
+//    ImageCache * imageCacheThread;
     Thumb *thumb;
 
     int startRow;
@@ -98,16 +98,17 @@ private:
     QList<int> iconsCached;
 
     bool foundItemsToLoad;
-//    bool updateImageCache; // rghcachechange
     Action action;
 
     bool allIconsLoaded;
-//    bool isShowCacheStatus;
     bool cacheIcons;
+
+    int metadataTry = 3;
+    int iconTry = 3;
+
 
     void createCacheStatus();
     void updateCacheStatus(int row);
-    void readMetadataIconChunk();
     void readAllMetadata();
     void readIconChunk();
     void readMetadataChunk();

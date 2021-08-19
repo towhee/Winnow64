@@ -746,10 +746,11 @@ bool DataModel::readMetadataForItem(int row)
         }
         // cannot read this file type, load empty metadata
         else {
-            qDebug() << __FUNCTION__ << "cannot read this file type, load empty metadata for" + fPath;
+            qWarning() << __FUNCTION__ << "cannot read this file type, load empty metadata for" + fPath;
             metadata->clearMetadata();
             metadata->m.row = row;
             addMetadataForItem(metadata->m);
+            return false;
         }
     }
 //    mutex.unlock();

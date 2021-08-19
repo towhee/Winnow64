@@ -6,7 +6,7 @@
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
-#include "Cache/imagecache.h"
+//#include "Cache/imagecache.h"
 #include "Properties/embelproperties.h"
 #include "Embellish/embel.h"
 #include "Metadata/ExifTool.h"

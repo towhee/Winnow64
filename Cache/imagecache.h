@@ -15,6 +15,7 @@
 #include <QThread>
 #include <QWaitCondition>
 #include <QGradient>
+#include <vector>
 
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
@@ -55,7 +56,7 @@ public:
 
     int decoderCount = 1;
 
-    QHash<QString, QImage> imCache;
+//    QHash<QString, QImage> imCache;  // moved to DataModel and changed to concurrent HashMap
     QString source;                 // temp for debugging
 
     // used by MW::updateImageCacheStatus
@@ -112,8 +113,8 @@ public slots:
     void colorManageChange();
 
 private:
-    QBasicMutex mutex;
-//    QMutex mutex;
+//    QBasicMutex mutex;
+    QMutex mutex;
     QWaitCondition condition;
     bool restart;
     bool abort;
