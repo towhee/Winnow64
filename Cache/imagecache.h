@@ -49,7 +49,6 @@ public:
     QSize getPreviewSize();
     QString diagnostics();
     QString reportCache(QString title = "");
-    void reportToCache();
     QString reportCacheProgress(QString action);
     void reportRunStatus();
     QString reportImCache();
@@ -89,6 +88,7 @@ public:
         int origKey;                // the key of a previous filter or sort
         QString fPath;              // image full path
         bool isMetadata;            // has metadata for embedded jpg offset and length been loaded
+        bool isCaching;             // decoder is working on image
         bool isCached;              // has image been cached
         bool isTarget;              // is this image targeted to be cached
         int priority;               // priority to cache image
@@ -101,6 +101,7 @@ signals:
     void showCacheStatus(QString instruction, int key = 0, QString source = "");
     void updateIsRunning(bool, bool);
     void updateCacheOnThumbs(QString fPath, bool isCached);
+    void dummyDecoder(int id);
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -132,14 +133,16 @@ private:
     CacheImage *cacheImage;
     QVector<ImageDecoder*> decoder;
 
-    QList<int>toCache;
-    QList<int>toDecache;
+//    QList<int>toCache;
+//    QList<int>toDecache;
 
     int getImCacheSize();           // add up total MB cached
     void setKeyToCurrent();         // cache key from currentFilePath
+    int getCacheKey(QString fPath); // cache key for any path
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
+    bool inTargetRange(QString fPath);  // image targeted to cache
     bool nextToCache();             // find highest priority not cached
     bool nextToDecache();           // find lowest priority cached - return -1 if none cached
     void checkForOrphans();         // check no strays in imageCache from jumping around
