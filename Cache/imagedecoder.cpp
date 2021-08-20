@@ -162,5 +162,6 @@ void ImageDecoder::run()
     if (metadata->rotateFormats.contains(ext) /*&& !abort*/) rotate();
     if (G::colorManage && !abort) colorManage();
     status = Status::Done;
+    qDebug() << __FUNCTION__ << "id =" << threadId << fPath;
     emit done(threadId);
 }
