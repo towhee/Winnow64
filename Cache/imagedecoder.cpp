@@ -63,7 +63,7 @@ void ImageDecoder::setReady()
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     status = Status::Ready;
     ba.clear();
-    fPath = "";
+//    fPath = "";
 }
 
 void ImageDecoder::decodeJpg()
@@ -162,6 +162,7 @@ void ImageDecoder::run()
     if (metadata->rotateFormats.contains(ext) /*&& !abort*/) rotate();
     if (G::colorManage && !abort) colorManage();
     status = Status::Done;
-    qDebug() << __FUNCTION__ << "id =" << threadId << fPath;
-    emit done(threadId);
+//    qDebug() << __FUNCTION__ << "emitid =" << threadId << fPath;
+    QImage *im = &image;
+    emit done(threadId, fPath);
 }

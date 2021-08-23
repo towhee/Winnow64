@@ -89,6 +89,7 @@ public:
         QString fPath;              // image full path
         bool isMetadata;            // has metadata for embedded jpg offset and length been loaded
         bool isCaching;             // decoder is working on image
+        int threadId;               // decoder thread working on image
         bool isCached;              // has image been cached
         bool isTarget;              // is this image targeted to be cached
         int priority;               // priority to cache image
@@ -107,8 +108,8 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-//    void fillCache(QImage *image = nullptr, QString fPath = "");
-    void fillCache(int id = -1);
+//    void fillCache(int id, QString fPath, QImage *image);
+    void fillCache(int id, QString fPath);
     void setCurrentPosition(QString path);
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();
@@ -146,7 +147,7 @@ private:
     bool nextToCache();             // find highest priority not cached
     bool nextToDecache();           // find lowest priority cached - return -1 if none cached
     void checkForOrphans();         // check no strays in imageCache from jumping around
-    void makeRoom(int room, int roomRqd); // remove images from cache until there is roomRqd
+    void makeRoom(int cacheKey); // remove images from cache until there is roomRqd
     void memChk();                  // still room in system memory for cache?
     static bool prioritySort(const CacheItem &p1, const CacheItem &p2);
     static bool keySort(const CacheItem &k1, const CacheItem &k2);

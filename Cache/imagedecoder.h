@@ -42,7 +42,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-    void done(int threadId);
+    void done(int threadId, QString fPath/*, QImage *image*/);
 
 private:
     void decodeJpg();

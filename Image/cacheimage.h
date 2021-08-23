@@ -29,6 +29,7 @@ public:
 private:
     DataModel *dm;
     Metadata *metadata;
+    QMutex mutex;
 
     bool loadFromHeic(QString &fPath, QImage &image);
 };
