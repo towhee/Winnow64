@@ -65,6 +65,7 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
     being properly read or the file is corrupted.  In this case the metadata
     will be updated to show the file is not readable.
 */
+    QMutexLocker locker(&mutex);
     if (G::isLogger) G::log(__FUNCTION__, fPath);
 //    qDebug() << __FUNCTION__ << "fPath =" << fPath;
     QFileInfo fileInfo(fPath);
@@ -120,6 +121,13 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
 
         // try to decode the jpg data
         ImageMetadata m = dm->imMetadata(fPath);
+        /*
+        qDebug() << __FUNCTION__
+                 << "JPG:"
+                 << "Id =" << decoder->threadId
+                 << "decoder->fPath =" << decoder->fPath
+                    ;
+                    //*/
         decoder->decode(G::Jpg, fPath, m, buf);
         imFile.close();
     }
@@ -169,6 +177,11 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
     else {
         // try to decode
         ImageMetadata m;
+        qDebug() << __FUNCTION__
+                 << "USEQT: "
+                 << "Id =" << decoder->threadId
+                 << "decoder->fPath =" << decoder->fPath
+                    ;
         decoder->decode(G::UseQt, fPath, m);
         imFile.close();
     }
