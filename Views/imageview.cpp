@@ -25,7 +25,7 @@ ImageView::ImageView(QWidget *parent,
                      QWidget *centralWidget,
                      Metadata *metadata,
                      DataModel *dm,
-                     ImageCache *imageCacheThread,
+                     ImageCacheData *icd,
                      IconView *thumbView,
                      InfoString *infoString,
                      bool isShootingInfoVisible,
@@ -41,7 +41,7 @@ ImageView::ImageView(QWidget *parent,
 //    this->centralWidget = centralWidget;
     this->metadata = metadata;
     this->dm = dm;
-    this->imageCacheThread = imageCacheThread;
+    this->icd = icd;
     this->thumbView = thumbView;
     this->infoString = infoString;
     this->classificationBadgeDiam = classificationBadgeDiam;
@@ -167,7 +167,7 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
     pmItem->setVisible(true);
 
     QImage image;
-    if (!refresh && dm->imCache.find(fPath, image)) {
+    if (!refresh && icd->imCache.find(fPath, image)) {
         setFullDim();               // req'd by setPreviewDim()
         pmItem->setPixmap(QPixmap::fromImage(image));
         isPreview = false;
@@ -239,7 +239,7 @@ are matched:
     if (G::isLogger) G::log(__FUNCTION__); 
     loadFullSizeTimer->stop();
     QImage image;
-    if(dm->imCache.find(currentImagePath, image)) {
+    if(icd->imCache.find(currentImagePath, image)) {
         pmItem->setPixmap(QPixmap::fromImage(image));
         setSceneRect(scene->itemsBoundingRect());
         isPreview = false;
@@ -348,22 +348,22 @@ void ImageView::setFullDim()
     full.setHeight(dm->index(row, G::HeightColumn).data().toInt());
 }
 
-void ImageView::setPreviewDim()
-{
-/*  Sets the QSize preview from metadata and the aspect ratio of the image.
-Req'd in advance to decide if the preview is big enough to use.  Uses full,
-which is defined in setFullDim.
-*/
-    if (G::isLogger) G::log(__FUNCTION__); 
-    preview = imageCacheThread->getPreviewSize();
-    qreal fullAspectRatio = (qreal)(full.height()) / full.width();
-    if (full.width() > full.height()) {
-        preview.setHeight(preview.width() * fullAspectRatio);
-    }
-    else {
-        preview.setWidth(preview.height() / fullAspectRatio);
-    }
-}
+//void ImageView::setPreviewDim()
+//{
+///*  Sets the QSize preview from metadata and the aspect ratio of the image.
+//Req'd in advance to decide if the preview is big enough to use.  Uses full,
+//which is defined in setFullDim.
+//*/
+//    if (G::isLogger) G::log(__FUNCTION__);
+//    preview = imageCacheThread->getPreviewSize();
+//    qreal fullAspectRatio = (qreal)(full.height()) / full.width();
+//    if (full.width() > full.height()) {
+//        preview.setHeight(preview.width() * fullAspectRatio);
+//    }
+//    else {
+//        preview.setWidth(preview.height() / fullAspectRatio);
+//    }
+//}
 
 bool ImageView::sceneBiggerThanView()
 {
@@ -1158,7 +1158,7 @@ void ImageView::copyImage()
     QPixmap pm = pmItem->pixmap();
     if (pm.isNull()) {
         QImage image;
-        if (dm->imCache.find(dm->currentFilePath, image)) {
+        if (icd->imCache.find(dm->currentFilePath, image)) {
             pm = QPixmap::fromImage(image);
         }
         else {

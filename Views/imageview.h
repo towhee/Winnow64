@@ -21,7 +21,7 @@ public:
               QWidget *centralWidget,
               Metadata *metadata,
               DataModel *dm,
-              ImageCache *imageCacheThread,
+              ImageCacheData *icd,
               IconView *thumbView,
               InfoString *infoString = nullptr,
               bool isShootingInfoVisible = false,
@@ -131,13 +131,13 @@ private:
     void getScrollBarStatus();
     void setScrollBars(QPointF scrollPct);
 
-    void setPreviewDim();
+//    void setPreviewDim();
     void setFullDim();
 
     QWidget *mainWindow;
     Metadata *metadata;
     DataModel *dm;
-    ImageCache *imageCacheThread;
+    ImageCacheData *icd;
     IconView *thumbView;
 
     bool sceneBiggerThanView();

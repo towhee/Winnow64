@@ -65,7 +65,7 @@ CompareView::CompareView(QWidget *parent,
                          QSize gridCell,
                          DataModel *dm,
                          Metadata *metadata,
-                         ImageCache *imageCacheThread,
+                         ImageCacheData *icd,
                          IconView *thumbView)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
@@ -74,7 +74,7 @@ CompareView::CompareView(QWidget *parent,
     this->gridCell = gridCell;
     this->dm = dm;
     this->metadata = metadata;
-    this->imageCacheThread = imageCacheThread;
+    this->icd = icd;
     this->thumbView = thumbView;
     pixmap = new Pixmap(this, dm, metadata);
     this->setStyleSheet("QGraphicsView  {"
@@ -131,14 +131,14 @@ or loads the file otherwise.
 
     // load the image from the image cache if available
     /*
-    // before changed imCache to concurrent dm->imCache
+    // before changed imCache to concurrent icd->imCache
     if (imageCacheThread->imCache.contains(fPath)) {
         pmItem->setPixmap(QPixmap::fromImage(imageCacheThread->imCache.value(fPath)));
         isLoaded = true;
     }
     */
     QImage image;
-    if (dm->imCache.find(fPath, image)) {
+    if (icd->imCache.find(fPath, image)) {
         pmItem->setPixmap(QPixmap::fromImage(image));
         isLoaded = true;
     }

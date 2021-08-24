@@ -48,6 +48,7 @@ namespace G
         RefineColumn,
         PickColumn,
         IngestedColumn,
+        CachedColumn,
         LabelColumn,
         RatingColumn,
         SearchColumn,

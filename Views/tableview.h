@@ -93,6 +93,13 @@ public:
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
+class CachedItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit CachedItemDelegate(QObject* parent = nullptr);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
+};
+
 class DimensionItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:

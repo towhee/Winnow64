@@ -18,7 +18,7 @@ public:
                 QSize gridCell,
                 DataModel *dm,
                 Metadata *metadata,
-                ImageCache *imageCacheThread,
+                ImageCacheData *icd,
                 IconView *thumbView);
 
     qreal zoom;
@@ -75,7 +75,7 @@ private:
     QSize gridCell;
     DataModel *dm;
     Metadata *metadata;
-    ImageCache *imageCacheThread;
+    ImageCacheData *icd;
     IconView *thumbView;
     Pixmap *pixmap;
     QImageReader imageReader;

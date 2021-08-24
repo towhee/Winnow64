@@ -1191,7 +1191,7 @@ void MW::handleStartupArgs(const QString &args)
         }
 
         // create an instance of EmbelExport and process the incoming
-        EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
+        EmbelExport embelExport(metadata, dm, icd, embelProperties);
 
         // get the location for the embellished files
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
@@ -1488,7 +1488,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
     setting->setValue("lastFileSelection", fPath);
-//    G::track(__FUNCTION__, "dm->imCache.find(fPath, image) " + fPath);
+//    G::track(__FUNCTION__, "icd->imCache.find(fPath, image) " + fPath);
 
     // update delegates so they can highlight the current item
     thumbView->iconViewDelegate->currentRow = currentRow;
@@ -1600,7 +1600,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     }
 
     // update cursor position on progressBar
-    updateImageCacheStatus("Update cursor", currentRow, "MW::fileSelectionChange");
+    updateImageCacheStatus("Update cursor", currentRow,
+                           imageCacheThread->cache, "MW::fileSelectionChange");
 
 //    if (!G::isInitializing) centralLayout->setCurrentIndex(prevCentralView);
 
@@ -1681,7 +1682,7 @@ void MW::clearAll()
 
     G::allMetadataLoaded = false;
     dm->clearDataModel();
-//    dm->imCache.clear();
+//    icd->imCache.clear();
     G::err.clear();
     currentRow = 0;
     infoView->clearInfo();
@@ -2060,7 +2061,8 @@ void MW::updateImageCachePositionAfterDelay()
     emit setImageCachePosition(dm->currentFilePath);
 }
 
-void MW::updateImageCacheStatus(QString instruction, int row, QString source)
+void MW::updateImageCacheStatus(QString instruction, int row,
+                                DataModel::Cache cache, QString source)
 {
 /*
     Displays a statusbar showing the metadata cache status.  Also shows the cache
@@ -2077,10 +2079,12 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
     }
     if (G::isSlideShow && isSlideShowRandom) return;
 
+    /*
     QString msg = "   currMB: " + QString::number(imageCacheThread->cache.currMB) +
                   "   minMB: "  + QString::number(imageCacheThread->cache.minMB) +
                   "   maxMB: "  + QString::number(imageCacheThread->cache.maxMB);
     updateStatus(true, msg);
+    //*/
 
     source = "";    // suppress compiler warning
     /*
@@ -2090,6 +2094,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
              << "source =" << source;
 //             */
 
+    /*
     // show cache amount ie "4.2 of 16.1GB (4 threads)" in info panel
     QString cacheAmount = QString::number(double(imageCacheThread->cache.currMB)/1024,'f',1)
             + " of "
@@ -2100,6 +2105,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
             ;
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
+    //*/
 
     if(!G::showCacheStatus) return;
 
@@ -2111,7 +2117,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
 
     // create a short alias to keep code shorter
     ImageCache *ic = imageCacheThread;
-    int rows = ic->cache.totFiles;
+    int rows = /*ic->*/cache.totFiles;
 
     if (instruction == "Update cursor") {
         progressBar->updateCursor(row, rows, G::progressCurrentColor, G::progressImageCacheColor);
@@ -2123,7 +2129,7 @@ void MW::updateImageCacheStatus(QString instruction, int row, QString source)
         // clear progress
         progressBar->clearProgress();
         // target range
-        int tFirst = ic->cache.targetFirst;
+        int tFirst = /*ic->*/cache.targetFirst;
         int tLast = ic->cache.targetLast + 1;
         progressBar->updateProgress(tFirst, tLast, rows, G::progressTargetColor,
                                     "");
@@ -4318,7 +4324,8 @@ void MW::createSelectionModel()
 void MW::createCaching()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    imageCacheThread = new ImageCache(this, dm, metadata);
+    icd = new ImageCacheData(this);
+    imageCacheThread = new ImageCache(this, icd, dm, metadata);
     metadataCacheThread = new MetadataCache(this, dm, metadata, imageCacheThread);
 
     if (isSettings) {
@@ -4399,8 +4406,10 @@ void MW::createCaching()
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
 
     // Update the cache status progress bar when changed in ImageCache
-    connect(imageCacheThread, SIGNAL(showCacheStatus(QString,int,QString)),
-            this, SLOT(updateImageCacheStatus(QString,int,QString)));
+//    connect(imageCacheThread, SIGNAL(showCacheStatus(QString,int,QString)),
+//            this, SLOT(updateImageCacheStatus(QString,int,QString)));
+    connect(imageCacheThread, &ImageCache::showCacheStatus,
+            this, &MW::updateImageCacheStatus);
 
     // Signal from ImageCache::run() to update cache status in datamodel
     connect(imageCacheThread, SIGNAL(updateCacheOnThumbs(QString,bool)),
@@ -4588,7 +4597,7 @@ void MW::createImageView()
                               centralWidget,
                               metadata,
                               dm,
-                              imageCacheThread,
+                              icd,
                               thumbView,
                               infoString,
                               setting->value("isImageInfoVisible").toBool(),
@@ -4626,7 +4635,7 @@ void MW::createImageView()
 void MW::createCompareView()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    compareImages = new CompareImages(this, centralWidget, metadata, dm, thumbView, imageCacheThread);
+    compareImages = new CompareImages(this, centralWidget, metadata, dm, thumbView, icd);
 
     if (isSettings) {
         if (setting->contains("lastPrefPage")) lastPrefPage = setting->value("lastPrefPage").toInt();
@@ -5170,7 +5179,7 @@ void MW::createEmbel()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     QString src = "Internal";
-    embel = new Embel(imageView->scene, imageView->pmItem, embelProperties, dm);
+    embel = new Embel(imageView->scene, imageView->pmItem, embelProperties, dm, icd);
     connect(imageView, &ImageView::embellish, embel, &Embel::build);
     connect(embel, &Embel::done, imageView, &ImageView::resetFitZoom);
     connect(infoView, &InfoView::dataEdited, embel, &Embel::refreshTexts);
@@ -7962,7 +7971,7 @@ void MW::setRotation(int degrees)
 
         // rotate selected cached full size images
         /*
-        // before changed imCache to concurrent dm->imCache
+        // before changed imCache to concurrent icd->imCache
         if (imageCacheThread->imCache.contains(fPath)) {
             QImage *image = &imageCacheThread->imCache[fPath];
             *image = image->transformed(trans, Qt::SmoothTransformation);
@@ -7970,7 +7979,7 @@ void MW::setRotation(int degrees)
         */
         //        if (imageCacheThread->imCache.contains(fPath)) {
         QImage image;
-        if (dm->imCache.find(fPath, image)) {
+        if (icd->imCache.find(fPath, image)) {
             image = image.transformed(trans, Qt::SmoothTransformation);
         }
     }
@@ -9977,7 +9986,7 @@ void MW::exportEmbel()
         return;
     }
 
-    EmbelExport embelExport(metadata, dm, imageCacheThread, embelProperties);
+    EmbelExport embelExport(metadata, dm, icd, embelProperties);
     connect(this, &MW::abortEmbelExport, &embelExport, &EmbelExport::abortEmbelExport);
     embelExport.exportImages(picks);
 }
@@ -11153,10 +11162,10 @@ void MW::refreshCurrentFolder()
 
             // update image cache in case image has changed
             /*
-            // before changed imCache to concurrent dm->imCache
+            // before changed imCache to concurrent imd->imCache
             if (imageCacheThread->imCache.contains(fPath)) imageCacheThread->imCache.remove(fPath);
             */
-            if (dm->imCache.contains(fPath)) dm->imCache.remove(fPath);
+            if (icd->imCache.contains(fPath)) icd->imCache.remove(fPath);
             if (dm->currentFilePath == fPath) {
                 if (imageView->loadImage(fPath, __FUNCTION__)) {
                     updateClassification();
@@ -11286,7 +11295,8 @@ void MW::deleteFiles()
     // remove selected from imageCache
     imageCacheThread->removeFromCache(sldm);
     // update cursor position on progressBar
-    updateImageCacheStatus("Update all rows", currentRow, __FUNCTION__);
+    updateImageCacheStatus("Update all rows", currentRow,
+                           imageCacheThread->cache, __FUNCTION__);
 
     // update current index
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
@@ -11665,24 +11675,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__;
-    QVector<QString> keys;
-    dm->imCache.getKeys(keys);
-    qDebug() << __FUNCTION__ << "keys.length() =" << keys.length();
-    for (int i = 0; i < keys.length(); ++i) {
-        qDebug() << i << keys.at(i);
-    }
-    return;
-
-    ImageCache* ict = imageCacheThread;
-    bool uncachedFound = false;
-    for (int i = 0; i < ict->cacheItemList.length(); ++i) {
-        if (ict->cacheItemList.at(i).isTarget && !ict->cacheItemList.at(i).isCached) {
-            qDebug() << __FUNCTION__ << ict->cacheItemList.at(i).fPath
-                     << "is targeted but not cached";
-            uncachedFound = true;
-        }
-    }
+//    qDebug() << __FUNCTION__ << dm->cache.totFiles
+//             << imageCacheThread->cache.totFiles;
+//    QModelIndex idx = dm->sf->index(0, G::CachedColumn);
+//    dm->sf->setData(idx, true, Qt::EditRole);
     return;
 
     qDebug() << __FUNCTION__ << "use decodeScan";

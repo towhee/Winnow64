@@ -83,8 +83,32 @@ public:
     bool timeToQuit;
     bool alt;
 
+    // IMAGE CACHE STRUCTURES
     // concurrent image cache hash
-    CTSL::HashMap<QString, QImage> imCache;
+//    CTSL::HashMap<QString, QImage> imCache;
+
+    struct Cache {
+        int key;                    // current image
+        int prevKey;                // used to establish directionof travel
+        int toCacheKey;             // next file to cache
+        int toDecacheKey;           // next file to remove from cache
+        bool isForward;             // direction of travel for caching algorithm
+        bool maybeDirectionChange;  // direction change but maybe below change threshold
+        int step;                   // difference between key and prevKey
+        int sumStep;                // sum of step until threshold
+        int directionChangeThreshold;//number of steps before change direction of cache
+        int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
+        int totFiles;               // number of images available
+        int currMB;                 // the current MB consumed by the cache
+        int maxMB;                  // maximum MB available to cache
+        int minMB;                  // minimum MB available to cache
+        int folderMB;               // MB required for all files in folder
+        int targetFirst;            // beginning of target range to cache
+        int targetLast;             // end of the target range to cache
+        bool isShowCacheStatus;     // show in app status bar
+        bool usePreview;            // cache smaller pixmap for speedier initial display
+        QSize previewSize;          // monitor display dimensions for scale of previews
+    } cache;
 
 signals:
     void updateClassification();        // req'd for 1st image, loaded before metadata cached

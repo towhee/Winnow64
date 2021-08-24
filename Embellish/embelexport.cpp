@@ -2,7 +2,7 @@
 
 EmbelExport::EmbelExport(Metadata *metadata,
                          DataModel *dm,
-                         ImageCache *imageCacheThread,
+                         ImageCacheData *icd,
                          EmbelProperties *embelProperties,
                          QWidget * /*parent*/)
 {
@@ -37,7 +37,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
     scene->addItem(pmItem);
     setScene(scene);
 
-    embellish = new Embel(scene, pmItem, embelProperties, dm, "Export");
+    embellish = new Embel(scene, pmItem, embelProperties, dm, icd, "Export");
 }
 
 EmbelExport::~EmbelExport()
@@ -56,7 +56,7 @@ bool EmbelExport::loadImage(QString fPath)
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     QImage image;
-    if (dm->imCache.find(fPath, image)) {
+    if (icd->imCache.find(fPath, image)) {
         pmItem->setPixmap(QPixmap::fromImage(image));
         return true;
     }

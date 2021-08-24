@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QObject>
 #include "Main/global.h"
+#include "Cache/cachedata.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/pixmap.h"
@@ -31,7 +32,7 @@ class ImageCache : public QThread
     Q_OBJECT
 
 public:
-    ImageCache(QObject *parent, DataModel *dm, Metadata *metadata);
+    ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm, Metadata *metadata);
     ~ImageCache() override;
 
     void initImageCache(int &cacheSizeMB, int &cacheMinMB,
@@ -59,28 +60,30 @@ public:
     QString source;                 // temp for debugging
 
     // used by MW::updateImageCacheStatus
-    struct Cache {
-        int key;                    // current image
-        int prevKey;                // used to establish directionof travel
-        int toCacheKey;             // next file to cache
-        int toDecacheKey;           // next file to remove from cache
-        bool isForward;             // direction of travel for caching algorithm
-        bool maybeDirectionChange;  // direction change but maybe below change threshold
-        int step;                   // difference between key and prevKey
-        int sumStep;                // sum of step until threshold
-        int directionChangeThreshold;//number of steps before change direction of cache
-        int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
-        int totFiles;               // number of images available
-        int currMB;                 // the current MB consumed by the cache
-        int maxMB;                  // maximum MB available to cache
-        int minMB;                  // minimum MB available to cache
-        int folderMB;               // MB required for all files in folder
-        int targetFirst;            // beginning of target range to cache
-        int targetLast;             // end of the target range to cache
-        bool isShowCacheStatus;     // show in app status bar
-        bool usePreview;            // cache smaller pixmap for speedier initial display
-        QSize previewSize;          // monitor display dimensions for scale of previews
-    } cache;
+//    struct Cache {
+//        int key;                    // current image
+//        int prevKey;                // used to establish directionof travel
+//        int toCacheKey;             // next file to cache
+//        int toDecacheKey;           // next file to remove from cache
+//        bool isForward;             // direction of travel for caching algorithm
+//        bool maybeDirectionChange;  // direction change but maybe below change threshold
+//        int step;                   // difference between key and prevKey
+//        int sumStep;                // sum of step until threshold
+//        int directionChangeThreshold;//number of steps before change direction of cache
+//        int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
+//        int totFiles;               // number of images available
+//        int currMB;                 // the current MB consumed by the cache
+//        int maxMB;                  // maximum MB available to cache
+//        int minMB;                  // minimum MB available to cache
+//        int folderMB;               // MB required for all files in folder
+//        int targetFirst;            // beginning of target range to cache
+//        int targetLast;             // end of the target range to cache
+//        bool isShowCacheStatus;     // show in app status bar
+//        bool usePreview;            // cache smaller pixmap for speedier initial display
+//        QSize previewSize;          // monitor display dimensions for scale of previews
+//    } cache;
+//    DataModel::Cache *cache;
+    DataModel::Cache cache;
 
     // image cache
     struct CacheItem {
@@ -99,7 +102,8 @@ public:
     QList<CacheItem> cacheItemList;
 
 signals:
-    void showCacheStatus(QString instruction, int key = 0, QString source = "");
+    void showCacheStatus(QString instruction, int key,
+                         DataModel::Cache cache, QString source = "");
     void updateIsRunning(bool, bool);
     void updateCacheOnThumbs(QString fPath, bool isCached);
     void dummyDecoder(int id);
@@ -128,6 +132,7 @@ private:
     QString currentPath;
     QString prevCurrentPath;
 
+    ImageCacheData *icd;
     DataModel *dm;
     Metadata *metadata;
     Pixmap *getImage;

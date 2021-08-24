@@ -6,7 +6,7 @@
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
-//#include "Cache/imagecache.h"
+#include "Cache/cachedata.h"
 #include "Properties/embelproperties.h"
 #include "Embellish/embel.h"
 #include "Metadata/ExifTool.h"
@@ -21,7 +21,7 @@ class EmbelExport : public QGraphicsView
 public:
     EmbelExport(Metadata *metadata,
                 DataModel *dm,
-                ImageCache *imageCacheThread,
+                ImageCacheData *icd,
                 EmbelProperties *embelProperties,
                 QWidget *parent = nullptr);
     ~EmbelExport();
@@ -40,6 +40,7 @@ private:
     bool loadImage(QString fPath);
     Metadata *metadata;
     DataModel *dm;
+    ImageCacheData *icd;
     ImageCache *imageCacheThread;
     EmbelProperties *embelProperties;
     Embel *embellish;

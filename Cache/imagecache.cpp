@@ -1,11 +1,17 @@
 #include "Cache/imagecache.h"
 
-ImageCache::ImageCache(QObject *parent, DataModel *dm, Metadata *metadata) : QThread(parent)
+ImageCache::ImageCache(QObject *parent,
+                       ImageCacheData *icd,
+                       DataModel *dm,
+                       Metadata *metadata)
+    : QThread(parent)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     // Pixmap is a class that loads either a QPixmap or QImage from a file
+    this->icd = icd;
     this->dm = dm;
     this->metadata = metadata;
+//    this->cache = &dm->cache;
 //    getImage = new Pixmap(this, dm, metadata);
     cacheImage = new CacheImage(this, dm, metadata);
     // create n decoder threads
@@ -32,39 +38,28 @@ ImageCache::~ImageCache()
 
 /*
 How the Image Cache works:
-
-
             CCC          CCCCCCCCC
                   TTTTTTTTTTTTTTTTTTTTTTTTTTTTT
     ......................*............................................
-
     . = all the thumbnails in dm->sf (filtered datamodel)
     * = the current thumbnail selected
     T = all the images targeted to cache.  The sum of T fills the assigned
         memory available for the cache ie 3000 MB
     C = the images currently cached, which can be fragmented if the user
         is jumping around, selecting images willy-nilly
-
 Procedure every time a new thumbnail is selected:
-
     1.  Define the target weighting caching strategy ahead and behind.  In
         the illustration we are caching 2 ahead for every 1 behind.
-
     2.  Assign a priority to cache for each image based on the direction
         of travel and the target weighting strategy.
-
     3.  Based on the priority and the cache maximum size, assign images
         to target for caching.
-
     4.  Add images that are targeted and not already cached.  If the cache
         is full before all targets have been cached then remove any cached
         images outside the target range that may have been left over from
         a previous thumbnail selection
-
 Data structures:
-
 cache: cache management parameters
-
     struct Cache {
         uint key;                   // current image
         uint prevKey;               // used to establish directionof travel
@@ -82,9 +77,7 @@ cache: cache management parameters
         bool usePreview;            // cache smaller pixmap for speedier initial display
         QSize previewSize;          // monitor display dimensions for scale of previews
     } cache;
-
 cacheItem: the cache status parameters for an image
-
     struct CacheItem {
         int key;
         int origKey;
@@ -94,14 +87,10 @@ cacheItem: the cache status parameters for an image
         int priority;
         float sizeMB;
     } cacheItem;
-
 cacheItemList:  the list of all the cacheItems
-
 imCache: a hash structure indexed by image file path holding each QImage
-
 Only functions called from ImageCache::run will run in another thread.  These functions must
 respect potential thread collision issues.  The functions and objects are:
-
 Functions that run in thread:
     run
     cacheUpToDate
@@ -118,11 +107,9 @@ Functions that run in thread:
     setPriorities
     setTargetRange
     updateImageCacheList
-
     reportCache
     reportToCache
     reportCacheProgress
-
 Variables used by thread:
     abort
     pause
@@ -134,13 +121,10 @@ Variables used by thread:
     getImage
     cache struct
     cacheItemList
-
 Multi-thread solution:
-
     It takes longer to decode a jpg than to read it off the USB media. Set up loop to read
     jpgs and then launch n worker threads to decode each jpg into a QImage and add to the
     imageCache.
-
     When create ImageCache create n decoders (one per core)
     Change (new folder, new image, filter, sort)
     Launch decoders
@@ -153,11 +137,9 @@ Multi-thread solution:
         create QImage
         read image file
         decodeWorker(
-
     // start fillCache
     repeat n times (QThread::idealThrreadCount())
         fillCache()
-
     Classes changed:
         ImageCache
         Pixmap -> CacheImage
@@ -168,11 +150,11 @@ void ImageCache::clearImageCache(bool includeList)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     QMutexLocker locker(&mutex);
-    dm->imCache.clear();
+    icd->imCache.clear();
     cache.currMB = 0;
     // do not clear cacheItemList if called from start slideshow
     if (includeList) cacheItemList.clear();
-    emit showCacheStatus("Clear Image Cache", 0, __FUNCTION__);
+    emit showCacheStatus("Clear Image Cache", 0, cache, __FUNCTION__);
 }
 
 void ImageCache::stopImageCache()
@@ -393,7 +375,6 @@ void ImageCache::setTargetRange()
     The target range is the list of images being targeted to cache, based on the current image,
     the direction of travel, the caching strategy and the maximum memory allotted to the image
     cache.
-
     The start and end of the target range are determined (cache.targetFirst and
     cache.targetLast) and the boolean isTarget is assigned for each item in in the
     cacheItemList.
@@ -606,7 +587,7 @@ void ImageCache::makeRoom(int cacheKey)
         // make some room by removing lowest priority cached image(s)
         if (nextToDecache()) {
             QString s = cacheItemList[cache.toDecacheKey].fPath;
-            dm->imCache.remove(s);
+            icd->imCache.remove(s);
             if (cache.isShowCacheStatus) emit updateCacheOnThumbs(s, false);
             cacheItemList[cache.toDecacheKey].isCached = false;
             cacheItemList[cache.toDecacheKey].isCaching = false;
@@ -622,7 +603,7 @@ void ImageCache::makeRoom(int cacheKey)
             qDebug() << __FUNCTION__ << "No cached images remaining to decache";
             break;
         }
-    }   
+    }
 }
 
 void ImageCache::memChk()
@@ -659,7 +640,6 @@ void ImageCache::checkForOrphans()
     out of sync and leave orphans in the image cache buffer. This function iterates through
     the image cache, checking that all cached images are in the target. If not, they are
     removed from the cache buffer.
-
     NOT USED.  rgh chk if keep
 */
     if (G::isLogger) G::log(__FUNCTION__);
@@ -685,7 +665,7 @@ void ImageCache::removeFromCache(QStringList &pathList)
     for (int i = 0; i < pathList.count(); ++i) {
         QString fPath = pathList.at(i);
 //        imCache.remove(fPath);
-        dm->imCache.remove(fPath);
+        icd->imCache.remove(fPath);
         for (int j = 0; j < cacheItemList.count(); ++j) {
             if (cacheItemList.at(j).fPath == fPath) {
                 cacheItemList.removeAt(j);
@@ -802,7 +782,7 @@ QString ImageCache::reportImCache()
     rpt.setString(&reportString);
     rpt << "\nimCache hash:";
     QHash<QString, QImage>::iterator i;
-    // replace with new HashMap dm->imCache
+    // replace with new HashMap imd->imCache
     /*
     for (i = imCache.begin(); i != imCache.end(); ++i) {
         rpt << "\n";
@@ -813,7 +793,7 @@ QString ImageCache::reportImCache()
     */
     QVector<QString> keys;
     // rgh check when imCache is empty
-    dm->imCache.getKeys(keys);
+    icd->imCache.getKeys(keys);
     for (int i = 0; i < keys.length(); ++i) {
         rpt << "\n";
         rpt << keys.at(i);
@@ -879,16 +859,14 @@ void ImageCache::buildImageCacheList()
 /*
     The imageCacheList must match dm->sf and contains the information required to maintain the
     image cache. It takes the form (example):
-
     Index Key OrigKey Priority Target Cached  SizeMB  Width Height  File Name
         0   0       0        0      1      0  65.792   5472   3078  D:/Pictures/_xmptest/2017-01-25_0911.tif
         1   1       1        1      1      0   77.97   5472   3648  D:/Pictures/_xmptest/Canon.JPG
         2   2       2        2      1      0   77.97   5472   3648  D:/Pictures/_xmptest/Canon1.cr2
         3   3       3        3      1      0   77.97   5472   3648  D:/Pictures/_xmptest/CanonPs.jpg
-
     It is built from dm->sf (sorted and/or filtered datamodel).
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__ << "for" << dm->currentFolderPath;
     cacheItemList.clear();
     // the total memory size of all the images in the folder currently selected
@@ -987,7 +965,7 @@ void ImageCache::initImageCache(int &cacheMaxMB, int &cacheMinMB,
     cache.previewSize = QSize(previewWidth, previewHeight);
     cache.usePreview = usePreview;
 
-    if (cache.isShowCacheStatus) emit showCacheStatus("Clear", 0, "ImageCache::initImageCache");
+    if (cache.isShowCacheStatus) emit showCacheStatus("Clear", 0, cache, "ImageCache::initImageCache");
 
     // populate the new folder image list
     buildImageCacheList();
@@ -1030,7 +1008,6 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     When the datamodel is filtered the image cache needs to be updated. The cacheItemList is
     rebuilt for the filtered dataset and isCached updated, the current image is set, and any
     surplus cached images (not in the filtered dataset) are removed from imCache.
-
     The image cache is now ready to run by callin(fPath)) cacg setCachePosition().
 */
     if (G::isLogger) G::log(__FUNCTION__);
@@ -1058,7 +1035,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
         if (fPath == currentImageFullPath) cache.key = row;
         // update cacheItemList for images already cached
 //        if (imCache.contains(fPath)) cacheItemList[row].isCached = true;
-        if (dm->imCache.contains(fPath)) cacheItemList[row].isCached = true;
+        if (icd->imCache.contains(fPath)) cacheItemList[row].isCached = true;
     }
 
     // if the sort has been reversed
@@ -1078,13 +1055,13 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     }
     */
     QVector<QString> keys;
-    dm->imCache.getKeys(keys);
+    icd->imCache.getKeys(keys);
     for (int i = 0; i < keys.length(); ++i) {
-        if (!filteredList.contains(keys.at(i))) dm->imCache.remove(keys.at(i));
+        if (!filteredList.contains(keys.at(i))) icd->imCache.remove(keys.at(i));
     }
 
     if (cache.isShowCacheStatus)
-        emit showCacheStatus("Update all rows", 0,  "ImageCache::rebuildImageCacheParameters");
+        emit showCacheStatus("Update all rows", 0, cache, "ImageCache::rebuildImageCacheParameters");
 
     if (isRunning() && G::isNewFolderLoaded) {
         mutex.lock();
@@ -1154,7 +1131,6 @@ void ImageCache::fillCache(int id, QString decoderPath/*, QImage *image*/)
     A number of ImageDecoders are created when ImageCache is created.  Each ImageDecoder runs
     in a separate thread.  The decoders convert an image file into a QImage and then signal
     this function with their id so the QImage can be inserted into the image cache.
-
     ImageDecoders are launched from CacheImage::run. CacheImage makes sure the necessary
     metadata is available and reads the file and then runs the decoder. This is very
     important, as file reads have to be sequential while the decoding can be performed
@@ -1164,7 +1140,6 @@ void ImageCache::fillCache(int id, QString decoderPath/*, QImage *image*/)
     is created and when the QImage has been inserted into the image cache the status is set to
     Ready.  When the decoder is called from CacheImage the status is set to Busy.  Finally,
     when the decoder finishes the decoding in ImageDecoder::run the status is set to Done.
-
     Each decoder signals this function when the image has been converted into a QImage.  Here
     the QImage is added to the imCache.  If there are more targeted images to be cached, the
     next one is assigned to the decoder, which is run again.  The decoders keep running until
@@ -1221,13 +1196,13 @@ void ImageCache::fillCache(int id, QString decoderPath/*, QImage *image*/)
     // add decoded QImage to cache if in target range
     if (targeted) {
         makeRoom(cacheKey);
-        dm->imCache.insert(decoder[id]->fPath, decoder[id]->image);
+        icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
         cacheItemList[cacheKey].isCaching = false;
         cacheItemList[cacheKey].isCached = true;
         cache.currMB = getImCacheSize();
         if (cache.isShowCacheStatus) {
             emit updateCacheOnThumbs(decoder[id]->fPath, true);
-            emit showCacheStatus("Update all rows", 0, "ImageCache::run inside loop");
+            emit showCacheStatus("Update all rows", 0, cache, "ImageCache::run inside loop");
         }
 //        decoder[id]->setReady();
     }
@@ -1252,7 +1227,7 @@ void ImageCache::fillCache(int id, QString decoderPath/*, QImage *image*/)
     else {
         if (cacheUpToDate()) {
             if (cache.isShowCacheStatus) {
-                emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
+                emit showCacheStatus("Update all rows", 0, cache, "ImageCache::run after check for orphans");
                 emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
                 /*
                 qDebug() << __FUNCTION__
@@ -1276,11 +1251,9 @@ void ImageCache::fillCache(int id, QString decoderPath/*, QImage *image*/)
 //    if (!targeted) decoder[id]->setReady();
 //    cacheItemList[cacheKey].isCaching = false;
     qDebug() << __FUNCTION__ << "id =" << id << "fPath" << fPath;
-
     // add decoded QImage to cache if done and in target range
     if (targeted) {
-        dm->imCache.insert(fPath, *image);
-
+        imd->imCache.insert(fPath, *image);
         cacheItemList[cacheKey].isCached = true;
         cache.currMB = getImCacheSize();
         if (cache.isShowCacheStatus) {
@@ -1289,7 +1262,6 @@ void ImageCache::fillCache(int id, QString decoderPath/*, QImage *image*/)
         }
         decoder[id]->setReady();
     }
-
     // get next image to cache
     if (nextToCache()) {
         QString fPath = cacheItemList.at(cache.toCacheKey).fPath;
@@ -1309,11 +1281,9 @@ void ImageCache::fillCache(int id, QString decoderPath/*, QImage *image*/)
             if (cache.isShowCacheStatus) {
                 emit showCacheStatus("Update all rows", 0,  "ImageCache::run after check for orphans");
                 emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
-
                 qDebug() << __FUNCTION__
                          << "decoder id =" << id
                          << "Filled Cache in " << t.elapsed() << "ms";
-
             }
         }
         else {
@@ -1332,31 +1302,24 @@ void ImageCache::run()
 /*
     This thread runs continuously, checking if there has there been a file selection, cache
     size, color manage or sort/filter change, which all trigger a change to the image cache.
-
     The target range is all the files that will fit into the available cache memory based on
     the cache priorities and direction of travel. We want to make sure the target range is
     cached, decaching anything outside the target range to make room as necessary.
-
     New file selection is confirmed by comparing the current path to the prevCurrentPath. The
     current path is updated by MetadataCache, which is executed for every
     MW::fileSelectionChange. MetadataCache first checks to see if the thumbnails require
     updating and then emits a signal to update setCurrentPosition which is continuously polled
     here.  Changing to position may require rebuilding the target range to cache.
-
     When the cache size is changed MW::setImageCacheParameters calls cacheSizeChange which sets
     cacheSizeHasChanged, which is continuously polled.  Changing the cache size will change the
     target range.
-
     If color manage is toggled from MW::toggleColorManage then all the cached images are
     refreshed (decoded again).
-
     If there is a sort or filter change to the datamodel then the entire cache list has to be
     updated and the cache rebuilt. This is triggered from MW::resortImageCache or
     MW::filterChange, which call rebuildImageCacheParameters.
-
     When one of the above triggers occur and there is a change to the image cache, the
     continuous polling activates these actions:
-
     - Wait for all decoder threads to finish
     - Set the cache key to the current image
     - Determine the direction of travel
@@ -1373,7 +1336,6 @@ void ImageCache::run()
         - If decoder has loaded a QImage then insert into the image cache
         - If the decoder is ready then get next QImage and signal fillCache
     - Continue polling for another cache change trigger.
-
 */
 
     if (G::isLogger) G::log(__FUNCTION__);
@@ -1489,7 +1451,7 @@ void ImageCache::run()
         //reportCache();
         // */
         if (cache.isShowCacheStatus)
-            emit showCacheStatus("Update all rows", 0, "ImageCache::run outer loop");
+            emit showCacheStatus("Update all rows", 0, cache, "ImageCache::run outer loop");
 
         // are all images in the target range cached
         if (cacheUpToDate() || abort) {

@@ -14,7 +14,7 @@ class CompareImages : public QWidget
 
 public:
     CompareImages(QWidget *parent, QWidget *centralWidget, Metadata *metadata, DataModel *dm,
-                  IconView *thumbView, ImageCache *imageCacheThread);
+                  IconView *thumbView, ImageCacheData *icd);
 
     qreal toggleZoom;
     qreal zoomValue;
@@ -57,7 +57,7 @@ private:
     Metadata *metadata;
     DataModel *dm;
     IconView *thumbView;
-    ImageCache *imageCacheThread;
+    ImageCacheData *icd;
     QWidget *centralWidget;
 //    bool &isRatingBadgeVisible;
 
