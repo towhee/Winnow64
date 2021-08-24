@@ -158,6 +158,7 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::RefineColumn, new QStandardItem("Refine")); horizontalHeaderItem(G::RefineColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::CachedColumn, new QStandardItem("Cached")); horizontalHeaderItem(G::CachedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour")); horizontalHeaderItem(G::LabelColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating")); horizontalHeaderItem(G::RatingColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::SearchColumn, new QStandardItem("🔎")); horizontalHeaderItem(G::SearchColumn)->setData(false, G::GeekRole);
@@ -482,6 +483,8 @@ bool DataModel::addFileData()
         setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::IngestedColumn), "false");
         setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+        setData(index(row, G::CachedColumn), "false");
+        setData(index(row, G::CachedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::MetadataLoadedColumn), "false");
         setData(index(row, G::SearchColumn), "false");
         setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
@@ -1107,6 +1110,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("refine", 25) << G::s(index(row, G::RefineColumn).data());
     rpt << "\n  " << G::sj("pick", 25) << G::s(index(row, G::PickColumn).data());
     rpt << "\n  " << G::sj("ingested", 25) << G::s(index(row, G::IngestedColumn).data());
+    rpt << "\n  " << G::sj("cached", 25) << G::s(index(row, G::CachedColumn).data());
     rpt << "\n  " << G::sj("label", 25) << G::s(index(row, G::LabelColumn).data());
     rpt << "\n  " << G::sj("_label", 25) << G::s(index(row, G::_LabelColumn).data());
     rpt << "\n  " << G::sj("rating", 25) << G::s(index(row, G::RatingColumn).data());

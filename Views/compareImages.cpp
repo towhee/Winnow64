@@ -11,14 +11,14 @@ CompareImages::CompareImages(QWidget *parent,
                              Metadata *metadata,
                              DataModel *dm,
                              IconView *thumbView,
-                             ImageCache *imageCacheThread)
+                             ImageCacheData *icd)
     : QWidget(parent)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     this->metadata = metadata;
     this->dm = dm;
     this->thumbView = thumbView;
-    this->imageCacheThread = imageCacheThread;
+    this->icd = icd;
     this->centralWidget = centralWidget;
 
     // set up a grid to contain the imageviews
@@ -102,7 +102,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 //        QModelIndex idxPick = dm->sf->index(idxPath.row(), G::PickColumn);
         QString fPath = selection.at(i).data(G::PathRole).toString();
         // create new compareView and append to list
-        imList->append(new CompareView(this, gridCell, dm, metadata, imageCacheThread, thumbView));
+        imList->append(new CompareView(this, gridCell, dm, metadata, icd, thumbView));
         imList->at(i)->loadImage(selection.at(i), fPath);
         // set toggleZoom value (from QSettings)
         imList->at(i)->toggleZoom = toggleZoom;

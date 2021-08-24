@@ -25,6 +25,7 @@ QT += xmlpatterns
 #QT += opengl
 
 HEADERS += Cache/mdcache.h \
+    Cache/cachedata.h \
     Datamodel/HashMap.h \
     Datamodel/HashNode.h
 HEADERS += Cache/tshash.h
@@ -132,6 +133,7 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
+SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/mdcache.cpp

@@ -37,6 +37,7 @@
 #include "Embellish/embelexport.h"
 #include "Embellish/embel.h"
 
+#include "Cache/cachedata.h"
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
 //#ifdef Q_OS_WIN
@@ -443,7 +444,8 @@ private slots:
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy = "");
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateMetadataCacheStatus(int row, bool clear = false);
-    void updateImageCacheStatus(QString instruction, int row, QString source);
+    void updateImageCacheStatus(QString instruction, int row,
+                                DataModel::Cache cache, QString source);
     // caching
     void updateImageCachePositionAfterDelay(); // rghcachechange
     void loadMetadataCache2ndPass();
@@ -896,6 +898,7 @@ private:
     QGridLayout *compareLayout;
     QStackedLayout *centralLayout;
     DataModel *dm;
+    ImageCacheData *icd;
     BuildFilters *buildFilters;
     QItemSelectionModel *selectionModel;
     Metadata *metadata;

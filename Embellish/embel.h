@@ -6,6 +6,7 @@
 //#include "Embellish/embelexport.h"
 #include "Main/global.h"
 #include "Datamodel/datamodel.h"
+#include "Cache/cachedata.h"
 #include "Cache/imagecache.h"
 #include "Properties/embelproperties.h"
 #include "Effects/graphicseffect.h"
@@ -17,8 +18,12 @@ class Embel : public QObject
     Q_OBJECT
 
 public:
-    Embel(QGraphicsScene *scene, QGraphicsPixmapItem *pmItem,
-          EmbelProperties *p, DataModel *dm, QString src = "Internal",
+    Embel(QGraphicsScene *scene,
+          QGraphicsPixmapItem *pmItem,
+          EmbelProperties *p,
+          DataModel *dm,
+          ImageCacheData *icd,
+          QString src = "Internal",
           QObject *object = nullptr);
 //    Embel(ImageView *gv, EmbelProperties *p);
 //    Embel(EmbelExport *ee, EmbelProperties *p);
@@ -58,6 +63,7 @@ private:
     GraphicsItemEventFilter *itemEventFilter;
     EmbelProperties *p;
     DataModel *dm;
+    ImageCacheData *icd;
     QString fPath;
 
     // set true when called from EmbelExport (see explanation in EmBel::build)
