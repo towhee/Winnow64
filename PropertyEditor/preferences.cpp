@@ -133,7 +133,7 @@ itemChange, which is subclassed here.
         Mac::availableMemory();     // sets G::availableMemoryMB
         #endif
 
-        int memAvail = mw->imageCacheThread->cache.currMB + G::availableMemoryMB;
+        int memAvail = mw->icd->cache.currMB + G::availableMemoryMB;
         QString availMBMsg = QString::number(mw->cacheMaxMB) + " of " +
                 QString::number(memAvail) + " available MB";
         static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
@@ -150,7 +150,7 @@ itemChange, which is subclassed here.
         Mac::availableMemory();     // sets G::availableMemoryMB
         #endif
 
-        int memAvail = mw->imageCacheThread->cache.currMB + G::availableMemoryMB;
+        int memAvail = mw->icd->cache.currMB + G::availableMemoryMB;
         QString availMBMsg = QString::number(mw->cacheMaxMB) + " of " +
                 QString::number(memAvail) + " available MB";
         static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);
@@ -810,7 +810,7 @@ void Preferences::addItems()
     #ifdef Q_OS_MAC
     Mac::availableMemory();     // sets G::availableMemoryMB
     #endif
-    int memAvail = mw->imageCacheThread->cache.currMB + G::availableMemoryMB;
+    int memAvail = mw->icd->cache.currMB + G::availableMemoryMB;
     i.value = QString::number(mw->cacheMaxMB) + " of " +
             QString::number(memAvail) + " available MB";
 

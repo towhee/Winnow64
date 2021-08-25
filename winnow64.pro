@@ -24,19 +24,19 @@ QT += concurrent
 QT += xmlpatterns
 #QT += opengl
 
-HEADERS += Cache/mdcache.h \
-    Cache/cachedata.h \
-    Datamodel/HashMap.h \
-    Datamodel/HashNode.h
+HEADERS += Cache/mdcache.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/tshash.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
-HEADERS += Dialogs/ingesterrors.h
-HEADERS += Dialogs/managegraphicsdlg.h
-HEADERS += Dialogs/manageimagesdlg.h
 HEADERS += Datamodel/buildfilters.h
 HEADERS += Datamodel/datamodel.h
 HEADERS += Datamodel/filters.h
+HEADERS += Datamodel/HashMap.h
+HEADERS += Datamodel/HashNode.h
+HEADERS += Dialogs/ingesterrors.h
+HEADERS += Dialogs/managegraphicsdlg.h
+HEADERS += Dialogs/manageimagesdlg.h
 HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/copystyledlg.h

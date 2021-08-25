@@ -50,6 +50,7 @@ public:
     template<typename T>
     static QString getString(T &io, quint32 offset, quint32 length);
     static QByteArray getByteArray(QFile &file, quint32 offset, quint32 length);
+    static int integer(int x);
 
     // Bit operations
     static QBitArray bytes2Bits(QByteArray bytes);
