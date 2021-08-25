@@ -451,6 +451,11 @@ QBitArray Utilities::bytes2Bits(QByteArray bytes)
     return bits;
 }
 
+int Utilities::integer(int x)
+{
+    return x;
+}
+
 //void Utilities::bytes2Bitset32(QByteArray bytes, std::bitset<32> &bits)
 //{
 //    bits = get32(bytes);

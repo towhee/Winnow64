@@ -1600,8 +1600,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     }
 
     // update cursor position on progressBar
-    updateImageCacheStatus("Update cursor", currentRow,
-                           imageCacheThread->cache, "MW::fileSelectionChange");
+    progressBar->updateCursor(currentRow, dm->sf->rowCount(),
+                              G::progressCurrentColor, G::progressImageCacheColor);
 
 //    if (!G::isInitializing) centralLayout->setCurrentIndex(prevCentralView);
 
@@ -2061,16 +2061,17 @@ void MW::updateImageCachePositionAfterDelay()
     emit setImageCachePosition(dm->currentFilePath);
 }
 
-void MW::updateImageCacheStatus(QString instruction, int row,
-                                DataModel::Cache cache, QString source)
+void MW::updateImageCacheStatus(QString instruction,
+                                ImageCacheData::Cache cache,
+                                QVector<bool> cached,
+                                QString source)
 {
 /*
     Displays a statusbar showing the metadata cache status.  Also shows the cache
     size in the info panel.
 
-    cache
-    cacheItemList
-
+    All status info is passed by copy to prevent collisions on source data, which is being
+    continuously updated by ImageCache
 */
 //    return;
     if (G::isLogger) {
@@ -2079,14 +2080,13 @@ void MW::updateImageCacheStatus(QString instruction, int row,
     }
     if (G::isSlideShow && isSlideShowRandom) return;
 
-    /*
-    QString msg = "   currMB: " + QString::number(imageCacheThread->cache.currMB) +
-                  "   minMB: "  + QString::number(imageCacheThread->cache.minMB) +
-                  "   maxMB: "  + QString::number(imageCacheThread->cache.maxMB);
+//    /*
+    QString msg = "   currMB: " + QString::number(cache.currMB) +
+                  "   minMB: "  + QString::number(cache.minMB) +
+                  "   maxMB: "  + QString::number(cache.maxMB);
     updateStatus(true, msg);
     //*/
 
-    source = "";    // suppress compiler warning
     /*
    qDebug() << "MW::updateImageCacheStatus  Instruction ="
              << instruction
@@ -2094,13 +2094,13 @@ void MW::updateImageCacheStatus(QString instruction, int row,
              << "source =" << source;
 //             */
 
-    /*
+//    /*
     // show cache amount ie "4.2 of 16.1GB (4 threads)" in info panel
-    QString cacheAmount = QString::number(double(imageCacheThread->cache.currMB)/1024,'f',1)
+    QString cacheAmount = QString::number(double(cache.currMB)/1024,'f',1)
             + " of "
-            + QString::number(double(imageCacheThread->cache.maxMB)/1024,'f',1)
+            + QString::number(double(cache.maxMB)/1024,'f',1)
             + "GB ("
-            + QString::number(imageCacheThread->decoderCount)
+            + QString::number(cache.decoderCount)
             + " threads)"
             ;
     QStandardItemModel *k = infoView->ok;
@@ -2116,34 +2116,24 @@ void MW::updateImageCacheStatus(QString instruction, int row,
     }
 
     // create a short alias to keep code shorter
-    ImageCache *ic = imageCacheThread;
-    int rows = /*ic->*/cache.totFiles;
-
-    if (instruction == "Update cursor") {
-        progressBar->updateCursor(row, rows, G::progressCurrentColor, G::progressImageCacheColor);
-        return;
-    }
+    int rows = cache.totFiles;
 
     if(instruction == "Update all rows") {
-//        qDebug() << __FUNCTION__ << "Update all rows";
         // clear progress
         progressBar->clearProgress();
         // target range
-        int tFirst = /*ic->*/cache.targetFirst;
-        int tLast = ic->cache.targetLast + 1;
+        int tFirst = cache.targetFirst;
+        int tLast = cache.targetLast + 1;
         progressBar->updateProgress(tFirst, tLast, rows, G::progressTargetColor,
                                     "");
         // cached
         for (int i = 0; i < rows; ++i) {
-            // bail if list has been cleared because new folder selected
-            if (ic->cacheItemList.isEmpty()) return;
-            if (ic->cacheItemList.at(i).isCached)
+            if (cached.at(i))
                 progressBar->updateProgress(i, i + 1, rows, G::progressImageCacheColor,
                                             "");
         }
         // cursor
-        row = currentRow;
-        progressBar->updateCursor(row, rows, G::progressCurrentColor, G::progressImageCacheColor);
+        progressBar->updateCursor(currentRow, rows, G::progressCurrentColor, G::progressImageCacheColor);
         return;
     }
 
@@ -11295,8 +11285,7 @@ void MW::deleteFiles()
     // remove selected from imageCache
     imageCacheThread->removeFromCache(sldm);
     // update cursor position on progressBar
-    updateImageCacheStatus("Update all rows", currentRow,
-                           imageCacheThread->cache, __FUNCTION__);
+    imageCacheThread->updateStatus("Update all rows", __FUNCTION__);
 
     // update current index
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
@@ -11675,10 +11664,18 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    qDebug() << __FUNCTION__ << dm->cache.totFiles
-//             << imageCacheThread->cache.totFiles;
-//    QModelIndex idx = dm->sf->index(0, G::CachedColumn);
-//    dm->sf->setData(idx, true, Qt::EditRole);
+    CTSL::HashMap<int, ImageCacheData::CacheItem> testCache;
+    ImageCacheData::CacheItem k;
+    for (int i = 0; i < 5; i++) {
+        k.key = i;
+        k.fPath = "item " + QString::number(i);
+        testCache.insert(i, k);
+    }
+    for (int i = 0; i < 5; i++) {
+        testCache.find(i, k);
+        qDebug() << __FUNCTION__ << i << k.key << k.fPath;
+    }
+
     return;
 
     qDebug() << __FUNCTION__ << "use decodeScan";

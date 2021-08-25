@@ -444,8 +444,10 @@ private slots:
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy = "");
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateMetadataCacheStatus(int row, bool clear = false);
-    void updateImageCacheStatus(QString instruction, int row,
-                                DataModel::Cache cache, QString source);
+    void updateImageCacheStatus(QString instruction,
+                                ImageCacheData::Cache cache,
+                                QVector<bool> cached,
+                                QString source);
     // caching
     void updateImageCachePositionAfterDelay(); // rghcachechange
     void loadMetadataCache2ndPass();

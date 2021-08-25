@@ -33,6 +33,7 @@ public:
         int folderMB;               // MB required for all files in folder
         int targetFirst;            // beginning of target range to cache
         int targetLast;             // end of the target range to cache
+        int decoderCount;           // number of separate threads used to decode images
         bool isShowCacheStatus;     // show in app status bar
         bool usePreview;            // cache smaller pixmap for speedier initial display
         QSize previewSize;          // monitor display dimensions for scale of previews
@@ -52,5 +53,6 @@ public:
     } cacheItem;
 
     QList<CacheItem> cacheItemList;
+    CTSL::HashMap<int, CacheItem> cacheItemHash;
 };
 #endif // CACHEDATA_H

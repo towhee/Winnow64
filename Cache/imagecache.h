@@ -49,6 +49,7 @@ public:
     void removeFromCache(QStringList &pathList);
     QSize getPreviewSize();
     QString diagnostics();
+    void updateStatus(QString instruction, QString source); // update cached send signal
     QString reportCache(QString title = "");
     QString reportCacheProgress(QString action);
     void reportRunStatus();
@@ -59,51 +60,13 @@ public:
 //    QHash<QString, QImage> imCache;  // moved to DataModel and changed to concurrent HashMap
     QString source;                 // temp for debugging
 
-    // used by MW::updateImageCacheStatus
-//    struct Cache {
-//        int key;                    // current image
-//        int prevKey;                // used to establish directionof travel
-//        int toCacheKey;             // next file to cache
-//        int toDecacheKey;           // next file to remove from cache
-//        bool isForward;             // direction of travel for caching algorithm
-//        bool maybeDirectionChange;  // direction change but maybe below change threshold
-//        int step;                   // difference between key and prevKey
-//        int sumStep;                // sum of step until threshold
-//        int directionChangeThreshold;//number of steps before change direction of cache
-//        int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
-//        int totFiles;               // number of images available
-//        int currMB;                 // the current MB consumed by the cache
-//        int maxMB;                  // maximum MB available to cache
-//        int minMB;                  // minimum MB available to cache
-//        int folderMB;               // MB required for all files in folder
-//        int targetFirst;            // beginning of target range to cache
-//        int targetLast;             // end of the target range to cache
-//        bool isShowCacheStatus;     // show in app status bar
-//        bool usePreview;            // cache smaller pixmap for speedier initial display
-//        QSize previewSize;          // monitor display dimensions for scale of previews
-//    } cache;
-//    DataModel::Cache *cache;
-    DataModel::Cache cache;
-
-    // image cache
-    struct CacheItem {
-        int key;                    // same as row in dm->sf (sorted and filtered datamodel)
-        int origKey;                // the key of a previous filter or sort
-        QString fPath;              // image full path
-        bool isMetadata;            // has metadata for embedded jpg offset and length been loaded
-        bool isCaching;             // decoder is working on image
-        int threadId;               // decoder thread working on image
-        bool isCached;              // has image been cached
-        bool isTarget;              // is this image targeted to be cached
-        int priority;               // priority to cache image
-        int sizeMB;                 // memory req'd to cache image
-    } cacheItem;
-
-    QList<CacheItem> cacheItemList;
+//    ImageCacheData::Cache icd->cache;
 
 signals:
-    void showCacheStatus(QString instruction, int key,
-                         DataModel::Cache cache, QString source = "");
+    void showCacheStatus(QString instruction,
+                         ImageCacheData::Cache cache,
+                         QVector<bool> cached,
+                         QString source = "");
     void updateIsRunning(bool, bool);
     void updateCacheOnThumbs(QString fPath, bool isCached);
     void dummyDecoder(int id);
@@ -119,7 +82,6 @@ public slots:
     void colorManageChange();
 
 private:
-//    QBasicMutex mutex;
     QMutex mutex;
     QWaitCondition condition;
     bool restart;
@@ -141,7 +103,9 @@ private:
 
 //    QList<int>toCache;
 //    QList<int>toDecache;
+    QVector<bool> cached;
 
+    void updateCached();            // used to update status in MW
     int getImCacheSize();           // add up total MB cached
     void setKeyToCurrent();         // cache key from currentFilePath
     int getCacheKey(QString fPath); // cache key for any path
@@ -151,11 +115,14 @@ private:
     bool inTargetRange(QString fPath);  // image targeted to cache
     bool nextToCache();             // find highest priority not cached
     bool nextToDecache();           // find lowest priority cached - return -1 if none cached
+    bool cacheHasMissing();         // missed files from first pass (isCaching = true)
     void checkForOrphans();         // check no strays in imageCache from jumping around
     void makeRoom(int cacheKey); // remove images from cache until there is roomRqd
     void memChk();                  // still room in system memory for cache?
-    static bool prioritySort(const CacheItem &p1, const CacheItem &p2);
-    static bool keySort(const CacheItem &k1, const CacheItem &k2);
+    static bool prioritySort(const ImageCacheData::CacheItem &p1,
+                             const ImageCacheData::CacheItem &p2);
+    static bool keySort(const ImageCacheData::CacheItem &k1,
+                        const ImageCacheData::CacheItem &k2);
     void buildImageCacheList();     //
     void updateImageCacheList();    //
     void refreshImageCache();
