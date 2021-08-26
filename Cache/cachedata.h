@@ -52,7 +52,17 @@ public:
         int sizeMB;                 // memory req'd to cache image
     } cacheItem;
 
-    QList<CacheItem> cacheItemList;
+//    struct PriorityItem {
+//        int key;                    // same as row in dm->sf (sorted and filtered datamodel)
+//        int priority;               // priority to cache image
+//    } priorityItem;
+
+//    QList<CacheItem> cacheItemList;
     CTSL::HashMap<int, CacheItem> cacheItemHash;
+    QList<CacheItem> priorityList;   // used to sort cacheItemHash by priority
+
+    QHash<QString,int> imageHash;   // used to quickly get integer key from fPath
 };
+Q_DECLARE_METATYPE(ImageCacheData::Cache)
+
 #endif // CACHEDATA_H
