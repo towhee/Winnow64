@@ -134,7 +134,7 @@ void ProgressBar::updateProgress(int fromItem,
 
     // to and from can be mixed depending on direction of travel
     if(fromItem < toItem) {
-        pxWidth = qRound((toItem - fromItem) * itemWidth) + 1;;
+        pxWidth = qRound((toItem - fromItem) * itemWidth) + 1;
         pxStart = qRound(fromItem * itemWidth);
         if(pxStart + pxWidth > barWidth) pxWidth = barWidth - pxStart;
     }
@@ -159,6 +159,20 @@ void ProgressBar::updateProgress(int fromItem,
     pnt.fillRect(doneRect, doneGradient);
     m1->progressLabel->setPixmap(*(m1->progressPixmap));
     if (comment != "") m1->updateStatus(false, comment, __FUNCTION__);
+}
+
+void ProgressBar::updateDoneItem(bool isDone, int item, int items, QColor doneColor)
+{
+    QPainter pnt(m1->progressPixmap);
+    int barWidth = m1->progressWidth;
+    float itemWidth = (float)barWidth / items;
+    int pxStart, pxWidth;
+    pxWidth = qRound(itemWidth) + 1;
+    pxStart = qRound(item * itemWidth);
+    QLinearGradient doneGradient = getGradient(doneColor);
+    QRect doneRect(pxStart, htOffset, pxWidth, ht);
+    pnt.fillRect(doneRect, doneGradient);
+    m1->progressLabel->setPixmap(*(m1->progressPixmap));
 }
 
 QLinearGradient ProgressBar::getGradient(QColor c1)

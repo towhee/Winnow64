@@ -15,6 +15,7 @@ public:
     void clearProgress();
     void setBackgroundColor(const QColor &bg);
     void updateProgress(int fromItem, int toItem, int items, QColor doneColor, QString comment);
+    void updateDoneItem(bool isDone, int item, int items, QColor doneColor);
     void updateCursor(int item, int items, QColor currentColor, QColor imageCacheColor);
     void saveProgressState();
     void recoverProgressState();

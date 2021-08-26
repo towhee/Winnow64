@@ -57,12 +57,12 @@ public:
 //        int priority;               // priority to cache image
 //    } priorityItem;
 
-//    QList<CacheItem> cacheItemList;
-    CTSL::HashMap<int, CacheItem> cacheItemHash;
-    QList<CacheItem> priorityList;   // used to sort cacheItemHash by priority
+    QList<CacheItem> cacheItemList;
+//    CTSL::HashMap<int, CacheItem> cacheItemHash;
+//    QList<CacheItem> priorityList;   // used to sort cacheItemHash by priority
 
     QHash<QString,int> imageHash;   // used to quickly get integer key from fPath
 };
-Q_DECLARE_METATYPE(ImageCacheData::Cache)
+//Q_DECLARE_METATYPE(ImageCacheData::Cache)
 
 #endif // CACHEDATA_H
