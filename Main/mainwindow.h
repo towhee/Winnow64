@@ -446,7 +446,6 @@ private slots:
     void updateMetadataCacheStatus(int row, bool clear = false);
     void updateImageCacheStatus(QString instruction,
                                 ImageCacheData::Cache cache,
-                                QVector<bool> cached,
                                 QString source);
     // caching
     void updateImageCachePositionAfterDelay(); // rghcachechange

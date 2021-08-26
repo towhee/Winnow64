@@ -319,7 +319,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
 //    if (sortColumn > 0) sortChange();
 
-    qRegisterMetaType<ImageCacheData::Cache>();
+//    qRegisterMetaType<ImageCacheData::Cache>();
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
 
@@ -2064,7 +2064,7 @@ void MW::updateImageCachePositionAfterDelay()
 
 void MW::updateImageCacheStatus(QString instruction,
                                 ImageCacheData::Cache cache,
-                                QVector<bool> cached,
+//                                QVector<bool> cached,
                                 QString source)
 {
 /*
@@ -2116,7 +2116,6 @@ void MW::updateImageCacheStatus(QString instruction,
         return;
     }
 
-    // create a short alias to keep code shorter
     int rows = cache.totFiles;
 
     if(instruction == "Update all rows") {
@@ -2129,10 +2128,10 @@ void MW::updateImageCacheStatus(QString instruction,
                                     "");
         // cached
         for (int i = 0; i < rows; ++i) {
-            if (cached.at(i))
-                progressBar->updateProgress(i, i + 1, rows, G::progressImageCacheColor,
-                                            "");
+            if (dm->sf->index(i, G::PathColumn).data(G::CachedRole).toBool())
+                progressBar->updateProgress(i, i + 1, rows, G::progressImageCacheColor, "");
         }
+
         // cursor
         progressBar->updateCursor(currentRow, rows, G::progressCurrentColor, G::progressImageCacheColor);
         return;
@@ -4397,10 +4396,8 @@ void MW::createCaching()
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
 
     // Update the cache status progress bar when changed in ImageCache
-//    connect(imageCacheThread, SIGNAL(showCacheStatus(QString,int,QString)),
-//            this, SLOT(updateImageCacheStatus(QString,int,QString)));
-//    connect(imageCacheThread, &ImageCache::showCacheStatus,
-//            this, &MW::updateImageCacheStatus);
+    connect(imageCacheThread, &ImageCache::showCacheStatus,
+            this, &MW::updateImageCacheStatus);
 
     // Signal from ImageCache::run() to update cache status in datamodel
     connect(imageCacheThread, SIGNAL(updateCacheOnThumbs(QString,bool)),
