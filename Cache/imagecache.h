@@ -57,7 +57,6 @@ public:
 
     int decoderCount = 1;
 
-//    QHash<QString, QImage> imCache;  // moved to DataModel and changed to concurrent HashMap
     QString source;                 // temp for debugging
 
 //    ImageCacheData::Cache icd->cache;
@@ -100,6 +99,7 @@ private:
     Pixmap *getImage;
     CacheImage *cacheImage;
     QVector<ImageDecoder*> decoder;
+    ImageCacheData::CacheItem item; // generic item used to update ImageCacheData::cacheItemHash
 
 //    QList<int>toCache;
 //    QList<int>toDecache;
@@ -121,8 +121,8 @@ private:
     void memChk();                  // still room in system memory for cache?
     static bool prioritySort(const ImageCacheData::CacheItem &p1,
                              const ImageCacheData::CacheItem &p2);
-    static bool keySort(const ImageCacheData::CacheItem &k1,
-                        const ImageCacheData::CacheItem &k2);
+//    static bool keySort(const ImageCacheData::CacheItem &k1,
+//                        const ImageCacheData::CacheItem &k2);
     void buildImageCacheList();     //
     void updateImageCacheList();    //
     void refreshImageCache();

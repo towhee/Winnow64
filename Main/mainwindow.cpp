@@ -319,6 +319,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
 //    if (sortColumn > 0) sortChange();
 
+    qRegisterMetaType<ImageCacheData::Cache>();
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
 
@@ -4398,8 +4399,8 @@ void MW::createCaching()
     // Update the cache status progress bar when changed in ImageCache
 //    connect(imageCacheThread, SIGNAL(showCacheStatus(QString,int,QString)),
 //            this, SLOT(updateImageCacheStatus(QString,int,QString)));
-    connect(imageCacheThread, &ImageCache::showCacheStatus,
-            this, &MW::updateImageCacheStatus);
+//    connect(imageCacheThread, &ImageCache::showCacheStatus,
+//            this, &MW::updateImageCacheStatus);
 
     // Signal from ImageCache::run() to update cache status in datamodel
     connect(imageCacheThread, SIGNAL(updateCacheOnThumbs(QString,bool)),
@@ -11671,6 +11672,10 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
         k.fPath = "item " + QString::number(i);
         testCache.insert(i, k);
     }
+    ImageCacheData::CacheItem n;
+    testCache.find(3, n);
+    n.fPath = "Something else";
+    testCache.insert(3, n);
     for (int i = 0; i < 5; i++) {
         testCache.find(i, k);
         qDebug() << __FUNCTION__ << i << k.key << k.fPath;
@@ -11678,21 +11683,21 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 
     return;
 
-    qDebug() << __FUNCTION__ << "use decodeScan";
-    QString jpgfile  = "/Users/roryhill/Pictures/_JPG/base.jpg";
-    QFile f(jpgfile);
-    f.open(QIODevice::ReadOnly);
-    QImage image;
-    Jpeg jpg;
-    jpg.decodeScan(f, image);
-    image.convertTo(QImage::Format_RGB888);
-    uchar* v = image.scanLine(0);
-    int n = 0;
-    for (unsigned long i = 0; i < 100; i++) {
-        int x = (0xff & *v++);
-        std::cout << std::hex << std::uppercase << std::setw(2) << x << " ";
-        if (++n % 25 == 0) std::cout << " " << std::dec << n + (int)0 << '\n';
-    }
-    std::cout << '\n';
+//    qDebug() << __FUNCTION__ << "use decodeScan";
+//    QString jpgfile  = "/Users/roryhill/Pictures/_JPG/base.jpg";
+//    QFile f(jpgfile);
+//    f.open(QIODevice::ReadOnly);
+//    QImage image;
+//    Jpeg jpg;
+//    jpg.decodeScan(f, image);
+//    image.convertTo(QImage::Format_RGB888);
+//    uchar* v = image.scanLine(0);
+//    int n = 0;
+//    for (unsigned long i = 0; i < 100; i++) {
+//        int x = (0xff & *v++);
+//        std::cout << std::hex << std::uppercase << std::setw(2) << x << " ";
+//        if (++n % 25 == 0) std::cout << " " << std::dec << n + (int)0 << '\n';
+//    }
+//    std::cout << '\n';
 }
 // End MW
