@@ -118,6 +118,9 @@ bool CacheImage::load(QString &fPath, ImageDecoder *decoder)
         }
 
         QByteArray buf = imFile.read(lengthFullJpg);
+        if (buf == nullptr) {
+            qWarning() << __FUNCTION__ << "nullptr for buf";
+        }
 
         // try to decode the jpg data
         ImageMetadata m = dm->imMetadata(fPath);

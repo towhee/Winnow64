@@ -70,7 +70,15 @@ void ImageDecoder::decodeJpg()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     // chk nullptr
-    image.loadFromData(ba, "JPEG");
+    qDebug() << __FUNCTION__
+             << "ba.isEmpty() =" << ba.isEmpty()
+             << "ba.isNull() =" << ba.isNull()
+             << "ba.length() =" << ba.length()
+                ;
+    if (this->ba == nullptr) {
+        qWarning() << __FUNCTION__ << "nullptr for ba in thread id" << threadId;
+    }
+    else image.loadFromData(ba, "JPEG");
 }
 
 void ImageDecoder::decodeTif()

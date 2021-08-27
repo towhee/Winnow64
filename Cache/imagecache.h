@@ -111,7 +111,6 @@ private:
     bool nextToCache();             // find highest priority not cached
     bool nextToDecache();           // find lowest priority cached - return -1 if none cached
     bool cacheHasMissing();         // missed files from first pass (isCaching = true)
-    void checkForOrphans();         // check no strays in imageCache from jumping around
     void makeRoom(int cacheKey); // remove images from cache until there is roomRqd
     void memChk();                  // still room in system memory for cache?
     static bool prioritySort(const ImageCacheData::CacheItem &p1,

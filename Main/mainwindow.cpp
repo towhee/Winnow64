@@ -319,7 +319,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
 //    if (sortColumn > 0) sortChange();
 
-//    qRegisterMetaType<ImageCacheData::Cache>();
+    qRegisterMetaType<ImageCacheData::Cache>();
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
 
@@ -2064,7 +2064,6 @@ void MW::updateImageCachePositionAfterDelay()
 
 void MW::updateImageCacheStatus(QString instruction,
                                 ImageCacheData::Cache cache,
-//                                QVector<bool> cached,
                                 QString source)
 {
 /*
@@ -2081,7 +2080,7 @@ void MW::updateImageCacheStatus(QString instruction,
     }
     if (G::isSlideShow && isSlideShowRandom) return;
 
-//    /*
+    /*
     QString msg = "   currMB: " + QString::number(cache.currMB) +
                   "   minMB: "  + QString::number(cache.minMB) +
                   "   maxMB: "  + QString::number(cache.maxMB);
