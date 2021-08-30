@@ -134,6 +134,31 @@ CACHING
 
 * see top of mdcache.cpp comments for more detail
 
+CACHE STATUS
+
+* Two status lights on the right side of the status bar (metadataThreadRunningLabel and
+  imageThreadRunningLabel) turn from green to red to indicate datamodel metadata and image
+  caching respectively.  A status light on the lower right of each thumbnail is made
+  visible when the associated image is cached.
+
+* An image cache progress bar (progressBar) shows the status of every image in the folder:
+  target range, isCached and cursor position.
+
+* The flag G::showCacheStatus toggles cache progress updates and the visibility of the
+  progress bar.
+
+* isCached is stored in datamodel as dm->sf->setData(idx, isCached, G::CachedRole)
+
+* Functions:
+  MW::createStatusBar                       - add status labels to right side of status bar
+  MW::setImageCacheParameters               - preferences calls to update cache status
+  MW::setThreadRunStatusInactive            - sets caching activity status lights gray
+  MW::updateImageCachingThreadRunStatus     - sets image caching activity status light green/red
+  MW::updateMetadataCachingThreadRunStatus  - sets metadata caching activity status light green/red
+  MW::setCacheStatusVisibility              - updateState calls to toggle progressBar visibility
+  MW::updateImageCacheStatus                - ImageCache calls to update image cache status
+  MW::setCachedStatus                       - sets isCached in datamodel and refreshes views
+
 ***********************************************************************************************
 
 DATAMODEL CHANGES
@@ -172,7 +197,6 @@ Image change
     MetadataCache::fileSelectionChange
     MetadataCache::setRange
     MetadataCache::readMetadataIconChunk
-    MW::updateImageCachePositionAfterDelay
     ImageCache::updateImageCachePosition
     ImageCache::updateImageCacheList
     ImageCache::setPriorities
@@ -249,6 +273,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     isStressTest = false;
     G::isTimer = true;                  // Global timer
     G::isTest = false;                  // use to find memory loss
+    useImageCache = true;
 
     // Initialize some variables
     initialize();
@@ -608,6 +633,8 @@ void MW::keyPressEvent(QKeyEvent *event)
         if (thumb->insertingThumbnails) {
             thumb->abort = true;
         }
+        // end stress test
+        isStressTest = false;
     }
 
     QMainWindow::keyPressEvent(event);
@@ -1242,7 +1269,7 @@ void MW::folderSelectionChange()
         G::log("FOLDER CHANGE");
         G::log(__FUNCTION__, currentViewDir);
     }
-    qDebug() << __FUNCTION__;
+    qDebug() << __FUNCTION__ << currentViewDir;
 
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
@@ -1256,9 +1283,9 @@ void MW::folderSelectionChange()
     // do not embellish
     if (turnOffEmbellish) embelProperties->invokeFromAction(embelTemplatesActions.at(0));
 
-    setCentralMessage("Gathering metadata and thumbnails for images in folder.");
-    statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
-    qApp->processEvents();
+//    setCentralMessage("Gathering metadata and thumbnails for images in folder.");
+//    statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
+//    qApp->processEvents();
 
     // ImageView set zoom = fit for the first image of a new folder
     imageView->isFirstImageNewFolder = true;
@@ -1400,6 +1427,8 @@ void MW::folderSelectionChange()
         thumbView->selectThumb(0);
     }
 
+    setCentralMessage("Gathering metadata and thumbnails for images in folder.");
+    qApp->processEvents();
     updateStatus(false, "Collecting metadata for all images in folder(s)", __FUNCTION__);
 
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
@@ -1443,7 +1472,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
              << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
              << "isFilterChange =" << isFilterChange
              << "isCurrentFolderOkay =" << isCurrentFolderOkay
-             << "current =" << current;
+             << "row =" << current.row()
+             << "icon row =" << thumbView->currentIndex().row()
+             << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
+                ;
 //    */
 
     bool isStart = false;
@@ -1534,8 +1566,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     if (!G::isSlideShow) progressLabel->setVisible(G::showCacheStatus);
 
     // update imageView immediately unless weird sort or folder not loaded yet
-    bool okToLoadImage = sortColumn == G::NameColumn
-                      || sortColumn == G::ModifiedColumn
+    bool okToLoadImage = (sortColumn == G::NameColumn
+                      || sortColumn == G::ModifiedColumn)
                       || G::isNewFolderLoaded;
     if (okToLoadImage) {
         if (imageView->loadImage(fPath, __FUNCTION__)) {
@@ -1570,14 +1602,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
             && useImageCache
            )
         {
-            /*
-            // other methods used. Sending signal avoids mutex delay in ImageCache
-            QTimer::singleShot(100, this, &MW::updateImageCachePositionAfterDelay);
-            imageCacheTimer->start(100);
-            G::track(__FUNCTION__, "call setCurrentPosition ImageCache " + fPath);
-            imageCacheThread->setCurrentPosition(dm->currentFilePath);
-            */
-//            qDebug() << __FUNCTION__ << "emit setImageCachePosition(dm->currentFilePath)";
             emit setImageCachePosition(dm->currentFilePath);
         }
     }
@@ -1678,8 +1702,8 @@ void MW::clearAll()
     if (G::isLogger) G::log(__FUNCTION__);
     // Stop any threads that might be running.
 //    qDebug() << __FUNCTION__ << "Stopping image cache";
-    imageCacheThread->stopImageCache();
-    metadataCacheThread->stopMetadataCache();
+//    imageCacheThread->stopImageCache();
+//    metadataCacheThread->stopMetadataCache();
 
     G::allMetadataLoaded = false;
     dm->clearDataModel();
@@ -1693,6 +1717,7 @@ void MW::clearAll()
     isDragDrop = false;
 
     updateStatus(false, "", __FUNCTION__);
+    progressBar->clearProgress();
     progressLabel->setVisible(false);
     updateClassification();
 }
@@ -2053,13 +2078,6 @@ void MW::updateMetadataCacheStatus(int row, bool clear)
                                 G::progressAddMetadataColor,
                                 "");
     return;
-}
-
-// rgh req'd??
-void MW::updateImageCachePositionAfterDelay()
-{
-//    imageCacheThread->setCurrentPosition(dm->currentFilePath);
-    emit setImageCachePosition(dm->currentFilePath);
 }
 
 void MW::updateImageCacheStatus(QString instruction,
@@ -4373,24 +4391,6 @@ void MW::createCaching()
     connect(metadataCacheThread, SIGNAL(loadMetadataCache2ndPass()),
             this, SLOT(loadMetadataCache2ndPass()));
 
-    // when a new image has been selected trigger a delayed update to image cache
-//    connect(metadataCacheThread, SIGNAL(updateImageCachePosition()),
-//            this, SLOT(updateImageCachePosition())); // rghcachechange
-
-    /* This singleshot timer signals the image cache that the position has moved in the
-    file selection. The delay is used to queue many quick changes to the image and avoid
-    updating the image cache until there is a pause in image selection changes.  This allows
-    the user to rapidly move from one image to the next until they get to the current image
-    cache limit.
-    */
-    imageCacheTimer = new QTimer(this);
-    imageCacheTimer->setSingleShot(true);
-
-    // change to ImageCache eliminates this
-    // connect timer to update image cache position
-//    connect(imageCacheTimer, SIGNAL(timeout()), this,
-//            SLOT(updateImageCachePositionAfterDelay()));
-
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
 
@@ -5253,7 +5253,7 @@ void MW::createStatusBar()
     statusBar()->setObjectName("WinnowStatusBar");
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
 
-    // start pregressbar
+    // cache status on right side of status bar
 
     // label to hold QPixmap showing progress
     progressLabel = new QLabel();
@@ -5326,6 +5326,8 @@ void MW::createStatusBar()
     statusBar()->addWidget(slideShowStatusLabel);
 
     setThreadRunStatusInactive();
+
+    // general status on left side of status bar
     statusLabel = new QLabel;
     statusBar()->addWidget(statusLabel);
 }
@@ -5561,8 +5563,8 @@ void MW::setImageCacheParameters()
     progressLabel->setVisible(isShowCacheThreadActivity);
 
     // thread busy indicators
-    metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
-    imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+//    metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+//    imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
 
     // thumbnail cache status indicators
     thumbView->refreshThumbs();
@@ -9601,8 +9603,8 @@ void MW::setCacheStatusVisibility()
     if (G::isLogger) G::log(__FUNCTION__);
     if (isShowCacheThreadActivity && !G::isSlideShow)
         progressLabel->setVisible(G::showCacheStatus);
-    metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
-    imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+//    metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+//    imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
 }
 
 // not used rgh ??
@@ -10751,8 +10753,19 @@ void MW::keyScrollPageUp()
     if(thumbView->isVisible()) thumbView->scrollPageUp(0);
 }
 
-void MW::stressTest()
+void MW::stressTest(int ms)
 {
+    G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
+    isStressTest = true;
+    bool isForward = true;
+    while (isStressTest) {
+        if (isForward && currentRow == dm->sf->rowCount() - 1) isForward = false;
+        if (!isForward && currentRow == 0) isForward = true;
+        if (isForward) keyRight();
+        else keyLeft();
+        G::wait(ms);
+    }
+    return;
     if (G::isLogger) G::log(__FUNCTION__);
     getSubfolders("/users/roryhill/pictures");
     QString fPath;
@@ -11661,22 +11674,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    CTSL::HashMap<int, ImageCacheData::CacheItem> testCache;
-    ImageCacheData::CacheItem k;
-    for (int i = 0; i < 5; i++) {
-        k.key = i;
-        k.fPath = "item " + QString::number(i);
-        testCache.insert(i, k);
-    }
-    ImageCacheData::CacheItem n;
-    testCache.find(3, n);
-    n.fPath = "Something else";
-    testCache.insert(3, n);
-    for (int i = 0; i < 5; i++) {
-        testCache.find(i, k);
-        qDebug() << __FUNCTION__ << i << k.key << k.fPath;
-    }
-
+    stressTest(50);
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";

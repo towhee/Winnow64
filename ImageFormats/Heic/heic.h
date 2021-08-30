@@ -98,8 +98,6 @@ private:
 #endif // HEIC_H
 
 /*
-
 Image data appears to be stored in image.h  class decoder_context;
     template <class DataUnit> class MetaDataArray
-
 */

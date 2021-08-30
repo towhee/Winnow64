@@ -3,8 +3,9 @@
 namespace G
 {
     // system messaging
-    bool isLogger = false;               // Writes log messages to file or console
+    bool isLogger = false;              // Writes log messages to file or console
     bool isFlowLogger = false;          // Writes key program flow points to file or console
+    bool isTestLogger = false;          // Writes test points to file or console
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
     QFile logFile;                      // MW::openLog(), MW::closeLog()
     QFile errlogFile;                   // MW::openErrLog(), MW::closeErrLog()
@@ -157,11 +158,14 @@ namespace G
 
     void errlog(QString functionName, QString fPath, QString err)
     {
+//        return;
         QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
         QString f = functionName.leftJustified(40, '.') + " ";
         QString p = fPath;
         QString e = err.leftJustified(75, '.') + " ";
         QString msg = d + e + f + p + "\n";
+        qDebug() << __FUNCTION__ << msg;
+        return;
         if (errlogFile.isOpen()) {
             errlogFile.write(msg.toUtf8());
             errlogFile.flush();

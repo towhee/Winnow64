@@ -9,11 +9,15 @@ The data is structured in columns:
 
     ● Path:             from QFileInfoList  FilePathRole (absolutePath)
                         from QFileInfoList  ToolTipRole
-                                            G::ThumbRectRole (icon)
+                                            G::IconRectRole (icon)
+                                            G::CachedRole
+                                            G::BusyRole (not used)
                                             G::DupIsJpgRole
-                                            G::DupRawIdxRole
+                                            G::DupOtherIdxRole
                                             G::DupHideRawRole
                                             G::DupRawTypeRole
+                                            G::ColumnRole
+                                            G::GeekRole
     ● File name:        from QFileInfoList  EditRole
     ● File type:        from QFileInfoList  EditRole
     ● File size:        from QFileInfoList  EditRole
@@ -724,6 +728,7 @@ bool DataModel::readMetadataForItem(int row)
 /*
     Reads the image metadata into the datamodel for the row.
 */
+//    QMutexLocker locker(&mutex);
 //    mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__, index(row, 0).data(G::PathRole).toString());
     QString fPath = index(row, 0).data(G::PathRole).toString();
@@ -895,7 +900,7 @@ bool DataModel::hasFolderChanged()
     Called from MW::refreshCurrentFolder.  The list of eligible files is read and compared to
     the datamodel.  If the count has changed then return false.  If the count has not changed
     compare the last modified datetime for each file.  If a file has been modified since the
-    datamodel was loaded thenit is added to the modifiedFiles list and return false.
+    datamodel was loaded then it is added to the modifiedFiles list and return false.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     bool hasChanged = false;
@@ -934,8 +939,10 @@ bool DataModel::hasFolderChanged()
             hasChanged = true;
             isFileModification = true;
             modifiedFiles.append(fileInfoList2.at(i));
-//            qDebug() << __FUNCTION__ << fileInfoList2.at(i).fileName()
-//                     << "modified at" << t2;
+            /*
+            qDebug() << __FUNCTION__ << fileInfoList2.at(i).fileName()
+                     << "modified at" << t2;
+                     //*/
         }
     }
     return hasChanged;
