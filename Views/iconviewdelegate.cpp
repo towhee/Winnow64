@@ -441,7 +441,7 @@ textRect         = a rectangle below itemRect
     }
 
     // draw the cache circle
-    if (!isCached && !G::isSlideShow && G::showCacheStatus) {
+    if (!isCached && !G::isSlideShow /*&& G::showCacheStatus*/) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect);

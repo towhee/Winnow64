@@ -13,101 +13,203 @@
    resulting QImage rotation and color manage are checked.  Done is emitted, signalling
    ImageCache::fillCache, where the QImage is inserted into the Image cache, and if there are
    still more images to cache, CacheImage is called and the cycle continues.
+
+   decode
+   load
+
 */
 
-ImageDecoder::ImageDecoder(QObject *parent, int id, Metadata *metadata) : QThread(parent)
+ImageDecoder::ImageDecoder(QObject *parent,
+                           int id,
+                           DataModel *dm,
+                           Metadata *metadata)
+    : QThread(parent)
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(id));
     threadId = id;
     status = Status::Ready;
+    this->dm = dm;
     this->metadata = metadata;
 }
 
 void ImageDecoder::stop()
 {
-    abort = true;
+    if (isRunning()) {
+        mutex.lock();
+        abort = true;
+        condition.wakeOne();
+        mutex.unlock();
+        wait();
+        abort = false;
+        status = Status::Ready;
+    }
 }
 
-void ImageDecoder::decode(G::ImageFormat format,
-                          QString fPath,
-                          ImageMetadata m,
-                          QByteArray ba)
+void ImageDecoder::decode(QString fPath)
 {
-    /*
-    qDebug() << __FUNCTION__
-             << "threadId =" << threadId
-             << fPath
-             << format;
-             //*/
     status = Status::Busy;
-    imageFormat = format;
     this->fPath = fPath;
-    this->m = m;
-    this->ba.clear();
-    this->ba = ba;
-    QFileInfo fileInfo(fPath);
-    if (!fileInfo.exists()) return;                 // guard for usb drive ejection
-    ext = fileInfo.completeSuffix().toLower();
-    if (format == G::Tif) {
-        p.file.setFileName(fPath);
-        if (p.file.open(QIODevice::ReadOnly)) buf = p.file.map(0, p.file.size());
-        else return;
-    }
     start();
 }
 
 // all code below runs in separate thread
 
+bool ImageDecoder::load()
+{
+/*  Loads a full size preview into a QImage.  It is invoked from ImageCache::fillCache.
+
+    NOTE: calls to metadata and dm to not appear to impact performance.
+*/
+    QMutexLocker locker(&mutex);
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
+    /*
+    qDebug() << __FUNCTION__ << "fPath =" << fPath;
+    //*/
+    QFileInfo fileInfo(fPath);
+    QString ext = fileInfo.completeSuffix().toLower();
+
+    if (metadata->videoFormats.contains(ext)) return false;
+
+    QFile imFile(fPath);
+    int dmRow = dm->fPathRow[fPath];
+
+    // is metadata loaded rgh use isMeta in cacheItemList?
+    if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
+        if (!dm->readMetadataForItem(dmRow)) {
+            G::error(__FUNCTION__, fPath, "Could not load metadata.");
+            return false;
+        }
+    }
+
+    if (abort) return false;
+
+    // is file already open by another process
+    if (imFile.isOpen()) {
+        G::error(__FUNCTION__, fPath, "File already open.");
+        return false;
+    }
+
+    // try to open image file
+    if (!imFile.open(QIODevice::ReadOnly)) {
+        imFile.close();
+        G::error(__FUNCTION__, fPath, "Could not open file for image.");
+        return false;
+    }
+
+    // JPG format (including embedded in raw files)
+    if (metadata->hasJpg.contains(ext) || ext == "jpg") {
+        // get offset and length of embedded Jpg from the datamodel
+        uint offsetFullJpg = dm->index(dmRow, G::OffsetFullColumn).data().toUInt();
+        uint lengthFullJpg = dm->index(dmRow, G::LengthFullColumn).data().toUInt();
+
+        // make sure legal offset by checking the length
+        if (lengthFullJpg == 0) {
+            imFile.close();
+            G::error(__FUNCTION__, fPath, "Jpg length = zero.");
+            return false;
+        }
+
+        // try to read the data
+        if (!imFile.seek(offsetFullJpg)) {
+            imFile.close();
+            G::error(__FUNCTION__, fPath, "Illegal offset to image.");
+            return false;
+        }
+
+        QByteArray buf = imFile.read(lengthFullJpg);
+        if (buf.length() == 0) {
+            qWarning() << __FUNCTION__ << "Zero JPG buffer";
+            G::error(__FUNCTION__, fPath, "JPG zero JPG buffer.");
+            imFile.close();
+            return false;
+        }
+
+        if (abort) return false;
+
+        // try to decode the jpg data
+        if (!image.loadFromData(buf, "JPEG")) {
+            G::error(__FUNCTION__, fPath, "image.loadFromData failed.");
+            imFile.close();
+            return false;
+        }
+        imFile.close();
+    }
+
+    // HEIC format
+    // rgh remove heic (why?)
+    else if (metadata->hasHeic.contains(ext)) {
+        ImageMetadata m = dm->imMetadata(fPath);
+        #ifdef Q_OS_WIN
+        Heic heic;
+        if (!heic.decodePrimaryImage(m, fPath, image)) {
+            G::error(__FUNCTION__, fPath, "heic.decodePrimaryImage failed.");
+            imFile.close();
+            return false;
+        }
+        /*
+        qDebug() << __FUNCTION__ << "HEIC image" << image.width() << image.height();
+        //*/
+        #endif
+    }
+
+    // TIFF format
+    else if (ext == "tif") {
+        // check for sampling format we cannot read
+        int samplesPerPixel = dm->index(dmRow, G::samplesPerPixelColumn).data().toInt();
+        if (samplesPerPixel > 3) {
+            imFile.close();
+            QString err = "Could not read tiff because " + QString::number(samplesPerPixel)
+                    + " samplesPerPixel > 3.";
+            G::error(__FUNCTION__, fPath, err);
+            return false;
+        }
+
+        // use Winnow decoder
+        ImageMetadata m = dm->imMetadata(fPath);
+        Tiff tiff;
+        if (!tiff.decode(m, fPath, image)) {
+            imFile.close();
+            QString err = "Could not decode using Winnow Tiff decoder.  "
+                        "Trying Qt tiff library to decode" + fPath + ". ";
+            G::error(__FUNCTION__, fPath, err);
+            if (abort) return false;
+            // use Qt tiff library to decode
+            if (!image.load(fPath)) {
+                imFile.close();
+                QString err = "Could not decode using Qt.";
+                G::error(__FUNCTION__, fPath, err);
+                return false;
+            }
+        }
+
+        imFile.close();
+    }
+
+    // All other formats
+    else {
+        // try to decode
+        ImageMetadata m;
+        /*
+        qDebug() << __FUNCTION__
+                 << "USEQT: "
+                 << "Id =" << threadId
+                 << "decoder->fPath =" << fPath
+                    ;
+                    //*/
+        if (!image.load(fPath)) {
+            imFile.close();
+            G::error(__FUNCTION__, fPath, "Could not decode using Qt.");
+            return false;
+        }
+        imFile.close();
+    }
+    return true;
+}
+
 void ImageDecoder::setReady()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     status = Status::Ready;
-    ba.clear();
-//    fPath = "";
-}
-
-void ImageDecoder::decodeJpg()
-{
-    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
-    // chk nullptr
-    qDebug() << __FUNCTION__
-             << "ba.isEmpty() =" << ba.isEmpty()
-             << "ba.isNull() =" << ba.isNull()
-             << "ba.length() =" << ba.length()
-                ;
-    if (this->ba == nullptr) {
-        qWarning() << __FUNCTION__ << "nullptr for ba in thread id" << threadId;
-    }
-    else image.loadFromData(ba, "JPEG");
-}
-
-void ImageDecoder::decodeTif()
-{
-    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
-    Tiff tiff;
-    p.offset = m.offsetFull;
-    if (!tiff.decode(m, p, image)) {
-        decodeUsingQt();
-    }
-    else {
-        p.file.unmap(buf);
-    }
-    p.file.close();
-}
-
-void ImageDecoder::decodeHeic()
-{
-    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
-    #ifdef Q_OS_WIN
-    Heic heic;
-    bool success = heic.decodePrimaryImage(m, fPath, image);
-    #endif
-}
-
-void ImageDecoder::decodeUsingQt()
-{
-    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
-    bool success = image.load(fPath);
 }
 
 void ImageDecoder::rotate()
@@ -154,23 +256,15 @@ void ImageDecoder::colorManage()
 void ImageDecoder::run()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
-    switch(imageFormat) {
-    case G::Jpg:
-        decodeJpg();
-        break;
-    case G::Tif:
-        decodeTif();
-        break;
-    case G::Heic:
-        decodeHeic();
-        break;
-    case G::UseQt:
-        decodeUsingQt();
+    if (load()) {
+        if (metadata->rotateFormats.contains(ext) && !abort) rotate();
+        if (G::colorManage && !abort) colorManage();
+        status = Status::Done;
     }
-    if (metadata->rotateFormats.contains(ext) /*&& !abort*/) rotate();
-    if (G::colorManage && !abort) colorManage();
-    status = Status::Done;
-//    qDebug() << __FUNCTION__ << "emitid =" << threadId << fPath;
-    QImage *im = &image;
-    emit done(threadId, fPath);
+    else {
+        status = Status::Failed;
+        fPath = "";
+    }
+    if (abort) return;
+    emit done(threadId);
 }

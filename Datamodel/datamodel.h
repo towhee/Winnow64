@@ -108,7 +108,7 @@ private:
 
     QDir *dir;
     QStringList *fileFilters;
-    QList<QStandardItem*> *thumbList;
+//    QList<QStandardItem*> *thumbList;
     QFileInfo fileInfo;
     QImage emptyImg;
     bool includeSubfolders = false;

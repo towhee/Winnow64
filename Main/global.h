@@ -136,6 +136,7 @@ namespace G
 
     extern bool isLogger;
     extern bool isFlowLogger;
+    extern bool isTestLogger;
     extern bool sendLogToConsole;
     extern QFile logFile;
     extern QFile errlogFile;

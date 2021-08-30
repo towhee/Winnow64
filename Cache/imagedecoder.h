@@ -1,8 +1,11 @@
 #ifndef IMAGEDECODER_H
 #define IMAGEDECODER_H
 
-#include <QObject>
+//#include <QObject>
+#include <QtWidgets>
+#include <QMutex>
 #include <QThread>
+#include <QWaitCondition>
 #include "Main/global.h"
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
@@ -18,23 +21,22 @@ class ImageDecoder : public QThread
     Q_OBJECT
 
 public:
-    ImageDecoder(QObject *parent, int id, Metadata *metadata);
-    void decode(G::ImageFormat format,
-                QString fPath,
-                ImageMetadata m,
-                QByteArray ba = nullptr);
+    ImageDecoder(QObject *parent,
+                 int id,
+                 DataModel *dm,
+                 Metadata *metadata);
+    void decode(QString fPath);
     void setReady();
     void stop();
 
     int threadId;
     QImage image;
-    QByteArray ba;
     QString fPath;
-    G::ImageFormat imageFormat;
 
     enum Status {
         Ready,
         Busy,
+        Failed,
         Done
     } status;
 
@@ -42,12 +44,12 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-    void done(int threadId, QString fPath/*, QImage *image*/);
+    void done(int threadId);
 
 private:
-    void decodeJpg();
-    void decodeTif();
-    void decodeHeic();
+    QMutex mutex;
+    QWaitCondition condition;
+    bool load();
     void decodeUsingQt();
     void rotate();
     void colorManage();

@@ -352,7 +352,6 @@ bool Heic::decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image)
                       heif_colorspace_RGB,
                       heif_chroma_interleaved_RGB,
                       nullptr);
-
     auto srcImage = wrapPointer(srcImagePtr, heif_image_release);
     auto channel = heif_channel_interleaved;
     int w = heif_image_get_width(srcImage.get(), channel);
@@ -362,20 +361,15 @@ bool Heic::decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image)
     m.widthFull = w;
     m.heightFull = h;
     QSize imgSize(w, h);
-
-
     int stride;
     const uint8_t* data = heif_image_get_plane_readonly(srcImage.get(),
                                                         heif_channel_interleaved,
                                                         &stride);
-
     qDebug() << __FUNCTION__ << fPath
              << "imgSize =" << imgSize
              << "stride =" << stride;
-
     // move data ownership to QImage
     heif_image* dataImage = srcImage.release();
-
     image = QImage(
                 data, imgSize.width(), imgSize.height(),
                 stride, QImage::Format_RGBA8888,

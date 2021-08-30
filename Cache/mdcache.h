@@ -1,5 +1,3 @@
-
-
 #ifndef MDCACHE_H
 #define MDCACHE_H
 

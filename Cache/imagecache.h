@@ -8,7 +8,7 @@
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/pixmap.h"
-#include "Image/cacheimage.h"
+//#include "Image/cacheimage.h"
 #include "Cache/imagedecoder.h"
 #include <algorithm>         // reqd to sort cache
 #include <QMutex>
@@ -76,7 +76,7 @@ protected:
 
 public slots:
 //    void fillCache(int id, QString fPath, QImage *image);
-    void fillCache(int id, QString fPath);
+    void fillCache(int id);
     void setCurrentPosition(QString path);
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();
@@ -90,17 +90,20 @@ private:
     bool cacheSizeHasChanged;
     bool filterOrSortHasChanged;
     bool refreshCache;
-    bool stopFillingCache;
+//    bool stopFillingCache;
     QString currentPath;
     QString prevCurrentPath;
+    int maxAttemptsToCacheImage = 10;
 
     ImageCacheData *icd;
     DataModel *dm;
     Metadata *metadata;
     Pixmap *getImage;
-    CacheImage *cacheImage;
+//    CacheImage *cacheImage;
     QVector<ImageDecoder*> decoder;
 
+    void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
+    void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     int getImCacheSize();           // add up total MB cached
     void setKeyToCurrent();         // cache key from currentFilePath
     int getCacheKey(QString fPath); // cache key for any path
@@ -108,9 +111,10 @@ private:
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
     bool inTargetRange(QString fPath);  // image targeted to cache
-    bool nextToCache();             // find highest priority not cached
+    bool nextToCache(int decoderId);             // find highest priority not cached
     bool nextToDecache();           // find lowest priority cached - return -1 if none cached
     bool cacheHasMissing();         // missed files from first pass (isCaching = true)
+    void fixOrphans();              // outside target range with isCached == true
     void makeRoom(int cacheKey); // remove images from cache until there is roomRqd
     void memChk();                  // still room in system memory for cache?
     static bool prioritySort(const ImageCacheData::CacheItem &p1,

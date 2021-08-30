@@ -448,7 +448,6 @@ private slots:
                                 ImageCacheData::Cache cache,
                                 QString source);
     // caching
-    void updateImageCachePositionAfterDelay(); // rghcachechange
     void loadMetadataCache2ndPass();
     void refreshCurrentAfterReload();
     void updateIconsVisible(bool useCurrentRow);
@@ -992,7 +991,6 @@ private:
     bool sortMenuUpdateToMatchTable = false;
 
     QString imageCacheFilePath;
-    QTimer *imageCacheTimer;
 
     bool newScrollSignal;           // used for scroll signal delay in case many/sec
     QTimer *metadataCacheScrollTimer;
@@ -1122,7 +1120,7 @@ private:
 
     void mediaReadSpeed();
     void reportHueCount();
-    void stressTest();
+    void stressTest(int ms);
     void test();                    // for debugging
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging

@@ -1,4 +1,9 @@
 BUGS / TO DO
+- iconView selected item can get out of sync with imCache
+- remove isCached column from datamodel
+- Change preference cache amount crashes if folder loaded
+- Loupe images not rotating
+- Make sure all decoder threads have finished when quitting program
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
 - Tiff with compression = 7, 8
 - TIFF PhotometricInterpretation <> 2 https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html
