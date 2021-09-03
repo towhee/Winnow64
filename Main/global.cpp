@@ -58,7 +58,7 @@ namespace G
     int availableMemoryMB;
     int winnowMemoryBeforeCacheMB;
     int metaCacheMB;
-    bool showCacheStatus;
+    bool showCacheStatus = false;
 
     // view
     QString mode;                       // In MW: Loupe, Grid, Table or Compare

@@ -706,7 +706,7 @@ void Preferences::addItems()
     i.key = "showThreadActivity";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+//    addItem(i);
 
     // Set the width of the cache status progress bar
     i.name = "progressWidthSlider";
@@ -723,7 +723,7 @@ void Preferences::addItems()
     i.min = 100;
     i.max = 4000;
     i.fixedWidth = 50;
-    addItem(i);
+//    addItem(i);
 
     // Cache Thumbnail Header
     i.name = "CacheThumbnailHeader";

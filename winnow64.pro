@@ -1,5 +1,6 @@
 #CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 CONFIG += sdk_no_version_check
+CONFIG += c++17
 TEMPLATE = app
 TARGET = Winnow
 INCLUDEPATH += .
