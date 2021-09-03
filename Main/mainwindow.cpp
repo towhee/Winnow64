@@ -273,7 +273,10 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     isStressTest = false;
     G::isTimer = true;                  // Global timer
     G::isTest = false;                  // use to find memory loss
+
     useImageCache = true;
+    useInfoView = true;
+    useFilterView = true;
 
     // Initialize some variables
     initialize();
@@ -348,10 +351,15 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     qRegisterMetaType<ImageMetadata>();
     qRegisterMetaType<QVector<int>>();
 
+    show();
+
     if (isStartupArgs) {
         handleStartupArgs(args);
     }
     else {
+        // First use of app
+        if (!isSettings) centralLayout->setCurrentIndex(StartTab);
+
         // process the persistant folder if available
         if (rememberLastDir && !isShift) {
             if (isFolderValid(lastDir, true, true)) {
@@ -360,14 +368,14 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
             }
         }
 
-        if (!isSettings) centralLayout->setCurrentIndex(StartTab);
+        // show start message
         else {
             QString msg = "Select a folder or bookmark to get started.";
             setCentralMessage(msg);
             prevMode = "Loupe";
         }
 
-        show();
+//        show();
 
         if (setting->value("hasCrashed").toBool()) {
             int picks = pickLogCount();
@@ -397,6 +405,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
 bool MW::isDevelopment()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__ << QCoreApplication::applicationDirPath();
     if (QCoreApplication::applicationDirPath().contains("Winnow64"))
         return true;
@@ -525,7 +534,7 @@ void MW::showEvent(QShowEvent *event)
 //    embelProperties->resizeColumns();
 
     G::isInitializing = false;
-    thumbView->selectFirst();
+//    thumbView->selectFirst();
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -574,6 +583,7 @@ void MW::moveEvent(QMoveEvent *event)
             + QString::number(G::displayPhysicalVerticalPixels)
             + " @ " + monitorScale;
     QString toolTip = dimensions + " (Monitor is scaled to " + monitorScale + ")";
+    if (!useInfoView) return;
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), dimensions);
     k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), toolTip, Qt::ToolTipRole);
@@ -581,6 +591,7 @@ void MW::moveEvent(QMoveEvent *event)
 
 void MW::resizeEvent(QResizeEvent *event)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QMainWindow::resizeEvent(event);
     // re-position zoom dialog
     emit resizeMW(this->geometry(), centralWidget->geometry());
@@ -1269,7 +1280,7 @@ void MW::folderSelectionChange()
         G::log("FOLDER CHANGE");
         G::log(__FUNCTION__, currentViewDir);
     }
-    qDebug() << __FUNCTION__ << currentViewDir;
+//    qDebug() << __FUNCTION__ << currentViewDir;
 
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
@@ -1485,7 +1496,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
             || !G::isNewFolderLoaded)
         return;
 
-    if (imageView->isFirstImageNewFolder && G::mode == "Loupe") thumbView->selectThumb(0);
+    // rghmemleak
+//    if (imageView->isFirstImageNewFolder && G::mode == "Loupe") thumbView->selectThumb(0);
 
     // if starting program, set first image to display
     if (current.row() == -1) {
@@ -1575,6 +1587,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
             centralLayout->setCurrentIndex(prevCentralView);
         }
     }
+
 //    G::track(__FUNCTION__, "Return from imageView->loadImage " + fPath);
     // update caching if folder has been loaded
     if (G::isNewFolderLoaded) {
@@ -1609,7 +1622,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     G::isNewSelection = false;
 
     // update the metadata panel
-    infoView->updateInfo(currentRow);
+    if (useInfoView) infoView->updateInfo(currentRow);
 
     // initialize the thumbDock if just opened app
     if (G::isInitializing) {
@@ -1710,9 +1723,11 @@ void MW::clearAll()
 //    icd->imCache.clear();
     G::err.clear();
     currentRow = 0;
-    infoView->clearInfo();
 //    metadata->clear();
-    imageView->clear();
+    if (useInfoView) {
+        infoView->clearInfo();
+        imageView->clear();
+    }
     setThreadRunStatusInactive();                      // turn thread activity buttons gray
     isDragDrop = false;
 
@@ -1903,7 +1918,6 @@ void MW::gridHasScrolled()
     the new one is proven to work all the time.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-    if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
@@ -1940,7 +1954,6 @@ void MW::tableHasScrolled()
     the new one is proven to work all the time.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-    if (G::isLogger) G::log(__FUNCTION__);
 
 //    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
@@ -2034,7 +2047,7 @@ void MW::loadEntireMetadataCache(QString source)
     bool resumeImageCaching = false;
     if (imageCacheThread->isRunning()) {
         qDebug() << __FUNCTION__ << "Pausing image cache";
-        imageCacheThread->pauseImageCache();
+        if (useImageCache) imageCacheThread->pauseImageCache();
         resumeImageCaching = true;
     }
 
@@ -2050,33 +2063,20 @@ void MW::loadEntireMetadataCache(QString source)
 
     if (resumeImageCaching) {
         qDebug() << __FUNCTION__ << "Resuming image cache";
-        imageCacheThread->resumeImageCache();
+        if (useImageCache) imageCacheThread->resumeImageCache();
     }
     QApplication::restoreOverrideCursor();
 
 }
 
-void MW::updateMetadataCacheStatus(int row, bool clear)
+void MW::updateMetadataCacheStatus(QString msg)
 {
 /*
-    Displays a statusbar showing the metadata cache status.
-
-    If clear = true then just repaint the progress bar gray and return.
-    If clear = false then update the progress for the row that has been cached.
+    Metadata caching progress is updated on the status bar.
 */
     if (G::isLogger) G::log(__FUNCTION__);
 
-    if(!G::showCacheStatus) return;
-
-    if(clear) {
-        progressBar->clearProgress();
-        return;
-    }
-
-    // show the rectangle for the current cached
-    progressBar->updateProgress(row, row + 1, dm->rowCount(),
-                                G::progressAddMetadataColor,
-                                "");
+    updateStatus(false, msg, "updateMetadataCacheStatus");
     return;
 }
 
@@ -2085,7 +2085,7 @@ void MW::updateImageCacheStatus(QString instruction,
                                 QString source)
 {
 /*
-    Displays a statusbar showing the metadata cache status.  Also shows the cache
+    Displays a statusbar showing the image cache status.  Also shows the cache
     size in the info panel.
 
     All status info is passed by copy to prevent collisions on source data, which is being
@@ -2121,8 +2121,10 @@ void MW::updateImageCacheStatus(QString instruction,
             + QString::number(cache.decoderCount)
             + " threads)"
             ;
-    QStandardItemModel *k = infoView->ok;
-    k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
+    if (useInfoView) {
+        QStandardItemModel *k = infoView->ok;
+        k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
+    }
     //*/
 
     if(!G::showCacheStatus) return;
@@ -2209,7 +2211,7 @@ void MW::loadImageCacheForNewFolder()
     metadataLoaded = true;
 
     G::isNewFolderLoaded = true;
-    qDebug() << __FUNCTION__ << "Metadata loaded";
+
     /* req'd to trigger MW::fileSelectionChange.  This must be done to initialize many things
        including current index and file path req'd by mdCache and EmbelProperties...  */
     fileSelectionChange(currentSfIdx, currentSfIdx);
@@ -4090,8 +4092,10 @@ void MW::createMenus()
     filters->addActions(*filterActions);
     filters->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-    infoView->addActions(*metadataActions);
-    infoView->setContextMenuPolicy(Qt::ActionsContextMenu);
+    if (useInfoView) {
+        infoView->addActions(*metadataActions);
+        infoView->setContextMenuPolicy(Qt::ActionsContextMenu);
+    }
 
     thumbView->addActions(*thumbViewActions);
     thumbView->setContextMenuPolicy(Qt::ActionsContextMenu);
@@ -4331,20 +4335,19 @@ void MW::createSelectionModel()
 void MW::createCaching()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    icd = new ImageCacheData(this);
-    imageCacheThread = new ImageCache(this, icd, dm, metadata);
-    metadataCacheThread = new MetadataCache(this, dm, metadata, imageCacheThread);
+    metadataCacheThread = new MetadataCache(this, dm, metadata);
 
     if (isSettings) {
         if (setting->contains("cacheAllMetadata")) metadataCacheThread->cacheAllMetadata = setting->value("cacheAllMetadata").toBool();
         if (setting->contains("cacheAllIcons")) metadataCacheThread->cacheAllIcons = setting->value("cacheAllIcons").toBool();
-        if (setting->contains("metadataChunkSize")) metadataCacheThread->metadataChunkSize = setting->value("metadataChunkSize").toInt();
+//        if (setting->contains("metadataChunkSize")) metadataCacheThread->metadataChunkSize = setting->value("metadataChunkSize").toInt();
     }
     else {
         metadataCacheThread->cacheAllMetadata = true;
         metadataCacheThread->cacheAllIcons = false;
-        metadataCacheThread->metadataChunkSize = 250;
+//        metadataCacheThread->metadataChunkSize = 250;
     }
+    metadataCacheThread->metadataChunkSize = 3000;
 
     /* When a new folder is selected the metadataCacheThread is started to load all the
     metadata and thumbs for each image. If the user scrolls during the cache process then the
@@ -4375,10 +4378,13 @@ void MW::createCaching()
 //            this, SLOT(refreshCurrentAfterReload()));
 
     // show progress bar when executing loadEntireMetadataCache
-    connect(metadataCacheThread, SIGNAL(showCacheStatus(int,bool)),
-            this, SLOT(updateMetadataCacheStatus(int,bool)));
+    connect(metadataCacheThread, &MetadataCache::showCacheStatus,
+            this, &MW::updateMetadataCacheStatus);
 
 //    connect(metadataCacheThread, &MetadataCache::scrollToCurrent, this, &MW::scrollToCurrentRow);
+
+    icd = new ImageCacheData(this);
+    imageCacheThread = new ImageCache(this, icd, dm, metadata);
 
     /* Image caching is triggered from the metadataCacheThread to avoid the two threads
        running simultaneously and colliding */
@@ -4656,6 +4662,7 @@ void MW::createInfoView()
 /*
     InfoView shows basic metadata in a dock widget.
 */
+    if (!useInfoView) return;
     if (G::isLogger) G::log(__FUNCTION__);
     infoView = new InfoView(this, dm, metadata, thumbView);
     infoView->setMaximumWidth(folderMaxWidth);
@@ -4917,6 +4924,7 @@ void MW::createFilterDock()
 
 void MW::createMetadataDock()
 {
+    if (!useInfoView) return;
     if (G::isLogger) G::log(__FUNCTION__);
     metadataDockTabText = "  📷  ";
     metadataDock = new DockWidget(metadataDockTabText, this);    // Metadata
@@ -5087,7 +5095,7 @@ void MW::createDocks()
     createFolderDock();
     createFavDock();
     createFilterDock();
-    createMetadataDock();
+    if (useInfoView) createMetadataDock();
     createThumbDock();
     createEmbelDock();
 
@@ -5096,7 +5104,7 @@ void MW::createDocks()
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
-    addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
+    if (useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
 
@@ -5114,8 +5122,8 @@ void MW::createDocks()
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, filterDock);
-    MW::tabifyDockWidget(filterDock, metadataDock);
-    if (!hideEmbellish) MW::tabifyDockWidget(metadataDock, embelDock);
+    if (useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
+    if (!hideEmbellish) if (useInfoView) MW::tabifyDockWidget(metadataDock, embelDock);
 }
 
 void MW::embelDockVisibilityChange()
@@ -5169,7 +5177,9 @@ void MW::createEmbel()
     embel = new Embel(imageView->scene, imageView->pmItem, embelProperties, dm, icd);
     connect(imageView, &ImageView::embellish, embel, &Embel::build);
     connect(embel, &Embel::done, imageView, &ImageView::resetFitZoom);
-    connect(infoView, &InfoView::dataEdited, embel, &Embel::refreshTexts);
+    if (useInfoView) {
+        connect(infoView, &InfoView::dataEdited, embel, &Embel::refreshTexts);
+    }
 }
 
 void MW::createFSTree()
@@ -5495,14 +5505,18 @@ void MW::setImageCacheMinSize(QString size)
 */
     if (G::isLogger) G::log(__FUNCTION__);
     cacheMinSize = size;
-    if (size == "500 MB") cacheMinMB = 500;
-    else if (size == "1000 MB") cacheMinMB = 1000;
-    else if (size == "2000 MB") cacheMinMB = 2000;
-    else if (size == "4000 MB") cacheMinMB = 4000;
-    else if (size == "8000 MB") cacheMinMB = 8000;
-    else if (size == "16000 MB") cacheMinMB = 16000;
-    else if (size == "32000 MB") cacheMinMB = 32000;
-
+    if (size == "0.5 GB") cacheMinMB = 500;
+    else if (size == "1 GB") cacheMinMB = 1000;
+    else if (size == "2 GB") cacheMinMB = 2000;
+    else if (size == "4 GB") cacheMinMB = 4000;
+    else if (size == "6 GB") cacheMinMB = 6000;
+    else if (size == "8 GB") cacheMinMB = 8000;
+    else if (size == "12 GB") cacheMinMB = 12000;
+    else if (size == "16 GB") cacheMinMB = 16000;
+    else if (size == "24 GB") cacheMinMB = 24000;
+    else if (size == "32 GB") cacheMinMB = 32000;
+    else if (size == "48 GB") cacheMinMB = 48000;
+    else if (size == "64 GB") cacheMinMB = 64000;
     if (cacheMaxMB < cacheMinMB) cacheMaxMB = cacheMinMB;
 }
 
@@ -5647,11 +5661,13 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     // check if null filter
     if (dm->sf->rowCount() == 0) {
         statusLabel->setText("");
+        if (useInfoView)  {
         QStandardItemModel *k = infoView->ok;
-        k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
-        k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
-        k->setData(k->index(infoView->SelectedRow, 1, infoView->statusInfoIdx), "");
-        k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
+            k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
+            k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
+            k->setData(k->index(infoView->SelectedRow, 1, infoView->statusInfoIdx), "");
+            k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
+        }
         updateStatusBar();
         return;
     }
@@ -5722,22 +5738,23 @@ QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵�
 //    qDebug() << "Status:" << status;
 
     // update InfoView - flag updates so itemChanged be ignored in MW::metadataChanged
-    infoView->isNewImageDataChange = true;
-
-    QStandardItemModel *k = infoView->ok;
-    if (keepBase) {
-        k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), getPosition());
-        k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), getZoom());
-        k->setData(k->index(infoView->SelectedRow, 1, infoView->statusInfoIdx), getSelectedFileSize());
-        k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), getPicked());
+    if (useInfoView)  {
+        infoView->isNewImageDataChange = true;
+        QStandardItemModel *k = infoView->ok;
+        if (keepBase) {
+            k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), getPosition());
+            k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), getZoom());
+            k->setData(k->index(infoView->SelectedRow, 1, infoView->statusInfoIdx), getSelectedFileSize());
+            k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), getPicked());
+        }
+        else {
+            k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
+            k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
+            k->setData(k->index(infoView->SelectedRow, 1, infoView->statusInfoIdx), "");
+            k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
+        }
+        infoView->isNewImageDataChange = false;
     }
-    else {
-        k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
-        k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
-        k->setData(k->index(infoView->SelectedRow, 1, infoView->statusInfoIdx), "");
-        k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
-    }
-    infoView->isNewImageDataChange = false;
 }
 
 void MW::clearStatus()
@@ -6792,21 +6809,21 @@ void MW::defaultWorkspace()
     folderDock->setFloating(false);
     favDock->setFloating(false);
     filterDock->setFloating(false);
-    metadataDock->setFloating(false);
+    if (useInfoView) metadataDock->setFloating(false);
     embelDock->setFloating(false);
     thumbDock->setFloating(false);
 
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
-    addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
+    if (useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
 //    addDockWidget(Qt::RightDockWidgetArea, embelDock);
     addDockWidget(Qt::BottomDockWidgetArea, thumbDock);
 
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, filterDock);
-    MW::tabifyDockWidget(filterDock, metadataDock);
+    if (useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
 
     folderDock->show();
     folderDock->raise();
@@ -7370,7 +7387,7 @@ void MW::preferences(QString text)
     propertiesDock->setVisible(true);
     propertiesDock->raise();
     return;
-    */
+    //*/
 }
 
 void MW::setShowImageCount()
@@ -7403,7 +7420,7 @@ void MW::setFontSize(int fontPixelSize)
     G::css = css;
     setStyleSheet(css);
 
-    infoView->refreshLayout();                                    // triggers sizehint!
+    if (useInfoView) infoView->refreshLayout();                   // triggers sizehint!
 //    infoView->updateInfo(currentRow);                           // triggers sizehint!
     bookmarks->setStyleSheet(css);
     fsTree->setStyleSheet(css);
@@ -7431,8 +7448,10 @@ void MW::setBackgroundShade(int shade)
     G::css = css;
     this->setStyleSheet(css);
 
-    infoView->updateInfo(currentRow);                           // triggers sizehint!
-    infoView->verticalScrollBar()->setStyleSheet(css);                           // triggers sizehint!
+    if (useInfoView) {
+        infoView->updateInfo(currentRow);                           // triggers sizehint!
+        infoView->verticalScrollBar()->setStyleSheet(css);          // triggers sizehint!
+    }
     bookmarks->setStyleSheet(css);
     bookmarks->verticalScrollBar()->setStyleSheet(css);
     fsTree->setStyleSheet(css);
@@ -7440,7 +7459,7 @@ void MW::setBackgroundShade(int shade)
     filters->setStyleSheet(css);
     filters->verticalScrollBar()->setStyleSheet(css);
     filters->setCategoryBackground(a, b);
-    infoView->setStyleSheet(css);
+    if (useInfoView) infoView->setStyleSheet(css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     thumbView->setStyleSheet(css);
     thumbView->horizontalScrollBar()->setStyleSheet(css);
@@ -7750,8 +7769,10 @@ void MW::toggleFullScreen()
         favDock->setVisible(fullScreenDocks.isFavs);
         filterDockVisibleAction->setChecked(fullScreenDocks.isFilters);
         filterDock->setVisible(fullScreenDocks.isFilters);
-        metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
-        metadataDock->setVisible(fullScreenDocks.isMetadata);
+        if (useInfoView) {
+            metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
+            metadataDock->setVisible(fullScreenDocks.isMetadata);
+        }
         embelDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
         embelDock->setVisible(fullScreenDocks.isMetadata);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
@@ -8005,6 +8026,7 @@ void MW::refreshBookmarks()
 
 void MW::openLog()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
     QDir dir(path);
     if (!dir.exists()) dir.mkdir(path);
@@ -8023,17 +8045,20 @@ void MW::openLog()
 
 void MW::closeLog()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     if (G::logFile.isOpen()) G::logFile.close();
 }
 
 void MW::clearLog()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     if (!G::logFile.isOpen()) openLog();
     G::logFile.resize(0);
 }
 
 void MW::openErrLog()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
     QDir dir(path);
     if (!dir.exists()) dir.mkdir(path);
@@ -8052,11 +8077,13 @@ void MW::openErrLog()
 
 void MW::closeErrLog()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     if (G::errlogFile.isOpen()) G::errlogFile.close();
 }
 
 void MW::clearErrLog()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     if (!G::errlogFile.isOpen()) openLog();
     G::errlogFile.resize(0);
 }
@@ -8212,11 +8239,13 @@ void MW::writeSettings()
     setting->endGroup();
 
     /* MetadataDock floating info */
-    setting->beginGroup(("MetadataDock"));
-    setting->setValue("screen", metadataDock->dw.screen);
-    setting->setValue("pos", metadataDock->dw.pos);
-    setting->setValue("size", metadataDock->dw.size);
-    setting->endGroup();
+    if (useInfoView) {
+        setting->beginGroup(("MetadataDock"));
+        setting->setValue("screen", metadataDock->dw.screen);
+        setting->setValue("pos", metadataDock->dw.pos);
+        setting->setValue("size", metadataDock->dw.size);
+        setting->endGroup();
+    }
 
     /* EmbelDock floating info */
     setting->beginGroup(("EmbelDock"));
@@ -8240,21 +8269,23 @@ void MW::writeSettings()
     setting->endGroup();
 
     /* InfoView okToShow fields */
-    setting->beginGroup("InfoFields");
-    setting->remove("");
-    QStandardItemModel *k = infoView->ok;
-    for(int row = 0; row < k->rowCount(); row++) {
-        QModelIndex parentIdx = k->index(row, 0);
-        QString field = k->index(row, 0).data().toString();
-        bool showField = k->index(row, 2).data().toBool();
-        setting->setValue(field, showField);
-        for (int childRow = 0; childRow < k->rowCount(parentIdx); childRow++) {
-            QString field = k->index(childRow, 0, parentIdx).data().toString();
-            bool showField = k->index(childRow, 2, parentIdx).data().toBool();
+     if (useInfoView) {
+        setting->beginGroup("InfoFields");
+        setting->remove("");
+        QStandardItemModel *k = infoView->ok;
+        for(int row = 0; row < k->rowCount(); row++) {
+            QModelIndex parentIdx = k->index(row, 0);
+            QString field = k->index(row, 0).data().toString();
+            bool showField = k->index(row, 2).data().toBool();
             setting->setValue(field, showField);
+            for (int childRow = 0; childRow < k->rowCount(parentIdx); childRow++) {
+                QString field = k->index(childRow, 0, parentIdx).data().toString();
+                bool showField = k->index(childRow, 2, parentIdx).data().toBool();
+                setting->setValue(field, showField);
+            }
         }
+        setting->endGroup();
     }
-    setting->endGroup();
 
     /* TableView okToShow fields */
     setting->beginGroup("TableFields");
@@ -8452,7 +8483,7 @@ bool MW::loadSettings()
 
         // cache
         cacheSizeMethod = "Moderate";
-        cacheMinSize = "2000 MB";
+        cacheMinSize = "  2 GB";
         cacheSizePercentOfAvailable = 50;
         cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.5);
         G::showCacheStatus = true;
@@ -9404,7 +9435,7 @@ void MW::setFilterDockVisibility()
 void MW::setMetadataDockVisibility()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    metadataDock->setVisible(metadataDockVisibleAction->isChecked());
+    if (useInfoView) metadataDock->setVisible(metadataDockVisibleAction->isChecked());
 }
 
 void MW::setEmbelDockVisibility()
@@ -9415,6 +9446,7 @@ void MW::setEmbelDockVisibility()
 
 void MW::setMetadataDockFixedSize()
 {
+    if (!useInfoView) return;
     if (G::isLogger) G::log(__FUNCTION__);
     if (metadataFixedSizeAction->isChecked()) {
         qDebug() << "variable size";
@@ -9505,6 +9537,7 @@ void MW::toggleFilterDockVisibility() {
 }
 
 void MW::toggleMetadataDockVisibility() {
+    if (!useInfoView) return;
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing) return;
 
@@ -10545,13 +10578,14 @@ void MW::metadataChanged(QStandardItem* item)
     image metadata, either internally or as a sidecar when ingesting. If raw+jpg are combined
     then the raw file rows are also updated in the data model.
 */
+     if (!useInfoView) return;
     if (G::isLogger) G::log(__FUNCTION__);
     // if new folder is invalid no relevent data has changed
     if(!isCurrentFolderOkay) return;
-    if (infoView->isNewImageDataChange) return;
+     if (useInfoView) if (infoView->isNewImageDataChange) return;
 
     QModelIndex par = item->index().parent();
-    if (par != infoView->tagInfoIdx) return;
+     if (useInfoView) if (par != infoView->tagInfoIdx) return;
 
     QString tagValue = item->data(Qt::DisplayRole).toString();
     QModelIndexList selection = selectionModel->selectedRows();
@@ -10755,16 +10789,26 @@ void MW::keyScrollPageUp()
 
 void MW::stressTest(int ms)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
     isStressTest = true;
     bool isForward = true;
+    int count = 0;
+    QElapsedTimer t;
+    t.start();
     while (isStressTest) {
+        ++count;
+//        if (count == 160) break;
         if (isForward && currentRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && currentRow == 0) isForward = true;
         if (isForward) keyRight();
         else keyLeft();
         G::wait(ms);
     }
+    double msPerImage = count * 1.0 / t.elapsed();
+    int imagePerSec = 1 / msPerImage;
+    qDebug() << __FUNCTION__ << "Executed stress test" << count << "times."
+             << imagePerSec << "images per second";
     return;
     if (G::isLogger) G::log(__FUNCTION__);
     getSubfolders("/users/roryhill/pictures");
@@ -10790,8 +10834,8 @@ void MW::slideShow()
 //        updateImageCacheWhenFileSelectionChange = true;// rghcachechange
         progressBar->setVisible(true);
         // change to ImageCache
-        imageCacheThread->setCurrentPosition(dm->currentFilePath);
-        imageCacheThread->resumeImageCache();
+        if (useImageCache) imageCacheThread->setCurrentPosition(dm->currentFilePath);
+//        imageCacheThread->resumeImageCache();
 //        imageCacheThread->updateImageCachePosition();
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
@@ -11180,7 +11224,7 @@ void MW::refreshCurrentFolder()
                 dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
             }
         }
-        infoView->updateInfo(currentRow);
+         if (useInfoView) infoView->updateInfo(currentRow);
 //        metadataCacheThread->loadNewFolder(true);
         refreshCurrentAfterReload();
     }
@@ -11674,7 +11718,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    stressTest(50);
+    stressTest(10);
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";

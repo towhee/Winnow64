@@ -293,15 +293,15 @@ void IconViewDelegate::paint(QPainter *painter,
                               const QStyleOptionViewItem &option,
                               const QModelIndex &index) const
 {
-/* The delegate cell size is defined in setThumbDimensions and assigned in sizeHint.
-The thumbSize cell contains a number of cells or rectangles:
+/*  The delegate cell size is defined in setThumbDimensions and assigned in sizeHint.
+    The thumbSize cell contains a number of cells or rectangles:
 
-Outer dimensions = cellRect or option.rect (QListView icon spacing is set to zero)
-frameRect        = cellRect - cBrdT - fPad
-thumbRect        = itemRect - thumbBorderGap - padding - thumbBorderThickness
-iconRect         = thumbRect - icon (icon has different aspect so either the
-                   width or height will have to be centered inside the thumbRect
-textRect         = a rectangle below itemRect
+    Outer dimensions = cellRect or option.rect (QListView icon spacing is set to zero)
+    frameRect        = cellRect - cBrdT - fPad
+    thumbRect        = itemRect - thumbBorderGap - padding - thumbBorderThickness
+    iconRect         = thumbRect - icon (icon has different aspect so either the
+                       width or height will have to be centered inside the thumbRect
+    textRect         = a rectangle below itemRect
 */
     painter->save();
     /*

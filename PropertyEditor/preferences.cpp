@@ -259,7 +259,8 @@ itemChange, which is subclassed here.
     }
 
     if (source == "infoView->ok") {
-        mw->infoView->ok->setData(index, v.toBool());
+        if (mw->useInfoView)
+            mw->infoView->ok->setData(index, v.toBool());
     }
 
     if (source == "fullScreenShowFolders") {
@@ -731,7 +732,7 @@ void Preferences::addItems()
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
-    addItem(i);
+//    addItem(i);   // setting default thumbnail cache parameters so remove as preference
 
     // Metadata chunk size (number of thumbnails)
     i.name = "metadataChunkSize";
@@ -750,7 +751,7 @@ void Preferences::addItems()
     i.min = 1;
     i.max = 3000;
     i.fixedWidth = 50;
-    addItem(i);
+//    addItem(i);   // set to 3000
 
     // Maximum icon size
     i.name = "maxIconSize";
@@ -771,7 +772,7 @@ void Preferences::addItems()
     i.min = 40;
     i.max = 640;
     i.fixedWidth = 50;
-    addItem(i);
+//    addItem(i);   // set to 256
 
     // Cache Full Image Header
     i.name = "CacheImagesHeader";
@@ -780,11 +781,11 @@ void Preferences::addItems()
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
-    addItem(i);
+//    addItem(i);
 
     // Memory required for the metadata cache (includes thumbnails)
     i.name = "metaCacheReqd";
-    i.parentName = "CacheImagesHeader";
+    i.parentName = "CacheHeader";
     i.captionText = "Metadata and thumb memory";
     i.tooltip = "Memory required for the metadata cache (includes thumbnails).";
     i.hasValue = true;
@@ -798,7 +799,7 @@ void Preferences::addItems()
 
     // Available memory for caching
     i.name = "availableMBToCache";
-    i.parentName = "CacheImagesHeader";
+    i.parentName = "CacheHeader";
     i.captionText = "Image cache / Available memory";
     i.tooltip = "The total amount of available memory in MB.";
     i.hasValue = true;
@@ -823,8 +824,8 @@ void Preferences::addItems()
 
     // Image cache size strategy
     i.name = "imageCacheSizeMethod";
-    i.parentName = "CacheImagesHeader";
-    i.captionText = "Choose cache size method";
+    i.parentName = "CacheHeader";
+    i.captionText = "Caching strategy";
     i.tooltip = "Select method of determining the size of the image cache\n"
                 "Thrifty  = larger of 10% of available memory or 2GB\n"
                 "Moderate = 50% of available memory\n"
@@ -842,22 +843,30 @@ void Preferences::addItems()
 
     // Image cache minimum size excluding metadata cache
     i.name = "imageCacheMinSize";
-    i.parentName = "CacheImagesHeader";
-    i.captionText = "Choose cache minimum size";
-    i.tooltip = "Select the minimum size of the image cache in MB\n";
+    i.parentName = "CacheHeader";
+    i.captionText = "Minimum cache size";
+    i.tooltip = "Minimum cache size in GB, overriding amount set by cache strategy.\n"
+                "The actual cache size could be smaller if the operating system does\n"
+                "not have enough memory available.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->cacheMinSize;
     i.key = "imageCacheMinSize";
     i.delegateType = DT_Combo;
     i.type = "QString";
-    i.dropList << "500 MB"
-               << "1000 MB"
-               << "2000 MB"
-               << "4000 MB"
-               << "8000 MB"
-               << "16000 MB"
-               << "32000 MB";
+    i.dropList << "0.5 GB"
+               << "1 GB"
+               << "2 GB"
+               << "4 GB"
+               << "6 GB"
+               << "8 GB"
+               << "12 GB"
+               << "16 GB"
+               << "24 GB"
+               << "32 GB"
+               << "48 GB"
+               << "64 GB"
+                ;
     addItem(i);
 
     // Slideshow Header (Root)
@@ -1026,6 +1035,7 @@ void Preferences::addItems()
     { // Metadata InfoView items
 
     // InfoView fields to show
+    if (mw->useInfoView) {
     QStandardItemModel *okInfo = mw->infoView->ok;
     // iterate through infoView data, adding it to the property editor
     for(int row = 0; row < okInfo->rowCount(); row++) {
@@ -1057,8 +1067,8 @@ void Preferences::addItems()
             i.index = okInfo->index(childRow, 2, parentIdx);
             addItem(i);
         }
-    }
-    // end Metadata InfoView items
+    } // end Metadata InfoView items
+    } // end if (mw->useInfoView)
     }
 
     // TableView show/hide fields Header (Root)

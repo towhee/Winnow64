@@ -100,6 +100,8 @@ public:
     bool isReleaseVersion = true;
     bool hideEmbellish = false;
     bool useImageCache = true;
+    bool useInfoView = true;
+    bool useFilterView = true;
 
     QString versionNumber = "1.27" ;
 
@@ -443,7 +445,7 @@ private slots:
 //    void updateImageCachePosition();  rgh trigger imageCache
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy = "");
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
-    void updateMetadataCacheStatus(int row, bool clear = false);
+    void updateMetadataCacheStatus(QString msg);
     void updateImageCacheStatus(QString instruction,
                                 ImageCacheData::Cache cache,
                                 QString source);

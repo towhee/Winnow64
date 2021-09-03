@@ -59,6 +59,8 @@ public:
     QString diagnosticsForCurrentRow();
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
+    bool metadataLoaded(int dmRow);
+    int rowFromPath(QString fPath);
 
     SortFilter *sf;
     QHash<QString, int> fPathRow;

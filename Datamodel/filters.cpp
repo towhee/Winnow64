@@ -433,6 +433,7 @@ void Filters::disableAllItems(bool disable)
 
 void Filters::updateProgress(int progress)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     bfProgressBar->setValue(progress);
 }
 
@@ -461,6 +462,7 @@ bool Filters::isAnyFilter()
 
 void Filters::invertFilters()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QList<QString> catWithCheckedItems;
     QString cat = "";
     QTreeWidgetItemIterator it(this);
@@ -514,6 +516,7 @@ void Filters::invertFilters()
 
 void Filters::finishedBuildFilters()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     filtersBuilt = true;
     buildingFilters = false;
     filterLabel->setVisible(false);
@@ -586,16 +589,19 @@ Uncheck types.  This is required when raw + jpg are either combined or not combi
 
 void Filters::expandAllFilters()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     expandAll();
 }
 
 void Filters::collapseAllFilters()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     collapseAll();
 }
 
 void Filters::toggleExpansion()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     bool isExpanded = false;
     QTreeWidgetItemIterator it(this);
     while (*it) {
@@ -664,6 +670,7 @@ void Filters::dataChanged(const QModelIndex &topLeft,
     filteredItemCount is updated.
 */
     // checkstate has changed
+    if (G::isLogger) G::log(__FUNCTION__);
     if (roles.contains(Qt::CheckStateRole)) {
         itemCheckStateHasChanged = true;
         QTreeWidget::dataChanged(topLeft, bottomRight, roles);

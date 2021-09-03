@@ -12,6 +12,7 @@ class PreferencesDlg  : public QDialog
 
 public:
     PreferencesDlg(QWidget *parent, bool &isSolo, Preferences *pref, QString &css);
+    ~PreferencesDlg() override;
 
 public slots:
     void solo();

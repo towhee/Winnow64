@@ -77,6 +77,11 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
 //    pref->expandBranch("Metadata panel items");
 }
 
+PreferencesDlg::~PreferencesDlg()
+{
+
+}
+
 void PreferencesDlg::expand()
 {
     tree->expandAll();

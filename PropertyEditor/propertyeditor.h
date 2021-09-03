@@ -17,7 +17,7 @@ class PropertyModel : public QStandardItemModel
 {
     Q_OBJECT
 public:
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 };
 
 class PropertyEditor : public QTreeView
@@ -25,6 +25,7 @@ class PropertyEditor : public QTreeView
     Q_OBJECT
 public:
     explicit PropertyEditor(QWidget *parent);
+    ~PropertyEditor() override;
     QStandardItemModel *model;
     PropertyDelegate *propertyDelegate;
 //    SortProperties *proxy;
@@ -88,6 +89,7 @@ public:
     QModelIndex getItemIndex(int itemIndex, QModelIndex parentIdx = QModelIndex());
     void updateHiddenRows(QModelIndex parent);
     QModelIndex foundIdx;
+    void close(QModelIndex parent);
     void diagnosticProperties(QModelIndex parent);
 
     QMap<QString, QModelIndex> sourceIdx;

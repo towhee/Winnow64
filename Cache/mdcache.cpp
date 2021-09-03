@@ -1,7 +1,6 @@
 #include "Main/global.h"
 #include "Cache/mdcache.h"
-//"C:\Program Files\Adobe\Adobe Photoshop 2021\Photoshop.exe" "2011-10-14_0132.jpg"
-//"C:\Program Files\Adobe\Adobe Photoshop 2021\Photoshop.exe" "D:\Pictures\Coaster\2011-10-14_0132.jpg"
+
 /*
 The metadata cache reads the relevant metadata and preview thumbnails from the image files and
 stores this information in the datamodel dm. The critical metadata is the offset and length of
@@ -79,13 +78,11 @@ When the user selects a thumbnail or a filter or sort has been invoked.
 */
 
 MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
-                  Metadata *metadata, ImageCache *imageCacheThread) : QThread(parent)
+                  Metadata *metadata) : QThread(parent)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     this->dm = dm;
     this->metadata = metadata;
-    // rgh req'd used??
-//    this->imageCacheThread = imageCacheThread;
     thumb = new Thumb(this, dm, metadata);
     abort = false;
 
@@ -107,6 +104,7 @@ MetadataCache::~MetadataCache()
     condition.wakeOne();
     mutex.unlock();
     wait();
+    delete thumb;
 }
 
 void MetadataCache::stopMetadataCache()
@@ -531,6 +529,9 @@ void MetadataCache::readIconChunk()
         start = 0;
         end = dm->sf->rowCount();
     }
+    int statusStep = 1000;
+    if (end < 1000) statusStep = 1000;
+    if (end < 3000) statusStep = 500;
     /*
     qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
              << "rowCount =" << dm->sf->rowCount()
@@ -593,6 +594,9 @@ void MetadataCache::readIconChunk()
                 iconsCached.append(dmRow);
             }
         }
+        QString msg = "Loading thumbnails: ";
+        msg += QString::number(row) + " of " + QString::number(end);
+        if (row % statusStep == 0) emit showCacheStatus(msg);
     }
 
     // reset after a filter change
@@ -616,6 +620,9 @@ void MetadataCache::readMetadataChunk()
             start = 0;
             end = dm->sf->rowCount();
         }
+        int statusStep = 1000;
+        if (end < 1000) statusStep = 1000;
+        if (end < 3000) statusStep = 500;
 
         for (int row = start; row < end; ++row) {
             if (abort) {
@@ -635,6 +642,9 @@ void MetadataCache::readMetadataChunk()
                             ;
                             //*/
             }
+            QString msg = "Reading metadata: ";
+            msg += QString::number(row) + " of " + QString::number(end);
+            if (row % statusStep == 0) emit showCacheStatus(msg);
         }
     } while (metadataLoadFailed && metadataTry > tryAgain++);
 
