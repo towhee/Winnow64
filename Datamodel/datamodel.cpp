@@ -894,6 +894,18 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     return true;
 }
 
+bool DataModel::metadataLoaded(int dmRow)
+{
+    QMutexLocker locker(&mutex);
+    return index(dmRow, G::MetadataLoadedColumn).data().toBool();
+}
+
+int DataModel::rowFromPath(QString fPath)
+{
+    QMutexLocker locker(&mutex);
+    return fPathRow[fPath];
+}
+
 bool DataModel::hasFolderChanged()
 {
 /*

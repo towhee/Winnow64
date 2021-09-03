@@ -65,6 +65,10 @@ bool ImageDecoder::load()
     /*
     qDebug() << __FUNCTION__ << "fPath =" << fPath;
     //*/
+
+    // null fPath when caching is cycling, waiting to finish.
+    if (fPath == "") return false;
+
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.completeSuffix().toLower();
 
@@ -74,12 +78,16 @@ bool ImageDecoder::load()
     int dmRow = dm->fPathRow[fPath];
 
     // is metadata loaded rgh use isMeta in cacheItemList?
-    if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
-        if (!dm->readMetadataForItem(dmRow)) {
-            G::error(__FUNCTION__, fPath, "Could not load metadata.");
-            return false;
-        }
+    if (!dm->metadataLoaded(dmRow)) {
+        G::error(__FUNCTION__, fPath, "Could not load metadata.");
+        return false;
     }
+//    if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
+//        //        if (!dm->readMetadataForItem(dmRow)) {
+//        G::error(__FUNCTION__, fPath, "Could not load metadata.");
+//        return false;
+//        //        }
+//    }
 
     if (abort) return false;
 

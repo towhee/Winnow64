@@ -17,7 +17,7 @@ class MetadataCache : public QThread
 
 public:
     MetadataCache(QObject *parent, DataModel *dm,
-                  Metadata *metadata, ImageCache *imageCacheThread);
+                  Metadata *metadata);
     ~MetadataCache() override;
 
     enum Action {
@@ -70,13 +70,11 @@ protected:
 
 signals:
     void loadImageCache();
-//    void pauseImageCache();
-//    void resumeImageCache();
     void updateIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void updateIconBestFit();
     void loadMetadataCache2ndPass();
     void selectFirst();
-    void showCacheStatus(int, bool);            // row, clear progress bar
+    void showCacheStatus(QString);            // row, clear progress bar
     void finished2ndPass();                     // buildFilters
 
 private:
@@ -85,7 +83,6 @@ private:
     bool abort;
     DataModel *dm;
     Metadata *metadata;
-//    ImageCache * imageCacheThread;
     Thumb *thumb;
 
     int startRow;

@@ -178,6 +178,7 @@ void IconView::reportThumbs()
 
 QString IconView::diagnostics()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -605,8 +606,6 @@ void IconView::scannedViewportRange()
     }
     visibleCells = lastVisibleCell - firstVisibleCell + 1;
     midVisibleCell = firstVisibleCell + visibleCells / 2;
-
-
     /*
    qDebug() << __FUNCTION__ << objectName().leftJustified(10, ' ')
              << "isInitializing =" << G::isInitializing
@@ -769,7 +768,6 @@ void IconView::selectThumb(QModelIndex idx)
     Used for thumbnail navigation (left, right, up, down etc)
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-//    qDebug() << __FUNCTION__ << idx;
     if (idx.isValid()) {
         G::isNewSelection = true;
         setCurrentIndex(idx);
@@ -1029,6 +1027,7 @@ void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
     thumbViewDelegate triggers this to provide rect data to calc thumb mouse
     click position that is then sent to imageView to zoom to the same spot
 */
+    if (G::isLogger) G::log(__FUNCTION__);
     dm->sf->setData(index, iconRect, G::IconRectRole);
 }
 
@@ -1641,24 +1640,6 @@ resize MW::resizeEvent that will change the centralWidget geometry.
             w = static_cast<int>(h * ivA);
         }
 
-/*        if (hScale < vScale) {
-            w = static_cast<int>(iconW * scale);
-            if (ivA > 1) {
-                h = static_cast<int>(w / ivA);
-            }
-            else {
-                h = static_cast<int>(w / ivA);
-            }
-        }
-        else {
-            h = static_cast<int>(iconH * scale);
-            if (ivA > 1) {
-                w = static_cast<int>(h * ivA);
-            }
-            else {
-                w = static_cast<int>(h * ivA);
-            }
-        }*/
         if (w > iconRect.width()) w = iconRect.width();
         if (h > iconRect.height()) h = iconRect.height();
 
@@ -1706,9 +1687,9 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
     h += (pw * 8);
     cursorRect = QRect(0, 0, w, h);
-    auto frame = new QImage(w, h, QImage::Format_ARGB32);
+    auto frame = QImage(w, h, QImage::Format_ARGB32);
     int opacity = 0;                                // Set this between 0 and 255
-    frame->fill(QColor(0,0,0,opacity));
+    frame.fill(QColor(0,0,0,opacity));
     QPen oPen, iPen;
     oPen.setWidth(pw);
     iPen.setWidth(pw);
@@ -1716,18 +1697,18 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     iPen.setColor(Qt::black);
     QRect oBorder(0, 0, w-pw-1, h-pw-1);            // outer border
     QRect iBorder(pw, pw, w-3*pw-1, h-3*pw-1);      // inner border
-    QPainter p(frame);
+    QPainter p(&frame);
     p.setPen(oPen);
     p.drawRect(oBorder);
     p.setPen(iPen);
     p.drawRect(iBorder);
-    setCursor(QCursor(QPixmap::fromImage(*frame)));
+    setCursor(QCursor(QPixmap::fromImage(frame)));
 }
 
 void IconView::invertSelection()
 {
 /*
-Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct
+    Inverts/toggles which thumbs are selected.  Called from MW::invertSelectionAct
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     QItemSelection toggleSelection;

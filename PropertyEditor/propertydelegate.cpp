@@ -210,6 +210,7 @@ void PropertyDelegate::commit(QWidget *editor)
     if (G::isLogger) G::log(__FUNCTION__); 
 //    qDebug() << __FUNCTION__ << submitted;
     emit commitData(editor);
+    emit closeEditor(editor);
 }
 
 void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,

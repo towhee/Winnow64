@@ -93,13 +93,11 @@ private:
 //    bool stopFillingCache;
     QString currentPath;
     QString prevCurrentPath;
-    int maxAttemptsToCacheImage = 10;
+    int maxAttemptsToCacheImage = 10000;
 
     ImageCacheData *icd;
     DataModel *dm;
     Metadata *metadata;
-    Pixmap *getImage;
-//    CacheImage *cacheImage;
     QVector<ImageDecoder*> decoder;
 
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
@@ -111,11 +109,11 @@ private:
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
     bool inTargetRange(QString fPath);  // image targeted to cache
-    bool nextToCache(int decoderId);             // find highest priority not cached
-    bool nextToDecache();           // find lowest priority cached - return -1 if none cached
+    bool nextToCache(int id);       // find highest priority not cached
+    bool nextToDecache(int id);     // find lowest priority cached - return -1 if none cached
     bool cacheHasMissing();         // missed files from first pass (isCaching = true)
     void fixOrphans();              // outside target range with isCached == true
-    void makeRoom(int cacheKey); // remove images from cache until there is roomRqd
+    void makeRoom(int id, int cacheKey); // remove images from cache until there is roomRqd
     void memChk();                  // still room in system memory for cache?
     static bool prioritySort(const ImageCacheData::CacheItem &p1,
                              const ImageCacheData::CacheItem &p2);
@@ -127,6 +125,7 @@ private:
     QSize scalePreview(int w, int h);
 
     QElapsedTimer t;
+    bool debugCaching = false;
 };
 
 #endif // IMAGECACHE_H

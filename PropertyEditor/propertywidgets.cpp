@@ -37,16 +37,18 @@ void Slider::mousePressEvent(QMouseEvent *event)
     int max = maximum();
     int value = event->pos().x() * 1.0 / width() * (max - min) + min;
     setValue(value);
-//    qDebug() << __FUNCTION__
-//             << event->pos().x()
-//             << width()
-//             << minimum()
-//             << maximum()
-//             << div
-//             << min
-//             << max
-//             << value
-//                ;
+    /*
+    qDebug() << __FUNCTION__
+             << event->pos().x()
+             << width()
+             << minimum()
+             << maximum()
+             << div
+             << min
+             << max
+             << value
+                ;
+                //*/
 }
 
 /* SLIDER EDITOR *****************************************************************************/

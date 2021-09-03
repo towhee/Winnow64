@@ -74,9 +74,15 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
     connect(this, &PropertyEditor::fontSizeChange, propertyDelegate, &PropertyDelegate::fontSizeChanged);
 }
 
+PropertyEditor::~PropertyEditor()
+{
+    qDebug() << __FUNCTION__ << "Close...";
+    close(model->index(0,0,QModelIndex()));
+}
+
 void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
 /*
-Sets the custom editor widget for the value column (column 2).
+    Sets the custom editor widget for the value column (column 2).
 */
 {
     if (G::isLogger) G::log(__FUNCTION__); 
@@ -546,6 +552,21 @@ void PropertyEditor::collapseAllExcept()
         if (idx.data(UR_okToCollapseRoot).toBool()) collapse(idx);
     }
 
+}
+
+void PropertyEditor::close(QModelIndex parent)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    for (int r = 0; r < model->rowCount(parent); ++r) {
+        QModelIndex idx0 = model->index(r, CapColumn, parent);
+        QModelIndex idx1 = model->index(r, ValColumn, parent);
+        auto editor = static_cast<ComboBoxEditor*>(idx1.data(UR_Editor).value<void*>());
+        delete editor;
+        // iterate children
+        if (model->hasChildren(idx0)) {
+            close(idx0);
+        }
+    }
 }
 
 void PropertyEditor::diagnosticProperties(QModelIndex parent)

@@ -65,7 +65,7 @@ namespace G
     QString fileSelectionChangeSource;  // GridMouseClick, ThumbMouseClick, TableMouseClick
 
     // icons
-    int maxIconSize;
+    int maxIconSize = 256;
     int minIconSize = 40;
     int iconWMax;                       // widest icon found in datamodel
     int iconHMax;                       // highest icon found in datamodel
@@ -158,7 +158,7 @@ namespace G
 
     void errlog(QString functionName, QString fPath, QString err)
     {
-//        return;
+        return;
         QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
         QString f = functionName.leftJustified(40, '.') + " ";
         QString p = fPath;
