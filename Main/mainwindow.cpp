@@ -8593,7 +8593,7 @@ bool MW::loadSettings()
 //            cacheSizeMB = (static_cast<int>(G::availableMemoryMB) * cacheSizePercentOfAvailable) / 100;
 //        if (cacheSizeMethod == "MB") cacheSizeMB = setting->value("cacheSizeMB").toInt();
         //*/
-    if (setting->contains("isShowCacheStatus")) G::showCacheStatus = setting->value("isShowCacheStatus").toBool();
+//    if (setting->contains("isShowCacheStatus")) G::showCacheStatus = setting->value("isShowCacheStatus").toBool();
     if (setting->contains("isShowCacheThreadActivity")) isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
     if (setting->contains("cacheStatusWidth")) progressWidth = setting->value("cacheStatusWidth").toInt();
     progressWidthBeforeResizeWindow = progressWidth;
