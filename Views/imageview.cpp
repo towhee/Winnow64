@@ -264,6 +264,7 @@ void ImageView::clear()
 
 void ImageView::noJpgAvailable()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     pmItem->setVisible(false);
     infoOverlay->setText("");
 }
@@ -434,6 +435,7 @@ to a percentage to be used to match position in the next image if zoomed.
 
 void ImageView::setClassificationBadgeImageDiam(int d)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     classificationBadgeDiam = d;
     placeClassificationBadge();
 }
@@ -471,6 +473,7 @@ size.
 
 void ImageView::activateRubberBand()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     isRubberBand = true;
     setCursor(Qt::CrossCursor);
     QString msg = "Rubberband activated.  Make a selection in the ImageView.\n"
@@ -480,6 +483,7 @@ void ImageView::activateRubberBand()
 
 void ImageView::quitRubberBand()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     isRubberBand = false;
     setCursor(Qt::ArrowCursor);
 }
@@ -532,6 +536,7 @@ images.
 qreal ImageView::getZoom()
 {
     // use view center to make sure inside scene item
+    if (G::isLogger) G::log(__FUNCTION__);
     qreal x1 = mapToScene(rect().center()).x();
     qreal x2 = mapToScene(rect().center() + QPoint(1, 0)).x();
     qreal calcZoom = 1.0 / (x2 - x1);
@@ -640,6 +645,7 @@ void ImageView::rotate(int degrees)
     the zoom factor to fit recalculated.  Finally, scale() is called to fit the
     image if the image was not zoomed.
 */
+    if (G::isLogger) G::log(__FUNCTION__);
     // extract pixmap, rotate and reset to pmItem
     QPixmap pm = pmItem->pixmap();
     QTransform trans;
@@ -731,6 +737,7 @@ used to determine the zoomCursor aspect in ThumbView.
 
 void ImageView::updateShootingInfo()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QModelIndex idx = thumbView->currentIndex();
     QString current = infoString->getCurrentInfoTemplate();
     shootingInfo = infoString->parseTokenString(infoString->infoTemplates[current],
@@ -804,6 +811,7 @@ void ImageView::monitorCursorState()
 
 void ImageView::setBackgroundColor(QColor bg)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     scene->setBackgroundBrush(bg);
 }
 
@@ -826,6 +834,7 @@ void ImageView::hideCursor()
 /*
     Called from mouse move event in a delay if in slideshow mode.
 */
+    if (G::isLogger) G::log(__FUNCTION__);
     setCursor(Qt::BlankCursor);
 }
 
@@ -834,6 +843,7 @@ void ImageView::hideCursor()
 ///*
 void ImageView::paintEvent(QPaintEvent *event)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QGraphicsView::paintEvent(event); // paint contents normally
 
     // draw text over the top of the viewport
@@ -850,6 +860,7 @@ void ImageView::paintEvent(QPaintEvent *event)
 
 void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QGraphicsView::drawForeground(painter, rect);
 
             painter->save();
@@ -862,6 +873,7 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
 
 void ImageView::scrollContentsBy(int dx, int dy)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     scrollCount++;
 //    isMouseDrag = (scrollCount > 2);
 //    qDebug() << G::t.restart() << "\t" << "scrolling dx =" << dx << "dy =" << dy << scrollCount;
@@ -1089,12 +1101,14 @@ void ImageView::enterEvent(QEvent *event)
 
 void ImageView::dragEnterEvent(QDragEnterEvent *event)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     qDebug() << "ImageView::" << __FUNCTION__;
 //    event->acceptProposedAction();
 }
 
 void ImageView::dropEvent(QDropEvent *event)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
 //    QFileInfo info(event->mimeData()->urls().at(0).toLocalFile());
 //    emit handleDrop(event->mimeData()->urls().at(0).toLocalFile());
 //    emit handleDrop(event->mimeData());
@@ -1102,6 +1116,7 @@ void ImageView::dropEvent(QDropEvent *event)
 
 QString ImageView::diagnostics()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -1146,6 +1161,7 @@ QString ImageView::diagnostics()
 
 void ImageView::exportImage()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QImage image = grab().toImage();
 //    image.save();
 }

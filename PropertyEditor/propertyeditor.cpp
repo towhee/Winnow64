@@ -78,6 +78,9 @@ PropertyEditor::~PropertyEditor()
 {
     qDebug() << __FUNCTION__ << "Close...";
     close(model->index(0,0,QModelIndex()));
+    delete propertyDelegate;
+    delete styleOptionViewItem;
+    delete model;
 }
 
 void PropertyEditor::editorWidgetToDisplay(QModelIndex idx, QWidget *editor)
@@ -558,13 +561,43 @@ void PropertyEditor::close(QModelIndex parent)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     for (int r = 0; r < model->rowCount(parent); ++r) {
-        QModelIndex idx0 = model->index(r, CapColumn, parent);
-        QModelIndex idx1 = model->index(r, ValColumn, parent);
-        auto editor = static_cast<ComboBoxEditor*>(idx1.data(UR_Editor).value<void*>());
-        delete editor;
+        QModelIndex capIdx = model->index(r, CapColumn, parent);
+        QModelIndex valIdx = model->index(r, ValColumn, parent);
+        if (valIdx.data(UR_DelegateType).toInt() == DT_Label) {
+            auto editor = static_cast<LabelEditor*>(valIdx.data(UR_Editor).value<void*>());
+            delete editor;
+        }
+        if (valIdx.data(UR_DelegateType).toInt() == DT_LineEdit) {
+            auto editor = static_cast<LineEditor*>(valIdx.data(UR_Editor).value<void*>());
+            delete editor;
+        }
+        if (valIdx.data(UR_DelegateType).toInt() == DT_Spinbox) {
+            auto editor = static_cast<SpinBoxEditor*>(valIdx.data(UR_Editor).value<void*>());
+            delete editor;
+        }
+        if (valIdx.data(UR_DelegateType).toInt() == DT_DoubleSpinbox) {
+            auto editor = static_cast<DoubleSpinBoxEditor*>(valIdx.data(UR_Editor).value<void*>());
+            delete editor;
+        }
+        if (valIdx.data(UR_DelegateType).toInt() == DT_Checkbox) {
+            auto editor = static_cast<CheckBoxEditor*>(valIdx.data(UR_Editor).value<void*>());
+            delete editor;
+        }
+        if (valIdx.data(UR_DelegateType).toInt() == DT_Combo) {
+            auto editor = static_cast<ComboBoxEditor*>(valIdx.data(UR_Editor).value<void*>());
+            delete editor;
+        }
+        if (valIdx.data(UR_DelegateType).toInt() == DT_Slider) {
+            auto editor = static_cast<SliderEditor*>(valIdx.data(UR_Editor).value<void*>());
+            delete editor;
+        }
+        if (valIdx.data(UR_DelegateType).toInt() == DT_Color) {
+            auto editor = static_cast<ColorEditor*>(valIdx.data(UR_Editor).value<void*>());
+            delete editor;
+        }
         // iterate children
-        if (model->hasChildren(idx0)) {
-            close(idx0);
+        if (model->hasChildren(capIdx)) {
+            close(capIdx);
         }
     }
 }

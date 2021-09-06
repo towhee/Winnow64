@@ -47,17 +47,17 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
     tree->setStyleSheet(css);
     tree->setHeaderHidden(true);
 
-    QHBoxLayout* layout = new QHBoxLayout(this);
+    layout = new QHBoxLayout(this);
     layout->addWidget(pref);
     layout->setContentsMargins(0,0,0,0);
 
-    QAction *expandAllAction = new QAction(tr("Expand all"), this);
+    expandAllAction = new QAction(tr("Expand all"), this);
     expandAllAction->setShortcutVisibleInContextMenu(true);
     expandAllAction->setShortcut(QKeySequence("Ctrl+>"));
     addAction(expandAllAction);
     connect(expandAllAction, &QAction::triggered, this, &PreferencesDlg::expand);
 
-    QAction *collapseAllAction = new QAction(tr("Collapse all"), this);
+    collapseAllAction = new QAction(tr("Collapse all"), this);
     collapseAllAction->setShortcutVisibleInContextMenu(true);
     collapseAllAction->setShortcut(QKeySequence("Ctrl+<"));
     addAction(collapseAllAction);
@@ -79,7 +79,9 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
 
 PreferencesDlg::~PreferencesDlg()
 {
-
+    delete layout;
+    delete expandAllAction;
+    delete collapseAllAction;
 }
 
 void PreferencesDlg::expand()

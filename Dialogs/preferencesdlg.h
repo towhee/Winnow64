@@ -21,6 +21,9 @@ private:
     PropertyEditor *tree;
     void expand();
     void collapse();
+    QHBoxLayout* layout;
+    QAction *expandAllAction;
+    QAction *collapseAllAction;
     QAction *soloAction;
     bool &isSolo;
 };
