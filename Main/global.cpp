@@ -181,8 +181,8 @@ namespace G
     }
 
     PopUp *popUp;
-    void newPopUp(QWidget *widget)
+    void newPopUp(QWidget *widget, QRect rect)
     {
-        popUp = new PopUp(widget);
+        popUp = new PopUp(widget, rect);
     }
 }

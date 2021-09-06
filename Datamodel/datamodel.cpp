@@ -565,9 +565,10 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
 ImageMetadata DataModel::imMetadata(QString fPath)
 {
 /*
-    Used by InfoString and IngestDlg
+    Used by ImageDecoder, InfoString and IngestDlg
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+//    QMutexLocker locker(&mutex);
+    if (G::isLogger) G::log(__FUNCTION__);
     int row = fPathRow[fPath];
     metadata->m.row = row;
     ImageMetadata m;
@@ -897,14 +898,14 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
 bool DataModel::metadataLoaded(int dmRow)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    QMutexLocker locker(&mutex);
+//    QMutexLocker locker(&mutex);
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
 }
 
 int DataModel::rowFromPath(QString fPath)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    QMutexLocker locker(&mutex);
+//    QMutexLocker locker(&mutex);
     return fPathRow[fPath];
 }
 

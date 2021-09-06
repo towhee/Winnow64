@@ -57,7 +57,6 @@ public:
 
     int decoderCount = 1;
 
-//    QHash<QString, QImage> imCache;  // moved to DataModel and changed to concurrent HashMap
     QString source;                 // temp for debugging
 
 //    ImageCacheData::Cache icd->cache;
@@ -65,7 +64,6 @@ public:
 signals:
     void showCacheStatus(QString instruction,
                          ImageCacheData::Cache cache,
-//                         QVector<bool> cached,
                          QString source = "");
     void updateIsRunning(bool, bool);
     void updateCacheOnThumbs(QString fPath, bool isCached);
@@ -75,7 +73,6 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-//    void fillCache(int id, QString fPath, QImage *image);
     void fillCache(int id);
     void setCurrentPosition(QString path);
     void cacheSizeChange();         // flag when cache size is changed in preferences
@@ -90,7 +87,6 @@ private:
     bool cacheSizeHasChanged;
     bool filterOrSortHasChanged;
     bool refreshCache;
-//    bool stopFillingCache;
     QString currentPath;
     QString prevCurrentPath;
     int maxAttemptsToCacheImage = 10000;
