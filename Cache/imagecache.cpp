@@ -757,7 +757,7 @@ void ImageCache::removeFromCache(QStringList &pathList)
 void ImageCache::updateStatus(QString instruction, QString source)
 {
 //    updateCached();
-    emit showCacheStatus(instruction, icd->cache, source);
+//    emit showCacheStatus(instruction, icd->cache, source);
 }
 
 QString ImageCache::diagnostics()
