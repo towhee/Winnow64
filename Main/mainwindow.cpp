@@ -2133,7 +2133,7 @@ void MW::updateImageCacheStatus(QString instruction,
     }
     //*/
 
-    if(!G::showCacheStatus) return;
+    return;
 
     // just repaint the progress bar gray and return.
     if(instruction == "Clear") {
@@ -8555,7 +8555,7 @@ bool MW::loadSettings()
     if (setting->contains("cacheSizeMethod")) setImageCacheSize(setting->value("cacheSizeMethod").toString());
     else setImageCacheSize("Moderate");
     if (setting->contains("cacheMinSize")) setImageCacheMinSize(setting->value("cacheMinSize").toString());
-    else setImageCacheMinSize("2000 MB");
+    else setImageCacheMinSize("4 GB");
         /*
 //        cacheSizeMethod = setting->value("cacheSizeMethod").toString();
 //        if (cacheSizeMethod == "Thrifty") cacheSizeBtn->setIcon(QIcon(":/images/icon16/thrifty.png"));
@@ -8569,7 +8569,8 @@ bool MW::loadSettings()
 //        if (cacheSizeMethod == "MB") cacheSizeMB = setting->value("cacheSizeMB").toInt();
         //*/
 //    if (setting->contains("isShowCacheStatus")) G::showCacheStatus = setting->value("isShowCacheStatus").toBool();
-    if (setting->contains("isShowCacheThreadActivity")) isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
+//    if (setting->contains("isShowCacheThreadActivity")) isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
+    isShowCacheThreadActivity = false;
     if (setting->contains("cacheStatusWidth")) progressWidth = setting->value("cacheStatusWidth").toInt();
     progressWidthBeforeResizeWindow = progressWidth;
     if (setting->contains("cacheWtAhead")) cacheWtAhead = setting->value("cacheWtAhead").toInt();
