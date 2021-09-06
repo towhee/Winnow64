@@ -96,14 +96,24 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
+    /*  if (G::isLogger) G::log(__FUNCTION__) up-to-date
+        MW
+        IconView
+        ImageView
+        DataModel
+    */
+
     bool isStartupArgs = false;
     bool isReleaseVersion = true;
     bool hideEmbellish = false;
     bool useImageCache = true;
     bool useInfoView = true;
+    bool useImageView = true;
+    bool useUpdateStatus = true;
+
     bool useFilterView = true;
 
-    QString versionNumber = "1.27 beta" ;
+    QString versionNumber = "1.27" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;

@@ -896,12 +896,14 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
 
 bool DataModel::metadataLoaded(int dmRow)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QMutexLocker locker(&mutex);
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
 }
 
 int DataModel::rowFromPath(QString fPath)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QMutexLocker locker(&mutex);
     return fPathRow[fPath];
 }
@@ -1190,6 +1192,7 @@ SortFilter::SortFilter(QObject *parent, Filters *filters, bool &combineRawJpg) :
     QSortFilterProxyModel(parent),
     combineRawJpg(combineRawJpg)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     this->filters = filters;
 }
 

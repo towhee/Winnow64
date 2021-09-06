@@ -1,17 +1,17 @@
 BUGS / TO DO
-- new to investigate
-  - Filters::addCategoryFromData item = new QTreeWidgetItem(category)
-  -
-- decoder rotation issue
-- Last image in folder not being cached on first attempt
+- Sometimes last image in folder not rendering
+- E:\2020 √\202001 √\2020-01-09_Victoria √\ heics not rendering
+- E:/2020 √/202001 √/2020-01-11_Buttertubs Marsh √/2020-01-11_0015.arw thumb not rotating
+- E:/2020 √/202001 √/2020-01-25_Linley Valley √/2020-01-25_0024_Focus Stack.tif has bad thumb
+  caused by Winnow adding thumbnail
+- E:/2020 √/202001 √/2020-01-27_Brookwood Marsh √/ erratic thumb/loupe rendering and model
+  reporting
 - Image caching progress bar disabled until can improve performance
 - Export from Lightroom broken
-- clear selection when load new folder
 - iconView selected item can get out of sync with imCache
 - remove isCached column from datamodel
 - Change preference cache amount crashes if folder loaded
 - Loupe images not rotating
-- Make sure all decoder threads have finished when quitting program
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
 - Tiff with compression = 7, 8
 - TIFF PhotometricInterpretation <> 2 https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html
@@ -56,6 +56,9 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Fixed memory leak when new file selection (in updateStatusBar)
+- Version 1.27 beta for mac
+- Redid image cache to improve performance and stability
 - Improve err recording and showing to user
 - Version 1.26
 - TIFF with planarConfiguration = 2

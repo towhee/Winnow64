@@ -276,6 +276,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     useImageCache = true;
     useInfoView = true;
+    useImageView = true;
+    useUpdateStatus = true;
+
     useFilterView = true;
 
     // Initialize some variables
@@ -527,6 +530,9 @@ void MW::showEvent(QShowEvent *event)
 //    connect(currScreen, &QScreen::logicalDotsPerInchChanged, this, &MW::setDisplayResolution);
 
     if (isShift) refreshFolders();
+
+    // initial status bar icon state
+    updateStatusBar();
 
 //    // set initial visibility
 //    embelTemplateChange(embelProperties->templateId);
@@ -1581,7 +1587,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     bool okToLoadImage = (sortColumn == G::NameColumn
                       || sortColumn == G::ModifiedColumn)
                       || G::isNewFolderLoaded;
-    if (okToLoadImage) {
+    if (okToLoadImage && useImageView) {
         if (imageView->loadImage(fPath, __FUNCTION__)) {
             updateClassification();
             centralLayout->setCurrentIndex(prevCentralView);
@@ -4788,6 +4794,7 @@ void MW::createFolderDock()
     folderTitleLayout->setSpacing(0);
     folderTitleBar = new DockTitleBar("Folders", folderTitleLayout);
     folderDock->setTitleBarWidget(folderTitleBar);
+
     // add widgets to the right side of the title bar layout
     // toggle expansion button
     BarBtn *folderRefreshBtn = new BarBtn();
@@ -4795,12 +4802,17 @@ void MW::createFolderDock()
     folderRefreshBtn->setToolTip("Refresh and collapse");
     connect(folderRefreshBtn, &BarBtn::clicked, this, &MW::refreshFolders);
     folderTitleLayout->addWidget(folderRefreshBtn);
+
     // preferences button
     BarBtn *folderGearBtn = new BarBtn();
     folderGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
     folderGearBtn->setToolTip("Preferences");
     connect(folderGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     folderTitleLayout->addWidget(folderGearBtn);
+
+    // Spacer
+    folderTitleLayout->addSpacing(10);
+
     // close button
     BarBtn *folderCloseBtn = new BarBtn();
     folderCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
@@ -4831,6 +4843,7 @@ void MW::createFavDock()
     favTitleLayout->setSpacing(0);
     favTitleBar = new DockTitleBar("Bookmarks", favTitleLayout);
     favDock->setTitleBarWidget(favTitleBar);
+
     // add widgets to the right side of the title bar layout
     // refresh button
     BarBtn *favRefreshBtn = new BarBtn();
@@ -4838,12 +4851,17 @@ void MW::createFavDock()
     favRefreshBtn->setToolTip("Refresh");
     connect(favRefreshBtn, &BarBtn::clicked, this, &MW::refreshFolders);
     favTitleLayout->addWidget(favRefreshBtn);
+
     // preferences button
     BarBtn *favGearBtn = new BarBtn();
     favGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
     favGearBtn->setToolTip("Preferences");
     connect(favGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     favTitleLayout->addWidget(favGearBtn);
+
+    // Spacer
+    favTitleLayout->addSpacing(10);
+
     // close button
     BarBtn *favCloseBtn = new BarBtn();
     favCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
@@ -4873,6 +4891,7 @@ void MW::createFilterDock()
     filterTitleLayout->setSpacing(0);
     filterTitleBar = new DockTitleBar("Filters", filterTitleLayout);
     filterDock->setTitleBarWidget(filterTitleBar);
+
     // add widgets to the right side of the title bar layout
     // toggle expansion button
     BarBtn *toggleExpansionBtn = new BarBtn();
@@ -4880,12 +4899,17 @@ void MW::createFilterDock()
     toggleExpansionBtn->setToolTip("Toggle expand all / collapse all");
     connect(toggleExpansionBtn, &BarBtn::clicked, filters, &Filters::toggleExpansion);
     filterTitleLayout->addWidget(toggleExpansionBtn);
+
     // preferences button
     BarBtn *filterGearBtn = new BarBtn();
     filterGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
     filterGearBtn->setToolTip("Preferences");
     connect(filterGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
     filterTitleLayout->addWidget(filterGearBtn);
+
+    // Spacer
+    filterTitleLayout->addSpacing(10);
+
     // close button
     BarBtn *filterCloseBtn = new BarBtn();
     filterCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
@@ -4937,6 +4961,7 @@ void MW::createMetadataDock()
     metaTitleLayout->setSpacing(0);
     metaTitleBar = new DockTitleBar("Metadata", metaTitleLayout);
     metadataDock->setTitleBarWidget(metaTitleBar);
+
     // add widgets to the right side of the title bar layout
     // preferences button
     BarBtn *metaGearBtn = new BarBtn();
@@ -4944,6 +4969,10 @@ void MW::createMetadataDock()
     metaGearBtn->setToolTip("Edit preferences including which items to show in this panel");
     connect(metaGearBtn, &BarBtn::clicked, this, &MW::infoViewPreferences);
     metaTitleLayout->addWidget(metaGearBtn);
+
+    // Spacer
+    metaTitleLayout->addSpacing(10);
+
     // close button
     BarBtn *metaCloseBtn = new BarBtn();
     metaCloseBtn->setIcon(QIcon(":/images/icon16/close.png"));
@@ -5029,6 +5058,9 @@ void MW::createEmbelDock()
     embelRunBtn->setToolTip("Export the selected images.");
     connect(embelRunBtn, &BarBtn::clicked, this, &MW::exportEmbel);
     embelTitleLayout->addWidget(embelRunBtn);
+
+    // Spacer
+    embelTitleLayout->addSpacing(10);
 
     // tile button
     BarBtn *embelTileBtn = new BarBtn();
@@ -5319,18 +5351,15 @@ void MW::createStatusBar()
     statusBar()->addPermanentWidget(cacheMethodBtn);
     cacheMethodBtn->show();
 
-    // labels/buttons to show various status
-    if (G::colorManage) statusBar()->addWidget(colorManageToggleBtn);
+    // add status icons to left side of statusBar
+    statusBar()->addWidget(colorManageToggleBtn);
     statusBar()->addWidget(reverseSortBtn);
-
     filterStatusLabel->setPixmap(QPixmap(":/images/icon16/filter.png"));
     filterStatusLabel->setAlignment(Qt::AlignVCenter);
     statusBar()->addWidget(filterStatusLabel);
-
     subfolderStatusLabel->setPixmap(QPixmap(":/images/icon16/subfolders.png"));
     statusBar()->addWidget(subfolderStatusLabel);
     rawJpgStatusLabel->setPixmap(QPixmap(":/images/icon16/link.png"));
-
     statusBar()->addWidget(rawJpgStatusLabel);
     slideShowStatusLabel->setPixmap(QPixmap(":/images/icon16/slideshow.png"));
     statusBar()->addWidget(slideShowStatusLabel);
@@ -5345,79 +5374,22 @@ void MW::createStatusBar()
 void MW::updateStatusBar()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    // remove all icons so can add back in proper order // previously used: if (!filterStatusLabel->isHidden()) statusBar()->removeWidget(filterStatusLabel); // etc
-    if(colorManageToggleBtn->isVisible())
-        statusBar()->removeWidget(colorManageToggleBtn);
-    if(reverseSortBtn->isVisible())
-        statusBar()->removeWidget(reverseSortBtn);
-    if(rawJpgStatusLabel->isVisible())
-        statusBar()->removeWidget(rawJpgStatusLabel);
-    if(filterStatusLabel->isVisible())
-        statusBar()->removeWidget(filterStatusLabel);
-    if(subfolderStatusLabel->isVisible())
-        statusBar()->removeWidget(subfolderStatusLabel);
-    if(!G::isSlideShow && slideShowStatusLabel->isVisible())
-        statusBar()->removeWidget(slideShowStatusLabel);
-    if(statusLabel->isVisible())
-        statusBar()->removeWidget(statusLabel);             // text showing x selected...
 
-    // add back relevant icons
-    if (filters->isAnyFilter()) {
-        statusBar()->addWidget(filterStatusLabel);
-        filterStatusLabel->show();
-    }
+    if (G::isColorManagement) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
+    else colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
 
-    if (G::isColorManagement) {
-        if (G::colorManage) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
-        else colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
-        statusBar()->addWidget(colorManageToggleBtn);
-        colorManageToggleBtn->show();
-    }
     if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
     else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
-    statusBar()->addWidget(reverseSortBtn);
-    reverseSortBtn->show();
 
-    if (subFoldersAction->isChecked()) {
-        statusBar()->addWidget(subfolderStatusLabel);
-        subfolderStatusLabel->show();
-    }
+    filterStatusLabel->setVisible(filters->isAnyFilter());
+    subfolderStatusLabel->setVisible(subFoldersAction->isChecked());
+    rawJpgStatusLabel->setVisible(combineRawJpgAction->isChecked());
+    slideShowStatusLabel->setVisible(G::isSlideShow);
 
-    if (combineRawJpgAction->isChecked()) {
-        statusBar()->addWidget(rawJpgStatusLabel);
-        rawJpgStatusLabel->show();
-    }
+//    updateProgressBarWidth();
 
-    if (G::isSlideShow) {
-        statusBar()->addWidget(slideShowStatusLabel);
-        slideShowStatusLabel->show();
-    }
-
-    statusBar()->addWidget(statusLabel);
-    statusLabel->show();
-    updateProgressBarWidth();
-
-    /*
-    qDebug() << __FUNCTION__
-             << "statusBar" << statusBar()->width()
-             << "layout spacing" << statusBar()->layout()->spacing()
-             << "reverseSortBtn " << reverseSortBtn->width()
-             << "rawJpgStatusLabel " << rawJpgStatusLabel->width()
-             << "statusLabel " << statusLabel->width()
-             << "progressLabel " << progressLabel->width()
-             << "metadataThreadRunningLabel " << metadataThreadRunningLabel->width()
-             << "imageThreadRunningLabel " << imageThreadRunningLabel->width()
-             << "statusBarSpacer " << statusBarSpacer->width()
-             ;
-    for (int i = 0; i < statusBar()->children().count(); ++i) {
-    foreach (auto obj, statusBar()->children()) {
-        qDebug() << __FUNCTION__
-                 << obj->objectName();
-    }
-//    */
-
-    if (!(G::isSlideShow && isSlideShowRandom)) progressLabel->setVisible(G::showCacheStatus);// rghcachechange
-    else progressLabel->setVisible(false);
+//    if (!(G::isSlideShow && isSlideShowRandom)) progressLabel->setVisible(G::showCacheStatus);// rghcachechange
+//    else progressLabel->setVisible(false);
 }
 
 int MW::availableSpaceForProgressBar()
@@ -5656,6 +5628,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     Reports status information on the status bar and in InfoView.  If keepBase = true
     then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message s.
 */
+    if (!useUpdateStatus) return;
     if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__ << s << source;
     // check if null filter
@@ -5733,7 +5706,8 @@ QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵�
 
     status = " " + base + s;
     statusLabel->setText(status);
-    updateStatusBar();
+
+//    updateStatusBar();
 
 //    qDebug() << "Status:" << status;
 
@@ -7377,6 +7351,7 @@ void MW::preferences(QString text)
     preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
     preferencesDlg->exec();
     delete pref;
+    delete preferencesDlg;
 
     /* Create a preferences tree as a docking panel:
     propertiesDock = new DockWidget(tr("  Preferencess  "), this);
