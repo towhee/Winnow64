@@ -246,7 +246,7 @@ namespace G
     extern QString sj(QString s, int x);
 
     extern PopUp *popUp;
-    extern void newPopUp(QWidget *widget);
+    extern void newPopUp(QWidget *widget, QRect rect);
 }
 #endif // GLOBAL_H
 

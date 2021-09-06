@@ -117,10 +117,6 @@ ImageView::ImageView(QWidget *parent,
     mouseMovementTimer = new QTimer(this);
 //    connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
 
-    loadFullSizeTimer = new QTimer(this);
-    loadFullSizeTimer->setInterval(500);
-    connect(loadFullSizeTimer, SIGNAL(timeout()), this, SLOT(upgradeToFullSize()));
-
 //    mouseZoomFit = true;
     isMouseDrag = false;
     isLeftMouseBtnPressed = false;
@@ -154,7 +150,7 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, fPath + " Src:" + src);
 //    qDebug() << __FUNCTION__ << fPath << src;
-//    fPath = "G:/Test/_DSC7390.ARW";
+
     // No folder selected yet
     if (!fPath.length()) return false;
 
@@ -167,13 +163,17 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
     pmItem->setVisible(true);
 
     QImage image;
-    if (!refresh && icd->imCache.find(fPath, image)) {
-        setFullDim();               // req'd by setPreviewDim()
+    bool imageAvailable = icd->imCache.find(fPath, image);
+    if (!refresh && imageAvailable) {
+        qDebug() << __FUNCTION__ << imageAvailable << refresh << fPath;
+        G::popUp->hide();
         pmItem->setPixmap(QPixmap::fromImage(image));
         isPreview = false;
         isLoaded = true;
     }
     else {
+        G::popUp->showPopup("Buffering image");
+        /* load image without waiting for cache
         // check metadata loaded for image (might not be if random slideshow)
         int dmRow = dm->fPathRow[fPath];
         if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
@@ -195,13 +195,13 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
             pmItem->setPixmap(QPixmap(":/images/error_image.png"));
             isLoaded = true;
         }
+        //*/
     }
 
     /* When the program is opening or resizing it is possible this function could be called
-    before the central widget has been fully defined, and has a small default size.  If that
-    is the case, ignore, as the function will be called again.
-    Also ignore if the image failed to be loaded into the graphics scene.
-    */
+    before the central widget has been fully defined, and has a small default size. If that is
+    the case, ignore, as the function will be called again. Also ignore if the image failed to
+    be loaded into the graphics scene. */
     if (isLoaded && rect().height() > 50) {
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
@@ -229,28 +229,30 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
     return isLoaded;
 }
 
-void ImageView::upgradeToFullSize()
-{
-/* Called after a delay by timer initiated in loadImage. Two prior conditions
-are matched:
-    If zoomed then the relative scroll position is set.
-    If zoomFit then zoomFit is recalculated.
-*/
-    if (G::isLogger) G::log(__FUNCTION__); 
-    loadFullSizeTimer->stop();
-    QImage image;
-    if(icd->imCache.find(currentImagePath, image)) {
-        pmItem->setPixmap(QPixmap::fromImage(image));
-        setSceneRect(scene->itemsBoundingRect());
-        isPreview = false;
-        qreal prevZoomFit = zoomFit;
-        zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
-        zoom *= (zoomFit / prevZoomFit);
-        if (isFit) zoom = zoomFit;
-        scale();
-        if (isScrollable) setScrollBars(scrollPct);
-    }
-}
+//void ImageView::upgradeToFullSize()
+//{
+///*
+//    Called after a delay by timer initiated in loadImage. Two prior conditions
+//    are matched:
+//        If zoomed then the relative scroll position is set.
+//        If zoomFit then zoomFit is recalculated.
+//*/
+//    if (G::isLogger) G::log(__FUNCTION__);
+//    qDebug() << __FUNCTION__;
+
+//    QImage image;
+//    if(icd->imCache.find(currentImagePath, image)) {
+//        pmItem->setPixmap(QPixmap::fromImage(image));
+//        setSceneRect(scene->itemsBoundingRect());
+//        isPreview = false;
+//        qreal prevZoomFit = zoomFit;
+//        zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+//        zoom *= (zoomFit / prevZoomFit);
+//        if (isFit) zoom = zoomFit;
+//        scale();
+//        if (isScrollable) setScrollBars(scrollPct);
+//    }
+//}
 
 void ImageView::clear()
 {
@@ -286,8 +288,7 @@ void ImageView::scale()
     If isSlideshow then hide mouse cursor unless is moves.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-    /*
-    qDebug() << __FUNCTION__
+    /* qDebug() << __FUNCTION__
              << "isPreview =" << isPreview
              << "isScrollable =" << isScrollable
              << "isFit =" << isFit
@@ -297,18 +298,20 @@ void ImageView::scale()
              << "sceneRect().width() =" << sceneRect().width();
     //  */
 
-//    qDebug() << __FUNCTION__ << zoom;
-    matrix.reset();
+//    matrix.reset();
+    transform.reset();
     if (G::isSlideShow) {
         setFitZoom();
     }
 
     if (isFit) setFitZoom();
     double highDpiZoom = zoom / G::actDevicePixelRatio;
-    matrix.scale(highDpiZoom, highDpiZoom);
+//    matrix.scale(highDpiZoom, highDpiZoom);
+    transform.scale(highDpiZoom, highDpiZoom);
     // when resize before first image zoom == inf
     if (zoom > 10) return;
-    setMatrix(matrix);
+//    setMatrix(matrix);
+    setTransform(transform);
     emit zoomChange(zoom);
 
     isScrollable = (zoom > zoomFit);
@@ -339,32 +342,6 @@ void ImageView::scale()
              << "sceneRect().width() =" << sceneRect().width();
 //    */
 }
-
-void ImageView::setFullDim()
-{
-/* Sets QSize full from metadata.  Req'd by setPreviewDim */
-    if (G::isLogger) G::log(__FUNCTION__); 
-    int row = dm->fPathRow[currentImagePath];
-    full.setWidth(dm->index(row, G::WidthColumn).data().toInt());
-    full.setHeight(dm->index(row, G::HeightColumn).data().toInt());
-}
-
-//void ImageView::setPreviewDim()
-//{
-///*  Sets the QSize preview from metadata and the aspect ratio of the image.
-//Req'd in advance to decide if the preview is big enough to use.  Uses full,
-//which is defined in setFullDim.
-//*/
-//    if (G::isLogger) G::log(__FUNCTION__);
-//    preview = imageCacheThread->getPreviewSize();
-//    qreal fullAspectRatio = (qreal)(full.height()) / full.width();
-//    if (full.width() > full.height()) {
-//        preview.setHeight(preview.width() * fullAspectRatio);
-//    }
-//    else {
-//        preview.setWidth(preview.height() / fullAspectRatio);
-//    }
-//}
 
 bool ImageView::sceneBiggerThanView()
 {
@@ -635,17 +612,21 @@ void ImageView::zoomToggle()
     scale();
 }
 
-void ImageView::rotate(int degrees)
+void ImageView::rotateImage(int degrees)
 {
 /*
-    This is called from MW::setRotation and rotates the image currently shown in
-    loupe view.  Loupe view is a QGraphicsView of the QGraphicsScene scene.  The
-    scene contains one QGraphicsItem pmItem, which in turn, contains the pixmap.
-    When the pixmap is rotated the scene bounding rectangle must be adjusted and
-    the zoom factor to fit recalculated.  Finally, scale() is called to fit the
-    image if the image was not zoomed.
+    This is called from MW::setRotation and rotates the image currently shown in loupe view.
+    Loupe view is a QGraphicsView of the QGraphicsScene scene. The scene contains one
+    QGraphicsItem pmItem, which in turn, contains the pixmap. When the pixmap is rotated the
+    scene bounding rectangle must be adjusted and the zoom factor to fit recalculated.
+    Finally, scale() is called to fit the image if the image was not zoomed.
+
+    The initial image rotation, based on the image metadata orientation, is done in either
+    ImageDecoder, Pixmap or Thumb, depending on where the load image is called from.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__ << degrees;
+
     // extract pixmap, rotate and reset to pmItem
     QPixmap pm = pmItem->pixmap();
     QTransform trans;
@@ -668,6 +649,8 @@ void ImageView::rotate(int degrees)
 void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 {
     if (G::isLogger) G::log(__FUNCTION__, imageFullPath);
+    qDebug() << __FUNCTION__ << imageFullPath;
+
     QTransform trans;
     int row = dm->fPathRow[imageFullPath];
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
@@ -703,13 +686,6 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
             image = image.transformed(trans, Qt::SmoothTransformation);
             break;
     }
-}
-
-void ImageView::transform()
-{
-    if (G::isLogger) G::log(__FUNCTION__); 
-    QImage displayImage;
-    rotateByExifRotation(displayImage, currentImagePath);
 }
 
 void ImageView::sceneGeometry(QPoint &sceneOrigin, QRectF &scene_Rect, QRect &cwRect)

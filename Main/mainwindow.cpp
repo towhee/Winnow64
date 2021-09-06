@@ -429,7 +429,6 @@ void MW::initialize()
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
     ingestHistoryFolders = new QStringList;
-    G::newPopUp(this);
     hasGridBeenActivated = true;
     isDragDrop = false;
     setAcceptDrops(true);
@@ -510,6 +509,8 @@ void MW::showEvent(QShowEvent *event)
     else {
         defaultWorkspace();
     }
+
+    G::newPopUp(this, centralWidget->geometry());
 
     // set initial visibility
     embelTemplateChange(embelProperties->templateId);
@@ -7921,7 +7922,7 @@ void MW::setRotation(int degrees)
 */
     if (G::isLogger) G::log(__FUNCTION__);
     // rotate current loupe view image
-    imageView->rotate(degrees);
+    imageView->rotateImage(degrees);
 
     // iterate selection
     QModelIndexList selection = selectionModel->selectedRows();
@@ -10191,6 +10192,12 @@ void MW::setCachedStatus(QString fPath, bool isCached)
     QModelIndex idx = dm->proxyIndexFromPath(fPath);
     if (idx.isValid()) {
         dm->sf->setData(idx, isCached, G::CachedRole);
+//        qDebug() << __FUNCTION__ << isCached << idx.row() << currentRow << fPath;
+        if (isCached && idx.row() == currentRow) {
+            imageView->loadImage(fPath, __FUNCTION__);
+            updateClassification();
+            centralLayout->setCurrentIndex(prevCentralView);
+        }
         thumbView->refreshThumb(idx, G::CachedRole);
         gridView->refreshThumb(idx, G::CachedRole);
 //        qDebug() << __FUNCTION__ << idx.row() << fPath << isCached;

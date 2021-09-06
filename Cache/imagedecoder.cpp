@@ -70,24 +70,18 @@ bool ImageDecoder::load()
     if (fPath == "") return false;
 
     QFileInfo fileInfo(fPath);
-    QString ext = fileInfo.completeSuffix().toLower();
+    ext = fileInfo.completeSuffix().toLower();
 
     if (metadata->videoFormats.contains(ext)) return false;
 
     QFile imFile(fPath);
-    int dmRow = dm->fPathRow[fPath];
+    m = dm->imMetadata(fPath);
 
     // is metadata loaded rgh use isMeta in cacheItemList?
-    if (!dm->metadataLoaded(dmRow)) {
+    if (!m.metadataLoaded) {
         G::error(__FUNCTION__, fPath, "Could not load metadata.");
         return false;
     }
-//    if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
-//        //        if (!dm->readMetadataForItem(dmRow)) {
-//        G::error(__FUNCTION__, fPath, "Could not load metadata.");
-//        return false;
-//        //        }
-//    }
 
     if (abort) return false;
 
@@ -106,28 +100,24 @@ bool ImageDecoder::load()
 
     // JPG format (including embedded in raw files)
     if (metadata->hasJpg.contains(ext) || ext == "jpg") {
-        // get offset and length of embedded Jpg from the datamodel
-        uint offsetFullJpg = dm->index(dmRow, G::OffsetFullColumn).data().toUInt();
-        uint lengthFullJpg = dm->index(dmRow, G::LengthFullColumn).data().toUInt();
-
         // make sure legal offset by checking the length
-        if (lengthFullJpg == 0) {
+        if (m.lengthFull == 0) {
             imFile.close();
             G::error(__FUNCTION__, fPath, "Jpg length = zero.");
             return false;
         }
 
         // try to read the data
-        if (!imFile.seek(offsetFullJpg)) {
+        if (!imFile.seek(m.offsetFull)) {
             imFile.close();
             G::error(__FUNCTION__, fPath, "Illegal offset to image.");
             return false;
         }
 
-        QByteArray buf = imFile.read(lengthFullJpg);
+        QByteArray buf = imFile.read(m.lengthFull);
         if (buf.length() == 0) {
             qWarning() << __FUNCTION__ << "Zero JPG buffer";
-            G::error(__FUNCTION__, fPath, "JPG zero JPG buffer.");
+            G::error(__FUNCTION__, fPath, "Zero JPG buffer.");
             imFile.close();
             return false;
         }
@@ -163,10 +153,9 @@ bool ImageDecoder::load()
     // TIFF format
     else if (ext == "tif") {
         // check for sampling format we cannot read
-        int samplesPerPixel = dm->index(dmRow, G::samplesPerPixelColumn).data().toInt();
-        if (samplesPerPixel > 3) {
+        if (m.samplesPerPixel > 3) {
             imFile.close();
-            QString err = "Could not read tiff because " + QString::number(samplesPerPixel)
+            QString err = "Could not read tiff because " + QString::number(m.samplesPerPixel)
                     + " samplesPerPixel > 3.";
             G::error(__FUNCTION__, fPath, err);
             return false;

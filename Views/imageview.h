@@ -29,13 +29,10 @@ public:
               int classificationBadgeDiam = 0,
               int infoOverlayFontSize = 0);
 
-//    OpenGLFrame *openGLFrame;
-//    ImageScene *scene;
     QGraphicsScene *scene;
 
     QGraphicsPixmapItem *pmItem;
-//    QGraphicsTextItem *infoItem;
-    QMatrix matrix;
+    QTransform transform;
     Pixmap *pixmap;
     QString currentImagePath;
 
@@ -63,7 +60,7 @@ public:
     void setBackgroundColor(QColor bg);
 
     void rotateByExifRotation(QImage &image, QString &imageFullPath);
-    void rotate(int degrees);
+    void rotateImage(int degrees);
     void setShootingInfo(QString infoString);
     void updateShootingInfo();
     void sceneGeometry(QPoint &sceneOrigin, QRectF &sceneR, QRect &centralWidgetRect);
@@ -105,22 +102,22 @@ signals:
     void newTile();
 
 private slots:
-    void upgradeToFullSize();
+//    void upgradeToFullSize();
 
 protected:
-    void resizeEvent(QResizeEvent *event);
-    void scrollContentsBy(int dx, int dy);
-    void wheelEvent(QWheelEvent *event);
-    void mouseDoubleClickEvent(QMouseEvent *event);
-    void mousePressEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void enterEvent(QEvent *event);
-    void paintEvent(QPaintEvent *event);
-    void dropEvent(QDropEvent *event);
-    void dragEnterEvent(QDragEnterEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
+    void scrollContentsBy(int dx, int dy) override;
+    void wheelEvent(QWheelEvent *event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void enterEvent(QEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
 
-    void drawForeground(QPainter *painter, const QRectF &rect);
+    void drawForeground(QPainter *painter, const QRectF &rect) override;
 
 private:
     void noJpgAvailable();
@@ -131,9 +128,6 @@ private:
     void getScrollBarStatus();
     void setScrollBars(QPointF scrollPct);
 
-//    void setPreviewDim();
-    void setFullDim();
-
     QWidget *mainWindow;
     Metadata *metadata;
     DataModel *dm;
@@ -143,14 +137,10 @@ private:
     bool sceneBiggerThanView();
     bool resizeIsSmaller();
     void placeClassificationBadge();
-    void transform();
 
     InfoString *infoString;
 
     QTimer *mouseMovementTimer;
-    QTimer *loadFullSizeTimer;
-    QElapsedTimer t;
-    QElapsedTimer t1;
 
     struct intSize
     {

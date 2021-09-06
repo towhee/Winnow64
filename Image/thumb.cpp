@@ -19,7 +19,7 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
     QTransform trans;
     int row = dm->fPathRow[fPath];
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
-    qDebug() << __FUNCTION__ << orientation << fPath;
+//    qDebug() << __FUNCTION__ << orientation << fPath;
     switch(orientation) {
         case 3:
             trans.rotate(180);

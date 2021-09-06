@@ -1339,27 +1339,6 @@ void ImageCache::fillCache(int id)
             updateStatus("Update all rows", "ImageCache::run after check for orphans");
         }
     }
-//    else {
-//        // all images in target range cached or being cached
-//        if (cacheUpToDate()) {
-//            // cleanup and exit fillCache cycle
-//            emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
-//            if (icd->cache.isShowCacheStatus) {
-//                updateStatus("Update all rows", "ImageCache::run after check for orphans");
-////                /*
-//                if (debugCaching) {
-//                qDebug() << __FUNCTION__
-//                         << "     decoder " << id
-//                         << "cacheUpToDate = true";
-//                }
-//                        //*/
-//            }
-//        }
-//        else {
-//            // must still be caching, keep decoder cycling until sure all are cached
-//            decodeNextImage(id);
-//        }
-//    }
 }
 
 void ImageCache::cacheImage(int id, int cacheKey)
@@ -1371,15 +1350,13 @@ void ImageCache::cacheImage(int id, int cacheKey)
     }
     makeRoom(id, cacheKey);
     icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
-//    if (icd->imCache.contains(decoder[id]->fPath)) {
-        icd->cacheItemList[cacheKey].isCaching = false;
-        icd->cacheItemList[cacheKey].isCached = true;
-        icd->cache.currMB = getImCacheSize();
-        emit updateCacheOnThumbs(decoder[id]->fPath, true);
-        if (icd->cache.isShowCacheStatus) {
-            updateStatus("Update all rows", "ImageCache::run inside loop");
-        }
-//    }
+    icd->cacheItemList[cacheKey].isCaching = false;
+    icd->cacheItemList[cacheKey].isCached = true;
+    icd->cache.currMB = getImCacheSize();
+    emit updateCacheOnThumbs(decoder[id]->fPath, true);
+    if (icd->cache.isShowCacheStatus) {
+        updateStatus("Update all rows", "ImageCache::run inside loop");
+    }
 }
 
 void ImageCache::run()

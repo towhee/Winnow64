@@ -18,9 +18,10 @@ In Winnow an instance of this class is created in global so that it is available
 of the program. It is created once in MW::initialize.
 */
 
-PopUp::PopUp(QWidget *source, QWidget *parent) : QWidget(parent)
+PopUp::PopUp(QWidget *source, QRect rect, QWidget *parent) : QWidget(parent)
 {
     this->source = source;
+    locRect = rect;
     setWindowFlags(Qt::FramelessWindowHint |        // Disable window decoration
                    Qt::Tool |                       // Discard display in a separate window
                    Qt::WindowStaysOnTopHint);       // Set on top of all windows
@@ -110,11 +111,15 @@ void PopUp::showPopup(const QString &text,
     else setWindowOpacity(popupOpacity);
 //    */
     setWindowOpacity(static_cast<double>(popupOpacity));
-
+    qDebug() << __FUNCTION__ << source->geometry() << locRect;
     int pW = width();
     int pH = height();
-    int sX = source->geometry().x();
-    int sY = source->geometry().y();
+//    int sX = locRect.x();
+//    int sY = locRect.y();
+//    int sW = locRect.width();
+//    int sH = locRect.height();
+    int sX = source->geometry().x() + locRect.x() / 2;
+    int sY = source->geometry().y() - locRect.y() / 2;
     int sW = source->geometry().width();
     int sH = source->geometry().height();
     int sCtrX = sX + sW / 2;

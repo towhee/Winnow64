@@ -17,7 +17,7 @@ class PopUp : public QWidget
 
 
 public:
-    explicit PopUp(QWidget *source, QWidget *parent = 0);
+    explicit PopUp(QWidget *source, QRect rect, QWidget *parent = 0);
     void setPopupOpacity(float opacity);
     float getPopupOpacity() const;
     void setPopupDuration(int msDuration);
@@ -48,6 +48,7 @@ private slots:
     void hideAnimation();                   // Slot start the animation hide
 
 private:
+    QRect locRect;
     QGridLayout layout;
     QPropertyAnimation animation;
     float popupOpacity;
