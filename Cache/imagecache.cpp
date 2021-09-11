@@ -178,14 +178,17 @@ void ImageCache::stopImageCache()
         qDebug() << __FUNCTION__ << id << decoder[id]->isRunning();
     }
     */
-    bool allStopped = false;
-    while (!allStopped) {
-        allStopped = true;
-        for (int id = 0; id < decoderCount; ++id) {
-            if (decoder[id]->isRunning()) allStopped = false;
-            if (!allStopped) break;
-        }
+    for (int id = 0; id < decoderCount; ++id) {
+        decoder[id]->stop();
     }
+//    bool allStopped = false;
+//    while (!allStopped) {
+//        allStopped = true;
+//        for (int id = 0; id < decoderCount; ++id) {
+//            if (decoder[id]->isRunning()) allStopped = false;
+//            if (!allStopped) break;
+//        }
+//    }
 
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
     clearImageCache(true);
@@ -957,15 +960,16 @@ void ImageCache::buildImageCacheList()
         float w = dm->sf->index(i, G::WidthColumn).data().toFloat();
         int h = dm->sf->index(i, G::HeightColumn).data().toInt();
         icd->cacheItem.sizeMB = static_cast<int>(w * h / 262144);
-        /*
-        if (cache.usePreview) {
-            QSize p = scalePreview(w, h);
-            w = p.width();
-            h = p.height();
-            cacheItem.sizeMB += (float)w * h / 262144;
-        }
-        // */
         icd->cacheItem.isMetadata = w > 0;
+        // decoder parameters
+        ImageMetadata m = dm->imMetadata(fPath);
+        icd->cacheItem.metadataLoaded = m.metadataLoaded;
+        icd->cacheItem.orientation = m.orientation;
+        icd->cacheItem.rotationDegrees = m.rotationDegrees;
+        icd->cacheItem.offsetFull = m.offsetFull;
+        icd->cacheItem.lengthFull = m.lengthFull;
+        icd->cacheItem.iccBuf = m.iccBuf;
+
         icd->cacheItemList.append(icd->cacheItem);
 
         folderMB += icd->cacheItem.sizeMB;
@@ -1202,8 +1206,8 @@ void ImageCache::decodeNextImage(int id)
              << icd->cacheItemList[icd->cache.toCacheKey].comment
                 ;
                 //*/
-    QString fPath;
-    fPath = icd->cacheItemList.at(icd->cache.toCacheKey).fPath;
+//    QString fPath;
+//    fPath = icd->cacheItemList.at(icd->cache.toCacheKey).fPath;
     icd->cacheItemList[icd->cache.toCacheKey].isCaching = true;
     icd->cacheItemList[icd->cache.toCacheKey].threadId = id;
     icd->cacheItemList[icd->cache.toCacheKey].attempts += 1;
@@ -1212,7 +1216,7 @@ void ImageCache::decodeNextImage(int id)
         qDebug().noquote() << __FUNCTION__ << "decoder" << id
                            << "key =" << k << decoder[id]->fPath;
     }
-    decoder[id]->decode(fPath);
+    decoder[id]->decode(icd->cacheItemList[icd->cache.toCacheKey]);
 }
 
 void ImageCache::cacheImage(int id, int cacheKey)
