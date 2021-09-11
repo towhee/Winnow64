@@ -36,18 +36,18 @@ public:
     ~ImageCache() override;
 
     void initImageCache(int &cacheSizeMB, int &cacheMinMB,
-             bool &isShowCacheStatus, int &cacheWtAhead,
-             bool &usePreview, int &previewWidth, int &previewHeight);
+             bool &isShowCacheStatus, int &cacheWtAhead/*,
+             bool &usePreview, int &previewWidth, int &previewHeight*/);
     void updateImageCacheParam(int &cacheSizeMB, int &cacheMinMB, bool &isShowCacheStatus,
-             int &cacheWtAhead, bool &usePreview, int &previewWidth, int &previewHeight);
+             int &cacheWtAhead/*, bool &usePreview, int &previewWidth, int &previewHeight*/);
     void rebuildImageCacheParameters(QString &currentImageFullPath, QString source = "");
     void stopImageCache();
     void clearImageCache(bool includeList = true);
-    void pauseImageCache();
-    void resumeImageCache();
+//    void pauseImageCache();
+//    void resumeImageCache();
     bool cacheUpToDate();           // target range all cached
     void removeFromCache(QStringList &pathList);
-    QSize getPreviewSize();
+//    QSize getPreviewSize();
 
     QString diagnostics();
     void updateStatus(QString instruction, QString source); // update cached send signal
@@ -117,9 +117,9 @@ private:
     static bool keySort(const ImageCacheData::CacheItem &k1,
                         const ImageCacheData::CacheItem &k2);
     void buildImageCacheList();     //
-    void updateImageCacheList();    //
+//    void updateImageCacheList();    //
     void refreshImageCache();
-    QSize scalePreview(int w, int h);
+//    QSize scalePreview(int w, int h);
 
     QElapsedTimer t;
     bool debugCaching = false;

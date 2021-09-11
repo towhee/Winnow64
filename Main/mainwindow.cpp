@@ -2034,12 +2034,12 @@ void MW::loadEntireMetadataCache(QString source)
 
     updateIconsVisible(true);
 
-    bool resumeImageCaching = false;
-    if (imageCacheThread->isRunning()) {
-        qDebug() << __FUNCTION__ << "Pausing image cache";
-        if (useImageCache) imageCacheThread->pauseImageCache();
-        resumeImageCaching = true;
-    }
+//    bool resumeImageCaching = false;
+//    if (imageCacheThread->isRunning()) {
+//        qDebug() << __FUNCTION__ << "Pausing image cache";
+//        if (useImageCache) imageCacheThread->pauseImageCache();
+//        resumeImageCaching = true;
+//    }
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -2051,10 +2051,10 @@ void MW::loadEntireMetadataCache(QString source)
     // metadataCacheThread->loadAllMetadata();
     // metadataCacheThread->wait();
 
-    if (resumeImageCaching) {
-        qDebug() << __FUNCTION__ << "Resuming image cache";
-        if (useImageCache) imageCacheThread->resumeImageCache();
-    }
+//    if (resumeImageCaching) {
+//        qDebug() << __FUNCTION__ << "Resuming image cache";
+//        if (useImageCache) imageCacheThread->resumeImageCache();
+//    }
     QApplication::restoreOverrideCursor();
 
 }
@@ -2184,8 +2184,7 @@ void MW::loadImageCacheForNewFolder()
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
     imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
-        G::showCacheStatus, cacheWtAhead, isCachePreview,
-        cachePreviewWidth, cachePreviewHeight);
+        G::showCacheStatus, cacheWtAhead);
 
     // have to wait until image caching thread running before setting flag
     metadataLoaded = true;
@@ -5524,8 +5523,7 @@ void MW::setImageCacheParameters()
     if (cacheNetMB < cacheMinMB) cacheNetMB = cacheMinMB;
 
     imageCacheThread->updateImageCacheParam(cacheNetMB, cacheMinMB,
-             G::showCacheStatus, cacheWtAhead, isCachePreview,
-             G::displayPhysicalHorizontalPixels, G::displayPhysicalVerticalPixels);
+             G::showCacheStatus, cacheWtAhead);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     // change to ImageCache
@@ -5899,7 +5897,7 @@ void MW::launchBuildFilters()
         return;
     }
 
-    imageCacheThread->pauseImageCache();
+//    imageCacheThread->pauseImageCache();
 
     filters->msgFrame->setVisible(true);
     buildFilters->build();
@@ -5924,7 +5922,7 @@ void MW::filterChange(QString source)
     // update filter checkbox
     qApp->processEvents();
 
-    imageCacheThread->pauseImageCache();
+//    imageCacheThread->pauseImageCache();
 
     // Need all metadata loaded before filtering
     if (source != "MW::clearAllFilters") {
@@ -10041,7 +10039,7 @@ void MW::ingest()
 void MW::ejectUsb(QString path)
 {
 /*
-    If the current folder is on the drive to be ejected attempts to read subsequent
+    If the current folder is on the drive to be ejected, attempts to read subsequent
     files will cause a crash. This is avoided by stopping any further activity in the
     metadataCacheThread and imageCacheThread, preventing any file reading attempts to a
     non-existent drive.
@@ -10828,10 +10826,12 @@ void MW::slideShow()
         G::popUp->showPopup(msg, 4000, true, 0.75, Qt::AlignLeft);
 
         // No image caching if random slide show
-        if (imageCacheThread->isRunning() && isSlideShowRandom) {
-            imageCacheThread->pauseImageCache();
-            progressBar->setVisible(false);
-        }
+        if (isSlideShowRandom) useImageCache = false;
+        else useImageCache = true;
+//        if (imageCacheThread->isRunning() && isSlideShowRandom) {
+//            imageCacheThread->pauseImageCache();
+//            progressBar->setVisible(false);
+//        }
 
         // disable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
@@ -10955,7 +10955,7 @@ void MW::slideShowResetSequence()
         msg = msg + "random";
         if (imageCacheThread->isRunning()) {
             qDebug() << __FUNCTION__ << "Pausing image cache";
-            imageCacheThread->pauseImageCache();
+//            imageCacheThread->pauseImageCache();
             imageCacheThread->clearImageCache(false);
         }
 //        updateImageCacheWhenFileSelectionChange = false;    // rghcachechange
