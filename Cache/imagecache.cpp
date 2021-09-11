@@ -1083,10 +1083,8 @@ void ImageCache::setCurrentPosition(QString path)
 {
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     if (G::isLogger) G::log(__FUNCTION__, path);
-//    QMutexLocker locker(&mutex);
-//    pause = false;
     mutex.lock();
-    currentPath = path;             // memory check
+    currentPath = path;
     mutex.unlock();
     // update current key, priorities and target range
     fillCache(-1, true);    // id, positionChange
@@ -1337,16 +1335,4 @@ void ImageCache::run()
             if (!abort) fillCache(id);
         }
     }
-
-//    // fill the cache with images
-//    bool positionChange = true;
-//    while (positionChange) {
-//        for (int id = 0; id < decoderCount; ++id) {
-//            if (!decoder[id]->isRunning()) {
-//                decoder[id]->fPath = "";
-//                if (!abort) fillCache(id, positionChange);
-//                positionChange = false;
-//            }
-//        }
-//    }
 }

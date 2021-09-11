@@ -162,22 +162,8 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
     bool isLoaded = false;
     pmItem->setVisible(true);
 
-    /* Must check if image has been cached before calling icd->imCache.find(fPath, image) to
-    prevent a mismatch between the fPath index and the image in icd->imCache hash table.  */
-    int row = dm->rowFromPath(fPath);
-    bool isCached = dm->index(row, 0).data(G::CachedRole).toBool();
-    QImage image;
-    bool imageAvailable = false;
-    if (isCached) imageAvailable = icd->imCache.find(fPath, image);
-    if (!refresh && imageAvailable) {
-        G::popUp->hide();
-        pmItem->setPixmap(QPixmap::fromImage(image));
-        isPreview = false;
-        isLoaded = true;
-    }
-    else {
-        G::popUp->showPopup("Buffering image");
-        /* load image without waiting for cache
+    if (G::isSlideShow) {
+        // load image without waiting for cache
         // check metadata loaded for image (might not be if random slideshow)
         int dmRow = dm->fPathRow[fPath];
         if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
@@ -199,7 +185,48 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
             pmItem->setPixmap(QPixmap(":/images/error_image.png"));
             isLoaded = true;
         }
-        //*/
+    }
+    else {
+        /* Must check if image has been cached before calling icd->imCache.find(fPath, image)
+        to prevent a mismatch between the fPath index and the image in icd->imCache hash
+        table. */
+        int row = dm->rowFromPath(fPath);
+        bool isCached = dm->index(row, 0).data(G::CachedRole).toBool();
+        QImage image;
+        bool imageAvailable = false;
+        if (isCached) imageAvailable = icd->imCache.find(fPath, image);
+        if (!refresh && imageAvailable) {
+            G::popUp->hide();
+            pmItem->setPixmap(QPixmap::fromImage(image));
+            isPreview = false;
+            isLoaded = true;
+        }
+        else {
+            G::popUp->showPopup("Buffering image");
+            /* load image without waiting for cache
+            // check metadata loaded for image (might not be if random slideshow)
+            int dmRow = dm->fPathRow[fPath];
+            if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
+                QFileInfo fileInfo(fPath);
+                if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+                    metadata->m.row = dmRow;
+                    dm->addMetadataForItem(metadata->m);
+                }
+            }
+
+            QPixmap displayPixmap;
+            isLoaded = pixmap->load(fPath, displayPixmap, "ImageView::loadImage");
+
+            if (isLoaded) {
+                pmItem->setPixmap(displayPixmap);
+                isPreview = false;
+            }
+            else {
+                pmItem->setPixmap(QPixmap(":/images/error_image.png"));
+                isLoaded = true;
+            }
+            //*/
+        }
     }
 
     /* When the program is opening or resizing it is possible this function could be called
