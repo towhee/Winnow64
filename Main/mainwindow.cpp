@@ -10790,6 +10790,7 @@ void MW::slideShow()
         // stop slideshow
         G::popUp->showPopup("Slideshow has been terminated.");
         G::isSlideShow = false;
+        useImageCache = true;
         imageView->setCursor(Qt::ArrowCursor);
         slideShowStatusLabel->setText("");
         updateStatus(true, "", __FUNCTION__);
