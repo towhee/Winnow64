@@ -7,6 +7,7 @@
 #include <QThread>
 #include <QWaitCondition>
 #include "Main/global.h"
+#include "Cache/cachedata.h"
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/imagemetadata.h"
@@ -25,7 +26,8 @@ public:
                  int id,
                  DataModel *dm,
                  Metadata *metadata);
-    void decode(QString fPath);
+    void decode(ImageCacheData::CacheItem item);
+//    void decode(QString fPath);
     void setReady();
     void stop();
 
@@ -56,7 +58,8 @@ private:
     bool abort = false;
     DataModel *dm;
     Metadata *metadata;
-    ImageMetadata m;
+    ImageCacheData::CacheItem m;
+//    ImageMetadata m;
     MetadataParameters p;
     unsigned char *buf;
     QString ext;

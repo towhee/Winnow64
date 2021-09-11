@@ -10041,7 +10041,7 @@ void MW::ingest()
 void MW::ejectUsb(QString path)
 {
 /*
-    If the current folder is on the drive to be ejectedW attempts to read subsequent
+    If the current folder is on the drive to be ejected attempts to read subsequent
     files will cause a crash. This is avoided by stopping any further activity in the
     metadataCacheThread and imageCacheThread, preventing any file reading attempts to a
     non-existent drive.
@@ -10067,6 +10067,7 @@ void MW::ejectUsb(QString path)
         imageCacheThread->stopImageCache();
         metadataCacheThread->stopMetadataCache();
         buildFilters->stop();
+        clearAll();
     }
 
     QString driveRoot;      // ie WIN "D:\" or MAC "Untitled"
@@ -11686,10 +11687,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    fPath = "D:/Pictures/Zenfolio/pbase2048/2021-09-07_0129_Zen2048.JPG";
-    imageCacheThread->colorManageChange();
+//    imageCacheThread->colorManageChange();
 
 //    folderAndFileSelectionChange("D:/Pictures/Zenfolio/pbase2048/2021-09-07_0129_Zen2048.JPG");
-//    stressTest(10);
+    stressTest(10);
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";
