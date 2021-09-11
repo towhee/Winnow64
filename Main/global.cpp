@@ -85,8 +85,6 @@ namespace G
     int ingestCount = 0;
     QDate ingestLastDate;
 
-//    bool colorManage;
-
     // not persistent
     bool isThreadTrackingOn;
     bool showAllTableColumns;

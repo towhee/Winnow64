@@ -374,6 +374,11 @@ void MetadataCache::setRange()
     prevFirstIconVisible = firstIconVisible;
     prevLastIconVisible = lastIconVisible;
 
+    statusStep = 100;
+//    if (rowCount < 1000) statusStep = 1000;
+//    if (rowCount < 3000) statusStep = 500;
+
+
     /*
     qDebug()  <<  __FUNCTION__
               << "source =" << actionList.at(action)
@@ -529,9 +534,6 @@ void MetadataCache::readIconChunk()
         start = 0;
         end = dm->sf->rowCount();
     }
-    int statusStep = 1000;
-    if (end < 1000) statusStep = 1000;
-    if (end < 3000) statusStep = 500;
     /*
     qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
              << "rowCount =" << dm->sf->rowCount()
@@ -620,9 +622,6 @@ void MetadataCache::readMetadataChunk()
             start = 0;
             end = dm->sf->rowCount();
         }
-        int statusStep = 1000;
-        if (end < 1000) statusStep = 1000;
-        if (end < 3000) statusStep = 500;
 
         for (int row = start; row < end; ++row) {
             if (abort) {

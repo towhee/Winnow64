@@ -789,14 +789,7 @@ void IconView::selectThumb(int row)
 void IconView::selectThumb(QString &fPath)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-//    qDebug() << __FUNCTION__ << fPath;
     selectThumb(dm->proxyIndexFromPath(fPath));
-    /*
-    QModelIndexList idxList = dm->sf->match(dm->sf->index(0, 0), G::PathRole, fPath,
-                                            1, Qt::MatchFixedString);
-    if (idxList.length() > 0) selectThumb(idxList[0]);
-    else G::popUp->showPopup("Could not find " + fPath + ".  Press Esc to continue.", 0);
-    */
 }
 
 void IconView::selectNext()

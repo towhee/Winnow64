@@ -88,6 +88,7 @@ private:
     int startRow;
     int endRow;
     int tpp;                                    // thumbsPerPage;
+    int statusStep = 100;
 
     // icon caching
     QList<int> iconsCached;

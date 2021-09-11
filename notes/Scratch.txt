@@ -1,146 +1,15 @@
 
-05:57:29: D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe exited with code 0
+cacheHasMissing
+fixOrphans
 
-05:57:34: Starting D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe ...
-libpng warning: iCCP: known incorrect sRGB profile
-MW::folderSelectionChange "D:/Pictures/2018-01-14_Lillian"
+fillCache(id)
+    if selected image changes
+        setKeyToCurrent
+        setDirection
+        getImCacheSize
+        setPriorities;
+        setTargetRange();
+            fixOrphans (change isCached and isCaching)
+        if (cacheSizeHasChanged)
+            makeRoom (update isCached)
 
- ImageCache::setTargetRange targetFirst = 0 targetLast = 0 isForward = true
-QFont::setPixelSize: Pixel size <= 0 (0)
-MW::loadImageCacheForNewFolder Metadata loaded
-
- ImageCache::setTargetRange targetFirst = 0 targetLast = 13 isForward = true
-ImageCache::fillCache       decoder 0 key = -1
-ImageCache::nextToCache     decoder 0 key = 0
-ImageCache::decodeNextImage decoder 0 key = 0
-ImageCache::fillCache       decoder 1 key = -1
-ImageCache::nextToCache     decoder 1 key = 1
-ImageCache::decodeNextImage decoder 1 key = 1
-ImageCache::fillCache       decoder 2 key = -1
-ImageCache::nextToCache     decoder 2 key = 2
-ImageCache::decodeNextImage decoder 2 key = 2
-ImageCache::fillCache       decoder 3 key = -1
-ImageCache::nextToCache     decoder 3 key = 3
-ImageCache::decodeNextImage decoder 3 key = 3
-ImageCache::fillCache       decoder 4 key = -1
-ImageCache::nextToCache     decoder 4 key = 4
-ImageCache::decodeNextImage decoder 4 key = 4
-ImageCache::fillCache       decoder 5 key = -1
-ImageCache::nextToCache     decoder 5 key = 5
-ImageCache::decodeNextImage decoder 5 key = 5
-ImageCache::fillCache       decoder 6 key = -1
-ImageCache::nextToCache     decoder 6 key = 6
-ImageCache::decodeNextImage decoder 6 key = 6
-ImageCache::fillCache       decoder 7 key = -1
-ImageCache::nextToCache     decoder 7 key = 7
-ImageCache::decodeNextImage decoder 7 key = 7
-ImageCache::fillCache       decoder 1 key = 1    D:/Pictures/2018-01-14_Lillian/2018-01-14_0002.NEF
-ImageCache::cacheImage      decoder 1 key = 1    D:/Pictures/2018-01-14_Lillian/2018-01-14_0002.NEF
-ImageCache::nextToCache     decoder 1 key = 8
-ImageCache::decodeNextImage decoder 1 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0002.NEF
-ImageCache::fillCache       decoder 6 key = 6    D:/Pictures/2018-01-14_Lillian/2018-01-14_0007.NEF
-ImageCache::cacheImage      decoder 6 key = 6    D:/Pictures/2018-01-14_Lillian/2018-01-14_0007.NEF
-ImageCache::nextToCache     decoder 6 key = 9
-ImageCache::decodeNextImage decoder 6 key = 9    D:/Pictures/2018-01-14_Lillian/2018-01-14_0007.NEF
-ImageCache::fillCache       decoder 0 key = 0    D:/Pictures/2018-01-14_Lillian/2018-01-14_0001.NEF
-ImageCache::cacheImage      decoder 0 key = 0    D:/Pictures/2018-01-14_Lillian/2018-01-14_0001.NEF
-
-ImageCache::nextToCache     decoder 0 key = 10
-ImageCache::decodeNextImage decoder 0 key = 10   D:/Pictures/2018-01-14_Lillian/2018-01-14_0001.NEF
-
-ImageCache::fillCache       decoder 2 key = 2    D:/Pictures/2018-01-14_Lillian/2018-01-14_0003.NEF
-ImageCache::cacheImage      decoder 2 key = 2    D:/Pictures/2018-01-14_Lillian/2018-01-14_0003.NEF
-ImageCache::nextToCache     decoder 2 key = 11
-ImageCache::decodeNextImage decoder 2 key = 11   D:/Pictures/2018-01-14_Lillian/2018-01-14_0003.NEF
-ImageCache::fillCache       decoder 3 key = 3    D:/Pictures/2018-01-14_Lillian/2018-01-14_0004.NEF
-ImageCache::cacheImage      decoder 3 key = 3    D:/Pictures/2018-01-14_Lillian/2018-01-14_0004.NEF
-ImageCache::nextToCache     decoder 3 key = 12
-ImageCache::decodeNextImage decoder 3 key = 12   D:/Pictures/2018-01-14_Lillian/2018-01-14_0004.NEF
-ImageCache::fillCache       decoder 5 key = 5    D:/Pictures/2018-01-14_Lillian/2018-01-14_0006.NEF
-ImageCache::cacheImage      decoder 5 key = 5    D:/Pictures/2018-01-14_Lillian/2018-01-14_0006.NEF
-ImageCache::nextToCache     decoder 5 key = 13
-ImageCache::decodeNextImage decoder 5 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0006.NEF
-ImageCache::fillCache       decoder 4 key = 4    D:/Pictures/2018-01-14_Lillian/2018-01-14_0005.NEF
-ImageCache::cacheImage      decoder 4 key = 4    D:/Pictures/2018-01-14_Lillian/2018-01-14_0005.NEF
-ImageCache::decodeNextImage decoder 4 key = 7    D:/Pictures/2018-01-14_Lillian/2018-01-14_0005.NEF
-ImageCache::fillCache       decoder 7 key = 7    D:/Pictures/2018-01-14_Lillian/2018-01-14_0008.NEF
-ImageCache::cacheImage      decoder 7 key = 7    D:/Pictures/2018-01-14_Lillian/2018-01-14_0008.NEF
-ImageCache::decodeNextImage decoder 7 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0008.NEF
-ImageCache::fillCache       decoder 6 key = 9    D:/Pictures/2018-01-14_Lillian/2018-01-14_0010.NEF
-ImageCache::cacheImage      decoder 6 key = 9    D:/Pictures/2018-01-14_Lillian/2018-01-14_0010.NEF
-ImageCache::decodeNextImage decoder 6 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0010.NEF
-ImageCache::fillCache       decoder 4 key = 7    D:/Pictures/2018-01-14_Lillian/2018-01-14_0008.NEF
-ImageCache::cacheImage      decoder 4 key = 7    D:/Pictures/2018-01-14_Lillian/2018-01-14_0008.NEF
-ImageCache::decodeNextImage decoder 4 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0008.NEF
-ImageCache::fillCache       decoder 5 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::cacheImage      decoder 5 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::decodeNextImage decoder 5 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::fillCache       decoder 3 key = 12   D:/Pictures/2018-01-14_Lillian/2018-01-14_0013.NEF
-ImageCache::cacheImage      decoder 3 key = 12   D:/Pictures/2018-01-14_Lillian/2018-01-14_0013.NEF
-ImageCache::decodeNextImage decoder 3 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0013.NEF
-ImageCache::fillCache       decoder 1 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::cacheImage      decoder 1 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-
-ImageCache::decodeNextImage decoder 1 key = 10   D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-
-ImageCache::fillCache       decoder 2 key = 11   D:/Pictures/2018-01-14_Lillian/2018-01-14_0012.NEF
-ImageCache::cacheImage      decoder 2 key = 11   D:/Pictures/2018-01-14_Lillian/2018-01-14_0012.NEF
-
-ImageCache::decodeNextImage decoder 2 key = 10   D:/Pictures/2018-01-14_Lillian/2018-01-14_0012.NEF
-ImageCache::fillCache       decoder 0 key = 10   D:/Pictures/2018-01-14_Lillian/2018-01-14_0011.NEF
-ImageCache::cacheImage      decoder 0 key = 10   D:/Pictures/2018-01-14_Lillian/2018-01-14_0011.NEF
-
-ImageCache::fillCache       decoder 7 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::cacheImage      decoder 7 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::nextToDecache   decoder 7 key = 13
-ImageCache::makeRoom        decoder 7 key = 13   room = 218 roomRqd = 174 Removed image D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::nextToCache     decoder 7 key = 13
-ImageCache::decodeNextImage decoder 7 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::fillCache       decoder 6 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::cacheImage      decoder 6 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::decodeNextImage decoder 6 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::fillCache       decoder 4 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::cacheImage      decoder 4 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::decodeNextImage decoder 4 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::fillCache       decoder 3 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::cacheImage      decoder 3 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::decodeNextImage decoder 3 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-
-ImageCache::fillCache       decoder 1 key = 10   D:/Pictures/2018-01-14_Lillian/2018-01-14_0011.NEF
-ImageCache::cacheImage      decoder 1 key = 10   D:/Pictures/2018-01-14_Lillian/2018-01-14_0011.NEF
-
-ImageCache::decodeNextImage decoder 1 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0011.NEF
-ImageCache::fillCache       decoder 5 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::cacheImage      decoder 5 key = 8    D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-ImageCache::decodeNextImage decoder 5 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0009.NEF
-
-ImageCache::fillCache       decoder 2 key = 10   D:/Pictures/2018-01-14_Lillian/2018-01-14_0011.NEF
-ImageCache::cacheImage      decoder 2 key = 10   D:/Pictures/2018-01-14_Lillian/2018-01-14_0011.NEF
-
-ImageCache::decodeNextImage decoder 2 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0011.NEF
-ImageCache::fillCache       decoder 7 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::cacheImage      decoder 7 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::fillCache       decoder 6 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::cacheImage      decoder 6 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::nextToDecache   decoder 6 key = 13
-ImageCache::makeRoom        decoder 6 key = 13   room = 218 roomRqd = 174 Removed image D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::fillCache       decoder 4 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::cacheImage      decoder 4 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::nextToDecache   decoder 4 key = 13
-ImageCache::makeRoom        decoder 4 key = 13   room = 218 roomRqd = 174 Removed image D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::fillCache       decoder 1 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::cacheImage      decoder 1 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::nextToDecache   decoder 1 key = 13
-ImageCache::makeRoom        decoder 1 key = 13   room = 218 roomRqd = 174 Removed image D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::fillCache       decoder 3 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::cacheImage      decoder 3 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::nextToDecache   decoder 3 key = 13
-ImageCache::makeRoom        decoder 3 key = 13   room = 218 roomRqd = 174 Removed image D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::fillCache       decoder 5 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::cacheImage      decoder 5 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::nextToDecache   decoder 5 key = 13
-ImageCache::makeRoom        decoder 5 key = 13   room = 218 roomRqd = 174 Removed image D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::fillCache       decoder 2 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::cacheImage      decoder 2 key = 13   D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF
-ImageCache::nextToDecache   decoder 2 key = 13
-ImageCache::makeRoom        decoder 2 key = 13   room = 218 roomRqd = 174 Removed image D:/Pictures/2018-01-14_Lillian/2018-01-14_0014.NEF

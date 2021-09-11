@@ -644,11 +644,11 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     if (err != "" && !isReport) return false;
 
     // rgh used for debugging - req'd?
-    G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
-                  " Compression:" + QString::number(compression) +
-                  " Predictor:" + QString::number(predictor) +
-                  " PlanarConfiguration:" + QString::number(planarConfiguration)
-                    ;
+//    G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
+//                  " Compression:" + QString::number(compression) +
+//                  " Predictor:" + QString::number(predictor) +
+//                  " PlanarConfiguration:" + QString::number(planarConfiguration)
+//                    ;
 
     if (p.report) {
         int w1 = 25;

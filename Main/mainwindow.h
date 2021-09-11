@@ -113,7 +113,7 @@ public:
 
     bool useFilterView = true;
 
-    QString versionNumber = "1.27" ;
+    QString versionNumber = "1.27 Beta 2" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -220,6 +220,7 @@ public:
     int classificationBadgeInThumbDiameter;
 
     // files
+    QString folderAndFileChangePath = "";
     bool rememberLastDir;
     QString lastDir;
     QString lastFileIfCrash;

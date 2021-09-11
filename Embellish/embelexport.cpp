@@ -29,7 +29,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
     if (G::isLogger) G::log(__FUNCTION__); 
     this->metadata = metadata;
     this->dm = dm;
-    this->imageCacheThread = imageCacheThread;
+    this->icd = icd;
     this->embelProperties = embelProperties;
 
     scene = new QGraphicsScene();

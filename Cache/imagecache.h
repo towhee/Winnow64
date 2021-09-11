@@ -48,6 +48,7 @@ public:
     bool cacheUpToDate();           // target range all cached
     void removeFromCache(QStringList &pathList);
     QSize getPreviewSize();
+
     QString diagnostics();
     void updateStatus(QString instruction, QString source); // update cached send signal
     QString reportCache(QString title = "");
@@ -73,7 +74,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
-    void fillCache(int id);
+    void fillCache(int id, bool positionChange = false);
     void setCurrentPosition(QString path);
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();

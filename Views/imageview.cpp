@@ -162,10 +162,14 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
     bool isLoaded = false;
     pmItem->setVisible(true);
 
+    /* Must check if image has been cached before calling icd->imCache.find(fPath, image) to
+    prevent a mismatch between the fPath index and the image in icd->imCache hash table.  */
+    int row = dm->rowFromPath(fPath);
+    bool isCached = dm->index(row, 0).data(G::CachedRole).toBool();
     QImage image;
-    bool imageAvailable = icd->imCache.find(fPath, image);
+    bool imageAvailable = false;
+    if (isCached) imageAvailable = icd->imCache.find(fPath, image);
     if (!refresh && imageAvailable) {
-        qDebug() << __FUNCTION__ << imageAvailable << refresh << fPath;
         G::popUp->hide();
         pmItem->setPixmap(QPixmap::fromImage(image));
         isPreview = false;
