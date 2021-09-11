@@ -1662,7 +1662,6 @@ void MW::folderAndFileSelectionChange(QString fPath)
     before the initial metadata has been cached and the image can be selected.
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
-    qDebug() << __FUNCTION__ << fPath;
     setCentralMessage("Loading " + fPath + " ...");
 
     embelProperties->setCurrentTemplate("Do not Embellish");
@@ -1683,33 +1682,17 @@ void MW::folderAndFileSelectionChange(QString fPath)
     //*/
 
     if (!fsTree->select(folder)) {
-        // failure
-        qDebug() << __FUNCTION__ << "fsTree failed to select" << fPath;
+        qWarning() << __FUNCTION__ << "fsTree failed to select" << fPath;
         return;
     }
 
-    qDebug() << __FUNCTION__ << "folderSelectionChange()";
+    // path to image, used in loadImageCacheForNewFolder to select image
+    folderAndFileChangePath = fPath;
     folderSelectionChange();
 
     centralLayout->setCurrentIndex(LoupeTab);
     thumbView->selectionModel()->clear();
-//    thumbView->selectThumb(fPath);
-
-    // select image with fPath
-    for (int i = 0; i < 100; i++) {
-        if (G::isNewFolderLoaded) {
-            thumbView->selectionModel()->clear();
-            thumbView->selectThumb(fPath);
-            centralLayout->setCurrentIndex(LoupeTab);
-            break;
-        }
-        else {
-            qDebug() << __FUNCTION__ << "waiting for folder to load:" << i;
-            G::wait(100);
-        }
-    }
     return;
-
 }
 
 void MW::clearAll()
@@ -2084,6 +2067,7 @@ void MW::updateMetadataCacheStatus(QString msg)
     if (G::isLogger) G::log(__FUNCTION__);
 
     updateStatus(false, msg, "updateMetadataCacheStatus");
+    setCentralMessage(msg);
     return;
 }
 
@@ -2187,7 +2171,6 @@ void MW::loadImageCacheForNewFolder()
     of memory has been consumed or all the images are cached.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__;
     // now that metadata is loaded populate the data model
     if(G::showCacheStatus) progressBar->clearProgress();
     qApp->processEvents();
@@ -2196,16 +2179,6 @@ void MW::loadImageCacheForNewFolder()
     // had to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
-    QModelIndexList indexesList = selectionModel->selectedIndexes();
-    QString fPath;
-    if (indexesList.isEmpty())
-        fPath = dm->sf->index(0, G::PathColumn).data().toString();
-    else
-        fPath = indexesList.first().data(G::PathRole).toString();
-
-    // the folder does not have any eligible images (probably from previous session and the
-    // drive has been removed or did have "include subfolders" activated
-    if (fPath == "") return;
 
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
@@ -2219,8 +2192,21 @@ void MW::loadImageCacheForNewFolder()
 
     G::isNewFolderLoaded = true;
 
-    /* req'd to trigger MW::fileSelectionChange.  This must be done to initialize many things
-       including current index and file path req'd by mdCache and EmbelProperties...  */
+    /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
+    including current index and file path req'd by mdCache and EmbelProperties...  If
+    folderAndFileSelectionChange has been executed then folderAndFileChangePath will be
+    the file to select in the new folder; otherwise the first file in dm->sf will be
+    selected. */
+    QString fPath = folderAndFileChangePath;
+    folderAndFileChangePath = "";
+    if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
+        thumbView->selectThumb(fPath);
+        currentSfIdx = dm->proxyIndexFromPath(fPath);
+    }
+    else {
+        thumbView->selectFirst();
+        currentSfIdx = dm->sf->index(0,0);
+    }
     fileSelectionChange(currentSfIdx, currentSfIdx);
 
     // set focus when program opens
@@ -5376,7 +5362,7 @@ void MW::updateStatusBar()
 {
     if (G::isLogger) G::log(__FUNCTION__);
 
-    if (G::isColorManagement) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
+    if (G::colorManage) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
     else colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
 
     if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
@@ -6364,13 +6350,13 @@ void MW::toggleColorManage()
         colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
     }
     else {
-        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
         G::colorManage = true;
+        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
     }
 
     if (dm->rowCount() == 0) return;
 
-    imageView->loadImage(dm->currentFilePath, __FUNCTION__, true/*refresh*/);
+//    imageView->loadImage(dm->currentFilePath, __FUNCTION__, true/*refresh*/);
 
     // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
     for (int row = 0; row < dm->rowCount(); ++row) {
@@ -10192,7 +10178,6 @@ void MW::setCachedStatus(QString fPath, bool isCached)
     QModelIndex idx = dm->proxyIndexFromPath(fPath);
     if (idx.isValid()) {
         dm->sf->setData(idx, isCached, G::CachedRole);
-//        qDebug() << __FUNCTION__ << isCached << idx.row() << currentRow << fPath;
         if (isCached && idx.row() == currentRow) {
             imageView->loadImage(fPath, __FUNCTION__);
             updateClassification();
@@ -10200,7 +10185,6 @@ void MW::setCachedStatus(QString fPath, bool isCached)
         }
         thumbView->refreshThumb(idx, G::CachedRole);
         gridView->refreshThumb(idx, G::CachedRole);
-//        qDebug() << __FUNCTION__ << idx.row() << fPath << isCached;
     }
     return;
 }
@@ -11701,7 +11685,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    stressTest(10);
+//    fPath = "D:/Pictures/Zenfolio/pbase2048/2021-09-07_0129_Zen2048.JPG";
+    imageCacheThread->colorManageChange();
+
+//    folderAndFileSelectionChange("D:/Pictures/Zenfolio/pbase2048/2021-09-07_0129_Zen2048.JPG");
+//    stressTest(10);
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";

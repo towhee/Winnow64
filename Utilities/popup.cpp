@@ -111,7 +111,7 @@ void PopUp::showPopup(const QString &text,
     else setWindowOpacity(popupOpacity);
 //    */
     setWindowOpacity(static_cast<double>(popupOpacity));
-    qDebug() << __FUNCTION__ << source->geometry() << locRect;
+//    qDebug() << __FUNCTION__ << source->geometry() << locRect;
     int pW = width();
     int pH = height();
 //    int sX = locRect.x();

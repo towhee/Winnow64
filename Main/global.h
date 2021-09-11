@@ -215,8 +215,6 @@ namespace G
     extern int ingestCount;
     extern QDate ingestLastDate;
 
-//    extern bool colorManage;
-
     extern bool isThreadTrackingOn;
     extern bool showAllTableColumns;
     extern bool isNewFolderLoaded;

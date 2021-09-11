@@ -121,9 +121,7 @@ itemChange, which is subclassed here.
         else mw->metadataCacheThread->cacheAllIcons = false;
     }
 
-    if (source == "imageCacheSizeMethod") {
-        mw->setImageCacheSize(v.toString());
-        mw->setImageCacheParameters();
+    if (source == "imageCacheStrategy") {
         // get available memory
         #ifdef Q_OS_WIN
         Win::availableMemory();     // sets G::availableMemoryMB
@@ -132,6 +130,9 @@ itemChange, which is subclassed here.
         #ifdef Q_OS_MAC
         Mac::availableMemory();     // sets G::availableMemoryMB
         #endif
+
+        mw->setImageCacheSize(v.toString());
+        mw->setImageCacheParameters();
 
         int memAvail = mw->icd->cache.currMB + G::availableMemoryMB;
         QString availMBMsg = QString::number(mw->cacheMaxMB) + " of " +
@@ -823,7 +824,7 @@ void Preferences::addItems()
     availMBMsgWidget = addItem(i);
 
     // Image cache size strategy
-    i.name = "imageCacheSizeMethod";
+    i.name = "imageCacheStrategy";
     i.parentName = "CacheHeader";
     i.captionText = "Caching strategy";
     i.tooltip = "Select method of determining the size of the image cache\n"
@@ -833,7 +834,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->cacheSizeMethod;
-    i.key = "imageCacheSizeMethod";
+    i.key = "imageCacheStrategy";
     i.delegateType = DT_Combo;
     i.type = "QString";
     i.dropList << "Thrifty"
@@ -916,7 +917,7 @@ void Preferences::addItems()
     i.name = "isSlideShowWrap";
     i.parentName = "SlideshowHeader";
     i.captionText = "Wrap slide selection";
-    i.tooltip = "Wrap mode goes back to the beginning when the last image has been shown.n";
+    i.tooltip = "Wrap mode goes back to the beginning when the last image has been shown.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->isSlideShowWrap;
