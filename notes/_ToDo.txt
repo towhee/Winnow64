@@ -1,4 +1,5 @@
 BUGS / TO DO
+- Load image when useImageCache == false
 - After embellish, reinstate orientation and ICC
 - E:\2020 √\202001 √\2020-01-09_Victoria √\ heics not rendering
 - E:/2020 √/202001 √/2020-01-25_Linley Valley √/2020-01-25_0024_Focus Stack.tif has bad thumb
