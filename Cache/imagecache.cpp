@@ -1087,7 +1087,7 @@ void ImageCache::setCurrentPosition(QString path)
     currentPath = path;
     mutex.unlock();
     // update current key, priorities and target range
-    fillCache(-1, true);    // id, positionChange
+//    fillCache(-1, true);    // id, positionChange
 
     if (!isRunning()) {
         start();
@@ -1316,6 +1316,8 @@ void ImageCache::run()
     - Continue polling for another cache change trigger.
 */
 //    if (G::isLogger) G::log(__FUNCTION__);
+
+    fillCache(-1, true);    // id, positionChange
 
     source = "";
     prevCurrentPath = currentPath;

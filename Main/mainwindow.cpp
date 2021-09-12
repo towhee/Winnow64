@@ -5529,6 +5529,7 @@ void MW::setImageCacheParameters()
     // change to ImageCache
     if (fPath.length())
         imageCacheThread->setCurrentPosition(fPath);
+//        emit setImageCachePosition(fPath);
 
     // cache progress bar
     progressLabel->setVisible(isShowCacheThreadActivity);
@@ -5783,6 +5784,7 @@ void MW::resortImageCache()
     imageCacheThread->rebuildImageCacheParameters(currentFilePath, __FUNCTION__);
     // change to ImageCache
     imageCacheThread->setCurrentPosition(dm->currentFilePath);
+//    emit setImageCachePosition(dm->currentFilePath);
 }
 
 void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
@@ -10802,6 +10804,7 @@ void MW::slideShow()
         progressBar->setVisible(true);
         // change to ImageCache
         if (useImageCache) imageCacheThread->setCurrentPosition(dm->currentFilePath);
+//        if (useImageCache) emit setImageCachePosition(dm->currentFilePath);
 //        imageCacheThread->resumeImageCache();
 //        imageCacheThread->updateImageCachePosition();
         // enable main window QAction shortcuts
