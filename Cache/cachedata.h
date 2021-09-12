@@ -49,13 +49,13 @@ public:
         bool isTarget;              // is this image targeted to be cached
         int priority;               // priority to cache image
         int sizeMB;                 // memory req'd to cache image
-        // below reqd for decoding to avoid using DAtaModel in another thread
+        // below reqd for decoding to avoid using DataModel in another thread
         bool metadataLoaded;
         int orientation;
         int rotationDegrees;
         quint32 offsetFull;
         quint32 lengthFull;
-        int samplesPerPixel;
+        int samplesPerPixel;        // req'd for tiff
         QByteArray iccBuf;
         QString comment;            // for debugging
     } cacheItem;

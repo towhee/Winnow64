@@ -1278,7 +1278,7 @@ void MW::folderSelectionChange()
     /* used by SortFilter/filterChange, set true when ImageCacheThread starts.  Must be first
        to flag before selection change event fires, so MW::fileSelectionChange knows not to
        run.  */
-    G::isNewFolderLoaded = false;
+//    G::isNewFolderLoaded = false;
 
     currentViewDir = getSelectedPath();
     setting->setValue("lastDir", currentViewDir);
@@ -1287,23 +1287,11 @@ void MW::folderSelectionChange()
         G::log("FOLDER CHANGE");
         G::log(__FUNCTION__, currentViewDir);
     }
-//    qDebug() << __FUNCTION__ << currentViewDir;
-
-    // Stop any threads that might be running.
-    imageCacheThread->stopImageCache();
-    metadataCacheThread->stopMetadataCache();
-    buildFilters->stop();
-    G::allMetadataLoaded = false;
-    setWindowTitle(winnowWithVersion);
 
     clearAll();
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->invokeFromAction(embelTemplatesActions.at(0));
-
-//    setCentralMessage("Gathering metadata and thumbnails for images in folder.");
-//    statusBar()->showMessage("Collecting file information for all images in folder(s)", 1000);
-//    qApp->processEvents();
 
     // ImageView set zoom = fit for the first image of a new folder
     imageView->isFirstImageNewFolder = true;
@@ -1314,9 +1302,6 @@ void MW::folderSelectionChange()
     // used by updateStatus
     isCurrentFolderOkay = false;
     pickMemSize = "";
-
-    // in case no eligible images, therefore no caching
-    setThreadRunStatusInactive();
 
     // stop slideshow if a new folder is selected
     if (G::isSlideShow && !isStressTest) slideShow();
@@ -1703,20 +1688,22 @@ void MW::clearAll()
     a bookmark or ejects a drive and the resulting folder does not have any eligible images.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    // Stop any threads that might be running.
-//    qDebug() << __FUNCTION__ << "Stopping image cache";
-//    imageCacheThread->stopImageCache();
-//    metadataCacheThread->stopMetadataCache();
 
+    setWindowTitle(winnowWithVersion);
+    G::isNewFolderLoaded = false;
     G::allMetadataLoaded = false;
+    // Stop any threads that might be running.
+    imageCacheThread->stopImageCache();
+    metadataCacheThread->stopMetadataCache();
+    buildFilters->stop();
     dm->clearDataModel();
 //    icd->imCache.clear();
     G::err.clear();
     currentRow = 0;
 //    metadata->clear();
+    imageView->clear();
     if (useInfoView) {
         infoView->clearInfo();
-        imageView->clear();
     }
     setThreadRunStatusInactive();                      // turn thread activity buttons gray
     isDragDrop = false;
@@ -10058,15 +10045,23 @@ void MW::ejectUsb(QString path)
     QStorageInfo ejectDrive(path);
     QStorageInfo currentDrive(currentViewDir);
     /*
-    qDebug() << __FUNCTION__ << currentViewDir << path
-             << currentDrive.name()
-             << ejectDrive.name()
+    qDebug() << __FUNCTION__
+             << "currentViewDir =" << currentViewDir
+             << "path =" << path
+             << "currentDrive.name() =" << currentDrive.name()
+             << "currentDrive.rootPath() =" << currentDrive.rootPath()
+             << "ejectDrive.name() =" << ejectDrive.name()
+             << "ejectDrive.rootPath() =" << ejectDrive.rootPath()
                 ;
                 //*/
-    if (currentDrive.name() == currentDrive.name()) {
-        imageCacheThread->stopImageCache();
-        metadataCacheThread->stopMetadataCache();
-        buildFilters->stop();
+    if (currentDrive.rootPath() == currentDrive.rootPath()) {
+        qDebug() << __FUNCTION__
+                 << "currentDrive.rootPath() =" << currentDrive.rootPath()
+                 << "ejectDrive.rootPath() =" << ejectDrive.rootPath()
+                    ;
+//        imageCacheThread->stopImageCache();
+//        metadataCacheThread->stopMetadataCache();
+//        buildFilters->stop();
         clearAll();
     }
 
@@ -10800,22 +10795,18 @@ void MW::slideShow()
         slideShowAction->setText(tr("Slide Show"));
         slideShowTimer->stop();
         delete slideShowTimer;
-//        updateImageCacheWhenFileSelectionChange = true;// rghcachechange
         progressBar->setVisible(true);
         // change to ImageCache
         if (useImageCache) imageCacheThread->setCurrentPosition(dm->currentFilePath);
-//        if (useImageCache) emit setImageCachePosition(dm->currentFilePath);
-//        imageCacheThread->resumeImageCache();
-//        imageCacheThread->updateImageCachePosition();
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
         for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);
-    } else {
+    }
+    else {
         // start slideshow
         imageView->setCursor(Qt::BlankCursor);
         G::isSlideShow = true;
         isSlideshowPaused = false;
-//        if (isSlideShowRandom) updateImageCacheWhenFileSelectionChange = false;// rghcachechange
         updateStatusBar();
         QString msg = "<h2>Press <font color=\"red\"><b>Esc</b></font> to exit slideshow</h2><p>";
         msg += "Press <font color=\"red\"><b>H</b></font> during slideshow for tips"
@@ -10832,10 +10823,6 @@ void MW::slideShow()
         // No image caching if random slide show
         if (isSlideShowRandom) useImageCache = false;
         else useImageCache = true;
-//        if (imageCacheThread->isRunning() && isSlideShowRandom) {
-//            imageCacheThread->pauseImageCache();
-//            progressBar->setVisible(false);
-//        }
 
         // disable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
@@ -10956,18 +10943,11 @@ void MW::slideShowResetSequence()
     if (G::isLogger) G::log(__FUNCTION__);
     QString msg = "Setting slideshow progress to ";
     if (isSlideShowRandom) {
-        msg = msg + "random";
-        if (imageCacheThread->isRunning()) {
-            qDebug() << __FUNCTION__ << "Pausing image cache";
-//            imageCacheThread->pauseImageCache();
-            imageCacheThread->clearImageCache(false);
-        }
-//        updateImageCacheWhenFileSelectionChange = false;    // rghcachechange
+        msg += "random";
         progressLabel->setVisible(false);
     }
     else {
         msg = msg + "sequential";
-//        updateImageCacheWhenFileSelectionChange = true; // rghcachechange
         progressLabel->setVisible(true);
     }
     G::popUp->showPopup(msg);
@@ -11690,11 +11670,24 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    fPath = "D:/Pictures/Zenfolio/pbase2048/2021-09-07_0129_Zen2048.JPG";
-//    imageCacheThread->colorManageChange();
+//    G::isNewFolderLoaded = false;
 
-//    folderAndFileSelectionChange("D:/Pictures/Zenfolio/pbase2048/2021-09-07_0129_Zen2048.JPG");
-    stressTest(10);
+//    currentViewDir = getSelectedPath();
+//    setting->setValue("lastDir", currentViewDir);
+
+    if (G::isLogger || G::isFlowLogger) {
+        G::log("FOLDER CHANGE");
+        G::log(__FUNCTION__, currentViewDir);
+    }
+//    qDebug() << __FUNCTION__ << currentViewDir;
+
+    // Stop any threads that might be running.
+    imageCacheThread->stopImageCache();
+    metadataCacheThread->stopMetadataCache();
+    buildFilters->stop();
+
+    clearAll();
+//    stressTest(10);
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";

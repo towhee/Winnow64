@@ -93,7 +93,7 @@ bool Canon::parse(MetadataParameters &p,
     p.hdr = "IFD0";
     p.offset = 16;
     p.hash = &exif->hash;
-    quint32 nextIFDOffset = ifd->readIFD(p, m) + startOffset;
+    quint32 nextIFDOffset = ifd->readIFD(p) + startOffset;
 
     // pull data reqd from IFD0
     m.offsetFull = ifd->ifdDataHash.value(273).tagValue;
@@ -122,7 +122,7 @@ bool Canon::parse(MetadataParameters &p,
     if (nextIFDOffset) {
         p.hdr = "IFD1";
         p.offset = nextIFDOffset;
-        nextIFDOffset = ifd->readIFD(p, m);
+        nextIFDOffset = ifd->readIFD(p);
     }
 
     // pull data reqd from IFD1
@@ -135,7 +135,7 @@ bool Canon::parse(MetadataParameters &p,
     if (nextIFDOffset) {
         p.hdr = "IFD2";
         p.offset = nextIFDOffset;
-        nextIFDOffset = ifd->readIFD(p, m);
+        nextIFDOffset = ifd->readIFD(p);
     }
 
     // pull small size jpg from IFD2
@@ -146,13 +146,13 @@ bool Canon::parse(MetadataParameters &p,
     if (nextIFDOffset && p.report) {
         p.hdr = "IFD3";
         p.offset = nextIFDOffset;
-        ifd->readIFD(p, m);
+        ifd->readIFD(p);
     }
 
     // read ExifIFD
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
-    ifd->readIFD(p, m);
+    ifd->readIFD(p);
 
     // EXIF: created datetime
     QString createdExif;
@@ -250,7 +250,7 @@ bool Canon::parse(MetadataParameters &p,
         p.hdr = "IFD Canon Maker Note";
         p.offset = makerOffset;
         p.hash = &canonMakerHash;
-        ifd->readIFD(p, m);
+        ifd->readIFD(p);
     }
 
     // read XMP

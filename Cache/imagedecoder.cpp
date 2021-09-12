@@ -63,25 +63,25 @@ bool ImageDecoder::load()
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
     QMutexLocker locker(&mutex);
-    if (G::isLogger) G::log(__FUNCTION__, m.fPath);
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
     /*
     qDebug() << __FUNCTION__ << "fPath =" << fPath;
     //*/
 
     // null fPath when caching is cycling, waiting to finish.
-    if (m.fPath == "") return false;
+    if (fPath == "") return false;
 
-    QFileInfo fileInfo(m.fPath);
+    QFileInfo fileInfo(fPath);
     ext = fileInfo.completeSuffix().toLower();
 
     if (metadata->videoFormats.contains(ext)) return false;
 
-    QFile imFile(m.fPath);
+    QFile imFile(fPath);
 //    m = dm->imMetadata(fPath);
 
     // is metadata loaded rgh use isMeta in cacheItemList?
     if (!m.metadataLoaded) {
-        G::error(__FUNCTION__, m.fPath, "Could not load metadata.");
+        G::error(__FUNCTION__, fPath, "Could not load metadata.");
         return false;
     }
 
@@ -89,14 +89,14 @@ bool ImageDecoder::load()
 
     // is file already open by another process
     if (imFile.isOpen()) {
-        G::error(__FUNCTION__, m.fPath, "File already open.");
+        G::error(__FUNCTION__, fPath, "File already open.");
         return false;
     }
 
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
         imFile.close();
-        G::error(__FUNCTION__, m.fPath, "Could not open file for image.");
+        G::error(__FUNCTION__, fPath, "Could not open file for image.");
         return false;
     }
 
@@ -112,14 +112,14 @@ bool ImageDecoder::load()
         // try to read the data
         if (!imFile.seek(m.offsetFull)) {
             imFile.close();
-            G::error(__FUNCTION__, m.fPath, "Illegal offset to image.");
+            G::error(__FUNCTION__, fPath, "Illegal offset to image.");
             return false;
         }
 
         QByteArray buf = imFile.read(m.lengthFull);
         if (buf.length() == 0) {
             qWarning() << __FUNCTION__ << "Zero JPG buffer";
-            G::error(__FUNCTION__, m.fPath, "Zero JPG buffer.");
+            G::error(__FUNCTION__, fPath, "Zero JPG buffer.");
             imFile.close();
             return false;
         }
@@ -128,7 +128,7 @@ bool ImageDecoder::load()
 
         // try to decode the jpg data
         if (!image.loadFromData(buf, "JPEG")) {
-            G::error(__FUNCTION__, m.fPath, "image.loadFromData failed.");
+            G::error(__FUNCTION__, fPath, "image.loadFromData failed.");
             imFile.close();
             return false;
         }
@@ -138,10 +138,9 @@ bool ImageDecoder::load()
     // HEIC format
     // rgh remove heic (why?)
     else if (metadata->hasHeic.contains(ext)) {
-        ImageMetadata m = dm->imMetadata(fPath);
         #ifdef Q_OS_WIN
         Heic heic;
-        if (!heic.decodePrimaryImage(m, fPath, image)) {
+        if (!heic.decodePrimaryImage(fPath, image)) {
             G::error(__FUNCTION__, fPath, "heic.decodePrimaryImage failed.");
             imFile.close();
             return false;
@@ -154,29 +153,35 @@ bool ImageDecoder::load()
 
     // TIFF format
     else if (ext == "tif") {
+        qDebug() << __FUNCTION__ << ext;
         // check for sampling format we cannot read
         if (m.samplesPerPixel > 3) {
             imFile.close();
             QString err = "Could not read tiff because " + QString::number(m.samplesPerPixel)
                     + " samplesPerPixel > 3.";
-            G::error(__FUNCTION__, m.fPath, err);
+            G::error(__FUNCTION__, fPath, err);
             return false;
         }
 
         // use Winnow decoder
-        ImageMetadata m = dm->imMetadata(m.fPath);
+//        ImageMetadata m = dm->imMetadata(fPath);
         Tiff tiff;
-        if (!tiff.decode(m, m.fPath, image)) {
+        if (!tiff.decode(fPath, m.offsetFull, image)) {
             imFile.close();
             QString err = "Could not decode using Winnow Tiff decoder.  "
-                        "Trying Qt tiff library to decode" + m.fPath + ". ";
-            G::error(__FUNCTION__, m.fPath, err);
+                        "Trying Qt tiff library to decode" + fPath + ". ";
+            G::error(__FUNCTION__, fPath, err);
+            qDebug() << __FUNCTION__
+                     << "Could not decode using Winnow Tiff decoder.  "
+                        "Trying Qt tiff library to decode" + fPath + ". ";
             if (abort) return false;
             // use Qt tiff library to decode
-            if (!image.load(m.fPath)) {
+            if (!image.load(fPath)) {
                 imFile.close();
                 QString err = "Could not decode using Qt.";
-                G::error(__FUNCTION__, m.fPath, err);
+                G::error(__FUNCTION__, fPath, err);
+                qDebug() << __FUNCTION__
+                         << "Could not decode using Qt decoder.  " + fPath + ".";
                 return false;
             }
         }
@@ -195,9 +200,9 @@ bool ImageDecoder::load()
                  << "decoder->fPath =" << fPath
                     ;
                     //*/
-        if (!image.load(m.fPath)) {
+        if (!image.load(fPath)) {
             imFile.close();
-            G::error(__FUNCTION__, m.fPath, "Could not decode using Qt.");
+            G::error(__FUNCTION__, fPath, "Could not decode using Qt.");
             return false;
         }
         imFile.close();

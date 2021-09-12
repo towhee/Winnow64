@@ -1011,7 +1011,7 @@ void CanonCR3::parseIfd0()
     p.hdr = "IFD0";
     p.offset = ifd0Offset + 16;
     p.hash = &exif->hash;
-    ifd->readIFD(p, m);
+    ifd->readIFD(p);
 
     quint32 startOffset = ifd0Offset + 8;
     m.widthFull = ifd->ifdDataHash.value(256).tagValue;
@@ -1039,7 +1039,7 @@ void CanonCR3::parseExif()
     if (G::isLogger) G::log(__FUNCTION__); 
     p.hdr = "IFD Exif";
     p.offset = exifOffset;
-    ifd->readIFD(p, m);
+    ifd->readIFD(p);
 
     quint32 startOffset = exifOffset - 8;
 

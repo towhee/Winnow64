@@ -195,7 +195,7 @@ bool Jpeg::parse(MetadataParameters &p,
     p.hdr = "IFD0";
     p.offset = offsetIfd0;
     p.hash = &exif->hash;
-    quint32 nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
+    quint32 nextIFDOffset = ifd->readIFD(p, isBigEnd);
     if (nextIFDOffset) nextIFDOffset += startOffset;
     quint32 offsetEXIF = 0;
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
@@ -218,7 +218,7 @@ bool Jpeg::parse(MetadataParameters &p,
     if (nextIFDOffset) {
         p.hdr = "IFD1";
         p.offset = nextIFDOffset;
-        nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
+        nextIFDOffset = ifd->readIFD(p, isBigEnd);
     }
     // IFD1: thumbnail offset and length
     if (ifd->ifdDataHash.contains(513)) {
@@ -229,7 +229,7 @@ bool Jpeg::parse(MetadataParameters &p,
     // read EXIF
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
-    ifd->readIFD(p, m, isBigEnd);
+    ifd->readIFD(p, isBigEnd);
 
     m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
@@ -343,7 +343,7 @@ bool Jpeg::parse(MetadataParameters &p,
         p.hdr = "IFD GPS";
         p.offset = offsetGPS;
         p.hash = &gps->hash;
-        ifd->readIFD(p, m, isBigEnd);
+        ifd->readIFD(p, isBigEnd);
     }
 
     // read IPTC

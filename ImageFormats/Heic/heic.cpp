@@ -97,7 +97,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
     p.offset = offsetIfd0;
     p.hdr = "IFD0";
     p.hash = &exif->hash;
-    quint32 nextIFDOffset = ifd->readIFD_B(p, m, isBigEnd);
+    quint32 nextIFDOffset = ifd->readIFD_B(p, isBigEnd);
     if (nextIFDOffset) nextIFDOffset += startOffset;
 
     quint32 offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
@@ -127,7 +127,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
     // read EXIF
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
-    ifd->readIFD_B(p, m, isBigEnd);
+    ifd->readIFD_B(p, isBigEnd);
 
     m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
@@ -240,7 +240,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
     p.hdr = "IFD GPS";
     p.offset = offsetGPS;
     p.hash = &gps->hash;
-    ifd->readIFD_B(p, m, isBigEnd);
+    ifd->readIFD_B(p, isBigEnd);
 
     // read XMP
 //    bool okToReadXmp = true;
@@ -291,7 +291,7 @@ heif_error readContext(As... as)
 
 }  // namespace
 
-bool Heic::decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image)
+bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
 {
     heif_context* ctx = heif_context_alloc();
     auto error = heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
@@ -322,10 +322,10 @@ bool Heic::decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image)
 
     int w = heif_image_get_width(img, heif_channel_interleaved);
     int h = heif_image_get_height(img, heif_channel_interleaved);
-    m.width = w;
-    m.height = h;
-    m.widthFull = w;
-    m.heightFull = h;
+//    m.width = w;
+//    m.height = h;
+//    m.widthFull = w;
+//    m.heightFull = h;
 
     int stride = 0;
     const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
@@ -380,7 +380,7 @@ bool Heic::decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image)
     */
 }
 
-bool Heic::decodeThumbnail(ImageMetadata &m, QString &fPath, QImage &image)
+bool Heic::decodeThumbnail(QString &fPath, QImage &image)
 {
     heif_context* ctx = heif_context_alloc();
     heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);

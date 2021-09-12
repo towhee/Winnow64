@@ -222,7 +222,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
             #ifdef Q_OS_WIN
             Heic heic;
             // try to read heic thumbnail
-            if (!heic.decodeThumbnail(m, fPath, image)) {
+            if (!heic.decodeThumbnail(fPath, image)) {
                 G::error(__FUNCTION__, fPath, "Unable to read heic thumbnail.");
                 return false;
             }

@@ -6,7 +6,7 @@ IFD::IFD()
 
 }
 
-quint32 IFD::readIFD(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
+quint32 IFD::readIFD(MetadataParameters &p, /*ImageMetadata &m,*/ bool isBigEnd)
 {
     /* hash is the hash for the image format ie jpeg, nikon nef etc
        the hash has a description for each tagID and is used for reporting
@@ -38,7 +38,7 @@ quint32 IFD::readIFD(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
         tagType = Utilities::get16(p.file.read(2), isBigEnd);
         tagCount = Utilities::get32(p.file.read(4), isBigEnd);
         // check for orientation and save offset for subsequent writing
-        if (p.hdr == "IFD0" && tagId == 274) m.orientationOffset = static_cast<uint>(p.file.pos());
+//        if (p.hdr == "IFD0" && tagId == 274) m.orientationOffset = static_cast<uint>(p.file.pos());
         if (tagType == 3 && tagCount == 1 && isBigEnd) {
             tagValue = Utilities::get16(p.file.read(2), isBigEnd);
             p.file.read(2);
@@ -105,7 +105,7 @@ quint32 IFD::readIFD(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
         p.rpt << "    nextIFDOffset = ";
         p.rpt << QString::number(nextIFDOffset, 10).toUpper();
         p.rpt << " / " << QString::number(nextIFDOffset, 16).toUpper();
-        if (m.type == "JPG") p.rpt << " (+ start offset)";
+        p.rpt << " (+ start offset if JPG)";
         p.rpt << "\n";
     }
     return(nextIFDOffset);
@@ -122,7 +122,7 @@ QList<quint32> IFD::getSubIfdOffsets(QFile &file, quint32 subIFDaddr, int count,
     return offsets;
 }
 
-quint32 IFD::readIFD_B(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
+quint32 IFD::readIFD_B(MetadataParameters &p, bool isBigEnd)
 {
     /* hash is the hash for the image format ie jpeg, nikon nef etc
        the hash has a description for each tagID and is used for reporting
@@ -154,7 +154,7 @@ quint32 IFD::readIFD_B(MetadataParameters &p, ImageMetadata &m, bool isBigEnd)
         tagType = Utilities::get16(p.buf.read(2), isBigEnd);
         tagCount = Utilities::get32(p.buf.read(4), isBigEnd);
         // check for orientation and save offset for subsequent writing
-        if (p.hdr == "IFD0" && tagId == 274) m.orientationOffset = static_cast<uint>(p.buf.pos());
+//        if (p.hdr == "IFD0" && tagId == 274) m.orientationOffset = static_cast<uint>(p.buf.pos());
         if (tagType == 3) {
             if (isBigEnd && tagCount > 1){
                 p.buf.read(2);

@@ -212,7 +212,7 @@ bool Olympus::parse(MetadataParameters &p,
     p.hdr = "IFD0";
     p.offset = offsetIfd0;
     p.hash = &exif->hash;
-    ifd->readIFD(p, m);
+    ifd->readIFD(p);
 
     // pull data reqd from IFD0
     m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount).trimmed();
@@ -225,7 +225,7 @@ bool Olympus::parse(MetadataParameters &p,
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
-    ifd->readIFD(p, m);
+    ifd->readIFD(p);
 
     // EXIF: created datetime
     QString createdExif;
@@ -309,7 +309,7 @@ bool Olympus::parse(MetadataParameters &p,
         p.hdr = "IFD Olympus Maker Note";
         p.offset = offset;
         p.hash = &olympusMakerHash;
-        ifd->readIFD(p, m);
+        ifd->readIFD(p);
         m.offsetThumb = ifd->ifdDataHash.value(256).tagValue + makerOffset;
         m.lengthThumb = ifd->ifdDataHash.value(256).tagCount;
 //        if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
@@ -321,7 +321,7 @@ bool Olympus::parse(MetadataParameters &p,
             offset = ifd->ifdDataHash.value(8224).tagValue + makerOffset;
             p.hdr = "IFD Olympus Maker Note: CameraSettingsIFD";
             p.offset = offset;
-            ifd->readIFD(p, m);
+            ifd->readIFD(p);
             m.offsetFull = ifd->ifdDataHash.value(257).tagValue + makerOffset;
             m.lengthFull = ifd->ifdDataHash.value(258).tagValue;
             p.offset = m.offsetFull;
