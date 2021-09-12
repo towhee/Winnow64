@@ -29,7 +29,7 @@ bool Pixmap::loadFromHeic(QString &fPath, QImage &image)
      #ifdef Q_OS_WIN
      // rgh remove heic
      Heic heic;
-     return heic.decodePrimaryImage(m, fPath, image);
+     return heic.decodePrimaryImage(fPath, image);
      #endif
 }
 
@@ -155,7 +155,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         Heic heic;
 
         // try to decode
-        if (!heic.decodePrimaryImage(m, fPath, image)) {
+        if (!heic.decodePrimaryImage(fPath, image)) {
             if (imFile.isOpen()) imFile.close();
             QString err = "Unable to decode.";
             G::error(__FUNCTION__, fPath, err);

@@ -164,7 +164,7 @@ bool Fuji::parse(MetadataParameters &p,
     p.hdr = "IFD0";
     p.offset = offsetIfd0;
     p.hash = &exif->hash;
-    quint32 nextIFDOffset = ifd->readIFD(p, m) + startOffset;
+    quint32 nextIFDOffset = ifd->readIFD(p) + startOffset;
 
     quint32 offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
@@ -179,7 +179,7 @@ bool Fuji::parse(MetadataParameters &p,
     if (nextIFDOffset) {
         p.hdr = "IFD1";
         p.offset = nextIFDOffset;
-        nextIFDOffset = ifd->readIFD(p, m);
+        nextIFDOffset = ifd->readIFD(p);
     }
     m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + startOffset;
     m.lengthThumb = ifd->ifdDataHash.value(514).tagValue + startOffset;
@@ -188,7 +188,7 @@ bool Fuji::parse(MetadataParameters &p,
     // read EXIF IFD
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
-    ifd->readIFD(p, m);
+    ifd->readIFD(p);
 
     m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
@@ -259,7 +259,7 @@ bool Fuji::parse(MetadataParameters &p,
         p.hdr = "IFD Fuji Maker Note";
         p.offset = makerOffset;
         p.hash = &fujiMakerHash;
-        ifd->readIFD(p, m);
+        ifd->readIFD(p);
     }
 
     // Fuji files do not contain xmp

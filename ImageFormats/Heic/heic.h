@@ -24,8 +24,8 @@ class Heic : public QObject
 public:
     Heic();
     bool parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps);
-    bool decodePrimaryImage(ImageMetadata &m, QString &fPath, QImage &image);
-    bool decodeThumbnail(ImageMetadata &m, QString &fPath, QImage &image);
+    bool decodePrimaryImage(QString &fPath, QImage &image);
+    bool decodeThumbnail(QString &fPath, QImage &image);
 
     // the numeric values map directly to the values of chroma_format_idc in the h.265 bitstream
     enum de265_chroma {

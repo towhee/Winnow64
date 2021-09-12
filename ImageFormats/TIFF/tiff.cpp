@@ -145,7 +145,7 @@ bool Tiff::parse(MetadataParameters &p,
     p.hdr = "IFD0";
     p.offset = ifdOffset;
     p.hash = &exif->hash;
-    quint32 nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
+    quint32 nextIFDOffset = ifd->readIFD(p, isBigEnd);
     // position of the final nextIFDOffset in the chain
     lastIFDOffsetPosition = 0;
     if (!nextIFDOffset) lastIFDOffsetPosition = p.file.pos() - 4;
@@ -251,7 +251,7 @@ bool Tiff::parse(MetadataParameters &p,
     }
 
     p.offset = m.ifd0Offset;
-    if (p.report) parseForDecoding(p, m, ifd);
+    if (p.report) parseForDecoding(p, ifd);
 
     /* Search for thumbnail in chained IFDs, IRB and subIFDs.
        - if no thumbnail found then:    m.offsetThumb == m.offsetFull
@@ -290,8 +290,8 @@ bool Tiff::parse(MetadataParameters &p,
             p.hdr = "IFD" + QString::number(count);
             p.offset = nextIFDOffset;
             p.hash = &exif->hash;
-            nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
-            parseForDecoding(p, m, ifd);
+            nextIFDOffset = ifd->readIFD(p, isBigEnd);
+            parseForDecoding(p, ifd);
             if (!ifd->ifdDataHash.contains(256)) continue;
             int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
             int h = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
@@ -308,7 +308,7 @@ bool Tiff::parse(MetadataParameters &p,
             p.hdr = "IFD" + QString::number(count);
             p.offset = nextIFDOffset;
             p.hash = &exif->hash;
-            nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
+            nextIFDOffset = ifd->readIFD(p, isBigEnd);
             // check if IFD is a reduced resolution main image ie maybe the thumbnail
             // SubFileType == 1 (tagid == 254)
             if (!ifd->ifdDataHash.contains(254)) continue;
@@ -336,8 +336,8 @@ bool Tiff::parse(MetadataParameters &p,
             count ++;
             p.hdr = "SubIFD " + QString::number(count);
             p.offset = nextIFDOffset;
-            nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
-            parseForDecoding(p, m, ifd);
+            nextIFDOffset = ifd->readIFD(p, isBigEnd);
+            parseForDecoding(p, ifd);
             if (!ifd->ifdDataHash.contains(256)) continue;
             int w = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
             int h = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
@@ -354,7 +354,7 @@ bool Tiff::parse(MetadataParameters &p,
             count ++;
             p.hdr = "SubIFD " + QString::number(count);
             p.offset = nextIFDOffset;
-            nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
+            nextIFDOffset = ifd->readIFD(p, isBigEnd);
             // check if IFD is a reduced resolution main image ie maybe the thumbnail
             // SubFileType == 1 (tagid == 254)
             if (!ifd->ifdDataHash.contains(254)) continue;
@@ -381,7 +381,7 @@ bool Tiff::parse(MetadataParameters &p,
 
     p.hdr = "IFD Exif";
     p.offset = ifdEXIFOffset;
-    if (ifdEXIFOffset) ifd->readIFD(p, m, isBigEnd);
+    if (ifdEXIFOffset) ifd->readIFD(p, isBigEnd);
 
     // EXIF: created datetime
     QString createdExif;
@@ -502,7 +502,19 @@ bool Tiff::parse(MetadataParameters &p,
     return true;
 }
 
-bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
+bool Tiff::isBigEndian(MetadataParameters &p)
+{
+/*
+    Used for decoding.
+*/
+    // first two bytes is the endian order
+    p.file.seek(0);
+    quint16 order = Utilities::get16(p.file.read(2));
+    if (order == 0x4D4D) return true;
+    else return false;
+}
+
+bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *ifd)
 {
 /*
     Get IFD parameters required for TIF decoding: stripOffsets, stripByteCounts, bitsPerSample,
@@ -519,9 +531,13 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     if (G::isLogger) G::log(__FUNCTION__);
 
     // IFD has already been read once, so if reporting do not want to report again
+
+    // endianess
+    isBigEnd = isBigEndian(p);
+
     bool isReport = p.report;
     p.report = false;
-    ifd->readIFD(p, m, m.isBigEnd);
+    ifd->readIFD(p, isBigEnd);
     p.report = isReport;
     err = "";
 
@@ -536,7 +552,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
             quint32 offset = ifd->ifdDataHash.value(273).tagValue;
             p.file.seek(offset);
             for (int i = 0; i < offsetCount; ++i) {
-                stripOffsets[i] = Utilities::get32(p.file.read(4), m.isBigEnd);
+                stripOffsets[i] = Utilities::get32(p.file.read(4), isBigEnd);
             }
         }
     }
@@ -555,7 +571,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
             quint32 offset = ifd->ifdDataHash.value(279).tagValue;
             p.file.seek(offset);
             for (int i = 0; i < stripCount; ++i) {
-                stripByteCounts[i] = Utilities::get32(p.file.read(4), m.isBigEnd);
+                stripByteCounts[i] = Utilities::get32(p.file.read(4), isBigEnd);
             }
         }
     }
@@ -566,7 +582,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     // IFD: bitsPerSample
     if (ifd->ifdDataHash.contains(258)) {
         p.file.seek(static_cast<int>(ifd->ifdDataHash.value(258).tagValue));
-        bitsPerSample = Utilities::get16(p.file.read(2), m.isBigEnd);
+        bitsPerSample = Utilities::get16(p.file.read(2), isBigEnd);
     }
     else {
        err = "No BitsPerSample.  \n";
@@ -631,7 +647,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     // IFD: rowsPerStrip
     (ifd->ifdDataHash.contains(278))
             ? rowsPerStrip = static_cast<int>(ifd->ifdDataHash.value(278).tagValue)
-            : rowsPerStrip = m.height;
+            : rowsPerStrip = height;
 
     // IFD: planarConfiguration
     (ifd->ifdDataHash.contains(284))
@@ -640,7 +656,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     if (planarConfiguration == 2 && compression == 5) {
         err = "LZW compression not supported for per channel planar configuration.  \n";
     }
-    if (err != "") qDebug() << __FUNCTION__ << m.fName << err;
+    if (err != "") qDebug() << __FUNCTION__ /*<< fPath*/ << err;
     if (err != "" && !isReport) return false;
 
     // rgh used for debugging - req'd?
@@ -691,7 +707,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
     MetadataParameters p;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
-        G::error(__FUNCTION__, m.fPath, "Unable to open file.");
+        G::error(__FUNCTION__, fPath, "Unable to open file.");
         return false;
     }
 
@@ -705,10 +721,29 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
 
     if (thumb && m.offsetThumb != m.offsetFull) p.offset = m.offsetThumb;
     else p.offset = m.offsetFull;
-    return decode(m, p, image, newSize);
+    return decode(/*m,*/ p, image, newSize);
 }
 
-bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int newSize)
+bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
+{
+/*
+   The version is used by decoders in image cache.
+*/
+    if (G::isLogger) G::log(__FUNCTION__, " load file from fPath");
+    QFileInfo fileInfo(fPath);
+    if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
+
+    MetadataParameters p;
+    p.file.setFileName(fPath);
+    if (!p.file.open(QIODevice::ReadOnly)) {
+        G::error(__FUNCTION__, fPath, "Unable to open file.");
+        return false;
+    }
+    p.offset = offset;
+    return decode(p, image);
+}
+
+bool Tiff::decode(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image, int newSize)
 {
 /*
     Decode tiff into QImage &image.
@@ -725,7 +760,7 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
     if (G::isLogger) G::log(__FUNCTION__, "Main decode with p.file assigned");
     IFD *ifd = new IFD;
     p.report = false;
-    if (!parseForDecoding(p, m, ifd)) {
+    if (!parseForDecoding(p, /*m, */ifd)) {
         return false;
     }
 
@@ -736,13 +771,13 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
     if (bitsPerSample == 16) im = new QImage(width, height, QImage::Format_RGBX64);
     if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
 
-    if (compression == 1) decodeBase(m, p, image);
-    if (compression == 5) decodeLZW(m, p, image);
+    if (compression == 1) decodeBase(/*m, */p, image);
+    if (compression == 5) decodeLZW(p, image);
 
     p.file.close();
 
     if (bitsPerSample == 16) {
-        if (m.isBigEnd) invertEndian16(im);
+        if (isBigEnd) invertEndian16(im);
         toRRGGBBAA(im);
     }
 
@@ -764,7 +799,7 @@ bool Tiff::decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int ne
     return true;
 }
 
-void Tiff::decodeBase(ImageMetadata &m, MetadataParameters &p, QImage &image)
+void Tiff::decodeBase(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image)
 {
     int strips = stripOffsets.count();
     int line = 0;
@@ -800,7 +835,7 @@ void Tiff::decodeBase(ImageMetadata &m, MetadataParameters &p, QImage &image)
     }
 }
 
-bool Tiff::decodeLZW(ImageMetadata &m, MetadataParameters &p, QImage &image)
+bool Tiff::decodeLZW(MetadataParameters &p, QImage &image)
 {
     int strips = stripOffsets.count();
     TiffStrips tiffStrips;
@@ -868,7 +903,7 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     the thumbnail before calling this function.
 */
     // get decoding parameters from source IFD (p.offset must be preset)
-    if (!parseForDecoding(p, m, ifd)) {
+    if (!parseForDecoding(p, ifd)) {
         return false;
     }
 
@@ -928,8 +963,8 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     if (bitsPerSample == 16) im = new QImage(width, height, QImage::Format_RGBX64);
     if (bitsPerSample == 8)  im = new QImage(width, height, QImage::Format_RGB888);
 
-    if (compression == 1) decodeBase(m, p, *im);
-    if (compression == 5) decodeLZW(m, p, *im);
+    if (compression == 1) decodeBase(/*m, */p, *im);
+    if (compression == 5) decodeLZW(p, *im);
 
     if (bitsPerSample == 16) {
         if (m.isBigEnd) invertEndian16(im);

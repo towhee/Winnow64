@@ -59,8 +59,6 @@ private:
     DataModel *dm;
     Metadata *metadata;
     ImageCacheData::CacheItem m;
-//    ImageMetadata m;
-    MetadataParameters p;
     unsigned char *buf;
     QString ext;
 };

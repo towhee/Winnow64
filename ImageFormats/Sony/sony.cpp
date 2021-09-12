@@ -330,7 +330,7 @@ bool Sony::parse(MetadataParameters &p,
     p.hdr = "IFD0";
     p.offset = offsetIfd0;
     p.hash = &exif->hash;
-    quint32 nextIFDOffset = ifd->readIFD(p, m);
+    quint32 nextIFDOffset = ifd->readIFD(p);
 
     // pull data reqd from IFD0
     // cameras earlier than a1 referenced downsized preview here
@@ -357,7 +357,7 @@ bool Sony::parse(MetadataParameters &p,
     quint32 offset = ifd->ifdDataHash.value(330).tagValue;
     p.hdr = "SubIFD0";
     p.offset = offset;
-    ifd->readIFD(p, m);
+    ifd->readIFD(p);
     m.width = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
     m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
 
@@ -365,7 +365,7 @@ bool Sony::parse(MetadataParameters &p,
     p.hdr = "IFD1";
     p.offset = nextIFDOffset;
     if (nextIFDOffset) {
-        nextIFDOffset = ifd->readIFD(p, m);
+        nextIFDOffset = ifd->readIFD(p);
         m.offsetThumb = ifd->ifdDataHash.value(513).tagValue;
         m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
     }
@@ -375,7 +375,7 @@ bool Sony::parse(MetadataParameters &p,
     p.hdr = "IFD2";
     p.offset = nextIFDOffset;
     if (nextIFDOffset) {
-        nextIFDOffset = ifd->readIFD(p, m);
+        nextIFDOffset = ifd->readIFD(p);
         m.offsetFull = ifd->ifdDataHash.value(513).tagValue;
         m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
         p.offset = m.offsetFull;
@@ -385,7 +385,7 @@ bool Sony::parse(MetadataParameters &p,
     // get the offset for ExifIFD and read it
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
-    ifd->readIFD(p, m);
+    ifd->readIFD(p);
 
     // IFD EXIF: dimensions
 //    m.width = ifd->ifdDataHash.value(40962).tagValue;
@@ -475,7 +475,7 @@ bool Sony::parse(MetadataParameters &p,
         p.hdr = "IFD Sony Maker Note";
         p.offset = makerOffset;
         p.hash = &sonyMakerHash;
-        ifd->readIFD(p, m);
+        ifd->readIFD(p);
     }
 
     /* Decipher/encipher Sony tag 0x2010, 0x900b, 0x9050 and 0x940x data

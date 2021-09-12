@@ -29,7 +29,7 @@ bool DNG::parse(MetadataParameters &p,
     p.hdr = "IFD0";
     p.offset = ifdOffset;
     p.hash = &exif->hash;
-    ifd->readIFD(p, m);
+    ifd->readIFD(p);
 
     m.lengthFull = 1;  // set arbitrary length to avoid error msg as tif do not
                           // have full size embedded jpg
@@ -137,7 +137,7 @@ bool DNG::parse(MetadataParameters &p,
             p.hdr = "SubIFD" + QString::number(i + 1);
             p.offset = ifdOffsets[i];
             p.hash = &exif->hash;
-            ifd->readIFD(p, m);
+            ifd->readIFD(p);
             if (ifd->ifdDataHash.contains(273)) {
                 // is it a JPG
                 quint32 offset = ifd->ifdDataHash.value(273).tagValue;
@@ -190,7 +190,7 @@ bool DNG::parse(MetadataParameters &p,
         p.hdr = "IFD Exif";
         p.offset = ifdEXIFOffset;
         p.hash = &exif->hash;
-        ifd->readIFD(p, m);
+        ifd->readIFD(p);
     }
 
     // EXIF: created datetime

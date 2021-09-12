@@ -91,6 +91,9 @@ void ImageCache::stopImageCache()
     bar will be hidden.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    for (int id = 0; id < decoderCount; ++id) {
+        decoder[id]->stop();
+    }
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -104,76 +107,10 @@ void ImageCache::stopImageCache()
         qDebug() << __FUNCTION__ << id << decoder[id]->isRunning();
     }
     */
-    for (int id = 0; id < decoderCount; ++id) {
-        decoder[id]->stop();
-    }
 
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
     clearImageCache(true);
 }
-
-//void ImageCache::pauseImageCache()
-//{
-///*
-//    Note that initImageCache and updateImageCache both check if isRunning and stop a running
-//    thread before starting again. Use this function to pause the image caching thread without
-//    a new one starting when there is a change to the datamodel, such as filtration or sorting.
-//*/
-//    if (G::isLogger) G::log(__FUNCTION__);
-//    mutex.lock();
-//    pause = true;
-//    mutex.unlock();
-//    return;
-
-////    if (G::isLogger) G::log(__FUNCTION__);
-////    if (isRunning()) {
-////        mutex.lock();
-////        abort = true;
-////        condition.wakeOne();
-////        mutex.unlock();
-////        wait();
-////        abort = false;
-////        emit updateIsRunning(false, true);
-////    }
-//}
-
-//void ImageCache::resumeImageCache()
-//{
-///*
-//    Restart the image cache after it has been paused. This is used by metadataCacheThread
-//    after scroll events and the imageCacheThread has been paused to resume loading the image
-//    cache.
-//*/
-//    if (G::isLogger) G::log(__FUNCTION__);
-//    QMutexLocker locker(&mutex);
-//    pause = false;
-//    return;
-////    mutex.lock();if (G::isLogger) G::log(__FUNCTION__);mutex.unlock();
-////    qDebug() << __FUNCTION__ << "Starting thread" << isRunning();
-//    source = __FUNCTION__;
-//    if (isRunning()) {
-//        abort = true;
-//        condition.wakeOne();
-//        wait();
-//        abort = false;
-//    }
-//    start(IdlePriority);
-//}
-
-//QSize ImageCache::scalePreview(int w, int h)
-//{
-//    if (G::isLogger) G::log(__FUNCTION__);
-//    QSize preview(w, h);
-//    preview.scale(icd->cache.previewSize.width(), icd->cache.previewSize.height(),
-//                  Qt::KeepAspectRatio);
-//    return preview;
-//}
-
-//QSize ImageCache::getPreviewSize()
-//{
-////    mutex.lock();if (G::isLogger) G::log(__FUNCTION__);mutex.unlock();
-//    return icd->cache.previewSize;
-//}
 
 int ImageCache::getImCacheSize()
 {

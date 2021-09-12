@@ -1265,7 +1265,7 @@ bool Nikon::parse(MetadataParameters &p,
     p.hdr = "IFD0";
     p.offset = offsetIfd0;
     p.hash = &exif->hash;
-    ifd->readIFD(p, m, isBigEnd);
+    ifd->readIFD(p, isBigEnd);
 
 
     // pull data reqd from IFD0
@@ -1302,7 +1302,7 @@ bool Nikon::parse(MetadataParameters &p,
         if (ifdOffsets.count() > 0) {
             p.hdr = "SubIFD1";
             p.offset = ifdOffsets[0];
-            ifd->readIFD(p, m, isBigEnd);
+            ifd->readIFD(p, isBigEnd);
             // pull data reqd from SubIFD1
             if (ifd->ifdDataHash.contains(513)) {
                 // newer models
@@ -1326,7 +1326,7 @@ bool Nikon::parse(MetadataParameters &p,
         if (ifdOffsets.count() > 1) {
             p.hdr = "SubIFD2";
             p.offset = ifdOffsets[1];
-            ifd->readIFD(p, m, isBigEnd);
+            ifd->readIFD(p, isBigEnd);
             m.width = ifd->ifdDataHash.value(256).tagValue;
             m.height = ifd->ifdDataHash.value(257).tagValue;
         }
@@ -1336,7 +1336,7 @@ bool Nikon::parse(MetadataParameters &p,
 //            hdr = "SubIFD3";
 //            p.hdr = "SubIFD3";
 //            p.offset = ifdOffsets[2];
-//            ifd->readIFD(p, m, isBigEnd);
+//            ifd->readIFD(p, isBigEnd);
 //            m.offsetSmall = ifd->ifdDataHash.value(513).tagValue;
 //            m.lengthSmall = ifd->ifdDataHash.value(514).tagValue;
 ////            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
@@ -1346,7 +1346,7 @@ bool Nikon::parse(MetadataParameters &p,
     // read ExifIFD
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
-    ifd->readIFD(p, m, isBigEnd);
+    ifd->readIFD(p, isBigEnd);
 
     // EXIF: created datetime
     QString createdExif;
@@ -1460,7 +1460,7 @@ bool Nikon::parse(MetadataParameters &p,
         p.hdr = "IFD Nikon Maker Note";
         p.offset = makerOffset;
         p.hash = &nikonMakerHash;
-        ifd->readIFD(p, m, isBigEnd);
+        ifd->readIFD(p, isBigEnd);
 
         // Get serial number, shutter count and lens type to decrypt the lens info
         m.cameraSN = Utilities::getString(p.file, ifd->ifdDataHash.value(29).tagValue + makerOffsetBase,
@@ -1493,7 +1493,7 @@ bool Nikon::parse(MetadataParameters &p,
             quint32 offset = ifd->ifdDataHash.value(17).tagValue + makerOffsetBase;
             p.offset = offset;
             p.hash = &exif->hash;
-            ifd->readIFD(p, m, isBigEnd);
+            ifd->readIFD(p, isBigEnd);
 
             m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + makerOffsetBase;
             m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;

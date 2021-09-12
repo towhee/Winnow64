@@ -142,7 +142,7 @@ bool Panasonic::parse(MetadataParameters &p,
     p.hdr = "Panasonic IFD0";
     p.offset = offsetIfd0;
     p.hash = &exif->hash;
-    ifd->readIFD(p, m);
+    ifd->readIFD(p);
 
     // pull data reqd from main file IFD0
     m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount).trimmed();
@@ -175,7 +175,7 @@ bool Panasonic::parse(MetadataParameters &p,
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
-    ifd->readIFD(p, m);
+    ifd->readIFD(p);
 
     // EXIF: created datetime
     QString createdExif;
@@ -277,14 +277,14 @@ bool Panasonic::parse(MetadataParameters &p,
         p.hdr = "IFD0";
         p.offset = offsetIfd0;
         p.hash = &exif->hash;
-        quint32 nextIFDOffset = ifd->readIFD(p, m) + startOffset;
+        quint32 nextIFDOffset = ifd->readIFD(p) + startOffset;
         offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
 
         // read JPG IFD1
         if (nextIFDOffset) {
             p.hdr = "IFD1";
             p.offset = nextIFDOffset;
-            ifd->readIFD(p, m);
+            ifd->readIFD(p);
         }
 
         m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + startOffset;
@@ -293,7 +293,7 @@ bool Panasonic::parse(MetadataParameters &p,
         // read JPG Exif IFD
         p.hdr = "IFD Exif";
         p.offset = offsetEXIF;
-        ifd->readIFD(p, m);
+        ifd->readIFD(p);
 
         // maker note
         if (ifd->ifdDataHash.contains(37500)) {
@@ -303,7 +303,7 @@ bool Panasonic::parse(MetadataParameters &p,
             p.hdr = "IFD Panasonic Maker Note";
             p.offset = makerOffset;
             p.hash = &panasonicMakerHash;
-            ifd->readIFD(p, m);
+            ifd->readIFD(p);
             // get lens
             m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(81).tagValue + startOffset, ifd->ifdDataHash.value(81).tagCount);
             // get lens serial number

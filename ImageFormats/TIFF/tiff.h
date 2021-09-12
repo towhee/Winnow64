@@ -29,12 +29,14 @@ public:
                IPTC *iptc,
                Exif *exif,
                GPS *gps);
-    bool parseForDecoding(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
+    bool parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *ifd);
+    // decode from cache decoder
+    bool decode(QString fPath, quint32 offset, QImage &image);
     // decode using unmapped QFile
     bool decode(ImageMetadata &m, QString &fPath, QImage &image,
                 bool thumb = false, int maxDim = 0);
     // decode using QFile mapped to memory
-    bool decode(ImageMetadata &m, MetadataParameters &p, QImage &image, int newSize = 0);
+    bool decode(/*ImageMetadata &m, */MetadataParameters &p, QImage &image, int newSize = 0);
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
 
 private:
@@ -46,6 +48,7 @@ private:
     // from tiff ifd
     int width;
     int height;
+    bool isBigEnd;
     int bitsPerSample = 0;
     int photoInterp = 0;
     int samplesPerPixel = 0;
@@ -94,9 +97,10 @@ private:
     QVector<QByteArray> inBa;
 
     QString err;
+    bool isBigEndian(MetadataParameters &p);
 
-    void decodeBase(ImageMetadata &m, MetadataParameters &p, QImage &image);
-    bool decodeLZW(ImageMetadata &m, MetadataParameters &p, QImage &image);
+    void decodeBase(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image);
+    bool decodeLZW(MetadataParameters &p, QImage &image);
 
     void perChannelToInterleave(QImage *im1);
     void toRRGGBBAA(QImage *im);
