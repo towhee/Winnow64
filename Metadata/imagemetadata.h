@@ -109,6 +109,7 @@ class MetadataParameters
     image file parsing classes ie parseSony.
 */
 public:
+    QString fPath;
     QFile file;
     QBuffer buf;
     quint32 offset;

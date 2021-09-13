@@ -99,7 +99,7 @@ private:
     QString err;
     bool isBigEndian(MetadataParameters &p);
 
-    void decodeBase(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image);
+    void decodeBase(MetadataParameters &p, QImage &image);
     bool decodeLZW(MetadataParameters &p, QImage &image);
 
     void perChannelToInterleave(QImage *im1);

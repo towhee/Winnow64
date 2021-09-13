@@ -58,9 +58,10 @@ private:
     bool abort = false;
     DataModel *dm;
     Metadata *metadata;
-    ImageCacheData::CacheItem m;
+    ImageCacheData::CacheItem n;
     unsigned char *buf;
     QString ext;
+    QString errImage = ":/images/badImage1.png";
 };
 
 #endif // IMAGEDECODER_H

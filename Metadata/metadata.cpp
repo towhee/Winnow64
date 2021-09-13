@@ -640,6 +640,7 @@ bool Metadata::parseHEIF()
 void Metadata::clearMetadata()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+    p.fPath = "";
     m.offsetFull = 0;
     m.lengthFull = 0;
     m.widthFull = 0;
@@ -732,6 +733,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     }
     clearMetadata();
     m.fPath = path;
+    p.fPath = path;
 
 //    if (p.file.isOpen()) p.file.close();
     if (p.file.isOpen()) {

@@ -49,8 +49,8 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item)
 //void ImageDecoder::decode(QString fPath)
 {
     status = Status::Busy;
-    m = item;
-    fPath = m.fPath;
+    n = item;
+    fPath = n.fPath;
     start();
 }
 
@@ -80,7 +80,7 @@ bool ImageDecoder::load()
 //    m = dm->imMetadata(fPath);
 
     // is metadata loaded rgh use isMeta in cacheItemList?
-    if (!m.metadataLoaded) {
+    if (!n.metadataLoaded) {
         G::error(__FUNCTION__, fPath, "Could not load metadata.");
         return false;
     }
@@ -103,20 +103,20 @@ bool ImageDecoder::load()
     // JPG format (including embedded in raw files)
     if (metadata->hasJpg.contains(ext) || ext == "jpg") {
         // make sure legal offset by checking the length
-        if (m.lengthFull == 0) {
+        if (n.lengthFull == 0) {
             imFile.close();
-            G::error(__FUNCTION__, m.fPath, "Jpg length = zero.");
+            G::error(__FUNCTION__, n.fPath, "Jpg length = zero.");
             return false;
         }
 
         // try to read the data
-        if (!imFile.seek(m.offsetFull)) {
+        if (!imFile.seek(n.offsetFull)) {
             imFile.close();
             G::error(__FUNCTION__, fPath, "Illegal offset to image.");
             return false;
         }
 
-        QByteArray buf = imFile.read(m.lengthFull);
+        QByteArray buf = imFile.read(n.lengthFull);
         if (buf.length() == 0) {
             qWarning() << __FUNCTION__ << "Zero JPG buffer";
             G::error(__FUNCTION__, fPath, "Zero JPG buffer.");
@@ -155,25 +155,24 @@ bool ImageDecoder::load()
     else if (ext == "tif") {
         qDebug() << __FUNCTION__ << ext;
         // check for sampling format we cannot read
-        if (m.samplesPerPixel > 3) {
+        if (n.samplesPerPixel > 3) {
             imFile.close();
-            QString err = "Could not read tiff because " + QString::number(m.samplesPerPixel)
+            QString err = "Could not read tiff because " + QString::number(n.samplesPerPixel)
                     + " samplesPerPixel > 3.";
             G::error(__FUNCTION__, fPath, err);
             return false;
         }
 
         // use Winnow decoder
-//        ImageMetadata m = dm->imMetadata(fPath);
         Tiff tiff;
-        if (!tiff.decode(fPath, m.offsetFull, image)) {
+        if (!tiff.decode(fPath, n.offsetFull, image)) {
             imFile.close();
             QString err = "Could not decode using Winnow Tiff decoder.  "
                         "Trying Qt tiff library to decode" + fPath + ". ";
             G::error(__FUNCTION__, fPath, err);
             qDebug() << __FUNCTION__
                      << "Could not decode using Winnow Tiff decoder.  "
-                        "Trying Qt tiff library to decode" + fPath + ". ";
+                        "Trying Qt tiff library to decode " + fPath + ". ";
             if (abort) return false;
             // use Qt tiff library to decode
             if (!image.load(fPath)) {
@@ -221,30 +220,30 @@ void ImageDecoder::rotate()
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     QTransform trans;
     int degrees;
-    if (m.orientation > 0) {
-        switch(m.orientation) {
+    if (n.orientation > 0) {
+        switch(n.orientation) {
         case 3:
-            degrees = m.rotationDegrees + 180;
+            degrees = n.rotationDegrees + 180;
             if (degrees > 360) degrees = degrees - 360;
             trans.rotate(degrees);
             image = image.transformed(trans, Qt::SmoothTransformation);
             break;
         case 6:
-            degrees = m.rotationDegrees + 90;
+            degrees = n.rotationDegrees + 90;
             if (degrees > 360) degrees = degrees - 360;
             trans.rotate(degrees);
             image = image.transformed(trans, Qt::SmoothTransformation);
             break;
         case 8:
-            degrees = m.rotationDegrees + 270;
+            degrees = n.rotationDegrees + 270;
             if (degrees > 360) degrees = degrees - 360;
             trans.rotate(degrees);
             image = image.transformed(trans, Qt::SmoothTransformation);
             break;
         }
     }
-    else if (m.rotationDegrees > 0){
-        trans.rotate(m.rotationDegrees);
+    else if (n.rotationDegrees > 0){
+        trans.rotate(n.rotationDegrees);
         image = image.transformed(trans, Qt::SmoothTransformation);
     }
 }
@@ -253,7 +252,7 @@ void ImageDecoder::colorManage()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     if (metadata->iccFormats.contains(ext)) {
-        ICC::transform(m.iccBuf, image);
+        ICC::transform(n.iccBuf, image);
     }
 }
 
@@ -266,8 +265,9 @@ void ImageDecoder::run()
         status = Status::Done;
     }
     else {
-        status = Status::Failed;
-        fPath = "";
+        image = QPixmap(":/images/error_image.png").toImage();
+//        status = Status::Failed;
+//        fPath = "";
     }
     if (abort) return;
     emit done(threadId);

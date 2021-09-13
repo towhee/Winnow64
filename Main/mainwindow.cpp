@@ -275,8 +275,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     G::isTest = false;                  // use to find memory loss
 
     useImageCache = true;
-    useInfoView = true;
     useImageView = true;
+    useInfoView = true;
     useUpdateStatus = true;
 
     useFilterView = true;
@@ -10170,7 +10170,7 @@ void MW::setCachedStatus(QString fPath, bool isCached)
     Make sure the file path exists in the datamodel. The most likely failure will be if a new
     folder has been selected but the image cache has not been rebuilt.
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
     QModelIndex idx = dm->proxyIndexFromPath(fPath);
     if (idx.isValid()) {
         dm->sf->setData(idx, isCached, G::CachedRole);

@@ -124,7 +124,7 @@ ImageView::ImageView(QWidget *parent,
     isFirstImageNewFolder = true;
 }
 
-bool ImageView::loadImage(QString fPath, QString src, bool refresh)
+bool ImageView::loadImage(QString fPath, QString src)
 {
 /*
     There are two sources for the image (pixmap): a file or the cache.
@@ -179,13 +179,13 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
 
         if (isLoaded) {
             pmItem->setPixmap(displayPixmap);
-            isPreview = false;
         }
         else {
             pmItem->setPixmap(QPixmap(":/images/error_image.png"));
             isLoaded = true;
         }
     }
+    // get cached image
     else {
         /* Must check if image has been cached before calling icd->imCache.find(fPath, image)
         to prevent a mismatch between the fPath index and the image in icd->imCache hash
@@ -195,37 +195,13 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
         QImage image;
         bool imageAvailable = false;
         if (isCached) imageAvailable = icd->imCache.find(fPath, image);
-        if (!refresh && imageAvailable) {
-            G::popUp->hide();
+        if (imageAvailable) {
             pmItem->setPixmap(QPixmap::fromImage(image));
-            isPreview = false;
+            G::popUp->hide();
             isLoaded = true;
         }
         else {
             G::popUp->showPopup("Buffering image");
-            /* load image without waiting for cache
-            // check metadata loaded for image (might not be if random slideshow)
-            int dmRow = dm->fPathRow[fPath];
-            if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
-                QFileInfo fileInfo(fPath);
-                if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-                    metadata->m.row = dmRow;
-                    dm->addMetadataForItem(metadata->m);
-                }
-            }
-
-            QPixmap displayPixmap;
-            isLoaded = pixmap->load(fPath, displayPixmap, "ImageView::loadImage");
-
-            if (isLoaded) {
-                pmItem->setPixmap(displayPixmap);
-                isPreview = false;
-            }
-            else {
-                pmItem->setPixmap(QPixmap(":/images/error_image.png"));
-                isLoaded = true;
-            }
-            //*/
         }
     }
 
@@ -259,31 +235,6 @@ bool ImageView::loadImage(QString fPath, QString src, bool refresh)
     }
     return isLoaded;
 }
-
-//void ImageView::upgradeToFullSize()
-//{
-///*
-//    Called after a delay by timer initiated in loadImage. Two prior conditions
-//    are matched:
-//        If zoomed then the relative scroll position is set.
-//        If zoomFit then zoomFit is recalculated.
-//*/
-//    if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__;
-
-//    QImage image;
-//    if(icd->imCache.find(currentImagePath, image)) {
-//        pmItem->setPixmap(QPixmap::fromImage(image));
-//        setSceneRect(scene->itemsBoundingRect());
-//        isPreview = false;
-//        qreal prevZoomFit = zoomFit;
-//        zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
-//        zoom *= (zoomFit / prevZoomFit);
-//        if (isFit) zoom = zoomFit;
-//        scale();
-//        if (isScrollable) setScrollBars(scrollPct);
-//    }
-//}
 
 void ImageView::clear()
 {
@@ -320,7 +271,6 @@ void ImageView::scale()
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     /* qDebug() << __FUNCTION__
-             << "isPreview =" << isPreview
              << "isScrollable =" << isScrollable
              << "isFit =" << isFit
              << "zoom =" << zoom
@@ -328,8 +278,6 @@ void ImageView::scale()
              << "rect().width() =" << rect().width()
              << "sceneRect().width() =" << sceneRect().width();
     //  */
-
-//    matrix.reset();
     transform.reset();
     if (G::isSlideShow) {
         setFitZoom();
@@ -337,11 +285,9 @@ void ImageView::scale()
 
     if (isFit) setFitZoom();
     double highDpiZoom = zoom / G::actDevicePixelRatio;
-//    matrix.scale(highDpiZoom, highDpiZoom);
     transform.scale(highDpiZoom, highDpiZoom);
     // when resize before first image zoom == inf
     if (zoom > 10) return;
-//    setMatrix(matrix);
     setTransform(transform);
     emit zoomChange(zoom);
 
@@ -364,7 +310,6 @@ void ImageView::scale()
 
     /*
     qDebug() << __FUNCTION__
-             << "isPreview =" << isPreview
              << "isScrollable =" << isScrollable
              << "isFit =" << isFit
              << "zoom =" << zoom
@@ -1144,7 +1089,6 @@ QString ImageView::diagnostics()
     rpt << "\n" << "isTrackpadScroll = " << G::s(isTrackpadScroll);
     rpt << "\n" << "isLeftMouseBtnPressed = " << G::s(isLeftMouseBtnPressed);
     rpt << "\n" << "isMouseDoubleClick = " << G::s(isMouseDoubleClick);
-    rpt << "\n" << "isPreview = " << G::s(isPreview);
     rpt << "\n" << "scrollCount = " << G::s(scrollCount);
     rpt << "\n" << "zoomFit = " << G::s(zoomFit);
     rpt << "\n" << "zoomInc = " << G::s(zoomInc);

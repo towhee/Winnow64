@@ -235,6 +235,7 @@ namespace G
     extern bool isTest;
 
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
+    extern QStringList doNotLog;
     extern void log(QString functionName = "", QString comment = "",
                     bool hideElapsedTime = false);
     extern void errlog(QString functionName, QString fPath, QString err);

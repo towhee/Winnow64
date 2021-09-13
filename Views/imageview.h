@@ -51,7 +51,7 @@ public:
     QByteArray tileBa;
     QString tileName;
 
-    bool loadImage(QString fPath, QString src, bool refresh = false);
+    bool loadImage(QString fPath, QString src);
     void exportImage();
     qreal getFitScaleFactor(QRectF container, QRectF content);
     void clear();
@@ -195,7 +195,6 @@ private:
     bool isTrackpadScroll;
     bool isLeftMouseBtnPressed;
     bool isMouseDoubleClick;
-    bool isPreview;
 
     int scrollCount;
 
