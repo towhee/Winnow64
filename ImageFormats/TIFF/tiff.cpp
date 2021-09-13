@@ -534,6 +534,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
 
     // endianess
     isBigEnd = isBigEndian(p);
+    qDebug() << __FUNCTION__ << p.fPath << "isBigEnd =" << isBigEnd;
 
     bool isReport = p.report;
     p.report = false;
@@ -660,11 +661,11 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
     if (err != "" && !isReport) return false;
 
     // rgh used for debugging - req'd?
-//    G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
-//                  " Compression:" + QString::number(compression) +
-//                  " Predictor:" + QString::number(predictor) +
-//                  " PlanarConfiguration:" + QString::number(planarConfiguration)
-//                    ;
+    G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
+                  " Compression:" + QString::number(compression) +
+                  " Predictor:" + QString::number(predictor) +
+                  " PlanarConfiguration:" + QString::number(planarConfiguration)
+                    ;
 
     if (p.report) {
         int w1 = 25;
@@ -734,12 +735,14 @@ bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
     if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
 
     MetadataParameters p;
+    p.fPath = fPath;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
         G::error(__FUNCTION__, fPath, "Unable to open file.");
         return false;
     }
     p.offset = offset;
+    qDebug() << __FUNCTION__ << fPath << "offset =" << offset;
     return decode(p, image);
 }
 
@@ -799,8 +802,9 @@ bool Tiff::decode(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image, in
     return true;
 }
 
-void Tiff::decodeBase(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image)
+void Tiff::decodeBase(MetadataParameters &p, QImage &image)
 {
+    qDebug() << __FUNCTION__ << p.fPath;
     int strips = stripOffsets.count();
     int line = 0;
     quint32 scanBytes = 0;

@@ -3,7 +3,7 @@
 namespace G
 {
     // system messaging
-    bool isLogger = false;              // Writes log messages to file or console
+    bool isLogger = true;              // Writes log messages to file or console
     bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool isTestLogger = false;          // Writes test points to file or console
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
@@ -135,8 +135,18 @@ namespace G
         t.restart();
     }
 
+    QStringList doNotLog =
+    {
+        "ImageCache",
+        "ImageDecoder",
+        "MetadataCache"
+    };
+
     void log(QString functionName, QString comment, bool hideElapsedTime)
     {
+        for (int i = 0; i < doNotLog.length(); ++i) {
+             if (functionName.contains(doNotLog.at(i))) return;
+        }
         QString time = QString("%L1").arg(t.nsecsElapsed() / 1000);
         if (hideElapsedTime) time = "";
         QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";

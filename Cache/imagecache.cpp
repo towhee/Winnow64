@@ -811,6 +811,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.rotationDegrees = m.rotationDegrees;
         icd->cacheItem.offsetFull = m.offsetFull;
         icd->cacheItem.lengthFull = m.lengthFull;
+        icd->cacheItem.samplesPerPixel = m.samplesPerPixel;
         icd->cacheItem.iccBuf = m.iccBuf;
 
         icd->cacheItemList.append(icd->cacheItem);
@@ -1138,15 +1139,15 @@ void ImageCache::fillCache(int id, bool positionChange)
                  << decoder[id]->fPath;
     }
 
-    // if decoder failed
-    if (decoder[id]->status == ImageDecoder::Failed) {
-        if (icd->cache.toCacheKey < icd->cacheItemList.length()) {
-            icd->cacheItemList[icd->cache.toCacheKey].isCaching = false;
-            icd->cacheItemList[icd->cache.toCacheKey].comment = "key = " +
-                    QString::number(cacheKey) + " status: failed";
-        }
-        cacheKey = -1;
-    }
+//    // if decoder failed
+//    if (decoder[id]->status == ImageDecoder::Failed) {
+//        if (icd->cache.toCacheKey < icd->cacheItemList.length()) {
+//            icd->cacheItemList[icd->cache.toCacheKey].isCaching = false;
+//            icd->cacheItemList[icd->cache.toCacheKey].comment = "key = " +
+//                    QString::number(cacheKey) + " status: failed";
+//        }
+//        cacheKey = -1;
+//    }
 
     // range check
     if (cacheKey >= icd->cacheItemList.length()) {
