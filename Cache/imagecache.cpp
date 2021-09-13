@@ -553,6 +553,7 @@ void ImageCache::makeRoom(int id, int cacheKey)
 
 void ImageCache::memChk()
 {
+//    return;  //rghmacdelay
 /*
     Check to make sure there is still room in system memory (heap) for the image cache. If
     something else (another program) has used the system memory then reduce the size of the
