@@ -113,11 +113,11 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void enterEvent(QEvent *event) override;
-    void paintEvent(QPaintEvent *event) override;
     void dropEvent(QDropEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
 
-    void drawForeground(QPainter *painter, const QRectF &rect) override;
+//    void paintEvent(QPaintEvent *event) override;
+//    void drawForeground(QPainter *painter, const QRectF &rect) override;
 
 private:
     void noJpgAvailable();

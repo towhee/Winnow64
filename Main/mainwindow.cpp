@@ -5712,6 +5712,7 @@ void MW::clearStatus()
 
 void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QString calledBy)
 {
+//    return;  //rghmacdelay
     if (G::isLogger) G::log(__FUNCTION__);
     if (isRunning) {
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
@@ -5732,6 +5733,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QStri
 
 void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
 {
+//    return;  //rghmacdelay
     if (G::isLogger) G::log(__FUNCTION__);
     if (isRunning) {
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");

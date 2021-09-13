@@ -792,7 +792,7 @@ void ImageView::hideCursor()
 
 // EVENTS
 
-///*
+/*
 void ImageView::paintEvent(QPaintEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
@@ -810,6 +810,7 @@ void ImageView::paintEvent(QPaintEvent *event)
 }
 //*/
 
+/*
 void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
 {
     if (G::isLogger) G::log(__FUNCTION__);
@@ -822,6 +823,7 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
 //            painter->drawRect(QRect(0, 0, 100, 100));
             painter->restore();
 }
+//*/
 
 void ImageView::scrollContentsBy(int dx, int dy)
 {
