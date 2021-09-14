@@ -3,7 +3,7 @@
 ImageCache::ImageCache(QObject *parent,
                        ImageCacheData *icd,
                        DataModel *dm,
-                       Metadata *metadata)
+                       Metadata *metadata, QLabel *imageCacheRunningLabel)
     : QThread(parent)
 {
     if (G::isLogger) G::log(__FUNCTION__);
@@ -11,6 +11,7 @@ ImageCache::ImageCache(QObject *parent,
     this->icd = icd;
     this->dm = dm;
     this->metadata = metadata;
+    runningLabel = imageCacheRunningLabel;
     // create n decoder threads
     decoderCount = QThread::idealThreadCount();
     icd->cache.decoderCount = decoderCount;
@@ -108,7 +109,8 @@ void ImageCache::stopImageCache()
     }
     */
 
-    emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
+    // update image cache active status light on status bar
+    updateIsRunningStatus(false);
     clearImageCache(true);
 }
 
@@ -604,6 +606,23 @@ void ImageCache::updateStatus(QString instruction, QString source)
 {
 //    updateCached();
 //    emit showCacheStatus(instruction, icd->cache, source);
+}
+
+void ImageCache::updateIsRunningStatus(bool isRunning)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (isRunning) {
+        runningLabel->setStyleSheet("QLabel {color:Red;}");
+        #ifdef Q_OS_WIN
+        runningLabel->setStyleSheet("QLabel {color:Red; font-size: 24px;}");
+        #endif
+    }
+    else {
+        runningLabel->setStyleSheet("QLabel {color:Green;}");
+        #ifdef Q_OS_WIN
+        runningLabel->setStyleSheet("QLabel {color:Green; font-size: 24px;}");
+        #endif
+    }
 }
 
 QString ImageCache::diagnostics()
@@ -1202,7 +1221,8 @@ void ImageCache::fillCache(int id, bool positionChange)
     }
     // caching completed
     else {
-        emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
+        // update image cache active status light on status bar
+        updateIsRunningStatus(false);
         if (debugCaching) {
             qDebug() << __FUNCTION__
                      << "     decoder " << id
@@ -1263,8 +1283,8 @@ void ImageCache::run()
     icd->cache.sumStep = 0;
     icd->cache.maybeDirectionChange = false;
 
-    // signal MW cache status
-    emit updateIsRunning(true, true);
+    // update image cache active status light on status bar
+    updateIsRunningStatus(true);
 
     // check available memory (another app may have used or released some memory)
     memChk();
