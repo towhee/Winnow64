@@ -312,9 +312,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createTableView();          // dependent on centralWidget
     createSelectionModel();     // dependent on ThumbView, ImageView
     createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
-    createStatusBar();          // no dependencies
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
-    createCaching();            // dependent on DataModel, Metadata, ThumbView, StatusBar
+    createCaching();            // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
@@ -322,6 +321,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createDocks();              // dependent on FSTree, Bookmarks, ThumbView, Metadata,
                                 //              InfoView, EmbelProperties
     createEmbel();              // dependent on EmbelView, EmbelDock
+    createStatusBar();
     createMessageView();
     loadWorkspaces();           // req'd by actions and menu
     createActions();            // dependent on above
@@ -4363,7 +4363,7 @@ void MW::createCaching()
 //    connect(metadataCacheThread, &MetadataCache::scrollToCurrent, this, &MW::scrollToCurrentRow);
 
     icd = new ImageCacheData(this);
-    imageCacheThread = new ImageCache(this, icd, dm, metadata, imageThreadRunningLabel);
+    imageCacheThread = new ImageCache(this, icd, dm, metadata);
 
     /* Image caching is triggered from the metadataCacheThread to avoid the two threads
        running simultaneously and colliding */
@@ -4375,6 +4375,9 @@ void MW::createCaching()
     // 2nd pass loading image cache for a new folder
     connect(metadataCacheThread, SIGNAL(loadMetadataCache2ndPass()),
             this, SLOT(loadMetadataCache2ndPass()));
+
+    connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
+            this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
 
     // Update the cache status progress bar when changed in ImageCache
     connect(imageCacheThread, &ImageCache::showCacheStatus,
@@ -5304,7 +5307,6 @@ void MW::createStatusBar()
     QString mtrl = "Turns red when metadata/icon caching in progress";
     metadataThreadRunningLabel->setToolTip(mtrl);
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
-    metadataThreadRunningLabel->setText("◉");
     updateMetadataThreadRunStatus(false, true, __FUNCTION__);
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
 
@@ -5314,7 +5316,6 @@ void MW::createStatusBar()
     QString itrl = "Turns red when image caching in progress";
     imageThreadRunningLabel->setToolTip(itrl);
     imageThreadRunningLabel->setFixedWidth(runLabelWidth);
-    imageThreadRunningLabel->setText("◉");
 
     // label to show cache amount
 //    cacheMethodBtn->setIcon(QIcon(":/images/icon16/thrifty.png"));
@@ -5730,6 +5731,27 @@ void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QStri
     calledBy = "";  // suppress compiler warning
 }
 
+void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
+{
+//    return;  //rghmacdelay
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (isRunning) {
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
+        #ifdef Q_OS_WIN
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Red; font-size: 24px;}");
+        #endif
+    }
+    else {
+        if (G::isTest) qDebug() << __FUNCTION__ << "Total time to cache folder =" << testTime.elapsed();
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
+        #ifdef Q_OS_WIN
+        imageThreadRunningLabel->setStyleSheet("QLabel {color:Green; font-size: 24px;}");
+        #endif
+    }
+    imageThreadRunningLabel->setText("◉");
+    if (isShowCacheThreadActivity) progressLabel->setVisible(showCacheLabel);
+}
+
 void MW::setThreadRunStatusInactive()
 {
     if (G::isLogger) G::log(__FUNCTION__);
@@ -5739,8 +5761,8 @@ void MW::setThreadRunStatusInactive()
     metadataThreadRunningLabel->setStyleSheet("QLabel {color:Gray;font-size: 24px;}");
     imageThreadRunningLabel->setStyleSheet("QLabel {color:Gray;font-size: 24px;}");
     #endif
-//    metadataThreadRunningLabel->setText("◉");
-//    imageThreadRunningLabel->setText("◉");
+    metadataThreadRunningLabel->setText("◉");
+    imageThreadRunningLabel->setText("◉");
 }
 
 void MW::resortImageCache()

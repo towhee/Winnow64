@@ -455,6 +455,7 @@ private slots:
     void updateIconBestFit();
 //    void updateImageCachePosition();  rgh trigger imageCache
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy = "");
+    void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
     void updateMetadataCacheStatus(QString msg);
     void updateImageCacheStatus(QString instruction,
                                 ImageCacheData::Cache cache,
