@@ -32,7 +32,8 @@ class ImageCache : public QThread
     Q_OBJECT
 
 public:
-    ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm, Metadata *metadata);
+    ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm, Metadata *metadata,
+               QLabel *imageCacheRunningLabel);
     ~ImageCache() override;
 
     void initImageCache(int &cacheSizeMB, int &cacheMinMB,
@@ -66,7 +67,7 @@ signals:
     void showCacheStatus(QString instruction,
                          ImageCacheData::Cache cache,
                          QString source = "");
-    void updateIsRunning(bool, bool);
+//    void updateIsRunning(bool, bool);
     void updateCacheOnThumbs(QString fPath, bool isCached);
     void dummyDecoder(int id);
 
@@ -91,6 +92,7 @@ private:
     QString currentPath;
     QString prevCurrentPath;
     int maxAttemptsToCacheImage = 10000;
+    QLabel *runningLabel;
 
     ImageCacheData *icd;
     DataModel *dm;
@@ -117,9 +119,8 @@ private:
     static bool keySort(const ImageCacheData::CacheItem &k1,
                         const ImageCacheData::CacheItem &k2);
     void buildImageCacheList();     //
-//    void updateImageCacheList();    //
     void refreshImageCache();
-//    QSize scalePreview(int w, int h);
+    void updateIsRunningStatus(bool isRunning);
 
     QElapsedTimer t;
     bool debugCaching = false;
