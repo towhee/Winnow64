@@ -164,7 +164,7 @@ void MetadataCache::loadNewFolder(bool isRefresh)
 
     MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -207,7 +207,7 @@ void MetadataCache::loadNewFolder2ndPass()
      - maxChunkSize
     metadata and icons are loaded into the datamodel.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -310,7 +310,7 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
     This function is called from MW::fileSelectionChange. A chunk of metadata and icons are
     added to the datamodel. The image cache is updated.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -373,10 +373,6 @@ void MetadataCache::setRange()
 
     prevFirstIconVisible = firstIconVisible;
     prevLastIconVisible = lastIconVisible;
-
-    statusStep = 100;
-//    if (rowCount < 1000) statusStep = 1000;
-//    if (rowCount < 3000) statusStep = 500;
 
 
     /*
@@ -525,7 +521,7 @@ void MetadataCache::readIconChunk()
     Load the thumb (icon) for all the image files in the target range.  This is called after a
     sort/filter change and all metadata has been loaded, but the icons visible have changed.
 */
-    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
 //    qDebug() << __FUNCTION__;
     int start = startRow;
     int end = endRow;
@@ -596,9 +592,13 @@ void MetadataCache::readIconChunk()
                 iconsCached.append(dmRow);
             }
         }
-        QString msg = "Loading thumbnails: ";
-        msg += QString::number(row) + " of " + QString::number(end);
-        if (row % statusStep == 0) emit showCacheStatus(msg);
+        if (!G::isNewFolderLoaded) {
+            QString msg = "Loading thumbnails: ";
+            msg += QString::number(row) + " of " + QString::number(end);
+            if (row % countInterval == 0) {
+                emit showCacheStatus(msg);
+            }
+        }
     }
 
     // reset after a filter change
@@ -610,7 +610,7 @@ void MetadataCache::readMetadataChunk()
 /*
     Load the metadata for all the image files in the target range.
 */
-    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
 
     int tryAgain = 0;
     bool metadataLoadFailed;
@@ -643,7 +643,10 @@ void MetadataCache::readMetadataChunk()
             }
             QString msg = "Reading metadata: ";
             msg += QString::number(row) + " of " + QString::number(end);
-            if (row % statusStep == 0) emit showCacheStatus(msg);
+            if (row % countInterval == 0) {
+                emit showCacheStatus(msg);
+//                qApp->processEvents();
+            }
         }
     } while (metadataLoadFailed && metadataTry > tryAgain++);
 

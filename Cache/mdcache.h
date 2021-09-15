@@ -75,7 +75,7 @@ signals:
     void loadMetadataCache2ndPass();
     void selectFirst();
     void showCacheStatus(QString);            // row, clear progress bar
-    void finished2ndPass();                     // buildFilters
+    void finished2ndPass();                   // buildFilters
 
 private:
     QMutex mutex;
@@ -88,7 +88,7 @@ private:
     int startRow;
     int endRow;
     int tpp;                                    // thumbsPerPage;
-    int statusStep = 100;
+    int countInterval = 100;                    // report progress interval
 
     // icon caching
     QList<int> iconsCached;

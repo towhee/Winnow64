@@ -344,7 +344,10 @@ bool Sony::parse(MetadataParameters &p,
     m.lengthThumb = ifd->ifdDataHash.value(279).tagValue;
 
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumb, lengthThumb);
-    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
+    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
+    m.model = "Sony " + Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
+    m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
+    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
 
     quint32 offsetEXIF;

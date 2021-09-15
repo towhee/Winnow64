@@ -510,7 +510,7 @@ void MW::showEvent(QShowEvent *event)
         defaultWorkspace();
     }
 
-    G::newPopUp(this, centralWidget->geometry());
+    G::newPopUp(this, centralWidget);
 
     // set initial visibility
     embelTemplateChange(embelProperties->templateId);
@@ -584,16 +584,8 @@ void MW::moveEvent(QMoveEvent *event)
 */
     QMainWindow::moveEvent(event);
     setDisplayResolution();
+    updateDisplayResolution();
     emit resizeMW(this->geometry(), centralWidget->geometry());
-    QString monitorScale = QString::number(G::actDevicePixelRatio * 100) + "%";
-    QString dimensions = QString::number(G::displayPhysicalHorizontalPixels) + "x"
-            + QString::number(G::displayPhysicalVerticalPixels)
-            + " @ " + monitorScale;
-    QString toolTip = dimensions + " (Monitor is scaled to " + monitorScale + ")";
-    if (!useInfoView) return;
-    QStandardItemModel *k = infoView->ok;
-    k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), dimensions);
-    k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), toolTip, Qt::ToolTipRole);
 }
 
 void MW::resizeEvent(QResizeEvent *event)
@@ -1430,8 +1422,9 @@ void MW::folderSelectionChange()
         thumbView->selectThumb(0);
     }
 
+    // Load folder progress
     setCentralMessage("Gathering metadata and thumbnails for images in folder.");
-    qApp->processEvents();
+//    qApp->processEvents();
     updateStatus(false, "Collecting metadata for all images in folder(s)", __FUNCTION__);
 
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
@@ -1704,6 +1697,7 @@ void MW::clearAll()
     imageView->clear();
     if (useInfoView) {
         infoView->clearInfo();
+        updateDisplayResolution();
     }
     setThreadRunStatusInactive();                      // turn thread activity buttons gray
     isDragDrop = false;
@@ -1760,6 +1754,8 @@ void MW::updateIconsVisible(bool useCurrentRow)
     gridView->viewportRange(currentRow, _first, _last);
     if (_first < first) first = _first;
     */
+//    // Grid might not be selected in CentralWidget
+    if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
 
     if (thumbView->isVisible()) {
         if (useCurrentRow) thumbView->calcViewportRange(currentRow);
@@ -1801,18 +1797,6 @@ void MW::updateIconsVisible(bool useCurrentRow)
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 //    metadataCacheThread->sizeChange(__FUNCTION__);
 }
-
-//void MW::updateImageCachePosition() // rghcachechange
-//{
-///*
-//    Signalled from the metadataCacheThread when a new image is selected or on a filtration
-//    change. Updates the current position in imageCacheThread, which then updates the image
-//    cache.
-//*/
-//    if (G::isLogger) G::log(__FUNCTION__);
-////    qDebug() << __FUNCTION__;
-//    imageCacheThread->setCurrentPosition(dm->currentFilePath);
-//}
 
 void MW::loadMetadataCache2ndPass()
 {
@@ -2021,13 +2005,6 @@ void MW::loadEntireMetadataCache(QString source)
 
     updateIconsVisible(true);
 
-//    bool resumeImageCaching = false;
-//    if (imageCacheThread->isRunning()) {
-//        qDebug() << __FUNCTION__ << "Pausing image cache";
-//        if (useImageCache) imageCacheThread->pauseImageCache();
-//        resumeImageCaching = true;
-//    }
-
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
     /* adding all metadata in dm slightly slower than using metadataCacheThread but progress
@@ -2038,24 +2015,8 @@ void MW::loadEntireMetadataCache(QString source)
     // metadataCacheThread->loadAllMetadata();
     // metadataCacheThread->wait();
 
-//    if (resumeImageCaching) {
-//        qDebug() << __FUNCTION__ << "Resuming image cache";
-//        if (useImageCache) imageCacheThread->resumeImageCache();
-//    }
     QApplication::restoreOverrideCursor();
 
-}
-
-void MW::updateMetadataCacheStatus(QString msg)
-{
-/*
-    Metadata caching progress is updated on the status bar.
-*/
-    if (G::isLogger) G::log(__FUNCTION__);
-
-    updateStatus(false, msg, "updateMetadataCacheStatus");
-    setCentralMessage(msg);
-    return;
 }
 
 void MW::updateImageCacheStatus(QString instruction,
@@ -2159,8 +2120,10 @@ void MW::loadImageCacheForNewFolder()
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     // now that metadata is loaded populate the data model
-    if(G::showCacheStatus) progressBar->clearProgress();
-    qApp->processEvents();
+    if(G::showCacheStatus) {
+        progressBar->clearProgress();
+        qApp->processEvents();
+    }
 //    updateIconBestFit();      // rgh make sure not req'd
 
     // had to wait for the data before resize table columns
@@ -2178,6 +2141,15 @@ void MW::loadImageCacheForNewFolder()
 
     G::isNewFolderLoaded = true;
 
+//    // set focus when program opens
+//    if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
+//    if (G::mode == "Loupe") thumbView->setFocus();
+////    if (G::mode == "Grid") gridDisplay();
+//    if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
+//    if (G::mode == "Grid") gridView->setFocus();
+//    if (G::mode == "Table") centralLayout->setCurrentIndex(TableTab);
+//    if (G::mode == "Table") tableView->setFocus();
+
     /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
     including current index and file path req'd by mdCache and EmbelProperties...  If
     folderAndFileSelectionChange has been executed then folderAndFileChangePath will be
@@ -2187,18 +2159,29 @@ void MW::loadImageCacheForNewFolder()
     folderAndFileChangePath = "";
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
         thumbView->selectThumb(fPath);
+        gridView->selectThumb(fPath);
         currentSfIdx = dm->proxyIndexFromPath(fPath);
     }
     else {
         thumbView->selectFirst();
+        gridView->selectFirst();
         currentSfIdx = dm->sf->index(0,0);
     }
     fileSelectionChange(currentSfIdx, currentSfIdx);
 
-    // set focus when program opens
-    if (G::mode == "Loupe") thumbView->setFocus();
-    if (G::mode == "Grid") gridView->setFocus();
-    if (G::mode == "Table") tableView->setFocus();
+    qDebug() << __FUNCTION__ << G::mode << prevMode;
+
+//    // set focus when program opens
+//    if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
+//    if (G::mode == "Loupe") thumbView->setFocus();
+////    if (G::mode == "Grid") gridDisplay();
+//    if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
+//    if (G::mode == "Grid") gridView->setFocus();
+//    if (G::mode == "Table") centralLayout->setCurrentIndex(TableTab);
+//    if (G::mode == "Table") tableView->setFocus();
+
+//    fileSelectionChange(currentSfIdx, currentSfIdx);
+
 }
 
 void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
@@ -4358,7 +4341,7 @@ void MW::createCaching()
 
     // show progress bar when executing loadEntireMetadataCache
     connect(metadataCacheThread, &MetadataCache::showCacheStatus,
-            this, &MW::updateMetadataCacheStatus);
+            this, &MW::setCentralMessage);
 
 //    connect(metadataCacheThread, &MetadataCache::scrollToCurrent, this, &MW::scrollToCurrentRow);
 
@@ -5873,7 +5856,6 @@ void MW::filterDockVisibilityChange(bool isVisible)
 void MW::launchBuildFilters()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__ << "G::isInitializing =" << G::isInitializing;
     if (G::isInitializing) return;
     if (filterDock->visibleRegion().isNull()) {
 //        G::popUp->showPopup("Filters will only be updated when the filters panel is visible.");
@@ -5887,8 +5869,6 @@ void MW::launchBuildFilters()
 //        G::popUp->showPopup("Not all data required for filtering has been loaded yet.");
         return;
     }
-
-//    imageCacheThread->pauseImageCache();
 
     filters->msgFrame->setVisible(true);
     buildFilters->build();
@@ -6244,7 +6224,12 @@ void MW::sortChange(QString source)
              ;
 //             */
 
-    G::popUp->showPopup("Sorting...", 0);
+    if (G::isNewFolderLoaded) {
+        G::popUp->showPopup("Sorting...", 0);
+    }
+    else {
+        setCentralMessage("Sorting images");
+    }
 
     thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
 
@@ -7454,12 +7439,24 @@ void MW::setClassificationBadgeThumbDiam(int d)
     gridView->setThumbParameters();
 }
 
-
-
 void MW::setPrefPage(int page)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     lastPrefPage = page;
+}
+
+void MW::updateDisplayResolution()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QString monitorScale = QString::number(G::actDevicePixelRatio * 100) + "%";
+    QString dimensions = QString::number(G::displayPhysicalHorizontalPixels) + "x"
+            + QString::number(G::displayPhysicalVerticalPixels)
+            + " @ " + monitorScale;
+    QString toolTip = dimensions + " (Monitor is scaled to " + monitorScale + ")";
+    if (!useInfoView) return;
+    QStandardItemModel *k = infoView->ok;
+    k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), dimensions);
+    k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), toolTip, Qt::ToolTipRole);
 }
 
 void MW::setDisplayResolution()
@@ -9042,7 +9039,7 @@ void MW::loupeDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
@@ -9122,7 +9119,7 @@ void MW::gridDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     G::mode = "Grid";
     asGridAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
@@ -9152,6 +9149,9 @@ void MW::gridDisplay()
     // selection has been lost while tableView and possibly thumbView were hidden
     recoverSelection();
 
+    // req'd to show thumbs first time
+    gridView->setThumbParameters();
+
     // sync scrolling between modes (loupe, grid and table)
     if (prevMode == "Table") {
         if (tableView->isRowVisible(currentRow)) scrollRow = currentRow;
@@ -9180,7 +9180,7 @@ void MW::gridDisplay()
 
 void MW::tableDisplay()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     G::mode = "Table";
     asTableAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
@@ -11672,24 +11672,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    G::isNewFolderLoaded = false;
-
-//    currentViewDir = getSelectedPath();
-//    setting->setValue("lastDir", currentViewDir);
-
-    if (G::isLogger || G::isFlowLogger) {
-        G::log("FOLDER CHANGE");
-        G::log(__FUNCTION__, currentViewDir);
-    }
-//    qDebug() << __FUNCTION__ << currentViewDir;
-
-    // Stop any threads that might be running.
-    imageCacheThread->stopImageCache();
-    metadataCacheThread->stopMetadataCache();
-    buildFilters->stop();
-
-    clearAll();
-//    stressTest(10);
+//    stressTest(100);
+    G::popUp->showPopup("Test, 2000");
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";

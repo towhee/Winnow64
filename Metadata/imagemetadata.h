@@ -33,7 +33,6 @@ public:
     int month = 0;
     int day = 0;
     float megapixels = 0;
-    QString creator = "";
     quint32 orientationOffset = 0;
     int orientation = 0;
     int rotationDegrees = 0;                // additional rotation from edit
@@ -52,6 +51,7 @@ public:
     int focalLengthNum = 0;
     QString shootingInfo = "";
     QString title = "";
+    QString creator = "";
     QString copyright = "";
     QString email = "";
     QString url = "";

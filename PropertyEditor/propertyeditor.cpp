@@ -76,7 +76,7 @@ PropertyEditor::PropertyEditor(QWidget *parent) : QTreeView(parent)
 
 PropertyEditor::~PropertyEditor()
 {
-    qDebug() << __FUNCTION__ << "Close...";
+    if (G::isLogger) G::log(__FUNCTION__);
     close(model->index(0,0,QModelIndex()));
     delete propertyDelegate;
     delete styleOptionViewItem;
