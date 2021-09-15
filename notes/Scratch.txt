@@ -1,15 +1,10 @@
-
-cacheHasMissing
-fixOrphans
-
-fillCache(id)
-    if selected image changes
-        setKeyToCurrent
-        setDirection
-        getImCacheSize
-        setPriorities;
-        setTargetRange();
-            fixOrphans (change isCached and isCaching)
-        if (cacheSizeHasChanged)
-            makeRoom (update isCached)
-
+G::popUp->setProgressVisible(true);
+G::popUp->setProgressMax(rowCount());
+QString msg = "It may take a moment to load all the metadata for " + x + " files<p>"
+        "This is required before any filtering or sorting of metadata can be done.<p>"
+        "Press <font color=\"red\"><b>Esc</b></font> to cancel.";
+G::popUp->showPopup(msg, 0, true, 1);
+int count = 0;
+for (int row = 0; row < rowCount(); ++row) {
+    ...
+    G::popUp->setProgress(row);

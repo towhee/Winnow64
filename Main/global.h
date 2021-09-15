@@ -43,7 +43,6 @@ namespace G
         // items available for TableView in order
         // items read when new folder (core fields)
         PathColumn,
-        IconLoadedColumn,
         NameColumn,
         RefineColumn,
         PickColumn,
@@ -244,8 +243,10 @@ namespace G
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);
 
+    extern int popUpProgressCount;
+    extern int popUpLoadFolderStep;
     extern PopUp *popUp;
-    extern void newPopUp(QWidget *widget, QRect rect);
+    extern void newPopUp(QWidget *widget, QWidget *centralWidget);
 }
 #endif // GLOBAL_H
 

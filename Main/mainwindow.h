@@ -288,13 +288,13 @@ public:
     QString currentViewDir;
 
     enum centralWidgetTabs {
-        LoupeTab,
-        CompareTab,
-        TableTab,
-        GridTab,
-        StartTab,
-        MessageTab,
-        EmbelTab            // rgh req'd? fo coord help?
+        LoupeTab,       // 0
+        CompareTab,     // 1
+        TableTab,       // 2
+        GridTab,        // 3
+        StartTab,       // 4
+        MessageTab,     // 5
+        EmbelTab        // 6    rgh req'd? for coord help?
     };
 
     // mode change
@@ -456,7 +456,6 @@ private slots:
 //    void updateImageCachePosition();  rgh trigger imageCache
     void updateMetadataThreadRunStatus(bool isRun, bool showCacheLabel, QString calledBy = "");
     void updateImageCachingThreadRunStatus(bool isRun, bool showCacheLabel);
-    void updateMetadataCacheStatus(QString msg);
     void updateImageCacheStatus(QString instruction,
                                 ImageCacheData::Cache cache,
                                 QString source);
@@ -508,6 +507,7 @@ private slots:
     void setClassificationBadgeThumbDiam(int d);
     void setPrefPage(int page);
     void setDisplayResolution();
+    void updateDisplayResolution();
     void setCombineRawJpg();
     void nextSlide();
     void prevRandomSlide();

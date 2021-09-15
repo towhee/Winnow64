@@ -260,7 +260,7 @@ If any of the editable fields change then MW::metadataChanged is triggered.
     // Set field description
     ok->setData(ok->index(FolderRow, 0, fileInfoIdx), "Folder");
     ok->setData(ok->index(FileNameRow, 0, fileInfoIdx), "File name");
-    ok->setData(ok->index(LocationRow, 0, fileInfoIdx), "Location");
+    ok->setData(ok->index(LocationRow, 0, fileInfoIdx), "Path");
     ok->setData(ok->index(SizeRow, 0, fileInfoIdx), "Size");
     ok->setData(ok->index(CreatedRow, 0, fileInfoIdx), "Created");
     ok->setData(ok->index(ModifiedRow, 0, fileInfoIdx), "Modified");

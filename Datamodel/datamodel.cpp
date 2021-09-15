@@ -157,7 +157,6 @@ DataModel::DataModel(QWidget *parent,
 
     // must include all prior Global dataModelColumns (any order okay)
     setHorizontalHeaderItem(G::PathColumn, new QStandardItem("Icon")); horizontalHeaderItem(G::PathColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::IconLoadedColumn, new QStandardItem("Icon Loaded")); horizontalHeaderItem(G::IconLoadedColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::NameColumn, new QStandardItem("File Name")); horizontalHeaderItem(G::NameColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::RefineColumn, new QStandardItem("Refine")); horizontalHeaderItem(G::RefineColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
@@ -325,7 +324,7 @@ Steps:
 - Note: build QMaps of unique field values for the filters is not done here, but on
   demand when the user selects the filter panel or a menu filter command.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     currentFolderPath = folderPath;
     filters->filtersBuilt = false;
     loadingModel = true;
@@ -344,8 +343,8 @@ Steps:
 
     timeToQuit = false;
     imageCount = 0;
-    countInterval = 1000;
-    QString step = "Step 1 0f 2: Searching for eligible images.\n\n";
+    countInterval = 100;
+    QString step = "Searching for eligible images.\n\n";
     QString escapeClause = "\n\nPress \"Esc\" to stop.";
     QString root;
     if (dir->isRoot()) root = "Drive ";
@@ -368,8 +367,8 @@ Steps:
                         QString::number(imageCount) + " found so far in " +
                         QString::number(folderCount) + " folders" +
                         escapeClause;
-            emit msg(s);
-            qApp->processEvents();
+            emit msg(s);        // rghmsg
+//            qApp->processEvents();
         }
         if (timeToQuit) return false;
     }
@@ -402,7 +401,7 @@ Steps:
                                 QString::number(imageCount) + " found so far in " +
                                 QString::number(folderCount) + " folders" +
                                 escapeClause;
-                    emit msg(s);
+                    emit msg(s);    // rghmsg
                     qApp->processEvents();
                 }
             }
@@ -430,11 +429,11 @@ bool DataModel::addFileData()
     • SearchColumn
     • ErrColumn
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     // make sure if raw+jpg pair that raw file is first to make combining easier
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 
-    QString step = "Step 2 0f 2: Loading eligible images.\n\n";
+    QString step = "Loading eligible images.\n\n";
     QString escapeClause = "\n\nPress \"Esc\" to stop.";
 
     // test if raw file to match jpg when same file names and one is a jpg
@@ -534,12 +533,15 @@ bool DataModel::addFileData()
 
         }
 
+        // Load folder progress
         if (row % 1000 == 0 && t.elapsed() > addFilesMaxDelay) {
-            QString s = step +
-                        QString::number(row) + " of " + QString::number(rowCount()) +
-                        " loaded." +
-                        escapeClause;
-            emit msg(s);
+//            QString s = step +
+//                        QString::number(row) + " of " + QString::number(rowCount()) +
+//                        " loaded." +
+//                        escapeClause;
+            QString s = QString::number(row) + " of " + QString::number(rowCount()) +
+                        " loaded.";
+            emit msg(s);    // rghmsg
             qApp->processEvents();
         }
 

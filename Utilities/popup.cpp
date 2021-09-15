@@ -18,10 +18,11 @@ In Winnow an instance of this class is created in global so that it is available
 of the program. It is created once in MW::initialize.
 */
 
-PopUp::PopUp(QWidget *source, QRect rect, QWidget *parent) : QWidget(parent)
+PopUp::PopUp(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget(parent)
 {
     this->source = source;
-    locRect = rect;
+    this->centralWidget = centralWidget;
+//    locRect = QWidget *centralWidget;
     setWindowFlags(Qt::FramelessWindowHint |        // Disable window decoration
                    Qt::Tool |                       // Discard display in a separate window
                    Qt::WindowStaysOnTopHint);       // Set on top of all windows
@@ -77,7 +78,6 @@ void PopUp::paintEvent(QPaintEvent *event)
 
 void PopUp::keyReleaseEvent(QKeyEvent *event)
 {
-    qDebug() << __FUNCTION__ << event;
     QWidget::keyReleaseEvent(event);
 }
 
@@ -111,23 +111,20 @@ void PopUp::showPopup(const QString &text,
     else setWindowOpacity(popupOpacity);
 //    */
     setWindowOpacity(static_cast<double>(popupOpacity));
-//    qDebug() << __FUNCTION__ << source->geometry() << locRect;
-    int pW = width();
-    int pH = height();
-//    int sX = locRect.x();
-//    int sY = locRect.y();
-//    int sW = locRect.width();
-//    int sH = locRect.height();
-    int sX = source->geometry().x() + locRect.x() / 2;
-    int sY = source->geometry().y() - locRect.y() / 2;
-    int sW = source->geometry().width();
-    int sH = source->geometry().height();
-    int sCtrX = sX + sW / 2;
-    int sCtrY = sY + sH / 2;
-    int pX = sCtrX - pW / 2;
-    int pY = sCtrY - pH / 2;
+    /*
+    qDebug() << __FUNCTION__
+             << "source->geometry()  =" << source->geometry()
+             << "centralWidget->geometry() =" << centralWidget->geometry()
+                ;
+                //*/
 
-    setGeometry(pX, pY, pW, pH);
+    // popup geometry
+    QRect cwRect = centralWidget->geometry();
+    int w = width();
+    int h = height();
+    int x = source->geometry().x() + cwRect.x() + cwRect.width() / 2 - w / 2;
+    int y = source->geometry().y() + cwRect.y() + cwRect.height() / 2 - h / 2;
+    setGeometry(x, y, w, h);
 
     QWidget::show();
 

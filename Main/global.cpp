@@ -3,8 +3,8 @@
 namespace G
 {
     // system messaging
-    bool isLogger = true;              // Writes log messages to file or console
-    bool isFlowLogger = false;          // Writes key program flow points to file or console
+    bool isLogger = false;              // Writes log messages to file or console
+    bool isFlowLogger = true;          // Writes key program flow points to file or console
     bool isTestLogger = false;          // Writes test points to file or console
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
     QFile logFile;                      // MW::openLog(), MW::closeLog()
@@ -144,9 +144,9 @@ namespace G
 
     void log(QString functionName, QString comment, bool hideElapsedTime)
     {
-        for (int i = 0; i < doNotLog.length(); ++i) {
-             if (functionName.contains(doNotLog.at(i))) return;
-        }
+//        for (int i = 0; i < doNotLog.length(); ++i) {
+//             if (functionName.contains(doNotLog.at(i))) return;
+//        }
         QString time = QString("%L1").arg(t.nsecsElapsed() / 1000);
         if (hideElapsedTime) time = "";
         QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
@@ -188,9 +188,11 @@ namespace G
         errlog(functionName, fPath, err);
     }
 
+    int popUpProgressCount = 0;
+    int popUpLoadFolderStep = 100;
     PopUp *popUp;
-    void newPopUp(QWidget *widget, QRect rect)
+    void newPopUp(QWidget *widget, QWidget *centralWidget)
     {
-        popUp = new PopUp(widget, rect);
+        popUp = new PopUp(widget, centralWidget);
     }
 }

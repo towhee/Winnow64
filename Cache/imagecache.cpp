@@ -169,8 +169,9 @@ void ImageCache::setDirection()
 {
 /*
     If the direction of travel changes then delay reversing the caching direction until a
-    third image is selected in the new direction of travel. This prevents needless caching if
-    the user justs reverses direction to check out the previous image
+    directionChangeThreshold (ie 3rd) image is selected in the new direction of travel. This
+    prevents needless caching if the user justs reverses direction to check out the previous
+    image
 */
     if (G::isLogger) G::log(__FUNCTION__);
 
@@ -196,27 +197,29 @@ void ImageCache::setDirection()
 
     icd->cache.directionChangeThreshold = 3;
     int thisStep = icd->cache.key - prevKey;
-    bool maybeDirection = thisStep > 0;
+    bool maybeIsForward = thisStep > 0;
+    icd->cache.maybeDirectionChange = icd->cache.isForward != maybeIsForward;
 
     /*
     qDebug() << __FUNCTION__
-             << "cache.maybeDirectionChange =" << cache.maybeDirectionChange
-             << "cache.isForward =" << cache.isForward
-             << "maybeDirection =" << maybeDirection
+             << "maybeDirectionChange =" << icd->cache.maybeDirectionChange
+             << "isForward =" << icd->cache.isForward
+             << "maybeIsForward =" << maybeIsForward
              << "thisStep =" << thisStep
-             << "cache.key =" << cache.key
+             << "sumStep =" << icd->cache.sumStep
+             << "directionChangeThreshold =" << icd->cache.directionChangeThreshold
+             << "key =" << icd->cache.key
              << "prevKey =" << prevKey
                 ;
                 // */
 
     // if direction has not maybe changed
-    if (!icd->cache.maybeDirectionChange && icd->cache.isForward == maybeDirection) {
+    if (!icd->cache.maybeDirectionChange) {
         icd->cache.sumStep = 0;
         return;
     }
 
-    // direction maybe changed
-    icd->cache.maybeDirectionChange = true;
+    // direction maybe changed, increment counter
     icd->cache.sumStep += thisStep;
 
     // maybe direction change gets to threshold then change cache direction
@@ -224,7 +227,6 @@ void ImageCache::setDirection()
         icd->cache.isForward = icd->cache.sumStep > 0;
         icd->cache.sumStep = 0;
         icd->cache.maybeDirectionChange = false;
-//        qDebug() << __FUNCTION__ << "Cache direction change.  isForward =" << cache.isForward;
     }
 
 //    qDebug() << __FUNCTION__ << thisStep << cache.sumStep << cache.isForward;
@@ -536,16 +538,20 @@ void ImageCache::makeRoom(int id, int cacheKey)
             room = icd->cache.maxMB - icd->cache.currMB;
             if (debugCaching) {
                 QString k = QString::number(icd->cache.toDecacheKey).leftJustified((4));
+                /*
                 qDebug().noquote() << __FUNCTION__
                          << "       decoder" << id << "key =" << k
                          << "room =" << room
                          << "roomRqd =" << roomRqd
                          << "Removed image" << s
                             ;
+                            //*/
             }
         }
         else {
+            /*
             qDebug() << __FUNCTION__ << "No cached images remaining to decache";
+            //*/
             break;
         }
     }
@@ -602,8 +608,7 @@ void ImageCache::removeFromCache(QStringList &pathList)
 
 void ImageCache::updateStatus(QString instruction, QString source)
 {
-//    updateCached();
-//    emit showCacheStatus(instruction, icd->cache, source);
+    emit showCacheStatus(instruction, icd->cache, source);
 }
 
 QString ImageCache::diagnostics()
@@ -1069,9 +1074,9 @@ void ImageCache::cacheImage(int id, int cacheKey)
     icd->cacheItemList[cacheKey].isCached = true;
     icd->cache.currMB = getImCacheSize();
     emit updateCacheOnThumbs(decoder[id]->fPath, true);
-    if (icd->cache.isShowCacheStatus) {
+//    if (icd->cache.isShowCacheStatus) {
         updateStatus("Update all rows", "ImageCache::run inside loop");
-    }
+//    }
 }
 
 void ImageCache::fillCache(int id, bool positionChange)
@@ -1202,6 +1207,7 @@ void ImageCache::fillCache(int id, bool positionChange)
     }
     // caching completed
     else {
+        fixOrphans();
         emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
         if (debugCaching) {
             qDebug() << __FUNCTION__
@@ -1256,12 +1262,11 @@ void ImageCache::run()
 */
 //    if (G::isLogger) G::log(__FUNCTION__);
 
+    // update position, priorities, target range
     fillCache(-1, true);    // id, positionChange
 
     source = "";
     prevCurrentPath = currentPath;
-    icd->cache.sumStep = 0;
-    icd->cache.maybeDirectionChange = false;
 
     // signal MW cache status
     emit updateIsRunning(true, true);
