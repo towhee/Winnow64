@@ -342,6 +342,7 @@ Steps:
     timeToQuit = false;
     imageCount = 0;
     countInterval = 100;
+
     QString step = "Searching for eligible images.\n\n";
     QString escapeClause = "\n\nPress \"Esc\" to stop.";
     QString root;
@@ -366,7 +367,8 @@ Steps:
                         QString::number(folderCount) + " folders" +
                         escapeClause;
             emit msg(s);        // rghmsg
-            qApp->processEvents();
+            QCoreApplication::processEvents();
+//            qApp->processEvents();
         }
         if (timeToQuit) return false;
     }
@@ -400,7 +402,8 @@ Steps:
                                 QString::number(folderCount) + " folders" +
                                 escapeClause;
                     emit msg(s);    // rghmsg
-                    qApp->processEvents();
+                    QCoreApplication::processEvents();
+//                    qApp->processEvents();
                 }
             }
         }
@@ -532,7 +535,7 @@ bool DataModel::addFileData()
         }
 
         // Load folder progress
-        if (row % 1000 == 0 && t.elapsed() > addFilesMaxDelay) {
+        if (row % 100 == 0 ) {
 //            QString s = step +
 //                        QString::number(row) + " of " + QString::number(rowCount()) +
 //                        " loaded." +
@@ -540,7 +543,8 @@ bool DataModel::addFileData()
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " loaded.";
             emit msg(s);    // rghmsg
-            qApp->processEvents();
+            QCoreApplication::processEvents();
+//            qApp->processEvents();
         }
 
     }
