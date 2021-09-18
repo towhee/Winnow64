@@ -13,8 +13,8 @@ Exif::Exif()
     hash[46] = "JpgOffset";
     hash[49] = "PanasonicImageHeight";
     hash[50] = "PanasonicImageWidth";
-    hash[254] = "SubfileType";
-    hash[255] = "OldSubfileType";
+    hash[254] = "NewSubfileType";
+    hash[255] = "SubfileType";
     hash[256] = "ImageWidth";
     hash[257] = "ImageHeight";
     hash[258] = "BitsPerSample";

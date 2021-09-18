@@ -144,7 +144,7 @@ CACHE STATUS
 * An image cache progress bar (progressBar) shows the status of every image in the folder:
   target range, isCached and cursor position.
 
-* The flag G::showCacheStatus toggles cache progress updates and the visibility of the
+* The flag isShowCacheProgressBar toggles cache progress updates and the visibility of the
   progress bar.
 
 * isCached is stored in datamodel as dm->sf->setData(idx, isCached, G::CachedRole)
@@ -1560,7 +1560,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
 
-    if (!G::isSlideShow) progressLabel->setVisible(G::showCacheStatus);
+    if (!G::isSlideShow) progressLabel->setVisible(isShowCacheProgressBar);
 
     // update imageView immediately unless weird sort or folder not loaded yet
     bool okToLoadImage = (sortColumn == G::NameColumn
@@ -1623,8 +1623,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     }
 
     // update cursor position on progressBar
-    progressBar->updateCursor(currentRow, dm->sf->rowCount(),
-                              G::progressCurrentColor, G::progressImageCacheColor);
+    progressBar->updateCursor(currentRow, dm->sf->rowCount());
 
 //    if (!G::isInitializing) centralLayout->setCurrentIndex(prevCentralView);
 
@@ -2066,7 +2065,7 @@ void MW::updateImageCacheStatus(QString instruction,
     }
     //*/
 
-    return;
+    if (!isShowCacheProgressBar) return;
 
     // just repaint the progress bar gray and return.
     if(instruction == "Clear") {
@@ -2082,16 +2081,17 @@ void MW::updateImageCacheStatus(QString instruction,
         // target range
         int tFirst = cache.targetFirst;
         int tLast = cache.targetLast + 1;
-        progressBar->updateProgress(tFirst, tLast, rows, G::progressTargetColor,
-                                    "");
+        progressBar->updateProgress(tFirst, tLast, rows,
+                                    progressBar->targetColorGradient);
         // cached
         for (int i = 0; i < rows; ++i) {
             if (dm->sf->index(i, G::PathColumn).data(G::CachedRole).toBool())
-                progressBar->updateProgress(i, i + 1, rows, G::progressImageCacheColor, "");
+                progressBar->updateProgress(i, i + 1, rows,
+                                            progressBar->imageCacheColorGradient);
         }
 
         // cursor
-        progressBar->updateCursor(currentRow, rows, G::progressCurrentColor, G::progressImageCacheColor);
+        progressBar->updateCursor(currentRow, rows);
         return;
     }
 
@@ -2120,7 +2120,7 @@ void MW::loadImageCacheForNewFolder()
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     // now that metadata is loaded populate the data model
-    if(G::showCacheStatus) {
+    if(isShowCacheProgressBar) {
         progressBar->clearProgress();
         qApp->processEvents();
     }
@@ -2134,21 +2134,12 @@ void MW::loadImageCacheForNewFolder()
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
     imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
-        G::showCacheStatus, cacheWtAhead);
+        isShowCacheProgressBar, cacheWtAhead);
 
     // have to wait until image caching thread running before setting flag
     metadataLoaded = true;
 
     G::isNewFolderLoaded = true;
-
-//    // set focus when program opens
-//    if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
-//    if (G::mode == "Loupe") thumbView->setFocus();
-////    if (G::mode == "Grid") gridDisplay();
-//    if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
-//    if (G::mode == "Grid") gridView->setFocus();
-//    if (G::mode == "Table") centralLayout->setCurrentIndex(TableTab);
-//    if (G::mode == "Table") tableView->setFocus();
 
     /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
     including current index and file path req'd by mdCache and EmbelProperties...  If
@@ -2168,20 +2159,6 @@ void MW::loadImageCacheForNewFolder()
         currentSfIdx = dm->sf->index(0,0);
     }
     fileSelectionChange(currentSfIdx, currentSfIdx);
-
-    qDebug() << __FUNCTION__ << G::mode << prevMode;
-
-//    // set focus when program opens
-//    if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
-//    if (G::mode == "Loupe") thumbView->setFocus();
-////    if (G::mode == "Grid") gridDisplay();
-//    if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
-//    if (G::mode == "Grid") gridView->setFocus();
-//    if (G::mode == "Table") centralLayout->setCurrentIndex(TableTab);
-//    if (G::mode == "Table") tableView->setFocus();
-
-//    fileSelectionChange(currentSfIdx, currentSfIdx);
-
 }
 
 void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
@@ -4252,7 +4229,7 @@ void MW::createDataModel()
     // loadSettings not run yet
     if (isSettings && setting->contains("combineRawJpg")) combineRawJpg = setting->value("combineRawJpg").toBool();
     else combineRawJpg = true;
-    dm = new DataModel(this, metadata, progressBar, filters, combineRawJpg);
+    dm = new DataModel(this, metadata, filters, combineRawJpg);
     thumb = new Thumb(this, dm, metadata);
 
     // show appropriate count column in filters
@@ -5262,11 +5239,11 @@ void MW::createStatusBar()
     if (isSettings && setting->contains("cacheStatusWidth"))
         progressWidth = setting->value("cacheStatusWidth").toInt();
     if (progressWidth < 100 || progressWidth > 1000) progressWidth = 200;
-    progressPixmap = new QPixmap(4000, 25);
+    progressPixmap = new QPixmap(4000, 25);   // cacheprogress
     progressPixmap->scaled(progressWidth, 25);
     progressPixmap->fill(widgetCSS.widgetBackgroundColor);
-    progressLabel->setPixmap(*progressPixmap);
     progressLabel->setFixedWidth(progressWidth);
+    progressLabel->setPixmap(*progressPixmap);
 
     // tooltip
     QString progressToolTip = "Image cache status for current folder:\n";
@@ -5344,7 +5321,7 @@ void MW::updateStatusBar()
 
 //    updateProgressBarWidth();
 
-//    if (!(G::isSlideShow && isSlideShowRandom)) progressLabel->setVisible(G::showCacheStatus);// rghcachechange
+//    if (!(G::isSlideShow && isSlideShowRandom)) progressLabel->setVisible(isShowCacheProgressBar);// rghcachechange
 //    else progressLabel->setVisible(false);
 }
 
@@ -5374,7 +5351,7 @@ void MW::updateProgressBarWidth()
         int availableSpace = availableSpaceForProgressBar();
         if (availableSpace < progressWidth) progressWidth = availableSpace;
         progressLabel->setFixedWidth(progressWidth);
-        progressPixmap->scaled(progressWidth, 25);
+            progressPixmap->scaled(progressWidth, 25); // cacheprogress
     }
 }
 
@@ -5493,7 +5470,7 @@ void MW::setImageCacheParameters()
     if (cacheNetMB < cacheMinMB) cacheNetMB = cacheMinMB;
 
     imageCacheThread->updateImageCacheParam(cacheNetMB, cacheMinMB,
-             G::showCacheStatus, cacheWtAhead);
+             isShowCacheProgressBar, cacheWtAhead);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     // change to ImageCache
@@ -5502,7 +5479,7 @@ void MW::setImageCacheParameters()
 //        emit setImageCachePosition(fPath);
 
     // cache progress bar
-    progressLabel->setVisible(isShowCacheThreadActivity);
+    progressLabel->setVisible(isShowCacheProgressBar);
 
     // thread busy indicators
 //    metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
@@ -5710,7 +5687,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QStri
         #endif
     }
     metadataThreadRunningLabel->setText("◉");
-    if (isShowCacheThreadActivity && !G::isSlideShow) progressLabel->setVisible(showCacheLabel);
+    if (isShowCacheProgressBar && !G::isSlideShow) progressLabel->setVisible(showCacheLabel);
     calledBy = "";  // suppress compiler warning
 }
 
@@ -5732,7 +5709,7 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
         #endif
     }
     imageThreadRunningLabel->setText("◉");
-    if (isShowCacheThreadActivity) progressLabel->setVisible(showCacheLabel);
+    if (isShowCacheProgressBar) progressLabel->setVisible(showCacheLabel);
 }
 
 void MW::setThreadRunStatusInactive()
@@ -7006,9 +6983,9 @@ QString MW::diagnostics()
     rpt << "\n" << "slideShowRandom = " << G::s(isSlideShowRandom);
     rpt << "\n" << "slideShowWrap = " << G::s(isSlideShowWrap);
     rpt << "\n" << "cacheSizeMB = " << G::s(cacheMaxMB);
-    rpt << "\n" << "showCacheStatus = " << G::s(G::showCacheStatus);
+    rpt << "\n" << "showCacheStatus = " << G::s(isShowCacheProgressBar);
     rpt << "\n" << "cacheDelay = " << G::s(cacheDelay);
-    rpt << "\n" << "isShowCacheThreadActivity = " << G::s(isShowCacheThreadActivity);
+    rpt << "\n" << "isShowCacheThreadActivity = " << G::s(isShowCacheProgressBar);
     rpt << "\n" << "progressWidth = " << G::s(progressWidth);
     rpt << "\n" << "cacheWtAhead = " << G::s(cacheWtAhead);
     rpt << "\n" << "isCachePreview = " << G::s(isCachePreview);
@@ -8127,11 +8104,8 @@ void MW::writeSettings()
     // image cache
     setting->setValue("cacheSizeMethod", cacheSizeMethod);
     setting->setValue("cacheMinSize", cacheMinSize);
-//    setting->setValue("cacheSizePercentOfAvailable", cacheSizePercentOfAvailable);
-//    setting->setValue("cacheSizeMB", cacheSizeMB);
-    setting->setValue("isShowCacheStatus", G::showCacheStatus);
+    setting->setValue("isShowCacheStatus", isShowCacheProgressBar);
     setting->setValue("cacheDelay", cacheDelay);
-    setting->setValue("isShowCacheThreadActivity", isShowCacheThreadActivity);
     setting->setValue("cacheStatusWidth", progressWidth);
     setting->setValue("cacheWtAhead", cacheWtAhead);
     setting->setValue("isCachePreview", isCachePreview);
@@ -8434,8 +8408,7 @@ bool MW::loadSettings()
         cacheMinSize = "  2 GB";
         cacheSizePercentOfAvailable = 50;
         cacheMaxMB = static_cast<int>(G::availableMemoryMB * 0.5);
-        G::showCacheStatus = true;
-        isShowCacheThreadActivity = true;
+        isShowCacheProgressBar = true;
         progressWidth = 200;
         progressWidthBeforeResizeWindow = progressWidth;
         cacheWtAhead = 7;
@@ -8541,9 +8514,7 @@ bool MW::loadSettings()
 //            cacheSizeMB = (static_cast<int>(G::availableMemoryMB) * cacheSizePercentOfAvailable) / 100;
 //        if (cacheSizeMethod == "MB") cacheSizeMB = setting->value("cacheSizeMB").toInt();
         //*/
-//    if (setting->contains("isShowCacheStatus")) G::showCacheStatus = setting->value("isShowCacheStatus").toBool();
-//    if (setting->contains("isShowCacheThreadActivity")) isShowCacheThreadActivity = setting->value("isShowCacheThreadActivity").toBool();
-    isShowCacheThreadActivity = false;
+    if (setting->contains("isShowCacheStatus")) isShowCacheProgressBar = setting->value("isShowCacheStatus").toBool();
     if (setting->contains("cacheStatusWidth")) progressWidth = setting->value("cacheStatusWidth").toInt();
     progressWidthBeforeResizeWindow = progressWidth;
     if (setting->contains("cacheWtAhead")) cacheWtAhead = setting->value("cacheWtAhead").toInt();
@@ -9586,10 +9557,8 @@ void MW::setStatusBarVisibility()
 void MW::setCacheStatusVisibility()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    if (isShowCacheThreadActivity && !G::isSlideShow)
-        progressLabel->setVisible(G::showCacheStatus);
-//    metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
-//    imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
+    if (isShowCacheProgressBar && !G::isSlideShow)
+        progressLabel->setVisible(isShowCacheProgressBar);
 }
 
 // not used rgh ??
@@ -11673,7 +11642,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    stressTest(100);
-    G::popUp->showPopup("Test, 2000");
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";

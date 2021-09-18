@@ -97,9 +97,19 @@ itemChange, which is subclassed here.
         mw->setClassificationBadgeImageDiam(value);
     }
 
-    if (source == "showThreadActivity") {
-        mw->isShowCacheThreadActivity = v.toBool();
-        G::showCacheStatus = v.toBool();
+    if (source == "showCacheProgressBar") {
+        mw->isShowCacheProgressBar = v.toBool();
+        mw->setImageCacheParameters();
+        // hide/show progressWidthSlider in preferences
+        QModelIndex capIdx = findIndex("progressWidthSlider");
+        if (v.toBool()) setRowHidden(capIdx.row(), capIdx.parent(), false);
+        else setRowHidden(capIdx.row(), capIdx.parent(), true);
+    }
+
+    if (source == "progressWidthSlider") {
+        mw->progressWidth = v.toInt();
+        mw->updateProgressBarWidth();
+        mw->progressWidthBeforeResizeWindow = mw->progressWidth;
         mw->setImageCacheParameters();
     }
 
@@ -142,6 +152,7 @@ itemChange, which is subclassed here.
 
     if (source == "imageCacheMinSize") {
         mw->setImageCacheMinSize(v.toString());
+        mw->setImageCacheSize(v.toString());
         mw->setImageCacheParameters();
         // get available memory
         #ifdef Q_OS_WIN
@@ -171,13 +182,6 @@ itemChange, which is subclassed here.
         if (v.toString() == "90% ahead") mw->cacheWtAhead = 9;
         if (v.toString() == "100% ahead") mw->cacheWtAhead = 10;
          mw->setImageCacheParameters();
-    }
-
-    if (source == "progressWidthSlider") {
-        mw->progressWidth = v.toInt();
-        mw->updateProgressBarWidth();
-        mw->progressWidthBeforeResizeWindow = mw->progressWidth;
-        mw->setImageCacheParameters();
     }
 
     if (source == "slideShowDelay") {
@@ -694,7 +698,7 @@ void Preferences::addItems()
 
     {
     // Show caching activity
-    i.name = "showThreadActivity";
+    i.name = "showCacheProgressBar";
     i.parentName = "CacheHeader";
     i.captionText = "Show caching activity";
     i.tooltip = "Two small indicators on the extreme right side of the status bar turn red\n"
@@ -703,17 +707,17 @@ void Preferences::addItems()
                 "preference shows or hides the indicators.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = mw->isShowCacheThreadActivity;
-    i.key = "showThreadActivity";
+    i.value = mw->isShowCacheProgressBar;
+    i.key = "showCacheProgressBar";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-//    addItem(i);
+    addItem(i);
 
     // Set the width of the cache status progress bar
     i.name = "progressWidthSlider";
     i.parentName = "CacheHeader";
-    i.captionText = "Cache status bar width";
-    i.tooltip = "Change the width of the cache status in the status bar.";
+    i.captionText = "Cache progress bar width";
+    i.tooltip = "Change the width of the cache progress bar in the status bar.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 120;
@@ -724,7 +728,13 @@ void Preferences::addItems()
     i.min = 100;
     i.max = 4000;
     i.fixedWidth = 50;
-//    addItem(i);
+    addItem(i);
+    // hide/show progressWidthSlider in preferences
+    QModelIndex idx = findIndex("showCacheProgressBar");
+    if (model->index(idx.row(), 1, idx.parent()).data().toBool())
+        setRowHidden(capIdx.row(), capIdx.parent(), false);
+    else
+        setRowHidden(capIdx.row(), capIdx.parent(), true);
 
     // Cache Thumbnail Header
     i.name = "CacheThumbnailHeader";

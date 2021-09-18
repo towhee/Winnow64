@@ -60,8 +60,6 @@ public:
         QString comment;            // for debugging
     } cacheItem;
 
-
-
     QList<CacheItem> cacheItemList;
 };
 Q_DECLARE_METATYPE(ImageCacheData::Cache)

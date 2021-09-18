@@ -146,7 +146,6 @@ namespace G
     extern int availableMemoryMB;
     extern int winnowMemoryBeforeCacheMB;
     extern int metaCacheMB;
-    extern bool showCacheStatus;
 
     struct WinScreen {
         QString adaptor;
@@ -177,15 +176,6 @@ namespace G
 
     extern QStringList ratings;
     extern QStringList labelColors;
-
-    extern QColor progressCurrentColor;
-    extern QColor progressBgColor;
-    extern QColor progressAppBgColor;
-    extern QColor progressAddFileInfoColor;
-    extern QColor progressAddMetadataColor;
-    extern QColor progressBuildFiltersColor;
-    extern QColor progressTargetColor;
-    extern QColor progressImageCacheColor;
 
     extern double iconOpacity;
 

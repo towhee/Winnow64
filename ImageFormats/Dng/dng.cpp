@@ -11,7 +11,7 @@ bool DNG::parse(MetadataParameters &p,
                 Exif *exif,
                 Jpeg *jpeg)
 {
-    //file.open happens in readMetadata
+    // p.file.open happens in readMetadata
 
     quint32 startOffset = 0;
 

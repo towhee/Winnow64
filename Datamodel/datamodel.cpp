@@ -139,7 +139,6 @@ Code examples for model:
 
 DataModel::DataModel(QWidget *parent,
                      Metadata *metadata,
-                     ProgressBar *progressBar,
                      Filters *filters,
                      bool &combineRawJpg) :
 
@@ -151,7 +150,6 @@ DataModel::DataModel(QWidget *parent,
     mw = parent;
     this->metadata = metadata;
     this->filters = filters;
-    this->progressBar = progressBar;
 
     setSortRole(Qt::EditRole);
 
@@ -368,7 +366,7 @@ Steps:
                         QString::number(folderCount) + " folders" +
                         escapeClause;
             emit msg(s);        // rghmsg
-//            qApp->processEvents();
+            qApp->processEvents();
         }
         if (timeToQuit) return false;
     }
