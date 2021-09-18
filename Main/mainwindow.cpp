@@ -10015,7 +10015,7 @@ void MW::ejectUsb(QString path)
     // if current folder is on USB drive to be ejected then stop caching
     QStorageInfo ejectDrive(path);
     QStorageInfo currentDrive(currentViewDir);
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << "currentViewDir =" << currentViewDir
              << "path =" << path
@@ -10036,16 +10036,16 @@ void MW::ejectUsb(QString path)
     }
 
     QString driveName = ejectDrive.name();      // ie WIN "D:\" or MAC "Untitled"
-//#if defined(Q_OS_WIN)
-//    driveRoot = path.left(3);
-//#elif defined(Q_OS_MAC)
-//    // ie extract "Untitled" from "/Volumes/Untitled/DCIM"
+#if defined(Q_OS_WIN)
+    driveName = ejectDrive.rootPath();
+#elif defined(Q_OS_MAC)
+    driveName = ejectDrive.name();
 //    int start = path.indexOf("/Volumes/", 0);
 //    if (start != 0) return;                   // should start with "/Volumes/"
 //    int pos = path.indexOf("/", start + 9);
 //    if (pos == -1) pos = path.length();
 //    driveName = path.mid(9, pos - 9);
-//#endif
+#endif
     if (Usb::isUsb(path)) {
         dm->load(driveName, false);
         refreshFolders();
@@ -11491,7 +11491,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     if (fPath.length() == 0) {
         if (report) {
             if (isRemembered)
-                msg = "The last folder from your previous session is null";
+                msg = "The last folder from your previous session is unavailable";
             else
                 msg = "The folder (" + fPath + ") does not exist or is not available";
 
