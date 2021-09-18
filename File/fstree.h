@@ -49,6 +49,7 @@ public:
     void setShowImageCount(bool showImageCount);
     bool getShowImageCount();
 
+    QFileSystemWatcher *watch;
 
     FSModel *fsModel;
     FSFilter *fsFilter;

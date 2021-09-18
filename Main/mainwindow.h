@@ -284,7 +284,8 @@ public:
     // tooltip for tabs in docked and tabified panels
 //    int prevTabIndex= -1;
 
-    QString currentViewDir;
+    QString currentViewDirPath;
+    QDir currentViewDir;
 
     enum centralWidgetTabs {
         LoupeTab,       // 0
@@ -479,7 +480,7 @@ private slots:
     void addNewBookmarkFromMenu();
     void addNewBookmarkFromContextMenu();
     void reportMetadata();
-    void checkDirState(const QModelIndex &, int, int);
+    void checkDirState(const QString &dirPath);
     void bookmarkClicked(QTreeWidgetItem *item, int col);
     void setRatingBadgeVisibility();
     void setShootingInfoVisibility();

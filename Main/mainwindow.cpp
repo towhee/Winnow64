@@ -833,8 +833,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
         else {
-            enableEjectUsbMenu(currentViewDir);
-            if(currentViewDir == "") {
+            enableEjectUsbMenu(currentViewDirPath);
+            if(currentViewDirPath == "") {
                 addBookmarkAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
                 copyPathActionFromContext->setEnabled(false);
@@ -967,7 +967,7 @@ void MW::dropEvent(QDropEvent *event)
     QFileInfo info(fPath);
     QDir incoming = info.dir();
     qDebug() << __FUNCTION__ << fPath;
-    if (incoming != currentViewDir && event->mimeData()->hasUrls())
+    if (incoming != currentViewDirPath && event->mimeData()->hasUrls())
         folderAndFileSelectionChange(fPath);
 }
 
@@ -979,7 +979,7 @@ void MW::handleDrop(QString fPath)
 //    QFileInfo info(event->mimeData()->urls().at(0).toLocalFile());
     QFileInfo info(fPath);
     QDir incoming = info.dir();
-    QDir current(currentViewDir);
+    QDir current(currentViewDirPath);
     qDebug() << __FUNCTION__ << fPath;
     bool isSameFolder = incoming == current;
     if (!isSameFolder) folderAndFileSelectionChange(fPath);
@@ -1259,8 +1259,9 @@ void MW::watchCurrentFolder()
     cached no longer exists (ejected) then make a folderSelectionChange.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    if (currentViewDir == "") return;
-    QFileInfo info(currentViewDir);
+    qDebug() << __FUNCTION__ << currentViewDirPath;
+    if (currentViewDirPath == "") return;
+    QFileInfo info(currentViewDirPath);
     if (info.exists()) return;
     folderSelectionChange();
 }
@@ -1272,12 +1273,12 @@ void MW::folderSelectionChange()
        run.  */
 //    G::isNewFolderLoaded = false;
 
-    currentViewDir = getSelectedPath();
-    setting->setValue("lastDir", currentViewDir);
+    currentViewDirPath = getSelectedPath();
+    setting->setValue("lastDir", currentViewDirPath);
 
     if (G::isLogger || G::isFlowLogger) {
         G::log("FOLDER CHANGE");
-        G::log(__FUNCTION__, currentViewDir);
+        G::log(__FUNCTION__, currentViewDirPath);
     }
 
     clearAll();
@@ -1319,19 +1320,19 @@ void MW::folderSelectionChange()
     }
 
     // confirm folder exists and is readable, report if not and do not process
-    if (!isFolderValid(currentViewDir, true /*report*/, false /*isRemembered*/)) {
+    if (!isFolderValid(currentViewDirPath, true /*report*/, false /*isRemembered*/)) {
         clearAll();
         G::isInitializing = false;
         setWindowTitle(winnowWithVersion);
-        if (G::isLogger) Utilities::log(__FUNCTION__, "Invalid folder " + currentViewDir);
+        if (G::isLogger) Utilities::log(__FUNCTION__, "Invalid folder " + currentViewDirPath);
         return;
     }
 
     // sync the favs / bookmarks with the folders view fsTree
-    bookmarks->select(currentViewDir);
+    bookmarks->select(currentViewDirPath);
 
     // add to recent folders
-    addRecentFolder(currentViewDir);
+    addRecentFolder(currentViewDirPath);
 
     // sync the folders tree with the current folder
     fsTree->scrollToCurrent();
@@ -1343,7 +1344,7 @@ void MW::folderSelectionChange()
 //    }
 
     // update menu
-    enableEjectUsbMenu(currentViewDir);
+    enableEjectUsbMenu(currentViewDirPath);
 
     /* We do not want to update the imageCache while metadata is still being loaded. The
     imageCache update is triggered in fileSelectionChange, which is also executed when the
@@ -1361,8 +1362,8 @@ void MW::folderSelectionChange()
 
     if (G::isTest) testTime.restart();
 
-    if (!dm->load(currentViewDir, subFoldersAction->isChecked())) {
-        qWarning() << "Datamodel Failed To Load for" << currentViewDir;
+    if (!dm->load(currentViewDirPath, subFoldersAction->isChecked())) {
+        qWarning() << "Datamodel Failed To Load for" << currentViewDirPath;
         clearAll();
         enableSelectionDependentMenus();
         if (dm->timeToQuit) {
@@ -1370,14 +1371,14 @@ void MW::folderSelectionChange()
             setCentralMessage("Image loading has been cancelled");
             return;
         }
-        QDir dir(currentViewDir);
+        QDir dir(currentViewDirPath);
         if (dir.isRoot()) {
             updateStatus(false, "No supported images in this drive", __FUNCTION__);
-            setCentralMessage("The root folder \"" + currentViewDir + "\" does not have any eligible images");
+            setCentralMessage("The root folder \"" + currentViewDirPath + "\" does not have any eligible images");
         }
         else {
             updateStatus(false, "No supported images in this folder", __FUNCTION__);
-            setCentralMessage("The folder \"" + currentViewDir + "\" does not have any eligible images");
+            setCentralMessage("The folder \"" + currentViewDirPath + "\" does not have any eligible images");
         }
         G::isInitializing = false;
         return;
@@ -1473,6 +1474,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
              << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
                 ;
 //    */
+//    if (!currentViewDir.exists())
 
     bool isStart = false;
     if(!isCurrentFolderOkay
@@ -2184,18 +2186,19 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     }
 }
 
-void MW::checkDirState(const QModelIndex &, int, int)
+void MW::checkDirState(const QString &dirPath)
 {
 /*
     called when signal rowsRemoved from FSTree
     does this get triggered if a drive goes offline???
     rgh this needs some TLC
 */
+    qDebug() << __FUNCTION__ << dirPath;
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing) return;
 
-    if (!QDir().exists(currentViewDir)) {
-        currentViewDir = "";
+    if (!QDir().exists(currentViewDirPath)) {
+        currentViewDirPath = "";
     }
 }
 
@@ -2211,6 +2214,7 @@ QString MW::getSelectedPath()
 
     QString path = idx.data(QFileSystemModel::FilePathRole).toString();
     QFileInfo dirInfo = QFileInfo(path);
+    currentViewDir = dirInfo.dir();
     return dirInfo.absoluteFilePath();
 }
 
@@ -5156,6 +5160,9 @@ void MW::createFSTree()
     fsTree->setShowImageCount(true);
     fsTree->combineRawJpg = combineRawJpg;
 
+    // watch for drive removal
+    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
+
     // selection change check if triggered by ejecting USB drive
     connect(fsTree, &FSTree::selectionChange, this, &MW::watchCurrentFolder);
 
@@ -5164,6 +5171,7 @@ void MW::createFSTree()
     // this does not work for touchpad tap
 //    connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
 
+    // this does not work to detect ejecting a drive
 //    connect(fsTree->fsModel, SIGNAL(rowsRemoved(const QModelIndex &, int, int)),
 //            this, SLOT(checkDirState(const QModelIndex &, int, int)));
 
@@ -6998,7 +7006,7 @@ QString MW::diagnostics()
     rpt << "\n" << "fullScreenDocks.isThumbs = " << G::s(fullScreenDocks.isThumbs);
     rpt << "\n" << "fullScreenDocks.isStatusBar = " << G::s(fullScreenDocks.isStatusBar);
     rpt << "\n" << "isNormalScreen = " << G::s(isNormalScreen);
-    rpt << "\n" << "currentViewDir = " << G::s(currentViewDir);
+    rpt << "\n" << "currentViewDir = " << G::s(currentViewDirPath);
     rpt << "\n" << "prevMode = " << G::s(prevMode);
     rpt << "\n" << "currentRow = " << G::s(currentRow);
     rpt << "\n" << "scrollRow = " << G::s(scrollRow);
@@ -8055,7 +8063,7 @@ void MW::writeSettings()
     setting->setValue("isColorManagement", G::isColorManagement);
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("checkIfUpdate", checkIfUpdate);
-    setting->setValue("lastDir", currentViewDir);
+    setting->setValue("lastDir", currentViewDirPath);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("combineRawJpg", combineRawJpg);
 
@@ -9301,7 +9309,7 @@ void MW::setCentralView()
     if (asGridAction->isChecked()) gridDisplay();
     if (asTableAction->isChecked()) tableDisplay();
     if (asCompareAction->isChecked()) compareDisplay();
-    if (currentViewDir == "") {
+    if (currentViewDirPath == "") {
         QString msg = "Select a folder or bookmark to get started.";
         setCentralMessage(msg);
         prevMode = "Loupe";
@@ -9942,7 +9950,7 @@ void MW::ingest()
     if (G::isLogger) G::log(__FUNCTION__);
     static QString prevSourceFolder = "";
     static QString baseFolderDescription = "";
-    if (prevSourceFolder != currentViewDir) baseFolderDescription = "";
+    if (prevSourceFolder != currentViewDirPath) baseFolderDescription = "";
 
     if (thumbView->isPick()) {
         ingestDlg = new IngestDlg(this,
@@ -9979,9 +9987,9 @@ void MW::ingest()
 
         if (!ingested) return;
 
-        if (autoEjectUsb) ejectUsb(currentViewDir);
+        if (autoEjectUsb) ejectUsb(currentViewDirPath);
 
-        prevSourceFolder = currentViewDir;
+        prevSourceFolder = currentViewDirPath;
 
         if(gotoIngestFolder) {
             fsTree->select(lastIngestLocation);
@@ -10014,7 +10022,7 @@ void MW::ejectUsb(QString path)
 
     // if current folder is on USB drive to be ejected then stop caching
     QStorageInfo ejectDrive(path);
-    QStorageInfo currentDrive(currentViewDir);
+    QStorageInfo currentDrive(currentViewDirPath);
     /*
     qDebug() << __FUNCTION__
              << "currentViewDir =" << currentViewDir
@@ -10040,11 +10048,13 @@ void MW::ejectUsb(QString path)
     driveName = ejectDrive.rootPath();
 #elif defined(Q_OS_MAC)
     driveName = ejectDrive.name();
-//    int start = path.indexOf("/Volumes/", 0);
-//    if (start != 0) return;                   // should start with "/Volumes/"
-//    int pos = path.indexOf("/", start + 9);
-//    if (pos == -1) pos = path.length();
-//    driveName = path.mid(9, pos - 9);
+    /*
+    int start = path.indexOf("/Volumes/", 0);
+    if (start != 0) return;                   // should start with "/Volumes/"
+    int pos = path.indexOf("/", start + 9);
+    if (pos == -1) pos = path.length();
+    driveName = path.mid(9, pos - 9);
+    //*/
 #endif
     if (Usb::isUsb(path)) {
         dm->load(driveName, false);
@@ -10058,7 +10068,7 @@ void MW::ejectUsb(QString path)
             G::popUp->showPopup("Failed to eject drive " + driveName, 2000);
     }
     else {
-        G::popUp->showPopup("Drive " + currentViewDir[0]
+        G::popUp->showPopup("Drive " + currentViewDirPath[0]
               + " is not removable and cannot be ejected", 2000);
     }
 }
@@ -10066,7 +10076,7 @@ void MW::ejectUsb(QString path)
 void MW::ejectUsbFromMainMenu()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    ejectUsb(currentViewDir);
+    ejectUsb(currentViewDirPath);
 }
 
 void MW::ejectUsbFromContextMenu()
@@ -10981,7 +10991,7 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
         return;
     }
 
-    if (destDir == 	currentViewDir) {
+    if (destDir == 	currentViewDirPath) {
         msgBox.critical(this, tr("Error"), tr("Destination folder is same as source."));
         return;
     }
@@ -11033,7 +11043,7 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
 void MW::selectCurrentViewDir()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    QModelIndex idx = fsTree->fsModel->index(currentViewDir);
+    QModelIndex idx = fsTree->fsModel->index(currentViewDirPath);
     if (idx.isValid()){
         fsTree->expand(idx);
         fsTree->setCurrentIndex(idx);
@@ -11073,7 +11083,7 @@ void MW::showNewImageWarning(QWidget *parent)
 void MW::addNewBookmarkFromMenu()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    addBookmark(currentViewDir);
+    addBookmark(currentViewDirPath);
 }
 
 void MW::addNewBookmarkFromContextMenu()
@@ -11640,7 +11650,20 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    stressTest(100);
+    QStringList mountedDrives;
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+/*        qDebug() << G::t.restart() << "\t" << "FSTree::createModel  " << storage.rootPath()
+                 << "storage.isValid()" << storage.isValid()
+                 << "storage.isReady()" << storage.isReady()
+                 << "storage.isReadOnly()" << storage.isReadOnly();
+//                 */
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                mountedDrives << storage.rootPath();
+            }
+        }
+    }
+    qDebug() << __FUNCTION__ << mountedDrives;
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";

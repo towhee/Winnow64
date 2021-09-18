@@ -195,7 +195,27 @@ void FSTree::createModel()
     if (G::isLogger) G::log(__FUNCTION__); 
     fsModel = new FSModel(this, metadata, count, combineCount, combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
-    fsModel->setRootPath("");
+    fsModel->setRootPath(fsModel->myComputer().toString());
+//    fsModel->setRootPath("");
+
+    // watcher
+    watch = new QFileSystemWatcher;
+
+    // get mounted drives only
+    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+          /*
+          qDebug() << G::t.restart() << "\t" << "FSTree::createModel  " << storage.rootPath()
+                 << "storage.isValid()" << storage.isValid()
+                 << "storage.isReady()" << storage.isReady()
+                 << "storage.isReadOnly()" << storage.isReadOnly();
+                 //                 */
+        if (storage.isValid() && storage.isReady()) {
+            if (!storage.isReadOnly()) {
+                mountedDrives << storage.rootPath();
+            }
+        }
+    }
+    watch->addPaths(mountedDrives);
 
 #ifdef Q_OS_LINIX   // not recognized for some reason
     fsModel->setRootPath("");
@@ -203,19 +223,19 @@ void FSTree::createModel()
 #endif
 
 #ifdef Q_OS_WIN
-    // get mounted drives only
-    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
-/*        qDebug() << G::t.restart() << "\t" << "FSTree::createModel  " << storage.rootPath()
-                 << "storage.isValid()" << storage.isValid()
-                 << "storage.isReady()" << storage.isReady()
-                 << "storage.isReadOnly()" << storage.isReadOnly();
-//                 */
-        if (storage.isValid() && storage.isReady()) {
-            if (!storage.isReadOnly()) {
-                mountedDrives << storage.rootPath();
-            }
-        }
-    }
+//    // get mounted drives only
+//    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
+///*        qDebug() << G::t.restart() << "\t" << "FSTree::createModel  " << storage.rootPath()
+//                 << "storage.isValid()" << storage.isValid()
+//                 << "storage.isReady()" << storage.isReady()
+//                 << "storage.isReadOnly()" << storage.isReadOnly();
+////                 */
+//        if (storage.isValid() && storage.isReady()) {
+//            if (!storage.isReadOnly()) {
+//                mountedDrives << storage.rootPath();
+//            }
+//        }
+//    }
     fsModel->setRootPath(fsModel->myComputer().toString());
 #endif
 
