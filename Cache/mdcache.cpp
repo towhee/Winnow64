@@ -597,6 +597,8 @@ void MetadataCache::readIconChunk()
             msg += QString::number(row) + " of " + QString::number(end);
             if (row % countInterval == 0) {
                 emit showCacheStatus(msg);
+                QCoreApplication::processEvents();
+//                qApp->processEvents();
             }
         }
     }
@@ -645,6 +647,7 @@ void MetadataCache::readMetadataChunk()
             msg += QString::number(row) + " of " + QString::number(end);
             if (row % countInterval == 0) {
                 emit showCacheStatus(msg);
+                QCoreApplication::processEvents();
 //                qApp->processEvents();
             }
         }
