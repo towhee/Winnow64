@@ -261,9 +261,8 @@ public:
     int cacheSizePercentOfAvailable;
     int cacheMinMB = 2000;
     int cacheMaxMB;
-//    bool isShowCacheStatus;   // replaced with G::showCacheStatus
     int cacheDelay = 100;
-    bool isShowCacheThreadActivity;
+    bool isShowCacheProgressBar;
     int progressWidth;
     int progressWidthBeforeResizeWindow;
     int cacheWtAhead;
