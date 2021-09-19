@@ -14,14 +14,18 @@ FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
 
 bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
+    if (sourceParent.row() == -1) return true;
+    if (!sourceParent.isValid()) return true;
 
 #ifdef Q_OS_WIN
+    /*
     if (!sourceParent.isValid()) {      // if is a drive
         QModelIndex idx = sourceModel()->index(sourceRow, 0, sourceParent);
         QString path = idx.data(QFileSystemModel::FilePathRole).toString();
         bool mounted = mountedDrives.contains(path);
         if (!mounted) return false;     // do not accept unmounted drives
     }
+    //*/
     return true;
 #endif
 
@@ -31,8 +35,6 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
 
     QString fParentPath = sourceParent.data(QFileSystemModel::FilePathRole).toString();
     QString fPath = sourceParent.model()->index(sourceRow, 0, sourceParent).data(QFileSystemModel::FilePathRole).toString();
-//    QString fPath = sourceParent.child(sourceRow, 0).data(QFileSystemModel::FilePathRole).toString();
-//    qDebug() << __FUNCTION__ << fPath << fPath2;
     QFileInfo info(fPath);
     /*
     qDebug() << G::t.restart() << "\t" << "fPath" << fPath
@@ -40,7 +42,7 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
              << "absolutePath" << info.absolutePath()
              << "absoluteFilePath" << info.absoluteFilePath()
              << "isHidden" << info.isHidden();
-*/
+    */
     if (fParentPath == "/" && (fPath == "/Users" || fPath == "/Volumes")) return true;
     if (fParentPath == "/") return false;
     if (info.isHidden()) return false;
@@ -49,7 +51,6 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
 
 #ifdef Q_OS_LINIX
     return true;
-//   return QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
 #endif
 }
 
@@ -57,7 +58,8 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
 CLASS FSModel subclassing QFileSystemModel
 ------------------------------------------------------------------------------*/
 
-/* We are subclassing QFileSystemModel in order to add a column for imageCount
+/*
+   We are subclassing QFileSystemModel in order to add a column for imageCount
    to the model and display the image count beside each folder in the TreeView.
 */
 
@@ -199,7 +201,7 @@ void FSTree::createModel()
 //    fsModel->setRootPath("");
 
     // watcher
-    watch = new QFileSystemWatcher;
+//    watch = new QFileSystemWatcher;
 
     // get mounted drives only
     foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
@@ -215,7 +217,7 @@ void FSTree::createModel()
             }
         }
     }
-    watch->addPaths(mountedDrives);
+//    watch->addPaths(mountedDrives);
 
 #ifdef Q_OS_LINIX   // not recognized for some reason
     fsModel->setRootPath("");
@@ -223,23 +225,14 @@ void FSTree::createModel()
 #endif
 
 #ifdef Q_OS_WIN
-//    // get mounted drives only
-//    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
-///*        qDebug() << G::t.restart() << "\t" << "FSTree::createModel  " << storage.rootPath()
-//                 << "storage.isValid()" << storage.isValid()
-//                 << "storage.isReady()" << storage.isReady()
-//                 << "storage.isReadOnly()" << storage.isReadOnly();
-////                 */
-//        if (storage.isValid() && storage.isReady()) {
-//            if (!storage.isReadOnly()) {
-//                mountedDrives << storage.rootPath();
-//            }
-//        }
+    fsModel->setRootPath("");
+//    fsModel->setRootPath(fsModel->myComputer().toString());
+//    for (int i = 0; i < mountedDrives.length(); ++i) {
+//        fsModel->setRootPath(mountedDrives.at(i));
 //    }
-    fsModel->setRootPath(fsModel->myComputer().toString());
 #endif
 
-#ifdef Q_OS_MACOS  // Q_OS_MACOS
+#ifdef Q_OS_MACOS
     fsModel->setRootPath("/Volumes");
     fsModel->setRootPath("/Users");
 #endif

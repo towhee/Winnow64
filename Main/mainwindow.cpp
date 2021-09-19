@@ -1474,14 +1474,18 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
              << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
                 ;
 //    */
-//    if (!currentViewDir.exists())
-
     bool isStart = false;
     if(!isCurrentFolderOkay
             || G::isInitializing
             || isFilterChange
             || !G::isNewFolderLoaded)
         return;
+
+    if (!currentViewDir.exists()) {
+        refreshFolders();
+        folderSelectionChange();
+        return;
+    }
 
     // rghmemleak
 //    if (imageView->isFirstImageNewFolder && G::mode == "Loupe") thumbView->selectThumb(0);
@@ -5160,8 +5164,8 @@ void MW::createFSTree()
     fsTree->setShowImageCount(true);
     fsTree->combineRawJpg = combineRawJpg;
 
-    // watch for drive removal
-    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
+    // watch for drive removal (not working)
+//    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
 
     // selection change check if triggered by ejecting USB drive
     connect(fsTree, &FSTree::selectionChange, this, &MW::watchCurrentFolder);
