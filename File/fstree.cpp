@@ -14,9 +14,6 @@ FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
 
 bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
-    if (sourceParent.row() == -1) return true;
-    if (!sourceParent.isValid()) return true;
-
 #ifdef Q_OS_WIN
     /*
     if (!sourceParent.isValid()) {      // if is a drive
@@ -219,23 +216,23 @@ void FSTree::createModel()
     }
 //    watch->addPaths(mountedDrives);
 
-#ifdef Q_OS_LINIX   // not recognized for some reason
-    fsModel->setRootPath("");
-//    fsModel->setRootPath("/home");
-#endif
+//#ifdef Q_OS_LINIX   // not recognized for some reason
+//    fsModel->setRootPath("");
+////    fsModel->setRootPath("/home");
+//#endif
 
-#ifdef Q_OS_WIN
-    fsModel->setRootPath("");
-//    fsModel->setRootPath(fsModel->myComputer().toString());
-//    for (int i = 0; i < mountedDrives.length(); ++i) {
-//        fsModel->setRootPath(mountedDrives.at(i));
-//    }
-#endif
+//#ifdef Q_OS_WIN
+//    fsModel->setRootPath("");
+////    fsModel->setRootPath(fsModel->myComputer().toString());
+////    for (int i = 0; i < mountedDrives.length(); ++i) {
+////        fsModel->setRootPath(mountedDrives.at(i));
+////    }
+//#endif
 
-#ifdef Q_OS_MACOS
-    fsModel->setRootPath("/Volumes");
-    fsModel->setRootPath("/Users");
-#endif
+//#ifdef Q_OS_MACOS
+//    fsModel->setRootPath("/Volumes");
+//    fsModel->setRootPath("/Users");
+//#endif
 
     fsFilter = new FSFilter(fsModel);
     fsFilter->setSourceModel(fsModel);
