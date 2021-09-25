@@ -344,11 +344,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         embelProperties->doNotEmbellish();
     }
 
-    // if previous sort was not by filename then sort
-    sortReverseAction->setChecked(setting->value("sortReverse").toBool());
-    if (sortReverseAction->isChecked()) reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
-    else reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
-//    if (sortColumn > 0) sortChange();
+    // if previous sort was not by filename or reverse order then sort
+    updateSortColumn(sortColumn);
+    if (isReverseSort) toggleSortDirection(Tog::on);
+    else toggleSortDirection(Tog::off);
+    if (sortColumn != G::NameColumn || isReverseSort) sortChange(__FUNCTION__);
 
     qRegisterMetaType<ImageCacheData::Cache>();
     qRegisterMetaType<ImageMetadata>();
@@ -437,7 +437,7 @@ void MW::initialize()
     colorManageToggleBtn = new BarBtn();
     msg = "Toggle color manage on/off.";
     colorManageToggleBtn->setToolTip(msg);
-    connect(colorManageToggleBtn, &BarBtn::clicked, this, &MW::toggleColorManage);
+    connect(colorManageToggleBtn, &BarBtn::clicked, this, &MW::toggleColorManageClick);
     cacheMethodBtn = new BarBtn();
     msg = "Toggle cache size Thrifty > Moderate > Greedy > Thrifty... \n"
           "Ctrl + Click to open cache preferences.";
@@ -445,7 +445,7 @@ void MW::initialize()
     connect(cacheMethodBtn, &BarBtn::clicked, this, &MW::toggleImageCacheMethod);
     reverseSortBtn = new BarBtn();
     reverseSortBtn ->setToolTip("Sort direction.  Shortcut to toggle: Opt/Alt + S");
-    connect(reverseSortBtn, &BarBtn::clicked, this, &MW::reverseSortDirection);
+    connect(reverseSortBtn, &BarBtn::clicked, this, &MW::toggleSortDirectionClick);
     filterStatusLabel = new QLabel;
     filterStatusLabel->setToolTip("The images have been filtered");
     subfolderStatusLabel = new QLabel;
@@ -645,6 +645,10 @@ void MW::keyPressEvent(QKeyEvent *event)
         }
         // end stress test
         isStressTest = false;
+        // close an open PopUp
+        if (G::popUp->isVisible()) {
+            G::popUp->hide();
+        }
     }
 
     QMainWindow::keyPressEvent(event);
@@ -1254,12 +1258,13 @@ void MW::handleStartupArgs(const QString &args)
 void MW::watchCurrentFolder()
 {
 /*
+   Not working.
     This slot is signalled from FSTree when a folder selection changes.  We are interested
     in selection changes caused by a drive being ejected.  If the current folder being
     cached no longer exists (ejected) then make a folderSelectionChange.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << currentViewDirPath;
+//    qDebug() << __FUNCTION__ << currentViewDirPath;
     if (currentViewDirPath == "") return;
     QFileInfo info(currentViewDirPath);
     if (info.exists()) return;
@@ -1268,16 +1273,14 @@ void MW::watchCurrentFolder()
 
 void MW::folderSelectionChange()
 {
-    /* used by SortFilter/filterChange, set true when ImageCacheThread starts.  Must be first
-       to flag before selection change event fires, so MW::fileSelectionChange knows not to
-       run.  */
-//    G::isNewFolderLoaded = false;
-
+/*
+   This is invoked when there is a folder selection change in the folder or bookmark views.
+   See PROGRAM FLOW at top of file for more information.
+*/
     currentViewDirPath = getSelectedPath();
     setting->setValue("lastDir", currentViewDirPath);
 
     if (G::isLogger || G::isFlowLogger) {
-        G::log("FOLDER CHANGE");
         G::log(__FUNCTION__, currentViewDirPath);
     }
 
@@ -1337,12 +1340,6 @@ void MW::folderSelectionChange()
     // sync the folders tree with the current folder
     fsTree->scrollToCurrent();
 
-    // rgh still req'd?
-    // show image count in Folders (fsTree) if showImageCountAction isChecked
-//    if (showImageCount) {
-//        fsTree->setShowImageCount(true);
-//    }
-
     // update menu
     enableEjectUsbMenu(currentViewDirPath);
 
@@ -1384,15 +1381,16 @@ void MW::folderSelectionChange()
         return;
     }
 
-//    dm->addAllMetadata();
-
-    /* update sort if necessary
+    /* update sort if necessary (DataModel loads sorted by name in ascending order)
     qDebug() << __FUNCTION__ << "Sort new folder if necessary"
              << "sortColumn =" << sortColumn
              << "sortReverseAction->isChecked() =" << sortReverseAction->isChecked();
     //*/
-    if (sortColumn != G::NameColumn || sortReverseAction->isChecked())
+    if (sortColumn != G::NameColumn || sortReverseAction->isChecked()) {
+        setCentralMessage("Sorting the data model.");
+        qApp->processEvents();
         sortChange("folderSelectionChange");
+    }
 
     // datamodel loaded - initialize indexes
     currentRow = 0;
@@ -1402,8 +1400,6 @@ void MW::folderSelectionChange()
 
     // made it this far, folder must have eligible images and is good-to-go
     isCurrentFolderOkay = true;
-
-//    /* update sort if necessary (moved above initialize indexes)
 
     // folder change triggered by dragdrop event
     bool dragFileSelected = false;
@@ -1425,7 +1421,7 @@ void MW::folderSelectionChange()
 
     // Load folder progress
     setCentralMessage("Gathering metadata and thumbnails for images in folder.");
-//    qApp->processEvents();
+    qApp->processEvents();
     updateStatus(false, "Collecting metadata for all images in folder(s)", __FUNCTION__);
 
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
@@ -1461,7 +1457,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo and
     delegate use of the current index must check the column.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
+    if (G::isLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
    /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
@@ -1487,20 +1483,19 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
         return;
     }
 
-    // rghmemleak
-//    if (imageView->isFirstImageNewFolder && G::mode == "Loupe") thumbView->selectThumb(0);
-
     // if starting program, set first image to display
     if (current.row() == -1) {
         isStart = true;
         thumbView->selectThumb(0);
+        return;
     }
 
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
 
-    if (isStart) return;
+//    if (isStart) return;
 
+    if (G::isFlowLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
     /*
     if (isDragDrop && dragDropFilePath.length() > 0) {
         thumbView->selectThumb(dragDropFilePath);
@@ -1591,17 +1586,17 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
         // (turn off image caching for testing with useImageCache = false. set in header)
         Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
         /*
-       qDebug() << __FUNCTION__ << "IMAGECACHE"
+        qDebug() << __FUNCTION__ << "IMAGECACHE"
                  << "isNoModifier =" << (key == Qt::NoModifier)
                  << "isShiftModifier =" << (key == Qt::ShiftModifier)
                  << "isControlModifier =" << (key == Qt::ControlModifier)
                  << "isAltModifier =" << (key == Qt::AltModifier)
                  << "isShiftAltModifier =" << (key == (Qt::AltModifier | Qt::ShiftModifier))
                     ;
-       //*/
+        //*/
         if (G::isNewFolderLoaded
             && !(G::isSlideShow && isSlideShowRandom)
-            && (key == Qt::NoModifier || key == Qt::KeypadModifier)
+            && (key == Qt::NoModifier || key == Qt::KeypadModifier || workspaceChanged)
             && (G::mode != "Compare")
             && useImageCache
            )
@@ -1610,6 +1605,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
         }
     }
 
+    workspaceChanged = false;
     G::isNewSelection = false;
 
     // update the metadata panel
@@ -1837,8 +1833,6 @@ void MW::thumbHasScrolled()
     the new one is proven to work all the time.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-
-//    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
@@ -1920,13 +1914,10 @@ void MW::tableHasScrolled()
     the new one is proven to work all the time.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-
-//    qDebug() << __FUNCTION__ << G::ignoreScrollSignal;
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        qDebug() << __FUNCTION__;
         updateIconsVisible(false);
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, __FUNCTION__);
@@ -2000,7 +1991,7 @@ void MW::loadEntireMetadataCache(QString source)
     separate thread as the filter and sort operations cannot commence until all the metadata
     has been loaded.
 */
-    if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Source: " + source);
     qDebug() << __FUNCTION__
              << "Source: " << source
              << "G::isInitializing: " << G::isInitializing
@@ -2382,7 +2373,7 @@ void MW::createActions()
     addAction(subFoldersAction);
     connect(subFoldersAction, &QAction::triggered, this, &MW::updateStatusBar);
 
-    refreshFoldersAction = new QAction(tr("Refresh folders"), this);
+    refreshFoldersAction = new QAction(tr("Refresh all"), this);
     refreshFoldersAction->setObjectName("refreshFolders");
     refreshFoldersAction->setShortcutVisibleInContextMenu(true);
     addAction(refreshFoldersAction);
@@ -2473,6 +2464,23 @@ void MW::createActions()
     ejectActionFromContextMenu->setShortcutVisibleInContextMenu(true);
     addAction(ejectActionFromContextMenu);
     connect(ejectActionFromContextMenu, &QAction::triggered, this, &MW::ejectUsbFromContextMenu);
+
+    colorManageAction = new QAction(tr("Color manage"), this);
+    colorManageAction->setObjectName("colorManage");
+    colorManageAction->setShortcutVisibleInContextMenu(true);
+    colorManageAction->setCheckable(true);
+    colorManageAction->setChecked(G::colorManage);
+    addAction(colorManageAction);
+    connect(colorManageAction, &QAction::triggered, this, &MW::toggleColorManageClick);
+
+    combineRawJpgAction = new QAction(tr("Combine Raw+Jpg"), this);
+    combineRawJpgAction->setObjectName("combineRawJpg");
+    combineRawJpgAction->setShortcutVisibleInContextMenu(true);
+    combineRawJpgAction->setCheckable(true);
+    if (isSettings && setting->contains("combineRawJpg")) combineRawJpgAction->setChecked(setting->value("combineRawJpg").toBool());
+    else combineRawJpgAction->setChecked(true);
+    addAction(combineRawJpgAction);
+    connect(combineRawJpgAction, &QAction::triggered, this, &MW::setCombineRawJpg);
 
     combineRawJpgAction = new QAction(tr("Combine Raw+Jpg"), this);
     combineRawJpgAction->setObjectName("combineRawJpg");
@@ -3071,7 +3079,7 @@ void MW::createActions()
     sortReverseAction->setShortcutVisibleInContextMenu(true);
     sortReverseAction->setCheckable(true);
     addAction(sortReverseAction);
-    connect(sortReverseAction, &QAction::triggered, this, &MW::sortChangeFromAction);
+    connect(sortReverseAction, &QAction::triggered, this, &MW::toggleSortDirectionClick);
 
     // Embellish menu
 
@@ -3602,7 +3610,6 @@ void MW::createMenus()
     QAction *fileGroupAct = new QAction("File", this);
     fileGroupAct->setMenu(fileMenu);
     fileMenu->addAction(openAction);
-    fileMenu->addAction(refreshCurrentAction);
     fileMenu->addAction(openUsbAction);
     openWithMenu = fileMenu->addMenu(tr("Open with..."));
     openWithMenu->addAction(manageAppAction);
@@ -3618,6 +3625,12 @@ void MW::createMenus()
     }
     connect(recentFoldersMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeRecentFolder(QAction*)));
+    fileMenu->addAction(revealFileAction);
+
+    fileMenu->addSeparator();
+    fileMenu->addAction(refreshCurrentAction);
+    fileMenu->addAction(refreshFoldersAction);
+
     fileMenu->addSeparator();
     fileMenu->addAction(ingestAction);
     ingestHistoryFoldersMenu = fileMenu->addMenu(tr("Ingest History"));
@@ -3628,17 +3641,14 @@ void MW::createMenus()
     connect(ingestHistoryFoldersMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeIngestHistoryFolder(QAction*)));
     fileMenu->addAction(ejectAction);
+
     fileMenu->addSeparator();
-//    fileMenu->addAction(showImageCountAction);
+    fileMenu->addAction(colorManageAction);
     fileMenu->addAction(combineRawJpgAction);
     fileMenu->addAction(subFoldersAction);
      fileMenu->addAction(addBookmarkAction);
     fileMenu->addSeparator();
     fileMenu->addAction(saveAsFileAction);
-    fileMenu->addSeparator();
-    fileMenu->addAction(revealFileAction);
-    fileMenu->addAction(refreshFoldersAction);
-    fileMenu->addAction(collapseFoldersAction);
     fileMenu->addSeparator();
     fileMenu->addAction(reportMetadataAction);
     fileMenu->addAction(mediaReadSpeedAction);
@@ -4768,6 +4778,8 @@ void MW::createFolderDock()
         if (setting->contains("size")) folderDock->dw.size = setting->value("size").toSize();
         setting->endGroup();
     }
+
+    connect(folderDock, &QDockWidget::visibilityChanged, this, &MW::folderDockVisibilityChange);
 }
 
 void MW::createFavDock()
@@ -5099,11 +5111,19 @@ void MW::createDocks()
     if (!hideEmbellish) if (useInfoView) MW::tabifyDockWidget(metadataDock, embelDock);
 }
 
+void MW::folderDockVisibilityChange()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (folderDock->isVisible()) {
+        fsTree->scrollToCurrent();
+    }
+}
+
 void MW::embelDockVisibilityChange()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     // rgh ??
-//    if (embelDock->isVisible()) newEmbelTemplate();
+    //    if (embelDock->isVisible()) newEmbelTemplate();
 }
 
 void MW::embelDockActivated(QDockWidget *dockWidget)
@@ -5575,6 +5595,10 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
 */
     if (!useUpdateStatus) return;
     if (G::isLogger) G::log(__FUNCTION__);
+
+    QString ms = QString("%L1").arg(testTime.nsecsElapsed() / 1000000) + " ms";
+    testTime.restart();
+
 //    qDebug() << __FUNCTION__ << s << source;
     // check if null filter
     if (dm->sf->rowCount() == 0) {
@@ -5649,12 +5673,11 @@ QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵�
         }
     }
 
-    status = " " + base + s;
+    status = " " + base + s + spacer + ms;
     statusLabel->setText(status);
-
 //    updateStatusBar();
 
-//    qDebug() << "Status:" << status;
+    qDebug() << "Status:" << status;
 
     // update InfoView - flag updates so itemChanged be ignored in MW::metadataChanged
     if (useInfoView)  {
@@ -6130,46 +6153,11 @@ void MW::refine()
 
 void MW::sortChangeFromAction()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
-    sortChange("Action");
-}
-
-void MW::sortChange(QString source)
-{
 /*
-    Triggered by a menu sort item or a new folder.  Core sort items (QFileInfo items) are
-    always loaded into the datamodel, so we can sort on them at any time.  Non-core items,
-    read from the image file metadata, are only loaded on demand.  All non-core items must
-    be loaded in order to sort on them.
+    When a sort change menu item is picked this function is called, and then redirects to
+    sortChange.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Src: " + source);
-    /*
-    qDebug() << __FUNCTION__ << "source =" << source
-             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
-             << "G::isInitializing =" << G::isInitializing
-             << "prevSortColumn =" << prevSortColumn
-             << "sortColumn =" << sortColumn
-             << "sortReverseAction->isChecked() =" << sortReverseAction->isChecked()
-                ;
-//                */
-
-    // reset sort to file name if was sorting on non-core metadata while folder still loading
-    if (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn) {
-        prevSortColumn = G::NameColumn;
-        updateSortColumn(G::NameColumn);
-    }
-
-    // do not sort conditions
-    bool doNotSort = false;
-    if (sortMenuUpdateToMatchTable)
-        doNotSort = true;
-    if (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn)
-        doNotSort = true;
-    if (!G::isNewFolderLoaded && sortColumn == G::NameColumn && !sortReverseAction->isChecked())
-        doNotSort = true;
-    if (source == "folderSelectionChange")
-        doNotSort = false;
-    if (doNotSort) return;
+    if (G::isLogger) G::log(__FUNCTION__);
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;        // core
     if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;        // core
@@ -6187,8 +6175,63 @@ void MW::sortChange(QString source)
     if (sortModelAction->isChecked()) sortColumn = G::CameraModelColumn;
     if (sortFocalLengthAction->isChecked()) sortColumn = G::FocalLengthColumn;
     if (sortTitleAction->isChecked()) sortColumn = G::TitleColumn;
+    sortChange("Action");
+}
+
+void MW::sortChange(QString source)
+{
+/*
+    Triggered by a menu sort item, a new folder or a new workspace. Core sort items (QFileInfo
+    items) are always loaded into the datamodel, so we can sort on them at any time. Non-core
+    items, read from the image file metadata, are only loaded on demand. All non-core items
+    must be loaded in order to sort on them.
+
+    The sort order (ascending or descending) can be set by the menu, the button icon on the
+    statusbar or a workspace change.
+*/
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Src: " + source);
+
+    if (G::isInitializing) return;
+
+    //    /*
+    qDebug() << __FUNCTION__ << "source =" << source
+             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+             << "G::isInitializing =" << G::isInitializing
+             << "prevSortColumn =" << prevSortColumn
+             << "sortColumn =" << sortColumn
+             << "isReverseSort =" << isReverseSort
+             << "prevIsReverseSort =" << prevIsReverseSort
+                ;
+//                */
+
+    // reset sort to file name if was sorting on non-core metadata while folder still loading
+    if (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn) {
+        prevSortColumn = G::NameColumn;
+        updateSortColumn(G::NameColumn);
+    }
+
+    // check if sorting has changed
+    bool sortHasChanged = false;
+    if (sortColumn != prevSortColumn || isReverseSort != prevIsReverseSort) {
+        sortHasChanged = true;
+        prevSortColumn = sortColumn;
+        prevIsReverseSort = isReverseSort;
+    }
+
+    // do not sort conditions
+    bool doNotSort = false;
+    if (sortMenuUpdateToMatchTable)
+        doNotSort = true;
+    if (!G::isNewFolderLoaded && sortColumn > G::CreatedColumn)
+        doNotSort = true;
+    if (!G::isNewFolderLoaded && sortColumn == G::NameColumn && !sortReverseAction->isChecked())
+        doNotSort = true;
+    if (G::isNewFolderLoaded && !sortHasChanged)
+        doNotSort = true;
+    if (doNotSort) return;
 
     // Need all metadata loaded before sorting non-core metadata
+    // rgh all metadata always loaded now - change this?
     if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn)
         loadEntireMetadataCache("SortChange");
 
@@ -6220,7 +6263,7 @@ void MW::sortChange(QString source)
         setCentralMessage("Sorting images");
     }
 
-    thumbView->sortThumbs(sortColumn, sortReverseAction->isChecked());
+    thumbView->sortThumbs(sortColumn, isReverseSort);
 
 //    if (!G::allMetadataLoaded) return;
 
@@ -6262,12 +6305,12 @@ void MW::sortChange(QString source)
 void MW::updateSortColumn(int sortColumn)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    /*
+//    /*
     qDebug() << __FUNCTION__
              << "sortColumn =" << sortColumn
              << "prevSortColumn =" << prevSortColumn
              ;
-//    */
+    //    */
 
     if (sortColumn == G::NameColumn) sortFileNameAction->setChecked(true);
     if (sortColumn == G::TypeColumn) sortFileTypeAction->setChecked(true);
@@ -6287,34 +6330,64 @@ void MW::updateSortColumn(int sortColumn)
     if (sortColumn == G::TitleColumn) sortTitleAction->setChecked(true);
 }
 
-void MW::reverseSortDirection()
-{
-    if (G::isLogger) G::log(__FUNCTION__);
-    if (sortReverseAction->isChecked()) {
-        sortReverseAction->setChecked(false);
-        reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
-        sortChange(__FUNCTION__);
-    }
-    else {
-        sortReverseAction->setChecked(true);
-        reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
-        sortChange(__FUNCTION__);
-    }
-}
-
-void MW::toggleColorManage()
+void MW::toggleSortDirectionClick()
 {
 /*
-    If the toggle turns color manage on then the image cache is rebuilt.
+    This is called by connect signals from the menu action and the reverse sort button.  The
+    call is redirected to toggleSortDirection, which has a parameter which is not supported
+    by the action and button signals.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    if (G::colorManage) {
-        G::colorManage = false;
-        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
+    toggleSortDirection(Tog::toggle);
+    sortChange(__FUNCTION__);
+}
+
+void MW::toggleSortDirection(Tog n)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (prevIsReverseSort == isReverseSort)
+    prevIsReverseSort = isReverseSort;
+    if (n == Tog::toggle) isReverseSort = !isReverseSort;
+    if (n == Tog::off) isReverseSort = false;
+    if (n == Tog::on) isReverseSort = true;
+    if (isReverseSort) {
+        sortReverseAction->setChecked(true);
+        reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
     }
     else {
-        G::colorManage = true;
+        sortReverseAction->setChecked(false);
+        reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
+    }
+//    sortChange(__FUNCTION__);
+//    if (G::isNewFolderLoaded || sortDirectionChanged) sortChange(__FUNCTION__);
+}
+
+void MW::toggleColorManageClick()
+{
+/*
+    This is called by connect signals from the menu action and the color manage button.  The
+    call is redirected to toggleColorManage, which has a parameter which is not supported
+    by the action and button signals.
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    toggleColorManage(Tog::toggle);
+}
+
+void MW::toggleColorManage(Tog n)
+{
+/*
+    The image cache is rebuilt to show the color manage option.
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (n == Tog::toggle) G::colorManage = !G::colorManage;
+    if (n == Tog::off) G::colorManage = false;
+    if (n == Tog::on) G::colorManage = true;
+    colorManageAction->setChecked(G::colorManage);
+    if (G::colorManage) {
         colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
+    }
+    else {
+        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
     }
 
     if (dm->rowCount() == 0) return;
@@ -6583,7 +6656,13 @@ void MW::invokeWorkspace(const workspaceData &w)
     gridView->setThumbParameters();
     G::colorManage = w.isColorManage;
     cacheSizeMethod = w.cacheSizeMethod;
+    sortColumn = w.sortColumn;
+    updateSortColumn(sortColumn);
+    if (w.isReverseSort) toggleSortDirection(Tog::on);
+    else toggleSortDirection(Tog::off);
     updateState();
+    workspaceChanged = true;
+    sortChange(__FUNCTION__);
     // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
 //    setThumbDockVisibity();
 }
@@ -6623,6 +6702,8 @@ void MW::snapshotWorkspace(workspaceData &wsd)
 
     wsd.isColorManage = G::colorManage;
     wsd.cacheSizeMethod = cacheSizeMethod;
+    wsd.sortColumn = sortColumn;
+    wsd.isReverseSort = sortReverseAction->isChecked();
 }
 
 void MW::manageWorkspaces()
@@ -6764,6 +6845,9 @@ void MW::defaultWorkspace()
 
     asLoupeAction->setChecked(true);
     infoVisibleAction->setChecked(true);
+    sortReverseAction->setChecked(false);
+    sortColumn = 0;
+    sortChange(__FUNCTION__);
     updateState();
 }
 
@@ -6826,6 +6910,8 @@ void MW::reportWorkspace(int n)
              << "\nisEmbelDisplay" << ws.isEmbelDisplay
              << "\nisColorManage" << ws.isColorManage
              << "\ncacheSizeMethod" << ws.cacheSizeMethod
+             << "\nsortColumn" << ws.sortColumn
+             << "\nisReverseSort" << ws.isReverseSort
                 ;
 }
 
@@ -6870,6 +6956,8 @@ void MW::loadWorkspaces()
         ws.isEmbelDisplay = setting->value("isEmbelDisplay").toBool();
         ws.isColorManage = setting->value("isColorManage").toBool();
         ws.cacheSizeMethod = setting->value("cacheSizeMethod").toString();
+        ws.sortColumn = setting->value("sortColumn").toInt();
+        ws.isReverseSort = setting->value("isReverseSort").toBool();
         workspaces->append(ws);
     }
     setting->endArray();
@@ -7384,7 +7472,7 @@ void MW::setBackgroundShade(int shade)
     filters->setStyleSheet(css);
     filters->verticalScrollBar()->setStyleSheet(css);
     filters->setCategoryBackground(a, b);
-    if (useInfoView) infoView->setStyleSheet(css);
+//    if (useInfoView) infoView->setStyleSheet(css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     thumbView->setStyleSheet(css);
     thumbView->horizontalScrollBar()->setStyleSheet(css);
@@ -8064,7 +8152,6 @@ void MW::writeSettings()
 
     // files
     setting->setValue("colorManage", G::colorManage);
-    setting->setValue("isColorManagement", G::isColorManagement);
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("checkIfUpdate", checkIfUpdate);
     setting->setValue("lastDir", currentViewDirPath);
@@ -8346,6 +8433,10 @@ void MW::writeSettings()
         setting->setValue("isTableDisplay", ws.isTableDisplay);
         setting->setValue("isCompareDisplay", ws.isCompareDisplay);
         setting->setValue("isEmbelDisplay", ws.isEmbelDisplay);
+        setting->setValue("isColorManage", ws.isColorManage);
+        setting->setValue("cacheSizeMethod", ws.cacheSizeMethod);
+        setting->setValue("sortColumn", ws.sortColumn);
+        setting->setValue("isReverseSort", ws.isReverseSort);
     }
     setting->endArray();
 }
@@ -8389,7 +8480,6 @@ bool MW::loadSettings()
 
         // files
         G::colorManage = true;
-        G::isColorManagement = true;
         rememberLastDir = false;
         checkIfUpdate = true;
         lastDir = "";
@@ -8436,6 +8526,7 @@ bool MW::loadSettings()
 
     // general
     sortColumn = setting->value("sortColumn").toInt();
+    isReverseSort = setting->value("sortReverse").toBool();
     autoAdvance = setting->value("autoAdvance").toBool();
     turnOffEmbellish = setting->value("turnOffEmbellish").toBool();
 //    if (setting->contains("isLogger"))
@@ -8475,7 +8566,6 @@ bool MW::loadSettings()
 
     // files
     if (setting->contains("colorManage")) G::colorManage = setting->value("colorManage").toBool();
-    if (setting->contains("isColorManagement")) G::isColorManagement = setting->value("isColorManagement").toBool();
     if (setting->contains("rememberLastDir")) rememberLastDir = setting->value("rememberLastDir").toBool();
     if (setting->contains("checkIfUpdate")) checkIfUpdate = setting->value("checkIfUpdate").toBool();
     if (setting->contains("lastDir")) lastDir = setting->value("lastDir").toString();
@@ -8855,11 +8945,6 @@ void MW::updateState()
     setMetadataDockVisibility();
     setEmbelDockVisibility();
     setThumbDockVisibity();
-//    setFolderDockLockMode();
-//    setFavDockLockMode();
-//    setFilterDockLockMode();
-//    setMetadataDockLockMode();
-//    setThumbDockLockMode();
     setShootingInfoVisibility();
     updateStatusBar();
 //    setActualDevicePixelRation();
@@ -10619,9 +10704,7 @@ void MW::keyRight()
 /*
 
 */
-//    G::track(__FUNCTION__);
     if (G::isLogger) G::log(__FUNCTION__);
-
     if (G::mode == "Compare") compareImages->go("Right");
     else thumbView->selectNext();
 }
@@ -10632,7 +10715,6 @@ void MW::keyLeft()
 
 */
     if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__ << "QThread::currentThread()" << QThread::currentThread();
     if (G::mode == "Compare") compareImages->go("Left");
     else thumbView->selectPrev();
 }
@@ -11654,20 +11736,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QStringList mountedDrives;
-    foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
-/*        qDebug() << G::t.restart() << "\t" << "FSTree::createModel  " << storage.rootPath()
-                 << "storage.isValid()" << storage.isValid()
-                 << "storage.isReady()" << storage.isReady()
-                 << "storage.isReadOnly()" << storage.isReadOnly();
-//                 */
-        if (storage.isValid() && storage.isReady()) {
-            if (!storage.isReadOnly()) {
-                mountedDrives << storage.rootPath();
-            }
-        }
-    }
-    qDebug() << __FUNCTION__ << mountedDrives;
+    reportWorkspace(0);
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";

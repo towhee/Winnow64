@@ -1,14 +1,10 @@
 BUGS / TO DO
-- Always scroll FSTree to current
+- check colorManage at start working
 - Load image when useImageCache == false
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
 - unicode path heics not rendering
 - E:/2020 √/202001 √/2020-01-25_Linley Valley √/2020-01-25_0024_Focus Stack.tif has bad thumb
   caused by Winnow adding thumbnail
-- Image caching progress bar disabled until can improve performance
-- iconView selected item can get out of sync with imCache
-- remove isCached column from datamodel
-- Loupe images not rotating
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
 - DNG without JPG preview: show TIFF?
 - DNG without jpg preview: add one similar to TIFF
@@ -55,6 +51,9 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Remove color manage from preferences, add menu item
+- remove isCached column from datamodel
+- Always scroll FSTree to current
 - Remove Icon Loaded column in datamodel
 - Sony files not getting make/artist/copyright
 - InfoView not showing monitor until move window

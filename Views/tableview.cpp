@@ -45,9 +45,6 @@ TableView::TableView(DataModel *dm)
     IngestedItemDelegate *ingestedItemDelegate = new IngestedItemDelegate;
     setItemDelegateForColumn(G::IngestedColumn, ingestedItemDelegate);
 
-    CachedItemDelegate *cachedItemDelegate = new CachedItemDelegate;
-    setItemDelegateForColumn(G::CachedColumn, cachedItemDelegate);
-
     DimensionItemDelegate *dimensionItemDelegate = new DimensionItemDelegate;
     setItemDelegateForColumn(G::DimensionsColumn, dimensionItemDelegate);
 
@@ -113,7 +110,6 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::RefineColumn) return fm.boundingRect("=Refine=").width();
     if (column == G::PickColumn) return fm.boundingRect("=Pick=").width();
     if (column == G::IngestedColumn) return fm.boundingRect("=Ingested=").width();
-    if (column == G::CachedColumn) return fm.boundingRect("=Cached=").width();
     if (column == G::LabelColumn) return fm.boundingRect("=Colour=").width();
     if (column == G::RatingColumn) return fm.boundingRect("=Rating=").width();
     if (column == G::SearchColumn) return fm.boundingRect("=false=").width();
@@ -359,15 +355,6 @@ IngestedItemDelegate::IngestedItemDelegate(QObject* parent): QStyledItemDelegate
 }
 
 QString IngestedItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
-{
-    return (value == "true") ? "✓" : "";
-}
-
-CachedItemDelegate::CachedItemDelegate(QObject* parent): QStyledItemDelegate(parent)
-{
-}
-
-QString CachedItemDelegate::displayText(const QVariant& value, const QLocale&) const
 {
     return (value == "true") ? "✓" : "";
 }

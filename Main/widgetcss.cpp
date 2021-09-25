@@ -32,6 +32,7 @@ QString WidgetCSS::css()
     disabledColor = QColor(l20,l20,l20);
     scrollBarHandleBackgroundColor = QColor(90,130,100);
     selectionColor = QColor(68,95,118);
+    mouseOverColor = QColor(40,54,66);  // not being used, matches what happens in treeview on windows
     borderColor = QColor(l40,l40,l40);
 
     // heights (mostly used for rows in TreeView etc)
@@ -394,8 +395,8 @@ QString WidgetCSS::treeView()
 //        "background-color: " + QColor(bg,bg,bg).name() + ";"
         "alternate-background-color: " + QColor(l5,l5,l5).name() + ";"
         "color: " + textColor.name() + ";"
-        "selection-background-color: " + selectionColor.name() + ";"
-        "selection-color: " + textColor.name() + ";"
+//        "selection-background-color: " + selectionColor.name() + ";"
+//        "selection-color: " + textColor.name() + ";"
         "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
     "}"
 
@@ -415,7 +416,18 @@ QString WidgetCSS::treeView()
 
     "QTreeView::item {"
 //        "height: " + h17 + "px;"      // this works but delegates and defaults working for now
-    "}";
+    "}"
+
+    "QTreeView::item:selected {"
+        "color: " + textColor.name() + ";"
+    "}"
+
+    "QTreeView::item:selected:!active {"
+        "color: " + textColor.name() + ";"
+        "background: " + selectionColor.name() + ";"
+            "}"
+
+    ;
 }
 
 QString WidgetCSS::tableView()
@@ -728,7 +740,7 @@ QString WidgetCSS::lineEdit()
         "border-style: solid;"
         "border-color: " + borderColor.name() + ";"
         "margin-left: 5px;"   /*Not sure why, but this is required*/
-//        "selection-background-color: darkgray;"
+        "selection-background-color: darkgray;"
         "padding-top: 1px;"
         "padding-bottom: 1px;"
         "padding-left: 4px;"

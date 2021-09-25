@@ -49,6 +49,7 @@ public:
     QColor widgetBackgroundColor;
     QColor scrollBarHandleBackgroundColor; // = QColor(90,130,100);
     QColor selectionColor; // = QColor(68,95,118);
+    QColor mouseOverColor; // = QColor(68,95,118);
 
     QString widget();
     QString mainWindow();

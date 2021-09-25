@@ -288,6 +288,18 @@ void ImageCache::setTargetRange()
     }
 }
 
+bool ImageCache::targetIsCached()
+{
+    bool nothingToCache = true;
+    for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+        if (icd->cacheItemList.at(i).isTarget && !icd->cacheItemList.at(i).isCached) {
+            nothingToCache = false;
+            break;
+        }
+    }
+    return nothingToCache;
+}
+
 bool ImageCache::inTargetRange(QString fPath)
 {
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
@@ -1023,7 +1035,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
 //    }
 }
 
-void ImageCache::fillCache(int id, bool positionChange)
+bool ImageCache::fillCache(int id, bool positionChange)
 {
 /*
     A number of ImageDecoders are created when ImageCache is created.  Each ImageDecoder runs
@@ -1070,7 +1082,10 @@ void ImageCache::fillCache(int id, bool positionChange)
         setTargetRange();
         if (cacheSizeHasChanged) makeRoom(0, 0);
     }
-    if (id == -1) return;
+    if (id == -1) {
+        if (targetIsCached()) return true;
+        else return false;
+    }
 
     bool okToCache = false;
     /* get the key (index to item in icd->cacheItemList) for decoder[id].  If the decoder has
@@ -1147,6 +1162,7 @@ void ImageCache::fillCache(int id, bool positionChange)
             updateStatus("Update all rows", "ImageCache::run after check for orphans");
         }
     }
+    return true;
 }
 
 void ImageCache::run()
@@ -1160,11 +1176,14 @@ void ImageCache::run()
 */
     if (G::isLogger) G::log(__FUNCTION__);
 
-    // update position, priorities, target range
-    fillCache(-1, true);    // id, positionChange
+//    // update position, priorities, target range
+//    if (fillCache(-1, true)) {   // id, positionChange
+//        // cache is up-to-date
+//        return;
+//    }
 
-    source = "";
-    prevCurrentPath = currentPath;
+//    source = "";
+
 
     // signal MW cache status
     emit updateIsRunning(true, true);

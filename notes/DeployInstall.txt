@@ -3,179 +3,256 @@ and http://165.227.46.158/winnow_mac/
 
 For windows PuTTY Key generator and winscp.exe for file transfers.
 
-For Mac:
----------------------------------------------------------------------
-Just a dmg:
-- Compile a release version (Projects/Winnow64/Winnow.app)
-- Copy Winnow.app to Projects/WinnowDMG
-- Create DMG.  Open Disk Utility.  
-	- Menu: File > New Image > Image from Folder...  pick WinnowDMG
-	- Save as Projects/winnow###.dmg
-- Open Filezilla, Menu: Server > Reconnect
-- Create folder for previous version and move it from current to new folder
-- Drag winnow###.dmg from Projects to current
--  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
--  Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
-   download url for the archived version.
-Updating ExifTool:
-- Download top version (not windows or mac)
-- Double click to uncompress to another folder
-- Copy exiftool and lib folder to Winnow project releaseDate
-	(build-winnow64-Desktop_Qt_5_15_2_clang_64bit-Release)
-
 NORMAL DEPLOYMENT
-Using an installer: (as of 2021-01-01)
-- Update ExifTool (see above).
-- Duplicate current on http://165.227.46.158/winnow_mac as version number
-- Update version in mainwindow.h
-- Compile Winnow in /Users/roryhill/Projects/Winnow64
-- Update version in /Users/roryhill/Projects/WinnowInstall/Config/config.xml
-- Run /Users/roryhill/Projects/WinnowInstall/Batch/WinnowInstallerScript.command
-- Done.
 
-Notes:
-Mac Deployment: (located in /Users/roryhill/Projects/WinnowInstall/Batch/DeployOnMac)
-Make sure latest version of Winnow.app is in /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_13_0_clang_64bit-Release
-cd /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_13_0_clang_64bit-Release
-cd /Users/roryhill/Projects/Winnow64
-/Users/roryhill/Qt/5.13.0/clang_64/bin/macdeployqt Winnow.app -dmg
+	For all platforms do this first
+	---------------------------------------------------------------------
+	- Update version in mainwindow.h
+	- global.cpp: isLogger and isFlowLogger = false
+	- compile release mode
 
-Useful paths:
-/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data
-/Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_12_0_clang_64bit-Release
-/Users/roryhill/Qt/Tools/QtInstallerFramework/3.0/bin/
+	For Mac:
+	---------------------------------------------------------------------
+	Using an installer: (as of 2021-01-01)
+	- Update ExifTool (see above).
+	- Duplicate current on http://165.227.46.158/winnow_mac as version number
+	- Compile Winnow in /Users/roryhill/Projects/Winnow64
+	- Update version in /Users/roryhill/Projects/WinnowInstall/Config/config.xml
+	- Run /Users/roryhill/Projects/WinnowInstall/Batch/WinnowInstallerScript.command
+	- test download new version
 
-INSTALLATION COMMANDS:
+	For Win: 
+	---------------------------------------------------------------------
+	-  Update winnow.exe by compiling in release mode without shadow build
+	-  Duplicate (DO NOT USE local temp copy) in winSCP the prior version in current to an archive folder (change target remote path).  DO NOT DELETE repository in current folder.
+	-  Update and save the version and folder paths in D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
+	-  Update and save the version and release date in
+	   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.bin\meta\package.xml
+	-  If changes other than binary, update and save the releaseDate in
+	   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
+	-  Run the batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallation.bat
+		- changes drive to D:
+		- changes dir to D:\My Projects\Winnow Project\WinnowInstallOnline
+		- copies winnow.exe from release to package
+		- recreates the repository in D:\My Projects\Winnow Project\WinnowInstallOnline
+		- creates a new binary installer winnowinstalleronline.exe
+		- runs WinSCP script (installscript.txt) to copy repository and winnowinstalleronline.exe
+		  to http://165.227.46.158/winnow_win/current
+	- Open C:\Program Files\Winnow\Winnow.exe and perform update if auto update is enabled or perform
+	  "Help > Check for updates" to confirm that the update works.
+	  Or run C:\Program Files\Winnow\maintenancetool.exe to update Winnow on local machine.
+	-  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
+	-  Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
+	   download url for the archived version.
 
-cd /Users/roryhill/Projects/WinnowInstall
+Qt VERSION CHANGE
 
-#Copy app from release to local install packages:
-cp -r /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_13_0_clang_64bit-Release/Winnow.dmg packages/com.rh.bin/data
+	For Mac:
+	---------------------------------------------------------------------
+	- update Qt paths in /Users/roryhill/Projects/WinnowInstall/Batch/WinnowInstallerScript.command
+	
+	For Win: 
+	---------------------------------------------------------------------
+	- update Qt paths in D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallation.bat
+	
+ADD NEW DLL ON WINDOWS
 
-
-#Update the repository:
-rm -r repository
-/Users/roryhill/Qt/Tools/QtInstallerFramework/3.1/bin/repogen -p packages --update-new-components repository
-
-#Create the installer "winnow installer"
-/Users/roryhill/Qt/Tools/QtInstallerFramework/3.1/bin/binarycreator --online-only -c config/config.xml -p packages winnow.dmg
-
-#Start the sftp to copy to server:
-sftp root@165.227.46.158
-cd /var/www/html/winnow_mac/current
-put -r /Users/roryhill/Projects/WinnowInstall/repository
-put -r /Users/roryhill/Projects/WinnowInstall/winnow.dmg
-
-# if updating on windows ignore html files
-#cd ../winnow
-#put /Users/roryhill/Projects/Winnow64/Docs/winnow.html
-#put /Users/roryhill/Projects/Winnow64/Docs/versions.html 
-exit
-
-
-For Win: 
----------------------------------------------------------------------
-Win Deployment:  IMPORTANT WHEN CHANGE VERSIONS OF QT!
-
-Manual deployment
-Open cmd
-CD "D:\My Projects\Winnow Project\Deploy Winnow"     (use as temp location as cannot write to folders in "c:\program files"
-C:\Qt\5.13.1\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --dir "D:\My Projects\Winnow Project\Deploy Winnow"
-C:\Qt\5.13.1\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --plugindir "D:\My Projects\Winnow Project\Deploy Winnow"
-then copy files and folders to D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\data
-and D:\My Projects\Winnow Project\WinnowInstallLocal\packages\com.rh.prod\data
-
-NORMAL DEPLOYMENT
-When adding dll or exe ie winnet.exe
-Copy dll files to:
-	D:\My Projects\Winnow Project\Deploy Winnow
-	D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\data
-	D:\My Projects\Winnow Project\WinnowInstallLocal\packages\com.rh.prod\data
-Update and save the releaseDate and version in
-   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
-
-Win Installation Update:
--  Update deploy if new dlls required and when using a new version of Qt!!  (See above)
--  Update QtInstallerFramework version if new version of Qt in onlineinstallation.bat
--  Update version in mainwindow.h
--  Set isReleaseVersion = true in mainwindow.h
--  Update winnow.exe by compiling in release mode without shadow build
--  Duplicate (DO NOT USE local temp copy) in winSCP the prior version in current to an archive folder (change target remote path).  DO NOT DELETE repository in current folder.
--  Update and save the version and folder paths in D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
--  Update and save the version and release date in
-   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.bin\meta\package.xml
--  If changes other than binary, update and save the releaseDate in
-   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
--  Run the batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallation.bat
-    - changes drive to D:
-    - changes dir to D:\My Projects\Winnow Project\WinnowInstallOnline
-    - copies winnow.exe from release to package
-    - recreates the repository in D:\My Projects\Winnow Project\WinnowInstallOnline
-    - creates a new binary installer winnowinstalleronline.exe
-    - runs WinSCP script (installscript.txt) to copy repository and winnowinstalleronline.exe
-      to http://165.227.46.158/winnow_win/current
-- Open C:\Program Files\Winnow\Winnow.exe and perform update if auto update is enabled or perform
-  "Help > Check for updates" to confirm that the update works.
-  Or run C:\Program Files\Winnow\maintenancetool.exe to update Winnow on local machine.
--  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
--  Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
-   download url for the archived version.
-
-Run 165.227.46.158/winnow_win/current/winnowinstalleronline.exe for new installation of Winnow.
-This is available on the Winnow Main Page at http://165.227.46.158/winnow/winnow.html
-
-Clean up orphaned entries in Apps and Features by deleting registry entries at
-Computer\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Uninstall\
-
----------------------------------------------------------------------
-
-Win Manual Installation Update:
-d:
-CD "D:\My Projects\Winnow Project\WinnowInstallOnline"
-copy /Y "D:\My Projects\Winnow Project\build-winnow64-Desktop_Qt_5_10_0_MSVC2017_64bit-Release\release\winnow.exe" packages\com.vendor.product\data
-RMDIR repository /S /Q
-C:\Qt\Tools\QtInstallerFramework\3.0\bin\repogen.exe -p packages repository
-C:\Qt\Tools\QtInstallerFramework\3.0\bin\binarycreator.exe --online-only -c config/config.xml -p packages winnowinstalleronline.exe
-"C:\Program Files (x86)\WinSCP\WinSCP.exe" /log="D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\WinSCP.log" /ini=nul /script="D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\installscript.txt"
-
-Repository
-Update deployment files (usually just winnow.exe) at D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.vendor.product\data
-CD D:\My Projects\Winnow Project\WinnowInstallOnline
-C:\Qt\Tools\QtInstallerFramework\3.0\bin\repogen.exe -p packages repository
-Use winscp.exe to copy repository to DigitalOcean web server
-Installer
-CD D:\My Projects\Winnow Project\WinnowInstall
-C:\Qt\Tools\QtInstallerFramework\2.0\bin\binarycreator.exe --offline-only -c config/config.xml -p packages winnowinstalleroffline.exe
-C:\Qt\Tools\QtInstallerFramework\3.0\bin\binarycreator.exe --online-only -c config/config.xml -p packages winnowinstalleronline.exe
-
----------------------------------------------------------------------
-
-WinSCP script: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\installscript.txt
-
-open sftp://root@165.227.46.158/ -hostkey="ssh-ed25519 256 YSQ/miRu2r/jJh0GXLXRIsVocu0ffPGt+vvaGZ2lmvk=" -privatekey="D:\Documents\DigitalOcean web server\ssh digital ocean private key.ppk"
-
-cd ../var/www/html/winnow_win
-put "D:\My Projects\Winnow Project\WinnowInstallOnline\repository"
-put "D:\My Projects\Winnow Project\WinnowInstallOnline\winnowinstalleronline.exe"
-cd ../winnow
-put "D:\My Projects\Winnow Project\Winnow64\Docs\winnow.html"
-
-exit
-
-End WinSCP script
+	When adding dll or exe ie winnet.exe
+	Copy dll files to:
+		D:\My Projects\Winnow Project\Deploy Winnow
+		D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\data
+		D:\My Projects\Winnow Project\WinnowInstallLocal\packages\com.rh.prod\data
+	Update and save the releaseDate and version in
+	   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
 
 
-winnow main page
-http://165.227.46.158/winnow/winnow.html
 
-winnow download
-http://165.227.46.158/winnow_win/winnowinstalleronline.exe
+Mac Notes:
+	Just a dmg:
+	- Compile a release version (Projects/Winnow64/Winnow.app)
+	- Copy Winnow.app to Projects/WinnowDMG
+	- Create DMG.  Open Disk Utility.  
+		- Menu: File > New Image > Image from Folder...  pick WinnowDMG
+		- Save as Projects/winnow###.dmg
+	- Open Filezilla, Menu: Server > Reconnect
+	- Create folder for previous version and move it from current to new folder
+	- Drag winnow###.dmg from Projects to current
+	-  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
+	-  Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
+	   download url for the archived version.
+	Updating ExifTool:
+	- Download top version (not windows or mac)
+	- Double click to uncompress to another folder
+	- Copy exiftool and lib folder to Winnow project releaseDate
+		(build-winnow64-Desktop_Qt_5_15_2_clang_64bit-Release)
 
-How to delete registry entry:
-"installscript.js"
-...
-Component.prototype.createOperations = function()
-{
-if (installer.value("os") == "win")
-{
-component.addElevatedOperation("Execute","echo do nothing","UNDOEXECUTE","cmd /C reg delete "HKEY_CURRENT_USER\Software\Company" /f")
+	Notes:
+	Mac Deployment: (located in /Users/roryhill/Projects/WinnowInstall/Batch/DeployOnMac)
+	Make sure latest version of Winnow.app is in /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_13_0_clang_64bit-Release
+	cd /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_13_0_clang_64bit-Release
+	cd /Users/roryhill/Projects/Winnow64
+	/Users/roryhill/Qt/5.13.0/clang_64/bin/macdeployqt Winnow.app -dmg
+
+	Useful paths:
+	/Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/data
+	/Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_12_0_clang_64bit-Release
+	/Users/roryhill/Qt/Tools/QtInstallerFramework/3.0/bin/
+
+	INSTALLATION COMMANDS:
+
+	cd /Users/roryhill/Projects/WinnowInstall
+
+	#Copy app from release to local install packages:
+	cp -r /Users/roryhill/Projects/build-winnow64-Desktop_Qt_5_13_0_clang_64bit-Release/Winnow.dmg packages/com.rh.bin/data
+
+
+	#Update the repository:
+	rm -r repository
+	/Users/roryhill/Qt/Tools/QtInstallerFramework/3.1/bin/repogen -p packages --update-new-components repository
+
+	#Create the installer "winnow installer"
+	/Users/roryhill/Qt/Tools/QtInstallerFramework/3.1/bin/binarycreator --online-only -c config/config.xml -p packages winnow.dmg
+
+	#Start the sftp to copy to server:
+	sftp root@165.227.46.158
+	cd /var/www/html/winnow_mac/current
+	put -r /Users/roryhill/Projects/WinnowInstall/repository
+	put -r /Users/roryhill/Projects/WinnowInstall/winnow.dmg
+
+	# if updating on windows ignore html files
+	#cd ../winnow
+	#put /Users/roryhill/Projects/Winnow64/Docs/winnow.html
+	#put /Users/roryhill/Projects/Winnow64/Docs/versions.html 
+	exit
+
+
+Win notes: 
+	Win Deployment:  IMPORTANT WHEN CHANGE VERSIONS OF QT!
+
+	Manual deployment
+	Open cmd
+	CD "D:\My Projects\Winnow Project\Deploy Winnow"     (use as temp location as cannot write to folders in "c:\program files"
+	C:\Qt\5.13.1\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --dir "D:\My Projects\Winnow Project\Deploy Winnow"
+	C:\Qt\5.13.1\msvc2017_64\bin\windeployqt.exe "D:\My Projects\Winnow Project\Winnow64\release\Winnow.exe" --plugindir "D:\My Projects\Winnow Project\Deploy Winnow"
+	then copy files and folders to D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\data
+	and D:\My Projects\Winnow Project\WinnowInstallLocal\packages\com.rh.prod\data
+
+	NORMAL DEPLOYMENT
+	When adding dll or exe ie winnet.exe
+	Copy dll files to:
+		D:\My Projects\Winnow Project\Deploy Winnow
+		D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\data
+		D:\My Projects\Winnow Project\WinnowInstallLocal\packages\com.rh.prod\data
+	Update and save the releaseDate and version in
+	   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
+
+	Win Installation Update:
+	-  Update deploy if new dlls required and when using a new version of Qt!!  (See above)
+	-  Update QtInstallerFramework version if new version of Qt in onlineinstallation.bat
+	-  Update version in mainwindow.h
+	-  Update winnow.exe by compiling in release mode without shadow build
+	-  Duplicate (DO NOT USE local temp copy) in winSCP the prior version in current to an archive folder (change target remote path).  DO NOT DELETE repository in current folder.
+	-  Update and save the version and folder paths in D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
+	-  Update and save the version and release date in
+	   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.bin\meta\package.xml
+	-  If changes other than binary, update and save the releaseDate in
+	   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
+	-  Run the batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallation.bat
+		- changes drive to D:
+		- changes dir to D:\My Projects\Winnow Project\WinnowInstallOnline
+		- copies winnow.exe from release to package
+		- recreates the repository in D:\My Projects\Winnow Project\WinnowInstallOnline
+		- creates a new binary installer winnowinstalleronline.exe
+		- runs WinSCP script (installscript.txt) to copy repository and winnowinstalleronline.exe
+		  to http://165.227.46.158/winnow_win/current
+	- Open C:\Program Files\Winnow\Winnow.exe and perform update if auto update is enabled or perform
+	  "Help > Check for updates" to confirm that the update works.
+	  Or run C:\Program Files\Winnow\maintenancetool.exe to update Winnow on local machine.
+	-  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
+	-  Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
+	   download url for the archived version.
+
+	Run 165.227.46.158/winnow_win/current/winnowinstalleronline.exe for new installation of Winnow.
+	This is available on the Winnow Main Page at http://165.227.46.158/winnow/winnow.html
+
+	Clean up orphaned entries in Apps and Features by deleting registry entries at
+	Computer\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Uninstall\
+
+	---------------------------------------------------------------------
+	
+	D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallation.bat:
+	---------------------------------------------------------------------
+	d:
+	CD "D:\My Projects\Winnow Project\WinnowInstallOnline"
+
+	REM To update package com.rh.prod copy all the dll files from release folder to D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\data
+
+	REM Copy winnow.exe to package com.rh.bin
+	copy /Y "D:\My Projects\Winnow Project\Winnow64\release\winnow.exe" packages\com.rh.bin\data
+	copy /Y "D:\My Projects\Winnow Project\Winnow64\release\winnet.exe" packages\com.rh.bin\data
+	copy /Y "D:\My Projects\Winnow Project\Winnow64\release\winnowlogger.exe" packages\com.rh.bin\data
+
+	REM Update the repository
+	RMDIR repository /S /Q
+	C:\Qt\Tools\QtInstallerFramework\4.0\bin\repogen.exe -p packages --update-new-components repository
+
+	REM Create the installer D:\My Projects\Winnow Project\WinnowInstallOnline
+	C:\Qt\Tools\QtInstallerFramework\4.0\bin\binarycreator.exe --online-only -c config/config.xml -p packages winnowinstalleronline.exe
+
+	REM Copy the local repository online to sftp://root:165.227.46.158/var/www/html
+	"C:\Program Files (x86)\WinSCP\WinSCP.exe" /log="D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\WinSCP.log" /ini=nul /script="D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\installscript.txt"
+	
+	
+	
+	
+
+	Win Manual Installation Update:
+	d:
+	CD "D:\My Projects\Winnow Project\WinnowInstallOnline"
+	copy /Y "D:\My Projects\Winnow Project\build-winnow64-Desktop_Qt_5_10_0_MSVC2017_64bit-Release\release\winnow.exe" packages\com.vendor.product\data
+	RMDIR repository /S /Q
+	C:\Qt\Tools\QtInstallerFramework\3.0\bin\repogen.exe -p packages repository
+	C:\Qt\Tools\QtInstallerFramework\3.0\bin\binarycreator.exe --online-only -c config/config.xml -p packages winnowinstalleronline.exe
+	"C:\Program Files (x86)\WinSCP\WinSCP.exe" /log="D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\WinSCP.log" /ini=nul /script="D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\installscript.txt"
+
+	Repository
+	Update deployment files (usually just winnow.exe) at D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.vendor.product\data
+	CD D:\My Projects\Winnow Project\WinnowInstallOnline
+	C:\Qt\Tools\QtInstallerFramework\3.0\bin\repogen.exe -p packages repository
+	Use winscp.exe to copy repository to DigitalOcean web server
+	Installer
+	CD D:\My Projects\Winnow Project\WinnowInstall
+	C:\Qt\Tools\QtInstallerFramework\2.0\bin\binarycreator.exe --offline-only -c config/config.xml -p packages winnowinstalleroffline.exe
+	C:\Qt\Tools\QtInstallerFramework\3.0\bin\binarycreator.exe --online-only -c config/config.xml -p packages winnowinstalleronline.exe
+
+	---------------------------------------------------------------------
+
+	WinSCP script: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\installscript.txt
+
+	open sftp://root@165.227.46.158/ -hostkey="ssh-ed25519 256 YSQ/miRu2r/jJh0GXLXRIsVocu0ffPGt+vvaGZ2lmvk=" -privatekey="D:\Documents\DigitalOcean web server\ssh digital ocean private key.ppk"
+
+	cd ../var/www/html/winnow_win
+	put "D:\My Projects\Winnow Project\WinnowInstallOnline\repository"
+	put "D:\My Projects\Winnow Project\WinnowInstallOnline\winnowinstalleronline.exe"
+	cd ../winnow
+	put "D:\My Projects\Winnow Project\Winnow64\Docs\winnow.html"
+
+	exit
+
+	End WinSCP script
+
+
+	winnow main page
+	http://165.227.46.158/winnow/winnow.html
+
+	winnow download
+	http://165.227.46.158/winnow_win/winnowinstalleronline.exe
+
+	How to delete registry entry:
+	"installscript.js"
+	...
+	Component.prototype.createOperations = function()
+	{
+	if (installer.value("os") == "win")
+	{
+	component.addElevatedOperation("Execute","echo do nothing","UNDOEXECUTE","cmd /C reg delete "HKEY_CURRENT_USER\Software\Company" /f")
