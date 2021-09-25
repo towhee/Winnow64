@@ -5675,11 +5675,9 @@ QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵�
 
     status = " " + base + s + spacer + ms;
     statusLabel->setText(status);
-//    updateStatusBar();
-
     qDebug() << "Status:" << status;
 
-    // update InfoView - flag updates so itemChanged be ignored in MW::metadataChanged
+    // update InfoView - flag updates so itemChanged is ignored in MW::metadataChanged
     if (useInfoView)  {
         infoView->isNewImageDataChange = true;
         QStandardItemModel *k = infoView->ok;
