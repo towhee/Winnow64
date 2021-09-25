@@ -68,7 +68,6 @@ namespace G
     bool isRunningColorAnalysis;
     bool isEmbellish;
     bool colorManage;
-    bool isColorManagement;
     bool embedTifThumb;
 
     // ingest
@@ -132,25 +131,33 @@ namespace G
         "MetadataCache"
     };
 
-    void log(QString functionName, QString comment, bool hideElapsedTime)
+    void log(QString functionName, QString comment, bool zeroElapsedTime)
     {
 //        for (int i = 0; i < doNotLog.length(); ++i) {
 //             if (functionName.contains(doNotLog.at(i))) return;
 //        }
-        QString time = QString("%L1").arg(t.nsecsElapsed() / 1000);
-        if (hideElapsedTime) time = "";
-        QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
-        QString e = time.rightJustified(11, ' ') + " ";
-        QString f = functionName.leftJustified(50, ' ') + " ";
-        QString c = comment;
-        if (sendLogToConsole && isDev) {
-            QString msg = e + f + c;
-            qDebug().noquote() << msg;
+        static QString prevFunctionName = "";
+        static QString prevComment = "";
+        if (zeroElapsedTime) {
+            t.restart();
         }
-        else {
-            QString msg = d + e + f + c + "\n";
-            if (logFile.isOpen()) logFile.write(msg.toUtf8());
+        if (functionName != "") {
+            QString microSec = QString("%L1").arg(t.nsecsElapsed() / 1000);
+            QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
+            QString e = microSec.rightJustified(11, ' ') + " ";
+            QString f = prevFunctionName.leftJustified(50, ' ') + " ";
+            QString c = prevComment;
+            if (sendLogToConsole) {
+                QString msg = e + f + c;
+                qDebug().noquote() << msg;
+            }
+            else {
+                QString msg = d + e + f + c + "\n";
+                if (logFile.isOpen()) logFile.write(msg.toUtf8());
+            }
         }
+        prevFunctionName = functionName;
+        prevComment = comment;
         t.restart();
     }
 

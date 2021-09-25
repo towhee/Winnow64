@@ -104,7 +104,6 @@ public:
     */
 
     bool isStartupArgs = false;
-    bool isReleaseVersion = true;
     bool hideEmbellish = false;
     bool useImageCache = true;
     bool useInfoView = true;
@@ -113,7 +112,7 @@ public:
 
     bool useFilterView = true;
 
-    QString versionNumber = "1.27 Beta 2" ;
+    QString versionNumber = "1.27" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -185,6 +184,8 @@ public:
         bool isEmbelDisplay;
         bool isColorManage;
         QString cacheSizeMethod;
+        int sortColumn;
+        bool isReverseSort;
     };
     workspaceData ws;   // hold values for workspace n
     workspaceData *w;
@@ -297,6 +298,12 @@ public:
         EmbelTab        // 6    rgh req'd? for coord help?
     };
 
+    enum Tog {
+        toggle,
+        off,
+        on
+    };
+
     // mode change
     QString prevMode;
     int currentRow;             // the current row in MW::fileSelection
@@ -307,9 +314,12 @@ public:
     bool modeChangeJustHappened;
     bool gridDisplayFirstOpen = true;
     bool justUpdatedBestFit;
-    int sortColumn = 0;
-    int prevSortColumn = 0;
+    int sortColumn = G::NameColumn;
+    int prevSortColumn = G::NameColumn;
+    bool isReverseSort = false;
+    bool prevIsReverseSort = false;
     bool preferencesHasFocus = false;
+    bool workspaceChanged = false;
 
     bool remoteAccess = false;
     bool showImageCount = true;
@@ -409,10 +419,12 @@ private slots:
     void uncheckAllFilters();
     void clearAllFilters();
     void sortChangeFromAction();
+    void toggleSortDirectionClick();
     void sortChange(QString src = "Action");
     void updateSortColumn(int sortColumn);
-    void reverseSortDirection();
-    void toggleColorManage();
+    void toggleSortDirection(Tog n = toggle);
+    void toggleColorManageClick();
+    void toggleColorManage(Tog n = toggle);
     void toggleImageCacheMethod();
     void allPreferences();
     void infoViewPreferences();
@@ -645,6 +657,7 @@ private:
     QAction *ingestAction;
     QAction *ejectAction;
     QAction *ejectActionFromContextMenu;
+    QAction *colorManageAction;
     QAction *combineRawJpgAction;
     QAction *refreshFoldersAction;
     QAction *renameAction;
@@ -1033,6 +1046,7 @@ private:
     void createMetadataDock();
     void createThumbDock();
     void createEmbelDock();
+    void folderDockVisibilityChange();
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
     void updateState();

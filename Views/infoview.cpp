@@ -31,8 +31,10 @@ public:
         categoryBackground.setColorAt(0, QColor(a,a,a));
         categoryBackground.setColorAt(1, QColor(b,b,b));
 
+//        int hOffset = 11;
+//        int vOffset = -1;
         int hOffset = 11;
-        int vOffset = -1;
+        int vOffset = 1;
         QPoint topLeft(option.rect.left() + hOffset, option.rect.top() - vOffset);
         QPoint bottomRight(option.rect.bottomRight());
         QRect textRect(topLeft, bottomRight);
@@ -104,6 +106,12 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
     setTabKeyNavigation(false);
 
     setItemDelegate(new InfoDelegate(this));
+
+    setStyleSheet("QLineEdit {background-color: transparent;"
+                  "border: none;"
+                  "padding-left: 5%;"
+                  "padding-bottom: 3%;"
+                  "};");  // not working
 
    // InfoView menu
 	infoMenu = new QMenu("");

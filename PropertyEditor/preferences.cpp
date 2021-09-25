@@ -224,11 +224,6 @@ itemChange, which is subclassed here.
         if (G::isLogger) mw->openLog();
     }
 
-    if (source == "isColorManagement") {
-        G::isColorManagement = v.toBool();
-        mw->updateStatusBar();
-    }
-
     if (source == "rememberLastDir") {
         mw->rememberLastDir = v.toBool();
     }
@@ -328,21 +323,6 @@ void Preferences::addItems()
     addItem(i);
 
     {
-    // Manage color
-    i.name = "isColorManagement";
-    i.parentName = "GeneralHeader";
-    i.captionText = "Color manage";
-    i.tooltip = "Turning on color management will ensure consistent color, especially for\n"
-                "files that have been converted to a color profile other than sRGB.  Color \n"
-                "management has a significant impact on image caching performance.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::isColorManagement;
-    i.key = "isColorManagement";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
     // Remember last folder
     i.name = "rememberLastDir";
     i.parentName = "GeneralHeader";
@@ -373,7 +353,9 @@ void Preferences::addItems()
     i.name = "limitFit100Pct";
     i.parentName = "GeneralHeader";
     i.captionText = "Limit loupe fit zoom to 100%.";
-    i.tooltip = "Limit loupe fit zoom to 100%.";
+    i.tooltip = "Limit loupe fit zoom to 100%.  This will prevent the image from being\n"
+                "zoomed beyond 100% to fit in the loupe view."
+                ;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->imageView->limitFit100Pct;

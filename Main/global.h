@@ -47,7 +47,6 @@ namespace G
         RefineColumn,
         PickColumn,
         IngestedColumn,
-        CachedColumn,
         LabelColumn,
         RatingColumn,
         SearchColumn,
@@ -198,7 +197,6 @@ namespace G
     extern bool isRunningColorAnalysis;
     extern bool isEmbellish;
     extern bool colorManage;
-    extern bool isColorManagement;
     extern bool embedTifThumb;
 
     extern int ingestCount;
@@ -226,7 +224,7 @@ namespace G
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
     extern QStringList doNotLog;
     extern void log(QString functionName = "", QString comment = "",
-                    bool hideElapsedTime = false);
+                    bool zeroElapsedTime = false);
     extern void errlog(QString functionName, QString fPath, QString err);
     extern void error(QString functionName, QString fPath, QString err);
     extern void wait(int ms);

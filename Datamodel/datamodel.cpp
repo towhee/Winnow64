@@ -159,7 +159,6 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::RefineColumn, new QStandardItem("Refine")); horizontalHeaderItem(G::RefineColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::PickColumn, new QStandardItem("Pick")); horizontalHeaderItem(G::PickColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::IngestedColumn, new QStandardItem("Ingested")); horizontalHeaderItem(G::IngestedColumn)->setData(false, G::GeekRole);
-    setHorizontalHeaderItem(G::CachedColumn, new QStandardItem("Cached")); horizontalHeaderItem(G::CachedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::LabelColumn, new QStandardItem("Colour")); horizontalHeaderItem(G::LabelColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating")); horizontalHeaderItem(G::RatingColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::SearchColumn, new QStandardItem("🔎")); horizontalHeaderItem(G::SearchColumn)->setData(false, G::GeekRole);
@@ -487,8 +486,6 @@ bool DataModel::addFileData()
         setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::IngestedColumn), "false");
         setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        setData(index(row, G::CachedColumn), "false");
-        setData(index(row, G::CachedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
         setData(index(row, G::MetadataLoadedColumn), "false");
         setData(index(row, G::SearchColumn), "false");
         setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
@@ -536,20 +533,14 @@ bool DataModel::addFileData()
 
         // Load folder progress
         if (row % 100 == 0 ) {
-//            QString s = step +
-//                        QString::number(row) + " of " + QString::number(rowCount()) +
-//                        " loaded." +
-//                        escapeClause;
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " loaded.";
             emit msg(s);    // rghmsg
             QCoreApplication::processEvents();
-//            qApp->processEvents();
         }
 
     }
     loadingModel = false;
-//    qDebug() << __FUNCTION__ << "model loaded for all images";
     return true;
 }
 
@@ -687,18 +678,25 @@ void DataModel::addAllMetadata()
     timeToQuit = false;
     loadingModel = true;
     QString x = QString::number(rowCount());
-    G::popUp->setProgressVisible(true);
-    G::popUp->setProgressMax(rowCount());
-    QString msg = "It may take a moment to load all the metadata for " + x + " files<p>"
-            "This is required before any filtering or sorting of metadata can be done.<p>"
-            "Press <font color=\"red\"><b>Esc</b></font> to cancel.";
-    G::popUp->showPopup(msg, 0, true, 1);
+//    G::popUp->setProgressVisible(true);
+//    G::popUp->setProgressMax(rowCount());
+//    QString msg = "It may take a moment to load all the metadata for " + x + " files<p>"
+//            "This is required before any filtering or sorting of metadata can be done.<p>"
+//            "Press <font color=\"red\"><b>Esc</b></font> to cancel.";
+//    G::popUp->showPopup(msg, 0, true, 1);
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
-        qApp->processEvents();
+        // Load folder progress
+        if (row % 100 == 0 ) {
+            QString s = QString::number(row) + " of " + QString::number(rowCount()) +
+                        " secondary metadata loading...";
+            emit msg(s);    // rghmsg
+            QCoreApplication::processEvents();
+        }
+//        qApp->processEvents();
         if (timeToQuit) break;
         // is metadata already cached
-        G::popUp->setProgress(row);
+//        G::popUp->setProgress(row);
         if (index(row, G::MetadataLoadedColumn).data().toBool()) continue;
 
         QString fPath = index(row, 0).data(G::PathRole).toString();
@@ -1136,7 +1134,6 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("refine", 25) << G::s(index(row, G::RefineColumn).data());
     rpt << "\n  " << G::sj("pick", 25) << G::s(index(row, G::PickColumn).data());
     rpt << "\n  " << G::sj("ingested", 25) << G::s(index(row, G::IngestedColumn).data());
-    rpt << "\n  " << G::sj("cached", 25) << G::s(index(row, G::CachedColumn).data());
     rpt << "\n  " << G::sj("label", 25) << G::s(index(row, G::LabelColumn).data());
     rpt << "\n  " << G::sj("_label", 25) << G::s(index(row, G::_LabelColumn).data());
     rpt << "\n  " << G::sj("rating", 25) << G::s(index(row, G::RatingColumn).data());

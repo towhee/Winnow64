@@ -712,7 +712,7 @@ int IconView::getNearestPick()
 
 void IconView::sortThumbs(int sortColumn, bool isReverse)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     if (isReverse) dm->sf->sort(sortColumn, Qt::DescendingOrder);
     else dm->sf->sort(sortColumn, Qt::AscendingOrder);
 
