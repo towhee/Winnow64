@@ -675,6 +675,8 @@ QString ImageCache::reportCache(QString title)
                 << "Caching"
                 << "Thread"
                 << "Cached"
+                << "Contains"
+                << "dmCached"
                 << "SizeMB"
                    ;
             rpt.setFieldWidth(3);
@@ -695,6 +697,8 @@ QString ImageCache::reportCache(QString title)
             << icd->cacheItemList.at(i).isCaching
             << icd->cacheItemList.at(i).threadId
             << icd->cacheItemList.at(i).isCached
+            << icd->imCache.contains(icd->cacheItemList.at(i).fPath)
+            << dm->sf->index(icd->cacheItemList.at(i).key,0).data(G::UserRoles::CachedRole).toBool()
             << icd->cacheItemList.at(i).sizeMB
                ;
         rpt.setFieldWidth(3);
@@ -918,7 +922,6 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
         // get key for current image
         if (fPath == currentImageFullPath) icd->cache.key = row;
         // update cacheItemList for images already cached
-//        if (imCache.contains(fPath)) cacheItemList[row].isCached = true;
         if (icd->imCache.contains(fPath)) icd->cacheItemList[row].isCached = true;
     }
 
@@ -1026,12 +1029,12 @@ void ImageCache::cacheImage(int id, int cacheKey)
     }
     makeRoom(id, cacheKey);
     icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
+//    if (icd->imCache.contains(decoder[id]->fPath)) {
     icd->cacheItemList[cacheKey].isCaching = false;
     icd->cacheItemList[cacheKey].isCached = true;
     icd->cache.currMB = getImCacheSize();
     emit updateCacheOnThumbs(decoder[id]->fPath, true);
-//    if (icd->cache.isShowCacheStatus) {
-        updateStatus("Update all rows", "ImageCache::run inside loop");
+    updateStatus("Update all rows", "ImageCache::run inside loop");
 //    }
 }
 
@@ -1118,9 +1121,6 @@ bool ImageCache::fillCache(int id, bool positionChange)
         if (cacheKey >= icd->cache.targetFirst && cacheKey <= icd->cache.targetLast) {
             okToCache = true;
         }
-//        if (inTargetRange(decoder[id]->fPath)) {
-//            okToCache = true;
-//        }
     }
 
     /*
@@ -1135,7 +1135,7 @@ bool ImageCache::fillCache(int id, bool positionChange)
                 //*/
     // add decoded QImage to cache if in target range.
     if (okToCache) {
-        if (!decoder[id]->isRunning()) cacheImage(id, cacheKey);
+        cacheImage(id, cacheKey);
     }
     /*
     if (decoder[id]->isRunning()) {
@@ -1150,7 +1150,7 @@ bool ImageCache::fillCache(int id, bool positionChange)
     */
     // get next image to cache (nextToCache() defines cache.toCacheKey)
     if (nextToCache(id)) {
-        if (!decoder[id]->isRunning()) decodeNextImage(id);
+        /*if (!decoder[id]->isRunning()) */decodeNextImage(id);
     }
     // caching completed
     else {

@@ -9,7 +9,7 @@ class ImageCacheData : public QObject
 {
     Q_OBJECT
 public:
-    explicit ImageCacheData(QObject *parent);
+    explicit ImageCacheData(QObject *);
 
     // concurrent image cache hash
     CTSL::HashMap<QString, QImage> imCache;
