@@ -1,6 +1,6 @@
 #include "Cache/cachedata.h"
 
-ImageCacheData::ImageCacheData(QObject *parent)
+ImageCacheData::ImageCacheData(QObject *)
 {
 
 }

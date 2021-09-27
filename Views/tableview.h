@@ -60,7 +60,7 @@ signals:
 class CreatedItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit CreatedItemDelegate(QObject* parent = 0);
+    explicit CreatedItemDelegate(QObject* parent = nullptr);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
@@ -93,67 +93,60 @@ public:
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
-class CachedItemDelegate : public QStyledItemDelegate {
-    Q_OBJECT
-public:
-    explicit CachedItemDelegate(QObject* parent = nullptr);
-    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
-};
-
 class DimensionItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
     explicit DimensionItemDelegate(QObject* parent = nullptr);
-    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
 class ApertureItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
     explicit ApertureItemDelegate(QObject* parent = nullptr);
-    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
 class ExposureTimeItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
     explicit ExposureTimeItemDelegate(QObject* parent = nullptr);
-    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
 class FocalLengthItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
     explicit FocalLengthItemDelegate(QObject* parent = nullptr);
-    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
 class ISOItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
     explicit ISOItemDelegate(QObject* parent = nullptr);
-    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
 class ExposureCompensationItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
     explicit ExposureCompensationItemDelegate(QObject* parent = nullptr);
-    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
 class FileSizeItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
     explicit FileSizeItemDelegate(QObject* parent = nullptr);
-    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
 class ErrItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
     explicit ErrItemDelegate(QObject* parent = nullptr);
-    virtual QString displayText(const QVariant & value, const QLocale & locale) const;
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
 #endif // TABLEVIEW_H
