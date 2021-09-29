@@ -140,6 +140,9 @@ void ImageCache::setKeyToCurrent()
 /*
     cache.key is the index of the item in cacheItemList that matches dm->currentFilePath
 */
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__ << "decoder-1";
+    }
     if (G::isLogger) G::log(__FUNCTION__);
     icd->cache.key = 0;
     for (int i = 0; i < icd->cacheItemList.count(); i++) {
@@ -172,6 +175,9 @@ void ImageCache::setDirection()
     image
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__ << "   decoder-1";
+    }
 
     int prevKey = icd->cache.prevKey;
     icd->cache.prevKey = icd->cache.key;
@@ -242,6 +248,9 @@ void ImageCache::setTargetRange()
 */
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__ << " decoder-1";
+    }
 
     // sort by priority to make it easy to find highest priority not already cached
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::prioritySort);
@@ -278,14 +287,14 @@ void ImageCache::setTargetRange()
 
     fixOrphans();
 
-    if (debugCaching) {
-        qDebug();
-        qDebug() << __FUNCTION__
-                 << "targetFirst =" << icd->cache.targetFirst
-                 << "targetLast =" << icd->cache.targetLast
-                 << "isForward =" << icd->cache.isForward
-                    ;
-    }
+//    if (debugCaching) {
+//        qDebug();
+//        qDebug() << __FUNCTION__
+//                 << "targetFirst =" << icd->cache.targetFirst
+//                 << "targetLast =" << icd->cache.targetLast
+//                 << "isForward =" << icd->cache.isForward
+//                    ;
+//    }
 }
 
 //bool ImageCache::cacheUpToDate()
@@ -340,6 +349,7 @@ bool ImageCache::nextToCache(int id)
       we know the previous attempt failed, and we should try again, unless the attempts are
       greater than 2.
 */
+//    QMutexLocker locker(&mutex);
     if (G::isLogger) G::log(__FUNCTION__);
     int lastPriority = icd->cacheItemList.length();
     int key = -1;
@@ -410,7 +420,10 @@ void ImageCache::setPriorities(int key)
     following the order (2 ahead, one behind) and assigned an increasing sort order key, which
     is used by setTargetRange to sort icd->cacheItemList by priority.
 */
-    if (G::isLogger) G::log(__FUNCTION__, "key = " +QString::number(key));
+    if (G::isLogger) G::log(__FUNCTION__, "key = " + QString::number(key));
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__ << "  decoder-1" << "key =" << key;
+    }
     // key = current position = current selected thumbnail
     int aheadAmount = 1;
     int behindAmount = 1;                   // default 50/50 weighting
@@ -988,8 +1001,7 @@ void ImageCache::cacheSizeChange()
 
 void ImageCache::setCurrentPosition(QString path)
 {
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-    if (G::isLogger) G::log(__FUNCTION__, path);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, path);
     mutex.lock();
     currentPath = path;
     mutex.unlock();
@@ -1029,13 +1041,11 @@ void ImageCache::cacheImage(int id, int cacheKey)
     }
     makeRoom(id, cacheKey);
     icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
-//    if (icd->imCache.contains(decoder[id]->fPath)) {
     icd->cacheItemList[cacheKey].isCaching = false;
     icd->cacheItemList[cacheKey].isCached = true;
     icd->cache.currMB = getImCacheSize();
     emit updateCacheOnThumbs(decoder[id]->fPath, true);
     updateStatus("Update all rows", "ImageCache::run inside loop");
-//    }
 }
 
 bool ImageCache::fillCache(int id, bool positionChange)
@@ -1078,7 +1088,6 @@ bool ImageCache::fillCache(int id, bool positionChange)
 
     if (positionChange) {
         setKeyToCurrent();
-//        if (icd->cache.isShowCacheStatus) updateCursor();
         setDirection();
         icd->cache.currMB = getImCacheSize();
         setPriorities(icd->cache.key);
@@ -1096,6 +1105,8 @@ bool ImageCache::fillCache(int id, bool positionChange)
     and -1 will be returned.
     */
     int cacheKey = getCacheKey(decoder[id]->fPath);
+//    int cacheKey = decoder[id]->cacheKey;
+//    QString fPath = decoder[id]->fPath;
 
     if (debugCaching) {
         QString k = QString::number(cacheKey).leftJustified((4));
@@ -1117,11 +1128,11 @@ bool ImageCache::fillCache(int id, bool positionChange)
     }
 
     // in target range
-    if (cacheKey != -1) {
-        if (cacheKey >= icd->cache.targetFirst && cacheKey <= icd->cache.targetLast) {
-            okToCache = true;
-        }
-    }
+//    if (cacheKey != -1) {
+//        if (cacheKey >= icd->cache.targetFirst && cacheKey <= icd->cache.targetLast) {
+//            okToCache = true;
+//        }
+//    }
 
     /*
     qDebug() << __FUNCTION__
@@ -1134,7 +1145,8 @@ bool ImageCache::fillCache(int id, bool positionChange)
                 ;
                 //*/
     // add decoded QImage to cache if in target range.
-    if (okToCache) {
+//    if (okToCache) {
+    if (cacheKey != -1) {
         cacheImage(id, cacheKey);
     }
     /*
@@ -1150,7 +1162,7 @@ bool ImageCache::fillCache(int id, bool positionChange)
     */
     // get next image to cache (nextToCache() defines cache.toCacheKey)
     if (nextToCache(id)) {
-        /*if (!decoder[id]->isRunning()) */decodeNextImage(id);
+        decodeNextImage(id);
     }
     // caching completed
     else {
@@ -1158,7 +1170,7 @@ bool ImageCache::fillCache(int id, bool positionChange)
         emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
         if (debugCaching) {
             qDebug() << __FUNCTION__
-                     << "     decoder " << id
+                     << "      decoder" << id
                      << "cacheUpToDate = true";
         }
         if (icd->cache.isShowCacheStatus) {
@@ -1178,6 +1190,9 @@ void ImageCache::run()
     the fillCache comments and at the top of this file.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__;
+    }
 
     // update position, priorities, target range
     if (fillCache(-1, true)) {   // id, positionChange

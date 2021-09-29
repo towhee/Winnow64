@@ -34,6 +34,7 @@ public:
     int threadId;
     QImage image;
     QString fPath;
+    int cacheKey;
 
     enum Status {
         Ready,

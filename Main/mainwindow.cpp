@@ -5595,9 +5595,10 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
 */
     if (!useUpdateStatus) return;
     if (G::isLogger) G::log(__FUNCTION__);
-
+    /*
     QString ms = QString("%L1").arg(testTime.nsecsElapsed() / 1000000) + " ms";
     testTime.restart();
+    */
 
 //    qDebug() << __FUNCTION__ << s << source;
     // check if null filter
@@ -5673,9 +5674,12 @@ QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵�
         }
     }
 
-    status = " " + base + s + spacer + ms;
+    status = " " + base + s;
     statusLabel->setText(status);
+    /*
+    status = " " + base + s + spacer + ms;
     qDebug() << "Status:" << status;
+    */
 
     // update InfoView - flag updates so itemChanged is ignored in MW::metadataChanged
     if (useInfoView)  {
@@ -11675,7 +11679,7 @@ void MW::mediaReadSpeed()
     double gbs = Performance::mediaReadSpeed(file) / 8 * 1024;
     if (static_cast<int>(gbs) == -1) return;  // err
     QString msg = "Media read speed: : " + QString::number(gbs, 'f', 0) +
-                  " MB/sec.     Press Esc to continue.";
+                  " MB/sec.   Press Esc to continue.";
     G::popUp->showPopup(msg, 0);
 }
 
@@ -11734,7 +11738,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    reportWorkspace(0);
+    stressTest(50);
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";

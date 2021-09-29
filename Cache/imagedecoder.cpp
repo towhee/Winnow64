@@ -51,6 +51,7 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item)
     status = Status::Busy;
     n = item;
     fPath = n.fPath;
+    cacheKey = n.key;
     start();
 }
 
