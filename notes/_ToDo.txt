@@ -1,4 +1,6 @@
 BUGS / TO DO
+- When embellish turn info and ratings off
+- Sort by name not always checked
 - check colorManage at start working
 - Load image when useImageCache == false
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
