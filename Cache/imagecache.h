@@ -122,7 +122,7 @@ private:
 //    QSize scalePreview(int w, int h);
 
     QElapsedTimer t;
-    bool debugCaching = true;
+    bool debugCaching = false;
 };
 
 #endif // IMAGECACHE_H

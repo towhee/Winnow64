@@ -347,14 +347,14 @@ bool ImageCache::nextToCache(int id)
     - isCaching and isCached are false.
     - decoderId matches item, isCaching is true and isCached = false.  If this is the case then
       we know the previous attempt failed, and we should try again, unless the attempts are
-      greater than 2.
+      greater than maxAttemptsToCacheImage.
 */
-//    QMutexLocker locker(&mutex);
     if (G::isLogger) G::log(__FUNCTION__);
     int lastPriority = icd->cacheItemList.length();
     int key = -1;
-    // find next priority item
-    for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+    // find next priority item  rgh only check in target range??
+//    for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+    for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
         bool isTarget = icd->cacheItemList.at(i).isTarget;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
         bool isCached = icd->cacheItemList.at(i).isCached;
@@ -375,7 +375,11 @@ bool ImageCache::nextToCache(int id)
         icd->cache.toCacheKey = key;
         if (debugCaching) {
             QString k = QString::number(key).leftJustified((4));
-            qDebug().noquote() << __FUNCTION__ << "    decoder" << id << "key =" << k;
+            qDebug().noquote() << __FUNCTION__
+                               << "    decoder" << id
+                               << "key =" << k
+                               << icd->cacheItemList.at(key).fPath
+                                  ;
         }
         return true;
     }
@@ -529,17 +533,9 @@ bool ImageCache::cacheUpToDate()
 /*
     Determine if all images in the target range are cached or being cached.
 */
-    int first = icd->cache.targetFirst;
-    int last = icd->cache.targetLast;
-    for (int i = first; i < last + 1; ++i) {
-        bool isCached = icd->cacheItemList.at(i).isCached;
-        bool isCaching = icd->cacheItemList.at(i).isCaching;
-        if (!isCached && !isCaching) {
-            if (icd->cacheItemList.at(i).attempts < maxAttemptsToCacheImage) {
-                icd->cache.toCacheKey = i;
-                return false;
-            }
-        }
+    for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
+        if (!icd->cacheItemList.at(i).isCached && !icd->cacheItemList.at(i).isCaching)
+            return false;
     }
     return true;
 }
@@ -1027,7 +1023,9 @@ void ImageCache::decodeNextImage(int id)
     if (debugCaching) {
         QString k = QString::number(icd->cache.toCacheKey).leftJustified((4));
         qDebug().noquote() << __FUNCTION__ << "decoder" << id
-                           << "key =" << k << decoder[id]->fPath;
+                           << "key =" << k
+                           << icd->cacheItemList[icd->cache.toCacheKey].fPath
+                              ;
     }
     decoder[id]->decode(icd->cacheItemList[icd->cache.toCacheKey]);
 }
@@ -1086,6 +1084,7 @@ bool ImageCache::fillCache(int id, bool positionChange)
 */
     QMutexLocker locker(&mutex);
 
+    // new image selected?
     if (positionChange) {
         setKeyToCurrent();
         setDirection();
@@ -1099,14 +1098,11 @@ bool ImageCache::fillCache(int id, bool positionChange)
         else return false;
     }
 
-    bool okToCache = false;
     /* get the key (index to item in icd->cacheItemList) for decoder[id].  If the decoder has
     not been initiated, then decoder[id]->fPath will be "" and there will be no key available
     and -1 will be returned.
     */
     int cacheKey = getCacheKey(decoder[id]->fPath);
-//    int cacheKey = decoder[id]->cacheKey;
-//    QString fPath = decoder[id]->fPath;
 
     if (debugCaching) {
         QString k = QString::number(cacheKey).leftJustified((4));
@@ -1114,7 +1110,8 @@ bool ImageCache::fillCache(int id, bool positionChange)
                  << "      decoder" << id
                  << "key =" << k
                  << "isRunning =" << decoder[id]->isRunning()
-                 << decoder[id]->fPath;
+                 << decoder[id]->fPath
+                    ;
     }
 
     // range check
@@ -1127,45 +1124,18 @@ bool ImageCache::fillCache(int id, bool positionChange)
         cacheKey = -1;
     }
 
-    // in target range
-//    if (cacheKey != -1) {
-//        if (cacheKey >= icd->cache.targetFirst && cacheKey <= icd->cache.targetLast) {
-//            okToCache = true;
-//        }
-//    }
-
-    /*
-    qDebug() << __FUNCTION__
-             << "id =" << id
-             << "Decoded:"
-             << cacheKey
-             << "targeted =" << targeted
-             << "done =" << done
-             << decoder[id]->fPath
-                ;
-                //*/
-    // add decoded QImage to cache if in target range.
-//    if (okToCache) {
+    // add decoded QImage to imCache.
     if (cacheKey != -1) {
         cacheImage(id, cacheKey);
     }
-    /*
-    if (decoder[id]->isRunning()) {
-        if (debugCaching) {
-            qDebug() << __FUNCTION__ << "isRunning = true decoder id =" << id
-                     << "cacheKey =" << cacheKey
-                     << "fPath =" << decoder[id]->fPath
-                        ;
-        }
-        return;
-    }
-    */
+
     // get next image to cache (nextToCache() defines cache.toCacheKey)
     if (nextToCache(id)) {
         decodeNextImage(id);
     }
     // caching completed
     else {
+        decoder[id]->setReady();
         fixOrphans();
         emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
         if (debugCaching) {
@@ -1195,7 +1165,7 @@ void ImageCache::run()
     }
 
     // update position, priorities, target range
-    if (fillCache(-1, true)) {   // id, positionChange
+    if (fillCache(-1, true)) {   // decoder id, positionChange
         // cache is up-to-date
         return;
     }
@@ -1206,9 +1176,10 @@ void ImageCache::run()
     // check available memory (another app may have used or released some memory)
     memChk();
 
-    // fill the cache with images
+    /* fill the cache with images.  Note use ImageDecoder::Status::Ready because
+       decoder[id]->isRunning() resulted in empty mages in imCache  */
     for (int id = 0; id < decoderCount; ++id) {
-        if (!decoder[id]->isRunning()) {
+        if (decoder[id]->status == ImageDecoder::Status::Ready) {
             decoder[id]->fPath = "";
             if (!abort) fillCache(id);
         }
