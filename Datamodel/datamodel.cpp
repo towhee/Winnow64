@@ -528,11 +528,10 @@ bool DataModel::addFileData()
                 setData(index(row, G::TypeColumn), "JPG+" + prevRawSuffix.toUpper());
             else
                 setData(index(row, G::TypeColumn), "JPG");
-
         }
 
         // Load folder progress
-        if (row % 100 == 0 ) {
+        if (row % 100 == 0) {
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " loaded.";
             emit msg(s);    // rghmsg

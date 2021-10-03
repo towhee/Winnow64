@@ -163,12 +163,21 @@ void Embel::clear()
 
     // remove flashItem
     if (scene->items().contains(flashItem)) scene->removeItem(flashItem);
+
+    // make scene same as image
+//    scene->setSceneRect(pmItem->boundingRect());
+    QRectF imageRect(pmItem->pixmap().rect());
+//    scene->setSceneRect(pmItem->pixmap().rect());
+    qDebug() << __FUNCTION__
+             << "pmItem->boundingRect() =" << pmItem->boundingRect()
+             << "scene->itemsBoundingRect() =" << scene->itemsBoundingRect()
+                ;
 }
 
 void Embel::build(QString path, QString src)
 {
 /*
-    The image created by following the embellish template happenes here. The path to the
+    The image created by following the embellish template happens here. The path to the
     current image is not required if the source is the main Winnow program. However, if the
     source is an EmbelExort then path will be defined, and the data model will not have
     been loaded, requiring a call Metadata to load the image data.
