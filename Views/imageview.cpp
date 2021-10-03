@@ -667,24 +667,13 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 void ImageView::sceneGeometry(QPoint &sceneOrigin, QRectF &scene_Rect, QRect &cwRect)
 {
 /*
-Return the top left corner of the image showing in the central widget in percent.  This is
-used to determine the zoomCursor aspect in ThumbView.
+    Return the top left corner of the image showing in the central widget in percent.  This is
+    used to determine the zoomCursor aspect in ThumbView.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     sceneOrigin = mapFromScene(0.0, 0.0);
     scene_Rect = sceneRect();
     cwRect = rect();
-////    qreal xOff = static_cast<qreal>(sceneOrigin.x());
-////    qreal yOff = static_cast<qreal>(sceneOrigin.y());
-////    xOff < 0 ? xOff = 0 : xOff = xOff;
-////    yOff < 0 ? yOff = 0 : yOff = yOff;
-//    qreal xPct = xOff / rect().width();
-//    qreal yPct = yOff / rect().height();
-//    qDebug() << __FUNCTION__
-//             << "sceneOrigin =" << sceneOrigin
-//             << "sceneRect() =" << sceneRect()
-//             << "rect() =" << rect();
-//    return QSizeF(xPct, yPct);
 }
 
 void ImageView::updateShootingInfo()
@@ -709,20 +698,19 @@ void ImageView::setShootingInfo(QString infoString)
     if (G::isLogger) G::log(__FUNCTION__); 
     // window (w) and view (v) sizes are updated during resize
 
+
     int offset = 10;                        // offset pixels from the edge of image
     int x, y = 0;                           // top left coordinates of info symbol
-    QPoint sceneOrigin;
-
-    sceneOrigin = mapFromScene(0.0, 0.0);
-
+    // the top left of the image in veiwport coordinates
+    QPoint viewportCoord = mapFromScene(pmItem->mapToScene(0,0));
     // if the scene is not as wide as the view
-    if (sceneOrigin.x() > 0)
-        x = sceneOrigin.x() + offset;
+    if (viewportCoord.x() > 0)
+        x = viewportCoord.x() + offset;
     else x = offset;
 
     // if the scene is not as high as the view
-    if (sceneOrigin.y() > 0)
-        y = sceneOrigin.y() + offset;
+    if (viewportCoord.y() > 0)
+        y = viewportCoord.y() + offset;
     else y = offset;
 
     QFont font("Tahoma", infoOverlayFontSize);
@@ -734,11 +722,6 @@ void ImageView::setShootingInfo(QString infoString)
     // make a little wider to account for the drop shadow
     infoOverlay->resize(infoOverlay->width()+10, infoOverlay->height()+10);
     infoOverlay->move(x, y);
-    /*
-    QRegion reg(frameGeometry());
-    reg -= QRegion(geometry());
-    reg += childrenRegion();
-    setMask(reg);*/
 }
 
 void ImageView::monitorCursorState()

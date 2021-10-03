@@ -1,4 +1,6 @@
 BUGS / TO DO
+- Figure out G::error and G::errlog
+- Include subfolders is wonky
 - When embellish turn info and ratings off
 - Sort by name not always checked
 - check colorManage at start working
@@ -12,7 +14,7 @@ BUGS / TO DO
 - DNG without jpg preview: add one similar to TIFF
 - Tiff with compression = 7, 8
 - TIFF PhotometricInterpretation <> 2 https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html
-- Filters not working sometimes
+- Filters not working sometimes (ie no days)
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow
 - Maintain count when switch folders during the same ingest

@@ -1577,6 +1577,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 //    G::track(__FUNCTION__, "Return from imageView->loadImage " + fPath);
     // update caching if folder has been loaded
     if (G::isNewFolderLoaded) {
+        fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
         updateIconsVisible(true);
         metadataCacheThread->fileSelectionChange();
 //        G::track(__FUNCTION__, "Return from metadataCacheThread->fileSelectionChange() " + fPath);
@@ -3136,10 +3137,11 @@ void MW::createActions()
      MacOS will not allow runtime menu insertions.  Cludge workaround
      add 30 dummy menu items and then hide until use.
 
-     embelTemplatesActions are executed by
-     EmbelProperties::invokeFromAction(QAction *embelAction)
+     embelTemplatesActions are executed by EmbelProperties::invokeFromAction which in turn
+     triggers EmbelProperties::itemChange.
+
      ie to execute "Do not embellish" (always the first action)
-        EmbelProperties::invokeFromAction(embelTemplatesActions.at(0))
+     EmbelProperties::invokeFromAction(embelTemplatesActions.at(0))
     */
     embelGroupAction = new QActionGroup(this);
     embelGroupAction->setExclusive(true);
@@ -5143,8 +5145,19 @@ void MW::embelTemplateChange(int id)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     embelTemplatesActions.at(id)->setChecked(true);
-    if (id == 0) embelRunBtn->setVisible(false);
-    else embelRunBtn->setVisible(true);
+    if (id == 0) {
+        embelRunBtn->setVisible(false);
+        setRatingBadgeVisibility();
+        setShootingInfoVisibility();
+    }
+    else {
+        embelRunBtn->setVisible(true);
+        isRatingBadgeVisible = false;
+        thumbView->refreshThumbs();
+        gridView->refreshThumbs();
+        updateClassification();
+        imageView->infoOverlay->setVisible(false);
+    }
 }
 
 void MW::syncEmbellishMenu()
@@ -11738,7 +11751,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    stressTest(50);
+//    stressTest(50);
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";

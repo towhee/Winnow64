@@ -169,7 +169,7 @@ namespace G
         QString p = fPath;
         QString e = err.leftJustified(75, '.') + " ";
         QString msg = d + e + f + p + "\n";
-        qDebug() << __FUNCTION__ << msg;
+//        qDebug() << __FUNCTION__ << msg;
         return;
         if (errlogFile.isOpen()) {
             errlogFile.write(msg.toUtf8());
