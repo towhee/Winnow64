@@ -163,15 +163,6 @@ void Embel::clear()
 
     // remove flashItem
     if (scene->items().contains(flashItem)) scene->removeItem(flashItem);
-
-    // make scene same as image
-//    scene->setSceneRect(pmItem->boundingRect());
-    QRectF imageRect(pmItem->pixmap().rect());
-//    scene->setSceneRect(pmItem->pixmap().rect());
-    qDebug() << __FUNCTION__
-             << "pmItem->boundingRect() =" << pmItem->boundingRect()
-             << "scene->itemsBoundingRect() =" << scene->itemsBoundingRect()
-                ;
 }
 
 void Embel::build(QString path, QString src)
