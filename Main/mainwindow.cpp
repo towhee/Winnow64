@@ -1632,6 +1632,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     if (G::isLogger) G::log(__FUNCTION__, "Finished " + fPath);
 //    G::track(__FUNCTION__, "Finished " + fPath);
+
 }
 
 void MW::folderAndFileSelectionChange(QString fPath)
@@ -10720,6 +10721,7 @@ void MW::keyRight()
 
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
     if (G::mode == "Compare") compareImages->go("Right");
     else thumbView->selectNext();
 }
@@ -10834,7 +10836,7 @@ void MW::keyScrollPageUp()
 void MW::stressTest(int ms)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
+//    G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
     isStressTest = true;
     bool isForward = true;
     int count = 0;
@@ -11752,6 +11754,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    stressTest(50);
+    qDebug() << __PRETTY_FUNCTION__;
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";

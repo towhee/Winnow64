@@ -201,7 +201,10 @@ bool ImageView::loadImage(QString fPath, QString src)
             isLoaded = true;
         }
         else {
-            G::popUp->showPopup("Buffering image");
+            // MacOS: if showPopup thumbs do not scroll when hold arrow key down
+            #ifdef Q_OS_WIN
+                G::popUp->showPopup("Buffering image");
+            #endif
         }
     }
 
