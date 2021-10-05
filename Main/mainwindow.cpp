@@ -9328,7 +9328,7 @@ void MW::tableDisplay()
         else scrollRow = thumbView->midVisibleCell;
     }
     G::ignoreScrollSignal = false;
-    G::wait(100);
+//    G::wait(100);
     tableView->scrollToRow(scrollRow, __FUNCTION__);
     if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, __FUNCTION__);
     updateIconsVisible(false);
@@ -11754,7 +11754,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //    stressTest(50);
-    qDebug() << __PRETTY_FUNCTION__;
+//    qDebug() << __PRETTY_FUNCTION__;
     return;
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";
