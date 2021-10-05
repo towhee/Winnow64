@@ -1,7 +1,6 @@
 BUGS / TO DO
 - Figure out G::error and G::errlog
 - Include subfolders is wonky
-- When embellish turn info and ratings off
 - Sort by name not always checked
 - check colorManage at start working
 - Load image when useImageCache == false
@@ -55,6 +54,8 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Shooting Info not located correctly after embellish mode
+- When embellish turn info and ratings off
 - Remove color manage from preferences, add menu item
 - remove isCached column from datamodel
 - Always scroll FSTree to current
