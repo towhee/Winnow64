@@ -324,6 +324,7 @@ void IconViewDelegate::paint(QPainter *painter,
     QString colorClass = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
+    bool isSelected = option.state.testFlag(QStyle::State_Selected);
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
 
@@ -387,14 +388,15 @@ void IconViewDelegate::paint(QPainter *painter,
 //             */
 
     // current index item
-    if (row == currentRow) {
+    if (row == currentRow && isSelected) {
         QRect currRect(cellRect.topLeft() + currOffset, cellRect.bottomRight() - currOffset);
         painter->setPen(currentPen);
         painter->drawRoundedRect(currRect, 8, 8);
     }
 
     // selected item
-    if (option.state.testFlag(QStyle::State_Selected)) {
+//    if (option.state.testFlag(QStyle::State_Selected)) {
+    if (isSelected) {
         painter->setPen(selectedPen);
         painter->drawRoundedRect(frameRect, 8, 8);
     }

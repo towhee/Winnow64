@@ -1435,13 +1435,17 @@ void IconView::wheelEvent(QWheelEvent *event)
 void IconView::mousePressEvent(QMouseEvent *event)
 {
 /*
-Captures the position of the mouse click within the thumbnail. This is sent
-to imageView, which pans to the same center in zoom view. This is handy
-when the user wants to view a specific part of another image that is in a
-different position than the current image.
+    Captures the position of the mouse click within the thumbnail. This is sent
+    to imageView, which pans to the same center in zoom view. This is handy
+    when the user wants to view a specific part of another image that is in a
+    different position than the current image.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     if (event->button() == Qt::RightButton) return;
+
+    // is start tab currently visible
+    if (m2->centralLayout->currentIndex() == m2->StartTab)
+        m2->centralLayout->setCurrentIndex(m2->LoupeTab);
 
     // is this a grid or a thumb view
     if(G::mode == "Grid") G::fileSelectionChangeSource =  "GridMouseClick";

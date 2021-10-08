@@ -1458,7 +1458,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     delegate use of the current index must check the column.
 */
     if (G::isLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
-   /*
+//   /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
@@ -1469,7 +1469,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
              << "icon row =" << thumbView->currentIndex().row()
              << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
                 ;
-//    */
+                //*/
     bool isStart = false;
     if(!isCurrentFolderOkay
             || G::isInitializing
@@ -2022,13 +2022,11 @@ void MW::updateImageCacheStatus(QString instruction,
                                 QString source)
 {
 /*
-    Displays a statusbar showing the image cache status.  Also shows the cache
-    size in the info panel.
-
-    All status info is passed by copy to prevent collisions on source data, which is being
-    continuously updated by ImageCache
+    Displays a statusbar showing the image cache status. Also shows the cache size in the info
+    panel. All status info is passed by copy to prevent collisions on source data, which is
+    being continuously updated by ImageCache
 */
-//    return;
+
     if (G::isLogger) {
         QString s = "Instruction: " + instruction + "  Source: " + source;
         G::log(__FUNCTION__, s);
@@ -2049,7 +2047,6 @@ void MW::updateImageCacheStatus(QString instruction,
              << "source =" << source;
 //             */
 
-//    /*
     // show cache amount ie "4.2 of 16.1GB (4 threads)" in info panel
     QString cacheAmount = QString::number(double(cache.currMB)/1024,'f',1)
             + " of "
@@ -2062,19 +2059,18 @@ void MW::updateImageCacheStatus(QString instruction,
         QStandardItemModel *k = infoView->ok;
         k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
     }
-    //*/
 
     if (!isShowCacheProgressBar) return;
 
     // just repaint the progress bar gray and return.
-    if(instruction == "Clear") {
+    if (instruction == "Clear") {
         progressBar->clearProgress();
         return;
     }
 
     int rows = cache.totFiles;
 
-    if(instruction == "Update all rows") {
+    if (instruction == "Update all rows") {
         // clear progress
         progressBar->clearProgress();
         // target range
@@ -5519,17 +5515,12 @@ void MW::setImageCacheParameters()
              isShowCacheProgressBar, cacheWtAhead);
 
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
-    // change to ImageCache
+    // set position in image cache
     if (fPath.length())
         imageCacheThread->setCurrentPosition(fPath);
-//        emit setImageCachePosition(fPath);
 
     // cache progress bar
     progressLabel->setVisible(isShowCacheProgressBar);
-
-    // thread busy indicators
-//    metadataThreadRunningLabel->setVisible(isShowCacheThreadActivity);
-//    imageThreadRunningLabel->setVisible(isShowCacheThreadActivity);
 
     // thumbnail cache status indicators
     thumbView->refreshThumbs();
@@ -5959,6 +5950,8 @@ void MW::filterChange(QString source)
 
     // get the current selected item
     currentRow = dm->sf->mapFromSource(currentDmIdx).row();
+    // check if still in filtered set, if not select first item in filtered set
+    if (currentRow == -1) currentRow = 0;
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
     QModelIndex idx = dm->sf->index(currentRow, 0);

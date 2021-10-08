@@ -1,11 +1,9 @@
 BUGS / TO DO
-- Figure out G::error and G::errlog
-- Include subfolders is wonky
-- Sort by name not always checked
-- check colorManage at start working
-- Load image when useImageCache == false
+- Filters not working sometimes (ie no days)
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
 - unicode path heics not rendering
+- Figure out G::error and G::errlog
+- Include subfolders is wonky
 - E:/2020 √/202001 √/2020-01-25_Linley Valley √/2020-01-25_0024_Focus Stack.tif has bad thumb
   caused by Winnow adding thumbnail
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
@@ -13,7 +11,6 @@ BUGS / TO DO
 - DNG without jpg preview: add one similar to TIFF
 - Tiff with compression = 7, 8
 - TIFF PhotometricInterpretation <> 2 https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html
-- Filters not working sometimes (ie no days)
 - Not remembering grid mode at opening
 - Does copy / paste files work inside Winnow
 - Maintain count when switch folders during the same ingest
@@ -54,6 +51,10 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- If click on current thumb while welcome screen change to loupe view
+- When current image no longer in filtered set refresh imageView
+- Filter no rating and no color class filtered amount wrong in combo with other filters
+- Release 1.27
 - Shooting Info not located correctly after embellish mode
 - When embellish turn info and ratings off
 - Remove color manage from preferences, add menu item

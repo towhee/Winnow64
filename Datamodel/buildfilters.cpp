@@ -59,7 +59,6 @@ void BuildFilters::build()
     filters->setEnabled(false);
     progress = 0;
     dmRows = dm->rowCount();
-    sfRows = dm->sf->rowCount();
     buildFiltersTimer.restart();
     start(NormalPriority);
 }
@@ -133,7 +132,7 @@ void BuildFilters::updateCountFiltered()
             QString searchValue = (*it)->text(1);
             int tot = 0;
 //            mutex.lock();
-            for (int row = 0; row < sfRows; ++row) {
+            for (int row = 0; row < dm->sf->rowCount(); ++row) {
                 if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
             }
 //            mutex.unlock();
@@ -162,7 +161,7 @@ void BuildFilters::countFiltered()
             QString searchValue = (*it)->text(1);
             int tot = 0;
 //            mutex.lock();
-            for (int row = 0; row < sfRows; ++row) {
+            for (int row = 0; row < dm->sf->rowCount(); ++row) {
                 if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
             }
 //            mutex.unlock();
@@ -292,7 +291,7 @@ void BuildFilters::mapUniqueInstances()
     QMap<QVariant, QString> creatorMap;
     QMap<QVariant, QString> yearMap;
     QMap<QVariant, QString> dayMap;
-    for(int row = 0; row < sfRows; row++) {
+    for(int row = 0; row < dm->sf->rowCount(); row++) {
         if (abort) return;
         QString type = dm->sf->index(row, G::TypeColumn).data().toString();
         if (!typesMap.contains(type)) typesMap[type] = type;
