@@ -112,7 +112,7 @@ public:
 
     bool useFilterView = true;
 
-    QString versionNumber = "1.27" ;
+    QString versionNumber = "1.28" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;

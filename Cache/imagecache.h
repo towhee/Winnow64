@@ -104,11 +104,8 @@ private:
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
-    bool inTargetRange(QString fPath);  // image targeted to cache
-//    bool cacheUpToDate();          // all images in target range have been cached
     bool nextToCache(int id);       // find highest priority not cached
     bool nextToDecache(int id);     // find lowest priority cached - return -1 if none cached
-    bool cacheHasMissing();         // missed files from first pass (isCaching = true)
     void fixOrphans();              // outside target range with isCached == true
     void makeRoom(int id, int cacheKey); // remove images from cache until there is roomRqd
     void memChk();                  // still room in system memory for cache?

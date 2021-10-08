@@ -28,6 +28,8 @@ ImageDecoder::ImageDecoder(QObject *parent,
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(id));
     threadId = id;
     status = Status::Ready;
+    fPath = "";
+    cacheKey = -1;
     this->dm = dm;
     this->metadata = metadata;
 }
