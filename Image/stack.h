@@ -14,10 +14,14 @@ class Stack : public QObject
 {
     Q_OBJECT
 public:
-    enum Method {average, mean};
-    Stack(Method method, DataModel *dm, Metadata *metadata, ImageCacheData *icd);
+    Stack(QModelIndexList &selection,
+          DataModel *dm,
+          Metadata *metadata,
+          ImageCacheData *icd);
+    void mean();
 
 private:
+    QModelIndexList &selection;
     DataModel *dm;
     Metadata *metadata;
     ImageCacheData *icd;
@@ -29,7 +33,6 @@ private:
     };
 
     void getPicks();
-    void doMean();
 
 };
 

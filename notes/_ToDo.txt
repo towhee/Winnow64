@@ -51,6 +51,7 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Crashing if change folders too quickly (Dave Kelly)
 - If click on current thumb while welcome screen change to loupe view
 - When current image no longer in filtered set refresh imageView
 - Filter no rating and no color class filtered amount wrong in combo with other filters
