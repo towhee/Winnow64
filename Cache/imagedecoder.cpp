@@ -272,6 +272,5 @@ void ImageDecoder::run()
 //        status = Status::Failed;
 //        fPath = "";
     }
-    if (abort) return;
-    emit done(threadId);
+    if (!abort) emit done(threadId);
 }

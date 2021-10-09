@@ -315,6 +315,7 @@ bool ImageCache::nextToCache(int id)
     int key = -1;
     // find next priority item  rgh only check in target range??
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
+        if (i >= lastPriority) break;
         bool isTarget = icd->cacheItemList.at(i).isTarget;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
         bool isCached = icd->cacheItemList.at(i).isCached;
@@ -806,6 +807,9 @@ void ImageCache::initImageCache(int &cacheMaxMB,
                                 int &cacheWtAhead)
 {
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+
+    abort = false;
+
     // cancel if no images to cache
     if (!dm->sf->rowCount()) return;
 
@@ -1042,7 +1046,8 @@ bool ImageCache::fillCache(int id, bool positionChange)
       - nextToDecache
 */
 
-    QMutexLocker locker(&mutex);        // required? - seems to run fine without mutex.
+//    QMutexLocker locker(&mutex);        // required? - seems to run fine without mutex.
+    if (abort) return false;
 
     // new image selected?
     if (positionChange) {
@@ -1090,7 +1095,7 @@ bool ImageCache::fillCache(int id, bool positionChange)
     }
 
     // get next image to cache (nextToCache() defines cache.toCacheKey)
-    if (nextToCache(id)) {
+    if (!abort && nextToCache(id)) {
         decodeNextImage(id);
     }
     // caching completed

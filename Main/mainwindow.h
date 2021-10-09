@@ -60,6 +60,7 @@
 #include "progressbar.h"
 
 #include "Utilities/coloranalysis.h"
+#include "Image/stack.h"
 
 #include "Utilities/performance.h"
 #include "ui_helpform.h"
@@ -112,7 +113,7 @@ public:
 
     bool useFilterView = true;
 
-    QString versionNumber = "1.28" ;
+    QString versionNumber = "1.27.1" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -666,6 +667,7 @@ private:
     QAction *reportMetadataAction;
     QAction *mediaReadSpeedAction;
     QAction *reportHueCountAction;
+    QAction *meanStackAction;
     QAction *exitAction;
 
     // Open with menu in File menu
@@ -1147,6 +1149,7 @@ private:
 
     void mediaReadSpeed();
     void reportHueCount();
+    void meanStack();
     void stressTest(int ms);
     void test();                    // for debugging
     template<typename T> void test2(T& io, int x);

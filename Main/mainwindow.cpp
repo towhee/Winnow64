@@ -1458,7 +1458,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     delegate use of the current index must check the column.
 */
     if (G::isLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
-//   /*
+   /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
@@ -2521,6 +2521,12 @@ void MW::createActions()
     reportHueCountAction->setShortcutVisibleInContextMenu(true);
     addAction(reportHueCountAction);
     connect(reportHueCountAction, &QAction::triggered, this, &MW::reportHueCount);
+
+    meanStackAction = new QAction(tr("Mean stack"), this);
+    meanStackAction->setObjectName("meanStack");
+    meanStackAction->setShortcutVisibleInContextMenu(true);
+    addAction(meanStackAction);
+    connect(meanStackAction, &QAction::triggered, this, &MW::meanStack);
 
     // Appears in Winnow menu in OSX
     exitAction = new QAction(tr("Exit"), this);
@@ -3652,6 +3658,7 @@ void MW::createMenus()
     fileMenu->addAction(reportMetadataAction);
     fileMenu->addAction(mediaReadSpeedAction);
     fileMenu->addAction(reportHueCountAction);
+    fileMenu->addAction(meanStackAction);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);    // Appears in Winnow menu in OSX
 
@@ -10714,7 +10721,6 @@ void MW::keyRight()
 
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
     if (G::mode == "Compare") compareImages->go("Right");
     else thumbView->selectNext();
 }
@@ -11634,6 +11640,14 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     }
 
     return true;
+}
+
+void MW::meanStack()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QModelIndexList selection = selectionModel->selectedRows();
+    Stack stack(selection, dm, metadata, icd);
+    stack.mean();
 }
 
 void MW::reportHueCount()

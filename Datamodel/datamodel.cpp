@@ -367,7 +367,6 @@ Steps:
                         escapeClause;
             emit msg(s);        // rghmsg
             QCoreApplication::processEvents();
-//            qApp->processEvents();
         }
         if (timeToQuit) return false;
     }
