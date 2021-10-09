@@ -25,7 +25,8 @@ QT += concurrent
 QT += xmlpatterns
 #QT += opengl
 
-HEADERS += Cache/mdcache.h
+HEADERS += Cache/mdcache.h \
+    Image/stack.h
 HEADERS += Cache/cachedata.h
 HEADERS += Cache/tshash.h
 HEADERS += Cache/imagecache.h
@@ -134,7 +135,8 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    Image/stack.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/mdcache.cpp
