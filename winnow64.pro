@@ -26,6 +26,7 @@ QT += xmlpatterns
 #QT += opengl
 
 HEADERS += Cache/mdcache.h \
+    Dialogs/selectionorpicksdlg.h \
     Image/stack.h
 HEADERS += Cache/cachedata.h
 HEADERS += Cache/tshash.h
@@ -136,6 +137,7 @@ HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
 SOURCES += Cache/cachedata.cpp \
+    Dialogs/selectionorpicksdlg.cpp \
     Image/stack.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -266,7 +268,8 @@ SOURCES += Views/infostring.cpp
 FORMS += Dialogs/aboutdlg.ui \
     Dialogs/ingesterrors.ui \
     Dialogs/managegraphicsdlg.ui \
-    Dialogs/manageimagesdlg.ui
+    Dialogs/manageimagesdlg.ui \
+    Dialogs/selectionorpicksdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/copystyledlg.ui

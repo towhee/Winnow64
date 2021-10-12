@@ -19,6 +19,8 @@ public:
           Metadata *metadata,
           ImageCacheData *icd);
     void mean();
+    void stop();
+    bool isRunning = false;
 
 private:
     QModelIndexList &selection;
@@ -31,9 +33,7 @@ private:
         double g;
         double b;
     };
-
-    void getPicks();
-
+    bool abort = false;
 };
 
 #endif // STACK_H
