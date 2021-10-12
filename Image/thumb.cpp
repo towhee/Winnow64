@@ -262,7 +262,6 @@ void Thumb::insertThumbnails(QModelIndexList &selection)
         return;
     }
 
-
     // within selection how many missing thumbnails
     int missingThumbnailCount = 0;
     for (int i = 0; i < count; ++i) {

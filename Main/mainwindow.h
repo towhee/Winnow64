@@ -47,6 +47,7 @@
 #include "ingestdlg.h"
 #include "saveasdlg.h"
 #include "aboutdlg.h"
+#include "selectionorpicksdlg.h"
 #include "Image/thumb.h"
 #include "preferencesdlg.h"
 #include "updateapp.h"
@@ -113,7 +114,7 @@ public:
 
     bool useFilterView = true;
 
-    QString versionNumber = "1.27.1" ;
+    QString versionNumber = "1.28" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -616,6 +617,7 @@ private:
     QMenu *editMenu;
     QMenu *ratingsMenu;
     QMenu *labelsMenu;
+    QMenu *utilitiesMenu;
     QMenu *goMenu;
     QMenu *filterMenu;
     QMenu *sortMenu;
@@ -972,6 +974,7 @@ private:
     QWidget *embelDockEmptyWidget;
     QWidget *thumbDockEmptyWidget;
     QVBoxLayout *imageViewContainer;
+    Stack *meanStack;
 
 //    QModelIndexList selectedImages;
     QModelIndexList selectedRows;
@@ -1087,6 +1090,7 @@ private:
     void loadShortcuts(bool defaultShortcuts);
     void saveSelection();
     void recoverSelection();
+    bool getSelection(QStringList &list);
     void openLog();
     void closeLog();
     void clearLog();
@@ -1149,7 +1153,8 @@ private:
 
     void mediaReadSpeed();
     void reportHueCount();
-    void meanStack();
+    void generateMeanStack();
+    void stopMeanStack();
     void stressTest(int ms);
     void test();                    // for debugging
     template<typename T> void test2(T& io, int x);

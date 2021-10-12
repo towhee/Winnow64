@@ -649,6 +649,10 @@ void MW::keyPressEvent(QKeyEvent *event)
         if (G::popUp->isVisible()) {
             G::popUp->hide();
         }
+        // end mean stack operation
+        if (meanStack->isRunning) {
+            meanStack->stop();
+        }
     }
 
     QMainWindow::keyPressEvent(event);
@@ -2526,7 +2530,7 @@ void MW::createActions()
     meanStackAction->setObjectName("meanStack");
     meanStackAction->setShortcutVisibleInContextMenu(true);
     addAction(meanStackAction);
-    connect(meanStackAction, &QAction::triggered, this, &MW::meanStack);
+    connect(meanStackAction, &QAction::triggered, this, &MW::generateMeanStack);
 
     // Appears in Winnow menu in OSX
     exitAction = new QAction(tr("Exit"), this);
@@ -3657,8 +3661,6 @@ void MW::createMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(reportMetadataAction);
     fileMenu->addAction(mediaReadSpeedAction);
-    fileMenu->addAction(reportHueCountAction);
-    fileMenu->addAction(meanStackAction);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);    // Appears in Winnow menu in OSX
 
@@ -3674,10 +3676,9 @@ void MW::createMenus()
     editMenu->addAction(copyAction);
     editMenu->addAction(deleteAction);
     editMenu->addSeparator();
-    editMenu->addAction(rejectAction);
-    editMenu->addSeparator();
-    editMenu->addAction(refineAction);
     editMenu->addAction(pickAction);
+    editMenu->addAction(rejectAction);
+    editMenu->addAction(refineAction);
     editMenu->addAction(pickUnlessRejectedAction);
 //    editMenu->addAction(filterPickAction);
     editMenu->addAction(popPickHistoryAction);
@@ -3699,10 +3700,14 @@ void MW::createMenus()
     labelsMenu->addAction(label3Action);
     labelsMenu->addAction(label4Action);
     labelsMenu->addAction(label5Action);
-    editMenu->addAction(addThumbnailsAction);
     editMenu->addSeparator();
     editMenu->addAction(rotateRightAction);
     editMenu->addAction(rotateLeftAction);
+    editMenu->addSeparator();
+    utilitiesMenu = editMenu->addMenu("Utilities");
+    utilitiesMenu->addAction(addThumbnailsAction);
+    utilitiesMenu->addAction(reportHueCountAction);
+    utilitiesMenu->addAction(meanStackAction);
     editMenu->addSeparator();
     editMenu->addAction(prefAction);       // Appears in Winnow menu in OSX
 //    editMenu->addAction(oldPrefAction);
@@ -9406,6 +9411,65 @@ void MW::recoverSelection()
     selectionModel->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 }
 
+bool MW::getSelection(QStringList &list)
+{
+    bool usePicks = false;
+
+    // nothing picked or selected
+    if (thumbView->isPick() && selectionModel->selectedRows().size() == 0) {
+        QMessageBox::information(this,
+            "Oops", "There are no picks or selected images to report.    ",
+            QMessageBox::Ok);
+        return false;
+    }
+
+    // picks = selection
+    bool picksEqualsSelection = true;
+    for (int row = 0; row < dm->sf->rowCount(); row++) {
+        bool isPicked = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
+        bool isSelected = selectionModel->isSelected(dm->sf->index(row, 0));
+        if (isPicked != isSelected) {
+            picksEqualsSelection = false;
+            break;
+        }
+    }
+
+    if (!picksEqualsSelection) {
+        // use picks or selected
+        if (thumbView->isPick() && selectionModel->selectedRows().size() > 1) {
+            SelectionOrPicksDlg::Option option;
+            SelectionOrPicksDlg dlg(option);
+            dlg.exec();
+            if (option == SelectionOrPicksDlg::Option::Cancel) return false;
+            if (option == SelectionOrPicksDlg::Option::Picks) usePicks = true;
+        }
+        else if (thumbView->isPick()) usePicks = true;
+    }
+
+    if (usePicks) {
+        for (int row = 0; row < dm->sf->rowCount(); row++) {
+            if (dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true") {
+                QModelIndex idx = dm->sf->index(row, 0);
+                list << idx.data(G::PathRole).toString();
+            }
+        }
+    }
+    else {
+        QModelIndexList idxList = selectionModel->selectedRows();
+        for (int i = 0; i < idxList.size(); ++i) {
+            int row = idxList.at(i).row();
+            QModelIndex idx = dm->sf->index(row, 0);
+            list << idx.data(G::PathRole).toString();
+        }
+    }
+
+    for (int i = 0; i < list.length(); i++) {
+        qDebug() << __FUNCTION__ << i << list.at(i);
+    }
+
+    return true;
+}
+
 void MW::setCentralView()
 {
     if (G::isLogger) G::log(__FUNCTION__);
@@ -11642,12 +11706,18 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     return true;
 }
 
-void MW::meanStack()
+void MW::generateMeanStack()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     QModelIndexList selection = selectionModel->selectedRows();
-    Stack stack(selection, dm, metadata, icd);
-    stack.mean();
+//    Stack stack(selection, dm, metadata, icd);
+    meanStack = new Stack(selection, dm, metadata, icd);
+    meanStack->mean();
+}
+
+void MW::stopMeanStack()
+{
+    meanStack->stop();
 }
 
 void MW::reportHueCount()
@@ -11655,35 +11725,36 @@ void MW::reportHueCount()
     if (G::isLogger) G::log(__FUNCTION__);
 
     QStringList picks;
+    if (!getSelection(picks)) return;
 
-    // build QStringList of picks
-    if (thumbView->isPick()) {
-        for (int row = 0; row < dm->sf->rowCount(); ++row) {
-            QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
-            QModelIndex idx = dm->sf->index(row, 0);
-            // only picks
-            if (pickIdx.data(Qt::EditRole).toString() == "true") {
-                picks << idx.data(G::PathRole).toString();
-            }
-        }
-    }
+//    // build QStringList of picks
+//    if (thumbView->isPick()) {
+//        for (int row = 0; row < dm->sf->rowCount(); ++row) {
+//            QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
+//            QModelIndex idx = dm->sf->index(row, 0);
+//            // only picks
+//            if (pickIdx.data(Qt::EditRole).toString() == "true") {
+//                picks << idx.data(G::PathRole).toString();
+//            }
+//        }
+//    }
 
-    // build QStringList of selected images
-    else if (selectionModel->selectedRows().size() > 0) {
-        QModelIndexList idxList = selectionModel->selectedRows();
-        for (int i = 0; i < idxList.size(); ++i) {
-            int row = idxList.at(i).row();
-            QModelIndex idx = dm->sf->index(row, 0);
-            picks << idx.data(G::PathRole).toString();
-        }
-    }
+//    // build QStringList of selected images
+//    else if (selectionModel->selectedRows().size() > 0) {
+//        QModelIndexList idxList = selectionModel->selectedRows();
+//        for (int i = 0; i < idxList.size(); ++i) {
+//            int row = idxList.at(i).row();
+//            QModelIndex idx = dm->sf->index(row, 0);
+//            picks << idx.data(G::PathRole).toString();
+//        }
+//    }
 
-    if (picks.size() == 0)  {
-        QMessageBox::information(this,
-            "Oops", "There are no picks or selected images to report.    ",
-            QMessageBox::Ok);
-        return;
-    }
+//    if (picks.size() == 0)  {
+//        QMessageBox::information(this,
+//            "Oops", "There are no picks or selected images to report.    ",
+//            QMessageBox::Ok);
+//        return;
+//    }
 
     ColorAnalysis hueReport;
     connect(this, &MW::abortHueReport, &hueReport, &ColorAnalysis::abortHueReport);
@@ -11760,9 +11831,15 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QStringList images;
+    getSelection(images);
 //    stressTest(50);
 //    qDebug() << __PRETTY_FUNCTION__;
-    return;
+//    SelectionOrPicksDlg::Option option;
+//    SelectionOrPicksDlg dlg(option);
+//    dlg.exec();
+//    qDebug() << __FUNCTION__ << option;
+//    if (option == SelectionOrPicksDlg::Option::Cancel) qDebug() << __FUNCTION__ << "Cancel";
 
 //    qDebug() << __FUNCTION__ << "use decodeScan";
 //    QString jpgfile  = "/Users/roryhill/Pictures/_JPG/base.jpg";
