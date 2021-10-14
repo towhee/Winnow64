@@ -14,16 +14,15 @@ class Stack : public QObject
 {
     Q_OBJECT
 public:
-    Stack(QModelIndexList &selection,
+    Stack(QStringList &selection,
           DataModel *dm,
           Metadata *metadata,
           ImageCacheData *icd);
     void mean();
     void stop();
-    bool isRunning = false;
 
 private:
-    QModelIndexList &selection;
+    QStringList &selection;
     DataModel *dm;
     Metadata *metadata;
     ImageCacheData *icd;

@@ -1,6 +1,6 @@
 #include "stack.h"
 
-Stack::Stack(QModelIndexList &selection,
+Stack::Stack(QStringList &selection,
              DataModel *dm,
              Metadata *metadata,
              ImageCacheData *icd) :
@@ -24,16 +24,16 @@ void Stack::mean()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     abort = false;
-    isRunning = true;
+    G::isRunningMeanStack = true;
 
-    int row = dm->rowFromPath(selection.at(0).data(G::PathRole).toString());
+    int row = dm->rowFromPath(selection.at(0));
     int w = dm->index(row, G::WidthColumn).data().toInt();
     int h = dm->index(row, G::HeightColumn).data().toInt();
 
     // total selection with same width or height
     int n = 0;
     for (int i = 0; i < selection.count(); ++i) {
-        row = dm->rowFromPath(selection.at(0).data(G::PathRole).toString());
+        row = dm->rowFromPath(selection.at(0));
         int thisW = dm->index(row, G::WidthColumn).data().toInt();
         int thisH = dm->index(row, G::HeightColumn).data().toInt();
         if (thisW == w && thisH == h) n++;
@@ -68,7 +68,7 @@ void Stack::mean()
     // incrementally update mean vector for each selected image
     for (int i = 0; i < n; ++i) {
         if (abort) break;
-        QString fPath = selection.at(i).data(G::PathRole).toString();
+        QString fPath = selection.at(i);
         if (icd->imCache.contains(fPath)) icd->imCache.find(fPath, image);
         else pix->load(fPath, image, "Stack::doMean");
         // get image width/height from QImage - might be different than metadata for raw
@@ -127,7 +127,7 @@ void Stack::mean()
         }
 
         // save
-        QFileInfo info(selection.at(0).data(G::PathRole).toString());
+        QFileInfo info(selection.at(0));
         QString base = info.dir().absolutePath() + "/" + info.baseName() + "_MeanStack" +
                        QString::number(n);
         QString newFilePath = base + ".jpg";
@@ -147,7 +147,7 @@ void Stack::mean()
 
     delete pix;
     abort = false;
-    isRunning = false;
+    G::isRunningMeanStack = false;
 
     G::popUp->setProgressVisible(false);    
     G::popUp->hide();
