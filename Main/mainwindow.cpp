@@ -650,7 +650,7 @@ void MW::keyPressEvent(QKeyEvent *event)
             G::popUp->hide();
         }
         // end mean stack operation
-        if (meanStack->isRunning) {
+        if (G::isRunningMeanStack) {
             meanStack->stop();
         }
     }
@@ -7319,7 +7319,11 @@ void MW::runExternalApp()
     }
 
     QStringList arguments;
+    if (!getSelection(arguments)) return;
     QString folderPath;
+    QFileInfo fInfo = arguments.at(0);
+    folderPath = fInfo.dir().absolutePath() + "/";
+    /*
     for (int tn = 0; tn < nFiles ; ++tn) {
         QString fPath = selectedIdxList[tn].data(G::PathRole).toString();
         QFileInfo fInfo = fPath;
@@ -7329,7 +7333,6 @@ void MW::runExternalApp()
         // Update arguments
         arguments << fPath;
 
-        /*
         // write sidecar in case external app can read the metadata
         QString destBaseName = fInfo.baseName();
         QString suffix = fInfo.suffix().toLower();
@@ -7358,8 +7361,8 @@ void MW::runExternalApp()
                 sidecarFile.close();
             }
         }
-        */
     }
+    //    */
 
     #ifdef Q_OS_WIN
     arguments.replaceInStrings("/", "\\");
@@ -9413,6 +9416,12 @@ void MW::recoverSelection()
 
 bool MW::getSelection(QStringList &list)
 {
+/*
+    Adds each image that is selected or picked as a file path to list. If there are picks and
+    a selection then a dialog offers the user a choice to use.
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+
     bool usePicks = false;
 
     // nothing picked or selected
@@ -9461,10 +9470,6 @@ bool MW::getSelection(QStringList &list)
             QModelIndex idx = dm->sf->index(row, 0);
             list << idx.data(G::PathRole).toString();
         }
-    }
-
-    for (int i = 0; i < list.length(); i++) {
-        qDebug() << __FUNCTION__ << i << list.at(i);
     }
 
     return true;
@@ -11709,8 +11714,8 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
 void MW::generateMeanStack()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    QModelIndexList selection = selectionModel->selectedRows();
-//    Stack stack(selection, dm, metadata, icd);
+    QStringList selection;
+    if (!getSelection(selection)) return;
     meanStack = new Stack(selection, dm, metadata, icd);
     meanStack->mean();
 }
@@ -11724,41 +11729,11 @@ void MW::reportHueCount()
 {
     if (G::isLogger) G::log(__FUNCTION__);
 
-    QStringList picks;
-    if (!getSelection(picks)) return;
-
-//    // build QStringList of picks
-//    if (thumbView->isPick()) {
-//        for (int row = 0; row < dm->sf->rowCount(); ++row) {
-//            QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
-//            QModelIndex idx = dm->sf->index(row, 0);
-//            // only picks
-//            if (pickIdx.data(Qt::EditRole).toString() == "true") {
-//                picks << idx.data(G::PathRole).toString();
-//            }
-//        }
-//    }
-
-//    // build QStringList of selected images
-//    else if (selectionModel->selectedRows().size() > 0) {
-//        QModelIndexList idxList = selectionModel->selectedRows();
-//        for (int i = 0; i < idxList.size(); ++i) {
-//            int row = idxList.at(i).row();
-//            QModelIndex idx = dm->sf->index(row, 0);
-//            picks << idx.data(G::PathRole).toString();
-//        }
-//    }
-
-//    if (picks.size() == 0)  {
-//        QMessageBox::information(this,
-//            "Oops", "There are no picks or selected images to report.    ",
-//            QMessageBox::Ok);
-//        return;
-//    }
-
+    QStringList selection;
+    if (!getSelection(selection)) return;
     ColorAnalysis hueReport;
     connect(this, &MW::abortHueReport, &hueReport, &ColorAnalysis::abortHueReport);
-    hueReport.process(picks);
+    hueReport.process(selection);
 }
 
 void MW::mediaReadSpeed()
@@ -11769,9 +11744,9 @@ void MW::mediaReadSpeed()
                                                  "/home"
                                                  );
     QFile file(fPath);
-    double gbs = Performance::mediaReadSpeed(file) / 8 * 1024;
-    if (static_cast<int>(gbs) == -1) return;  // err
-    QString msg = "Media read speed: : " + QString::number(gbs, 'f', 0) +
+    double mbs = Performance::mediaReadSpeed(file) /*/ 8*/ * 1024;
+    if (static_cast<int>(mbs) == -1) return;  // err
+    QString msg = "Media read speed: : " + QString::number(mbs, 'f', 0) +
                   " MB/sec.   Press Esc to continue.";
     G::popUp->showPopup(msg, 0);
 }
