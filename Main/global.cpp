@@ -66,7 +66,7 @@ namespace G
     bool isSlideShow;
     bool isProcessingExportedImages;
     bool isRunningColorAnalysis;
-    bool isRunningMeanStack;
+    bool isRunningStackOperation;
     bool isEmbellish;
     bool colorManage;
     bool embedTifThumb;

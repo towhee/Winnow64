@@ -18,13 +18,19 @@ void Stack::stop()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     abort = true;
+    G::isRunningStackOperation = false;
+    G::popUp->setProgressVisible(false);
+    G::popUp->hide();
+    G::popUp->showPopup("Stack operation has been aborted.");
+    qDebug() << __FUNCTION__ << abort;
+    qApp->processEvents();
 }
 
 void Stack::mean()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     abort = false;
-    G::isRunningMeanStack = true;
+    G::isRunningStackOperation = true;
 
     int row = dm->rowFromPath(selection.at(0));
     int w = dm->index(row, G::WidthColumn).data().toInt();
@@ -146,9 +152,9 @@ void Stack::mean()
     }
 
     delete pix;
-    abort = false;
-    G::isRunningMeanStack = false;
+//    abort = false;
+//    G::isRunningMeanStack = false;
 
-    G::popUp->setProgressVisible(false);    
-    G::popUp->hide();
+//    G::popUp->setProgressVisible(false);
+//    G::popUp->hide();
 }

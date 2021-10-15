@@ -195,7 +195,7 @@ namespace G
     extern bool isSlideShow;
     extern bool isProcessingExportedImages;
     extern bool isRunningColorAnalysis;
-    extern bool isRunningMeanStack;
+    extern bool isRunningStackOperation;
     extern bool isEmbellish;
     extern bool colorManage;
     extern bool embedTifThumb;

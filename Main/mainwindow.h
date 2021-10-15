@@ -381,6 +381,7 @@ signals:
     void needToShow();
     void abortEmbelExport();
     void abortHueReport();
+    void abortStackOperation();
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
@@ -988,6 +989,9 @@ private:
     } pick;
     QStack<Pick> *pickStack;
 
+    // slideShow counter
+    int slideCount = 0;
+
     // used in visibility and focus setting for docks
     enum {SetFocus, SetVisible, SetInvisible} dockToggle;
 
@@ -1154,7 +1158,6 @@ private:
     void mediaReadSpeed();
     void reportHueCount();
     void generateMeanStack();
-    void stopMeanStack();
     void stressTest(int ms);
     void test();                    // for debugging
     template<typename T> void test2(T& io, int x);

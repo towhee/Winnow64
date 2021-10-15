@@ -611,83 +611,51 @@ void MW::keyPressEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
 
-//    if(event->modifiers() & Qt::ShiftModifier) isShift = true;
-//    else isShift = false;
-//    qDebug() << "MW::keyPressEvent" << event << isShift;
-
-    if (event->key() == Qt::Key_Right) {
-        G::t1.restart();
-        qDebug() << __FUNCTION__ << "Right key pressed";
-    }
-
+    // must process first
     QMainWindow::keyPressEvent(event);
 
     if (event->key() == Qt::Key_Return) {
         loupeDisplay();
     }
-    if (event->key() == Qt::Key_Escape) {
-        // cancel slideshow
-        if (G::isSlideShow) {
-            slideShow();     // toggles slideshow off
-            return;
-        }
-        // exit full screen mode
-        if(fullScreenAction->isChecked()) {
-            escapeFullScreen();
-        }
-        // quit loading datamodel
-        if (dm->loadingModel) {
-            dm->timeToQuit = true;
-        }
-        // quit adding thumbnails
-        if (thumb->insertingThumbnails) {
-            thumb->abort = true;
-        }
-        // end stress test
-        isStressTest = false;
-        // close an open PopUp
-        if (G::popUp->isVisible()) {
-            G::popUp->hide();
-        }
-        // end mean stack operation
-        if (G::isRunningMeanStack) {
-            meanStack->stop();
-        }
-    }
-
-    QMainWindow::keyPressEvent(event);
 }
 
 void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     if (event->key() == Qt::Key_Escape) {
+        /* Cancel the current operation without exiting from full screen mode.  If no current
+           operation, then okay to exit full screen.  escapeFullScreen must be the last option
+           tested.
+        */
+        // cancel slideshow
+        if (G::isSlideShow) slideShow();
+        // quit loading datamodel
+        else if (dm->loadingModel) dm->timeToQuit = true;
+        // quit adding thumbnails
+        else if (thumb->insertingThumbnails) thumb->abort = true;
         // abort Embellish export process
-        if (G::isProcessingExportedImages) emit abortEmbelExport();
+        else if (G::isProcessingExportedImages) emit abortEmbelExport();
         // abort color analysis
-        if (G::isRunningColorAnalysis) emit abortHueReport();
-        // hide preferences
-        if (preferencesHasFocus) {
-            propertiesDock->setVisible(false);  // rgh not using propertiesDock?
-        }
+        else if (G::isRunningColorAnalysis) emit abortHueReport();
+        // abort stack operation
+        else if (G::isRunningStackOperation) emit abortStackOperation();
         // stop building filters
-        if (filters->buildingFilters) {
-            buildFilters->stop();
-        }
-        // quit rubberbanding  // rgh still valid??
-        if (imageView->isRubberBand) {
-            imageView->quitRubberBand();
-        }
+        else if (filters->buildingFilters)  buildFilters->stop();
+        // end stress test
+        else if (isStressTest) isStressTest = false;
+        // exit full screen mode
+        else if (fullScreenAction->isChecked()) escapeFullScreen();
     }
 
     if (G::isSlideShow) {
         int n = event->key() - 48;
+        QVector<int> delay {0,1,2,3,5,10,30,60,180,600};
 
         if (event->key() == Qt::Key_Backspace) {
             isSlideshowPaused = false;
             prevRandomSlide();
         }
-        if (event->key() == Qt::Key_W) {
+        else if (event->key() == Qt::Key_W) {
             isSlideShowWrap = !isSlideShowWrap;
             isSlideshowPaused = false;
             QString msg;
@@ -695,18 +663,18 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             else msg = "Slide wrapping is off.";
             G::popUp->showPopup(msg);
         }
-        if (event->key() == Qt::Key_H) {
+        else if (event->key() == Qt::Key_H) {
             isSlideshowPaused = true;
             slideshowHelpMsg();
         }
-        if (event->key() == Qt::Key_Space) {
+        else if (event->key() == Qt::Key_Space) {
             isSlideshowPaused = !isSlideshowPaused;
             QString msg;
             if (isSlideshowPaused) msg = "Slideshow is paused";
             else msg = "Slideshow is restarted";
             G::popUp->showPopup(msg);
         }
-        if (event->key() == Qt::Key_R) {
+        else if (event->key() == Qt::Key_R) {
             isSlideShowRandom = !isSlideShowRandom;
             isSlideshowPaused = false;
             slideShowResetSequence();
@@ -718,11 +686,15 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // quick change slideshow delay 1 - 9 seconds
         else if (n > 0 && n <= 9) {
             isSlideshowPaused = false;
-            slideShowDelay = n;
+            slideShowDelay = delay[n];
             slideShowResetDelay();
-            QString msg = "Slideshow interval set to " + QString::number(n) + " seconds.";
+            QString msg = "Slideshow interval set to " + QString::number(slideShowDelay) + " seconds.";
             G::popUp->showPopup(msg);
         }
+//        else {
+//            isSlideshowPaused = true;
+//            slideshowHelpMsg();
+//        }
     }
 
     QMainWindow::keyReleaseEvent(event);
@@ -10984,6 +10956,8 @@ void MW::slideShow()
         slideShowAction->setText(tr("Stop Slide Show"));
         slideShowTimer = new QTimer(this);
         connect(slideShowTimer, SIGNAL(timeout()), this, SLOT(nextSlide()));
+        slideCount = 0;
+        nextSlide();
         slideShowTimer->start(slideShowDelay * 1000);
     }
 }
@@ -10991,52 +10965,8 @@ void MW::slideShow()
 void MW::nextSlide()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    static int counter = 0;
-    /*
-    qDebug() << __FUNCTION__
-             << "counter =" << counter
-             << "isStressTest =" << isStressTest
-             << "isSlideshowPaused =" << isSlideshowPaused
-                ;
-//                */
-
-    if (isStressTest) {
-//        slideShowTimer->stop();
-        int waitTime = 0;
-        while (!G::isNewFolderLoaded) {
-            slideShowTimer->stop();
-            G::wait(1000);
-            waitTime += 1000;
-            if (waitTime > 15000) {
-                slideShow();
-                return;
-            }
-        }
-        if (counter % 2 == 0) {
-            getSubfolders("D:/Pictures");                     // on PC
-//            getSubfolders("/users/roryhill/pictures");        // on mac
-            uint r = QRandomGenerator::global()->generate();
-            int n = subfolders->count();
-            int x = static_cast<int>(r) % n;
-            QString fPath = subfolders->at(x);
-//            fsTree->setCurrentIndex(fsTree->fsModel->index(fPath));
-            QModelIndex idx = fsTree->fsModel->index(fPath);
-            QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
-            fsTree->setCurrentIndex(filterIdx);
-            fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
-            qDebug() << "STRESS TEST NEW FOLDER:"
-                     << "r =" << r
-                     << "n =" << n
-                     << "x =" << x
-                     << fPath;
-            folderSelectionChange();
-//            slideShowTimer->start(slideShowDelay * 1000);
-        }
-    }
-
     if (isSlideshowPaused) return;
-
-    counter++;
+    slideCount++;
     if (isSlideShowRandom) {
         // push previous image path onto the slideshow history stack
         int row = thumbView->currentIndex().row();
@@ -11052,7 +10982,7 @@ void MW::nextSlide()
         else thumbView->selectNext();
     }
 
-    QString msg = "  Slide # "+ QString::number(counter) + "  (press H for slideshow shortcuts)";
+    QString msg = "  Slide # "+ QString::number(slideCount) + "  (press H for slideshow shortcuts)";
     updateStatus(true, msg, __FUNCTION__);
 
 }
@@ -11080,9 +11010,6 @@ void MW::slideShowResetDelay()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     slideShowTimer->setInterval(slideShowDelay * 1000);
-//    QString msg = "Reset slideshow interval to ";
-//    msg += QString::number(slideShowDelay) + " seconds";
-//    G::popUp->showPopup(msg);
 }
 
 void MW::slideShowResetSequence()
@@ -11117,12 +11044,23 @@ void MW::slideshowHelpMsg()
         "<p><b>Slideshow Shortcuts:</b><br/></p>"
         "<table border=\"0\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\">"
         "<tr><td width=\"120\"><font color=\"red\"><b>Esc</b></font></td><td>Exit slideshow</td></tr>"
-        "<tr><td><font color=\"red\"><b>  1 to 9  </b></font></td><td>Change the slideshow interval (seconds).  <br>Go to preferences to set longer intervals.</td></tr>"
         "<tr><td><font color=\"red\"><b>  W       </b></font></td><td>Toggle wrapping on and off.</td></tr>"
         "<tr><td><font color=\"red\"><b>  R       </b></font></td><td>Toggle random vs sequential slide selection.</td></tr>"
         "<tr><td><font color=\"red\"><b>Backspace </b></font></td><td>Go back to a previous random slide</td></tr>"
         "<tr><td><font color=\"red\"><b>Spacebar  </b></font></td><td>Pause/Continue slideshow</td></tr>"
         "<tr><td><font color=\"red\"><b>  H       </b></font></td><td>Show this popup message</td></tr>"
+        "</table>"
+        "<p>Change the slideshow interval.  Go to preferences to set other interval.</p>"
+        "<table border=\"0\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\">"
+        "<tr><td width=\"120\"><font color=\"red\"><b>1</b></font></td><td>1 second</td></tr>"
+        "<tr><td><font color=\"red\"><b>  2  </b></font></td><td>2 seconds</td></tr>"
+        "<tr><td><font color=\"red\"><b>  3  </b></font></td><td>3 seconds</td></tr>"
+        "<tr><td><font color=\"red\"><b>  4  </b></font></td><td>5 seconds</td></tr>"
+        "<tr><td><font color=\"red\"><b>  5  </b></font></td><td>10 seconds</td></tr>"
+        "<tr><td><font color=\"red\"><b>  6  </b></font></td><td>30 seconds</td></tr>"
+        "<tr><td><font color=\"red\"><b>  7  </b></font></td><td>1 minute</td></tr>"
+        "<tr><td><font color=\"red\"><b>  8  </b></font></td><td>3 minutes</td></tr>"
+        "<tr><td><font color=\"red\"><b>  9  </b></font></td><td>10 minutes</td></tr>"
         "</table>"
         "<p>Current settings:<p>"
         "<ul style=\"line-height:50%; list-style-type:none;\""
@@ -11717,12 +11655,8 @@ void MW::generateMeanStack()
     QStringList selection;
     if (!getSelection(selection)) return;
     meanStack = new Stack(selection, dm, metadata, icd);
+    connect(this, &MW::abortStackOperation, meanStack, &Stack::stop);
     meanStack->mean();
-}
-
-void MW::stopMeanStack()
-{
-    meanStack->stop();
 }
 
 void MW::reportHueCount()
@@ -11806,9 +11740,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QStringList images;
-    getSelection(images);
-//    stressTest(50);
+    stressTest(50);
 //    qDebug() << __PRETTY_FUNCTION__;
 //    SelectionOrPicksDlg::Option option;
 //    SelectionOrPicksDlg dlg(option);

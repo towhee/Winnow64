@@ -1,8 +1,7 @@
 BUGS / TO DO
-- Esc from full screen causes crash
 - Filters not working sometimes (ie no days)
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
-- unicode path heics not rendering
+- Unicode path heics not rendering
 - Figure out G::error and G::errlog
 - Include subfolders is wonky
 - E:/2020 √/202001 √/2020-01-25_Linley Valley √/2020-01-25_0024_Focus Stack.tif has bad thumb
@@ -52,6 +51,7 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Esc from full screen causes crash
 - Crashing if change folders too quickly (Dave Kelly)
 - If click on current thumb while welcome screen change to loupe view
 - When current image no longer in filtered set refresh imageView

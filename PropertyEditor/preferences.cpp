@@ -887,7 +887,7 @@ void Preferences::addItems()
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
-    i.max = 300;
+    i.max = 86400;
     i.fixedWidth = 50;
     addItem(i);
 
