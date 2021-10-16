@@ -4280,12 +4280,10 @@ void MW::createCaching()
     if (isSettings) {
         if (setting->contains("cacheAllMetadata")) metadataCacheThread->cacheAllMetadata = setting->value("cacheAllMetadata").toBool();
         if (setting->contains("cacheAllIcons")) metadataCacheThread->cacheAllIcons = setting->value("cacheAllIcons").toBool();
-//        if (setting->contains("metadataChunkSize")) metadataCacheThread->metadataChunkSize = setting->value("metadataChunkSize").toInt();
     }
     else {
         metadataCacheThread->cacheAllMetadata = true;
         metadataCacheThread->cacheAllIcons = false;
-//        metadataCacheThread->metadataChunkSize = 250;
     }
     metadataCacheThread->metadataChunkSize = 3000;
 
@@ -11246,10 +11244,6 @@ void MW::refreshCurrentFolder()
             }
 
             // update image cache in case image has changed
-            /*
-            // before changed imCache to concurrent imd->imCache
-            if (imageCacheThread->imCache.contains(fPath)) imageCacheThread->imCache.remove(fPath);
-            */
             if (icd->imCache.contains(fPath)) icd->imCache.remove(fPath);
             if (dm->currentFilePath == fPath) {
                 if (imageView->loadImage(fPath, __FUNCTION__)) {

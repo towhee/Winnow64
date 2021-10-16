@@ -676,12 +676,13 @@ void DataModel::addAllMetadata()
     timeToQuit = false;
     loadingModel = true;
     QString x = QString::number(rowCount());
-//    G::popUp->setProgressVisible(true);
-//    G::popUp->setProgressMax(rowCount());
-//    QString msg = "It may take a moment to load all the metadata for " + x + " files<p>"
-//            "This is required before any filtering or sorting of metadata can be done.<p>"
-//            "Press <font color=\"red\"><b>Esc</b></font> to cancel.";
-//    G::popUp->showPopup(msg, 0, true, 1);
+    /* G::popUp->setProgressVisible(true);
+    G::popUp->setProgressMax(rowCount());
+    QString msg = "It may take a moment to load all the metadata for " + x + " files<p>"
+            "This is required before any filtering or sorting of metadata can be done.<p>"
+            "Press <font color=\"red\"><b>Esc</b></font> to cancel.";
+    G::popUp->showPopup(msg, 0, true, 1);
+    //*/
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
         // Load folder progress
@@ -694,7 +695,8 @@ void DataModel::addAllMetadata()
 //        qApp->processEvents();
         if (timeToQuit) break;
         // is metadata already cached
-//        G::popUp->setProgress(row);
+        /* G::popUp->setProgress(row);
+           */
         if (index(row, G::MetadataLoadedColumn).data().toBool()) continue;
 
         QString fPath = index(row, 0).data(G::PathRole).toString();
