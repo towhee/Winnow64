@@ -313,7 +313,7 @@ bool ImageCache::nextToCache(int id)
     if (G::isLogger) G::log(__FUNCTION__);
     int lastPriority = icd->cacheItemList.length();
     int key = -1;
-    // find next priority item  rgh only check in target range??
+    // find next priority item
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
         if (i >= lastPriority) break;
         bool isTarget = icd->cacheItemList.at(i).isTarget;
@@ -689,7 +689,7 @@ QString ImageCache::reportImCache()
     rpt << "\nimCache hash:";
     QHash<QString, QImage>::iterator i;
     QVector<QString> keys;
-    // rgh check when imCache is empty
+    // check when imCache is empty
     icd->imCache.getKeys(keys);
     for (int i = 0; i < keys.length(); ++i) {
         rpt << "\n";

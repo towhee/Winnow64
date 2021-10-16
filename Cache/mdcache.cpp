@@ -172,7 +172,6 @@ void MetadataCache::loadNewFolder(bool isRefresh)
         mutex.unlock();
         wait();
     }
-//    qDebug() << __FUNCTION__;
     abort = false;
     G::allMetadataLoaded = false;
     isRefreshFolder = isRefresh;
@@ -180,9 +179,6 @@ void MetadataCache::loadNewFolder(bool isRefresh)
     foundItemsToLoad = true;
     startRow = 0;
     int rowCount = dm->sf->rowCount();
-    // temp fix
-//    lastIconVisible = rowCount;
-//    endRow = rowCount;
     // rgh fix (are we going to read all metadata all of the time?)
     if (metadataChunkSize > rowCount) {
         endRow = rowCount;
