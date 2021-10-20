@@ -106,6 +106,19 @@ class HashMap
             }
         }
 
+        int count()
+        /*
+        The total number of keys in the hash map.  Each bucket (hashTable[i]) can have
+        multiple keys
+        */
+        {
+            int n = 0;
+            for (size_t i = 0; i < hashSize; ++i) {
+                n += hashTable[i].count();
+            }
+            return n;
+        }
+
         void getKeys(QVector<K> &keys)
         /*
         Populates the vector keys with all the keys in the hash map.  This is useful to

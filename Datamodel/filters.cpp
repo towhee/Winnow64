@@ -553,7 +553,8 @@ folder is selected to reset the filter criteria.
 
 void Filters::uncheckAllFilters()
 {
-    /* Uncheck all the filter items
+/*
+    Uncheck all the filter items
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     QTreeWidgetItemIterator it(this);
@@ -572,7 +573,7 @@ void Filters::uncheckAllFilters()
 void Filters::uncheckTypesFilters()
 {
 /*
-Uncheck types.  This is required when raw + jpg are either combined or not combined.
+    Uncheck types.  This is required when raw + jpg are either combined or not combined.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     QTreeWidgetItemIterator it(this);
@@ -669,8 +670,9 @@ void Filters::dataChanged(const QModelIndex &topLeft,
     signal and updates the datamodel searchColumn match to true or false for each row. The
     filteredItemCount is updated.
 */
-    // checkstate has changed
     if (G::isLogger) G::log(__FUNCTION__);
+
+    // checkstate has changed
     if (roles.contains(Qt::CheckStateRole)) {
         itemCheckStateHasChanged = true;
         QTreeWidget::dataChanged(topLeft, bottomRight, roles);
@@ -736,7 +738,7 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
              << "!item->parent() =" << !item->parent()
              << "itemCheckStateHasChanged" << itemCheckStateHasChanged             << "!G::isNewFolderLoaded =" << !G::isNewFolderLoaded
              << "G::buildingFilters =" << G::buildingFilters;
-//          */
+            //*/
     // Only interested in clicks on column 0 (checkbox + text)
     if (item->isDisabled() ||
         column > 0 ||
@@ -753,7 +755,7 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
                  << "item->parent() =" << item->parent()->text(0)
                  << "item =" << item->text(0)
                  << "itemCheckStateHasChanged =" << itemCheckStateHasChanged;
-    //          */
+        //          */
         // clicked on the search text then edit it - this triggers Filters::dataChanged
         if (item == searchTrue) {
             editItem(searchTrue, 0);
