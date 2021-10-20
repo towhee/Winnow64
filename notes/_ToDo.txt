@@ -1,4 +1,5 @@
 BUGS / TO DO
+- MW::enableSelectionDependentMenus needs updating for all situations
 - Filters not working sometimes (ie no days)
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
 - Unicode path heics not rendering

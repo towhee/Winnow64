@@ -54,6 +54,22 @@ bucket is always constructed with a dummy head node
             clear();
         }
 
+        int count()
+        /*
+        Return number of keys in the bucket
+        */
+        {
+            // A shared mutex is used to enable mutiple concurrent reads
+            std::shared_lock<std::shared_timed_mutex> lock(mutex_);
+            HashNode<K, V> * node = head;
+            int n = 0;
+            while (node != nullptr) {
+                n++;
+                node = node->next;
+            }
+            return n;
+        }
+
         void getKeys(QVector<K> &keys)
         /*
         Return all the keys in the bucket

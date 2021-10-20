@@ -272,7 +272,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     simulateJustInstalled = false;
     isStressTest = false;
     G::isTimer = true;                  // Global timer
-    G::isTest = false;                  // use to find memory loss
+    G::isTest = true;                   // test performance timer
 
     useImageCache = true;
     useImageView = true;
@@ -1333,7 +1333,7 @@ void MW::folderSelectionChange()
 
     uncheckAllFilters();
 
-    if (G::isTest) testTime.restart();
+//    if (G::isTest) testTime.restart();
 
     if (!dm->load(currentViewDirPath, subFoldersAction->isChecked())) {
         qWarning() << "Datamodel Failed To Load for" << currentViewDirPath;
@@ -2095,7 +2095,7 @@ void MW::loadImageCacheForNewFolder()
         progressBar->clearProgress();
         qApp->processEvents();
     }
-//    updateIconBestFit();      // rgh make sure not req'd
+    updateIconBestFit();      // rgh make sure req'd
 
     // had to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
@@ -5720,13 +5720,23 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
 //    return;  //rghmacdelay
     if (G::isLogger) G::log(__FUNCTION__);
     if (isRunning) {
+        if (G::isTest) testTime.restart();
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
         #ifdef Q_OS_WIN
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Red; font-size: 24px;}");
         #endif
     }
     else {
-        if (G::isTest) qDebug() << __FUNCTION__ << "Total time to cache folder =" << testTime.elapsed();
+        if (G::isTest) {
+            int ms = testTime.elapsed();
+            int n = icd->imCache.count();
+            if (n)
+            qDebug() << __FUNCTION__
+                    << "Total time to fill cache =" << ms
+                    << "   Images cached =" << n
+                    << "   ms per image =" << ms / n
+                       ;
+        }
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Green;}");
         #ifdef Q_OS_WIN
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Green; font-size: 24px;}");
@@ -8520,6 +8530,7 @@ bool MW::loadSettings()
 
     // general
     sortColumn = setting->value("sortColumn").toInt();
+    prevSortColumn = sortColumn;
     isReverseSort = setting->value("sortReverse").toBool();
     autoAdvance = setting->value("autoAdvance").toBool();
     turnOffEmbellish = setting->value("turnOffEmbellish").toBool();
@@ -11734,7 +11745,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    stressTest(50);
+    qDebug() << __FUNCTION__ << "Total cached images =" << icd->imCache.count();
+//    stressTest(50);
 //    qDebug() << __PRETTY_FUNCTION__;
 //    SelectionOrPicksDlg::Option option;
 //    SelectionOrPicksDlg dlg(option);
