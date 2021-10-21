@@ -98,23 +98,7 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    /*  if (G::isLogger) G::log(__FUNCTION__) up-to-date
-        MW
-        IconView
-        ImageView
-        DataModel
-    */
-
-    bool isStartupArgs = false;
-    bool hideEmbellish = false;
-    bool useImageCache = true;
-    bool useInfoView = true;
-    bool useImageView = true;
-    bool useUpdateStatus = true;
-
-    bool useFilterView = true;
-
-    QString versionNumber = "1.28" ;
+    QString versionNumber = "1.29" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -127,8 +111,14 @@ public:
 
     bool isShift;               // used when opening if shift key pressed
     bool ignoreSelectionChange = false;
+    bool isStartupArgs = false;
+    bool hideEmbellish = false;
+    bool useImageCache = true;
+    bool useInfoView = true;
+    bool useImageView = true;
+    bool useUpdateStatus = true;
 
-//    QScreen *currScreen;
+    bool useFilterView = true;
 
     int copyCutCount;   // rgh req'd?
     QTextStream rpt;

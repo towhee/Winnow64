@@ -285,7 +285,7 @@ void ImageCache::setTargetRange()
         icd->cache.targetLast = icd->cache.totFiles - 1;
     }
 
-    fixOrphans();
+//    fixOrphans();     // this slows thngs down
 
     /*
     if (debugCaching) {
@@ -311,22 +311,23 @@ bool ImageCache::nextToCache(int id)
       greater than maxAttemptsToCacheImage.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+
     int lastPriority = icd->cacheItemList.length();
     int key = -1;
     // find next priority item
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
-        if (i >= lastPriority) break;
-        bool isTarget = icd->cacheItemList.at(i).isTarget;
+        int priority = icd->cacheItemList.at(i).priority;
+        if (priority >= lastPriority) break;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
         bool isCached = icd->cacheItemList.at(i).isCached;
         int attempts = icd->cacheItemList.at(i).attempts;
         int threadId = icd->cacheItemList.at(i).threadId;
         // chk orphaned items rgh what about imCache - maybe still in imCache
-        if (isTarget && !isCached && attempts < maxAttemptsToCacheImage) {
+        if (!isCached && attempts < maxAttemptsToCacheImage) {
             if (!isCaching || (isCaching && id == threadId)) {
                 // higher priorities are lower numbers (highest = 0)
-                if (icd->cacheItemList.at(i).priority < lastPriority) {
-                    lastPriority = icd->cacheItemList.at(i).priority;
+                if (priority < lastPriority) {
+                    lastPriority = priority;
                     key = i;
                 }
             }
@@ -354,15 +355,17 @@ bool ImageCache::nextToDecache(int id)
     order to find the first image currently cached.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+
     int lastPriority = 0;
     int key = -1;
     // find next priority item
     for (int i = icd->cacheItemList.length() - 1; i > -1; --i) {
+        int priority = icd->cacheItemList.at(i).priority;
         bool isCached = icd->cacheItemList.at(i).isCached;
         if (isCached) {
             // higher priorities are lower numbers
-            if (icd->cacheItemList.at(i).priority > lastPriority) {
-                lastPriority = icd->cacheItemList.at(i).priority;
+            if (priority > lastPriority) {
+                lastPriority = priority;
                 key = i;
             }
         }
@@ -509,7 +512,6 @@ void ImageCache::makeRoom(int id, int cacheKey)
 */
     if (G::isLogger) G::log(__FUNCTION__);
     if (cacheKey >= icd->cacheItemList.length()) return;
-//    icd->cache.currMB = getImCacheSize();
     int room = icd->cache.maxMB - icd->cache.currMB;
     int roomRqd = icd->cacheItemList.at(cacheKey).sizeMB;
     while (room < roomRqd) {
@@ -1130,7 +1132,10 @@ void ImageCache::run()
         qDebug().noquote() << __FUNCTION__;
     }
 
-    // update position, priorities, target range
+    // check available memory (another app may have used or released some memory)
+    memChk();
+
+    // update if position change or cacheSizeHasChanged
     if (fillCache(-1, true)) {   // decoder id, positionChange
         // cache is up-to-date
         return;
@@ -1139,11 +1144,8 @@ void ImageCache::run()
     // signal MW cache status
     emit updateIsRunning(true, true);
 
-    // check available memory (another app may have used or released some memory)
-    memChk();
-
     /* fill the cache with images.  Note use ImageDecoder::Status::Ready because
-       decoder[id]->isRunning() resulted in empty mages in imCache  */
+       decoder[id]->isRunning() resulted in empty images in imCache  */
     for (int id = 0; id < decoderCount; ++id) {
         if (decoder[id]->status == ImageDecoder::Status::Ready) {
             decoder[id]->fPath = "";

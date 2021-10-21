@@ -96,6 +96,9 @@ private:
     Metadata *metadata;
     QVector<ImageDecoder*> decoder;
 
+//    QList<int>toCache;
+//    QList<int>toDecache;
+
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     int getImCacheSize();           // add up total MB cached
