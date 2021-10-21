@@ -272,7 +272,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     simulateJustInstalled = false;
     isStressTest = false;
     G::isTimer = true;                  // Global timer
-    G::isTest = true;                   // test performance timer
+    G::isTest = false;                  // test performance timer
 
     useImageCache = true;
     useImageView = true;
