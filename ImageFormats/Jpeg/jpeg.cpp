@@ -1225,7 +1225,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                      << "line =" << line
                      << "scanLines[y].length() =" << scanLine[y].length()
                      << "data.length() =" << data.length()
-                     << "im.bytesPerLine()) =" << im.bytesPerLine();
+                     << "im.bytesPerLine() =" << im.bytesPerLine();
             std::memcpy(im.scanLine(line), data, im.bytesPerLine());
             scanLine[y].clear();
         }
