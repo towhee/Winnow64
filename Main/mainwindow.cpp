@@ -10892,18 +10892,23 @@ void MW::stressTest(int ms)
     QElapsedTimer t;
     t.start();
     while (isStressTest) {
+        G::wait(ms);
         ++count;
-//        if (count == 160) break;
         if (isForward && currentRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && currentRow == 0) isForward = true;
         if (isForward) keyRight();
         else keyLeft();
-        G::wait(ms);
     }
-    double msPerImage = count * 1.0 / t.elapsed();
-    int imagePerSec = 1 / msPerImage;
-    qDebug() << __FUNCTION__ << "Executed stress test" << count << "times."
-             << imagePerSec << "images per second";
+    qint64 msElapsed = t.elapsed();
+    double seconds = msElapsed * 0.001;
+    double msPerImage = msElapsed * 1.0 / count;
+    int imagePerSec = count * 1.0 / seconds;
+    qDebug() << __FUNCTION__ << "Executed stress test" << count << "times.  "
+             << msElapsed << "ms elapsed  "
+             << ms << "ms delay  "
+             << imagePerSec << "images per second  "
+             << msPerImage << "ms per image."
+                ;
     return;
     if (G::isLogger) G::log(__FUNCTION__);
     getSubfolders("/users/roryhill/pictures");
@@ -11745,8 +11750,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << "Total cached images =" << icd->imCache.count();
-//    stressTest(50);
+//    qDebug() << __FUNCTION__ << "Total cached images =" << icd->imCache.count();
+    stressTest(170);
 //    qDebug() << __PRETTY_FUNCTION__;
 //    SelectionOrPicksDlg::Option option;
 //    SelectionOrPicksDlg dlg(option);
