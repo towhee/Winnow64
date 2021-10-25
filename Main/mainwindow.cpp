@@ -627,6 +627,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
            operation, then okay to exit full screen.  escapeFullScreen must be the last option
            tested.
         */
+        G::popUp->hide();
         // cancel slideshow
         if (G::isSlideShow) slideShow();
         // quit loading datamodel
@@ -11688,9 +11689,9 @@ void MW::mediaReadSpeed()
                                                  "/home"
                                                  );
     QFile file(fPath);
-    double mbs = Performance::mediaReadSpeed(file) /*/ 8*/ * 1024;
-    if (static_cast<int>(mbs) == -1) return;  // err
-    QString msg = "Media read speed: : " + QString::number(mbs, 'f', 0) +
+    double MBPerSec = Performance::mediaReadSpeed(file) * 1024 / 8;
+    if (static_cast<int>(MBPerSec) == -1) return;  // err
+    QString msg = "Media read speed: : " + QString::number(MBPerSec, 'f', 0) +
                   " MB/sec.   Press Esc to continue.";
     G::popUp->showPopup(msg, 0);
 }
@@ -11750,8 +11751,30 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    Jpeg jpg;
+    QString fPath = "D:/Pictures/_Jpg/test.jpg";
+    QImage image;
+    MetadataParameters p;
+    p.file.setFileName(fPath);
+    if (p.file.open(QIODevice::ReadOnly)) {
+        bool isBigEnd = true;
+        if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
+            G::error(__FUNCTION__, fPath, "JPG does not start with 0xFFD8.");
+            p.file.close();
+            return;
+        }
+        p.offset = static_cast<quint32>(p.file.pos());
+        ImageMetadata m;
+        jpg.getJpgSegments(p, m);
+        p.file.seek(0);
+        QByteArray ba = p.file.readAll();
+        p.file.close();
+        jpg.decodeScan(ba, image);
+        imageView->pmItem->setPixmap(QPixmap::fromImage(image));
+    }
+
 //    qDebug() << __FUNCTION__ << "Total cached images =" << icd->imCache.count();
-    stressTest(170);
+//    stressTest(125);
 //    qDebug() << __PRETTY_FUNCTION__;
 //    SelectionOrPicksDlg::Option option;
 //    SelectionOrPicksDlg dlg(option);
