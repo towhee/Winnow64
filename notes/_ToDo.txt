@@ -52,6 +52,7 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Release 1.28
 - Esc from full screen causes crash
 - Crashing if change folders too quickly (Dave Kelly)
 - If click on current thumb while welcome screen change to loupe view

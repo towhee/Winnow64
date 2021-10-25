@@ -316,6 +316,7 @@ bool ImageCache::nextToCache(int id)
     int key = -1;
     // find next priority item
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
+        if (i >= lastPriority) break;
         int priority = icd->cacheItemList.at(i).priority;
         if (priority >= lastPriority) break;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
