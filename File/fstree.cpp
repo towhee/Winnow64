@@ -401,22 +401,18 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
     emit selectionChange();
 }
 
-//void FSTree::paintEvent(QPaintEvent *event)
-//{
-////    resizeColumns();
-//    QTreeView::paintEvent(event);
-//}
-
-//void FSTree::focusInEvent(QFocusEvent *event)
-//{
-//    qDebug() << __FUNCTION__ << "Acquired focus";
-//}
-
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     // ignore right mouse clicks (context menu)
-    if (event->button() == Qt::RightButton) return;
+//    if (event->button() == Qt::RightButton) return;
+    if (event->button() == Qt::RightButton) {
+        rightClickIndex = indexAt(event->pos());
+        if (rightClickIndex.isValid()) {
+            rightMouseClickPath = rightClickIndex.data(Qt::ToolTipRole).toString();
+        }
+        return;
+    }
     QTreeView::mousePressEvent(event);
 }
 

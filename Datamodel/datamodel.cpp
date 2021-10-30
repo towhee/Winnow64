@@ -167,6 +167,7 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::WidthColumn, new QStandardItem("Width")); horizontalHeaderItem(G::WidthColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::HeightColumn, new QStandardItem("Height")); horizontalHeaderItem(G::HeightColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::DimensionsColumn, new QStandardItem("Dimensions")); horizontalHeaderItem(G::DimensionsColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::AspectRatioColumn, new QStandardItem("Aspect Ratio")); horizontalHeaderItem(G::AspectRatioColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::CreatedColumn, new QStandardItem("Created")); horizontalHeaderItem(G::CreatedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::ModifiedColumn, new QStandardItem("Last Modified")); horizontalHeaderItem(G::ModifiedColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::YearColumn, new QStandardItem("Year")); horizontalHeaderItem(G::YearColumn)->setData(false, G::GeekRole);
@@ -811,6 +812,8 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::HeightColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::DimensionsColumn), QString::number(m.width) + "x" + QString::number(m.height));
     setData(index(row, G::DimensionsColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
+    setData(index(row, G::AspectRatioColumn), QString::number((m.width * 1.0 / m.height), 'f', 2));
+    setData(index(row, G::AspectRatioColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::RotationColumn), 0);
     setData(index(row, G::RotationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::ApertureColumn), m.apertureNum);
@@ -1147,6 +1150,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("width", 25) << G::s(index(row, G::WidthColumn).data());
     rpt << "\n  " << G::sj("height", 25) << G::s(index(row, G::HeightColumn).data());
     rpt << "\n  " << G::sj("dimensions", 25) << G::s(index(row, G::DimensionsColumn).data());
+    rpt << "\n  " << G::sj("aspectRatio", 25) << G::s(index(row, G::DimensionsColumn).data());
     rpt << "\n  " << G::sj("rotation", 25) << G::s(index(row, G::RotationColumn).data());
     rpt << "\n  " << G::sj("apertureNum", 25) << G::s(index(row, G::ApertureColumn).data());
     rpt << "\n  " << G::sj("exposureTimeNum", 25) << G::s(index(row, G::ShutterspeedColumn).data());
