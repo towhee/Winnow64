@@ -125,6 +125,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::MegaPixelsColumn) return fm.boundingRect("=999.99=").width();
     if (column == G::LoadMsecPerMpColumn) return fm.boundingRect("=Msec/Mp=").width();
     if (column == G::DimensionsColumn) return fm.boundingRect("=99999x99999=").width();
+    if (column == G::AspectRatioColumn) return fm.boundingRect("=Aspect Ratio=").width();
     if (column == G::RotationColumn) return fm.boundingRect("=Rot=").width();
     if (column == G::ApertureColumn) return fm.boundingRect("=Aperture=").width();
     if (column == G::ShutterspeedColumn) return fm.boundingRect("=1/8000 sec=").width();

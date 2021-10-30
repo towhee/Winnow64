@@ -61,6 +61,7 @@ public:
 
 //    bool newData;
     bool combineRawJpg;
+    QString rightMouseClickPath;
     QHash <QString, QString> count;
     QHash <QString, QString> combineCount;
 
@@ -94,6 +95,7 @@ private:
     Metadata *metadata;
     QDir *dir;
     QStringList *fileFilters;
+    QModelIndex rightClickIndex;
     int imageCountColumnWidth;
     QElapsedTimer t;
 };

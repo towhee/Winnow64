@@ -98,7 +98,7 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    QString versionNumber = "1.29" ;
+    QString versionNumber = "1.30" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -279,6 +279,7 @@ public:
 
     QString currentViewDirPath;
     QDir currentViewDir;
+    bool ignoreFolderSelectionChange = false;
 
     enum centralWidgetTabs {
         LoupeTab,       // 0
@@ -671,6 +672,9 @@ private:
     QAction *copyAction;
     QAction *copyImageAction;
     QAction *deleteAction;
+    QAction *deleteActiveFolderAction;
+    QAction *deleteBookmarkFolderAction;
+    QAction *deleteFSTreeFolderAction;
     QAction *rejectAction;
     QAction *refineAction;
     QAction *pickAction;                // shortcut "`"
@@ -1036,6 +1040,7 @@ private:
     QString filterDockTabText;
     QString metadataDockTabText;
     QString embelDockTabText;
+    QString thumbDockTabText;
 
     void createEmbel();
     void createDocks();
@@ -1045,6 +1050,9 @@ private:
     void createMetadataDock();
     void createThumbDock();
     void createEmbelDock();
+    QTabBar* tabifiedBar();
+    bool isDockTabified(QString tabText);
+    bool isSelectedDockTab(QString tabText);
     void folderDockVisibilityChange();
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
@@ -1095,10 +1103,11 @@ private:
 
     bool isValidPath(QString &path);
     QString getSelectedPath();
-    void wheelEvent(QWheelEvent *event);
+    void wheelEvent(QWheelEvent *event) override;
 //    bool event(QEvent *event);
     void copy();
     void deleteFiles();
+    void deleteFolder();
     void showNewImageWarning(QWidget *parent);
     bool removeDirOp(QString dirToDelete);
     void addBookmark(QString path);

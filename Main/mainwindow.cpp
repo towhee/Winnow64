@@ -1254,6 +1254,13 @@ void MW::folderSelectionChange()
    This is invoked when there is a folder selection change in the folder or bookmark views.
    See PROGRAM FLOW at top of file for more information.
 */
+    // ignore if selection change triggered by deletion of prior selected folder
+    if (ignoreFolderSelectionChange) {
+        ignoreFolderSelectionChange = false;
+        fsTree->selectionModel()->clear();
+        return;
+    }
+
     currentViewDirPath = getSelectedPath();
     setting->setValue("lastDir", currentViewDirPath);
 
@@ -2577,6 +2584,22 @@ void MW::createActions()
     addAction(deleteAction);
     connect(deleteAction, &QAction::triggered, this, &MW::deleteFiles);
 
+    deleteActiveFolderAction = new QAction(tr("Delete Folder"), this);
+    deleteActiveFolderAction->setObjectName("deleteActiveFolder");
+    addAction(deleteActiveFolderAction);
+    connect(deleteActiveFolderAction, &QAction::triggered, this, &MW::deleteFolder);
+
+    // not being used due to risk of folder containing many subfolders with no indication to user
+    deleteBookmarkFolderAction = new QAction(tr("Delete Folder"), this);
+    deleteBookmarkFolderAction->setObjectName("deleteBookmarkFolder");
+    addAction(deleteBookmarkFolderAction);
+    connect(deleteBookmarkFolderAction, &QAction::triggered, this, &MW::deleteFolder);
+
+    deleteFSTreeFolderAction = new QAction(tr("Delete Folder"), this);
+    deleteFSTreeFolderAction->setObjectName("deleteFSTreeFolder");
+    addAction(deleteFSTreeFolderAction);
+    connect(deleteFSTreeFolderAction, &QAction::triggered, this, &MW::deleteFolder);
+
     copyAction = new QAction(tr("Copy file(s)"), this);
     copyAction->setObjectName("copyFiles");
     copyAction->setShortcutVisibleInContextMenu(true);
@@ -3648,6 +3671,7 @@ void MW::createMenus()
     editMenu->addAction(copyImageAction);
     editMenu->addAction(copyAction);
     editMenu->addAction(deleteAction);
+    editMenu->addAction(deleteActiveFolderAction);
     editMenu->addSeparator();
     editMenu->addAction(pickAction);
     editMenu->addAction(rejectAction);
@@ -3882,6 +3906,7 @@ void MW::createMenus()
 //    fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileActionFromContext);
     fsTreeActions->append(copyPathActionFromContext);
+    fsTreeActions->append(deleteFSTreeFolderAction);
     fsTreeActions->append(separatorAction1);
     fsTreeActions->append(pasteAction);
     fsTreeActions->append(separatorAction2);
@@ -3896,7 +3921,9 @@ void MW::createMenus()
 //    favActions->append(pasteAction);
     favActions->append(separatorAction);
     favActions->append(removeBookmarkAction);
-    favActions->append(separatorAction1);
+    // not being used due to risk of folder containing many subfolders with no indication to user
+//    favActions->append(deleteBookmarkFolderAction);
+//    favActions->append(separatorAction1);
 
     // filters context menu
     filterActions = new QList<QAction *>;
@@ -4927,7 +4954,8 @@ void MW::createMetadataDock()
 void MW::createThumbDock()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    thumbDock = new DockWidget("Thumbnails", this);  // Thumbnails
+    thumbDockTabText = "Thumbnails";
+    thumbDock = new DockWidget(thumbDockTabText, this);  // Thumbnails
 //    thumbDock = new DockWidget(" 👍", this);  // Thumbnails
     thumbDock->setObjectName("thumbDock");
     thumbDock->setWidget(thumbView);
@@ -5091,6 +5119,57 @@ void MW::createDocks()
     MW::tabifyDockWidget(favDock, filterDock);
     if (useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
     if (!hideEmbellish) if (useInfoView) MW::tabifyDockWidget(metadataDock, embelDock);
+}
+
+QTabBar* MW::tabifiedBar()
+{
+
+    // find the tabbar containing the dock widgets
+    QTabBar* widgetTabBar = nullptr;
+    QList<QTabBar *> tabList = findChildren<QTabBar *>();
+    for (int i = 0; i < tabList.count(); i++) {
+        if (tabList.at(i)->currentIndex() != -1) {
+            widgetTabBar = tabList.at(i);
+            break;
+        }
+    }
+    return widgetTabBar;
+}
+
+bool MW::isDockTabified(QString tabText)
+{
+
+    QTabBar* widgetTabBar = tabifiedBar();
+    bool found = false;
+    if (widgetTabBar != nullptr) {
+        int idx = widgetTabBar->currentIndex();
+        for (int i = 0; i < widgetTabBar->count(); i++) {
+            if (widgetTabBar->tabText(i) == tabText) {
+                found = true;
+                break;
+            }
+        }
+    }
+    return found;
+}
+
+bool MW::isSelectedDockTab(QString tabText)
+{
+
+    QTabBar* widgetTabBar = tabifiedBar();
+    bool selected = false;
+    if (widgetTabBar != nullptr) {
+        int idx = widgetTabBar->currentIndex();
+        for (int i = 0; i < widgetTabBar->count(); i++) {
+            if (widgetTabBar->tabText(i) == tabText) {
+                if (i == idx) {
+                    selected = true;
+                    break;
+                }
+            }
+        }
+    }
+    return selected;
 }
 
 void MW::folderDockVisibilityChange()
@@ -8559,7 +8638,7 @@ bool MW::loadSettings()
         if (G::fontSize == "") G::fontSize = "12";
     }
 
-    // Thumbdock
+    // thumbdock
     if (setting->contains("wasThumbDockVisible")) wasThumbDockVisible = setting->value("wasThumbDockVisible").toBool();
 
     // load imageView->infoOverlayFontSize later as imageView has not been created yet
@@ -9557,8 +9636,9 @@ void MW::toggleFolderDockVisibility()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing) return;
-
-    if (folderDock->isVisible()) dockToggle = SetInvisible;
+    QString dock = folderDockTabText;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
+    else if (folderDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
 
     switch (dockToggle) {
@@ -9580,8 +9660,9 @@ void MW::toggleFolderDockVisibility()
 void MW::toggleFavDockVisibility() {
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing) return;
-
-    if (favDock->isVisible()) dockToggle = SetInvisible;
+    QString dock = favDockTabText;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
+    else if (favDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
 
     switch (dockToggle) {
@@ -9603,8 +9684,9 @@ void MW::toggleFavDockVisibility() {
 void MW::toggleFilterDockVisibility() {
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing) return;
-
-    if (filterDock->isVisible()) dockToggle = SetInvisible;
+    QString dock = filterDockTabText;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
+    else if (filterDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
 
     switch (dockToggle) {
@@ -9627,8 +9709,9 @@ void MW::toggleMetadataDockVisibility() {
     if (!useInfoView) return;
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing) return;
-
-    if (metadataDock->isVisible()) dockToggle = SetInvisible;
+    QString dock = metadataDockTabText;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
+    else if (metadataDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
 
     switch (dockToggle) {
@@ -9652,8 +9735,9 @@ void MW::toggleThumbDockVisibity()
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing) return;
     qDebug() << __FUNCTION__;
-
-    if (thumbDock->isVisible()) dockToggle = SetInvisible;
+    QString dock = thumbDockTabText;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
+    else if (thumbDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
 
     switch (dockToggle) {
@@ -9686,8 +9770,9 @@ void MW::toggleThumbDockVisibity()
 void MW::toggleEmbelDockVisibility() {
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing) return;
-
-    if (embelDock->isVisible()) dockToggle = SetInvisible;
+    QString dock = embelDockTabText;
+    if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
+    else if (embelDock->isVisible()) dockToggle = SetInvisible;
     else dockToggle = SetVisible;
 
     switch (dockToggle) {
@@ -11374,12 +11459,19 @@ void MW::deleteFiles()
     }
     thumbView->selectionModel()->clearSelection();
 
-    // delete file in folder on disk
+    // delete file(s) in folder on disk
     for (int i = 0; i < sl.count(); ++i) {
         QString fPath = sl.at(i);
         if (QFile::remove(fPath)) {
             sldm.append(fPath);
         }
+    }
+
+    // if all images in folder were deleted
+    if (sldm.count() == dm->rowCount()) {
+        clearAll();
+        folderSelectionChange();
+        return;
     }
 
     // remove fPath from datamodel dm if successfully deleted
@@ -11405,9 +11497,56 @@ void MW::deleteFiles()
         }
         bookmarks->count();
     }
+}
 
-    // if all images in folder deleted then refresh folder
-    if (dm->rowCount() == 0) folderSelectionChange();
+void MW::deleteFolder()
+{
+    QString dirToDelete;
+    QString senderObject = (static_cast<QAction*>(sender()))->objectName();
+    if (senderObject == "deleteActiveFolder") {
+        dirToDelete = currentViewDirPath;
+    }
+    else if (senderObject == "deleteBookmarkFolder") {
+        dirToDelete = bookmarks->rightMouseClickPath;
+    }
+    else if (senderObject == "deleteFSTreeFolder") {
+        dirToDelete = fsTree->rightMouseClickPath;
+    }
+
+    if (deleteWarning) {
+        QMessageBox msgBox;
+        int msgBoxWidth = 300;
+        msgBox.setWindowTitle("Delete Folder");
+        msgBox.setTextFormat(Qt::RichText);
+        msgBox.setText("This operation will delete the folder<br>"
+                       "<font color=\"red\"><b>" + dirToDelete +
+                       "</b></font>");
+        msgBox.setInformativeText("Do you want continue?");
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        msgBox.setDefaultButton(QMessageBox::Cancel);
+        msgBox.setIcon(QMessageBox::Warning);
+        QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
+                    "QPushButton:default {background-color: rgb(68,95,118);}";
+        msgBox.setStyleSheet(css);
+        QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
+        layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+        int ret = msgBox.exec();
+        if (ret == QMessageBox::Cancel) return;
+    }
+
+    if (currentViewDirPath == dirToDelete) {
+        ignoreFolderSelectionChange = true;
+        clearAll();
+    }
+
+    QDir dir(dirToDelete);
+    dir.removeRecursively();
+
+    if (bookmarks->bookmarkPaths.contains(dirToDelete)) {
+        bookmarks->bookmarkPaths.remove(dirToDelete);
+        bookmarks->reloadBookmarks();
+    }
 }
 
 void MW::openUsbFolder()
@@ -11751,27 +11890,64 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    Jpeg jpg;
-    QString fPath = "D:/Pictures/_Jpg/test.jpg";
-    QImage image;
-    MetadataParameters p;
-    p.file.setFileName(fPath);
-    if (p.file.open(QIODevice::ReadOnly)) {
-        bool isBigEnd = true;
-        if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-            G::error(__FUNCTION__, fPath, "JPG does not start with 0xFFD8.");
-            p.file.close();
-            return;
+    bool isSelected = false;
+    QString tabText = favDockTabText;
+    // find the tabbar containing the dock widgets
+    QTabBar* widgetTabBar = nullptr;
+    QList<QTabBar *> tabList = findChildren<QTabBar *>();
+    for (int i = 0; i < tabList.count(); i++) {
+        if (tabList.at(i)->currentIndex() != -1) {
+            widgetTabBar = tabList.at(i);
+            break;
         }
-        p.offset = static_cast<quint32>(p.file.pos());
-        ImageMetadata m;
-        jpg.getJpgSegments(p, m);
-        p.file.seek(0);
-        QByteArray ba = p.file.readAll();
-        p.file.close();
-        jpg.decodeScan(ba, image);
-        imageView->pmItem->setPixmap(QPixmap::fromImage(image));
     }
+    // find the tab with the requested dock
+    if (widgetTabBar != nullptr) {
+//        widgetTabBar->setCurrentIndex(0);
+        int idx = widgetTabBar->currentIndex();
+        for (int i = 0; i < widgetTabBar->count(); i++) {
+            if (widgetTabBar->tabText(i) == tabText) {
+                if (idx == i) isSelected = true;
+                break;
+            }
+        }
+    }
+    qDebug() << __FUNCTION__ << "Selected" << isSelected;
+    return;
+
+//    QList<QTabBar*> tabList = findChildren<QTabBar*>();
+//    qDebug() << __FUNCTION__ << tabList.at(0)->tabText(0);
+//    return;
+//    QTabBar* widgetTabBar = tabList.at(0);
+//    int idx = widgetTabBar->currentIndex();
+//    qDebug() << __FUNCTION__ << tabList.count() << widgetTabBar->count();
+//    for (int i = 0; i < widgetTabBar->count(); i++) {
+//        qDebug() << i << idx
+//                 << widgetTabBar->tabText(i);
+//    }
+//    return;
+    folderDockVisibleAction->setChecked(true);
+//    Jpeg jpg;
+//    QString fPath = "D:/Pictures/_Jpg/test.jpg";
+//    QImage image;
+//    MetadataParameters p;
+//    p.file.setFileName(fPath);
+//    if (p.file.open(QIODevice::ReadOnly)) {
+//        bool isBigEnd = true;
+//        if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
+//            G::error(__FUNCTION__, fPath, "JPG does not start with 0xFFD8.");
+//            p.file.close();
+//            return;
+//        }
+//        p.offset = static_cast<quint32>(p.file.pos());
+//        ImageMetadata m;
+//        jpg.getJpgSegments(p, m);
+//        p.file.seek(0);
+//        QByteArray ba = p.file.readAll();
+//        p.file.close();
+//        jpg.decodeScan(ba, image);
+//        imageView->pmItem->setPixmap(QPixmap::fromImage(image));
+//    }
 
 //    qDebug() << __FUNCTION__ << "Total cached images =" << icd->imCache.count();
 //    stressTest(125);

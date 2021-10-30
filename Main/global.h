@@ -63,6 +63,7 @@ namespace G
         MegaPixelsColumn,
         LoadMsecPerMpColumn,
         DimensionsColumn,
+        AspectRatioColumn,
         RotationColumn,
         ApertureColumn,
         ShutterspeedColumn,
