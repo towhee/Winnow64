@@ -12,6 +12,11 @@ FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
 
 }
 
+void FSFilter::refresh()
+{
+    this->invalidateFilter();
+}
+
 bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
 #ifdef Q_OS_WIN
@@ -255,7 +260,7 @@ void FSTree::refreshModel()
     createModel();
 }
 
-bool FSTree::getShowImageCount()
+bool FSTree::isShowImageCount()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     return fsModel->showImageCount;
@@ -264,6 +269,16 @@ bool FSTree::getShowImageCount()
 void FSTree::setShowImageCount(bool showImageCount)
 {
     fsModel->showImageCount = showImageCount;
+}
+
+void FSTree::updateImageCount(QString dirPath)
+{
+/*
+
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    getImageCount(dirPath, true, "updateImageCount");
+    fsFilter->invalidate();
 }
 
 void FSTree::scrollToCurrent()
@@ -290,6 +305,12 @@ bool FSTree::select(QString dirPath)
         return false;
     }
 }
+
+//QModelIndex FSTree::index(QString dirPath)
+//{
+//    if (G::isLogger) G::log(__FUNCTION__);
+//    return fsFilter->mapFromSource(fsModel->index(dirPath));
+//}
 
 QModelIndex FSTree::getCurrentIndex()
 {
@@ -448,7 +469,7 @@ void FSTree::dropEvent(QDropEvent *event)
     if (G::isLogger) G::log(__FUNCTION__); 
 	if (event->source())
 	{
-		QString fstreeStr="FSTree";
+        QString fstreeStr = "FSTree";
 		bool dirOp = (event->source()->metaObject()->className() == fstreeStr);
 		emit dropOp(event->keyboardModifiers(), dirOp, event->mimeData()->urls().at(0).toLocalFile());
 		setCurrentIndex(dndOrigSelection);
