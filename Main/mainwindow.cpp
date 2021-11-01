@@ -9040,7 +9040,7 @@ void MW::updateState()
 void MW::refreshFolders()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    bool showImageCount = fsTree->getShowImageCount();
+    bool showImageCount = fsTree->isShowImageCount();
     fsTree->refreshModel();
     fsTree->setShowImageCount(showImageCount);
 
@@ -11467,6 +11467,10 @@ void MW::deleteFiles()
         }
     }
 
+    // refresh image count in folders and bookmarks
+    fsTree->updateImageCount(currentViewDirPath);
+    bookmarks->count();
+
     // if all images in folder were deleted
     if (sldm.count() == dm->rowCount()) {
         clearAll();
@@ -11482,6 +11486,7 @@ void MW::deleteFiles()
 
     // remove selected from imageCache
     imageCacheThread->removeFromCache(sldm);
+
     // update cursor position on progressBar
     imageCacheThread->updateStatus("Update all rows", __FUNCTION__);
 
@@ -11489,14 +11494,6 @@ void MW::deleteFiles()
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
     thumbView->setCurrentIndex(sfIdx);
     fileSelectionChange(sfIdx, sfIdx);
-
-    // refresh image count in folders and bookmarks
-    if (sldm.count()) {
-        for (int i = 0; i < slDir.length(); ++i) {
-            fsTree->getImageCount(slDir.at(i), true, __FUNCTION__);
-        }
-        bookmarks->count();
-    }
 }
 
 void MW::deleteFolder()
@@ -11890,29 +11887,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    bool isSelected = false;
-    QString tabText = favDockTabText;
-    // find the tabbar containing the dock widgets
-    QTabBar* widgetTabBar = nullptr;
-    QList<QTabBar *> tabList = findChildren<QTabBar *>();
-    for (int i = 0; i < tabList.count(); i++) {
-        if (tabList.at(i)->currentIndex() != -1) {
-            widgetTabBar = tabList.at(i);
-            break;
-        }
-    }
-    // find the tab with the requested dock
-    if (widgetTabBar != nullptr) {
-//        widgetTabBar->setCurrentIndex(0);
-        int idx = widgetTabBar->currentIndex();
-        for (int i = 0; i < widgetTabBar->count(); i++) {
-            if (widgetTabBar->tabText(i) == tabText) {
-                if (idx == i) isSelected = true;
-                break;
-            }
-        }
-    }
-    qDebug() << __FUNCTION__ << "Selected" << isSelected;
     return;
 
 //    QList<QTabBar*> tabList = findChildren<QTabBar*>();
@@ -11926,7 +11900,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //                 << widgetTabBar->tabText(i);
 //    }
 //    return;
-    folderDockVisibleAction->setChecked(true);
+//    folderDockVisibleAction->setChecked(true);
 //    Jpeg jpg;
 //    QString fPath = "D:/Pictures/_Jpg/test.jpg";
 //    QImage image;

@@ -13,6 +13,7 @@ class FSFilter : public QSortFilterProxyModel
 
 public:
     FSFilter(QObject *parent);
+    void refresh();
 
 protected:
     bool filterAcceptsRow(int source_row,
@@ -47,7 +48,8 @@ public:
     void createModel();
     void refreshModel();
     void setShowImageCount(bool showImageCount);
-    bool getShowImageCount();
+    bool isShowImageCount();
+    void updateImageCount(QString dirPath);
 
 //    QFileSystemWatcher *watch;
 
@@ -55,6 +57,7 @@ public:
     FSFilter *fsFilter;
 
 	QModelIndex getCurrentIndex();
+//    QModelIndex index(QString dirPath);
     bool select(QString dirPath);
     void scrollToCurrent();
 //    void showSupportedImageCount();
