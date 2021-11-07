@@ -11,7 +11,7 @@ void ColorAnalysis::process(QStringList &fPathList)
     G::isRunningColorAnalysis = true;
     G::popUp->setProgressVisible(true);
     G::popUp->setProgressMax(count);
-    QString txt = "Counting hues in " + QString::number(count) + " images. " +
+    QString txt = "Generating hue count for " + QString::number(count) + " images. " +
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
     G::popUp->showPopup(txt, 0, true, 1);
 

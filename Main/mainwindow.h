@@ -1013,9 +1013,7 @@ private:
     bool isLeftMouseBtnPressed = false;
     bool isMouseDrag = false;
 
-    // loadImageList
-    bool timeToQuit;
-    QList<QFileInfo> fileInfoList;
+//    bool timeToQuit;
 
     bool sortMenuUpdateToMatchTable = false;
 

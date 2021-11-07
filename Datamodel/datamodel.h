@@ -50,6 +50,7 @@ public:
     ImageMetadata imMetadata(QString fPath);
     void clearPicks();
     void remove(QString fPath);
+    void insert(QString fPath);
     QModelIndex proxyIndexFromPath(QString fPath);
     int proxyRowFromModelRow(int dmRow);
     int modelRowFromProxyRow(int sfRow);
@@ -114,6 +115,7 @@ private:
     bool includeSubfolders = false;
 
     bool addFileData();
+    void addFileDataForRow(int row, QFileInfo fileInfo);
     void rawPlusJpg();
 
     int addFilesMaxDelay = 1000;    // quit if exceed and not forceBuildFilters

@@ -45,7 +45,6 @@ ENHANCEMENTS
 - Add glow (inner/outer)
 - Add guassian blur (inner/outer)
 - Copy files between folders using drag'n'drop
-- Delete a folder
 - Rename file(s)
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
@@ -53,7 +52,10 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Cache was not updating in priority order
+- Menu color manage not updating when change workspace
 - Delete all images in folder crashes
+- Delete a folder
 - Release 1.29
 - Tweak to image caching performance.
 - Release 1.28

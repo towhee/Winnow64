@@ -265,9 +265,40 @@ bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
     return s1 < s2;
 }
 
+void DataModel::insert(QString fPath)
+{
+/*
+    Insert a new image into the data model.  Use when a new image is created by embel export
+    or meanStack to quickly refresh the active folder with the just saved image.
+*/
+    if (G::isLogger) G::log(__FUNCTION__); 
+    QFileInfo insertFile(fPath);
+
+    // find row greater than insert file absolute path
+    int row;
+    for (row = 0; row < rowCount(); ++row) {
+        QString rowPath = index(row, 0).data(G::PathRole).toString();
+        QFileInfo currentFile(rowPath);
+        if (lessThan(insertFile, currentFile)) break;
+    }
+
+    // insert new row
+    insertRow(row);
+    fileInfoList.insert(row, insertFile);
+
+    // add the file data
+    addFileDataForRow(row, insertFile);
+    // read and add metadata
+    readMetadataForItem(row);
+}
+
 void DataModel::remove(QString fPath)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+/*
+    Delete a row from the data model matching the absolute path.  This is used when an image
+    file has been deleted by Winnow.
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
     // remove row from datamodel
     int row;
     for (row = 0; row < rowCount(); ++row) {
@@ -450,8 +481,8 @@ bool DataModel::addFileData()
         if (timeToQuit) return false;
         // get file info
         fileInfo = fileInfoList.at(row);
-//        addFileDataForRow(row, fileInfo);
-
+        addFileDataForRow(row, fileInfo);
+        /*
         // append hash index of datamodel row for fPath for fast lookups
         QString fPath = fileInfo.filePath();
         // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
@@ -491,6 +522,7 @@ bool DataModel::addFileData()
         setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
         setData(index(row, G::SearchTextColumn), search);
         setData(index(row, G::SearchTextColumn), search, Qt::ToolTipRole);
+        //*/
 
         /* Save info for duplicated raw and jpg files, which generally are the result of
         setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
@@ -541,6 +573,51 @@ bool DataModel::addFileData()
     }
     loadingModel = false;
     return true;
+}
+
+void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+
+    // append hash index of datamodel row for fPath for fast lookups
+    QString fPath = fileInfo.filePath();
+    // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
+    fPathRow[fPath] = row;
+
+    // string to hold aggregated text for searching
+    QString search = fPath;
+
+    setData(index(row, G::PathColumn), fPath, G::PathRole);
+    QString tip = QString::number(row) + ": " + fileInfo.absoluteFilePath();
+    setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
+    setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
+    setData(index(row, G::PathColumn), false, G::CachedRole);
+    setData(index(row, G::PathColumn), false, G::DupHideRawRole);
+    setData(index(row, G::NameColumn), fileInfo.fileName());
+    setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
+    setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
+    QString s = fileInfo.suffix().toUpper();
+    setData(index(row, G::TypeColumn), s);
+    setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::SizeColumn), fileInfo.size());
+    setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss");
+    search += s;
+    setData(index(row, G::CreatedColumn), s);
+    s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
+    search += s;
+    setData(index(row, G::ModifiedColumn), s);
+    setData(index(row, G::RefineColumn), false);
+    setData(index(row, G::RefineColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::PickColumn), "false");
+    setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::IngestedColumn), "false");
+    setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    setData(index(row, G::MetadataLoadedColumn), "false");
+    setData(index(row, G::SearchColumn), "false");
+    setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
+    setData(index(row, G::SearchTextColumn), search);
+    setData(index(row, G::SearchTextColumn), search, Qt::ToolTipRole);
 }
 
 bool DataModel::updateFileData(QFileInfo fileInfo)
