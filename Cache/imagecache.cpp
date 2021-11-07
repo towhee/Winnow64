@@ -486,7 +486,8 @@ void ImageCache::fixOrphans()
             if (isCached) icd->cacheItemList[i].isCached = false;
             if (isCaching) icd->cacheItemList[i].isCaching = false;
             if (inImageCache) icd->imCache.remove(fPath);
-            if (isCached) emit updateCacheOnThumbs(fPath, false);
+            emit updateCacheOnThumbs(fPath, false);
+//            if (isCached) emit updateCacheOnThumbs(fPath, false, icd->cache.targetFirst,icd->cache.targetLast);
         }
     }
 }
@@ -497,6 +498,13 @@ bool ImageCache::cacheUpToDate()
     Determine if all images in the target range are cached or being cached.
 */
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
+        // check if image was passed over while rapidly traversing the folder
+        if (icd->cacheItemList.at(i).isCached && icd->cacheItemList.at(i).threadId == -1) {
+            icd->cacheItemList[i].isCached = false;
+            icd->cacheItemList[i].isCaching = false;
+            return false;
+        }
+        // check if caching image is in progress
         if (!icd->cacheItemList.at(i).isCached && !icd->cacheItemList.at(i).isCaching)
             return false;
     }
@@ -575,7 +583,7 @@ void ImageCache::removeFromCache(QStringList &pathList)
     Called when delete an image.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    for (int i = 0; i < pathList.count(); ++i) {
+    for (int i = pathList.count() - 1; i > -1; --i) {
         QString fPath = pathList.at(i);
         icd->imCache.remove(fPath);
         for (int j = 0; j < icd->cacheItemList.length(); ++j) {
@@ -864,7 +872,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     When the datamodel is filtered the image cache needs to be updated. The cacheItemList is
     rebuilt for the filtered dataset and isCached updated, the current image is set, and any
     surplus cached images (not in the filtered dataset) are removed from imCache.
-    The image cache is now ready to run by callin(fPath)) cacg setCachePosition().
+    The image cache is now ready to run by calling setCachePosition().
 */
     if (G::isLogger) G::log(__FUNCTION__);
     if(dm->sf->rowCount() == 0) return;
@@ -900,19 +908,17 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 
     QVector<QString> keys;
     icd->imCache.getKeys(keys);
-    for (int i = 0; i < keys.length(); ++i) {
+    for (int i =  - 1; i > -1; --i) {
         if (!filteredList.contains(keys.at(i))) icd->imCache.remove(keys.at(i));
     }
+//    for (int i = 0; i < keys.length(); ++i) {
+//        if (!filteredList.contains(keys.at(i))) icd->imCache.remove(keys.at(i));
+//    }
 
     if (icd->cache.isShowCacheStatus)
         updateStatus("Update all rows", "ImageCache::rebuildImageCacheParameters");
 
-    if (isRunning() && G::isNewFolderLoaded) {
-        mutex.lock();
-        filterOrSortHasChanged = true;
-        pause = false;
-        mutex.unlock();
-    }
+//    setCurrentPosition(currentImageFullPath);
 }
 
 void ImageCache::refreshImageCache()

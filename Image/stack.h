@@ -6,6 +6,7 @@
 #include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
+#include "Metadata/ExifTool.h"
 #include "Effects/effects.h"
 #include "Image/pixmap.h"
 #include "Cache/cachedata.h"
@@ -18,7 +19,7 @@ public:
           DataModel *dm,
           Metadata *metadata,
           ImageCacheData *icd);
-    void mean();
+    QString mean();
     void stop();
 
 private:

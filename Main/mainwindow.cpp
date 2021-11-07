@@ -3704,7 +3704,7 @@ void MW::createMenus()
     utilitiesMenu = editMenu->addMenu("Utilities");
     utilitiesMenu->addAction(addThumbnailsAction);
     utilitiesMenu->addAction(reportHueCountAction);
-    utilitiesMenu->addAction(meanStackAction);
+//    utilitiesMenu->addAction(meanStackAction);
     editMenu->addSeparator();
     editMenu->addAction(prefAction);       // Appears in Winnow menu in OSX
 //    editMenu->addAction(oldPrefAction);
@@ -6439,8 +6439,6 @@ void MW::toggleSortDirection(Tog n)
         sortReverseAction->setChecked(false);
         reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
     }
-//    sortChange(__FUNCTION__);
-//    if (G::isNewFolderLoaded || sortDirectionChanged) sortChange(__FUNCTION__);
 }
 
 void MW::toggleColorManageClick()
@@ -6735,7 +6733,8 @@ void MW::invokeWorkspace(const workspaceData &w)
     gridView->rejustify();
     thumbView->setThumbParameters();
     gridView->setThumbParameters();
-    G::colorManage = w.isColorManage;
+    if (w.isColorManage) toggleColorManage(Tog::on);
+    else toggleColorManage(Tog::off);
     cacheSizeMethod = w.cacheSizeMethod;
     sortColumn = w.sortColumn;
     updateSortColumn(sortColumn);
@@ -7211,7 +7210,7 @@ QString MW::diagnostics()
     rpt << "\n" << "hasGridBeenActivated = " << G::s(hasGridBeenActivated);
     rpt << "\n" << "isLeftMouseBtnPressed = " << G::s(isLeftMouseBtnPressed);
     rpt << "\n" << "isMouseDrag = " << G::s(isMouseDrag);
-    rpt << "\n" << "timeToQuit = " << G::s(timeToQuit);
+//    rpt << "\n" << "timeToQuit = " << G::s(timeToQuit);
     rpt << "\n" << "sortMenuUpdateToMatchTable = " << G::s(sortMenuUpdateToMatchTable);
     rpt << "\n" << "imageCacheFilePath = " << G::s(imageCacheFilePath);
     rpt << "\n" << "newScrollSignal = " << G::s(newScrollSignal);
@@ -10403,6 +10402,13 @@ void MW::setCachedStatus(QString fPath, bool isCached)
         thumbView->refreshThumb(idx, G::CachedRole);
         gridView->refreshThumb(idx, G::CachedRole);
     }
+
+//    // check for orphan cached outside target range
+//    if (targetStart >= dm->sf->rowCount()) return;
+//    for (int row = 0; row < targetStart; ++row) {
+//        QModelIndex idx = dm->sf->index(row, 0);
+
+//    }
     return;
 }
 
@@ -11438,7 +11444,7 @@ void MW::deleteFiles()
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     if (selection.isEmpty()) return;
 
-    /* set the currentIndex to the first row in selection (order depends on how selection was
+    /* save the index to the first row in selection (order depends on how selection was
        made) to insure the correct index is selected after deletion.  */
     int lowRow = 999999;
     for (int i = 0; i < selection.count(); ++i) {
@@ -11491,6 +11497,7 @@ void MW::deleteFiles()
     imageCacheThread->updateStatus("Update all rows", __FUNCTION__);
 
     // update current index
+    if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
     thumbView->setCurrentIndex(sfIdx);
     fileSelectionChange(sfIdx, sfIdx);
@@ -11803,7 +11810,17 @@ void MW::generateMeanStack()
     if (!getSelection(selection)) return;
     meanStack = new Stack(selection, dm, metadata, icd);
     connect(this, &MW::abortStackOperation, meanStack, &Stack::stop);
-    meanStack->mean();
+    QString fPath = meanStack->mean();
+    if (fPath != "") {
+        dm->insert(fPath);
+        imageCacheThread->rebuildImageCacheParameters(fPath, __FUNCTION__);
+        if (G::mode == "Grid") {
+            gridView->selectThumb(fPath);
+        }
+        else {
+            thumbView->selectThumb(fPath);
+        }
+    }
 }
 
 void MW::reportHueCount()
@@ -11887,66 +11904,19 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    return;
+    // copy metadata from first image to the new stacked image
+    QString src = "E:/2021/202110/2021-10-08_Stephanson Point/2021-10-08_0142.arw";
+    QString dst = "E:/2021/202110/2021-10-08_Stephanson Point/2021-10-08_0142_MeanStack3.jpg";
+    qDebug() << __FUNCTION__ << src << dst;
+    ExifTool et;
+    et.overwrite();
+    // copy all metadata tags from src to dst
+    et.copyAllTags(src, dst);
+    // copy ICC from src to dst
+    et.copyICC(src, dst);
+    // add thumbnail to dst
+    et.addThumb(src, dst);
+    et.close();
 
-//    QList<QTabBar*> tabList = findChildren<QTabBar*>();
-//    qDebug() << __FUNCTION__ << tabList.at(0)->tabText(0);
-//    return;
-//    QTabBar* widgetTabBar = tabList.at(0);
-//    int idx = widgetTabBar->currentIndex();
-//    qDebug() << __FUNCTION__ << tabList.count() << widgetTabBar->count();
-//    for (int i = 0; i < widgetTabBar->count(); i++) {
-//        qDebug() << i << idx
-//                 << widgetTabBar->tabText(i);
-//    }
-//    return;
-//    folderDockVisibleAction->setChecked(true);
-//    Jpeg jpg;
-//    QString fPath = "D:/Pictures/_Jpg/test.jpg";
-//    QImage image;
-//    MetadataParameters p;
-//    p.file.setFileName(fPath);
-//    if (p.file.open(QIODevice::ReadOnly)) {
-//        bool isBigEnd = true;
-//        if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-//            G::error(__FUNCTION__, fPath, "JPG does not start with 0xFFD8.");
-//            p.file.close();
-//            return;
-//        }
-//        p.offset = static_cast<quint32>(p.file.pos());
-//        ImageMetadata m;
-//        jpg.getJpgSegments(p, m);
-//        p.file.seek(0);
-//        QByteArray ba = p.file.readAll();
-//        p.file.close();
-//        jpg.decodeScan(ba, image);
-//        imageView->pmItem->setPixmap(QPixmap::fromImage(image));
-//    }
-
-//    qDebug() << __FUNCTION__ << "Total cached images =" << icd->imCache.count();
-//    stressTest(125);
-//    qDebug() << __PRETTY_FUNCTION__;
-//    SelectionOrPicksDlg::Option option;
-//    SelectionOrPicksDlg dlg(option);
-//    dlg.exec();
-//    qDebug() << __FUNCTION__ << option;
-//    if (option == SelectionOrPicksDlg::Option::Cancel) qDebug() << __FUNCTION__ << "Cancel";
-
-//    qDebug() << __FUNCTION__ << "use decodeScan";
-//    QString jpgfile  = "/Users/roryhill/Pictures/_JPG/base.jpg";
-//    QFile f(jpgfile);
-//    f.open(QIODevice::ReadOnly);
-//    QImage image;
-//    Jpeg jpg;
-//    jpg.decodeScan(f, image);
-//    image.convertTo(QImage::Format_RGB888);
-//    uchar* v = image.scanLine(0);
-//    int n = 0;
-//    for (unsigned long i = 0; i < 100; i++) {
-//        int x = (0xff & *v++);
-//        std::cout << std::hex << std::uppercase << std::setw(2) << x << " ";
-//        if (++n % 25 == 0) std::cout << " " << std::dec << n + (int)0 << '\n';
-//    }
-//    std::cout << '\n';
 }
 // End MW

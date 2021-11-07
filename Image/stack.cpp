@@ -26,11 +26,12 @@ void Stack::stop()
     qApp->processEvents();
 }
 
-void Stack::mean()
+QString Stack::mean()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     abort = false;
     G::isRunningStackOperation = true;
+    QString dst = "";
 
     int row = dm->rowFromPath(selection.at(0));
     int w = dm->index(row, G::WidthColumn).data().toInt();
@@ -44,7 +45,7 @@ void Stack::mean()
         int thisH = dm->index(row, G::HeightColumn).data().toInt();
         if (thisW == w && thisH == h) n++;
     }
-    if (n < 2) return;
+    if (n < 2) return dst;
 
     QImage image;
     Pixmap *pix = new Pixmap(this, dm, metadata);
@@ -67,7 +68,7 @@ void Stack::mean()
 
     G::popUp->setProgressVisible(true);
     G::popUp->setProgressMax(n + 1);
-    QString txt = "Crunching the mean (" + QString::number(n) + " images)." +
+    QString txt = "Generating the average from " + QString::number(n) + " images." +
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
     G::popUp->showPopup(txt, 0, true, 1);
 
@@ -149,12 +150,25 @@ void Stack::mean()
             else fileAlreadyExists = false;
         } while (fileAlreadyExists);
         image.save(newFilePath, "JPG", 100);
+
+        // copy metadata from first image to the new stacked image
+        QString src = selection.at(0);
+        dst = newFilePath;
+        qDebug() << __FUNCTION__ << src << dst;
+        ExifTool et;
+        et.overwrite();
+        // copy all metadata tags from src to dst
+        et.copyAllTags(src, dst);
+        // copy ICC from src to dst
+        et.copyICC(src, dst);
+        // add thumbnail to dst
+        et.addThumb(src, dst);
+        et.close();
+
+        G::popUp->setProgressVisible(false);
+        G::popUp->hide();
     }
 
     delete pix;
-//    abort = false;
-//    G::isRunningMeanStack = false;
-
-//    G::popUp->setProgressVisible(false);
-//    G::popUp->hide();
+    return dst;
 }

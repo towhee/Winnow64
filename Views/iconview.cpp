@@ -646,9 +646,10 @@ bool IconView::isPick()
 
 QFileInfoList IconView::getPicks()
 {
-/* Returns a list of all the files that have been picked.  It is used in
-MW, passing the list on to the ingestDlg for ingestion/copying to another
-folder.
+/*
+    Returns a list of all the files that have been picked.  It is used in
+    MW, passing the list on to the ingestDlg for ingestion/copying to another
+    folder.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     QFileInfoList fileInfoList;
