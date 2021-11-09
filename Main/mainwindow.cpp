@@ -489,22 +489,33 @@ void MW::showEvent(QShowEvent *event)
 
     if (isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
+//        /*
+        // run restoreGeometry second time if display has been scaled
+        if (G::actDevicePixelRatio > 1.0)
+            restoreGeometry(setting->value("Geometry").toByteArray());
+        //*/
+        /*
         #ifdef Q_OS_WIN
         // correct for highdpi
-        double dpiFactor = 1.0 / G::actDevicePixelRatio;
-        resize(width() * dpiFactor, height() * dpiFactor);
+//        double dpiFactor = 1.0 / G::actDevicePixelRatio;
+//        resize(width() * dpiFactor, height() * dpiFactor);
+//        resize(width() * G::actDevicePixelRatio, height() * G::actDevicePixelRatio);
         #endif
+        //*/
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
+        /*
         // do not start with filterDock open
 //        if (filterDock->isVisible()) {
 //            folderDock->raise();
 //            folderDockVisibleAction->setChecked(true);
 //        }
-
+        //*/
         updateState();
+        /*
         // if embel dock visible then set mode to embelView
-        embelDockVisibilityChange();    // rgh not being used
+//        embelDockVisibilityChange();    // rgh not being used
+        //*/
     }
     else {
         defaultWorkspace();
@@ -3704,7 +3715,7 @@ void MW::createMenus()
     utilitiesMenu = editMenu->addMenu("Utilities");
     utilitiesMenu->addAction(addThumbnailsAction);
     utilitiesMenu->addAction(reportHueCountAction);
-//    utilitiesMenu->addAction(meanStackAction);
+    utilitiesMenu->addAction(meanStackAction);
     editMenu->addSeparator();
     editMenu->addAction(prefAction);       // Appears in Winnow menu in OSX
 //    editMenu->addAction(oldPrefAction);
@@ -10402,13 +10413,6 @@ void MW::setCachedStatus(QString fPath, bool isCached)
         thumbView->refreshThumb(idx, G::CachedRole);
         gridView->refreshThumb(idx, G::CachedRole);
     }
-
-//    // check for orphan cached outside target range
-//    if (targetStart >= dm->sf->rowCount()) return;
-//    for (int row = 0; row < targetStart; ++row) {
-//        QModelIndex idx = dm->sf->index(row, 0);
-
-//    }
     return;
 }
 

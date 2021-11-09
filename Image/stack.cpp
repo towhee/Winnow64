@@ -76,8 +76,12 @@ QString Stack::mean()
     for (int i = 0; i < n; ++i) {
         if (abort) break;
         QString fPath = selection.at(i);
-        if (icd->imCache.contains(fPath)) icd->imCache.find(fPath, image);
-        else pix->load(fPath, image, "Stack::doMean");
+        if (icd->imCache.contains(fPath)) {
+            icd->imCache.find(fPath, image);
+        }
+        else {
+            pix->load(fPath, image, "Stack::doMean");
+        }
         // get image width/height from QImage - might be different than metadata for raw
         if (i == 0) {
             w = image.width();
@@ -154,7 +158,6 @@ QString Stack::mean()
         // copy metadata from first image to the new stacked image
         QString src = selection.at(0);
         dst = newFilePath;
-        qDebug() << __FUNCTION__ << src << dst;
         ExifTool et;
         et.overwrite();
         // copy all metadata tags from src to dst
@@ -163,7 +166,8 @@ QString Stack::mean()
         et.copyICC(src, dst);
         // add thumbnail to dst
         et.addThumb(src, dst);
-        et.close();
+        QVariant ret = et.close();
+        qDebug() << __FUNCTION__ << "et exit code =" << ret;
 
         G::popUp->setProgressVisible(false);
         G::popUp->hide();

@@ -49,7 +49,7 @@ void ExifTool::copyAllTags(QString src, QString dst)
     if (isOverWrite) args += "-overwrite_original\n";
     args += dst.toUtf8() + "\n";
     args += "-execute\n";
-    process.write(args);
+    process.write(args);    
 }
 
 void ExifTool::copyICC(QString src, QString dst)

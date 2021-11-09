@@ -1,4 +1,6 @@
 BUGS / TO DO
+- On mac crash when open on Pius macs
+- Zoom dialog on top of other windows trap focus event?)
 - Sort taking time when loading folder and sort is file
 - MW::enableSelectionDependentMenus needs updating for all situations
 - Filters not working sometimes (ie no days)
@@ -52,6 +54,8 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Winow size and location when open and display at 150% is wrong
+- Release 1.30
 - Cache was not updating in priority order
 - Menu color manage not updating when change workspace
 - Delete all images in folder crashes
