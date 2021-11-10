@@ -253,10 +253,17 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     // Check if modifier key pressed while program opening
     isShift = false;
-    if (QGuiApplication::queryKeyboardModifiers()) {
+    Qt::KeyboardModifiers modifier = QGuiApplication::queryKeyboardModifiers();
+    if (modifier & Qt::ShiftModifier) {
         isShift = true;
         G::isEmbellish = false;
         qDebug() << __FUNCTION__ << "isShift == true";
+    }
+    if (modifier & Qt::ControlModifier) {
+        G::isLogger = true;
+        G::sendLogToConsole = false;  // write to winlog.txt
+//        openLog();
+        qDebug() << __FUNCTION__ << "command modifier";
     }
 
     // check args to see if program was started by another process (winnet)
@@ -295,11 +302,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
     setting->setValue("appPath", qApp->applicationDirPath());
 
-    // Logger
+//    // Logger
     if (G::isLogger && G::sendLogToConsole == false) openLog();
 
-    // Error Logger
-    openErrLog();
+//    // Error Logger
+//    openErrLog();
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
@@ -8147,6 +8154,7 @@ void MW::openLog()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
+    qDebug() << __FUNCTION__ << path;
     QDir dir(path);
     if (!dir.exists()) dir.mkdir(path);
     if (G::logFile.isOpen()) G::logFile.close();
