@@ -259,12 +259,12 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         G::isEmbellish = false;
         qDebug() << __FUNCTION__ << "isShift == true";
     }
-    if (modifier & Qt::ControlModifier) {
-        G::isLogger = true;
-        G::sendLogToConsole = false;  // write to winlog.txt
-//        openLog();
-        qDebug() << __FUNCTION__ << "command modifier";
-    }
+//    if (modifier & Qt::ControlModifier) {
+//        G::isLogger = true;
+//        G::sendLogToConsole = false;  // write to winlog.txt
+////        openLog();
+//        qDebug() << __FUNCTION__ << "command modifier";
+//    }
 
     // check args to see if program was started by another process (winnet)
     QString delimiter = "\n";
@@ -303,7 +303,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     setting->setValue("appPath", qApp->applicationDirPath());
 
 //    // Logger
-    if (G::isLogger && G::sendLogToConsole == false) openLog();
+//    if (G::isLogger && G::sendLogToConsole == false) openLog();
 
 //    // Error Logger
 //    openErrLog();
