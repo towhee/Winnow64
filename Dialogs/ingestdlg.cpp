@@ -374,12 +374,13 @@ void IngestDlg::ingest()
     t.restart();
     for (int i = 0; i < pickList.size(); ++i) {
         qint64 fileBytesToWrite = 0;
-//        int progress = (i + 1) * 100 * n / (pickList.size() + 1);
         int progress = (i + 1) * 100 * n / (pickList.size());
-//        qDebug() << __FUNCTION__
-//                 << "progress =" << progress
-//                 << "ui->progressBar->minimum() = " << ui->progressBar->minimum()
-//                 << "ui->progressBar->maximum() = " << ui->progressBar->maximum();
+        /*
+        qDebug() << __FUNCTION__
+                 << "progress =" << progress
+                 << "ui->progressBar->minimum() = " << ui->progressBar->minimum()
+                 << "ui->progressBar->maximum() = " << ui->progressBar->maximum();
+        //*/
         ui->progressBar->setValue(progress);
         qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
@@ -398,8 +399,8 @@ void IngestDlg::ingest()
         QString destFileName = destBaseName + dotSuffix;
         QString sidecarName = destBaseName + ".xmp";
 
-        // buffer to hold file with edited xmp data
-        QByteArray buffer;
+        // buffer to hold xmp data
+//        QByteArray buffer;
 
         // check if image already exists at destination folder
         QString destinationPath = folderPath + destFileName;
@@ -467,24 +468,26 @@ void IngestDlg::ingest()
         }
 
         // write the sidecar xmp file
-        ImageMetadata m = dm->imMetadata(metadataChangedSourcePath);
+        /*ImageMetadata m = */dm->imMetadata(metadataChangedSourcePath);
         bool okToWriteSidecar = ingestIncludeXmpSidecar &&
-                                copyOk &&
-                                metadata->writeMetadata(sourcePath, m, buffer);
+                                copyOk/* &&
+                                metadata->writeXMP(sourcePath)*/;
         if (okToWriteSidecar) {
-            QFile sidecarFile(sidecarPath);
-            fileBytesToWrite += sidecarFile.size();
-            sidecarFile.open(QIODevice::WriteOnly);
-            qint64 bytesWritten = sidecarFile.write(buffer);
-            if (bytesWritten == 0) failedToCopy << sidecarPath;
-            sidecarFile.close();
-            if (isBackup) {
-                QFile sidecarFile(sidecarBackupPath);
-                fileBytesToWrite += sidecarFile.size();
-                sidecarFile.open(QIODevice::WriteOnly);
-                qint64 bytesWritten = sidecarFile.write(buffer);
-                if (bytesWritten == 0) failedToCopy << sidecarBackupPath;
-                sidecarFile.close();
+            bool sidecarOk = metadata->writeXMP(sidecarPath);
+//            QFile sidecarFile(sidecarPath);
+//            fileBytesToWrite += sidecarFile.size();
+//            sidecarFile.open(QIODevice::WriteOnly);
+//            qint64 bytesWritten = sidecarFile.write(buffer);
+//            if (bytesWritten == 0) failedToCopy << sidecarPath;
+//            sidecarFile.close();
+            if (isBackup && sidecarOk) {
+                bool backupSidecarCopyOk = QFile::copy(sidecarPath, sidecarBackupPath);
+//                QFile sidecarBackupFile(sidecarBackupPath);
+//                fileBytesToWrite += sidecarBackupFile.size();
+//                sidecarBackupFile.open(QIODevice::WriteOnly);
+//                qint64 bytesWritten = sidecarBackupFile.write(buffer);
+//                if (bytesWritten == 0) failedToCopy << sidecarBackupPath;
+//                sidecarBackupFile.close();
             }
         }
         // write to internal xmp (future enhancement?)
@@ -524,7 +527,6 @@ void IngestDlg::ingest()
         IngestErrors ingestErrors(failedToCopy, integrityFailure);
         ingestErrors.exec();
     }
-
 
     QDialog::accept();
 }

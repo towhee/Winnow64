@@ -1,10 +1,9 @@
 #include "xmp.h"
 
 /*
-Xmp reads and writes xmp tags to a QByteArray buffer.  The buffer is read from
-the image file, based on supplied ofsets.  If there is no xmp data in the image
-file or the file format is not documented then the xmp tags are written to a
-sidecar buffer.
+Xmp reads and writes xmp tags to a QByteArray buffer. The buffer is read from the image file,
+based on supplied offsets. If there is no xmp data in the image file or the file format is not
+documented then the xmp tags are written to a sidecar buffer.
 
 Example sidecar file that lightroom successfully reads:
 
@@ -30,10 +29,15 @@ Example sidecar file that lightroom successfully reads:
 </x:xmpmeta>
 */
 
-Xmp::Xmp(QFile &file, uint &offset, uint &nextOffset, bool useSidecar,
+Xmp::Xmp(QFile &file,
+         uint &offset,
+         uint &nextOffset,
+//         const ImageMetadata m,
+         bool useSidecar,
          QObject *parent) :  QObject(parent)
 {
-    // no file xmp data, use the sidecar skeleton
+    if (G::isLogger) G::log(__FUNCTION__);
+    // if use sidecar, use the sidecar skeleton
     if (useSidecar) {
         xmpBa = sidecarSkeleton;
         xmpmetaStart = 0;
@@ -53,7 +57,10 @@ Xmp::Xmp(QFile &file, uint &offset, uint &nextOffset, bool useSidecar,
         xmpBa = xmpBa.mid(xmpmetaStart, xmpmetaLength);
     }
     QFileInfo info(file);
-    fileType.append(info.suffix().toUpper().toLatin1());
+    folderPath = info.absoluteDir().path();
+    baseName = info.baseName();
+    extension = info.suffix().toUpper();
+    fileType.append(extension.toLatin1());
     xmpSchemaList << "Rating" << "Label" << "ModifyDate" << "CreateDate";
     dcSchemaList << "title" << "rights" << "creator";
     auxSchemaList << "Lens" << "LensSerialNumber" << "SerialNumber";
@@ -61,7 +68,6 @@ Xmp::Xmp(QFile &file, uint &offset, uint &nextOffset, bool useSidecar,
 
     schemaHash["Rating"] = "xmp";                   // read/write
     schemaHash["Label"] = "xmp";                    // read/write
-    schemaHash["ModifyDate"] = "xmp";               // write only
     schemaHash["CreateDate"] = "xmp";               // read only
     schemaHash["ModifyDate"] = "xmp";               // write only
     schemaHash["title"] = "dc";                     // read/write
@@ -77,6 +83,7 @@ Xmp::Xmp(QFile &file, uint &offset, uint &nextOffset, bool useSidecar,
 
 void Xmp::insertSchemas(QByteArray &item)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QByteArray schema = schemaHash[item];
     QByteArray search = schema;
     search.prepend("xmlns:");
@@ -96,6 +103,7 @@ void Xmp::insertSchemas(QByteArray &item)
 
 int Xmp::schemaInsertPos(QByteArray schema)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     int pos;
     int schemaStart;
     assignmentMethod = "";
@@ -146,6 +154,7 @@ int Xmp::schemaInsertPos(QByteArray schema)
 
 bool Xmp::writeJPG(QByteArray &buffer)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     if (xmpBa.length() < xmpmetaRoom) {
         buffer.replace(xmpmetaOffset, xmpBa.length(), xmpBa);
     }
@@ -158,7 +167,19 @@ bool Xmp::writeJPG(QByteArray &buffer)
 
 bool Xmp::writeSidecar(QByteArray &buffer)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     buffer = xmpBa;
+    if (extension.toLower() == "xmp") {
+
+    }
+    else {}
+    QString sidecarPath = folderPath + "/" + baseName + ".xmp";
+    QFile sidecarFile(sidecarPath);
+    qint64 fileBytesToWrite = sidecarFile.size();
+    sidecarFile.open(QIODevice::WriteOnly);
+    qint64 bytesWritten = sidecarFile.write(buffer);
+//    if (bytesWritten == 0) failedToCopy << sidecarPath;
+    sidecarFile.close();
 
 //    qDebug() << G::t.restart() << "\t" << "Xmp::writeSidecar: " << buffer;
 
@@ -167,26 +188,28 @@ bool Xmp::writeSidecar(QByteArray &buffer)
 
 QString Xmp::metaAsString()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     return QTextCodec::codecForMib(106)->toUnicode(xmpBa);
 }
 
 QString Xmp::getItem(QByteArray item)
 {
 /*
-items: Rating, Label, title ...
-item case is important: title is legal, Title is illegal
+    items: Rating, Label, title ...
+    item case is important: title is legal, Title is illegal
 
-schemas: xmp, dc, aux ...
+    schemas: xmp, dc, aux ...
 
-xmp schema can have two formats:
-    xmp:Rating="2"                  // from LR, Photoshop
-    <xmp:Rating>0</xmp:Rating>      // from camera
+    xmp schema can have two formats:
+        xmp:Rating="2"                  // from LR, Photoshop
+        <xmp:Rating>0</xmp:Rating>      // from camera
 
-dc schema:
-    <dc:title> <rdf:Alt> <rdf:li xml:lang="x-default">Cormorant in California</rdf:li> </rdf:Alt> </dc:title>
+    dc schema:
+        <dc:title> <rdf:Alt> <rdf:li xml:lang="x-default">Cormorant in California</rdf:li> </rdf:Alt> </dc:title>
 
-xmp:ModifyDate="2017-12-21T16:51:02-08:00"
+    xmp:ModifyDate="2017-12-21T16:51:02-08:00"
 */
+    if (G::isLogger) G::log(__FUNCTION__);
     int startPos;
     QByteArray searchItem;
     QByteArray schema = schemaHash[item];
@@ -244,16 +267,18 @@ xmp:ModifyDate="2017-12-21T16:51:02-08:00"
 bool Xmp::setItem(QByteArray item, QByteArray value)
 {
 /*
-items: Rating, Label, title, Orientation ...
-item case is important: title is legal, Title is illegal
+    items: Rating, Label, title, Orientation ...
+    item case is important: title is legal, Title is illegal
 
-xmp schema can have two formats:
-    xmp:Rating="2"                  // from LR, Photoshop
-    <xmp:Rating>0</xmp:Rating>      // from camera
+    xmp schema can have two formats:
+        xmp:Rating="2"                  // from LR, Photoshop
+        <xmp:Rating>0</xmp:Rating>      // from camera
 
-dc schema for title:
-    <dc:title> <rdf:Alt> <rdf:li xml:lang="x-default">Cormorant in California</rdf:li> </rdf:Alt> </dc:title>
+    dc schema for title:
+        <dc:title> <rdf:Alt> <rdf:li xml:lang="x-default">Cormorant in California</rdf:li> </rdf:Alt> </dc:title>
 */
+    if (G::isLogger) G::log(__FUNCTION__);
+
     // ie schema = "Rating"
     QByteArray schema = schemaHash[item];
 
@@ -265,10 +290,11 @@ dc schema for title:
     // make sure schema exists in xmp
     insertSchemas(item);
 
-//    qDebug() << G::t.restart() << "\t" << "Xmp::setItem  item =" << item
-//             << "schema =" << schema
-//             << "tag =" << tag;
+    qDebug() << G::t.restart() << "\t" << "Xmp::setItem  item =" << item
+             << "schema =" << schema
+             << "tag =" << tag;
 
+    // search for item in case it already exists in xmp side car file
     int startPos = xmpBa.indexOf(tag, xmpmetaStart);
 
     // does item exist already
@@ -307,7 +333,7 @@ dc schema for title:
                 xmpBa.insert(startPos, newItem);
             }
         }
-        if (item == "title" || item == "rights") {
+        if (item == "title" || item == "rights" /*|| item == "Rating" || item == "Label"*/) {
             // ie <dc:title><rdf:Alt><rdf:li xml:lang="x-default">This is the title</rdf:li></rdf:Alt></dc:title>
             newItem.append("\n\t\t\t<");
             newItem.append(tag);
@@ -409,6 +435,7 @@ dc schema for title:
 
 void Xmp::report()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
 
     QXmlQuery query;
     query.setQuery(metaAsString());
@@ -434,19 +461,20 @@ void Xmp::report()
 
 QString Xmp::diagnostics()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
-    rpt << Utilities::centeredRptHdr('=', "ImageView Diagnostics");
+    rpt << Utilities::centeredRptHdr('=', "XMP Diagnostics");
     rpt << "\n";
-//    rpt << "\n" << "xmpSegmentOffset = " << G::s(xmpSegmentOffset);
-//    rpt << "\n" << "xmpmetaOffset = " << G::s(xmpmetaOffset);
-//    rpt << "\n" << "xmpLength = " << G::s(xmpLength);
-//    rpt << "\n" << "xmpmetaStart = " << G::s(xmpmetaStart);
-//    rpt << "\n" << "xmpmetaEnd = " << G::s(xmpmetaEnd);
-//    rpt << "\n" << "xmpPacketEnd = " << G::s(xmpPacketEnd);
-//    rpt << "\n" << "xmpmetaRoom = " << G::s(xmpmetaRoom);
-//    rpt << "\n" << "assignmentMethod = " << G::s(assignmentMethod);
+    rpt << "\n" << "xmpSegmentOffset = " << G::s((qulonglong)xmpSegmentOffset);
+    rpt << "\n" << "xmpmetaOffset = " << G::s((qulonglong)xmpmetaOffset);
+    rpt << "\n" << "xmpLength = " << G::s((qulonglong)xmpLength);
+    rpt << "\n" << "xmpmetaStart = " << G::s((qulonglong)xmpmetaStart);
+    rpt << "\n" << "xmpmetaEnd = " << G::s((qulonglong)xmpmetaEnd);
+    rpt << "\n" << "xmpPacketEnd = " << G::s((qulonglong)xmpPacketEnd);
+    rpt << "\n" << "xmpmetaRoom = " << G::s((qulonglong)xmpmetaRoom);
+    rpt << "\n" << "assignmentMethod = " << G::s(assignmentMethod);
     rpt << "\n\n" ;
     return reportString;
 }

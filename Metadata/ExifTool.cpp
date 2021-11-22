@@ -1,5 +1,9 @@
 #include "Metadata/ExifTool.h"
 
+/*
+
+*/
+
 ExifTool::ExifTool()
 {
     exifToolPath = qApp->applicationDirPath() + "/et.exe";
@@ -22,9 +26,9 @@ int ExifTool::execute(QStringList &args)
     return QProcess::execute(exifToolPath, args);
 }
 
-void ExifTool::overwrite()
+void ExifTool::setOverWrite(bool overWrite)
 {
-    isOverWrite = true;
+    isOverWrite = overWrite;
 }
 
 int ExifTool::close()
@@ -64,10 +68,30 @@ void ExifTool::copyICC(QString src, QString dst)
     process.write(args);
 }
 
+// not used
 void ExifTool::writeTitle(QString dst, QString val)
 {
     QByteArray args;
 
+}
+
+// not used as ExifTool can only read results into a file, going to try using my own xmp.setItem
+void ExifTool::readXMP(QString dst, QString tag, QString &val)
+{
+    QByteArray args;
+    args += "-" + tag + "=" + val + "\n";
+    args += dst.toUtf8() + "\n";
+    args += "-execute\n";
+    process.write(args);
+}
+
+void ExifTool::writeXMP(QString dst, QString tag, QString val)
+{
+    QByteArray args;
+    args += "-" + tag + "=" + val + "\n";
+    args += dst.toUtf8() + "\n";
+    args += "-execute\n";
+    process.write(args);
 }
 
 void ExifTool::addThumb(QString src, QString dst)

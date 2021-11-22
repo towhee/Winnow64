@@ -1,5 +1,5 @@
 BUGS / TO DO
-- On mac crash when open on Pius macs
+- Ingest reset last image number if destination folder changes ie go to manual from auto
 - Zoom dialog on top of other windows trap focus event?)
 - Sort taking time when loading folder and sort is file
 - MW::enableSelectionDependentMenus needs updating for all situations
@@ -54,6 +54,8 @@ ENHANCEMENTS
 - Write xmp into eligible files ???
 - Read xmp sidecars when open folder
 DONE/FIXED
+- Release 1.30.1
+- MW::openLog causng cxrash at open Winnow if no settings (first time use)
 - Winow size and location when open and display at 150% is wrong
 - Release 1.30
 - Cache was not updating in priority order

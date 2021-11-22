@@ -6,18 +6,20 @@
 #include <QtWidgets>
 #include <QtXmlPatterns>
 #include "Main/global.h"
+//#include "Metadata/imagemetadata.h"
 #include "Utilities/utilities.h"
 
 class Xmp : public QObject
 {
     Q_OBJECT
 public:
-    Xmp(QFile &file, uint &offset, uint &nextOffset, bool useSidecar = false,
-        QObject *parent = nullptr);
+    Xmp(QFile &file, uint &offset, uint &nextOffset,
+        bool useSidecar = false, QObject *parent = nullptr);
     QString getItem(QByteArray item);
     bool setItem(QByteArray item, QByteArray value);
     QString metaAsString();
     bool writeJPG(QByteArray &buffer);
+    bool readSidecar(QByteArray &buffer);
     bool writeSidecar(QByteArray &buffer);
     QString diagnostics();
 
@@ -38,6 +40,10 @@ private:
     ulong xmpmetaEnd;               // offset from start of xmp segment
     ulong xmpPacketEnd;             // offset from start of xmp segment
     int xmpmetaRoom;                // xmpPacketEnd - xmpmetaStart
+
+    QString folderPath;
+    QString baseName;
+    QString extension;
 
     QString assignmentMethod;       // brackets or equals
     QByteArray fileType;            // uppercase suffix

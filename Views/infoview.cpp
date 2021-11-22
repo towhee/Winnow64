@@ -187,6 +187,12 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex, const QVe
             }
 
             emit dataEdited();
+
+            // write to sidecar
+            if (G::useSidecar) {
+                dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+                metadata->writeXMP(fPath);
+            }
         }
     }
     count++;

@@ -286,7 +286,7 @@ void Thumb::insertThumbnails(QModelIndexList &selection)
     insertingThumbnails = true;
 
     ExifTool et;
-    et.overwrite();
+    et.setOverWrite(true);
     QStringList thumbList;
     for (int i = 0; i < count; ++i) {
         G::popUp->setProgress(i+1);
