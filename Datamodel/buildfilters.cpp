@@ -119,7 +119,6 @@ void BuildFilters::unfilteredItemSearchCount()
 void BuildFilters::updateCountFiltered()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-    qDebug() << __FUNCTION__;
     filters->filtersBuilt = false;
     filters->buildingFilters = true;
     QTreeWidgetItemIterator it(filters);

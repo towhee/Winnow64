@@ -378,13 +378,21 @@ int Metadata::getNewOrientation(int orientation, int rotation)
     return orientationFromDegrees[degrees];
 }
 
-bool Metadata::writeMetadata(const QString &fPath, ImageMetadata m, QByteArray &buffer)
+bool Metadata::writeXMP(const QString &fPath)
 {
 /*
-    Called from ingest (Ingestdlg). If it is a supported image type a copy of the image file
-    is made and any metadata changes are updated in buffer. If it is a raw file in the
-    sidecarFormats hash then the xmp data for existing and changed metadata is written to
-    buffer and the original image file is copied unchanged.
+    Called from ingest (Ingestdlg).
+
+    fPath: the absolute path of the file to receive the xmp metadata
+    buffer: byte array containing the xmp data
+
+    m: the current state of the metadata for fPath MUST BE UPDATED BEFORE CALLING with
+       dm->imMetadata(fPath); because dm not available from Metadata.
+
+    If it is a supported image type a copy of the image file is made and any metadata changes
+    are updated in buffer. If it is a raw file in the sidecarFormats hash then the xmp data
+    for existing and changed metadata is written to buffer and the original image file is
+    copied unchanged.
 */
     if (G::isLogger) G::log(__FUNCTION__);
     // is xmp supported for this file
@@ -395,7 +403,9 @@ bool Metadata::writeMetadata(const QString &fPath, ImageMetadata m, QByteArray &
         return false;
     }
 
-    bool useSidecar = sidecarFormats.contains(suffix);
+    // write to a sidecar file for all formats for now.  May write inside source image in the future
+    bool useSidecar = true;
+//    useSidecar = sidecarFormats.contains(suffix);
 
     // new orientation
     int newOrientation = getNewOrientation(m.orientation, m.rotationDegrees);
@@ -452,6 +462,7 @@ bool Metadata::writeMetadata(const QString &fPath, ImageMetadata m, QByteArray &
     xmp.setItem("ModifyDate", modifyDate.toLatin1());
 
     // get the buffer to write to a new p.file
+    QByteArray buffer;
     if (suffix == "jpg") {
         p.file.seek(0);
         buffer = p.file.readAll();
@@ -637,6 +648,45 @@ bool Metadata::parseHEIF()
 #endif
 }
 
+bool Metadata::parseSidecar()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QFileInfo info(p.file);
+    QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
+    QFile sidecarFile(sidecarPath);
+
+    // no sidecar file
+    if (!sidecarFile.exists()) {
+        return false;
+    }
+    sidecarFile.open(QIODevice::ReadOnly);
+
+    // parse sidecar
+    uint start = 0;
+    uint end = (uint)sidecarFile.size() - 1;
+    Xmp xmp(sidecarFile, start, end);
+    QString s;
+    s = xmp.getItem("Rating");
+    if (s != "")  m.rating = s;
+    s = xmp.getItem("Label");
+    if (s != "")  m.label = s;
+    s = xmp.getItem("title");
+    if (s != "")  m.title = s;
+    s = xmp.getItem("rights");
+    if (s != "")  m.copyright = s;
+    s = xmp.getItem("creator");
+    if (s != "")  m.creator = s;
+    s = xmp.getItem("CiEmailWork");
+    if (s != "")  m.email = s;
+    s = xmp.getItem("CiUrlWork");
+    if (s != "")  m.url = s;
+    s = xmp.getItem("Orientation");
+    if (s != "")  m.orientation = s.toInt();
+
+    sidecarFile.close();
+    return true;
+}
+
 void Metadata::clearMetadata()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
@@ -777,6 +827,9 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
             qDebug() << __FUNCTION__ << m.err;
             return false;
         }
+        else {
+            if (G::useSidecar) parseSidecar();
+        }
     }
     else {
         if (p.file.isOpen()) p.file.close();
@@ -867,21 +920,22 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     return m.metadataLoaded;
 }
 
-bool Metadata::writeMetadata(QStringList &paths, const QString tag, const QString tagValue)
-{
-    if (G::isLogger) G::log(__FUNCTION__, tag);
-    QString tagName;
-    if (tag == "Title") tagName = "XMP-dc:Title";
-    if (tag == "Creator") tagName = "XMP-dc:creator";
-    if (tag == "Copyright") tagName = "";
-    if (tag == "Email") tagName = "";
-    if (tag == "Url") tagName = "";
-    ExifTool et;
-    et.overwrite();
-    for (int i = 0; i < paths.length(); ++i) {
+// duplicate function - do we need this??
+//bool Metadata::writeXMP(QStringList &paths, const QString tag, const QString tagValue)
+//{
+//    if (G::isLogger) G::log(__FUNCTION__, tag);
+//    QString tagName;
+//    if (tag == "Title") tagName = "XMP-dc:Title";
+//    if (tag == "Creator") tagName = "XMP-dc:creator";
+//    if (tag == "Copyright") tagName = "";
+//    if (tag == "Email") tagName = "";
+//    if (tag == "Url") tagName = "";
+//    ExifTool et;
+//    et.setOverWrite(true);
+//    for (int i = 0; i < paths.length(); ++i) {
 
-    }
-    return true;
-}
+//    }
+//    return true;
+//}
 
 // End Metadata

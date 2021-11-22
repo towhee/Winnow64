@@ -69,6 +69,7 @@ namespace G
     bool isRunningStackOperation;
     bool isEmbellish;
     bool colorManage;
+    bool useSidecar;
     bool embedTifThumb;
 
     // ingest

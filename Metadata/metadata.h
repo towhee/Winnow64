@@ -42,10 +42,11 @@ class Metadata : public QObject
 public:
     Metadata(QObject *parent = nullptr);
     bool readMetadata(bool report, const QString &path, QString source);
-    bool writeMetadata(QStringList &paths, const QString tag, const QString tagValue);
+//    bool writeXMP(QStringList &paths, const QString tag, const QString tagValue);
     QString diagnostics(QString fPath);
     void reportMetadata();
     void testNewFileFormat(const QString &path);
+    bool parseSidecar();
 
     /* The ImageMetadata class struct has all the fields that are stored in the
        datamodel.  The various file parse routines populate ImageMetadata.
@@ -99,7 +100,7 @@ public:
     }  */
 
     void clearMetadata();
-    bool writeMetadata(const QString &imageFileName, ImageMetadata m, QByteArray &buffer);
+    bool writeXMP(const QString &imageFileName);
 
     QFile file;
     bool okToReadXmp;
@@ -179,6 +180,7 @@ private:
     bool parsePanasonic();
     bool parseSony();
     bool parseTIF();
+//    bool parseSidecar();
 
 signals:
 

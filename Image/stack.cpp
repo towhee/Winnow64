@@ -159,7 +159,7 @@ QString Stack::mean()
         QString src = selection.at(0);
         dst = newFilePath;
         ExifTool et;
-        et.overwrite();
+        et.setOverWrite(true);
         // copy all metadata tags from src to dst
         et.copyAllTags(src, dst);
         // copy ICC from src to dst

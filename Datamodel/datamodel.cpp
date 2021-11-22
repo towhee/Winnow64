@@ -633,10 +633,17 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
     return true;
 }
 
-ImageMetadata DataModel::imMetadata(QString fPath)
+ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 {
 /*
-    Used by ImageDecoder, InfoString and IngestDlg
+    Returns the struct ImageMetadata ontaining almost all the metadata available for the
+    fPath image for convenient access.  ie rating = m.rating
+
+    If updateInMetadata == true then metadata->m is updated for the fPath.  This is used in
+    metadata->writeXMP, since Metadata does not have direct assess to the DataModel dm.
+    updateInMetadata == false by default.
+
+    Used by ImageDecoder, InfoString, IngestDlg and XMP sidecars.
 */
 //    QMutexLocker locker(&mutex);
     if (G::isLogger) G::log(__FUNCTION__);
@@ -665,7 +672,6 @@ ImageMetadata DataModel::imMetadata(QString fPath)
     else {
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-//            metadata->m.row = row;
             addMetadataForItem(metadata->m);
             success = true;
         }
@@ -737,6 +743,9 @@ ImageMetadata DataModel::imMetadata(QString fPath)
     m.iccSegmentLength = index(row, G::ICCSegmentLengthColumn).data().toUInt();
     m.iccBuf = index(row, G::ICCBufColumn).data().toByteArray();
     m.iccSpace = index(row, G::ICCSegmentOffsetColumn).data().toString();
+
+    if (updateInMetadata) metadata->m = m;
+
     return m;
 }
 

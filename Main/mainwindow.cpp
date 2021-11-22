@@ -6292,7 +6292,7 @@ void MW::sortChange(QString source)
 
     if (G::isInitializing) return;
 
-    //    /*
+        /*
     qDebug() << __FUNCTION__ << "source =" << source
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "G::isInitializing =" << G::isInitializing
@@ -6404,7 +6404,7 @@ void MW::sortChange(QString source)
 void MW::updateSortColumn(int sortColumn)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << "sortColumn =" << sortColumn
              << "prevSortColumn =" << prevSortColumn
@@ -8239,6 +8239,7 @@ void MW::writeSettings()
     setting->setValue("autoAdvance", autoAdvance);
     setting->setValue("turnOffEmbellish", turnOffEmbellish);
     setting->setValue("deleteWarning", deleteWarning);
+    setting->setValue("useSidecar", G::useSidecar);
     setting->setValue("embedTifThumb", G::embedTifThumb);
     setting->setValue("isLogger", G::isLogger);
 
@@ -8586,6 +8587,7 @@ bool MW::loadSettings()
         checkIfUpdate = true;
         lastDir = "";
         deleteWarning = true;
+        G::useSidecar = true;
         G::embedTifThumb = false;
 
         // ingest
@@ -8640,6 +8642,10 @@ bool MW::loadSettings()
         deleteWarning = setting->value("deleteWarning").toBool();
     else
         deleteWarning = true;
+    if (setting->contains("useSidecar"))
+        G::useSidecar = setting->value("useSidecar").toBool();
+    else
+        G::useSidecar = true;
     if (setting->contains("embedTifThumb"))
         G::embedTifThumb = setting->value("embedTifThumb").toBool();
     else
@@ -10528,7 +10534,7 @@ void MW::setRating()
             isAlreadyRating = false;
         }
     }
-    if(isAlreadyRating) rating = "";     // invert the label(s)
+    if (isAlreadyRating) rating = "";     // invert the label(s)
 
     // set the rating in the datamodel
     for (int i = 0; i < selection.count(); ++i) {
@@ -10553,6 +10559,11 @@ void MW::setRating()
                 updateRatingLog(fPath, rating);
             }
         }
+        // write to sidecar
+        if (G::useSidecar) {
+            dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+            metadata->writeXMP(fPath);
+        }
     }
 
     thumbView->refreshThumbs();
@@ -10565,7 +10576,7 @@ void MW::setRating()
     dm->sf->filterChange();
 
     // update filter counts
-    buildFilters->updateCountFiltered();
+    buildFilters->updateCountFiltered();    
 }
 
 int MW::ratingLogCount()
@@ -10619,11 +10630,15 @@ void MW::updateRatingLog(QString fPath, QString rating)
     QString sKey = fPath;
     sKey.replace("/", "🔸");
     if (rating == "") {
+        /*
         qDebug() << __FUNCTION__ << "removing" << sKey;
+        //*/
         setting->remove(sKey);
     }
     else {
+        /*
         qDebug() << __FUNCTION__ << "adding" << sKey;
+        //*/
         setting->setValue(sKey, rating);
     }
     setting->endGroup();
@@ -10689,6 +10704,11 @@ void MW::setColorClass()
                 fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
                 updateColorClassLog(fPath, colorClass);
             }
+        }
+        // write to sidecar
+        if (G::useSidecar) {
+            dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+            metadata->writeXMP(fPath);
         }
     }
 
@@ -11916,12 +11936,33 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qDebug() << __FUNCTION__ << dm->currentFilePath;
+    dm->imMetadata(dm->currentFilePath);          // update metadata->m struct for fPath image
+    metadata->writeXMP(dm->currentFilePath);
+
+
+//    metadata->parseSidecar();
+//    dm->addMetadataForItem(metadata->m);
+
+//    ImageMetadata m = dm->imMetadata(currentViewDirPath);
+//    QByteArray buffer;
+//    metadata->writeMetadata(currentViewDirPath, m, buffer);
+
+//    QString dst = "D:/Pictures/Test/2021-11-01_0001.xmp";
+//    QString tag = "title";
+//    QString val = "Test Title";
+//    ExifTool et;
+//    et.setOverWrite(true);
+//    et.writeXMP(dst, tag, val);
+//    et.close();
+
+    /*
     // copy metadata from first image to the new stacked image
     QString src = "E:/2021/202110/2021-10-08_Stephanson Point/2021-10-08_0142.arw";
     QString dst = "E:/2021/202110/2021-10-08_Stephanson Point/2021-10-08_0142_MeanStack3.jpg";
     qDebug() << __FUNCTION__ << src << dst;
     ExifTool et;
-    et.overwrite();
+    et.setOverWrite(true);
     // copy all metadata tags from src to dst
     et.copyAllTags(src, dst);
     // copy ICC from src to dst
@@ -11929,6 +11970,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     // add thumbnail to dst
     et.addThumb(src, dst);
     et.close();
-
+    */
 }
 // End MW

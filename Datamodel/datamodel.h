@@ -47,7 +47,7 @@ public:
     void clearDataModel();
     bool hasFolderChanged();
     void find(QString text);
-    ImageMetadata imMetadata(QString fPath);
+    ImageMetadata imMetadata(QString fPath, bool updateInMetadata = false);
     void clearPicks();
     void remove(QString fPath);
     void insert(QString fPath);

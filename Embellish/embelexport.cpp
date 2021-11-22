@@ -183,7 +183,7 @@ void EmbelExport::exportImages(const QStringList &srcList)
     exportingEmbellishedImages = true;
 
     ExifTool et;
-    et.overwrite();
+    et.setOverWrite(true);
 //    QStringList dstList;
     for (int i = 0; i < count; i++) {
         G::popUp->setProgress(i+1);

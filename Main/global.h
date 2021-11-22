@@ -199,6 +199,7 @@ namespace G
     extern bool isRunningStackOperation;
     extern bool isEmbellish;
     extern bool colorManage;
+    extern bool useSidecar;
     extern bool embedTifThumb;
 
     extern int ingestCount;
