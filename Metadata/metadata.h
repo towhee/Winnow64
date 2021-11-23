@@ -100,7 +100,7 @@ public:
     }  */
 
     void clearMetadata();
-    bool writeXMP(const QString &imageFileName);
+    bool writeXMP(const QString &imageFileName, QString src = "Undefined");
 
     QFile file;
     bool okToReadXmp;

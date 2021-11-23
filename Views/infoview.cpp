@@ -141,15 +141,25 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex, const QVe
     The signal dataEdited is emitted, which triggers Embel to update the text fields. This
     will only work if Embel::isRemote == false.
 */
+    bool isSidecarChange = G::useSidecar && G::isNewFolderLoadedAndInfoViewUpToDate && !isNewImageDataChange;
     static int count = 0;
     if (count == 0) {
         bool isEditable = ok->itemFromIndex(idx1)->isEditable();
-        if ( isEditable) {
+        if (isEditable) {
             QModelIndexList selection = thumbView->selectionModel()->selectedRows();
             QModelIndex idx0 = ok->index(idx1.row(), 0, idx1.parent());
             QString field = idx0.data().toString();
-//            int row = dm->currentRow;
-            for (int i = 0; i < selection.count(); i++) {
+
+            int n = selection.count();
+            if (isSidecarChange) {
+                G::popUp->setProgressVisible(true);
+                G::popUp->setProgressMax(n + 1);
+                QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
+                              "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+                G::popUp->showPopup(txt, 0, true, 1);
+            }
+
+            for (int i = 0; i < n; i++) {
                 int row = selection.at(i).row();
                 if (field == "Title") {
                     QString s = idx1.data().toString();
@@ -184,19 +194,25 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex, const QVe
                     dm->setData(dm->sf->index(row, G::UrlColumn), s);
                     dm->setData(dm->sf->index(row, G::UrlColumn), s, Qt::ToolTipRole);
                 }
+
+                // write to sidecar
+                if (isSidecarChange) {
+                    dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+                    metadata->writeXMP(fPath, __FUNCTION__);
+                    G::popUp->setProgress(i+1);
+                }
             }
 
             emit dataEdited();
 
-            // write to sidecar
-            if (G::useSidecar) {
-                dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-                metadata->writeXMP(fPath);
-            }
         }
     }
     count++;
     if (count > 1) count = 0;
+    if (isSidecarChange) {
+        G::popUp->setProgressVisible(false);
+        G::popUp->hide();
+    }
 }
 
 void InfoView::refreshLayout()

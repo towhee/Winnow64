@@ -257,10 +257,14 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
 //        m.email = xmp.getItem("CiEmailWork");
 //        m.url = xmp.getItem("CiUrlWork");
 
-//        // save original values so can determine if edited when writing changes
-//        m._title = m.title;
-//        m._rating = m.rating;
-//        m._label = m.label;
+//    // save original values so can determine if edited when writing changes
+//    m._rating = m.rating;
+//    m._label = m.label;
+//    m._title = m.title;
+//    m._creator = m.creator;
+//    m._copyright = m.copyright;
+//    m._email  = m.email ;
+//    m._url = m.url;
 
 //        if (p.report) p.xmpString = xmp.metaAsString();
 //    }
