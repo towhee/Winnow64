@@ -62,8 +62,8 @@ public:
 
     QString _rating = "";                    // original value
     QString _label = "";                     // original value
-    QString _creator = "";                   // original value
     QString _title = "";                     // original value
+    QString _creator = "";                   // original value
     QString _copyright = "";                 // original value
     QString _email = "";                     // original value
     QString _url = "";                       // original value

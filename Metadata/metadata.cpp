@@ -378,7 +378,7 @@ int Metadata::getNewOrientation(int orientation, int rotation)
     return orientationFromDegrees[degrees];
 }
 
-bool Metadata::writeXMP(const QString &fPath)
+bool Metadata::writeXMP(const QString &fPath, QString src)
 {
 /*
     Called from ingest (Ingestdlg).
@@ -395,6 +395,7 @@ bool Metadata::writeXMP(const QString &fPath)
     copied unchanged.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
@@ -659,6 +660,7 @@ bool Metadata::parseSidecar()
     if (!sidecarFile.exists()) {
         return false;
     }
+
     sidecarFile.open(QIODevice::ReadOnly);
 
     // parse sidecar
@@ -666,22 +668,45 @@ bool Metadata::parseSidecar()
     uint end = (uint)sidecarFile.size() - 1;
     Xmp xmp(sidecarFile, start, end);
     QString s;
+    if (xmp.isItem("Rating")) m.rating = xmp.getItem("Rating");
+    if (xmp.isItem("Label")) m.label = xmp.getItem("Rating");
+    if (xmp.isItem("title")) m.title = xmp.getItem("Rating");
+    if (xmp.isItem("rights")) m.copyright = xmp.getItem("rights");
+    if (xmp.isItem("creator")) m.creator = xmp.getItem("creator");
+    if (xmp.isItem("CiEmailWork")) m.email = xmp.getItem("CiEmailWork");
+    if (xmp.isItem("CiUrlWork")) m.url = xmp.getItem("CiUrlWork");
+    /*
+
     s = xmp.getItem("Rating");
-    if (s != "")  m.rating = s;
+    if (s != "x")  m.rating = s;
+
     s = xmp.getItem("Label");
-    if (s != "")  m.label = s;
+    if (s != "x")  m.label = s;
+
     s = xmp.getItem("title");
-    if (s != "")  m.title = s;
+    if (s != "x")  m.title = s;
+
     s = xmp.getItem("rights");
-    if (s != "")  m.copyright = s;
+    if (s != "x")  m.copyright = s;
+
     s = xmp.getItem("creator");
-    if (s != "")  m.creator = s;
+    if (s != "x")  m.creator = s;
+
     s = xmp.getItem("CiEmailWork");
-    if (s != "")  m.email = s;
+    if (s != "x")  m.email = s;
+
     s = xmp.getItem("CiUrlWork");
-    if (s != "")  m.url = s;
+    if (s != "x")  m.url = s;
+
     s = xmp.getItem("Orientation");
-    if (s != "")  m.orientation = s.toInt();
+    if (s != "x")  m.orientation = s.toInt();
+    */
+
+    if (p.report) {
+        p.rpt << "\nSidecar file name = " << sidecarPath << "\n";
+        sidecarFile.seek(0);
+        p.rpt << xmp.metaAsString();
+    }
 
     sidecarFile.close();
     return true;
@@ -765,9 +790,6 @@ void Metadata::testNewFileFormat(const QString &path)
 bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
     if (G::isLogger) G::log(__FUNCTION__, "Source: " + source);
-//    G::log(__FUNCTION__, "Source =" + source + "  " + path);
-//    qDebug() << __FUNCTION__ << "called by" << source << path;
-//    isReport = true;
 
     // make sure file is available ie usb drive has been ejected
     QFileInfo fileInfo(path);
@@ -785,10 +807,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     m.fPath = path;
     p.fPath = path;
 
-//    if (p.file.isOpen()) p.file.close();
     if (p.file.isOpen()) {
         qDebug() << __FUNCTION__ << "File already open" << path;
-//        qDebug() << __FUNCTION__ << "Could not close" << path;
         return false;
     }
     p.file.setFileName(path);
@@ -827,8 +847,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
             qDebug() << __FUNCTION__ << m.err;
             return false;
         }
-        else {
-            if (G::useSidecar) parseSidecar();
+        if (G::useSidecar) {
+            parseSidecar();
         }
     }
     else {
@@ -873,6 +893,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
                                  bool isReport, bool isLoadXmp, QString source)
 {
     if (G::isLogger) G::log(__FUNCTION__, fileInfo.filePath() + "  Source: " + source);
+
     // check if already loaded
     QString fPath = fileInfo.filePath();
     if (fPath == "") {

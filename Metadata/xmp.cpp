@@ -188,8 +188,35 @@ bool Xmp::writeSidecar(QByteArray &buffer)
 
 QString Xmp::metaAsString()
 {
+/*
+    Returns unicode string from QByteArray xmpBa
+*/
     if (G::isLogger) G::log(__FUNCTION__);
     return QTextCodec::codecForMib(106)->toUnicode(xmpBa);
+}
+
+bool Xmp::isItem(QByteArray item)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    int startPos;
+    QByteArray searchItem;
+    QByteArray schema = schemaHash[item];
+
+    QByteArray tag = schema;
+    tag.append(":");
+    tag.append(item);
+
+    searchItem = tag;
+    searchItem.append("=\"");
+    startPos = xmpBa.indexOf(searchItem, xmpmetaStart);
+    if (startPos == -1) {
+        searchItem = tag;
+        searchItem.append(">");
+        startPos = xmpBa.indexOf(searchItem, xmpmetaStart);
+    }
+
+    if (startPos == -1) return false;
+    else return true;
 }
 
 QString Xmp::getItem(QByteArray item)
@@ -261,7 +288,11 @@ QString Xmp::getItem(QByteArray item)
         // this works, but fails with html escape codes
 //        return QTextCodec::codecForMib(106)->toUnicode(result);
     }
-    return "";
+    else {
+        // use hand graphic to denote "not found" vs found but = "" (blank)
+        return "";
+//        return "🖐";
+    }
 }
 
 bool Xmp::setItem(QByteArray item, QByteArray value)
@@ -290,9 +321,11 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
     // make sure schema exists in xmp
     insertSchemas(item);
 
+    /*
     qDebug() << G::t.restart() << "\t" << "Xmp::setItem  item =" << item
              << "schema =" << schema
              << "tag =" << tag;
+             //*/
 
     // search for item in case it already exists in xmp side car file
     int startPos = xmpBa.indexOf(tag, xmpmetaStart);

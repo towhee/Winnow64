@@ -80,6 +80,7 @@ namespace G
     bool isThreadTrackingOn;
     bool showAllTableColumns;
     bool isNewFolderLoaded;
+    bool isNewFolderLoadedAndInfoViewUpToDate;
     bool isInitializing;
     bool isNewSelection;
     int scrollBarThickness = 14;        // Also set in winnowstyle.css for vertical and horizontal

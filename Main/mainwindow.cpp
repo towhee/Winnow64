@@ -1473,10 +1473,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
                 ;
                 //*/
     bool isStart = false;
+
     if(!isCurrentFolderOkay
             || G::isInitializing
-            || isFilterChange
-            || !G::isNewFolderLoaded)
+            || isFilterChange/*
+            || !G::isNewFolderLoaded*/)
         return;
 
     if (!currentViewDir.exists()) {
@@ -1690,6 +1691,7 @@ void MW::clearAll()
     setWindowTitle(winnowWithVersion);
     G::isNewFolderLoaded = false;
     G::allMetadataLoaded = false;
+    G::isNewFolderLoadedAndInfoViewUpToDate = false;
     // Stop any threads that might be running.
     imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadataCache();
@@ -2156,6 +2158,11 @@ void MW::loadImageCacheForNewFolder()
         currentSfIdx = dm->sf->index(0,0);
     }
     fileSelectionChange(currentSfIdx, currentSfIdx);
+
+    /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
+       InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
+       would prematurally trigger Metadata::writeXMP */
+    G::isNewFolderLoadedAndInfoViewUpToDate = true;
 }
 
 void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
@@ -8587,7 +8594,7 @@ bool MW::loadSettings()
         checkIfUpdate = true;
         lastDir = "";
         deleteWarning = true;
-        G::useSidecar = true;
+        G::useSidecar = false;
         G::embedTifThumb = false;
 
         // ingest
@@ -8645,7 +8652,7 @@ bool MW::loadSettings()
     if (setting->contains("useSidecar"))
         G::useSidecar = setting->value("useSidecar").toBool();
     else
-        G::useSidecar = true;
+        G::useSidecar = false;
     if (setting->contains("embedTifThumb"))
         G::embedTifThumb = setting->value("embedTifThumb").toBool();
     else
@@ -10536,8 +10543,17 @@ void MW::setRating()
     }
     if (isAlreadyRating) rating = "";     // invert the label(s)
 
+    int n = selection.count();
+    if (G::useSidecar) {
+        G::popUp->setProgressVisible(true);
+        G::popUp->setProgressMax(n + 1);
+        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
+                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+        G::popUp->showPopup(txt, 0, true, 1);
+    }
+
     // set the rating in the datamodel
-    for (int i = 0; i < selection.count(); ++i) {
+    for (int i = 0; i < n; ++i) {
         int row = selection.at(i).row();
         QModelIndex ratingIdx = dm->sf->index(row, G::RatingColumn);
         dm->sf->setData(ratingIdx, rating, Qt::EditRole);
@@ -10562,7 +10578,8 @@ void MW::setRating()
         // write to sidecar
         if (G::useSidecar) {
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-            metadata->writeXMP(fPath);
+            metadata->writeXMP(fPath, __FUNCTION__);
+            G::popUp->setProgress(i+1);
         }
     }
 
@@ -10577,6 +10594,11 @@ void MW::setRating()
 
     // update filter counts
     buildFilters->updateCountFiltered();    
+
+    if (G::useSidecar) {
+        G::popUp->setProgressVisible(false);
+        G::popUp->hide();
+    }
 }
 
 int MW::ratingLogCount()
@@ -10601,10 +10623,10 @@ void MW::recoverRatingLog()
         if (idx.isValid()) {
             QModelIndex ratingIdx = dm->sf->index(idx.row(), G::RatingColumn);
             dm->sf->setData(ratingIdx, pickStatus, Qt::EditRole);
-            qDebug() << __FUNCTION__ << pickStatus << fPath << "updated";
+//            qDebug() << __FUNCTION__ << pickStatus << fPath << "updated";
         }
         else {
-            qDebug() << __FUNCTION__ << fPath << "not found";
+//            qDebug() << __FUNCTION__ << fPath << "not found";
         }
     }
     setting->endGroup();
@@ -10682,8 +10704,17 @@ void MW::setColorClass()
     }
     if(isAlreadyLabel) colorClass = "";     // invert the label
 
+    int n = selection.count();
+    if (G::useSidecar) {
+        G::popUp->setProgressVisible(true);
+        G::popUp->setProgressMax(n + 1);
+        QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
+                      "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+        G::popUp->showPopup(txt, 0, true, 1);
+    }
+
     // update the data model
-    for (int i = 0; i < selection.count(); ++i) {
+    for (int i = 0; i < n; ++i) {
         int row = selection.at(i).row();
         QModelIndex labelIdx = dm->sf->index(row, G::LabelColumn);
         dm->sf->setData(labelIdx, colorClass, Qt::EditRole);
@@ -10708,7 +10739,8 @@ void MW::setColorClass()
         // write to sidecar
         if (G::useSidecar) {
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-            metadata->writeXMP(fPath);
+            metadata->writeXMP(fPath, __FUNCTION__);
+            G::popUp->setProgress(i+1);
         }
     }
 
@@ -10724,6 +10756,11 @@ void MW::setColorClass()
 
     // update filter counts
     buildFilters->updateCountFiltered();
+
+    if (G::useSidecar) {
+        G::popUp->setProgressVisible(false);
+        G::popUp->hide();
+    }
 }
 
 int MW::colorClassLogCount()
@@ -10748,10 +10785,10 @@ void MW::recoverColorClassLog()
         if (idx.isValid()) {
             QModelIndex colorClassIdx = dm->sf->index(idx.row(), G::LabelColumn);
             dm->sf->setData(colorClassIdx, colorClassStatus, Qt::EditRole);
-            qDebug() << __FUNCTION__ << colorClassStatus << fPath << "updated";
+//            qDebug() << __FUNCTION__ << colorClassStatus << fPath << "updated";
         }
         else {
-            qDebug() << __FUNCTION__ << fPath << "not found";
+//            qDebug() << __FUNCTION__ << fPath << "not found";
         }
     }
     setting->endGroup();
@@ -10777,11 +10814,11 @@ void MW::updateColorClassLog(QString fPath, QString label)
     QString sKey = fPath;
     sKey.replace("/", "🔸");
     if (label == "") {
-        qDebug() << __FUNCTION__ << "removing" << sKey;
+//        qDebug() << __FUNCTION__ << "removing" << sKey;
         setting->remove(sKey);
     }
     else {
-        qDebug() << __FUNCTION__ << "adding" << sKey;
+//        qDebug() << __FUNCTION__ << "adding" << sKey;
         setting->setValue(sKey, label);
     }
     setting->endGroup();
@@ -11936,9 +11973,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << dm->currentFilePath;
-    dm->imMetadata(dm->currentFilePath);          // update metadata->m struct for fPath image
-    metadata->writeXMP(dm->currentFilePath);
+    QString s ="🖐";
+    bool b = s != "🖐";
+    qDebug() << __FUNCTION__ << b;
+//    dm->imMetadata(dm->currentFilePath);          // update metadata->m struct for fPath image
+//    metadata->writeXMP(dm->currentFilePath);
 
 
 //    metadata->parseSidecar();

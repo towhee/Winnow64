@@ -473,7 +473,7 @@ void IngestDlg::ingest()
                                 copyOk/* &&
                                 metadata->writeXMP(sourcePath)*/;
         if (okToWriteSidecar) {
-            bool sidecarOk = metadata->writeXMP(sidecarPath);
+            bool sidecarOk = metadata->writeXMP(sidecarPath, __FUNCTION__);
 //            QFile sidecarFile(sidecarPath);
 //            fileBytesToWrite += sidecarFile.size();
 //            sidecarFile.open(QIODevice::WriteOnly);

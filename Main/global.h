@@ -208,6 +208,7 @@ namespace G
     extern bool isThreadTrackingOn;
     extern bool showAllTableColumns;
     extern bool isNewFolderLoaded;
+    extern bool isNewFolderLoadedAndInfoViewUpToDate;
     extern bool isInitializing;
     extern bool isNewSelection;
     extern int scrollBarThickness;
