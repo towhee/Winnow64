@@ -8,6 +8,7 @@ public:
 
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const
     {
+//        qDebug() << __FUNCTION__ << index;
         static int count = 0;
         count++;
         index.isValid();          // suppress compiler warning
@@ -15,7 +16,19 @@ public:
         return QSize(option.rect.width(), height);
     }
 
-    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index ) const
+    void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const
+    {
+        int leftOffset = 4;
+        int rightOffset = 19;
+        int topOffset = 1;
+        QPoint topLeft(option.rect.left() - leftOffset, option.rect.top() + topOffset);
+        QPoint bottomRight(option.rect.right() + rightOffset, option.rect.bottom());
+        QRect editRect(topLeft, bottomRight);
+        editor->setGeometry(editRect);
+//        qDebug() << __FUNCTION__ << editRect;
+    }
+
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
     {
         painter->save();
 
@@ -31,8 +44,6 @@ public:
         categoryBackground.setColorAt(0, QColor(a,a,a));
         categoryBackground.setColorAt(1, QColor(b,b,b));
 
-//        int hOffset = 11;
-//        int vOffset = -1;
         int hOffset = 11;
         int vOffset = 1;
         QPoint topLeft(option.rect.left() + hOffset, option.rect.top() - vOffset);
@@ -107,11 +118,19 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
 
     setItemDelegate(new InfoDelegate(this));
 
-    setStyleSheet("QLineEdit {background-color: transparent;"
-                  "border: none;"
-                  "padding-left: 5%;"
-                  "padding-bottom: 3%;"
-                  "};");  // not working
+    setStyleSheet("QLineEdit {"
+                      "selection-background-color:" + G::selectionColor.name() + ";"
+                      "border: none;"
+                      "margin-left: 6px;"
+                      "margin-right: 20px;"
+                      "margin-bottom: -5px;"
+                      "padding-top: -6px;"
+                      "padding-left: 8px;"
+                  "}"
+                  "QLineEdit:focus {"
+                      "background-color:" + G::selectionColor.name() + ";"
+                  "}"
+                  ";");
 
    // InfoView menu
 	infoMenu = new QMenu("");
@@ -161,6 +180,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex, const QVe
 
             for (int i = 0; i < n; i++) {
                 int row = selection.at(i).row();
+                QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
                 if (field == "Title") {
                     QString s = idx1.data().toString();
                     dm->setData(dm->sf->index(row, G::TitleColumn), s);
@@ -215,9 +235,26 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex, const QVe
     }
 }
 
+void InfoView::resizeEvent(QResizeEvent *event)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+//    QModelIndex idx = selectionModel()->currentIndex();
+//    QModelIndex idx = selectionModel()->selection().first();
+//    updateEditorGeometries();
+//    QModelIndex par = model()->index(2, 0);
+//    int row = currentIndex().row();
+//    qDebug() << __FUNCTION__ << row;
+//    QModelIndex idx = model()->index(2, 1, par);
+//    itemDelegate()->sizeHintChanged(idx);
+//    updateEditorGeometries();
+    QTreeView::resizeEvent(event);
+//    qDebug() << __FUNCTION__ << selectionModel()->selection();
+}
+
 void InfoView::refreshLayout()
 {
-    if (G::isLogger) G::log(__FUNCTION__);    setColumn0Width();
+    if (G::isLogger) G::log(__FUNCTION__);
+    setColumn0Width();
     scheduleDelayedItemsLayout();
 }
 

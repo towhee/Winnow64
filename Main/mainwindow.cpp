@@ -259,12 +259,14 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
         G::isEmbellish = false;
         qDebug() << __FUNCTION__ << "isShift == true";
     }
-//    if (modifier & Qt::ControlModifier) {
-//        G::isLogger = true;
-//        G::sendLogToConsole = false;  // write to winlog.txt
-////        openLog();
-//        qDebug() << __FUNCTION__ << "command modifier";
-//    }
+    /* modifier & Qt::ControlModifier
+    if (modifier & Qt::ControlModifier) {
+        G::isLogger = true;
+        G::sendLogToConsole = false;  // write to winlog.txt
+//        openLog();
+        qDebug() << __FUNCTION__ << "command modifier";
+    }
+    //*/
 
     // check args to see if program was started by another process (winnet)
     QString delimiter = "\n";
@@ -330,7 +332,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createEmbel();              // dependent on EmbelView, EmbelDock
     createStatusBar();
     createMessageView();
-    loadWorkspaces();           // req'd by actions and menu
     createActions();            // dependent on above
     createMenus();              // dependent on createActions and loadSettings
 
@@ -591,6 +592,25 @@ void MW::closeEvent(QCloseEvent *event)
     delete ingestHistoryFolders;
     delete embel;
     event->accept();
+}
+
+void MW::appStateChange(Qt::ApplicationState state)
+{
+/*
+    If operating system focus changes to another app then hide the zoom dialog if it is
+    visible.  If the focus is returning to Winnow then check if the zoom dialog was visible
+    before and make it visible again.
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (!zoomDlg) return;
+    if (state == Qt::ApplicationActive)
+    {
+        if (isZoomDlgVisible) zoomDlg->setVisible(true);
+        resetFocus();
+    }
+    else {
+        zoomDlg->setVisible(false);
+    }
 }
 
 void MW::moveEvent(QMoveEvent *event)
@@ -949,6 +969,13 @@ void MW::focusChange(QWidget *previous, QWidget *current)
     if (current->objectName() == "DisableGoActions") enableGoKeyActions(false);
     else enableGoKeyActions(true);
     if (previous == nullptr) return;    // suppress compiler warning
+}
+
+void MW::resetFocus()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    activateWindow();
+    setFocus();
 }
 
 // DRAG AND DROP
@@ -3304,11 +3331,11 @@ void MW::createActions()
     centralGroupAction->addAction(asTableAction);
     centralGroupAction->addAction(asCompareAction);
 
-    zoomToAction = new QAction(tr("Zoom To"), this);
-    zoomToAction->setObjectName("zoomTo");
+    zoomToAction = new QAction(tr("Zoom"), this);
+    zoomToAction->setObjectName("zoomDlg");
     zoomToAction->setShortcutVisibleInContextMenu(true);
     addAction(zoomToAction);
-    connect(zoomToAction, &QAction::triggered, this, &MW::updateZoom);
+    connect(zoomToAction, &QAction::triggered, this, &MW::toggleZoomDlg);
 
     zoomOutAction = new QAction(tr("Zoom Out"), this);
     zoomOutAction->setObjectName("zoomOut");
@@ -3468,7 +3495,7 @@ void MW::createActions()
     }
     addActions(workspaceActions);
 
-// connection moved to after menu creation as will not work before
+// connection moved to after menu creation as will not work before menu created
 //    connect(workspaceMenu, SIGNAL(triggered(QAction*)),
 //            SLOT(invokeWorkspace(QAction*)));
 
@@ -4236,6 +4263,7 @@ void MW::enableSelectionDependentMenus()
 //        filterInvertAction->setEnabled(false);
 //        sortGroupAction->setEnabled(false);
 //        sortReverseAction->setEnabled(false);
+
         zoomToAction->setEnabled(false);
         zoomInAction->setEnabled(false);
         zoomOutAction->setEnabled(false);
@@ -6842,6 +6870,10 @@ void MW::deleteWorkspace(int n)
     // remove workspace from list of workspaces
     workspaces->removeAt(n);
 
+    // remove workspace from settings deleting all and then saving all
+    setting->remove("Workspaces");
+    saveWorkspaces();
+
     // sync menus by re-updating.  Tried to use indexes but had problems so
     // resorted to brute force solution
     syncWorkspaceMenu();
@@ -6967,13 +6999,13 @@ void MW::renameWorkspace(int n, QString name)
         (*workspaces)[n].name = name;
         syncWorkspaceMenu();
     }
+    saveWorkspaces();
 }
 
 void MW::populateWorkspace(int n, QString name)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     snapshotWorkspace((*workspaces)[n]);
-    (*workspaces)[n].accelNum = QString::number(n);
     (*workspaces)[n].name = name;
 }
 
@@ -6982,7 +7014,6 @@ void MW::reportWorkspace(int n)
     if (G::isLogger) G::log(__FUNCTION__);
     ws = workspaces->at(n);
     qDebug() << G::t.restart() << "\t" << "\n\nName" << ws.name
-             << "\nAccel#" << ws.accelNum
              << "\nGeometry" << ws.geometry
              << "\nState" << ws.state
              << "\nisFullScreen" << ws.isFullScreen
@@ -7024,10 +7055,9 @@ void MW::loadWorkspaces()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     if (!isSettings) return;
-    int size = setting->beginReadArray("workspaces");
+    int size = setting->beginReadArray("Workspaces");
     for (int i = 0; i < size; ++i) {
         setting->setArrayIndex(i);
-        ws.accelNum = setting->value("accelNum").toString();
         ws.name = setting->value("name").toString();
         ws.geometry = setting->value("geometry").toByteArray();
         ws.state = setting->value("state").toByteArray();
@@ -7064,6 +7094,51 @@ void MW::loadWorkspaces()
         ws.sortColumn = setting->value("sortColumn").toInt();
         ws.isReverseSort = setting->value("isReverseSort").toBool();
         workspaces->append(ws);
+    }
+    setting->endArray();
+}
+
+void MW::saveWorkspaces()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    setting->beginWriteArray("Workspaces");
+    for (int i = 0; i < workspaces->count(); ++i) {
+        ws = workspaces->at(i);
+        setting->setArrayIndex(i);
+        setting->setValue("name", ws.name);
+        setting->setValue("geometry", ws.geometry);
+        setting->setValue("state", ws.state);
+        setting->setValue("isFullScreen", ws.isFullScreen);
+        setting->setValue("isWindowTitleBarVisible", ws.isWindowTitleBarVisible);
+        setting->setValue("isMenuBarVisible", ws.isMenuBarVisible);
+        setting->setValue("isStatusBarVisible", ws.isStatusBarVisible);
+        setting->setValue("isFolderDockVisible", ws.isFolderDockVisible);
+        setting->setValue("isFavDockVisible", ws.isFavDockVisible);
+        setting->setValue("isFilterDockVisible", ws.isFilterDockVisible);
+        setting->setValue("isMetadataDockVisible", ws.isMetadataDockVisible);
+        setting->setValue("isEmbelDockVisible", ws.isEmbelDockVisible);
+        setting->setValue("isThumbDockVisible", ws.isThumbDockVisible);
+        setting->setValue("thumbSpacing", ws.thumbSpacing);
+        setting->setValue("thumbPadding", ws.thumbPadding);
+        setting->setValue("thumbWidth", ws.thumbWidth);
+        setting->setValue("thumbHeight", ws.thumbHeight);
+        setting->setValue("showThumbLabels", ws.showThumbLabels);
+        setting->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
+        setting->setValue("thumbPaddingGrid", ws.thumbPaddingGrid);
+        setting->setValue("thumbWidthGrid", ws.thumbWidthGrid);
+        setting->setValue("thumbHeightGrid", ws.thumbHeightGrid);
+        setting->setValue("labelFontSizeGrid", ws.labelFontSizeGrid);
+        setting->setValue("showThumbLabelsGrid", ws.showThumbLabelsGrid);
+        setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
+        setting->setValue("isLoupeDisplay", ws.isLoupeDisplay);
+        setting->setValue("isGridDisplay", ws.isGridDisplay);
+        setting->setValue("isTableDisplay", ws.isTableDisplay);
+        setting->setValue("isCompareDisplay", ws.isCompareDisplay);
+        setting->setValue("isEmbelDisplay", ws.isEmbelDisplay);
+        setting->setValue("isColorManage", ws.isColorManage);
+        setting->setValue("cacheSizeMethod", ws.cacheSizeMethod);
+        setting->setValue("sortColumn", ws.sortColumn);
+        setting->setValue("isReverseSort", ws.isReverseSort);
     }
     setting->endArray();
 }
@@ -7936,7 +8011,7 @@ void MW::selectAllThumbs()
     thumbView->selectAll();
 }
 
-void MW::updateZoom()
+void MW::toggleZoomDlg()
 {
 /*
     This function provides a dialog to change scale and to set the toggleZoom value, which is
@@ -7946,7 +8021,11 @@ void MW::updateZoom()
 
     The dialog is non-modal and floats at the bottom of the central widget. Adjustments are
     made when the main window resizes or is moved or the mode changes or when a different
-    workspace is invoked.
+    workspace is invoked.  NOTE: the dialog window flag is Qt::WindowStaysOnTopHint.  When
+    The app focus changes to another app, the zoom dialog is hidden so it does not float on
+    top of other apps (this is triggered in the slot MW::appStateChange).  The windows flag
+    Qt::WindowStaysOnTopHint is not changed as this automatically hides the window - it is
+    easier to just hide it.  The prior state of ZoomDlg is held in isZoomDlgVisible.
 
     When the zoom is changed this is signalled to ImageView and CompareImages, which in turn
     make the scale changes to the image. Conversely, changes in scale originating from
@@ -7960,48 +8039,63 @@ void MW::updateZoom()
     applicable.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__ /*<< isZoomDlgVisible*/;
+    // toggle zoomDlg (if open then close)
+    if (isZoomDlgVisible) {
+        if (zoomDlg->isVisible()) {
+            isZoomDlgVisible = false;
+            zoomDlg->close();
+            return;
+        }
+    }
+
     // only makes sense to zoom when in loupe or compare view
     if (G::mode == "Table" || G::mode == "Grid") {
         G::popUp->showPopup("The zoom dialog is only available in loupe view", 2000);
         return;
     }
 
-    // toggle zoomDlg (if open then close)
-    if (zoomDlg) {
-        if (zoomDlg->isVisible()) {
-            zoomDlg->close();
-            return;
-        }
-    }
-
     // the dialog positions itself relative to the main window and central widget.
     QRect a = this->geometry();
     QRect c = centralWidget->geometry();
     zoomDlg = new ZoomDlg(this, imageView->zoom, a, c);
-//    ZoomDlg *zoomDlg = new ZoomDlg(this, imageView->zoom, a, c);
+    isZoomDlgVisible = true;
 
     // update the imageView and compareView classes if there is a zoom change
-    connect(zoomDlg, SIGNAL(zoom(qreal)), imageView, SLOT(zoomTo(qreal)));
-    connect(zoomDlg, SIGNAL(zoom(qreal)), compareImages, SLOT(zoomTo(qreal)));
+    connect(zoomDlg, &ZoomDlg::zoom, imageView, &ImageView::zoomTo);
+    connect(zoomDlg, &ZoomDlg::zoom, compareImages, &CompareImages::zoomTo);
 
     // update the imageView and compareView classes if there is a toggleZoomValue change
-    connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)),
-            imageView, SLOT(updateToggleZoom(qreal)));
-    connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)),
-            compareImages, SLOT(updateToggleZoom(qreal)));
+    connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)), imageView, SLOT(updateToggleZoom(qreal)));
+    connect(zoomDlg, SIGNAL(updateToggleZoom(qreal)), compareImages, SLOT(updateToggleZoom(qreal)));
+
+    // if zoom dialog signals to close (Return or Z shortcut) then update using this function
+    connect(zoomDlg, &ZoomDlg::closeZoom, this, &MW::toggleZoomDlg);
 
     // if zoom change in parent send it to the zoom dialog
-    connect(imageView, SIGNAL(zoomChange(qreal)), zoomDlg, SLOT(zoomChange(qreal)));
-    connect(compareImages, SIGNAL(zoomChange(qreal)), zoomDlg, SLOT(zoomChange(qreal)));
+    connect(imageView, &ImageView::zoomChange, zoomDlg, &ZoomDlg::zoomChange);
+    connect(compareImages, &CompareImages::zoomChange, zoomDlg, &ZoomDlg::zoomChange);
 
     // if main window resized then re-position zoom dialog
     connect(this, SIGNAL(resizeMW(QRect,QRect)), zoomDlg, SLOT(positionWindow(QRect,QRect)));
 
+    // if main window loses focus, hide ZoomDlg because stayOnTop shows over other apps
+    QGuiApplication *app = qobject_cast<QGuiApplication *>(QCoreApplication::instance());
+    connect(app, &QGuiApplication::applicationStateChanged, this, &MW::appStateChange);
+
     // if view change other than loupe then close zoomDlg
-    connect(this, SIGNAL(closeZoomDlg()), zoomDlg, SLOT(close()));
+    connect(this, &MW::closeZoomDlg, zoomDlg, &ZoomDlg::closeZoomDlg);
+
+    // if mouse leave zoom dialog then reset focus to main window
+    connect(zoomDlg, &ZoomDlg::leaveZoom, this, &MW::resetFocus);
 
     // use show() so dialog will be non-modal
     zoomDlg->show();
+
+    // reset the focus to the main window
+    resetFocus();
+//    activateWindow();
+//    setFocus();
 }
 
 void MW::zoomIn()
@@ -8507,48 +8601,7 @@ void MW::writeSettings()
     }
     setting->endGroup();
 
-    // save workspaces
-    setting->beginWriteArray("workspaces");
-    for (int i = 0; i < workspaces->count(); ++i) {
-        ws = workspaces->at(i);
-        setting->setArrayIndex(i);
-        setting->setValue("accelNum", ws.accelNum);
-        setting->setValue("name", ws.name);
-        setting->setValue("geometry", ws.geometry);
-        setting->setValue("state", ws.state);
-        setting->setValue("isFullScreen", ws.isFullScreen);
-        setting->setValue("isWindowTitleBarVisible", ws.isWindowTitleBarVisible);
-        setting->setValue("isMenuBarVisible", ws.isMenuBarVisible);
-        setting->setValue("isStatusBarVisible", ws.isStatusBarVisible);
-        setting->setValue("isFolderDockVisible", ws.isFolderDockVisible);
-        setting->setValue("isFavDockVisible", ws.isFavDockVisible);
-        setting->setValue("isFilterDockVisible", ws.isFilterDockVisible);
-        setting->setValue("isMetadataDockVisible", ws.isMetadataDockVisible);
-        setting->setValue("isEmbelDockVisible", ws.isEmbelDockVisible);
-        setting->setValue("isThumbDockVisible", ws.isThumbDockVisible);
-        setting->setValue("thumbSpacing", ws.thumbSpacing);
-        setting->setValue("thumbPadding", ws.thumbPadding);
-        setting->setValue("thumbWidth", ws.thumbWidth);
-        setting->setValue("thumbHeight", ws.thumbHeight);
-        setting->setValue("showThumbLabels", ws.showThumbLabels);
-        setting->setValue("thumbSpacingGrid", ws.thumbSpacingGrid);
-        setting->setValue("thumbPaddingGrid", ws.thumbPaddingGrid);
-        setting->setValue("thumbWidthGrid", ws.thumbWidthGrid);
-        setting->setValue("thumbHeightGrid", ws.thumbHeightGrid);
-        setting->setValue("labelFontSizeGrid", ws.labelFontSizeGrid);
-        setting->setValue("showThumbLabelsGrid", ws.showThumbLabelsGrid);
-        setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
-        setting->setValue("isLoupeDisplay", ws.isLoupeDisplay);
-        setting->setValue("isGridDisplay", ws.isGridDisplay);
-        setting->setValue("isTableDisplay", ws.isTableDisplay);
-        setting->setValue("isCompareDisplay", ws.isCompareDisplay);
-        setting->setValue("isEmbelDisplay", ws.isEmbelDisplay);
-        setting->setValue("isColorManage", ws.isColorManage);
-        setting->setValue("cacheSizeMethod", ws.cacheSizeMethod);
-        setting->setValue("sortColumn", ws.sortColumn);
-        setting->setValue("isReverseSort", ws.isReverseSort);
-    }
-    setting->endArray();
+    saveWorkspaces();
 }
 
 bool MW::loadSettings()
@@ -8794,6 +8847,7 @@ bool MW::loadSettings()
     ingestDescriptionCompleter = setting->childKeys();
     setting->endGroup();
 
+    loadWorkspaces();
     // moved read workspaces to separate function as req'd by actions while the
     // rest of QSettings are dependent on actions being defined first.
 
@@ -9289,6 +9343,9 @@ void MW::loupeDisplay()
     thumbView->scrollToRow(scrollRow, __FUNCTION__);
 //    updateIconsVisible(false);
 
+    // If the zoom dialog was active, but hidden by gridView or tableView, then show it
+    if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);
+
     prevMode = "Loupe";
 
 }
@@ -9354,8 +9411,8 @@ void MW::gridDisplay()
 
     if (gridView->justifyMargin() > 3) gridView->rejustify();
 
-    // if the zoom dialog was open then close it as no image visible to zoom
-    emit closeZoomDlg();
+    // if the zoom dialog was open then hide it as no image visible to zoom
+    if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(false);
 
     gridView->setFocus();
     prevMode = "Grid";
@@ -9434,8 +9491,8 @@ void MW::tableDisplay()
     updateIconsVisible(false);
 //    qDebug() << __FUNCTION__ << scrollRow << tableView->midVisibleRow;
 
-    // if the zoom dialog was open then close it as no image visible to zoom
-    emit closeZoomDlg();
+    // if the zoom dialog was open then hide it as no image visible to zoom
+    if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(false);
 
     tableView->setFocus();
     prevMode = "Table";
@@ -9478,6 +9535,9 @@ void MW::compareDisplay()
     // restore thumbdock to previous state
     thumbDock->setVisible(wasThumbDockVisible);
     thumbDockVisibleAction->setChecked(wasThumbDockVisible);
+
+    // If the zoom dialog was active, but hidden by gridView or tableView, then show it
+    if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);
 
     hasGridBeenActivated = false;
     prevMode = "Compare";
@@ -11559,6 +11619,9 @@ void MW::deleteFiles()
         dm->remove(fPath);
     }
 
+    // refresh datamodel fPathRow hash
+    dm->refreshRowFromPath();
+
     // remove selected from imageCache
     imageCacheThread->removeFromCache(sldm);
 
@@ -11965,6 +12028,8 @@ void MW::helpWelcome()
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+    zoomDlg->setWindowFlags(windowFlags() & ~Qt::WindowStaysOnTopHint);
+    zoomDlg->show();
     return;
 
     QString fPath = "D:/Pictures/_DNG/DngNikonD850FromLightroom.dng";
@@ -11973,13 +12038,17 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString s ="🖐";
-    bool b = s != "🖐";
-    qDebug() << __FUNCTION__ << b;
-//    dm->imMetadata(dm->currentFilePath);          // update metadata->m struct for fPath image
-//    metadata->writeXMP(dm->currentFilePath);
 
+//    if (zoomDlg) {
+//        zoomDlg->setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+//        qDebug() << "isZoomDlg =" << isZoomDlg
+//                 << "zoomDlg->isVisible() =" << zoomDlg->isVisible()
+//                 << "zoomDlg->isHidden() ="  << zoomDlg->isHidden();
+//    }
+//    else qDebug() << "isZoomDlg =" << isZoomDlg;
 
+//    infoView->updateInfo(currentRow);
+//    infoView->repaint();
 //    metadata->parseSidecar();
 //    dm->addMetadataForItem(metadata->m);
 

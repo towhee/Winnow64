@@ -31,6 +31,11 @@ namespace G
     qreal ptToPx;                       // font points to pixels conversion factor
     int textShade = 190;                // text default luminousity
     int backgroundShade;                // app background luminousity
+
+    QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
+    QColor selectionColor = QColor(68,95,118);
+    QColor mouseOverColor= QColor(40,54,66);
+
     QString css;                        // app stylesheet;
 
     int transparency = 150;

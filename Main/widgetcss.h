@@ -43,13 +43,14 @@ public:
     int fontSize;
     int halfFontSize;
     int scrollBarWidth = 14;
-    QColor textColor; // = QColor(G::textShade,G::textShade,G::textShade);
-    QColor borderColor;
+    QColor textColor;     // = QColor(G::textShade,G::textShade,G::textShade);
     QColor disabledColor; // = QColor(G::backgroundShade+20,G::backgroundShade+20,G::backgroundShade+20);
+    QColor borderColor;
     QColor widgetBackgroundColor;
-    QColor scrollBarHandleBackgroundColor; // = QColor(90,130,100);
-    QColor selectionColor; // = QColor(68,95,118);
-    QColor mouseOverColor; // = QColor(68,95,118);
+
+    QColor scrollBarHandleBackgroundColor;
+    QColor selectionColor;
+    QColor mouseOverColor;
 
     QString widget();
     QString mainWindow();

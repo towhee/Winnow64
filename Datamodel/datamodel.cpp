@@ -398,7 +398,7 @@ Steps:
                         QString::number(folderCount) + " folders" +
                         escapeClause;
             emit msg(s);        // rghmsg
-            QCoreApplication::processEvents();
+//            QCoreApplication::processEvents();
         }
         if (timeToQuit) return false;
     }
@@ -432,7 +432,7 @@ Steps:
                                 QString::number(folderCount) + " folders" +
                                 escapeClause;
                     emit msg(s);    // rghmsg
-                    QCoreApplication::processEvents();
+//                    QCoreApplication::processEvents();
 //                    qApp->processEvents();
                 }
             }
@@ -567,7 +567,7 @@ bool DataModel::addFileData()
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " loaded.";
             emit msg(s);    // rghmsg
-            QCoreApplication::processEvents();
+//            QCoreApplication::processEvents();
         }
 
     }
@@ -777,7 +777,7 @@ void DataModel::addAllMetadata()
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " secondary metadata loading...";
             emit msg(s);    // rghmsg
-            QCoreApplication::processEvents();
+//            QCoreApplication::processEvents();
         }
 //        qApp->processEvents();
         if (timeToQuit) break;
@@ -998,6 +998,16 @@ int DataModel::rowFromPath(QString fPath)
     if (G::isLogger) G::log(__FUNCTION__);
 //    QMutexLocker locker(&mutex);
     return fPathRow[fPath];
+}
+
+void DataModel::refreshRowFromPath()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    fPathRow.clear();
+    for (int row = 0; row < rowCount(); ++row) {
+        QString fPath = index(row, G::PathColumn).data(G::PathRole).toString();
+        fPathRow[fPath] = row;
+    }
 }
 
 bool DataModel::hasFolderChanged()

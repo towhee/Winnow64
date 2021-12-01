@@ -19,17 +19,20 @@ public:
 
 public slots:
     void zoomChange(qreal zoom);
-//    void zoomChange(int zoom);
+    void closeZoomDlg();
+
     void positionWindow(QRect a, QRect c);
-    void close();
 
 protected:
     void enterEvent(QEvent *event);
+    void leaveEvent(QEvent *event);
     void changeEvent(QEvent *event);
 
 signals:
     void zoom(qreal zoomVal);
     void updateToggleZoom(qreal toggleZoomVal);
+    void closeZoom();
+    void leaveZoom();
 
 private:
     Ui::ZoomDlg *ui;

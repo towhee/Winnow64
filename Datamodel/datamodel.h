@@ -61,6 +61,7 @@ public:
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);
     int rowFromPath(QString fPath);
+    void refreshRowFromPath();
 
     SortFilter *sf;
     QHash<QString, int> fPathRow;

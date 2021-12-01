@@ -166,6 +166,10 @@ namespace G
     extern int iconWMax;
     extern int iconHMax;
 
+    extern QColor scrollBarHandleBackgroundColor;
+    extern QColor selectionColor;
+    extern QColor mouseOverColor;
+
     extern int transparency;
     extern QColor labelNoneColor;
     extern QColor labelRedColor;

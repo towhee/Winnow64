@@ -140,7 +140,6 @@ public:
     QVector<QString> xAppShortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
 
     struct workspaceData {
-        QString accelNum;       // for accelerator
         QString name;           // used for menu
         QByteArray geometry;
         QByteArray state;
@@ -342,6 +341,7 @@ protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
 
 public slots:
+    void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
     void watchCurrentFolder();
     void folderSelectionChange();
@@ -376,6 +376,7 @@ signals:
 
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
+    void resetFocus();
     void checkForUpdate();
     void setShowImageCount();
     void about();
@@ -433,7 +434,7 @@ private slots:
     void compareDisplay();
     void newEmbelTemplate();
     void embelTemplateChange(int id);
-    void updateZoom();
+    void toggleZoomDlg();
     void zoomOut();
     void zoomIn();
     void zoomToFit();
@@ -587,6 +588,7 @@ private slots:
     void defaultWorkspace();
     void reportWorkspace(int n);
     void loadWorkspaces();
+    void saveWorkspaces();
 
     void help();
     void helpShortcuts();
@@ -597,7 +599,7 @@ private slots:
     void greedyCache();
 
 private:
-    QApplication *app;
+//    QApplication *app;
 //    friend class ProgressBar;   // mw1
 
 
@@ -1012,6 +1014,8 @@ private:
 
     bool isLeftMouseBtnPressed = false;
     bool isMouseDrag = false;
+
+    bool isZoomDlgVisible = false;
 
 //    bool timeToQuit;
 

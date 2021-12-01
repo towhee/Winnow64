@@ -117,6 +117,8 @@ void Metadata::initSupportedFiles()
                         << "sr2"
                         << "jpg"
                         << "jpeg"
+                        << "xmp"
+                        << "tif"
                            ;
 
     internalXmpFormats  << "notyetjpg";
@@ -399,10 +401,10 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
-    if (!sidecarFormats.contains(suffix)) {
-//        qDebug() << __FUNCTION__ << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
-        return false;
-    }
+//    if (!sidecarFormats.contains(suffix)) {
+////        qDebug() << __FUNCTION__ << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
+//        return false;
+//    }
 
     // write to a sidecar file for all formats for now.  May write inside source image in the future
     bool useSidecar = true;
@@ -669,38 +671,12 @@ bool Metadata::parseSidecar()
     Xmp xmp(sidecarFile, start, end);
     QString s;
     if (xmp.isItem("Rating")) m.rating = xmp.getItem("Rating");
-    if (xmp.isItem("Label")) m.label = xmp.getItem("Rating");
-    if (xmp.isItem("title")) m.title = xmp.getItem("Rating");
+    if (xmp.isItem("Label")) m.label = xmp.getItem("Label");
+    if (xmp.isItem("title")) m.title = xmp.getItem("title");
     if (xmp.isItem("rights")) m.copyright = xmp.getItem("rights");
     if (xmp.isItem("creator")) m.creator = xmp.getItem("creator");
     if (xmp.isItem("CiEmailWork")) m.email = xmp.getItem("CiEmailWork");
     if (xmp.isItem("CiUrlWork")) m.url = xmp.getItem("CiUrlWork");
-    /*
-
-    s = xmp.getItem("Rating");
-    if (s != "x")  m.rating = s;
-
-    s = xmp.getItem("Label");
-    if (s != "x")  m.label = s;
-
-    s = xmp.getItem("title");
-    if (s != "x")  m.title = s;
-
-    s = xmp.getItem("rights");
-    if (s != "x")  m.copyright = s;
-
-    s = xmp.getItem("creator");
-    if (s != "x")  m.creator = s;
-
-    s = xmp.getItem("CiEmailWork");
-    if (s != "x")  m.email = s;
-
-    s = xmp.getItem("CiUrlWork");
-    if (s != "x")  m.url = s;
-
-    s = xmp.getItem("Orientation");
-    if (s != "x")  m.orientation = s.toInt();
-    */
 
     if (p.report) {
         p.rpt << "\nSidecar file name = " << sidecarPath << "\n";
