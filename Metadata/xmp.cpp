@@ -289,8 +289,8 @@ QString Xmp::getItem(QByteArray item)
 //        return QTextCodec::codecForMib(106)->toUnicode(result);
     }
     else {
-        // use hand graphic to denote "not found" vs found but = "" (blank)
         return "";
+        // use hand graphic to denote "not found" vs found but = "" (blank)
 //        return "🖐";
     }
 }

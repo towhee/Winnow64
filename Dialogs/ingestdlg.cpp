@@ -385,7 +385,9 @@ void IngestDlg::ingest()
         qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
         QString sourcePath = fileInfo.absoluteFilePath();
-//        fileBytesToCopy += fileInfo.size();
+        QString sourceFolderPath = fileInfo.absoluteDir().absolutePath();
+        QString sourceBaseName = fileInfo.baseName();
+        QString sourceSidecarPath = sourceFolderPath + "/" + sourceBaseName + ".xmp";
 
         // seqNum is required by parseTokenString
         // increase sequence unless dup (raw + jpg)
@@ -399,22 +401,17 @@ void IngestDlg::ingest()
         QString destFileName = destBaseName + dotSuffix;
         QString sidecarName = destBaseName + ".xmp";
 
-        // buffer to hold xmp data
-//        QByteArray buffer;
-
         // check if image already exists at destination folder
         QString destinationPath = folderPath + destFileName;
         QString backupPath = folderPath2 + destFileName;
-        QString sidecarPath = folderPath + sidecarName;
-        QString sidecarBackupPath = folderPath2 + sidecarName;
+        QString destSidecarPath = folderPath + sidecarName;
+        QString backupSidecarPath = folderPath2 + sidecarName;
 
         // rename destination and fileName if already exists
         renameIfExists(destinationPath, destBaseName, dotSuffix);
 
-        /* If there is edited xmp data in an eligible file format, copy it into a buffer. This
-        routine is also used in MW::runExternalApp().  If combinedRawJpg then use the jpg from
-        the datamodel as that is where changes to ratings and labels etc will have occurred.
-        */
+        // rename destination and xmp file if already exists
+        renameIfExists(destSidecarPath, destBaseName, ".xmp");
 
         // set the metadataChangedSourcePath depending on combineRawJpg
         QString metadataChangedSourcePath = sourcePath;
@@ -467,27 +464,54 @@ void IngestDlg::ingest()
             }
         }
 
-        // write the sidecar xmp file
-        /*ImageMetadata m = */dm->imMetadata(metadataChangedSourcePath);
-        bool okToWriteSidecar = ingestIncludeXmpSidecar &&
-                                copyOk/* &&
-                                metadata->writeXMP(sourcePath)*/;
+        /* write the sidecar xmp file. First confirm the source image file was successfully
+        copied and that include xmp has been checked.  If G::useSidecar == true then the xmp
+        sidecar will already exist on the source folder and we can copy it to the destination.
+        If not, then a new xmp file is created using metadata->writeXMP, which requires update
+        of ImageMetadata struct in metadata, as it is used to figure out what can be written
+        to the xmp file (ie m.rating != m._rating, where _rating = original value in image
+        file). We only want to write info that has changed. Finally, if backup then copy xmp
+        file to the backup folder as well. */
+        bool okToWriteSidecar = ingestIncludeXmpSidecar && copyOk;
         if (okToWriteSidecar) {
-            bool sidecarOk = metadata->writeXMP(sidecarPath, __FUNCTION__);
-//            QFile sidecarFile(sidecarPath);
-//            fileBytesToWrite += sidecarFile.size();
-//            sidecarFile.open(QIODevice::WriteOnly);
-//            qint64 bytesWritten = sidecarFile.write(buffer);
-//            if (bytesWritten == 0) failedToCopy << sidecarPath;
-//            sidecarFile.close();
+            bool sidecarOk;
+            if (G::useSidecar) {
+                // will already be an xmp sidecar so just copy it to destinaton
+                sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
+                if (!sidecarOk) {
+                    qDebug() << __FUNCTION__ << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
+                    failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
+                }
+            }
+            else {
+                // create xmp sidecar as destination
+                dm->imMetadata(metadataChangedSourcePath);
+                sidecarOk = metadata->writeXMP(destSidecarPath, __FUNCTION__);
+                if (!sidecarOk) {
+                    qDebug() << __FUNCTION__ << "Failed to write" << sourceSidecarPath << "to" << destSidecarPath;
+                    failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
+                }
+            }
+            if (copyOk && integrityCheck) {
+                if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
+                    qDebug() << __FUNCTION__ << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
+                    integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
+                }
+            }
+
+            // copy sidecar from destination to backup
             if (isBackup && sidecarOk) {
-                bool backupSidecarCopyOk = QFile::copy(sidecarPath, sidecarBackupPath);
-//                QFile sidecarBackupFile(sidecarBackupPath);
-//                fileBytesToWrite += sidecarBackupFile.size();
-//                sidecarBackupFile.open(QIODevice::WriteOnly);
-//                qint64 bytesWritten = sidecarBackupFile.write(buffer);
-//                if (bytesWritten == 0) failedToCopy << sidecarBackupPath;
-//                sidecarBackupFile.close();
+                bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
+                if (!backupSidecarCopyOk) {
+                    qDebug() << __FUNCTION__ << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
+                    failedToCopy << destSidecarPath + " to " + backupSidecarPath;
+                }
+                if (copyOk && integrityCheck) {
+                    if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
+                        qDebug() << __FUNCTION__ << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
+                        integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
+                    }
+                }
             }
         }
         // write to internal xmp (future enhancement?)
@@ -594,6 +618,10 @@ bool IngestDlg::parametersOk()
 
 void IngestDlg::updateExistingSequence()
 {
+/*
+    The sequence is a part of the file name to make sure the file name is unique, and defined
+    in the file name template with XX... (ie dscn0001.jpg).
+*/
     if (G::isLogger) G::log(__FUNCTION__); 
     if (isInitializing) return;
 
@@ -603,7 +631,7 @@ void IngestDlg::updateExistingSequence()
     QString tokenString = filenameTemplatesMap[tokenKey];
 
     // if not a sequence in the token string then disable and return
-    if(!tokenString.contains("XX")) {
+    if (!tokenString.contains("XX")) {
         Utilities::setOpacity(ui->startSeqLabel, 0.5);
         Utilities::setOpacity(ui->spinBoxStartNumber, 0.5);
         ui->spinBoxStartNumber->setDisabled(true);
@@ -618,7 +646,7 @@ void IngestDlg::updateExistingSequence()
     }
 
     QDir dir(folderPath);
-    if(dir.exists()) {
+    if (dir.exists()) {
         int sequenceNum = getSequenceStart(folderPath);
         if(ui->spinBoxStartNumber->value() < sequenceNum + 1)
             ui->spinBoxStartNumber->setValue(sequenceNum + 1);
@@ -637,6 +665,9 @@ void IngestDlg::updateExistingSequence()
 
 void IngestDlg::on_selectFolderBtn_clicked()
 {
+/*
+    Manually select the primary folder.  Set up file sequencing.  Show renaming example.
+*/
     if (G::isLogger) G::log(__FUNCTION__); 
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     QString path = ui->manualFolderLabel->text();
@@ -652,7 +683,6 @@ void IngestDlg::on_selectFolderBtn_clicked()
         manualFolderPath = folderPath;
         ui->manualFolderLabel->setText(folderPath);
         ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
-        buildFileNameSequence();
         updateExistingSequence();
         ui->manualRadio->setChecked(true);
         updateEnabledState();
@@ -677,7 +707,7 @@ void IngestDlg::on_selectFolderBtn_2_clicked()
         ui->manualFolderLabel_2->setText(folderPath2);
         ui->manualFolderLabel_2->setToolTip( ui->manualFolderLabel_2->text());
 //        buildFileNameSequence();
-//        updateExistingSequence();
+        updateExistingSequence();
         ui->manualRadio->setChecked(true);
         updateEnabledState();
     }

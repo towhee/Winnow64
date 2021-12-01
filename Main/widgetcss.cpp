@@ -30,10 +30,11 @@ QString WidgetCSS::css()
 
     textColor = QColor(fg,fg,fg);
     disabledColor = QColor(l20,l20,l20);
-    scrollBarHandleBackgroundColor = QColor(90,130,100);
-    selectionColor = QColor(68,95,118);
-    mouseOverColor = QColor(40,54,66);  // not being used, matches what happens in treeview on windows
     borderColor = QColor(l40,l40,l40);
+
+    scrollBarHandleBackgroundColor = G::scrollBarHandleBackgroundColor;
+    selectionColor = G::selectionColor;
+    mouseOverColor = G::mouseOverColor;  // not being used, matches what happens in treeview on windows
 
     // heights (mostly used for rows in TreeView etc)
     h12 = QString::number(fontSize * 1.2 * G::ptToPx);
@@ -735,21 +736,18 @@ QString WidgetCSS::lineEdit()
     return
     "QLineEdit {"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
-//        "border: 1px solid gray;"
-        "border-width: 1px;"
-        "border-style: solid;"
-        "border-color: " + borderColor.name() + ";"
-        "margin-left: 5px;"   /*Not sure why, but this is required*/
+        "border: 1px solid gray;"
         "selection-background-color: darkgray;"
-        "padding-top: 1px;"
-        "padding-bottom: 1px;"
-        "padding-left: 4px;"
-        "border-radius: 2px;"
+        "margin-left: 5px;"
     "}"
 
-    "QLineEdit:hover, QLineEdit:focus {"
-//        "border-color: red;"
+    "QLineEdit:focus {"
+        "background-color: transparent;"
     "}"
+
+    "QLineEdit:hover {"
+//        "border-color: red;"
+            "}"
 
     "QLineEdit:disabled {"
         "color:" + disabledColor.name() + ";"

@@ -96,6 +96,7 @@ private slots:
 
 protected:
     void mousePressEvent(QMouseEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
     void setupOk();

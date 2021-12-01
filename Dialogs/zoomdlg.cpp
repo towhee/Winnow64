@@ -9,16 +9,16 @@ ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent
     setWindowFlags(Qt::WindowStaysOnTopHint | Qt::Dialog | Qt::FramelessWindowHint);
     ui->setupUi(this);
 
-    // shortcuts
+    // Toggle zoom dialog off (MW shortcuts inactive while ZoomDlg has focus)
     QAction *okayAction = new QAction(tr("Okay"), this);
     okayAction->setShortcut(QKeySequence("Return"));
     this->addAction(okayAction);
-    connect(okayAction, SIGNAL(triggered(bool)), this, SLOT(accept()));
+    connect(okayAction, SIGNAL(triggered(bool)), this, SLOT(closeZoomDlg()));
 
     QAction *okay2Action = new QAction(tr("Okay"), this);
     okay2Action->setShortcut(QKeySequence("Z"));
     this->addAction(okay2Action);
-    connect(okay2Action, SIGNAL(triggered(bool)), this, SLOT(accept()));
+    connect(okay2Action, SIGNAL(triggered(bool)), this, SLOT(closeZoomDlg()));
 
     // update controls to current zoom factor
     zoomChange(zoom);
@@ -39,10 +39,11 @@ ZoomDlg::~ZoomDlg()
     delete ui;
 }
 
-void ZoomDlg::close()
+void ZoomDlg::closeZoomDlg()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    accept();
+    qDebug() << __FUNCTION__ ;
+    if (isVisible()) emit closeZoom();
 }
 
 void ZoomDlg::positionWindow(QRect a, QRect c)
@@ -157,6 +158,15 @@ void ZoomDlg::enterEvent(QEvent* /*event*/)
     this->activateWindow();
     this->setFocus();
     this->ui->zoomSlider->setFocus();
+}
+
+void ZoomDlg::leaveEvent(QEvent* /*event*/)
+{
+    /*
+    For convenience, set window focus on mouseover
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    emit leaveZoom();
 }
 
 void ZoomDlg::changeEvent(QEvent *event)

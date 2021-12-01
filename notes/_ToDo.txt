@@ -1,6 +1,5 @@
 BUGS / TO DO
-- Ingest reset last image number if destination folder changes ie go to manual from auto
-- Zoom dialog on top of other windows trap focus event?)
+- Glitchy InfoView editbox when resize
 - Sort taking time when loading folder and sort is file
 - MW::enableSelectionDependentMenus needs updating for all situations
 - Filters not working sometimes (ie no days)
@@ -40,8 +39,10 @@ CODE IMPROVEMENTS
 - Sort out i.name vs i.key in PropertyEditor
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - Tweak panning in compareView (eliminate incremental scrolling)
-- Cleanup imageview rubberband
+- Cleanup imageview rubberband (not bing used)
 ENHANCEMENTS
+- Delete item from ingest description completer
+- Add "How this works" throughout app?
 - https://github.com/wang-bin/qdevicewatcher
 - Add fade and alias to stroke
 - Add glow (inner/outer)
@@ -52,10 +53,15 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 - Read keywords
 - Write xmp into eligible files ???
-- Read xmp sidecars when open folder
 DONE/FIXED
+- precessEvents can cause crash when loading a new folder
+- Zoom dialog was showing on top of other application windows
+- Ingest was resetting last image number incorrectly if destination folder changes to manual from auto
+- Glitch in workspaces fixed (may result in users losing workspaces) when they upgrade
+- Fixed delete bug where rowFromPath out of sync
+- Read/write xmp sidecars
 - Release 1.30.1
-- MW::openLog causng cxrash at open Winnow if no settings (first time use)
+- MW::openLog causng crash at open Winnow if no settings (first time use)
 - Winow size and location when open and display at 150% is wrong
 - Release 1.30
 - Cache was not updating in priority order
