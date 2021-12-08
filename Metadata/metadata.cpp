@@ -319,7 +319,7 @@ void Metadata::reportMetadata()
     p.rpt.setFieldWidth(25); p.rpt << "isBigEndian"         << m.isBigEnd;            p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetifd0Seg"       << m.ifd0Offset;          p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetXMPSeg"        << m.xmpSegmentOffset;    p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "offsetNextXMPSegment"<< m.xmpNextSegmentOffset;p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetNextXMPSegment"<< m.xmpSegmentLength;p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "orientation"         << m.orientation;         p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "width"               << m.width;               p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "height"              << m.height;              p.rpt.setFieldWidth(0); p.rpt << "\n";
@@ -407,7 +407,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
 //    }
 
     // write to a sidecar file for all formats for now.  May write inside source image in the future
-    bool useSidecar = true;
+//    bool useSidecar = true;
 //    useSidecar = sidecarFormats.contains(suffix);
 
     // new orientation
@@ -445,10 +445,10 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     p.file.open(QIODevice::ReadOnly);
 
     // update xmp data
-    Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset, useSidecar);
+    Xmp xmp(p.file);
 
     // orientation is written to xmp sidecars only
-    if (orientationChanged && useSidecar) {
+    if (orientationChanged && G::useSidecar) {
         QString s = QString::number(newOrientation);
         xmp.setItem("Orientation", s.toLatin1());
     }
@@ -465,14 +465,15 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     xmp.setItem("ModifyDate", modifyDate.toLatin1());
 
     // get the buffer to write to a new p.file
-    QByteArray buffer;
+    /* write orientation directly into jpg
     if (suffix == "jpg") {
+        QByteArray buffer;
         p.file.seek(0);
         buffer = p.file.readAll();
-        /* Update orientation first, as orientation is written to EXIF, not
-        XMP, for known formats. Writing subsequent xmp could change file length
-        and make the orientationOffset incorrect.
-        */
+//        Update orientation first, as orientation is written to EXIF, not
+//        XMP, for known formats. Writing subsequent xmp could change file length
+//        and make the orientationOffset incorrect.
+
         if (orientationChanged && m.orientationOffset > 0) {
             QChar c = newOrientation & 0xFF;
             QByteArray ba;
@@ -481,8 +482,9 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         }
         xmp.writeJPG(buffer);
     }
-    if (useSidecar)
-        xmp.writeSidecar(buffer);
+    //*/
+
+    if (G::useSidecar) xmp.writeSidecar();
 
     p.file.close();
     return true;
@@ -666,9 +668,10 @@ bool Metadata::parseSidecar()
     sidecarFile.open(QIODevice::ReadOnly);
 
     // parse sidecar
-    uint start = 0;
-    uint end = (uint)sidecarFile.size() - 1;
-    Xmp xmp(sidecarFile, start, end);
+//    uint start = 0;
+//    uint end = (uint)sidecarFile.size()/* - 1*/;
+//    Xmp xmp(sidecarFile, start, end);
+    Xmp xmp(sidecarFile);
     QString s;
     if (xmp.isItem("Rating")) m.rating = xmp.getItem("Rating");
     if (xmp.isItem("Label")) m.label = xmp.getItem("Label");
@@ -679,7 +682,7 @@ bool Metadata::parseSidecar()
     if (xmp.isItem("CiUrlWork")) m.url = xmp.getItem("CiUrlWork");
 
     if (p.report) {
-        p.rpt << "\nSidecar file name = " << sidecarPath << "\n";
+        p.rpt << "\nSidecar: " << sidecarPath << "\n";
         sidecarFile.seek(0);
         p.rpt << xmp.metaAsString();
     }

@@ -92,11 +92,10 @@ public slots:
     void setColumn0Width();
 
 private slots:
-    void dataChanged(const QModelIndex &idx1, const QModelIndex, const QVector<int> &roles);
+    void dataChanged(const QModelIndex &idx1, const QModelIndex&, const QVector<int> &roles) override;
 
 protected:
-    void mousePressEvent(QMouseEvent *event);
-    void resizeEvent(QResizeEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
 
 private:
     void setupOk();

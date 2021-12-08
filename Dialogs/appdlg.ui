@@ -143,12 +143,12 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="okBtn">
+      <widget class="QPushButton" name="changePathBtn">
        <property name="toolTip">
-        <string>Save the changes, which will be reflected in the external applications available in &quot;Open with...&quot;</string>
+        <string>Relocate the program using Explorer/Finder.</string>
        </property>
        <property name="text">
-        <string>Save changes</string>
+        <string>Change Path</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>
@@ -156,12 +156,12 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="cancelBtn">
+      <widget class="QPushButton" name="okBtn">
        <property name="toolTip">
-        <string>Exit without saving any changes</string>
+        <string>Save the changes and exit.  To exit without saving changes press &quot;ESC&quot; or the close button &quot;X&quot;.</string>
        </property>
        <property name="text">
-        <string>Cancel</string>
+        <string>Ok</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>

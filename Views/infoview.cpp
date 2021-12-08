@@ -6,7 +6,7 @@ class InfoDelegate : public QStyledItemDelegate
 public:
     explicit InfoDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
 
-    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const override
     {
 //        qDebug() << __FUNCTION__ << index;
         static int count = 0;
@@ -16,7 +16,7 @@ public:
         return QSize(option.rect.width(), height);
     }
 
-    void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const
+    void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const override
     {
         int leftOffset = 4;
         int rightOffset = 19;
@@ -25,10 +25,9 @@ public:
         QPoint bottomRight(option.rect.right() + rightOffset, option.rect.bottom());
         QRect editRect(topLeft, bottomRight);
         editor->setGeometry(editRect);
-//        qDebug() << __FUNCTION__ << editRect;
     }
 
-    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override
     {
         painter->save();
 
@@ -78,13 +77,13 @@ public:
 
 
 /*
-This class shows information in a two column table.
+    This class shows information in a two column table.
 
-Column 0 = Item Description
-Column 1 = Item Value
-Column 2 = Flag to show or hide row (hidden)
+    Column 0 = Item Description
+    Column 1 = Item Value
+    Column 2 = Flag to show or hide row (hidden)
 
-It is used to show some file, image and application state information.
+    It is used to show some file, image and application state information.
 */
 
 InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView *thumbView)
@@ -97,20 +96,19 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
     ok = new QStandardItemModel(this);
     setupOk();
     setModel(ok);
-    selectionModel()->setModel(ok);
+//    selectionModel()->setModel(ok);
 
     setRootIsDecorated(true);
-//    setColumnWidth(0, 100);
     setIndentation(0);
     setExpandsOnDoubleClick(true);
     setHeaderHidden(true);
     setAlternatingRowColors(true);
-    setSelectionMode(QAbstractItemView::SingleSelection);
     setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::SelectedClicked);
-    setFirstColumnSpanned(0, QModelIndex(), true);
-    setFirstColumnSpanned(1, QModelIndex(), true);
-    setFirstColumnSpanned(2, QModelIndex(), true);
-    setFirstColumnSpanned(3, QModelIndex(), true);
+    // setup headers
+    setFirstColumnSpanned(0, QModelIndex(), true);  // File:
+    setFirstColumnSpanned(1, QModelIndex(), true);  // Camera:
+    setFirstColumnSpanned(2, QModelIndex(), true);  // Tags:
+    setFirstColumnSpanned(3, QModelIndex(), true);  // Status:
     expandAll();
     hideColumn(2);
     setColumn0Width();
@@ -118,21 +116,9 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
 
     setItemDelegate(new InfoDelegate(this));
 
-    setStyleSheet("QLineEdit {"
-                      "selection-background-color:" + G::selectionColor.name() + ";"
-                      "border: none;"
-                      "margin-left: 6px;"
-                      "margin-right: 20px;"
-                      "margin-bottom: -5px;"
-                      "padding-top: -6px;"
-                      "padding-left: 8px;"
-                  "}"
-                  "QLineEdit:focus {"
-                      "background-color:" + G::selectionColor.name() + ";"
-                  "}"
-                  ";");
+    // setStyleSheet - see InfoView::mousePressEvent
 
-   // InfoView menu
+    // InfoView menu
 	infoMenu = new QMenu("");
     copyInfoAction = new QAction(tr("Copy item"), this);
 
@@ -143,12 +129,14 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
             SLOT(showInfoViewMenu(QPoint)));
 
     connect(ok, &QStandardItemModel::dataChanged, this, &InfoView::dataChanged);
-
-//    connect(itemDelegate(), &QStyledItemDelegate::closeEditor, this, &InfoView::editorClosed);
-//    connect(selectionModel(), &QItemSelectionModel::currentChanged, this, &InfoView::selectionChanged);
+    /*
+    connect(itemDelegate(), &QStyledItemDelegate::closeEditor, this, &InfoView::editorClosed);
+    connect(selectionModel(), &QItemSelectionModel::selectionChanged, this, &InfoView::selChanged);
+    connect(this, &QAbstractItemView::activated, this, &InfoView::styleBackground);
+    //*/
 }
 
-void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex, const QVector<int> &roles)
+void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QVector<int> &roles)
 {
 /*
     Updates the datamodel for info items that can be edited: title, creator, copyright, email
@@ -224,7 +212,6 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex, const QVe
             }
 
             emit dataEdited();
-
         }
     }
     count++;
@@ -233,22 +220,6 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex, const QVe
         G::popUp->setProgressVisible(false);
         G::popUp->hide();
     }
-}
-
-void InfoView::resizeEvent(QResizeEvent *event)
-{
-    if (G::isLogger) G::log(__FUNCTION__);
-//    QModelIndex idx = selectionModel()->currentIndex();
-//    QModelIndex idx = selectionModel()->selection().first();
-//    updateEditorGeometries();
-//    QModelIndex par = model()->index(2, 0);
-//    int row = currentIndex().row();
-//    qDebug() << __FUNCTION__ << row;
-//    QModelIndex idx = model()->index(2, 1, par);
-//    itemDelegate()->sizeHintChanged(idx);
-//    updateEditorGeometries();
-    QTreeView::resizeEvent(event);
-//    qDebug() << __FUNCTION__ << selectionModel()->selection();
 }
 
 void InfoView::refreshLayout()
@@ -526,6 +497,33 @@ void InfoView::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::LeftButton) {
         QModelIndex index = indexAt(event->pos());
         if (index.column() == 1) { // column you want to use for one click
+            QString selectedCount = ok->index(SelectedRow, 1, statusInfoIdx).data().toString();
+            selectedCount.remove(selectedCount.indexOf(" "), selectedCount.length() - 1);
+            if (selectedCount.toInt() > 1) {
+
+            }
+            qDebug() << __FUNCTION__ << "selected =" << selectedCount;
+            // alternating colors
+            int row = index.row();
+            int a = G::backgroundShade + 5;
+            int b = G::backgroundShade;
+            QColor altBackground(b,b,b);
+            if (row % 2 != 0) altBackground = QColor(a,a,a);
+            setStyleSheet(
+                "QLineEdit {"
+                    "selection-background-color: gray;"
+                    "border: none;"
+                    "margin-left: 5px;"
+                    "margin-right: 20px;"
+                    "margin-bottom: -5px;"
+                    "padding-top: -6px;"
+                    "padding-left: 8px;"
+                "}"
+                "QLineEdit:focus {"
+                    "background-color:" + altBackground.name() + ";"
+                "}"
+                ";"
+            );
             edit(index);
         }
     }

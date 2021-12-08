@@ -1,11 +1,15 @@
 #include "xmp.h"
 
 /*
-Xmp reads and writes xmp tags to a QByteArray buffer. The buffer is read from the image file,
-based on supplied offsets. If there is no xmp data in the image file or the file format is not
-documented then the xmp tags are written to a sidecar buffer.
+Xmp reads and writes xmp tags to the QByteArray buffer. The buffer is read from the source
+file. If there are no offsets then a sidecar file will be used. If there is no xmp data in the
+source file or the file format is not documented then the xmp tags are written to a sidecar
+file.
 
-Example sidecar file that lightroom successfully reads:
+Read/Write to a sidecar:   Xmp xmp(file);
+Read/Write to image file:  Xmp xmp(file, offset, nextOffset);
+
+Example sidecar file that lightroom successfully read/writes:
 
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
     <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
@@ -29,25 +33,48 @@ Example sidecar file that lightroom successfully reads:
 </x:xmpmeta>
 */
 
-Xmp::Xmp(QFile &file,
-         uint &offset,
-         uint &nextOffset,
-//         const ImageMetadata m,
-         bool useSidecar,
-         QObject *parent) :  QObject(parent)
+Xmp::Xmp(QFile &file, uint offset, uint length, QObject *parent) :  QObject(parent)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    // if use sidecar, use the sidecar skeleton
+    bool useSidecar = (length == 0);
+    QFileInfo info(file);
+    folderPath = info.absoluteDir().path();
+    baseName = info.baseName();
+    extension = info.suffix().toUpper();
+    fileType.append(extension.toLatin1());
+    sidecarPath = folderPath + "/" + baseName + ".xmp";    // if use sidecar, use the sidecar skeleton
     if (useSidecar) {
-        xmpBa = sidecarSkeleton;
+        /* file could be the source file (ie filename.jpg or filename.nef etc) or it could be
+           the sidecar  (filename.xmp).  If it is the source file, then generate the sidecar
+           file, cand use it if it already exists.  If not, then create the sidecar file with
+           a basic xmp skeleton.
+          */
         xmpmetaStart = 0;
-        xmpmetaEnd = xmpBa.length();
+        bool sideCarExists = false;
+        if (extension.toLower() == "xmp") {
+            if (file.exists()) {
+                xmpmetaEnd = file.size();
+                xmpBa = file.readAll();
+                sideCarExists = true;
+            }
+        }
+        else {
+            QFile sidecarFile(sidecarPath);
+            if (sidecarFile.exists()) {
+                xmpmetaEnd = sidecarFile.size();
+                xmpBa = sidecarFile.readAll();
+                sideCarExists = true;
+            }
+        }
+        if (!sideCarExists) {
+            xmpBa = sidecarSkeleton;
+            xmpmetaEnd = xmpBa.length();
+        }
     }
     else {
         xmpSegmentOffset = offset;
-        ulong xmpLength = nextOffset - offset;
         file.seek(offset);
-        xmpBa = file.read(xmpLength);
+        xmpBa = file.read(length);
         xmpmetaStart = xmpBa.indexOf("<x:xmpmeta");
         xmpmetaEnd = xmpBa.indexOf("</x:xmpmeta", xmpmetaStart + 20) + 12;
         xmpPacketEnd = xmpBa.indexOf("<?xpacket end", xmpmetaEnd);
@@ -56,15 +83,27 @@ Xmp::Xmp(QFile &file,
         int xmpmetaLength = xmpmetaEnd - xmpmetaStart;
         xmpBa = xmpBa.mid(xmpmetaStart, xmpmetaLength);
     }
-    QFileInfo info(file);
-    folderPath = info.absoluteDir().path();
-    baseName = info.baseName();
-    extension = info.suffix().toUpper();
-    fileType.append(extension.toLatin1());
-    xmpSchemaList << "Rating" << "Label" << "ModifyDate" << "CreateDate";
-    dcSchemaList << "title" << "rights" << "creator";
-    auxSchemaList << "Lens" << "LensSerialNumber" << "SerialNumber";
-    iptc4xmpCoreSchemaList << "CiUrlWork" << "CiEmailWork";
+    xmpSchemaList << "Rating"
+                  << "Label"
+                  << "ModifyDate"
+                  << "CreateDate"
+                  << "WinnowAddThumb"
+                     ;
+    dcSchemaList << "title"
+                 << "rights"
+                 << "creator"
+                    ;
+    auxSchemaList << "Lens"
+                  << "LensSerialNumber"
+                  << "SerialNumber"
+                     ;
+    iptc4xmpCoreSchemaList << "CiUrlWork"
+                           << "CiEmailWork"
+                              ;
+
+    useLanguage << "dc:title"
+                << "dc:rights"
+                   ;
 
     schemaHash["Rating"] = "xmp";                   // read/write
     schemaHash["Label"] = "xmp";                    // read/write
@@ -79,6 +118,7 @@ Xmp::Xmp(QFile &file,
     schemaHash["CiEmailWork"] = "Iptc4xmpCore";     // read/write
     schemaHash["CiUrlWork"] = "Iptc4xmpCore";       // read/write
     schemaHash["Orientation"] = "tiff";             // write (sidecars only)
+    schemaHash["WinnowAddThumb"] = "xmp";           // read/write
 }
 
 void Xmp::insertSchemas(QByteArray &item)
@@ -165,24 +205,15 @@ bool Xmp::writeJPG(QByteArray &buffer)
     return true;
 }
 
-bool Xmp::writeSidecar(QByteArray &buffer)
+bool Xmp::writeSidecar()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    buffer = xmpBa;
-    if (extension.toLower() == "xmp") {
-
-    }
-    else {}
-    QString sidecarPath = folderPath + "/" + baseName + ".xmp";
     QFile sidecarFile(sidecarPath);
     qint64 fileBytesToWrite = sidecarFile.size();
     sidecarFile.open(QIODevice::WriteOnly);
-    qint64 bytesWritten = sidecarFile.write(buffer);
+    qint64 bytesWritten = sidecarFile.write(xmpBa);
 //    if (bytesWritten == 0) failedToCopy << sidecarPath;
     sidecarFile.close();
-
-//    qDebug() << G::t.restart() << "\t" << "Xmp::writeSidecar: " << buffer;
-
     return true;
 }
 
@@ -366,41 +397,38 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
                 xmpBa.insert(startPos, newItem);
             }
         }
-        if (item == "title" || item == "rights" /*|| item == "Rating" || item == "Label"*/) {
-            // ie <dc:title><rdf:Alt><rdf:li xml:lang="x-default">This is the title</rdf:li></rdf:Alt></dc:title>
+        if (schema == "dc") {
+            /* ie
+             ie <dc:title><rdf:Alt><rdf:li xml:lang="x-default">This is the title</rdf:li></rdf:Alt></dc:title>
+             ie <dc:creator><rdf:Seq><rdf:li>Rory Hill</rdf:li></rdf:Seq></dc:creator>
+            //*/
             newItem.append("\n\t\t\t<");
             newItem.append(tag);
-            newItem.append("><rdf:Alt><rdf:li xml:lang=\"x-default\">");
-            newItem.append(value);
-            newItem.append("</rdf:li></rdf:Alt></");
-            newItem.append(tag);
-            newItem.append(">");
-//            qDebug() << G::t.restart() << "\t" << "\nBefore set title:\n"
-//                     << metaAsString();
-            xmpBa.insert(startPos, newItem);
-//            qDebug() << G::t.restart() << "\t" << "\nAfter set title:\n"
-//                     << metaAsString();
-        }
-        if (item == "creator") {
-            // ie <dc:creator><rdf:Seq><rdf:li>Rory Hill</rdf:li></rdf:Seq></dc:creator>
-            newItem.append("\n\t\t\t<");
-            newItem.append(tag);
-            newItem.append("><rdf:Seq><rdf:li>");
-            newItem.append(value);
-            newItem.append("</rdf:li></rdf:Seq></");
+            if (useLanguage.contains(tag)) {
+                newItem.append("><rdf:Alt><rdf:li xml:lang=\"x-default\">");
+                newItem.append(value);
+                newItem.append("</rdf:li></rdf:Alt></");
+            }
+            else {
+                newItem.append("><rdf:Seq><rdf:li>");
+                newItem.append(value);
+                newItem.append("</rdf:li></rdf:Seq></");
+            }
             newItem.append(tag);
             newItem.append(">");
             xmpBa.insert(startPos, newItem);
         }
-        if (item == "CiEmailWork" || item == "CiUrlWork") {
-            /* ie <Iptc4xmpCore:CreatorContactInfo rdf:parseType='Resource'>
-                      <Iptc4xmpCore:CiEmailWork>hillrg@mail.com</Iptc4xmpCore:CiEmailWork>  // 1st item
-                      <Iptc4xmpCore:CiUrlWork>hill.com</Iptc4xmpCore:CiEmailWork>           // 2nd item
-                  </Iptc4xmpCore:CreatorContactInfo> */
+        if (schema == "Iptc4xmpCore") {
+            /* ie
+             <Iptc4xmpCore:CreatorContactInfo rdf:parseType='Resource'>
+                  <Iptc4xmpCore:CiEmailWork>hillrg@mail.com</Iptc4xmpCore:CiEmailWork>  // 1st item
+                  <Iptc4xmpCore:CiUrlWork>hill.com</Iptc4xmpCore:CiEmailWork>           // 2nd item
+              </Iptc4xmpCore:CreatorContactInfo>
+            //*/
 
             // does a Iptc4xmpCore:CreatorContactInfo item already exist?
             int pos = xmpBa.indexOf("<Iptc4xmpCore:Ci", startPos);
-            // 1st item, build header and add item
+            // no, this is the 1st item: build header and add item
             if (pos == -1) {
                 newItem.append("\n\t\t\t<Iptc4xmpCore:CreatorContactInfo rdf:parseType='Resource'>");
                 newItem.append("\n\t\t\t\t<");
@@ -412,7 +440,7 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
                 newItem.append(">");
                 newItem.append("\n\t\t\t<Iptc4xmpCore:CreatorContactInfo>");
             }
-            // 2nd item, already header, just insert 2nd item above 1st item
+            // 2nd item, already header: just insert 2nd item above 1st item
             else {
                 startPos = pos;
                 newItem.append("<");
@@ -434,7 +462,7 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
     bool foundItem = false;
     startPos += tag.length();
 
-    if (item == "title" || item == "rights" || item == "creator") {
+    if (schema == "dc") {
         QByteArray temp = xmpBa.mid(startPos, 100);
         startPos = xmpBa.indexOf("rdf:li", startPos);
         temp = xmpBa.mid(startPos, 100);
@@ -460,7 +488,8 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
 
     if (foundItem) {
         xmpBa.replace(startPos, endPos - startPos, value);
-//        report();
+        report();
+
         return true;
     }
     return false;

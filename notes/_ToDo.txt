@@ -1,4 +1,7 @@
 BUGS / TO DO
+- FSTree selection changes by itself (only display)
+- Update folder image count every time select folder
+- Undocked panel changes size when reopen after closing Winnow in some cases
 - Glitchy InfoView editbox when resize
 - Sort taking time when loading folder and sort is file
 - MW::enableSelectionDependentMenus needs updating for all situations
@@ -39,7 +42,7 @@ CODE IMPROVEMENTS
 - Sort out i.name vs i.key in PropertyEditor
 - When rebuildImageCacheParameters keep imCache images still in filtered target range
 - Tweak panning in compareView (eliminate incremental scrolling)
-- Cleanup imageview rubberband (not bing used)
+- Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
 - Delete item from ingest description completer
 - Add "How this works" throughout app?
@@ -54,7 +57,7 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ???
 DONE/FIXED
-- precessEvents can cause crash when loading a new folder
+- processEvents can cause crash when loading a new folder
 - Zoom dialog was showing on top of other application windows
 - Ingest was resetting last image number incorrectly if destination folder changes to manual from auto
 - Glitch in workspaces fixed (may result in users losing workspaces) when they upgrade

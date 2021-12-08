@@ -158,7 +158,7 @@ bool Panasonic::parse(MetadataParameters &p,
     p.offset = m.offsetFull;
     jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
     m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
-    m.xmpNextSegmentOffset = ifd->ifdDataHash.value(700).tagCount + m.xmpSegmentOffset;
+    m.xmpSegmentLength = ifd->ifdDataHash.value(700).tagCount /*+ m.xmpSegmentOffset*/;
     m.height = static_cast<int>(ifd->ifdDataHash.value(49).tagValue);
     m.width = static_cast<int>(ifd->ifdDataHash.value(50).tagValue);
     if (ifd->ifdDataHash.contains(23)) {
@@ -317,8 +317,8 @@ bool Panasonic::parse(MetadataParameters &p,
 
     // read XMP
     bool okToReadXmp = true;
-    if (m.isXmp && okToReadXmp && m.xmpSegmentOffset > 0 && m.xmpNextSegmentOffset > 0) {
-        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+    if (m.isXmp && okToReadXmp && m.xmpSegmentOffset > 0 && m.xmpSegmentLength > 0) {
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
         m.label = xmp.getItem("Label");       // case is important "Label"
         m.title = xmp.getItem("title");       // case is important "title"

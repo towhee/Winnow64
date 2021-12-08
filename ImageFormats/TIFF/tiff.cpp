@@ -246,8 +246,9 @@ bool Tiff::parse(MetadataParameters &p,
         m.isXmp = true;
         ifdXMPOffset = ifd->ifdDataHash.value(700).tagValue;
         m.xmpSegmentOffset = static_cast<uint>(ifdXMPOffset);
-        int xmpSegmentLength = static_cast<int>(ifd->ifdDataHash.value(700).tagCount);
-        m.xmpNextSegmentOffset = m.xmpSegmentOffset + static_cast<uint>(xmpSegmentLength);
+//        int xmpSegmentLength = static_cast<int>(ifd->ifdDataHash.value(700).tagCount);
+//        m.xmpSegmentLength = m.xmpSegmentOffset + static_cast<uint>(xmpSegmentLength);
+        m.xmpSegmentLength = static_cast<quint32>(ifd->ifdDataHash.value(700).tagCount);
     }
 
     p.offset = m.ifd0Offset;
@@ -375,6 +376,13 @@ bool Tiff::parse(MetadataParameters &p,
     if (G::embedTifThumb && m.offsetThumb == m.offsetFull && thumbLongside > 512) {
         p.offset = m.offsetThumb;        // Smallest preview to use
         encodeThumbnail(p, m, ifd);
+        // write thumbnail added to xmp sidecar if writing sidecars
+        if (G::useSidecar) {
+            Xmp xmp(p.file);
+            QByteArray val = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss").toLatin1();
+            xmp.setItem("WinnowAddThumb", val);
+            xmp.writeSidecar();
+        }
     }
 
     // EXIF: *******************************************************************
@@ -479,7 +487,7 @@ bool Tiff::parse(MetadataParameters &p,
     // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
-        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
         m.label = xmp.getItem("Label");       // case is important "Label"
         m.title = xmp.getItem("title");       // case is important "title"

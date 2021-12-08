@@ -154,10 +154,12 @@ bool ImageView::loadImage(QString fPath, QString src)
     // No folder selected yet
     if (!fPath.length()) return false;
 
-    /* important to keep currentImagePath.  It is used to check if there isn't
-    an image (when currentImagePath.isEmpty() == true) - for example when
-    no folder has been chosen or the same image is being reloaded. */
-//    if (fPath == currentImagePath) return false;  // this prevents reloading image if change embellish template
+    // could be a popup from a prior uncached image being loaded
+    G::popUp->hide();
+
+    /* important to keep currentImagePath. It is used to check if there isn't an image (when
+    currentImagePath.isEmpty() == true) - for example when no folder has been chosen or the
+    same image is being reloaded. It is also used by Embellish.  */
     currentImagePath = fPath;
     bool isLoaded = false;
     pmItem->setVisible(true);
@@ -193,17 +195,19 @@ bool ImageView::loadImage(QString fPath, QString src)
         int row = dm->rowFromPath(fPath);
         bool isCached = dm->index(row, 0).data(G::CachedRole).toBool();
         QImage image;
+        // confirm the cached image is in the image cache
         bool imageAvailable = false;
         if (isCached) imageAvailable = icd->imCache.find(fPath, image);
         if (imageAvailable) {
             pmItem->setPixmap(QPixmap::fromImage(image));
-            G::popUp->hide();
+//            G::popUp->hide();
             isLoaded = true;
         }
+        // not cached
         else {
             // MacOS: if showPopup thumbs do not scroll when hold arrow key down
             #ifdef Q_OS_WIN
-                G::popUp->showPopup("Buffering image");
+                if (G::isNewFolderLoaded) G::popUp->showPopup("Buffering image");
             #endif
         }
     }
@@ -381,8 +385,9 @@ void ImageView::getScrollBarStatus()
 
 QPointF ImageView::getScrollPct()
 {
-/* The view center is defined by the scrollbar values.  The value is converted
-to a percentage to be used to match position in the next image if zoomed.
+/*
+   The view center is defined by the scrollbar values. The value is converted to a percentage
+   to be used to match position in the next image if zoomed.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     getScrollBarStatus();
@@ -399,10 +404,10 @@ void ImageView::setClassificationBadgeImageDiam(int d)
 void ImageView::placeClassificationBadge()
 {
 /*
-The bright green thumbsUp pixmap shows the pick status for the current image.
-This function locates the pixmap in the bottom corner of the image label as the
-image is resized and zoomed, adjusting for the aspect ratio of the image and
-size.
+    The bright green thumbsUp pixmap shows the pick status for the current image.
+    This function locates the pixmap in the bottom corner of the image label as the
+    image is resized and zoomed, adjusting for the aspect ratio of the image and
+    size.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     QPoint sceneBottomRight = mapFromScene(sceneRect().bottomRight());
@@ -446,15 +451,14 @@ void ImageView::quitRubberBand()
 
 void ImageView::resizeEvent(QResizeEvent *event)
 {
-/* Manage behavior when window resizes.
+/*
+   Manage behavior when window resizes.
 
-● if image zoom is not zoomFit then no change
-● if zoomFit then recalc and maintain
-● if zoomed and resize to view entire image then engage zoomFit
-● if view larger than image and resize to clip image then engage zoomFit.
-
-● move and size pick icon and shooting info as necessary
-
+    ● if image zoom is not zoomFit then no change
+    ● if zoomFit then recalc and maintain
+    ● if zoomed and resize to view entire image then engage zoomFit
+    ● if view larger than image and resize to clip image then engage zoomFit.
+    ● move and size pick icon and shooting info as necessary
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     /*
@@ -477,11 +481,11 @@ void ImageView::resizeEvent(QResizeEvent *event)
 
 void ImageView::thumbClick(float xPct, float yPct)
 {
-/* When the image is zoomed and a thumbnail is mouse clicked the position
-within the thumb is passed here as the percent of the width and height. The
-zoom amount is maintained and the main image is panned to the same location as
-on the thumb. This makes it quick to check eyes and other details in many
-images.
+/*
+   When the image is zoomed and a thumbnail is mouse clicked the position within the thumb is
+   passed here as the percent of the width and height. The zoom amount is maintained and the
+   main image is panned to the same location as on the thumb. This makes it quick to check
+   eyes and other details in many images.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     if (zoom > zoomFit) {
@@ -496,17 +500,19 @@ qreal ImageView::getZoom()
     qreal x1 = mapToScene(rect().center()).x();
     qreal x2 = mapToScene(rect().center() + QPoint(1, 0)).x();
     qreal calcZoom = 1.0 / (x2 - x1);
-//    qDebug() << G::t.restart() << "\t" << "getZoom():   zoom =" << zoom
-//             << "x1 =" << x1 << "x2 =" << x2
-//             << "calc zoom =" << calcZoom;
+    /*
+    qDebug() << G::t.restart() << "\t" << "getZoom():   zoom =" << zoom
+             << "x1 =" << x1 << "x2 =" << x2
+             << "calc zoom =" << calcZoom;
+    //*/
     return calcZoom;
 }
 
 void ImageView::updateToggleZoom(qreal toggleZoomValue)
 {
 /*
-Slot for signal from update zoom dialog to set the amount to zoom when user
-clicks on the unzoomed image.
+    Slot for signal from update zoom dialog to set the amount to zoom when user
+    clicks on the unzoomed image.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     toggleZoom = toggleZoomValue;
@@ -546,8 +552,8 @@ void ImageView::zoomToFit()
 void ImageView::zoomTo(qreal zoomTo)
 {
 /*
-Called from ZoomDlg when the zoom is changed. From here the message is passed
-on to ImageView::scale(), which in turn makes the proper scale change.
+    Called from ZoomDlg when the zoom is changed. From here the message is passed
+    on to ImageView::scale(), which in turn makes the proper scale change.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     zoom = zoomTo;
@@ -697,10 +703,10 @@ void ImageView::setShootingInfo(QString infoString)
     Locate and format the info label, which currently displays the shooting
     information in the top left corner of the image.  The text has a drop shadow
     to help make it visible against different coloured backgrounds.
+
+    window (w) and view (v) sizes are updated during resize
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-    // window (w) and view (v) sizes are updated during resize
-
 
     int offset = 10;                        // offset pixels from the edge of image
     int x, y = 0;                           // top left coordinates of info symbol
@@ -778,45 +784,10 @@ void ImageView::hideCursor()
 
 // EVENTS
 
-/*
-void ImageView::paintEvent(QPaintEvent *event)
-{
-    if (G::isLogger) G::log(__FUNCTION__);
-    QGraphicsView::paintEvent(event); // paint contents normally
-
-    // draw text over the top of the viewport
-//    QPainter p(viewport());
-//    QPoint pt(30,30); // location for text string, in this case upper left corner
-//    QString str;
-//    // set string text, in this case the mouse position value
-//    str = QString("TEST");
-//    p.drawText(pt, str);
-
-//    p.end();
-}
-//*/
-
-/*
-void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
-{
-    if (G::isLogger) G::log(__FUNCTION__);
-    QGraphicsView::drawForeground(painter, rect);
-
-            painter->save();
-//            painter->resetMatrix();
-//            painter->resetTransform();
-            painter->setPen(QPen(Qt::green));
-//            painter->drawRect(QRect(0, 0, 100, 100));
-            painter->restore();
-}
-//*/
-
 void ImageView::scrollContentsBy(int dx, int dy)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     scrollCount++;
-//    isMouseDrag = (scrollCount > 2);
-//    qDebug() << G::t.restart() << "\t" << "scrolling dx =" << dx << "dy =" << dy << scrollCount;
     QGraphicsView::scrollContentsBy(dx, dy);
 }
 
@@ -831,17 +802,18 @@ void ImageView::wheelEvent(QWheelEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
 
-    // if trackpad scrolling set in preferences then default behavior
-//    if(useWheelToScroll && isScrollable) {
-//        qDebug() << __FUNCTION__ << zoom << isScrollable;
-//        QGraphicsView::wheelEvent(event);
-//        isTrackpadScroll = true;
-//        return;
-//    }
+    /* if trackpad scrolling set in preferences then default behavior
+    if(useWheelToScroll && isScrollable) {
+        qDebug() << __FUNCTION__ << zoom << isScrollable;
+        QGraphicsView::wheelEvent(event);
+        isTrackpadScroll = true;
+        return;
+    }
+    //*/
 
     // wheel scrolling / trackpad swiping = next/previous image
     static int delta;
-    delta += event->delta();
+    delta += event->delta();    // deprecated
     int deltaThreshold = 40;
 
     if(delta > deltaThreshold) {
@@ -860,12 +832,6 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     // placeholder function pending use
-//    qDebug() << __FUNCTION__ << isFit << zoom << zoomFit;
-//    if (isFit && zoom < zoomFit) {
-//        zoom = zoomFit;
-//        scale();
-//        isMouseDoubleClick = true;
-//    }
     QWidget::mouseDoubleClickEvent(event);
 
 }
@@ -873,8 +839,10 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 void ImageView::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    static int n = 0;
-    n++;
+
+//    static int n = 0;
+//    n++;
+
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
 
@@ -895,22 +863,19 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // prevent zooming when double mouse click
-//    if (event->button() == Qt::Dou) {
-//        return;
-//    }
     if (isMouseDoubleClick) return;
 
     isMouseDoubleClick = false;
     isMouseDrag = false;
     if (event->button() == Qt::LeftButton) {
-//        if (isRubberBand) {
-//            setCursor(Qt::CrossCursor);
-//            origin = event->pos();
-//            rubberBand->setGeometry(QRect(origin, QSize()));
-//            rubberBand->show();
-//            return;
-//        }
+        /*if (isRubberBand) {
+            setCursor(Qt::CrossCursor);
+            origin = event->pos();
+            rubberBand->setGeometry(QRect(origin, QSize()));
+            rubberBand->show();
+            return;
+        }
+        //*/
         isLeftMouseBtnPressed = true;
         scrollCount = 0;                // still used?
         mousePressPt.setX(event->x());
@@ -935,13 +900,14 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 void ImageView::mouseMoveEvent(QMouseEvent *event)
 {
 /*
-    Pan the image during a mouse drag operation
-    Set a delay to hide cursor if in slideshow mode
+    Pan the image during a mouse drag operation.
+    Set a delay to hide cursor if in slideshow mode.
 */
-//    if (isRubberBand) {
-//        rubberBand->setGeometry(QRect(origin, event->pos()).normalized());
-//        return;
-//    }
+    /*if (isRubberBand) {
+        rubberBand->setGeometry(QRect(origin, event->pos()).normalized());
+        return;
+    }
+    //*/
 
     static QPoint prevPos = event->pos();
 
@@ -1003,8 +969,6 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 
     // prevent zooming when forward and back buttons
     if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) return;
-
-//    if (isMouseDoubleClick) return;
 
     isLeftMouseBtnPressed = false;
 
@@ -1130,7 +1094,7 @@ void ImageView::copyImage()
 //static inline int bound0To255(int val)
 //{
 //    if (G::isLogger) G::log(__FUNCTION__);
-//    return ((val > 255)? 255 : (val < 0)? 0 : val);
+//    return ((val > 255) ? 255 : (val < 0) ? 0 : val);
 //}
 
 static inline int hslValue(double n1, double n2, double hue)

@@ -209,7 +209,7 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::isBigEndianColumn, new QStandardItem("isBigEndian")); horizontalHeaderItem(G::isBigEndianColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ifd0OffsetColumn, new QStandardItem("ifd0Offset")); horizontalHeaderItem(G::ifd0OffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::XmpSegmentOffsetColumn, new QStandardItem("XmpSegmentOffset")); horizontalHeaderItem(G::XmpSegmentOffsetColumn)->setData(true, G::GeekRole);
-    setHorizontalHeaderItem(G::XmpNextSegmentOffsetColumn, new QStandardItem("XmpNextSegmentOffset")); horizontalHeaderItem(G::XmpNextSegmentOffsetColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::XmpSegmentLengthColumn, new QStandardItem("XmpSegmentLengthColumn")); horizontalHeaderItem(G::XmpSegmentLengthColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::IsXMPColumn, new QStandardItem("IsXMP")); horizontalHeaderItem(G::IsXMPColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ICCSegmentOffsetColumn, new QStandardItem("ICCSegmentOffsetColumn")); horizontalHeaderItem(G::ICCSegmentOffsetColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::ICCSegmentLengthColumn, new QStandardItem("ICCSegmentLengthColumn")); horizontalHeaderItem(G::ICCSegmentLengthColumn)->setData(true, G::GeekRole);
@@ -736,7 +736,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.isBigEnd = index(row, G::isBigEndianColumn).data().toBool();
     m.ifd0Offset = index(row, G::ifd0OffsetColumn).data().toUInt();
     m.xmpSegmentOffset = index(row, G::XmpSegmentOffsetColumn).data().toUInt();
-    m.xmpNextSegmentOffset = index(row, G::XmpNextSegmentOffsetColumn).data().toUInt();
+    m.xmpSegmentLength = index(row, G::XmpSegmentLengthColumn).data().toUInt();
     m.orientationOffset = index(row, G::OrientationOffsetColumn).data().toUInt();
     m.isXmp = index(row, G::IsXMPColumn).data().toBool();
     m.iccSegmentOffset = index(row, G::ICCSegmentOffsetColumn).data().toUInt();
@@ -964,7 +964,7 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::isBigEndianColumn), m.isBigEnd);
     setData(index(row, G::ifd0OffsetColumn), m.ifd0Offset);
     setData(index(row, G::XmpSegmentOffsetColumn), m.xmpSegmentOffset);
-    setData(index(row, G::XmpNextSegmentOffsetColumn), m.xmpNextSegmentOffset);
+    setData(index(row, G::XmpSegmentLengthColumn), m.xmpSegmentLength);
     setData(index(row, G::IsXMPColumn), m.isXmp);
     setData(index(row, G::ICCSegmentOffsetColumn), m.iccSegmentOffset);
     setData(index(row, G::ICCSegmentLengthColumn), m.iccSegmentLength);
@@ -1110,7 +1110,7 @@ When Raw+Jpg is toggled in the main program MW the file type filter must be rebu
 QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 {
 /*
-    The hash table fPathRow {path, row} if build when the datamodel is loaded to provide a
+    The hash table fPathRow {path, row} is build when the datamodel is loaded to provide a
     quick lookup to get the datamodel row from an image path.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
@@ -1275,7 +1275,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("isBigEndian", 25) << G::s(index(row, G::isBigEndianColumn).data());
     rpt << "\n  " << G::sj("ifd0Offset", 25) << G::s(index(row, G::ifd0OffsetColumn).data());
     rpt << "\n  " << G::sj("xmpSegmentOffset", 25) << G::s(index(row, G::XmpSegmentOffsetColumn).data());
-    rpt << "\n  " << G::sj("xmpNextSegmentOffset", 25) << G::s(index(row, G::XmpNextSegmentOffsetColumn).data());
+    rpt << "\n  " << G::sj("xmpNextSegmentOffset", 25) << G::s(index(row, G::XmpSegmentLengthColumn).data());
 
     rpt << "\n  " << G::sj("isXmp", 25) << G::s(index(row, G::IsXMPColumn).data());
     rpt << "\n  " << G::sj("orientationOffset", 25) << G::s(index(row, G::OrientationOffsetColumn).data());

@@ -24,6 +24,7 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
     ui->setupUi(this);
 
     {
+
 #ifdef Q_OS_LINIX
 //
 #endif
@@ -45,6 +46,17 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
     ui->appsTable->horizontalHeader()->setStretchLastSection(true);
     ui->appsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->appsTable->verticalHeader()->setSectionsClickable(false);
+
+    setStyleSheet(
+        "QLineEdit {"
+            "selection-background-color: gray;"
+            "border: none;"
+        "}"
+        "QLineEdit:focus {"
+            "background-color:" + G::selectionColor.name() + ";"
+        "}"
+        ";"
+    );
 
     /* fill the table with the shortcuts and blanks for the name and path.
     All table editing after this simply renames the name and path and no rows
@@ -77,8 +89,11 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
         ui->appsTable->item(row, 2)->setText(path);
         setFlags(row);
     }
+//    checkProgramsExist();
 
     if (rows > 0) ui->appsTable->selectRow(0);
+
+    connect(ui->appsTable, &QTableWidget::currentCellChanged, this, &Appdlg::checkProgramsExist);
 }
 
 Appdlg::~Appdlg()
@@ -100,7 +115,7 @@ void Appdlg::setFlags(int row)
     else {
         item0->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // non editable
         item1->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable); // editable
-        item2->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // non editable
+        item2->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable); // editable
     }
 }
 
@@ -169,6 +184,32 @@ void Appdlg::on_removeBtn_clicked()
     ui->appsTable->selectRow(row);
 }
 
+void Appdlg::checkProgramsExist(int currentRow, int currentColumn, int previousRow, int previousColumn)
+{
+    QColor defaultColor = QColor(G::textShade, G::textShade, G::textShade);
+    QColor warningColor = QColor(128,0,0);
+    int rows = xApps.length();
+        for (int row = 0; row < rows; ++row) {
+        QFile test(ui->appsTable->item(row, 2)->text());
+        if (test.exists()) {
+            ui->appsTable->item(row, 2)->setForeground(defaultColor);
+        }
+        else {
+            ui->appsTable->item(row, 2)->setForeground(warningColor);
+        }
+    }
+}
+
+void Appdlg::on_changePathBtn_clicked()
+{
+    int row = ui->appsTable->currentRow();
+    QString appPath = QFileDialog::getOpenFileName(this,
+         tr("Select program executable"), "/home");
+    QFileInfo fileInfo(appPath);
+    ui->appsTable->item(row, 2)->setText(fileInfo.absoluteFilePath());
+    checkProgramsExist();
+}
+
 void Appdlg::on_okBtn_clicked()
 {
     int rows = getAppCount();
@@ -181,10 +222,10 @@ void Appdlg::on_okBtn_clicked()
     accept();
 }
 
-void Appdlg::on_cancelBtn_clicked()
-{
-    reject();
-}
+//void Appdlg::on_cancelBtn_clicked()
+//{
+//    reject();
+//}
 
 void Appdlg::on_moveDown_clicked()
 {

@@ -98,7 +98,7 @@ namespace G
         isBigEndianColumn,
         ifd0OffsetColumn,
         XmpSegmentOffsetColumn,
-        XmpNextSegmentOffsetColumn,
+        XmpSegmentLengthColumn,
         IsXMPColumn,
         ICCSegmentOffsetColumn,
         ICCSegmentLengthColumn,
@@ -166,11 +166,12 @@ namespace G
     extern int iconWMax;
     extern int iconHMax;
 
+    extern QColor textColor;
+    extern QColor backgroundColor;
     extern QColor scrollBarHandleBackgroundColor;
     extern QColor selectionColor;
     extern QColor mouseOverColor;
 
-    extern int transparency;
     extern QColor labelNoneColor;
     extern QColor labelRedColor;
     extern QColor labelYellowColor;

@@ -13,15 +13,15 @@ class Xmp : public QObject
 {
     Q_OBJECT
 public:
-    Xmp(QFile &file, uint &offset, uint &nextOffset,
-        bool useSidecar = false, QObject *parent = nullptr);
+    Xmp(QFile &file, uint offset = 0, uint length = 0, QObject *parent = nullptr);
+
     bool isItem(QByteArray item);
     QString getItem(QByteArray item);
     bool setItem(QByteArray item, QByteArray value);
     QString metaAsString();
     bool writeJPG(QByteArray &buffer);
     bool readSidecar(QByteArray &buffer);
-    bool writeSidecar(QByteArray &buffer);
+    bool writeSidecar();
     QString diagnostics();
 
 signals:
@@ -45,6 +45,7 @@ private:
     QString folderPath;
     QString baseName;
     QString extension;
+    QString sidecarPath;
 
     QString assignmentMethod;       // brackets or equals
     QByteArray fileType;            // uppercase suffix
@@ -55,6 +56,8 @@ private:
     QByteArrayList dcSchemaList;
     QByteArrayList auxSchemaList;
     QByteArrayList iptc4xmpCoreSchemaList;
+
+    QByteArrayList useLanguage;
 
     QByteArray xmpmetaPrefix = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">";
     QByteArray xmpmetaSuffix = "</x:xmpmeta>";

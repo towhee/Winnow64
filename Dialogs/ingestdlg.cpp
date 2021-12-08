@@ -120,6 +120,14 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->manualFolderLabel_2->setText(manualFolderPath2);
     ui->manualFolderLabel_2->setToolTip(ui->manualFolderLabel_2->text());
 
+    /* ui->descriptionLineEdit->setStyleSheet not working
+    ui->descriptionLineEdit->setStyleSheet(
+        "QLineEdit {"
+            "margin-left: 15px;"
+            "padding-left: 15px;"
+        "};"
+    );
+    //*/
     ui->descriptionLineEdit->setText(baseFolderDescription);
 
     // initialize templates and tokens
