@@ -111,7 +111,7 @@ bool Canon::parse(MetadataParameters &p,
     // xmp offset
     m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
     // xmpNextSegmentOffset used to later calc available room in xmp
-    m.xmpNextSegmentOffset = ifd->ifdDataHash.value(700).tagCount + m.xmpSegmentOffset;
+    m.xmpSegmentLength = ifd->ifdDataHash.value(700).tagCount/* + m.xmpSegmentOffset*/;
     if (m.xmpSegmentOffset) m.isXmp = true;
     else m.isXmp = false;
 
@@ -256,7 +256,7 @@ bool Canon::parse(MetadataParameters &p,
     // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
-        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
         m.label = xmp.getItem("Label");       // case is important "Label"
         m.title = xmp.getItem("title");       // case is important "title"

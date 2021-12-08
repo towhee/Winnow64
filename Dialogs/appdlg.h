@@ -24,10 +24,13 @@ protected:
 private slots:
     void on_addBtn_clicked();
     void on_removeBtn_clicked();
+    void on_changePathBtn_clicked();
     void on_okBtn_clicked();
-    void on_cancelBtn_clicked();
+//    void on_cancelBtn_clicked();
     void on_moveDown_clicked();
     void on_moveUp_clicked();
+//    void currentChanged(const QModelIndex &current, const QModelIndex &previous);
+    void checkProgramsExist(int currentRow = 0, int currentColumn = 0, int previousRow = 0, int previousColumn = 0);
 
 private:
     Ui::Appdlg *ui;

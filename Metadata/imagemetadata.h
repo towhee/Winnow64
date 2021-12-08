@@ -91,7 +91,7 @@ public:
     bool isBigEnd = false;
     quint32 ifd0Offset = 0;
     quint32 xmpSegmentOffset = 0;
-    quint32 xmpNextSegmentOffset = 0;
+    quint32 xmpSegmentLength = 0;
     bool isXmp = false;
     quint32 iccSegmentOffset;
     quint32 iccSegmentLength;

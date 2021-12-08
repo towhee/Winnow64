@@ -80,6 +80,18 @@ datamodel.
     setItemDelegate(new FiltersDelegate(this));
     setFocusPolicy(Qt::NoFocus);
 
+    setStyleSheet("QLineEdit {"
+                      "font: italic;"
+                      "selection-background-color: gray;"
+                      "border: none;"
+                      "margin-left: 0px;"
+                      "padding-left: 0px;"
+                  "}"
+                  "QLineEdit:focus {"
+                      "background-color:" + G::backgroundColor.name() + ";"
+                  "}"
+                  ";");
+
     filterCategoryToDmColumn["Search"] = G::SearchColumn;
 
     filterCategoryToDmColumn["Refine"] = G::RefineColumn;

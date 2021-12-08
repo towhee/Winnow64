@@ -894,6 +894,10 @@
       <property name="toolTip">
        <string/>
       </property>
+      <property name="styleSheet">
+       <string notr="true">padding-left = 5px
+margin-left =  5px</string>
+      </property>
      </widget>
      <widget class="QLabel" name="folderDescription">
       <property name="geometry">

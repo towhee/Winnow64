@@ -99,8 +99,9 @@ bool DNG::parse(MetadataParameters &p,
         m.isXmp = true;
         ifdXMPOffset = ifd->ifdDataHash.value(700).tagValue;
         m.xmpSegmentOffset = ifdXMPOffset;
-        int xmpSegmentLength = static_cast<int>(ifd->ifdDataHash.value(700).tagCount);
-        m.xmpNextSegmentOffset = m.xmpSegmentOffset + static_cast<uint>(xmpSegmentLength);
+//        int xmpSegmentLength = static_cast<int>(ifd->ifdDataHash.value(700).tagCount);
+//        m.xmpSegmentLength = m.xmpSegmentOffset + static_cast<uint>(xmpSegmentLength);
+        m.xmpSegmentLength = static_cast<quint32>(ifd->ifdDataHash.value(700).tagCount);
     }
 
     // SubIFDs: ****************************************************************
@@ -289,7 +290,7 @@ bool DNG::parse(MetadataParameters &p,
     // read XMP - no XMP in fuji raw files
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
-        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
         m.label = xmp.getItem("Label");       // case is important "Label"
         m.title = xmp.getItem("title");       // case is important "title"

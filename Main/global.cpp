@@ -29,16 +29,19 @@ namespace G
     QString fontSize;                   // app font point size
     qreal dpi;                          // current logical screen dots per inch
     qreal ptToPx;                       // font points to pixels conversion factor
+
+    // application colors
     int textShade = 190;                // text default luminousity
     int backgroundShade;                // app background luminousity
-
+    QColor textColor = QColor(textShade,textShade,textShade);
+    QColor backgroundColor;             // define after settings loaded
     QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
     QColor selectionColor = QColor(68,95,118);
     QColor mouseOverColor= QColor(40,54,66);
 
     QString css;                        // app stylesheet;
 
-    int transparency = 150;
+    static int transparency = 150;
     QColor labelNoneColor(85,85,85,transparency);                // Background Gray
     QColor labelRedColor(QColor(128,0,0,transparency));          // Dark red
     QColor labelYellowColor(QColor(255,255,0,transparency));     // Dark yellow

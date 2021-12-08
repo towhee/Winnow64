@@ -161,7 +161,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::isBigEndianColumn) return fm.boundingRect("=isBigEndian=").width();
     if (column == G::ifd0OffsetColumn) return fm.boundingRect("=ifd0OffsetColumn=").width();
     if (column == G::XmpSegmentOffsetColumn) return fm.boundingRect("=XmpSegmentOffsetColumn=").width();
-    if (column == G::XmpNextSegmentOffsetColumn) return fm.boundingRect("=XmpNextSegmentOffsetColumn=").width();
+    if (column == G::XmpSegmentLengthColumn) return fm.boundingRect("=XmpSegmentLengthColumn=").width();
     if (column == G::IsXMPColumn) return fm.boundingRect("=IsXMPColumn=").width();
     if (column == G::ICCSegmentOffsetColumn) return fm.boundingRect("=ICCSegmentOffsetColumn=").width();
     if (column == G::ICCSegmentLengthColumn) return fm.boundingRect("=ICCSegmentLengthColumn=").width();

@@ -61,7 +61,7 @@ public:
 
     bool buildingFilters = false;
     bool filtersBuilt = false;
-    QString buildingFiltersMsg = "Press \"Esc\" to stop.";
+    QString buildingFiltersMsg = "Building filters. Press \"Esc\" to stop.";
 
     QString searchString = "";
     QStringList ignoreSearchStrings;

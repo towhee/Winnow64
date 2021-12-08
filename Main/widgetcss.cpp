@@ -364,13 +364,18 @@ QString WidgetCSS::treeWidget()
         "color: lightgray;"
     "}"
 
+    "QTreeWidget::item {"
+        "height: 24px;"
+//        "margin-left: -1px;"  // aligns edit box with cell contents
+    "}"
+
     "QTreeWidget::item:disabled {"
         "color:" + disabledColor.name() + ";"
     "}"
 
-    "QTreeWidget::item {"
-        "height: 24px;"
-        "margin-left: -1px;"  // aligns edit box with cell contents
+    "QTreeWidget::item:focus {"
+        "background-color: green;"/* + disabledColor.name() + ";"*/
+        "margin-left: 15px;"
     "}"
 
     "QTreeWidget::indicator {"
@@ -384,8 +389,13 @@ QString WidgetCSS::treeWidget()
 
     "QTreeWidget::indicator:checked {"
         "image: url(:/images/checkbox_checked_blue.png);"
+        "margin-left: -5px;"
+        "padding-left: 5px;"
     "}"
 
+    "QLineEdit:focus {"
+//        "background-color:" + G::selectionColor.name() + ";"
+    "}"
     ;
 }
 
@@ -426,7 +436,7 @@ QString WidgetCSS::treeView()
     "QTreeView::item:selected:!active {"
         "color: " + textColor.name() + ";"
         "background: " + selectionColor.name() + ";"
-            "}"
+    "}"
 
     ;
 }
@@ -738,12 +748,12 @@ QString WidgetCSS::lineEdit()
         "background-color: " + QColor(d10,d10,d10).name() + ";"
         "border: 1px solid gray;"
         "selection-background-color: darkgray;"
-        "margin-left: 5px;"
+//        "padding-left: 5px;"
     "}"
 
-    "QLineEdit:focus {"
-        "background-color: transparent;"
-    "}"
+//    "QLineEdit:focus {"
+//        "background-color: transparent;"
+//    "}"
 
     "QLineEdit:hover {"
 //        "border-color: red;"

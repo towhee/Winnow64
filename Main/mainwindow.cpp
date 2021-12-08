@@ -1417,8 +1417,9 @@ void MW::folderSelectionChange()
     //*/
     if (sortColumn != G::NameColumn || sortReverseAction->isChecked()) {
         setCentralMessage("Sorting the data model.");
-        qApp->processEvents();
+//        qApp->processEvents();
         sortChange("folderSelectionChange");
+        setCentralMessage("");
     }
 
     // datamodel loaded - initialize indexes
@@ -1450,7 +1451,7 @@ void MW::folderSelectionChange()
 
     // Load folder progress
     setCentralMessage("Gathering metadata and thumbnails for images in folder.");
-    qApp->processEvents();
+//    qApp->processEvents();
     updateStatus(false, "Collecting metadata for all images in folder(s)", __FUNCTION__);
 
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
@@ -1503,8 +1504,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     if(!isCurrentFolderOkay
             || G::isInitializing
-            || isFilterChange/*
-            || !G::isNewFolderLoaded*/)
+            || isFilterChange
+            || !G::isNewFolderLoaded)
         return;
 
     if (!currentViewDir.exists()) {
@@ -1596,7 +1597,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     // update imageView immediately unless weird sort or folder not loaded yet
     bool okToLoadImage = (sortColumn == G::NameColumn
                       || sortColumn == G::ModifiedColumn)
-                      || G::isNewFolderLoaded;
+                      /*&& G::isNewFolderLoaded*/;
     if (okToLoadImage && useImageView) {
         if (imageView->loadImage(fPath, __FUNCTION__)) {
             updateClassification();
@@ -2148,9 +2149,11 @@ void MW::loadImageCacheForNewFolder()
     // now that metadata is loaded populate the data model
     if(isShowCacheProgressBar) {
         progressBar->clearProgress();
-        qApp->processEvents();
+//        qApp->processEvents();
     }
+//    setCentralMessage("updateIconBestFit.");
     updateIconBestFit();      // rgh make sure req'd
+//    setCentralMessage("updateIconBestFit done.");
 
     // had to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
@@ -7384,18 +7387,25 @@ void MW::externalAppManager()
         Menus cannot be added/deleted at runtime in MacOS so 10 menu items are created
         in the MW constructor and then edited here based on changes made in appDlg.
         */
-        for(int i = 0; i <10; ++i) {
-            if(i < externalApps.length()) {
+        setting->beginGroup("ExternalApps");
+        setting->remove("");
+        for (int i = 0; i < 10; ++i) {
+            if (i < externalApps.length()) {
                 QString shortcut = "Alt+" + xAppShortcut[i];
                 appActions.at(i)->setShortcut(QKeySequence(shortcut));
                 appActions.at(i)->setText(externalApps.at(i).name);
                 appActions.at(i)->setVisible(true);
+                // save to settings
+                QString sortPrefix = xAppShortcut[i];
+                if (sortPrefix == "0") sortPrefix = "X";
+                setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).path);
             }
             else {
                 appActions.at(i)->setVisible(false);
                 appActions.at(i)->setText("");
             }
         }
+        setting->endGroup();
     }
 }
 
@@ -8020,12 +8030,19 @@ void MW::toggleZoomDlg()
     user can set the amount of zoom when toggled.
 
     The dialog is non-modal and floats at the bottom of the central widget. Adjustments are
-    made when the main window resizes or is moved or the mode changes or when a different
-    workspace is invoked.  NOTE: the dialog window flag is Qt::WindowStaysOnTopHint.  When
-    The app focus changes to another app, the zoom dialog is hidden so it does not float on
-    top of other apps (this is triggered in the slot MW::appStateChange).  The windows flag
-    Qt::WindowStaysOnTopHint is not changed as this automatically hides the window - it is
-    easier to just hide it.  The prior state of ZoomDlg is held in isZoomDlgVisible.
+    made when the main window resizes or is moved or when a different workspace is invoked.
+    This only applies when a mode that can be zoomed is visible, so table and grid are not
+    applicable.
+
+    When the zoom dialog is created, zoomDlg->show makes the dialog visible and also gives it
+    the focus, but the design is for the zoomDlg to only have focus when a mouseover occurs.
+    The focus is set to MW when the zoomDlg leaveEvent fires and after zoomDlg->show.
+
+    NOTE: the dialog window flag is Qt::WindowStaysOnTopHint. When The app focus changes to
+    another app, the zoom dialog is hidden so it does not float on top of other apps (this is
+    triggered in the slot MW::appStateChange). The windows flag Qt::WindowStaysOnTopHint is
+    not changed as this automatically hides the window - it is easier to just hide it. The
+    prior state of ZoomDlg is held in isZoomDlgVisible.
 
     When the zoom is changed this is signalled to ImageView and CompareImages, which in turn
     make the scale changes to the image. Conversely, changes in scale originating from
@@ -8035,8 +8052,6 @@ void MW::toggleZoomDlg()
     changed more than can be accounted for in int/qreal conversions then the signal is not
     propagated.
 
-    This only applies when a mode that can be zoomed is visible, so table and grid are not
-    applicable.
 */
     if (G::isLogger) G::log(__FUNCTION__);
     qDebug() << __FUNCTION__ /*<< isZoomDlgVisible*/;
@@ -8086,7 +8101,7 @@ void MW::toggleZoomDlg()
     // if view change other than loupe then close zoomDlg
     connect(this, &MW::closeZoomDlg, zoomDlg, &ZoomDlg::closeZoomDlg);
 
-    // if mouse leave zoom dialog then reset focus to main window
+    // reset focus to main window if the mouse cursor leaves the zoom dialog
     connect(zoomDlg, &ZoomDlg::leaveZoom, this, &MW::resetFocus);
 
     // use show() so dialog will be non-modal
@@ -8094,8 +8109,6 @@ void MW::toggleZoomDlg()
 
     // reset the focus to the main window
     resetFocus();
-//    activateWindow();
-//    setFocus();
 }
 
 void MW::zoomIn()
@@ -8555,14 +8568,14 @@ void MW::writeSettings()
     setting->endGroup();
 
     /* External apps */
-    setting->beginGroup("ExternalApps");
-    setting->remove("");
-    for (int i = 0; i < externalApps.length(); ++i) {
-        QString sortPrefix = xAppShortcut[i];
-        if(sortPrefix == "0") sortPrefix = "X";
-        setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).path);
-    }
-    setting->endGroup();
+//    setting->beginGroup("ExternalApps");
+//    setting->remove("");
+//    for (int i = 0; i < externalApps.length(); ++i) {
+//        QString sortPrefix = xAppShortcut[i];
+//        if (sortPrefix == "0") sortPrefix = "X";
+//        setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).path);
+//    }
+//    setting->endGroup();
 
     /* save bookmarks */
     int idx = 0;
@@ -8716,6 +8729,7 @@ bool MW::loadSettings()
     if (setting->contains("backgroundShade")) {
         G::backgroundShade = setting->value("backgroundShade").toInt();
         if (G::backgroundShade < 20) G::backgroundShade = 50;
+        G::backgroundColor = QColor(G::backgroundShade,G::backgroundShade,G::backgroundShade);
     }
     if (setting->contains("fontSize")) {
         G::fontSize = setting->value("fontSize").toString();
@@ -11888,17 +11902,21 @@ void MW::openInExplorer()
     process->start("explorer.exe", args);
 }
 
-bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
+bool MW::isFolderValid(QString dirPath, bool report, bool isRemembered)
 {
-    if (G::isLogger) G::log(__FUNCTION__, fPath);
+    if (G::isLogger) G::log(__FUNCTION__, dirPath);
     QString msg;
+    QDir testDir(dirPath);
 
-    if (fPath.length() == 0) {
+    if (dirPath.length() == 0) {
         if (report) {
             if (isRemembered)
                 msg = "The last folder from your previous session is unavailable";
             else
-                msg = "The folder (" + fPath + ") does not exist or is not available";
+                if (testDir.exists())
+                    msg = "No images available in this folder";
+                else
+                    msg = "The folder (" + dirPath + ") does not exist or is not available";
 
             statusLabel->setText("");
             setCentralMessage(msg);
@@ -11906,15 +11924,13 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
         return false;
     }
 
-    QDir testDir(fPath);
-
     if (!testDir.exists()) {
         if (report) {
 //            QMessageBox::critical(this, tr("Error"), tr("The folder does not exist or is not available"));
             if (isRemembered)
-                msg = "The last folder from your previous session (" + fPath + ") does not exist or is not available";
+                msg = "The last folder from your previous session (" + dirPath + ") does not exist or is not available";
             else
-                msg = "The folder (" + fPath + ") does not exist or is not available";
+                msg = "The folder (" + dirPath + ") does not exist or is not available";
 
             statusLabel->setText("");
             setCentralMessage(msg);
@@ -11925,7 +11941,7 @@ bool MW::isFolderValid(QString fPath, bool report, bool isRemembered)
     // check if unmounted USB drive
     if (!testDir.isReadable()) {
         if (report) {
-            msg = "The folder (" + fPath + ") is not readable.  Perhaps it was a USB drive that is not currently mounted or that has been ejected.";
+            msg = "The folder (" + dirPath + ") is not readable.  Perhaps it was a USB drive that is not currently mounted or that has been ejected.";
             statusLabel->setText("");
             setCentralMessage(msg);
         }

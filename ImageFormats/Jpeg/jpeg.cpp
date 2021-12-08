@@ -352,7 +352,7 @@ bool Jpeg::parse(MetadataParameters &p,
     // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
-        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
         m.rating = xmp.getItem("Rating");     // case is important "Rating"
         m.label = xmp.getItem("Label");       // case is important "Label"
         m.title = xmp.getItem("title");       // case is important "title"
@@ -454,7 +454,7 @@ void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
             if (segName == "http://ns.adobe.com") {
                 segmentHash["XMP"] = static_cast<quint32>(p.offset);
                 m.xmpSegmentOffset = static_cast<quint32>(p.offset);
-                m.xmpNextSegmentOffset = static_cast<quint32>(nextOffset);
+                m.xmpSegmentLength = static_cast<quint32>(nextOffset - m.xmpSegmentOffset);
                 m.isXmp = true;
             }
             break;
