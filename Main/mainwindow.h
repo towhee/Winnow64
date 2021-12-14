@@ -406,9 +406,11 @@ private slots:
     void metadataChanged(QStandardItem* item);
     void filterLastDay();
     void filterDockVisibilityChange(bool);
+    void filterSyncActionsWithFilters();
     void filterChange(QString source = "");
     void quickFilter();
     void invertFilters();
+    void setFilterSolo();
     void toggleReject();
     void refine();
     void uncheckAllFilters();
@@ -731,10 +733,11 @@ private:
 
     // Filters
 
+    QAction *filterSoloAction;
     QAction *filterUpdateAction;
     QAction *clearAllFiltersAction;
-    QAction *expandAllAction;
-    QAction *collapseAllAction;
+    QAction *expandAllFiltersAction;
+    QAction *collapseAllFiltersAction;
     QAction *filterSearchAction;
     QAction *filterRating1Action;
     QAction *filterRating2Action;

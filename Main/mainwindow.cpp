@@ -338,8 +338,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
 
-//    G::actDevicePixelRatio = 1.5;
-
     // recall previous thumbDock state in case last closed in Grid mode
     if (wasThumbDockVisible) thumbDockVisibleAction->setChecked(wasThumbDockVisible);
 
@@ -497,18 +495,14 @@ void MW::showEvent(QShowEvent *event)
 
     if (isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
-//        /*
         // run restoreGeometry second time if display has been scaled
         if (G::actDevicePixelRatio > 1.0)
             restoreGeometry(setting->value("Geometry").toByteArray());
-        //*/
-        /*
-        #ifdef Q_OS_WIN
         // correct for highdpi
 //        double dpiFactor = 1.0 / G::actDevicePixelRatio;
 //        resize(width() * dpiFactor, height() * dpiFactor);
 //        resize(width() * G::actDevicePixelRatio, height() * G::actDevicePixelRatio);
-        #endif
+//        #endif
         //*/
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
@@ -2775,7 +2769,7 @@ void MW::createActions()
     prefInfoAction->setObjectName("infosettings");
     prefInfoAction->setShortcutVisibleInContextMenu(true);
     addAction(prefInfoAction);
-    connect(prefInfoAction, &QAction::triggered, [this]() {preferences("Metadata panel items");} );
+    connect(prefInfoAction, &QAction::triggered, this, &MW::infoViewPreferences);
 
     // Go menu
 
@@ -2903,17 +2897,17 @@ void MW::createActions()
     addAction(clearAllFiltersAction);
     connect(clearAllFiltersAction, &QAction::triggered, this, &MW::clearAllFilters);
 
-    expandAllAction = new QAction(tr("Expand all filters"), this);
-    expandAllAction->setObjectName("expandAll");
-    expandAllAction->setShortcutVisibleInContextMenu(true);
-    addAction(expandAllAction);
-    connect(expandAllAction, &QAction::triggered, filters, &Filters::expandAllFilters);
+    expandAllFiltersAction = new QAction(tr("Expand all filters"), this);
+    expandAllFiltersAction->setObjectName("expandAll");
+    expandAllFiltersAction->setShortcutVisibleInContextMenu(true);
+    addAction(expandAllFiltersAction);
+    connect(expandAllFiltersAction, &QAction::triggered, filters, &Filters::expandAllFilters);
 
-    collapseAllAction = new QAction(tr("Collapse all filters"), this);
-    collapseAllAction->setObjectName("collapseAll");
-    collapseAllAction->setShortcutVisibleInContextMenu(true);
-    addAction(collapseAllAction);
-    connect(collapseAllAction, &QAction::triggered, filters, &Filters::collapseAllFilters);
+    collapseAllFiltersAction = new QAction(tr("Collapse all filters"), this);
+    collapseAllFiltersAction->setObjectName("collapseAll");
+    collapseAllFiltersAction->setShortcutVisibleInContextMenu(true);
+    addAction(collapseAllFiltersAction);
+    connect(collapseAllFiltersAction, &QAction::triggered, filters, &Filters::collapseAllFilters);
 
     filterSearchAction = new QAction(tr("Filter by search text"), this);
     filterSearchAction->setCheckable(true);
@@ -2997,6 +2991,17 @@ void MW::createActions()
     filterUpdateAction->setShortcutVisibleInContextMenu(true);
     addAction(filterUpdateAction);
     connect(filterUpdateAction,  &QAction::triggered, this, &MW::launchBuildFilters);
+
+    filterSoloAction = new QAction(tr("Solo mode"), this);
+    filterSoloAction->setShortcutVisibleInContextMenu(true);
+    filterSoloAction->setCheckable(true);
+    addAction(filterSoloAction);
+    if (!setting->value("isSoloFilters").isValid() || simulateJustInstalled)
+        filterSoloAction->setChecked(true);
+    else
+        filterSoloAction->setChecked(setting->value("isSoloFilters").toBool());
+    setFilterSolo();    // set solo in filters and save to settings
+    connect(filterSoloAction,  &QAction::triggered, this, &MW::setFilterSolo);
 
     // Sort Menu
 
@@ -3987,9 +3992,10 @@ void MW::createMenus()
     filterActions->append(clearAllFiltersAction);
     filterActions->append(searchTextEditAction);
     filterActions->append(separatorAction);
-    filterActions->append(expandAllAction);
-    filterActions->append(collapseAllAction);
-    filterActions->append(separatorAction1);
+    filterActions->append(expandAllFiltersAction);
+    filterActions->append(collapseAllFiltersAction);
+    filterActions->append(filterSoloAction);
+//    filterActions->append(separatorAction1);
 
     // metadata context menu
     QList<QAction *> *metadataActions = new QList<QAction *>;
@@ -4192,7 +4198,7 @@ void MW::enableSelectionDependentMenus()
         keyEndAction->setEnabled(true);
         nextPickAction->setEnabled(true);
         prevPickAction->setEnabled(true);
-        clearAllFiltersAction->setEnabled(true);
+//        clearAllFiltersAction->setEnabled(true);
         filterPickAction->setEnabled(true);
         filterRating1Action->setEnabled(true);
         filterRating2Action->setEnabled(true);
@@ -4251,7 +4257,7 @@ void MW::enableSelectionDependentMenus()
         keyEndAction->setEnabled(false);
         nextPickAction->setEnabled(false);
         prevPickAction->setEnabled(false);
-        clearAllFiltersAction->setEnabled(false);
+//        clearAllFiltersAction->setEnabled(false);
 //        filterPickAction->setEnabled(false);
 //        filterRating1Action->setEnabled(false);
 //        filterRating2Action->setEnabled(false);
@@ -4819,6 +4825,9 @@ void MW::createFolderDock()
     connect(folderRefreshBtn, &BarBtn::clicked, this, &MW::refreshFolders);
     folderTitleLayout->addWidget(folderRefreshBtn);
 
+    // Spacer
+    folderTitleLayout->addSpacing(5);
+
     // preferences button
     BarBtn *folderGearBtn = new BarBtn();
     folderGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
@@ -4835,6 +4844,9 @@ void MW::createFolderDock()
     folderCloseBtn->setToolTip("Hide the Folders Panel");
     connect(folderCloseBtn, &BarBtn::clicked, this, &MW::toggleFolderDockVisibility);
     folderTitleLayout->addWidget(folderCloseBtn);
+
+    // Spacer
+    folderTitleLayout->addSpacing(5);
 
     if (isSettings) {
         setting->beginGroup(("FolderDock"));
@@ -4870,6 +4882,9 @@ void MW::createFavDock()
     connect(favRefreshBtn, &BarBtn::clicked, this, &MW::refreshFolders);
     favTitleLayout->addWidget(favRefreshBtn);
 
+    // Spacer
+    favTitleLayout->addSpacing(5);
+
     // preferences button
     BarBtn *favGearBtn = new BarBtn();
     favGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
@@ -4886,6 +4901,9 @@ void MW::createFavDock()
     favCloseBtn->setToolTip("Hide the Bookmarks Panel");
     connect(favCloseBtn, &BarBtn::clicked, this, &MW::toggleFavDockVisibility);
     favTitleLayout->addWidget(favCloseBtn);
+
+    // Spacer
+    favTitleLayout->addSpacing(5);
 
     if (isSettings) {
         setting->beginGroup(("FavDock"));
@@ -4918,6 +4936,9 @@ void MW::createFilterDock()
     connect(toggleExpansionBtn, &BarBtn::clicked, filters, &Filters::toggleExpansion);
     filterTitleLayout->addWidget(toggleExpansionBtn);
 
+    // Spacer
+    filterTitleLayout->addSpacing(5);
+
     // preferences button
     BarBtn *filterGearBtn = new BarBtn();
     filterGearBtn->setIcon(QIcon(":/images/icon16/gear.png"));
@@ -4934,6 +4955,9 @@ void MW::createFilterDock()
     filterCloseBtn->setToolTip("Hide the Filters Panel");
     connect(filterCloseBtn, &BarBtn::clicked, this, &MW::toggleFilterDockVisibility);
     filterTitleLayout->addWidget(filterCloseBtn);
+
+    // Spacer
+    filterTitleLayout->addSpacing(5);
 
     // Inside dock set layout for a text label, a progress bar and the filters tree
     QVBoxLayout *msgLayout = new QVBoxLayout();
@@ -4998,6 +5022,9 @@ void MW::createMetadataDock()
     connect(metaCloseBtn, &BarBtn::clicked, this, &MW::toggleMetadataDockVisibility);
     metaTitleLayout->addWidget(metaCloseBtn);
 
+    // Spacer
+    metaTitleLayout->addSpacing(5);
+
     if (isSettings) {
         setting->beginGroup(("MetadataDock"));
         if (setting->contains("screen")) metadataDock->dw.screen = setting->value("screen").toInt();
@@ -5028,6 +5055,7 @@ void MW::createThumbDock()
         if (setting->contains("screen")) thumbDock->dw.screen = setting->value("screen").toInt();
         if (setting->contains("pos")) thumbDock->dw.pos = setting->value("pos").toPoint();
         if (setting->contains("size")) thumbDock->dw.size = setting->value("size").toSize();
+        if (setting->contains("devicePixelRatio")) thumbDock->dw.devicePixelRatio = setting->value("devicePixelRatio").toReal();
         setting->endGroup();
     }
 //    else thumbDock->dw.size = QSize(600, 600);
@@ -5132,12 +5160,18 @@ void MW::createEmbelDock()
     connect(embelQuestionBtn, &BarBtn::clicked, embelProperties, &EmbelProperties::coordHelp);
     embelTitleLayout->addWidget(embelQuestionBtn);
 
+    // Spacer
+    embelTitleLayout->addSpacing(5);
+
     // close button
     BarBtn *embelCloseBtn = new BarBtn();
     embelCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
     embelCloseBtn->setToolTip("Hide the Embellish Panel");
     connect(embelCloseBtn, &BarBtn::clicked, this, &MW::toggleEmbelDockVisibility);
     embelTitleLayout->addWidget(embelCloseBtn);
+
+    // Spacer
+    embelTitleLayout->addSpacing(5);
 }
 
 void MW::createDocks()
@@ -6005,15 +6039,16 @@ void MW::launchBuildFilters()
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing) return;
     if (filterDock->visibleRegion().isNull()) {
+        filters->setSoloMode(filterSoloAction->isChecked());
 //        G::popUp->showPopup("Filters will only be updated when the filters panel is visible.");
-        return;
+//        return;
     }
     if (filters->filtersBuilt) {
         G::popUp->showPopup("Filters are up-to-date.");
         return;
     }
     if (dm->loadingModel) {
-//        G::popUp->showPopup("Not all data required for filtering has been loaded yet.");
+        G::popUp->showPopup("Not all data required for filtering has been loaded yet.");
         return;
     }
 
@@ -6037,8 +6072,12 @@ void MW::filterChange(QString source)
         G::popUp->showPopup("Please wait for the folder to complete loading...", 2000);
         return;
     }
+
     // update filter checkbox
     qApp->processEvents();
+
+    // if filter chnage source is the filter panel then sync menu actions isChecked property
+    if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();
 
 //    imageCacheThread->pauseImageCache();
 
@@ -6111,6 +6150,10 @@ void MW::filterChange(QString source)
 void MW::quickFilter()
 {
     if (G::isLogger) G::log(__FUNCTION__);
+
+    // make sure the filters have been built
+    if (!filters->filtersBuilt) buildFilters->build();
+
     // checked
     if (filterSearchAction->isChecked()) filters->searchTrue->setCheckState(0, Qt::Checked);
     if (filterRating1Action->isChecked()) filters->ratings1->setCheckState(0, Qt::Checked);
@@ -6137,6 +6180,22 @@ void MW::quickFilter()
     if (!filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Unchecked);
 
     filterChange("MW::quickFilter");
+}
+
+void MW::filterSyncActionsWithFilters()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    filterRating1Action->setChecked(filters->ratings1->checkState(0));
+    filterRating2Action->setChecked(filters->ratings2->checkState(0));
+    filterRating3Action->setChecked(filters->ratings3->checkState(0));
+    filterRating4Action->setChecked(filters->ratings4->checkState(0));
+    filterRating5Action->setChecked(filters->ratings5->checkState(0));
+    filterRedAction->setChecked(filters->labelsRed->checkState(0));
+    filterYellowAction->setChecked(filters->labelsYellow->checkState(0));
+    filterGreenAction->setChecked(filters->labelsGreen->checkState(0));
+    filterBlueAction->setChecked(filters->labelsBlue->checkState(0));
+    filterPurpleAction->setChecked(filters->labelsPurple->checkState(0));
+    filterLastDayAction->setChecked(filters->isOnlyMostRecentDayChecked());
 }
 
 void MW::invertFilters()
@@ -6190,20 +6249,34 @@ void MW::clearAllFilters()
     filterChange("MW::clearAllFilters");    
 }
 
+void MW::setFilterSolo()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    filters->setSoloMode(filterSoloAction->isChecked());
+    setting->setValue("isSoloFilters", filterSoloAction->isChecked());
+}
+
 void MW::filterLastDay()
 {
 /*
 .
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    if (dm->rowCount() == 0) {
+    if (dm->sf->rowCount() == 0) {
         G::popUp->showPopup("No images available to filter", 2000);
         filterLastDayAction->setChecked(false);
         return;
     }
 
     // if the additional filters have not been built then do an update
-    if (!filters->days->childCount()) launchBuildFilters();
+    if (!filters->filtersBuilt) {
+        qDebug() << __FUNCTION__ << "build filters";
+        launchBuildFilters();
+        G::popUp->showPopup("Building filters.", 0);
+        buildFilters->wait();
+        G::popUp->hide();
+//    if (!filters->days->childCount()) launchBuildFilters();
+    }
 
     // if there still are no days then tell user and return
     int last = filters->days->childCount();
@@ -8504,6 +8577,7 @@ void MW::writeSettings()
     setting->setValue("screen", thumbDock->dw.screen);
     setting->setValue("pos", thumbDock->dw.pos);
     setting->setValue("size", thumbDock->dw.size);
+    setting->setValue("devicePixelRatio", thumbDock->dw.devicePixelRatio);
     setting->endGroup();
 
     /* InfoView okToShow fields */
@@ -8681,6 +8755,8 @@ bool MW::loadSettings()
         slideShowDelay = 5;
         isSlideShowRandom = false;
         isSlideShowWrap = true;
+
+        // filters
 
         // cache
         cacheSizeMethod = "Moderate";
@@ -9164,7 +9240,7 @@ void MW::refreshFolders()
 
 void MW::setThumbDockFloatFeatures(bool isFloat)
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__, "isFloat = " + QString::number(isFloat));
     if (isFloat) {
         thumbView->setMaximumHeight(100000);
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -9203,6 +9279,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    if (thumbDock->isFloating()) return;
     thumbView->setMaximumHeight(100000);
 
     /* Check if the thumbDock is docked top or bottom. If so, set the titlebar to vertical and
@@ -12054,6 +12131,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+
+    thumbDock->setFloating(!thumbDock->isFloating());
+    G::wait(500);
+    if (thumbDock->isFloating()) thumbDock->resize(700, 700);
+
 
 //    if (zoomDlg) {
 //        zoomDlg->setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
