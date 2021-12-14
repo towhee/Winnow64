@@ -100,10 +100,10 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
 
     setRootIsDecorated(true);
     setIndentation(0);
-    setExpandsOnDoubleClick(true);
+    setExpandsOnDoubleClick(false);
     setHeaderHidden(true);
     setAlternatingRowColors(true);
-    setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::SelectedClicked);
+    setEditTriggers(QAbstractItemView::SelectedClicked);
     // setup headers
     setFirstColumnSpanned(0, QModelIndex(), true);  // File:
     setFirstColumnSpanned(1, QModelIndex(), true);  // Camera:
@@ -475,6 +475,7 @@ void InfoView::updateInfo(const int &row)
     // set tooltips
     for(int row = 0; row < ok->rowCount(); row++) {
         QModelIndex parentIdx = ok->index(row, 0);
+        ok->setData(parentIdx, "Click category to expand/collapse", Qt::ToolTipRole);
         for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
             QModelIndex idx = ok->index(childRow, 1, parentIdx);
             QString value = qvariant_cast<QString>(idx.data());
@@ -495,23 +496,30 @@ void InfoView::updateInfo(const int &row)
 void InfoView::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
-        QModelIndex index = indexAt(event->pos());
-        if (index.column() == 1) { // column you want to use for one click
+        QModelIndex idx = indexAt(event->pos());
+        // check if click on category row. If so, expand or collapse branch
+        qDebug() << __FUNCTION__ << idx.parent() << idx.parent().isValid();
+        if (!idx.parent().isValid()) isExpanded(idx) ? collapse(idx) : expand(idx);
+
+        else if (idx.column() == 1) { // column you want to use for one click
+            QString name = ok->index(idx.row(), 0, idx.parent()).data().toString();
             QString selectedCount = ok->index(SelectedRow, 1, statusInfoIdx).data().toString();
             selectedCount.remove(selectedCount.indexOf(" "), selectedCount.length() - 1);
             if (selectedCount.toInt() > 1) {
-
+                QString msg = "<font color=\"red\"><b>Note: </b></font>"
+                              "Any edits to " + name + " will be applied to all " +
+                              selectedCount + " selected images.";
+                G::popUp->showPopup(msg, 3000);
             }
             qDebug() << __FUNCTION__ << "selected =" << selectedCount;
             // alternating colors
-            int row = index.row();
+            int row = idx.row();
             int a = G::backgroundShade + 5;
             int b = G::backgroundShade;
             QColor altBackground(b,b,b);
             if (row % 2 != 0) altBackground = QColor(a,a,a);
             setStyleSheet(
                 "QLineEdit {"
-                    "selection-background-color: gray;"
                     "border: none;"
                     "margin-left: 5px;"
                     "margin-right: 20px;"
@@ -524,7 +532,7 @@ void InfoView::mousePressEvent(QMouseEvent *event)
                 "}"
                 ";"
             );
-            edit(index);
+            edit(idx);
         }
     }
     QTreeView::mousePressEvent(event);

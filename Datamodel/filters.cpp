@@ -80,32 +80,34 @@ datamodel.
     setItemDelegate(new FiltersDelegate(this));
     setFocusPolicy(Qt::NoFocus);
 
-    setStyleSheet("QLineEdit {"
-                      "font: italic;"
-                      "selection-background-color: gray;"
-                      "border: none;"
-                      "margin-left: 0px;"
-                      "padding-left: 0px;"
-                  "}"
-                  "QLineEdit:focus {"
-                      "background-color:" + G::backgroundColor.name() + ";"
-                  "}"
-                  ";");
+    setStyleSheet(
+        "QTreeWidget::item {"
+            "margin-left: -4px;"  // aligns edit box with cell contents
+        "}"
+        "QLineEdit {"
+            "font: italic;"
+            "border: none;"
+        "}"
+        "QLineEdit:focus {"
+            "background-color:" + G::backgroundColor.name() + ";"
+        "}"
+        ";"
+    );
 
-    filterCategoryToDmColumn["Search"] = G::SearchColumn;
+    filterCategoryToDmColumn[" Search"] = G::SearchColumn;
 
-    filterCategoryToDmColumn["Refine"] = G::RefineColumn;
-    filterCategoryToDmColumn["Picks"] = G::PickColumn;
-    filterCategoryToDmColumn["Ratings"] = G::RatingColumn;
-    filterCategoryToDmColumn["Color class"] = G::LabelColumn;
-    filterCategoryToDmColumn["File type"] = G::TypeColumn;
-    filterCategoryToDmColumn["Years"] = G::YearColumn;
-    filterCategoryToDmColumn["Days"] = G::DayColumn;
-    filterCategoryToDmColumn["Camera model"] = G::CameraModelColumn;
-    filterCategoryToDmColumn["Lenses"] = G::LensColumn;
-    filterCategoryToDmColumn["FocalLengths"] = G::FocalLengthColumn;
-    filterCategoryToDmColumn["Title"] = G::TitleColumn;
-    filterCategoryToDmColumn["Creators"] = G::CreatorColumn;
+    filterCategoryToDmColumn[" Refine"] = G::RefineColumn;
+    filterCategoryToDmColumn[" Picks"] = G::PickColumn;
+    filterCategoryToDmColumn[" Ratings"] = G::RatingColumn;
+    filterCategoryToDmColumn[" Color class"] = G::LabelColumn;
+    filterCategoryToDmColumn[" File type"] = G::TypeColumn;
+    filterCategoryToDmColumn[" Years"] = G::YearColumn;
+    filterCategoryToDmColumn[" Days"] = G::DayColumn;
+    filterCategoryToDmColumn[" Camera model"] = G::CameraModelColumn;
+    filterCategoryToDmColumn[" Lenses"] = G::LensColumn;
+    filterCategoryToDmColumn[" FocalLengths"] = G::FocalLengthColumn;
+    filterCategoryToDmColumn[" Title"] = G::TitleColumn;
+    filterCategoryToDmColumn[" Creators"] = G::CreatorColumn;
 
     /* Sits above the filters QTreeWidget and is used to message that the filters are
        being rebuilt.  Set invisible at start and rendered visible when building filters */
@@ -123,7 +125,8 @@ datamodel.
     setProgressBarStyle();
     bfProgressBar->setValue(0);
 
-    expandAll();
+//    if (isSolo) collapseAll();
+//    else expandAll();
 
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
 }
@@ -134,7 +137,7 @@ void Filters::createPredefinedFilters()
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     search = new QTreeWidgetItem(this);
-    search->setText(0, "Search");
+    search->setText(0, " Search");
     search->setFont(0, categoryFont);
     search->setText(2, "Filter");
     search->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
@@ -160,7 +163,7 @@ void Filters::createPredefinedFilters()
     searchFalse->setData(1, Qt::EditRole, false);
 
     refine = new QTreeWidgetItem(this);
-    refine->setText(0, "Refine");
+    refine->setText(0, " Refine");
 //    refine->setFont(0, categoryFont);
     refine->setData(0, G::ColumnRole, G::RefineColumn);
 
@@ -174,7 +177,7 @@ void Filters::createPredefinedFilters()
     refineTrue->setData(1, Qt::EditRole, true);
 
     picks = new QTreeWidgetItem(this);
-    picks->setText(0, "Picks");
+    picks->setText(0, " Picks");
 //    picks->setFont(0, categoryFont);
     picks->setData(0, G::ColumnRole, G::PickColumn);
 
@@ -192,7 +195,7 @@ void Filters::createPredefinedFilters()
     picksReject->setData(1, Qt::EditRole, "reject");
 
     ratings = new QTreeWidgetItem(this);
-    ratings->setText(0, "Ratings");
+    ratings->setText(0, " Ratings");
 //    ratings->setFont(0, categoryFont);
     ratings->setData(0, G::ColumnRole, G::RatingColumn);
 
@@ -222,7 +225,7 @@ void Filters::createPredefinedFilters()
     ratings5->setData(1, Qt::EditRole, 5);
 
     labels = new QTreeWidgetItem(this);
-    labels->setText(0, "Color class");
+    labels->setText(0, " Color class");
 //    labels->setFont(0, categoryFont);
     labels->setData(0, G::ColumnRole, G::LabelColumn);
 
@@ -261,42 +264,42 @@ by addCategoryFromData.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     types = new QTreeWidgetItem(this);
-    types->setText(0, "File type");
+    types->setText(0, " File type");
 //    types->setFont(0, categoryFont);
     types->setData(0, G::ColumnRole, G::TypeColumn);
 
     years = new QTreeWidgetItem(this);
-    years->setText(0, "Years");
+    years->setText(0, " Years");
 //    years->setFont(0, categoryFont);
     years->setData(0, G::ColumnRole, G::YearColumn);
 
     days = new QTreeWidgetItem(this);
-    days->setText(0, "Days");
+    days->setText(0, " Days");
 //    days->setFont(0, categoryFont);
     days->setData(0, G::ColumnRole, G::DayColumn);
 
     models = new QTreeWidgetItem(this);
-    models->setText(0, "Camera model");
+    models->setText(0, " Camera model");
 //    models->setFont(0, categoryFont);
     models->setData(0, G::ColumnRole, G::CameraModelColumn);
 
     lenses = new QTreeWidgetItem(this);
-    lenses->setText(0, "Lenses");
+    lenses->setText(0, " Lenses");
 //    lenses->setFont(0, categoryFont);
     lenses->setData(0, G::ColumnRole, G::LensColumn);
 
     focalLengths = new QTreeWidgetItem(this);
-    focalLengths->setText(0, "FocalLengths");
+    focalLengths->setText(0, " FocalLengths");
 //    focalLengths->setFont(0, categoryFont);
     focalLengths->setData(0, G::ColumnRole, G::FocalLengthColumn);
 
     titles = new QTreeWidgetItem(this);
-    titles->setText(0, "Title");
+    titles->setText(0, " Title");
 //    titles->setFont(0, categoryFont);
     titles->setData(0, G::ColumnRole, G::TitleColumn);
 
     creators = new QTreeWidgetItem(this);
-    creators->setText(0, "Creators");
+    creators->setText(0, " Creators");
 //    creators->setFont(0, categoryFont);
     creators->setData(0, G::ColumnRole, G::CreatorColumn);
 }
@@ -418,9 +421,10 @@ void Filters::setSearchNewFolder()
 void Filters::disableZeroCountItems(bool disable)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+    return;
     QTreeWidgetItemIterator it(this);
     while (*it) {
-        if ((*it)->parent() && (*it)->parent()->text(0) != "Search") {
+        if ((*it)->parent() && (*it)->parent()->text(0) != " Search") {
             if (disable) {
                 if ((*it)->text(2) == "0") (*it)->setDisabled(true);
                 else (*it)->setDisabled(false);
@@ -468,6 +472,21 @@ bool Filters::isAnyFilter()
             if ((*it)->checkState(0) == Qt::Checked) return true;
         }
         ++it;
+    }
+    return false;
+}
+
+bool Filters::isOnlyMostRecentDayChecked()
+{
+/*
+    This is used to sync MW filters menu chech state with Filters panel (here)
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    int n = days->childCount();
+    for (int i = 0; i < n; i++) {
+        bool isChecked = days->child(i)->checkState(0);
+        if ((i < n - 1) && isChecked) return false;
+         if (i == n - 1) return isChecked;
     }
     return false;
 }
@@ -537,7 +556,8 @@ void Filters::finishedBuildFilters()
     msgFrame->setVisible(false);
     disableZeroCountItems(true);
     setEnabled(true);
-    expandAll();
+    if (isSolo) collapseAll();
+    else expandAll();
     if (G::isLogger) G::log(__FUNCTION__, "Finished");
 }
 
@@ -561,6 +581,26 @@ folder is selected to reset the filter criteria.
         ++it;
     }
     setSearchNewFolder();
+}
+
+bool Filters::otherHdrExpanded(QModelIndex thisIdx)
+{
+    for (int i = 0; i < topLevelItemCount(); ++i) {
+        QModelIndex idx = indexFromItem(topLevelItem(i));
+        if (idx == thisIdx) continue;
+        if (isExpanded(idx)) return true;
+    }
+    return false;
+//    QTreeWidgetItemIterator it(this);
+//    while (*it) {
+//        if (!(*it)->parent()) {
+//            (*it)->setCheckState(0, Qt::Unchecked);
+//            (*it)->setData(2, Qt::EditRole, "");
+//            (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+//            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+//        }
+//        ++it;
+//    }
 }
 
 void Filters::uncheckAllFilters()
@@ -784,6 +824,12 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
     emit filterChange("Filters::itemClickedSignal");
 }
 
+void Filters::setSoloMode(bool isSolo)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    this->isSolo = isSolo;
+}
+
 void Filters::resizeColumns()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
@@ -824,8 +870,27 @@ void Filters::mousePressEvent(QMouseEvent *event)
     if (buildingFilters) return;
     QPoint p = event->pos();
     QModelIndex idx = indexAt(p);
-    if (idx.isValid() && p.x() >= indentation) {
-        isExpanded(idx) ? collapse(idx) : expand(idx);
+    bool isLeftBtn = event->button() == Qt::LeftButton;
+    bool isHdr = idx.parent() == QModelIndex();
+    bool notIndentation = p.x() >= indentation;
+    bool isValid = idx.isValid();
+    bool isCtrlModifier = event->modifiers() & Qt::ControlModifier;
+    qDebug() << __FUNCTION__ << otherHdrExpanded(idx);
+    if (isLeftBtn && isHdr && isValid && notIndentation) {
+        if (isSolo && !isCtrlModifier) {
+            if (isExpanded(idx)) {
+                bool otherHdrWasExpanded = otherHdrExpanded(idx);
+                collapseAll();
+                if (otherHdrWasExpanded) expand(idx);
+            }
+            else {
+                collapseAll();
+                expand(idx);
+            }
+        }
+        else {
+            isExpanded(idx) ? collapse(idx) : expand(idx);
+        }
     }
-    QTreeWidget::mousePressEvent(event);
+    if (!isHdr) QTreeWidget::mousePressEvent(event);
 }

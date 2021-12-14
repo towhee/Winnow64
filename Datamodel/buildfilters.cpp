@@ -40,7 +40,6 @@ void BuildFilters::stop()
 void BuildFilters::build()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -66,7 +65,6 @@ void BuildFilters::build()
 void BuildFilters::done()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__;
     if (!abort) emit finishedBuildFilters();
 //    qint64 msec = buildFiltersTimer.elapsed();
 //    qDebug() << __FUNCTION__ << QString("%L1").arg(msec) << "msec";
@@ -82,7 +80,6 @@ void BuildFilters::unfilteredItemSearchCount()
     This function is run everytime the search string changes.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__;
     int col = G::SearchColumn;
 
     // get total matches for searchTrue
@@ -148,7 +145,6 @@ void BuildFilters::updateCountFiltered()
 void BuildFilters::countFiltered()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-//    qDebug() << __FUNCTION__;
     // count filtered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
@@ -197,7 +193,6 @@ void BuildFilters::countFiltered()
 void BuildFilters::countUnfiltered()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-    qDebug() << __FUNCTION__;
     // count unfiltered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
@@ -252,7 +247,6 @@ void BuildFilters::countUnfiltered()
 void BuildFilters::loadAllMetadata()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-    qDebug() << __FUNCTION__;
     if (!G::allMetadataLoaded) {
         for (int row = 0; row < dmRows; ++row) {
             if (abort) return;
@@ -280,7 +274,6 @@ void BuildFilters::loadAllMetadata()
 void BuildFilters::mapUniqueInstances()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-    qDebug() << __FUNCTION__;
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QVariant, QString> typesMap;
     QMap<QVariant, QString> modelMap;
@@ -351,7 +344,6 @@ void BuildFilters::run()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     if (filters->filtersBuilt) return;
-    qDebug() << __FUNCTION__;
 
     if (!abort) loadAllMetadata();
     if (!abort) mapUniqueInstances();

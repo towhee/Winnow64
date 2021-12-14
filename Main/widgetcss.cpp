@@ -403,11 +403,8 @@ QString WidgetCSS::treeView()
 {
     return
     "QTreeView {"
-//        "background-color: " + QColor(bg,bg,bg).name() + ";"
         "alternate-background-color: " + QColor(l5,l5,l5).name() + ";"
         "color: " + textColor.name() + ";"
-//        "selection-background-color: " + selectionColor.name() + ";"
-//        "selection-color: " + textColor.name() + ";"
         "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
     "}"
 
@@ -415,14 +412,12 @@ QString WidgetCSS::treeView()
     "QTreeView::branch:closed:has-children:has-siblings {"
         "border-image: none;"
         "image: url(:/images/branch-closed-winnow.png);"
-//        "margin-bottom: 2px;"
     "}"
 
     "QTreeView::branch:open:has-children:!has-siblings,"
     "QTreeView::branch:open:has-children:has-siblings  {"
         "border-image: none;"
         "image: url(:/images/branch-open-winnow.png);"
-//        "margin-bottom: 2px;"
     "}"
 
     "QTreeView::item {"
@@ -680,7 +675,7 @@ QString WidgetCSS::spinBox()
         "border-width: 1px;"
         "border-style: solid;"
         "border-color: " + borderColor.name() + ";"
-        "selection-background-color: darkgray;"
+        "selection-background-color:" + G::selectionColor.name() + ";"
         "border-radius: 2px;"
         "padding-left: 4px;"
     "}"
@@ -711,7 +706,7 @@ QString WidgetCSS::doubleSpinBox()
     "border-width: 1px;"
     "border-style: solid;"
     "border-color: " + borderColor.name() + ";"
-    "selection-background-color: darkgray;"
+    "selection-background-color:" + G::selectionColor.name() + ";"
     "border-radius: 2px;"
     "padding-left: 4px;"
     "}"
@@ -747,8 +742,7 @@ QString WidgetCSS::lineEdit()
     "QLineEdit {"
         "background-color: " + QColor(d10,d10,d10).name() + ";"
         "border: 1px solid gray;"
-        "selection-background-color: darkgray;"
-//        "padding-left: 5px;"
+        "selection-background-color:" + G::selectionColor.name() + ";"
     "}"
 
 //    "QLineEdit:focus {"

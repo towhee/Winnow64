@@ -32,8 +32,8 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event);    // The background will be drawn through the redraw method
-    void focusOutEvent(QFocusEvent *event);
-    void keyReleaseEvent(QKeyEvent *event);
+    void focusOutEvent(QFocusEvent *event) override;
+    void keyReleaseEvent(QKeyEvent *event) override;
 
 
 public slots:

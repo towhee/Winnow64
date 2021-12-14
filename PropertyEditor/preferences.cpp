@@ -412,7 +412,7 @@ void Preferences::addItems()
     // Write metadata edits to sidecar XMP file
     i.name = "useSidecar";
     i.parentName = "GeneralHeader";
-    i.captionText = "Read/Write metadata edits to sidecar XMP file";
+    i.captionText = "Read/Write metadata edits to xmp sidecar";
     i.tooltip = "If you edit metadata (rating, color class, title, creator,\n"
                 "copyright, email, url and orientation) the change will be\n"
                 "written to a XMP sidecar file.  This data can be read by\n"
@@ -705,11 +705,8 @@ void Preferences::addItems()
     // Show caching activity
     i.name = "showCacheProgressBar";
     i.parentName = "CacheHeader";
-    i.captionText = "Show caching activity";
-    i.tooltip = "Two small indicators on the extreme right side of the status bar turn red\n"
-                "when there is caching activity.  The left indicator is for matadata caching\n"
-                "activity, while the right indicator shows image caching activity.  This\n"
-                "preference shows or hides the indicators.";
+    i.captionText = "Show caching progress";
+    i.tooltip = "Show or hide the cache progress bar in the status area on the lower right.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->isShowCacheProgressBar;

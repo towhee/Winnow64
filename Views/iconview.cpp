@@ -1037,6 +1037,12 @@ which isn't pretty at all.
 */
     event->ignore();    // suppress compiler warning
     if (G::isLogger) G::log(__FUNCTION__); 
+    if (m2->thumbDock != nullptr) {
+        qDebug() << __FUNCTION__
+                 << "m2->thumbDock->isFloating() ="
+                 << m2->thumbDock->isFloating();
+        if (m2->thumbDock->isFloating()) return;
+    }
     int mid = midVisibleCell;
 
     static int prevWidth = 0;
@@ -1552,7 +1558,7 @@ viewport. It is also called from MW::thumbHasScrolled as the mouse pointer might
 different thumbnail after the thumbnails scroll.  Finally it is called when there is a window
 resize MW::resizeEvent that will change the centralWidget geometry.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+//    if (G::isLogger) G::log(__FUNCTION__);
     if (G::isEmbellish) return;
     if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
         setCursor(Qt::ArrowCursor);

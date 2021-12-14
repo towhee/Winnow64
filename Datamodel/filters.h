@@ -58,9 +58,11 @@ public:
     void disableZeroCountItems(bool disable);
     void disableAllItems(bool disable);
     void setProgressBarStyle();
+    bool isOnlyMostRecentDayChecked();
 
     bool buildingFilters = false;
     bool filtersBuilt = false;
+    bool isSolo = true;
     QString buildingFiltersMsg = "Building filters. Press \"Esc\" to stop.";
 
     QString searchString = "";
@@ -85,6 +87,7 @@ public slots:
     void checkPicks(bool check);
     void updateProgress(int progress);
     void finishedBuildFilters();
+    void setSoloMode(bool isSolo);
 
 private slots:
     void dataChanged(const QModelIndex &topLeft,
@@ -93,12 +96,13 @@ private slots:
     void itemClickedSignal(QTreeWidgetItem *item, int column);
 
 protected:
-    void resizeEvent(QResizeEvent *event);
-    void paintEvent(QPaintEvent *event);
-    void mousePressEvent(QMouseEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
 
 private:
     void resizeColumns();
+    bool otherHdrExpanded(QModelIndex thisIdx);
     QLinearGradient categoryBackground;
     QFont categoryFont;
     QFont searchDefaultTextFont;
