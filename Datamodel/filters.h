@@ -89,10 +89,10 @@ public slots:
     void finishedBuildFilters();
     void setSoloMode(bool isSolo);
 
-private slots:
+public slots:
     void dataChanged(const QModelIndex &topLeft,
                      const QModelIndex &bottomRight,
-                     const QVector<int> &roles = QVector<int>());
+                     const QVector<int> &roles = QVector<int>()) override;
     void itemClickedSignal(QTreeWidgetItem *item, int column);
 
 protected:

@@ -61,6 +61,7 @@ Xmp::Xmp(QFile &file, uint offset, uint length, QObject *parent) :  QObject(pare
         else {
             QFile sidecarFile(sidecarPath);
             if (sidecarFile.exists()) {
+                sidecarFile.open(QIODevice::ReadWrite);
                 xmpmetaEnd = sidecarFile.size();
                 xmpBa = sidecarFile.readAll();
                 sideCarExists = true;
@@ -353,9 +354,11 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
     insertSchemas(item);
 
     /*
-    qDebug() << G::t.restart() << "\t" << "Xmp::setItem  item =" << item
+    qDebug() << "Xmp::setItem  item =" << item
              << "schema =" << schema
-             << "tag =" << tag;
+             << "tag =" << tag
+             << "xmpBa =" << xmpBa
+                ;
              //*/
 
     // search for item in case it already exists in xmp side car file
@@ -488,7 +491,7 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
 
     if (foundItem) {
         xmpBa.replace(startPos, endPos - startPos, value);
-        report();
+//        report();
 
         return true;
     }

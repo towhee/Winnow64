@@ -62,7 +62,7 @@ void Win::collectScreensInfo()
             adaptorString = displayDevice.DeviceString;
             adaptorStringW = adaptorString.c_str();
 
-            // Cycle throughattached monitors
+            // Cycle through attached monitors
             std::wstring deviceName;
             LPCWSTR deviceNameW;
             std::wstring deviceString;

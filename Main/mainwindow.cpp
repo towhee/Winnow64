@@ -1404,6 +1404,9 @@ void MW::folderSelectionChange()
         return;
     }
 
+    // update FSTree count column for folder in case it has changed
+    fsTree->updateFolderImageCount(currentViewDirPath);
+
     /* update sort if necessary (DataModel loads sorted by name in ascending order)
     qDebug() << __FUNCTION__ << "Sort new folder if necessary"
              << "sortColumn =" << sortColumn
@@ -2423,6 +2426,12 @@ void MW::createActions()
 //    showImageCountAction->setChecked(setting->value("showImageCount").toBool());
     addAction(showImageCountAction);
     connect(showImageCountAction, &QAction::triggered, this, &MW::setShowImageCount);
+
+    updateImageCountAction = new QAction(tr("Update image counts"), this);
+    updateImageCountAction->setObjectName("updateImageCount");
+    updateImageCountAction->setShortcutVisibleInContextMenu(true);
+    addAction(updateImageCountAction);
+    connect(updateImageCountAction, &QAction::triggered, fsTree, &FSTree::updateVisibleImageCount);
 
     addBookmarkAction = new QAction(tr("Add Bookmark"), this);
     addBookmarkAction->setObjectName("addBookmark");
@@ -3960,6 +3969,7 @@ void MW::createMenus()
     fsTreeActions = new QList<QAction *>;
 //    QList<QAction *> *fsTreeActions = new QList<QAction *>;
     fsTreeActions->append(refreshFoldersAction);
+    fsTreeActions->append(updateImageCountAction);
     fsTreeActions->append(collapseFoldersAction);
     fsTreeActions->append(ejectActionFromContextMenu);
     fsTreeActions->append(separatorAction);
@@ -4853,6 +4863,7 @@ void MW::createFolderDock()
         if (setting->contains("screen")) folderDock->dw.screen = setting->value("screen").toInt();
         if (setting->contains("pos")) folderDock->dw.pos = setting->value("pos").toPoint();
         if (setting->contains("size")) folderDock->dw.size = setting->value("size").toSize();
+        if (setting->contains("devicePixelRatio")) folderDock->dw.devicePixelRatio = setting->value("devicePixelRatio").toReal();
         setting->endGroup();
     }
 
@@ -4910,6 +4921,7 @@ void MW::createFavDock()
         if (setting->contains("screen")) favDock->dw.screen = setting->value("screen").toInt();
         if (setting->contains("pos")) favDock->dw.pos = setting->value("pos").toPoint();
         if (setting->contains("size")) favDock->dw.size = setting->value("size").toSize();
+        if (setting->contains("devicePixelRatio")) favDock->dw.devicePixelRatio = setting->value("devicePixelRatio").toReal();
         setting->endGroup();
     }
 }
@@ -4984,6 +4996,7 @@ void MW::createFilterDock()
         if (setting->contains("screen")) filterDock->dw.screen = setting->value("screen").toInt();
         if (setting->contains("pos")) filterDock->dw.pos = setting->value("pos").toPoint();
         if (setting->contains("size")) filterDock->dw.size = setting->value("size").toSize();
+        if (setting->contains("devicePixelRatio")) filterDock->dw.devicePixelRatio = setting->value("devicePixelRatio").toReal();
         setting->endGroup();
     }
 }
@@ -5030,6 +5043,7 @@ void MW::createMetadataDock()
         if (setting->contains("screen")) metadataDock->dw.screen = setting->value("screen").toInt();
         if (setting->contains("pos")) metadataDock->dw.pos = setting->value("pos").toPoint();
         if (setting->contains("size")) metadataDock->dw.size = setting->value("size").toSize();
+        if (setting->contains("devicePixelRatio")) metadataDock->dw.devicePixelRatio = setting->value("devicePixelRatio").toReal();
         setting->endGroup();
     }
 }
@@ -5039,15 +5053,8 @@ void MW::createThumbDock()
     if (G::isLogger) G::log(__FUNCTION__);
     thumbDockTabText = "Thumbnails";
     thumbDock = new DockWidget(thumbDockTabText, this);  // Thumbnails
-//    thumbDock = new DockWidget(" 👍", this);  // Thumbnails
     thumbDock->setObjectName("thumbDock");
     thumbDock->setWidget(thumbView);
-//    QHBoxLayout *thumbTitleLayout = new QHBoxLayout();
-//    thumbTitleLayout->setContentsMargins(0, 0, 0, 0);
-//    thumbTitleLayout->setSpacing(0);
-//    DockTitleBar *thumbTitleBar = new DockTitleBar("Thumbnails", thumbTitleLayout);
-//    thumbDock->setTitleBarWidget(thumbTitleBar);
-//    thumbDock->setWindowTitle(" 👍 ");
     thumbDock->installEventFilter(this);
 
     if (isSettings) {
@@ -6121,6 +6128,7 @@ void MW::filterChange(QString source)
     if (currentRow == -1) currentRow = 0;
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
+    thumbView->selectThumb(currentRow);
     QModelIndex idx = dm->sf->index(currentRow, 0);
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
@@ -8540,6 +8548,7 @@ void MW::writeSettings()
     setting->setValue("screen", folderDock->dw.screen);
     setting->setValue("pos", folderDock->dw.pos);
     setting->setValue("size", folderDock->dw.size);
+    setting->setValue("devicePixelRatio", folderDock->dw.devicePixelRatio);
     setting->endGroup();
 
     /* FavDock floating info */
@@ -8547,22 +8556,25 @@ void MW::writeSettings()
     setting->setValue("screen", favDock->dw.screen);
     setting->setValue("pos", favDock->dw.pos);
     setting->setValue("size", favDock->dw.size);
+    setting->setValue("devicePixelRatio", favDock->dw.devicePixelRatio);
     setting->endGroup();
 
     /* MetadataDock floating info */
-    if (useInfoView) {
+//    if (useInfoView) {
         setting->beginGroup(("MetadataDock"));
         setting->setValue("screen", metadataDock->dw.screen);
         setting->setValue("pos", metadataDock->dw.pos);
         setting->setValue("size", metadataDock->dw.size);
+        setting->setValue("devicePixelRatio", metadataDock->dw.devicePixelRatio);
         setting->endGroup();
-    }
+//    }
 
     /* EmbelDock floating info */
     setting->beginGroup(("EmbelDock"));
-    setting->setValue("screen", metadataDock->dw.screen);
-    setting->setValue("pos", metadataDock->dw.pos);
-    setting->setValue("size", metadataDock->dw.size);
+    setting->setValue("screen", embelDock->dw.screen);
+    setting->setValue("pos", embelDock->dw.pos);
+    setting->setValue("size", embelDock->dw.size);
+    setting->setValue("devicePixelRatio", embelDock->dw.devicePixelRatio);
     setting->endGroup();
 
     /* FilterDock floating info */
@@ -8570,6 +8582,7 @@ void MW::writeSettings()
     setting->setValue("screen", filterDock->dw.screen);
     setting->setValue("pos", filterDock->dw.pos);
     setting->setValue("size", filterDock->dw.size);
+    setting->setValue("devicePixelRatio", filterDock->dw.devicePixelRatio);
     setting->endGroup();
 
     /* ThumbDock floating info */
@@ -9218,6 +9231,7 @@ void MW::refreshFolders()
     bool showImageCount = fsTree->isShowImageCount();
     fsTree->refreshModel();
     fsTree->setShowImageCount(showImageCount);
+    fsTree->updateVisibleImageCount();
 
     // make folder panel visible and set focus
     folderDock->raise();
@@ -10722,8 +10736,8 @@ void MW::setRating()
                 ratingIdx = dm->index(row, G::RatingColumn);
                 dm->setData(ratingIdx, rating, Qt::EditRole);
                 // update rating crash log
-                fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
-                updateRatingLog(fPath, rating);
+                QString jpgPath  = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+                updateRatingLog(jpgPath, rating);
             }
         }
         // write to sidecar
@@ -10883,8 +10897,8 @@ void MW::setColorClass()
                 labelIdx = dm->index(row, G::LabelColumn);
                 dm->setData(labelIdx, colorClass, Qt::EditRole);
                 // update color class crash log
-                fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
-                updateColorClassLog(fPath, colorClass);
+                QString jpgPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
+                updateColorClassLog(jpgPath, colorClass);
             }
         }
         // write to sidecar
@@ -10907,6 +10921,7 @@ void MW::setColorClass()
 
     // update filter counts
     buildFilters->updateCountFiltered();
+    dm->sf->filterChange();
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
@@ -11694,7 +11709,7 @@ void MW::deleteFiles()
     }
 
     // refresh image count in folders and bookmarks
-    fsTree->updateImageCount(currentViewDirPath);
+    fsTree->updateFolderImageCount(currentViewDirPath);
     bookmarks->count();
 
     // if all images in folder were deleted
@@ -12131,10 +12146,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-
-    thumbDock->setFloating(!thumbDock->isFloating());
-    G::wait(500);
-    if (thumbDock->isFloating()) thumbDock->resize(700, 700);
+    filters->update();
+//    QtConcurrent::run(fsTree, &FSTree::updateVisibleImageCount);
+//    fsTree->refreshModel();
 
 
 //    if (zoomDlg) {

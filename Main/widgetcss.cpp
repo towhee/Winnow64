@@ -373,10 +373,10 @@ QString WidgetCSS::treeWidget()
         "color:" + disabledColor.name() + ";"
     "}"
 
-    "QTreeWidget::item:focus {"
-        "background-color: green;"/* + disabledColor.name() + ";"*/
-        "margin-left: 15px;"
-    "}"
+//    "QTreeWidget::item:focus {"
+//        "background-color: green;"/* + disabledColor.name() + ";"*/
+//        "margin-left: 15px;"
+//    "}"
 
     "QTreeWidget::indicator {"
         "width: 15px;"

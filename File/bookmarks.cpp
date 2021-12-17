@@ -54,6 +54,7 @@ BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount,
 	setDragEnabled(false);
 	setDragDropMode(QAbstractItemView::DropOnly);
 
+    setEditTriggers(QAbstractItemView::NoEditTriggers);
     setRootIsDecorated(false);
     setColumnCount(2);
     setHeaderHidden(true);
@@ -159,6 +160,12 @@ void BookMarks::resizeEvent(QResizeEvent *event)
     if (G::isLogger) G::log(__FUNCTION__); 
     resizeColumns();
     QTreeWidget::resizeEvent(event);
+}
+
+void BookMarks::mouseDoubleClickEvent(QMouseEvent *)
+{
+    // ignore double mouse clicks (edit/expand)
+    return;
 }
 
 void BookMarks::mousePressEvent(QMouseEvent *event)

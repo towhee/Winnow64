@@ -442,7 +442,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     p.file.setFileName(fPath);
     // rgh error trap file operation
     if (p.file.isOpen()) p.file.close();
-    p.file.open(QIODevice::ReadOnly);
+    p.file.open(QIODevice::ReadWrite);
 
     // update xmp data
     Xmp xmp(p.file);

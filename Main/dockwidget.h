@@ -62,6 +62,9 @@ public:
     };
     DWLoc dw;
 
+    QSize dprSize;
+    double prevDpr = 1;
+
     bool ignoreResize;
     bool isInitializing = true;
 

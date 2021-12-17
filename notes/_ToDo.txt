@@ -1,11 +1,7 @@
 BUGS / TO DO
 - FSTree selection changes by itself (only display)
-- Update folder image count every time select folder
-- Undocked panel changes size when reopen after closing Winnow in some cases
 - Sort taking time when loading folder and sort is file
 - MW::enableSelectionDependentMenus needs updating for all situations
-- Rating and lable not actuating when in filter mode
-- Filter counts not updating when filtered and change label
 - Filters not working sometimes (ie no days)
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
 - Unicode path heics not rendering
@@ -58,6 +54,11 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ???
 DONE/FIXED
+- Filter counts not updating when filtered and change label
+- Update folder image count every time select folder
+- Ingest: if no xmp file do not report failure to copy
+- When filter sometimes loupe image is not selected
+- Undocked panel sizing wrong when different device pixel ratios
 - Solo mode for filters
 - Sync filter panel and filter menu check states
 - Single click expand/collapse for InfoView

@@ -661,6 +661,7 @@ private:
     QAction *refreshFoldersAction;
     QAction *renameAction;
     QAction *showImageCountAction;
+    QAction *updateImageCountAction;
     QAction *runDropletAction;
     QAction *reportMetadataAction;
     QAction *mediaReadSpeedAction;
