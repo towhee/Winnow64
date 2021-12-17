@@ -29,8 +29,8 @@ The tree columns are:
     0   CheckBox filter item
     1   The value to filter (hidden)
     2   The number of proxy rows containing the value
-    3   The number of datamodel rows containing the value
-    4
+    3   The number of datamodel rows containing the value combining Raw+Jpg
+    4   The number of datamodel rows containing the value
 
 The dynamic filter options are populated by DataModel on demand when the user filters or
 the filters dock has focus.

@@ -34,6 +34,9 @@ public:
     QHash <QString, QString> &count;
     QHash <QString, QString> &combineCount;
 
+protected:
+//    bool event(QEvent *event) override;       // debugging
+
 private:
     QDir *dir;
     int imageCountColumn = 4;
@@ -49,7 +52,8 @@ public:
     void refreshModel();
     void setShowImageCount(bool showImageCount);
     bool isShowImageCount();
-    void updateImageCount(QString dirPath);
+    void updateFolderImageCount(QString dirPath);
+    void updateVisibleImageCount();
 
 //    QFileSystemWatcher *watch;
 
@@ -77,6 +81,7 @@ public slots:
 private slots:
 
 protected:
+//    bool event(QEvent *event) override;                   // debugging
     void mousePressEvent(QMouseEvent *event) override;       // debugging
     void mouseReleaseEvent(QMouseEvent *event) override;     // debugging
     void mouseMoveEvent(QMouseEvent *event) override;

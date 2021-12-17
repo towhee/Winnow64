@@ -484,11 +484,13 @@ void IngestDlg::ingest()
         if (okToWriteSidecar) {
             bool sidecarOk;
             if (G::useSidecar) {
-                // will already be an xmp sidecar so just copy it to destinaton
-                sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
-                if (!sidecarOk) {
-                    qDebug() << __FUNCTION__ << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
-                    failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
+                if (QFile(sourceSidecarPath).exists()) {
+                    // will already be an xmp sidecar so just copy it to destinaton
+                    sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
+                    if (!sidecarOk) {
+                        qDebug() << __FUNCTION__ << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
+                        failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
+                    }
                 }
             }
             else {

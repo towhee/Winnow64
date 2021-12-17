@@ -1037,12 +1037,12 @@ which isn't pretty at all.
 */
     event->ignore();    // suppress compiler warning
     if (G::isLogger) G::log(__FUNCTION__); 
-    if (m2->thumbDock != nullptr) {
-        qDebug() << __FUNCTION__
-                 << "m2->thumbDock->isFloating() ="
-                 << m2->thumbDock->isFloating();
-        if (m2->thumbDock->isFloating()) return;
-    }
+//    if (m2->thumbDock != nullptr) {
+//        qDebug() << __FUNCTION__
+//                 << "m2->thumbDock->isFloating() ="
+//                 << m2->thumbDock->isFloating();
+//        if (m2->thumbDock->isFloating()) return;
+//    }
     int mid = midVisibleCell;
 
     static int prevWidth = 0;

@@ -82,6 +82,12 @@ FSModel::FSModel(QWidget *parent, Metadata *metadata, QHash<QString, QString> &c
     dir->setFilter(QDir::Files);
 }
 
+//bool FSModel::event(QEvent *event)
+//{
+//    qDebug() << __FUNCTION__ << event;
+//    return QFileSystemModel::event(event);
+//}
+
 bool FSModel::hasChildren(const QModelIndex &parent) const
 {
     if (parent.column() > 0)
@@ -271,7 +277,7 @@ void FSTree::setShowImageCount(bool showImageCount)
     fsModel->showImageCount = showImageCount;
 }
 
-void FSTree::updateImageCount(QString dirPath)
+void FSTree::updateFolderImageCount(QString dirPath)
 {
 /*
 
@@ -279,6 +285,13 @@ void FSTree::updateImageCount(QString dirPath)
     if (G::isLogger) G::log(__FUNCTION__);
     getImageCount(dirPath, true, "updateImageCount");
     fsFilter->invalidate();
+}
+
+void FSTree::updateVisibleImageCount()
+{
+    for (int i = 0; i < count.size(); ++i) {
+        updateFolderImageCount((count.keys().at(i)));
+    }
 }
 
 void FSTree::scrollToCurrent()
@@ -410,6 +423,12 @@ void FSTree::getImageCount(QString const dirPath, bool changed, QString src)
     }
 }
 
+//bool FSTree::event(QEvent *event)
+//{
+//    qDebug() << __FUNCTION__ << event;
+//    return QTreeView::event(event);
+//}
+
 void FSTree::resizeEvent(QResizeEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
@@ -420,6 +439,8 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
 {
     QTreeView::selectionChanged(selected, deselected);
     emit selectionChange();
+//    QtConcurrent::run(this, &FSTree::updateVisibleImageCount);
+//    qDebug() << __FUNCTION__ << count;
 }
 
 void FSTree::mousePressEvent(QMouseEvent *event)

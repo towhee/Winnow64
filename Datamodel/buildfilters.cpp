@@ -127,19 +127,26 @@ void BuildFilters::updateCountFiltered()
             int col = filters->filterCategoryToDmColumn[cat];
             QString searchValue = (*it)->text(1);
             int tot = 0;
-//            mutex.lock();
+            // filtered counts
             for (int row = 0; row < dm->sf->rowCount(); ++row) {
                 if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
             }
-//            mutex.unlock();
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+            // unfiltered counts
+            tot = 0;
+            for (int row = 0; row < dm->rowCount(); ++row) {
+                if (dm->index(row, col).data().toString() == searchValue) tot++;
+            }
+            (*it)->setData(4, Qt::EditRole, QString::number(tot));
+            (*it)->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
         }
         ++it;
     }
     filters->disableZeroCountItems(true);
     filters->filtersBuilt = true;
     filters->buildingFilters = false;
+    filters->update();
 }
 
 void BuildFilters::countFiltered()
