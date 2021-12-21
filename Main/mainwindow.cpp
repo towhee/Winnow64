@@ -299,7 +299,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // structure to hold persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
     G::settings = setting;
-    if (setting->contains("cacheSizeMB") && !simulateJustInstalled) isSettings = true;
+    if (setting->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
     loadSettings();             // except settings with dependencies ie for actions not created yet
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)

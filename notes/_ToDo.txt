@@ -52,6 +52,7 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ??
 DONE/FIXED
+- Release 1.31 with QSettings fix (check for slideShowDelay as cacheSizeMB is deprecated)
 - Release 1.31
 - Remove unwanted entries from ingest description completer history.
 - Filter counts not updating when filtered and change label
