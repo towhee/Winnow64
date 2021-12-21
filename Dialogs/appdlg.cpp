@@ -89,7 +89,7 @@ Appdlg::Appdlg(QList<G::Pair> &externalApps, QWidget *parent)
         ui->appsTable->item(row, 2)->setText(path);
         setFlags(row);
     }
-//    checkProgramsExist();
+    checkProgramsExist();
 
     if (rows > 0) ui->appsTable->selectRow(0);
 

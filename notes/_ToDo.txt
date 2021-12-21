@@ -1,8 +1,6 @@
 BUGS / TO DO
-- FSTree selection changes by itself (only display)
 - Sort taking time when loading folder and sort is file
 - MW::enableSelectionDependentMenus needs updating for all situations
-- Filters not working sometimes (ie no days)
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
 - Unicode path heics not rendering
 - Figure out G::error and G::errlog

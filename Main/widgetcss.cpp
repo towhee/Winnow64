@@ -30,6 +30,7 @@ QString WidgetCSS::css()
 
     textColor = QColor(fg,fg,fg);
     disabledColor = QColor(l20,l20,l20);
+//    borderColor = QColor(l60,l60,l60);
     borderColor = QColor(l40,l40,l40);
 
     scrollBarHandleBackgroundColor = G::scrollBarHandleBackgroundColor;
@@ -302,8 +303,10 @@ QString WidgetCSS::tabWidget()
     "}"
 
     "QTabBar::tab {"
-        "color: silver;"
-        "background-color: " + QColor(l20,l20,l20).name() + ";"
+        "color: " + QColor(fg-40,fg-40,fg-40).name() + ";"
+//        "color: silver;"
+        "background-color: " + QColor(bg,bg,bg).name() + ";"
+//        "background-color: " + QColor(l20,l20,l20).name() + ";"
         "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
         "padding: 4px 4px;"
     "}"
@@ -314,8 +317,10 @@ QString WidgetCSS::tabWidget()
 
     "QTabBar::tab:selected {"
         "color: cadetblue;"
-        "border-bottom: 0px;"
         "background-color: " + QColor(bg,bg,bg).name() + ";"
+        "border-bottom: 0px;"
+//        "border-color:" + QColor(l60,l60,l60).name() + ";"
+        "border-color:" + borderColor.name() + ";"
    " }"
 
     "QTabBar::tab:disabled {"

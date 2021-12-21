@@ -308,7 +308,7 @@ void Metadata::reportMetadata()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     QString createdExif = m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
-    p.rpt << "\n";
+    p.rpt << "\nDATAMODEL:\n\n";
     p.rpt.reset();
     p.rpt.setFieldAlignment(QTextStream::AlignLeft);
 

@@ -2,6 +2,8 @@
 
 namespace G
 {
+    QSettings *settings;
+
     // system messaging
     bool isLogger = false;              // Writes log messages to file or console
     bool isFlowLogger = false;          // Writes key program flow points to file or console

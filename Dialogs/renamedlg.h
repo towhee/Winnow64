@@ -33,7 +33,7 @@ public:
                        QString dlgTitle,
                        QString nameTitle,
                        QWidget *parent = nullptr);
-    ~RenameDlg();
+    ~RenameDlg() override;
 
 private slots:
     void on_name_textChanged(const QString &text);

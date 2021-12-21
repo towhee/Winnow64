@@ -875,8 +875,8 @@
       <property name="geometry">
        <rect>
         <x>195</x>
-        <y>88</y>
-        <width>561</width>
+        <y>89</y>
+        <width>391</width>
         <height>25</height>
        </rect>
       </property>
@@ -971,6 +971,41 @@ margin-left =  5px</string>
       </property>
       <property name="text">
        <string>Edit template(s)</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+      <property name="default">
+       <bool>false</bool>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="editDescriptionListBtn">
+      <property name="geometry">
+       <rect>
+        <x>600</x>
+        <y>90</y>
+        <width>151</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>Remove items from the description completer list.</string>
+      </property>
+      <property name="toolTipDuration">
+       <number>-3</number>
+      </property>
+      <property name="text">
+       <string>Remove lookup</string>
       </property>
       <property name="autoDefault">
        <bool>false</bool>
@@ -1096,7 +1131,7 @@ margin-left =  5px</string>
        <rect>
         <x>195</x>
         <y>90</y>
-        <width>561</width>
+        <width>391</width>
         <height>25</height>
        </rect>
       </property>
@@ -1217,6 +1252,41 @@ margin-left =  5px</string>
       </property>
       <property name="text">
        <string>Edit template(s)</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+      <property name="default">
+       <bool>false</bool>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="editDescriptionListBtn_2">
+      <property name="geometry">
+       <rect>
+        <x>600</x>
+        <y>90</y>
+        <width>151</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="toolTipDuration">
+       <number>-3</number>
+      </property>
+      <property name="text">
+       <string>Edit desc list</string>
       </property>
       <property name="autoDefault">
        <bool>false</bool>
