@@ -50,8 +50,10 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 - Read keywords
-- Write xmp into eligible files ???
+- Write xmp into eligible files ??
 DONE/FIXED
+- Release 1.31
+- Remove unwanted entries from ingest description completer history.
 - Filter counts not updating when filtered and change label
 - Update folder image count every time select folder
 - Ingest: if no xmp file do not report failure to copy
@@ -68,7 +70,7 @@ DONE/FIXED
 - Read/write xmp sidecars
 - Release 1.30.1
 - MW::openLog causng crash at open Winnow if no settings (first time use)
-- Winow size and location when open and display at 150% is wrong
+- Winnow size and location when open and display at 150% is wrong
 - Release 1.30
 - Cache was not updating in priority order
 - Menu color manage not updating when change workspace
