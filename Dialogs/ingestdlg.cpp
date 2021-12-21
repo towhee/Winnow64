@@ -169,7 +169,10 @@ IngestDlg::IngestDlg(QWidget *parent,
     updateEnabledState();
 
     // assign completer to description
-    QCompleter *completer = new QCompleter(this->ingestDescriptionCompleter, this);
+    ingestDescriptionListModel = new QStringListModel(this->ingestDescriptionCompleter);
+    QCompleter *completer = new QCompleter(ingestDescriptionListModel, this);
+//    QCompleter *completer;
+//    completer->setModel(&ingestDescriptionListModel);
     completer->setCaseSensitivity(Qt::CaseInsensitive);
     ui->descriptionLineEdit->setCompleter(completer);
     ui->descriptionLineEdit_2->setCompleter(completer);
@@ -1372,6 +1375,18 @@ void IngestDlg::on_filenameTemplatesBtn_clicked()
     }
     ui->filenameTemplatesCB->setCurrentIndex(index);
     on_filenameTemplatesCB_currentIndexChanged(currentKey);
+}
+
+void IngestDlg::on_editDescriptionListBtn_clicked()
+{
+    EditListDlg listDlg(ingestDescriptionListModel, "Description completer list");
+    listDlg.exec();
+    ingestDescriptionCompleter = ingestDescriptionListModel->stringList();
+}
+
+void IngestDlg::on_editDescriptionListBtn_2_clicked()
+{
+    on_editDescriptionListBtn_clicked();
 }
 
 void IngestDlg::on_combinedIncludeJpgChk_clicked()

@@ -6,7 +6,7 @@
 #include "Main/global.h"
 
 namespace Ui {
-class ManageImagesDlg;
+    class ManageImagesDlg;
 }
 
 class ManageImagesDlg : public QDialog

@@ -133,6 +133,8 @@ namespace G
         QImage image;
     };
 
+    extern QSettings *settings;
+
     extern bool isLogger;
     extern bool isFlowLogger;
     extern bool isTestLogger;

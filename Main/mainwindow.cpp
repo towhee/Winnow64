@@ -298,6 +298,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     // structure to hold persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
+    G::settings = setting;
     if (setting->contains("cacheSizeMB") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
     loadSettings();             // except settings with dependencies ie for actions not created yet
@@ -7434,10 +7435,13 @@ void MW::diagnosticsReport(QString reportString)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     QDialog *dlg = new QDialog;
+    dlg->setStyleSheet(G::css);
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
+    md.textBrowser->setStyleSheet(G::css);
     md.textBrowser->setText(reportString);
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+//    md.textBrowser->setStyleSheet(G::css);
     dlg->show();
 //    std::cout << reportString.toStdString() << std::flush;
 }

@@ -10,6 +10,7 @@
 //#include "ui_helpingest.h"
 #include "Utilities/utilities.h"
 #include "Dialogs/ingesterrors.h"
+#include "Dialogs/editlistdlg.h"
 
 namespace Ui {
 class IngestDlg;
@@ -61,6 +62,8 @@ private slots:
     void on_pathTemplatesBtn_2_clicked();
     void on_descriptionLineEdit_textChanged(const QString &);
     void on_descriptionLineEdit_2_textChanged(const QString);
+    void on_editDescriptionListBtn_clicked();
+    void on_editDescriptionListBtn_2_clicked();
 
     void on_filenameTemplatesBtn_clicked();
     void on_filenameTemplatesCB_currentIndexChanged(const QString &arg1);
@@ -140,6 +143,8 @@ private:
     QString &baseFolderDescription;             // auto reuse if same source folder as previous
     QString baseFolderDescription2;
     QStringList& ingestDescriptionCompleter;
+
+    QStringListModel *ingestDescriptionListModel;
 
     // manually create path to ingest
     QString &manualFolderPath;

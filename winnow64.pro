@@ -25,9 +25,7 @@ QT += concurrent
 QT += xmlpatterns
 #QT += opengl
 
-HEADERS += Cache/mdcache.h \
-    Dialogs/selectionorpicksdlg.h \
-    Image/stack.h
+HEADERS += Cache/mdcache.h
 HEADERS += Cache/cachedata.h
 HEADERS += Cache/tshash.h
 HEADERS += Cache/imagecache.h
@@ -37,19 +35,21 @@ HEADERS += Datamodel/datamodel.h
 HEADERS += Datamodel/filters.h
 HEADERS += Datamodel/HashMap.h
 HEADERS += Datamodel/HashNode.h
-HEADERS += Dialogs/ingesterrors.h
-HEADERS += Dialogs/managegraphicsdlg.h
-HEADERS += Dialogs/manageimagesdlg.h
 HEADERS += Dialogs/aboutdlg.h
 HEADERS += Dialogs/appdlg.h
 HEADERS += Dialogs/copystyledlg.h
+HEADERS += Dialogs/editlistdlg.h
 HEADERS += Dialogs/ingestdlg.h
+HEADERS += Dialogs/ingesterrors.h
 HEADERS += Dialogs/loadusbdlg.h
+HEADERS += Dialogs/managegraphicsdlg.h
+HEADERS += Dialogs/manageimagesdlg.h
 HEADERS += Dialogs/managetilesdlg.h
 HEADERS += Dialogs/patterndlg.h
 HEADERS += Dialogs/preferencesdlg.h
 HEADERS += Dialogs/renamedlg.h
 HEADERS += Dialogs/saveasdlg.h
+HEADERS += Dialogs/selectionorpicksdlg.h
 HEADERS += Dialogs/testaligndlg.h
 HEADERS += Dialogs/workspacedlg.h
 HEADERS += Dialogs/tokendlg.h
@@ -65,9 +65,9 @@ HEADERS += Embellish/embelexport.h
 HEADERS += Embellish/Properties/embelproperties.h
 HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
-HEADERS +=
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
+HEADERS += Image/stack.h
 HEADERS += Image/thumb.h
 #HEADERS += Image/tiffhandler.h
 HEADERS += ImageFormats/Canon/canon.h
@@ -136,9 +136,7 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/cachedata.cpp \
-    Dialogs/selectionorpicksdlg.cpp \
-    Image/stack.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/mdcache.cpp
@@ -148,6 +146,7 @@ SOURCES += Datamodel/filters.cpp
 SOURCES += Dialogs/aboutdlg.cpp
 SOURCES += Dialogs/appdlg.cpp
 SOURCES += Dialogs/copystyledlg.cpp
+SOURCES += Dialogs/editlistdlg.cpp
 SOURCES += Dialogs/ingestdlg.cpp
 SOURCES += Dialogs/ingesterrors.cpp
 SOURCES += Dialogs/loadusbdlg.cpp
@@ -158,6 +157,7 @@ SOURCES += Dialogs/patterndlg.cpp
 SOURCES += Dialogs/preferencesdlg.cpp
 SOURCES += Dialogs/renamedlg.cpp
 SOURCES += Dialogs/saveasdlg.cpp
+SOURCES += Dialogs/selectionorpicksdlg.cpp
 SOURCES += Dialogs/testaligndlg.cpp
 SOURCES += Dialogs/tokendlg.cpp
 SOURCES += Dialogs/updateapp.cpp
@@ -174,6 +174,7 @@ SOURCES += File/fstree.cpp
 SOURCES +=
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
+SOURCES += Image/stack.cpp
 SOURCES += Image/thumb.cpp
 #SOURCES += Image/tiffhandler.cpp
 SOURCES += ImageFormats/Canon/canon.cpp
@@ -265,23 +266,22 @@ SOURCES += Views/infoview.cpp
 SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
 
-FORMS += Dialogs/aboutdlg.ui \
-    Dialogs/ingesterrors.ui \
-    Dialogs/managegraphicsdlg.ui \
-    Dialogs/manageimagesdlg.ui \
-    Dialogs/selectionorpicksdlg.ui
+FORMS += Dialogs/aboutdlg.ui
 FORMS += Dialogs/aligndlg.ui
 FORMS += Dialogs/appdlg.ui
 FORMS += Dialogs/copystyledlg.ui
-FORMS += Embellish/embelCoord.ui
+FORMS += Dialogs/editlistdlg.ui
 FORMS += Dialogs/ingestdlg.ui
-FORMS += Utilities/inputdlg.ui
+FORMS += Dialogs/ingesterrors.ui
 #FORMS += Dialogs/ingestdlg_copy.ui
 FORMS += Dialogs/loadusbdlg.ui
+FORMS += Dialogs/managegraphicsdlg.ui
+FORMS += Dialogs/manageimagesdlg.ui
 FORMS += Dialogs/managetilesdlg.ui
 FORMS += Dialogs/patterndlg.ui
 FORMS += Dialogs/renamedlg.ui
 FORMS += Dialogs/saveasdlg.ui
+FORMS += Dialogs/selectionorpicksdlg.ui
 FORMS += Dialogs/testaligndlg.ui
 FORMS += Dialogs/testdlg.ui
 FORMS += Dialogs/test1.ui
@@ -290,6 +290,7 @@ FORMS += Dialogs/tokendlg.ui
 FORMS += Dialogs/updateapp.ui
 FORMS += Dialogs/workspacedlg.ui
 FORMS += Dialogs/zoomdlg.ui
+FORMS += Embellish/embelCoord.ui
 FORMS += Help/helpform.ui
 FORMS += Help/helpingest.ui
 FORMS += Help/ingestautopath.ui
@@ -298,6 +299,7 @@ FORMS += Help/message.ui
 FORMS += Help/shortcutsform.ui
 FORMS += Help/welcome.ui
 FORMS += Metadata/metadatareport.ui
+FORMS += Utilities/inputdlg.ui
 
 RESOURCES += winnow.qrc
 ICON = images/winnow.icns
