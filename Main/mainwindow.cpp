@@ -1592,11 +1592,18 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     if (!G::isSlideShow) progressLabel->setVisible(isShowCacheProgressBar);
 
+    /*
     // update imageView immediately unless weird sort or folder not loaded yet
+    qDebug() << __FUNCTION__
+             << "sortColumn =" << sortColumn
+             << "G::NameColumn =" << G::NameColumn
+             << "G::ModifiedColumn =" << G::ModifiedColumn
+                ;
     bool okToLoadImage = (sortColumn == G::NameColumn
-                      || sortColumn == G::ModifiedColumn)
-                      /*&& G::isNewFolderLoaded*/;
+                      || sortColumn == G::ModifiedColumn);
     if (okToLoadImage && useImageView) {
+    */
+    if (useImageView) {
         if (imageView->loadImage(fPath, __FUNCTION__)) {
             updateClassification();
             centralLayout->setCurrentIndex(prevCentralView);
@@ -6531,6 +6538,8 @@ void MW::updateSortColumn(int sortColumn)
              ;
     //    */
 
+    if (sortColumn == 0) sortColumn = G::NameColumn;
+
     if (sortColumn == G::NameColumn) sortFileNameAction->setChecked(true);
     if (sortColumn == G::TypeColumn) sortFileTypeAction->setChecked(true);
     if (sortColumn == G::SizeColumn) sortFileSizeAction->setChecked(true);
@@ -8744,6 +8753,7 @@ bool MW::loadSettings()
 
         // datamodel
         G::maxIconSize = 256;
+        sortColumn = G::NameColumn;
 
         // files
         G::colorManage = true;
