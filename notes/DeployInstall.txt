@@ -18,6 +18,8 @@ NORMAL DEPLOYMENT
 	- Duplicate current on http://165.227.46.158/winnow_mac as version number
 	- Compile Winnow in /Users/roryhill/Projects/Winnow64
 	- Update version in /Users/roryhill/Projects/WinnowInstall/Config/config.xml
+	- Update version in /Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/meta/package.xml.  This will make sure message is 
+	  up-to-date when user is installing.
 	- Run /Users/roryhill/Projects/WinnowInstall/Batch/WinnowInstallerScript.command
 	- test download new version
 
