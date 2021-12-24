@@ -699,6 +699,7 @@ void IngestDlg::on_selectFolderBtn_clicked()
         updateExistingSequence();
         ui->manualRadio->setChecked(true);
         updateEnabledState();
+        getAvailableStorageMB();
     }
 }
 
@@ -723,6 +724,7 @@ void IngestDlg::on_selectFolderBtn_2_clicked()
         updateExistingSequence();
         ui->manualRadio->setChecked(true);
         updateEnabledState();
+        getAvailableStorageMB();
     }
 }
 
@@ -744,6 +746,7 @@ void IngestDlg::on_selectRootFolderBtn_clicked()
     updateExistingSequence();
     ui->autoRadio->setChecked(true);
     updateEnabledState();
+    getAvailableStorageMB();
 }
 
 void IngestDlg::on_selectRootFolderBtn_2_clicked()
@@ -764,6 +767,7 @@ void IngestDlg::on_selectRootFolderBtn_2_clicked()
     updateExistingSequence();
     ui->autoRadio->setChecked(true);
     updateEnabledState();
+    getAvailableStorageMB();
 }
 
 bool IngestDlg::isToken(QString tokenString, int pos)
@@ -1074,7 +1078,9 @@ void IngestDlg::getAvailableStorageMB()
 /*
     Return how many MB available on the drive pointed that contains path.
 */
-    QStorageInfo info(rootFolderPath);
+    qDebug() << __FUNCTION__ << rootFolderPath;
+
+    QStorageInfo info(folderPath);
     if (info.isValid()) {
         drive = info.displayName();
         QString name = info.rootPath();
@@ -1082,11 +1088,17 @@ void IngestDlg::getAvailableStorageMB()
         availableMB = bytes / 1024 / 1024;
         QString s = name + " (" + drive + ") " + Utilities::formatMemory(bytes);
         if (picksMB > availableMB) ui->drive->setStyleSheet("QLabel {color:red;}");
+        else ui->drive->setStyleSheet("QLabel {color:" + G::textColor.name() + ";}");
+        ui->drive->setText(s);
+    }
+    else {
+        ui->drive->setStyleSheet("QLabel {color:red;}");
+        QString s = "Primary folder is invalid.";
         ui->drive->setText(s);
     }
 
     // backup drive
-    info.setPath(rootFolderPath2);
+    info.setPath(folderPath2);
     if (info.isValid() && isBackup) {
         drive2 = info.displayName();
         QString name = info.rootPath();
@@ -1097,6 +1109,29 @@ void IngestDlg::getAvailableStorageMB()
         ui->drive_2->setText(s);
     }
     ui->drive_2->setVisible(isBackup);
+//    QStorageInfo info(rootFolderPath);
+//    if (info.isValid()) {
+//        drive = info.displayName();
+//        QString name = info.rootPath();
+//        qint64 bytes = info.bytesAvailable();
+//        availableMB = bytes / 1024 / 1024;
+//        QString s = name + " (" + drive + ") " + Utilities::formatMemory(bytes);
+//        if (picksMB > availableMB) ui->drive->setStyleSheet("QLabel {color:red;}");
+//        ui->drive->setText(s);
+//    }
+
+//    // backup drive
+//    info.setPath(rootFolderPath2);
+//    if (info.isValid() && isBackup) {
+//        drive2 = info.displayName();
+//        QString name = info.rootPath();
+//        qint64 bytes = info.bytesAvailable();
+//        availableMB2 = bytes / 1024 / 1024;
+//        QString s = name + " (" + drive2 + ") " + " " + Utilities::formatMemory(bytes);
+//        if (picksMB > availableMB2) ui->drive_2->setStyleSheet("QLabel {color:red;}");
+//        ui->drive_2->setText(s);
+//    }
+//    ui->drive_2->setVisible(isBackup);
 }
 
 void IngestDlg::updateEnabledState()
