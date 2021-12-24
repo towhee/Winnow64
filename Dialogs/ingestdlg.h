@@ -60,7 +60,7 @@ private slots:
     void on_pathTemplatesCB_2_currentIndexChanged(const QString &arg1);
     void on_pathTemplatesBtn_clicked();
     void on_pathTemplatesBtn_2_clicked();
-    void on_descriptionLineEdit_textChanged(const QString &);
+    void on_descriptionLineEdit_textChanged(const QString &arg1);
     void on_descriptionLineEdit_2_textChanged(const QString);
     void on_editDescriptionListBtn_clicked();
     void on_editDescriptionListBtn_2_clicked();
