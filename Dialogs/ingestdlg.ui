@@ -731,7 +731,7 @@
      </font>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="primaryTab">
      <attribute name="title">
@@ -741,7 +741,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>120</y>
+        <y>121</y>
         <width>161</width>
         <height>20</height>
        </rect>
@@ -792,7 +792,7 @@
       <property name="geometry">
        <rect>
         <x>41</x>
-        <y>50</y>
+        <y>52</y>
         <width>140</width>
         <height>20</height>
        </rect>
@@ -874,7 +874,7 @@
      <widget class="QLineEdit" name="descriptionLineEdit">
       <property name="geometry">
        <rect>
-        <x>195</x>
+        <x>200</x>
         <y>89</y>
         <width>391</width>
         <height>25</height>
@@ -1053,7 +1053,7 @@ margin-left =  5px</string>
       <property name="geometry">
        <rect>
         <x>-10</x>
-        <y>50</y>
+        <y>52</y>
         <width>191</width>
         <height>20</height>
        </rect>
@@ -1129,8 +1129,8 @@ margin-left =  5px</string>
      <widget class="QLineEdit" name="descriptionLineEdit_2">
       <property name="geometry">
        <rect>
-        <x>195</x>
-        <y>90</y>
+        <x>200</x>
+        <y>89</y>
         <width>391</width>
         <height>25</height>
        </rect>
@@ -1178,7 +1178,7 @@ margin-left =  5px</string>
       <property name="geometry">
        <rect>
         <x>-10</x>
-        <y>120</y>
+        <y>121</y>
         <width>191</width>
         <height>20</height>
        </rect>
@@ -1286,7 +1286,7 @@ margin-left =  5px</string>
        <number>-3</number>
       </property>
       <property name="text">
-       <string>Edit desc list</string>
+       <string>Remove lookup</string>
       </property>
       <property name="autoDefault">
        <bool>false</bool>
@@ -1859,6 +1859,35 @@ margin-left =  5px</string>
    </property>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>ejectChk</tabstop>
+  <tabstop>openIngestFolderChk</tabstop>
+  <tabstop>backupChk</tabstop>
+  <tabstop>includeXmpChk</tabstop>
+  <tabstop>integrityChk</tabstop>
+  <tabstop>selectFolderBtn</tabstop>
+  <tabstop>autoRadio</tabstop>
+  <tabstop>manualRadio</tabstop>
+  <tabstop>autoIngestTab</tabstop>
+  <tabstop>helpBtn</tabstop>
+  <tabstop>selectFolderBtn_2</tabstop>
+  <tabstop>spinBoxStartNumber</tabstop>
+  <tabstop>filenameTemplatesCB</tabstop>
+  <tabstop>filenameTemplatesBtn</tabstop>
+  <tabstop>cancelBtn</tabstop>
+  <tabstop>okBtn</tabstop>
+  <tabstop>selectRootFolderBtn</tabstop>
+  <tabstop>pathTemplatesBtn</tabstop>
+  <tabstop>pathTemplatesCB</tabstop>
+  <tabstop>descriptionLineEdit</tabstop>
+  <tabstop>editDescriptionListBtn</tabstop>
+  <tabstop>selectRootFolderBtn_2</tabstop>
+  <tabstop>pathTemplatesCB_2</tabstop>
+  <tabstop>pathTemplatesBtn_2</tabstop>
+  <tabstop>descriptionLineEdit_2</tabstop>
+  <tabstop>editDescriptionListBtn_2</tabstop>
+  <tabstop>combinedIncludeJpgChk</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
  <slots>

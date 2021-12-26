@@ -12,10 +12,14 @@ public:
     static bool integrityCheck(const QString &path1, const QString &path2);
     static QSize fitScreen(QSize preferred);
 
+    // File/folder path operations
+    static QString getDrive(QString path);
+
     // Get unique
     static void uniqueFolderPath(QString &path, QString delimiter = "_");
     static void uniqueFilePath(QString &path, QString delimiter = "_");
     static void uniqueInList(QString &name, const QStringList &list, QString delimiter = "_");
+
     static QString inputText(QString title, QString description,
                              QStringList doNotUse, QString input = "");
     static void log(QString function, QString msg);

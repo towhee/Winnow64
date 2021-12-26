@@ -30,7 +30,7 @@ QString WidgetCSS::css()
 
     textColor = QColor(fg,fg,fg);
     disabledColor = QColor(l20,l20,l20);
-//    borderColor = QColor(l60,l60,l60);
+    G::disabledColor = QColor(l20,l20,l20);
     borderColor = QColor(l40,l40,l40);
 
     scrollBarHandleBackgroundColor = G::scrollBarHandleBackgroundColor;

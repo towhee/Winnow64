@@ -27,6 +27,17 @@ QSize Utilities::fitScreen(QSize preferred)
     return QSize(w, h);
 }
 
+QString Utilities::getDrive(QString path)
+{
+/*
+    Returns the drive portion of a file system path.  The path must use the delimiter /.
+    The path must include the drive - the absolute path.
+*/
+    int firstSlash = path.indexOf("/");
+    if (firstSlash == -1) return "";
+    return path.left(firstSlash);
+}
+
 void Utilities::uniqueInList(QString &name, const QStringList &list, QString delimiter)
 {
 /*

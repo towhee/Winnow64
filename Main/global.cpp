@@ -37,6 +37,7 @@ namespace G
     int backgroundShade;                // app background luminousity
     QColor textColor = QColor(textShade,textShade,textShade);
     QColor backgroundColor;             // define after settings loaded
+    QColor disabledColor;               // app background luminousity
     QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
     QColor selectionColor = QColor(68,95,118);
     QColor mouseOverColor= QColor(40,54,66);
