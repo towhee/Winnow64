@@ -170,6 +170,7 @@ namespace G
 
     extern QColor textColor;
     extern QColor backgroundColor;
+    extern QColor disabledColor;
     extern QColor scrollBarHandleBackgroundColor;
     extern QColor selectionColor;
     extern QColor mouseOverColor;
@@ -194,7 +195,6 @@ namespace G
     extern qreal ptToPx;
     extern int textShade;
     extern int backgroundShade;
-    extern int disabledShade;
     extern QString css;
 
     extern bool allMetadataLoaded;

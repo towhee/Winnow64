@@ -46,10 +46,10 @@ public:
     ~IngestDlg() override;
 
 private slots:
-    void updateFolderPath();
+    void updateFolderPaths();
 
     void on_autoRadio_toggled(bool checked);
-    void on_manualRadio_toggled(bool);
+    void on_manualRadio_toggled(bool checked);
 
     void on_autoIngestTab_currentChanged(int);
     void on_selectFolderBtn_clicked();
@@ -134,8 +134,10 @@ private:
     QString &rootFolderPath;
     QString &rootFolderPath2;
 
-    QString drive;
-    QString drive2;
+    QString pathDrive;      // path name to first /
+    QString pathDrive2;     // path name to first /
+    QString drive;          // pretty drive name
+    QString drive2;         // pretty drive name
     QString folderPath; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
     QString folderPath2; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
     QString fromRootToBaseFolder;
@@ -150,12 +152,22 @@ private:
     QString &manualFolderPath;
     QString &manualFolderPath2;
 
+    bool autoDriveAvailable;
+    bool autoDrive2Available;
+    bool manualDriveAvailable;
+    bool manualDrive2Available;
+    bool invalidDrive;
+
     // memory required for picks
     double picksMB;
 
     // available MB on destination drive
     double availableMB;
     double availableMB2;
+
+    // text styles
+    QString normalText;
+    QString redText;
 
     // list of files not copied
     QStringList failedToCopy;

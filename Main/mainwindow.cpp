@@ -12160,7 +12160,15 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    filters->update();
+    QString p = "Q:/Backup/";
+    qDebug() << __FUNCTION__ << p.right(1);
+    return;
+    QString drive = Utilities::getDrive(p);
+    qDebug() << __FUNCTION__ << drive;
+    QStorageInfo info(drive);
+    qDebug() << __FUNCTION__ << info.displayName() << info.bytesAvailable();
+
+//    filters->update();
 //    QtConcurrent::run(fsTree, &FSTree::updateVisibleImageCount);
 //    fsTree->refreshModel();
 
