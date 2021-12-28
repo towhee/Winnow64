@@ -33,10 +33,22 @@ QString Utilities::getDrive(QString path)
     Returns the drive portion of a file system path.  The path must use the delimiter /.
     The path must include the drive - the absolute path.
 */
+    QString drivePath = "";
+#ifdef Q_OS_WIN
     int firstSlash = path.indexOf("/");
+    drivePath = path.left(firstSlash+1);
     if (firstSlash == -1) return "";
-    qDebug() << __FUNCTION__ << path << firstSlash << path.left(firstSlash);
-    return path.left(firstSlash);
+#endif
+#ifdef Q_OS_MAC
+    if (path.left(9) == "/Volumes/") {
+        drivePath = path.left(path.indexOf("/", 10) /*+ 1*/);
+    }
+    else {
+        if (path.at(0) == "/") drivePath = "/";
+    }
+#endif
+    qDebug() << __FUNCTION__ << path << drivePath;
+    return drivePath;
 }
 
 void Utilities::uniqueInList(QString &name, const QStringList &list, QString delimiter)

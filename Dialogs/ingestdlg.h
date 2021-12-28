@@ -136,8 +136,8 @@ private:
     QString &rootFolderPath;
     QString &rootFolderPath2;
 
-    QString pathDrive;      // path name to first /
-    QString pathDrive2;     // path name to first /
+    QString drivePath;      // path name to first /
+    QString drive2Path;     // path name to first /
     QString drive;          // pretty drive name
     QString drive2;         // pretty drive name
     QString folderPath; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"

@@ -872,7 +872,7 @@ QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
 void IngestDlg::updateFolderPaths()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    QDir d;
+    QStorageInfo d;
 
     // Auto folders
     if (isAuto) {
@@ -887,9 +887,10 @@ void IngestDlg::updateFolderPaths()
         folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
         ui->folderLabel->setText(folderPath);
         ui->folderLabel->setToolTip(ui->folderLabel->text());
-        pathDrive = Utilities::getDrive(rootFolderPath);
-        d.setPath(pathDrive);
-        autoDriveAvailable = d.exists();
+        drivePath = Utilities::getDrive(rootFolderPath);
+        qDebug() << __FUNCTION__ << "pathDrive =" << drivePath;
+        d.setPath(drivePath);
+        autoDriveAvailable = d.isValid();
         autoDriveAvailable ? ui->folderLabel->setStyleSheet(normalText) : ui->folderLabel->setStyleSheet(redText);
 
         baseFolderDescription2 = (ui->descriptionLineEdit_2->text().length() > 0)
@@ -897,9 +898,10 @@ void IngestDlg::updateFolderPaths()
         folderPath2 = rootFolderPath2 + fromRootToBaseFolder2 + baseFolderDescription2 + "/";
         ui->folderLabel_2->setText(folderPath2);
         ui->folderLabel_2->setToolTip(ui->folderLabel_2->text());
-        pathDrive2 = Utilities::getDrive(rootFolderPath2);
-        d.setPath(pathDrive2);
-        autoDrive2Available = d.exists();
+        drive2Path = Utilities::getDrive(rootFolderPath2);
+        qDebug() << __FUNCTION__ << "pathDrive2 =" << drive2Path;
+        d.setPath(drive2Path);
+        autoDrive2Available = d.isValid();
         autoDrive2Available ? ui->folderLabel_2->setStyleSheet(normalText) : ui->folderLabel_2->setStyleSheet(redText);
 
         // reset formating or disabling does not work
@@ -912,16 +914,16 @@ void IngestDlg::updateFolderPaths()
     else {
         folderPath = ui->manualFolderLabel->text() + "/";
         ui->manualFolderLabel->setToolTip(ui->manualFolderLabel->text());
-        pathDrive = Utilities::getDrive(folderPath);
-        d.setPath(pathDrive);
-        manualDriveAvailable = d.exists();
+        drivePath = Utilities::getDrive(folderPath);
+        d.setPath(drivePath);
+        manualDriveAvailable = d.isValid();
         manualDriveAvailable ? ui->manualFolderLabel->setStyleSheet(normalText) : ui->manualFolderLabel->setStyleSheet(redText);
 
         folderPath2 = ui->manualFolderLabel_2->text() + "/";
         ui->manualFolderLabel_2->setToolTip(ui->manualFolderLabel_2->text());
-        pathDrive2 = Utilities::getDrive(folderPath2);
-        d.setPath(pathDrive2);
-        manualDrive2Available = d.exists();
+        drive2Path = Utilities::getDrive(folderPath2);
+        d.setPath(drive2Path);
+        manualDrive2Available = d.isValid();
         manualDrive2Available ? ui->manualFolderLabel_2->setStyleSheet(normalText) : ui->manualFolderLabel_2->setStyleSheet(redText);
 
         // reset formating or disabling does not work
@@ -931,8 +933,8 @@ void IngestDlg::updateFolderPaths()
         invalidDrive = (!manualDriveAvailable || !manualDrive2Available);
     }
 
-    updateExistingSequence();
     getAvailableStorageMB();
+    updateExistingSequence();
     getSequenceStart(folderPath);
     buildFileNameSequence();
     updateExistingSequence();
@@ -1090,11 +1092,29 @@ void IngestDlg::getAvailableStorageMB()
     this function is called.
 */
 
-    QStorageInfo info(pathDrive);
+    QStorageInfo info(drivePath);
+//    /*
+    qDebug() << __FUNCTION__
+             << "drivePath =" << drivePath
+             << "folderPath =" << folderPath
+             << "info.name() =" << info.name()
+             << "info.rootPath() =" << info.rootPath()
+             << "info.displayName()) =" << info.displayName()
+             << "info.device() =" << info.device()
+             << "info.fileSystemType() =" << info.fileSystemType()
+             << "info.isValid() =" << info.isValid()
+             << "\ninfo.mountedVolumes() =" << info.mountedVolumes()
+                ;
+                //*/
 
-    if (info.isValid()) {
-        if (info.rootPath() == info.displayName()) drive = pathDrive;
-        else drive = pathDrive + " (" + info.displayName() + ")";
+    if (info.isValid() && info.rootPath() != "") {
+        #ifdef Q_OS_WIN
+            if (info.rootPath() == info.displayName()) drive = drivePath;
+            else drive = drivePath + " (" + info.displayName() + ")";
+        #endif
+        #ifdef Q_OS_MAC
+            drive = info.displayName();
+        #endif
         qint64 bytes = info.bytesAvailable();
         availableMB = bytes / 1024 / 1024;
         QString s = drive + " " + Utilities::formatMemory(bytes);
@@ -1104,14 +1124,32 @@ void IngestDlg::getAvailableStorageMB()
     }
     else {
         ui->drive->setStyleSheet(redText);
-        ui->drive->setText("Primary drive " + pathDrive + " is unavailable.");
+        ui->drive->setText("Primary drive " + drivePath + " is unavailable.");
     }
 
     // backup drive
-    info.setPath(pathDrive2);
-    if (info.isValid()) {
-        if (info.rootPath() == info.displayName()) drive2 = pathDrive2;
-        else drive2 = pathDrive2 + " (" + info.displayName() + ")";
+    info.setPath(drive2Path);
+//    /*
+    qDebug() << __FUNCTION__
+             << "drive2Path =" << drive2Path
+             << "folderPath2 =" << folderPath2
+             << "info.name() =" << info.name()
+             << "info.rootPath() =" << info.rootPath()
+             << "info.displayName()) =" << info.displayName()
+             << "info.device() =" << info.device()
+             << "info.fileSystemType() =" << info.fileSystemType()
+             << "info.isValid() =" << info.isValid()
+             << "\ninfo.mountedVolumes() =" << info.mountedVolumes()
+                ;
+                //*/
+    if (info.isValid() && info.rootPath() != "") {
+        #ifdef Q_OS_WIN
+            if (info.rootPath() == info.displayName()) drive2 = drive2Path;
+            else drive2 = drive2Path + " (" + info.displayName() + ")";
+        #endif
+        #ifdef Q_OS_MAC
+            drive2 = info.displayName() + ":";
+        #endif
         qint64 bytes = info.bytesAvailable();
         availableMB2 = bytes / 1024 / 1024;
         QString s = drive2 + " " + Utilities::formatMemory(bytes);
@@ -1121,7 +1159,7 @@ void IngestDlg::getAvailableStorageMB()
     }
     else {
         ui->drive_2->setStyleSheet(redText);
-        ui->drive_2->setText("Backup drive " + pathDrive2 + " is unavailable.");
+        ui->drive_2->setText("Backup drive " + drive2Path + " is unavailable.");
     }
     ui->drive_2->setVisible(isBackup);
 }
