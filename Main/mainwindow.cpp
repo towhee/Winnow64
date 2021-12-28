@@ -12160,6 +12160,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+
     QString p = "Q:/Backup/";
     qDebug() << __FUNCTION__ << p.right(1);
     return;

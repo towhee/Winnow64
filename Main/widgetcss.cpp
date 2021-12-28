@@ -19,6 +19,7 @@ QString WidgetCSS::css()
     if (d20 < 0) d20 = 0;
 
     // lighter than background
+    l3  = bg + 3;
     l5  = bg + 5;
     l10 = bg + 10;
     l15 = bg + 15;
@@ -31,7 +32,10 @@ QString WidgetCSS::css()
     textColor = QColor(fg,fg,fg);
     disabledColor = QColor(l20,l20,l20);
     G::disabledColor = QColor(l20,l20,l20);
+    G::tabWidgetBorderColor = QColor(l60,l60,l60);
+    G::pushButtonBackgroundColor = QColor(d10,d10,d10);
     borderColor = QColor(l40,l40,l40);
+    G::borderColor = borderColor;
 
     scrollBarHandleBackgroundColor = G::scrollBarHandleBackgroundColor;
     selectionColor = G::selectionColor;
@@ -270,13 +274,7 @@ QString WidgetCSS::dockWidget()
 //        "border: 1px;"
 //        "border-color: " + textColor.name() + ";"
     "}"
-
-    "QTabWidget::pane {"                      /* The tab widget frame */
-//        "border: 1px solid " + QColor(l40,l40,l40).name() + ";"    /* not working in main window */
-        "position: absolute;"
-        "top: -0.5em;"
-        "border-radius: 5px;"
-    "}";
+     ;
 }
 
 // Not working
@@ -296,36 +294,42 @@ QString WidgetCSS::dockWidget()
 QString WidgetCSS::tabWidget()
 {
     return
+    "QTabWidget::pane {"
+        "margin-top: -1px;"
+    "}"
+
     "QTabWidget::tab-bar {"
-//        "left: 0;"
-//        "alignment: left;"
-/*        "border: 1px solid red;"                      nada */
+        "alignment: left;"
+//        "qproperty-drawBase: 1;"        // nada
     "}"
 
     "QTabBar::tab {"
         "color: " + QColor(fg-40,fg-40,fg-40).name() + ";"
-//        "color: silver;"
         "background-color: " + QColor(bg,bg,bg).name() + ";"
-//        "background-color: " + QColor(l20,l20,l20).name() + ";"
         "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
-        "padding: 4px 4px;"
+        "border-bottom-color:" + G::tabWidgetBorderColor.name() + ";"
+        "padding-bottom: 2px;"
     "}"
 
-    /*QTabBar:selected {                    nada
-        border: red;
-    }*/
-
     "QTabBar::tab:selected {"
-        "color: cadetblue;"
-        "background-color: " + QColor(bg,bg,bg).name() + ";"
+        "color:" + G::textColor.name() + ";"
         "border-bottom: 0px;"
-//        "border-color:" + QColor(l60,l60,l60).name() + ";"
-        "border-color:" + borderColor.name() + ";"
-   " }"
+        "border-color:" + G::tabWidgetBorderColor.name() + ";"
+    " }"
+
+
+//    "QTabBar::tab:!selected {"
+////        "border-bottom: 0px;"
+////        "background-color: " + QColor(bg,bg,bg).name() + ";"
+////        "margin-top: 2px;"
+////        "border-bottom: 0px;"
+////        "border-color:" + borderColor.name() + ";"
+//   " }"
 
     "QTabBar::tab:disabled {"
         "color:" + disabledColor.name() + ";"
-    "}";
+    "}"
+    ;
 }
 
 QString WidgetCSS::stackedWidget()

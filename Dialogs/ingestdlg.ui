@@ -735,13 +735,13 @@
     </property>
     <widget class="QWidget" name="primaryTab">
      <attribute name="title">
-      <string>  Primary Location Parameters  </string>
+      <string>  Primary Location  </string>
      </attribute>
      <widget class="QLabel" name="destinationFolderLabel">
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>121</y>
+        <y>122</y>
         <width>161</width>
         <height>20</height>
        </rect>
@@ -986,7 +986,7 @@ margin-left =  5px</string>
       <property name="geometry">
        <rect>
         <x>600</x>
-        <y>90</y>
+        <y>89</y>
         <width>151</width>
         <height>25</height>
        </rect>
@@ -1020,7 +1020,7 @@ margin-left =  5px</string>
     </widget>
     <widget class="QWidget" name="backupTab">
      <attribute name="title">
-      <string>Backup Location Parameters</string>
+      <string>  Backup Location </string>
      </attribute>
      <widget class="QLabel" name="folderLabel_2">
       <property name="geometry">
@@ -1178,7 +1178,7 @@ margin-left =  5px</string>
       <property name="geometry">
        <rect>
         <x>-10</x>
-        <y>121</y>
+        <y>122</y>
         <width>191</width>
         <height>20</height>
        </rect>
@@ -1267,7 +1267,7 @@ margin-left =  5px</string>
       <property name="geometry">
        <rect>
         <x>600</x>
-        <y>90</y>
+        <y>89</y>
         <width>151</width>
         <height>25</height>
        </rect>
@@ -1492,7 +1492,7 @@ margin-left =  5px</string>
     <property name="geometry">
      <rect>
       <x>80</x>
-      <y>35</y>
+      <y>39</y>
       <width>140</width>
       <height>20</height>
      </rect>
@@ -1802,7 +1802,7 @@ margin-left =  5px</string>
     </rect>
    </property>
    <property name="text">
-    <string>P:/</string>
+    <string>P:</string>
    </property>
   </widget>
   <widget class="QLabel" name="drive_2">
@@ -1815,7 +1815,7 @@ margin-left =  5px</string>
     </rect>
    </property>
    <property name="text">
-    <string>Q:/</string>
+    <string>Q:</string>
    </property>
   </widget>
   <widget class="QLabel" name="label">

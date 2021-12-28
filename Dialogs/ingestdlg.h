@@ -44,12 +44,12 @@ public:
                        bool &isAuto,
                        QString css);
     ~IngestDlg() override;
+    void test();
 
 private slots:
     void updateFolderPaths();
 
     void on_autoRadio_toggled(bool checked);
-    void on_manualRadio_toggled(bool checked);
 
     void on_autoIngestTab_currentChanged(int);
     void on_selectFolderBtn_clicked();
@@ -83,8 +83,9 @@ private slots:
     void on_openIngestFolderChk_stateChanged(int arg1);
 
 protected:
-    void resizeEvent(QResizeEvent *event);
-    void moveEvent(QMoveEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
+    void moveEvent(QMoveEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 signals:
     void updateIngestHistory(QString folderPath);
@@ -110,6 +111,7 @@ private:
 
     bool isInitializing;
     QString css;
+    QString tabWidgetBackgroundColorName;
 
     QFileSystemModel fileSystemModel;
     Metadata *metadata;
