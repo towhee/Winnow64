@@ -35,6 +35,7 @@ QString Utilities::getDrive(QString path)
 */
     int firstSlash = path.indexOf("/");
     if (firstSlash == -1) return "";
+    qDebug() << __FUNCTION__ << path << firstSlash << path.left(firstSlash);
     return path.left(firstSlash);
 }
 

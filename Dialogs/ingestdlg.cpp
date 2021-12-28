@@ -88,16 +88,6 @@ IngestDlg::IngestDlg(QWidget *parent,
     normalText = "QLabel {color:" + G::textColor.name() + ";}";
     redText = "QLabel {color:red;}";
 
-    QString radioStyle =
-        "QRadioButton:checked {"
-            "color: yellow;"
-        "}"
-        "QRadioButton:unchecked {"
-            "color: green;"
-        "}";
-//    ui->autoRadio->setStyleSheet(radioStyle);
-//    ui->manualRadio->setStyleSheet(radioStyle);
-
     ui->setupUi(this);
     setStyleSheet(css);
 
@@ -194,14 +184,8 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->progressBar->setVisible(false);
     ui->autoIngestTab->tabBar()->setCurrentIndex(0);
     isInitializing = false;
+
     updateFolderPaths();
-    updateExistingSequence();
-    buildFileNameSequence();
-
-    qDebug() << __FUNCTION__ << "isInvalidFolder =" << invalidDrive;
-
-//    connect(isBackupChkBox, SIGNAL(stateChanged(int)),
-//            this, SLOT(on_isBackupChkBox_stateChanged(int)));
 }
 
 IngestDlg::~IngestDlg()
@@ -701,9 +685,6 @@ void IngestDlg::on_selectFolderBtn_clicked()
         manualFolderPath = folderPath;
         ui->manualFolderLabel->setText(folderPath);
         ui->manualFolderLabel->setToolTip( ui->manualFolderLabel->text());
-        updateExistingSequence();
-        ui->manualRadio->setChecked(true);
-        updateEnabledState();
         updateFolderPaths();
     }
 }
@@ -725,10 +706,6 @@ void IngestDlg::on_selectFolderBtn_2_clicked()
         manualFolderPath2 = folderPath2;
         ui->manualFolderLabel_2->setText(folderPath2);
         ui->manualFolderLabel_2->setToolTip( ui->manualFolderLabel_2->text());
-//        buildFileNameSequence();
-        updateExistingSequence();
-        ui->manualRadio->setChecked(true);
-        updateEnabledState();
         updateFolderPaths();
     }
 }
@@ -747,10 +724,7 @@ void IngestDlg::on_selectRootFolderBtn_clicked()
         ui->rootFolderLabel->setToolTip(ui->rootFolderLabel->text());
     }
 
-    ui->autoRadio->setChecked(true);
     updateFolderPaths();
-    updateExistingSequence();
-    updateEnabledState();
 }
 
 void IngestDlg::on_selectRootFolderBtn_2_clicked()
@@ -767,10 +741,7 @@ void IngestDlg::on_selectRootFolderBtn_2_clicked()
         ui->rootFolderLabel_2->setToolTip(ui->rootFolderLabel_2->text());
     }
 
-    ui->autoRadio->setChecked(true);
     updateFolderPaths();
-    updateExistingSequence();
-    updateEnabledState();
 }
 
 bool IngestDlg::isToken(QString tokenString, int pos)
@@ -904,7 +875,7 @@ void IngestDlg::updateFolderPaths()
     QDir d;
 
     // Auto folders
-    if (ui->autoRadio->isChecked()/* || isInitializing*/) {
+    if (isAuto) {
         baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
                 ? ui->descriptionLineEdit->text() : "";
         /*
@@ -962,6 +933,10 @@ void IngestDlg::updateFolderPaths()
 
     updateExistingSequence();
     getAvailableStorageMB();
+    getSequenceStart(folderPath);
+    buildFileNameSequence();
+    updateExistingSequence();
+    updateEnabledState();
 }
 
 void IngestDlg::buildFileNameSequence()
@@ -1040,30 +1015,22 @@ void IngestDlg::on_descriptionLineEdit_textChanged(const QString& arg1)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     static QString prevText = "";
-    updateFolderPaths();
     // copy primary description to backup description unless it is already different
     QString desc2 = ui->descriptionLineEdit_2->text();
     if (desc2  == prevText) ui->descriptionLineEdit_2->setText(arg1);
-
     prevText = arg1;
-    ui->autoRadio->setChecked(true);
-    updateEnabledState();
+    updateFolderPaths();
 }
 
 void IngestDlg::on_descriptionLineEdit_2_textChanged(const QString/* &arg1*/)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     updateFolderPaths();
-//    ui->folderLabel_2->setText(arg1);
 }
 
 void IngestDlg::on_spinBoxStartNumber_valueChanged(const QString /* &arg1 */)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    // updateFolderPath();
-//    int sequenceNum = getSequenceStart(folderPath) + G::ingestCount;
-//    if(ui->spinBoxStartNumber->value() < sequenceNum)
-//        ui->spinBoxStartNumber->setValue(sequenceNum + 1);
     buildFileNameSequence();
 }
 
@@ -1114,45 +1081,47 @@ int IngestDlg::getSequenceStart(const QString &path)
 void IngestDlg::getAvailableStorageMB()
 {
 /*
-    Return how many MB available on the drive pointed that contains path.
+    Return how many MB available on the drive selected that contains path.  If the drive is
+    unavailable change its font to red.
+
+    Each time the destination folder parameters are changed for either auto generation or
+    manual, updateFolderPaths() is called, where class variables folderPath, folderPath2,
+    pathDrive, pathDrive2, autoDriveAvailable and autoDriveAvailable2 are updated and
+    this function is called.
 */
 
     QStorageInfo info(pathDrive);
 
     if (info.isValid()) {
-        drive = info.displayName();
-        QString name = info.rootPath();
-        if (name != drive) drive = pathDrive + " (" + drive + ")";
+        if (info.rootPath() == info.displayName()) drive = pathDrive;
+        else drive = pathDrive + " (" + info.displayName() + ")";
         qint64 bytes = info.bytesAvailable();
         availableMB = bytes / 1024 / 1024;
-        QString s = drive + " = " + Utilities::formatMemory(bytes);
-//        QString s = name + " (" + drive + ") " + Utilities::formatMemory(bytes);
+        QString s = drive + " " + Utilities::formatMemory(bytes);
         if (picksMB > availableMB) ui->drive->setStyleSheet(redText);
         else ui->drive->setStyleSheet(normalText);
         ui->drive->setText(s);
     }
     else {
         ui->drive->setStyleSheet(redText);
-        ui->drive->setText("Primary drive " + pathDrive + " is invalid.");
+        ui->drive->setText("Primary drive " + pathDrive + " is unavailable.");
     }
 
     // backup drive
     info.setPath(pathDrive2);
     if (info.isValid()) {
-        drive2 = info.displayName();
-        QString name = info.rootPath();
-        if (name != drive2) drive2 = pathDrive2 + " (" + drive2 + ")";
+        if (info.rootPath() == info.displayName()) drive2 = pathDrive2;
+        else drive2 = pathDrive2 + " (" + info.displayName() + ")";
         qint64 bytes = info.bytesAvailable();
         availableMB2 = bytes / 1024 / 1024;
-        QString s = drive2 + " = " + Utilities::formatMemory(bytes);
+        QString s = drive2 + " " + Utilities::formatMemory(bytes);
         if (picksMB > availableMB2) ui->drive_2->setStyleSheet(redText);
         else ui->drive_2->setStyleSheet(normalText);
         ui->drive_2->setText(s);
     }
     else {
         ui->drive_2->setStyleSheet(redText);
-        ui->drive_2->setText("Backup root folder is invalid.");
-//        qDebug() << __FUNCTION__ << info.rootPath();
+        ui->drive_2->setText("Backup drive " + pathDrive2 + " is unavailable.");
     }
     ui->drive_2->setVisible(isBackup);
 }
@@ -1161,10 +1130,8 @@ void IngestDlg::updateEnabledState()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     if (isAuto) {
-//        ui->autoIngestTab->tabBar()->children().at(0)->
+        // auto widgets
         ui->autoIngestTab->tabBar()->setStyleSheet(G::css);
-//        ui->autoIngestTab->tabBar()->setTabEnabled(0, true);
-//        ui->autoIngestTab->tabBar()->setTabEnabled(1, true);
         ui->selectRootFolderBtn->setEnabled(true);
         ui->selectRootFolderBtn_2->setEnabled(true);
         ui->templateLabel1->setEnabled(true);
@@ -1186,15 +1153,15 @@ void IngestDlg::updateEnabledState()
         ui->folderLabel->setEnabled(true);
         ui->folderLabel_2->setEnabled(true);
 
+        // manual widgets
         ui->selectFolderBtn->setEnabled(false);
         ui->selectFolderBtn_2->setEnabled(false);
         ui->manualFolderLabel->setEnabled(false);
         ui->manualFolderLabel_2->setEnabled(false);
     }
     else {
+        // auto widgets
         ui->autoIngestTab->tabBar()->setStyleSheet("QTabBar::tab {color:" + G::disabledColor.name() + ";}");
-//        ui->autoIngestTab->tabBar()->setTabEnabled(0, false);
-//        ui->autoIngestTab->tabBar()->setTabEnabled(1, false);
         ui->selectRootFolderBtn->setEnabled(false);
         ui->selectRootFolderBtn_2->setEnabled(false);
         ui->templateLabel1->setEnabled(false);
@@ -1216,6 +1183,7 @@ void IngestDlg::updateEnabledState()
         ui->folderLabel->setEnabled(false);
         ui->folderLabel_2->setEnabled(false);
 
+        // manual widgets
         ui->selectFolderBtn->setEnabled(true);
         ui->selectFolderBtn_2->setEnabled(true);
         ui->manualFolderLabel->setEnabled(true);
@@ -1227,36 +1195,8 @@ void IngestDlg::on_autoRadio_toggled(bool checked)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     isAuto = checked;
-    updateEnabledState();
-    if (isAuto) {
-        if (ui->folderLabel->text().length() > 0) {
-            updateFolderPaths();
-            getSequenceStart(folderPath);
-            updateExistingSequence();
-        }
-    }
-    else {
-        if (ui->manualFolderLabel->text().length() > 0) {
-            updateFolderPaths();
-            buildFileNameSequence();
-            updateExistingSequence();
-        }
-    }
+    updateFolderPaths();
 }
-
-void IngestDlg::on_manualRadio_toggled(bool checked)
-{
-    if (G::isLogger) G::log(__FUNCTION__); 
-    isAuto = !checked;
-    updateEnabledState();
-    if (ui->manualFolderLabel->text().length() > 0) {
-        updateFolderPaths();
-        buildFileNameSequence();
-        updateExistingSequence();
-        getAvailableStorageMB();
-    }
-}
-
 
 void IngestDlg::initTokenList()
 {
@@ -1358,8 +1298,6 @@ void IngestDlg::on_pathTemplatesCB_2_currentIndexChanged(const QString &arg1)
     fromRootToBaseFolder2 = parseTokenString(pickList.at(0), tokenString);
     if (!isInitializing) pathTemplateSelected2 = ui->pathTemplatesCB_2->currentIndex();
     updateFolderPaths();
-//    seqStart = getSequenceStart(folderPath);
-//    updateExistingSequence();
 }
 
 void IngestDlg::on_filenameTemplatesCB_currentIndexChanged(const QString &arg1)
@@ -1510,6 +1448,8 @@ void IngestDlg::on_helpBtn_clicked()
 void IngestDlg::on_cancelBtn_clicked()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+//    test();
+//    return;
     reject();
 }
 
@@ -1610,11 +1550,11 @@ void IngestDlg::fontSize()
     ui->templateLabel1->setStyleSheet(fs);
     ui->templateLabel1_2->setStyleSheet(fs);
 
-    ui->manualRadio->setStyleSheet(fs);
-    ui->manualFolderLabel->setStyleSheet(fs);
-    manualDriveAvailable ? ui->manualFolderLabel->setStyleSheet(normalText) : ui->manualFolderLabel->setStyleSheet(redText);
-    ui->manualFolderLabel_2->setStyleSheet(fs);
-    manualDrive2Available ? ui->manualFolderLabel_2->setStyleSheet(normalText) : ui->manualFolderLabel_2->setStyleSheet(redText);
+//    ui->manualRadio->setStyleSheet(fs);
+//    ui->manualFolderLabel->setStyleSheet(fs);
+//    manualDriveAvailable ? ui->manualFolderLabel->setStyleSheet(normalText) : ui->manualFolderLabel->setStyleSheet(redText);
+//    ui->manualFolderLabel_2->setStyleSheet(fs);
+//    manualDrive2Available ? ui->manualFolderLabel_2->setStyleSheet(normalText) : ui->manualFolderLabel_2->setStyleSheet(redText);
     ui->selectFolderBtn->setStyleSheet(fs);
     ui->selectFolderBtn_2->setStyleSheet(fs);
 
@@ -1635,18 +1575,44 @@ void IngestDlg::fontSize()
     ui->cancelBtn->setStyleSheet(fs);
     ui->okBtn->setStyleSheet(fs);
 
+//    if (isAuto) {
+//        ui->manualFolderLabel->setEnabled(false);
+//        ui->manualFolderLabel_2->setEnabled(false);
+//    }
+//    else {
+//        ui->folderLabel->setEnabled(false);
+//        ui->folderLabel_2->setEnabled(false);
+//    }
+
     adjustSize();
 }
 
 void IngestDlg::resizeEvent(QResizeEvent *event)
 {
-    fontSize();
+//    fontSize();
     QDialog::resizeEvent(event);
 }
 
 void IngestDlg::moveEvent(QMoveEvent *event)
 {
-    fontSize();
+//    fontSize();
+    qDebug() << __FUNCTION__ << event;
     QDialog::moveEvent(event);
 }
 
+void IngestDlg::showEvent(QShowEvent *event)
+{
+    QDialog::showEvent(event);
+//    fontSize();
+    qDebug() << __FUNCTION__ << isAuto;
+    ui->autoIngestTab->setStyleSheet(
+        "QWidget {border-color:" + G::tabWidgetBorderColor.name() + ";border-radius: 0px;}"
+        "QPushButton, QComboBox, QLineEdit {border-color:" + G::borderColor.name() + ";}"
+    );
+    updateEnabledState();
+}
+
+void IngestDlg::test()
+{
+    ui->folderLabel->setStyleSheet("QLabel {color:" + G::disabledColor.name() + ";}");
+}

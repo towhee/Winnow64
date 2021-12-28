@@ -170,7 +170,10 @@ namespace G
 
     extern QColor textColor;
     extern QColor backgroundColor;
+    extern QColor borderColor;
     extern QColor disabledColor;
+    extern QColor tabWidgetBorderColor;
+    extern QColor pushButtonBackgroundColor;
     extern QColor scrollBarHandleBackgroundColor;
     extern QColor selectionColor;
     extern QColor mouseOverColor;

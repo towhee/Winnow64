@@ -25,6 +25,7 @@ public:
     int d20;
 
     // lighter than background
+    int l3;
     int l5;
     int l10;
     int l15;

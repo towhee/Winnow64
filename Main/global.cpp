@@ -36,8 +36,11 @@ namespace G
     int textShade = 190;                // text default luminousity
     int backgroundShade;                // app background luminousity
     QColor textColor = QColor(textShade,textShade,textShade);
-    QColor backgroundColor;             // define after settings loaded
-    QColor disabledColor;               // app background luminousity
+    QColor backgroundColor;             // define after app stylesheet defined
+    QColor borderColor;                 // define after app stylesheet defined
+    QColor disabledColor;               // define after app stylesheet defined
+    QColor tabWidgetBorderColor;        // define after app stylesheet defined
+    QColor pushButtonBackgroundColor;   // define after app stylesheet defined
     QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
     QColor selectionColor = QColor(68,95,118);
     QColor mouseOverColor= QColor(40,54,66);
