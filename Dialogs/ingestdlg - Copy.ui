@@ -6,19 +6,19 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>796</width>
-    <height>783</height>
+    <width>873</width>
+    <height>874</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
   <property name="font">
    <font>
-    <pointsize>16</pointsize>
+    <pointsize>14</pointsize>
    </font>
   </property>
   <property name="windowTitle">
@@ -31,9 +31,9 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>510</y>
-     <width>761</width>
-     <height>111</height>
+     <y>550</y>
+     <width>831</width>
+     <height>131</height>
     </rect>
    </property>
    <property name="minimumSize">
@@ -44,7 +44,7 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>13</pointsize>
+     <pointsize>14</pointsize>
     </font>
    </property>
    <property name="toolTip">
@@ -53,542 +53,529 @@
    <property name="title">
     <string>Images will be copied and renamed to</string>
    </property>
-   <widget class="QLabel" name="folderPathLabel">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>20</y>
-      <width>721</width>
-      <height>20</height>
-     </rect>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>0</number>
     </property>
-    <property name="palette">
-     <palette>
-      <active>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="ButtonText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </active>
-      <inactive>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="ButtonText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </inactive>
-      <disabled>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="ButtonText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </disabled>
-     </palette>
+    <property name="topMargin">
+     <number>9</number>
     </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-     </font>
+    <property name="bottomMargin">
+     <number>9</number>
     </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">color:rgb(180,180,120)</string>
-    </property>
-    <property name="frameShape">
-     <enum>QFrame::Box</enum>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-   </widget>
-   <widget class="QLabel" name="folderPathLabel_2">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>40</y>
-      <width>721</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="palette">
-     <palette>
-      <active>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="ButtonText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </active>
-      <inactive>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="ButtonText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </inactive>
-      <disabled>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="ButtonText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </disabled>
-     </palette>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">color:rgb(180,180,120)</string>
-    </property>
-    <property name="frameShape">
-     <enum>QFrame::Box</enum>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-   </widget>
-   <widget class="QLabel" name="folderPathLabel_3">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>60</y>
-      <width>721</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="palette">
-     <palette>
-      <active>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>0</red>
-          <green>0</green>
-          <blue>0</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>0</red>
-          <green>0</green>
-          <blue>0</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </active>
-      <inactive>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>0</red>
-          <green>0</green>
-          <blue>0</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>0</red>
-          <green>0</green>
-          <blue>0</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </inactive>
-      <disabled>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>120</red>
-          <green>120</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>0</red>
-          <green>0</green>
-          <blue>0</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </disabled>
-     </palette>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="frameShape">
-     <enum>QFrame::Box</enum>
-    </property>
-    <property name="text">
-     <string>...</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="folderPathLabel_4">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>80</y>
-      <width>721</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="palette">
-     <palette>
-      <active>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="ButtonText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </active>
-      <inactive>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="ButtonText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </inactive>
-      <disabled>
-       <colorrole role="WindowText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="Text">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="ButtonText">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-       <colorrole role="PlaceholderText">
-        <brush brushstyle="NoBrush">
-         <color alpha="128">
-          <red>180</red>
-          <green>180</green>
-          <blue>120</blue>
-         </color>
-        </brush>
-       </colorrole>
-      </disabled>
-     </palette>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>10</pointsize>
-     </font>
-    </property>
-    <property name="toolTip">
-     <string/>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">color:rgb(180,180,120)</string>
-    </property>
-    <property name="frameShape">
-     <enum>QFrame::Box</enum>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-   </widget>
+    <item>
+     <widget class="QLabel" name="folderPathLabel">
+      <property name="palette">
+       <palette>
+        <active>
+         <colorrole role="WindowText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="ButtonText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </active>
+        <inactive>
+         <colorrole role="WindowText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="ButtonText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </inactive>
+        <disabled>
+         <colorrole role="WindowText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="ButtonText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </disabled>
+       </palette>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color:rgb(180,180,120)</string>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="folderPathLabel_2">
+      <property name="palette">
+       <palette>
+        <active>
+         <colorrole role="WindowText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="ButtonText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </active>
+        <inactive>
+         <colorrole role="WindowText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="ButtonText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </inactive>
+        <disabled>
+         <colorrole role="WindowText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="ButtonText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </disabled>
+       </palette>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color:rgb(180,180,120)</string>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="folderPathLabel_3">
+      <property name="palette">
+       <palette>
+        <active>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </active>
+        <inactive>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </inactive>
+        <disabled>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>120</red>
+            <green>120</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </disabled>
+       </palette>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <property name="text">
+       <string>...</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="folderPathLabel_4">
+      <property name="palette">
+       <palette>
+        <active>
+         <colorrole role="WindowText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="ButtonText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </active>
+        <inactive>
+         <colorrole role="WindowText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="ButtonText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </inactive>
+        <disabled>
+         <colorrole role="WindowText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="ButtonText">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="PlaceholderText">
+          <brush brushstyle="NoBrush">
+           <color alpha="128">
+            <red>180</red>
+            <green>180</green>
+            <blue>120</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </disabled>
+       </palette>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color:rgb(180,180,120)</string>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </item>
+   </layout>
   </widget>
   <widget class="QProgressBar" name="progressBar">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>700</y>
-     <width>691</width>
+     <y>780</y>
+     <width>831</width>
      <height>20</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>10</pointsize>
+     <pointsize>14</pointsize>
     </font>
    </property>
    <property name="toolTip">
@@ -601,18 +588,18 @@
     <set>Qt::AlignCenter</set>
    </property>
   </widget>
-  <widget class="QGroupBox" name="groupBox_2">
+  <widget class="QGroupBox" name="ingestToGroupBox">
    <property name="geometry">
     <rect>
      <x>20</x>
      <y>20</y>
-     <width>761</width>
-     <height>351</height>
+     <width>831</width>
+     <height>391</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>13</pointsize>
+     <pointsize>14</pointsize>
     </font>
    </property>
    <property name="toolTip">
@@ -627,15 +614,15 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>90</x>
-      <y>286</y>
+      <x>120</x>
+      <y>320</y>
       <width>101</width>
       <height>25</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
       <weight>50</weight>
       <bold>false</bold>
      </font>
@@ -660,14 +647,14 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>30</y>
-      <width>471</width>
+      <y>36</y>
+      <width>531</width>
       <height>21</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
       <weight>50</weight>
       <bold>false</bold>
      </font>
@@ -683,14 +670,14 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>260</y>
+      <y>284</y>
       <width>511</width>
       <height>17</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
       <weight>50</weight>
       <bold>false</bold>
      </font>
@@ -705,15 +692,15 @@
    <widget class="QLabel" name="manualFolderLabel">
     <property name="geometry">
      <rect>
-      <x>210</x>
-      <y>290</y>
-      <width>461</width>
-      <height>20</height>
+      <x>240</x>
+      <y>320</y>
+      <width>561</width>
+      <height>25</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -733,35 +720,35 @@
     <property name="geometry">
      <rect>
       <x>40</x>
-      <y>60</y>
-      <width>701</width>
-      <height>181</height>
+      <y>70</y>
+      <width>771</width>
+      <height>191</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
      </font>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="primaryTab">
      <attribute name="title">
-      <string>  Primary Location Parameters  </string>
+      <string>  Primary Location  </string>
      </attribute>
      <widget class="QLabel" name="destinationFolderLabel">
       <property name="geometry">
        <rect>
-        <x>9</x>
-        <y>120</y>
+        <x>20</x>
+        <y>122</y>
         <width>161</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -777,15 +764,15 @@
      <widget class="QLabel" name="folderLabel">
       <property name="geometry">
        <rect>
-        <x>190</x>
+        <x>200</x>
         <y>120</y>
-        <width>491</width>
-        <height>20</height>
+        <width>561</width>
+        <height>25</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -804,15 +791,15 @@
      <widget class="QLabel" name="templateLabel1">
       <property name="geometry">
        <rect>
-        <x>30</x>
-        <y>50</y>
+        <x>41</x>
+        <y>52</y>
         <width>140</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -828,15 +815,21 @@
      <widget class="QPushButton" name="selectRootFolderBtn">
       <property name="geometry">
        <rect>
-        <x>50</x>
+        <x>61</x>
         <y>16</y>
         <width>120</width>
         <height>25</height>
        </rect>
       </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
         <weight>50</weight>
         <bold>false</bold>
        </font>
@@ -860,7 +853,7 @@
      <widget class="QComboBox" name="pathTemplatesCB">
       <property name="geometry">
        <rect>
-        <x>190</x>
+        <x>200</x>
         <y>50</y>
         <width>320</width>
         <height>26</height>
@@ -868,7 +861,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -881,25 +874,35 @@
      <widget class="QLineEdit" name="descriptionLineEdit">
       <property name="geometry">
        <rect>
-        <x>185</x>
-        <y>90</y>
-        <width>491</width>
-        <height>20</height>
+        <x>200</x>
+        <y>89</y>
+        <width>391</width>
+        <height>25</height>
        </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
        <string/>
       </property>
+      <property name="styleSheet">
+       <string notr="true">padding-left = 5px
+margin-left =  5px</string>
+      </property>
      </widget>
      <widget class="QLabel" name="folderDescription">
       <property name="geometry">
        <rect>
-        <x>-1</x>
+        <x>10</x>
         <y>91</y>
         <width>171</width>
         <height>20</height>
@@ -907,7 +910,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -923,15 +926,15 @@
      <widget class="QLabel" name="rootFolderLabel">
       <property name="geometry">
        <rect>
-        <x>190</x>
-        <y>20</y>
-        <width>491</width>
-        <height>20</height>
+        <x>200</x>
+        <y>16</y>
+        <width>561</width>
+        <height>25</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -947,7 +950,7 @@
      <widget class="QPushButton" name="pathTemplatesBtn">
       <property name="geometry">
        <rect>
-        <x>530</x>
+        <x>600</x>
         <y>50</y>
         <width>151</width>
         <height>25</height>
@@ -955,7 +958,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
         <weight>50</weight>
         <bold>false</bold>
        </font>
@@ -979,23 +982,58 @@
        <bool>false</bool>
       </property>
      </widget>
-    </widget>
-    <widget class="QWidget" name="backupTab">
-     <attribute name="title">
-      <string>Backup Location Parameters</string>
-     </attribute>
-     <widget class="QLabel" name="folderLabel_2">
+     <widget class="QPushButton" name="editDescriptionListBtn">
       <property name="geometry">
        <rect>
-        <x>190</x>
-        <y>120</y>
-        <width>491</width>
-        <height>20</height>
+        <x>600</x>
+        <y>89</y>
+        <width>151</width>
+        <height>25</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string>Remove items from the description completer list.</string>
+      </property>
+      <property name="toolTipDuration">
+       <number>-3</number>
+      </property>
+      <property name="text">
+       <string>Remove lookup</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+      <property name="default">
+       <bool>false</bool>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="backupTab">
+     <attribute name="title">
+      <string>  Backup Location </string>
+     </attribute>
+     <widget class="QLabel" name="folderLabel_2">
+      <property name="geometry">
+       <rect>
+        <x>200</x>
+        <y>120</y>
+        <width>561</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1014,15 +1052,15 @@
      <widget class="QLabel" name="templateLabel1_2">
       <property name="geometry">
        <rect>
-        <x>30</x>
-        <y>50</y>
-        <width>140</width>
+        <x>-10</x>
+        <y>52</y>
+        <width>191</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1038,7 +1076,7 @@
      <widget class="QPushButton" name="selectRootFolderBtn_2">
       <property name="geometry">
        <rect>
-        <x>50</x>
+        <x>61</x>
         <y>16</y>
         <width>120</width>
         <height>25</height>
@@ -1046,7 +1084,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
         <weight>50</weight>
         <bold>false</bold>
        </font>
@@ -1070,7 +1108,7 @@
      <widget class="QComboBox" name="pathTemplatesCB_2">
       <property name="geometry">
        <rect>
-        <x>190</x>
+        <x>200</x>
         <y>50</y>
         <width>320</width>
         <height>26</height>
@@ -1078,7 +1116,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1091,15 +1129,21 @@
      <widget class="QLineEdit" name="descriptionLineEdit_2">
       <property name="geometry">
        <rect>
-        <x>185</x>
-        <y>90</y>
-        <width>491</width>
-        <height>20</height>
+        <x>200</x>
+        <y>89</y>
+        <width>391</width>
+        <height>25</height>
        </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1109,15 +1153,15 @@
      <widget class="QLabel" name="folderDescription_2">
       <property name="geometry">
        <rect>
-        <x>30</x>
+        <x>-10</x>
         <y>91</y>
-        <width>140</width>
+        <width>191</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1133,15 +1177,15 @@
      <widget class="QLabel" name="destinationFolderLabel_2">
       <property name="geometry">
        <rect>
-        <x>30</x>
-        <y>120</y>
-        <width>140</width>
+        <x>-10</x>
+        <y>122</y>
+        <width>191</width>
         <height>20</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1157,15 +1201,15 @@
      <widget class="QLabel" name="rootFolderLabel_2">
       <property name="geometry">
        <rect>
-        <x>190</x>
-        <y>20</y>
-        <width>491</width>
-        <height>20</height>
+        <x>200</x>
+        <y>16</y>
+        <width>561</width>
+        <height>25</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1181,15 +1225,21 @@
      <widget class="QPushButton" name="pathTemplatesBtn_2">
       <property name="geometry">
        <rect>
-        <x>530</x>
+        <x>600</x>
         <y>50</y>
         <width>151</width>
         <height>25</height>
        </rect>
       </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
         <weight>50</weight>
         <bold>false</bold>
        </font>
@@ -1213,13 +1263,48 @@
        <bool>false</bool>
       </property>
      </widget>
+     <widget class="QPushButton" name="editDescriptionListBtn_2">
+      <property name="geometry">
+       <rect>
+        <x>600</x>
+        <y>89</y>
+        <width>151</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>14</pointsize>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="toolTip">
+       <string/>
+      </property>
+      <property name="toolTipDuration">
+       <number>-3</number>
+      </property>
+      <property name="text">
+       <string>Remove lookup</string>
+      </property>
+      <property name="autoDefault">
+       <bool>false</bool>
+      </property>
+      <property name="default">
+       <bool>false</bool>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+     </widget>
     </widget>
    </widget>
    <widget class="QPushButton" name="helpBtn">
     <property name="geometry">
      <rect>
-      <x>570</x>
-      <y>30</y>
+      <x>640</x>
+      <y>36</y>
       <width>151</width>
       <height>25</height>
      </rect>
@@ -1251,15 +1336,15 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>90</x>
-      <y>316</y>
+      <x>120</x>
+      <y>350</y>
       <width>101</width>
       <height>25</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
       <weight>50</weight>
       <bold>false</bold>
      </font>
@@ -1283,15 +1368,15 @@
    <widget class="QLabel" name="manualFolderLabel_2">
     <property name="geometry">
      <rect>
-      <x>210</x>
-      <y>320</y>
-      <width>461</width>
-      <height>20</height>
+      <x>240</x>
+      <y>350</y>
+      <width>561</width>
+      <height>25</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -1308,18 +1393,18 @@
     </property>
    </widget>
   </widget>
-  <widget class="QGroupBox" name="groupBox_4">
+  <widget class="QGroupBox" name="filenameGroupBox">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>390</y>
-     <width>761</width>
+     <y>430</y>
+     <width>831</width>
      <height>101</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>13</pointsize>
+     <pointsize>14</pointsize>
     </font>
    </property>
    <property name="toolTip">
@@ -1331,15 +1416,15 @@
    <widget class="QLabel" name="existingSequenceLabel">
     <property name="geometry">
      <rect>
-      <x>270</x>
+      <x>310</x>
       <y>70</y>
-      <width>471</width>
-      <height>20</height>
+      <width>491</width>
+      <height>25</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -1360,13 +1445,13 @@
      <rect>
       <x>20</x>
       <y>71</y>
-      <width>171</width>
+      <width>201</width>
       <height>20</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -1382,7 +1467,7 @@
    <widget class="QSpinBox" name="spinBoxStartNumber">
     <property name="geometry">
      <rect>
-      <x>210</x>
+      <x>240</x>
       <y>70</y>
       <width>51</width>
       <height>22</height>
@@ -1390,7 +1475,7 @@
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -1403,18 +1488,18 @@
      <number>9999</number>
     </property>
    </widget>
-   <widget class="QLabel" name="label_5">
+   <widget class="QLabel" name="templateLabel2">
     <property name="geometry">
      <rect>
-      <x>50</x>
-      <y>30</y>
+      <x>80</x>
+      <y>39</y>
       <width>140</width>
       <height>20</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -1430,15 +1515,15 @@
    <widget class="QComboBox" name="filenameTemplatesCB">
     <property name="geometry">
      <rect>
-      <x>210</x>
-      <y>30</y>
-      <width>321</width>
+      <x>240</x>
+      <y>35</y>
+      <width>351</width>
       <height>26</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
      </font>
     </property>
     <property name="toolTip">
@@ -1448,15 +1533,21 @@
    <widget class="QPushButton" name="filenameTemplatesBtn">
     <property name="geometry">
      <rect>
-      <x>570</x>
-      <y>30</y>
+      <x>630</x>
+      <y>35</y>
       <width>161</width>
       <height>25</height>
      </rect>
     </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
     <property name="font">
      <font>
-      <pointsize>13</pointsize>
+      <pointsize>14</pointsize>
       <weight>50</weight>
       <bold>false</bold>
      </font>
@@ -1482,14 +1573,14 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>740</y>
-     <width>351</width>
-     <height>16</height>
+     <y>818</y>
+     <width>201</width>
+     <height>25</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>13</pointsize>
+     <pointsize>14</pointsize>
     </font>
    </property>
    <property name="toolTip">
@@ -1502,8 +1593,8 @@
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>520</x>
-     <y>730</y>
+     <x>600</x>
+     <y>810</y>
      <width>251</width>
      <height>43</height>
     </rect>
@@ -1522,7 +1613,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="toolTip">
@@ -1546,7 +1637,7 @@
       </property>
       <property name="font">
        <font>
-        <pointsize>13</pointsize>
+        <pointsize>14</pointsize>
        </font>
       </property>
       <property name="focusPolicy">
@@ -1571,15 +1662,21 @@
   <widget class="QCheckBox" name="combinedIncludeJpgChk">
    <property name="geometry">
     <rect>
-     <x>380</x>
-     <y>640</y>
-     <width>330</width>
-     <height>20</height>
+     <x>450</x>
+     <y>700</y>
+     <width>391</width>
+     <height>25</height>
     </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
    </property>
    <property name="font">
     <font>
-     <pointsize>13</pointsize>
+     <pointsize>14</pointsize>
     </font>
    </property>
    <property name="text">
@@ -1589,15 +1686,21 @@
   <widget class="QCheckBox" name="ejectChk">
    <property name="geometry">
     <rect>
-     <x>380</x>
-     <y>660</y>
-     <width>330</width>
-     <height>20</height>
+     <x>450</x>
+     <y>725</y>
+     <width>391</width>
+     <height>25</height>
     </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
    </property>
    <property name="font">
     <font>
-     <pointsize>13</pointsize>
+     <pointsize>14</pointsize>
     </font>
    </property>
    <property name="text">
@@ -1608,14 +1711,20 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>660</y>
-     <width>330</width>
-     <height>20</height>
+     <y>725</y>
+     <width>421</width>
+     <height>25</height>
     </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
    </property>
    <property name="font">
     <font>
-     <pointsize>13</pointsize>
+     <pointsize>14</pointsize>
     </font>
    </property>
    <property name="text">
@@ -1626,21 +1735,159 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>640</y>
-     <width>311</width>
-     <height>20</height>
+     <y>700</y>
+     <width>411</width>
+     <height>25</height>
     </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
    </property>
    <property name="font">
     <font>
-     <pointsize>13</pointsize>
+     <pointsize>14</pointsize>
     </font>
    </property>
    <property name="text">
     <string>Backup to second location while ingesting</string>
    </property>
   </widget>
+  <widget class="QCheckBox" name="includeXmpChk">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>750</y>
+     <width>421</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Include XMP sidecar with Winnow metadata</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="gbsLabel">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>843</y>
+     <width>181</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Gb/sec</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="drive">
+   <property name="geometry">
+    <rect>
+     <x>320</x>
+     <y>818</y>
+     <width>271</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>P:</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="drive_2">
+   <property name="geometry">
+    <rect>
+     <x>320</x>
+     <y>843</y>
+     <width>321</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Q:</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>818</y>
+     <width>101</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Drive space</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="integrityChk">
+   <property name="geometry">
+    <rect>
+     <x>450</x>
+     <y>750</y>
+     <width>391</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Integrity check copied files (slower)</string>
+   </property>
+  </widget>
  </widget>
+ <tabstops>
+  <tabstop>ejectChk</tabstop>
+  <tabstop>openIngestFolderChk</tabstop>
+  <tabstop>backupChk</tabstop>
+  <tabstop>includeXmpChk</tabstop>
+  <tabstop>integrityChk</tabstop>
+  <tabstop>selectFolderBtn</tabstop>
+  <tabstop>autoRadio</tabstop>
+  <tabstop>manualRadio</tabstop>
+  <tabstop>autoIngestTab</tabstop>
+  <tabstop>helpBtn</tabstop>
+  <tabstop>selectFolderBtn_2</tabstop>
+  <tabstop>spinBoxStartNumber</tabstop>
+  <tabstop>filenameTemplatesCB</tabstop>
+  <tabstop>filenameTemplatesBtn</tabstop>
+  <tabstop>cancelBtn</tabstop>
+  <tabstop>okBtn</tabstop>
+  <tabstop>selectRootFolderBtn</tabstop>
+  <tabstop>pathTemplatesBtn</tabstop>
+  <tabstop>pathTemplatesCB</tabstop>
+  <tabstop>descriptionLineEdit</tabstop>
+  <tabstop>editDescriptionListBtn</tabstop>
+  <tabstop>selectRootFolderBtn_2</tabstop>
+  <tabstop>pathTemplatesCB_2</tabstop>
+  <tabstop>pathTemplatesBtn_2</tabstop>
+  <tabstop>descriptionLineEdit_2</tabstop>
+  <tabstop>editDescriptionListBtn_2</tabstop>
+  <tabstop>combinedIncludeJpgChk</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
  <slots>
