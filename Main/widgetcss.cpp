@@ -308,7 +308,10 @@ QString WidgetCSS::tabWidget()
         "background-color: " + QColor(bg,bg,bg).name() + ";"
         "border: 1px solid " + QColor(mb,mb,mb).name() + ";"
         "border-bottom-color:" + G::tabWidgetBorderColor.name() + ";"
-        "padding-bottom: 2px;"
+        "padding-top: 4px;"
+        "padding-bottom: 3px;"
+        "padding-left: 5px;"
+        "padding-right: 5px;"
     "}"
 
     "QTabBar::tab:selected {"
@@ -760,7 +763,7 @@ QString WidgetCSS::lineEdit()
 
     "QLineEdit:hover {"
 //        "border-color: red;"
-            "}"
+    "}"
 
     "QLineEdit:disabled {"
         "color:" + disabledColor.name() + ";"

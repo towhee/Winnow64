@@ -98,7 +98,7 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    QString versionNumber = "1.31.1" ;
+    QString versionNumber = "1.32" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;

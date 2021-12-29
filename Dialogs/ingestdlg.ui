@@ -19,6 +19,7 @@
   <property name="font">
    <font>
     <pointsize>14</pointsize>
+    <strikeout>false</strikeout>
    </font>
   </property>
   <property name="windowTitle">
@@ -28,6 +29,18 @@
    <bool>false</bool>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
+   <property name="leftMargin">
+    <number>9</number>
+   </property>
+   <property name="topMargin">
+    <number>9</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item>
     <widget class="QScrollArea" name="scrollArea">
      <property name="sizePolicy">
@@ -59,14 +72,14 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>860</width>
-        <height>854</height>
+        <width>869</width>
+        <height>863</height>
        </rect>
       </property>
       <property name="minimumSize">
        <size>
-        <width>850</width>
-        <height>840</height>
+        <width>860</width>
+        <height>854</height>
        </size>
       </property>
       <widget class="QCheckBox" name="integrityChk">
@@ -87,6 +100,7 @@
        <property name="font">
         <font>
          <pointsize>14</pointsize>
+         <strikeout>false</strikeout>
         </font>
        </property>
        <property name="text">
@@ -111,6 +125,7 @@
        <property name="font">
         <font>
          <pointsize>14</pointsize>
+         <strikeout>false</strikeout>
         </font>
        </property>
        <property name="text">
@@ -135,6 +150,7 @@
        <property name="font">
         <font>
          <pointsize>14</pointsize>
+         <strikeout>false</strikeout>
         </font>
        </property>
        <property name="text">
@@ -185,6 +201,7 @@
        <property name="font">
         <font>
          <pointsize>14</pointsize>
+         <strikeout>false</strikeout>
         </font>
        </property>
        <property name="toolTip">
@@ -550,6 +567,7 @@
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -716,6 +734,7 @@
        <property name="font">
         <font>
          <pointsize>14</pointsize>
+         <strikeout>false</strikeout>
         </font>
        </property>
        <property name="toolTip">
@@ -741,6 +760,7 @@
           <pointsize>14</pointsize>
           <weight>50</weight>
           <bold>false</bold>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -773,6 +793,7 @@
           <pointsize>14</pointsize>
           <weight>50</weight>
           <bold>false</bold>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -796,6 +817,7 @@
           <pointsize>14</pointsize>
           <weight>50</weight>
           <bold>false</bold>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -817,6 +839,7 @@
         <property name="font">
          <font>
           <pointsize>14</pointsize>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -844,6 +867,7 @@
         <property name="font">
          <font>
           <pointsize>14</pointsize>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="currentIndex">
@@ -865,6 +889,7 @@
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -889,6 +914,7 @@
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -916,6 +942,7 @@
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -948,6 +975,7 @@
             <pointsize>14</pointsize>
             <weight>50</weight>
             <bold>false</bold>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -978,6 +1006,7 @@
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1027,6 +1056,7 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1051,6 +1081,7 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1077,6 +1108,7 @@ margin-left =  5px</string>
             <pointsize>14</pointsize>
             <weight>50</weight>
             <bold>false</bold>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1112,6 +1144,7 @@ margin-left =  5px</string>
             <pointsize>14</pointsize>
             <weight>50</weight>
             <bold>false</bold>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1150,6 +1183,7 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1177,6 +1211,7 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1203,6 +1238,7 @@ margin-left =  5px</string>
             <pointsize>14</pointsize>
             <weight>50</weight>
             <bold>false</bold>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1233,6 +1269,7 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1260,6 +1297,7 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1278,6 +1316,7 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1302,6 +1341,7 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1326,6 +1366,7 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1358,6 +1399,7 @@ margin-left =  5px</string>
             <pointsize>14</pointsize>
             <weight>50</weight>
             <bold>false</bold>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1393,6 +1435,7 @@ margin-left =  5px</string>
             <pointsize>14</pointsize>
             <weight>50</weight>
             <bold>false</bold>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1434,6 +1477,7 @@ margin-left =  5px</string>
         <property name="font">
          <font>
           <pointsize>13</pointsize>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -1463,6 +1507,7 @@ margin-left =  5px</string>
           <pointsize>14</pointsize>
           <weight>50</weight>
           <bold>false</bold>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -1493,6 +1538,7 @@ margin-left =  5px</string>
         <property name="font">
          <font>
           <pointsize>14</pointsize>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -1521,6 +1567,7 @@ margin-left =  5px</string>
        <property name="font">
         <font>
          <pointsize>14</pointsize>
+         <strikeout>false</strikeout>
         </font>
        </property>
        <property name="toolTip">
@@ -1541,6 +1588,7 @@ margin-left =  5px</string>
         <property name="font">
          <font>
           <pointsize>14</pointsize>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -1568,6 +1616,7 @@ margin-left =  5px</string>
         <property name="font">
          <font>
           <pointsize>14</pointsize>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -1592,6 +1641,7 @@ margin-left =  5px</string>
         <property name="font">
          <font>
           <pointsize>14</pointsize>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -1616,6 +1666,7 @@ margin-left =  5px</string>
         <property name="font">
          <font>
           <pointsize>14</pointsize>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -1640,6 +1691,7 @@ margin-left =  5px</string>
         <property name="font">
          <font>
           <pointsize>14</pointsize>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -1666,6 +1718,7 @@ margin-left =  5px</string>
           <pointsize>14</pointsize>
           <weight>50</weight>
           <bold>false</bold>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="toolTip">
@@ -1703,6 +1756,7 @@ margin-left =  5px</string>
        <property name="font">
         <font>
          <pointsize>14</pointsize>
+         <strikeout>false</strikeout>
         </font>
        </property>
        <property name="text">
@@ -1727,6 +1781,7 @@ margin-left =  5px</string>
        <property name="font">
         <font>
          <pointsize>14</pointsize>
+         <strikeout>false</strikeout>
         </font>
        </property>
        <property name="text">
@@ -1758,6 +1813,7 @@ margin-left =  5px</string>
        <property name="font">
         <font>
          <pointsize>14</pointsize>
+         <strikeout>false</strikeout>
         </font>
        </property>
        <property name="toolTip">
@@ -1788,6 +1844,7 @@ margin-left =  5px</string>
        <property name="font">
         <font>
          <pointsize>14</pointsize>
+         <strikeout>false</strikeout>
         </font>
        </property>
        <property name="text">
@@ -1806,6 +1863,7 @@ margin-left =  5px</string>
        <property name="font">
         <font>
          <pointsize>14</pointsize>
+         <strikeout>false</strikeout>
         </font>
        </property>
        <property name="toolTip">
@@ -1839,6 +1897,7 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1863,6 +1922,7 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="focusPolicy">
