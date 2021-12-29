@@ -8607,7 +8607,7 @@ void MW::writeSettings()
     setting->endGroup();
 
     /* InfoView okToShow fields */
-     if (useInfoView) {
+    if (useInfoView) {
         setting->beginGroup("InfoFields");
         setting->remove("");
         QStandardItemModel *k = infoView->ok;
@@ -8698,21 +8698,22 @@ void MW::writeSettings()
     }
     setting->endGroup();
 
-    /* save ingest history folders */
-    setting->beginGroup("IngestHistoryFolders");
-    setting->remove("");
-    for (int i = 0; i < ingestHistoryFolders->count(); i++) {
-        setting->setValue("ingestHistoryFolder" + QString::number(i+1),
-                          ingestHistoryFolders->at(i));
-    }
-    setting->endGroup();
+    // moved to ingest()
+//    /* save ingest history folders */
+//    setting->beginGroup("IngestHistoryFolders");
+//    setting->remove("");
+//    for (int i = 0; i < ingestHistoryFolders->count(); i++) {
+//        setting->setValue("ingestHistoryFolder" + QString::number(i+1),
+//                          ingestHistoryFolders->at(i));
+//    }
+//    setting->endGroup();
 
-    /* save ingest description completer list */
-    setting->beginGroup("IngestDescriptionCompleter");
-    for (const auto& i : ingestDescriptionCompleter) {
-        setting->setValue(i, "");
-    }
-    setting->endGroup();
+//    /* save ingest description completer list */
+//    setting->beginGroup("IngestDescriptionCompleter");
+//    for (const auto& i : ingestDescriptionCompleter) {
+//        setting->setValue(i, "");
+//    }
+//    setting->endGroup();
 
     saveWorkspaces();
 }
@@ -10435,6 +10436,22 @@ void MW::ingest()
 
         bool ingested = ingestDlg->exec();
         delete ingestDlg;
+
+        /* save ingest history folders */
+        setting->beginGroup("IngestHistoryFolders");
+        setting->remove("");
+        for (int i = 0; i < ingestHistoryFolders->count(); i++) {
+            setting->setValue("ingestHistoryFolder" + QString::number(i+1),
+                              ingestHistoryFolders->at(i));
+        }
+        setting->endGroup();
+
+        /* save ingest description completer list */
+        setting->beginGroup("IngestDescriptionCompleter");
+        for (const auto& i : ingestDescriptionCompleter) {
+            setting->setValue(i, "");
+        }
+        setting->endGroup();
 
         if (!ingested) return;
 
