@@ -30,7 +30,7 @@ private:
     QPixmap &tile;
     QGraphicsRectItem *imageRect;
     QGraphicsRectItem *patternRect;
-    QMatrix matrix;
+    QTransform matrix;  // qt6.2
     qreal zoom;
     QRubberBand *rubberBand;
     QPoint origin;

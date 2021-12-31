@@ -502,26 +502,27 @@ void Xmp::report()
 {
     if (G::isLogger) G::log(__FUNCTION__);
 
-    QXmlQuery query;
-    query.setQuery(metaAsString());
+// Qt6.2
+//    QXmlQuery query;
+//    query.setQuery(metaAsString());
 
-    // Set up the output device
-    QByteArray outArray;
-    QBuffer buffer(&outArray);
-    if (buffer.isOpen()) buffer.close();
-    buffer.open(QIODevice::ReadWrite);
+//    // Set up the output device
+//    QByteArray outArray;
+//    QBuffer buffer(&outArray);
+//    if (buffer.isOpen()) buffer.close();
+//    buffer.open(QIODevice::ReadWrite);
 
-    // format xmp
-    QXmlFormatter formatter(query, &buffer);
-    query.evaluateTo(&formatter);
+//    // format xmp
+//    QXmlFormatter formatter(query, &buffer);
+//    query.evaluateTo(&formatter);
 
-    QString xmpString = QTextCodec::codecForMib(106)->toUnicode(outArray);
+//    QString xmpString = QTextCodec::codecForMib(106)->toUnicode(outArray);
 
-    QMessageBox msg;
-    msg.setText(metaAsString());
-//    msg.setText(xmpString);
-    msg.exec();
-    buffer.close();
+//    QMessageBox msg;
+//    msg.setText(metaAsString());
+////    msg.setText(xmpString);
+//    msg.exec();
+//    buffer.close();
 }
 
 QString Xmp::diagnostics()

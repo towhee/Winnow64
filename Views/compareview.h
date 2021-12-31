@@ -83,7 +83,7 @@ private:
     QFrame *frame;
 
     QGraphicsScene *scene;
-    QMatrix matrix;
+    QTransform matrix;      // qt6.2
 
     QPixmap displayPixmap;
     QImage thumbsUp;

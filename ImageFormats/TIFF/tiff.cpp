@@ -1019,7 +1019,7 @@ void Tiff::perChannelToInterleave(QImage *im1)
     uchar *nn = im2.scanLine(0);
     uchar *n = im2.bits();
     uchar *o = im1->bits();
-    int bc = im2.byteCount();
+    int bc = im2.sizeInBytes();
     int a = im2.bitPlaneCount();
     const int p = im2.height() * im2.width();
     for (int i = 0; i < p; ++i) {

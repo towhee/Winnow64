@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QtWidgets>
 #include <QtCore>
-#include <QtXmlPatterns>
+//#include <QtXmlPatterns>
 #include <iostream>
 #include <iomanip>
 

@@ -253,8 +253,8 @@
               </brush>
              </colorrole>
              <colorrole role="PlaceholderText">
-              <brush brushstyle="NoBrush">
-               <color alpha="128">
+              <brush brushstyle="SolidPattern">
+               <color alpha="255">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -291,8 +291,8 @@
               </brush>
              </colorrole>
              <colorrole role="PlaceholderText">
-              <brush brushstyle="NoBrush">
-               <color alpha="128">
+              <brush brushstyle="SolidPattern">
+               <color alpha="255">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -329,8 +329,8 @@
               </brush>
              </colorrole>
              <colorrole role="PlaceholderText">
-              <brush brushstyle="NoBrush">
-               <color alpha="128">
+              <brush brushstyle="SolidPattern">
+               <color alpha="255">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -343,6 +343,7 @@
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -392,8 +393,8 @@
               </brush>
              </colorrole>
              <colorrole role="PlaceholderText">
-              <brush brushstyle="NoBrush">
-               <color alpha="128">
+              <brush brushstyle="SolidPattern">
+               <color alpha="255">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -430,8 +431,8 @@
               </brush>
              </colorrole>
              <colorrole role="PlaceholderText">
-              <brush brushstyle="NoBrush">
-               <color alpha="128">
+              <brush brushstyle="SolidPattern">
+               <color alpha="255">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -468,8 +469,8 @@
               </brush>
              </colorrole>
              <colorrole role="PlaceholderText">
-              <brush brushstyle="NoBrush">
-               <color alpha="128">
+              <brush brushstyle="SolidPattern">
+               <color alpha="255">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -482,6 +483,7 @@
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -614,8 +616,8 @@
               </brush>
              </colorrole>
              <colorrole role="PlaceholderText">
-              <brush brushstyle="NoBrush">
-               <color alpha="128">
+              <brush brushstyle="SolidPattern">
+               <color alpha="255">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -652,8 +654,8 @@
               </brush>
              </colorrole>
              <colorrole role="PlaceholderText">
-              <brush brushstyle="NoBrush">
-               <color alpha="128">
+              <brush brushstyle="SolidPattern">
+               <color alpha="255">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -690,8 +692,8 @@
               </brush>
              </colorrole>
              <colorrole role="PlaceholderText">
-              <brush brushstyle="NoBrush">
-               <color alpha="128">
+              <brush brushstyle="SolidPattern">
+               <color alpha="255">
                 <red>180</red>
                 <green>180</green>
                 <blue>120</blue>
@@ -704,6 +706,7 @@
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -871,7 +874,7 @@
          </font>
         </property>
         <property name="currentIndex">
-         <number>1</number>
+         <number>0</number>
         </property>
         <widget class="QWidget" name="primaryTab">
          <attribute name="title">
@@ -1034,6 +1037,7 @@
           <property name="font">
            <font>
             <pointsize>14</pointsize>
+            <strikeout>false</strikeout>
            </font>
           </property>
           <property name="toolTip">
@@ -1476,7 +1480,7 @@ margin-left =  5px</string>
         </property>
         <property name="font">
          <font>
-          <pointsize>13</pointsize>
+          <pointsize>14</pointsize>
           <strikeout>false</strikeout>
          </font>
         </property>

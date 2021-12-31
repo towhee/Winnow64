@@ -748,17 +748,17 @@ bool IngestDlg::isToken(QString tokenString, int pos)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     QChar ch = tokenString.at(pos);
-    if (ch.unicode() == 8233) return false;  // Paragraph Separator
-    if (ch == "{") return false;
+    if (ch.unicode() == 8233) return false;     // Paragraph Separator
+    if (ch == '{') return false;                // qt6.2 changed " to '
     if (pos == 0) return false;
 
     // look backwards
     bool foundPossibleTokenStart = false;
-    int startPos;
+    int startPos = 0;
     for (int i = pos; i >= 0; i--) {
         ch = tokenString.at(i);
-        if (i < pos && ch == "}") return false;
-        if (ch == "{") {
+        if (i < pos && ch == '}') return false; // qt6.2 changed " to '
+        if (ch == '{') {                        // qt6.2 changed " to '
             foundPossibleTokenStart = true;
             startPos = i + 1;
         }
@@ -772,7 +772,7 @@ bool IngestDlg::isToken(QString tokenString, int pos)
 //    int n = tokenString.length();
     for (int i = pos; i < tokenString.length(); i++) {
         ch = tokenString.at(i);
-        if (ch == "}") {
+        if (ch == '}') {                        // qt6.2 changed " to '
             for (int j = startPos; j < i; j++) {
                 token.append(tokenString.at(j));
             }

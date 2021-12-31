@@ -683,17 +683,18 @@ void Filters::addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetIt
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     static QTreeWidgetItem *item;
-    QMap<QVariant, QString> uniqueItems;
-    for (auto key : itemMap.keys()) {
-      if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
-    }
-    for (auto key : uniqueItems.keys()) {
-//        if (quitBuildingFilters) return;
-        item = new QTreeWidgetItem(category);
-        item->setText(0, uniqueItems.value(key));
-        item->setCheckState(0, Qt::Unchecked);
-        item->setData(1, Qt::EditRole, key);
-    }
+    // qt 6.2
+//    QMap<QVariant, QString> uniqueItems;
+//    for (auto key : itemMap.keys()) {
+//      if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
+//    }
+//    for (auto key : uniqueItems.keys()) {
+////        if (quitBuildingFilters) return;
+//        item = new QTreeWidgetItem(category);
+//        item->setText(0, uniqueItems.value(key));
+//        item->setCheckState(0, Qt::Unchecked);
+//        item->setData(1, Qt::EditRole, key);
+//    }
 }
 
 

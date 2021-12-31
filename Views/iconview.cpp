@@ -1418,12 +1418,12 @@ int IconView::getVerticalScrollBarMax()
     return vMax;
 }
 
-void IconView::enterEvent(QEvent *event)
-{
-    if (G::isLogger) G::log(__FUNCTION__); 
-//    setFocus();
-    QListView::enterEvent(event);
-}
+//void IconView::enterEvent(QEvent *event)
+//{
+//    if (G::isLogger) G::log(__FUNCTION__);
+////    setFocus();
+//    QListView::enterEvent(event);
+//}
 
 void IconView::leaveEvent(QEvent *event)
 {

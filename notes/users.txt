@@ -1,3 +1,5 @@
+Change mail list in Outlook > People > Groups
+
 Rory Hill
 Andreas Berglund
 Doug Fisk
@@ -10,4 +12,4 @@ Pius Sullivan
 Dave Clark
 Graeme Hill
 Grant Eldridge
-Jim Murray
+Jim MurraySteve Large

@@ -7542,7 +7542,9 @@ void MW::runExternalApp()
         }
     }
     if(appPath == "") return;       // add err handling
-    QFileInfo appInfo = appPath;
+//    QFileInfo appInfo = appPath;  // qt6.2
+    QFileInfo appInfo;              // qt6.2
+    appInfo.setFile(appPath);       // qt6.2
     QString appExecutable = appInfo.fileName();
 
 //    app = externalApps[((QAction*) sender())->text()];
@@ -7584,7 +7586,9 @@ void MW::runExternalApp()
     QStringList arguments;
     if (!getSelection(arguments)) return;
     QString folderPath;
-    QFileInfo fInfo = arguments.at(0);
+//    QFileInfo fInfo = arguments.at(0);    // qt6.2
+    QFileInfo fInfo;                        // qt6.2
+    fInfo.setFile(arguments.at(0));         // qt6.2
     folderPath = fInfo.dir().absolutePath() + "/";
     /*
     for (int tn = 0; tn < nFiles ; ++tn) {
@@ -10536,7 +10540,8 @@ void MW::ejectUsb(QString path)
             G::popUp->showPopup("Failed to eject drive " + driveName, 2000);
     }
     else {
-        G::popUp->showPopup("Drive " + currentViewDirPath[0]
+        QString d = currentViewDirPath.at(0);
+        G::popUp->showPopup("Drive " + d
               + " is not removable and cannot be ejected", 2000);
     }
 }
@@ -12177,14 +12182,21 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-
-    QString p = "Q:/Backup/";
-    qDebug() << __FUNCTION__ << p.right(1);
+    qWarning() << __FUNCTION__ << "ICC hInProfile failed.";
     return;
-    QString drive = Utilities::getDrive(p);
-    qDebug() << __FUNCTION__ << drive;
-    QStorageInfo info(drive);
-    qDebug() << __FUNCTION__ << info.displayName() << info.bytesAvailable();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    qDebug() << __FUNCTION__ << QT_VERSION;
+#else
+    qDebug() << __FUNCTION__ << QT_VERSION << "Good";
+#endif
+
+//    QString p = "Q:/Backup/";
+//    qDebug() << __FUNCTION__ << p.right(1);
+//    return;
+//    QString drive = Utilities::getDrive(p);
+//    qDebug() << __FUNCTION__ << drive;
+//    QStorageInfo info(drive);
+//    qDebug() << __FUNCTION__ << info.displayName() << info.bytesAvailable();
 
 //    filters->update();
 //    QtConcurrent::run(fsTree, &FSTree::updateVisibleImageCount);

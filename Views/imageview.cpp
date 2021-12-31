@@ -994,12 +994,13 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     QGraphicsView::mouseReleaseEvent(event);
 }
 
-void ImageView::enterEvent(QEvent *event)
-{
-    if (G::isLogger) G::log(__FUNCTION__); 
-    QVariant x = event->type();     // suppress compiler warning
-//    this->setFocus();
-}
+// qt6.2
+//void ImageView::enterEvent(QEvent *event)
+//{
+//    if (G::isLogger) G::log(__FUNCTION__);
+//    QVariant x = event->type();     // suppress compiler warning
+////    this->setFocus();
+//}
 
 // DRAG AND DROP
 
