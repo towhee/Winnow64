@@ -4,7 +4,8 @@
 #include <QObject>
 #include <QtCore>
 #include <QtWidgets>
-#include <QtXmlPatterns>
+#include <QTextCodec>       // Qt6.2 with Qt5 compatibility
+//#include <QtXmlPatterns>  // Qt6.2 with Qt5 compatibility
 #include "Main/global.h"
 //#include "Metadata/imagemetadata.h"
 #include "Utilities/utilities.h"

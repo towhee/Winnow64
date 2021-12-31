@@ -1,6 +1,8 @@
 #CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 CONFIG += sdk_no_version_check
-CONFIG += c++17
+CONFIG += c++17                    # qt6.2
+#QMAKE_CXXFLAGS += /std:c++17        # qt6.2
+#QMAKE_CXXFLAGS += /Zc:__cplusplus   # qt6.2
 TEMPLATE = app
 TARGET = Winnow
 INCLUDEPATH += .
@@ -22,7 +24,9 @@ Debug:UI_DIR = debug/.ui
 
 QT += widgets
 QT += concurrent
-QT += xmlpatterns
+QT += network
+#QT += core5compat   # qt6.2
+QT += xmlpatterns  # qt6.2
 #QT += opengl
 
 HEADERS += Cache/mdcache.h

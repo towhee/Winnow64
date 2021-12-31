@@ -17,7 +17,7 @@ PatternDlgView::PatternDlgView(QPixmap &pm, QPixmap &tile, QWidget * /*parent*/)
     zoom = 1;
     matrix.reset();
     matrix.scale(zoom, zoom);
-    setMatrix(matrix);
+    setTransform(matrix);  // qt6.2
 
     rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
     patternRect = new QGraphicsRectItem;

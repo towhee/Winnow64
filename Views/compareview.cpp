@@ -400,7 +400,7 @@ void CompareView::scale(bool okayToPropagate)
     matrix.reset();
     double highDpiZoom = zoom / G::actDevicePixelRatio;
     matrix.scale(highDpiZoom, highDpiZoom);
-    setMatrix(matrix);
+    setTransform(matrix);   // qt6.2
 
     // notify ZoomDlg of change in scale
     qDebug() << __FUNCTION__ << zoom << "zoomChange";
@@ -644,7 +644,7 @@ void CompareView::enterEvent(QEvent *event)
     select();
     // zoomToFit zoom factor can be different so do update
     emit zoomChange(zoom, /* hasFocus */ true);
-    QGraphicsView::enterEvent(event);
+//    QGraphicsView::enterEvent(event); // qt6.2
 }
 
 void CompareView::leaveEvent(QEvent *event)

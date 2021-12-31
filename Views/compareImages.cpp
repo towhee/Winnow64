@@ -24,7 +24,7 @@ CompareImages::CompareImages(QWidget *parent,
     // set up a grid to contain the imageviews
     gridLayout = new QGridLayout;
     gridLayout->setContentsMargins(0, 0, 0, 0);
-    gridLayout->setMargin(0);
+//    gridLayout->setMargin(0); // qt6.2
     gridLayout->setSpacing(0);
 
     setLayout(gridLayout);

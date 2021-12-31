@@ -345,6 +345,8 @@ void Metadata::reportMetadata()
     p.rpt.setFieldWidth(25); p.rpt << "nikonLensCode"       << m.nikonLensCode;       p.rpt.setFieldWidth(0); p.rpt << "\n";
 
     if (m.isXmp && p.xmpString.length() > 0) {
+        // qt6.2
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         p.rpt << "\nXMP Extract:\n\n";
         QXmlQuery query;
         query.setQuery(p.xmpString);
@@ -362,6 +364,7 @@ void Metadata::reportMetadata()
 
         QString xmpStr = QTextCodec::codecForMib(106)->toUnicode(outArray);
         p.rpt << xmpStr;
+#endif
     }
 }
 

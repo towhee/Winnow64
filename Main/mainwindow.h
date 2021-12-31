@@ -2,7 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QtWidgets>
-#include <QDesktopWidget>
+//#include <QDesktopWidget>         // qt6.2
 #include "sstream"
 #include <iostream>
 #include <iomanip>

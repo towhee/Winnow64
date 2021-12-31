@@ -168,7 +168,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *event);
     void resizeEvent(QResizeEvent* event);
-    void enterEvent(QEvent *event);
+//    void enterEvent(QEvent *event);   // qt6.2
     void leaveEvent(QEvent *event);
 //    QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction,
 //                           Qt::KeyboardModifiers modifiers);

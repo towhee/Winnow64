@@ -21,6 +21,10 @@ namespace ICC
         }
         else {
             hInProfile = cmsOpenProfileFromMem(buf.data(), static_cast<uint32_t>(buf.length()));
+            if (!hInProfile) {
+                qWarning() << __FUNCTION__ << "ICC hInProfile failed.";
+                return;
+            }
         }
 
         cmsHTRANSFORM hTransform;
@@ -30,14 +34,20 @@ namespace ICC
                                         TYPE_BGRA_8,
                                         INTENT_PERCEPTUAL, 0);
         if (hTransform) {
-            cmsDoTransform(hTransform, image.constBits(), image.bits(),
-                 static_cast<uint>(image.width()*image.height()));
-            cmsCloseProfile(hInProfile);
+            uchar bitsPerPixel = image.pixelFormat().bitsPerPixel();
+            quint32 size = static_cast<quint32>(image.width()*image.height()*bitsPerPixel/32);
+            quint32 size2 = static_cast<quint32>(image.height()*image.bytesPerLine()/4);
+            qDebug() << __FUNCTION__ << size << size2;
+
+            cmsDoTransform(hTransform, image.constBits(), image.bits(), size2);
+            if (!cmsCloseProfile(hInProfile)) {
+                qWarning() << __FUNCTION__ << "ICC cmsCloseProfile failed.";
+            }
             cmsDeleteTransform(hTransform);
         }
         else {
-//            qWarning() << __FUNCTION__ << "ICC hTransform failed.";
-//            Utilities::log
+            qWarning() << __FUNCTION__ << "ICC cmsCreateTransform failed.";
+    //            Utilities::log
         }
     }
 }

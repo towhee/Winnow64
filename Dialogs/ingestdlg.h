@@ -6,7 +6,7 @@
 #include "Datamodel/datamodel.h"
 #include "tokendlg.h"
 
-#include "ui_ingestautopath.h"
+//#include "ui_ingestautopath.h"
 //#include "ui_helpingest.h"
 #include "Utilities/utilities.h"
 #include "Dialogs/ingesterrors.h"

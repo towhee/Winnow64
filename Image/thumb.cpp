@@ -84,14 +84,15 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     int row = dm->fPathRow[fPath];
 
     // Check if metadata has been cached for this image
+    QFileInfo info(imFile);  // qt6.2
     if (dm->index(row, G::OffsetThumbColumn).data().isNull()) {
-        metadata->loadImageMetadata(fPath, true, false, false, false, __FUNCTION__);
+        metadata->loadImageMetadata(info, true, false, false, false, __FUNCTION__); // qt6.2
         dm->addMetadataForItem(metadata->m);
     }
     uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
     uint lengthThumb = dm->index(row, G::LengthThumbColumn).data().toUInt();
 
-    QFileInfo info(imFile);
+//    QFileInfo info(imFile);   // qt6.2
     QString ext = info.suffix().toLower();
 
     QString s = "File size = " + QString::number(imFile.size());

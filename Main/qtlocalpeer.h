@@ -44,6 +44,7 @@
 #include <QLocalServer>
 #include <QLocalSocket>
 #include <QDir>
+#include <QRegExp>  // qt6.2
 
 #include "qtlockedfile.h"
 
