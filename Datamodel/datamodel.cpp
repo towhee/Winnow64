@@ -636,7 +636,7 @@ bool DataModel::updateFileData(QFileInfo fileInfo)
 ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 {
 /*
-    Returns the struct ImageMetadata ontaining almost all the metadata available for the
+    Returns the struct ImageMetadata containing almost all the metadata available for the
     fPath image for convenient access.  ie rating = m.rating
 
     If updateInMetadata == true then metadata->m is updated for the fPath.  This is used in

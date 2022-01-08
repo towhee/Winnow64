@@ -34,12 +34,12 @@ namespace ICC
                                         TYPE_BGRA_8,
                                         INTENT_PERCEPTUAL, 0);
         if (hTransform) {
+            /* another way to get size
             uchar bitsPerPixel = image.pixelFormat().bitsPerPixel();
             quint32 size = static_cast<quint32>(image.width()*image.height()*bitsPerPixel/32);
-            quint32 size2 = static_cast<quint32>(image.height()*image.bytesPerLine()/4);
-            qDebug() << __FUNCTION__ << size << size2;
-
-            cmsDoTransform(hTransform, image.constBits(), image.bits(), size2);
+            //*/
+            quint32 size = static_cast<quint32>(image.height()*image.bytesPerLine()/4);
+            cmsDoTransform(hTransform, image.constBits(), image.bits(), size);
             if (!cmsCloseProfile(hInProfile)) {
                 qWarning() << __FUNCTION__ << "ICC cmsCloseProfile failed.";
             }

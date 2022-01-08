@@ -327,8 +327,10 @@ bool Panasonic::parse(MetadataParameters &p,
         m.lensSN = xmp.getItem("LensSerialNumber");
         m.creator = xmp.getItem("creator");
         m.copyright = xmp.getItem("rights");
-        m.email = xmp.getItem("CiEmailWork");
-        m.url = xmp.getItem("CiUrlWork");
+        m.email = xmp.getItem("email");
+        m.url = xmp.getItem("url");
+//        m.email = xmp.getItem("CiEmailWork");
+//        m.url = xmp.getItem("CiUrlWork");
 
         // save original values so can determine if edited when writing changes
         m._rating = m.rating;
@@ -339,7 +341,7 @@ bool Panasonic::parse(MetadataParameters &p,
         m._email  = m.email ;
         m._url = m.url;
 
-        if (p.report) p.xmpString = xmp.metaAsString();
+        if (p.report) p.xmpString = xmp.xmpAsString();
     }
 
     return true;

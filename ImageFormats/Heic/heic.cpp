@@ -254,6 +254,8 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
 //        m.lensSN = xmp.getItem("LensSerialNumber");
 //        if (m.creator.isEmpty()) m.creator = xmp.getItem("creator");
 //        m.copyright = xmp.getItem("rights");
+//        m.email = xmp.getItem("email");
+//        m.url = xmp.getItem("url");
 //        m.email = xmp.getItem("CiEmailWork");
 //        m.url = xmp.getItem("CiUrlWork");
 

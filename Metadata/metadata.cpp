@@ -345,26 +345,9 @@ void Metadata::reportMetadata()
     p.rpt.setFieldWidth(25); p.rpt << "nikonLensCode"       << m.nikonLensCode;       p.rpt.setFieldWidth(0); p.rpt << "\n";
 
     if (m.isXmp && p.xmpString.length() > 0) {
-        // qt6.2
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        p.rpt << "\nXMP Extract:\n\n";
-        QXmlQuery query;
-        query.setQuery(p.xmpString);
-
-        // Set up the output device
-        QByteArray outArray;
-        QBuffer buffer(&outArray);
-        if (buffer.isOpen()) buffer.close();
-        buffer.open(QIODevice::ReadWrite);
-
-        // format xmp
-        QXmlFormatter formatter(query, &buffer);
-        query.evaluateTo(&formatter);
-        buffer.close();
-
-        QString xmpStr = QTextCodec::codecForMib(106)->toUnicode(outArray);
-        p.rpt << xmpStr;
-#endif
+        p.rpt << "\nEmbedded XMP Extract:\n\n";
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
+        p.rpt << xmp.report();
     }
 }
 
@@ -400,10 +383,15 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     copied unchanged.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__ << src;
 
     // is xmp supported for this file
     QFileInfo info(fPath);
     QString suffix = info.suffix().toLower();
+
+    // TEMP PREVENT WRITING TO ANYTHING BUT .XMP
+    if (suffix != "xmp") return false;
+
 //    if (!sidecarFormats.contains(suffix)) {
 ////        qDebug() << __FUNCTION__ << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
 //        return false;
@@ -437,9 +425,9 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         return false;
     }
 
-    // make sure file is available ie usb drive has been ejected
-    QFileInfo fileInfo(fPath);
-    if (!fileInfo.exists()) return false;
+    // make sure file is available ie usb drive may have been ejected
+//    QFileInfo fileInfo(fPath);
+//    if (!fileInfo.exists()) return false;
 
     // data edited, open image file
     p.file.setFileName(fPath);
@@ -455,8 +443,8 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         QString s = QString::number(newOrientation);
         xmp.setItem("Orientation", s.toLatin1());
     }
-    if (urlChanged) xmp.setItem("CiUrlWork", m.url.toLatin1());
-    if (emailChanged) xmp.setItem("CiEmailWork", m.email.toLatin1());
+    if (urlChanged) xmp.setItem("url", m.url.toLatin1());
+    if (emailChanged) xmp.setItem("email", m.email.toLatin1());
     if (copyrightChanged) xmp.setItem("rights", m.copyright.toLatin1());
     if (creatorChanged) xmp.setItem("creator", m.creator.toLatin1());
     if (titleChanged) xmp.setItem("title", m.title.toLatin1());
@@ -487,7 +475,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     }
     //*/
 
-    if (G::useSidecar) xmp.writeSidecar();
+//    if (G::useSidecar) xmp.writeSidecar();
 
     p.file.close();
     return true;
@@ -686,12 +674,23 @@ bool Metadata::parseSidecar()
 
     if (p.report) {
         p.rpt << "\nSidecar: " << sidecarPath << "\n";
-        sidecarFile.seek(0);
-        p.rpt << xmp.metaAsString();
+//        sidecarFile.seek(0);
+//        p.rpt << xmp.xmpAsString();
+        p.rpt << xmp.report();
     }
 
     sidecarFile.close();
     return true;
+}
+
+QString Metadata::sidecarPath(QString fPath)
+/*
+    The sidecar file has the same name as the image file, but uses the extension "xmp".
+*/
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QFileInfo info(fPath);
+    return info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
 }
 
 void Metadata::clearMetadata()
