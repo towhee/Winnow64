@@ -3,6 +3,7 @@
 
 ColorAnalysis::ColorAnalysis(QObject *parent)/* : fPath(fPath)*/
 {
+
 }
 
 void ColorAnalysis::process(QStringList &fPathList)
@@ -46,7 +47,8 @@ void ColorAnalysis::process(QStringList &fPathList)
 
     QTextBrowser *tb = new QTextBrowser;
     QDialog *dlg = new QDialog;
-    dlg->setMinimumSize(800, 600);
+    dlg->setMinimumSize(1200, 800);
+    dlg->setStyleSheet(G::css);
     QVBoxLayout *layout = new QVBoxLayout;
     dlg->setLayout(layout);
     layout->addWidget(tb);

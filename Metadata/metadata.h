@@ -20,6 +20,7 @@
 #include "Metadata/imagemetadata.h"
 #include "Metadata/ExifTool.h"
 #include "xmp.h"
+
 #include "ui_metadatareport.h"
 
 #ifdef Q_OS_WIN
@@ -49,6 +50,7 @@ public:
     void reportMetadata();
     void testNewFileFormat(const QString &path);
     bool parseSidecar();
+    QString sidecarPath(QString fPath);
 
     /* The ImageMetadata class struct has all the fields that are stored in the
        datamodel.  The various file parse routines populate ImageMetadata.

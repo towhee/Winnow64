@@ -1520,8 +1520,10 @@ bool Nikon::parse(MetadataParameters &p,
         if (m.lensSN.isEmpty()) m.lensSN = xmp.getItem("LensSerialNumber");
         if (m.creator.isEmpty()) m.creator = xmp.getItem("creator");
         if (m.copyright.isEmpty()) m.copyright = xmp.getItem("rights");
-        if (m.email.isEmpty()) m.email = xmp.getItem("CiEmailWork");
-        if (m.url.isEmpty()) m.url = xmp.getItem("CiUrlWork");
+        m.email = xmp.getItem("email");
+        m.url = xmp.getItem("url");
+//        m.email = xmp.getItem("CiEmailWork");
+//        m.url = xmp.getItem("CiUrlWork");
 
         // save original values so can determine if edited when writing changes
         m._rating = m.rating;
@@ -1532,7 +1534,7 @@ bool Nikon::parse(MetadataParameters &p,
         m._email  = m.email ;
         m._url = m.url;
 
-        if (p.report) p.xmpString = xmp.metaAsString();
+        if (p.report) p.xmpString = xmp.xmpAsString();
     }
 
     return true;

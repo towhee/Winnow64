@@ -1,14 +1,17 @@
 #CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 CONFIG += sdk_no_version_check
-CONFIG += c++17                    # qt6.2
-#QMAKE_CXXFLAGS += /std:c++17        # qt6.2
-#QMAKE_CXXFLAGS += /Zc:__cplusplus   # qt6.2
+CONFIG += c++17                    # qt6.2 remove
+#QMAKE_CXXFLAGS += /std:c++17        # qt6.2 add
+#QMAKE_CXXFLAGS += /Zc:__cplusplus   # qt6.2 add
 TEMPLATE = app
 TARGET = Winnow
 INCLUDEPATH += .
 INCLUDEPATH += Dialogs
 INCLUDEPATH += Utilities
-INCLUDEPATH += MacOS
+
+INCLUDEPATH += $$PWD
+DEPENDPATH += $$PWD
+#DEPENDPATH += $$PWD/libxml
 
 Release:DESTDIR = release
 Release:OBJECTS_DIR = release/.obj
@@ -309,8 +312,8 @@ RESOURCES += winnow.qrc
 ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
-DISTFILES += Docs/ingestautopath \
-    Lcms2/lcms2.def
+DISTFILES += Docs/ingestautopath
+#DISTFILES += Lcms2/lcms2.def
 DISTFILES += Docs/ingestautopath.html
 DISTFILES += Docs/versions
 DISTFILES += Docs/test.html
@@ -359,7 +362,7 @@ win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzl
 win32:INCLUDEPATH += $$PWD/Lib/zlib
 win32:DEPENDPATH += $$PWD/Lib/zlib
 
-# lcms
+# lcms not using compiled lib: compiling source in project using D:\My Projects\Winnow Project\Winnow64\Lcms2
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -lCORE_RL_lcms_
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
 win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include

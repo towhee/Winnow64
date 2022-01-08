@@ -4,8 +4,20 @@
 #include <QObject>
 #include <QtCore>
 #include <QtWidgets>
-#include <QTextCodec>       // Qt6.2 with Qt5 compatibility
-//#include <QtXmlPatterns>  // Qt6.2 with Qt5 compatibility
+#include <QTextCodec>       // Qt6.2 with Qt5 compatibility remove
+//#include <QtXmlPatterns>  // Qt6.2 with Qt5 compatibility remove
+
+#include "Lib/rapidxml/rapidxml.hpp"
+#include "Lib/rapidxml/rapidxml_iterators.hpp"
+#include "Lib/rapidxml/rapidxml_print.hpp"
+#include "Lib/rapidxml/rapidxml_utils.hpp"
+
+#include <stdio.h>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <cstdint>
+
 #include "Main/global.h"
 //#include "Metadata/imagemetadata.h"
 #include "Utilities/utilities.h"
@@ -14,25 +26,60 @@ class Xmp : public QObject
 {
     Q_OBJECT
 public:
-    Xmp(QFile &file, uint offset = 0, uint length = 0, QObject *parent = nullptr);
+    Xmp(QFile &file, uint offset, uint length, QObject *parent = nullptr);
+    Xmp(QFile &file, QObject *parent = nullptr);
+
+    static QByteArray skeleton();
 
     bool isItem(QByteArray item);
     QString getItem(QByteArray item);
     bool setItem(QByteArray item, QByteArray value);
-    QString metaAsString();
+
+    bool getNode(rapidxml::xml_node<>* node, QByteArray nodeName);
+    QString attribute(QByteArray attrName, QByteArray nodeName = "rdf:Description");
+    QString setAttribute(QByteArray attrName, QByteArray nodeName = "rdf:Description");
+    QString xmpAsString();
     bool writeJPG(QByteArray &buffer);
     bool readSidecar(QByteArray &buffer);
     bool writeSidecar();
     QString diagnostics();
+
+    QString report();
+    bool isValid = false;
+
+//    struct XmlObj {
+//        QString nodeName;
+//        QString attrName;
+//        bool operator==(const XmlObj& x) const {
+//            return (x.nodeName == nodeName && x.attrName == attrName);
+//        }
+//        bool compare(const XmlObj& x) const {
+//            return (x.nodeName == nodeName && x.attrName == attrName);
+//        }
+//    };
+    QHash<QString, QString>xmpHash;
 
 signals:
 
 public slots:
 
 private:
+    void initialize();
+    void buildHash(rapidxml::xml_node<> *node, rapidxml::xml_node<> *baseNode = nullptr);
     void insertSchemas(QByteArray &item);
     int schemaInsertPos(QByteArray schema);
-    void report();
+
+    void walk(QTextStream &rpt,
+              const rapidxml::xml_node<>* node,
+              int indentSize = 4,
+              int indent = 0);
+
+    rapidxml::xml_document<> xmlDoc;
+    rapidxml::xml_node<>* xmlNode = nullptr;
+    rapidxml::xml_attribute<>* xmlAttribute = nullptr;
+    rapidxml::xml_node<>* xmlRdfDescriptionNode = nullptr;
+    QByteArrayList a;               // attributes appended to xmlDoc
+    QByteArrayList v;               // values appended to xmlDoc
 
     QByteArray xmpBa;               // the xmpmeta packet
     ulong xmpSegmentOffset;         // file offset to start of xmp segment
@@ -46,11 +93,19 @@ private:
     QString folderPath;
     QString baseName;
     QString extension;
-    QString sidecarPath;
+    QString filePath;
+    QHash<QByteArray,QByteArray> lookupHash;
+    QStringList mapSkipNodes = {
+        "rdf:li",
+        "rdf:Seq",
+        "rdf:Alt",
+        "rdf:Bag"
+    };
 
     QString assignmentMethod;       // brackets or equals
     QByteArray fileType;            // uppercase suffix
     QHash<QByteArray,QByteArray> schemaHash;
+
     QHash<QByteArray,QByteArray> startTagHash;
 
     QByteArrayList xmpSchemaList;

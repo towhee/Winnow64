@@ -353,27 +353,31 @@ bool Jpeg::parse(MetadataParameters &p,
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
-        m.rating = xmp.getItem("Rating");     // case is important "Rating"
-        m.label = xmp.getItem("Label");       // case is important "Label"
-        m.title = xmp.getItem("title");       // case is important "title"
-        m.cameraSN = xmp.getItem("SerialNumber");
-        if (m.lens.isEmpty()) m.lens = xmp.getItem("Lens");
-        m.lensSN = xmp.getItem("LensSerialNumber");
-        if (m.creator.isEmpty()) m.creator = xmp.getItem("creator");
-        m.copyright = xmp.getItem("rights");
-        m.email = xmp.getItem("CiEmailWork");
-        m.url = xmp.getItem("CiUrlWork");
+        if (xmp.isValid) {
+            m.rating = xmp.getItem("Rating");     // case is important "Rating"
+            m.label = xmp.getItem("Label");       // case is important "Label"
+            m.title = xmp.getItem("title");       // case is important "title"
+            m.cameraSN = xmp.getItem("SerialNumber");
+            if (m.lens.isEmpty()) m.lens = xmp.getItem("Lens");
+            m.lensSN = xmp.getItem("LensSerialNumber");
+            if (m.creator.isEmpty()) m.creator = xmp.getItem("creator");
+            m.copyright = xmp.getItem("rights");
+            m.email = xmp.getItem("email");
+            m.url = xmp.getItem("url");
+    //        m.email = xmp.getItem("CiEmailWork");
+    //        m.url = xmp.getItem("CiUrlWork");
 
-        // save original values so can determine if edited when writing changes
-        m._rating = m.rating;
-        m._label = m.label;
-        m._title = m.title;
-        m._creator = m.creator;
-        m._copyright = m.copyright;
-        m._email  = m.email ;
-        m._url = m.url;
+            // save original values so can determine if edited when writing changes
+            m._rating = m.rating;
+            m._label = m.label;
+            m._title = m.title;
+            m._creator = m.creator;
+            m._copyright = m.copyright;
+            m._email  = m.email ;
+            m._url = m.url;
 
-        if (p.report) p.xmpString = xmp.metaAsString();
+            if (p.report) p.xmpString = xmp.xmpAsString();
+        }
     }
     return true;
 }
