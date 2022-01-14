@@ -1,13 +1,24 @@
 #include "xmp.h"
 
 /*
-Xmp reads and writes xmp tags to the QByteArray buffer. The buffer is read from the source
-file. If there are no offsets then a sidecar file will be used. If there is no xmp data in the
-source file or the file format is not documented then the xmp tags are written to a sidecar
-file.
+Xmp reads and writes xmp tags to the QByteArray buffer xmpBa. The buffer is read from the
+source file. If there are no offsets then a sidecar file will be used. If there is no xmp data
+in the source file or the file format is not documented then the xmp tags are written to a
+sidecar file.
 
 Read/Write to a sidecar:   Xmp xmp(file);
 Read/Write to image file:  Xmp xmp(file, offset, nextOffset);
+
+Xmp uses the library rapidxml to parse the xmp text into a DOM rapidxml::xml_document. The
+library uses pointers for all operations, so any variables passed to rapidxml must be Xmp
+class variables to insure their lifespan. Also, since the xml nodes are in a tree arrangement,
+recursive routines are used to find nodes, which make it difficult to return information.
+Class level instantiations of xmlNode and xmlAttribute are used to point to the node and
+attribute found.  getNode() and getAttribute define xmlNode and xmlAttribute respectively.
+
+At initialization, the function buildHash() populates xmpHash with all the node and
+node/attribute objects in the xmp document.  This makes it easier to determine if a node or
+node/attribute exists and where to find an attribute.
 
 Example sidecar file that lightroom successfully read/writes:
 
@@ -247,7 +258,26 @@ QByteArray Xmp::skeleton()
            "\n\t<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">"
            "\n\t\t<rdf:Description "
            "\n\t\t\trdf:about=\"\">"
-           "\n\t\t</rdf:Description>\n\t</rdf:RDF>\n</x:xmpmeta>";
+           "\n\t\t</rdf:Description>\n"
+           "\t\t<Iptc4xmpCore:CreatorContactInfo rdf:parseType='Resource'>\n"
+           "\t\t</Iptc4xmpCore:CreatorContactInfo>\n"
+           "\t</rdf:RDF>\n"
+           "</x:xmpmeta>";
+}
+
+void Xmp::test(XmpObj o)
+{
+//    QString s = "xmp:Rating";
+//    XmpObj o = xmlDocObj(s, xmlDoc.first_node());
+    qDebug() << __FUNCTION__
+             << "name =" << o.nodeName
+             << "attribute =" << o.attrName
+             << "parent =" << o.parentName
+             << "type =" << o.type
+             << "value =" << o.value
+             << "exists =" << o.exists()
+                ;
+
 }
 
 void Xmp::initialize()
@@ -262,12 +292,18 @@ void Xmp::initialize()
     int xmpmetaLength = xmpmetaEnd - xmpmetaStart;
     xmpBa = xmpBa.mid(xmpmetaStart, xmpmetaLength);
 
-    if (xmpBa.length() == 0) xmpBa.append(sidecarSkeleton);
+    if (xmpBa.length() == 0) xmpBa = skeleton();
 
-//    enum {PARSE_FLAGS = rapidxml::parse_non_destructive};
-    enum {PARSE_FLAGS = rapidxml::parse_default};
+    enum {PARSE_FLAGS = rapidxml::parse_non_destructive};
+//    enum {PARSE_FLAGS =
+//            rapidxml::parse_default |
+//            rapidxml::parse_no_string_terminators/* |
+//            rapidxml::parse_declaration_node |
+//            rapidxml::parse_no_data_nodes*/
+//         };
     try {
-        xmlDoc.parse<PARSE_FLAGS>(xmpBa.data());    // 0 means default parse flags
+        xmlDoc.parse<0>(xmpBa.data());    // 0 means default parse flags
+//        xmlDoc.parse<PARSE_FLAGS>(xmpBa.data());    // 0 means default parse flags
     }
     catch (const std::runtime_error& e) {
         std::cerr << "Runtime error was: " << e.what() << std::endl;
@@ -286,6 +322,23 @@ void Xmp::initialize()
         return;
     }
 
+    nullXmpObj.nodeName = "";
+    nullXmpObj.attrName = "";
+    nullXmpObj.parentName = "";
+
+    XmpObj xmpObj;
+    xmpObj.nodeName = "rdf:Description"; xmpObj.attrName = "xmp:Rating"; xmpObj.parentName = ""; xmpObj.type = "attribute"; xmpObjs["rating"] = xmpObj;
+    xmpObj.nodeName = "rdf:Description"; xmpObj.attrName = "xmp:Label"; xmpObj.parentName = ""; xmpObj.type = "attribute"; xmpObjs["label"] = xmpObj;
+    xmpObj.nodeName = "rdf:Description"; xmpObj.attrName = "xmp:CreateDate"; xmpObj.parentName = ""; xmpObj.type = "attribute"; xmpObjs["createdate"] = xmpObj;
+    xmpObj.nodeName = "rdf:Description"; xmpObj.attrName = "xmp:ModifyDate"; xmpObj.parentName = ""; xmpObj.type = "attribute"; xmpObjs["modifydate"] = xmpObj;
+    xmpObj.nodeName = "rdf:Description"; xmpObj.attrName = "dc:title"; xmpObj.parentName = ""; xmpObj.type = "attribute"; xmpObjs["title"] = xmpObj;
+    xmpObj.nodeName = "rdf:Description"; xmpObj.attrName = "xmp:rights"; xmpObj.parentName = ""; xmpObj.type = "attribute"; xmpObjs["rights"] = xmpObj;
+    xmpObj.nodeName = "rdf:Description"; xmpObj.attrName = "xmp:creator"; xmpObj.parentName = ""; xmpObj.type = "attribute"; xmpObjs["creator"] = xmpObj;
+    xmpObj.nodeName = "Iptc4xmpCore:CiEmailWork"; xmpObj.attrName = ""; xmpObj.parentName = "Iptc4xmpCore:CreatorContactInfo"; xmpObj.type = "node"; xmpObjs["email"] = xmpObj;
+    xmpObj.nodeName = "Iptc4xmpCore:CiUrlWork"; xmpObj.attrName = ""; xmpObj.parentName = "Iptc4xmpCore:CreatorContactInfo"; xmpObj.type = "node"; xmpObjs["url"] = xmpObj;
+
+
+    /*
     xmpSchemaList << "Rating"
                   << "Label"
                   << "ModifyDate"
@@ -307,34 +360,21 @@ void Xmp::initialize()
     useLanguage << "dc:title"
                 << "dc:rights"
                    ;
-
-    lookupHash["rating_attr"] = "rdf:Description|xmp:Rating";
-    lookupHash["rating_node"] = "Rating|";
-    lookupHash["label_attr"] = "rdf:Description|xmp:Label";
-    lookupHash["label_node"] = "Label|";
-    lookupHash["createdate_attr"] = "rdf:Description|xmp:CreateDate";
-    lookupHash["createdate_node"] = "CreateDate|";
-    lookupHash["modifydate_attr"] = "rdf:Description|xmp:ModifyDate";
-    lookupHash["modifydate_node"] = "ModifyDate|";
-    lookupHash["title_attr"] = "rdf:Description|dc:title";
-    lookupHash["title_node"] = "dc:title|";
-    lookupHash["rights_attr"] = "rdf:Description|dc:rights";
-    lookupHash["rights_node"] = "dc:rights|";
-    lookupHash["creator_attr"] = "rdf:Description|dc:creator";
-    lookupHash["creator_node"] = "dc:creator|";
-    lookupHash["lens_attr"] = "rdf:Description|aux:Lens";
-    lookupHash["lens_node"] = "aux:Lens|";
-    lookupHash["lensserialnumber_attr"] = "rdf:Description|aux:LensSerialNumber";
-    lookupHash["lensserialnumber_node"] = "aux:LensSerialNumber|";
-    lookupHash["email_attr"] = "rdf:Description|Iptc4xmpCore:CiEmailWork";
-    lookupHash["email_node"] = "Iptc4xmpCore:CiEmailWork|";
-    lookupHash["url_attr"] = "rdf:Description|Iptc4xmpCore:CiUrlWork";
-    lookupHash["url_node"] = "Iptc4xmpCore:CiUrlWork|";
-    lookupHash["orientation_attr"] = "rdf:Description|tiff:Orientation";
-    lookupHash["orientation_node"] = "tiff:Orientation|";
-    lookupHash["winnowaddthumb_attr"] = "rdf:Description|xmp:WinnowAddThumb";
-    lookupHash["winnowaddthumb_node"] = "xmp:WinnowAddThumb|";
-
+    */
+    xmpItems["rating"] = "xmp:Rating";
+    xmpItems["label"] = "xmp:Label";
+    xmpItems["createdate"] = "xmp:CreateDate";
+    xmpItems["modifydate"] = "xmp:ModifyDate";
+    xmpItems["title"] = "dc:title";
+    xmpItems["rights"] = "dc:rights";
+    xmpItems["creator"] = "dc:creator";
+    xmpItems["lens"] = "aux:Lens";
+    xmpItems["lensserialnumber"] = "aux:LensSerialNumber";
+    xmpItems["email"] = "Iptc4xmpCore:CiEmailWork";
+    xmpItems["url"] = "Iptc4xmpCore:CiUrlWork";
+    xmpItems["orientation"] = "tiff:Orientation";
+    xmpItems["winnowaddthumb"] = "xmp:WinnowAddThumb";
+    /*
     schemaHash["Rating"] = "xmp";                   // read/write
     schemaHash["Label"] = "xmp";                    // read/write
     schemaHash["CreateDate"] = "xmp";               // read only
@@ -349,10 +389,14 @@ void Xmp::initialize()
     schemaHash["CiUrlWork"] = "Iptc4xmpCore";       // read/write
     schemaHash["Orientation"] = "tiff";             // write (sidecars only)
     schemaHash["WinnowAddThumb"] = "xmp";           // read/write
-
+    */
     buildHash(xmlDoc.first_node());
 //    qDebug() << __FUNCTION__ << xmpHash;
     isValid = true;
+//    std::cout << xmpBa.toStdString() << std::endl << std::flush;
+//    std::cout << fromXmlDocument().toStdString() << std::endl << std::flush;
+
+
     return;
 }
 
@@ -366,7 +410,7 @@ void Xmp::buildHash(rapidxml::xml_node<>* node, rapidxml::xml_node<>* baseNode)
         if (!mapSkipNodes.contains(nodeName)) {
             if (node->value_size()) {
                 QString value = QString(node->value()).left(node->value_size());
-                xmpHash.insert(nodeName + "|", value);
+                xmpHashOld.insert(nodeName + "|", value);
                 /*
                 qDebug() << __FUNCTION__ << "node:"
                          << "node name ="
@@ -383,7 +427,7 @@ void Xmp::buildHash(rapidxml::xml_node<>* node, rapidxml::xml_node<>* baseNode)
             for(a = node->first_attribute(); a; a = a->next_attribute()) {
                 attrName = QString(a->name()).left(a->name_size());
                 QString value = QString(a->value()).left(a->value_size());
-                xmpHash.insert(nodeName + "|" + attrName, value);
+                xmpHashOld.insert(nodeName + "|" + attrName, value);
                 /*
                 qDebug() << __FUNCTION__ << "attr:"
                          << "node name ="
@@ -405,7 +449,7 @@ void Xmp::buildHash(rapidxml::xml_node<>* node, rapidxml::xml_node<>* baseNode)
     if (t == rapidxml::node_data) {
         QString nodeName = QString(baseNode->name()).left(baseNode->name_size());
         QString value = QString(node->value()).left(node->value_size());
-        xmpHash.insert(nodeName + "|", value);
+        xmpHashOld.insert(nodeName + "|", value);
         /*
         qDebug() << __FUNCTION__ << "data:"
                  << "base node name ="
@@ -501,15 +545,12 @@ bool Xmp::writeJPG(QByteArray &buffer)
     return true;
 }
 
-bool Xmp::writeSidecar()
+bool Xmp::writeSidecar(QFile &sidecarFile)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    QFile sidecarFile(filePath);
-    qint64 fileBytesToWrite = sidecarFile.size();
-    sidecarFile.open(QIODevice::WriteOnly);
-    qint64 bytesWritten = sidecarFile.write(xmpBa);
-//    if (bytesWritten == 0) failedToCopy << sidecarPath;
-    sidecarFile.close();
+    sidecarFile.resize(0);
+    qint64 bytesWritten = sidecarFile.write(docToQString().toUtf8());
+    if (bytesWritten == 0) return false;
     return true;
 }
 
@@ -569,12 +610,21 @@ bool Xmp::getNode(rapidxml::xml_node<>* node, QByteArray nodeName)
     return false;
 }
 
-QString Xmp::attribute(QByteArray attrName, QByteArray nodeName)
+bool Xmp::getAttribute(QByteArray attrName, QByteArray nodeName)
 /*
 
   */
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    if (nodeName == "rdf:Description") xmlNode = xmlRdfDescriptionNode;
+    else getNode(xmlDoc.first_node(), nodeName);
+    xmlAttribute = xmlNode->first_attribute(attrName);
+    if (xmlAttribute == 0) { // attribute does not exist
+        return false;
+    }
+    return true;
+
+    /*
     rapidxml::xml_node<>* node = xmlDoc.first_node();
     xmlNode = nullptr;
     getNode(node, nodeName);
@@ -589,6 +639,7 @@ QString Xmp::attribute(QByteArray attrName, QByteArray nodeName)
     }
     qDebug() << __FUNCTION__ << QString(a->value()).left(a->value_size());
     return QString(a->value()).left(a->value_size());
+    */
 }
 
 QString Xmp::getItem(QByteArray item)
@@ -610,278 +661,180 @@ QString Xmp::getItem(QByteArray item)
 */
     if (G::isLogger) G::log(__FUNCTION__);
 
-    QByteArray lookup = item.toLower().append("_attr");
-    if (lookupHash.contains(lookup)) {  // try attribute
-        QString key = lookupHash[lookup];
-        if (xmpHash.contains(key)) {
-            return xmpHash[key];
-        }
-        else {  // try node
-            lookup = item.toLower().append("_node");
-            if (lookupHash.contains(lookup)) {  // try attribute
-                QString key = lookupHash[lookup];
-                if (xmpHash.contains(key)) {
-                    return xmpHash[key];
-                }
-            }
+    item = item.toLower();
+    if (!xmpItems.contains(item)) return "";
+    XmpObj obj = xmlDocObj(xmpItems[item], xmlDoc.first_node());
+    if (!obj.exists()) return "";
+    if (!obj.value.isEmpty()) return obj.value;
+    QStringList propertyElements;
+    propertyElements << "rdf:Seq" << "rdf:Bag" << "rdf:Alt";
+    // try drilling into node found
+    rapidxml::xml_node<> *node = obj.node->first_node();
+    if (node == 0) return "";
+    QString nodeName = QString(node->name()).left(node->name_size());
+    if (propertyElements.contains(nodeName)) {
+        rapidxml::xml_node<> *list = node->first_node();
+        if (list == 0) return "";
+        nodeName = QString(list->name()).left(list->name_size());
+        if (nodeName == "rdf:li") {
+            QString val = QString(list->value()).left(list->value_size());
+            if (val != "") return val;
+            rapidxml::xml_attribute<>* a = list->first_attribute();
+            if (a == 0) return "";
+            return QString(a->name()).left(a->name_size());
         }
     }
     return "";
-
-    // OLD CODE...
-    int startPos;
-    QByteArray searchItem;
-    QByteArray schema = schemaHash[item];
-
-    QByteArray tag = schema;
-    tag.append(":");
-    tag.append(item);
-
-    searchItem = tag;
-    searchItem.append("=\"");
-    startPos = xmpBa.indexOf(searchItem, xmpmetaStart);
-    if (startPos == -1) {
-        searchItem = tag;
-        searchItem.append(">");
-        startPos = xmpBa.indexOf(searchItem, xmpmetaStart);
-    }
-
-    if (startPos == -1) return "";
-
-    // tag exists, check if schema is xmp or dc
-    int endPos = 0;
-    bool foundItem = false;
-    startPos += searchItem.length() - 1;
-    QByteArray temp = xmpBa.mid(startPos, 100);
-
-    if (schema == "dc") {
-        startPos = xmpBa.indexOf("rdf:li", startPos);
-        startPos = xmpBa.indexOf(">", startPos) + 1;
-        endPos = xmpBa.indexOf("<", startPos);
-        foundItem = true;
-    }
-    else {
-        if (xmpBa.at(startPos) == 0x22) {                   // = '"'
-            endPos = xmpBa.indexOf("\"", ++startPos);
-            foundItem = true;
-        }
-        if (xmpBa.at(startPos) == 0x3E) {                   // = '>'
-            endPos = xmpBa.indexOf("<", ++startPos);
-            foundItem = true;
-        }
-    }
-
-    if (foundItem) {
-        // use QTextDocument to convert xmp escape coded characters ie &#39; = apostrophe
-        QTextDocument d;
-        d.setHtml(xmpBa.mid(startPos, endPos - startPos));
-        return d.toPlainText();
-
-        // this works, but fails with html escape codes
-//        return QTextCodec::codecForMib(106)->toUnicode(result);
-    }
-    else {
-        return "";
-        // use hand graphic to denote "not found" vs found but = "" (blank)
-//        return "🖐";
-    }
 }
 
 bool Xmp::setItem(QByteArray item, QByteArray value)
 {
 /*
+    This function updates the xmp value for the item.
 
-    items: Rating, Label, title, Orientation ...
-    item case is important: title is legal, Title is illegal
+    The nodes and attributes contained in xmlDoc are summarized in xmpHash to expedite lookups.
+    The format of xmpHash is (node|attribute, value);  The node|attribute string is used to
+    identify the node or node attribute the value resides within.
 
-    xmp schema can have two formats:
-        xmp:Rating="2"                  // from LR, Photoshop
-        <xmp:Rating>0</xmp:Rating>      // from camera
+    The lookupHash is used to convert items (rating, label etc) into the node|attribute format
+    required by xmpHash.
 
-    dc schema for title:
-        <dc:title> <rdf:Alt> <rdf:li xml:lang="x-default">Cormorant in California</rdf:li> </rdf:Alt> </dc:title>
+    Each item is added to an attribute list (a) and a value list (v).  This is necessary as
+    xmlDoc only contains pointers, so the data resides in the attributes and values, which must
+    have lifespans equal to the Xmp class.
+
+    If an item already exists, it is removed and the new item and value are appended as an
+    attribute to the node <rdf:Description>. This converts an items that were in the node
+    format to the attribute format.  For example:
+        Node format:      <xmp:Rating>5</xmp:Rating>
+        Attribute format: xmp:Rating = "5"
 */
     if (G::isLogger) G::log(__FUNCTION__);
-
-    QByteArray lookup = item.toLower().append("_attr");
-    qDebug() << __FUNCTION__ << "lookup =" << lookup;
-    if (lookupHash.contains(lookup)) {  // try attribute
-        QString key = lookupHash[lookup];
-        qDebug() << __FUNCTION__ << "key =" << key;
-        QStringList xmlObj =  key.split("|");
-        if (xmlObj.count() < 2) return false;
-        // item and value lifetime must be same as xmpDoc, so save in QByteArrayList
-        a.append(xmlObj.at(1).toUtf8());
-        v.append(value);
-        qDebug() << __FUNCTION__ << xmlObj;
-        if (xmpHash.contains(key)) {    // edit existing value
-
-        }
-        else {  // append value to xmlRdfDescriptionNode
-            int i = a.count() - 1;
-            qDebug() << __FUNCTION__ << "Append attribute =" << a[i] << "value =" << v[i];
-            rapidxml::xml_attribute<> *attr = xmlDoc.allocate_attribute(a[i], v[i]);
-            xmlRdfDescriptionNode->append_attribute(attr);
-        }
-        qDebug() << __FUNCTION__ << xmpBa;
-        qDebug() << __FUNCTION__ << "Report:";
-        std::cout << report().toStdString() << std::endl << std::flush;
-    }
-    return true;
-
-    // OLD CODE ...
-    // ie schema = "Rating"
-    QByteArray schema = schemaHash[item];
-
-    // ie "xmp:Rating"
-    QByteArray tag = schema;
-    tag.append(":");
-    tag.append(item);
-
-    // make sure schema exists in xmp
-    insertSchemas(item);
-
     /*
-    qDebug() << "Xmp::setItem  item =" << item
-             << "schema =" << schema
-             << "tag =" << tag
-             << "xmpBa =" << xmpBa
-                ;
-             //*/
+    qDebug();
+    std::cout << "xmpBa to start:" << std::endl;
+    std::cout << xmpBa.toStdString() << std::endl << std::flush;
+    QCoreApplication::processEvents();
+    qDebug() << __FUNCTION__ << "item =" << item << "value =" << value;
+    //*/
+    qDebug();
+    item = item.toLower();
+    qDebug() << __FUNCTION__ << item << value;
+    if (!xmpItems.contains(item)) return false;
 
-    // search for item in case it already exists in xmp side car file
-    int startPos = xmpBa.indexOf(tag, xmpmetaStart);
-
-    // does item exist already
-    if (startPos == -1) {
-        // not found, create new item
-        QByteArray newItem;
-        newItem.clear();
-        startPos = schemaInsertPos(schema);     // determines assignmentMethod
-        if (schema == "xmp" || schema == "tiff" || schema == "aux") {
-            if (assignmentMethod == "brackets") {
-                // ie <xmp:Rating>3</xmp:Rating>
-                newItem = "\n\t\t\t<";
-                newItem.append(tag);
-                newItem.append(">");
-                newItem.append(value);
-                newItem.append("</");
-                newItem.append(tag);
-                newItem.append(">");
-                xmpBa.insert(startPos, newItem);
-            }
-            if (assignmentMethod == "equals") {
-                // ie xmp:Rating="3"
-                newItem.append("\n\t\t\t");
-                newItem.append(tag);
-                newItem.append("=\"");
-                newItem.append(value);
-                newItem.append("\" ");
-                xmpBa.insert(startPos, newItem);
-            }
-            // add sidecar extension if writing orientation
-            if (item == "Orientation") {
-                newItem.clear();
-                newItem.append("\n\t\t\t");
-                newItem.append(sidecarExtension);
-                newItem.replace("XXX", fileType);
-                xmpBa.insert(startPos, newItem);
-            }
-        }
-        if (schema == "dc") {
-            /* ie
-             ie <dc:title><rdf:Alt><rdf:li xml:lang="x-default">This is the title</rdf:li></rdf:Alt></dc:title>
-             ie <dc:creator><rdf:Seq><rdf:li>Rory Hill</rdf:li></rdf:Seq></dc:creator>
-            //*/
-            newItem.append("\n\t\t\t<");
-            newItem.append(tag);
-            if (useLanguage.contains(tag)) {
-                newItem.append("><rdf:Alt><rdf:li xml:lang=\"x-default\">");
-                newItem.append(value);
-                newItem.append("</rdf:li></rdf:Alt></");
-            }
-            else {
-                newItem.append("><rdf:Seq><rdf:li>");
-                newItem.append(value);
-                newItem.append("</rdf:li></rdf:Seq></");
-            }
-            newItem.append(tag);
-            newItem.append(">");
-            xmpBa.insert(startPos, newItem);
-        }
-        if (schema == "Iptc4xmpCore") {
-            /* ie
-             <Iptc4xmpCore:CreatorContactInfo rdf:parseType='Resource'>
-                  <Iptc4xmpCore:CiEmailWork>hillrg@mail.com</Iptc4xmpCore:CiEmailWork>  // 1st item
-                  <Iptc4xmpCore:CiUrlWork>hill.com</Iptc4xmpCore:CiEmailWork>           // 2nd item
-              </Iptc4xmpCore:CreatorContactInfo>
-            //*/
-
-            // does a Iptc4xmpCore:CreatorContactInfo item already exist?
-            int pos = xmpBa.indexOf("<Iptc4xmpCore:Ci", startPos);
-            // no, this is the 1st item: build header and add item
-            if (pos == -1) {
-                newItem.append("\n\t\t\t<Iptc4xmpCore:CreatorContactInfo rdf:parseType='Resource'>");
-                newItem.append("\n\t\t\t\t<");
-                newItem.append(tag);
-                newItem.append(">");
-                newItem.append(value);
-                newItem.append("</");
-                newItem.append(tag);
-                newItem.append(">");
-                newItem.append("\n\t\t\t<Iptc4xmpCore:CreatorContactInfo>");
-            }
-            // 2nd item, already header: just insert 2nd item above 1st item
-            else {
-                startPos = pos;
-                newItem.append("<");
-                newItem.append(tag);
-                newItem.append(">");
-                newItem.append(value);
-                newItem.append("</");
-                newItem.append(tag);
-                newItem.append(">\n\t\t\t\t");
-            }
-            xmpBa.insert(startPos, newItem);
-        }
-        // item created
-        return true;
+    // if item exists in xmp remove item so we can replace
+    XmpObj obj = xmlDocObj(xmpItems[item], xmlDoc.first_node());
+    qDebug() << __FUNCTION__ << "Remove object if exists already:";
+    test(obj);
+//    return false;
+    if (obj.exists()) {
+        if (obj.type == "attribute") obj.node->remove_attribute(obj.attr);
+        if (obj.type == "node") obj.parent->remove_node(obj.node);
     }
 
-    // item exists, replace item
-    int endPos;
-    bool foundItem = false;
-    startPos += tag.length();
+    // get default XmpObj for item
+    obj = xmpObjs[item];
+    qDebug() << __FUNCTION__ << "Object to append (obj):";
+    test(obj);
 
-    if (schema == "dc") {
-        QByteArray temp = xmpBa.mid(startPos, 100);
-        startPos = xmpBa.indexOf("rdf:li", startPos);
-        temp = xmpBa.mid(startPos, 100);
-        startPos = xmpBa.indexOf(">", startPos) + 1;
-        temp = xmpBa.mid(startPos, 100);
-        endPos = xmpBa.indexOf("<", startPos);
-        foundItem = true;
+    // item and value lifetime must be same as xmpDoc, so save in QByteArrayList
+    if (obj.type == "attribute") {
+        XmpObj parObj = xmlDocObj(obj.nodeName, xmlDoc.first_node());
+        if (!parObj.exists()) return false; // create parent node if missing!!
+        a.append(obj.attrName.toUtf8());
+        v.append(value);
+        // get just appended list index
+        int idx = a.count() - 1;
+        // append attribute and value
+        rapidxml::xml_attribute<> *attr = xmlDoc.allocate_attribute(a[idx], v[idx]);
+        parObj.node->append_attribute(attr);
+//        xmlRdfDescriptionNode->append_attribute(attr);
     }
-    else {
-        if (xmpBa.at(startPos) == 0x3D) {                     // = '=' or QString::QString("=")
-            if (xmpBa.at(++startPos) == 0x22) {               // = '"'
-                endPos = xmpBa.indexOf("\"", ++startPos);
-                foundItem = true;
-            }
-            else return false;
-        }
-
-        if (xmpBa.at(startPos) == 0x3E) {                     // = '>'
-            endPos = xmpBa.indexOf("<", ++startPos);
-            foundItem = true;
-        }
+    if (obj.type == "node") {
+        XmpObj parObj = xmlDocObj(obj.parentName, xmlDoc.first_node());
+        qDebug() << __FUNCTION__ << "Node parent object (parObj):";
+        test(parObj);
+        if (!parObj.exists()) return false;  // create parent node if missing!!
+        a.append(obj.nodeName.toUtf8());
+        v.append(value);
+        // get just appended list index
+        int idx = a.count() - 1;
+        // append node and value
+        qDebug() << __FUNCTION__ << "Node name/value" << a[idx] << v[idx];
+        rapidxml::xml_node<> *node = xmlDoc.allocate_node(rapidxml::node_element, a[idx], v[idx]);
+        parObj.node->append_node(node);
     }
 
-    if (foundItem) {
-        xmpBa.replace(startPos, endPos - startPos, value);
-//        report();
+        /* debugging
+        std::string s;
+        rapidxml::print(std::back_inserter(s), xmlDoc);
+        xmpBa = QByteArray::fromStdString(s);
+        std::cout << "xmpBa from print xmlDoc:" << std::endl;
+        std::cout << xmpBa.toStdString() << std::endl << std::flush;
+        QCoreApplication::processEvents();
 
-        return true;
+        std::cout << s << std::endl << std::flush;
+        std::cout << xmpBa.toStdString() << std::endl << std::flush;
+        //*/
+    return true;
+}
+
+Xmp::XmpObj Xmp::xmlDocObj(QString name,
+                           rapidxml::xml_node<> *node,
+                           rapidxml::xml_node<> *parNode)
+{
+    XmpObj obj = nullXmpObj;
+    QString nodeName = QString(node->name()).left(node->name_size());
+    QString parName = "";
+    if (parNode) parName = QString(parNode->name()).left(parNode->name_size());
+    if (nodeName == name) {
+        obj.node = node;
+        obj.parent = parNode;
+        obj.attr = nullptr;
+        obj.nodeName = name;
+        obj.type = "node";
+        obj.value = QString(node->value()).left(node->value_size());
+        return obj;
+    }
+    // node attributes
+    rapidxml::xml_attribute<>* a;
+    for(a = node->first_attribute(); a; a = a->next_attribute()) {
+        QString attrName = QString(a->name()).left(a->name_size());
+        if (attrName == name) {
+            obj.node = node;
+            obj.parent = parNode;
+            obj.attr = a;
+            obj.nodeName = nodeName;
+            obj.attrName = attrName;
+            obj.parentName = parName;
+            obj.type = "attribute";
+            obj.value = QString(a->value()).left(a->value_size());
+            return obj;
+        }
+    }
+    // child nodes
+    rapidxml::xml_node<>* n;
+    for(n = node->first_node(); n; n = n->next_sibling() ) {
+        obj = xmlDocObj(name, n, node);
+        if (!(obj == nullXmpObj)) return obj;
+    }
+    return obj;
+}
+
+bool Xmp::xmlDocContains(QString name, const rapidxml::xml_node<> *node)
+{
+    QString nodeName = QString(node->name()).left(node->name_size());
+    if (nodeName == name) return true;
+    // node attributes
+    const rapidxml::xml_attribute<>* a;
+    for(a = node->first_attribute(); a; a = a->next_attribute()) {
+        QString attrName = QString(a->name()).left(a->name_size());
+        if (attrName == name) return true;
+    }
+    // child nodes
+    rapidxml::xml_node<>* n;
+    for(n = node->first_node(); n; n = n->next_sibling() ) {
+        if (xmlDocContains(name, n)) return true;
     }
     return false;
 }
@@ -894,22 +847,28 @@ void Xmp::walk(QTextStream &rpt, const rapidxml::xml_node<>* node, int indentSiz
     // indent for this node
     QString indentNodeStr = QString(indentCount*indentSize, ' ');
     QString indentElementStr = QString((indentCount+1)*indentSize, ' ');
-    rpt << indentNodeStr;
 
     const rapidxml::node_type t = node->type();
     if (t == rapidxml::node_element) {
         // start node
         nodeName = QString(node->name()).left(node->name_size());
-        rpt << "<" << nodeName << "\n";
+        rpt << indentNodeStr << "<" << nodeName;
 
         // node attributes
-        const rapidxml::xml_attribute<>* a;
-        for(a = node->first_attribute(); a; a = a->next_attribute()) {
-            attrName = QString(a->name()).left(a->name_size());
-            attrVal = QString(a->value()).left(a->value_size());
-            rpt << indentElementStr << attrName << " = \"" << attrVal << "\"";
-            if (a == node->last_attribute()) rpt << ">";
+        if (node->first_attribute()) {
+            const rapidxml::xml_attribute<>* a;
             rpt << "\n";
+            for (a = node->first_attribute(); a; a = a->next_attribute()) {
+                attrName = QString(a->name()).left(a->name_size());
+                attrVal = QString(a->value()).left(a->value_size());
+                rpt << indentElementStr << attrName << " = \"" << attrVal << "\"";
+                if (a == node->last_attribute()) rpt << ">";
+                rpt << "\n";
+            }
+        }
+        else {
+            rpt << ">";
+            indentNodeStr = "";
         }
 
         // child nodes
@@ -924,45 +883,41 @@ void Xmp::walk(QTextStream &rpt, const rapidxml::xml_node<>* node, int indentSiz
     }
 
     if (t == rapidxml::node_data) {
-        rpt << QString(node->value()).left(node->value_size()) << "\n";
+        rpt << QString(node->value()).left(node->value_size());
         return;
     }
-
-    rpt << "Node type:" << t;
 }
 
-QString Xmp::report()
+QString Xmp::docToQString()
 {
 /*
-    Not being used.
+    Returns a formatted xml text string from the DOM document rapidxml::xml_document (xmlDoc).
 */
     if (G::isLogger) G::log(__FUNCTION__);
 
-//    using namespace rapidxml;
-//    rapidxml::xml_document<> xmlDoc;    // character type defaults to char
-//    enum {PARSE_FLAGS = rapidxml::parse_non_destructive};
-//    xmlDoc.parse<PARSE_FLAGS>(xmpBa.data());    // 0 means default parse flags
-    QTextStream rpt;
     QString rptString = "";
-    rpt.setString(&rptString);
-    walk(rpt, xmlDoc.first_node(), 3);
-//    std::cout << std::flush;
+
+//    /*
+    // format text using my walk function
+//    QTextStream rpt;
+//    rpt.setString(&rptString);
+//    walk(rpt, xmlDoc.first_node(), 3);
+    //*/
+
+//    /*
+    // format text using rapidxml::print
+    std::string s;
+    rapidxml::print(std::back_inserter(s), xmlDoc);
+    std::cout << s << std::endl << std::flush;
+    rptString = QString::fromStdString(s);
+    //*/
+
     return rptString;
+}
 
-    /*
-    std::cout << "Name of my first node is: " << xmlDoc.first_node()->name() << "\n" << std::flush;
-    rapidxml::xml_node<> *node = xmlDoc.first_node();
-    std::cout << "Node foobar has value " << node->value() << "\n" << std::flush;
-    for (rapidxml::xml_attribute<> *attr = node->first_attribute();
-         attr; attr = attr->next_attribute())
-    {
-        std::cout << "Node has attribute " << attr->name() << " ";
-        std::cout << "with value " << attr->value() << "\n" << std::flush;
-    }
-    qDebug() << __FUNCTION__ << "RAPIDXML:";
+void Xmp::xmlDocRpt(QTextStream &rpt, const rapidxml::xml_node<> *node)
+{
 
-//    rapidxml::print(std::cout, doc, 0);   // 0 means default printing flags
-//*/
 }
 
 QString Xmp::diagnostics()

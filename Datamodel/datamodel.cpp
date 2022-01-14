@@ -197,6 +197,8 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::_CopyrightColumn, new QStandardItem("_Copyright")); horizontalHeaderItem(G::_CopyrightColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_EmailColumn, new QStandardItem("_Email")); horizontalHeaderItem(G::_EmailColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::_UrlColumn, new QStandardItem("_Url")); horizontalHeaderItem(G::_UrlColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::_OrientationColumn, new QStandardItem("_Url")); horizontalHeaderItem(G::_OrientationColumn)->setData(true, G::GeekRole);
+//    setHorizontalHeaderItem(G::_RotationColumn, new QStandardItem("_Url")); horizontalHeaderItem(G::_RotationColumn)->setData(true, G::GeekRole);
 
     setHorizontalHeaderItem(G::OffsetFullColumn, new QStandardItem("OffsetFull")); horizontalHeaderItem(G::OffsetFullColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::LengthFullColumn, new QStandardItem("LengthFull")); horizontalHeaderItem(G::LengthFullColumn)->setData(true, G::GeekRole);
@@ -659,6 +661,8 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m._label = index(row, G::_LabelColumn).data().toString();
     m.rating = index(row, G::RatingColumn).data().toString();
     m._rating = index(row, G::_RatingColumn).data().toString();
+//    m._orientation = index(row, G::_OrientationColumn).data().toInt();
+//    m._rotationDegrees = index(row, G::_RotationColumn).data().toInt();
     m.createdDate = index(row, G::CreatedColumn).data().toDateTime();
     m.modifiedDate = index(row, G::ModifiedColumn).data().toDateTime();
 
@@ -860,7 +864,7 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
 /*
     This function is called after the metadata for each eligible image in the selected
     folder(s) is being cached or when addAllMetadata is called prior of filtering or sorting.
-    The metadata is displayed in tableView, which is created in MW, and in InfoView.
+    The metadata is displayed in tableView and InfoView.
 
     If a folder is opened with combineRawJpg all the metadata for the raw file may not have
     been loaded, but editable data, (such as rating, label, title, email, url) may have been
@@ -868,6 +872,7 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
 */
 //    mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__); 
+    qDebug() << __FUNCTION__ << m.fPath;
     int row = m.row;
     QString search = index(row, G::SearchTextColumn).data().toString();
     if (!metadata->ratings.contains(m.rating)) m.rating = "";
@@ -900,7 +905,8 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     setData(index(row, G::DimensionsColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::AspectRatioColumn), QString::number((m.width * 1.0 / m.height), 'f', 2));
     setData(index(row, G::AspectRatioColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-    setData(index(row, G::RotationColumn), 0);
+    setData(index(row, G::OrientationColumn), QString::number(m.orientation));
+    setData(index(row, G::RotationColumn), QString::number(m.rotationDegrees));
     setData(index(row, G::RotationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::ApertureColumn), m.apertureNum);
     setData(index(row, G::ApertureColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -1248,6 +1254,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("dimensions", 25) << G::s(index(row, G::DimensionsColumn).data());
     rpt << "\n  " << G::sj("aspectRatio", 25) << G::s(index(row, G::DimensionsColumn).data());
     rpt << "\n  " << G::sj("rotation", 25) << G::s(index(row, G::RotationColumn).data());
+//    rpt << "\n  " << G::sj("_rotation", 25) << G::s(index(row, G::_RotationColumn).data());
     rpt << "\n  " << G::sj("apertureNum", 25) << G::s(index(row, G::ApertureColumn).data());
     rpt << "\n  " << G::sj("exposureTimeNum", 25) << G::s(index(row, G::ShutterspeedColumn).data());
     rpt << "\n  " << G::sj("iso", 25) << G::s(index(row, G::ISOColumn).data());

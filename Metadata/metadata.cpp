@@ -319,11 +319,11 @@ void Metadata::reportMetadata()
     p.rpt.setFieldWidth(25); p.rpt << "isBigEndian"         << m.isBigEnd;            p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetifd0Seg"       << m.ifd0Offset;          p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "offsetXMPSeg"        << m.xmpSegmentOffset;    p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "offsetNextXMPSegment"<< m.xmpSegmentLength;p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "offsetNextXMPSegment"<< m.xmpSegmentLength;    p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "orientation"         << m.orientation;         p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "width"               << m.width;               p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "height"              << m.height;              p.rpt.setFieldWidth(0); p.rpt << "\n";
-    p.rpt.setFieldWidth(25); p.rpt << "created"             << createdExif;                       p.rpt.setFieldWidth(0); p.rpt << "\n";
+    p.rpt.setFieldWidth(25); p.rpt << "created"             << createdExif;           p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "make"                << m.make;                p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "model"               << m.model;               p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "exposureTime"        << m.exposureTime;        p.rpt.setFieldWidth(0); p.rpt << "\n";
@@ -344,10 +344,10 @@ void Metadata::reportMetadata()
     p.rpt.setFieldWidth(25); p.rpt << "shutterCount"        << m.shutterCount;        p.rpt.setFieldWidth(0); p.rpt << "\n";
     p.rpt.setFieldWidth(25); p.rpt << "nikonLensCode"       << m.nikonLensCode;       p.rpt.setFieldWidth(0); p.rpt << "\n";
 
-    if (m.isXmp && p.xmpString.length() > 0) {
+    if (m.isXmp && p.xmpString.length() > 0 && m.xmpSegmentOffset > 0) {
         p.rpt << "\nEmbedded XMP Extract:\n\n";
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
-        p.rpt << xmp.report();
+        p.rpt << xmp.docToQString();
     }
 }
 
@@ -375,7 +375,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     buffer: byte array containing the xmp data
 
     m: the current state of the metadata for fPath MUST BE UPDATED BEFORE CALLING with
-       dm->imMetadata(fPath); because dm not available from Metadata.
+       dm->imMetadata(fPath); because dm is not available from Metadata.
 
     If it is a supported image type a copy of the image file is made and any metadata changes
     are updated in buffer. If it is a raw file in the sidecarFormats hash then the xmp data
@@ -404,6 +404,18 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     // new orientation
     int newOrientation = getNewOrientation(m.orientation, m.rotationDegrees);
 
+    qDebug() << __FUNCTION__ << "m.rating =" << m.rating << "m._rating = " << m._rating;
+    qDebug() << __FUNCTION__ << "m.label =" << m.label << "m._label = " << m._label;
+    qDebug() << __FUNCTION__ << "m.title =" << m.title << "m._title = " << m._title;
+    qDebug() << __FUNCTION__ << "m.creator =" << m.creator << "m._creator = " << m._creator;
+    qDebug() << __FUNCTION__ << "m.copyright =" << m.copyright << "m._copyright = " << m._copyright;
+    qDebug() << __FUNCTION__ << "m.email =" << m.email << "m._email = " << m._email;
+    qDebug() << __FUNCTION__ << "m.url =" << m.url << "m._url = " << m._url;
+
+//    qDebug() << __FUNCTION__ << "m.orientation =" << m.orientation << "m._orientation = " << m._orientation;
+//    qDebug() << __FUNCTION__ << "m.rotationDegrees =" << m.rotationDegrees << "m._rotationDegrees = " << m._rotationDegrees;
+    qDebug();
+
     // has metadata been edited? ( _ is original data)
     bool ratingChanged = m.rating != m._rating;
     bool labelChanged = m.label != m._label;
@@ -412,7 +424,8 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     bool copyrightChanged = m.copyright != m._copyright;
     bool emailChanged = m.email != m._email;
     bool urlChanged = m.url != m._url;
-    bool orientationChanged = m.orientation != newOrientation;
+//    bool orientationChanged = m.orientation != m._orientation;
+//    bool rotationChanged = m.rotationDegrees != m._rotationDegrees;
     if (   !ratingChanged
         && !labelChanged
         && !titleChanged
@@ -420,8 +433,10 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         && !copyrightChanged
         && !emailChanged
         && !urlChanged
-        && !orientationChanged ) {
-//        qDebug() << __FUNCTION__ << "Unable to write xmp buffer. No metadata has been edited.";
+//        && !orientationChanged
+//        && !rotationChanged
+       ) {
+        qDebug() << __FUNCTION__ << "Unable to write xmp buffer. No metadata has been edited.";
         return false;
     }
 
@@ -438,11 +453,13 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     // update xmp data
     Xmp xmp(p.file);
 
+//    xmp.test();
+
     // orientation is written to xmp sidecars only
-    if (orientationChanged && G::useSidecar) {
-        QString s = QString::number(newOrientation);
-        xmp.setItem("Orientation", s.toLatin1());
-    }
+//    if (orientationChanged && G::useSidecar) {
+//        QString s = QString::number(newOrientation);
+//        xmp.setItem("Orientation", s.toLatin1());
+//    }
     if (urlChanged) xmp.setItem("url", m.url.toLatin1());
     if (emailChanged) xmp.setItem("email", m.email.toLatin1());
     if (copyrightChanged) xmp.setItem("rights", m.copyright.toLatin1());
@@ -476,6 +493,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     //*/
 
 //    if (G::useSidecar) xmp.writeSidecar();
+    xmp.writeSidecar(p.file);
 
     p.file.close();
     return true;
@@ -650,33 +668,40 @@ bool Metadata::parseSidecar()
     QFileInfo info(p.file);
     QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
     QFile sidecarFile(sidecarPath);
+    qDebug() << __FUNCTION__ << sidecarPath;
 
     // no sidecar file
     if (!sidecarFile.exists()) {
         return false;
     }
 
-    sidecarFile.open(QIODevice::ReadOnly);
+    if (!sidecarFile.open(QIODevice::ReadOnly)) {
+        qWarning() << __FUNCTION__ << "Failed to open sidecar file" << sidecarPath;
+        return false;
+    }
 
     // parse sidecar
-//    uint start = 0;
-//    uint end = (uint)sidecarFile.size()/* - 1*/;
-//    Xmp xmp(sidecarFile, start, end);
     Xmp xmp(sidecarFile);
     QString s;
-    if (xmp.isItem("Rating")) m.rating = xmp.getItem("Rating");
-    if (xmp.isItem("Label")) m.label = xmp.getItem("Label");
-    if (xmp.isItem("title")) m.title = xmp.getItem("title");
-    if (xmp.isItem("rights")) m.copyright = xmp.getItem("rights");
-    if (xmp.isItem("creator")) m.creator = xmp.getItem("creator");
-    if (xmp.isItem("CiEmailWork")) m.email = xmp.getItem("CiEmailWork");
-    if (xmp.isItem("CiUrlWork")) m.url = xmp.getItem("CiUrlWork");
+    s = xmp.getItem("rating"); if (!s.isEmpty()) {m.rating = s; m._rating = s;}
+    s = xmp.getItem("label"); if (!s.isEmpty()) {m.label = s; m._label = s;}
+    s = xmp.getItem("title"); if (!s.isEmpty()) {m.title = s; m._title = s;}
+    s = xmp.getItem("creator"); if (!s.isEmpty()) {m.creator = s; m._creator = s;}
+    s = xmp.getItem("rights"); if (!s.isEmpty()) {m.copyright = s; m._copyright = s;}
+    s = xmp.getItem("email"); if (!s.isEmpty()) {m.email = s; m._email = s;}
+    s = xmp.getItem("url"); if (!s.isEmpty()) {m.url = s; m._url = s;}
+
+//    m.rating = xmp.getItem("Rating");
+//    m.label = xmp.getItem("Label");
+//    m.title = xmp.getItem("title");
+//    m.creator = xmp.getItem("creator");
+//    m.copyright = xmp.getItem("rights");
+//    m.email = xmp.getItem("email");
+//    m.url = xmp.getItem("url");
 
     if (p.report) {
         p.rpt << "\nSidecar: " << sidecarPath << "\n";
-//        sidecarFile.seek(0);
-//        p.rpt << xmp.xmpAsString();
-        p.rpt << xmp.report();
+        p.rpt << xmp.docToQString();
     }
 
     sidecarFile.close();
@@ -877,6 +902,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
     // check if already loaded
     QString fPath = fileInfo.filePath();
+    qDebug() << __FUNCTION__ << fPath << source;
     if (fPath == "") {
         qWarning() << __FUNCTION__ << "NULL FILE REQUESTED FROM "
                    << source;

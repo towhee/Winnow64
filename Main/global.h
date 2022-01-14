@@ -64,6 +64,7 @@ namespace G
         LoadMsecPerMpColumn,
         DimensionsColumn,
         AspectRatioColumn,
+        OrientationColumn,
         RotationColumn,
         ApertureColumn,
         ShutterspeedColumn,
@@ -86,6 +87,8 @@ namespace G
         _CopyrightColumn,
         _EmailColumn,
         _UrlColumn,
+//        _OrientationColumn,
+//        _RotationColumn,
 
         // binary helpers
         OffsetFullColumn,
@@ -105,7 +108,6 @@ namespace G
         ICCBufColumn,
         ICCSpaceColumn,
         OrientationOffsetColumn,
-        OrientationColumn,
         RotationDegreesColumn,
         ShootingInfoColumn,
         SearchTextColumn,
