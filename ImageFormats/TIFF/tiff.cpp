@@ -381,7 +381,7 @@ bool Tiff::parse(MetadataParameters &p,
             Xmp xmp(p.file);
             QByteArray val = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss").toLatin1();
             xmp.setItem("WinnowAddThumb", val);
-            xmp.writeSidecar();
+//            xmp.writeSidecar(p.file);
         }
     }
 
@@ -509,6 +509,8 @@ bool Tiff::parse(MetadataParameters &p,
         m._copyright = m.copyright;
         m._email  = m.email ;
         m._url = m.url;
+        m._orientation = m.orientation;
+        m._rotationDegrees = m.rotationDegrees;
 
         if (p.report) p.xmpString = xmp.xmpAsString();
     }

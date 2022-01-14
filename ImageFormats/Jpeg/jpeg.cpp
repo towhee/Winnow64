@@ -364,8 +364,6 @@ bool Jpeg::parse(MetadataParameters &p,
             m.copyright = xmp.getItem("rights");
             m.email = xmp.getItem("email");
             m.url = xmp.getItem("url");
-    //        m.email = xmp.getItem("CiEmailWork");
-    //        m.url = xmp.getItem("CiUrlWork");
 
             // save original values so can determine if edited when writing changes
             m._rating = m.rating;
@@ -375,6 +373,10 @@ bool Jpeg::parse(MetadataParameters &p,
             m._copyright = m.copyright;
             m._email  = m.email ;
             m._url = m.url;
+            m._orientation = m.orientation;
+            m._rotationDegrees = m.rotationDegrees;
+
+            qDebug() << __FUNCTION__ << m.fPath;
 
             if (p.report) p.xmpString = xmp.xmpAsString();
         }

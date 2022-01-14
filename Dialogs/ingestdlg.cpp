@@ -1093,7 +1093,7 @@ void IngestDlg::getAvailableStorageMB()
 */
 
     QStorageInfo info(drivePath);
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << "drivePath =" << drivePath
              << "folderPath =" << folderPath
@@ -1129,7 +1129,7 @@ void IngestDlg::getAvailableStorageMB()
 
     // backup drive
     info.setPath(drive2Path);
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << "drive2Path =" << drive2Path
              << "folderPath2 =" << folderPath2

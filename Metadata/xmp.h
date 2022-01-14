@@ -9,7 +9,7 @@
 
 #include "Lib/rapidxml/rapidxml.hpp"
 #include "Lib/rapidxml/rapidxml_iterators.hpp"
-#include "Lib/rapidxml/rapidxml_print.hpp"
+#include "Lib/rapidxml/rapidxml_print_rgh.hpp"
 #include "Lib/rapidxml/rapidxml_utils.hpp"
 
 #include <stdio.h>
@@ -29,35 +29,54 @@ public:
     Xmp(QFile &file, uint offset, uint length, QObject *parent = nullptr);
     Xmp(QFile &file, QObject *parent = nullptr);
 
+    struct XmpObj {
+        rapidxml::xml_node<>* node;
+        rapidxml::xml_node<>* parent;
+        rapidxml::xml_attribute<>* attr;
+        QString nodeName;           // req'd ie "rdf:Description"
+        QString attrName;           // if "" then node format ie "xmp:Rating"
+        QString parentName;         // req'd if attrName = ""
+        QString type;               // node or attribute
+        QString value;
+        bool operator==(const XmpObj& x) const {
+            return (x.nodeName == nodeName
+                    && x.attrName == attrName
+                    && x.parentName == parentName
+                    );
+        }
+        bool exists() const {
+            return !(nodeName == "" && attrName == "" && parentName == "");
+        }
+    };
     static QByteArray skeleton();
+
+    void test(XmpObj o);
 
     bool isItem(QByteArray item);
     QString getItem(QByteArray item);
     bool setItem(QByteArray item, QByteArray value);
 
     bool getNode(rapidxml::xml_node<>* node, QByteArray nodeName);
-    QString attribute(QByteArray attrName, QByteArray nodeName = "rdf:Description");
+    bool getAttribute(QByteArray attrName, QByteArray nodeName = "rdf:Description");
     QString setAttribute(QByteArray attrName, QByteArray nodeName = "rdf:Description");
     QString xmpAsString();
     bool writeJPG(QByteArray &buffer);
     bool readSidecar(QByteArray &buffer);
-    bool writeSidecar();
+    bool writeSidecar(QFile &sidecarFile);
     QString diagnostics();
 
-    QString report();
+    bool xmlDocContains(QString name, const rapidxml::xml_node<>* node);
+    XmpObj xmlDocObj(QString name,
+                     rapidxml::xml_node<> *node,
+                     rapidxml::xml_node<> *parNode = nullptr);
+
+    QString docToQString();
+    QByteArray docToByteArray();
+    std::string docToStdString();
     bool isValid = false;
 
-//    struct XmlObj {
-//        QString nodeName;
-//        QString attrName;
-//        bool operator==(const XmlObj& x) const {
-//            return (x.nodeName == nodeName && x.attrName == attrName);
-//        }
-//        bool compare(const XmlObj& x) const {
-//            return (x.nodeName == nodeName && x.attrName == attrName);
-//        }
-//    };
-    QHash<QString, QString>xmpHash;
+    QHash<QString, QString>xmpHashOld;
+    QHash<QString, XmpObj>xmpObjs;
 
 signals:
 
@@ -73,15 +92,19 @@ private:
               const rapidxml::xml_node<>* node,
               int indentSize = 4,
               int indent = 0);
+    void xmlDocRpt(QTextStream &rpt, const rapidxml::xml_node<>* node);
 
     rapidxml::xml_document<> xmlDoc;
     rapidxml::xml_node<>* xmlNode = nullptr;
     rapidxml::xml_attribute<>* xmlAttribute = nullptr;
     rapidxml::xml_node<>* xmlRdfDescriptionNode = nullptr;
+    XmpObj nullXmpObj;
     QByteArrayList a;               // attributes appended to xmlDoc
     QByteArrayList v;               // values appended to xmlDoc
 
     QByteArray xmpBa;               // the xmpmeta packet
+    std::string xmpString;
+
     ulong xmpSegmentOffset;         // file offset to start of xmp segment
     ulong xmpmetaOffset;            // file offset to start of xmpmeta packet
     ulong xmpLength;                // length of xmp segment
@@ -94,7 +117,7 @@ private:
     QString baseName;
     QString extension;
     QString filePath;
-    QHash<QByteArray,QByteArray> lookupHash;
+    QHash<QString,QString> xmpItems;
     QStringList mapSkipNodes = {
         "rdf:li",
         "rdf:Seq",
@@ -131,6 +154,11 @@ private:
          "\n\t\t<rdf:Description "
          "\n\t\t\trdf:about=\"\">"
          "\n\t\t</rdf:Description>\n\t</rdf:RDF>\n</x:xmpmeta>";
+//    QByteArray sidecarSkeleton = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">"
+//                                 "\n\t<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">"
+//                                 "\n\t\t<rdf:Description "
+//                                 "\n\t\t\trdf:about=\"\">"
+//                                 "\n\t\t</rdf:Description>\n\t</rdf:RDF>\n</x:xmpmeta>";
     QByteArray sidecarExtension = "<photoshop:SidecarForExtension>XXX</photoshop:SidecarForExtension>";
     QByteArray rdfSeq = "<rdf:Seq><rdf:li>XXX</rdf:li></rdf:Seq>";
     QByteArray rdfList = "<TAG><rdf:Alt><rdf:li xml:lang=\"x-default\">XXX</rdf:li></rdf:Alt></TAG>";

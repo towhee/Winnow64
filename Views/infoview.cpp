@@ -206,7 +206,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 // write to sidecar
                 if (isSidecarChange) {
                     dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-                    metadata->writeXMP(fPath, __FUNCTION__);
+                    metadata->writeXMP(metadata->sidecarPath(fPath), __FUNCTION__);
                     G::popUp->setProgress(i+1);
                 }
             }

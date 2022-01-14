@@ -91,6 +91,7 @@ HEADERS += ImageFormats/Olympus/olympus.h
 HEADERS += ImageFormats/Panasonic/panasonic.h
 HEADERS += ImageFormats/Sony/sony.h
 HEADERS += ImageFormats/Tiff/tiff.h
+HEADERS += Lib/rapidxml/rapidxml_print_rgh.hpp
 
 #HEADERS += Lcms2/lcms2.h
 #HEADERS += Lcms2/lcms2_plugin.h

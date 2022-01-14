@@ -312,6 +312,8 @@ bool DNG::parse(MetadataParameters &p,
         m._copyright = m.copyright;
         m._email  = m.email ;
         m._url = m.url;
+        m._orientation = m.orientation;
+        m._rotationDegrees = m.rotationDegrees;
 
         if (p.report) p.xmpString = xmp.xmpAsString();
     }

@@ -60,13 +60,15 @@ public:
     ulong shutterCount = 0;
     QString copyFileNamePrefix = "";        // rgh do we need?
 
-    QString _rating = "";                    // original value
-    QString _label = "";                     // original value
-    QString _title = "";                     // original value
-    QString _creator = "";                   // original value
-    QString _copyright = "";                 // original value
-    QString _email = "";                     // original value
-    QString _url = "";                       // original value
+    QString _rating = "";                   // original value
+    QString _label = "";                    // original value
+    QString _title = "";                    // original value
+    QString _creator = "";                  // original value
+    QString _copyright = "";                // original value
+    QString _email = "";                    // original value
+    QString _url = "";                      // original value
+    int _orientation = 0;                   // original value
+    int _rotationDegrees = 0;               // original value
 
     bool metadataLoaded = false;            // all metadata except thumb
     bool isThumbLoaded = false;             // refers to thumb only

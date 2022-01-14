@@ -7450,6 +7450,8 @@ void MW::diagnosticsReport(QString reportString)
     md.textBrowser->setStyleSheet(G::css);
     md.textBrowser->setText(reportString);
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+    QFontMetrics metrics(md.textBrowser->font());
+    md.textBrowser->setTabStopDistance(3 * metrics.width(' '));
 //    md.textBrowser->setStyleSheet(G::css);
     dlg->show();
 //    std::cout << reportString.toStdString() << std::flush;
@@ -10940,7 +10942,7 @@ void MW::setColorClass()
         // write to sidecar
         if (G::useSidecar) {
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-            metadata->writeXMP(fPath, __FUNCTION__);
+            metadata->writeXMP(metadata->sidecarPath(fPath), __FUNCTION__);
             G::popUp->setProgress(i+1);
         }
     }
@@ -12182,29 +12184,20 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString a = "test|this";
-    QStringList l = a.split("|");
-    qDebug() << __FUNCTION__ << l;
-    qDebug() << __FUNCTION__ << l.at(0) << l.at(1);
-
-    a = "test1|";
-    l = a.split("|");
-    qDebug() << __FUNCTION__ << l;
-    qDebug() << __FUNCTION__ << l.at(0) << l.at(1);
-
-
-
-//    ImageMetadata m = dm->imMetadata(dm->currentFilePath);
-//    qDebug() << __FUNCTION__ << m.xmpSegmentOffset << m.fName;
-//    QFile f(dm->currentFilePath);
-//    f.open(QIODevice::ReadWrite);
-//    Xmp xmp(f, m.xmpSegmentOffset, m.xmpSegmentLength);
-//    xmp.report();
-//    QString fPath = "D:/Pictures/Coaster/2005-10-11_0082.xmp";
-//    QFile f(fPath);
-//    f.open(QIODevice::ReadWrite);
-//    Xmp xmp(f);
-////    xmp.report();
-//    qDebug() << __FUNCTION__ << xmp.attribute("xmp:Rating", "xmp:Rating");
+    QString s = "";
+    if (s.isEmpty()) qDebug() << __FUNCTION__ << s << "true";
+//    QByteArray ba = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">"
+//                    "\n\t<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">"
+//                    "\n\t\t<rdf:Description "
+//                    "\n\t\t\trdf:about=\"\">"
+//                    "\n\t\t</rdf:Description>\n\t</rdf:RDF>\n</x:xmpmeta>";
+//    QByteArray ba1 = ba;
+    QFile f("D:/Pictures/Business Card/2006-05-06_0005-Edit.xmp");
+    f.open(QIODevice::ReadWrite);
+    Xmp xmp(f);
+//    xmp.writeSidecar(f);
+//    f.write(Xmp::skeleton());
+    xmp.writeSidecar(f);
+    f.close();
 }
 // End MW
