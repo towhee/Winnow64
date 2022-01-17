@@ -875,8 +875,14 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
     qDebug() << __FUNCTION__ << m.fPath;
     int row = m.row;
     QString search = index(row, G::SearchTextColumn).data().toString();
-    if (!metadata->ratings.contains(m.rating)) m.rating = "";
-    if (!metadata->labels.contains(m.label)) m.label = "";
+    if (!metadata->ratings.contains(m.rating)) {
+        m.rating = "";
+        m._rating = "";
+    }
+    if (!metadata->labels.contains(m.label)) {
+        m.label = "";
+        m._label = "";
+    }
 
     setData(index(row, G::SearchColumn), m.isSearch);
     setData(index(row, G::SearchColumn), Qt::AlignCenter, Qt::TextAlignmentRole);

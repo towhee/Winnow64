@@ -3,9 +3,9 @@
 
 #include <QtWidgets>
 #include <QtCore>
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <QtXmlPatterns>
-#endif
+//#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+//#include <QtXmlPatterns>
+//#endif
 //#include <iostream>
 //#include <iomanip>
 //#include "Cache/tshash.h"

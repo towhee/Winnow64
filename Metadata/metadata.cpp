@@ -347,7 +347,7 @@ void Metadata::reportMetadata()
     if (m.isXmp && p.xmpString.length() > 0 && m.xmpSegmentOffset > 0) {
         p.rpt << "\nEmbedded XMP Extract:\n\n";
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
-        p.rpt << xmp.docToQString();
+        if (xmp.isValid) p.rpt << xmp.docToQString();
     }
 }
 
@@ -452,8 +452,10 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
 
     // update xmp data
     Xmp xmp(p.file);
-
-//    xmp.test();
+    if (!xmp.isValid) {
+        p.file.close();
+        return false;
+    }
 
     // orientation is written to xmp sidecars only
 //    if (orientationChanged && G::useSidecar) {
@@ -471,6 +473,14 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
     xmp.setItem("ModifyDate", modifyDate.toLatin1());
+
+    m._rating = m.rating;
+    m._label = m.label;
+    m._title = m.title;
+    m._creator = m.creator;
+    m._copyright = m.copyright;
+    m._email = m.email;
+    m._url = m.url;
 
     // get the buffer to write to a new p.file
     /* write orientation directly into jpg
@@ -682,30 +692,29 @@ bool Metadata::parseSidecar()
 
     // parse sidecar
     Xmp xmp(sidecarFile);
-    QString s;
-    s = xmp.getItem("rating"); if (!s.isEmpty()) {m.rating = s; m._rating = s;}
-    s = xmp.getItem("label"); if (!s.isEmpty()) {m.label = s; m._label = s;}
-    s = xmp.getItem("title"); if (!s.isEmpty()) {m.title = s; m._title = s;}
-    s = xmp.getItem("creator"); if (!s.isEmpty()) {m.creator = s; m._creator = s;}
-    s = xmp.getItem("rights"); if (!s.isEmpty()) {m.copyright = s; m._copyright = s;}
-    s = xmp.getItem("email"); if (!s.isEmpty()) {m.email = s; m._email = s;}
-    s = xmp.getItem("url"); if (!s.isEmpty()) {m.url = s; m._url = s;}
-
-//    m.rating = xmp.getItem("Rating");
-//    m.label = xmp.getItem("Label");
-//    m.title = xmp.getItem("title");
-//    m.creator = xmp.getItem("creator");
-//    m.copyright = xmp.getItem("rights");
-//    m.email = xmp.getItem("email");
-//    m.url = xmp.getItem("url");
+    if (!xmp.isValid) {
+        sidecarFile.close();
+        return false;
+    }
 
     if (p.report) {
         p.rpt << "\nSidecar: " << sidecarPath << "\n";
         p.rpt << xmp.docToQString();
     }
+    else {
+        QString s;
+        s = xmp.getItem("rating"); if (!s.isEmpty()) {m.rating = s; m._rating = s;}
+        s = xmp.getItem("label"); if (!s.isEmpty()) {m.label = s; m._label = s;}
+        s = xmp.getItem("title"); if (!s.isEmpty()) {m.title = s; m._title = s;}
+        s = xmp.getItem("creator"); if (!s.isEmpty()) {m.creator = s; m._creator = s;}
+        s = xmp.getItem("rights"); if (!s.isEmpty()) {m.copyright = s; m._copyright = s;}
+        s = xmp.getItem("email"); if (!s.isEmpty()) {m.email = s; m._email = s;}
+        s = xmp.getItem("url"); if (!s.isEmpty()) {m.url = s; m._url = s;}
+    }
 
     sidecarFile.close();
     return true;
+
 }
 
 QString Metadata::sidecarPath(QString fPath)

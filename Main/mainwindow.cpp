@@ -12184,6 +12184,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+
+    qWarning() << __FUNCTION__;
+    return;
     QString s = "";
     if (s.isEmpty()) qDebug() << __FUNCTION__ << s << "true";
 //    QByteArray ba = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">"
