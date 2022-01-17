@@ -379,9 +379,11 @@ bool Tiff::parse(MetadataParameters &p,
         // write thumbnail added to xmp sidecar if writing sidecars
         if (G::useSidecar) {
             Xmp xmp(p.file);
-            QByteArray val = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss").toLatin1();
-            xmp.setItem("WinnowAddThumb", val);
+            if (xmp.isValid) {
+                QByteArray val = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss").toLatin1();
+                xmp.setItem("WinnowAddThumb", val);
 //            xmp.writeSidecar(p.file);
+            }
         }
     }
 
@@ -488,18 +490,18 @@ bool Tiff::parse(MetadataParameters &p,
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
-        m.rating = xmp.getItem("Rating");     // case is important "Rating"
-        m.label = xmp.getItem("Label");       // case is important "Label"
-        m.title = xmp.getItem("title");       // case is important "title"
-        m.cameraSN = xmp.getItem("SerialNumber");
-        if (m.lens.isEmpty()) m.lens = xmp.getItem("Lens");
-        m.lensSN = xmp.getItem("LensSerialNumber");
-        if (m.creator.isEmpty()) m.creator = xmp.getItem("creator");
-        m.copyright = xmp.getItem("rights");
-        m.email = xmp.getItem("email");
-        m.url = xmp.getItem("url");
-//        m.email = xmp.getItem("CiEmailWork");
-//        m.url = xmp.getItem("CiUrlWork");
+        if (xmp.isValid) {
+            m.rating = xmp.getItem("Rating");
+            m.label = xmp.getItem("Label");
+            m.title = xmp.getItem("title");
+            m.cameraSN = xmp.getItem("SerialNumber");
+            if (m.lens.isEmpty()) m.lens = xmp.getItem("Lens");
+            m.lensSN = xmp.getItem("LensSerialNumber");
+            if (m.creator.isEmpty()) m.creator = xmp.getItem("creator");
+            m.copyright = xmp.getItem("rights");
+            m.email = xmp.getItem("email");
+            m.url = xmp.getItem("url");
+        }
 
         // save original values so can determine if edited when writing changes
         m._rating = m.rating;
