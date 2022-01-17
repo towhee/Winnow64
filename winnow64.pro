@@ -32,7 +32,10 @@ QT += network
 QT += xmlpatterns  # qt6.2
 #QT += opengl
 
-HEADERS += Cache/mdcache.h
+HEADERS += Cache/mdcache.h \
+    Lib/rapidxml/rapidxml.hpp \
+    Lib/rapidxml/rapidxml_iterators.hpp \
+    Lib/rapidxml/rapidxml_utils.hpp
 HEADERS += Cache/cachedata.h
 HEADERS += Cache/tshash.h
 HEADERS += Cache/imagecache.h
