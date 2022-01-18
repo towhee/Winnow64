@@ -248,6 +248,8 @@ Xmp::Xmp(QFile &file, uint offset, uint length, QObject *parent) :  QObject(pare
         filePath = QFileInfo(file).filePath();
         file.seek(offset);
         xmpBa = file.read(length);
+        xmpmetaStart = xmpBa.indexOf("<x:xmpmeta");
+        xmpmetaEnd = xmpBa.indexOf("</x:xmpmeta", xmpmetaStart + 20) + 12;
         xmpPacketEnd = xmpBa.indexOf("<?xpacket end", xmpmetaEnd);
         xmpmetaRoom = xmpPacketEnd - xmpmetaStart;
         xmpmetaOffset = xmpSegmentOffset + xmpmetaStart;
