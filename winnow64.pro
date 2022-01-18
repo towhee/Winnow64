@@ -32,10 +32,8 @@ QT += network
 QT += xmlpatterns  # qt6.2
 #QT += opengl
 
-HEADERS += Cache/mdcache.h \
-    Lib/rapidxml/rapidxml.hpp \
-    Lib/rapidxml/rapidxml_iterators.hpp \
-    Lib/rapidxml/rapidxml_utils.hpp
+HEADERS += Cache/mdcache.h
+HEADERS +=
 HEADERS += Cache/cachedata.h
 HEADERS += Cache/tshash.h
 HEADERS += Cache/imagecache.h
@@ -94,7 +92,6 @@ HEADERS += ImageFormats/Olympus/olympus.h
 HEADERS += ImageFormats/Panasonic/panasonic.h
 HEADERS += ImageFormats/Sony/sony.h
 HEADERS += ImageFormats/Tiff/tiff.h
-HEADERS += Lib/rapidxml/rapidxml_print_rgh.hpp
 
 #HEADERS += Lcms2/lcms2.h
 #HEADERS += Lcms2/lcms2_plugin.h
@@ -115,6 +112,8 @@ HEADERS += Metadata/iptc.h
 HEADERS += Metadata/imagemetadata.h
 HEADERS += Metadata/metadata.h
 HEADERS += Metadata/metareport.h
+HEADERS += Metadata/rapidxml.h
+HEADERS += Metadata/rapidxml_print_rgh.h
 HEADERS += Metadata/xmp.h
 #HEADERS += Metadata/ExifTool.h
 #HEADERS += Metadata/ExifToolPipe.h

@@ -7,10 +7,12 @@
 #include <QTextCodec>       // Qt6.2 with Qt5 compatibility remove
 //#include <QtXmlPatterns>  // Qt6.2 with Qt5 compatibility remove
 
-#include "Lib/rapidxml/rapidxml.hpp"
-#include "Lib/rapidxml/rapidxml_iterators.hpp"
-#include "Lib/rapidxml/rapidxml_print_rgh.hpp"
-#include "Lib/rapidxml/rapidxml_utils.hpp"
+//#include "Lib/rapidxml/rapidxml.hpp"
+//#include "Lib/rapidxml/rapidxml_iterators.hpp"
+//#include "Lib/rapidxml/rapidxml_print_rgh.hpp"
+//#include "Lib/rapidxml/rapidxml_utils.hpp"
+#include "Metadata/rapidxml.h"
+#include "Metadata/rapidxml_print_rgh.h"
 
 #include <stdio.h>
 #include <string>
