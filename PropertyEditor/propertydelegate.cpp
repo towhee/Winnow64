@@ -129,21 +129,9 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
 
 QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-    int height = static_cast<int>(G::fontSize.toInt() * 1.5 * G::ptToPx);
-//    qDebug() << __FUNCTION__ << height;
+    // row height = 1.7 * text height
+    int height = static_cast<int>(G::fontSize.toInt() * 1.7 * G::ptToPx);
     return QSize(option.rect.width(), height);
-    /*
-    int type = index.data(UR_DelegateType).toInt();
-    switch (type) {
-        case 0:
-        case DT_Label: return LabelEditor(index, nullptr).sizeHint();
-        case DT_LineEdit: return LineEditor(index, nullptr).sizeHint();
-        case DT_Checkbox: return CheckBoxEditor(index, nullptr).sizeHint();
-        case DT_Spinbox: return SpinBoxEditor(index, nullptr).sizeHint();
-        case DT_Combo: return ComboBoxEditor(index, nullptr).sizeHint();
-        case DT_Slider: return SliderEditor(index, nullptr).sizeHint();
-        case DT_PlusMinus: return PlusMinusEditor(index, nullptr).sizeHint();
-    }*/
 }
 
 void PropertyDelegate::setEditorData(QWidget *editor,

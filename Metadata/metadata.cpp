@@ -366,6 +366,15 @@ int Metadata::getNewOrientation(int orientation, int rotation)
     return orientationFromDegrees[degrees];
 }
 
+void Metadata::writeOrientation(QString fPath, QString orientationNumber)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    ExifTool et;
+    et.setOverWrite(true);
+    et.writeOrientation(fPath, orientationNumber);
+    et.close();
+}
+
 bool Metadata::writeXMP(const QString &fPath, QString src)
 {
 /*
@@ -678,7 +687,6 @@ bool Metadata::parseSidecar()
     QFileInfo info(p.file);
     QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
     QFile sidecarFile(sidecarPath);
-    qDebug() << __FUNCTION__ << sidecarPath;
 
     // no sidecar file
     if (!sidecarFile.exists()) {
@@ -911,7 +919,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
     // check if already loaded
     QString fPath = fileInfo.filePath();
-    qDebug() << __FUNCTION__ << fPath << source;
     if (fPath == "") {
         qWarning() << __FUNCTION__ << "NULL FILE REQUESTED FROM "
                    << source;

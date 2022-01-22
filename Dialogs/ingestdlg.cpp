@@ -39,17 +39,22 @@ Files are copied to a destination based on building a file path consisting of:
 
 IngestDlg::IngestDlg(QWidget *parent,
                      bool &combineRawJpg,
+                     bool &combinedIncludeJpg,
                      bool &autoEjectUsb,
                      bool &integrityCheck,
+                     bool &isBackgroundIngest,
                      bool &ingestIncludeXmpSidecar,
                      bool &isBackup,
                      bool &gotoIngestFolder,
+                     int &seqStart,
                      Metadata *metadata,
                      DataModel *dm,
                      QString &ingestRootFolder,
                      QString &ingestRootFolder2,
                      QString &manualFolderPath,
                      QString &manualFolderPath2,
+                     QString &folderPath,
+                     QString &folderPath2,
                      QString &baseFolderDescription,
                      QMap<QString, QString>& pathTemplates,
                      QMap<QString, QString>& filenameTemplates,
@@ -65,17 +70,22 @@ IngestDlg::IngestDlg(QWidget *parent,
                      metadata(metadata),
                      isAuto(isAuto),
                      combineRawJpg(combineRawJpg),
+                     combinedIncludeJpg(combinedIncludeJpg),
                      autoEjectUsb(autoEjectUsb),
                      integrityCheck(integrityCheck),
+                     isBackgroundIngest(isBackgroundIngest),
                      ingestIncludeXmpSidecar(ingestIncludeXmpSidecar),
                      isBackup(isBackup),
                      gotoIngestFolder(gotoIngestFolder),
+                     seqStart(seqStart),
                      pathTemplatesMap(pathTemplates),
                      filenameTemplatesMap(filenameTemplates),
                      pathTemplateSelected(pathTemplateSelected),
                      pathTemplateSelected2(pathTemplateSelected2),
                      rootFolderPath(ingestRootFolder),
                      rootFolderPath2(ingestRootFolder2),
+                     folderPath(folderPath),
+                     folderPath2(folderPath2),
                      baseFolderDescription(baseFolderDescription),
                      ingestDescriptionCompleter(ingestDescriptionCompleter),
                      manualFolderPath(manualFolderPath),
@@ -173,6 +183,8 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->ejectChk->setChecked(autoEjectUsb);
     // initialize integrityCheck
     ui->integrityChk->setChecked(integrityCheck);
+    // initialize backgroundIngestCheck
+    ui->backgroundIngestChk->setChecked(isBackgroundIngest);
     // initialize ingestIncludeXmpSidecar
     ui->includeXmpChk->setChecked(ingestIncludeXmpSidecar);
     // initialize use backup as well as primary ingest
@@ -230,7 +242,8 @@ void IngestDlg::getPicks()
     Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(2,0)
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-    bool inclDupJpg = ui->combinedIncludeJpgChk->isChecked();
+//    combinedIncludeJpg = ui->combinedIncludeJpgChk->isChecked();
+//    bool inclDupJpg = ui->combinedIncludeJpgChk->isChecked();
     QString fPath;
     pickList.clear();
     for (int row = 0; row < dm->rowCount(); ++row) {
@@ -243,7 +256,7 @@ void IngestDlg::getPicks()
                 // if raw+jpg files have been combined
                 if (combineRawJpg) {
                     // append the jpg if combineRawJpg and include combined jpgs
-                    if (inclDupJpg && idx.data(G::DupIsJpgRole).toBool()) {
+                    if (combinedIncludeJpg && idx.data(G::DupIsJpgRole).toBool()) {
                         fPath = idx.data(G::PathRole).toString();
                         QFileInfo fileInfo(fPath);
                         pickList.append(fileInfo);
@@ -273,7 +286,7 @@ void IngestDlg::getPicks()
     QString s2 = fileCount == 1 ? " file " : " files ";
     QString s3 = Utilities::formatMemory(bytes);
     QString s4 = "";
-    if (inclDupJpg) s4 = " including duplicate jpg";
+    if (combinedIncludeJpg) s4 = " including duplicate jpg";
     ui->statsLabel->setText(s1 + s2 + s3 + s4);
     ui->gbsLabel->setText("");
 }
@@ -313,6 +326,7 @@ void IngestDlg::quitIfNotEnoughSpace()
         reject();
     }
 }
+
 
 void IngestDlg::ingest()
 {
@@ -382,6 +396,7 @@ void IngestDlg::ingest()
                  << "ui->progressBar->maximum() = " << ui->progressBar->maximum();
         //*/
         ui->progressBar->setValue(progress);
+        emit updateProgress(progress);
         qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
         QString sourcePath = fileInfo.absoluteFilePath();
@@ -554,6 +569,7 @@ void IngestDlg::ingest()
         ingestErrors.exec();
     }
 
+    emit updateProgress(-1);
     QDialog::accept();
 }
 
@@ -857,7 +873,6 @@ QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
                 seqWidth = currentToken.length();
                 tokenResult = QString("%1").arg(seqNum, seqWidth , 10, QChar('0'));
             }
-
             s.append(tokenResult);
             i = tokenEnd;
         }
@@ -888,7 +903,7 @@ void IngestDlg::updateFolderPaths()
         ui->folderLabel->setText(folderPath);
         ui->folderLabel->setToolTip(ui->folderLabel->text());
         drivePath = Utilities::getDrive(rootFolderPath);
-        qDebug() << __FUNCTION__ << "pathDrive =" << drivePath;
+//        qDebug() << __FUNCTION__ << "pathDrive =" << drivePath;
         d.setPath(drivePath);
         autoDriveAvailable = d.isValid();
         autoDriveAvailable ? ui->folderLabel->setStyleSheet(normalText) : ui->folderLabel->setStyleSheet(redText);
@@ -899,7 +914,7 @@ void IngestDlg::updateFolderPaths()
         ui->folderLabel_2->setText(folderPath2);
         ui->folderLabel_2->setToolTip(ui->folderLabel_2->text());
         drive2Path = Utilities::getDrive(rootFolderPath2);
-        qDebug() << __FUNCTION__ << "pathDrive2 =" << drive2Path;
+//        qDebug() << __FUNCTION__ << "pathDrive2 =" << drive2Path;
         d.setPath(drive2Path);
         autoDrive2Available = d.isValid();
         autoDrive2Available ? ui->folderLabel_2->setStyleSheet(normalText) : ui->folderLabel_2->setStyleSheet(redText);
@@ -1022,11 +1037,23 @@ void IngestDlg::on_descriptionLineEdit_textChanged(const QString& arg1)
     if (desc2  == prevText) ui->descriptionLineEdit_2->setText(arg1);
     prevText = arg1;
     updateFolderPaths();
+    // add description to completer list
+    QString desc = ui->descriptionLineEdit->text();
+    if (desc.length() > 0) {
+        if (!ingestDescriptionCompleter.contains(desc))
+            ingestDescriptionCompleter << desc;
+    }
 }
 
 void IngestDlg::on_descriptionLineEdit_2_textChanged(const QString/* &arg1*/)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+    // add description to completer list
+    QString desc = ui->descriptionLineEdit->text();
+    if (desc.length() > 0) {
+        if (!ingestDescriptionCompleter.contains(desc))
+            ingestDescriptionCompleter << desc;
+    }
     updateFolderPaths();
 }
 
@@ -1058,6 +1085,7 @@ int IngestDlg::getSequenceStart(const QString &path)
     for (int f = 0; f < dir.entryList().size(); ++f) {
         seq = "";
         QString fName = dir.entryList().at(f);
+        qDebug() << __FUNCTION__ << "fName" << fName;
         int period = fName.indexOf(".", 0);
         if (period < 1) continue;
         foundNumber = false;
@@ -1075,8 +1103,8 @@ int IngestDlg::getSequenceStart(const QString &path)
             }
         }
     }
-    if (sequence < G::ingestCount) sequence = G::ingestCount;
-    if (sequence > G::ingestCount) G::ingestCount = sequence;
+//    if (sequence < G::ingestCount) sequence = G::ingestCount;
+//    if (sequence > G::ingestCount) G::ingestCount = sequence;
     return sequence;
 }
 
@@ -1427,6 +1455,7 @@ void IngestDlg::on_editDescriptionListBtn_2_clicked()
 void IngestDlg::on_combinedIncludeJpgChk_clicked()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+    combinedIncludeJpg = ui->combinedIncludeJpgChk->isChecked();
     getPicks();
 }
 
@@ -1440,6 +1469,21 @@ void IngestDlg::on_integrityChk_stateChanged(int /*arg1*/)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     integrityCheck = ui->integrityChk->isChecked();
+}
+
+void IngestDlg::on_backgroundIngestChk_stateChanged(int /*arg1*/)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    isBackgroundIngest = ui->backgroundIngestChk->isChecked();
+    qDebug() << __FUNCTION__ << isBackgroundIngest;
+    ui->openIngestFolderChk->setEnabled(!isBackgroundIngest);
+    ui->ejectChk->setEnabled(!isBackgroundIngest);
+    if (isBackgroundIngest) {
+
+    }
+    else {
+
+    }
 }
 
 void IngestDlg::on_includeXmpChk_stateChanged(int /*arg1*/)
@@ -1497,13 +1541,15 @@ void IngestDlg::on_okBtn_clicked()
     // check parameters
     if(!parametersOk()) return;
 
+    quitIfNotEnoughSpace();
+
     bool backup = ui->backupChk->isChecked();
 
     // make sure the destination folder exists
     QDir dir(folderPath);
     if (!dir.exists()) {
         if(!dir.mkpath(folderPath)) {
-            QMessageBox::critical(this, tr("Error"),
+            QMessageBox::critical(nullptr, tr("Error"),
                  "The folder \"" + folderPath + "\" was not created.");
             return;
         }
@@ -1513,13 +1559,19 @@ void IngestDlg::on_okBtn_clicked()
     if(backup) {
         QDir dir2(folderPath2);
         if (!dir2.mkpath(folderPath2)) {
-            QMessageBox::warning(this, tr("Error"),
+            QMessageBox::warning(nullptr, tr("Error"),
                  "The folder \"" + folderPath2 + "\" was not created.");
             return;
         }
     }
+    qDebug() << __FUNCTION__ << "folderPaths" << folderPath << folderPath2;
 
-    ingest();
+    if (ui->backgroundIngestChk->isChecked()) {
+        QDialog::accept();
+    }
+    else {
+        ingest();
+    }
 }
 
 void IngestDlg::on_autoIngestTab_currentChanged(int /*index*/)
@@ -1625,24 +1677,9 @@ void IngestDlg::fontSize()
     adjustSize();
 }
 
-void IngestDlg::resizeEvent(QResizeEvent *event)
-{
-//    fontSize();
-    QDialog::resizeEvent(event);
-}
-
-void IngestDlg::moveEvent(QMoveEvent *event)
-{
-//    fontSize();
-    qDebug() << __FUNCTION__ << event;
-    QDialog::moveEvent(event);
-}
-
 void IngestDlg::showEvent(QShowEvent *event)
 {
     QDialog::showEvent(event);
-//    fontSize();
-    qDebug() << __FUNCTION__ << isAuto;
     ui->autoIngestTab->setStyleSheet(
         "QWidget {border-color:" + G::tabWidgetBorderColor.name() + ";border-radius: 0px;}"
         "QPushButton, QComboBox, QLineEdit {border-color:" + G::borderColor.name() + ";}"

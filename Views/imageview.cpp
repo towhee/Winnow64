@@ -155,6 +155,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     if (!fPath.length()) return false;
 
     // could be a popup from a prior uncached image being loaded
+    qDebug() << __FUNCTION__ << "G::popUp->hide()";
     G::popUp->hide();
 
     /* important to keep currentImagePath. It is used to check if there isn't an image (when

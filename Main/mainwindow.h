@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QtWidgets>
+#include <QtConcurrent>
 //#include <QDesktopWidget>         // qt6.2
 #include "sstream"
 #include <iostream>
@@ -44,7 +45,9 @@
 #include "Utilities/icc.h"
 //#endif
 
+#include "File/ingest.h"
 #include "ingestdlg.h"
+#include "ingestdlgold.h"
 #include "saveasdlg.h"
 #include "aboutdlg.h"
 #include "selectionorpicksdlg.h"
@@ -232,6 +235,7 @@ public:
     bool autoIngestFolderPath;
     bool autoEjectUsb;
     bool integrityCheck;
+    bool isBackgroundIngest;
     bool ingestIncludeXmpSidecar;
     bool backupIngest;
     bool gotoIngestFolder;
@@ -352,6 +356,7 @@ public slots:
 //    void handleDrop(QDropEvent *event);
 //    void handleDrop(const QMimeData *mimeData);
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
+    void setProgress(int value);
     void setStatus(QString state);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void setThumbDockHeight();  // signal from thumbView
@@ -539,6 +544,7 @@ private slots:
     void externalAppError(QProcess::ProcessError);
 
     void addIngestHistoryFolder(QString fPath);
+    void ingestFinished();
 
     void setCentralView();
 
@@ -891,6 +897,7 @@ private:
     QWidget *messageView;
     Ui::message msg;
     QLineEdit *filterBar;
+    QProgressBar *progressBar;
     QLabel *statusLabel;
     BarBtn *reverseSortBtn;
     BarBtn *colorManageToggleBtn;
@@ -900,7 +907,7 @@ private:
     QLabel *rawJpgStatusLabel;
     QLabel *slideShowStatusLabel;
     QLabel *cacheStatusLabel;
-    ProgressBar *progressBar;
+    ProgressBar *cacheProgressBar;
     QLabel *progressLabel;
     QPixmap *progressPixmap;
     QLabel *centralLabel;
@@ -954,7 +961,9 @@ private:
     ImageCache *imageCacheThread;
     Thumb *thumb;
     InfoView *infoView;
+    Ingest *backgroundIngest = nullptr;
     IngestDlg *ingestDlg;
+    IngestDlgOld *ingestDlgOld;
     SaveAsDlg *saveAsDlg;
     LoadUsbDlg *loadUsbDlg;
     AboutDlg *aboutDlg;

@@ -803,8 +803,8 @@ void DataModel::addAllMetadata()
     }
     if (!timeToQuit) G::allMetadataLoaded = true;
     loadingModel = false;
-    G::popUp->setProgressVisible(false);
-    G::popUp->hide();
+//    G::popUp->setProgressVisible(false);
+//    G::popUp->hide();
 
     timeToQuit = false;
 
@@ -859,7 +859,7 @@ bool DataModel::readMetadataForItem(int row)
     return true;
 }
 
-bool DataModel:: addMetadataForItem(ImageMetadata m)
+bool DataModel::addMetadataForItem(ImageMetadata m)
 {
 /*
     This function is called after the metadata for each eligible image in the selected
@@ -872,7 +872,6 @@ bool DataModel:: addMetadataForItem(ImageMetadata m)
 */
 //    mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__ << m.fPath;
     int row = m.row;
     QString search = index(row, G::SearchTextColumn).data().toString();
     if (!metadata->ratings.contains(m.rating)) {
