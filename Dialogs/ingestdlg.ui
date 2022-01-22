@@ -162,7 +162,7 @@
         <rect>
          <x>310</x>
          <y>823</y>
-         <width>321</width>
+         <width>291</width>
          <height>25</height>
         </rect>
        </property>
@@ -761,7 +761,6 @@
         <property name="font">
          <font>
           <pointsize>14</pointsize>
-          <weight>50</weight>
           <bold>false</bold>
           <strikeout>false</strikeout>
          </font>
@@ -794,7 +793,6 @@
         <property name="font">
          <font>
           <pointsize>14</pointsize>
-          <weight>50</weight>
           <bold>false</bold>
           <strikeout>false</strikeout>
          </font>
@@ -818,7 +816,6 @@
         <property name="font">
          <font>
           <pointsize>14</pointsize>
-          <weight>50</weight>
           <bold>false</bold>
           <strikeout>false</strikeout>
          </font>
@@ -976,7 +973,6 @@
           <property name="font">
            <font>
             <pointsize>14</pointsize>
-            <weight>50</weight>
             <bold>false</bold>
             <strikeout>false</strikeout>
            </font>
@@ -1110,7 +1106,6 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
-            <weight>50</weight>
             <bold>false</bold>
             <strikeout>false</strikeout>
            </font>
@@ -1146,7 +1141,6 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
-            <weight>50</weight>
             <bold>false</bold>
             <strikeout>false</strikeout>
            </font>
@@ -1240,7 +1234,6 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
-            <weight>50</weight>
             <bold>false</bold>
             <strikeout>false</strikeout>
            </font>
@@ -1401,7 +1394,6 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
-            <weight>50</weight>
             <bold>false</bold>
             <strikeout>false</strikeout>
            </font>
@@ -1437,7 +1429,6 @@ margin-left =  5px</string>
           <property name="font">
            <font>
             <pointsize>14</pointsize>
-            <weight>50</weight>
             <bold>false</bold>
             <strikeout>false</strikeout>
            </font>
@@ -1509,7 +1500,6 @@ margin-left =  5px</string>
         <property name="font">
          <font>
           <pointsize>14</pointsize>
-          <weight>50</weight>
           <bold>false</bold>
           <strikeout>false</strikeout>
          </font>
@@ -1720,7 +1710,6 @@ margin-left =  5px</string>
         <property name="font">
          <font>
           <pointsize>14</pointsize>
-          <weight>50</weight>
           <bold>false</bold>
           <strikeout>false</strikeout>
          </font>
@@ -1808,10 +1797,10 @@ margin-left =  5px</string>
       <widget class="QProgressBar" name="progressBar">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>760</y>
-         <width>831</width>
-         <height>20</height>
+         <x>590</x>
+         <y>830</y>
+         <width>251</width>
+         <height>16</height>
         </rect>
        </property>
        <property name="font">
@@ -1828,6 +1817,9 @@ margin-left =  5px</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
+       </property>
+       <property name="textVisible">
+        <bool>false</bool>
        </property>
       </widget>
       <widget class="QCheckBox" name="includeXmpChk">
@@ -1962,6 +1954,19 @@ margin-left =  5px</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="backgroundIngestChk">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>755</y>
+         <width>421</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Background Ingest</string>
        </property>
       </widget>
      </widget>

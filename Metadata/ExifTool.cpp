@@ -37,9 +37,9 @@ int ExifTool::close()
     closeArgs += "-stay_open\n";
     closeArgs += "False\n";
     process.write(closeArgs);
-    if (process.waitForFinished(30000))
-        qDebug() << __FUNCTION__ << "ExifTool exit code =" << process.exitCode();
-    else qWarning("ExifTool::copyAll process.waitForFinished failed");
+    if (!process.waitForFinished(30000))
+        /*qDebug() << __FUNCTION__ << "ExifTool exit code =" << process.exitCode();
+    else*/ qWarning("ExifTool::copyAll process.waitForFinished failed");
 
     return process.exitCode();
 }
@@ -73,6 +73,26 @@ void ExifTool::writeTitle(QString dst, QString val)
 {
     QByteArray args;
 
+}
+
+void ExifTool::writeOrientation(QString src, QString orientation)
+{
+/*
+    1 = Horizontal (normal)
+    2 = Mirror horizontal
+    3 = Rotate 180
+    4 = Mirror vertical
+    5 = Mirror horizontal and rotate 270 CW
+    6 = Rotate 90 CW
+    7 = Mirror horizontal and rotate 90 CW
+    8 = Rotate 270 CW
+*/
+    QByteArray args;
+    args += "-orientation#=" + orientation.toUtf8() + "\n";
+    if (isOverWrite) args += "-overwrite_original\n";
+    args += src.toUtf8() + "\n";
+    args += "-execute\n";
+    process.write(args);
 }
 
 // not used as ExifTool can only read results into a file, going to try using my own xmp.setItem

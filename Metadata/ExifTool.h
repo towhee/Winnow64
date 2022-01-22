@@ -17,6 +17,7 @@ public:
     void writeXMP(QString dst, QString tag, QString val);
     void readXMP(QString dst, QString tag, QString &val);
     void addThumb(QString src, QString dst);
+    void writeOrientation(QString src, QString orientation);
     int copyAll(QString src, QString dst);
     int copyAll(const QStringList &src, QStringList &dst);
     void stayOpen();

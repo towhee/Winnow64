@@ -40,7 +40,6 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
-- Delete item from ingest description completer
 - Add "How this works" throughout app?
 - https://github.com/wang-bin/qdevicewatcher
 - Add fade and alias to stroke
@@ -53,6 +52,8 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ??
 DONE/FIXED
+- Rotate images updates source file EXIF
+- Replaced Qt XML with Rapidxml
 - Color management was crashing if QImage pixels != 32bits
 - Release 1.31 with QSettings fix (check for slideShowDelay as cacheSizeMB is deprecated)
 - Release 1.31

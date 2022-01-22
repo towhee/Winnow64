@@ -283,11 +283,11 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     G::isTimer = true;                  // Global timer
     G::isTest = false;                  // test performance timer
 
+    // testing control
     useImageCache = true;
     useImageView = true;
     useInfoView = true;
     useUpdateStatus = true;
-
     useFilterView = true;
 
     // Initialize some variables
@@ -296,12 +296,13 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // platform specific settings
     setupPlatform();
 
-    // structure to hold persistant settings between sessions
+    // persistant settings between sessions
     setting = new QSettings("Winnow", "winnow_100");
     G::settings = setting;
     if (setting->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
     loadSettings();             // except settings with dependencies ie for actions not created yet
+
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
     setting->setValue("appPath", qApp->applicationDirPath());
 
@@ -587,6 +588,12 @@ void MW::closeEvent(QCloseEvent *event)
     delete ingestHistoryFolders;
     delete embel;
     event->accept();
+}
+
+void MW::ingestFinished()
+{
+    delete backgroundIngest;
+    backgroundIngest = nullptr;
 }
 
 void MW::appStateChange(Qt::ApplicationState state)
@@ -1662,7 +1669,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     }
 
     // update cursor position on progressBar
-    progressBar->updateCursor(currentRow, dm->sf->rowCount());
+    cacheProgressBar->updateCursor(currentRow, dm->sf->rowCount());
 
 //    if (!G::isInitializing) centralLayout->setCurrentIndex(prevCentralView);
 
@@ -1743,7 +1750,7 @@ void MW::clearAll()
     isDragDrop = false;
 
     updateStatus(false, "", __FUNCTION__);
-    progressBar->clearProgress();
+    cacheProgressBar->clearProgress();
     progressLabel->setVisible(false);
     updateClassification();
 }
@@ -2101,7 +2108,7 @@ void MW::updateImageCacheStatus(QString instruction,
 
     // just repaint the progress bar gray and return.
     if (instruction == "Clear") {
-        progressBar->clearProgress();
+        cacheProgressBar->clearProgress();
         return;
     }
 
@@ -2109,21 +2116,21 @@ void MW::updateImageCacheStatus(QString instruction,
 
     if (instruction == "Update all rows") {
         // clear progress
-        progressBar->clearProgress();
+        cacheProgressBar->clearProgress();
         // target range
         int tFirst = cache.targetFirst;
         int tLast = cache.targetLast + 1;
-        progressBar->updateProgress(tFirst, tLast, rows,
-                                    progressBar->targetColorGradient);
+        cacheProgressBar->updateProgress(tFirst, tLast, rows,
+                                    cacheProgressBar->targetColorGradient);
         // cached
         for (int i = 0; i < rows; ++i) {
             if (dm->sf->index(i, G::PathColumn).data(G::CachedRole).toBool())
-                progressBar->updateProgress(i, i + 1, rows,
-                                            progressBar->imageCacheColorGradient);
+                cacheProgressBar->updateProgress(i, i + 1, rows,
+                                            cacheProgressBar->imageCacheColorGradient);
         }
 
         // cursor
-        progressBar->updateCursor(currentRow, rows);
+        cacheProgressBar->updateCursor(currentRow, rows);
         return;
     }
 
@@ -2153,7 +2160,7 @@ void MW::loadImageCacheForNewFolder()
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     // now that metadata is loaded populate the data model
     if(isShowCacheProgressBar) {
-        progressBar->clearProgress();
+        cacheProgressBar->clearProgress();
 //        qApp->processEvents();
     }
 //    setCentralMessage("updateIconBestFit.");
@@ -4333,7 +4340,7 @@ void MW::createDataModel()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     metadata = new Metadata;
-    progressBar = new ProgressBar(this);
+    cacheProgressBar = new ProgressBar(this);
 
     // loadSettings not run yet
     if (isSettings && setting->contains("combineRawJpg")) combineRawJpg = setting->value("combineRawJpg").toBool();
@@ -5492,6 +5499,20 @@ void MW::createStatusBar()
     setImageCacheSize(cacheSizeMethod);
     statusBar()->addPermanentWidget(cacheMethodBtn);
     cacheMethodBtn->show();
+
+    // add process progress bar to left side of statusBar
+    progressBar = new QProgressBar;
+    progressBar->setStyleSheet(
+                "QProgressBar {"
+                    "border: 1px solid gray;"
+                "}"
+                );
+    progressBar->setFixedSize(50, 8);
+    progressBar->setTextVisible(false);
+//    progressBar->setValue(75);
+    progressBar->setVisible(false);
+    qDebug() << __FUNCTION__ << progressBar->minimum() << progressBar->minimumSize();
+    statusBar()->addWidget(progressBar);
 
     // add status icons to left side of statusBar
     statusBar()->addWidget(colorManageToggleBtn);
@@ -7349,6 +7370,7 @@ QString MW::diagnostics()
     rpt << "\n" << "autoIngestFolderPath = " << G::s(autoIngestFolderPath);
     rpt << "\n" << "autoEjectUsb = " << G::s(autoEjectUsb);
     rpt << "\n" << "integrityCheck = " << G::s(integrityCheck);
+    rpt << "\n" << "isBackgroundIngest = " << G::s(isBackgroundIngest);
     rpt << "\n" << "ingestIncludeXmpSidecar = " << G::s(ingestIncludeXmpSidecar);
     rpt << "\n" << "backupIngest = " << G::s(backupIngest);
     rpt << "\n" << "gotoIngestFolder = " << G::s(gotoIngestFolder);
@@ -7775,7 +7797,7 @@ void MW::setBackgroundShade(int shade)
     gridView->verticalScrollBar()->setStyleSheet(css);
     messageView->setStyleSheet(css);
     welcome->setStyleSheet(css);
-    progressBar->setBackgroundColor(widgetCSS.widgetBackgroundColor);
+    cacheProgressBar->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     folderTitleBar->setStyle();
     favTitleBar->setStyle();
     filterTitleBar->setStyle();
@@ -8266,23 +8288,19 @@ void MW::rotateRight()
 void MW::setRotation(int degrees)
 {
 /*
-    Rotate the loupe view image.
-
     Rotate all selected thumbnails by the specified degrees. 90 = rotate right and
     270 = rotate left.
 
-    Rotate all selected cached full size imagesby the specified degrees.
+    Rotate all selected cached full size images by the specified degrees.
 
     When images are added to the image cache (ImageCache) they are rotated by the
     metadata orientation + the edited rotation.  Newly cached images are always
     rotation up-to-date.
 
     When there is a rotation action (rotateLeft or rotateRight) the current
-    rotation amount (in degrees) is updated in the datamodel and Metadata. Metadata
-    is updated, duplicating the datamodel because the Metadata class is already
-    being accessed by ImageCache but the datamodel is not.
+    rotation amount (in degrees) is updated in the datamodel.
 
-    Also, the orientation metadata must be updated for any images ingested.
+    The rotation is updated in the image file EXIF using exifTool in separate threads.
 */
     if (G::isLogger) G::log(__FUNCTION__);
     // rotate current loupe view image
@@ -8293,18 +8311,25 @@ void MW::setRotation(int degrees)
     for (int i = 0; i < selection.count(); ++i) {
         // update rotation amount in the data model
         int row = selection.at(i).row();
-        QModelIndex rotIdx = dm->sf->index(row, G::RotationColumn);
-        int prevRotation = rotIdx.data(Qt::EditRole).toInt();
-        int newRotation = prevRotation + degrees;
-        if (newRotation > 360) newRotation = newRotation - 360;
-        dm->sf->setData(rotIdx, newRotation);
+        QModelIndex orientationIdx = dm->sf->index(row, G::OrientationColumn);
+        int orientation = orientationIdx.data(Qt::EditRole).toInt();
+        int prevRotation = 0;
+        switch (orientation) {
+        case 6: prevRotation = 90;  break;
+        case 3: prevRotation = 180; break;
+        case 8: prevRotation = 270; break;
+        }
 
-        // update rotation amount in the Metadata
-        // metadata is easier to access than the datamodel in ImageCache so
-        // duplicate saving rotation in Metadata
-//        QModelIndex idx = dm->sf->index(row, G::PathColumn);
-//        QString fPath = idx.data(G::PathRole).toString();
-//        metadata->setRotation(fPath, newRotation);
+        int newRotation = prevRotation + degrees;
+        if (newRotation >= 360) newRotation = newRotation - 360;
+        int newOrientation = 0;
+        switch (newRotation) {
+        case 90:  newOrientation = 6; break;
+        case 180: newOrientation = 3; break;
+        case 270: newOrientation = 8; break;
+        }
+
+        dm->sf->setData(orientationIdx, newOrientation);
 
         // rotate thumbnail(s)
         QTransform trans;
@@ -8320,17 +8345,24 @@ void MW::setRotation(int degrees)
         QApplication::processEvents();
 
         // rotate selected cached full size images
-        /*
-        // before changed imCache to concurrent icd->imCache
-        if (imageCacheThread->imCache.contains(fPath)) {
-            QImage *image = &imageCacheThread->imCache[fPath];
-            *image = image->transformed(trans, Qt::SmoothTransformation);
-        }
-        */
-        //        if (imageCacheThread->imCache.contains(fPath)) {
         QImage image;
         if (icd->imCache.find(fPath, image)) {
             image = image.transformed(trans, Qt::SmoothTransformation);
+            icd->imCache.insert(fPath, image);
+        }
+
+        // update exif in image
+        qDebug() << __FUNCTION__ << fPath << newRotation;
+        QString orient;
+        switch (newRotation) {
+        case 0:   orient = "1"; break;
+        case 90:  orient = "6"; break;
+        case 180: orient = "3"; break;
+        case 270: orient = "8"; break;
+        }
+        if (orient.length() && G::modifySourceFiles) {
+            // note that Metadata::writeOrientation must be static!
+            QtConcurrent::run(&Metadata::writeOrientation, fPath, orient);
         }
     }
 }
@@ -8453,6 +8485,7 @@ void MW::writeSettings()
     setting->setValue("autoAdvance", autoAdvance);
     setting->setValue("turnOffEmbellish", turnOffEmbellish);
     setting->setValue("deleteWarning", deleteWarning);
+    setting->setValue("modifySourceFiles", G::modifySourceFiles);
     setting->setValue("useSidecar", G::useSidecar);
     setting->setValue("embedTifThumb", G::embedTifThumb);
     setting->setValue("isLogger", G::isLogger);
@@ -8475,10 +8508,11 @@ void MW::writeSettings()
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("combineRawJpg", combineRawJpg);
 
-    // ingest
+    /* ingest (moved to MW::ingest)
     setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
     setting->setValue("autoEjectUSB", autoEjectUsb);
     setting->setValue("integrityCheck", integrityCheck);
+    setting->setValue("isBackgroundIngest", isBackgroundIngest);
     setting->setValue("ingestIncludeXmpSidecar", ingestIncludeXmpSidecar);
     setting->setValue("backupIngest", backupIngest);
     setting->setValue("gotoIngestFolder", gotoIngestFolder);
@@ -8491,6 +8525,7 @@ void MW::writeSettings()
     setting->setValue("filenameTemplateSelected", filenameTemplateSelected);
     setting->setValue("ingestCount", G::ingestCount);
     setting->setValue("ingestLastDate", G::ingestLastDate);
+    */
 
     // thumbs
     setting->setValue("thumbWidth", thumbView->iconWidth);
@@ -8768,6 +8803,7 @@ bool MW::loadSettings()
         checkIfUpdate = true;
         lastDir = "";
         deleteWarning = true;
+        G::modifySourceFiles = false;
         G::useSidecar = false;
         G::embedTifThumb = false;
 
@@ -8775,6 +8811,7 @@ bool MW::loadSettings()
         autoIngestFolderPath = false;
         autoEjectUsb = false;
         integrityCheck = false;
+        isBackgroundIngest = false;
         ingestIncludeXmpSidecar = true;
         gotoIngestFolder = false;
         backupIngest = false;
@@ -8825,6 +8862,10 @@ bool MW::loadSettings()
         deleteWarning = setting->value("deleteWarning").toBool();
     else
         deleteWarning = true;
+    if (setting->contains("modifySourceFiles"))
+        G::modifySourceFiles = setting->value("modifySourceFiles").toBool();
+    else
+        G::modifySourceFiles = false;
     if (setting->contains("useSidecar"))
         G::useSidecar = setting->value("useSidecar").toBool();
     else
@@ -8867,6 +8908,7 @@ bool MW::loadSettings()
     if (setting->contains("autoIngestFolderPath")) autoIngestFolderPath = setting->value("autoIngestFolderPath").toBool();
     if (setting->contains("autoEjectUSB")) autoEjectUsb = setting->value("autoEjectUSB").toBool();
     if (setting->contains("integrityCheck")) integrityCheck = setting->value("integrityCheck").toBool();
+    if (setting->contains("isBackgroundIngest")) isBackgroundIngest = setting->value("isBackgroundIngest").toBool();
     if (setting->contains("ingestIncludeXmpSidecar")) ingestIncludeXmpSidecar = setting->value("ingestIncludeXmpSidecar").toBool();
     if (setting->contains("backupIngest")) backupIngest = setting->value("backupIngest").toBool();
     if (setting->contains("gotoIngestFolder")) gotoIngestFolder = setting->value("gotoIngestFolder").toBool();
@@ -10027,6 +10069,18 @@ void MW::setCacheStatusVisibility()
         progressLabel->setVisible(isShowCacheProgressBar);
 }
 
+void MW::setProgress(int value)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (value < 0 || value > 100) {
+        progressBar->setVisible(false);
+        return;
+    }
+    progressBar->setValue(value);
+    progressBar->setVisible(true);
+    progressBar->repaint();
+}
+
 // not used rgh ??
 void MW::setStatus(QString state)
 {
@@ -10273,11 +10327,11 @@ void MW::updatePickLog(QString fPath, QString pickStatus)
     QString sKey = fPath;
     sKey.replace("/", "🔸");
     if (pickStatus == "true") {
-        qDebug() << __FUNCTION__ << "adding" << sKey;
+//        qDebug() << __FUNCTION__ << "adding" << sKey;
         setting->setValue(sKey, pickStatus);
     }
     else {
-        qDebug() << __FUNCTION__ << "removing" << sKey;
+//        qDebug() << __FUNCTION__ << "removing" << sKey;
         setting->remove(sKey);
     }
     setting->endGroup();
@@ -10403,15 +10457,71 @@ void MW::exportEmbel()
 void MW::ingest()
 {
 /*
+    Copies images from a source location (usually a camera media card) to one or more
+    destinations.  Ingestion comprises of three files:
 
+    1.  MW::ingest()
+
+        This function keeps track of the presSourceFolder and baseFolderDescription during
+        subsequent calls.  It uses this to effect the behavior of the IngestDlg, which is
+        called.  When IngestDlg closes persistent ingest data is saving in settings.  If the
+        isBackgroundIngest flag = true then a backgroundIngest instantiation of Ingest is
+        created and run.
+
+    2.  IngestDlg
+
+        When this dialog is invoked the files that have been picked are copied to a primary
+        destination folder, and optionally, to a backup location. This process is known as
+        ingestion: selecting and copying images from a camera card to a computer. If backround
+        ingesting is selected then the dialog closes and the user can continue working while
+        the ingest happens in the background in another thread, using all the IngestDlg
+        settings.
+
+        The destination folder can be selected/created manually or automatically.  If
+        automatic, a root folder is selected/created, a path to the destination folder
+        is defined using tokens, and the destination folder description defined.  The
+        picked images can be renamed during this process.
+
+        Files are copied to a destination based on building a file path consisting of:
+
+              Root Folder                   (rootFolderPath)
+            + Path to base folder           (fromRootToBaseFolder) source pathTemplateString
+            + Base Folder Description       (baseFolderDescription)
+            + File Name                     (fileBaseName)     source filenameTemplateString
+            + File Suffix                   (fileSuffix)
+
+            ie E:/2018/201802/2018-02-08 Rory birthday/2018-02-08_0001.NEF
+
+            rootFolderPath:         ie "E:/" where all the images are located
+            fromRootToBaseFolder:   ie "2018/201802/2018-02-08" from the path template
+            baseFolderDescription:  ie " Rory birthday" a description appended to the
+                                        pathToBaseFolder
+            fileBaseName:           ie "2018-02-08_0001" from the filename template
+            fileSuffix:             ie ".NEF"
+
+            folderPath:             ie "E:/2018/201802/2018-02-08 Rory birthday/"
+                = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
+                = the copy to destination
+
+            The strings fromRootToBaseFolder and the fileBaseName can be tokenized in
+            TokenDlg, allowing the user to automate the construction of the entire destination
+            file path.
+
+    3. Ingest
+
+        Ingest duplicates the actual ingest process that runs in the IngestDlg, but runs in a
+        separate thread after the IngestDlg closes.  Progress is updated in progressBar at the
+        extreme left in the status bar.
 */
+
+    /* old ingest
     if (G::isLogger) G::log(__FUNCTION__);
     static QString prevSourceFolder = "";
     static QString baseFolderDescription = "";
     if (prevSourceFolder != currentViewDirPath) baseFolderDescription = "";
 
     if (thumbView->isPick()) {
-        ingestDlg = new IngestDlg(this,
+        ingestDlgOld = new IngestDlgOld(this,
                                   combineRawJpg,
                                   autoEjectUsb,
                                   integrityCheck,
@@ -10434,16 +10544,15 @@ void MW::ingest()
                                   autoIngestFolderPath,
                                   css);
 
-        connect(ingestDlg, SIGNAL(updateIngestHistory(QString)),
-                this, SLOT(addIngestHistoryFolder(QString)));
+        connect(ingestDlgOld, &IngestDlgOld::updateIngestHistory, this, &MW::addIngestHistoryFolder);
+        connect(ingestDlgOld, &IngestDlgOld::updateProgress, this, &MW::setProgress);
+        // not used rgh
+        connect(ingestDlgOld, &IngestDlgOld::revealIngestLocation, this, &MW::revealInFileBrowser);
 
-        connect(ingestDlg, SIGNAL(revealIngestLocation(QString)),
-                this, SLOT(revealInFileBrowser(QString)));
+        bool ingested = ingestDlgOld->exec();
+        delete ingestDlgOld;
 
-        bool ingested = ingestDlg->exec();
-        delete ingestDlg;
-
-        /* save ingest history folders */
+        // save ingest history folders
         setting->beginGroup("IngestHistoryFolders");
         setting->remove("");
         for (int i = 0; i < ingestHistoryFolders->count(); i++) {
@@ -10452,7 +10561,7 @@ void MW::ingest()
         }
         setting->endGroup();
 
-        /* save ingest description completer list */
+        // save ingest description completer list
         setting->beginGroup("IngestDescriptionCompleter");
         for (const auto& i : ingestDescriptionCompleter) {
             setting->setValue(i, "");
@@ -10476,6 +10585,132 @@ void MW::ingest()
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
+    //*/
+
+//    /* new ingest
+    if (G::isLogger) G::log(__FUNCTION__);
+
+    // check if background ingest in progress
+    bool backgroundIngestInProgress = backgroundIngest != nullptr;
+    if (isBackgroundIngest && backgroundIngestInProgress) {
+        QString msg =
+                "There is a background ingest in progress.  When it\n"
+                "has completed the progress bar on the left side of\n"
+                "the status bar will disapper."
+                ;
+        G::popUp->showPopup(msg, 1500);
+        return;
+    }
+
+    static QString prevSourceFolder = "";
+    static QString baseFolderDescription = "";
+    if (prevSourceFolder != currentViewDirPath) baseFolderDescription = "";
+
+    QString folderPath;        // req'd by backgroundIngest
+    QString folderPath2;       // req'd by backgroundIngest
+    bool combinedIncludeJpg;   // req'd by backgroundIngest
+    int seqStart = 1;          // req'd by backgroundIngest
+
+    if (thumbView->isPick()) {
+        ingestDlg = new IngestDlg(this,
+                                  combineRawJpg,
+                                  combinedIncludeJpg,
+                                  autoEjectUsb,
+                                  integrityCheck,
+                                  isBackgroundIngest,
+                                  ingestIncludeXmpSidecar,
+                                  backupIngest,
+                                  gotoIngestFolder,
+                                  seqStart,
+                                  metadata,
+                                  dm,
+                                  ingestRootFolder,
+                                  ingestRootFolder2,
+                                  manualFolderPath,
+                                  manualFolderPath2,
+                                  folderPath,
+                                  folderPath2,
+                                  baseFolderDescription,
+                                  pathTemplates,
+                                  filenameTemplates,
+                                  pathTemplateSelected,
+                                  pathTemplateSelected2,
+                                  filenameTemplateSelected,
+                                  ingestDescriptionCompleter,
+                                  autoIngestFolderPath,
+                                  css);
+
+        bool okToIngest = ingestDlg->exec();
+        delete ingestDlg;
+
+        // update ingest history folders
+        // get rid of "/" at end of path for history (in file menu)
+        QString historyPath = folderPath.left(folderPath.length() - 1);
+        addIngestHistoryFolder(historyPath);
+
+        // save ingest history folders
+        setting->beginGroup("IngestHistoryFolders");
+        setting->remove("");
+        for (int i = 0; i < ingestHistoryFolders->count(); i++) {
+            setting->setValue("ingestHistoryFolder" + QString::number(i+1),
+                              ingestHistoryFolders->at(i));
+        }
+        setting->endGroup();
+
+        // save ingest description completer list
+        setting->beginGroup("IngestDescriptionCompleter");
+        for (const auto& i : ingestDescriptionCompleter) {
+            setting->setValue(i, "");
+        }
+        setting->endGroup();
+
+        // save ingest settings
+        setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
+        setting->setValue("autoEjectUSB", autoEjectUsb);
+        setting->setValue("integrityCheck", integrityCheck);
+        setting->setValue("isBackgroundIngest", isBackgroundIngest);
+        setting->setValue("ingestIncludeXmpSidecar", ingestIncludeXmpSidecar);
+        setting->setValue("backupIngest", backupIngest);
+        setting->setValue("gotoIngestFolder", gotoIngestFolder);
+        setting->setValue("ingestRootFolder", ingestRootFolder);
+        setting->setValue("ingestRootFolder2", ingestRootFolder2);
+        setting->setValue("pathTemplateSelected", pathTemplateSelected);
+        setting->setValue("pathTemplateSelected2", pathTemplateSelected2);
+        setting->setValue("manualFolderPath", manualFolderPath);
+        setting->setValue("manualFolderPath2", manualFolderPath2);
+        setting->setValue("filenameTemplateSelected", filenameTemplateSelected);
+        setting->setValue("ingestCount", G::ingestCount);
+        setting->setValue("ingestLastDate", G::ingestLastDate);
+
+        if (!okToIngest || !isBackgroundIngest) return;
+
+        // start background ingest
+        backgroundIngest = new Ingest(this,
+                                      combineRawJpg,
+                                      combinedIncludeJpg,
+                                      integrityCheck,
+                                      ingestIncludeXmpSidecar,
+                                      backupIngest,
+                                      seqStart,
+                                      metadata,
+                                      dm,
+                                      folderPath,
+                                      folderPath2,
+                                      filenameTemplates,
+                                      filenameTemplateSelected);
+
+        connect(backgroundIngest, &Ingest::updateProgress, this, &MW::setProgress);
+        connect(backgroundIngest, &Ingest::ingestFinished, this, &MW::ingestFinished);
+        backgroundIngest->commence();
+
+        prevSourceFolder = currentViewDirPath;
+
+        // set the ingested flags and clear the pick flags
+        setIngested();
+    }
+    else QMessageBox::information(this,
+         "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
+    //*/
 }
 
 void MW::ejectUsb(QString path)
@@ -11297,7 +11532,7 @@ void MW::slideShow()
         slideShowAction->setText(tr("Slide Show"));
         slideShowTimer->stop();
         delete slideShowTimer;
-        progressBar->setVisible(true);
+        cacheProgressBar->setVisible(true);
         // change to ImageCache
         if (useImageCache) imageCacheThread->setCurrentPosition(dm->currentFilePath);
         // enable main window QAction shortcuts
@@ -12184,23 +12419,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-
-    qWarning() << __FUNCTION__;
-    return;
-    QString s = "";
-    if (s.isEmpty()) qDebug() << __FUNCTION__ << s << "true";
-//    QByteArray ba = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">"
-//                    "\n\t<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">"
-//                    "\n\t\t<rdf:Description "
-//                    "\n\t\t\trdf:about=\"\">"
-//                    "\n\t\t</rdf:Description>\n\t</rdf:RDF>\n</x:xmpmeta>";
-//    QByteArray ba1 = ba;
-    QFile f("D:/Pictures/Business Card/2006-05-06_0005-Edit.xmp");
-    f.open(QIODevice::ReadWrite);
-    Xmp xmp(f);
-//    xmp.writeSidecar(f);
-//    f.write(Xmp::skeleton());
-    xmp.writeSidecar(f);
-    f.close();
+    QString msg =
+            "There is a background ingest in progress.  When it<br>"
+            "has completed the progress bar on the left side of<br>"
+            "the status bar will disappear."
+            ;
+    G::popUp->showPopup(msg, 5000, true, 0.75, Qt::AlignLeft);
 }
 // End MW

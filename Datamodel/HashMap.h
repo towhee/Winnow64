@@ -69,7 +69,7 @@ class HashMap
         bool find(const K &key, V &value) const
         /*
         Function to find an entry in the hash map matching the key. If key is found, the
-        corresponding value is referenced the parameter "value" and function returns true.
+        corresponding value is referenced by the parameter "value" and function returns true.
         If key is not found, function returns false.
         */
         {

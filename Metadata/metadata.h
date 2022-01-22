@@ -105,6 +105,8 @@ public:
 
     void clearMetadata();
     bool writeXMP(const QString &imageFileName, QString src = "Undefined");
+    static void writeOrientation(QString fPath, QString orientationNumber);
+
 
     QFile file;
     bool okToReadXmp;

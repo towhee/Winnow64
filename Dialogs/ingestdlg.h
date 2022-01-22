@@ -12,6 +12,28 @@
 #include "Dialogs/ingesterrors.h"
 #include "Dialogs/editlistdlg.h"
 
+/*
+void getPicks()
+QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
+void IngestDlg::renameIfExists(QString &destination, QString &baseName, QString dotSuffix)
+SIGNAL: void updateProgress(int progress)
+struct d {
+    QString folderPath;
+    QString folderPath2;
+    bool isBackup;
+    bool integrityCheck
+    bool ingestIncludeXmpSidecar
+    bool combineRawJpg
+    QString tokenString;
+    QList<QFileInfo> pickList;      // create
+    DataModel *dm
+    Metadata *metadata
+    QStringList failedToCopy;       // ingesting only
+    QStringList integrityFailure;   // ingesting only
+    bool failedToCopy               // ingesting only
+};
+*/
+
 namespace Ui {
 class IngestDlg;
 }
@@ -23,17 +45,22 @@ class IngestDlg : public QDialog
 public:
     explicit IngestDlg(QWidget *parent,
                        bool &combineRawJpg,
+                       bool &combinedIncludeJpg,
                        bool &autoEjectUsb,
                        bool &integrityCheck,
+                       bool &isBackgroundIngest,
                        bool &ingestIncludeXmpSidecar,
                        bool &isBackup,
                        bool &gotoIngestFolder,
+                       int &seqStart,
                        Metadata *metadata,
                        DataModel *dm,
                        QString &ingestRootFolder,
                        QString &ingestRootFolder2,
                        QString &manualFolderPath,
                        QString &manualFolderPath2,
+                       QString &folderPath,
+                       QString &folderPath2,
                        QString &baseFolderDescription,
                        QMap<QString, QString>&pathTemplates,
                        QMap<QString, QString>&filenameTemplates,
@@ -46,57 +73,13 @@ public:
     ~IngestDlg() override;
     void test();
 
-private slots:
-    void updateFolderPaths();
-
-    void on_autoRadio_toggled(bool checked);
-
-    void on_autoIngestTab_currentChanged(int);
-    void on_selectFolderBtn_clicked();
-    void on_selectFolderBtn_2_clicked();
-    void on_selectRootFolderBtn_2_clicked();
-    void on_selectRootFolderBtn_clicked();
-    void on_pathTemplatesCB_currentIndexChanged(const QString &arg1);
-    void on_pathTemplatesCB_2_currentIndexChanged(const QString &arg1);
-    void on_pathTemplatesBtn_clicked();
-    void on_pathTemplatesBtn_2_clicked();
-    void on_descriptionLineEdit_textChanged(const QString &arg1);
-    void on_descriptionLineEdit_2_textChanged(const QString);
-    void on_editDescriptionListBtn_clicked();
-    void on_editDescriptionListBtn_2_clicked();
-
-    void on_filenameTemplatesBtn_clicked();
-    void on_filenameTemplatesCB_currentIndexChanged(const QString &arg1);
-    void on_spinBoxStartNumber_valueChanged(const QString);
-
-    void on_combinedIncludeJpgChk_clicked();
-    void on_ejectChk_stateChanged(int);
-    void on_integrityChk_stateChanged(int);
-    void on_includeXmpChk_stateChanged(int);
-    void on_backupChk_stateChanged(int arg1);
-    void on_isBackupChkBox_stateChanged(int arg1);
-
-    void on_cancelBtn_clicked();
-    void on_okBtn_clicked();
-    void on_helpBtn_clicked();
-
-    void on_openIngestFolderChk_stateChanged(int arg1);
-
-protected:
-    void resizeEvent(QResizeEvent *event) override;
-    void moveEvent(QMoveEvent *event) override;
-    void showEvent(QShowEvent *event) override;
-
-signals:
-    void updateIngestHistory(QString folderPath);
-    void revealIngestLocation(QString fPath);
-
-private:
+//private:
     Ui::IngestDlg *ui;
     void initTokenList();
     void initExampleMap();
     bool isToken(QString tokenString, int pos);
     QString parseTokenString(QFileInfo info, QString tokenString);
+//    static void backgroundIngest(IngestDlg *d);
     void ingest();
     void buildFileNameSequence();
     void updateExistingSequence();
@@ -118,11 +101,14 @@ private:
     DataModel *dm;
     bool &isAuto;
     bool &combineRawJpg;
+    bool &combinedIncludeJpg;
     bool &autoEjectUsb;
     bool &integrityCheck;
+    bool &isBackgroundIngest;
     bool &ingestIncludeXmpSidecar;
     bool &isBackup;
     bool &gotoIngestFolder;
+    int &seqStart;
     QFileInfoList pickList;
 
     QStringList tokens;
@@ -140,8 +126,8 @@ private:
     QString drive2Path;     // path name to first /
     QString drive;          // pretty drive name
     QString drive2;         // pretty drive name
-    QString folderPath; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
-    QString folderPath2; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
+    QString &folderPath; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
+    QString &folderPath2; // rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/"
     QString fromRootToBaseFolder;
     QString fromRootToBaseFolder2;
     QString &baseFolderDescription;             // auto reuse if same source folder as previous
@@ -183,7 +169,6 @@ private:
     QCheckBox *isBackupChkBox;
 
     int seqWidth;
-    int seqStart;
     int seqNum;
 
     QDateTime createdDate;
@@ -193,6 +178,52 @@ private:
 
     QString currentToken;
     int tokenStart, tokenEnd;
+
+private slots:
+    void updateFolderPaths();
+
+    void on_autoRadio_toggled(bool checked);
+
+    void on_autoIngestTab_currentChanged(int);
+    void on_selectFolderBtn_clicked();
+    void on_selectFolderBtn_2_clicked();
+    void on_selectRootFolderBtn_2_clicked();
+    void on_selectRootFolderBtn_clicked();
+    void on_pathTemplatesCB_currentIndexChanged(const QString &arg1);
+    void on_pathTemplatesCB_2_currentIndexChanged(const QString &arg1);
+    void on_pathTemplatesBtn_clicked();
+    void on_pathTemplatesBtn_2_clicked();
+    void on_descriptionLineEdit_textChanged(const QString &arg1);
+    void on_descriptionLineEdit_2_textChanged(const QString);
+    void on_editDescriptionListBtn_clicked();
+    void on_editDescriptionListBtn_2_clicked();
+
+    void on_filenameTemplatesBtn_clicked();
+    void on_filenameTemplatesCB_currentIndexChanged(const QString &arg1);
+    void on_spinBoxStartNumber_valueChanged(const QString);
+
+    void on_combinedIncludeJpgChk_clicked();
+    void on_ejectChk_stateChanged(int);
+    void on_integrityChk_stateChanged(int);
+    void on_backgroundIngestChk_stateChanged(int);
+    void on_includeXmpChk_stateChanged(int);
+    void on_backupChk_stateChanged(int arg1);
+    void on_isBackupChkBox_stateChanged(int arg1);
+
+    void on_cancelBtn_clicked();
+    void on_okBtn_clicked();
+    void on_helpBtn_clicked();
+
+    void on_openIngestFolderChk_stateChanged(int arg1);
+
+protected:
+    void showEvent(QShowEvent *event) override;
+
+signals:
+    void updateIngestHistory(QString folderPath);
+    void revealIngestLocation(QString fPath);
+    void updateProgress(int value);
+
 };
 
 #endif // INGESTDLG_H

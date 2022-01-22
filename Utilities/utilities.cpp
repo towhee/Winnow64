@@ -47,7 +47,7 @@ QString Utilities::getDrive(QString path)
         if (path.at(0) == "/") drivePath = "/";
     }
 #endif
-    qDebug() << __FUNCTION__ << path << drivePath;
+//    qDebug() << __FUNCTION__ << path << drivePath;
     return drivePath;
 }
 

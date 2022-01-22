@@ -32,7 +32,9 @@ QT += network
 QT += xmlpatterns  # qt6.2
 #QT += opengl
 
-HEADERS += Cache/mdcache.h
+HEADERS += Cache/mdcache.h \
+    Dialogs/ingestdlgold.h \
+    File/ingest.h
 HEADERS +=
 HEADERS += Cache/cachedata.h
 HEADERS += Cache/tshash.h
@@ -146,7 +148,9 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/cachedata.cpp
+SOURCES += Cache/cachedata.cpp \
+    Dialogs/ingestdlgold.cpp \
+    File/ingest.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/mdcache.cpp

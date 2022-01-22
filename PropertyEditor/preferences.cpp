@@ -215,6 +215,10 @@ itemChange, which is subclassed here.
         mw->deleteWarning = v.toBool();
     }
 
+    if (source == "modifySourceFiles") {
+        G::modifySourceFiles = v.toBool();
+    }
+
     if (source == "useSidecar") {
         G::useSidecar = v.toBool();
     }
@@ -326,6 +330,42 @@ void Preferences::addItems()
     i.delegateType = DT_None;
     addItem(i);
 
+    // Allow source files to be changed
+    i.name = "modifySourceFiles";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Allow modify the source image file";
+    i.tooltip = "If you edit metadata (rating, color class, title, creator,\n"
+                "copyright, email, url and orientation) the changes will be\n"
+                "written to the source image file.  This data can be read by\n"
+                "Winnow and other programs like Lightroom."
+                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::modifySourceFiles;
+    i.key = "editSourceFiles";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Write metadata edits to sidecar XMP file
+    i.name = "useSidecar";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Use xmp sidecars";
+    i.tooltip = "If you edit metadata (rating, color class, title, creator,\n"
+                "copyright, email, url and orientation) the change will be\n"
+                "written to a XMP sidecar file.  This data can be read by\n"
+                "Winnow and other programs like Lightroom.\n\n"
+                "Note this will impact performance, as it will take longer to\n"
+                "initially read all the metadata when a folder is loaded.\n"
+                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::useSidecar;
+    i.key = "useSidecar";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
     {
     // Remember last folder
     i.name = "rememberLastDir";
@@ -409,34 +449,17 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
-    // Write metadata edits to sidecar XMP file
-    i.name = "useSidecar";
-    i.parentName = "GeneralHeader";
-    i.captionText = "Read/Write metadata edits to xmp sidecar";
-    i.tooltip = "If you edit metadata (rating, color class, title, creator,\n"
-                "copyright, email, url and orientation) the change will be\n"
-                "written to a XMP sidecar file.  This data can be read by\n"
-                "Winnow and other programs like Lightroom.\n\n"
-                "Note this will impact performance, as it will take longer to\n"
-                "initially read all the metadata when a folder is loaded.\n"
-                ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::useSidecar;
-    i.key = "useSidecar";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
     // Add missing thumbnails to TIFF files
     i.name = "addMissingThumbnailToTif";
     i.parentName = "GeneralHeader";
     i.captionText = "Add missing thumbnails to TIFF files";
-    i.tooltip = "WARNING: this will change your TIFF file.  Please make \n"
-                "sure you have backups until you are sure this does not \n"
-                "corrupt your images.\n\n"
+    i.tooltip = "WARNING: this will change your TIFF file.  Please make sure\n"
+                "you have backups until you are sure this does not corrupt\n"
+                "your images.\n\n"
                 "Turning this on will dramatically improve future thumbnail\n"
-                "load times.";
+                "load times.\n\n"
+                "This setting is independent of the modify source image setting."
+                ;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::embedTifThumb;

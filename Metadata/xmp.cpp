@@ -1,13 +1,11 @@
 #include "xmp.h"
 
 /*
-Xmp reads and writes xmp tags to the QByteArray buffer xmpBa. The buffer is read from the
-source file. If there are no offsets then a sidecar file will be used. If there is no xmp data
-in the source file or the file format is not documented then the xmp tags are written to a
-sidecar file.
+Xmp reads xmp tags from from the source file, which could be an image file or an xmp sidecar
+file. If there are no offsets then a sidecar file will be used.
 
 Read/Write to a sidecar:   Xmp xmp(file);
-Read/Write to image file:  Xmp xmp(file, offset, nextOffset);
+Read/Write to image file:  Xmp xmp(file, offset, nextOffset);  // no writing yet
 
 Xmp uses the library rapidxml to parse the xmp text into a DOM rapidxml::xml_document. The
 library uses pointers for all operations, so any data passed to rapidxml must be Xmp class
@@ -266,9 +264,6 @@ QByteArray Xmp::skeleton()
            "\n\t<rdf:RDF"
            "\n\t\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">"
            "\n\t\t<rdf:Description"
-//           "\n\t\t\txmlns:xmp=\"http://ns.adobe.com/xap/1.0/\""
-//           "\n\t\t\txmlns:dc=\"http://purl.org/dc/elements/1.1/\""
-//           "\n\t\t\txmlns:tiff=\"http://ns.adobe.com/tiff/1.0/\""
            "\n\t\t\trdf:about=\"\">"
            "\n\t\t</rdf:Description>\n"
            "\t\t<Iptc4xmpCore:CreatorContactInfo rdf:parseType='Resource'>\n"
@@ -416,13 +411,6 @@ void Xmp::initialize()
     e.schema = "winnow";
     definedElements["winnowaddthumb"] = e;
 
-    e.elementName = "tiff:Orientation";
-    e.nodeName = "rdf:Description";         // rgh check this is correct
-    e.attrName = "tiff:Orientation";        // rgh check this is correct
-    e.parentName = "";
-    e.type = "attribute";
-    definedElements["orientation"] = e;
-
     // schema elements
     e.parentName = "";
     e.nodeName = "rdf:Description";
@@ -447,11 +435,6 @@ void Xmp::initialize()
     e.attrName = "xmlns:aux";
     e.value = "http://ns.adobe.com/exif/1.0/aux/";
     definedElements["aux"] = e;
-
-    e.elementName = "xmlns:tif";
-    e.attrName = "xmlns:tif";
-    e.value = "http://ns.adobe.com/tiff/1.0/";
-    definedElements["tif"] = e;
 
     e.elementName = "xmlns:Iptc4xmpCore";
     e.attrName = "xmlns:Iptc4xmpCore";
