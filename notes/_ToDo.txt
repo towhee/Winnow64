@@ -52,6 +52,8 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ??
 DONE/FIXED
+- Ingest Q Q.
+- Background ingesting
 - Rotate images updates source file EXIF
 - Replaced Qt XML with Rapidxml
 - Color management was crashing if QImage pixels != 32bits

@@ -6,7 +6,9 @@
 /*
 When this dialog is invoked the files that have been picked are copied to a primary
 destination folder, and optionally, to a backup location.  This process is known as
-ingestion: selecting and copying images froma camera card to a computer.
+ingestion: selecting and copying images from a camera card to a computer.  If backround
+ingesting is selected then the dialog closes and the user can continue working while the
+ingest happens in the background in another thread, using all the IngestDlg settings.
 
 The destination folder can be selected/created manually or automatically.  If
 automatic, a root folder is selected/created, a path to the destination folder
@@ -356,9 +358,9 @@ void IngestDlg::ingest()
 
     quitIfNotEnoughSpace();
 
-    // get rid of "/" at end of path for history (in file menu)
-    QString historyPath = folderPath.left(folderPath.length() - 1);
-    emit updateIngestHistory(historyPath);
+//    // get rid of "/" at end of path for history (in file menu)
+//    QString historyPath = folderPath.left(folderPath.length() - 1);
+//    emit updateIngestHistory(historyPath);
 
     QString key = ui->filenameTemplatesCB->currentText();
     QString tokenString;
@@ -1685,6 +1687,17 @@ void IngestDlg::showEvent(QShowEvent *event)
         "QPushButton, QComboBox, QLineEdit {border-color:" + G::borderColor.name() + ";}"
     );
     updateEnabledState();
+}
+
+void IngestDlg::keyPressEvent(QKeyEvent *event)
+{
+/*
+    Intercept keystrokes and shortcut click ingest button if "q" or "Q" pressed.  This
+    improves ergonomics when the user opens IngestDlg with a "Q" from MW and immediately
+    wants to ingest without changing any of the dialog settings.
+*/
+    QDialog::keyPressEvent(event);
+    if (event->key() == Qt::Key_Q) on_okBtn_clicked();
 }
 
 void IngestDlg::test()

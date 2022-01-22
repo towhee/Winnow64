@@ -302,9 +302,7 @@ void Ingest::run()
         Finally the source file is copied to the renamed destination.
     */
 
-    qDebug() << __FUNCTION__ << "start" << "filenameTemplateSelected" << filenameTemplateSelected;
     // rgh to do: replace int filenameTemplateSelected with QString filenameTemplateSelected
-    qDebug() << __FUNCTION__ << "filenameTemplatesMap" << filenameTemplatesMap;
     QMapIterator<QString,QString> it(filenameTemplatesMap);
     int i = 0;
     QString tokenString = "";
@@ -317,7 +315,6 @@ void Ingest::run()
         }
         i++;
     }
-    qDebug() << __FUNCTION__ << "tokenString" << tokenString;
     if (tokenString == "") {
         // add failure message
         return;
