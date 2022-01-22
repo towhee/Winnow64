@@ -149,6 +149,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     will only work if Embel::isRemote == false.
 */
     bool isSidecarChange = G::useSidecar && G::isNewFolderLoadedAndInfoViewUpToDate && !isNewImageDataChange;
+    bool usedPopUp = false;
     static int count = 0;
     if (count == 0) {
         bool isEditable = ok->itemFromIndex(idx1)->isEditable();
@@ -159,6 +160,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
 
             int n = selection.count();
             if (isSidecarChange) {
+                usedPopUp = true;
                 G::popUp->setProgressVisible(true);
                 G::popUp->setProgressMax(n + 1);
                 QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
@@ -216,7 +218,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     }
     count++;
     if (count > 1) count = 0;
-    if (isSidecarChange) {
+    if (usedPopUp) {
         G::popUp->setProgressVisible(false);
         G::popUp->hide();
     }

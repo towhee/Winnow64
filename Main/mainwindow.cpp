@@ -6545,6 +6545,7 @@ void MW::sortChange(QString source)
     fileSelectionChange(idx, idx);
 
     scrollToCurrentRow();
+    qDebug() << __FUNCTION__ << "G::popUp->hide()";
     G::popUp->hide();
 
 }
@@ -10594,11 +10595,11 @@ void MW::ingest()
     bool backgroundIngestInProgress = backgroundIngest != nullptr;
     if (isBackgroundIngest && backgroundIngestInProgress) {
         QString msg =
-                "There is a background ingest in progress.  When it\n"
-                "has completed the progress bar on the left side of\n"
-                "the status bar will disapper."
+                "There is a background ingest in progress.  When it<br>"
+                "has completed the progress bar on the left side of<br>"
+                "the status bar will disappear."
                 ;
-        G::popUp->showPopup(msg, 1500);
+        G::popUp->showPopup(msg, 5000);
         return;
     }
 

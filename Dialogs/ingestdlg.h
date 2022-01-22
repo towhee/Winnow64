@@ -218,11 +218,10 @@ private slots:
 
 protected:
     void showEvent(QShowEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
 
 signals:
-    void updateIngestHistory(QString folderPath);
-    void revealIngestLocation(QString fPath);
-    void updateProgress(int value);
+    void updateProgress(int progress);
 
 };
 
