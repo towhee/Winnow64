@@ -1,8 +1,8 @@
 #CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 CONFIG += sdk_no_version_check
-CONFIG += c++17                    # qt6.2 remove
-#QMAKE_CXXFLAGS += /std:c++17        # qt6.2 add
-#QMAKE_CXXFLAGS += /Zc:__cplusplus   # qt6.2 add
+win32:QMAKE_CXXFLAGS += /std:c++17
+win32:QMAKE_CXXFLAGS += /Zc:__cplusplus
+
 TEMPLATE = app
 TARGET = Winnow
 INCLUDEPATH += .
@@ -28,9 +28,9 @@ Debug:UI_DIR = debug/.ui
 QT += widgets
 QT += concurrent
 QT += network
-#QT += core5compat   # qt6.2
-QT += xmlpatterns  # qt6.2
-#QT += opengl
+greaterThan(QT_MAJOR_VERSION, 5) {
+    QT += core5compat
+}
 
 HEADERS += Cache/mdcache.h \
     Dialogs/ingestdlgold.h \

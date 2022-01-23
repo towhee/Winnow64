@@ -52,8 +52,13 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ??
 DONE/FIXED
+- Works with Qt 6.2
+- Status count of picks after ingest not updated
+- When sort using TableView header not scrolling to current row
+- Added "Modify the source image files" setting
 - Ingest Q Q.
 - Background ingesting
+- Ingest destination drive space fixed
 - Rotate images updates source file EXIF
 - Replaced Qt XML with Rapidxml
 - Color management was crashing if QImage pixels != 32bits

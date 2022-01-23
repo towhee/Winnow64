@@ -256,15 +256,15 @@ bool InfoString::parseToken(QString &tokenString, int pos,
     if (pos >= tokenString.length()) return false;
     QChar ch = tokenString.at(pos);
     if (ch.unicode() == 8233) return false;  // Paragraph Separator
-    if (ch == "{") return false;
+    if (ch == '{') return false;
 
     // look backwards
     bool foundPossibleTokenStart = false;
     int startPos;
     for (int i = pos; i >= 0; i--) {
         ch = tokenString.at(i);
-        if (i < pos && ch == "}") return false;
-        if (ch == "{") {
+        if (i < pos && ch == '}') return false;
+        if (ch == '{') {
             foundPossibleTokenStart = true;
             startPos = i + 1;
         }
@@ -276,7 +276,7 @@ bool InfoString::parseToken(QString &tokenString, int pos,
     // look forwards
     for (int i = pos; i < tokenString.length(); i++) {
         ch = tokenString.at(i);
-        if (ch == "}") {
+        if (ch == '}') {
             for (int j = startPos; j < i; j++) {
                 token.append(tokenString.at(j));
             }

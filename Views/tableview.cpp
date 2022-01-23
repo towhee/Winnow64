@@ -390,7 +390,7 @@ QString ExposureTimeItemDelegate::displayText(const QVariant& value, const QLoca
     return QString();
 
     QString exposureTime;
-    if (value < 1.0) {
+    if (value.toDouble() < 1.0) {
         double recip = 1 / value.toDouble();
         if (recip >= 2) exposureTime = "1/" + QString::number(qRound(recip));
         else exposureTime = QString::number(value.toDouble(), 'g', 2);

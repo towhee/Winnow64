@@ -88,10 +88,10 @@ void ExifTool::writeOrientation(QString src, QString orientation)
     8 = Rotate 270 CW
 */
     QByteArray args;
-    args += "-orientation#=" + orientation.toUtf8() + "\n";
+    args.append("-orientation#=" + orientation.toUtf8() + "\n");
     if (isOverWrite) args += "-overwrite_original\n";
-    args += src.toUtf8() + "\n";
-    args += "-execute\n";
+    args.append(src.toUtf8() + "\n");
+    args.append("-execute\n");
     process.write(args);
 }
 
@@ -99,18 +99,19 @@ void ExifTool::writeOrientation(QString src, QString orientation)
 void ExifTool::readXMP(QString dst, QString tag, QString &val)
 {
     QByteArray args;
-    args += "-" + tag + "=" + val + "\n";
-    args += dst.toUtf8() + "\n";
-    args += "-execute\n";
+    args.append("-" + tag.toUtf8() + "=" + val.toUtf8() + "\n");
+//    args = args + "-" + tag + "=" + val + "\n");
+    args.append(dst.toUtf8() + "\n");
+    args.append("-execute\n");
     process.write(args);
 }
 
 void ExifTool::writeXMP(QString dst, QString tag, QString val)
 {
     QByteArray args;
-    args += "-" + tag + "=" + val + "\n";
-    args += dst.toUtf8() + "\n";
-    args += "-execute\n";
+    args.append('-' + tag.toUtf8() + '=' + val.toUtf8() + '\n');
+    args.append(dst.toUtf8() + "\n");
+    args.append("-execute\n");
     process.write(args);
 }
 
@@ -119,10 +120,10 @@ void ExifTool::addThumb(QString src, QString dst)
 //    '-ThumbnailImage<=thumb.jpg' dst.jpg
     QByteArray args;
 //    args += "-thumbnailimage<=:/thumb.jpg\n";
-    args += "-thumbnailimage<=" + src.toUtf8() + "\n";
+    args.append("-thumbnailimage<=" + src.toUtf8() + "\n");
     if (isOverWrite) args += "-overwrite_original\n";
-    args += dst.toUtf8() + "\n";
-    args += "-execute\n";
+    args.append(dst.toUtf8() + "\n");
+    args.append("-execute\n");
     process.write(args);
     process.waitForBytesWritten(1000);
 }
@@ -153,10 +154,10 @@ int ExifTool::copyAll(const QStringList &src, QStringList &dst)
     QByteArray args;
     for (int i = 0; i < src.length(); i++) {
         args += "-TagsFromFile\n";
-        args += src.at(i) + "\n";       // src = path of source file
+        args += src.at(i).toUtf8() + "\n";       // src = path of source file
         args += "-all:all\n";
         args += "-icc_profile\n";
-        args += dst.at(i) + "\n";       // dst = path of destination file
+        args += dst.at(i).toUtf8() + "\n";       // dst = path of destination file
         args += "-execute\n";
     }
     // time to quit

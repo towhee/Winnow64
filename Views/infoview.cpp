@@ -407,7 +407,7 @@ void InfoView::updateInfo(const int &row)
 
     // make sure there is metadata for this image
     if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
-        metadata->loadImageMetadata(fPath, true, true, false, true, __FUNCTION__);
+        metadata->loadImageMetadata(imageInfo, true, true, false, true, __FUNCTION__);
         metadata->m.row = dm->fPathRow[fPath];
         dm->addMetadataForItem(metadata->m);
     }
@@ -438,7 +438,7 @@ void InfoView::updateInfo(const int &row)
     value = dm->sf->index(row, G::ShutterspeedColumn).data();
     if (value == 0) s = "";
     else {
-        if (value < 1.0) {
+        if (value.toDouble() < 1.0) {
             double recip = 1 / value.toDouble();
             if (recip >= 2) s = "1/" + QString::number(qRound(recip));
             else s = QString::number(value.toDouble(), 'g', 2);

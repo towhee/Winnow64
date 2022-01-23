@@ -139,7 +139,8 @@ bool DockWidget::event(QEvent *event)
         setFloating(!isFloating());
         if (isFloating()) {
             move(dw.pos);
-            dw.devicePixelRatio =  QGuiApplication::screens().at(dw.screen)->devicePixelRatio();
+            dw.devicePixelRatio =  dw.devicePixelRatio =  this->screen()->devicePixelRatio();
+//            dw.devicePixelRatio =  QGuiApplication::screens().at(dw.screen)->devicePixelRatio();
             if (!qFuzzyCompare(dw.devicePixelRatio, prevDpr)) {
                 dprSize *= prevDpr;
                 dprSize /= dw.devicePixelRatio;
@@ -213,9 +214,10 @@ void DockWidget::resizeEvent(QResizeEvent *event)
     if (ignoreResize) return;
 
     if (isFloating()) {
-        dw.screen = QApplication::desktop()->screenNumber(this);
+//        dw.screen = QApplication::desktop()->screenNumber(this);
         prevDpr = dw.devicePixelRatio;
-        dw.devicePixelRatio =  QGuiApplication::screens().at(dw.screen)->devicePixelRatio();
+        dw.devicePixelRatio =  this->screen()->devicePixelRatio();
+//        dw.devicePixelRatio =  QGuiApplication::screens().at(dw.screen)->devicePixelRatio();
         dw.size = event->size();
         dprSize = dw.size;
         /*
@@ -246,7 +248,7 @@ void DockWidget::moveEvent(QMoveEvent *event)
                     ;
                     //*/
     if (isFloating()) {
-        dw.screen = QApplication::desktop()->screenNumber(this);
+//        dw.screen = QApplication::desktop()->screenNumber(this);
         dw.pos = QPoint(frameGeometry().x(), frameGeometry().y());
         qDebug() << __FUNCTION__ << "Redefine dw.pos:"
                  << "dw.pos =" << dw.pos

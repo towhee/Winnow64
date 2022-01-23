@@ -282,14 +282,14 @@ void BuildFilters::mapUniqueInstances()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     // collect all unique instances for filtration (use QMap to maintain order)
-    QMap<QVariant, QString> typesMap;
-    QMap<QVariant, QString> modelMap;
-    QMap<QVariant, QString> lensMap;
-    QMap<QVariant, QString> titleMap;
-    QMap<QVariant, QString> flMap;
-    QMap<QVariant, QString> creatorMap;
-    QMap<QVariant, QString> yearMap;
-    QMap<QVariant, QString> dayMap;
+    QMap<QString, QString> typesMap;
+    QMap<QString, QString> modelMap;
+    QMap<QString, QString> lensMap;
+    QMap<QString, QString> titleMap;
+    QMap<QString, QString> flMap;
+    QMap<QString, QString> creatorMap;
+    QMap<QString, QString> yearMap;
+    QMap<QString, QString> dayMap;
     for(int row = 0; row < dm->sf->rowCount(); row++) {
         if (abort) return;
         QString type = dm->sf->index(row, G::TypeColumn).data().toString();

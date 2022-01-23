@@ -1,7 +1,7 @@
 #include "Utilities/popup.h"
 #include <QPainter>
 #include <QApplication>
-#include <QDesktopWidget>
+//#include <QDesktopWidget>
 #include <QDebug>
 
 /*

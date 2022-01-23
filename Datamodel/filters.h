@@ -52,7 +52,7 @@ public:
     void createPredefinedFilters();
     void createDynamicFilters();
     void removeChildrenDynamicFilters();
-    void addCategoryFromData(QMap<QVariant, QString> itemMap, QTreeWidgetItem *category);
+    void addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground(const int &a, const int &b);
     void setSearchNewFolder();
     void disableZeroCountItems(bool disable);

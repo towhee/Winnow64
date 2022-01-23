@@ -395,6 +395,14 @@ void Xmp::initialize()
     e.schema = "aux";
     definedElements["serialnumber"] = e;
 
+    e.elementName = "aux:Lens";
+    e.nodeName = "rdf:Description";
+    e.attrName = "aux:Lens";
+    e.parentName = "";
+    e.type = "attribute";
+    e.schema = "aux";
+    definedElements["lens"] = e;
+
     e.elementName = "aux:LensSerialNumber";
     e.nodeName = "rdf:Description";
     e.attrName = "aux:LensSerialNumber";

@@ -64,7 +64,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     // new grid
     gridLayout = new QGridLayout;
     gridLayout->setContentsMargins(0, 0, 0, 0);
-    gridLayout->setMargin(0);
+//    gridLayout->setMargin(0); // Qt 6.2
     gridLayout->setSpacing(0);
     setLayout(gridLayout);
     setContentsMargins(0, 0, 0, 0);
