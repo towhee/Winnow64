@@ -61,8 +61,13 @@ void ProgressBar::setBackgroundColor(const QColor &bg)
     the pixmap the new background shade.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    int w = m1->progressLabel->pixmap()->width();
-    int h = m1->progressLabel->pixmap()->height();
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+    int w = m1->progressLabel->pixmap()->width();   // deprecated
+    int h = m1->progressLabel->pixmap()->height();  // deprecated
+#else
+    int w = m1->progressLabel->pixmap(Qt::ReturnByValueConstant()).width();     // Qt 6.2
+    int h = m1->progressLabel->pixmap(Qt::ReturnByValueConstant()).height();    // Qt 6.2
+#endif
     QPainter pnt(m1->progressPixmap);
     // above progress bar
     QRect bgRect(0, 0, w, htOffset);
@@ -75,9 +80,15 @@ void ProgressBar::setBackgroundColor(const QColor &bg)
 
 void ProgressBar::saveProgressState()
 {
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     int w = m1->progressLabel->pixmap()->width();
     int h = m1->progressLabel->pixmap()->height();
     state = m1->progressLabel->pixmap()->copy(0, 0, w, h);
+#else
+    int w = m1->progressLabel->pixmap(Qt::ReturnByValueConstant()).width();
+    int h = m1->progressLabel->pixmap(Qt::ReturnByValueConstant()).height();
+    state = m1->progressLabel->pixmap(Qt::ReturnByValueConstant()).copy(0, 0, w, h);
+#endif
 }
 
 void ProgressBar::recoverProgressState()

@@ -1642,11 +1642,6 @@ void IngestDlg::fontSize()
     ui->templateLabel1->setStyleSheet(fs);
     ui->templateLabel1_2->setStyleSheet(fs);
 
-//    ui->manualRadio->setStyleSheet(fs);
-//    ui->manualFolderLabel->setStyleSheet(fs);
-//    manualDriveAvailable ? ui->manualFolderLabel->setStyleSheet(normalText) : ui->manualFolderLabel->setStyleSheet(redText);
-//    ui->manualFolderLabel_2->setStyleSheet(fs);
-//    manualDrive2Available ? ui->manualFolderLabel_2->setStyleSheet(normalText) : ui->manualFolderLabel_2->setStyleSheet(redText);
     ui->selectFolderBtn->setStyleSheet(fs);
     ui->selectFolderBtn_2->setStyleSheet(fs);
 
@@ -1666,15 +1661,6 @@ void IngestDlg::fontSize()
 
     ui->cancelBtn->setStyleSheet(fs);
     ui->okBtn->setStyleSheet(fs);
-
-//    if (isAuto) {
-//        ui->manualFolderLabel->setEnabled(false);
-//        ui->manualFolderLabel_2->setEnabled(false);
-//    }
-//    else {
-//        ui->folderLabel->setEnabled(false);
-//        ui->folderLabel_2->setEnabled(false);
-//    }
 
     adjustSize();
 }

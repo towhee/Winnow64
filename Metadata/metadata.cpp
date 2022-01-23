@@ -369,10 +369,12 @@ int Metadata::getNewOrientation(int orientation, int rotation)
 void Metadata::writeOrientation(QString fPath, QString orientationNumber)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    ExifTool et;
-    et.setOverWrite(true);
-    et.writeOrientation(fPath, orientationNumber);
-    et.close();
+    if (G::modifySourceFiles) {
+        ExifTool et;
+        et.setOverWrite(true);
+        et.writeOrientation(fPath, orientationNumber);
+        et.close();
+    }
 }
 
 bool Metadata::writeXMP(const QString &fPath, QString src)

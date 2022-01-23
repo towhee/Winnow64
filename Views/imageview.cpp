@@ -813,7 +813,8 @@ void ImageView::wheelEvent(QWheelEvent *event)
 
     // wheel scrolling / trackpad swiping = next/previous image
     static int delta;
-    delta += event->delta();    // deprecated
+//    delta += event->pixelDelta();
+    delta += event->angleDelta().y();    // deprecated
     int deltaThreshold = 40;
 
     if(delta > deltaThreshold) {
@@ -912,7 +913,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     static QPoint prevPos = event->pos();
 
     if (isLeftMouseBtnPressed && event->pos() != prevPos) {
-        if(G::isSlideShow) emit killSlideshow();
+        if (G::isSlideShow) emit killSlideshow();
         isMouseDrag = true;
         setCursor(Qt::ClosedHandCursor);
         horizontalScrollBar()->setValue(horizontalScrollBar()->value() -

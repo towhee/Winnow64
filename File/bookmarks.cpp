@@ -104,7 +104,7 @@ void BookMarks::count()
                  QString suffix = info.suffix().toLower();
                  QString jpgPath = fPath + "/" + baseName + ".jpg";
                  if (metadata->hasJpg.contains(suffix)) {
-                     if (dir->entryInfoList().contains(jpgPath)) continue;
+                     if (dir->entryInfoList().contains(QFileInfo(jpgPath))) continue;
                  }
                  count++;
              }

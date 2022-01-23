@@ -130,7 +130,7 @@ removes the entire selection which removes the token.
     QTextCursor cursor;
     QChar ch = textDoc->characterAt(pos);
     if (ch.unicode() == 8233) return false;
-    if (ch == "{") return false;
+    if (ch == '{') return false;
     if (pos == 0) return false;
 
     // look backwards
@@ -138,8 +138,8 @@ removes the entire selection which removes the token.
     int startPos;
     for (int i = pos; i >= 0; i--) {
         ch = textDoc->characterAt(i);
-        if (i < pos && ch == "}") return false;
-        if (ch == "{") {
+        if (i < pos && ch == '}') return false;
+        if (ch == '{') {
             foundPossibleTokenStart = true;
             startPos = i + 1;
         }
@@ -152,7 +152,7 @@ removes the entire selection which removes the token.
     QString token;
     for (int i = pos; i <= textDoc->characterCount(); i++) {
         ch = textDoc->characterAt(i);
-        if (ch == "}") {
+        if (ch == '}') {
             for (int j = startPos; j < i; j++) {
                 token.append(textDoc->characterAt(j));
             }

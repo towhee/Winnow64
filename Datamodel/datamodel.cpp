@@ -1106,7 +1106,7 @@ When Raw+Jpg is toggled in the main program MW the file type filter must be rebu
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     filters->types->takeChildren();
-    QMap<QVariant, QString> typesMap;
+    QMap<QString, QString> typesMap;
     int rows = sf->rowCount();
     for(int row = 0; row < rows; row++) {
         QString type = sf->index(row, G::TypeColumn).data().toString();

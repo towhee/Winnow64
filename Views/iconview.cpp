@@ -227,24 +227,24 @@ void IconView::refreshThumbs() {
 void IconView::setThumbParameters()
 {
 /*
-When thumb parameters (height, width, padding, fontsize, showLabels) are
-changed this function is called from:
+    When thumb parameters (height, width, padding, fontsize, showLabels) are
+    changed this function is called from:
 
-    MW::invokeWorkspace
-    MW::defaultWorkspace
-    MW::loupeDisplay
-    MW::gridDisplay
-    MW::tableDisplay
-    MW::CompareDisplay
-    prefdlg signal updateThumbParameters
-    prefdlg signal updateGridParameters
+        MW::invokeWorkspace
+        MW::defaultWorkspace
+        MW::loupeDisplay
+        MW::gridDisplay
+        MW::tableDisplay
+        MW::CompareDisplay
+        prefdlg signal updateThumbParameters
+        prefdlg signal updateGridParameters
 
-There are two instances of ThumbView: thumbView and gridView. They are
-distinguished by their assigned object names: "Thumbnails" and "Grid".
+    There are two instances of ThumbView: thumbView and gridView. They are
+    distinguished by their assigned object names: "Thumbnails" and "Grid".
 
-Both instances update the delegate. If it is the "Thumbnails" thumbView
-instance then the thumb dock is signalled so it can be resized to fit the
-possibly altered thumbnail dimensions.
+    Both instances update the delegate. If it is the "Thumbnails" thumbView instance then
+    MW::setThumbDockHeight is called (friend class) so it can be resized to fit the possibly
+    altered thumbnail dimensions.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     /* MUST set thumbdock height to fit thumbs BEFORE updating the delegate.  If not, and the
@@ -257,11 +257,6 @@ possibly altered thumbnail dimensions.
     setSpacing(0);
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
         labelFontSize, showIconLabels, badgeSize);
-
-    if(objectName() == "Thumbnails") {
-        if (!m2->thumbDock->isFloating())
-            emit updateThumbDockHeight();
-    }
 }
 
 void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight, /*int _thumbPadding,*/

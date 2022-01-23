@@ -587,7 +587,8 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
 
     QPalette palette = comboBox->palette();
     QPalette view_palette = comboBox->view()->palette();
-    view_palette.setColor(QPalette::Active, QPalette::Background, QColor(77,77,77));
+    view_palette.setColor(QPalette::Active, QPalette::Window, QColor(77,77,77));
+//    view_palette.setColor(QPalette::Active, QPalette::Background, QColor(77,77,77));  // rgh 2022-01-22
     comboBox->view()->setPalette(view_palette);
 
     comboBox->setWindowFlags(Qt::FramelessWindowHint);

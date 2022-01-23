@@ -1935,6 +1935,7 @@ void MW::gridHasScrolled()
     }
     G::ignoreScrollSignal = false;
 }
+
 void MW::tableHasScrolled()
 {
 /*
@@ -4476,6 +4477,7 @@ void MW::createThumbView()
 //    thumbView->setWrapping(false);
     thumbView->firstVisibleCell = 0;
     thumbView->showZoomFrame = true;            // may have settings but not showZoomFrame yet
+    qDebug() << __FUNCTION__ << isSettings;
     if (isSettings) {
         // loadSettings has not run yet (dependencies, but QSettings has been opened
         if (setting->contains("thumbWidth")) thumbView->iconWidth = setting->value("thumbWidth").toInt();
@@ -4490,7 +4492,7 @@ void MW::createThumbView()
         thumbView->iconWidth = 100;
         thumbView->iconHeight = 100;
         thumbView->labelFontSize = 12;
-        thumbView->showIconLabels = true;
+        thumbView->showIconLabels = false;
         thumbView->showZoomFrame = true;
         thumbView->badgeSize = classificationBadgeInThumbDiameter;
         thumbView->visibleCells = width() / thumbView->iconWidth;
@@ -4499,11 +4501,10 @@ void MW::createThumbView()
     connect(thumbView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
 
     // back and forward mouse buttons toggle pick
-    connect(thumbView, SIGNAL(togglePick()), this, SLOT(togglePick()));
-//    connect(thumbView, &ThumbView::togglePick, this, &MW::togglePick);
+    connect(thumbView, &IconView::togglePick, this, &MW::togglePick);
 
-    connect(thumbView, SIGNAL(updateThumbDockHeight()),
-            this, SLOT(setThumbDockHeight()));
+//    connect(thumbView, SIGNAL(updateThumbDockHeight()),
+//            this, SLOT(setThumbDockHeight()));
 
     connect(thumbView, &IconView::updateStatus, this, &MW::updateStatus);
 
@@ -4512,12 +4513,6 @@ void MW::createThumbView()
 
     connect(thumbView->horizontalScrollBar(), SIGNAL(valueChanged(int)),
             this, SLOT(thumbHasScrolled()));
-
-//    connect(thumbView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-//            this, SLOT(loadMetadataCacheAfterDelay()));
-
-//    connect(thumbView->horizontalScrollBar(), SIGNAL(valueChanged(int)),
-//            this, SLOT(loadMetadataCacheAfterDelay()));
 }
 
 void MW::createGridView()
@@ -4549,12 +4544,10 @@ void MW::createGridView()
     }
 
     // double mouse click fires displayLoupe
-    connect(gridView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
-
-    connect(gridView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(gridHasScrolled()));
-//    connect(gridView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-//            this, SLOT(loadMetadataCacheAfterDelay()));
+    connect(gridView, &IconView::displayLoupe, this, &MW::loupeDisplay);
+    // update metadata and icons if not loaded for new images when scroll
+    connect(gridView->verticalScrollBar(), &QScrollBar::valueChanged,
+            this, &MW::gridHasScrolled);
 }
 
 void MW::createTableView()
@@ -4588,17 +4581,13 @@ void MW::createTableView()
     }
 
     // update menu "sort by" to match tableView sort change
-    connect(tableView->horizontalHeader(),
-            SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
-            this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
-
-    connect(tableView, SIGNAL(displayLoupe()), this, SLOT(loupeDisplay()));
-
-    connect(tableView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-            this, SLOT(tableHasScrolled()));
-
-//    connect(tableView->verticalScrollBar(), SIGNAL(valueChanged(int)),
-//            this, SLOT(loadMetadataCacheAfterDelay()));
+    connect(tableView->horizontalHeader(), &QHeaderView::sortIndicatorChanged,
+            this, &MW::sortIndicatorChanged);
+    // change to loupe view if double click or enter in tableview
+    connect(tableView, &TableView::displayLoupe, this, &MW::loupeDisplay);
+    // sync scrolling between tableview and thumbview
+    connect(tableView->verticalScrollBar(), &QScrollBar::valueChanged,
+            this, &MW::tableHasScrolled);
 }
 
 void MW::createImageView()
@@ -4666,16 +4655,11 @@ void MW::createImageView()
         imageView->infoOverlayFontSize = infoOverlayFontSize;   // defined in loadSettings
     }
 
-    connect(imageView, SIGNAL(togglePick()), this, SLOT(togglePick()));
-
+    connect(imageView, &ImageView::togglePick, this, &MW::togglePick);
     connect(imageView, &ImageView::updateStatus, this, &MW::updateStatus);
-
-    connect(thumbView, SIGNAL(thumbClick(float,float)),
-            imageView, SLOT(thumbClick(float,float)));
-
+    connect(thumbView, &IconView::thumbClick, imageView, &ImageView::thumbClick);
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
-
-    connect(imageView, SIGNAL(killSlideshow()), this, SLOT(slideShow()));
+    connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
 }
 
 void MW::createCompareView()
@@ -5215,17 +5199,6 @@ void MW::createDocks()
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
 
-//    folderDockOrigWidget = folderDock->titleBarWidget();
-//    favDockOrigWidget = favDock->titleBarWidget();
-//    filterDockOrigWidget = filterDock->titleBarWidget();
-//    metadataDockOrigWidget = metadataDock->titleBarWidget();
-//    thumbDockOrigWidget = thumbDock->titleBarWidget();
-//    folderDockEmptyWidget = new QWidget;
-//    favDockEmptyWidget = new QWidget;
-//    filterDockEmptyWidget = new QWidget;
-//    metadataDockEmptyWidget = new QWidget;
-//    thumbDockEmptyWidget = new QWidget;
-
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, filterDock);
@@ -5581,7 +5554,7 @@ void MW::updateProgressBarWidth()
         int availableSpace = availableSpaceForProgressBar();
         if (availableSpace < progressWidth) progressWidth = availableSpace;
         progressLabel->setFixedWidth(progressWidth);
-            progressPixmap->scaled(progressWidth, 25); // cacheprogress
+        updateImageCacheStatus("Update all rows", icd->cache, __FUNCTION__);
     }
 }
 
@@ -6038,6 +6011,8 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     currentRow = dm->sf->mapFromSource(currentDmIdx).row();
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
+
+    scrollToCurrentRow();
 
     resortImageCache();
 }
@@ -6545,7 +6520,6 @@ void MW::sortChange(QString source)
     fileSelectionChange(idx, idx);
 
     scrollToCurrentRow();
-    qDebug() << __FUNCTION__ << "G::popUp->hide()";
     G::popUp->hide();
 
 }
@@ -7049,7 +7023,7 @@ void MW::defaultWorkspace()
     thumbView->iconWidth = 100;
     thumbView->iconHeight = 100;
     thumbView->labelFontSize = 10;
-    thumbView->showIconLabels = true;
+    thumbView->showIconLabels = false;
     thumbView->showZoomFrame = true;
 
 //    gridView->iconPadding = 0;
@@ -7474,7 +7448,8 @@ void MW::diagnosticsReport(QString reportString)
     md.textBrowser->setText(reportString);
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     QFontMetrics metrics(md.textBrowser->font());
-    md.textBrowser->setTabStopDistance(3 * metrics.width(' '));
+    md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
+//    md.textBrowser->setTabStopDistance(3 * metrics.width(' ')); // width is deprecated Qt 6.2
 //    md.textBrowser->setStyleSheet(G::css);
     dlg->show();
 //    std::cout << reportString.toStdString() << std::flush;
@@ -10708,6 +10683,8 @@ void MW::ingest()
 
         // set the ingested flags and clear the pick flags
         setIngested();
+
+        updateStatus(true, "", __FUNCTION__);
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
@@ -12420,11 +12397,17 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString msg =
-            "There is a background ingest in progress.  When it<br>"
-            "has completed the progress bar on the left side of<br>"
-            "the status bar will disappear."
-            ;
-    G::popUp->showPopup(msg, 5000, true, 0.75, Qt::AlignLeft);
+//    cacheProgressBar->setBackgroundColor(Qt::gray);
+//    QPixmap pm = progressPixmap->scaled(200, 25);
+    progressWidth = 400;
+    progressLabel->setFixedWidth(progressWidth);
+//    progressLabel->setPixmap(pm);
+    updateImageCacheStatus("Update all rows", icd->cache, "");
+
+//#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+//    qDebug() << __FUNCTION__ << progressLabel->pixmap()->width();
+//#else
+//    qDebug() << __FUNCTION__ << progressLabel->pixmap(Qt::ReturnByValueConstant()).width();
+//#endif
 }
 // End MW

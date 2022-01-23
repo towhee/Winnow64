@@ -333,7 +333,7 @@ void Preferences::addItems()
     // Allow source files to be changed
     i.name = "modifySourceFiles";
     i.parentName = "GeneralHeader";
-    i.captionText = "Allow modify the source image file";
+    i.captionText = "Modify the source image files";
     i.tooltip = "If you edit metadata (rating, color class, title, creator,\n"
                 "copyright, email, url and orientation) the changes will be\n"
                 "written to the source image file.  This data can be read by\n"
