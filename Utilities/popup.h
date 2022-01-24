@@ -31,7 +31,7 @@ public:
     QProgressBar progressBar;
 
 protected:
-    void paintEvent(QPaintEvent *event);    // The background will be drawn through the redraw method
+    void paintEvent(QPaintEvent *event) override;    // The background will be drawn through the redraw method
     void focusOutEvent(QFocusEvent *event) override;
     void keyReleaseEvent(QKeyEvent *event) override;
 

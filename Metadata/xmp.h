@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QtCore>
 #include <QtWidgets>
-#include <QTextCodec>       // Qt6.2 with Qt5 compatibility remove
+//#include <QTextCodec>       // Qt6.2 with Qt5 compatibility remove
 
 #include "Metadata/rapidxml.h"
 #include "Metadata/rapidxml_print_rgh.h"

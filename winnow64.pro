@@ -29,13 +29,12 @@ QT += widgets
 QT += concurrent
 QT += network
 greaterThan(QT_MAJOR_VERSION, 5) {
-    QT += core5compat
+#    QT += core5compat
 }
 
 HEADERS += Cache/mdcache.h \
     Dialogs/ingestdlgold.h \
     File/ingest.h
-HEADERS +=
 HEADERS += Cache/cachedata.h
 HEADERS += Cache/tshash.h
 HEADERS += Cache/imagecache.h
@@ -95,8 +94,8 @@ HEADERS += ImageFormats/Panasonic/panasonic.h
 HEADERS += ImageFormats/Sony/sony.h
 HEADERS += ImageFormats/Tiff/tiff.h
 
-#HEADERS += Lcms2/lcms2.h
-#HEADERS += Lcms2/lcms2_plugin.h
+HEADERS += Lcms2/lcms2.h
+HEADERS += Lcms2/lcms2_plugin.h
 
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
@@ -203,32 +202,32 @@ SOURCES += ImageFormats/Panasonic/panasonic.cpp
 SOURCES += ImageFormats/Sony/sony.cpp
 SOURCES += ImageFormats/Tiff/tiff.cpp
 
-#SOURCES += Lcms2/cmsalpha.c
-#SOURCES += Lcms2/cmscam02.c
-#SOURCES += Lcms2/cmscgats.c
-#SOURCES += Lcms2/cmscnvrt.c
-#SOURCES += Lcms2/cmserr.c
-#SOURCES += Lcms2/cmsgamma.c
-#SOURCES += Lcms2/cmsgmt.c
-#SOURCES += Lcms2/cmshalf.c
-#SOURCES += Lcms2/cmsintrp.c
-#SOURCES += Lcms2/cmsio0.c
-#SOURCES += Lcms2/cmsio1.c
-#SOURCES += Lcms2/cmslut.c
-#SOURCES += Lcms2/cmsmd5.c
-#SOURCES += Lcms2/cmsmtrx.c
-#SOURCES += Lcms2/cmsnamed.c
-#SOURCES += Lcms2/cmsopt.c
-#SOURCES += Lcms2/cmspack.c
-#SOURCES += Lcms2/cmspcs.c
-#SOURCES += Lcms2/cmsplugin.c
-#SOURCES += Lcms2/cmsps2.c
-#SOURCES += Lcms2/cmssamp.c
-#SOURCES += Lcms2/cmssm.c
-#SOURCES += Lcms2/cmstypes.c
-#SOURCES += Lcms2/cmsvirt.c
-#SOURCES += Lcms2/cmswtpnt.c
-#SOURCES += Lcms2/cmsxform.c
+SOURCES += Lcms2/cmsalpha.c
+SOURCES += Lcms2/cmscam02.c
+SOURCES += Lcms2/cmscgats.c
+SOURCES += Lcms2/cmscnvrt.c
+SOURCES += Lcms2/cmserr.c
+SOURCES += Lcms2/cmsgamma.c
+SOURCES += Lcms2/cmsgmt.c
+SOURCES += Lcms2/cmshalf.c
+SOURCES += Lcms2/cmsintrp.c
+SOURCES += Lcms2/cmsio0.c
+SOURCES += Lcms2/cmsio1.c
+SOURCES += Lcms2/cmslut.c
+SOURCES += Lcms2/cmsmd5.c
+SOURCES += Lcms2/cmsmtrx.c
+SOURCES += Lcms2/cmsnamed.c
+SOURCES += Lcms2/cmsopt.c
+SOURCES += Lcms2/cmspack.c
+SOURCES += Lcms2/cmspcs.c
+SOURCES += Lcms2/cmsplugin.c
+SOURCES += Lcms2/cmsps2.c
+SOURCES += Lcms2/cmssamp.c
+SOURCES += Lcms2/cmssm.c
+SOURCES += Lcms2/cmstypes.c
+SOURCES += Lcms2/cmsvirt.c
+SOURCES += Lcms2/cmswtpnt.c
+SOURCES += Lcms2/cmsxform.c
 
 SOURCES += Main/dockwidget.cpp
 SOURCES += Main/global.cpp
@@ -354,10 +353,10 @@ macx:LIBS += -framework AppKit
 #macx:LIBS += -framework Foundation
 
 # lcms
-macx: LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2
-macx: INCLUDEPATH += $$PWD/Lib/lcms2/include
-macx: DEPENDPATH += $$PWD/Lib/lcms2/include
-macx: PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/liblcms2.a
+#macx: LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2
+#macx: INCLUDEPATH += $$PWD/Lib/lcms2/include
+#macx: DEPENDPATH += $$PWD/Lib/lcms2/include
+#macx: PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/liblcms2.a
 
 
 win32:QMAKE_CXXFLAGS += /MD

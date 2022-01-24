@@ -530,7 +530,8 @@ QString Xmp::xmpAsString()
     Returns unicode string from QByteArray xmpBa
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    return QTextCodec::codecForMib(106)->toUnicode(xmpBa);
+//    return QTextCodec::codecForMib(106)->toUnicode(xmpBa);
+    return QString::fromUtf8(xmpBa);
 }
 
 QString Xmp::getItem(QByteArray item)
