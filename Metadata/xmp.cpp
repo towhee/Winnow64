@@ -288,15 +288,16 @@ void Xmp::initialize()
         return;
     }
     catch (const rapidxml::parse_error& e) {
-        std::cerr << "Parse error was: " << e.what() << "  " << filePath.toStdString() << std::endl;
+        std::cerr << "Parse error: " << e.what() << "  " << e.where<char>()
+                  << "  " << filePath.toStdString() << std::endl;
         return;
     }
     catch (const std::exception& e) {
-        std::cerr << "Error was: " << e.what() << std::endl;
+        std::cerr << "Exception error: " << e.what() << std::endl;
         return;
     }
     catch (...) {
-        std::cerr << "An unknown error occurred." << std::endl;
+        std::cerr << "Unknown error" << std::endl;
         return;
     }
 
@@ -688,6 +689,7 @@ Xmp::XmpElement Xmp::xmlDocObj(QString name,
     - value
 */
     XmpElement obj = nullXmpObj;
+    return obj;
     QString nodeName = QString(node->name()).left(node->name_size());
     QString parName = "";
     if (parNode) parName = QString(parNode->name()).left(parNode->name_size());

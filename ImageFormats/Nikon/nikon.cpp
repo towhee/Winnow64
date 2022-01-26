@@ -1508,6 +1508,15 @@ bool Nikon::parse(MetadataParameters &p,
         }
     }
 
+    // jpg preview metadata report information
+    if (p.report) {
+        p.offset = m.offsetFull;
+        Jpeg jpeg;
+        IPTC iptc;
+        GPS gps;
+        jpeg.parse(p, m, ifd, &iptc, exif, &gps);
+    }
+
     // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {

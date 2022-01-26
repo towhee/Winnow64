@@ -197,6 +197,11 @@ void BookMarks::removeBookmark()
 //	}
 }
 
+void BookMarks::contextMenuEvent(QContextMenuEvent *event)
+{
+
+}
+
 void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 

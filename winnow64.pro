@@ -1,5 +1,12 @@
 #CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 CONFIG += sdk_no_version_check
+
+#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
+greaterThan(QT_MAJOR_VERSION, 5) {
+    DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x051500
+#    QT += core5compat
+}
+
 win32:QMAKE_CXXFLAGS += /std:c++17
 win32:QMAKE_CXXFLAGS += /Zc:__cplusplus
 
@@ -28,13 +35,8 @@ Debug:UI_DIR = debug/.ui
 QT += widgets
 QT += concurrent
 QT += network
-greaterThan(QT_MAJOR_VERSION, 5) {
-#    QT += core5compat
-}
 
-HEADERS += Cache/mdcache.h \
-    Dialogs/ingestdlgold.h \
-    File/ingest.h
+HEADERS += Cache/mdcache.h
 HEADERS += Cache/cachedata.h
 HEADERS += Cache/tshash.h
 HEADERS += Cache/imagecache.h
@@ -74,6 +76,7 @@ HEADERS += Embellish/embelexport.h
 HEADERS += Embellish/Properties/embelproperties.h
 HEADERS += File/bookmarks.h
 HEADERS += File/fstree.h
+HEADERS += File/ingest.h
 HEADERS += Image/imagealign.h
 HEADERS += Image/pixmap.h
 HEADERS += Image/stack.h
@@ -93,10 +96,8 @@ HEADERS += ImageFormats/Olympus/olympus.h
 HEADERS += ImageFormats/Panasonic/panasonic.h
 HEADERS += ImageFormats/Sony/sony.h
 HEADERS += ImageFormats/Tiff/tiff.h
-
 HEADERS += Lcms2/lcms2.h
 HEADERS += Lcms2/lcms2_plugin.h
-
 HEADERS += Main/dockwidget.h
 HEADERS += Main/global.h
 HEADERS += Main/mainwindow.h
@@ -147,9 +148,7 @@ HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
-SOURCES += Cache/cachedata.cpp \
-    Dialogs/ingestdlgold.cpp \
-    File/ingest.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/mdcache.cpp
@@ -184,7 +183,7 @@ SOURCES += Embellish/Properties/embelproperties.cpp
 SOURCES += Embellish/embelexport.cpp
 SOURCES += File/bookmarks.cpp
 SOURCES += File/fstree.cpp
-SOURCES +=
+SOURCES += File/ingest.cpp
 SOURCES += Image/imagealign.cpp
 SOURCES += Image/pixmap.cpp
 SOURCES += Image/stack.cpp
@@ -319,7 +318,6 @@ ICON = images/winnow.icns
 RC_ICONS = images/winnow.ico
 
 DISTFILES += Docs/ingestautopath
-#DISTFILES += Lcms2/lcms2.def
 DISTFILES += Docs/ingestautopath.html
 DISTFILES += Docs/versions
 DISTFILES += Docs/test.html
@@ -359,9 +357,7 @@ macx:LIBS += -framework AppKit
 #macx: PRE_TARGETDEPS += $$PWD/Lib/lcms2/release/liblcms2.a
 
 
-win32:QMAKE_CXXFLAGS += /MD
-#win32:QMAKE_CXXFLAGS += /MDd
-#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../LIBRARYNAME/Lib/ -lLIBRARY /NODEFAULTLIB:library
+#win32:QMAKE_CXXFLAGS += /MD
 
 # zLib
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/zlib/x64-Release/ -lzlib
@@ -369,10 +365,10 @@ win32:INCLUDEPATH += $$PWD/Lib/zlib
 win32:DEPENDPATH += $$PWD/Lib/zlib
 
 # lcms not using compiled lib: compiling source in project using D:\My Projects\Winnow Project\Winnow64\Lcms2
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -lCORE_RL_lcms_
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
-win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
-win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
+#win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -lCORE_RL_lcms_
+#else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/Lib/lcms2-2.9/Lib/MS/ -llcms2_staticd
+#win32:INCLUDEPATH += $$PWD/Lib/lcms2-2.9/include
+#win32:DEPENDPATH += $$PWD/Lib/lcms2-2.9/Lib/MS/
 
 # libde265 (frame parallel)
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/Lib/libde265/release/ -llibde265
