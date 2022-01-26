@@ -518,7 +518,12 @@ void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
     }
     if (p.report) {
         MetaReport::header("JPG Segment Hash", p.rpt);
-        p.rpt << "Segment\t\tOffset\t\tHex\n";
+        p.rpt.setFieldWidth(12);
+        p.rpt.setFieldAlignment(QTextStream::AlignLeft);
+        p.rpt << "Segment";
+        p.rpt.setFieldAlignment(QTextStream::AlignRight);
+        p.rpt << "Offset";
+        p.rpt << "Hex" << "\n";
 
         QHashIterator<QString, quint32> i(segmentHash);
         while (i.hasNext()) {
@@ -527,6 +532,7 @@ void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
                   << ":\t\t" << i.value() << "\t\t"
                   << QString::number(i.value(), 16).toUpper() << "\n";
         }
+        p.rpt.setFieldAlignment(QTextStream::AlignLeft);
     }
 }
 
