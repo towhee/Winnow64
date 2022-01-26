@@ -4100,6 +4100,7 @@ void MW::createMenus()
     // main menu
     menuBar()->addAction(fileGroupAct);
     menuBar()->addAction(editGroupAct);
+    menuBar()->addMenu(goMenu);
     menuBar()->addAction(goGroupAct);
     menuBar()->addAction(filterGroupAct);
     menuBar()->addAction(sortGroupAct);

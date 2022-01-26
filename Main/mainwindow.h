@@ -47,7 +47,6 @@
 
 #include "File/ingest.h"
 #include "ingestdlg.h"
-#include "ingestdlgold.h"
 #include "saveasdlg.h"
 #include "aboutdlg.h"
 #include "selectionorpicksdlg.h"
@@ -963,7 +962,6 @@ private:
     InfoView *infoView;
     Ingest *backgroundIngest = nullptr;
     IngestDlg *ingestDlg;
-    IngestDlgOld *ingestDlgOld;
     SaveAsDlg *saveAsDlg;
     LoadUsbDlg *loadUsbDlg;
     AboutDlg *aboutDlg;

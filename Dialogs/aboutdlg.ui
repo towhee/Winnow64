@@ -35,9 +35,12 @@
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Fixed</enum>
+       </property>
        <property name="sizeHint" stdset="0">
         <size>
-         <width>20</width>
+         <width>180</width>
          <height>20</height>
         </size>
        </property>
@@ -59,15 +62,13 @@
        </property>
        <property name="font">
         <font>
-         <family>Tahoma</family>
          <pointsize>30</pointsize>
-         <weight>50</weight>
          <italic>false</italic>
          <bold>false</bold>
         </font>
        </property>
        <property name="text">
-        <string>&lt;h1&gt;&lt;i&gt;Winnow&lt;/i&gt;&lt;/h1&gt;</string>
+        <string>&lt;h1&gt;Winnow&lt;/h1&gt;</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -205,7 +206,6 @@
          </property>
          <property name="font">
           <font>
-           <family>MS Shell Dlg 2</family>
            <pointsize>20</pointsize>
           </font>
          </property>
@@ -240,7 +240,6 @@
          </property>
          <property name="font">
           <font>
-           <family>MS Shell Dlg 2</family>
            <pointsize>20</pointsize>
           </font>
          </property>
@@ -281,7 +280,6 @@
          </property>
          <property name="font">
           <font>
-           <family>MS Shell Dlg 2</family>
            <pointsize>20</pointsize>
           </font>
          </property>
@@ -300,7 +298,6 @@
          </property>
          <property name="font">
           <font>
-           <family>MS Shell Dlg 2</family>
            <pointsize>20</pointsize>
           </font>
          </property>

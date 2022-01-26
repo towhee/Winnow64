@@ -1,4 +1,5 @@
 BUGS / TO DO
+- report line/column of error in rapidxml
 - add Copyright status
 - Sort taking time when loading folder and sort is file
 - MW::enableSelectionDependentMenus needs updating for all situations
