@@ -496,6 +496,15 @@ bool Sony::parse(MetadataParameters &p,
 
     // Sony does not embed xmp in raw files
 
+    // jpg preview metadata report information
+    if (p.report) {
+        p.offset = m.offsetFull;
+        Jpeg jpeg;
+        IPTC iptc;
+        GPS gps;
+        jpeg.parse(p, m, ifd, &iptc, exif, &gps);
+    }
+
     return true;
 
 }

@@ -262,6 +262,15 @@ bool Fuji::parse(MetadataParameters &p,
         ifd->readIFD(p);
     }
 
+    // jpg preview metadata report information
+    if (p.report) {
+        p.offset = m.offsetFull;
+        Jpeg jpeg;
+        IPTC iptc;
+        GPS gps;
+        jpeg.parse(p, m, ifd, &iptc, exif, &gps);
+    }
+
     // Fuji files do not contain xmp
 
     return true;

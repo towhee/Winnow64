@@ -287,6 +287,15 @@ bool DNG::parse(MetadataParameters &p,
 
 //    if (ifdIPTCOffset) readIPTC(ifdIPTCOffset);
 
+    // jpg preview metadata report information
+    if (p.report) {
+        p.offset = m.offsetFull;
+        Jpeg jpeg;
+        IPTC iptc;
+        GPS gps;
+        jpeg.parse(p, m, ifd, &iptc, exif, &gps);
+    }
+
     // read XMP - no XMP in fuji raw files
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp) {
