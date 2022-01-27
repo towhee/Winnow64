@@ -315,6 +315,15 @@ bool Panasonic::parse(MetadataParameters &p,
 
     m.isXmp = true;       // Panasonic has an xmp segment
 
+    // jpg preview metadata report information
+    if (p.report) {
+        p.offset = m.offsetFull;
+        Jpeg jpeg;
+        IPTC iptc;
+        GPS gps;
+        jpeg.parse(p, m, ifd, &iptc, exif, &gps);
+    }
+
     // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp && m.xmpSegmentOffset > 0 && m.xmpSegmentLength > 0) {

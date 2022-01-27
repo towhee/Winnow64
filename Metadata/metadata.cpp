@@ -308,7 +308,8 @@ void Metadata::reportMetadata()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     QString createdExif = m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
-    p.rpt << "\nDATAMODEL:\n\n";
+    MetaReport::header("Winnow datamodel", p.rpt);
+//    p.rpt << "\nDATAMODEL:\n\n";
     p.rpt.reset();
     p.rpt.setFieldAlignment(QTextStream::AlignLeft);
 
@@ -345,7 +346,8 @@ void Metadata::reportMetadata()
     p.rpt.setFieldWidth(25); p.rpt << "nikonLensCode"       << m.nikonLensCode;       p.rpt.setFieldWidth(0); p.rpt << "\n";
 
     if (m.isXmp && p.xmpString.length() > 0 && m.xmpSegmentOffset > 0) {
-        p.rpt << "\nEmbedded XMP Extract:\n\n";
+        MetaReport::header("Embedded XMP Extract", p.rpt);
+//        p.rpt << "\nEmbedded XMP Extract:\n\n";
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
         if (xmp.isValid) p.rpt << xmp.docToQString();
     }
@@ -708,7 +710,8 @@ bool Metadata::parseSidecar()
     }
 
     if (p.report) {
-        p.rpt << "\nSidecar: " << sidecarPath << "\n";
+        MetaReport::header("Sidecar XMP Extract", p.rpt);
+//        p.rpt << "\nSidecar: " << sidecarPath << "\n";
         p.rpt << xmp.docToQString();
     }
     else {

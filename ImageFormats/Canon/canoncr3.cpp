@@ -1126,6 +1126,16 @@ void CanonCR3::parseExif()
     // IFD Exif: lens serial nember
     m.lensSN = Utilities::getString(p.file, ifd->ifdDataHash.value(42037).tagValue + startOffset,
             ifd->ifdDataHash.value(42037).tagCount);
+
+    // jpg preview metadata report information
+    if (p.report) {
+        p.offset = m.offsetFull;
+        Jpeg jpeg;
+        IPTC iptc;
+        GPS gps;
+        jpeg.parse(p, m, ifd, &iptc, exif, &gps);
+    }
+
     /*
     qDebug() << __FUNCTION__
              << m.createdDate
