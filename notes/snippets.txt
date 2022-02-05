@@ -1,3 +1,10 @@
+// Qt version control
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+    qDebug() << __FUNCTION__ << progressLabel->pixmap()->width();
+#else
+    qDebug() << __FUNCTION__ << progressLabel->pixmap(Qt::ReturnByValueConstant()).width();
+#endif
+
 // disable QAction shortcuts
 QList<QAction*> actions = findChildren<QAction*>();
 for (QAction *a : actions) a->setShortcutContext(Qt::WidgetShortcut);

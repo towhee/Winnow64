@@ -1070,7 +1070,7 @@ private:
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
     void updateState();
-    void clearAll();
+    void stopAndClearAll();
     void deleteViewerImage();
     void selectCurrentViewDir();
     void addMenuSeparator(QWidget *widget);
@@ -1166,6 +1166,7 @@ private:
     void diagnosticsIngest();
     void diagnosticsZoom();
     void diagnosticsReport(QString reportString);
+    void errorReport();
 
     void mediaReadSpeed();
     void reportHueCount();

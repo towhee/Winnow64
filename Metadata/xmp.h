@@ -25,63 +25,98 @@ public:
     Xmp(QFile &file, uint offset, uint length, QObject *parent = nullptr);
     Xmp(QFile &file, QObject *parent = nullptr);
 
+    enum Err {
+        NoErr,
+        ParseFailed,
+        NoRoot,
+        InvalidRoot,
+        NoRdf,
+        NoRdfDescription,
+        NoRdfAbout,
+        Count
+    } err;
+    QVector<QString> errMsg;
+
+    enum ElementType {
+        Node,
+        Attribute
+    };
+
     struct XmpElement {
         rapidxml::xml_node<>* node;
         rapidxml::xml_node<>* parent;
         rapidxml::xml_attribute<>* attr;
         QString schema;             // ie xmp, aux, dc...
-        QString elementName;        // used to search ie "xmp:Rating"
-        QString nodeName;           // req'd ie "rdf:Description"
-        QString attrName;           // if "" then node format ie "xmp:Rating"
+        QString name;               // used to search ie "xmp:Rating"
         QString parentName;         // req'd if attrName = ""
-        QString type;               // node or attribute
+        ElementType type;           // node or attribute
         QString value;
         bool operator==(const XmpElement& x) const {
-            return (x.nodeName == nodeName
-                    && x.attrName == attrName
-                    && x.parentName == parentName
-                    );
+            return (x.name == name && x.parentName == parentName);
         }
         bool exists() const {
-            return !(nodeName == "" && attrName == "" && parentName == "");
+            return !(name == "" && parentName == "");
         }
     };
-    static QByteArray skeleton();
 
     QString getItem(QByteArray item);
     bool setItem(QByteArray item, QByteArray value);
+    void fix();
 
-    QString setAttribute(QByteArray attrName, QByteArray nodeName = "rdf:Description");
-    QString xmpAsString();
+    QString srcToString();
     bool writeJPG(QByteArray &buffer);
     bool writeSidecar(QFile &sidecarFile);
 
     QString docToQString();
     QByteArray docToByteArray();
     std::string docToStdString();
+
     bool isValid = false;
 
     QHash<QString, XmpElement>definedElements;
 
 private:
     void initialize();
-    bool includeSchemaNamespece(QString item);
-    void test(XmpElement o);
+    bool includeSchemaNamespace(QString item);
+    void report(XmpElement o);
+    static QByteArray skeleton();
 
-    XmpElement xmlDocObj(QString name,
+    XmpElement xmlDocElement(QString name,
                      rapidxml::xml_node<> *node,
                      rapidxml::xml_node<> *parNode = nullptr);
 
     void walk(QTextStream &rpt,
-              const rapidxml::xml_node<>* node,
+              rapidxml::xml_node<>* node,
               int indentSize = 4,
               int indent = 0);
 
+    inline QString xmlNodeName(rapidxml::xml_node<> *node)
+    {
+        return QString(node->name()).left(node->name_size());
+    }
+
+    inline QString xmlNodeValue(rapidxml::xml_node<> *node)
+    {
+        return QString(node->value()).left(node->value_size());
+    }
+
+    inline QString xmlAttributeName(rapidxml::xml_attribute<> *attr)
+    {
+        return QString(attr->name()).left(attr->name_size());
+    }
+
+    inline QString xmlAttributeValue(rapidxml::xml_attribute<> *attr)
+    {
+        return QString(attr->value()).left(attr->value_size());
+    }
+
     rapidxml::xml_document<> xmlDoc;
-    rapidxml::xml_node<> *rdfDescriptionNode;
-    rapidxml::xml_attribute<> *rdfAbout;
-    XmpElement nullXmpObj;
-    QByteArrayList a;               // attributes appended to xmlDoc
+    rapidxml::xml_node<> *rootNode = nullptr;
+    rapidxml::xml_node<> *rdfNode = nullptr;
+    rapidxml::xml_node<> *rdfDescriptionNode = nullptr;
+    rapidxml::xml_attribute<> *rdfAbout = nullptr;
+    XmpElement nullXmpElement;
+    QByteArrayList a;               // attributes/nodes appended to xmlDoc
     QByteArrayList v;               // values appended to xmlDoc
 
     QByteArray xmpBa;               // the xmpmeta packet
@@ -102,36 +137,6 @@ private:
         "rdf:Alt",
         "rdf:Bag"
     };
-
-    /*
-    QString assignmentMethod;       // brackets or equals
-    QByteArray fileType;            // uppercase suffix
-
-    QHash<QByteArray,QByteArray> startTagHash;
-    QHash<QString,QByteArray> schemaHash;
-
-    QByteArrayList xmpSchemaList;
-    QByteArrayList dcSchemaList;
-    QByteArrayList auxSchemaList;
-    QByteArrayList iptc4xmpCoreSchemaList;
-
-    QByteArrayList useLanguage;
-
-    QByteArray xmpmetaPrefix = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">";
-    QByteArray xmpmetaSuffix = "</x:xmpmeta>";
-    QByteArray rdfPrefix = "<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">";
-    QByteArray rdfSuffix = "</rdf:RDF>";
-    QByteArray rdfDescriptionPrefix = "<rdf:Description";  // + schemas
-    QByteArray rdfDescriptionSuffix = "</rdf:Description>";
-    QByteArray xmpSchema = "\n\t\t\txmlns:xmp=\"http://ns.adobe.com/xap/1.0/\" ";
-    QByteArray dcSchema = "\n\t\t\txmlns:dc=\"http://purl.org/dc/elements/1.1/\" ";
-    QByteArray tifSchema = "\n\t\t\txmlns:tiff=\"http://ns.adobe.com/tiff/1.0/\" ";
-    QByteArray iptc4xmpCoreSchema = "\n\t\t\txmlns:Iptc4xmpCore=\"http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/\" ";
-    QByteArray psSchema = "\n\t\t\txmlns:photoshop=\"http://ns.adobe.com/photoshop/1.0/\" ";
-    QByteArray sidecarExtension = "<photoshop:SidecarForExtension>XXX</photoshop:SidecarForExtension>";
-    QByteArray rdfSeq = "<rdf:Seq><rdf:li>XXX</rdf:li></rdf:Seq>";
-    QByteArray rdfList = "<TAG><rdf:Alt><rdf:li xml:lang=\"x-default\">XXX</rdf:li></rdf:Alt></TAG>";
-    */
 };
 
 #endif // XMP_H

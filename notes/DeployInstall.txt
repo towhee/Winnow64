@@ -56,6 +56,8 @@ Qt VERSION CHANGE
 	For Win: 
 	---------------------------------------------------------------------
 	- update Qt paths in D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallation.bat
+	- may need to update dll in release folders: iconengines, imageformats, platforms and styles to the 
+	  current Qt version copies
 	
 ADD NEW DLL ON WINDOWS
 

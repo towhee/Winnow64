@@ -175,8 +175,6 @@ IngestDlg::IngestDlg(QWidget *parent,
     // assign completer to description
     ingestDescriptionListModel = new QStringListModel(this->ingestDescriptionCompleter);
     QCompleter *completer = new QCompleter(ingestDescriptionListModel, this);
-//    QCompleter *completer;
-//    completer->setModel(&ingestDescriptionListModel);
     completer->setCaseSensitivity(Qt::CaseInsensitive);
     ui->descriptionLineEdit->setCompleter(completer);
     ui->descriptionLineEdit_2->setCompleter(completer);
@@ -369,13 +367,6 @@ void IngestDlg::ingest()
     else {
         // add message explaining failure
         return;
-    }
-
-    // add description to completer list
-    QString desc = ui->descriptionLineEdit->text();
-    if (desc.length() > 0) {
-        if (!ingestDescriptionCompleter.contains(desc))
-            ingestDescriptionCompleter << desc;
     }
 
     // copy cycles req'd: 1 if no backup, 2 if backup
@@ -1039,23 +1030,23 @@ void IngestDlg::on_descriptionLineEdit_textChanged(const QString& arg1)
     if (desc2  == prevText) ui->descriptionLineEdit_2->setText(arg1);
     prevText = arg1;
     updateFolderPaths();
-    // add description to completer list
-    QString desc = ui->descriptionLineEdit->text();
-    if (desc.length() > 0) {
-        if (!ingestDescriptionCompleter.contains(desc))
-            ingestDescriptionCompleter << desc;
-    }
+    // add description to completer list (move to after dialog closes)
+//    QString desc = ui->descriptionLineEdit->text();
+//    if (desc.length() > 0) {
+//        if (!ingestDescriptionCompleter.contains(desc))
+//            ingestDescriptionCompleter << desc;
+//    }
 }
 
 void IngestDlg::on_descriptionLineEdit_2_textChanged(const QString/* &arg1*/)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    // add description to completer list
-    QString desc = ui->descriptionLineEdit->text();
-    if (desc.length() > 0) {
-        if (!ingestDescriptionCompleter.contains(desc))
-            ingestDescriptionCompleter << desc;
-    }
+    // add description to completer list (move to after dialog closes)
+//    QString desc = ui->descriptionLineEdit->text();
+//    if (desc.length() > 0) {
+//        if (!ingestDescriptionCompleter.contains(desc))
+//            ingestDescriptionCompleter << desc;
+//    }
     updateFolderPaths();
 }
 
@@ -1542,6 +1533,13 @@ void IngestDlg::on_okBtn_clicked()
     if (G::isLogger) G::log(__FUNCTION__); 
     // check parameters
     if(!parametersOk()) return;
+
+    // add description to completer list (move to after dialog closes)
+    QString desc = ui->descriptionLineEdit->text();
+    if (desc.length() > 0) {
+        if (!ingestDescriptionCompleter.contains(desc))
+            ingestDescriptionCompleter << desc;
+    }
 
     quitIfNotEnoughSpace();
 

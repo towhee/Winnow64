@@ -43,6 +43,7 @@ private:
     void createOkToShow();
 
 private slots:
+    void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
 
 signals:
     void displayLoupe();

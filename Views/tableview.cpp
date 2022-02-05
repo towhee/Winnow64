@@ -233,6 +233,12 @@ void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)
     emit displayLoupe();
 }
 
+void TableView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+
+}
+
 void TableView::createOkToShow()
 {
 /*

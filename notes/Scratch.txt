@@ -1,10 +1,68 @@
-G::popUp->setProgressVisible(true);
-G::popUp->setProgressMax(rowCount());
-QString msg = "It may take a moment to load all the metadata for " + x + " files<p>"
-        "This is required before any filtering or sorting of metadata can be done.<p>"
-        "Press <font color=\"red\"><b>Esc</b></font> to cancel.";
-G::popUp->showPopup(msg, 0, true, 1);
-int count = 0;
-for (int row = 0; row < rowCount(); ++row) {
-    ...
-    G::popUp->setProgress(row);
+MW::test COMMENCE CLEARALL
+         61 MW::keyPressEvent
+          1 MW::clearAll
+          6 ImageCache::stopImageCache
+        431 MW::updateImageCachingThreadRunStatus
+         28 ImageCache::clearImageCache
+         56 Xmp::Xmp
+         90 Xmp::Xmp
+         12 MW::updateImageCacheStatus                         Instruction: Clear  Source: ImageCache::clearImageCache
+          7 MW::metadataChanged
+         25 MW::metadataChanged
+          7 Xmp::getItem
+         59 Xmp::getItem
+          3 Xmp::getItem
+          3 Xmp::getItem
+          2 Xmp::getItem
+          1 Xmp::getItem
+          1 Xmp::getItem
+          1 Xmp::getItem
+         81 Xmp::getItem
+        101 Metadata::parseSidecar
+        925 DataModel::addMetadataForItem
+        308 MW::updateMetadataThreadRunStatus
+        476 DataModel::clearDataModel
+          7 MW::fileSelectionChange
+         42 IconView::selectionChanged
+          1 MW::updateStatus
+          4 IconView::getCurrentFilePath
+         10 Win::availableMemory
+          3 MW::getZoom
+          2 MW::getPosition
+          3 IconView::getSelectedCount
+        358 MW::getPicked
+          7 MW::getPosition
+          3 MW::metadataChanged
+         16 InfoView::showOrHide
+          3 MW::getZoom
+          4 MW::getSelectedFileSize
+          5 MW::memoryReqdForSelection
+          1 MW::metadataChanged
+          9 InfoView::showOrHide
+        431 MW::getPicked
+1,545,704,047 IconView::selectionChanged
+          3 Filters::removeChildrenDynamicFilters
+         21 Filters::clearAll
+         29 Filters::dataChanged
+          2 Filters::setSearchNewFolder
+         40 Filters::dataChanged
+         56 ImageView::clear
+         19 InfoView::clearInfo
+          3 MW::metadataChanged
+         39 InfoView::showOrHide
+          1 MW::metadataChanged
+         10 InfoView::showOrHide
+          1 MW::metadataChanged
+         10 InfoView::showOrHide
+          1 MW::metadataChanged
+          7 InfoView::showOrHide
+          0 MW::metadataChanged
+          6 InfoView::showOrHide
+          7 MW::updateDisplayResolution
+          0 MW::metadataChanged
+          6 InfoView::showOrHide
+        400 MW::setThreadRunStatusInactive
+         16 MW::updateStatus
+        197 MW::updateStatusBar
+        114 Filters::isAnyFilter
+MW::test CLEARALL

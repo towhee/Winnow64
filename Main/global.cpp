@@ -2,10 +2,13 @@
 
 namespace G
 {
+    bool stop = false;                  // flag to stop everything
+
     QSettings *settings;
 
     // system messaging
     bool isLogger = false;              // Writes log messages to file or console
+    bool isErrorLogger = false;         // Writes error log messages to file or console
     bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool isTestLogger = false;          // Writes test points to file or console
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
@@ -181,15 +184,16 @@ namespace G
 
     void errlog(QString functionName, QString fPath, QString err)
     {
-        return;
+//        return;
+        if (!isErrorLogger) return;
         QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
         QString f = functionName.leftJustified(40, '.') + " ";
         QString p = fPath;
         QString e = err.leftJustified(75, '.') + " ";
         QString msg = d + e + f + p + "\n";
-//        qDebug() << __FUNCTION__ << msg;
-        return;
         if (errlogFile.isOpen()) {
+            quint32 eof = errlogFile.size();
+            errlogFile.seek(eof);
             errlogFile.write(msg.toUtf8());
             errlogFile.flush();
         }
