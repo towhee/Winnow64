@@ -326,7 +326,7 @@ bool Panasonic::parse(MetadataParameters &p,
 
     // read XMP
     bool okToReadXmp = true;
-    if (m.isXmp && okToReadXmp && m.xmpSegmentOffset > 0 && m.xmpSegmentLength > 0) {
+    if (!G::stop && m.isXmp && okToReadXmp && m.xmpSegmentOffset > 0 && m.xmpSegmentLength > 0) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
         if (xmp.isValid) {
             m.rating = xmp.getItem("Rating");
@@ -352,7 +352,7 @@ bool Panasonic::parse(MetadataParameters &p,
         m._orientation = m.orientation;
         m._rotationDegrees = m.rotationDegrees;
 
-        if (p.report) p.xmpString = xmp.xmpAsString();
+        if (p.report) p.xmpString = xmp.srcToString();
     }
 
     return true;

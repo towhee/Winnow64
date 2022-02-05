@@ -232,6 +232,11 @@ itemChange, which is subclassed here.
         if (G::isLogger) mw->openLog();
     }
 
+    if (source == "isErrorLogger") {
+        G::isErrorLogger = v.toBool();
+        if (G::isErrorLogger) mw->openLog();
+    }
+
     if (source == "rememberLastDir") {
         mw->rememberLastDir = v.toBool();
     }
@@ -342,7 +347,7 @@ void Preferences::addItems()
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::modifySourceFiles;
-    i.key = "editSourceFiles";
+    i.key = "modifySourceFiles";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
@@ -482,6 +487,21 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
 //    addItem(i);
+
+    // Error Logger
+    i.name = "isErrorLogger";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Turn error logging on";
+    i.tooltip = "Turn this on to write errors to a log file."
+                "Warning: this will impact performance.  Use"
+                "to help resolve bugs and crashes.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::isErrorLogger;
+    i.key = "isErrorLogger";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
 
     // Thumbnails Header (Root) ---------------------------------------------------------------
     i.name = "AppearanceHeader";

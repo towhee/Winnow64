@@ -310,7 +310,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 //    if (G::isLogger && G::sendLogToConsole == false) openLog();
 
 //    // Error Logger
-//    openErrLog();
+    if (G::isErrorLogger) openErrLog();
 
     // app stylesheet and QSetting font size and background from last session
     createAppStyle();
@@ -1315,7 +1315,7 @@ void MW::folderSelectionChange()
         G::log(__FUNCTION__, currentViewDirPath);
     }
 
-    clearAll();
+    stopAndClearAll();
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->invokeFromAction(embelTemplatesActions.at(0));
@@ -1355,7 +1355,7 @@ void MW::folderSelectionChange()
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(currentViewDirPath, true /*report*/, false /*isRemembered*/)) {
-        clearAll();
+        stopAndClearAll();
         G::isInitializing = false;
         setWindowTitle(winnowWithVersion);
         if (G::isLogger) Utilities::log(__FUNCTION__, "Invalid folder " + currentViewDirPath);
@@ -1392,7 +1392,7 @@ void MW::folderSelectionChange()
 
     if (!dm->load(currentViewDirPath, subFoldersAction->isChecked())) {
         qWarning() << "Datamodel Failed To Load for" << currentViewDirPath;
-        clearAll();
+        stopAndClearAll();
         enableSelectionDependentMenus();
         if (dm->timeToQuit) {
             updateStatus(false, "Image loading has been cancelled", __FUNCTION__);
@@ -1493,6 +1493,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     delegate use of the current index must check the column.
 */
     if (G::isLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
+    if (G::stop) return;
+
    /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
@@ -1719,7 +1721,7 @@ void MW::folderAndFileSelectionChange(QString fPath)
     return;
 }
 
-void MW::clearAll()
+void MW::stopAndClearAll()
 {
 /*
     Called when folderSelectionChange and invalid folder (no folder, no eligible images).
@@ -1727,19 +1729,19 @@ void MW::clearAll()
     a bookmark or ejects a drive and the resulting folder does not have any eligible images.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
 
+    G::stop = true;
     setWindowTitle(winnowWithVersion);
     G::isNewFolderLoaded = false;
     G::allMetadataLoaded = false;
     G::isNewFolderLoadedAndInfoViewUpToDate = false;
     // Stop any threads that might be running.
-    imageCacheThread->stopImageCache();
     metadataCacheThread->stopMetadataCache();
+    imageCacheThread->stopImageCache();
     buildFilters->stop();
-    dm->clearDataModel();
 //    icd->imCache.clear();
-    G::err.clear();
-    currentRow = 0;
+//    G::err.clear();
 //    metadata->clear();
     imageView->clear();
     if (useInfoView) {
@@ -1753,6 +1755,11 @@ void MW::clearAll()
     cacheProgressBar->clearProgress();
     progressLabel->setVisible(false);
     updateClassification();
+    selectionModel->clear();
+    dm->clearDataModel();
+    currentRow = 0;
+    G::stop = false;
+    qDebug() << __FUNCTION__ << "COMPLETED STOPANDCLEARALL";
 }
 
 void MW::nullFiltration()
@@ -2225,7 +2232,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         folderSelectionChange();
     }
     else {
-        clearAll();
+        stopAndClearAll();
         setWindowTitle(winnowWithVersion);
         enableSelectionDependentMenus();
     }
@@ -2306,7 +2313,7 @@ void MW::createActions()
     addAction(manageAppAction);
     connect(manageAppAction, &QAction::triggered, this, &MW::externalAppManager);
 
-    /* read external apps from QStettings */
+    /* read external apps from QSettings */
     if (isSettings) {
         setting->beginGroup("ExternalApps");
         QStringList names = setting->childKeys();
@@ -3585,11 +3592,11 @@ void MW::createActions()
     addAction(diagnosticsCurrentAction);
     connect(diagnosticsCurrentAction, &QAction::triggered, this, &MW::diagnosticsCurrent);
 
-    diagnosticsErrorsAction = new QAction(tr("Error Diagnostics"), this);
+    diagnosticsErrorsAction = new QAction(tr("Errors"), this);
     diagnosticsErrorsAction->setObjectName("diagnosticsErrorsAction");
     diagnosticsErrorsAction->setShortcutVisibleInContextMenu(true);
     addAction(diagnosticsErrorsAction);
-    connect(diagnosticsErrorsAction, &QAction::triggered, this, &MW::diagnosticsErrors);
+    connect(diagnosticsErrorsAction, &QAction::triggered, this, &MW::errorReport);
 
     diagnosticsMainAction = new QAction(tr("Main"), this);
     diagnosticsMainAction->setObjectName("diagnosticsMain");
@@ -4784,7 +4791,6 @@ void MW::createInfoView()
                 k->setData(idParentChk, okToShow, Qt::EditRole);
 //                qDebug() << G::t.restart() << "\t" << "Parent match so set to" << okToShow
 //                         << idParent.data().toString() << "\n";
-                isFound = true;
                 break;
             }
             for (int childRow = 0; childRow < k->rowCount(idParent); childRow++) {
@@ -6084,6 +6090,8 @@ void MW::filterChange(QString source)
         G::popUp->showPopup("Please wait for the folder to complete loading...", 2000);
         return;
     }
+
+    if (G::stop) return;
 
     // update filter checkbox
     qApp->processEvents();
@@ -7450,10 +7458,25 @@ void MW::diagnosticsReport(QString reportString)
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     QFontMetrics metrics(md.textBrowser->font());
     md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
-//    md.textBrowser->setTabStopDistance(3 * metrics.width(' ')); // width is deprecated Qt 6.2
-//    md.textBrowser->setStyleSheet(G::css);
     dlg->show();
 //    std::cout << reportString.toStdString() << std::flush;
+}
+
+void MW::errorReport()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QDialog *dlg = new QDialog;
+    dlg->setStyleSheet(G::css);
+    Ui::metadataReporttDlg md;
+    md.setupUi(dlg);
+    dlg->setWindowTitle("Winnow Error Log");
+    md.textBrowser->setStyleSheet(G::css);
+    md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+    G::errlogFile.seek(0);
+    QString errString(G::errlogFile.readAll());
+//    qDebug() << __FUNCTION__ << G::errlogFile.isOpen() << errString;
+    md.textBrowser->setText(errString);
+    dlg->show();
 }
 
 void MW::about()
@@ -8414,6 +8437,7 @@ void MW::openErrLog()
     if (!dir.exists()) dir.mkdir(path);
     if (G::errlogFile.isOpen()) G::errlogFile.close();
     QString fPath = path + "/WinnowErrorLog.txt";
+//    qDebug() << __FUNCTION__ << fPath;
     G::errlogFile.setFileName(fPath);
     // erase content if over one week since last modified
     QFileInfo info(G::errlogFile);
@@ -8421,7 +8445,8 @@ void MW::openErrLog()
     QDateTime oneWeekAgo = QDateTime::currentDateTime().addDays(-7);
     if (lastModified < oneWeekAgo) clearErrLog();
     if (G::errlogFile.open(QIODevice::ReadWrite)) {
-        G::errlogFile.readAll();
+//        QString errString(G::errlogFile.readAll());
+//        qDebug() << __FUNCTION__ << errString;
     }
 }
 
@@ -8466,6 +8491,7 @@ void MW::writeSettings()
     setting->setValue("useSidecar", G::useSidecar);
     setting->setValue("embedTifThumb", G::embedTifThumb);
     setting->setValue("isLogger", G::isLogger);
+    setting->setValue("isErrorLogger", G::isErrorLogger);
 
     // datamodel
     setting->setValue("maxIconSize", G::maxIconSize);
@@ -8761,6 +8787,7 @@ bool MW::loadSettings()
         prevMode = "Loupe";
         G::mode = "Loupe";
 //        G::isLogger = false;
+        G::isErrorLogger = false;
 
         // appearance
         G::backgroundShade = 50;
@@ -8835,6 +8862,10 @@ bool MW::loadSettings()
 //        G::isLogger = setting->value("isLogger").toBool();
 //    else
 //        G::isLogger = false;
+    if (setting->contains("isErrorLogger"))
+        G::isErrorLogger = setting->value("isErrorLogger").toBool();
+    else
+        G::isLogger = false;
     if (setting->contains("deleteWarning"))
         deleteWarning = setting->value("deleteWarning").toBool();
     else
@@ -10435,7 +10466,7 @@ void MW::ingest()
 {
 /*
     Copies images from a source location (usually a camera media card) to one or more
-    destinations.  Ingestion comprises of three files:
+    destinations.  Ingestion comprises of three components:
 
     1.  MW::ingest()
 
@@ -10484,87 +10515,13 @@ void MW::ingest()
             TokenDlg, allowing the user to automate the construction of the entire destination
             file path.
 
-    3. Ingest
+    3. Ingest (class)
 
         Ingest duplicates the actual ingest process that runs in the IngestDlg, but runs in a
         separate thread after the IngestDlg closes.  Progress is updated in progressBar at the
         extreme left in the status bar.
 */
 
-    /* old ingest
-    if (G::isLogger) G::log(__FUNCTION__);
-    static QString prevSourceFolder = "";
-    static QString baseFolderDescription = "";
-    if (prevSourceFolder != currentViewDirPath) baseFolderDescription = "";
-
-    if (thumbView->isPick()) {
-        ingestDlgOld = new IngestDlgOld(this,
-                                  combineRawJpg,
-                                  autoEjectUsb,
-                                  integrityCheck,
-                                  ingestIncludeXmpSidecar,
-                                  backupIngest,
-                                  gotoIngestFolder,
-                                  metadata,
-                                  dm,
-                                  ingestRootFolder,
-                                  ingestRootFolder2,
-                                  manualFolderPath,
-                                  manualFolderPath2,
-                                  baseFolderDescription,
-                                  pathTemplates,
-                                  filenameTemplates,
-                                  pathTemplateSelected,
-                                  pathTemplateSelected2,
-                                  filenameTemplateSelected,
-                                  ingestDescriptionCompleter,
-                                  autoIngestFolderPath,
-                                  css);
-
-        connect(ingestDlgOld, &IngestDlgOld::updateIngestHistory, this, &MW::addIngestHistoryFolder);
-        connect(ingestDlgOld, &IngestDlgOld::updateProgress, this, &MW::setProgress);
-        // not used rgh
-        connect(ingestDlgOld, &IngestDlgOld::revealIngestLocation, this, &MW::revealInFileBrowser);
-
-        bool ingested = ingestDlgOld->exec();
-        delete ingestDlgOld;
-
-        // save ingest history folders
-        setting->beginGroup("IngestHistoryFolders");
-        setting->remove("");
-        for (int i = 0; i < ingestHistoryFolders->count(); i++) {
-            setting->setValue("ingestHistoryFolder" + QString::number(i+1),
-                              ingestHistoryFolders->at(i));
-        }
-        setting->endGroup();
-
-        // save ingest description completer list
-        setting->beginGroup("IngestDescriptionCompleter");
-        for (const auto& i : ingestDescriptionCompleter) {
-            setting->setValue(i, "");
-        }
-        setting->endGroup();
-
-        if (!ingested) return;
-
-        if (autoEjectUsb) ejectUsb(currentViewDirPath);
-
-        prevSourceFolder = currentViewDirPath;
-
-        if(gotoIngestFolder) {
-            fsTree->select(lastIngestLocation);
-            folderSelectionChange();
-            return;
-        }
-
-        // set the ingested flags and clear the pick flags
-        setIngested();
-    }
-    else QMessageBox::information(this,
-         "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
-    //*/
-
-//    /* new ingest
     if (G::isLogger) G::log(__FUNCTION__);
 
     // check if background ingest in progress
@@ -10619,6 +10576,8 @@ void MW::ingest()
 
         bool okToIngest = ingestDlg->exec();
         delete ingestDlg;
+
+        if (!okToIngest) return;
 
         // update ingest history folders
         // get rid of "/" at end of path for history (in file menu)
@@ -10728,7 +10687,7 @@ void MW::ejectUsb(QString path)
                  << "ejectDrive.rootPath() =" << ejectDrive.rootPath()
                     ;
                     //*/
-        clearAll();
+        stopAndClearAll();
     }
 
     QString driveName = ejectDrive.name();      // ie WIN "D:\" or MAC "Untitled"
@@ -11966,7 +11925,7 @@ void MW::deleteFiles()
 
     // if all images in folder were deleted
     if (sldm.count() == dm->rowCount()) {
-        clearAll();
+        stopAndClearAll();
         folderSelectionChange();
         return;
     }
@@ -12031,7 +11990,7 @@ void MW::deleteFolder()
 
     if (currentViewDirPath == dirToDelete) {
         ignoreFolderSelectionChange = true;
-        clearAll();
+        stopAndClearAll();
     }
 
     QDir dir(dirToDelete);
@@ -12398,17 +12357,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    cacheProgressBar->setBackgroundColor(Qt::gray);
-//    QPixmap pm = progressPixmap->scaled(200, 25);
-    progressWidth = 400;
-    progressLabel->setFixedWidth(progressWidth);
-//    progressLabel->setPixmap(pm);
-    updateImageCacheStatus("Update all rows", icd->cache, "");
-
-//#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-//    qDebug() << __FUNCTION__ << progressLabel->pixmap()->width();
-//#else
-//    qDebug() << __FUNCTION__ << progressLabel->pixmap(Qt::ReturnByValueConstant()).width();
-//#endif
+    qDebug() << __FUNCTION__ << G::modifySourceFiles;
+//    selectionModel->clear();
+//    thumbView->selectionModel()->clear();
+//    return;
+//    qDebug() << __FUNCTION__ << "COMMENCE CLEARALL";
+//    stopAndClearAll();
+//    qDebug() << __FUNCTION__ << "CLEARALL";
 }
 // End MW

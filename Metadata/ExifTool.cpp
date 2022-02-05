@@ -87,6 +87,7 @@ void ExifTool::writeOrientation(QString src, QString orientation)
     7 = Mirror horizontal and rotate 90 CW
     8 = Rotate 270 CW
 */
+    qDebug() << __FUNCTION__ << src << orientation;
     QByteArray args;
     args.append("-orientation#=" + orientation.toUtf8() + "\n");
     if (isOverWrite) args += "-overwrite_original\n";

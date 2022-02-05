@@ -2,7 +2,7 @@
 
 void MetaReport::header(QString title, QTextStream &rpt)
 {
-    int hdrWidth = 90;
+    int hdrWidth = 120;
     int titleWidth = title.size() + 4;
     int padWidth = (hdrWidth - titleWidth) / 2;
     rpt.reset();

@@ -722,6 +722,10 @@ For some reason the selectionModel rowCount is not up-to-date and the selection 
 after the MD::fileSelectionChange occurs, hence update the status bar from here.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::stop) {
+        qDebug() << __FUNCTION__ << "G::stop =" << G::stop;
+        return;
+    }
     QListView::selectionChanged(selected, deselected);
     if (!G::isInitializing) emit updateStatus(true, "", __FUNCTION__);
 }

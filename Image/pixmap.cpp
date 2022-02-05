@@ -5,7 +5,10 @@ Pixmap::Pixmap(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(par
 {
     this->dm = dm;
     this->metadata = metadata;
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
     QImageReader::setAllocationLimit(1024);
+#endif
+
 }
 
 bool Pixmap::load(QString &fPath, QPixmap &pm, QString src)

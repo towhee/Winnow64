@@ -488,7 +488,7 @@ bool Tiff::parse(MetadataParameters &p,
 
     // read XMP
     bool okToReadXmp = true;
-    if (m.isXmp && okToReadXmp) {
+    if (m.isXmp && okToReadXmp && !G::stop) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
         if (xmp.isValid) {
             m.rating = xmp.getItem("Rating");
@@ -514,7 +514,7 @@ bool Tiff::parse(MetadataParameters &p,
         m._orientation = m.orientation;
         m._rotationDegrees = m.rotationDegrees;
 
-        if (p.report) p.xmpString = xmp.xmpAsString();
+        if (p.report) p.xmpString = xmp.srcToString();
     }
 
     return true;
@@ -552,7 +552,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
 
     // endianess
     isBigEnd = isBigEndian(p);
-    qDebug() << __FUNCTION__ << p.fPath << "isBigEnd =" << isBigEnd;
+//    qDebug() << __FUNCTION__ << p.fPath << "isBigEnd =" << isBigEnd;
 
     bool isReport = p.report;
     p.report = false;
@@ -675,7 +675,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
     if (planarConfiguration == 2 && compression == 5) {
         err = "LZW compression not supported for per channel planar configuration.  \n";
     }
-    if (err != "") qDebug() << __FUNCTION__ /*<< fPath*/ << err;
+    if (err != "") G::error(__FUNCTION__, p.fPath, err);
     if (err != "" && !isReport) return false;
 
     // rgh used for debugging - req'd?
@@ -822,7 +822,7 @@ bool Tiff::decode(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image, in
 
 void Tiff::decodeBase(MetadataParameters &p, QImage &image)
 {
-    qDebug() << __FUNCTION__ << p.fPath;
+    if (G::isLogger) G::log(__FUNCTION__);
     int strips = stripOffsets.count();
     int line = 0;
     quint32 scanBytes = 0;

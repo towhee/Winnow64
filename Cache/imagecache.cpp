@@ -94,9 +94,13 @@ void ImageCache::stopImageCache()
     bar will be hidden.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+
+    // stop decoders
     for (int id = 0; id < decoderCount; ++id) {
         decoder[id]->stop();
     }
+
+    // stop imagecache thread
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -106,7 +110,10 @@ void ImageCache::stopImageCache()
         abort = false;
     }
 
+    // turn off caching activity lights on statusbar
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
+
+    // reset the image cache
     clearImageCache(true);
 }
 
@@ -1095,6 +1102,10 @@ bool ImageCache::fillCache(int id, bool positionChange)
                    << "EXCEEDS icd->cacheItemList.length() of"
                    << icd->cacheItemList.length()
                       ;
+        QString err = "cacheKey = " + QString::number(cacheKey) +
+                      " exceeds icd->cacheItemList.length() of " +
+                      QString::number(icd->cacheItemList.length());
+        G::error(__FUNCTION__, decoder[id]->fPath, err);
         cacheKey = -1;
     }
 
@@ -1156,7 +1167,7 @@ void ImageCache::run()
     for (int id = 0; id < decoderCount; ++id) {
         if (decoder[id]->status == ImageDecoder::Status::Ready) {
             decoder[id]->fPath = "";
-            if (!abort) fillCache(id);
+            fillCache(id);
         }
     }
 }

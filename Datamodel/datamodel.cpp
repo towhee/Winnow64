@@ -235,11 +235,10 @@ DataModel::DataModel(QWidget *parent,
 void DataModel::clearDataModel()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-//    if (rowCount() == 0) return;
+    if (rowCount() == 0) return;
     // clear the model:  clear() wipes the headers
-    removeRows(0, rowCount());
+//    removeRows(0, rowCount());
     setRowCount(0);
-//    setColumnCount(0);
     // clear the fPath index of datamodel rows
     fPathRow.clear();
     // clear all items for filters based on data content ie file types, camera model
@@ -843,12 +842,14 @@ bool DataModel::readMetadataForItem(int row)
                 qDebug() << __FUNCTION__ << "Failed to load metadata for" << fPath;
                 qDebug() << __FUNCTION__ << "MetadataLoaded ="
                          << index(row, G::MetadataLoadedColumn).data().toBool();
+                G::error(__FUNCTION__, fPath, "Failed to load metadata.");
                 return false;
             }
         }
         // cannot read this file type, load empty metadata
         else {
             qWarning() << __FUNCTION__ << "cannot read this file type, load empty metadata for" + fPath;
+            G::error(__FUNCTION__, fPath, "Cannot read file type.");
             metadata->clearMetadata();
             metadata->m.row = row;
             addMetadataForItem(metadata->m);

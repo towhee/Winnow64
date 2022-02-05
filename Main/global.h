@@ -135,9 +135,12 @@ namespace G
         QImage image;
     };
 
+    extern bool stop;
+
     extern QSettings *settings;
 
     extern bool isLogger;
+    extern bool isErrorLogger;
     extern bool isFlowLogger;
     extern bool isTestLogger;
     extern bool sendLogToConsole;

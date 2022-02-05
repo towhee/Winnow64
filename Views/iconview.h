@@ -158,7 +158,7 @@ public slots:
     void sortThumbs(int sortColumn, bool isReverse);
 
 private slots:
-    void selectionChanged (const QItemSelection &selected, const QItemSelection &deselected);
+    void selectionChanged (const QItemSelection &selected, const QItemSelection &deselected) override;
 
 protected:
     void startDrag(Qt::DropActions);

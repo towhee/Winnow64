@@ -264,7 +264,7 @@ bool Canon::parse(MetadataParameters &p,
 
     // read XMP
     bool okToReadXmp = true;
-    if (m.isXmp && okToReadXmp) {
+    if (m.isXmp && okToReadXmp && !G::stop) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
         if (xmp.isValid) {
             m.rating = xmp.getItem("Rating");
@@ -290,7 +290,7 @@ bool Canon::parse(MetadataParameters &p,
         m._orientation = m.orientation;
         m._rotationDegrees = m.rotationDegrees;
 
-        if (p.report) p.xmpString = xmp.xmpAsString();
+        if (p.report) p.xmpString = xmp.srcToString();
     }
 
     return true;

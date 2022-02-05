@@ -185,7 +185,7 @@ QString Utilities::centeredRptHdr(QChar padChar, QString title)
     QString hdr;
     QTextStream rpt;
     rpt.setString(&hdr);
-    int hdrWidth = 90;
+    int hdrWidth = 120;
     int titleWidth = title.size() + 4;
     int padWidth = (hdrWidth - titleWidth) / 2;
     rpt.reset();
