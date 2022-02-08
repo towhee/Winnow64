@@ -55,9 +55,9 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     QSize size = thumbReader.size();
 
     dm->setData(dm->index(row, G::WidthColumn), size.width());
-    dm->setData(dm->index(row, G::WidthFullColumn), size.width());
+    dm->setData(dm->index(row, G::WidthPreviewColumn), size.width());
     dm->setData(dm->index(row, G::HeightColumn), size.height());
-    dm->setData(dm->index(row, G::HeightFullColumn), size.height());
+    dm->setData(dm->index(row, G::HeightPreviewColumn), size.height());
 
     size.scale(thumbMax, Qt::KeepAspectRatio);
     thumbReader.setScaledSize(size);

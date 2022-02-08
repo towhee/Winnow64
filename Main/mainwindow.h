@@ -502,6 +502,7 @@ private slots:
 //    void toggleThumbWrap();
     void setIngested();
     void togglePick();
+    void togglePickMouseOver();
     void togglePickMouseOverItem(QModelIndex idx);
     void togglePickUnlessRejected();
     int pickLogCount();
@@ -689,6 +690,7 @@ private:
     QAction *refineAction;
     QAction *pickAction;                // shortcut "`"
     QAction *pick1Action;               // added for shortcut "P"
+    QAction *pickMouseOverAction;       // shortcut mouse forward/back buttons
     QAction *popPickHistoryAction;
     QAction *pickUnlessRejectedAction;
     QAction *filterPickAction;

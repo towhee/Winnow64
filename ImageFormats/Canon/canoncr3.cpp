@@ -1014,18 +1014,18 @@ void CanonCR3::parseIfd0()
     ifd->readIFD(p);
 
     quint32 startOffset = ifd0Offset + 8;
-    m.widthFull = ifd->ifdDataHash.value(256).tagValue;
-    m.heightFull = ifd->ifdDataHash.value(257).tagValue;
-    m.width = m.widthFull;
-    m.height = m.heightFull;
+    m.widthPreview = ifd->ifdDataHash.value(256).tagValue;
+    m.heightPreview = ifd->ifdDataHash.value(257).tagValue;
+    m.width = m.widthPreview;
+    m.height = m.heightPreview;
     m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset, ifd->ifdDataHash.value(271).tagCount);
     m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset, ifd->ifdDataHash.value(272).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset, ifd->ifdDataHash.value(33432).tagCount);
     /*
     qDebug() << __FUNCTION__
-             << m.widthFull
-             << m.heightFull
+             << m.widthPreview
+             << m.heightPreview
              << m.make
              << m.model
              << m.orientation

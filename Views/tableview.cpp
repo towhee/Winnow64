@@ -107,20 +107,21 @@ int TableView::sizeHintForColumn(int column) const
     QFontMetrics fm(this->font());
     if (column == G::PathColumn) return fm.boundingRect("Icon").width();
     if (column == G::NameColumn) return fm.boundingRect("2019-02-25_0001.jpg========").width();
-    if (column == G::RefineColumn) return fm.boundingRect("=Refine=").width();
-    if (column == G::PickColumn) return fm.boundingRect("=Pick=").width();
-    if (column == G::IngestedColumn) return fm.boundingRect("=Ingested=").width();
-    if (column == G::LabelColumn) return fm.boundingRect("=Colour=").width();
-    if (column == G::RatingColumn) return fm.boundingRect("=Rating=").width();
-    if (column == G::SearchColumn) return fm.boundingRect("=false=").width();
     if (column == G::TypeColumn) return fm.boundingRect("=JPG+NEF=").width();
     if (column == G::SizeColumn) return fm.boundingRect("=999,999,999=").width();
-    if (column == G::WidthColumn) return fm.boundingRect("=Width=").width();
-    if (column == G::HeightColumn) return fm.boundingRect("=Height=").width();
     if (column == G::CreatedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
     if (column == G::ModifiedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
     if (column == G::YearColumn) return fm.boundingRect("=2000=").width();
     if (column == G::DayColumn) return fm.boundingRect("=2000-00-00=").width();
+    if (column == G::RefineColumn) return fm.boundingRect("=Refine=").width();
+    if (column == G::PickColumn) return fm.boundingRect("=Pick=").width();
+    if (column == G::IngestedColumn) return fm.boundingRect("=Ingested=").width();
+    if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Meta Loaded=").width();
+    if (column == G::SearchColumn) return fm.boundingRect("=false=").width();
+    if (column == G::LabelColumn) return fm.boundingRect("=Colour=").width();
+    if (column == G::RatingColumn) return fm.boundingRect("=Rating=").width();
+    if (column == G::WidthColumn) return fm.boundingRect("=Width=").width();
+    if (column == G::HeightColumn) return fm.boundingRect("=Height=").width();
     if (column == G::CreatorColumn) return fm.boundingRect("Rory Hill=====").width();
     if (column == G::MegaPixelsColumn) return fm.boundingRect("=999.99=").width();
     if (column == G::LoadMsecPerMpColumn) return fm.boundingRect("=Msec/Mp=").width();
@@ -145,8 +146,8 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::_UrlColumn) return fm.boundingRect("=Url=======================").width();
     if (column == G::OffsetFullColumn) return fm.boundingRect("=OffsetFullColumn=").width();
     if (column == G::LengthFullColumn) return fm.boundingRect("=LengthFullColumn=").width();
-    if (column == G::WidthFullColumn) return fm.boundingRect("=WidthFull=").width();
-    if (column == G::HeightFullColumn) return fm.boundingRect("=HeightFull=").width();
+    if (column == G::WidthPreviewColumn) return fm.boundingRect("=WidthPreview=").width();
+    if (column == G::HeightPreviewColumn) return fm.boundingRect("=HeightPreview=").width();
     if (column == G::OffsetThumbColumn) return fm.boundingRect("=OffsetThumbColumn=").width();
     if (column == G::LengthThumbColumn) return fm.boundingRect("=LengthThumbColumn=").width();
 //    if (column == G::OffsetSmallColumn) return fm.boundingRect("=OffsetSmallColumn=").width();
@@ -171,7 +172,6 @@ int TableView::sizeHintForColumn(int column) const
 //    if (column == G::OrientationColumn) return fm.boundingRect("=OrientationColumn=").width();
     if (column == G::RotationDegreesColumn) return fm.boundingRect("=RotationDegreesColumn=").width();
     if (column == G::ShootingInfoColumn) return fm.boundingRect("=ShootingInfoColumn======================").width();
-    if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Meta Loaded=").width();
     if (column == G::SearchTextColumn) return fm.boundingRect("=SearchText=====================================================================================").width();
     return 50;
 }

@@ -549,7 +549,6 @@ void PropertyEditor::collapseAllExcept()
     okToCollapseRoot = true.  This is used in EmbelProperties to keep the Template header
     open all the time to show the current template.
 */
-    qDebug() << __FUNCTION__;
     for(int r = 0; r < model->rowCount(QModelIndex()); ++r) {
         QModelIndex idx = model->index(r, 0);
         if (idx.data(UR_okToCollapseRoot).toBool()) collapse(idx);

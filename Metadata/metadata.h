@@ -51,6 +51,12 @@ public:
     void testNewFileFormat(const QString &path);
     bool parseSidecar();
     QString sidecarPath(QString fPath);
+    inline QString b(bool x)
+    {
+        if (x == true)  return "true";
+        else return "false";
+    }
+    inline QString d(QDateTime x){return x.toString("yyyy-MM-dd hh:mm:ss");}
 
     /* The ImageMetadata class struct has all the fields that are stored in the
        datamodel.  The various file parse routines populate ImageMetadata.

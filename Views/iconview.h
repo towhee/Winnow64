@@ -56,14 +56,12 @@ public:
     int badgeSize;
     QSize cellSize;
 
-//    bool isFloat;       // set by MW ...
-//    bool isBestAspect;
-
     int firstVisibleCell;
     int midVisibleCell;
     int lastVisibleCell;
     int visibleCells;
 
+    QModelIndex mouseOverIndex; // for toggle pick
     QModelIndex prevIdx;        // for zoomCursor
 
     bool calcViewportRange(int row);
@@ -189,7 +187,6 @@ private:
     int getPrevPick();
 
     DataModel *dm;
-
 
     bool isLeftMouseBtnPressed;
     bool isMouseDrag;

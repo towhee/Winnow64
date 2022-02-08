@@ -1,5 +1,4 @@
 BUGS / TO DO
-- add Copyright status
 - Sort taking time when loading folder and sort is file
 - MW::enableSelectionDependentMenus needs updating for all situations
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
@@ -31,6 +30,10 @@ MAC
 - Handle winnets on Mac
 - Mac check for updates not done yet
 - Open with ... (doesn't work on macOS)
+QT 6
+- dm->clearDataModel() crashes
+- Replace QTextCodec::codecForMib(106)->toUnicode(xmpBa)
+- Menu
 PERFORMANCE
 - HEIF files are slow
 CODE IMPROVEMENTS
@@ -52,7 +55,10 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ??
 DONE/FIXED
-- Works with Qt 6.2
+- Esc to stop loading a folder
+- Right click pick thumbnail
+- Rotate image in source using ExifTool
+- Works with Qt 6.2 except dm->clear() causes long delay or crash
 - Status count of picks after ingest not updated
 - When sort using TableView header not scrolling to current row
 - Added "Modify the source image files" setting

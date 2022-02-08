@@ -194,11 +194,11 @@ bool Tiff::parse(MetadataParameters &p,
     (ifd->ifdDataHash.contains(257))
         ? m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue)
         : m.height = 0;
-    m.widthFull = m.width;
-    m.heightFull = m.height;
+    m.widthPreview = m.width;
+    m.heightPreview = m.height;
     // start thumbnail dimensions
     int thumbLongside;
-    m.widthFull > m.heightFull ? thumbLongside = m.widthFull : thumbLongside = m.heightFull;
+    m.widthPreview > m.heightPreview ? thumbLongside = m.widthPreview : thumbLongside = m.heightPreview;
 
     /*
      Moved to Tiff::parseForDecoding:
@@ -679,11 +679,11 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
     if (err != "" && !isReport) return false;
 
     // rgh used for debugging - req'd?
-    G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
-                  " Compression:" + QString::number(compression) +
-                  " Predictor:" + QString::number(predictor) +
-                  " PlanarConfiguration:" + QString::number(planarConfiguration)
-                    ;
+//    G::tiffData = "BitsPerSample:" + QString::number(bitsPerSample) +
+//                  " Compression:" + QString::number(compression) +
+//                  " Predictor:" + QString::number(predictor) +
+//                  " PlanarConfiguration:" + QString::number(planarConfiguration)
+//                    ;
 
     if (p.report) {
         int w1 = 25;

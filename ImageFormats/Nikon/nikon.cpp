@@ -1309,7 +1309,7 @@ bool Nikon::parse(MetadataParameters &p,
                 m.offsetFull = ifd->ifdDataHash.value(513).tagValue;
                 m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
                 p.offset = m.offsetFull;
-                jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
+                jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
             }
             else {
             // D2H and older
@@ -1502,7 +1502,7 @@ bool Nikon::parse(MetadataParameters &p,
                 m.offsetFull = m.offsetThumb;
                 m.lengthFull = m.lengthThumb;
                 p.offset = m.offsetFull;
-                jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
+                jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
             }
 //            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
         }
