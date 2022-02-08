@@ -311,7 +311,7 @@ void ImageView::scale()
 
     placeClassificationBadge();
     setShootingInfo(shootingInfo);
-//    emit updateStatus(true, "", __FUNCTION__);
+    emit updateStatus(true, "", __FUNCTION__);
 
     isMouseDoubleClick = false;
 

@@ -338,7 +338,7 @@ bool Sony::parse(MetadataParameters &p,
     m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
     // get jpeg full size preview dimensions
     p.offset = m.offsetFull;
-    jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
+    jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
 //    if (lengthFullJPG) verifyEmbeddedJpg(offsetFull, lengthFull);
     m.offsetThumb = ifd->ifdDataHash.value(273).tagValue;
     m.lengthThumb = ifd->ifdDataHash.value(279).tagValue;
@@ -382,7 +382,7 @@ bool Sony::parse(MetadataParameters &p,
         m.offsetFull = ifd->ifdDataHash.value(513).tagValue;
         m.lengthFull = ifd->ifdDataHash.value(514).tagValue;
         p.offset = m.offsetFull;
-        jpeg->getWidthHeight(p, m.widthFull, m.heightFull);
+        jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
     }
 
     // get the offset for ExifIFD and read it

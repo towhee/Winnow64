@@ -723,7 +723,6 @@ after the MD::fileSelectionChange occurs, hence update the status bar from here.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     if (G::stop) {
-        qDebug() << __FUNCTION__ << "G::stop =" << G::stop;
         return;
     }
     QListView::selectionChanged(selected, deselected);
@@ -1447,7 +1446,11 @@ void IconView::mousePressEvent(QMouseEvent *event)
     different position than the current image.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-    if (event->button() == Qt::RightButton) return;
+    if (event->button() == Qt::RightButton) {
+        // save mouse over index for toggle pick
+        mouseOverIndex = indexAt(event->pos());
+        return;
+    }
 
     // is start tab currently visible
     if (m2->centralLayout->currentIndex() == m2->StartTab)
@@ -1459,6 +1462,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
 
     // forward and back buttons
     if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) {
+        qDebug() << __FUNCTION__ << event->pos();
         QModelIndex idx = indexAt(event->pos());
         if (idx.isValid()) {
              m2->togglePickMouseOverItem(idx);
@@ -1570,8 +1574,8 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     if (m2->imageView->isFit) return;
 
     // preview dimensions
-    int imW = dm->sf->index(idx.row(), G::WidthFullColumn).data().toInt();
-    int imH = dm->sf->index(idx.row(), G::HeightFullColumn).data().toInt();
+    int imW = dm->sf->index(idx.row(), G::WidthPreviewColumn).data().toInt();
+    int imH = dm->sf->index(idx.row(), G::HeightPreviewColumn).data().toInt();
     if (imW == 0 || imH == 0) return;
 
     qreal zoom = m2->imageView->zoom;

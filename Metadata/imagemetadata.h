@@ -10,32 +10,50 @@ class ImageMetadata
     This structure, of all the fields in metadata, is used to insert a new item
     into the datamodel dm->addMetadataForItem(ImageMetadata m) and to pass metadata
     to other classes such as the image parsing routines.
+
+    The order = order set in datamodel
 */
 public:
     int row = 0;                            // datamodel row
     QString fPath = "";
+    // roles for G::PathColumn in datamodel
+    QString toolTipRole = "";
+    bool cacheRole = false;
+    bool dupHideRawRole = false;
+
     QString fName = "";
+    QDateTime createdDate;
+    QDateTime modifiedDate;
+    QString year = "";
+    QString day = "";
     bool refine = false;
     bool pick = false;
-    bool isPicked = false;                  //rgh required?
     bool ingested = false;
+    bool metadataLoaded = false;            // all metadata except thumb
+
+    bool isThumbLoaded = false;             // refers to thumb only
+    bool thumbUnavailable = false;          // no embedded thumb
+    bool imageUnavailable = false;          // no embedded preview
+
     bool isSearch = false;
-    QString rating = "";
-    QString label = "";
     QString type = "";
+    // end of file system info, rest requires pulling metadata from image file
     int size = 0;
     int width = 0;                          // width of raw image
     int height = 0;                         // height of raw image
     QString dimensions = "";
-    QDateTime createdDate;
-    QDateTime modifiedDate;
-    int year = 0;
-    int month = 0;
-    int day = 0;
+    int widthPreview = 0;                      // width of preview (ImageView image width)
+    int heightPreview = 0;                     // height of preview (ImageView image height)
     float megapixels = 0;
-    quint32 orientationOffset = 0;
+    int loadMsecPerMp;
+    float aspectRatio = 1;
     int orientation = 0;
+    quint32 orientationOffset = 0;
     int rotationDegrees = 0;                // additional rotation from edit
+
+    int _orientation = 0;                   // original value
+    int _rotationDegrees = 0;               // original value
+
     QString aperture = "";
     double apertureNum = 0.0;
     QString exposureTime = "";
@@ -49,39 +67,33 @@ public:
     QString lens = "";
     QString focalLength = "";
     int focalLengthNum = 0;
+    QString cameraSN = "";
+    QString lensSN = "";
+    int shutterCount = 0;
+    QString copyFileNamePrefix = "";        // rgh do we need?
     QString shootingInfo = "";
+
     QString title = "";
     QString creator = "";
     QString copyright = "";
     QString email = "";
     QString url = "";
-    QString cameraSN = "";
-    QString lensSN = "";
-    ulong shutterCount = 0;
-    QString copyFileNamePrefix = "";        // rgh do we need?
+    QString rating = "";
+    QString label = "";
 
-    QString _rating = "";                   // original value
-    QString _label = "";                    // original value
     QString _title = "";                    // original value
     QString _creator = "";                  // original value
     QString _copyright = "";                // original value
     QString _email = "";                    // original value
     QString _url = "";                      // original value
-    int _orientation = 0;                   // original value
-    int _rotationDegrees = 0;               // original value
+    QString _rating = "";                   // original value
+    QString _label = "";                    // original value
 
-    bool metadataLoaded = false;            // all metadata except thumb
-    bool isThumbLoaded = false;             // refers to thumb only
-    bool thumbUnavailable = false;          // no embedded thumb
-    bool imageUnavailable = false;          // no embedded preview
     QStringList err;
-    QString searchStr = "";
     QByteArray nikonLensCode = nullptr;
 
     quint32 offsetFull = 0;
     quint32 lengthFull = 0;
-    int widthFull = 0;                      // width of preview (ImageView image width)
-    int heightFull = 0;                     // height of preview (ImageView image height)
     quint32 offsetThumb = 0;
     quint32 lengthThumb = 0;
     // reqd for TIFF
@@ -100,7 +112,7 @@ public:
     QByteArray iccBuf;
     QString iccSpace;
     QString parseSource;
-    int loadMsecPerMp;
+    QString searchStr = "";
 };
 Q_DECLARE_METATYPE(ImageMetadata)
 

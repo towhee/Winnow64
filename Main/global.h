@@ -93,8 +93,8 @@ namespace G
         // binary helpers
         OffsetFullColumn,
         LengthFullColumn,
-        WidthFullColumn,
-        HeightFullColumn,
+        WidthPreviewColumn,
+        HeightPreviewColumn,
         OffsetThumbColumn,
         LengthThumbColumn,
         samplesPerPixelColumn,
@@ -107,6 +107,7 @@ namespace G
         ICCSegmentLengthColumn,
         ICCBufColumn,
         ICCSpaceColumn,
+
         OrientationOffsetColumn,
         RotationDegreesColumn,
         ShootingInfoColumn,

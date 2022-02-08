@@ -235,8 +235,8 @@ bool Jpeg::parse(MetadataParameters &p,
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
     p.offset = 0;
     if (!m.width || !m.height) getDimensions(p, m);
-    m.widthFull = m.width;
-    m.heightFull = m.height;
+    m.widthPreview = m.width;
+    m.heightPreview = m.height;
 
     // EXIF: created datetime
     QString createdExif;

@@ -93,6 +93,7 @@ protected:
 //    void focusInEvent(QFocusEvent *event);
 
 signals:
+    void updateFileCount(QString msg);
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void selectionChange();
 

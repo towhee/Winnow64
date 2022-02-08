@@ -383,6 +383,8 @@ void FSTree::getVisibleImageCount(QString src)
     raw+jpg are combined.
 */
     if (G::isLogger) G::log(__FUNCTION__, "Source: " + src);
+    emit updateFileCount("Counting images in folders.");
+
     QModelIndex idx = indexAt(rect().topLeft());  // delta
     while (idx.isValid())
     {
@@ -390,6 +392,8 @@ void FSTree::getVisibleImageCount(QString src)
         getImageCount(dirPath, false, src);
         idx = indexBelow(idx);
     }
+    emit updateFileCount("Select folder.");
+
 }
 
 void FSTree::getImageCount(QString const dirPath, bool changed, QString src)

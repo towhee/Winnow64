@@ -668,8 +668,9 @@ void MW::keyReleaseEvent(QKeyEvent *event)
            tested.
         */
         G::popUp->hide();
+        if (!G::isNewFolderLoaded) stopAndClearAll();
         // cancel slideshow
-        if (G::isSlideShow) slideShow();
+        else if (G::isSlideShow) slideShow();
         // quit loading datamodel
         else if (dm->loadingModel) dm->timeToQuit = true;
         // quit adding thumbnails
@@ -1729,9 +1730,11 @@ void MW::stopAndClearAll()
     a bookmark or ejects a drive and the resulting folder does not have any eligible images.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
+//    qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
 
     G::stop = true;
+    imageView->clear();
+    setCentralMessage("Halting folder load.");
     setWindowTitle(winnowWithVersion);
     G::isNewFolderLoaded = false;
     G::allMetadataLoaded = false;
@@ -1740,9 +1743,6 @@ void MW::stopAndClearAll()
     metadataCacheThread->stopMetadataCache();
     imageCacheThread->stopImageCache();
     buildFilters->stop();
-//    icd->imCache.clear();
-//    G::err.clear();
-//    metadata->clear();
     imageView->clear();
     if (useInfoView) {
         infoView->clearInfo();
@@ -1758,8 +1758,10 @@ void MW::stopAndClearAll()
     selectionModel->clear();
     dm->clearDataModel();
     currentRow = 0;
+
+    setCentralMessage("Select a folder.");
     G::stop = false;
-    qDebug() << __FUNCTION__ << "COMPLETED STOPANDCLEARALL";
+//    qDebug() << __FUNCTION__ << "COMPLETED STOPANDCLEARALL";
 }
 
 void MW::nullFiltration()
@@ -2633,9 +2635,15 @@ void MW::createActions()
     addAction(pickAction);
     connect(pickAction, &QAction::triggered, this, &MW::togglePick);
 
-    pick1Action = new QAction(tr("Pick"), this);
+    pick1Action = new QAction(tr("Pick"), this);  // added for shortcut "P"
     addAction(pick1Action);
     connect(pick1Action, &QAction::triggered, this, &MW::togglePick);
+
+    pickMouseOverAction = new QAction(tr("Pick at cursor"), this);  // IconView context menu
+    pickMouseOverAction->setObjectName("toggleMouseOverPick");
+    pickAction->setShortcutVisibleInContextMenu(true);
+    addAction(pickMouseOverAction);
+    connect(pickMouseOverAction, &QAction::triggered, this, &MW::togglePickMouseOver);
 
     pickUnlessRejectedAction = new QAction(tr("Pick unless rejected"), this);
     pickUnlessRejectedAction->setObjectName("pickUnlessRejected");
@@ -4045,6 +4053,7 @@ void MW::createMenus()
 
     // thumbview context menu
     QList<QAction *> *thumbViewActions = new QList<QAction *>;
+    thumbViewActions->append(pickMouseOverAction);
     thumbViewActions->append(revealFileAction);
     thumbViewActions->append(openWithGroupAct);
     thumbViewActions->append(separatorAction);
@@ -4133,17 +4142,19 @@ void MW::createMenus()
     centralWidget->addActions(*mainContextActions);
     centralWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-//    imageView->addActions(*mainContextActions);
-//    imageView->setContextMenuPolicy(Qt::ActionsContextMenu);
+    /*
+    imageView->addActions(*mainContextActions);
+    imageView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-//    tableView->addActions(*mainContextActions);
-//    tableView->setContextMenuPolicy(Qt::ActionsContextMenu);
+    tableView->addActions(*mainContextActions);
+    tableView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-//    gridView->addActions(*mainContextActions);
-//    gridView->setContextMenuPolicy(Qt::ActionsContextMenu);
+    gridView->addActions(*mainContextActions);
+    gridView->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-//    compareImages->addActions(*mainContextActions);
-//    compareImages->setContextMenuPolicy(Qt::ActionsContextMenu);
+    compareImages->addActions(*mainContextActions);
+    compareImages->setContextMenuPolicy(Qt::ActionsContextMenu);
+    //*/
 
     // docking panels context menus
     fsTree->addActions(*fsTreeActions);
@@ -4482,10 +4493,8 @@ void MW::createThumbView()
     thumbView->setObjectName("Thumbnails");
 //    thumbView->setSpacing(0);                // thumbView not visible without this
     thumbView->setAutoScroll(false);
-//    thumbView->setWrapping(false);
     thumbView->firstVisibleCell = 0;
     thumbView->showZoomFrame = true;            // may have settings but not showZoomFrame yet
-    qDebug() << __FUNCTION__ << isSettings;
     if (isSettings) {
         // loadSettings has not run yet (dependencies, but QSettings has been opened
         if (setting->contains("thumbWidth")) thumbView->iconWidth = setting->value("thumbWidth").toInt();
@@ -5351,11 +5360,16 @@ void MW::createFSTree()
     // watch for drive removal (not working)
 //    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
 
+    // counting eligible image files in folders
+    connect(fsTree, &FSTree::updateFileCount, this, &MW::setCentralMessage);
+
     // selection change check if triggered by ejecting USB drive
     connect(fsTree, &FSTree::selectionChange, this, &MW::watchCurrentFolder);
 
     // this works for touchpad tap
-    connect(fsTree, SIGNAL(pressed(const QModelIndex&)), this, SLOT(folderSelectionChange()));
+//    connect(fsTree, SIGNAL(pressed(const QModelIndex&)), this, SLOT(folderSelectionChange()));
+    connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChange);
+
     // this does not work for touchpad tap
 //    connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
 
@@ -5489,9 +5503,7 @@ void MW::createStatusBar()
                 );
     progressBar->setFixedSize(50, 8);
     progressBar->setTextVisible(false);
-//    progressBar->setValue(75);
     progressBar->setVisible(false);
-    qDebug() << __FUNCTION__ << progressBar->minimum() << progressBar->minimumSize();
     statusBar()->addWidget(progressBar);
 
     // add status icons to left side of statusBar
@@ -7431,7 +7443,11 @@ void MW::diagnosticsImageView() {diagnosticsReport(imageView->diagnostics());}
 void MW::diagnosticsInfoView() {}
 void MW::diagnosticsTableView() {}
 void MW::diagnosticsCompareView() {}
-void MW::diagnosticsMetadata() {diagnosticsReport(metadata->diagnostics(dm->currentFilePath));}
+void MW::diagnosticsMetadata()
+{
+    dm->imMetadata(dm->currentFilePath, true);
+    diagnosticsReport(metadata->diagnostics(dm->currentFilePath));
+}
 void MW::diagnosticsXMP() {}
 void MW::diagnosticsMetadataCache() {}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
@@ -8352,7 +8368,6 @@ void MW::setRotation(int degrees)
         }
 
         // update exif in image
-        qDebug() << __FUNCTION__ << fPath << newRotation;
         QString orient;
         switch (newRotation) {
         case 0:   orient = "1"; break;
@@ -10206,6 +10221,19 @@ void MW::togglePickUnlessRejected()
 
     // update filter counts
     buildFilters->updateCountFiltered();
+}
+
+void MW::togglePickMouseOver()
+{
+/*
+    Toggles the pick status item the mouse is over is toggled, but the selection is not
+    changed.
+
+    Triggered by ThumbView context menu MW::pickMouseOverAction.  ThumbView mousePressEvent
+    stores the mouse click indexAt(position).  Use this to call togglePickMouseOverItem.
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    togglePickMouseOverItem(thumbView->mouseOverIndex);
 }
 
 void MW::togglePickMouseOverItem(QModelIndex idx)
@@ -12357,7 +12385,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << G::modifySourceFiles;
+//#define Bool(b)
+
+    bool b = false;
+    QTextStream ts;
+    QString s;
+    ts.setString(&s);
+    ts << b;
+    qDebug() << __FUNCTION__ << metadata->b(b);
+
+//    qDebug() << __FUNCTION__ << G::modifySourceFiles;
 //    selectionModel->clear();
 //    thumbView->selectionModel()->clear();
 //    return;

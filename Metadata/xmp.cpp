@@ -838,7 +838,6 @@ Xmp::XmpElement Xmp::xmlDocElement(QString name,
             element.parentName = nodeName;
             element.type = ElementType::Attribute;
             element.value = xmlAttributeValue(a);
-            report(element);
             return element;
         }
     }
@@ -913,8 +912,11 @@ QString Xmp::srcToString()
     Returns unicode string from QByteArray xmpBa
 */
     if (G::isLogger) G::log(__FUNCTION__);
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     return QTextCodec::codecForMib(106)->toUnicode(xmpBa);  // deprecated in Qt 6
-//    return QString::fromUtf8(xmpBa);
+#else
+    return QString::fromUtf8(xmpBa);
+#endif
 }
 
 QString Xmp::docToQString()
