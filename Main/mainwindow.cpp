@@ -12385,21 +12385,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//#define Bool(b)
-
-    bool b = false;
-    QTextStream ts;
-    QString s;
-    ts.setString(&s);
-    ts << b;
-    qDebug() << __FUNCTION__ << metadata->b(b);
-
-//    qDebug() << __FUNCTION__ << G::modifySourceFiles;
-//    selectionModel->clear();
-//    thumbView->selectionModel()->clear();
-//    return;
-//    qDebug() << __FUNCTION__ << "COMMENCE CLEARALL";
-//    stopAndClearAll();
-//    qDebug() << __FUNCTION__ << "CLEARALL";
+    qDebug() << __FUNCTION__ << qApp->applicationDirPath();
 }
 // End MW
