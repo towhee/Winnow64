@@ -159,15 +159,15 @@ private slots:
     void selectionChanged (const QItemSelection &selected, const QItemSelection &deselected) override;
 
 protected:
-    void startDrag(Qt::DropActions);
-    void wheelEvent(QWheelEvent *event);
-    void mousePressEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void mouseDoubleClickEvent(QMouseEvent *event);
-    void resizeEvent(QResizeEvent* event);
+    void startDrag(Qt::DropActions) override;
+    void wheelEvent(QWheelEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void resizeEvent(QResizeEvent* event) override;
 //    void enterEvent(QEvent *event);   // qt6.2
-    void leaveEvent(QEvent *event);
+    void leaveEvent(QEvent *event) override;
 //    QModelIndex moveCursor(QAbstractItemView::CursorAction cursorAction,
 //                           Qt::KeyboardModifiers modifiers);
 //    bool event(QEvent* event);      // key capture

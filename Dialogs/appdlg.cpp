@@ -188,7 +188,7 @@ void Appdlg::checkProgramsExist(int currentRow, int currentColumn, int previousR
 {
     QColor defaultColor = QColor(G::textShade, G::textShade, G::textShade);
     QColor warningColor = QColor(128,0,0);
-    int rows = xApps.length();
+    int rows = static_cast<int>(xApps.length());
         for (int row = 0; row < rows; ++row) {
         QFile test(ui->appsTable->item(row, 2)->text());
         if (test.exists()) {
