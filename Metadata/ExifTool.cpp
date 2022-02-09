@@ -6,8 +6,14 @@
 
 ExifTool::ExifTool()
 {
-    exifToolPath = qApp->applicationDirPath() + "ExifTool/exiftool.exe";
-//    exifToolPath = qApp->applicationDirPath() + "/et.exe";
+
+#ifdef Q_OS_WIN
+    exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool.exe";
+#endif
+#ifdef Q_OS_MAC
+    exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
+#endif
+    exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool.exe";
     QStringList startArgs;
     startArgs << "-stay_open";
     startArgs << "True";
