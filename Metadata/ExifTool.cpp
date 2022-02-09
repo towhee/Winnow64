@@ -13,7 +13,6 @@ ExifTool::ExifTool()
 #ifdef Q_OS_MAC
     exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
 #endif
-    exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool.exe";
     QStringList startArgs;
     startArgs << "-stay_open";
     startArgs << "True";
@@ -22,6 +21,7 @@ ExifTool::ExifTool()
     startArgs << "-execute";
     process.start(exifToolPath, startArgs);   // exifToolPath = path to ExifTool.exe or ExifTool.app
     process.waitForStarted(3000);
+    qDebug() << __FUNCTION__ << process.errorString();
 }
 
 int ExifTool::execute(QStringList &args)
