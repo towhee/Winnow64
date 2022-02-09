@@ -101,6 +101,7 @@ void ExifTool::writeOrientation(QString src, QString orientation)
     args.append(src.toUtf8() + "\n");
     args.append("-execute\n");
     process.write(args);
+    qDebug() << __FUNCTION__ << process.errorString();
 }
 
 // not used as ExifTool can only read results into a file, going to try using my own xmp.setItem
