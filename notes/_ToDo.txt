@@ -55,6 +55,8 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ??
 DONE/FIXED
+- ExifTool running on Mac
+- Mac binary is now native for RISC chips ie M1
 - Esc to stop loading a folder
 - Right click pick thumbnail
 - Rotate image in source using ExifTool
