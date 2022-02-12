@@ -147,8 +147,15 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight, int l
     difficult to manage the gridView justification.  If it is decided another layer would be
     useful it would be better to include the cellBorder and thumbPadding suggested in the
     diagram comments above.
-*/
 
+    This function has triggered the setPixelSize error if labelFontSize = 0
+*/
+    /*
+    qDebug() << "IconViewDelegate::setThumbDimensions"
+             << "row =" << currentRow
+             << "labelFontSize =" << labelFontSize
+                ;
+             //*/
     delegateShowThumbLabels = showThumbLabels;
 //    fPad = thumbPadding;
     font = QApplication::font();

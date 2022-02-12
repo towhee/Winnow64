@@ -248,7 +248,7 @@ there does not appear to be any signal or event when ListView is finished hence 
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 {
-    G::log(__FUNCTION__, "START APPLICATION", true);
+    if (G::isLogger) G::log(__FUNCTION__, "START APPLICATION", true);
     setObjectName("WinnowMainWindow");
 
     // Check if modifier key pressed while program opening
@@ -1508,7 +1508,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
              << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
                 ;
                 //*/
-    bool isStart = false;
+//    bool isStart = false;
 
     if(!isCurrentFolderOkay
             || G::isInitializing
@@ -1524,7 +1524,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     // if starting program, set first image to display
     if (current.row() == -1) {
-        isStart = true;
+//        isStart = true;
         thumbView->selectThumb(0);
         return;
     }
@@ -1733,6 +1733,7 @@ void MW::stopAndClearAll()
 //    qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
 
     G::stop = true;
+
     imageView->clear();
     setCentralMessage("Halting folder load.");
     setWindowTitle(winnowWithVersion);

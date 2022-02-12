@@ -184,7 +184,7 @@ void Appdlg::on_removeBtn_clicked()
     ui->appsTable->selectRow(row);
 }
 
-void Appdlg::checkProgramsExist(int currentRow, int currentColumn, int previousRow, int previousColumn)
+void Appdlg::checkProgramsExist(int /*currentRow*/, int /*currentColumn*/, int /*previousRow*/, int /*previousColumn*/)
 {
     QColor defaultColor = QColor(G::textShade, G::textShade, G::textShade);
     QColor warningColor = QColor(128,0,0);

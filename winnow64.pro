@@ -9,6 +9,7 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 
 win32:QMAKE_CXXFLAGS += /std:c++17
 win32:QMAKE_CXXFLAGS += /Zc:__cplusplus
+win32:QMAKE_CXXFLAGS += /wd4138             # supress "*/" found outside of comment
 
 TEMPLATE = app
 TARGET = Winnow

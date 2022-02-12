@@ -236,9 +236,13 @@ void DataModel::clearDataModel()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     if (rowCount() == 0) return;
-    // clear the model:  clear() wipes the headers
-//    removeRows(0, rowCount());
-    setRowCount(0);
+    /* clear the model
+       clear() wipes the headers
+       beginRemoveRows(QModelIndex(), 0, rowCount()) is not stable when rapidly change folders
+       */
+    beginResetModel();
+    removeRows(0, rowCount());
+    endResetModel();
     // clear the fPath index of datamodel rows
     fPathRow.clear();
     // clear all items for filters based on data content ie file types, camera model
@@ -852,8 +856,8 @@ bool DataModel::readMetadataForItem(int row)
                 addMetadataForItem(metadata->m);
             }
             else {
-                qDebug() << __FUNCTION__ << "Failed to load metadata for" << fPath;
-                qDebug() << __FUNCTION__ << "MetadataLoaded ="
+                qWarning() << __FUNCTION__ << "Failed to load metadata for " << fPath;
+                qWarning() << __FUNCTION__ << "MetadataLoaded ="
                          << index(row, G::MetadataLoadedColumn).data().toBool();
                 G::error(__FUNCTION__, fPath, "Failed to load metadata.");
                 return false;
@@ -861,8 +865,8 @@ bool DataModel::readMetadataForItem(int row)
         }
         // cannot read this file type, load empty metadata
         else {
-            qWarning() << __FUNCTION__ << "cannot read this file type, load empty metadata for" + fPath;
-            G::error(__FUNCTION__, fPath, "Cannot read file type.");
+//            qWarning() << __FUNCTION__ << "cannot read this file type, load empty metadata for " + fPath;
+//            G::error(__FUNCTION__, fPath, "Cannot read file type.");
             metadata->clearMetadata();
             metadata->m.row = row;
             addMetadataForItem(metadata->m);

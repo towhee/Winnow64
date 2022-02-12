@@ -445,7 +445,7 @@ bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
     return true;
 }
 
-bool CanonCR3::infeBox(quint32 &offset, quint32 &length)
+bool CanonCR3::infeBox(quint32 &offset, quint32 &/*length*/)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     p.file.seek(offset + 12);
@@ -654,7 +654,7 @@ bool CanonCR3::tkhdBox(quint32 &offset, quint32 &length)
     return true;
 }
 
-bool CanonCR3::mdiaBox(quint32 &offset, quint32 &length)
+bool CanonCR3::mdiaBox(quint32 &offset, quint32 &/*length*/)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     // container for media info - drill into
@@ -670,7 +670,7 @@ bool CanonCR3::mdhdBox(quint32 &offset, quint32 &length)
     return true;
 }
 
-bool CanonCR3::minfBox(quint32 &offset, quint32 &length)
+bool CanonCR3::minfBox(quint32 &offset, quint32 &/*length*/)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     // container
@@ -686,7 +686,7 @@ bool CanonCR3::vmhdBox(quint32 &offset, quint32 &length)
     return true;
 }
 
-bool CanonCR3::stblBox(quint32 &offset, quint32 &length)
+bool CanonCR3::stblBox(quint32 &offset, quint32 &/*length*/)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     // container
@@ -752,8 +752,8 @@ bool CanonCR3::ispeBox(quint32 &offset, quint32 &length)
     p.file.seek(offset + 12);
     quint32 image_width = Utilities::get32(p.file.read(4));
     quint32 image_height = Utilities::get32(p.file.read(4));
-//    qDebug() << __FUNCTION__ << "image_width =" << image_width;
-//    qDebug() << __FUNCTION__ << "image_height =" << image_height << "\n";
+    qDebug() << __FUNCTION__ << "image_width =" << image_width;
+    qDebug() << __FUNCTION__ << "image_height =" << image_height << "\n";
 
     offset += length;       // temp for testing
     return true;
@@ -786,7 +786,7 @@ bool CanonCR3::ipmaBox(quint32 &offset, quint32 &length)
 
         for (int j = 0; j < association_count; j++) {
             int x = Utilities::get8(p.file.peek(1));
-            int essential =  (x & 0b10000000) >> 7;
+//            int essential =  (x & 0b10000000) >> 7;
             quint16 property_index;
             if (flags & 1) {
                 property_index = Utilities::get16(p.file.read(2));
@@ -845,7 +845,7 @@ bool CanonCR3::iprpBox(quint32 &offset, quint32 &length)
     return true;
 }
 
-bool CanonCR3::mdatBox(quint32 &offset, quint32 &length)
+bool CanonCR3::mdatBox(quint32 &offset, quint32 &/*length*/)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     if (p.report) p.rpt << "Full size embedded JPG starting at " << offset + 16;
@@ -990,7 +990,7 @@ bool CanonCR3::moovBox(quint32 &offset, quint32 &length)
     p.file.seek(offset);
     nextHeifBox(length, type);
     getHeifBox(type, offset, length);
-    quint32 uuidEnd = offset + length;
+//    quint32 uuidEnd = offset + length;
 //    if (type == "uuid") uuidBox(offset, length);
 //    offset += 24;
 

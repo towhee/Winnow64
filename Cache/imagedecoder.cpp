@@ -156,7 +156,6 @@ bool ImageDecoder::load()
 
     // TIFF format
     else if (ext == "tif") {
-        qDebug() << __FUNCTION__ << ext;
         // check for sampling format we cannot read
         if (n.samplesPerPixel > 3) {
             imFile.close();
@@ -173,7 +172,7 @@ bool ImageDecoder::load()
             QString err = "Could not decode using Winnow Tiff decoder.  "
                         "Trying Qt tiff library to decode" + fPath + ". ";
             G::error(__FUNCTION__, fPath, err);
-            qDebug() << __FUNCTION__
+            qWarning() << __FUNCTION__
                      << "Could not decode using Winnow Tiff decoder.  "
                         "Trying Qt tiff library to decode " + fPath + ". ";
             if (abort) return false;

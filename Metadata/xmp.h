@@ -92,22 +92,22 @@ private:
 
     inline QString xmlNodeName(rapidxml::xml_node<> *node)
     {
-        return QString(node->name()).left(node->name_size());
+        return QString(node->name()).left(static_cast<int>(node->name_size()));
     }
 
     inline QString xmlNodeValue(rapidxml::xml_node<> *node)
     {
-        return QString(node->value()).left(node->value_size());
+        return QString(node->value()).left(static_cast<int>(node->value_size()));
     }
 
     inline QString xmlAttributeName(rapidxml::xml_attribute<> *attr)
     {
-        return QString(attr->name()).left(attr->name_size());
+        return QString(attr->name()).left(static_cast<int>(attr->name_size()));
     }
 
     inline QString xmlAttributeValue(rapidxml::xml_attribute<> *attr)
     {
-        return QString(attr->value()).left(attr->value_size());
+        return QString(attr->value()).left(static_cast<int>(attr->value_size()));
     }
 
     rapidxml::xml_document<> xmlDoc;
