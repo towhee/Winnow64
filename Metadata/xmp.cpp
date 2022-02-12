@@ -259,7 +259,7 @@ Xmp::Xmp(QFile &file, QObject *parent) :  QObject(parent)
         xmpBa = file.readAll();
     }
     initialize();
-    if (err == Xmp::ParseFailed) fix();
+//    if (err == Xmp::ParseFailed) fix();
 }
 
 Xmp::Xmp(QFile &file, uint offset, uint length, QObject *parent) :  QObject(parent)
@@ -326,9 +326,9 @@ void Xmp::initialize()
         err = Err::ParseFailed;
         return;
     }
-    catch (const rapidxml::parse_error& e) {
-        std::cerr << "Parse error: " << e.what() << "  " << e.where<char>()
-                  << "  " << filePath.toStdString() << std::endl;
+    catch (const rapidxml::parse_error& /*e*/) {
+//        std::cerr << "Parse error: " << e.what() << "  " << e.where<char>()
+//                  << "  " << filePath.toStdString() << std::endl;
         err = Err::ParseFailed;
         return;
     }

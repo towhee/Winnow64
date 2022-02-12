@@ -16,7 +16,7 @@ QRectF GraphicsItemEventFilter::boundingRect() const
     return QRectF();
 }
 
-void GraphicsItemEventFilter::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+void GraphicsItemEventFilter::paint(QPainter */*painter*/, const QStyleOptionGraphicsItem */*option*/, QWidget */*widget*/)
 {
 
 }

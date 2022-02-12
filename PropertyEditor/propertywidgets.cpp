@@ -171,7 +171,8 @@ void SliderEditor::fontSizeChanged(int fontSize)
     qDebug() << __FUNCTION__ << fontSize;
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
-void SliderEditor::paintEvent(QPaintEvent *event)
+
+void SliderEditor::paintEvent(QPaintEvent */*event*/)
 {
     QColor textColor = QColor(G::textShade,G::textShade,G::textShade);
     if (outOfRange)
@@ -235,7 +236,7 @@ void LabelEditor::fontSizeChanged(int fontSize)
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
-void LabelEditor::paintEvent(QPaintEvent *event)
+void LabelEditor::paintEvent(QPaintEvent */*event*/)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
@@ -308,7 +309,7 @@ void LineEditor::fontSizeChanged(int fontSize)
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
-void LineEditor::paintEvent(QPaintEvent *event)
+void LineEditor::paintEvent(QPaintEvent */*event*/)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
@@ -387,7 +388,7 @@ void SpinBoxEditor::fontSizeChanged(int fontSize)
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
-void SpinBoxEditor::paintEvent(QPaintEvent *event)
+void SpinBoxEditor::paintEvent(QPaintEvent */*event*/)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
@@ -477,7 +478,7 @@ void DoubleSpinBoxEditor::fontSizeChanged(int fontSize)
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
-void DoubleSpinBoxEditor::paintEvent(QPaintEvent *event)
+void DoubleSpinBoxEditor::paintEvent(QPaintEvent */*event*/)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
 }
@@ -545,7 +546,7 @@ void CheckBoxEditor::fontSizeChanged(int fontSize)
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
-void CheckBoxEditor::paintEvent(QPaintEvent *event)
+void CheckBoxEditor::paintEvent(QPaintEvent */*event*/)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
@@ -686,7 +687,7 @@ void ComboBoxEditor::fontSizeChanged(int fontSize)
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
-void ComboBoxEditor::paintEvent(QPaintEvent *event)
+void ComboBoxEditor::paintEvent(QPaintEvent */*event*/)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
@@ -776,7 +777,7 @@ BarBtnEditor::BarBtnEditor(const QModelIndex, QWidget *parent)
     btns.clear();
 }
 
-void BarBtnEditor::paintEvent(QPaintEvent *event)
+void BarBtnEditor::paintEvent(QPaintEvent */*event*/)
 {
 //    setStyleSheet("font-size: " + G::fontSize + "pt;");
 //    QWidget::paintEvent(event);
@@ -858,7 +859,7 @@ void ColorEditor::dlgColorChanged(const QColor &color)
     lineEdit->setText(color.name());
 }
 
-void ColorEditor::dlgColorClose(int result)
+void ColorEditor::dlgColorClose(int /*result*/)
 {
     colorDlg->close();
 }
@@ -902,7 +903,7 @@ void ColorEditor::fontSizeChanged(int fontSize)
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
-void ColorEditor::paintEvent(QPaintEvent *event)
+void ColorEditor::paintEvent(QPaintEvent */*event*/)
 {
 }
 
@@ -972,7 +973,7 @@ void SelectFolderEditor::fontSizeChanged(int fontSize)
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
-void SelectFolderEditor::paintEvent(QPaintEvent *event)
+void SelectFolderEditor::paintEvent(QPaintEvent */*event*/)
 {
 }
 
@@ -1041,6 +1042,6 @@ void SelectFileEditor::fontSizeChanged(int fontSize)
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
-void SelectFileEditor::paintEvent(QPaintEvent *event)
+void SelectFileEditor::paintEvent(QPaintEvent */*event*/)
 {
 }

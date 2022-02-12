@@ -110,7 +110,7 @@ namespace G
     QString tiffData;                   // temp for testing tiff decoder performance
 
     QElapsedTimer t;
-    QElapsedTimer t1;
+//    QElapsedTimer t1;
     bool isTimer;
     bool isTest;
 

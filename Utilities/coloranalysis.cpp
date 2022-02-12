@@ -1,7 +1,7 @@
 #include "coloranalysis.h"
 #include "Effects/effects.h"
 
-ColorAnalysis::ColorAnalysis(QObject *parent)/* : fPath(fPath)*/
+ColorAnalysis::ColorAnalysis(QObject */*parent*/)/* : fPath(fPath)*/
 {
 
 }

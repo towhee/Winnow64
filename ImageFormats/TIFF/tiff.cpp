@@ -730,8 +730,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
         return false;
     }
 
-    /*
-    qDebug() << __FUNCTION__
+    /* qDebug() << __FUNCTION__
              << "isThumb =" << thumb
              << "newSize =" << newSize
              << "m.offsetThumb =" << m.offsetThumb
@@ -760,7 +759,9 @@ bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
         return false;
     }
     p.offset = offset;
+    /*
     qDebug() << __FUNCTION__ << fPath << "offset =" << offset;
+    //*/
     return decode(p, image);
 }
 
@@ -1111,15 +1112,15 @@ void Tiff::sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h)
                 //*/
 }
 
-void Tiff::scaleFromQImage(QImage &im, QByteArray &bas, int newLongSide)
+void Tiff::scaleFromQImage(QImage &im, QByteArray &bas, int /*newLongSide*/)
 {
-    int nth;
-    bas.clear();
-    for (int y = 0; y < im.height(); ++y) {
-        if (y % nth == 0) {
+//    int nth;
+//    bas.clear();
+//    for (int y = 0; y < im.height(); ++y) {
+//        if (y % nth == 0) {
 
-        }
-    }
+//        }
+//    }
 }
 
 Tiff::TiffType Tiff::getTiffType()

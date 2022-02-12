@@ -7,7 +7,7 @@ DNG::DNG()
 bool DNG::parse(MetadataParameters &p,
                 ImageMetadata &m,
                 IFD *ifd,
-                IPTC *iptc,
+                IPTC */*iptc*/,
                 Exif *exif,
                 Jpeg *jpeg)
 {
@@ -279,7 +279,7 @@ bool DNG::parse(MetadataParameters &p,
     // Photoshop: **************************************************************
     // Get embedded JPG if available
 
-    bool foundTifThumb = false;
+//    bool foundTifThumb = false;
 //    if (ifdPhotoshopOffset) readIRB(ifdPhotoshopOffset);
 
     // IPTC: *******************************************************************

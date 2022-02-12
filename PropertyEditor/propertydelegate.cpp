@@ -127,7 +127,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
     }
 }
 
-QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
+QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &/*index*/) const
 {
     // row height = 1.7 * text height
     int height = static_cast<int>(G::fontSize.toInt() * 1.7 * G::ptToPx);

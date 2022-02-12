@@ -1451,10 +1451,10 @@ void fastblur(BImage img,int radius){
     bool excludeTransparency = true;
     int w = img.width();
     int h = img.height();
-    int wi = w - radius - radius;
-    int hi = w - radius - radius;
+//    int wi = w - radius - radius;
+//    int hi = w - radius - radius;
     // outside margin
-    int om = radius;
+//    int om = radius;
     if(img.depth() < 8) img = img.convertToFormat(QImage::Format_Indexed8);
     /*
     // create QVector of img for pixel wrangling
@@ -1469,7 +1469,7 @@ void fastblur(BImage img,int radius){
 
     int wm = w - 1;
     int hm = h - 1;
-    int wh = w * h;
+    unsigned long long wh = static_cast<unsigned long long>(w * h);
     int div = radius + radius + 1;
     /*
 //    QVector<QVector<int>> r(h);
@@ -1493,7 +1493,7 @@ void fastblur(BImage img,int radius){
     qint64 t1ms = t.nsecsElapsed();
     qDebug() << __FUNCTION__ << "memset =" << t1ms;
     */
-    int asum,rsum,gsum,bsum,x,y,yp,n,yw;
+    int asum, rsum, gsum, bsum, x, y, yp, n, yw;
     int yo;     // first opaque pixel in row or column as n (x + y * w)
     int fop;    // first opaque pixel in row or column as x or y
 //    QRgb *p, *p1, *p2;
@@ -1663,7 +1663,7 @@ void Effects::boxBlur2D(QImage &img, int radius)
     int h = img.height();
     int wm = w - 1;
     int hm = h - 1;
-    int wh = w * h;
+//    int wh = w * h;
     int blurRange = radius + radius + 1;
 
     if(img.depth() < 8) img = img.convertToFormat(QImage::Format_Indexed8);
@@ -1903,7 +1903,8 @@ Not being used - see #define CrunchRaisedPixel which is faster than calling func
 {
     int range = 255;
     double scale = 1.0 / range;
-    int r, g, b, a;
+    int r, g, b;
+    int a = 255;
 
     int z2 = ground * (range - adj);
     /* red */
@@ -1919,7 +1920,7 @@ Not being used - see #define CrunchRaisedPixel which is faster than calling func
     int gDelta = static_cast<int>(blend * (gnew - g));
     g += gDelta;
     /* blue */
-    b = static_cast<int>(blend * scale * (z1 + z2));
+//    b = static_cast<int>(blend * scale * (z1 + z2));
     b = qBlue(s[y][x]);
     z1 = b * adj;
     int bnew = static_cast<int>(scale * (z1 + z2));
@@ -2436,7 +2437,7 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     vector2DToImage(img, s);
 }
 
-bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bool inner)
+bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bool /*inner*/)
 {
 /*
     Draws a solid boundary around an object in an image, where the boundary is transparency.
@@ -2790,7 +2791,7 @@ void Effects::test(QImage &img)
     if(img.depth() < 8)
         img = img.convertToFormat(QImage::Format_Indexed8);
 
-    int a, r, g, b;
+//    int a, r, g, b;
 
     // create QVector of img for pixel wrangling
     QVector<QVector<QRgb>> s(h);  // source, destination
@@ -2798,12 +2799,12 @@ void Effects::test(QImage &img)
 
     // shade
     for (int y = 0; y < h; ++y) {
-        int i = static_cast<double>(y) / h * 101;
+        int i = static_cast<int>(y * 1.0 / h * 101);
         n[0] = 0;
         n[1] = lookup[i][0];
         n[2] = lookup[i][1];
         double illum = DotProduct(n, l);
-        int illumination = illum * 100;
+        int illumination = static_cast<int>(illum * 100);
         illumination += (illumination - 100) * 2;
         for (int x = 0; x < w; ++x) {
             s[y][x] = QColor(s[y][x]).lighter(illumination).rgba();

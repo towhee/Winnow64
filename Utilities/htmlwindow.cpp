@@ -2,7 +2,7 @@
 
 HtmlWindow::HtmlWindow(const QString &title,
                        const QString &htmlPath,
-                       const QSize &size, QObject *parent) : QScrollArea()
+                       const QSize &size, QObject */*parent*/) : QScrollArea()
 {
 /*
     This opens a modeless window containing the html document.  The window will have a minimum

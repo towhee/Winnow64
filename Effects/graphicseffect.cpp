@@ -1,7 +1,7 @@
 #include "graphicseffect.h"
 #include "REF_imageblitz_effects.h"
 
-GraphicsEffect::GraphicsEffect(QString src, QObject *parent)
+GraphicsEffect::GraphicsEffect(QString src, QObject */*parent*/)
 {
 //    qDebug() << __FUNCTION__;
     this->objectName() = "GraphicsEffect";
@@ -428,8 +428,8 @@ Utilities::log(__FUNCTION__, "");
     double rads = lightDirection * (3.14159 / 180);
     int dx = qRound(-sin(rads) * length);
     int dy = qRound(+cos(rads) * length);
-    int x = boundingRect().x();
-    int y = boundingRect().y();
+//    int x = boundingRect().x();
+//    int y = boundingRect().y();
 //    int w = boundingRect().width();
 //    int h = boundingRect().height();
     /*
@@ -613,6 +613,9 @@ Utilities::log(__FUNCTION__, "");
 #endif
 //    qDebug() << __FUNCTION__ << QTime::currentTime();
     if (overlay.isNull()) return;
+
+    // silence issue
+    blurRadius = 1;
 
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;

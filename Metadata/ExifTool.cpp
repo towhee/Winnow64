@@ -21,7 +21,7 @@ ExifTool::ExifTool()
     startArgs << "-execute";
     process.start(exifToolPath, startArgs);   // exifToolPath = path to ExifTool.exe or ExifTool.app
     process.waitForStarted(3000);
-    qDebug() << __FUNCTION__ << process.errorString();
+//    qDebug() << __FUNCTION__ << process.errorString();
 }
 
 int ExifTool::execute(QStringList &args)
@@ -29,7 +29,6 @@ int ExifTool::execute(QStringList &args)
     /* all args that are a path to an image should be converted to a url
        ie  QUrl("D:/Pictures/Zenfolio/2021-02-12_0006.jpg").path();  */
     Utilities::log(__FUNCTION__, exifToolPath);
-    qDebug() << __FUNCTION__ << args;
     return QProcess::execute(exifToolPath, args);
 }
 
@@ -94,14 +93,12 @@ void ExifTool::writeOrientation(QString src, QString orientation)
     7 = Mirror horizontal and rotate 90 CW
     8 = Rotate 270 CW
 */
-    qDebug() << __FUNCTION__ << src << orientation;
     QByteArray args;
     args.append("-orientation#=" + orientation.toUtf8() + "\n");
     if (isOverWrite) args += "-overwrite_original\n";
     args.append(src.toUtf8() + "\n");
     args.append("-execute\n");
     process.write(args);
-    qDebug() << __FUNCTION__ << process.errorString();
 }
 
 // not used as ExifTool can only read results into a file, going to try using my own xmp.setItem

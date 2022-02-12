@@ -260,7 +260,7 @@ bool InfoString::parseToken(QString &tokenString, int pos,
 
     // look backwards
     bool foundPossibleTokenStart = false;
-    int startPos;
+    int startPos = 0;
     for (int i = pos; i >= 0; i--) {
         ch = tokenString.at(i);
         if (i < pos && ch == '}') return false;
@@ -378,9 +378,7 @@ QString InfoString::tokenValue(QString &token,
         return QLocale(QLocale::English).toString(info.size());
     }
     if (token == "MPix") {
-        uint width = m.width;
-        uint height = m.height;
-        return QString::number((width * height) / 1000000.0, 'f', 1);
+        return QString::number((m.width * m.height) / 1000000.0, 'f', 1);
     }
     if (token == "CreateDate")
         return m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
@@ -492,9 +490,7 @@ Finds the token in the datamodel and returns the datamodel value.
         return QLocale(QLocale::English).toString(info.size());
     }
     if (token == "MPix") {
-        uint width = m.width;
-        uint height = m.height;
-        return QString::number((width * height) / 1000000.0, 'f', 1);
+        return QString::number((m.width * m.height) / 1000000.0, 'f', 1);
     }
     if (token == "CreateDate")
         return m.createdDate.toString("yyyy-MM-dd hh:mm:ss");

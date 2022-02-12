@@ -255,6 +255,7 @@ void IconView::setThumbParameters()
             m2->setThumbDockHeight();
     }
     setSpacing(0);
+    if (labelFontSize == 0) labelFontSize = 10;
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
         labelFontSize, showIconLabels, badgeSize);
 }

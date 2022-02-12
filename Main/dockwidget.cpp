@@ -87,7 +87,7 @@ void DockTitleBar::setStyle()
     int g1 = G::backgroundShade;
     int g0 = g1 - 10;
     if (g0 < 0) g0 = 0;
-    int c = G::backgroundShade + 30;
+//    int c = G::backgroundShade + 30;
     QString s = "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
                 "stop: 0 " + QColor(g1,g1,g1).name() + ", "
                 "stop: 1 " + QColor(g0,g0,g0).name() + ");"
