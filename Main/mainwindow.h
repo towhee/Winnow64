@@ -1072,7 +1072,7 @@ private:
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
     void updateState();
-    void stopAndClearAll();
+    void stopAndClearAll(QString src = "");
     void deleteViewerImage();
     void selectCurrentViewDir();
     void addMenuSeparator(QWidget *widget);

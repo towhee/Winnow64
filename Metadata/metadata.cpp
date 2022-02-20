@@ -361,9 +361,7 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("creator", n) << G::s(m.creator) << "\n";
     p.rpt << G::sj("_creator", n) << G::s(m._creator) << "\n";
     p.rpt << G::sj("copyright", n) << G::s(m.copyright) << "\n";
-    p.rpt << G::sj("fPath", n) << G::s(m.fPath) << "\n";
     p.rpt << G::sj("_copyright", n) << G::s(m._copyright) << "\n";
-    p.rpt << G::sj("fPath", n) << G::s(m.fPath) << "\n";
     p.rpt << G::sj("email", n) << G::s(m.email) << "\n";
     p.rpt << G::sj("_email", n) << G::s(m._email) << "\n";
     p.rpt << G::sj("url", n) << G::s(m.url) << "\n";
@@ -463,7 +461,8 @@ void Metadata::reportMetadata()
 //    p.rpt << "searchStr"           << m.searchStr;              p.rpt << "\n";
 */
 
-    if (m.isXmp /*&& p.xmpString.length() > 0 && m.xmpSegmentOffset > 0*/) {
+    if (m.isXmp) {
+        // sidecar xmp
         MetaReport::header("Embedded XMP Extract", p.rpt);
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
         if (xmp.isValid) p.rpt << xmp.docToQString();

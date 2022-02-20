@@ -652,9 +652,10 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 */
 //    QMutexLocker locker(&mutex);
     if (G::isLogger) G::log(__FUNCTION__, fPath);
+    ImageMetadata m;
+    if (fPath == "") return m;
     int row = fPathRow[fPath];
     metadata->m.row = row;
-    ImageMetadata m;
 
     // file info (calling Metadata not required)
     m.row = row;
