@@ -800,6 +800,7 @@ QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     QString fPath = info.absoluteFilePath();
+    if (fPath == "") return "";
     ImageMetadata m = dm->imMetadata(fPath);
     createdDate = m.createdDate;
 //    qDebug() << __FUNCTION__ << fPath << createdDate;

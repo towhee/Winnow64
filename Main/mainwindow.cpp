@@ -1316,7 +1316,7 @@ void MW::folderSelectionChange()
         G::log(__FUNCTION__, currentViewDirPath);
     }
 
-    stopAndClearAll();
+    stopAndClearAll("folderSelectionChange");
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->invokeFromAction(embelTemplatesActions.at(0));
@@ -1722,7 +1722,7 @@ void MW::folderAndFileSelectionChange(QString fPath)
     return;
 }
 
-void MW::stopAndClearAll()
+void MW::stopAndClearAll(QString src)
 {
 /*
     Called when folderSelectionChange and invalid folder (no folder, no eligible images).
@@ -1760,7 +1760,10 @@ void MW::stopAndClearAll()
     dm->clearDataModel();
     currentRow = 0;
 
-    setCentralMessage("Select a folder.");
+    if (src == "folderSelectionChange")
+        setCentralMessage("Loading folder.");
+    else
+        setCentralMessage("Select a folder.");
     G::stop = false;
 //    qDebug() << __FUNCTION__ << "COMPLETED STOPANDCLEARALL";
 }

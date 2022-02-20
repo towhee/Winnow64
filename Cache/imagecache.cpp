@@ -789,6 +789,7 @@ void ImageCache::buildImageCacheList()
 
     for (int i = 0; i < dm->sf->rowCount(); ++i) {
         QString fPath = dm->sf->index(i, G::PathColumn).data(G::PathRole).toString();
+        if (fPath == "") continue;
         ImageMetadata m = dm->imMetadata(fPath);
         /* cacheItemList is a list of cacheItem used to track the current
            cache status and make future caching decisions for each image  */

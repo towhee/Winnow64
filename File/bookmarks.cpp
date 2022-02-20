@@ -175,7 +175,6 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         rightClickItem = itemAt(event->pos());
         if (rightClickItem) {
             rightMouseClickPath = rightClickItem->toolTip(0);
-            qDebug() << __FUNCTION__ << rightClickItem->toolTip(0);
         }
         return;
     }
