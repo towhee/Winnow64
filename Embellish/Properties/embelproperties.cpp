@@ -1509,9 +1509,19 @@ void EmbelProperties::syncWinnets()
     renamed or deleted.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    // windows executables end in .exe and macos have no extension
+    QString ext = "";
+    #ifdef Q_OS_WIN
+    ext = ".exe";
+    #endif
+    #ifdef Q_OS_MAC
+    ext = ".app";
+    #endif
+    qDebug() << __FUNCTION__ << ext;
+
     // list of executables that must not be changed
     QStringList criticalExecutables;
-    criticalExecutables << "Winnow.exe" << "Winnet.exe";
+    criticalExecutables << "Winnow" + ext << "Winnet" + ext;
 
     // list of all executables in the Winnow folder
     QString appDir = qApp->applicationDirPath();
@@ -1535,14 +1545,14 @@ void EmbelProperties::syncWinnets()
     okToChange << dir.entryList();
 
     // strip ".exe"
-    okToChange.replaceInStrings(".exe", "");
+    okToChange.replaceInStrings(ext, "");
 
     // add if missing item in templateList
-    QString winnetPath = appDir + "/Winnet.exe";
+    QString winnetPath = appDir + "/Winnet" + ext;
     QFile winnet(winnetPath);
     for (int i = 0; i < templateList.length(); i++) {
         if (!okToChange.contains(templateList.at(i))) {
-            QString newWinnet = dirPath + "/" + templateList.at(i) + ".exe";
+            QString newWinnet = dirPath + "/" + templateList.at(i) + ext;
             // add a new Winnet
             winnet.copy(newWinnet);
         }

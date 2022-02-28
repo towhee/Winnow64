@@ -304,7 +304,15 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     loadSettings();             // except settings with dependencies ie for actions not created yet
 
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
+#ifdef Q_OS_WIN
     setting->setValue("appPath", qApp->applicationDirPath());
+#endif
+//#ifdef Q_OS_MAC
+//    QDir dir = QDir(qApp->applicationDirPath());
+//    dir.cdUp();
+//    dir.cdUp();
+//    setting->setValue("appPath", dir.path());
+//#endif
 
 //    // Logger
 //    if (G::isLogger && G::sendLogToConsole == false) openLog();
@@ -1145,11 +1153,17 @@ void MW::handleStartupArgs(const QString &args)
     if (args.length() < 2) return;
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
+    /*
+    QString a = "";
+    for (QString s : argList) a += s + "\n";
+    QMessageBox::information(this, "MW::handleStartupArgs", a);
+    //*/
+    Utilities::log("MW::handleStartupArgs", args);
 
     /* log
     Utilities::log(__FUNCTION__, QString::number(argList.length()) + " arguments");
     Utilities::log(__FUNCTION__, args);
-//    */
+    //*/
 
     QStringList pathList;
     QString templateName;
@@ -1173,11 +1187,13 @@ void MW::handleStartupArgs(const QString &args)
 
         /* log
         Utilities::log(__FUNCTION__, "Template to use: " + templateName);
-//      */
+        //*/
 
         // get the folder where the files to embellish are located
         QFileInfo info(argList.at(3));
         QString folderPath = info.dir().absolutePath();
+//        QMessageBox::information(this, "MW::handleStartupArgs", folderPath);
+//        Utilities::log("MW::handleStartupArgs", args);
 
         // list of all supported files in the folder
         QStringList fileFilters;
@@ -1234,13 +1250,13 @@ void MW::handleStartupArgs(const QString &args)
                           "  " + fPath
                           ;
             Utilities::log(__FUNCTION__, msg);
-//                        */
+            //*/
         }
 
         /* log
         Utilities::log(__FUNCTION__, QString::number(dir.entryInfoList().size()) + " files " +
                        folderPath + "  Cutoff = " + t.toString("yyyy-MM-dd hh:mm:ss"));
-//                       */
+        //*/
 
         // add the recently modified incoming files to pathList
         for (int i = 0; i < dir.entryInfoList().size(); ++i) {
@@ -1253,7 +1269,7 @@ void MW::handleStartupArgs(const QString &args)
                         " Adding " + info.lastModified().toString("yyyy-MM-dd hh:mm:ss") +
                         " " + info.filePath();
                 Utilities::log(__FUNCTION__, msg);
-//                */
+                //*/
             }
         }
 
@@ -3893,10 +3909,10 @@ void MW::createMenus()
 //    embelMenu->addAction(embelTileAction);
     embelMenu->addAction(embelManageTilesAction);
     embelMenu->addAction(embelManageGraphicsAction);
-    #ifdef Q_OS_WIN
+//    #ifdef Q_OS_WIN
     embelMenu->addSeparator();
     embelMenu->addAction(embelRevealWinnetsAction);
-    #endif
+//    #endif
     QAction *embelGroupAct = new QAction("Embellish", this);
     embelGroupAct->setMenu(embelMenu);
     embelMenu->addSeparator();

@@ -129,6 +129,9 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     embelProperties->setCurrentTemplate(templateName);
     embellish->setRemote(true);
 
+//    QMessageBox::information(this, "EmbelExport::exportRemoteFiles", pathList.at(0));
+//    Utilities::log("EmbelExport::exportRemoteFiles", pathList.at(0));
+
     exportImages(pathList);
 
     embellish->setRemote(false);
@@ -262,8 +265,12 @@ void EmbelExport::exportImage(const QString &fPath)
     // read the image, add it to the graphics scene and embellish
     if (loadImage(fPath)) {
         // embellish
-        embellish->build(fPath, __FUNCTION__);
+        embellish->build(fPath, "EmbelExport::exportImage");
         setSceneRect(scene->itemsBoundingRect());
+    }
+    else {
+        QString msg = "Failed to loadImage(fPath)";
+        Utilities::log("EmbelExport::exportImage", msg);
     }
 
     // Create QImage with the exact size of the scene
@@ -274,10 +281,16 @@ void EmbelExport::exportImage(const QString &fPath)
     QPainter painter(&image);
     scene->render(&painter);
 
+    bool wasSaved = false;
+
     // save
-    if (extension == "JPG") image.save(exportPath, "JPG", 100);
-    if (extension == "PNG") image.save(exportPath, "PNG", 100);
-    if (extension == "TIF") image.save(exportPath, "TIF");
+    if (extension == "JPG") wasSaved = image.save(exportPath, "JPG", 100);
+    if (extension == "PNG") wasSaved = image.save(exportPath, "PNG", 100);
+    if (extension == "TIF") wasSaved = image.save(exportPath, "TIF");
+
+    QString msg = exportPath + (wasSaved ? " true" : " false")
+            + " Image width: " + QString::number(image.width());
+    Utilities::log("EmbelExport::exportImage", msg);
 
     // add thumbnail
     QImage thumb = image.scaled(160, 160, Qt::KeepAspectRatio);
