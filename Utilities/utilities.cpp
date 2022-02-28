@@ -138,7 +138,7 @@ void Utilities::log(QString function, QString msg)
         fLog.readAll();
         QString t = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
         QString f = function;
-        QString txt = t + "  " + function + "  " + msg + "\n";
+        QString txt = t + "  " + f + "  " + msg + "\n";
         fLog.write(txt.toUtf8());
         fLog.close();
     }

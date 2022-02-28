@@ -187,8 +187,8 @@ void Embel::build(QString path, QString src)
 
     /*
     QString msg = "src = " + src + "  path = " + path;
-    Utilities::log(__FUNCTION__, msg);
-    */
+    Utilities::log("Embel::build", msg);
+    //*/
 
     QElapsedTimer t;
     t.start();
@@ -202,11 +202,14 @@ void Embel::build(QString path, QString src)
     if (path != "") {
         fPath = path;
     }
+    QString msg = "src = " + src + "  fPath = " + fPath;
+    Utilities::log("Embel::build", msg);
     clear();
     createBorders();
     createTexts();
     createGraphics();
     borderImageCoordinates();
+    Utilities::log("Embel::build", "w = " + QString::number(w));
     scene->setSceneRect(0, 0, w, h);
     addBordersToScene();
     addImageToScene();
