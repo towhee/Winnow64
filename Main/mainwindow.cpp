@@ -304,15 +304,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     loadSettings();             // except settings with dependencies ie for actions not created yet
 
     // update executable location - req'd by Winnets (see MW::handleStartupArgs)
-#ifdef Q_OS_WIN
     setting->setValue("appPath", qApp->applicationDirPath());
-#endif
-//#ifdef Q_OS_MAC
-//    QDir dir = QDir(qApp->applicationDirPath());
-//    dir.cdUp();
-//    dir.cdUp();
-//    setting->setValue("appPath", dir.path());
-//#endif
 
 //    // Logger
 //    if (G::isLogger && G::sendLogToConsole == false) openLog();
@@ -1158,6 +1150,7 @@ void MW::handleStartupArgs(const QString &args)
     for (QString s : argList) a += s + "\n";
     QMessageBox::information(this, "MW::handleStartupArgs", a);
     //*/
+    Utilities::log("MW::handleStartupArgs Winnow Location", qApp->applicationDirPath());
     Utilities::log("MW::handleStartupArgs", args);
 
     /* log

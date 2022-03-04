@@ -130,7 +130,7 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     embellish->setRemote(true);
 
 //    QMessageBox::information(this, "EmbelExport::exportRemoteFiles", pathList.at(0));
-//    Utilities::log("EmbelExport::exportRemoteFiles", pathList.at(0));
+    Utilities::log("EmbelExport::exportRemoteFiles", pathList.at(0));
 
     exportImages(pathList);
 
