@@ -8555,7 +8555,7 @@ void MW::writeSettings()
     setting->setValue("manualFolderPath2", manualFolderPath2);
     setting->setValue("filenameTemplateSelected", filenameTemplateSelected);
     setting->setValue("ingestCount", G::ingestCount);
-    setting->setValue("ingestLastDate", G::ingestLastDate);
+    setting->setValue("ingestLastSeqDate", G::ingestLastSeqDate);
     */
 
     // thumbs
@@ -8956,8 +8956,8 @@ bool MW::loadSettings()
     if (setting->contains("manualFolderPath")) manualFolderPath = setting->value("manualFolderPath").toString();
     if (setting->contains("manualFolderPath2")) manualFolderPath2 = setting->value("manualFolderPath2").toString();
     if (setting->contains("ingestCount")) G::ingestCount = setting->value("ingestCount").toInt();
-    if (setting->contains("ingestLastDate")) G::ingestLastDate = setting->value("ingestLastDate").toDate();
-    if (G::ingestLastDate != QDate::currentDate()) G::ingestCount = 0;
+    if (setting->contains("ingestLastSeqDate")) G::ingestLastSeqDate = setting->value("ingestLastSeqDate").toDate();
+    if (G::ingestLastSeqDate != QDate::currentDate()) G::ingestCount = 0;
 
     // preferences
     if (setting->contains("isSoloPrefDlg")) isSoloPrefDlg = setting->value("isSoloPrefDlg").toBool();
@@ -10657,7 +10657,7 @@ void MW::ingest()
         setting->setValue("manualFolderPath2", manualFolderPath2);
         setting->setValue("filenameTemplateSelected", filenameTemplateSelected);
         setting->setValue("ingestCount", G::ingestCount);
-        setting->setValue("ingestLastDate", G::ingestLastDate);
+        setting->setValue("ingestLastSeqDate", G::ingestLastSeqDate);
 
         if (!okToIngest || !isBackgroundIngest) return;
 
@@ -12398,6 +12398,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << qApp->applicationDirPath();
+    QString fPath = "/Users/roryhill/Pictures/Test/2021-09-25_0001.arw";
+    QFileInfo i(fPath);
+    qDebug() << __FUNCTION__
+             << "birth =" << i.birthTime();
+//    qDebug() << __FUNCTION__ << G::ingestCount << G::ingestLastSeqDate;
 }
 // End MW

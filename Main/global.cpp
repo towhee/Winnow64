@@ -92,7 +92,7 @@ namespace G
 
     // ingest
     int ingestCount = 0;
-    QDate ingestLastDate;
+    QDate ingestLastSeqDate;
 
     // not persistent
     bool isThreadTrackingOn;

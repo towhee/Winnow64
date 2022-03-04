@@ -483,7 +483,8 @@ void Ingest::run()
 
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();
-    G::ingestLastDate = QDate::currentDate();
+    G::ingestLastSeqDate = seqDate;
+    qDebug() << __FUNCTION__ << seqDate<< G::ingestCount << G::ingestLastSeqDate;
 
     // show any ingest errors
     if (failedToCopy.length() || integrityFailure.length()) {

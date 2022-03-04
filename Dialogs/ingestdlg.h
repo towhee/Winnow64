@@ -170,6 +170,7 @@ public:
 
     int seqWidth;
     int seqNum;
+    QDate seqDate;
 
     QDateTime createdDate;
 

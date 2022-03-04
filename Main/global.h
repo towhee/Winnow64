@@ -220,7 +220,7 @@ namespace G
     extern bool embedTifThumb;
 
     extern int ingestCount;
-    extern QDate ingestLastDate;
+    extern QDate ingestLastSeqDate;
 
     extern bool isThreadTrackingOn;
     extern bool showAllTableColumns;

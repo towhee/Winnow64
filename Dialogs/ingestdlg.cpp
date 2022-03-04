@@ -275,6 +275,16 @@ void IngestDlg::getPicks()
         }
     }
 
+    // seqDate set to the created date of the first pick
+    if (pickList.count()) {
+        seqDate = pickList.at(0).birthTime().date();
+        qDebug() << __FUNCTION__
+                 << pickList.at(0).absoluteFilePath()
+                 << seqDate
+                 << G::ingestLastSeqDate
+                    ;
+    }
+
     // stats
     fileCount = pickList.count();
     fileMB = 0;
@@ -554,7 +564,8 @@ void IngestDlg::ingest()
 
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();
-    G::ingestLastDate = QDate::currentDate();
+    G::ingestLastSeqDate = seqDate;
+    qDebug() << __FUNCTION__ << seqDate<< G::ingestCount << G::ingestLastSeqDate;
 
     // show any ingest errors
     if (failedToCopy.length() || integrityFailure.length()) {
@@ -1097,8 +1108,14 @@ int IngestDlg::getSequenceStart(const QString &path)
             }
         }
     }
-//    if (sequence < G::ingestCount) sequence = G::ingestCount;
-//    if (sequence > G::ingestCount) G::ingestCount = sequence;
+
+    // check if previous ingest to another folder for the same date
+    if (seqDate == G::ingestLastSeqDate) {
+        if (sequence < G::ingestCount) {
+            sequence = G::ingestCount + 1;
+        }
+    }
+
     return sequence;
 }
 

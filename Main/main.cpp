@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
         args += argv[i];
         if (i < argc - 1) args += delimiter;
     }
-    Utilities::log("WinnowMain", args);
+//    Utilities::log("WinnowMain", args);
 
     // instance already running
     if (instance.sendMessage(args)) {
