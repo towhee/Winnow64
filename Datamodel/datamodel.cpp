@@ -607,8 +607,12 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::SizeColumn), fileInfo.size());
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss");
-    search += s;
+//    if (s == "") {
+//        s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
+//        search += s;
+//    }
     setData(index(row, G::CreatedColumn), s);
+    qDebug() << __FUNCTION__ << fPath << index(row, G::CreatedColumn).data();
     s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     search += s;
     setData(index(row, G::ModifiedColumn), s);

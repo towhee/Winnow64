@@ -59,7 +59,7 @@ private:
     int tokenEnd;
     int seqWidth;
     int seqNum;
-
+    QDate seqDate;
 
     void getPicks();
     QString parseTokenString(QFileInfo info, QString tokenString);

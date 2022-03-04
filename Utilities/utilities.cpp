@@ -34,6 +34,7 @@ QString Utilities::getDrive(QString path)
     The path must include the drive - the absolute path.
 */
     QString drivePath = "";
+    if (path == "") return "";
 #ifdef Q_OS_WIN
     int firstSlash = path.indexOf("/");
     drivePath = path.left(firstSlash+1);
