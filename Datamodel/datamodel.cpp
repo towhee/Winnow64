@@ -606,13 +606,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
     setData(index(row, G::SizeColumn), fileInfo.size());
     setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-    s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss");
-//    if (s == "") {
-//        s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
-//        search += s;
-//    }
-    setData(index(row, G::CreatedColumn), s);
-    qDebug() << __FUNCTION__ << fPath << index(row, G::CreatedColumn).data();
+    // G::CreatedColumn is extracted from the image metadata, not QFileInfo
     s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     search += s;
     setData(index(row, G::ModifiedColumn), s);
@@ -916,7 +910,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::RatingColumn), m.rating);
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::_RatingColumn), m._rating);
-    setData(index(row, G::CreatedColumn), m.createdDate);
+    qDebug() << __FUNCTION__ << m.createdDate << m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
+    setData(index(row, G::CreatedColumn), m.createdDate.toString("yyyy-MM-dd hh:mm:ss"));
     setData(index(row, G::YearColumn), m.createdDate.toString("yyyy"));
     setData(index(row, G::DayColumn), m.createdDate.toString("yyyy-MM-dd"));
     search += m.createdDate.toString("yyyy-MM-dd");
