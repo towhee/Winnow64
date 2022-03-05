@@ -1,4 +1,8 @@
 BUGS / TO DO
+qt.core.qmetaobject.connectslotsbyname: QMetaObject::connectSlotsByName: No matching signal for on_filenameTemplatesCB_currentIndexChanged(QString)
+qt.core.qmetaobject.connectslotsbyname: QMetaObject::connectSlotsByName: No matching signal for on_spinBoxStartNumber_valueChanged(QString)
+qt.core.qmetaobject.connectslotsbyname: QMetaObject::connectSlotsByName: No matching signal for on_isBackupChkBox_stateChanged(int)
+
 - Sort taking time when loading folder and sort is file
 - MW::enableSelectionDependentMenus needs updating for all situations
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
@@ -55,6 +59,8 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ??
 DONE/FIXED
+- Ingest on PC Destination folder with no description has extra /
+- CreateDate QDateTime::fromString was not working in Qt 6
 - ExifTool running on Mac
 - Mac binary is now native for RISC chips ie M1
 - Esc to stop loading a folder

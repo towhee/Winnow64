@@ -309,7 +309,7 @@ void Ingest::run()
     while (it.hasNext()) {
         it.next();
         if (i == filenameTemplateSelected) {
-            qDebug() << __FUNCTION__ << "it.value()" << it.value();
+//            qDebug() << __FUNCTION__ << "it.value()" << it.value();
             tokenString = it.value();
             break;
         }
@@ -429,7 +429,7 @@ void Ingest::run()
                     // will already be an xmp sidecar so just copy it to destinaton
                     sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
                     if (!sidecarOk) {
-                        qDebug() << __FUNCTION__ << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
+                        qWarning() << __FUNCTION__ << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
                         failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
                     }
                 }
@@ -439,13 +439,13 @@ void Ingest::run()
                 dm->imMetadata(metadataChangedSourcePath);
                 sidecarOk = metadata->writeXMP(destSidecarPath, __FUNCTION__);
                 if (!sidecarOk) {
-                    qDebug() << __FUNCTION__ << "Failed to write" << sourceSidecarPath << "to" << destSidecarPath;
+                    qWarning() << __FUNCTION__ << "Failed to write" << sourceSidecarPath << "to" << destSidecarPath;
                     failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
                 }
             }
             if (copyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
-                    qDebug() << __FUNCTION__ << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
+                    qWarning() << __FUNCTION__ << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
                     integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
                 }
             }
@@ -454,12 +454,12 @@ void Ingest::run()
             if (isBackup && sidecarOk) {
                 bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
                 if (!backupSidecarCopyOk) {
-                    qDebug() << __FUNCTION__ << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
+                    qWarning() << __FUNCTION__ << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
                     failedToCopy << destSidecarPath + " to " + backupSidecarPath;
                 }
                 if (copyOk && integrityCheck) {
                     if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
-                        qDebug() << __FUNCTION__ << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
+                        qWarning() << __FUNCTION__ << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
                         integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
                     }
                 }
@@ -484,7 +484,7 @@ void Ingest::run()
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();
     G::ingestLastSeqDate = seqDate;
-    qDebug() << __FUNCTION__ << seqDate<< G::ingestCount << G::ingestLastSeqDate;
+    qDebug() << __FUNCTION__ << seqDate << G::ingestCount << G::ingestLastSeqDate;
 
     // show any ingest errors
     if (failedToCopy.length() || integrityFailure.length()) {

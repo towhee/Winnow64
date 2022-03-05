@@ -243,7 +243,6 @@ bool Jpeg::parse(MetadataParameters &p,
     createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue + startOffset,
         ifd->ifdDataHash.value(36868).tagCount).left(19);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
-    qDebug() << __FUNCTION__ << "createdExif" << createdExif << "m.createdDate" << m.createdDate;
     // try DateTimeOriginal
     if (createdExif.length() == 0) {
         createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36867).tagValue + startOffset,
