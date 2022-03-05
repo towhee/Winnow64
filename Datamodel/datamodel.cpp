@@ -910,7 +910,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::RatingColumn), m.rating);
     setData(index(row, G::RatingColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::_RatingColumn), m._rating);
-    qDebug() << __FUNCTION__ << m.createdDate << m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
     setData(index(row, G::CreatedColumn), m.createdDate.toString("yyyy-MM-dd hh:mm:ss"));
     setData(index(row, G::YearColumn), m.createdDate.toString("yyyy"));
     setData(index(row, G::DayColumn), m.createdDate.toString("yyyy-MM-dd"));

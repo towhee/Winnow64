@@ -190,7 +190,7 @@ private slots:
     void on_selectFolderBtn_2_clicked();
     void on_selectRootFolderBtn_2_clicked();
     void on_selectRootFolderBtn_clicked();
-    void on_pathTemplatesCB_currentIndexChanged(const QString &arg1);
+    void on_pathTemplatesCB_currentTextChanged(const QString &arg1);
     void on_pathTemplatesCB_2_currentIndexChanged(const QString &arg1);
     void on_pathTemplatesBtn_clicked();
     void on_pathTemplatesBtn_2_clicked();

@@ -904,7 +904,8 @@ void IngestDlg::updateFolderPaths()
                  << "fromRootToBaseFolder =" << fromRootToBaseFolder
                  << "baseFolderDescription =" << baseFolderDescription;
                  // */
-        folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
+        folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription /*+ "/"*/;
+        if (baseFolderDescription != "") folderPath += "/";
         ui->folderLabel->setText(folderPath);
         ui->folderLabel->setToolTip(ui->folderLabel->text());
         drivePath = Utilities::getDrive(rootFolderPath);
@@ -915,7 +916,8 @@ void IngestDlg::updateFolderPaths()
 
         baseFolderDescription2 = (ui->descriptionLineEdit_2->text().length() > 0)
                 ? ui->descriptionLineEdit_2->text() : "";
-        folderPath2 = rootFolderPath2 + fromRootToBaseFolder2 + baseFolderDescription2 + "/";
+        folderPath2 = rootFolderPath2 + fromRootToBaseFolder2 + baseFolderDescription2 /*+ "/"*/;
+        if (baseFolderDescription2 != "") folderPath2 += "/";
         ui->folderLabel_2->setText(folderPath2);
         ui->folderLabel_2->setToolTip(ui->folderLabel_2->text());
         drive2Path = Utilities::getDrive(rootFolderPath2);
@@ -955,7 +957,7 @@ void IngestDlg::updateFolderPaths()
 
     getAvailableStorageMB();
     updateExistingSequence();
-    getSequenceStart(folderPath);
+    seqStart += getSequenceStart(folderPath);
     buildFileNameSequence();
     updateExistingSequence();
     updateEnabledState();
@@ -1355,15 +1357,18 @@ void IngestDlg::initExampleMap()
     exampleMap["XXXXXXX"] = "0000001";
 }
 
-void IngestDlg::on_pathTemplatesCB_currentIndexChanged(const QString &arg1)
+void IngestDlg::on_pathTemplatesCB_currentTextChanged(const QString &arg1)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    if (arg1 == "") return;
+    qDebug() << __FUNCTION__ << "arg1" << arg1;
+//    QString tem = ui->pathTemplatesCB->itemText(index);
+//    if (tem == "") return;
     QString tokenString = pathTemplatesMap[arg1];
     fromRootToBaseFolder = parseTokenString(pickList.at(0), tokenString);
+    qDebug() << __FUNCTION__ << "fromRootToBaseFolder" << fromRootToBaseFolder;
     if (!isInitializing) pathTemplateSelected = ui->pathTemplatesCB->currentIndex();
     updateFolderPaths();
-    seqStart = getSequenceStart(folderPath);
+    seqStart += getSequenceStart(folderPath);
     updateExistingSequence();
 }
 
@@ -1412,7 +1417,7 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
         row++;
     }
     ui->pathTemplatesCB->setCurrentIndex(index);
-    on_pathTemplatesCB_currentIndexChanged(currentKey);
+    on_pathTemplatesCB_currentTextChanged(currentKey);
 }
 
 void IngestDlg::on_pathTemplatesBtn_2_clicked()
@@ -1706,3 +1711,4 @@ void IngestDlg::test()
 {
     ui->folderLabel->setStyleSheet("QLabel {color:" + G::disabledColor.name() + ";}");
 }
+

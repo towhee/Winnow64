@@ -10579,6 +10579,11 @@ void MW::ingest()
 
     static QString prevSourceFolder = "";
     static QString baseFolderDescription = "";
+    qDebug() << __FUNCTION__
+             << "prevSourceFolder" << prevSourceFolder
+             << "currentViewDirPath" << currentViewDirPath
+             << "baseFolderDescription" << baseFolderDescription
+                ;
     if (prevSourceFolder != currentViewDirPath) baseFolderDescription = "";
 
     QString folderPath;        // req'd by backgroundIngest
@@ -10659,26 +10664,28 @@ void MW::ingest()
         setting->setValue("ingestCount", G::ingestCount);
         setting->setValue("ingestLastSeqDate", G::ingestLastSeqDate);
 
-        if (!okToIngest || !isBackgroundIngest) return;
+        if (!okToIngest) return;
 
         // start background ingest
-        backgroundIngest = new Ingest(this,
-                                      combineRawJpg,
-                                      combinedIncludeJpg,
-                                      integrityCheck,
-                                      ingestIncludeXmpSidecar,
-                                      backupIngest,
-                                      seqStart,
-                                      metadata,
-                                      dm,
-                                      folderPath,
-                                      folderPath2,
-                                      filenameTemplates,
-                                      filenameTemplateSelected);
+        if (isBackgroundIngest) {
+            backgroundIngest = new Ingest(this,
+                                          combineRawJpg,
+                                          combinedIncludeJpg,
+                                          integrityCheck,
+                                          ingestIncludeXmpSidecar,
+                                          backupIngest,
+                                          seqStart,
+                                          metadata,
+                                          dm,
+                                          folderPath,
+                                          folderPath2,
+                                          filenameTemplates,
+                                          filenameTemplateSelected);
 
-        connect(backgroundIngest, &Ingest::updateProgress, this, &MW::setProgress);
-        connect(backgroundIngest, &Ingest::ingestFinished, this, &MW::ingestFinished);
-        backgroundIngest->commence();
+            connect(backgroundIngest, &Ingest::updateProgress, this, &MW::setProgress);
+            connect(backgroundIngest, &Ingest::ingestFinished, this, &MW::ingestFinished);
+            backgroundIngest->commence();
+        }
 
         prevSourceFolder = currentViewDirPath;
 
@@ -12398,12 +12405,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString fPath = "D:/Pictures/Coaster/2005-10-11_0082.jpg";
-    QFileInfo i(fPath);
-    qDebug() << __FUNCTION__
-             << "i.absoluteFilePath" << i.absoluteFilePath()
-             << "i.birthTime =" << i.birthTime();
     qDebug() << __FUNCTION__ << G::ingestCount << G::ingestLastSeqDate;
-    qDebug() << __FUNCTION__ << dm->sf->index(0, G::CreatedColumn).data().toDateTime().toString("yyyy-MM-dd hh:mm:ss");
 }
 // End MW

@@ -1517,7 +1517,6 @@ void EmbelProperties::syncWinnets()
     #ifdef Q_OS_MAC
     ext = ".app";
     #endif
-    qDebug() << __FUNCTION__ << ext;
 
     // list of executables that must not be changed
     QStringList criticalExecutables;
