@@ -180,7 +180,7 @@ bool Panasonic::parse(MetadataParameters &p,
     // EXIF: created datetime
     QString createdExif;
     createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
-        ifd->ifdDataHash.value(36868).tagCount);
+        ifd->ifdDataHash.value(36868).tagCount).left(19);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // shutter speed

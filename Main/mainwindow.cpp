@@ -12398,10 +12398,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QString fPath = "/Users/roryhill/Pictures/Test/2021-09-25_0001.arw";
+    QString fPath = "D:/Pictures/Coaster/2005-10-11_0082.jpg";
     QFileInfo i(fPath);
     qDebug() << __FUNCTION__
-             << "birth =" << i.birthTime();
-//    qDebug() << __FUNCTION__ << G::ingestCount << G::ingestLastSeqDate;
+             << "i.absoluteFilePath" << i.absoluteFilePath()
+             << "i.birthTime =" << i.birthTime();
+    qDebug() << __FUNCTION__ << G::ingestCount << G::ingestLastSeqDate;
+    qDebug() << __FUNCTION__ << dm->sf->index(0, G::CreatedColumn).data().toDateTime().toString("yyyy-MM-dd hh:mm:ss");
 }
 // End MW
