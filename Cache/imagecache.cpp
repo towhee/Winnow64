@@ -163,6 +163,7 @@ void ImageCache::setKeyToCurrent()
 int ImageCache::getCacheKey(QString fPath)
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    if (fPath == "") return -1;
     for (int i = 0; i < icd->cacheItemList.count(); i++) {
         if (icd->cacheItemList.at(i).fPath == fPath) {
             return i;

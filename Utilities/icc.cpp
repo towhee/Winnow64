@@ -46,7 +46,10 @@ namespace ICC
             cmsDeleteTransform(hTransform);
         }
         else {
-            qWarning() << __FUNCTION__ << "ICC cmsCreateTransform failed.";
+            qWarning() << __FUNCTION__
+                       << "ICC cmsCreateTransform failed with error code"
+                       << hTransform
+                          ;
     //            Utilities::log
         }
     }

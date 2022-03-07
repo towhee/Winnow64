@@ -191,7 +191,7 @@ private slots:
     void on_selectRootFolderBtn_2_clicked();
     void on_selectRootFolderBtn_clicked();
     void on_pathTemplatesCB_currentTextChanged(const QString &arg1);
-    void on_pathTemplatesCB_2_currentIndexChanged(const QString &arg1);
+    void on_pathTemplatesCB_2_currentTextChanged(const QString &arg1);
     void on_pathTemplatesBtn_clicked();
     void on_pathTemplatesBtn_2_clicked();
     void on_descriptionLineEdit_textChanged(const QString &arg1);
@@ -200,8 +200,8 @@ private slots:
     void on_editDescriptionListBtn_2_clicked();
 
     void on_filenameTemplatesBtn_clicked();
-    void on_filenameTemplatesCB_currentIndexChanged(const QString &arg1);
-    void on_spinBoxStartNumber_valueChanged(const QString);
+    void on_filenameTemplatesCB_currentTextChanged(const QString &arg1);
+    void on_spinBoxStartNumber_textChanged(const QString);
 
     void on_combinedIncludeJpgChk_clicked();
     void on_ejectChk_stateChanged(int);

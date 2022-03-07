@@ -278,15 +278,17 @@ void IngestDlg::getPicks()
     // seqDate set to the created date of the first pick
     if (pickList.count()) {
         seqDate = pickList.at(0).birthTime().date();
+        /*
         qDebug() << __FUNCTION__
                  << pickList.at(0).absoluteFilePath()
                  << seqDate
                  << G::ingestLastSeqDate
                     ;
+                    //*/
     }
 
     // stats
-    fileCount = pickList.count();
+    fileCount = static_cast<int>(pickList.count());
     fileMB = 0;
 
     qulonglong bytes = 0;
@@ -321,7 +323,7 @@ void IngestDlg::quitIfNotEnoughSpace()
 
         QMessageBox msgBox;
         int msgBoxWidth = 300;
-        msgBox.setWindowTitle("Insufficient Drive Space");
+        msgBox.setWindowTitle(title);
         msgBox.setText(msg);
 //        msgBox.setInformativeText("Do you want continue?");
         msgBox.setStandardButtons(QMessageBox::Ok);
@@ -1064,7 +1066,7 @@ void IngestDlg::on_descriptionLineEdit_2_textChanged(const QString/* &arg1*/)
     updateFolderPaths();
 }
 
-void IngestDlg::on_spinBoxStartNumber_valueChanged(const QString /* &arg1 */)
+void IngestDlg::on_spinBoxStartNumber_textChanged(const QString /* &arg1 */)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     buildFileNameSequence();
@@ -1372,7 +1374,7 @@ void IngestDlg::on_pathTemplatesCB_currentTextChanged(const QString &arg1)
     updateExistingSequence();
 }
 
-void IngestDlg::on_pathTemplatesCB_2_currentIndexChanged(const QString &arg1)
+void IngestDlg::on_pathTemplatesCB_2_currentTextChanged(const QString &arg1)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     if (arg1 == "") return;
@@ -1382,7 +1384,7 @@ void IngestDlg::on_pathTemplatesCB_2_currentIndexChanged(const QString &arg1)
     updateFolderPaths();
 }
 
-void IngestDlg::on_filenameTemplatesCB_currentIndexChanged(const QString &arg1)
+void IngestDlg::on_filenameTemplatesCB_currentTextChanged(const QString &arg1)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     if (arg1 == "") return;
@@ -1453,7 +1455,7 @@ void IngestDlg::on_filenameTemplatesBtn_clicked()
         row++;
     }
     ui->filenameTemplatesCB->setCurrentIndex(index);
-    on_filenameTemplatesCB_currentIndexChanged(currentKey);
+    on_filenameTemplatesCB_currentTextChanged(currentKey);
 }
 
 void IngestDlg::on_editDescriptionListBtn_clicked()
