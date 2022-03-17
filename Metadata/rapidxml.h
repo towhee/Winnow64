@@ -2225,7 +2225,7 @@ namespace rapidxml
 
                 // Data node
                 default:
-                    next_char = parse_and_append_data<Flags>(node, text, contents_start);
+                    next_char = parse_and_append_data<Flags>(node, text, contents_start); // XX
                     goto after_data_node;   // Bypass regular processing after data nodes
 
                 }

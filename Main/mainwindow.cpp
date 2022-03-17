@@ -11478,7 +11478,9 @@ void MW::stressTest(int ms)
     QElapsedTimer t;
     t.start();
     while (isStressTest) {
-        G::wait(ms);
+//        G::wait(ms);
+        QTime t1 = QTime::currentTime().addMSecs(ms);
+        while (QTime::currentTime() < t1) /*qApp->processEvents(QEventLoop::AllEvents, 10)*/;
         ++count;
         if (isForward && currentRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && currentRow == 0) isForward = true;
@@ -12405,6 +12407,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    stressTest(50);
     qDebug() << __FUNCTION__ << G::ingestCount << G::ingestLastSeqDate;
 }
 // End MW
