@@ -91,19 +91,16 @@ private:
     QString currentPath;
     int maxAttemptsToCacheImage = 10000;
 
-    ImageCacheData *icd;
+    ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;
     Metadata *metadata;
-    QVector<ImageDecoder*> decoder;
-
-//    QList<int>toCache;
-//    QList<int>toDecache;
+    QVector<ImageDecoder*> decoder;     // all the decoders
+    QHash<QString,int> cacheKeyHash;    // cache key for any path
 
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     int getImCacheSize();           // add up total MB cached
     void setKeyToCurrent();         // cache key from currentFilePath
-    int getCacheKey(QString fPath); // cache key for any path
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache

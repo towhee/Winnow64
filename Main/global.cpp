@@ -131,7 +131,7 @@ namespace G
     {
 //        return;
         QTime t = QTime::currentTime().addMSecs(ms);
-        while (QTime::currentTime() < t) /*qApp->processEvents(QEventLoop::AllEvents, 10)*/;
+        while (QTime::currentTime() < t) qApp->processEvents(QEventLoop::AllEvents, 10);
     }
 
     void track(QString functionName, QString comment, bool hideTime)

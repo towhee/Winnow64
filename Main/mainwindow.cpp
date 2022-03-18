@@ -11471,16 +11471,16 @@ void MW::keyScrollPageUp()
 void MW::stressTest(int ms)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-//    G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
+    qDebug() << __FUNCTION__ << ms;
+    G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
     isStressTest = true;
     bool isForward = true;
     int count = 0;
     QElapsedTimer t;
     t.start();
+    qDebug() << __FUNCTION__ << "-1";
     while (isStressTest) {
-//        G::wait(ms);
-        QTime t1 = QTime::currentTime().addMSecs(ms);
-        while (QTime::currentTime() < t1) /*qApp->processEvents(QEventLoop::AllEvents, 10)*/;
+        G::wait(ms);
         ++count;
         if (isForward && currentRow == dm->sf->rowCount() - 1) isForward = false;
         if (!isForward && currentRow == 0) isForward = true;
@@ -12407,7 +12407,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    stressTest(50);
-    qDebug() << __FUNCTION__ << G::ingestCount << G::ingestLastSeqDate;
+        stressTest(50);
+//    qDebug() << __FUNCTION__ << G::ingestCount << G::ingestLastSeqDate;
 }
 // End MW

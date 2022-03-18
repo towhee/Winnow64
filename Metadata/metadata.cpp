@@ -1005,7 +1005,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (!parsed) {
             p.file.close();
             m.err += "Unable to read format for " + path + ". ";
-            qDebug() << __FUNCTION__ << m.err;
+            qWarning() << __FUNCTION__ << m.err;
             return false;
         }
         if (G::useSidecar) {
