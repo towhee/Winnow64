@@ -160,18 +160,6 @@ void ImageCache::setKeyToCurrent()
     }
 }
 
-int ImageCache::getCacheKey(QString fPath)
-{
-    if (G::isLogger) G::log(__FUNCTION__);
-    if (fPath == "") return -1;
-    for (int i = 0; i < icd->cacheItemList.count(); i++) {
-        if (icd->cacheItemList.at(i).fPath == fPath) {
-            return i;
-        }
-    }
-    return -1;
-}
-
 void ImageCache::setDirection()
 {
 /*
@@ -784,12 +772,14 @@ void ImageCache::buildImageCacheList()
 */
     if (G::isLogger) G::log(__FUNCTION__);
     icd->cacheItemList.clear();
+    cacheKeyHash.clear();
     // the total memory size of all the images in the folder currently selected
     int folderMB = 0;
     icd->cache.totFiles = dm->sf->rowCount();
 
     for (int i = 0; i < dm->sf->rowCount(); ++i) {
         QString fPath = dm->sf->index(i, G::PathColumn).data(G::PathRole).toString();
+        cacheKeyHash[fPath] = i;
         if (fPath == "") continue;
         ImageMetadata m = dm->imMetadata(fPath);
         /* cacheItemList is a list of cacheItem used to track the current
@@ -1081,11 +1071,8 @@ bool ImageCache::fillCache(int id, bool positionChange)
         else return false;
     }
 
-    /* get the key (index to item in icd->cacheItemList) for decoder[id].  If the decoder has
-    not been initiated, then decoder[id]->fPath will be "" and there will be no key available
-    and -1 will be returned.
-    */
-    int cacheKey = getCacheKey(decoder[id]->fPath);
+    int cacheKey = -1;
+    if (decoder[id]->fPath != "") cacheKey = cacheKeyHash[decoder[id]->fPath];
 
     if (debugCaching) {
         QString k = QString::number(cacheKey).leftJustified((4));
@@ -1120,8 +1107,7 @@ bool ImageCache::fillCache(int id, bool positionChange)
     if (!abort && nextToCache(id)) {
         decodeNextImage(id);
     }
-    // caching completed
-    else {
+    else { // caching completed
         decoder[id]->setReady();
         fixOrphans();
         emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
