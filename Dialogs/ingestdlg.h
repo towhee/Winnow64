@@ -11,6 +11,7 @@
 #include "Utilities/utilities.h"
 #include "Dialogs/ingesterrors.h"
 #include "Dialogs/editlistdlg.h"
+#include "File/ingest.h"
 
 /*
 void getPicks()
@@ -207,7 +208,6 @@ private slots:
     void on_ejectChk_stateChanged(int);
     void on_integrityChk_stateChanged(int);
     void on_backgroundIngestChk_stateChanged(int);
-    void on_includeXmpChk_stateChanged(int);
     void on_backupChk_stateChanged(int arg1);
     void on_isBackupChkBox_stateChanged(int arg1);
 

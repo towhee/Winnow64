@@ -413,58 +413,41 @@ void Ingest::run()
             }
         }
 
-        /* write the sidecar xmp file. First confirm the source image file was successfully
-        copied and that include xmp has been checked.  If G::useSidecar == true then the xmp
-        sidecar will already exist on the source folder and we can copy it to the destination.
-        If not, then a new xmp file is created using metadata->writeXMP, which requires update
-        of ImageMetadata struct in metadata, as it is used to figure out what can be written
-        to the xmp file (ie m.rating != m._rating, where _rating = original value in image
-        file). We only want to write info that has changed. Finally, if backup then copy xmp
-        file to the backup folder as well. */
-        bool okToWriteSidecar = ingestIncludeXmpSidecar && copyOk;
-        if (okToWriteSidecar) {
-            bool sidecarOk;
-            if (G::useSidecar) {
-                if (QFile(sourceSidecarPath).exists()) {
-                    // will already be an xmp sidecar so just copy it to destinaton
-                    sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
-                    if (!sidecarOk) {
-                        qWarning() << __FUNCTION__ << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
-                        failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
-                    }
-                }
-            }
-            else {
-                // create xmp sidecar as destination
-                dm->imMetadata(metadataChangedSourcePath);
-                sidecarOk = metadata->writeXMP(destSidecarPath, __FUNCTION__);
-                if (!sidecarOk) {
-                    qWarning() << __FUNCTION__ << "Failed to write" << sourceSidecarPath << "to" << destSidecarPath;
-                    failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
-                }
-            }
-            if (copyOk && integrityCheck) {
-                if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
-                    qWarning() << __FUNCTION__ << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
-                    integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
-                }
+        // if sidecar exists copy to destination
+        bool sidecarOk = false;
+        if (copyOk && QFile(sourceSidecarPath).exists()) {
+            sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
+            if (!sidecarOk) {
+                qWarning() << __FUNCTION__ << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
+                failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
             }
 
-            // copy sidecar from destination to backup
-            if (isBackup && sidecarOk) {
-                bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
-                if (!backupSidecarCopyOk) {
-                    qWarning() << __FUNCTION__ << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
-                    failedToCopy << destSidecarPath + " to " + backupSidecarPath;
-                }
-                if (copyOk && integrityCheck) {
-                    if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
-                        qWarning() << __FUNCTION__ << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
-                        integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
-                    }
+        }
+
+        // check if copied xmp = original xmp
+        if (copyOk && integrityCheck) {
+            if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
+                qWarning() << __FUNCTION__ << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
+                integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
+            }
+        }
+
+        // copy sidecar from destination to backup
+        if (isBackup && sidecarOk) {
+            bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
+            if (!backupSidecarCopyOk) {
+                qWarning() << __FUNCTION__ << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
+                failedToCopy << destSidecarPath + " to " + backupSidecarPath;
+            }
+            if (copyOk && integrityCheck) {
+                if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
+                    qWarning() << __FUNCTION__ << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
+                    integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
                 }
             }
         }
+    }
+
         // write to internal xmp (future enhancement?)
         /*
         if (ingestIncludeXmpSidecar && copyOk && metadata->writeMetadata(sourcePath, m, buffer)) {
@@ -479,7 +462,6 @@ void Ingest::run()
             }
         }
         */
-    }
 
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();
