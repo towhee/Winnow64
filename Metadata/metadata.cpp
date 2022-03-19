@@ -503,7 +503,7 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
 bool Metadata::writeXMP(const QString &fPath, QString src)
 {
 /*
-    Called from ingest (Ingestdlg).
+    Called from ingest (Ingestdlg).  // not anymore rgh update this
 
     fPath: the absolute path of the file to receive the xmp metadata
     buffer: byte array containing the xmp data

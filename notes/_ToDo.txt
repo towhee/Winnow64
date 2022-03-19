@@ -1,9 +1,9 @@
 BUGS / TO DO
-qt.core.qmetaobject.connectslotsbyname: QMetaObject::connectSlotsByName: No matching signal for on_filenameTemplatesCB_currentIndexChanged(QString)
-qt.core.qmetaobject.connectslotsbyname: QMetaObject::connectSlotsByName: No matching signal for on_spinBoxStartNumber_valueChanged(QString)
-qt.core.qmetaobject.connectslotsbyname: QMetaObject::connectSlotsByName: No matching signal for on_isBackupChkBox_stateChanged(int)
+- qt.core.qmetaobject.connectslotsbyname: QMetaObject::connectSlotsByName: No matching signal for on_filenameTemplatesCB_currentIndexChanged(QString)
+- qt.core.qmetaobject.connectslotsbyname: QMetaObject::connectSlotsByName: No matching signal for on_spinBoxStartNumber_valueChanged(QString)
+- qt.core.qmetaobject.connectslotsbyname: QMetaObject::connectSlotsByName: No matching signal for on_isBackupChkBox_stateChanged(int)
 
-qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family ".AppleSystemFallback" with one that exists to avoid this cost.
+- qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family ".AppleSystemFallback" with one that exists to avoid this cost.
 
 - Sort taking time when loading folder and sort is file
 - MW::enableSelectionDependentMenus needs updating for all situations
@@ -61,6 +61,9 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ??
 DONE/FIXED
+- DataModel::clearDataModel had big delay removing all the rows
+- Delete files was not including xmp sidecars
+- ImageCache getCacheKey occasionally crash, replace with cacheKeyHash
 - Ingest on PC Destination folder with no description has extra /
 - CreateDate QDateTime::fromString was not working in Qt 6
 - ExifTool running on Mac

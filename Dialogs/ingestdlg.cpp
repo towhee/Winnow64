@@ -185,8 +185,6 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->integrityChk->setChecked(integrityCheck);
     // initialize backgroundIngestCheck
     ui->backgroundIngestChk->setChecked(isBackgroundIngest);
-    // initialize ingestIncludeXmpSidecar
-    ui->includeXmpChk->setChecked(ingestIncludeXmpSidecar);
     // initialize use backup as well as primary ingest
     ui->backupChk->setChecked(isBackup);
 //    isBackupChkBox->setChecked(isBackup);
@@ -484,58 +482,40 @@ void IngestDlg::ingest()
             }
         }
 
-        /* write the sidecar xmp file. First confirm the source image file was successfully
-        copied and that include xmp has been checked.  If G::useSidecar == true then the xmp
-        sidecar will already exist on the source folder and we can copy it to the destination.
-        If not, then a new xmp file is created using metadata->writeXMP, which requires update
-        of ImageMetadata struct in metadata, as it is used to figure out what can be written
-        to the xmp file (ie m.rating != m._rating, where _rating = original value in image
-        file). We only want to write info that has changed. Finally, if backup then copy xmp
-        file to the backup folder as well. */
-        bool okToWriteSidecar = ingestIncludeXmpSidecar && copyOk;
-        if (okToWriteSidecar) {
-            bool sidecarOk;
-            if (G::useSidecar) {
-                if (QFile(sourceSidecarPath).exists()) {
-                    // will already be an xmp sidecar so just copy it to destinaton
-                    sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
-                    if (!sidecarOk) {
-                        qDebug() << __FUNCTION__ << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
-                        failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
-                    }
-                }
-            }
-            else {
-                // create xmp sidecar as destination
-                dm->imMetadata(metadataChangedSourcePath);
-                sidecarOk = metadata->writeXMP(destSidecarPath, __FUNCTION__);
-                if (!sidecarOk) {
-                    qDebug() << __FUNCTION__ << "Failed to write" << sourceSidecarPath << "to" << destSidecarPath;
-                    failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
-                }
-            }
-            if (copyOk && integrityCheck) {
-                if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
-                    qDebug() << __FUNCTION__ << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
-                    integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
-                }
+        // if sidecar exists copy to destination
+        bool sidecarOk = false;
+        if (copyOk && QFile(sourceSidecarPath).exists()) {
+            sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
+            if (!sidecarOk) {
+                qWarning() << __FUNCTION__ << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
+                failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
             }
 
-            // copy sidecar from destination to backup
-            if (isBackup && sidecarOk) {
-                bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
-                if (!backupSidecarCopyOk) {
-                    qDebug() << __FUNCTION__ << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
-                    failedToCopy << destSidecarPath + " to " + backupSidecarPath;
-                }
-                if (copyOk && integrityCheck) {
-                    if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
-                        qDebug() << __FUNCTION__ << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
-                        integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
-                    }
+        }
+
+        // check if copied xmp = original xmp
+        if (copyOk && integrityCheck) {
+            if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
+                qWarning() << __FUNCTION__ << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
+                integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
+            }
+        }
+
+        // copy sidecar from destination to backup
+        if (isBackup && sidecarOk) {
+            bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
+            if (!backupSidecarCopyOk) {
+                qWarning() << __FUNCTION__ << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
+                failedToCopy << destSidecarPath + " to " + backupSidecarPath;
+            }
+            if (copyOk && integrityCheck) {
+                if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
+                    qWarning() << __FUNCTION__ << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
+                    integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
                 }
             }
         }
+
         // write to internal xmp (future enhancement?)
         /*
         if (ingestIncludeXmpSidecar && copyOk && metadata->writeMetadata(sourcePath, m, buffer)) {
@@ -1504,12 +1484,6 @@ void IngestDlg::on_backgroundIngestChk_stateChanged(int /*arg1*/)
     }
 }
 
-void IngestDlg::on_includeXmpChk_stateChanged(int /*arg1*/)
-{
-    if (G::isLogger) G::log(__FUNCTION__);
-    ingestIncludeXmpSidecar = ui->includeXmpChk->isChecked();
-}
-
 void IngestDlg::on_backupChk_stateChanged(int arg1)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
@@ -1589,7 +1563,6 @@ void IngestDlg::on_okBtn_clicked()
             return;
         }
     }
-    qDebug() << __FUNCTION__ << "folderPaths" << folderPath << folderPath2;
 
     if (ui->backgroundIngestChk->isChecked()) {
         QDialog::accept();

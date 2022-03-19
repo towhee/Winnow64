@@ -240,9 +240,11 @@ void DataModel::clearDataModel()
        clear() wipes the headers
        beginRemoveRows(QModelIndex(), 0, rowCount()) is not stable when rapidly change folders
        */
-    beginResetModel();
+//    beginResetModel();
+    beginRemoveRows(QModelIndex(), 0, rowCount());
     removeRows(0, rowCount());
-    endResetModel();
+    endRemoveRows();
+//    endResetModel();
     // clear the fPath index of datamodel rows
     fPathRow.clear();
     // clear all items for filters based on data content ie file types, camera model

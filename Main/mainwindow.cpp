@@ -1774,7 +1774,6 @@ void MW::stopAndClearAll(QString src)
     else
         setCentralMessage("Select a folder.");
     G::stop = false;
-//    qDebug() << __FUNCTION__ << "COMPLETED STOPANDCLEARALL";
 }
 
 void MW::nullFiltration()
@@ -10623,7 +10622,7 @@ void MW::ingest()
         bool okToIngest = ingestDlg->exec();
         delete ingestDlg;
 
-        if (!okToIngest) return;
+//        if (!okToIngest) return;
 
         // update ingest history folders
         // get rid of "/" at end of path for history (in file menu)
@@ -10688,6 +10687,18 @@ void MW::ingest()
         }
 
         prevSourceFolder = currentViewDirPath;
+        qDebug() << __FUNCTION__
+                 << "gotoIngestFolder =" << gotoIngestFolder
+                 << "isBackgroundIngest =" << isBackgroundIngest
+                 << "lastIngestLocation =" << lastIngestLocation
+                    ;
+
+        // if background ingesting do not jump to the ingest destination folder
+        if (gotoIngestFolder && !isBackgroundIngest) {
+            fsTree->select(lastIngestLocation);
+            folderSelectionChange();
+            return;
+        }
 
         // set the ingested flags and clear the pick flags
         setIngested();
@@ -11961,11 +11972,15 @@ void MW::deleteFiles()
     }
     thumbView->selectionModel()->clearSelection();
 
-    // delete file(s) in folder on disk
+    // delete file(s) in folder on disk, including any xmp sidecars
     for (int i = 0; i < sl.count(); ++i) {
         QString fPath = sl.at(i);
+        QString sidecarPath = metadata->sidecarPath(fPath);
         if (QFile::remove(fPath)) {
             sldm.append(fPath);
+        }
+        if (QFile(sidecarPath).exists()) {
+            QFile::remove(sidecarPath);
         }
     }
 
