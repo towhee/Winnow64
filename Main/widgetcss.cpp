@@ -30,8 +30,8 @@ QString WidgetCSS::css()
     l60 = bg + 60;
 
     textColor = QColor(fg,fg,fg);
-    disabledColor = QColor(l20,l20,l20);
-    G::disabledColor = QColor(l20,l20,l20);
+    disabledColor = QColor(l40,l40,l40);
+    G::disabledColor = QColor(l40,l40,l40);
     G::tabWidgetBorderColor = QColor(l60,l60,l60);
     G::pushButtonBackgroundColor = QColor(d10,d10,d10);
     borderColor = QColor(l40,l40,l40);
@@ -793,6 +793,10 @@ QString WidgetCSS::checkBox()
     return
     "QCheckBox {"
         "spacing: 5px;"
+    "}"
+
+    "QCheckBox::disabled {"
+        "color:" + disabledColor.name() + ";"
     "}"
 
     "QCheckBox::indicator {"
