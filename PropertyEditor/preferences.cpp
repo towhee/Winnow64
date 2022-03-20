@@ -338,28 +338,31 @@ void Preferences::addItems()
     // Allow source files to be changed
     i.name = "modifySourceFiles";
     i.parentName = "GeneralHeader";
-    i.captionText = "Modify the source image files";
-    i.tooltip = "If you edit metadata (rating, color class, title, creator,\n"
-                "copyright, email, url and orientation) the changes will be\n"
-                "written to the source image file.  This data can be read by\n"
-                "Winnow and other programs like Lightroom."
+    i.captionText = "Modify source file orientation";
+    i.tooltip = "If you edit the rotation or orientation it will modify\n"
+                "the source file with this option turned on."
                 ;
+//    i.tooltip = "If you edit metadata (rating, color class, title, creator,\n"
+//                "copyright, email, url and orientation) the changes will be\n"
+//                "written to the source image file.  This data can be read by\n"
+//                "Winnow and other programs like Lightroom."
+//            ;
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::modifySourceFiles;
     i.key = "modifySourceFiles";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+//    addItem(i);       // cancel this for version 1.32 release
 
     // Write metadata edits to sidecar XMP file
     i.name = "useSidecar";
     i.parentName = "GeneralHeader";
     i.captionText = "Use xmp sidecars";
     i.tooltip = "If you edit metadata (rating, color class, title, creator,\n"
-                "copyright, email, url and orientation) the change will be\n"
-                "written to a XMP sidecar file.  This data can be read by\n"
-                "Winnow and other programs like Lightroom.\n\n"
+                "copyright, email and url) the change will be written to\n"
+                "a XMP sidecar file.  This data can be read by Winnow and\n"
+                " other programs like Lightroom.\n\n"
                 "Note this will impact performance, as it will take longer to\n"
                 "initially read all the metadata when a folder is loaded.\n"
                 ;
