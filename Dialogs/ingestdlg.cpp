@@ -45,6 +45,7 @@ IngestDlg::IngestDlg(QWidget *parent,
                      bool &autoEjectUsb,
                      bool &integrityCheck,
                      bool &isBackgroundIngest,
+                     bool &isBackgroundIngestBeep,
                      bool &ingestIncludeXmpSidecar,
                      bool &isBackup,
                      bool &gotoIngestFolder,
@@ -76,6 +77,7 @@ IngestDlg::IngestDlg(QWidget *parent,
                      autoEjectUsb(autoEjectUsb),
                      integrityCheck(integrityCheck),
                      isBackgroundIngest(isBackgroundIngest),
+                     isBackgroundIngestBeep(isBackgroundIngestBeep),
                      ingestIncludeXmpSidecar(ingestIncludeXmpSidecar),
                      isBackup(isBackup),
                      gotoIngestFolder(gotoIngestFolder),
@@ -185,9 +187,10 @@ IngestDlg::IngestDlg(QWidget *parent,
     ui->integrityChk->setChecked(integrityCheck);
     // initialize backgroundIngestCheck
     ui->backgroundIngestChk->setChecked(isBackgroundIngest);
+    // initialize backgroundIngestCheckBeep
+    ui->beepChk->setChecked(isBackgroundIngestBeep);
     // initialize use backup as well as primary ingest
     ui->backupChk->setChecked(isBackup);
-//    isBackupChkBox->setChecked(isBackup);
     // initialize open ingest folder after ingest
     ui->openIngestFolderChk->setChecked(gotoIngestFolder);
 
@@ -1248,6 +1251,9 @@ void IngestDlg::updateEnabledState()
         ui->manualFolderLabel->setEnabled(true);
         ui->manualFolderLabel_2->setEnabled(true);
     }
+
+    // check boxes
+    ui->beepChk->setEnabled(isBackgroundIngest);
 }
 
 void IngestDlg::on_autoRadio_toggled(bool checked)
@@ -1471,15 +1477,18 @@ void IngestDlg::on_backgroundIngestChk_stateChanged(int /*arg1*/)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     isBackgroundIngest = ui->backgroundIngestChk->isChecked();
-    qDebug() << __FUNCTION__ << isBackgroundIngest;
     ui->openIngestFolderChk->setEnabled(!isBackgroundIngest);
     ui->ejectChk->setEnabled(!isBackgroundIngest);
+    ui->beepChk->setEnabled(isBackgroundIngest);
     if (isBackgroundIngest) {
-
+        ui->ejectChk->setChecked(false);
     }
-    else {
+}
 
-    }
+void IngestDlg::on_beepChk_stateChanged(int /*arg1*/)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    isBackgroundIngestBeep = ui->beepChk->isChecked();
 }
 
 void IngestDlg::on_backupChk_stateChanged(int arg1)

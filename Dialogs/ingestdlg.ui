@@ -85,8 +85,8 @@
       <widget class="QCheckBox" name="integrityChk">
        <property name="geometry">
         <rect>
-         <x>440</x>
-         <y>730</y>
+         <x>10</x>
+         <y>705</y>
          <width>391</width>
          <height>25</height>
         </rect>
@@ -111,7 +111,7 @@
        <property name="geometry">
         <rect>
          <x>440</x>
-         <y>705</y>
+         <y>710</y>
          <width>391</width>
          <height>25</height>
         </rect>
@@ -135,8 +135,8 @@
       <widget class="QCheckBox" name="combinedIncludeJpgChk">
        <property name="geometry">
         <rect>
-         <x>440</x>
-         <y>680</y>
+         <x>10</x>
+         <y>730</y>
          <width>391</width>
          <height>25</height>
         </rect>
@@ -1734,8 +1734,8 @@ margin-left =  5px</string>
       <widget class="QCheckBox" name="openIngestFolderChk">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>705</y>
+         <x>440</x>
+         <y>685</y>
          <width>421</width>
          <height>25</height>
         </rect>
@@ -1935,13 +1935,26 @@ margin-left =  5px</string>
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>730</y>
+         <y>755</y>
          <width>421</width>
          <height>22</height>
         </rect>
        </property>
        <property name="text">
         <string>Background Ingest</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="beepChk">
+       <property name="geometry">
+        <rect>
+         <x>440</x>
+         <y>755</y>
+         <width>421</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Beep when background ingest finished</string>
        </property>
       </widget>
      </widget>

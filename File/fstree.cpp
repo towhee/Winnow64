@@ -307,6 +307,7 @@ void FSTree::scrollToCurrent()
 bool FSTree::select(QString dirPath)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+
     QDir test(dirPath);
     if (test.exists()) {
         setCurrentIndex(fsFilter->mapFromSource(fsModel->index(dirPath)));
@@ -450,6 +451,19 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+
+    // do not allow if there is a background ingest in progress
+    if (G::isRunningBackgroundIngest) {
+        QString msg =
+                "There is a background ingest in progress.  When it<br>"
+                "has completed the progress bar on the left side of<br>"
+                "the status bar will disappear and you can select another<br>"
+                "folder."
+                ;
+        G::popUp->showPopup(msg, 5000);
+        return;
+    }
+
     // ignore right mouse clicks (context menu)
 //    if (event->button() == Qt::RightButton) return;
     if (event->button() == Qt::RightButton) {

@@ -808,6 +808,10 @@ QString WidgetCSS::checkBox()
         "image: url(:/images/checkbox_checked_blue.png);"
     "}"
 
+    "QCheckBox::indicator:disabled {"
+    "image: url(:/images/checkbox_disabled.png);"
+    "}"
+
      ;
 #endif
 }

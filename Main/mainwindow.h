@@ -235,6 +235,7 @@ public:
     bool autoEjectUsb;
     bool integrityCheck;
     bool isBackgroundIngest;
+    bool isBackgroundIngestBeep;
     bool ingestIncludeXmpSidecar;
     bool backupIngest;
     bool gotoIngestFolder;
