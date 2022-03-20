@@ -886,8 +886,7 @@ void IngestDlg::updateFolderPaths()
                  << "fromRootToBaseFolder =" << fromRootToBaseFolder
                  << "baseFolderDescription =" << baseFolderDescription;
                  // */
-        folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription /*+ "/"*/;
-        if (baseFolderDescription != "") folderPath += "/";
+        folderPath = rootFolderPath + fromRootToBaseFolder + baseFolderDescription + "/";
         ui->folderLabel->setText(folderPath);
         ui->folderLabel->setToolTip(ui->folderLabel->text());
         drivePath = Utilities::getDrive(rootFolderPath);
@@ -898,8 +897,7 @@ void IngestDlg::updateFolderPaths()
 
         baseFolderDescription2 = (ui->descriptionLineEdit_2->text().length() > 0)
                 ? ui->descriptionLineEdit_2->text() : "";
-        folderPath2 = rootFolderPath2 + fromRootToBaseFolder2 + baseFolderDescription2 /*+ "/"*/;
-        if (baseFolderDescription2 != "") folderPath2 += "/";
+        folderPath2 = rootFolderPath2 + fromRootToBaseFolder2 + baseFolderDescription2 + "/";
         ui->folderLabel_2->setText(folderPath2);
         ui->folderLabel_2->setToolTip(ui->folderLabel_2->text());
         drive2Path = Utilities::getDrive(rootFolderPath2);
