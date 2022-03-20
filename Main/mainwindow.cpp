@@ -562,6 +562,17 @@ void MW::showEvent(QShowEvent *event)
 void MW::closeEvent(QCloseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
+
+    // do not allow if there is a background ingest in progress
+    if (G::isRunningBackgroundIngest) {
+        QString msg =
+                "There is a background ingest in progress.  When it<br>"
+                "has completed Winnow will close."
+                ;
+        G::popUp->showPopup(msg, 0);
+        while (G::isRunningBackgroundIngest) G::wait(100);
+    }
+
     setCentralMessage("Closing Winnow ...");
     metadataCacheThread->stopMetadataCache();
     imageCacheThread->stopImageCache();
@@ -594,6 +605,9 @@ void MW::ingestFinished()
 {
     delete backgroundIngest;
     backgroundIngest = nullptr;
+    G::isRunningBackgroundIngest = false;
+    // Audible to signal completion
+    QApplication::beep();
 }
 
 void MW::appStateChange(Qt::ApplicationState state)
@@ -7379,6 +7393,7 @@ QString MW::diagnostics()
     rpt << "\n" << "autoEjectUsb = " << G::s(autoEjectUsb);
     rpt << "\n" << "integrityCheck = " << G::s(integrityCheck);
     rpt << "\n" << "isBackgroundIngest = " << G::s(isBackgroundIngest);
+    rpt << "\n" << "isBackgroundIngestBeep = " << G::s(isBackgroundIngestBeep);
     rpt << "\n" << "ingestIncludeXmpSidecar = " << G::s(ingestIncludeXmpSidecar);
     rpt << "\n" << "backupIngest = " << G::s(backupIngest);
     rpt << "\n" << "gotoIngestFolder = " << G::s(gotoIngestFolder);
@@ -8539,22 +8554,6 @@ void MW::writeSettings()
     setting->setValue("combineRawJpg", combineRawJpg);
 
     /* ingest (moved to MW::ingest)
-    setting->setValue("autoIngestFolderPath", autoIngestFolderPath);
-    setting->setValue("autoEjectUSB", autoEjectUsb);
-    setting->setValue("integrityCheck", integrityCheck);
-    setting->setValue("isBackgroundIngest", isBackgroundIngest);
-    setting->setValue("ingestIncludeXmpSidecar", ingestIncludeXmpSidecar);
-    setting->setValue("backupIngest", backupIngest);
-    setting->setValue("gotoIngestFolder", gotoIngestFolder);
-    setting->setValue("ingestRootFolder", ingestRootFolder);
-    setting->setValue("ingestRootFolder2", ingestRootFolder2);
-    setting->setValue("pathTemplateSelected", pathTemplateSelected);
-    setting->setValue("pathTemplateSelected2", pathTemplateSelected2);
-    setting->setValue("manualFolderPath", manualFolderPath);
-    setting->setValue("manualFolderPath2", manualFolderPath2);
-    setting->setValue("filenameTemplateSelected", filenameTemplateSelected);
-    setting->setValue("ingestCount", G::ingestCount);
-    setting->setValue("ingestLastSeqDate", G::ingestLastSeqDate);
     */
 
     // thumbs
@@ -8843,6 +8842,7 @@ bool MW::loadSettings()
         autoEjectUsb = false;
         integrityCheck = false;
         isBackgroundIngest = false;
+        isBackgroundIngestBeep = false;
         ingestIncludeXmpSidecar = true;
         gotoIngestFolder = false;
         backupIngest = false;
@@ -8944,6 +8944,7 @@ bool MW::loadSettings()
     if (setting->contains("autoEjectUSB")) autoEjectUsb = setting->value("autoEjectUSB").toBool();
     if (setting->contains("integrityCheck")) integrityCheck = setting->value("integrityCheck").toBool();
     if (setting->contains("isBackgroundIngest")) isBackgroundIngest = setting->value("isBackgroundIngest").toBool();
+    if (setting->contains("isBackgroundIngestBeep")) isBackgroundIngestBeep = setting->value("isBackgroundIngestBeep").toBool();
     if (setting->contains("ingestIncludeXmpSidecar")) ingestIncludeXmpSidecar = setting->value("ingestIncludeXmpSidecar").toBool();
     if (setting->contains("backupIngest")) backupIngest = setting->value("backupIngest").toBool();
     if (setting->contains("gotoIngestFolder")) gotoIngestFolder = setting->value("gotoIngestFolder").toBool();
@@ -10565,12 +10566,14 @@ void MW::ingest()
     if (G::isLogger) G::log(__FUNCTION__);
 
     // check if background ingest in progress
-    bool backgroundIngestInProgress = backgroundIngest != nullptr;
-    if (isBackgroundIngest && backgroundIngestInProgress) {
+//    bool backgroundIngestInProgress = backgroundIngest != nullptr;
+//    if (isBackgroundIngest && backgroundIngestInProgress) {
+    if (G::isRunningBackgroundIngest) {
         QString msg =
                 "There is a background ingest in progress.  When it<br>"
                 "has completed the progress bar on the left side of<br>"
-                "the status bar will disappear."
+                "the status bar will disappear and you can make another<br>"
+                "ingest."
                 ;
         G::popUp->showPopup(msg, 5000);
         return;
@@ -10597,6 +10600,7 @@ void MW::ingest()
                                   autoEjectUsb,
                                   integrityCheck,
                                   isBackgroundIngest,
+                                  isBackgroundIngestBeep,
                                   ingestIncludeXmpSidecar,
                                   backupIngest,
                                   gotoIngestFolder,
@@ -10621,8 +10625,6 @@ void MW::ingest()
 
         bool okToIngest = ingestDlg->exec();
         delete ingestDlg;
-
-//        if (!okToIngest) return;
 
         // update ingest history folders
         // get rid of "/" at end of path for history (in file menu)
@@ -10650,6 +10652,7 @@ void MW::ingest()
         setting->setValue("autoEjectUSB", autoEjectUsb);
         setting->setValue("integrityCheck", integrityCheck);
         setting->setValue("isBackgroundIngest", isBackgroundIngest);
+        setting->setValue("isBackgroundIngestBeep", isBackgroundIngestBeep);
         setting->setValue("ingestIncludeXmpSidecar", ingestIncludeXmpSidecar);
         setting->setValue("backupIngest", backupIngest);
         setting->setValue("gotoIngestFolder", gotoIngestFolder);
@@ -10684,6 +10687,7 @@ void MW::ingest()
             connect(backgroundIngest, &Ingest::updateProgress, this, &MW::setProgress);
             connect(backgroundIngest, &Ingest::ingestFinished, this, &MW::ingestFinished);
             backgroundIngest->commence();
+            G::isRunningBackgroundIngest = true;
         }
 
         prevSourceFolder = currentViewDirPath;

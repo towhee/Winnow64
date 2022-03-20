@@ -219,6 +219,7 @@ namespace G
     extern bool useSidecar;
     extern bool embedTifThumb;
 
+    extern bool isRunningBackgroundIngest;
     extern int ingestCount;
     extern QDate ingestLastSeqDate;
 

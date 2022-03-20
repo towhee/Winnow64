@@ -170,6 +170,18 @@ void BookMarks::mouseDoubleClickEvent(QMouseEvent *)
 
 void BookMarks::mousePressEvent(QMouseEvent *event)
 {
+    // do not allow if there is a background ingest in progress
+    if (G::isRunningBackgroundIngest) {
+        QString msg =
+                "There is a background ingest in progress.  When it<br>"
+                "has completed the progress bar on the left side of<br>"
+                "the status bar will disappear and you can select another<br>"
+                "folder."
+                ;
+        G::popUp->showPopup(msg, 5000);
+        return;
+    }
+
     // ignore right mouse clicks (context menu)
     if (event->button() == Qt::RightButton) {
         rightClickItem = itemAt(event->pos());

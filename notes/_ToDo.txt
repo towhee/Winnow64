@@ -61,6 +61,7 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ??
 DONE/FIXED
+- use png for disabled checkbox
 - DataModel::clearDataModel had big delay removing all the rows
 - Delete files was not including xmp sidecars
 - ImageCache getCacheKey occasionally crash, replace with cacheKeyHash

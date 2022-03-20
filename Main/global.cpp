@@ -91,6 +91,7 @@ namespace G
     bool embedTifThumb;
 
     // ingest
+    bool isRunningBackgroundIngest;
     int ingestCount = 0;
     QDate ingestLastSeqDate;
 
