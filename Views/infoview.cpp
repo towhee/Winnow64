@@ -122,8 +122,8 @@ InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView 
 	infoMenu = new QMenu("");
     copyInfoAction = new QAction(tr("Copy item"), this);
 
-//    connect(copyInfoAction, SIGNAL(triggered()), this, SLOT(copyEntry()));
-//	infoMenu->addAction(copyAction);
+    // metadata fields that can be edited
+    editFields << "Title" << "Creator" << "Copyright" << "Email" << "Url";
 
     connect(this, SIGNAL(customContextMenuRequested(QPoint)),
             SLOT(showInfoViewMenu(QPoint)));
@@ -507,7 +507,7 @@ void InfoView::mousePressEvent(QMouseEvent *event)
             QString name = ok->index(idx.row(), 0, idx.parent()).data().toString();
             QString selectedCount = ok->index(SelectedRow, 1, statusInfoIdx).data().toString();
             selectedCount.remove(selectedCount.indexOf(" "), selectedCount.length() - 1);
-            if (selectedCount.toInt() > 1) {
+            if (selectedCount.toInt() > 1 && editFields.contains(name)) {
                 QString msg = "<font color=\"red\"><b>Note: </b></font>"
                               "Any edits to " + name + " will be applied to all " +
                               selectedCount + " selected images.";

@@ -107,6 +107,7 @@ private:
     Metadata *metadata;
     IconView *thumbView;
     QString fPath;
+    QStringList editFields;
 };
 
 #endif // INFOVIEW_H
