@@ -605,6 +605,8 @@ void MW::closeEvent(QCloseEvent *event)
 
 void MW::ingestFinished()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
     delete backgroundIngest;
     backgroundIngest = nullptr;
     G::isRunningBackgroundIngest = false;
@@ -12440,6 +12442,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
 //        stressTest(50);
-    qDebug() << __FUNCTION__ << G::winOutProfilePath << G::winOutProfilePath;
+    QApplication::beep();
 }
 // End MW
