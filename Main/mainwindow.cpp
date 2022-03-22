@@ -495,6 +495,8 @@ void MW::showEvent(QShowEvent *event)
     if (G::isLogger) G::log(__FUNCTION__);
     QMainWindow::showEvent(event);
 
+    getDisplayProfile();
+
     if (isSettings) {
         restoreGeometry(setting->value("Geometry").toByteArray());
         // run restoreGeometry second time if display has been scaled
@@ -636,6 +638,7 @@ void MW::moveEvent(QMoveEvent *event)
     well. Also we need to know if the app has been dragged onto another monitor, which may
     have different dimensions and a different icc profile (win only).
 */
+    if (G::isLogger) G::log(__FUNCTION__);
     QMainWindow::moveEvent(event);
     setDisplayResolution();
     updateDisplayResolution();
@@ -7909,6 +7912,7 @@ void MW::setDisplayResolution()
     G::sysDevicePixelRatio - the system reported device pixel ratio
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
     bool monitorChanged = false;
     bool devicePixelRatioChanged = false;
     // ignore until show event
@@ -8026,17 +8030,7 @@ void MW::setDisplayResolution()
     }
 
     // color manage for new monitor
-    #ifdef Q_OS_WIN
-    if (G::winScreenHash.contains(screen->name()))
-        G::winOutProfilePath = "C:/Windows/System32/spool/drivers/color/" +
-            G::winScreenHash[screen->name()].profile;
-    ICC::setOutProfile();
-    #endif
-    #ifdef Q_OS_MAC
-    G::winOutProfilePath = Mac::getDisplayProfileURL();
-//    G::winOutProfilePath = "/users/roryhill/Library/ColorSync/Profiles/MacBook LCD_06-02-2021.icc";
-    ICC::setOutProfile();
-    #endif
+    getDisplayProfile();
 
     cachePreviewWidth = G::displayPhysicalHorizontalPixels;
     cachePreviewHeight = G::displayPhysicalVerticalPixels;
@@ -8053,6 +8047,25 @@ void MW::setDisplayResolution()
 //                */
 
     screen = nullptr;
+}
+
+void MW::getDisplayProfile()
+{
+/*
+    This is required for colo management.  It is called after the show event when the
+    progam is opening and when the main window is moved to a different screen.
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+    #ifdef Q_OS_WIN
+    if (G::winScreenHash.contains(screen->name()))
+        G::winOutProfilePath = "C:/Windows/System32/spool/drivers/color/" +
+            G::winScreenHash[screen->name()].profile;
+    ICC::setOutProfile();
+    #endif
+    #ifdef Q_OS_MAC
+    G::winOutProfilePath = Mac::getDisplayProfileURL();
+    ICC::setOutProfile();
+    #endif
 }
 
 double MW::macActualDevicePixelRatio(QPoint loc, QScreen *screen)
@@ -12426,7 +12439,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-        stressTest(50);
-//    qDebug() << __FUNCTION__ << G::ingestCount << G::ingestLastSeqDate;
+//        stressTest(50);
+    qDebug() << __FUNCTION__ << G::winOutProfilePath << G::winOutProfilePath;
 }
 // End MW

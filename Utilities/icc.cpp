@@ -17,10 +17,20 @@ namespace ICC
 
     cmsHPROFILE hOutProfile;
 
-    void setOutProfile()
+    void err(cmsContext contextID, cmsUInt32Number errorCode, const char *text)
+    {
+        qDebug() << "ICC::err" << errorCode << text << G::winOutProfilePath;
+    }
+
+    bool setOutProfile()
     {
         if (G::isLogger) G::log(__FUNCTION__);
+        if (G::winOutProfilePath == "") {
+            qWarning() << "The outProfilePath has not been assigned";
+            return false;
+        }
         hOutProfile = cmsOpenProfileFromFile(QFile::encodeName(G::winOutProfilePath).constData(), "r") ;
+
     }
 
     void transform(const QByteArray &buf, QImage &image)
@@ -63,6 +73,8 @@ namespace ICC
                        << hTransform
                           ;
     //            Utilities::log
+//            cmsContext *context = new cmsContext;
+            cmsSetLogErrorHandler(err);
         }
     }
 }

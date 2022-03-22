@@ -21,9 +21,10 @@
 
 namespace ICC
 {
-    extern void setOutProfile();
+    extern bool setOutProfile();
     extern void transform(const QByteArray &buf, QImage &image);
     extern cmsHPROFILE hOutProfile;
+    extern void err(cmsContext contextID, cmsUInt32Number errorCode, const char *text);
 }
 
 #endif // ICC_H
