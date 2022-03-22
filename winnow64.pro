@@ -7,6 +7,8 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 #    QT += core5compat
 }
 
+#QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
+
 # MacOS universal binaries
 #QMAKE_APPLE_DEVICE_ARCHS = arm64
 #QMAKE_APPLE_DEVICE_ARCHS = x86_64 arm64
