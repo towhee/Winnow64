@@ -522,6 +522,7 @@ private slots:
     void setClassificationBadgeThumbDiam(int d);
     void setPrefPage(int page);
     void setDisplayResolution();
+    void getDisplayProfile();
     void updateDisplayResolution();
     void setCombineRawJpg();
     void nextSlide();
