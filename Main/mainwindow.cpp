@@ -502,7 +502,7 @@ void MW::showEvent(QShowEvent *event)
         // run restoreGeometry second time if display has been scaled
         if (G::actDevicePixelRatio > 1.0)
             restoreGeometry(setting->value("Geometry").toByteArray());
-        // correct for highdpi
+        /* correct for highdpi
 //        double dpiFactor = 1.0 / G::actDevicePixelRatio;
 //        resize(width() * dpiFactor, height() * dpiFactor);
 //        resize(width() * G::actDevicePixelRatio, height() * G::actDevicePixelRatio);
@@ -511,7 +511,7 @@ void MW::showEvent(QShowEvent *event)
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
         /*
-        // do not start with filterDock open
+        /* do not start with filterDock open
 //        if (filterDock->isVisible()) {
 //            folderDock->raise();
 //            folderDockVisibleAction->setChecked(true);
@@ -1827,7 +1827,7 @@ void MW::updateIconsVisible(bool useCurrentRow)
     Polls both thumbView and gridView to determine the first, mid and last thumbnail visible.
     This is used in the metadataCacheThread to determine the range of files to cache.
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     int first = dm->sf->rowCount();
     int last = 0;
 
@@ -1883,6 +1883,14 @@ void MW::updateIconsVisible(bool useCurrentRow)
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 //    metadataCacheThread->sizeChange(__FUNCTION__);
+}
+
+void MW::loadNewFolder()
+{
+/*
+    Test load metadata and thumbnails in main thread instead of MdCache
+*/
+
 }
 
 void MW::loadMetadataCache2ndPass()
@@ -2186,7 +2194,7 @@ void MW::updateIconBestFit()
     thumbs triggers an unwanted scrolling, so the first visible thumbnail is recorded before
     the bestAspect is called and the IconView is returned to its previous position after.
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     gridView->bestAspect();
     thumbView->bestAspect();
 }
@@ -2204,11 +2212,9 @@ void MW::loadImageCacheForNewFolder()
         cacheProgressBar->clearProgress();
 //        qApp->processEvents();
     }
-//    setCentralMessage("updateIconBestFit.");
     updateIconBestFit();      // rgh make sure req'd
-//    setCentralMessage("updateIconBestFit done.");
 
-    // had to wait for the data before resize table columns
+    // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
@@ -3685,6 +3691,13 @@ void MW::createActions()
     addAction(diagnosticsEmbellishAction);
     connect(diagnosticsEmbellishAction, &QAction::triggered, this, &MW::diagnosticsEmbellish);
 
+    // Tests
+    stressTestAction = new QAction(tr("Stress test"), this);
+    stressTestAction->setObjectName("stressTest");
+    stressTestAction->setShortcutVisibleInContextMenu(true);
+    addAction(stressTestAction);
+    connect(stressTestAction, &QAction::triggered, this, &MW::stressTest);
+
     // Non- Menu actions
     thriftyCacheAction = new QAction(tr("Thrifty Cache"), this);
     addAction(thriftyCacheAction);
@@ -3700,9 +3713,6 @@ void MW::createActions()
     addAction(greedyCacheAction);
     greedyCacheAction->setShortcut(QKeySequence("F12"));
     connect(greedyCacheAction, &QAction::triggered, this, &MW::greedyCache);
-
-
-
 
     // Testing
 
@@ -3742,7 +3752,7 @@ void MW::createMenus()
 
     // File Menu
 
-    QMenu *fileMenu = new QMenu(this);
+    fileMenu = new QMenu(this);
     QAction *fileGroupAct = new QAction("File", this);
     fileGroupAct->setMenu(fileMenu);
     fileMenu->addAction(openAction);
@@ -3793,7 +3803,7 @@ void MW::createMenus()
 
     // Edit Menu
 
-    QMenu *editMenu = new QMenu(this);
+    editMenu = new QMenu(this);
     QAction *editGroupAct = new QAction("Edit", this);
     editGroupAct->setMenu(editMenu);
     editMenu->addAction(selectAllAction);
@@ -3842,7 +3852,7 @@ void MW::createMenus()
 
     // Go Menu
 
-    QMenu *goMenu = new QMenu(this);
+    goMenu = new QMenu(this);
     QAction *goGroupAct = new QAction("Go", this);
     goGroupAct->setMenu(goMenu);
     goMenu->addAction(keyRightAction);
@@ -3870,7 +3880,7 @@ void MW::createMenus()
 
     // Filter Menu
 
-    QMenu *filterMenu = new QMenu(this);
+    filterMenu = new QMenu(this);
     QAction *filterGroupAct = new QAction("Filter", this);
     filterGroupAct->setMenu(filterMenu);
     filterMenu->addAction(filterUpdateAction);
@@ -3909,7 +3919,7 @@ void MW::createMenus()
 
     // Embellish Menu
 
-    QMenu *embelMenu = new QMenu(this);
+    embelMenu = new QMenu(this);
 //    embelMenu->setIcon(QIcon(":/images/icon16/lightning.png"));
     embelMenu->addAction(embelExportAction);
     embelMenu->addSeparator();
@@ -3932,7 +3942,7 @@ void MW::createMenus()
 
     // View Menu
 
-    /*QMenu **/viewMenu = new QMenu(this);
+    viewMenu = new QMenu(this);
     QAction *viewGroupAct = new QAction("View", this);
     viewGroupAct->setMenu(viewMenu);
     viewMenu->addActions(centralGroupAction->actions());
@@ -3958,7 +3968,7 @@ void MW::createMenus()
 
     // Window Menu
 
-    QMenu *windowMenu = new QMenu(this);
+    windowMenu = new QMenu(this);
     QAction *windowGroupAct = new QAction("Window", this);
     windowGroupAct->setMenu(windowMenu);
     workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
@@ -3988,7 +3998,7 @@ void MW::createMenus()
 
     // Help Menu
 
-    QMenu *helpMenu = new QMenu(this);
+    helpMenu = new QMenu(this);
     QAction *helpGroupAct = new QAction("Help", this);
     helpGroupAct->setMenu(helpMenu);
     helpMenu->addAction(checkForUpdateAction);
@@ -4001,6 +4011,7 @@ void MW::createMenus()
 //    helpMenu->addAction(helpRevealLogFileAction);
     helpMenu->addSeparator();
     helpDiagnosticsMenu = helpMenu->addMenu(tr("&Diagnostics"));
+    testMenu = helpDiagnosticsMenu->addMenu(tr("&Tests"));
     helpDiagnosticsMenu->addAction(diagnosticsAllAction);
     helpDiagnosticsMenu->addAction(diagnosticsCurrentAction);
     helpDiagnosticsMenu->addAction(diagnosticsErrorsAction);
@@ -4012,6 +4023,7 @@ void MW::createMenus()
     helpDiagnosticsMenu->addAction(diagnosticsDataModelAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsEmbellishAction);
+    testMenu->addAction(stressTestAction);
 
     // Separator Action
     QAction *separatorAction = new QAction(this);
@@ -4499,7 +4511,7 @@ void MW::createCaching()
 
     // 2nd pass loading image cache for a new folder
     connect(metadataCacheThread, SIGNAL(loadMetadataCache2ndPass()),
-            this, SLOT(loadMetadataCache2ndPass()));
+            this, SLOT(loadMetadataCache2ndPass())/*, Qt::DirectConnection*/);
 
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
@@ -7914,7 +7926,7 @@ void MW::setDisplayResolution()
     G::sysDevicePixelRatio - the system reported device pixel ratio
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
+
     bool monitorChanged = false;
     bool devicePixelRatioChanged = false;
     // ignore until show event
@@ -8054,14 +8066,14 @@ void MW::setDisplayResolution()
 void MW::getDisplayProfile()
 {
 /*
-    This is required for colo management.  It is called after the show event when the
+    This is required for color management.  It is called after the show event when the
     progam is opening and when the main window is moved to a different screen.
 */
     if (G::isLogger) G::log(__FUNCTION__);
     #ifdef Q_OS_WIN
-    if (G::winScreenHash.contains(screen->name()))
+    if (G::winScreenHash.contains(screen()->name()))
         G::winOutProfilePath = "C:/Windows/System32/spool/drivers/color/" +
-            G::winScreenHash[screen->name()].profile;
+            G::winScreenHash[screen()->name()].profile;
     ICC::setOutProfile();
     #endif
     #ifdef Q_OS_MAC
@@ -11502,7 +11514,10 @@ void MW::stressTest(int ms)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     qDebug() << __FUNCTION__ << ms;
-    G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
+    ms = QInputDialog::getInt(this, "Enter ms delay between images", "Delay (1-1000 ms) ",
+                              50, 1, 1000);
+
+//    G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
     isStressTest = true;
     bool isForward = true;
     int count = 0;
@@ -12132,7 +12147,7 @@ void MW::openUsbFolder()
         drive = usbDrives.at(0);
     }
     else if (usbDrives.length() == 0) {
-
+        G::popUp->showPopup("No USB Drives available");
     }
 
     refreshFolders();
@@ -12150,7 +12165,7 @@ void MW::openUsbFolder()
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
         thumbView->selectThumb(0);
-        if (!wasSubFoldersChecked) subFoldersAction->setChecked(false);
+        if (!wasSubFoldersChecked) subFoldersAction->setChecked(true);
         updateStatusBar();
     }
     else {
@@ -12441,7 +12456,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//        stressTest(50);
-    QApplication::beep();
+    qDebug() << __FUNCTION__ << dm->index(0, G::NameColumn).data().toString();
 }
 // End MW

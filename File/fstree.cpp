@@ -282,7 +282,7 @@ void FSTree::updateFolderImageCount(QString dirPath)
 /*
 
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     getImageCount(dirPath, true, "updateImageCount");
     fsFilter->invalidate();
 }

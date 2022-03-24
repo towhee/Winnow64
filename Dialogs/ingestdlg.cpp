@@ -1346,12 +1346,8 @@ void IngestDlg::initExampleMap()
 void IngestDlg::on_pathTemplatesCB_currentTextChanged(const QString &arg1)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__ << "arg1" << arg1;
-//    QString tem = ui->pathTemplatesCB->itemText(index);
-//    if (tem == "") return;
     QString tokenString = pathTemplatesMap[arg1];
     fromRootToBaseFolder = parseTokenString(pickList.at(0), tokenString);
-    qDebug() << __FUNCTION__ << "fromRootToBaseFolder" << fromRootToBaseFolder;
     if (!isInitializing) pathTemplateSelected = ui->pathTemplatesCB->currentIndex();
     updateFolderPaths();
     seqStart += getSequenceStart(folderPath);
@@ -1496,14 +1492,6 @@ void IngestDlg::on_backupChk_stateChanged(int arg1)
     if (G::isLogger) G::log(__FUNCTION__); 
     isBackup = arg1;
     getAvailableStorageMB();
-}
-
-void IngestDlg::on_isBackupChkBox_stateChanged(int arg1)
-{
-    if (G::isLogger) G::log(__FUNCTION__); 
-    isBackup = arg1;
-    qDebug() << __FUNCTION__ << isBackup;
-    ui->drive_2->setVisible(true);
 }
 
 void IngestDlg::on_helpBtn_clicked()

@@ -17,8 +17,6 @@
 #include "Main/global.h"
 #include "Lcms2/lcms2.h"                // little color management system
 
-//#include "Lcms2/lcms2_plugin.h"       // reqd if use code, not if use library
-
 namespace ICC
 {
     extern bool setOutProfile();

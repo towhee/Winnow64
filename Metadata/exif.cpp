@@ -280,7 +280,7 @@ Exif::Exif()
     hash[37435] = "CIP3Sheet";
     hash[37436] = "CIP3Side";
     hash[37439] = "StoNits";
-    hash[37500] = "MakerNoteApple ";
+    hash[37500] = "MakerNotes";
     hash[37510] = "UserComment";
     hash[37520] = "SubSecTime";
     hash[37521] = "SubSecTimeOriginal";
