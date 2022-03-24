@@ -171,6 +171,7 @@ void MetadataCache::loadNewFolder(bool isRefresh)
         condition.wakeOne();
         mutex.unlock();
         wait();
+        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Was Running - stopped");
     }
     abort = false;
     G::allMetadataLoaded = false;
@@ -192,7 +193,8 @@ void MetadataCache::loadNewFolder(bool isRefresh)
     G::iconWMax = G::minIconSize;
     G::iconHMax = G::minIconSize;
     action = Action::NewFolder;
-    start(TimeCriticalPriority);
+    start(LowPriority);
+//    start(TimeCriticalPriority);
 }
 
 void MetadataCache::loadNewFolder2ndPass()
@@ -214,13 +216,15 @@ void MetadataCache::loadNewFolder2ndPass()
         condition.wakeOne();
         mutex.unlock();
         wait();
+        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Was Running - stopped");
     }
     abort = false;
     action = Action::NewFolder2ndPass;
     setRange();
     foundItemsToLoad = anyItemsToLoad();
 //    qDebug() << __FUNCTION__ << foundItemsToLoad;
-    start(TimeCriticalPriority);
+    start(LowPriority);
+//    start(TimeCriticalPriority);
 }
 
 void MetadataCache::loadAllMetadata()
@@ -593,13 +597,16 @@ void MetadataCache::readIconChunk()
             }
         }
         if (!G::isNewFolderLoaded) {
+            QString fPath = idx.data(G::PathRole).toString();
             QString msg = "Loading thumbnails: ";
-            msg += QString::number(row) + " of " + QString::number(end);
+            msg += QString::number(row) + " of " + QString::number(end-1)/* + " " + fPath*/;
+//            msg += " " + fPath;
+            if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, msg);
             if (row % countInterval == 0) {
                 emit showCacheStatus(msg);
-//                QCoreApplication::processEvents();
-//                qApp->processEvents();
             }
+            // keep event processing up-to-date to improve signal/slot performance emit loadMetadataCache2ndPass()
+            QApplication::processEvents();
         }
     }
 
@@ -636,20 +643,24 @@ void MetadataCache::readMetadataChunk()
             int dmRow = dm->sf->mapToSource(idx).row();
             if (!dm->readMetadataForItem(dmRow)) {
                 metadataLoadFailed = true;
-                /*
+//                /*
                 qDebug() << __FUNCTION__
                          << "tryAgain =" << tryAgain
                          << "row =" << row
                             ;
                             //*/
             }
+            QString fPath = idx.data(G::PathRole).toString();
             QString msg = "Reading metadata: ";
-            msg += QString::number(row) + " of " + QString::number(end);
+            msg += QString::number(row) + " of " + QString::number(end-1)/* + " " + fPath*/;
+//            msg += " " + fPath;
+            if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(__FUNCTION__, msg); mutex.unlock();}
             if (row % countInterval == 0) {
                 emit showCacheStatus(msg);
-//                QCoreApplication::processEvents();
-//                qApp->processEvents();
             }
+
+            // keep event processing up-to-date to improve signal/slot performance emit loadMetadataCache2ndPass()
+            QApplication::processEvents();
         }
     } while (metadataLoadFailed && metadataTry > tryAgain++);
 
@@ -693,7 +704,7 @@ void MetadataCache::run()
 
         // read the icons
         if (action == Action::NewFolder2ndPass) {
-        readIconChunk();    //lzwrgh
+            readIconChunk();
         }
 
         // read next metadata and icon chunk
@@ -733,9 +744,12 @@ void MetadataCache::run()
             }
         }
 
+        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "emit loadMetadataCache2ndPass");
         // calc icon best fit and return to load requisite number of icons
         if (action == Action::NewFolder) {
             emit loadMetadataCache2ndPass();
+//            QApplication::processEvents();
+//            return;
         }
 
         dm->loadingModel = false;
@@ -744,7 +758,6 @@ void MetadataCache::run()
     // after 2nd pass on new folder initiate the image cache
     if (action == Action::NewFolder2ndPass) {
         G::metaCacheMB = memRequired();
-//        emit finished2ndPass(); // launchBuildFilters req'd
         emit loadImageCache();
     }
 

@@ -156,9 +156,11 @@ namespace G
 
     void log(QString functionName, QString comment, bool zeroElapsedTime)
     {
-//        for (int i = 0; i < doNotLog.length(); ++i) {
-//             if (functionName.contains(doNotLog.at(i))) return;
-//        }
+        /*
+        for (int i = 0; i < doNotLog.length(); ++i) {
+             if (functionName.contains(doNotLog.at(i))) return;
+        }
+        //*/
         static QString prevFunctionName = "";
         static QString prevComment = "";
         if (zeroElapsedTime) {

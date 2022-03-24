@@ -19,7 +19,7 @@ namespace ICC
 
     void err(cmsContext contextID, cmsUInt32Number errorCode, const char *text)
     {
-        qDebug() << "ICC::err" << errorCode << text << G::winOutProfilePath;
+        qWarning() << "ICC::err" << errorCode << text << G::winOutProfilePath;
     }
 
     bool setOutProfile()
@@ -27,10 +27,11 @@ namespace ICC
         if (G::isLogger) G::log(__FUNCTION__);
         if (G::winOutProfilePath == "") {
             qWarning() << "The outProfilePath has not been assigned";
+            cmsSetLogErrorHandler(err);
             return false;
         }
         hOutProfile = cmsOpenProfileFromFile(QFile::encodeName(G::winOutProfilePath).constData(), "r") ;
-
+        return true;
     }
 
     void transform(const QByteArray &buf, QImage &image)
@@ -56,24 +57,18 @@ namespace ICC
                                         TYPE_BGRA_8,
                                         INTENT_PERCEPTUAL, 0);
         if (hTransform) {
-            /* another way to get size
-            uchar bitsPerPixel = image.pixelFormat().bitsPerPixel();
-            quint32 size = static_cast<quint32>(image.width()*image.height()*bitsPerPixel/32);
-            //*/
             quint32 size = static_cast<quint32>(image.height()*image.bytesPerLine()/4);
             cmsDoTransform(hTransform, image.constBits(), image.bits(), size);
             if (!cmsCloseProfile(hInProfile)) {
                 qWarning() << __FUNCTION__ << "ICC cmsCloseProfile failed.";
+                cmsSetLogErrorHandler(err);
             }
             cmsDeleteTransform(hTransform);
         }
         else {
             qWarning() << __FUNCTION__
-                       << "ICC cmsCreateTransform failed with error code"
-                       << hTransform
+                       << "ICC cmsCreateTransform failed."
                           ;
-    //            Utilities::log
-//            cmsContext *context = new cmsContext;
             cmsSetLogErrorHandler(err);
         }
     }

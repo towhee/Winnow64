@@ -236,15 +236,12 @@ void DataModel::clearDataModel()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     if (rowCount() == 0) return;
-    /* clear the model
-       clear() wipes the headers
-       beginRemoveRows(QModelIndex(), 0, rowCount()) is not stable when rapidly change folders
-       */
-//    beginResetModel();
+    // clear the model
+    beginResetModel();
     beginRemoveRows(QModelIndex(), 0, rowCount());
     removeRows(0, rowCount());
     endRemoveRows();
-//    endResetModel();
+    endResetModel();
     // clear the fPath index of datamodel rows
     fPathRow.clear();
     // clear all items for filters based on data content ie file types, camera model
@@ -467,7 +464,8 @@ bool DataModel::addFileData()
     • SearchColumn
     • ErrColumn
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    QString logmsg = QString::number(fileInfoList.count()) + " images";
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, logmsg);
     // make sure if raw+jpg pair that raw file is first to make combining easier
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
 

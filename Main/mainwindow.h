@@ -100,7 +100,7 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    QString versionNumber = "1.32" ;
+    QString versionNumber = "1.31.2" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -474,6 +474,7 @@ private slots:
                                 ImageCacheData::Cache cache,
                                 QString source);
     // caching
+    void loadNewFolder();
     void loadMetadataCache2ndPass();
     void refreshCurrentAfterReload();
     void updateIconsVisible(bool useCurrentRow);
@@ -632,6 +633,7 @@ private:
         QMenu *workspaceMenu;
     QMenu *helpMenu;
         QMenu *helpDiagnosticsMenu;
+            QMenu *testMenu;
 
     QMenu *viewSubMenu;
     QMenu *imageFileSubMenu;
@@ -873,6 +875,9 @@ private:
     QAction *diagnosticsThumbAction;
     QAction *diagnosticsIngestAction;
     QAction *diagnosticsZoomAction;
+
+    // Testing Menu (under Help Diagnostics Menu)
+    QAction *stressTestAction;
 
     // Context menus
     QList<QAction *> *fsTreeActions;
@@ -1175,7 +1180,7 @@ private:
     void mediaReadSpeed();
     void reportHueCount();
     void generateMeanStack();
-    void stressTest(int ms);
+    void stressTest(int ms = 50);
     void test();                    // for debugging
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging

@@ -1,5 +1,12 @@
 #include "olympus.h"
 
+/*
+    https://exiftool.org/TagNames/Olympus.html
+    https://exiftool.org/TagNames/Olympus.html#Equipment
+    http://www.ozhiker.com/electronics/pjmt/jpeg_info/olympus_mn.html
+    https://exiv2.org/tags-olympus.html
+*/
+
 Olympus::Olympus()
 {
     olympusMakerHash[0] = "MakerNoteVersion";
@@ -12,10 +19,10 @@ Olympus::Olympus()
     olympusMakerHash[256] = "ThumbnailImage";
     olympusMakerHash[260] = "BodyFirmwareVersion";
     olympusMakerHash[512] = "SpecialMode";
-    olympusMakerHash[513] = "Quality";
-    olympusMakerHash[514] = "Macro";
+    olympusMakerHash[513] = "QualitySetting";
+    olympusMakerHash[514] = "MacroMode";
     olympusMakerHash[515] = "BWMode";
-    olympusMakerHash[516] = "DigitalZoom";
+    olympusMakerHash[516] = "DigitalZoomRatio";
     olympusMakerHash[517] = "FocalPlaneDiagonal";
     olympusMakerHash[518] = "LensDistortionParams";
     olympusMakerHash[519] = "CameraType";
@@ -215,6 +222,7 @@ bool Olympus::parse(MetadataParameters &p,
     ifd->readIFD(p);
 
     // pull data reqd from IFD0
+    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount).trimmed();
     m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount).trimmed();
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
@@ -300,33 +308,48 @@ bool Olympus::parse(MetadataParameters &p,
                 ifd->ifdDataHash.value(42036).tagCount);
 
     // read makernoteIFD
-    // Offsets in makernote are relative to the start of the makernotes
-    quint32 makerOffset = ifd->ifdDataHash.value(37500).tagValue;
-    if (ifd->ifdDataHash.contains(37500)) {
-        // The IFD starts 10 or 12 bits after the offset to make room for the
-        // string "OLYMPUS II  "
-        quint32 offset = makerOffset + 12;
-        p.hdr = "IFD Olympus Maker Note";
-        p.offset = offset;
-        p.hash = &olympusMakerHash;
-        ifd->readIFD(p);
-        m.offsetThumb = ifd->ifdDataHash.value(256).tagValue + makerOffset;
-        m.lengthThumb = ifd->ifdDataHash.value(256).tagCount;
-//        if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
-        // read CameraSettingsIFD
-        if (ifd->ifdDataHash.contains(8224)) {
-//            readIFD("IFD Olympus Maker Note: CameraSettingsIFD",
-//                    ifd->ifdDataHash.value(8224).tagValue + makerOffset);
-            offset = ifd->ifdDataHash.value(8224).tagValue + makerOffset;
-            p.hdr = "IFD Olympus Maker Note: CameraSettingsIFD";
+    /* the makernotes IFD is preceeded with either
+       "OLYMPUS " + 49 49  03 00
+       "OM SYSTEM   " + 49 49  04 00
+     */
+    quint32 makerOffset = ifd->ifdDataHash.value(37500).tagValue;
+    p.file.seek(makerOffset);
+    bool foundMakerNotes = false;
+    if (ifd->ifdDataHash.contains(37500)) {
+        int off;
+        for (off = 0; off < 30; off++) {
+            quint16 order = Utilities::get16(p.file.read(2));
+            off++;
+            if (order == 0x4949) {
+                foundMakerNotes = true;
+                break;
+            }
+        }
+        if (foundMakerNotes) {
+            quint32 offset = makerOffset + off + 3;
+            p.hdr = "IFD Olympus Maker Note";
             p.offset = offset;
+            p.hash = &olympusMakerHash;
             ifd->readIFD(p);
-            m.offsetFull = ifd->ifdDataHash.value(257).tagValue + makerOffset;
-            m.lengthFull = ifd->ifdDataHash.value(258).tagValue;
-            p.offset = m.offsetFull;
-            jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
-            jpeg->getDimensions(p, m);
+            m.offsetThumb = ifd->ifdDataHash.value(256).tagValue + makerOffset;
+            m.lengthThumb = ifd->ifdDataHash.value(256).tagCount;
+    //        if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
+
+            // read CameraSettingsIFD
+            if (ifd->ifdDataHash.contains(8224)) {
+    //            readIFD("IFD Olympus Maker Note: CameraSettingsIFD",
+    //                    ifd->ifdDataHash.value(8224).tagValue + makerOffset);
+                offset = ifd->ifdDataHash.value(8224).tagValue + makerOffset;
+                p.hdr = "IFD Olympus Maker Note: CameraSettingsIFD";
+                p.offset = offset;
+                ifd->readIFD(p);
+                m.offsetFull = ifd->ifdDataHash.value(257).tagValue + makerOffset;
+                m.lengthFull = ifd->ifdDataHash.value(258).tagValue;
+                p.offset = m.offsetFull;
+                jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
+                jpeg->getDimensions(p, m);
+            }
         }
     }
 
