@@ -43,8 +43,17 @@ void ImageDecoder::stop()
         mutex.unlock();
         wait();
         abort = false;
-        status = Status::Ready;
     }
+}
+
+bool ImageDecoder::quit()
+{
+    status = Status::Ready;
+    fPath = "";
+    QImage blank;
+    image = blank;
+    cacheKey = -1;
+    return false;
 }
 
 void ImageDecoder::decode(ImageCacheData::CacheItem item)
@@ -88,7 +97,7 @@ bool ImageDecoder::load()
         return false;
     }
 
-    if (abort) return false;
+    if (abort) quit();
 
     // is file already open by another process
     if (imFile.isOpen()) {
@@ -127,7 +136,7 @@ bool ImageDecoder::load()
             return false;
         }
 
-        if (abort) return false;
+        if (abort) quit();
 
         // try to decode the jpg data
         if (!image.loadFromData(buf, "JPEG")) {
@@ -175,7 +184,7 @@ bool ImageDecoder::load()
             qWarning() << __FUNCTION__
                      << "Could not decode using Winnow Tiff decoder.  "
                         "Trying Qt tiff library to decode " + fPath + ". ";
-            if (abort) return false;
+            if (abort) quit();
             // use Qt tiff library to decode
             if (!image.load(fPath)) {
                 imFile.close();

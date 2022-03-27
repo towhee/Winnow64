@@ -65,19 +65,7 @@ public:
     int prevFirstIconVisible;
     int prevLastIconVisible;
 
-protected:
-    void run() Q_DECL_OVERRIDE;
-
-signals:
-    void loadImageCache();
-    void updateIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
-    void updateIconBestFit();
-    void loadMetadataCache2ndPass();
-    void selectFirst();
-    void showCacheStatus(QString);            // row, clear progress bar
-    void finished2ndPass();                   // buildFilters
-
-private:
+//private:
     QMutex mutex;
     QWaitCondition condition;
     bool abort;
@@ -112,6 +100,19 @@ private:
     bool anyItemsToLoad();
 
     QElapsedTimer t;
+
+protected:
+    void run() Q_DECL_OVERRIDE;
+
+signals:
+    void loadImageCache();
+    void updateIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
+    void updateIconBestFit();
+    void loadMetadataCache2ndPass();
+    void selectFirst();
+    void showCacheStatus(QString);            // row, clear progress bar
+    void finished2ndPass();                   // buildFilters
+
 };
 
 #endif // MDCACHE_H

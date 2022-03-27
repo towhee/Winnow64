@@ -6,13 +6,16 @@
 
 ExifTool::ExifTool()
 {
-
+    Utilities::log(__FUNCTION__, exifToolPath);
 #ifdef Q_OS_WIN
-    exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool.exe";
+    exifToolPath = qApp->applicationDirPath() + "/et.exe";
 #endif
 #ifdef Q_OS_MAC
     exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
 #endif
+    // confirm exifToolPath exists
+    if (!QFile(exifToolPath).exists())
+        qWarning() << __FUNCTION__ << exifToolPath << "is missing";
     QStringList startArgs;
     startArgs << "-stay_open";
     startArgs << "True";

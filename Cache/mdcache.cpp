@@ -470,7 +470,7 @@ void MetadataCache::readAllMetadata()
 /*
     Load the thumb (icon) for all the image files in the folder(s).
 */
-    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger) G::log(__FUNCTION__);
     int count = 0;
     int rows = dm->rowCount();
     for (int row = 0; row < rows; ++row) {
@@ -484,6 +484,21 @@ void MetadataCache::readAllMetadata()
             dm->addMetadataForItem(metadata->m);
             count++;
         }
+        /*
+        if (G::isLogger || G::isFlowLogger)
+        {
+            QString msg = "Reading metadata: ";
+            msg += QString::number(row) + " of " + QString::number(end-1);
+            msg += " " + fPath;
+            G::log(__FUNCTION__, msg);
+        }
+        //*/
+        if (row % countInterval == 0) {
+            QString msg = "Reading metadata: ";
+            msg += QString::number(row) + " of " + QString::number(rows);
+            emit showCacheStatus(msg);
+        }
+        QApplication::processEvents();
     }
     G::allMetadataLoaded = true;
 }
@@ -598,13 +613,21 @@ void MetadataCache::readIconChunk()
         }
         if (!G::isNewFolderLoaded) {
             QString fPath = idx.data(G::PathRole).toString();
-            QString msg = "Loading thumbnails: ";
-            msg += QString::number(row) + " of " + QString::number(end-1)/* + " " + fPath*/;
-//            msg += " " + fPath;
-            if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, msg);
+            /*
+            if (G::isLogger || G::isFlowLogger)
+            {
+                QString msg = "Loading thumbnails: ";
+                msg += QString::number(row) + " of " + QString::number(end-1);
+                msg += " " + fPath;
+                G::log(__FUNCTION__, msg);
+            }
+            //*/
             if (row % countInterval == 0) {
+                QString msg = "Reading metadata: ";
+                msg += QString::number(row) + " of " + QString::number(end)/* + " " + fPath*/;
                 emit showCacheStatus(msg);
             }
+
             // keep event processing up-to-date to improve signal/slot performance emit loadMetadataCache2ndPass()
             QApplication::processEvents();
         }
@@ -651,11 +674,18 @@ void MetadataCache::readMetadataChunk()
                             //*/
             }
             QString fPath = idx.data(G::PathRole).toString();
-            QString msg = "Reading metadata: ";
-            msg += QString::number(row) + " of " + QString::number(end-1)/* + " " + fPath*/;
-//            msg += " " + fPath;
-            if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(__FUNCTION__, msg); mutex.unlock();}
+            if (G::isLogger || G::isFlowLogger)
+                /*
+            {
+                QString msg = "Reading metadata: ";
+                msg += QString::number(row) + " of " + QString::number(end-1);
+                msg += " " + fPath;
+                G::log(__FUNCTION__, msg);
+            }
+            //*/
             if (row % countInterval == 0) {
+                QString msg = "Reading metadata: ";
+                msg += QString::number(row) + " of " + QString::number(end)/* + " " + fPath*/;
                 emit showCacheStatus(msg);
             }
 

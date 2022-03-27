@@ -66,6 +66,7 @@ signals:
     void showCacheStatus(QString instruction,
                          ImageCacheData::Cache cache,
                          QString source = "");
+    void centralMsg(QString msg);
     void updateIsRunning(bool, bool);
     void updateCacheOnThumbs(QString fPath, bool isCached);
     void dummyDecoder(int id);

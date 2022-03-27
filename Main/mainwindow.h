@@ -100,7 +100,7 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    QString versionNumber = "1.31.2" ;
+    QString versionNumber = "1.32" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -349,7 +349,7 @@ public slots:
     void handleStartupArgs(const QString &msg);
     void watchCurrentFolder();
     void folderSelectionChange();
-    void fileSelectionChange(QModelIndex current, QModelIndex);
+    void fileSelectionChange(QModelIndex current, QModelIndex, QString src);
     void folderAndFileSelectionChange(QString fPath);
     void nullFiltration();
     void handleDrop(QString fPath);

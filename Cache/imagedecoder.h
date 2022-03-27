@@ -53,6 +53,7 @@ private:
     QMutex mutex;
     QWaitCondition condition;
     bool load();
+    bool quit();
     void decodeUsingQt();
     void rotate();
     void colorManage();

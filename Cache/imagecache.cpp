@@ -770,7 +770,7 @@ void ImageCache::buildImageCacheList()
 
     It is built from dm->sf (sorted and/or filtered datamodel).
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     icd->cacheItemList.clear();
     cacheKeyHash.clear();
     // the total memory size of all the images in the folder currently selected
@@ -807,6 +807,15 @@ void ImageCache::buildImageCacheList()
 
         icd->cacheItemList.append(icd->cacheItem);
         folderMB += icd->cacheItem.sizeMB;
+        if (G::isLogger || G::isFlowLogger) {
+            if (i % 1000 == 0) {
+                QString msg = "Building Image Cache: ";
+                msg += QString::number(i) + " of " + QString::number(dm->sf->rowCount());
+//                G::log(__FUNCTION__, msg);
+                emit centralMsg(msg);
+            }
+        }
+        QApplication::processEvents();
     }
     icd->cache.folderMB = folderMB;
 }
@@ -1086,15 +1095,18 @@ bool ImageCache::fillCache(int id, bool positionChange)
 
     // range check
     if (cacheKey >= icd->cacheItemList.length()) {
-        qWarning() << __FUNCTION__
-                   << "cacheKey =" << cacheKey
-                   << "EXCEEDS icd->cacheItemList.length() of"
-                   << icd->cacheItemList.length()
-                      ;
-        QString err = "cacheKey = " + QString::number(cacheKey) +
-                      " exceeds icd->cacheItemList.length() of " +
-                      QString::number(icd->cacheItemList.length());
+        if (icd->cacheItemList.length() > 0) {
+            qWarning() << __FUNCTION__
+                       << "Decoder" << id << decoder[id]->fPath
+                       << "cacheKey =" << cacheKey
+                       << "EXCEEDS icd->cacheItemList.length() of"
+                       << icd->cacheItemList.length()
+                          ;
+            QString err = "cacheKey = " + QString::number(cacheKey) +
+                          " exceeds icd->cacheItemList.length() of " +
+                          QString::number(icd->cacheItemList.length());
         G::error(__FUNCTION__, decoder[id]->fPath, err);
+        }
         cacheKey = -1;
     }
 
@@ -1133,7 +1145,8 @@ void ImageCache::run()
     added to imCache. More details are available in the fillCache comments and at the top of
     this class.
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    if (icd->cacheItemList.length() == 0) return;
     if (debugCaching) {
         qDebug().noquote() << __FUNCTION__;
     }

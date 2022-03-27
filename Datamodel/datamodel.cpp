@@ -151,6 +151,19 @@ DataModel::DataModel(QWidget *parent,
     this->metadata = metadata;
     this->filters = filters;
 
+    setModelProperties();
+
+    sf = new SortFilter(this, filters, combineRawJpg);
+    sf->setSourceModel(this);
+
+    // root folder containing images to be added to the data model
+    dir = new QDir();
+    fileFilters = new QStringList;          // eligible image file types
+    emptyImg.load(":/images/no_image.png");
+}
+
+void DataModel::setModelProperties()
+{
     setSortRole(Qt::EditRole);
 
     // must include all prior Global dataModelColumns (any order okay)
@@ -223,31 +236,24 @@ DataModel::DataModel(QWidget *parent,
     setHorizontalHeaderItem(G::ShootingInfoColumn, new QStandardItem("ShootingInfo")); horizontalHeaderItem(G::ShootingInfoColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::SearchTextColumn, new QStandardItem("Search")); horizontalHeaderItem(G::SearchTextColumn)->setData(true, G::GeekRole);
 
-    sf = new SortFilter(this, filters, combineRawJpg);
-    sf->setSourceModel(this);
-
-    // root folder containing images to be added to the data model
-    dir = new QDir();
-    fileFilters = new QStringList;          // eligible image file types
-    emptyImg.load(":/images/no_image.png");
 }
-
 void DataModel::clearDataModel()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
-    if (rowCount() == 0) return;
-    // clear the model
-    beginResetModel();
-    beginRemoveRows(QModelIndex(), 0, rowCount());
-    removeRows(0, rowCount());
-    endRemoveRows();
-    endResetModel();
-    // clear the fPath index of datamodel rows
-    fPathRow.clear();
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    /* clear the model
+       // takes a very long time
+       beginRemoveRows(QModelIndex(), 0, n-1);
+       removeRows(0, n-1);
+       endRemoveRows();
+       */
+    clear();
+    setModelProperties();
     // clear all items for filters based on data content ie file types, camera model
     filters->removeChildrenDynamicFilters();
     // reset remaining criteria without signalling filter change as no new data yet
     filters->clearAll();
+    // clear the fPath index of datamodel rows
+    fPathRow.clear();
     // clear list of fileInfo
     fileInfoList.clear();
 }
@@ -357,7 +363,7 @@ Steps:
 - Note: build QMaps of unique field values for the filters is not done here, but on
   demand when the user selects the filter panel or a menu filter command.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "clearDataModel");
     currentFolderPath = folderPath;
     filters->filtersBuilt = false;
     loadingModel = true;
@@ -365,6 +371,7 @@ Steps:
 
     // clear the model
     clearDataModel();
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "continue loading");
 
     // do some initializing
     fileFilters->clear();
@@ -401,7 +408,7 @@ Steps:
                         QString::number(imageCount) + " found so far in " +
                         QString::number(folderCount) + " folders" +
                         escapeClause;
-            emit msg(s);        // rghmsg
+            emit centralMsg(s);        // rghmsg
 //            QCoreApplication::processEvents();
         }
         if (timeToQuit) return false;
@@ -435,7 +442,7 @@ Steps:
                                 QString::number(imageCount) + " found so far in " +
                                 QString::number(folderCount) + " folders" +
                                 escapeClause;
-                    emit msg(s);    // rghmsg
+                    emit centralMsg(s);    // rghmsg
 //                    QCoreApplication::processEvents();
 //                    qApp->processEvents();
                 }
@@ -571,7 +578,7 @@ bool DataModel::addFileData()
         if (row % 100 == 0) {
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " loaded.";
-            emit msg(s);    // rghmsg
+            emit centralMsg(s);    // rghmsg
 //            QCoreApplication::processEvents();
         }
 
@@ -795,7 +802,7 @@ void DataModel::addAllMetadata()
         if (row % 100 == 0 ) {
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " secondary metadata loading...";
-            emit msg(s);    // rghmsg
+            emit centralMsg(s);    // rghmsg
 //            QCoreApplication::processEvents();
         }
 //        qApp->processEvents();
@@ -1096,9 +1103,9 @@ bool DataModel::hasFolderChanged()
 void DataModel::searchStringChange(QString searchString)
 {
 /*
-When the search string in filters is edited a signal is emitted to run this function.  Where
-there is a match G::SearchColumn is set to true, otherwise false.  Udate the filtered and
-unfiltered counts.
+    When the search string in filters is edited a signal is emitted to run this function.
+    Where there is a match G::SearchColumn is set to true, otherwise false. Update the
+    filtered and unfiltered counts.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     qDebug() << __FUNCTION__ << searchString;
