@@ -719,15 +719,18 @@ void IconView::sortThumbs(int sortColumn, bool isReverse)
 void IconView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
 /*
-For some reason the selectionModel rowCount is not up-to-date and the selection is updated
-after the MD::fileSelectionChange occurs, hence update the status bar from here.
+    For some reason the selectionModel rowCount is not up-to-date and the selection is updated
+    after the MD::fileSelectionChange occurs, hence update the status bar from here.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
-    if (G::stop) {
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    if (G::stop || selected.isEmpty() || !selected.at(0).isValid()) {
         return;
     }
     QListView::selectionChanged(selected, deselected);
-    if (!G::isInitializing) emit updateStatus(true, "", __FUNCTION__);
+    if (!G::isInitializing) {
+        emit fileSelectionChange(selected.at(0).indexes().at(0), QModelIndex(), __FUNCTION__);
+        emit updateStatus(true, "", __FUNCTION__);
+    }
 }
 
 int IconView::getSelectedCount()

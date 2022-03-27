@@ -564,8 +564,8 @@ void Filters::finishedBuildFilters()
 void Filters::clearAll()
 {
 /*
-Uncheck all the filter items but do not signal filter change.  This is called when a new
-folder is selected to reset the filter criteria.
+    Uncheck all the filter items but do not signal filter change.  This is called when a new
+    folder is selected to reset the filter criteria.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     QTreeWidgetItemIterator it(this);

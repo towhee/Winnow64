@@ -42,6 +42,7 @@ public:
               Filters *filters,
               bool &combineRawJpg);
 
+    void setModelProperties();
     bool load(QString &dir, bool includeSubfoldersFlag);
     bool readMetadataForItem(int row);
     void clearDataModel();
@@ -88,7 +89,7 @@ public:
 
 signals:
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
-    void msg(QString message);
+    void centralMsg(QString message);
     void updateStatus(bool keepBase, QString s, QString source);
 
 public slots:

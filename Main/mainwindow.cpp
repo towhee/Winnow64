@@ -1340,6 +1340,8 @@ void MW::folderSelectionChange()
     currentViewDirPath = getSelectedPath();
     setting->setValue("lastDir", currentViewDirPath);
 
+    setCentralMessage("Loading information for folder " + currentViewDirPath);
+
     if (G::isLogger || G::isFlowLogger) {
         G::log(__FUNCTION__, currentViewDirPath);
     }
@@ -1451,7 +1453,6 @@ void MW::folderSelectionChange()
     //*/
     if (sortColumn != G::NameColumn || sortReverseAction->isChecked()) {
         setCentralMessage("Sorting the data model.");
-//        qApp->processEvents();
         sortChange("folderSelectionChange");
         setCentralMessage("");
     }
@@ -1479,13 +1480,12 @@ void MW::folderSelectionChange()
         isDragDrop = false;
     }
 
-    if (!dragFileSelected) {
-        thumbView->selectThumb(0);
-    }
+//    if (!dragFileSelected) {
+//        thumbView->selectThumb(0);
+//    }
 
     // Load folder progress
     setCentralMessage("Gathering metadata and thumbnails for images in folder.");
-//    qApp->processEvents();
     updateStatus(false, "Collecting metadata for all images in folder(s)", __FUNCTION__);
 
     /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
@@ -1498,8 +1498,9 @@ void MW::folderSelectionChange()
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
 
-    // rgh isRefreshingDM ??
-    metadataCacheThread->loadNewFolder(isRefreshingDM);
+    // start loading new folder
+//    metadataCacheThread->loadNewFolder(isRefreshingDM);
+    loadNewFolder();
 
     // format pickMemSize as bytes, KB, MB or GB
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -1508,7 +1509,7 @@ void MW::folderSelectionChange()
     G::isInitializing = false;
 }
 
-void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
+void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/, QString src)
 {
 /*
     Triggered when file selection changes (folder change selects new image, so it also
@@ -1521,7 +1522,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo and
     delegate use of the current index must check the column.
 */
-    if (G::isLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, src + " " + current.data(G::PathRole).toString());
     if (G::stop) return;
 
    /*
@@ -1552,7 +1553,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
 
     // if starting program, set first image to display
     if (current.row() == -1) {
-//        isStart = true;
         thumbView->selectThumb(0);
         return;
     }
@@ -1560,15 +1560,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
 
-//    if (isStart) return;
-
-    if (G::isFlowLogger) G::log(__FUNCTION__, current.data(G::PathRole).toString());
     /*
     if (isDragDrop && dragDropFilePath.length() > 0) {
         thumbView->selectThumb(dragDropFilePath);
         isDragDrop = false;
     }
     */
+
+    setCentralMessage("");
 
     // user clicks outside thumb but inside treeView dock
 //    QModelIndexList selected = selectionModel->selectedIndexes();
@@ -1586,7 +1585,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/)
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
     setting->setValue("lastFileSelection", fPath);
-//    G::track(__FUNCTION__, "icd->imCache.find(fPath, image) " + fPath);
 
     // update delegates so they can highlight the current item
     thumbView->iconViewDelegate->currentRow = currentRow;
@@ -1757,13 +1755,13 @@ void MW::stopAndClearAll(QString src)
     Can be triggered when the user picks a folder in the folder panel or open menu, picks
     a bookmark or ejects a drive and the resulting folder does not have any eligible images.
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
 
     G::stop = true;
 
     imageView->clear();
-    setCentralMessage("Halting folder load.");
+    setCentralMessage("Preparing to load new folder.");
     setWindowTitle(winnowWithVersion);
     G::isNewFolderLoaded = false;
     G::allMetadataLoaded = false;
@@ -1777,7 +1775,8 @@ void MW::stopAndClearAll(QString src)
         infoView->clearInfo();
         updateDisplayResolution();
     }
-    setThreadRunStatusInactive();                      // turn thread activity buttons gray
+    // turn thread activity buttons gray
+    setThreadRunStatusInactive();
     isDragDrop = false;
 
     updateStatus(false, "", __FUNCTION__);
@@ -1785,14 +1784,22 @@ void MW::stopAndClearAll(QString src)
     progressLabel->setVisible(false);
     updateClassification();
     selectionModel->clear();
+    thumbView->setUpdatesEnabled(false);
+    gridView->setUpdatesEnabled(false);
+    tableView->setUpdatesEnabled(false);
+    tableView->setSortingEnabled(false);
     dm->clearDataModel();
+    thumbView->setUpdatesEnabled(true);
+    gridView->setUpdatesEnabled(true);
+    tableView->setUpdatesEnabled(true);
+    tableView->setSortingEnabled(true);
     currentRow = 0;
+    G::stop = false;
 
     if (src == "folderSelectionChange")
         setCentralMessage("Loading folder.");
     else
         setCentralMessage("Select a folder.");
-    G::stop = false;
 }
 
 void MW::nullFiltration()
@@ -1889,8 +1896,40 @@ void MW::loadNewFolder()
 {
 /*
     Test load metadata and thumbnails in main thread instead of MdCache
-*/
 
+*/
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    MetadataCache *mct = metadataCacheThread;
+    G::allMetadataLoaded = false;
+    mct->isRefreshFolder = isRefreshingDM;
+    mct->iconsCached.clear();
+    mct->foundItemsToLoad = true;
+    mct->startRow = 0;
+    int rowCount = dm->sf->rowCount();
+    // rgh fix (are we going to read all metadata all of the time?)
+    if (mct->metadataChunkSize > rowCount) {
+        mct->endRow = rowCount;
+        mct->lastIconVisible = rowCount;
+    }
+    else {
+        mct->endRow = mct->metadataChunkSize;
+        mct->lastIconVisible = mct->metadataChunkSize;
+    }
+    // reset for bestAspect calc
+    G::iconWMax = G::minIconSize;
+    G::iconHMax = G::minIconSize;
+
+    dm->loadingModel = true;
+
+    setCentralMessage("Reading all metadata.");
+    mct->readAllMetadata();
+//    mct->readMetadataChunk();
+    updateIconBestFit();
+    updateIconsVisible(true);
+    setCentralMessage("Reading icon chunk (up to 3000).");
+    mct->readIconChunk();
+    G::metaCacheMB = mct->memRequired();
+    loadImageCacheForNewFolder();
 }
 
 void MW::loadMetadataCache2ndPass()
@@ -2207,12 +2246,13 @@ void MW::loadImageCacheForNewFolder()
     of memory has been consumed or all the images are cached.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    setCentralMessage("Initializing the Image Cache");
     // now that metadata is loaded populate the data model
     if(isShowCacheProgressBar) {
         cacheProgressBar->clearProgress();
 //        qApp->processEvents();
     }
-    updateIconBestFit();      // rgh make sure req'd
+//    updateIconBestFit();      // rgh make sure req'd
 
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
@@ -2246,7 +2286,7 @@ void MW::loadImageCacheForNewFolder()
         gridView->selectFirst();
         currentSfIdx = dm->sf->index(0,0);
     }
-    fileSelectionChange(currentSfIdx, currentSfIdx);
+    fileSelectionChange(currentSfIdx, currentSfIdx, __FUNCTION__);
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
        InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
@@ -4423,7 +4463,7 @@ void MW::createDataModel()
 
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
-    connect(dm, &DataModel::msg, this, &MW::setCentralMessage);
+    connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
 
     buildFilters = new BuildFilters(this, dm, metadata, filters, combineRawJpg);
@@ -4446,8 +4486,9 @@ void MW::createSelectionModel()
     gridView->setSelectionModel(selectionModel);
 
     // whenever currentIndex changes do a file selection change
-    connect(selectionModel, &QItemSelectionModel::currentChanged,
-            this, &MW::fileSelectionChange);
+
+//    connect(selectionModel, &QItemSelectionModel::currentChanged,
+//            this, &MW::fileSelectionChange);
 }
 
 void MW::createCaching()
@@ -4527,6 +4568,10 @@ void MW::createCaching()
     // Signal to ImageCache new image selection
     connect(this, SIGNAL(setImageCachePosition(QString)),
             imageCacheThread, SLOT(setCurrentPosition(QString)));
+
+    // Send message to setCentralMsg
+    connect(imageCacheThread, &ImageCache::centralMsg, this, &MW::setCentralMessage);
+
 }
 
 void MW::createThumbView()
@@ -4565,6 +4610,9 @@ void MW::createThumbView()
 
 //    connect(thumbView, SIGNAL(updateThumbDockHeight()),
 //            this, SLOT(setThumbDockHeight()));
+
+    // trigger fileSelectionChange
+    connect(thumbView, &IconView::fileSelectionChange, this, &MW::fileSelectionChange);
 
     connect(thumbView, &IconView::updateStatus, this, &MW::updateStatus);
 
@@ -6219,7 +6267,8 @@ void MW::filterChange(QString source)
 
     QApplication::restoreOverrideCursor();
 
-    fileSelectionChange(idx, idx);
+    qDebug() << __FUNCTION__ << "Calling fileSelectionChange";
+    fileSelectionChange(idx, idx, __FUNCTION__);
     source = "";    // suppress compiler warning
 }
 
@@ -6477,7 +6526,7 @@ void MW::sortChange(QString source)
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Src: " + source);
 
-    if (G::isInitializing) return;
+    if (G::isInitializing || !G::isNewFolderLoaded) return;
 
         /*
     qDebug() << __FUNCTION__ << "source =" << source
@@ -6554,9 +6603,8 @@ void MW::sortChange(QString source)
 //    if (!G::allMetadataLoaded) return;
 
     // get the current selected item
-    currentRow = dm->sf->mapFromSource(currentDmIdx).row();
-//    if (G::isNewFolderLoaded) currentRow = dm->sf->mapFromSource(currentDmIdx).row();
-//    else currentRow = 0;
+    if (G::isNewFolderLoaded) currentRow = dm->sf->mapFromSource(currentDmIdx).row();
+    else currentRow = 0;
 
     thumbView->iconViewDelegate->currentRow = currentRow;
     gridView->iconViewDelegate->currentRow = currentRow;
@@ -6581,7 +6629,8 @@ void MW::sortChange(QString source)
        selected index does not change and fileSelectionChange will not be signalled.
        Therefore we call it here to force the update to caching and icons */
 //    qDebug() << __FUNCTION__ << idx.data() << "Calling fileSelectionChange(idx, idx)";
-    fileSelectionChange(idx, idx);
+    qDebug() << __FUNCTION__ << "Calling fileSelectionChange";
+    fileSelectionChange(idx, idx, __FUNCTION__);
 
     scrollToCurrentRow();
     G::popUp->hide();
@@ -8246,7 +8295,6 @@ void MW::toggleZoomDlg()
 
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ /*<< isZoomDlgVisible*/;
     // toggle zoomDlg (if open then close)
     if (isZoomDlgVisible) {
         if (zoomDlg->isVisible()) {
@@ -10076,7 +10124,7 @@ void MW::toggleThumbDockVisibity()
         thumbDock->raise();
         thumbDockVisibleAction->setChecked(true);
         qDebug() << __FUNCTION__ << currentSfIdx.data() << "Calling fileSelectionChange(currentSfIdx, currentSfIdx)";
-        fileSelectionChange(currentSfIdx, currentSfIdx);
+        fileSelectionChange(currentSfIdx, currentSfIdx, __FUNCTION__);
     }
 
     if (G::mode != "Grid" && isNormalScreen) {
@@ -12048,7 +12096,8 @@ void MW::deleteFiles()
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
     thumbView->setCurrentIndex(sfIdx);
-    fileSelectionChange(sfIdx, sfIdx);
+    qDebug() << __FUNCTION__ << "Calling fileSelectionChange";
+    fileSelectionChange(sfIdx, sfIdx, __FUNCTION__);
 }
 
 void MW::deleteFolder()
@@ -12413,6 +12462,7 @@ void MW::setCentralMessage(QString message)
     if (G::isLogger) G::log(__FUNCTION__);
     msg.msgLabel->setText(message);
     centralLayout->setCurrentIndex(MessageTab);
+    QApplication::processEvents();
 }
 
 void MW::help()
@@ -12456,6 +12506,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << dm->index(0, G::NameColumn).data().toString();
+    stopAndClearAll("test");
 }
 // End MW
