@@ -70,7 +70,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     QElapsedTimer decodeTime;
 //    QElapsedTimer ICCTime;
 //    qint64 tRead;
-    qint64 tDecode;
+//    qint64 tDecode;
 //    qint64 tICC;
 //    readTime.start();
 
@@ -241,6 +241,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     // All other formats
     else {
         // try to decode
+        qDebug() << __FUNCTION__ << fPath;
         if (!image.load(fPath)) {
             imFile.close();
             QString err = "Could not decode.";

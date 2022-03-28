@@ -72,7 +72,7 @@ void Metadata::initSupportedFiles()
                         << "hif"
                            ;
 
-    getMetadataFormats  << "arw"
+    hasMetadataFormats  << "arw"
                         << "cr2"
                         << "cr3"
                         << "dng"
@@ -1004,8 +1004,9 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         }
         if (!parsed) {
             p.file.close();
-            m.err += "Unable to read format for " + path + ". ";
-            qWarning() << __FUNCTION__ << m.err;
+            QString msg =  "Unable to parse metadata for " + path + ". ";
+            m.err += msg;
+            qWarning() << __FUNCTION__ << msg;
             return false;
         }
         if (G::useSidecar) {
@@ -1065,7 +1066,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
-    if (!getMetadataFormats.contains(ext)) {
+    if (!hasMetadataFormats.contains(ext)) {
         clearMetadata();
         return false;
     }
