@@ -1567,8 +1567,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/, QStr
     }
     */
 
-    setCentralMessage("");
-
     // user clicks outside thumb but inside treeView dock
 //    QModelIndexList selected = selectionModel->selectedIndexes();
 //    if (selected.isEmpty() && !G::isInitializing) return;
