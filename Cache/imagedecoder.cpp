@@ -89,10 +89,9 @@ bool ImageDecoder::load()
     if (metadata->videoFormats.contains(ext)) return false;
 
     QFile imFile(fPath);
-//    m = dm->imMetadata(fPath);
 
     // is metadata loaded rgh use isMeta in cacheItemList?
-    if (!n.metadataLoaded) {
+    if (!n.metadataLoaded && metadata->hasMetadataFormats.contains(ext)) {
         G::error(__FUNCTION__, fPath, "Could not load metadata.");
         return false;
     }
@@ -203,7 +202,7 @@ bool ImageDecoder::load()
     else {
         // try to decode
         ImageMetadata m;
-        /*
+//        /*
         qDebug() << __FUNCTION__
                  << "USEQT: "
                  << "Id =" << threadId

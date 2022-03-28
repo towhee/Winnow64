@@ -166,7 +166,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     }
 
     // The image type might not have metadata we can read, so load entire image and resize
-    if (!metadata->getMetadataFormats.contains(ext)) {
+    if (!metadata->hasMetadataFormats.contains(ext)) {
         return loadFromEntireFile(fPath, image, dmRow);
     }
 

@@ -80,7 +80,7 @@ public:
     QStringList hasJpg;
     QStringList hasHeic;
     QStringList sidecarFormats;
-    QStringList getMetadataFormats;
+    QStringList hasMetadataFormats;
     QStringList rotateFormats;
     QStringList embeddedICCFormats;
     QStringList internalXmpFormats;

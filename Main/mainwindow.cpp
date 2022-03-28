@@ -688,6 +688,8 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         */
         G::popUp->hide();
         if (!G::isNewFolderLoaded) stopAndClearAll();
+        // end stress test
+        else if (isStressTest) isStressTest = false;
         // cancel slideshow
         else if (G::isSlideShow) slideShow();
         // quit loading datamodel
@@ -702,8 +704,6 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         else if (G::isRunningStackOperation) emit abortStackOperation();
         // stop building filters
         else if (filters->buildingFilters)  buildFilters->stop();
-        // end stress test
-        else if (isStressTest) isStressTest = false;
         // exit full screen mode
         else if (fullScreenAction->isChecked()) escapeFullScreen();
     }
@@ -11582,6 +11582,14 @@ void MW::stressTest(int ms)
     double seconds = msElapsed * 0.001;
     double msPerImage = msElapsed * 1.0 / count;
     int imagePerSec = count * 1.0 / seconds;
+    QString msg = "Executed stress test " + QString::number(count) + " times.<br>" +
+                  QString::number(msElapsed) + " ms elapsed.<br>" +
+                  QString::number(ms) + " ms delay.<br>" +
+                  QString::number(imagePerSec) + " images per second.<br>" +
+                  QString::number(msPerImage) + " ms per image."
+//                  + "<br><br>Press <font color=\"red\"><b>Esc</b></font> to cancel this popup."
+                  ;
+    G::popUp->showPopup(msg, 0);
     qDebug() << __FUNCTION__ << "Executed stress test" << count << "times.  "
              << msElapsed << "ms elapsed  "
              << ms << "ms delay  "
@@ -11931,7 +11939,7 @@ void MW::refreshCurrentFolder()
 
             // update metadata
             QString ext = dm->modifiedFiles.at(i).suffix().toLower();
-            if (metadata->getMetadataFormats.contains(ext)) {
+            if (metadata->hasMetadataFormats.contains(ext)) {
                 if (metadata->loadImageMetadata(dm->modifiedFiles.at(i), true, true, false, true, __FUNCTION__)) {
                     metadata->m.row = dmRow;
                     dm->addMetadataForItem(metadata->m);
