@@ -290,7 +290,7 @@ void BuildFilters::mapUniqueInstances()
     QMap<QString, QString> creatorMap;
     QMap<QString, QString> yearMap;
     QMap<QString, QString> dayMap;
-    for(int row = 0; row < dm->sf->rowCount(); row++) {
+    for (int row = 0; row < dm->sf->rowCount(); row++) {
         if (abort) return;
         QString type = dm->sf->index(row, G::TypeColumn).data().toString();
         if (!typesMap.contains(type)) typesMap[type] = type;

@@ -45,13 +45,16 @@ datamodel.
     setColumnCount(5);
     setHeaderHidden(true);
     setColumnWidth(0, 250);
+    setColumnWidth(1, 0);
     setColumnWidth(1, 50);
     setColumnWidth(2, 50);
+    setColumnWidth(3, 0);
     setColumnWidth(3, 50);
     setColumnWidth(4, 50);
-    setHeaderLabels({"", "Value", "Filter", "Raw+Jpg", "All"});
+    // Headerlabel set in search header: {"", "Value", "Filter", "Raw+Jpg", "All"}
     header()->setDefaultAlignment(Qt::AlignCenter);
-    hideColumn(1);
+
+    // Cannot hide columns until tree fully initialized - see resizeColumns
 
     indentation = 10;
     setIndentation(indentation);
@@ -141,9 +144,9 @@ void Filters::createPredefinedFilters()
     search->setFont(0, categoryFont);
     search->setText(2, "Filter");
     search->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
-    search->setText(3, "Total");
+    search->setText(3, "JPG/RAW");
     search->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
-    search->setText(4, "Total");
+    search->setText(4, "All");
     search->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
     search->setData(0, G::ColumnRole, G::SearchColumn);
 
@@ -265,42 +268,34 @@ by addCategoryFromData.
     if (G::isLogger) G::log(__FUNCTION__); 
     types = new QTreeWidgetItem(this);
     types->setText(0, " File type");
-//    types->setFont(0, categoryFont);
     types->setData(0, G::ColumnRole, G::TypeColumn);
 
     years = new QTreeWidgetItem(this);
     years->setText(0, " Years");
-//    years->setFont(0, categoryFont);
     years->setData(0, G::ColumnRole, G::YearColumn);
 
     days = new QTreeWidgetItem(this);
     days->setText(0, " Days");
-//    days->setFont(0, categoryFont);
     days->setData(0, G::ColumnRole, G::DayColumn);
 
     models = new QTreeWidgetItem(this);
     models->setText(0, " Camera model");
-//    models->setFont(0, categoryFont);
     models->setData(0, G::ColumnRole, G::CameraModelColumn);
 
     lenses = new QTreeWidgetItem(this);
     lenses->setText(0, " Lenses");
-//    lenses->setFont(0, categoryFont);
     lenses->setData(0, G::ColumnRole, G::LensColumn);
 
     focalLengths = new QTreeWidgetItem(this);
     focalLengths->setText(0, " FocalLengths");
-//    focalLengths->setFont(0, categoryFont);
     focalLengths->setData(0, G::ColumnRole, G::FocalLengthColumn);
 
     titles = new QTreeWidgetItem(this);
     titles->setText(0, " Title");
-//    titles->setFont(0, categoryFont);
     titles->setData(0, G::ColumnRole, G::TitleColumn);
 
     creators = new QTreeWidgetItem(this);
     creators->setText(0, " Creators");
-//    creators->setFont(0, categoryFont);
     creators->setData(0, G::ColumnRole, G::CreatorColumn);
 }
 
@@ -834,16 +829,20 @@ void Filters::setSoloMode(bool isSolo)
 void Filters::resizeColumns()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
+    hideColumn(1);
+    hideColumn(3);
     QFont font = this->font();
 //    font.setPointSize(G::fontSize.toInt());
     QFontMetrics fm(font);
-    int decorationWidth = 25;       // the expand/collapse arrows
-    int countColumnWidth = fm.boundingRect("99999").width();
-    int countFilteredColumnWidth = fm.boundingRect("Filter_").width();
-    int col0Width = width() - G::scrollBarThickness - countColumnWidth -
-                    countFilteredColumnWidth - decorationWidth;
+//    int decorationWidth = 25;       // the expand/collapse arrows
+    int countColumnWidth = fm.boundingRect("999999").width();
+    qDebug() << __FUNCTION__ << countColumnWidth;
+    int countFilteredColumnWidth = fm.boundingRect("999999").width();
+    int col0Width = viewport()->width() - countColumnWidth -
+                    countFilteredColumnWidth - 5 /*- decorationWidth*/;
+//    int col0Width = width() - G::scrollBarThickness - countColumnWidth -
+//            countFilteredColumnWidth - 5 /*- decorationWidth*/;
     setColumnWidth(4, countColumnWidth);
-    setColumnWidth(3, countColumnWidth);
     setColumnWidth(2, countFilteredColumnWidth);
     setColumnWidth(0, col0Width);
 }
