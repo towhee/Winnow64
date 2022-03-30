@@ -2266,6 +2266,7 @@ void MW::loadImageCacheForNewFolder()
     metadataLoaded = true;
 
     G::isNewFolderLoaded = true;
+    dm->loadingModel = false;
 
     /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
     including current index and file path req'd by mdCache and EmbelProperties...  If
@@ -6167,7 +6168,7 @@ void MW::launchBuildFilters()
         return;
     }
     if (dm->loadingModel) {
-        G::popUp->showPopup("Not all data required for filtering has been loaded yet.");
+        G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
         return;
     }
 
