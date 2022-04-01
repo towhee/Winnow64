@@ -30,9 +30,8 @@
 class ImageCache : public QThread
 {
     Q_OBJECT
-
 public:
-    ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm, Metadata *metadata);
+    ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm/*, Metadata *metadata*/);
     ~ImageCache() override;
 
     void initImageCache(int &cacheSizeMB, int &cacheMinMB,

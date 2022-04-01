@@ -836,7 +836,6 @@ void Filters::resizeColumns()
     QFontMetrics fm(font);
 //    int decorationWidth = 25;       // the expand/collapse arrows
     int countColumnWidth = fm.boundingRect("999999").width();
-    qDebug() << __FUNCTION__ << countColumnWidth;
     int countFilteredColumnWidth = fm.boundingRect("999999").width();
     int col0Width = viewport()->width() - countColumnWidth -
                     countFilteredColumnWidth - 5 /*- decorationWidth*/;

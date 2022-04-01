@@ -43,15 +43,16 @@ Data structures:
 
 ImageCache::ImageCache(QObject *parent,
                        ImageCacheData *icd,
-                       DataModel *dm,
-                       Metadata *metadata)
+                       DataModel *dm/*,
+                       Metadata *metadata*/)
     : QThread(parent)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     // Data is kept in ImageCacheData icd, a concurrent hash table
     this->icd = icd;
     this->dm = dm;
-    this->metadata = metadata;
+    metadata = new Metadata;
+//    this->metadata = metadata;
     // create n decoder threads
     decoderCount = QThread::idealThreadCount();
     icd->cache.decoderCount = decoderCount;

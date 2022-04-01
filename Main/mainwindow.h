@@ -41,6 +41,11 @@
 #include "Cache/cachedata.h"
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
+
+// loadversion2
+#include "Cache/imagecache2.h"
+#include "Cache/metaread.h"
+
 //#ifdef Q_OS_WIN
 #include "Utilities/icc.h"
 //#endif
@@ -112,6 +117,8 @@ public:
             "Includes links to download and video tutorials.</p></body></html>";
 
     bool isShift;               // used when opening if shift key pressed
+
+    // debugging flags
     bool ignoreSelectionChange = false;
     bool isStartupArgs = false;
     bool hideEmbellish = false;
@@ -119,8 +126,10 @@ public:
     bool useInfoView = true;
     bool useImageView = true;
     bool useUpdateStatus = true;
-
     bool useFilterView = true;
+
+    // loadversion2
+    bool useLinearLoadProcess = false;
 
     int copyCutCount;   // rgh req'd?
     QTextStream rpt;
@@ -474,6 +483,11 @@ private slots:
                                 ImageCacheData::Cache cache,
                                 QString source);
     // caching
+    // loadversion2
+    void loadNew1();
+    void loadNew2();
+    void loadNew3();
+
     void loadNewFolder();
     void loadMetadataCache2ndPass();
     void refreshCurrentAfterReload();
@@ -963,10 +977,14 @@ private:
     CompareImages *compareImages;
 
     MetadataCache *metadataCacheThread;
+    ImageCache *imageCacheThread;
 //    MdCacheMgr *mdCacheMgr;
 //    MetaHash metaHash;
 
-    ImageCache *imageCacheThread;
+    // loadversion2
+    MetaRead *metaRead;
+    ImageCache2 *imageCacheThread2;
+
     Thumb *thumb;
     InfoView *infoView;
     Ingest *backgroundIngest = nullptr;

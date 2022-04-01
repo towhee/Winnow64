@@ -202,7 +202,7 @@ bool ImageDecoder::load()
     else {
         // try to decode
         ImageMetadata m;
-//        /*
+        /*
         qDebug() << __FUNCTION__
                  << "USEQT: "
                  << "Id =" << threadId
