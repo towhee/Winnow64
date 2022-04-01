@@ -291,7 +291,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     useFilterView = true;
 
     // loadversion2
-    useLinearLoadProcess = false;
+    useLinearLoadProcess = true;
 
     // Initialize some variables
     initialize();
@@ -1782,7 +1782,7 @@ void MW::stopAndClearAll(QString src)
     G::allMetadataLoaded = false;
     G::isNewFolderLoadedAndInfoViewUpToDate = false;
     // Stop any threads that might be running.
-    metaRead->stop();
+    if (!useLinearLoadProcess) metaRead->stop();
     metadataCacheThread->stopMetadataCache();
     imageCacheThread->stopImageCache();
     buildFilters->stop();
