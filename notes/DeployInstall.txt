@@ -16,18 +16,20 @@ NORMAL DEPLOYMENT
 	Using an installer: (as of 2021-01-01)
 	- Update ExifTool (see above).
 	- Duplicate current on http://165.227.46.158/winnow_mac as version number
-	- Compile Winnow in /Users/roryhill/Projects/Winnow64
+        - Compile Winnow in /Users/roryhill/Projects/Winnow64 as a universal binary
 	- Update version and test/current in /Users/roryhill/Projects/WinnowInstall/Config/config.xml
-	- Update version in /Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/meta/package.xml.  This will make sure message is 
-	  up-to-date when user is installing.
+        - Update version in /Users/roryhill/Projects/WinnowInstall/packages/com.rh.bin/meta/package.xml.
+          This will make sure message is up-to-date when user is installing.
 	- Run /Users/roryhill/Projects/WinnowInstall/Batch/WinnowInstallerScript.command
 	- test download new version
 
 	For Win: 
 	---------------------------------------------------------------------
 	-  Update winnow.exe by compiling in release mode without shadow build
-	-  Duplicate (DO NOT USE local temp copy) in winSCP the prior version in current to an archive folder (change target remote path).  DO NOT DELETE repository in current folder.
-	-  Update and save the version and folder paths and test/current in D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
+        -  Duplicate (DO NOT USE local temp copy) in winSCP the prior version in current to an archive
+           folder (change target remote path).  DO NOT DELETE repository in current folder.
+        -  Update and save the version and folder paths and test/current in
+           D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
 	-  Update and save the version and release date in
 	   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.bin\meta\package.xml
 	-  If changes other than binary, update and save the releaseDate in

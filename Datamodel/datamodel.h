@@ -6,8 +6,8 @@
 #include "Datamodel/filters.h"
 #include "progressbar.h"
 #include "Main/global.h"
-#include "Datamodel/HashMap.h"
-#include "Datamodel/HashNode.h"
+//#include "Datamodel/HashMap.h"
+//#include "Datamodel/HashNode.h"
 #include <algorithm>                // req'd for sorting fileInfoList
 
 class SortFilter : public QSortFilterProxyModel

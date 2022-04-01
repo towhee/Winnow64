@@ -8,6 +8,12 @@ CACHING STRATEGY
 - read icons for visible range*, visible + range, visible - range, rest to limit
 - when visible icons read, launch ImageCache
 
+NEW CLASSES
+- MetaRead
+- MetaReader
+- IconLoad
+- IconLoader
+
 Metadata reading in class metaread (replace mdcache) - new thread
 
 QVector<bool> dmRowRead;  // match rows in datamodel

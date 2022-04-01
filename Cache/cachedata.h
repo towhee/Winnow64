@@ -17,7 +17,7 @@ public:
     // cache parameters in struct (used in ImageCache and MainWindow)
     struct Cache {
         int key;                    // current image
-        int prevKey;                // used to establish directionof travel
+        int prevKey;                // used to establish directiono f travel
         int toCacheKey;             // next file to cache
         int toDecacheKey;           // next file to remove from cache
         bool isForward;             // direction of travel for caching algorithm
@@ -30,7 +30,7 @@ public:
         int currMB;                 // the current MB consumed by the cache
         int maxMB;                  // maximum MB available to cache
         int minMB;                  // minimum MB available to cache
-        int folderMB;               // MB required for all files in folder
+        int folderMB;               // MB required for all files in folder // rgh req'd?
         int targetFirst;            // beginning of target range to cache
         int targetLast;             // end of the target range to cache
         int decoderCount;           // number of separate threads used to decode images
@@ -61,7 +61,6 @@ public:
     } cacheItem;
 
     QVector<CacheItem> cacheItemList;
-//    QList<CacheItem> cacheItemList;
 };
 Q_DECLARE_METATYPE(ImageCacheData::Cache)
 
@@ -82,5 +81,4 @@ Q_DECLARE_METATYPE(ImageCacheData::Cache)
    10       10        1        3        0        4        1      119   D:/Pictures/Calendar_Beach/2012-08-16_0015.jpg
    11       11        1        3        0        5        1      119   D:/Pictures/Calendar_Beach/2014-09-26_0288.jpg
    12       12        1        3        0        1        1      119   D:/Pictures/Calendar_Beach/2014-04-11_0060.jpg
-
 */

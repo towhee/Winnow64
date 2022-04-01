@@ -1,13 +1,13 @@
 #ifndef IMAGEDECODER_H
 #define IMAGEDECODER_H
 
-//#include <QObject>
 #include <QtWidgets>
 #include <QMutex>
 #include <QThread>
 #include <QWaitCondition>
 #include "Main/global.h"
 #include "Cache/cachedata.h"
+#include "Metadata/metadata.h"
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/imagemetadata.h"
@@ -20,7 +20,6 @@
 class ImageDecoder : public QThread
 {
     Q_OBJECT
-
 public:
     ImageDecoder(QObject *parent,
                  int id,

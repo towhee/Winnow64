@@ -54,6 +54,9 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ??
 DONE/FIXED
+- Release 1.32
+- Filters not updating
+- Added "test" to installation process
 - Handle winnets on Mac
 - Use png for disabled checkbox
 - DataModel::clearDataModel had big delay removing all the rows

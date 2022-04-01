@@ -901,6 +901,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 //    mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__); 
     int row = m.row;
+//    qDebug() << __FUNCTION__ << row;
     if (!metadata->ratings.contains(m.rating)) {
         m.rating = "";
         m._rating = "";

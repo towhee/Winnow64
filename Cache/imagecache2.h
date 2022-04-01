@@ -1,5 +1,5 @@
-#ifndef IMAGECACHE_H
-#define IMAGECACHE_H
+#ifndef IMAGECACHE2_H
+#define IMAGECACHE2_H
 
 #include <QtWidgets>
 #include <QObject>
@@ -27,12 +27,12 @@
 #include "Utilities/mac.h"
 #endif
 
-class ImageCache : public QThread
+class ImageCache2 : public QThread
 {
     Q_OBJECT
 public:
-    ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm/*, Metadata *metadata*/);
-    ~ImageCache() override;
+    ImageCache2(QObject *parent, ImageCacheData *icd, DataModel *dm/*, Metadata *metadata*/);
+    ~ImageCache2() override;
 
     void initImageCache(int &cacheSizeMB, int &cacheMinMB,
              bool &isShowCacheStatus, int &cacheWtAhead/*,
@@ -47,6 +47,8 @@ public:
     bool cacheUpToDate();           // target range all cached
     void removeFromCache(QStringList &pathList);
 //    QSize getPreviewSize();
+
+    void addCacheItem(ImageMetadata &m);
 
     QString diagnostics();
     void updateStatus(QString instruction, QString source); // update cached send signal
@@ -122,4 +124,5 @@ private:
     bool debugCaching = false;
 };
 
-#endif // IMAGECACHE_H
+#endif // IMAGECACHE2_H
+
