@@ -45,9 +45,10 @@ void MetaRead::run()
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->m.row = dmRow;
             if (abort) stop();
-//            emit add(metadata->m);
-            dm->addMetadataForItem(metadata->m);
-            imageCacheThread2->addCacheItem(metadata->m);
+            emit addToDatamodel(metadata->m);
+            emit addToImageCache(metadata->m);
+//            dm->addMetadataForItem(metadata->m);
+//            imageCacheThread2->addCacheItem(metadata->m);
         }
         // load icon
         QModelIndex idx = dm->sf->index(dmRow, 0);

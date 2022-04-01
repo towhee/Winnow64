@@ -106,9 +106,9 @@ bucket is always constructed with a dummy head node
 
         bool find(const K &key, V &value) const
         /*
-        Function to find an entry in the bucket matching the key If key is found, the
+        Function to find an entry in the bucket matching the key. If key is found, the
         corresponding value is copied into the parameter "value" and function returns
-        true. If key is not found, function returns false
+        true. If key is not found, function returns false.
         */
         {
             // A shared mutex is used to enable mutiple concurrent reads
@@ -128,7 +128,7 @@ bucket is always constructed with a dummy head node
         void insert(const K &key, const V &value)
         /*
         Function to insert into the bucket. If key already exists, update the value, else
-        insert a new node in the bucket with the <key, value> pair
+        insert a new node in the bucket with the <key, value> pair.
         */
         {
             //Exclusive lock to enable single write in the bucket

@@ -757,7 +757,7 @@ void ImageCache2::reportRunStatus()
              << "currentPath =" << currentPath;
 }
 
-void ImageCache2::addCacheItem(ImageMetadata &m)
+void ImageCache2::addCacheItem(ImageMetadata m)
 {
     mutex.lock();
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);

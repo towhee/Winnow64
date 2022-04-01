@@ -911,6 +911,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
         m._label = "";
     }
 
+    QMutexLocker locker(&mutex);
     QString search = index(row, G::SearchTextColumn).data().toString();
 
     setData(index(row, G::SearchColumn), m.isSearch);
