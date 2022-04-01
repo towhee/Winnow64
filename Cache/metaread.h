@@ -28,7 +28,8 @@ protected:
 
 signals:
     void completed();
-    void add(ImageMetadata m);
+    void addToDatamodel(ImageMetadata m);
+    void addToImageCache(ImageMetadata m);
 
 private:
     QMutex mutex;

@@ -48,8 +48,6 @@ public:
     void removeFromCache(QStringList &pathList);
 //    QSize getPreviewSize();
 
-    void addCacheItem(ImageMetadata &m);
-
     QString diagnostics();
     void updateStatus(QString instruction, QString source); // update cached send signal
     QString reportCache(QString title = "");
@@ -76,6 +74,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 public slots:
+    void addCacheItem(ImageMetadata m);
     bool fillCache(int id, bool positionChange = false);
     void setCurrentPosition(QString path);
     void cacheSizeChange();         // flag when cache size is changed in preferences

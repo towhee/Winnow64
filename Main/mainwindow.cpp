@@ -291,7 +291,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     useFilterView = true;
 
     // loadversion2
-    useLinearLoadProcess = true;
+    useLinearLoadProcess = false;
 
     // Initialize some variables
     initialize();
@@ -1689,6 +1689,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/, QStr
             && useImageCache
            )
         {
+            qDebug() << __FUNCTION__ << "emit setImageCachePosition(dm->currentFilePath);";
             emit setImageCachePosition(dm->currentFilePath);
         }
     }
@@ -1948,6 +1949,7 @@ void MW::loadNew2()   // loadversion2
 void MW::loadNew3()  // loadversion2
 {
    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+   qDebug() << __FUNCTION__;
 //    setCentralMessage("Initializing the Image Cache");
     // now that metadata is loaded populate the data model
     if (isShowCacheProgressBar) {
@@ -4712,7 +4714,10 @@ void MW::createCaching()
 
         metaRead = new MetaRead(this, dm, imageCacheThread2);
         // add metadata to datamodel
-        connect(metaRead, &MetaRead::add, dm, &DataModel::addMetadataForItem);
+        connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
+        // add to image cache list
+        connect(metaRead, &MetaRead::addToImageCache,
+                imageCacheThread2, &ImageCache2::addCacheItem);
         // message metadata reading completed
         connect(metaRead, &MetaRead::completed, this, &MW::loadNew2);
     }
