@@ -1654,6 +1654,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/, QStr
     if (okToLoadImage && useImageView) {
     */
     if (useImageView) {
+//        setCentralMessage("");
         if (imageView->loadImage(fPath, __FUNCTION__)) {
             updateClassification();
             centralLayout->setCurrentIndex(prevCentralView);
@@ -1689,7 +1690,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/, QStr
             && useImageCache
            )
         {
-            qDebug() << __FUNCTION__ << "emit setImageCachePosition(dm->currentFilePath);";
             emit setImageCachePosition(dm->currentFilePath);
         }
     }
@@ -1900,54 +1900,73 @@ void MW::updateIconsVisible(bool useCurrentRow)
              << "last =" << last;
 //        */
 
-    metadataCacheThread->firstIconVisible = first;
-    metadataCacheThread->midIconVisible = (first + last) / 2;// rgh qCeil ??
-    metadataCacheThread->lastIconVisible = last;
-    metadataCacheThread->visibleIcons = last - first + 1;
+    if (useLinearLoadProcess) {
+        metadataCacheThread->firstIconVisible = first;
+        metadataCacheThread->midIconVisible = (first + last) / 2;// rgh qCeil ??
+        metadataCacheThread->lastIconVisible = last;
+        metadataCacheThread->visibleIcons = last - first + 1;
+    }
+    else {
+//        metaRead->initialize(first, last);
+        dm->firstVisibleRow = first;
+        dm->lastVisibleRow = last;
+    }
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 //    metadataCacheThread->sizeChange(__FUNCTION__);
 }
 
+void MW::loadNew0()   // loadversion2
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
+    updateMetadataThreadRunStatus(true, true, __FUNCTION__);
+    metaRead->read();
+}
+
 void MW::loadNew1()   // loadversion2
 {
-//    qDebug() << __FUNCTION__ << "metaRead->initialize()";
+    if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
     G::allMetadataLoaded = false;
+    // reset for bestAspect calc
+    G::iconWMax = G::minIconSize;
+    G::iconHMax = G::minIconSize;
     dm->loadingModel = true;
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
+    updateIconsVisible(true);
     imageCacheThread2->initImageCache(netCacheMBSize, cacheMinMB,
         isShowCacheProgressBar, cacheWtAhead);
-//    setCentralMessage("Reading all metadata.");
-//    metaRead->initialize();     // move to stop and clear?
-//    qDebug() << __FUNCTION__ << "metaRead->read(0)";
-    updateMetadataThreadRunStatus(true, true, __FUNCTION__);
-    metaRead->read(0);
+    loadNew0();
     loadNew3();
 
 }
 
 void MW::loadNew2()   // loadversion2
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     qDebug() << __FUNCTION__ << G::t.elapsed() << "ms";
-    qApp->beep();
+    G::allMetadataLoaded = dm->allMetadataLoaded();
     updateMetadataThreadRunStatus(false, true, __FUNCTION__);
-    // reset for bestAspect calc
-    G::iconWMax = G::minIconSize;
-    G::iconHMax = G::minIconSize;
     updateIconBestFit();
     updateIconsVisible(true);
-//    setCentralMessage("Reading icons (up to 3000).");
-    metadataCacheThread->readIconChunk();
-    G::metaCacheMB = metadataCacheThread->memRequired();
+    if (useLinearLoadProcess) {
+        metadataCacheThread->readIconChunk();
+        G::metaCacheMB = metadataCacheThread->memRequired();
+    }
+    else {
+
+    }
 
 //    loadNew3();
-
+//    emit setImageCachePosition(dm->currentFilePath);
 }
 
 void MW::loadNew3()  // loadversion2
 {
+    if (G::isLogger) G::log(__FUNCTION__);
    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
    qDebug() << __FUNCTION__;
 //    setCentralMessage("Initializing the Image Cache");
@@ -1971,7 +1990,7 @@ void MW::loadNew3()  // loadversion2
 //    emit setImageCachePosition(first);
 
     // have to wait until image caching thread running before setting flag
-    metadataLoaded = true;
+//    metadataLoaded = true;
 
     G::isNewFolderLoaded = true;
     dm->loadingModel = false;
@@ -2087,7 +2106,10 @@ void MW::thumbHasScrolled()
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-        if (!G::isNewSelection) metadataCacheThread->scrollChange(__FUNCTION__);
+        if (!G::isNewSelection) {
+            if (useLinearLoadProcess) metadataCacheThread->scrollChange(__FUNCTION__);
+            else loadNew0();
+        }
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
         if (idx.isValid()) {
@@ -2129,7 +2151,10 @@ void MW::gridHasScrolled()
         updateIconsVisible(false);
         thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-        if (!G::isNewSelection) metadataCacheThread->scrollChange(__FUNCTION__);
+        if (!G::isNewSelection) {
+            if (useLinearLoadProcess) metadataCacheThread->scrollChange(__FUNCTION__);
+            else loadNew0();
+        }
     }
     G::ignoreScrollSignal = false;
 }
@@ -2167,7 +2192,10 @@ void MW::tableHasScrolled()
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, __FUNCTION__);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-        if (!G::isNewSelection) metadataCacheThread->scrollChange(__FUNCTION__);
+        if (!G::isNewSelection) {
+            if (useLinearLoadProcess) metadataCacheThread->scrollChange(__FUNCTION__);
+            else loadNew0();
+        }
     }
     G::ignoreScrollSignal = false;
 }
@@ -4719,7 +4747,10 @@ void MW::createCaching()
         connect(metaRead, &MetaRead::addToImageCache,
                 imageCacheThread2, &ImageCache2::addCacheItem);
         // message metadata reading completed
-        connect(metaRead, &MetaRead::completed, this, &MW::loadNew2);
+        connect(metaRead, &MetaRead::done, this, &MW::loadNew2);
+        // signal to ImageCache new image selection
+        connect(metaRead, &MetaRead::setImageCachePosition,
+                imageCacheThread2, &ImageCache2::setCurrentPosition);
     }
 }
 

@@ -484,6 +484,7 @@ private slots:
                                 QString source);
     // caching
     // loadversion2
+    void loadNew0();
     void loadNew1();
     void loadNew2();
     void loadNew3();

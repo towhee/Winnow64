@@ -61,6 +61,7 @@ public:
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);
+    bool allMetadataLoaded();
     int rowFromPath(QString fPath);
     void refreshRowFromPath();
 
@@ -71,6 +72,8 @@ public:
     QString currentFolderPath;
     QString currentFilePath;            // used in caching to update image cache
     int currentRow;                     // used in caching to check if new image selected
+    int firstVisibleRow;                // used to determine MetaRead priority queue
+    int lastVisibleRow;                 // used to determine MetaRead priority queue
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
     bool basicFileInfoLoaded = false;   // do not navigate until basic info loaded in datamodel

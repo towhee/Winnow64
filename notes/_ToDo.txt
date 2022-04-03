@@ -1,4 +1,5 @@
 BUGS / TO DO
+- Pref cache available memory wrong before load first folder
 - On Mac: qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family ".AppleSystemFallback" with one that exists to avoid this cost.
 - Image metadata report does not show sidecar for PNG file
 - Sort taking time when loading folder and sort is file

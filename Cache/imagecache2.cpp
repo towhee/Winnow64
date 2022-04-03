@@ -979,6 +979,7 @@ void ImageCache2::setCurrentPosition(QString path)
     cache direction, priorities and target are reset and the cache is updated in fillCache.
     */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, path);
+    qDebug() << __FUNCTION__ << path;
     mutex.lock();
     currentPath = path;
     mutex.unlock();
@@ -1018,6 +1019,9 @@ void ImageCache2::cacheImage(int id, int cacheKey)
         qDebug().noquote() << __FUNCTION__ << "     decoder" << id << "key =" << k
                  << decoder[id]->fPath;
     }
+    QString k = QString::number(cacheKey).leftJustified((4));
+    qDebug().noquote() << __FUNCTION__ << "     decoder" << id << "key =" << k
+             << decoder[id]->fPath;
     makeRoom(id, cacheKey);
     icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
     icd->cacheItemList[cacheKey].isCaching = false;

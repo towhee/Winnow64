@@ -20,18 +20,28 @@ public:
     MetaRead(QObject *parent, DataModel *dm, ImageCache2 *imageCacheThread2);
     ~MetaRead() override;
     void stop();
-    void read(int row = 0);
-    void initialize();
+    void read(int currentRow = 0);
+    void initialize(int firstVisibleRow, int lastVisibleRow);
 
 protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-    void completed();
+    void done();
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
+    void setImageCachePosition(QString fPath);
 
 private:
+    void readRow(int sfRow);
+    void readMetadata(QModelIndex sfIdx, QString fPath);
+    void readIcon(QModelIndex sfIdx, QString fPath);
+    void iconMax(QPixmap &thumb);
+    void iconCleanup(int sfRow);
+    void setIconRange(int firstVisibleRow, int lastVisibleRow);
+    void buildPriorityQueue(int currentRow);
+    bool isNotLoaded(int sfRow);
+
     QMutex mutex;
     QWaitCondition condition;
     bool abort;
@@ -39,6 +49,23 @@ private:
     Metadata *metadata;
     ImageCache2 *imageCacheThread2;
     Thumb *thumb;
+
+    int rowCount;
+    int currentRow = 0;
+    int iconChunkSize;
+    struct Chunk {
+//        int startRow;
+//        int endRow;
+        int firstVisible;
+        int lastVisible;
+        int visibleCount;
+        int maxCount;
+//        int pageCount;
+    };
+    Chunk icons;
+
+    QList<int> priority;
+
 };
 
 #endif // METAREAD_H

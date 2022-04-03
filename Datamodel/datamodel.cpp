@@ -1035,6 +1035,14 @@ bool DataModel::metadataLoaded(int dmRow)
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
 }
 
+bool DataModel::allMetadataLoaded()
+{
+    for (int row = 0; row < rowCount(); ++row) {
+        if (!index(row, G::MetadataLoadedColumn).data().toBool()) return false;
+    }
+    return true;
+}
+
 int DataModel::rowFromPath(QString fPath)
 {
     if (G::isLogger) G::log(__FUNCTION__);

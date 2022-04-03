@@ -207,7 +207,9 @@ bool ImageView::loadImage(QString fPath, QString src)
         else {
             // MacOS: if showPopup thumbs do not scroll when hold arrow key down
             #ifdef Q_OS_WIN
-                if (G::isNewFolderLoaded) G::popUp->showPopup("Buffering image");
+                if (G::isNewFolderLoaded) {
+                    G::popUp->showPopup("Buffering image");
+                }
             #endif
         }
     }
