@@ -623,7 +623,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::IngestedColumn), "false");
     setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
-    setData(index(row, G::MetadataLoadedColumn), "false");
+    setData(index(row, G::MetadataLoadedColumn), false);
     setData(index(row, G::SearchColumn), "false");
     setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
     setData(index(row, G::SearchTextColumn), search);

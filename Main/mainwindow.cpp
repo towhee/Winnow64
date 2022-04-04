@@ -1465,7 +1465,7 @@ void MW::folderSelectionChange()
     }
 
     // datamodel loaded - initialize indexes
-    currentRow = 0;
+    currentRow = 00;
     currentSfIdx = dm->sf->index(currentRow, 0);
     dm->currentRow = currentRow;
     currentDmIdx = dm->sf->mapToSource(currentSfIdx);
@@ -1515,6 +1515,7 @@ void MW::folderSelectionChange()
     else {
         // metadata and icons read using multiple threaded readers
         // loadversion2
+        qDebug() << __FUNCTION__ << "loadNew1()";
         loadNew1();
     }
 
@@ -1665,7 +1666,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/, QStr
     // update caching if folder has been loaded
     if (G::isNewFolderLoaded) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
-        updateIconsVisible(true);
+        updateIconsVisible(currentRow);
         if (useLinearLoadProcess)
             metadataCacheThread->fileSelectionChange();
 //        G::track(__FUNCTION__, "Return from metadataCacheThread->fileSelectionChange() " + fPath);
@@ -1840,12 +1841,12 @@ bool MW::isCurrentThumbVisible()
     do not invoke metadata caching.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    updateIconsVisible(false);
+    updateIconsVisible(-1);
     return (currentRow > metadataCacheThread->firstIconVisible &&
             metadataCacheThread->lastIconVisible);
 }
 
-void MW::updateIconsVisible(bool useCurrentRow)
+void MW::updateIconsVisible(int row)
 {
 /*
     Polls both thumbView and gridView to determine the first, mid and last thumbnail visible.
@@ -1869,14 +1870,14 @@ void MW::updateIconsVisible(bool useCurrentRow)
     if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
 
     if (thumbView->isVisible()) {
-        if (useCurrentRow) thumbView->calcViewportRange(currentRow);
+        if (row >= 0) thumbView->calcViewportRange(row);
         else thumbView->scannedViewportRange();
         if (thumbView->firstVisibleCell < first) first = thumbView->firstVisibleCell;
         if (thumbView->lastVisibleCell > last) last = thumbView->lastVisibleCell;
     }
 
     if (gridView->isVisible()) {
-        if (useCurrentRow) gridView->calcViewportRange(currentRow);
+        if (row >= 0) gridView->calcViewportRange(row);
         else gridView->scannedViewportRange();
         if (gridView->firstVisibleCell < first) first = gridView->firstVisibleCell;
         if (gridView->lastVisibleCell > last) last = gridView->lastVisibleCell;
@@ -1936,12 +1937,10 @@ void MW::loadNew1()   // loadversion2
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-    updateIconsVisible(true);
+    updateIconsVisible(currentRow);
     imageCacheThread2->initImageCache(netCacheMBSize, cacheMinMB,
         isShowCacheProgressBar, cacheWtAhead);
     loadNew0();
-    loadNew3();
-
 }
 
 void MW::loadNew2()   // loadversion2
@@ -1949,19 +1948,14 @@ void MW::loadNew2()   // loadversion2
     if (G::isLogger) G::log(__FUNCTION__);
     qDebug() << __FUNCTION__ << G::t.elapsed() << "ms";
     G::allMetadataLoaded = dm->allMetadataLoaded();
+    G::isNewFolderLoaded = true;
+    dm->loadingModel = false;
     updateMetadataThreadRunStatus(false, true, __FUNCTION__);
     updateIconBestFit();
-    updateIconsVisible(true);
-    if (useLinearLoadProcess) {
-        metadataCacheThread->readIconChunk();
-        G::metaCacheMB = metadataCacheThread->memRequired();
-    }
-    else {
-
-    }
-
-//    loadNew3();
-//    emit setImageCachePosition(dm->currentFilePath);
+    updateIconsVisible(currentRow);
+    // resize table columns with all data loaded
+    tableView->resizeColumnsToContents();
+    tableView->setColumnWidth(G::PathColumn, 24+8);
 }
 
 void MW::loadNew3()  // loadversion2
@@ -1977,20 +1971,9 @@ void MW::loadNew3()  // loadversion2
     }
 //    updateIconBestFit();      // rgh make sure req'd
 
-    // have to wait for the data before resize table columns
+    // preliminary resize table columns
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
-
-//    // set image cache parameters and build image cacheItemList
-//    int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
-//    if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-//    imageCacheThread2->initImageCache(netCacheMBSize, cacheMinMB,
-//        isShowCacheProgressBar, cacheWtAhead);
-//    QString first = dm->sf->index(0, 0).data(G::PathRole).toString();
-//    emit setImageCachePosition(first);
-
-    // have to wait until image caching thread running before setting flag
-//    metadataLoaded = true;
 
     G::isNewFolderLoaded = true;
     dm->loadingModel = false;
@@ -2055,7 +2038,7 @@ void MW::loadNewFolder()
 
 //    mct->readMetadataChunk();
     updateIconBestFit();
-    updateIconsVisible(true);
+    updateIconsVisible(currentRow);
     setCentralMessage("Reading icon chunk (up to 3000).");
     mct->readIconChunk();
     G::metaCacheMB = mct->memRequired();
@@ -2067,7 +2050,7 @@ void MW::loadMetadataCache2ndPass()
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__;
     updateIconBestFit();
-    updateIconsVisible(true);
+    updateIconsVisible(currentRow);
     metadataCacheThread->loadNewFolder2ndPass();
 }
 
@@ -2100,9 +2083,9 @@ void MW::thumbHasScrolled()
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconsVisible(false);
+        updateIconsVisible(-1);
         gridView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
-        updateIconsVisible(false);
+        updateIconsVisible(-1);
         if (tableView->isVisible())
             tableView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
@@ -2148,7 +2131,7 @@ void MW::gridHasScrolled()
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconsVisible(false);
+        updateIconsVisible(-1);
         thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
@@ -2188,7 +2171,7 @@ void MW::tableHasScrolled()
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        updateIconsVisible(false);
+        updateIconsVisible(-1);
         if (thumbView->isVisible())
             thumbView->scrollToRow(tableView->midVisibleRow, __FUNCTION__);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
@@ -2209,7 +2192,7 @@ void MW::numberIconsVisibleChange()
 */
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-    updateIconsVisible(true);
+    updateIconsVisible(currentRow);
     metadataCacheThread->sizeChange(__FUNCTION__);
 }
 
@@ -2272,7 +2255,7 @@ void MW::loadEntireMetadataCache(QString source)
     if (G::isInitializing) return;
     if (metadataCacheThread->isAllMetadataLoaded()) return;
 
-    updateIconsVisible(true);
+    updateIconsVisible(currentRow);
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -4741,14 +4724,17 @@ void MW::createCaching()
         connect(imageCacheThread2, &ImageCache2::centralMsg, this, &MW::setCentralMessage);
 
         metaRead = new MetaRead(this, dm, imageCacheThread2);
+
         // add metadata to datamodel
         connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
         // add to image cache list
         connect(metaRead, &MetaRead::addToImageCache,
-                imageCacheThread2, &ImageCache2::addCacheItem);
+                imageCacheThread2, &ImageCache2::addCacheItemImageMetadata);
         // message metadata reading completed
         connect(metaRead, &MetaRead::done, this, &MW::loadNew2);
-        // signal to ImageCache new image selection
+        // Signal to MW::loadNew3 to prep and run fileSelectionChange
+        connect(metaRead, &MetaRead::delayedStartImageCache, this, &MW::loadNew3);
+        // signal to ImageCache new image selection req'd?
         connect(metaRead, &MetaRead::setImageCachePosition,
                 imageCacheThread2, &ImageCache2::setCurrentPosition);
     }
@@ -6936,7 +6922,7 @@ void MW::scrollToCurrentRow()
          QAbstractItemView::ScrollHint::PositionAtCenter);
     G::ignoreScrollSignal = false;
 
-    updateIconsVisible(true);
+    updateIconsVisible(currentRow);
     metadataCacheThread->scrollChange(__FUNCTION__);
 }
 
@@ -7723,7 +7709,10 @@ void MW::diagnosticsMetadata()
 }
 void MW::diagnosticsXMP() {}
 void MW::diagnosticsMetadataCache() {}
-void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
+void MW::diagnosticsImageCache() { // loadversion2
+    if (useLinearLoadProcess) diagnosticsReport(imageCacheThread->diagnostics());
+    else diagnosticsReport(imageCacheThread2->diagnostics());
+}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
 void MW::diagnosticsErrors() {diagnosticsReport(dm->diagnosticsErrors());}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics());}
@@ -9740,7 +9729,7 @@ void MW::loupeDisplay()
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
-    updateIconsVisible(false);
+    updateIconsVisible(-1);
 
     // save selection as tableView is hidden and not synced
     saveSelection();
@@ -9784,7 +9773,7 @@ void MW::loupeDisplay()
     thumbView->setThumbParameters();
 
     // sync scrolling between modes (loupe, grid and table)
-    updateIconsVisible(false);
+    updateIconsVisible(-1);
     if (prevMode == "Table") {
         if (tableView->isRowVisible(currentRow)) scrollRow = currentRow;
         else scrollRow = tableView->midVisibleRow;
@@ -9800,7 +9789,7 @@ void MW::loupeDisplay()
     G::ignoreScrollSignal = false;
 //    thumbView->waitUntilOkToScroll();
     thumbView->scrollToRow(scrollRow, __FUNCTION__);
-//    updateIconsVisible(false);
+//    updateIconsVisible(-1);
 
     // If the zoom dialog was active, but hidden by gridView or tableView, then show it
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);
@@ -9823,7 +9812,7 @@ void MW::gridDisplay()
     G::mode = "Grid";
     asGridAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
-    updateIconsVisible(false);
+    updateIconsVisible(-1);
 
     // save selection as gridView is hidden and not synced
     saveSelection();
@@ -9866,7 +9855,7 @@ void MW::gridDisplay()
     G::ignoreScrollSignal = false;
 //    gridView->waitUntilOkToScroll();
      gridView->scrollToRow(scrollRow, __FUNCTION__);
-    updateIconsVisible(false);
+    updateIconsVisible(-1);
 
     if (gridView->justifyMargin() > 3) gridView->rejustify();
 
@@ -9884,7 +9873,7 @@ void MW::tableDisplay()
     G::mode = "Table";
     asTableAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
-    updateIconsVisible(false);
+    updateIconsVisible(-1);
 
     // save selection as tableView is hidden and not synced
     saveSelection();
@@ -9947,7 +9936,7 @@ void MW::tableDisplay()
 //    G::wait(100);
     tableView->scrollToRow(scrollRow, __FUNCTION__);
     if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, __FUNCTION__);
-    updateIconsVisible(false);
+    updateIconsVisible(-1);
 //    qDebug() << __FUNCTION__ << scrollRow << tableView->midVisibleRow;
 
     // if the zoom dialog was open then hide it as no image visible to zoom

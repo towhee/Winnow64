@@ -165,6 +165,7 @@ void MetadataCache::loadNewFolder(bool isRefresh)
     MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -240,6 +241,7 @@ void MetadataCache::loadAllMetadata()
     progress bar update is more important then use the datamodel function dm::addAllMetadata.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
+    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -266,6 +268,7 @@ void MetadataCache::scrollChange(QString source)
 */
 //    return;
     if (G::isLogger) G::log(__FUNCTION__, "called by =" + source);
+    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -293,6 +296,7 @@ void MetadataCache::sizeChange(QString source)
 */
 //    return;
     if (G::isLogger) G::log(__FUNCTION__, "called by = " + source);
+    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -315,6 +319,7 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
     added to the datamodel. The image cache is updated.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;

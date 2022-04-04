@@ -5,9 +5,10 @@
         memRequired
         iconCleanup
         iconChunkSize
-        initialize req'd
-        setIconRange req'd
+        initialize req'd ?
+        setIconRange req'd ?
         run when scroll event
+        new folder start row > 0
 */
 
 MetaRead::MetaRead(QObject *parent,
@@ -53,6 +54,7 @@ void MetaRead::read(int currentRow)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     stop();
+    abort = false;
     this->currentRow = currentRow;
     rowCount = dm->sf->rowCount();
     /*
@@ -184,9 +186,8 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     if (G::isLogger) G::log(__FUNCTION__);
     int dmRow = dm->sf->mapToSource(sfIdx).row();
     QFileInfo fileInfo(fPath);
-    qDebug() << __FUNCTION__
-             <<  sfIdx.row() << fPath;
     if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+//        qDebug() << __FUNCTION__ <<  sfIdx.row() << fPath;
         metadata->m.row = dmRow;
         if (abort) return;
         emit addToDatamodel(metadata->m);
@@ -218,9 +219,10 @@ void MetaRead::readRow(int sfRow)
     if (G::isLogger) G::log(__FUNCTION__);
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     QString fPath = sfIdx.data(G::PathRole).toString();
-    QModelIndex metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn);
-    // load metadata
-    if (!G::allMetadataLoaded && !metaLoaded.data().toBool()) {
+    bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
+//    qDebug() << __FUNCTION__ << sfRow << G::allMetadataLoaded << metaLoaded;
+    // load metadataqDebug() << __FUNCTION__ <<
+    if (!G::allMetadataLoaded && !metaLoaded) {
         readMetadata(sfIdx, fPath);
         if (abort) return;
     }
@@ -238,13 +240,17 @@ void MetaRead::run()
         * the rest
 */
     buildPriorityQueue(currentRow);
-    qDebug() << __FUNCTION__ << priority.length();
+//    qDebug() << __FUNCTION__ << priority.length() << priority;
     QModelIndex sfIdx = dm->sf->index(dm->firstVisibleRow, 0);
     QString fPath = sfIdx.data(G::PathRole).toString();
-    for (int i = 0; i < priority.length(); i++) {
+    int i;
+    for (i = 0; i < priority.length(); i++) {
         readRow(priority.at(i));
         if (abort) return;
-        if (i == 50) emit setImageCachePosition(fPath);
+        if (i == 50) emit delayedStartImageCache();
+//        if (i == 50) emit setImageCachePosition(fPath);
     }
+    if (i <= 50) emit delayedStartImageCache();
+    qDebug() << __FUNCTION__ << i;
     emit done();
 }

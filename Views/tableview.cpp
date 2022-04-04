@@ -144,6 +144,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::_CopyrightColumn) return fm.boundingRect("=Copyright=====").width();
     if (column == G::_EmailColumn) return fm.boundingRect("=Email================").width();
     if (column == G::_UrlColumn) return fm.boundingRect("=Url=======================").width();
+    if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Metadata Loaded=").width();
     if (column == G::OffsetFullColumn) return fm.boundingRect("=OffsetFullColumn=").width();
     if (column == G::LengthFullColumn) return fm.boundingRect("=LengthFullColumn=").width();
     if (column == G::WidthPreviewColumn) return fm.boundingRect("=WidthPreview=").width();
