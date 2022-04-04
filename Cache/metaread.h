@@ -31,6 +31,7 @@ signals:
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
     void setImageCachePosition(QString fPath);
+    void delayedStartImageCache();
 
 private:
     void readRow(int sfRow);

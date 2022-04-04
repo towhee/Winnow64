@@ -492,7 +492,7 @@ private slots:
     void loadNewFolder();
     void loadMetadataCache2ndPass();
     void refreshCurrentAfterReload();
-    void updateIconsVisible(bool useCurrentRow);
+    void updateIconsVisible(int row);
     bool isCurrentThumbVisible();
     void numberIconsVisibleChange();
     void loadMetadataChunk();

@@ -650,6 +650,9 @@ QString ImageCache::reportCache(QString title)
                 << "Contains"
                 << "dmCached"
                 << "SizeMB"
+                << "Loaded"
+                << "Offset"
+                << "Length"
                    ;
             rpt.setFieldWidth(3);
             rpt << "   ";
@@ -672,6 +675,9 @@ QString ImageCache::reportCache(QString title)
             << icd->imCache.contains(icd->cacheItemList.at(i).fPath)
             << dm->sf->index(icd->cacheItemList.at(i).key,0).data(G::UserRoles::CachedRole).toBool()
             << icd->cacheItemList.at(i).sizeMB
+            << icd->cacheItemList.at(i).metadataLoaded
+            << icd->cacheItemList.at(i).offsetFull
+            << icd->cacheItemList.at(i).lengthFull
                ;
         rpt.setFieldWidth(3);
         rpt << "   ";
@@ -698,10 +704,28 @@ QString ImageCache::reportImCache()
     QHash<QString, QImage>::iterator i;
     QVector<QString> keys;
     // check when imCache is empty
+    QImage image;
     icd->imCache.getKeys(keys);
     for (int i = 0; i < keys.length(); ++i) {
+        icd->imCache.find(keys.at(i), image);
+        int w = image.width();
+        int h = image.height();
         rpt << "\n";
-        rpt << i << keys.at(i);
+        rpt.reset();
+        rpt.setFieldAlignment(QTextStream::AlignLeft);
+        rpt.setFieldWidth(6);
+        rpt << i;
+        rpt.setFieldWidth(4);
+        rpt << " w = ";
+        rpt.setFieldWidth(6);
+        rpt << w;
+        rpt.setFieldWidth(4);
+        rpt << " h = ";
+        rpt.setFieldWidth(6);
+        rpt << h;
+        rpt.reset();
+        rpt << " ";
+        rpt << keys.at(i);
     }
     rpt << "\n" << keys.length() << " images in image cache.";
 

@@ -371,12 +371,12 @@ Determine the first and last visible icons in the IconView viewport for any item
 datamodel. Scrolling is set to center the current item in the viewport. There are three
 scenarios to consider:
 
-1.  At the start the top of the viewport = the top of the fisrt thumbnail.
+1.  At the start the top of the viewport = the top of the first thumbnail.
 
 2.  At the end the bottom = the bottom of the last thumbnail.
 
-3.  In between the start and end the top of the viewport can = a fractional part of a thumbnail
-    and the same for the bottom of the viewport.
+3.  In between the start and end the top of the viewport can be a fractional part of a
+    thumbnail and the same for the bottom of the viewport.
 
 Scenario 3 occurs when the viewport has to scroll to center the current thumbnail.
 
