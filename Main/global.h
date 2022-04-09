@@ -218,6 +218,7 @@ namespace G
     extern bool modifySourceFiles;
     extern bool useSidecar;
     extern bool embedTifThumb;
+    extern bool tryConcurrentLoading;
 
     extern bool isRunningBackgroundIngest;
     extern int ingestCount;

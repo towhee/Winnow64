@@ -775,6 +775,10 @@ void IconView::selectThumb(QModelIndex idx)
         G::isNewSelection = true;
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
+//        qDebug() << __FUNCTION__ << "idx =" << idx;
+    }
+    else {
+        qWarning() << "Failed to select" << idx.data(G::PathRole).toString();
     }
 }
 

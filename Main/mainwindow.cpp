@@ -291,7 +291,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     useFilterView = true;
 
     // loadversion2
-    useLinearLoadProcess = false;
+//    useLinearLoadProcess = true;
 
     // Initialize some variables
     initialize();
@@ -327,7 +327,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createSelectionModel();     // dependent on ThumbView, ImageView
     createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
-    createCaching();            // dependent on DataModel, Metadata, ThumbView
+    createMDCache();            // dependent on DataModel, Metadata, ThumbView
+    createImageCache();         // dependent on DataModel, Metadata, ThumbView
+    createImageCache2();        // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
@@ -1465,7 +1467,7 @@ void MW::folderSelectionChange()
     }
 
     // datamodel loaded - initialize indexes
-    currentRow = 00;
+    currentRow = 0;
     currentSfIdx = dm->sf->index(currentRow, 0);
     dm->currentRow = currentRow;
     currentDmIdx = dm->sf->mapToSource(currentSfIdx);
@@ -1526,7 +1528,7 @@ void MW::folderSelectionChange()
     G::isInitializing = false;
 }
 
-void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/, QString src)
+void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString src)
 {
 /*
     Triggered when file selection changes (folder change selects new image, so it also
@@ -1541,9 +1543,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/, QStr
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, src + " " + current.data(G::PathRole).toString());
     if (G::stop) return;
+    G::isNewSelection = false;
+    if (current == previous) return;
 
-   /*
-    qDebug() << __FUNCTION__
+//   /*
+    qDebug() << "\n" << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
@@ -1556,7 +1560,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/, QStr
                 //*/
 //    bool isStart = false;
 
-    if(!isCurrentFolderOkay
+    if (!isCurrentFolderOkay
             || G::isInitializing
             || isFilterChange
             || !G::isNewFolderLoaded)
@@ -1568,6 +1572,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/, QStr
         return;
     }
 
+//    qDebug() << __FUNCTION__ << "current.row() =" << current.row();
+//    qDebug() << __FUNCTION__ << "thumbView->selectionModel()->selection() ="
+//             << thumbView->selectionModel()->selection();
     // if starting program, set first image to display
     if (current.row() == -1) {
         thumbView->selectThumb(0);
@@ -1691,12 +1698,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex /*previous*/, QStr
             && useImageCache
            )
         {
-            emit setImageCachePosition(dm->currentFilePath);
+            if (useLinearLoadProcess)
+                emit setImageCachePosition(dm->currentFilePath);
+            else
+                emit setImageCachePosition2(dm->currentFilePath);
         }
     }
 
     workspaceChanged = false;
-    G::isNewSelection = false;
 
     // update the metadata panel
     if (useInfoView) infoView->updateInfo(currentRow);
@@ -1737,6 +1746,16 @@ void MW::folderAndFileSelectionChange(QString fPath)
     embelProperties->setCurrentTemplate("Do not Embellish");
     QFileInfo info(fPath);
     QString folder = info.dir().absolutePath();
+
+    if (folder == currentViewDirPath) {
+        if (dm->proxyIndexFromPath(fPath).isValid()) {
+            thumbView->selectThumb(fPath);
+            gridView->selectThumb(fPath);
+            currentSfIdx = dm->proxyIndexFromPath(fPath);
+            fileSelectionChange(currentSfIdx, currentSfIdx, __FUNCTION__);
+        }
+        return;
+    }
     /*
     qDebug() << __FUNCTION__
              << "isStartupArgs =" << isStartupArgs
@@ -1930,16 +1949,32 @@ void MW::loadNew1()   // loadversion2
     if (G::isLogger) G::log(__FUNCTION__);
     qDebug() << __FUNCTION__;
     G::allMetadataLoaded = false;
+    dm->loadingModel = true;
     // reset for bestAspect calc
     G::iconWMax = G::minIconSize;
     G::iconHMax = G::minIconSize;
-    dm->loadingModel = true;
+    /* The memory required for the datamodel (metadata + icons) has to be estimated since the
+       ImageCache is starting before all the metadata has been read.  Icons average ~180K and
+       metadata ~20K  */
+    int rows = dm->rowCount();
+    int maxIconsToLoad = rows < metaRead->iconChunkSize ? rows : metaRead->iconChunkSize;
+    G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
+    // target image
+    if (folderAndFileChangePath != "") {
+        currentRow = dm->rowFromPath(folderAndFileChangePath);
+        qDebug() << __FUNCTION__ << currentRow;
+    }
+    updateIconsVisible(currentRow);
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-    updateIconsVisible(currentRow);
     imageCacheThread2->initImageCache(netCacheMBSize, cacheMinMB,
         isShowCacheProgressBar, cacheWtAhead);
+    // no sorting or filtering until all metadta loaded
+    filterMenu->setEnabled(false);
+    sortMenu->setEnabled(false);
+    // read metadata
+    metaRead->initialize();     // only when change folders
     loadNew0();
 }
 
@@ -1947,8 +1982,15 @@ void MW::loadNew2()   // loadversion2
 {
     if (G::isLogger) G::log(__FUNCTION__);
     qDebug() << __FUNCTION__ << G::t.elapsed() << "ms";
-    G::allMetadataLoaded = dm->allMetadataLoaded();
     G::isNewFolderLoaded = true;
+    G::allMetadataLoaded = dm->allMetadataLoaded();
+    if (G::allMetadataLoaded) {
+        filterMenu->setEnabled(true);
+        sortMenu->setEnabled(true);
+    }
+    else {
+        qDebug() << __FUNCTION__ << "Not all metadata loaded";
+    }
     dm->loadingModel = false;
     updateMetadataThreadRunStatus(false, true, __FUNCTION__);
     updateIconBestFit();
@@ -1986,7 +2028,10 @@ void MW::loadNew3()  // loadversion2
     QString fPath = folderAndFileChangePath;
     folderAndFileChangePath = "";
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
-        thumbView->selectThumb(fPath);
+        qDebug() << __FUNCTION__ << "valid folderAndFileChangePath";
+        if (thumbView->isVisible()) thumbView->selectThumb(fPath);
+        if (gridView->isVisible()) gridView->selectThumb(fPath);
+
         gridView->selectThumb(fPath);
         currentSfIdx = dm->proxyIndexFromPath(fPath);
     }
@@ -1995,6 +2040,7 @@ void MW::loadNew3()  // loadversion2
         gridView->selectFirst();
         currentSfIdx = dm->sf->index(0,0);
     }
+    qDebug() << __FUNCTION__ << "fileSelectionChange";
     fileSelectionChange(currentSfIdx, currentSfIdx, __FUNCTION__);
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
@@ -2032,7 +2078,12 @@ void MW::loadNewFolder()
 
     dm->loadingModel = true;
 
+    // no sorting or filtering until all metadta loaded
+    filterMenu->setEnabled(false);
+    sortMenu->setEnabled(false);
+
     setCentralMessage("Reading all metadata.");
+    updateMetadataThreadRunStatus(true, true, __FUNCTION__);
     mct->readAllMetadata();
     qDebug() << __FUNCTION__ << G::t.elapsed() << "ms";
 
@@ -2041,42 +2092,50 @@ void MW::loadNewFolder()
     updateIconsVisible(currentRow);
     setCentralMessage("Reading icon chunk (up to 3000).");
     mct->readIconChunk();
+    updateMetadataThreadRunStatus(false, true, __FUNCTION__);
+    // no sorting or filtering until all metadta loaded
+    filterMenu->setEnabled(true);
+    sortMenu->setEnabled(true);
     G::metaCacheMB = mct->memRequired();
     loadImageCacheForNewFolder();
 }
 
-void MW::loadMetadataCache2ndPass()
-{
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__;
-    updateIconBestFit();
-    updateIconsVisible(currentRow);
-    metadataCacheThread->loadNewFolder2ndPass();
-}
+//void MW::loadMetadataCache2ndPass()
+//{
+//    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+////    qDebug() << __FUNCTION__;
+//    updateIconBestFit();
+//    updateIconsVisible(currentRow);
+//    metadataCacheThread->loadNewFolder2ndPass();
+//}
 
 void MW::thumbHasScrolled()
 {
 /*
-    This function is called after a thumbView scrollbar change signal.
+    This function is called after a thumbView scrollbar change signal.  The visible thumbnails
+    are determined and loaded if necessary.
 
     If the change was caused by the user scrolling then we want to process it, as defined by
     G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
     another view then we do not want to process again and get into a loop.
 
+    Also, we do not need to process scrolling if it was the result of a new selection, which
+    will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewSelection is set true
+    in IconView when a selection is made, and set false in fileSelectionChange.
+
     MW::updateMetadataCacheIconviewState polls setViewportParameters() in all visible views
     (thumbView, gridView and tableView) to assign the firstVisibleRow, midVisibleRow and
     lastVisibleRow in metadataCacheThread.
 
-    The gridView and tableView, if visible, are scrolled to sync with gridView.
+    The gridView and tableView, if visible, are scrolled to sync with thumbView.
 
     Finally metadataCacheThread->scrollChange is called to load any necessary metadata and
     icons within the cache range.
 
     Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay to
     call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread. This
-    was to prevent many scroll calls from bunching up. The new approach just aborts an
-    existing thread and starts over. It is simpler and faster. Keeping the old process until
-    the new one is proven to work all the time.
+    was to prevent many scroll calls from bunching up. The new approach just aborts the
+    metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isInitializing || !G::isNewFolderLoaded) return;
@@ -2091,7 +2150,7 @@ void MW::thumbHasScrolled()
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
             if (useLinearLoadProcess) metadataCacheThread->scrollChange(__FUNCTION__);
-            else loadNew0();
+//            else loadNew0();
         }
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
@@ -2105,26 +2164,30 @@ void MW::thumbHasScrolled()
 void MW::gridHasScrolled()
 {
 /*
-    This function is called after a gridView scrollbar change signal.
+    This function is called after a thumbView scrollbar change signal.  The visible thumbnails
+    are determined and loaded if necessary.
 
     If the change was caused by the user scrolling then we want to process it, as defined by
     G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
     another view then we do not want to process again and get into a loop.
 
+    Also, we do not need to process scrolling if it was the result of a new selection, which
+    will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewSelection is set true
+    in IconView when a selection is made, and set false in fileSelectionChange.
+
     MW::updateMetadataCacheIconviewState polls setViewportParameters() in all visible views
     (thumbView, gridView and tableView) to assign the firstVisibleRow, midVisibleRow and
     lastVisibleRow in metadataCacheThread.
 
-    The thumbView, if visible, is scrolled to sync with gridView.
+    The gridView and tableView, if visible, are scrolled to sync with thumbView.
 
     Finally metadataCacheThread->scrollChange is called to load any necessary metadata and
     icons within the cache range.
 
-    Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
-    to call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread.
-    This was to prevent many scroll calls from bunching up.  The new approach just aborts an
-    existing thread and starts over.  It is simpler and faster.  Keeping the old process until
-    the new one is proven to work all the time.
+    Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay to
+    call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread. This
+    was to prevent many scroll calls from bunching up. The new approach just aborts the
+    metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
@@ -2136,7 +2199,7 @@ void MW::gridHasScrolled()
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
             if (useLinearLoadProcess) metadataCacheThread->scrollChange(__FUNCTION__);
-            else loadNew0();
+//            else loadNew0();
         }
     }
     G::ignoreScrollSignal = false;
@@ -2145,26 +2208,30 @@ void MW::gridHasScrolled()
 void MW::tableHasScrolled()
 {
 /*
-    This function is called after a tableView scrollbar change signal.
+    This function is called after a thumbView scrollbar change signal.  The visible thumbnails
+    are determined and loaded if necessary.
 
     If the change was caused by the user scrolling then we want to process it, as defined by
     G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
     another view then we do not want to process again and get into a loop.
 
+    Also, we do not need to process scrolling if it was the result of a new selection, which
+    will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewSelection is set true
+    in IconView when a selection is made, and set false in fileSelectionChange.
+
     MW::updateMetadataCacheIconviewState polls setViewportParameters() in all visible views
     (thumbView, gridView and tableView) to assign the firstVisibleRow, midVisibleRow and
     lastVisibleRow in metadataCacheThread.
 
-    The thumbView, if visible, is scrolled to sync with gridView.
+    The gridView and tableView, if visible, are scrolled to sync with thumbView.
 
     Finally metadataCacheThread->scrollChange is called to load any necessary metadata and
     icons within the cache range.
 
     Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay to
     call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread. This
-    was to prevent many scroll calls from bunching up. The new approach just aborts an
-    existing thread and starts over. It is simpler and faster. Keeping the old process until
-    the new one is proven to work all the time.
+    was to prevent many scroll calls from bunching up. The new approach just aborts the
+    metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
@@ -2177,7 +2244,7 @@ void MW::tableHasScrolled()
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
             if (useLinearLoadProcess) metadataCacheThread->scrollChange(__FUNCTION__);
-            else loadNew0();
+//            else loadNew0();
         }
     }
     G::ignoreScrollSignal = false;
@@ -2199,6 +2266,8 @@ void MW::numberIconsVisibleChange()
 void MW::loadMetadataCacheAfterDelay()
 {
 /*
+    Not being used.  Replaced by stopping MetadataCache thread.
+
     See MetadataCache::run comments in mdcache.cpp. A 100ms singleshot timer insures that the
     metadata caching is not restarted until there is a pause in the scolling.
 
@@ -4614,8 +4683,15 @@ void MW::createSelectionModel()
 //            this, &MW::fileSelectionChange);
 }
 
-void MW::createCaching()
+void MW::createMDCache()
 {
+    /* When a new folder is selected the metadataCacheThread is started to load all the
+    metadata and thumbs for each image. If the user scrolls during the cache process then the
+    metadataCacheThread is restarted at the first visible thumb to speed up the display of the
+    thumbs for the user. However, if every scroll event triggered a restart it would be
+    inefficient, so this timer is used to wait for a pause in the scrolling before triggering
+    a restart at the new place.
+    */
     if (G::isLogger) G::log(__FUNCTION__);
     metadataCacheThread = new MetadataCache(this, dm, metadata);
 
@@ -4627,7 +4703,38 @@ void MW::createCaching()
         metadataCacheThread->cacheAllMetadata = true;
         metadataCacheThread->cacheAllIcons = false;
     }
-    metadataCacheThread->metadataChunkSize = 3000;
+    metadataCacheThread->metadataChunkSize = 200;
+
+    // not being used
+    metadataCacheScrollTimer = new QTimer(this);
+    metadataCacheScrollTimer->setSingleShot(true);
+    // next connect to update
+    connect(metadataCacheScrollTimer, &QTimer::timeout, this, &MW::loadMetadataChunk);
+
+    connect(metadataCacheThread, &MetadataCache::updateIsRunning,
+            this, &MW::updateMetadataThreadRunStatus);
+
+    connect(metadataCacheThread, &MetadataCache::updateIconBestFit,
+            this, &MW::updateIconBestFit);
+
+    connect(metadataCacheThread, &MetadataCache::selectFirst,
+            thumbView, &IconView::selectFirst);
+
+//    connect(metadataCacheThread, &MetadataCache::finished2ndPass,
+//            this, &MW::launchBuildFilters);
+
+//    connect(metadataCacheThread, &MetadataCache::showCacheStatus,
+//            this, &MW::setCentralMessage);
+
+    //    connect(metadataCacheThread, SIGNAL(refreshCurrentAfterReload()),
+    //            this, SLOT(refreshCurrentAfterReload()));
+
+//    connect(metadataCacheThread, &MetadataCache::scrollToCurrent, this, &MW::scrollToCurrentRow);
+}
+
+void MW::createImageCache()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
 
     /* When a new folder is selected the metadataCacheThread is started to load all the
     metadata and thumbs for each image. If the user scrolls during the cache process then the
@@ -4636,108 +4743,81 @@ void MW::createCaching()
     inefficient, so this timer is used to wait for a pause in the scrolling before triggering
     a restart at the new place.
     */
-    metadataCacheScrollTimer = new QTimer(this);
-    metadataCacheScrollTimer->setSingleShot(true);
-    // next connect to update
-    connect(metadataCacheScrollTimer, SIGNAL(timeout()), this,
-            SLOT(loadMetadataChunk()));
-
-    connect(metadataCacheThread, SIGNAL(updateIsRunning(bool,bool,QString)),
-            this, SLOT(updateMetadataThreadRunStatus(bool,bool,QString)));
-
-    connect(metadataCacheThread, SIGNAL(updateIconBestFit()),
-            this, SLOT(updateIconBestFit()));
-
-    connect(metadataCacheThread, SIGNAL(selectFirst()),
-            thumbView, SLOT(selectFirst()));
-
-    connect(metadataCacheThread, SIGNAL(finished2ndPass()),
-            this, SLOT(launchBuildFilters()));
-
-//    connect(metadataCacheThread, SIGNAL(refreshCurrentAfterReload()),
-//            this, SLOT(refreshCurrentAfterReload()));
-
-    // show progress bar when executing loadEntireMetadataCache
-    connect(metadataCacheThread, &MetadataCache::showCacheStatus,
-            this, &MW::setCentralMessage);
-
-//    connect(metadataCacheThread, &MetadataCache::scrollToCurrent, this, &MW::scrollToCurrentRow);
 
     icd = new ImageCacheData(this);
     imageCacheThread = new ImageCache(this, icd, dm);
-    // loadversion2
-    imageCacheThread2 = new ImageCache2(this, icd, dm);
 
     /* Image caching is triggered from the metadataCacheThread to avoid the two threads
        running simultaneously and colliding */
 
     // LINEAR LOAD PROCESS CONNECTIONS
-    if (useLinearLoadProcess) {
-        // load image cache for a new folder
-        connect(metadataCacheThread, SIGNAL(loadImageCache()),
-                this, SLOT(loadImageCacheForNewFolder()));
 
-        // 2nd pass loading image cache for a new folder
-        connect(metadataCacheThread, SIGNAL(loadMetadataCache2ndPass()),
-                this, SLOT(loadMetadataCache2ndPass())/*, Qt::DirectConnection*/);
-
-        connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
-                this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
-
-        // Update the cache status progress bar when changed in ImageCache
-        connect(imageCacheThread, &ImageCache::showCacheStatus,
-                this, &MW::updateImageCacheStatus);
-
-        // Signal from ImageCache::run() to update cache status in datamodel
-        connect(imageCacheThread, SIGNAL(updateCacheOnThumbs(QString,bool)),
-                this, SLOT(setCachedStatus(QString,bool)));
-
-        // Signal to ImageCache new image selection
-        connect(this, SIGNAL(setImageCachePosition(QString)),
-                imageCacheThread, SLOT(setCurrentPosition(QString)));
-
-        // Send message to setCentralMsg
-        connect(imageCacheThread, &ImageCache::centralMsg,
-                this, &MW::setCentralMessage);
-    }
-    // NONLINEAR LOAD PROCESS CONNECTIONS   // loadversion2
     // load image cache for a new folder
+    connect(metadataCacheThread, SIGNAL(loadImageCache()),
+            this, SLOT(loadImageCacheForNewFolder()));
 
-    if (!useLinearLoadProcess) {
+    // 2nd pass loading image cache for a new folder
+    connect(metadataCacheThread, SIGNAL(loadMetadataCache2ndPass()),
+            this, SLOT(loadMetadataCache2ndPass())/*, Qt::DirectConnection*/);
+
+    connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
+            this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
+
+    // Update the cache status progress bar when changed in ImageCache
+    connect(imageCacheThread, &ImageCache::showCacheStatus,
+            this, &MW::updateImageCacheStatus);
+
+    // Signal from ImageCache::run() to update cache status in datamodel
+    connect(imageCacheThread, &ImageCache::updateCacheOnThumbs,
+            this, &MW::setCachedStatus);
+
+    // Signal to ImageCache new image selection
+    connect(this, SIGNAL(setImageCachePosition(QString)),
+            imageCacheThread, SLOT(setCurrentPosition(QString)));
+
+    // Send message to setCentralMsg
+    connect(imageCacheThread, &ImageCache::centralMsg,
+            this, &MW::setCentralMessage);
+}
+
+void MW::createImageCache2()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
     // loadversion2
-        connect(imageCacheThread2, &ImageCache2::updateIsRunning,
-                this, &MW::updateImageCachingThreadRunStatus);
+    imageCacheThread2 = new ImageCache2(this, icd, dm);
 
-        // Update the cache status progress bar when changed in ImageCache
-        connect(imageCacheThread2, &ImageCache2::showCacheStatus,
-                this, &MW::updateImageCacheStatus);
+    connect(imageCacheThread2, &ImageCache2::updateIsRunning,
+            this, &MW::updateImageCachingThreadRunStatus);
 
-        // Signal from ImageCache::run() to update cache status in datamodel
-        connect(imageCacheThread2, &ImageCache2::updateCacheOnThumbs,
-                this, &MW::setCachedStatus);
+    // Update the cache status progress bar when changed in ImageCache
+    connect(imageCacheThread2, &ImageCache2::showCacheStatus,
+            this, &MW::updateImageCacheStatus);
 
-        // Signal to ImageCache new image selection
-        connect(this, &MW::setImageCachePosition,
-                imageCacheThread2, &ImageCache2::setCurrentPosition);
+    // Signal from ImageCache::run() to update cache status in datamodel
+    connect(imageCacheThread2, &ImageCache2::updateCacheOnThumbs,
+            this, &MW::setCachedStatus);
 
-        // Send message to setCentralMsg
-        connect(imageCacheThread2, &ImageCache2::centralMsg, this, &MW::setCentralMessage);
+    // Signal to ImageCache new image selection
+    connect(this, &MW::setImageCachePosition2,
+            imageCacheThread2, &ImageCache2::setCurrentPosition);
 
-        metaRead = new MetaRead(this, dm, imageCacheThread2);
+    // Send message to setCentralMsg
+    connect(imageCacheThread2, &ImageCache2::centralMsg, this, &MW::setCentralMessage);
 
-        // add metadata to datamodel
-        connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
-        // add to image cache list
-        connect(metaRead, &MetaRead::addToImageCache,
-                imageCacheThread2, &ImageCache2::addCacheItemImageMetadata);
-        // message metadata reading completed
-        connect(metaRead, &MetaRead::done, this, &MW::loadNew2);
-        // Signal to MW::loadNew3 to prep and run fileSelectionChange
-        connect(metaRead, &MetaRead::delayedStartImageCache, this, &MW::loadNew3);
-        // signal to ImageCache new image selection req'd?
-        connect(metaRead, &MetaRead::setImageCachePosition,
-                imageCacheThread2, &ImageCache2::setCurrentPosition);
-    }
+    metaRead = new MetaRead(this, dm, imageCacheThread2);
+
+    // add metadata to datamodel
+    connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
+    // add to image cache list
+    connect(metaRead, &MetaRead::addToImageCache,
+            imageCacheThread2, &ImageCache2::addCacheItemImageMetadata);
+    // message metadata reading completed
+    connect(metaRead, &MetaRead::done, this, &MW::loadNew2);
+    // Signal to MW::loadNew3 to prep and run fileSelectionChange
+    connect(metaRead, &MetaRead::delayedStartImageCache, this, &MW::loadNew3);
+    // signal to ImageCache new image selection req'd?
+    connect(metaRead, &MetaRead::setImageCachePosition,
+            imageCacheThread2, &ImageCache2::setCurrentPosition);
 }
 
 void MW::createThumbView()
@@ -6149,7 +6229,7 @@ void MW::clearStatus()
     statusLabel->setText("");
 }
 
-void MW::updateMetadataThreadRunStatus(bool isRunning,bool showCacheLabel, QString calledBy)
+void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QString calledBy)
 {
 //    return;  //rghmacdelay
     if (G::isLogger) G::log(__FUNCTION__);
@@ -6898,7 +6978,7 @@ void MW::toggleColorManage(Tog n)
     // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
     for (int row = 0; row < dm->rowCount(); ++row) {
         QString fPath = dm->index(row, G::PathColumn).data(G::PathRole).toString();
-        setCachedStatus(fPath, false);
+        setCachedStatus(fPath, false, "MW::toggleColorManage");
     }
     // reload image cache
     imageCacheThread->colorManageChange();
@@ -7732,10 +7812,15 @@ void MW::diagnosticsReport(QString reportString)
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
     md.textBrowser->setStyleSheet(G::css);
+    QFont courier("Courier", 12);
+    md.textBrowser->setFont(courier);
     md.textBrowser->setText(reportString);
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
+//    md.textBrowser->setFixedWidth(1800);
+//    md.textBrowser->setSizePolicy(1800, 800);
     QFontMetrics metrics(md.textBrowser->font());
     md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
+//    dlg->setBaseSize(1800, 800);
     dlg->show();
 //    std::cout << reportString.toStdString() << std::flush;
 }
@@ -8776,6 +8861,7 @@ void MW::writeSettings()
     setting->setValue("modifySourceFiles", G::modifySourceFiles);
     setting->setValue("useSidecar", G::useSidecar);
     setting->setValue("embedTifThumb", G::embedTifThumb);
+    setting->setValue("tryConcurrentLoading", G::tryConcurrentLoading);
     setting->setValue("isLogger", G::isLogger);
     setting->setValue("isErrorLogger", G::isErrorLogger);
 
@@ -9080,6 +9166,7 @@ bool MW::loadSettings()
         G::modifySourceFiles = false;
         G::useSidecar = false;
         G::embedTifThumb = false;
+        G::tryConcurrentLoading = false;
 
         // ingest
         autoIngestFolderPath = false;
@@ -9153,6 +9240,15 @@ bool MW::loadSettings()
         G::embedTifThumb = setting->value("embedTifThumb").toBool();
     else
         G::embedTifThumb = false;
+    if (setting->contains("tryConcurrentLoading")) {
+        G::tryConcurrentLoading = setting->value("tryConcurrentLoading").toBool();
+        useLinearLoadProcess = !G::tryConcurrentLoading;
+    }
+    else {
+        G::tryConcurrentLoading = false;
+        useLinearLoadProcess = true;
+    }
+
     lastFileIfCrash = setting->value("lastFileSelection").toString();
 
     // appearance
@@ -11092,7 +11188,7 @@ void MW::setCombineRawJpg()
     G::popUp->close();
 }
 
-void MW::setCachedStatus(QString fPath, bool isCached)
+void MW::setCachedStatus(QString fPath, bool isCached, QString src)
 {
 /*
     When an image is added or removed from the image cache in ImageCache a signal triggers
@@ -11106,16 +11202,40 @@ void MW::setCachedStatus(QString fPath, bool isCached)
     folder has been selected but the image cache has not been rebuilt.
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
-    QModelIndex idx = dm->proxyIndexFromPath(fPath);
-    if (idx.isValid()) {
-        dm->sf->setData(idx, isCached, G::CachedRole);
-        if (isCached && idx.row() == currentRow) {
-            imageView->loadImage(fPath, __FUNCTION__);
-            updateClassification();
-            centralLayout->setCurrentIndex(prevCentralView);
+//    qDebug() << __FUNCTION__ << "Src:" << src << fPath;
+//    QModelIndex sfIdx = dm->proxyIndexFromPath(fPath);
+    if (!dm->fPathRow.contains(fPath)) {
+        qDebug() << __FUNCTION__ << "Not in dm->fPathrow" << fPath;
+        return;
+    }
+    int dmRow = dm->fPathRow[fPath];
+    QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
+
+    if (sfIdx.isValid()) {
+        dm->sf->setData(sfIdx, isCached, G::CachedRole);
+        if (isCached) {
+            if (sfIdx.row() == currentRow) {
+                imageView->loadImage(fPath, __FUNCTION__);
+                updateClassification();
+                centralLayout->setCurrentIndex(prevCentralView);
+            }
+            /*
+            else {
+                qWarning() << __FUNCTION__ << "sfIdx.row()" << sfIdx.row()
+                           << "DOES NOT EQUAL currentRow" << currentRow;
+            }
+            //*/
         }
-        thumbView->refreshThumb(idx, G::CachedRole);
-        gridView->refreshThumb(idx, G::CachedRole);
+        /*
+        else {
+            qWarning() << __FUNCTION__ << "NOT CACHED" << fPath;
+        }
+        //*/
+        thumbView->refreshThumb(sfIdx, G::CachedRole);
+        gridView->refreshThumb(sfIdx, G::CachedRole);
+    }
+    else {
+        qWarning() << __FUNCTION__ << "INVALID INDEX FOR" << sfIdx;
     }
     return;
 }
@@ -12677,14 +12797,27 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
     zoomDlg->show();
     return;
 
-    QString fPath = "D:/Pictures/_DNG/DngNikonD850FromLightroom.dng";
+    QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
     metadata->testNewFileFormat(fPath);
 }
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << G::t.elapsed() << "ms";
-    qApp->beep();
-//    stopAndClearAll("test");
+    for (int i = 0; i < dm->rowCount(); ++i) {
+        QModelIndex iconIdx = dm->sf->mapToSource(dm->sf->index(i, 0));
+        bool isNullIcon = dm->itemFromIndex(iconIdx)->icon().isNull();
+        if (isNullIcon) qDebug() << i << __FUNCTION__ << isNullIcon;
+    }
+//        qDebug() << __FUNCTION__ << dm->itemFromIndex(dm->index(750, 0))->icon().isNull();
+
+//    qDebug() << dm->sf->index(750, G::PathColumn).data(Qt::DecorationRole).size();
+//    QIcon nullIcon;
+//    qDebug() << __FUNCTION__ << nullIcon.isNull();
+//    dm->itemFromIndex(dm->index(750, 0))->setIcon(nullIcon);
+//    qDebug() << dm->sf->index(750, G::PathColumn).data(Qt::DecorationRole);
+    return;
+    qDebug() << __FUNCTION__ << useLinearLoadProcess;
+    folderAndFileChangePath = "D:/Pictures/2018-01-14_Lillian/2018-01-14_0038.NEF"; // pos = 871
+    folderAndFileSelectionChange(folderAndFileChangePath);
 }
 // End MW

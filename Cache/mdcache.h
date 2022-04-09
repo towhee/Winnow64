@@ -30,12 +30,12 @@ public:
     };
     QStringList actionList;
 
-    void loadNewFolder(bool isRefresh = false);
-    void loadNewFolder2ndPass();
+//    void loadNewFolder(bool isRefresh = false);
+//    void loadNewFolder2ndPass();
+//    void loadAllMetadata();
     void scrollChange(QString source);
     void sizeChange(QString source);
     void fileSelectionChange(/*bool okayToImageCache*/); // rghcachechange
-    void loadAllMetadata();
     void readMetadataIcon(const QModelIndex &idx);
     void stopMetadataCache();
     bool isAllMetadataLoaded();

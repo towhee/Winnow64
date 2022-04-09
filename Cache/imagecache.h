@@ -35,10 +35,9 @@ public:
     ~ImageCache() override;
 
     void initImageCache(int &cacheSizeMB, int &cacheMinMB,
-             bool &isShowCacheStatus, int &cacheWtAhead/*,
-             bool &usePreview, int &previewWidth, int &previewHeight*/);
+             bool &isShowCacheStatus, int &cacheWtAhead);
     void updateImageCacheParam(int &cacheSizeMB, int &cacheMinMB, bool &isShowCacheStatus,
-             int &cacheWtAhead/*, bool &usePreview, int &previewWidth, int &previewHeight*/);
+             int &cacheWtAhead);
     void rebuildImageCacheParameters(QString &currentImageFullPath, QString source = "");
     void stopImageCache();
     void clearImageCache(bool includeList = true);
@@ -67,7 +66,7 @@ signals:
                          QString source = "");
     void centralMsg(QString msg);
     void updateIsRunning(bool, bool);
-    void updateCacheOnThumbs(QString fPath, bool isCached);
+    void updateCacheOnThumbs(QString fPath, bool isCached, QString src);
     void dummyDecoder(int id);
 
 protected:
@@ -90,6 +89,7 @@ private:
     bool refreshCache;
     QString currentPath;
     int maxAttemptsToCacheImage = 10000;
+    bool checkForOrphans;           // prevent multiple orphan checks as each decoder finishes
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;

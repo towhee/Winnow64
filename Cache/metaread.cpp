@@ -2,13 +2,12 @@
 
 /*
     to do:
-        memRequired
-        iconCleanup
+        memRequired - done except checking
+        iconCleanup - done except checking
         iconChunkSize
-        initialize req'd ?
-        setIconRange req'd ?
         run when scroll event
-        new folder start row > 0
+        file selection change while not allMetadataLoaded
+        viewport size change
 */
 
 MetaRead::MetaRead(QObject *parent,
@@ -21,12 +20,17 @@ MetaRead::MetaRead(QObject *parent,
     this->imageCacheThread2 = imageCacheThread2;
     metadata = new Metadata;
     thumb = new Thumb(this, dm, metadata);
-    iconChunkSize = 3000;
+    iconChunkSize = 4000;
     abort = false;
 }
 
 MetaRead::~MetaRead()
 {
+    mutex.lock();
+    abort = true;
+    condition.wakeOne();
+    mutex.unlock();
+    wait();
 }
 
 void MetaRead::stop()
@@ -43,26 +47,18 @@ void MetaRead::stop()
     }
 }
 
-void MetaRead::initialize(int firstVisibleRow, int lastVisibleRow)
+void MetaRead::initialize()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    rowCount = dm->sf->rowCount();
-//    setIconRange(firstVisibleRow, lastVisibleRow);
+    iconsLoaded.clear();
 }
 
-void MetaRead::read(int currentRow)
+void MetaRead::read()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     stop();
     abort = false;
-    this->currentRow = currentRow;
-    rowCount = dm->sf->rowCount();
-    /*
-    qDebug() << __FUNCTION__
-             << "dm->firstVisibleRow =" << dm->firstVisibleRow
-             << "dm->lastVisibleRow =" << dm->lastVisibleRow
-                ;
-                //*/
+    sfRowCount = dm->sf->rowCount();
     start();
 }
 
@@ -78,69 +74,81 @@ void MetaRead::iconMax(QPixmap &thumb)
     if (h > G::iconHMax) G::iconHMax = h;
 }
 
-void MetaRead::iconCleanup(int sfRow)
+void MetaRead::iconCleanup()
 {
 /*
     When the icon targets (the rows that we want to load icons) change we need to clean up any
     other rows that have icons previously loaded in order to minimize memory consumption. Rows
-    that have icons are tracked in the list iconsCached as the dm row (not dm->sf proxy).
+    that have icons are tracked in the list iconsLoaded as the dm row (not dm->sf proxy).
+
+    We need to keep the total icons loaded under iconChunkSize.  We want the icons to be loaded
+    in the top of the priorityQueue, which is the list of sfRows, first by visible, and then
+    alternating front and back for all of sf.
+
+    Assuming the most complicated case, where the dataset has been filtered (sf), then the
+    remainder of the dataset is non_sf. We first remove icons from non_sf and then in sf,
+    at the end of the priorityQueue, until we have removed enough.
+
+    - all items in datamodel (dm)
+    i items with icon loaded (30 = iconChunkSize)
+    f filtered items (21 with 9 icon loaded, need 21 - 9 = 12 icons)
+    v visible items
+    x icons to remove (12)
+    + icons to add (12)
+    o outcome after unnecessary icons removed and new ones added
+
+    --iiiiii----------iiiiiiii-------------iiiiiiiiiii-----ii--iii-- 30
+    ---------fffffff---ffffff---ffff------ffff---------------------- 21
+    ---------vvvvvvv------------------------------------------------  6
+    --xxxxxx----------x------x----------------xxx------------------- 12
+    ---------+++++++------------++++------+------------------------- 12
+    ---------ooooooo---oooooo---oooo------oooo-ooooooo-----oo--ooo-- 30
+
 */
     if (G::isLogger) G::log(__FUNCTION__);
-
-//    QMutableListIterator<int> i(iconsCached);
-//    QPixmap nullPm;
-//    while (i.hasNext()) {
-//        if (abort) return;
-//        i.next();
-//        // the datamodel row dmRow
-//        int dmRow = i.value();
-//        // the filtered proxy row sfRow
-//        int sfRow = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
-//        /* mapFromSource returns -1 if dm->index(dmRow, 0) is not in the filtered dataset
-//        This can happen is the user switches folders and the datamodel is cleared before the
-//        thread abort is processed.
-//        */
-//        if (sfRow == -1) return;
-
-//        // remove all loaded icons outside target range
-//        if (sfRow < icons.startRow || sfRow > endRow) {
-//            i.remove();
-//            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(nullPm);
-////            qDebug() << __FUNCTION__ << actionList[action]
-////                     << "Removing icon for row" << sfRow;
-//        }
-//    }
-}
-
-void MetaRead::setIconRange(int firstVisibleRow, int lastVisibleRow)
-{
-/*
-    Define the range of icons to cache: prev + current + next viewports/pages of icons.
-    Variables are set in MW::updateIconsVisible
-*/
-    if (G::isLogger) G::log(__FUNCTION__);
-
-    icons.firstVisible = firstVisibleRow;
-    icons.lastVisible = lastVisibleRow;
-    icons.visibleCount = icons.lastVisible - icons.firstVisible + 1;
-
-    /*
-    // total per page (tpp)
-    icons.pageCount = icons.visibleCount;
-    if (defaultIconsPerPage > icons.pageCount) icons.pageCount = defaultIconsPerPage;
-
-    // if icons visible greater than chunk size then increase chunk size
-//    if (tpp > icons.maxCount) icons.maxCount = tpp;
-
-    // first to cache (icons.startRow)
-    icons.startRow = icons.firstVisible - icons.pageCount;
-    if (icons.startRow < 0) icons.startRow = 0;
-
-    // last to cache (endRow)
-    icons.endRow = icons.lastVisible + icons.pageCount;
-    if (icons.endRow - icons.startRow < icons.maxCount) icons.endRow = icons.startRow + icons.maxCount;
-    if (icons.endRow >= rowCount) icons.endRow = rowCount;
-    */
+    // cleanup extra icons, first count icons loaded in dm->sf
+    int allIconsLoaded = iconsLoaded.size() ;
+    int sfIconsLoaded = 0;
+    for (int sfRow : priorityQueue) {
+        int dmRow = dm->modelRowFromProxyRow(sfRow);
+        if (iconsLoaded.contains(dmRow)) sfIconsLoaded++;
+    }
+    // icons loaded but not in dm->sf
+    int iconsLoadedNonSF = allIconsLoaded - sfIconsLoaded;
+    // icons in dm->sf not loaded
+    int sfIconsNotLoaded = sfRowCount - sfIconsLoaded;
+    // is cleanup required
+    if (allIconsLoaded + sfIconsNotLoaded > iconChunkSize) {
+        int iconsToCleanup = allIconsLoaded + sfIconsNotLoaded - iconChunkSize;
+        QPixmap nullPm;
+        int iconsRemoved = 0;
+        // remove iconsToCleanup (iconsLoaded are dmRow)
+        for (int i : iconsLoaded) {
+            int dmRow = iconsLoaded.at(i);
+            int sfRow = dm->proxyRowFromModelRow(dmRow);
+            // not in dm->sf
+            if (sfRow == -1) {
+                // remove
+                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(nullPm);
+                iconsLoaded.remove(i);
+                iconsRemoved++;
+            }
+            if (iconsToCleanup == iconsRemoved) return;
+        }
+        // still need to remove more icons from back of priorityQueue
+        for (int p = priorityQueue.size(); p > 0; --p) {
+            int sfRow = priorityQueue.at(p);
+            int dmRow = dm->modelRowFromProxyRow(sfRow);
+            int i = iconsLoaded.indexOf(dmRow);
+            if (i > -1) {
+                // remove
+                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(nullPm);
+                iconsLoaded.remove(i);
+                iconsRemoved++;
+            }
+            if (iconsToCleanup == iconsRemoved) return;
+        }
+    }
 }
 
 bool MetaRead::isNotLoaded(int sfRow)
@@ -152,33 +160,28 @@ bool MetaRead::isNotLoaded(int sfRow)
     return false;
 }
 
-void MetaRead::buildPriorityQueue(int currentRow)
+void MetaRead::buildPriorityQueue()
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    priorityQueue.clear();
     int firstVisible = dm->firstVisibleRow;
     int lastVisible = dm->lastVisibleRow;
-    priority.clear();
+    bool noIconsLoaded = iconsLoaded.size() == 0;
     // visible rows (thumbnails)
     for (int row = firstVisible; row < lastVisible; ++row) {
-        if (isNotLoaded(row)) priority.append(row);
+        if (isNotLoaded(row)) priorityQueue.append(row);
+        if (abort) return;
     }
-    /*
-    // next page
-    for (int row = icons.lastVisible; row < icons.endRow; ++row) {
-        if (isNotLoaded(row)) priority.append(row);
-    }
-    // prev page
-    for (int row = icons.startRow; row < icons.firstVisible; ++row) {
-        if (isNotLoaded(row)) priority.append(row);
-    }
-    */
     // alternate ahead/behind until finished
     int behind = firstVisible;
     int ahead = lastVisible - 1;
-    while (behind > 0 || ahead < rowCount - 1) {
-        if (behind > 0) priority.append(--behind);
-        if (ahead < rowCount - 1) priority.append(++ahead);
+    while (behind > 0 || ahead < sfRowCount - 1) {
+        if (behind > 0) priorityQueue.append(--behind);
+        if (ahead < sfRowCount - 1) priorityQueue.append(++ahead);
+        if (abort) return;
     }
+    if (noIconsLoaded || dm->rowCount() <= iconChunkSize) return;
+//    iconCleanup();
 }
 
 void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
@@ -187,15 +190,12 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     int dmRow = dm->sf->mapToSource(sfIdx).row();
     QFileInfo fileInfo(fPath);
     if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
-//        qDebug() << __FUNCTION__ <<  sfIdx.row() << fPath;
         metadata->m.row = dmRow;
         if (abort) return;
-        emit addToDatamodel(metadata->m);
-        emit addToImageCache(metadata->m);
-        /* direct call
+//        emit addToDatamodel(metadata->m);
         dm->addMetadataForItem(metadata->m);
-        imageCacheThread2->addCacheItem(metadata->m);
-        */
+//        emit addToImageCache(metadata->m);
+        imageCacheThread2->addCacheItemImageMetadata(metadata->m);
     }
 }
 
@@ -205,12 +205,11 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     QModelIndex dmIdx = dm->sf->mapToSource(sfIdx);
     QImage image;
     bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
-    QPixmap pm;
     if (thumbLoaded) {
-        pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+        QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
         dm->itemFromIndex(dmIdx)->setIcon(pm);
         iconMax(pm);
-//                iconsCached.append(sfRow);
+        iconsLoaded.append(dmIdx.row());
     }
 }
 
@@ -218,17 +217,21 @@ void MetaRead::readRow(int sfRow)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
+    if (!sfIdx.isValid()) return;
     QString fPath = sfIdx.data(G::PathRole).toString();
-    bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
-//    qDebug() << __FUNCTION__ << sfRow << G::allMetadataLoaded << metaLoaded;
-    // load metadataqDebug() << __FUNCTION__ <<
-    if (!G::allMetadataLoaded && !metaLoaded) {
-        readMetadata(sfIdx, fPath);
-        if (abort) return;
+    if (!G::allMetadataLoaded) {
+        bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
+        if (!metaLoaded) {
+            readMetadata(sfIdx, fPath);
+            if (abort) return;
+        }
     }
     // load icon
-    if (sfIdx.isValid() && sfIdx.data(Qt::DecorationRole).isNull()) {
+    QModelIndex dmIdx = dm->sf->mapToSource(sfIdx);
+    bool isNullIcon = dm->itemFromIndex(dmIdx)->icon().isNull();
+    if (isNullIcon && iconsLoaded.size() < iconChunkSize) {
         readIcon(sfIdx, fPath);
+        if (abort) return;
     }
 }
 
@@ -238,19 +241,24 @@ void MetaRead::run()
     Read metadata and thumbnails.  Priorities are:
         * visible icons
         * the rest
+
+    priorityQueue is a list of sfRow with lowest = highest priority
 */
-    buildPriorityQueue(currentRow);
-//    qDebug() << __FUNCTION__ << priority.length() << priority;
-    QModelIndex sfIdx = dm->sf->index(dm->firstVisibleRow, 0);
-    QString fPath = sfIdx.data(G::PathRole).toString();
-    int i;
-    for (i = 0; i < priority.length(); i++) {
-        readRow(priority.at(i));
+    buildPriorityQueue();
+    if (abort) return;
+    int n = static_cast<int>(priorityQueue.size());
+    bool imageCachingStarted = false;
+    for (int i = 0; i < n; i++) {
+        readRow(priorityQueue.at(i));
         if (abort) return;
-        if (i == 50) emit delayedStartImageCache();
-//        if (i == 50) emit setImageCachePosition(fPath);
+        if (!imageCachingStarted) {
+            if (i == (n - 1) || i == 50) {
+                qDebug() << __FUNCTION__ << "emit delayedStartImageCache()";
+                emit delayedStartImageCache();
+                imageCachingStarted = true;
+            }
+        }
     }
-    if (i <= 50) emit delayedStartImageCache();
-    qDebug() << __FUNCTION__ << i;
+//    emit delayedStartImageCache();
     emit done();
 }

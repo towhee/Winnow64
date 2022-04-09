@@ -67,7 +67,7 @@ signals:
                          QString source = "");
     void centralMsg(QString msg);
     void updateIsRunning(bool, bool);
-    void updateCacheOnThumbs(QString fPath, bool isCached);
+    void updateCacheOnThumbs(QString fPath, bool isCached, QString src);
     void dummyDecoder(int id);
 
 protected:
@@ -101,6 +101,7 @@ private:
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
     int getImCacheSize();           // add up total MB cached
+    int keyFromPath(QString fPath); // cache key from image file absolute path
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead

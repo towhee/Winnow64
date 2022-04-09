@@ -1,4 +1,7 @@
 BUGS / TO DO
+- Filtering can get bogged down
+- Filter progress not showing
+- InfoView context remove "set fixed size" and add "copy field"
 - Pref cache available memory wrong before load first folder
 - On Mac: qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family ".AppleSystemFallback" with one that exists to avoid this cost.
 - Image metadata report does not show sidecar for PNG file
@@ -56,6 +59,7 @@ ENHANCEMENTS
 - Write xmp into eligible files ??
 DONE/FIXED
 - Release 1.32
+- Fixed MetadataCache::readIconChunk detect null icons
 - Filters not updating
 - Added "test" to installation process
 - Handle winnets on Mac
