@@ -380,6 +380,7 @@ public slots:
 
 signals:
     void setImageCachePosition(QString);
+    void setImageCachePosition2(QString);
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     void closeZoomDlg();
     void aSyncGo(int);  // rgh req'd?
@@ -401,7 +402,7 @@ private slots:
     void ejectUsb(QString path);
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
-    void setCachedStatus(QString fPath, bool isCached);
+    void setCachedStatus(QString fPath, bool isCached, QString src);
     void searchTextEdit();
 
     int ratingLogCount();
@@ -490,7 +491,7 @@ private slots:
     void loadNew3();
 
     void loadNewFolder();
-    void loadMetadataCache2ndPass();
+//    void loadMetadataCache2ndPass();
     void refreshCurrentAfterReload();
     void updateIconsVisible(int row);
     bool isCurrentThumbVisible();
@@ -983,7 +984,7 @@ private:
 //    MetaHash metaHash;
 
     // loadversion2
-    MetaRead *metaRead;
+    MetaRead *metaRead = nullptr;
     ImageCache2 *imageCacheThread2;
 
     Thumb *thumb;
@@ -1104,7 +1105,9 @@ private:
     void addMenuSeparator(QWidget *widget);
     void createActions();
     void createBookmarks();
-    void createCaching();
+    void createMDCache();
+    void createImageCache();
+    void createImageCache2();
     void createCentralWidget();
     void createCompareView();
     void createDataModel();

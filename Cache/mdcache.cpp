@@ -150,113 +150,113 @@ bool MetadataCache::isAllIconLoaded()
     return loaded;
 }
 
-void MetadataCache::loadNewFolder(bool isRefresh)
-{
-/*
-    This function is called from MW::folderSelectionChange and will not have any filtering so
-    we can use the datamodel dm directly. The greater of:
+//void MetadataCache::loadNewFolder(bool isRefresh)
+//{
+///*
+//    This function is called from MW::folderSelectionChange and will not have any filtering so
+//    we can use the datamodel dm directly. The greater of:
 
-        - the number of visible cells in the gridView or
-        - maxChunkSize
+//        - the number of visible cells in the gridView or
+//        - maxChunkSize
 
-    metadata and icons are loaded into the datamodel. The number of visible cells are not
-    known yet because IconView::bestAspect has not been determined.
+//    metadata and icons are loaded into the datamodel. The number of visible cells are not
+//    known yet because IconView::bestAspect has not been determined.
 
-    MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
-*/
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
-    if (isRunning()) {
-        mutex.lock();
-        abort = true;
-        condition.wakeOne();
-        mutex.unlock();
-        wait();
-        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Was Running - stopped");
-    }
-    abort = false;
-    G::allMetadataLoaded = false;
-    isRefreshFolder = isRefresh;
-    iconsCached.clear();
-    foundItemsToLoad = true;
-    startRow = 0;
-    int rowCount = dm->sf->rowCount();
-    // rgh fix (are we going to read all metadata all of the time?)
-    if (metadataChunkSize > rowCount) {
-        endRow = rowCount;
-        lastIconVisible = rowCount;
-    }
-    else {
-        endRow = metadataChunkSize;
-        lastIconVisible = metadataChunkSize;
-    }
-    // reset for bestAspect calc
-    G::iconWMax = G::minIconSize;
-    G::iconHMax = G::minIconSize;
-    action = Action::NewFolder;
-    start(LowPriority);
-//    start(TimeCriticalPriority);
-}
-
-void MetadataCache::loadNewFolder2ndPass()
-{
-/*
-    This function is initiated after MetadataCache::loadNewFolder has called run. A signal is
-    emitted back to MW, which in turn calculates the best aspect and number of cells visible
-    in the gridview, based on the metadata read in the first pass.
-
-    The greater of:
-     - the number of visible cells in the gridView or
-     - maxChunkSize
-    metadata and icons are loaded into the datamodel.
-*/
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-    if (isRunning()) {
-        mutex.lock();
-        abort = true;
-        condition.wakeOne();
-        mutex.unlock();
-        wait();
-        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Was Running - stopped");
-    }
-    abort = false;
-    action = Action::NewFolder2ndPass;
-    setRange();
-    foundItemsToLoad = anyItemsToLoad();
-//    qDebug() << __FUNCTION__ << foundItemsToLoad;
-    start(LowPriority);
-//    start(TimeCriticalPriority);
-}
-
-void MetadataCache::loadAllMetadata()
-{
-/*
-    Using dm::addAllMetadata instead (see why below) so not being used
-
-    All the metadata if loaded into the datamodel. This is called prior to filtering or
-    sorting the datamodel. This is duplicated in the datamodel, where is can be run in the
-    main thread, allowing for real time updates to the progress bar.
-
-    Loading all the metadata in a separate high priority thread is slightly faster, but if the
-    progress bar update is more important then use the datamodel function dm::addAllMetadata.
-*/
-    if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__;
-    if (isRunning()) {
-        mutex.lock();
-        abort = true;
-        condition.wakeOne();
-        mutex.unlock();
-        wait();
-    }
+//    MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
+//*/
+//    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__;
-    abort = false;
-    startRow = 0;
-    endRow = dm->sf->rowCount();
-    action = Action::AllMetadata;
-    foundItemsToLoad = true;
-    start(TimeCriticalPriority);
-}
+//    if (isRunning()) {
+//        mutex.lock();
+//        abort = true;
+//        condition.wakeOne();
+//        mutex.unlock();
+//        wait();
+//        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Was Running - stopped");
+//    }
+//    abort = false;
+//    G::allMetadataLoaded = false;
+//    isRefreshFolder = isRefresh;
+//    iconsCached.clear();
+//    foundItemsToLoad = true;
+//    startRow = 0;
+//    int rowCount = dm->sf->rowCount();
+//    // rgh fix (are we going to read all metadata all of the time?)
+//    if (metadataChunkSize > rowCount) {
+//        endRow = rowCount;
+//        lastIconVisible = rowCount;
+//    }
+//    else {
+//        endRow = metadataChunkSize;
+//        lastIconVisible = metadataChunkSize;
+//    }
+//    // reset for bestAspect calc
+//    G::iconWMax = G::minIconSize;
+//    G::iconHMax = G::minIconSize;
+//    action = Action::NewFolder;
+//    start(LowPriority);
+////    start(TimeCriticalPriority);
+//}
+
+//void MetadataCache::loadNewFolder2ndPass()
+//{
+///*
+//    This function is initiated after MetadataCache::loadNewFolder has called run. A signal is
+//    emitted back to MW, which in turn calculates the best aspect and number of cells visible
+//    in the gridview, based on the metadata read in the first pass.
+
+//    The greater of:
+//     - the number of visible cells in the gridView or
+//     - maxChunkSize
+//    metadata and icons are loaded into the datamodel.
+//*/
+//    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+//    if (isRunning()) {
+//        mutex.lock();
+//        abort = true;
+//        condition.wakeOne();
+//        mutex.unlock();
+//        wait();
+//        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Was Running - stopped");
+//    }
+//    abort = false;
+//    action = Action::NewFolder2ndPass;
+//    setRange();
+//    foundItemsToLoad = anyItemsToLoad();
+////    qDebug() << __FUNCTION__ << foundItemsToLoad;
+//    start(LowPriority);
+////    start(TimeCriticalPriority);
+//}
+
+//void MetadataCache::loadAllMetadata()
+//{
+///*
+//    Using dm::addAllMetadata instead (see why below) so not being used
+
+//    All the metadata if loaded into the datamodel. This is called prior to filtering or
+//    sorting the datamodel. This is duplicated in the datamodel, where is can be run in the
+//    main thread, allowing for real time updates to the progress bar.
+
+//    Loading all the metadata in a separate high priority thread is slightly faster, but if the
+//    progress bar update is more important then use the datamodel function dm::addAllMetadata.
+//*/
+//    if (G::isLogger) G::log(__FUNCTION__);
+//    qDebug() << __FUNCTION__;
+//    if (isRunning()) {
+//        mutex.lock();
+//        abort = true;
+//        condition.wakeOne();
+//        mutex.unlock();
+//        wait();
+//    }
+////    qDebug() << __FUNCTION__;
+//    abort = false;
+//    startRow = 0;
+//    endRow = dm->sf->rowCount();
+//    action = Action::AllMetadata;
+//    foundItemsToLoad = true;
+//    start(TimeCriticalPriority);
+//}
 
 void MetadataCache::scrollChange(QString source)
 {
@@ -268,7 +268,6 @@ void MetadataCache::scrollChange(QString source)
 */
 //    return;
     if (G::isLogger) G::log(__FUNCTION__, "called by =" + source);
-    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -285,6 +284,14 @@ void MetadataCache::scrollChange(QString source)
     action = Action::Scroll;
     setRange();
     foundItemsToLoad = anyItemsToLoad();
+        /*
+        qDebug() << __FUNCTION__ << "foundItemsToLoad =" << foundItemsToLoad
+                 << "start =" << startRow << "end =" << endRow
+                 << "firstIconVisible =" << firstIconVisible
+                 << "firstIconVisible =" << firstIconVisible
+                 << "rowCount =" << dm->sf->rowCount()
+                 << "action =" << action;
+    //    */
     start(TimeCriticalPriority);
 }
 
@@ -341,7 +348,9 @@ bool MetadataCache::anyItemsToLoad()
 //        QString ext = dm->sf->index(i, G::TypeColumn).data().toString().toLower();
 //        if (metadata->noMetadataFormats.contains(ext)) continue;
         // icon not loaded
-        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
+        QModelIndex idx = dm->sf->mapToSource(dm->sf->index(i, 0));
+//        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
+        if (dm->itemFromIndex(idx)->icon().isNull())
             return true;
         // metadata not loaded
         if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
@@ -409,6 +418,7 @@ void MetadataCache::iconCleanup()
     if (G::isLogger) G::log(__FUNCTION__); 
     QMutableListIterator<int> i(iconsCached);
     QPixmap nullPm;
+    QIcon nullIcon;
     while (i.hasNext()) {
         if (abort) return;
         i.next();
@@ -546,7 +556,6 @@ void MetadataCache::readIconChunk()
     sort/filter change and all metadata has been loaded, but the icons visible have changed.
 */
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
-//    qDebug() << __FUNCTION__;
     int start = startRow;
     int end = endRow;
     if (end > dm->sf->rowCount()) end = dm->sf->rowCount();
@@ -556,6 +565,8 @@ void MetadataCache::readIconChunk()
     }
     /*
     qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
+             << "firstIconVisible =" << firstIconVisible
+             << "firstIconVisible =" << firstIconVisible
              << "rowCount =" << dm->sf->rowCount()
              << "action =" << action;
 //    */
@@ -568,21 +579,22 @@ void MetadataCache::readIconChunk()
         }
 
         // load icon
-        QModelIndex idx = dm->sf->index(row, 0);
-        if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
-            int dmRow = dm->sf->mapToSource(idx).row();
+        QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, 0));
+        QStandardItem *item = dm->itemFromIndex(dmIdx);
+        bool isNullIcon = item->icon().isNull();
+        if (dmIdx.isValid() && isNullIcon) {
+            int dmRow = dmIdx.row();
             QImage image;
-            QString fPath = idx.data(G::PathRole).toString();
+            QString fPath = dmIdx.data(G::PathRole).toString();
             /*
             if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
             bool thumbLoaded = thumb->loadThumb(fPath, image);
             if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
             */
             bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIconChunk");
-            QPixmap pm;
             if (thumbLoaded) {
-                pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                item->setIcon(pm);
                 iconMax(pm);
                 iconsCached.append(dmRow);
             }
@@ -590,34 +602,37 @@ void MetadataCache::readIconChunk()
     }
 
     // process entire range
-    for (int row = start; row <= end; ++row) {
+    for (int row = start; row < end; ++row) {
         if (abort) {
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
 
         // load icon
-        QModelIndex idx = dm->sf->index(row, 0);
-        if (idx.isValid() && idx.data(Qt::DecorationRole).isNull()) {
-            int dmRow = dm->sf->mapToSource(idx).row();
+        QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, 0));
+        QStandardItem *item = dm->itemFromIndex(dmIdx);
+        bool isNullIcon = item->icon().isNull();
+        if (dmIdx.isValid() && isNullIcon) {
+            int dmRow = dmIdx.row();
             QImage image;
-            QString fPath = idx.data(G::PathRole).toString();
+            QString fPath = dmIdx.data(G::PathRole).toString();
             /*
             if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
             bool thumbLoaded = thumb->loadThumb(fPath, image);
             if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
             */
             bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIconChunk");
-            QPixmap pm;
             if (thumbLoaded) {
-                pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+                item->setIcon(pm);
                 iconMax(pm);
                 iconsCached.append(dmRow);
             }
         }
+
+        // show progress
         if (!G::isNewFolderLoaded) {
-            QString fPath = idx.data(G::PathRole).toString();
+            QString fPath = dmIdx.data(G::PathRole).toString();
             /*
             if (G::isLogger || G::isFlowLogger)
             {
@@ -637,9 +652,6 @@ void MetadataCache::readIconChunk()
             QApplication::processEvents();
         }
     }
-
-    // reset after a filter change
-//    emit updateIconBestFit();
 }
 
 void MetadataCache::readMetadataChunk()
@@ -698,15 +710,6 @@ void MetadataCache::readMetadataChunk()
             QApplication::processEvents();
         }
     } while (metadataLoadFailed && metadataTry > tryAgain++);
-
-    /*
-    if (tryAgain == metadataTry)
-        qDebug() << __FUNCTION__ << "Failed to read all metadata.";
-    else
-        qDebug() << __FUNCTION__ << "All metadata in chunk read."
-                 << "tryAgain =" << tryAgain
-                    ;
-                    //*/
 }
 
 void MetadataCache::run()
@@ -727,21 +730,6 @@ void MetadataCache::run()
         int rowCount = dm->sf->rowCount();
         dm->loadingModel = true;
 
-        // read all metadata but no icons
-        if (action == Action::AllMetadata) {
-            readAllMetadata();
-        }
-
-        // just read metadata chunk, wait for icon best fit determination
-        if (action == Action::NewFolder) {
-            readMetadataChunk();
-        }
-
-        // read the icons
-        if (action == Action::NewFolder2ndPass) {
-            readIconChunk();
-        }
-
         // read next metadata and icon chunk
         if (action == Action::Scroll ||
             action == Action::Resize ||
@@ -759,13 +747,7 @@ void MetadataCache::run()
 
         // update allMetadataLoaded flag if metadata has been loaded for every row in dm
         if (!G::allMetadataLoaded) {
-            G::allMetadataLoaded = true;
-            for (int i = 0; i < rowCount; ++i) {
-                if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool()) {
-                    G::allMetadataLoaded = false;
-                    break;
-                }
-            }
+            G::allMetadataLoaded = dm->allMetadataLoaded();
         }
 
         // clean up orphaned icons outside icon range   rgh what about other actions
@@ -779,21 +761,7 @@ void MetadataCache::run()
             }
         }
 
-        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "emit loadMetadataCache2ndPass");
-        // calc icon best fit and return to load requisite number of icons
-        if (action == Action::NewFolder) {
-            emit loadMetadataCache2ndPass();
-//            QApplication::processEvents();
-//            return;
-        }
-
         dm->loadingModel = false;
-    }
-
-    // after 2nd pass on new folder initiate the image cache
-    if (action == Action::NewFolder2ndPass) {
-        G::metaCacheMB = memRequired();
-        emit loadImageCache();
     }
 
     // update status of metadataThreadRunningLabel in statusbar

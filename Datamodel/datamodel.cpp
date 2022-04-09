@@ -899,7 +899,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */
 //    mutex.lock();
-    if (G::isLogger) G::log(__FUNCTION__); 
+    QMutexLocker locker(&mutex);
+    if (G::isLogger) G::log(__FUNCTION__);
     int row = m.row;
 //    qDebug() << __FUNCTION__ << row;
     if (!metadata->ratings.contains(m.rating)) {
@@ -911,7 +912,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
         m._label = "";
     }
 
-    QMutexLocker locker(&mutex);
     QString search = index(row, G::SearchTextColumn).data().toString();
 
     setData(index(row, G::SearchColumn), m.isSearch);
@@ -1024,7 +1024,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
-
+//    mutex.unlock();
     return true;
 }
 
@@ -1164,11 +1164,20 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
     quick lookup to get the datamodel row from an image path.
 */
     if (G::isLogger) G::log(__FUNCTION__); 
-    if (!fPathRow.contains(fPath)) return index(-1, -1);
-    int row = fPathRow[fPath];
-    QModelIndex idx = sf->mapFromSource(index(row, 0));
-    if (idx.isValid()) return idx;
-    return index(-1, -1);       // invalid index
+    if (!fPathRow.contains(fPath)) {
+        qDebug() << __FUNCTION__ << "Not in fPathrow";
+        return index(-1, -1);
+    }
+    int dmRow = fPathRow[fPath];
+    QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
+    if (sfIdx.isValid()) {
+        qDebug() << __FUNCTION__ << "Valid" << sfIdx;
+        return sfIdx;
+    }
+    else {
+        qDebug() << __FUNCTION__ << "Invalid proxy";
+        return index(-1, -1);       // invalid index
+    }
 
     /* deprecated code
     QModelIndexList idxList = sf->match(sf->index(0, 0), G::PathRole, fPath);
@@ -1182,6 +1191,12 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 int DataModel::proxyRowFromModelRow(int dmRow) {
     if (G::isLogger) G::log(__FUNCTION__); 
     return sf->mapFromSource(index(dmRow, 0)).row();
+}
+
+int DataModel::modelRowFromProxyRow(int sfRow)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    return sf->mapToSource(sf->index(sfRow, 0)).row();
 }
 
 void DataModel::clearPicks()
@@ -1272,6 +1287,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     if (G::isLogger) G::log(__FUNCTION__); 
     QString s = "";
     rpt << "\n"   << G::sj("DataModel row", 27) << G::s(row);
+    rpt << "\n  " << G::sj("isIcon", 25) << G::s(!itemFromIndex(index(row, G::PathColumn))->icon().isNull());
     rpt << "\n  " << G::sj("FileName", 25) << G::s(index(row, G::NameColumn).data());
     rpt << "\n  " << G::sj("FilePath", 25) << G::s(index(row, 0).data(G::PathRole));
     rpt << "\n  " << G::sj("dupHideRaw", 25) << G::s(index(row, 0).data(G::DupHideRawRole));
@@ -1393,7 +1409,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
                     QModelIndex idx = sourceModel()->index(sourceRow, dataModelColumn, sourceParent);
                     QVariant dataValue = idx.data(Qt::EditRole);
                     QVariant filterValue = (*filter)->data(1, Qt::EditRole);
-                    /*
+//                    /*
                     QString itemName = (*filter)->text(0);      // for debugging
                     qDebug() << G::t.restart() << "\t" << itemCategory << itemName
                              << "sfRow" << sourceRow

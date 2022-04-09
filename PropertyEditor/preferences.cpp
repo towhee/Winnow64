@@ -227,6 +227,12 @@ itemChange, which is subclassed here.
         G::embedTifThumb = v.toBool();
     }
 
+    if (source == "tryConcurrentLoading") {
+        G::tryConcurrentLoading = v.toBool();
+        mw->useLinearLoadProcess = !G::tryConcurrentLoading;
+        if (G::tryConcurrentLoading) mw->createImageCache2();
+    }
+
     if (source == "isLogger") {
         G::isLogger = v.toBool();
         if (G::isLogger) mw->openLog();
@@ -476,12 +482,29 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
+    // Try concurrent loading
+    i.name = "tryConcurrentLoading";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Beta: try concurrent loading.";
+    i.tooltip = "When you click on a new folder, the metadata, icons and images\n"
+                "will be loaded concurrently.  For larger folders, this will\n"
+                "allow you to browse full size images almost immediately.\n\n"
+                "Please note that this is beta and may have some stability issues."
+                ;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::tryConcurrentLoading;
+    i.key = "tryConcurrentLoading";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
     // Logger
     i.name = "isLogger";
     i.parentName = "GeneralHeader";
     i.captionText = "Turn log on";
-    i.tooltip = "Turn this on to write errors to a log file."
-                "Warning: this will impact performance.  Use"
+    i.tooltip = "Turn this on to write errors to a log file.\n"
+                "Warning: this will impact performance.  Use\n"
                 "to help resolve bugs and crashes.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -495,8 +518,8 @@ void Preferences::addItems()
     i.name = "isErrorLogger";
     i.parentName = "GeneralHeader";
     i.captionText = "Turn error logging on";
-    i.tooltip = "Turn this on to write errors to a log file."
-                "Warning: this will impact performance.  Use"
+    i.tooltip = "Turn this on to write errors to a log file.\n"
+                "Warning: this will impact performance.  Use\n"
                 "to help resolve bugs and crashes.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -504,7 +527,7 @@ void Preferences::addItems()
     i.key = "isErrorLogger";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+//    addItem(i);
 
     // Thumbnails Header (Root) ---------------------------------------------------------------
     i.name = "AppearanceHeader";
