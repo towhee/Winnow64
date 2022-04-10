@@ -98,7 +98,7 @@ private:
     Metadata *metadata;
     QVector<ImageDecoder*> decoder;     // all the decoders
     QHash<QString,int> cacheKeyHash;    // cache key for any path
-    QList<int> targetQueue;
+    QList<int> targetQueue;             // new - not used
 
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
