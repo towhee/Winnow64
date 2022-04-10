@@ -50,7 +50,7 @@ private:
     Metadata *metadata;
     ImageCache2 *imageCacheThread2;
     Thumb *thumb;
-
+    int adjIconChunkSize;
     int sfRowCount;
 
     QList<int> priorityQueue;

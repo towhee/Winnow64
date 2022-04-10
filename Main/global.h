@@ -207,6 +207,7 @@ namespace G
     extern QString css;
 
     extern bool allMetadataLoaded;
+    extern bool allIconsLoaded;
 //    extern bool buildingFilters;
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;

@@ -79,6 +79,7 @@ namespace G
 
     // status
     bool allMetadataLoaded;
+    bool allIconsLoaded;
     bool ignoreScrollSignal;
     bool isSlideShow;
     bool isProcessingExportedImages;

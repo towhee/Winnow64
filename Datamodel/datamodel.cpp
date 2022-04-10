@@ -1035,6 +1035,21 @@ bool DataModel::metadataLoaded(int dmRow)
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
 }
 
+bool DataModel::iconLoaded(int sfRow)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QModelIndex dmIdx = sf->mapToSource(sf->index(sfRow, 0));
+    return !(itemFromIndex(dmIdx)->icon().isNull());
+}
+
+bool DataModel::allIconsLoaded()
+{
+    for (int row = 0; row < rowCount(); ++row) {
+        if (itemFromIndex(index(row, 0))->icon().isNull()) return false;
+    }
+    return true;
+}
+
 bool DataModel::allMetadataLoaded()
 {
     for (int row = 0; row < rowCount(); ++row) {

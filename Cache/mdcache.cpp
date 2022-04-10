@@ -348,9 +348,7 @@ bool MetadataCache::anyItemsToLoad()
 //        QString ext = dm->sf->index(i, G::TypeColumn).data().toString().toLower();
 //        if (metadata->noMetadataFormats.contains(ext)) continue;
         // icon not loaded
-        QModelIndex idx = dm->sf->mapToSource(dm->sf->index(i, 0));
-//        if (dm->sf->index(i, G::PathColumn).data(Qt::DecorationRole).isNull())
-        if (dm->itemFromIndex(idx)->icon().isNull())
+        if (!dm->iconLoaded(i))
             return true;
         // metadata not loaded
         if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
@@ -536,7 +534,7 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
     }
 
     // load icon
-    if (idx.data(Qt::DecorationRole).isNull()) {
+    if (!dm->iconLoaded(sfRow)) {
         QImage image;
 //        qDebug() << __FUNCTION__ << "row =" << sfRow << fPath;
         bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readMetadataIcon");
@@ -581,8 +579,8 @@ void MetadataCache::readIconChunk()
         // load icon
         QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, 0));
         QStandardItem *item = dm->itemFromIndex(dmIdx);
-        bool isNullIcon = item->icon().isNull();
-        if (dmIdx.isValid() && isNullIcon) {
+//        bool isNullIcon = item->icon().isNull();
+        if (dmIdx.isValid() && !dm->iconLoaded(row)) {
             int dmRow = dmIdx.row();
             QImage image;
             QString fPath = dmIdx.data(G::PathRole).toString();
@@ -611,8 +609,8 @@ void MetadataCache::readIconChunk()
         // load icon
         QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, 0));
         QStandardItem *item = dm->itemFromIndex(dmIdx);
-        bool isNullIcon = item->icon().isNull();
-        if (dmIdx.isValid() && isNullIcon) {
+//        bool isNullIcon = item->icon().isNull();
+        if (dmIdx.isValid() && !dm->iconLoaded(row)) {
             int dmRow = dmIdx.row();
             QImage image;
             QString fPath = dmIdx.data(G::PathRole).toString();
