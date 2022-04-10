@@ -260,10 +260,12 @@ void ImageCache2::setTargetRange()
 
     // assign target files to cache
     int sumMB = 0;
+    targetQueue.clear();
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
         sumMB += icd->cacheItemList.at(i).sizeMB;
         if (sumMB < icd->cache.maxMB) {
             icd->cacheItemList[i].isTarget = true;
+            targetQueue.append(i);
          }
         else {
             icd->cacheItemList[i].isTarget = false;
@@ -488,19 +490,31 @@ void ImageCache2::fixOrphans()
     is shown as isCaching it is reset, and if the image is cached then it is removed from the
     imCache and the cached flag is reset to false.
 */
+    checkForOrphans = false;
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
         QString fPath = icd->cacheItemList.at(i).fPath;
         bool isCached = icd->cacheItemList.at(i).isCached;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
         bool inImageCache = icd->imCache.contains(fPath);
         if (icd->cacheItemList.at(i).isTarget) {
-            if (isCaching) icd->cacheItemList[i].isCaching = false;
+            if (isCaching) {
+                // chk if decoding is active
+                int id = icd->cacheItemList[i].threadId;
+                if (decoder[id]->isRunning() && decoder[id]->cacheKey == i) {
+                    // decoding is active, no action req'd
+                }
+                else {
+                    // reset isCaching to false
+                    icd->cacheItemList[i].isCaching = false;
+                    checkForOrphans = true;
+                }
+            }
         }
         else {
             if (isCached) icd->cacheItemList[i].isCached = false;
             if (isCaching) icd->cacheItemList[i].isCaching = false;
             if (inImageCache) icd->imCache.remove(fPath);
-            emit updateCacheOnThumbs(fPath, false, "ImageCache2::fixOrphans");
+            emit updateCacheOnThumbs(fPath, false, "ImageCache::fixOrphans");
 //            if (isCached) emit updateCacheOnThumbs(fPath, false, icd->cache.targetFirst,icd->cache.targetLast);
         }
     }
@@ -1031,7 +1045,7 @@ void ImageCache2::setCurrentPosition(QString path)
     cache direction, priorities and target are reset and the cache is updated in fillCache.
     */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, path);
-    qDebug() << __FUNCTION__ << path;
+//    qDebug() << __FUNCTION__ << path;
     mutex.lock();
     currentPath = path;
     mutex.unlock();
@@ -1185,7 +1199,7 @@ bool ImageCache2::fillCache(int id, bool positionChange)
     }
     else { // caching completed
         decoder[id]->setReady();
-//        fixOrphans();
+        if (checkForOrphans) fixOrphans();
         emit updateIsRunning(false, true);  // (isRunning, showCacheLabel)
         if (debugCaching) {
             qDebug() << __FUNCTION__
@@ -1226,6 +1240,8 @@ void ImageCache2::run()
 
     // signal MW cache status
     emit updateIsRunning(true, true);
+
+    checkForOrphans = true;
 
     /* fill the cache with images.  Note use ImageDecoder::Status::Ready because
        decoder[id]->isRunning() resulted in empty images in imCache  */

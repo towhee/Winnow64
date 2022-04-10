@@ -62,6 +62,8 @@ public:
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);
     bool allMetadataLoaded();
+    bool allIconsLoaded();
+    bool iconLoaded(int sfRow);
     int rowFromPath(QString fPath);
     void refreshRowFromPath();
 

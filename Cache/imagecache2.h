@@ -91,12 +91,14 @@ private:
     bool refreshCache;
     QString currentPath;
     int maxAttemptsToCacheImage = 10000;
+    bool checkForOrphans;           // prevent multiple orphan checks as each decoder finishes
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;
     Metadata *metadata;
     QVector<ImageDecoder*> decoder;     // all the decoders
     QHash<QString,int> cacheKeyHash;    // cache key for any path
+    QList<int> targetQueue;
 
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList

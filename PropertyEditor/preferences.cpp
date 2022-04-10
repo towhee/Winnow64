@@ -115,6 +115,7 @@ itemChange, which is subclassed here.
 
     if (source == "metadataChunkSize") {
         mw->metadataCacheThread->metadataChunkSize = v.toInt();
+        mw->metaRead->iconChunkSize = v.toInt();
     }
 
     if (source == "maxIconSize") {
@@ -818,8 +819,8 @@ void Preferences::addItems()
 
     // Metadata chunk size (number of thumbnails)
     i.name = "metadataChunkSize";
-    i.parentName = "CacheThumbnailHeader";
-    i.captionText = "Incremental amount to load";
+    i.parentName = "CacheHeader";
+    i.captionText = "Maximum thumbnails to cache";
     i.tooltip = "Enter the number of minimum thumbnails and metadata you want to cache.\n"
                 "If the grid is displaying a larger number then the larger number will \n"
                 "be used to make sure they are all shown.  You can experiment to see \n"
@@ -831,9 +832,9 @@ void Preferences::addItems()
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;
-    i.max = 3000;
+    i.max = 10000;
     i.fixedWidth = 50;
-//    addItem(i);   // set to 3000
+    addItem(i);   // set to 3000
 
     // Maximum icon size
     i.name = "maxIconSize";
