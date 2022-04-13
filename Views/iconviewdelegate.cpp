@@ -334,6 +334,7 @@ void IconViewDelegate::paint(QPainter *painter,
     bool isSelected = option.state.testFlag(QStyle::State_Selected);
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
+    bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
 
     // Make the item border rect smaller to accommodate the border.
     QRect cellRect(option.rect);
@@ -450,7 +451,7 @@ void IconViewDelegate::paint(QPainter *painter,
     }
 
     // draw the cache circle
-    if (!isCached && !G::isSlideShow) {
+    if (!isCached && metaLoaded && !G::isSlideShow) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect);

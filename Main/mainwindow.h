@@ -129,7 +129,7 @@ public:
     bool useFilterView = true;
 
     // loadversion2
-    bool useLinearLoadProcess = false;
+//    bool useLinearLoadProcess = false;
 
     int copyCutCount;   // rgh req'd?
     QTextStream rpt;

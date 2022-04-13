@@ -229,9 +229,7 @@ itemChange, which is subclassed here.
     }
 
     if (source == "tryConcurrentLoading") {
-        G::tryConcurrentLoading = v.toBool();
-        mw->useLinearLoadProcess = !G::tryConcurrentLoading;
-        if (G::tryConcurrentLoading) mw->createImageCache2();
+        G::useLinearLoading = !v.toBool();
     }
 
     if (source == "isLogger") {
@@ -494,7 +492,7 @@ void Preferences::addItems()
                 ;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = G::tryConcurrentLoading;
+    i.value = !G::useLinearLoading;
     i.key = "tryConcurrentLoading";
     i.delegateType = DT_Checkbox;
     i.type = "bool";

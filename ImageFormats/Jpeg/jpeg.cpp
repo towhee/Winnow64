@@ -101,6 +101,10 @@ bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
         p.file.seek(p.offset);                  // APP1 FFE*
         marker = Utilities::get16(p.file.read(2), isBigEnd);
         if (marker < 0xFF01) {
+            qDebug() << "Jpeg::getDimensions"
+                     << "FAIL: MARKER < 0xFFC0"
+                     << "m.fPath =" << m.fPath
+                        ;
             return false;
         }
         p.offset = Utilities::get16(p.file.peek(2), isBigEnd) + static_cast<quint32>(p.file.pos());
@@ -108,6 +112,11 @@ bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
     p.file.seek(p.file.pos()+3);
     m.height = Utilities::get16(p.file.read(2), isBigEnd);
     m.width = Utilities::get16(p.file.read(2), isBigEnd);
+    qDebug() << "Jpeg::getDimensions"
+             << "m.width =" << m.width
+             << "m.height =" << m.height
+             << "m.fPath =" << m.fPath
+                ;
     return true;
 }
 
@@ -129,6 +138,9 @@ bool Jpeg::parse(MetadataParameters &p,
 
     if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
         G::error(__FUNCTION__, m.fPath, "JPG does not start with 0xFFD8.");
+        qDebug() << "Jpeg::parse FAILED JPG does not start with 0xFFD8."
+                 << m.fPath
+                    ;
         return false;
     }
 
@@ -145,10 +157,17 @@ bool Jpeg::parse(MetadataParameters &p,
         // metadata available
         m.offsetFull = 0;
         m.lengthFull = static_cast<uint>(p.file.size());
+        qDebug() << "Jpeg::parse JFIF type JPG"
+                 << m.fPath
+                   ;
+        getDimensions(p, m);
         return true;
     }
     else {
         G::error(__FUNCTION__, m.fPath, "JPG does not contain EXIF information.");
+        qDebug() << "Jpeg::parse JPG does not contain EXIF information."
+                 << m.fPath
+                    ;
         return false;
     }
 
@@ -233,6 +252,12 @@ bool Jpeg::parse(MetadataParameters &p,
 
     m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
+    qDebug() << "Jpeg::PARSE"
+             << "m.width =" << m.width
+             << "m.height =" << m.height
+             << "m.fPath =" << m.fPath
+                ;
+
     p.offset = 0;
     if (!m.width || !m.height) getDimensions(p, m);
     m.widthPreview = m.width;

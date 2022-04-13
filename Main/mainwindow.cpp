@@ -290,9 +290,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     useUpdateStatus = true;
     useFilterView = true;
 
-    // loadversion2
-//    useLinearLoadProcess = true;
-
     // Initialize some variables
     initialize();
 
@@ -329,7 +326,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
     createMDCache();            // dependent on DataModel, Metadata, ThumbView
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
-    createImageCache2();        // dependent on DataModel, Metadata, ThumbView
+//    createImageCache2();        // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
@@ -584,7 +581,7 @@ void MW::closeEvent(QCloseEvent *event)
     metadataCacheThread->stopMetadataCache();
     imageCacheThread->stopImageCache();
     // loadversion2
-    if (!useLinearLoadProcess) {
+    if (!G::useLinearLoading) {
         metaRead->stop();
     }
     if (filterDock->isVisible()) {
@@ -1510,8 +1507,8 @@ void MW::folderSelectionChange()
     // start loading new folder
 //    metadataCacheThread->loadNewFolder(isRefreshingDM);
     G::t.restart();
-    qDebug() << __FUNCTION__ << "useLinearLoadProcess =" << useLinearLoadProcess;
-    if (useLinearLoadProcess) {
+    qDebug() << __FUNCTION__ << "useLinearLoadProcess =" << G::useLinearLoading;
+    if (G::useLinearLoading) {
         // metadata and icons loaded in GUI thread
         loadNewFolder();
     }
@@ -1545,7 +1542,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, src + " " + current.data(G::PathRole).toString());
     if (G::stop) return;
     G::isNewSelection = false;
-    if (current == previous) return;
+//    if (current == previous) return;
 
    /*
     qDebug() << "\n" << __FUNCTION__
@@ -1675,7 +1672,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (G::isNewFolderLoaded) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
         updateIconsVisible(currentRow);
-        if (useLinearLoadProcess)
+        if (G::useLinearLoading)
             metadataCacheThread->fileSelectionChange();
 //        G::track(__FUNCTION__, "Return from metadataCacheThread->fileSelectionChange() " + fPath);
 
@@ -1699,10 +1696,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
             && useImageCache
            )
         {
-            if (useLinearLoadProcess)
+//            if (G::useLinearLoading)
                 emit setImageCachePosition(dm->currentFilePath);
-            else
-                emit setImageCachePosition2(dm->currentFilePath);
+//            else
+//                emit setImageCachePosition2(dm->currentFilePath);
         }
     }
 
@@ -1796,6 +1793,10 @@ void MW::stopAndClearAll(QString src)
 //    qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
 
     G::stop = true;
+    // Stop any threads that might be running.
+    metadataCacheThread->stopMetadataCache();
+    imageCacheThread->stopImageCache();
+    buildFilters->stop();
 
     imageView->clear();
     setCentralMessage("Preparing to load new folder.");
@@ -1803,11 +1804,7 @@ void MW::stopAndClearAll(QString src)
     G::isNewFolderLoaded = false;
     G::allMetadataLoaded = false;
     G::isNewFolderLoadedAndInfoViewUpToDate = false;
-    // Stop any threads that might be running.
-    if (!useLinearLoadProcess) metaRead->stop();
-    metadataCacheThread->stopMetadataCache();
-    imageCacheThread->stopImageCache();
-    buildFilters->stop();
+    if (!G::useLinearLoading) metaRead->stop();
     imageView->clear();
     if (useInfoView) {
         infoView->clearInfo();
@@ -1921,7 +1918,7 @@ void MW::updateIconsVisible(int row)
              << "last =" << last;
 //        */
 
-    if (useLinearLoadProcess) {
+    if (G::useLinearLoading) {
         metadataCacheThread->firstIconVisible = first;
         metadataCacheThread->midIconVisible = (first + last) / 2;// rgh qCeil ??
         metadataCacheThread->lastIconVisible = last;
@@ -1971,7 +1968,7 @@ void MW::loadNew1()   // loadversion2
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-    imageCacheThread2->initImageCache(netCacheMBSize, cacheMinMB,
+    imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
         isShowCacheProgressBar, cacheWtAhead);
     // no sorting or filtering until all metadta loaded
     filterMenu->setEnabled(false);
@@ -1986,7 +1983,7 @@ void MW::loadNew2()   // loadversion2
     if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__ << G::t.elapsed() << "ms";
     G::isNewFolderLoaded = true;
-    G::allMetadataLoaded = dm->allMetadataLoaded();
+    G::allMetadataLoaded = true;//dm->allMetadataLoaded();
     G::allIconsLoaded = dm->allIconsLoaded();
     if (G::allMetadataLoaded) {
         filterMenu->setEnabled(true);
@@ -2044,7 +2041,7 @@ void MW::loadNew3()  // loadversion2
         gridView->selectFirst();
         currentSfIdx = dm->sf->index(0,0);
     }
-    qDebug() << __FUNCTION__ << "fileSelectionChange";
+//    qDebug() << __FUNCTION__ << "fileSelectionChange";
     fileSelectionChange(currentSfIdx, currentSfIdx, __FUNCTION__);
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
@@ -2155,7 +2152,7 @@ void MW::thumbHasScrolled()
             tableView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
-            if (useLinearLoadProcess) metadataCacheThread->scrollChange(__FUNCTION__);
+            if (G::useLinearLoading) metadataCacheThread->scrollChange(__FUNCTION__);
             else loadNew0();
         }
         // update thumbnail zoom frame cursor
@@ -2204,7 +2201,7 @@ void MW::gridHasScrolled()
         thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
-            if (useLinearLoadProcess) metadataCacheThread->scrollChange(__FUNCTION__);
+            if (G::useLinearLoading) metadataCacheThread->scrollChange(__FUNCTION__);
             else loadNew0();
         }
     }
@@ -2249,7 +2246,7 @@ void MW::tableHasScrolled()
             thumbView->scrollToRow(tableView->midVisibleRow, __FUNCTION__);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
-            if (useLinearLoadProcess) metadataCacheThread->scrollChange(__FUNCTION__);
+            if (G::useLinearLoading) metadataCacheThread->scrollChange(__FUNCTION__);
 //            else loadNew0();
         }
     }
@@ -2409,7 +2406,9 @@ void MW::updateImageCacheStatus(QString instruction,
                                     cacheProgressBar->targetColorGradient);
         // cached
         for (int i = 0; i < rows; ++i) {
-            if (dm->sf->index(i, G::PathColumn).data(G::CachedRole).toBool())
+//            bool metaLoaded = dm->sf->index(i, G::MetadataLoadedColumn).data().toBool();
+            bool cached = dm->sf->index(i, G::PathColumn).data(G::CachedRole).toBool();
+            if (/*metaLoaded && */cached)
                 cacheProgressBar->updateProgress(i, i + 1, rows,
                                             cacheProgressBar->imageCacheColorGradient);
         }
@@ -4736,6 +4735,17 @@ void MW::createMDCache()
     //            this, SLOT(refreshCurrentAfterReload()));
 
 //    connect(metadataCacheThread, &MetadataCache::scrollToCurrent, this, &MW::scrollToCurrentRow);
+
+    metaRead = new MetaRead(this, dm);
+    metaRead->iconChunkSize = 20;
+
+    // add metadata to datamodel
+    connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
+    // message metadata reading completed
+    connect(metaRead, &MetaRead::done, this, &MW::loadNew2);
+    // Signal to MW::loadNew3 to prep and run fileSelectionChange
+    connect(metaRead, &MetaRead::delayedStartImageCache, this, &MW::loadNew3);
+
 }
 
 void MW::createImageCache()
@@ -4784,6 +4794,15 @@ void MW::createImageCache()
     // Send message to setCentralMsg
     connect(imageCacheThread, &ImageCache::centralMsg,
             this, &MW::setCentralMessage);
+
+    // concurrent load
+    // add to image cache list
+    connect(metaRead, &MetaRead::addToImageCache,
+            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+    // signal to ImageCache new image selection req'd?
+    connect(metaRead, &MetaRead::setImageCachePosition,
+            imageCacheThread, &ImageCache::setCurrentPosition);
+
 }
 
 void MW::createImageCache2()
@@ -4810,7 +4829,7 @@ void MW::createImageCache2()
     // Send message to setCentralMsg
     connect(imageCacheThread2, &ImageCache2::centralMsg, this, &MW::setCentralMessage);
 
-    metaRead = new MetaRead(this, dm, imageCacheThread2);
+    metaRead = new MetaRead(this, dm);
     metaRead->iconChunkSize = 20;
 
     // add metadata to datamodel
@@ -7796,10 +7815,11 @@ void MW::diagnosticsMetadata()
 }
 void MW::diagnosticsXMP() {}
 void MW::diagnosticsMetadataCache() {}
-void MW::diagnosticsImageCache() { // loadversion2
-    if (useLinearLoadProcess) diagnosticsReport(imageCacheThread->diagnostics());
-    else diagnosticsReport(imageCacheThread2->diagnostics());
-}
+// loadversion2
+void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
+//    if (useLinearLoadProcess) diagnosticsReport(imageCacheThread->diagnostics());
+//    else diagnosticsReport(imageCacheThread2->diagnostics());
+//}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
 void MW::diagnosticsErrors() {diagnosticsReport(dm->diagnosticsErrors());}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics());}
@@ -8868,7 +8888,7 @@ void MW::writeSettings()
     setting->setValue("modifySourceFiles", G::modifySourceFiles);
     setting->setValue("useSidecar", G::useSidecar);
     setting->setValue("embedTifThumb", G::embedTifThumb);
-    setting->setValue("tryConcurrentLoading", G::tryConcurrentLoading);
+    setting->setValue("tryConcurrentLoading", !G::useLinearLoading);
     setting->setValue("isLogger", G::isLogger);
     setting->setValue("isErrorLogger", G::isErrorLogger);
 
@@ -9173,7 +9193,7 @@ bool MW::loadSettings()
         G::modifySourceFiles = false;
         G::useSidecar = false;
         G::embedTifThumb = false;
-        G::tryConcurrentLoading = false;
+        G::useLinearLoading = true;
 
         // ingest
         autoIngestFolderPath = false;
@@ -9247,14 +9267,10 @@ bool MW::loadSettings()
         G::embedTifThumb = setting->value("embedTifThumb").toBool();
     else
         G::embedTifThumb = false;
-    if (setting->contains("tryConcurrentLoading")) {
-        G::tryConcurrentLoading = setting->value("tryConcurrentLoading").toBool();
-        useLinearLoadProcess = !G::tryConcurrentLoading;
-    }
-    else {
-        G::tryConcurrentLoading = false;
-        useLinearLoadProcess = true;
-    }
+    if (setting->contains("tryConcurrentLoading"))
+        G::useLinearLoading = !setting->value("tryConcurrentLoading").toBool();
+    else
+        G::useLinearLoading = true;
 
     lastFileIfCrash = setting->value("lastFileSelection").toString();
 
@@ -11216,9 +11232,10 @@ void MW::setCachedStatus(QString fPath, bool isCached, QString src)
         return;
     }
     int dmRow = dm->fPathRow[fPath];
+    bool metaLoaded = dm->index(dmRow, G::MetadataLoadedColumn).data().toBool();
     QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
 
-    if (sfIdx.isValid()) {
+    if (sfIdx.isValid() && metaLoaded) {
         dm->sf->setData(sfIdx, isCached, G::CachedRole);
         if (isCached) {
             if (sfIdx.row() == currentRow) {
@@ -11242,6 +11259,7 @@ void MW::setCachedStatus(QString fPath, bool isCached, QString src)
         gridView->refreshThumb(sfIdx, G::CachedRole);
     }
     else {
+
         qWarning() << __FUNCTION__ << "INVALID INDEX FOR" << sfIdx;
     }
     return;
@@ -12766,7 +12784,7 @@ void MW::setCentralMessage(QString message)
     if (G::isLogger) G::log(__FUNCTION__);
     msg.msgLabel->setText(message);
     centralLayout->setCurrentIndex(MessageTab);
-    QApplication::processEvents();
+//    QApplication::processEvents();
 }
 
 void MW::help()
@@ -12810,10 +12828,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << __FUNCTION__ << metaRead->iconChunkSize;
-    for (int i = 0; i < dm->rowCount(); ++i) {
-        if (!dm->iconLoaded(i)) qDebug() << i << __FUNCTION__ << "Icon not loaded";
-    }
+//    qDebug() << __FUNCTION__ << metaRead->iconChunkSize;
+//    for (int i = 0; i < dm->rowCount(); ++i) {
+//        if (!dm->iconLoaded(i)) qDebug() << i << __FUNCTION__ << "Icon not loaded";
+//    }
 //    qDebug() << __FUNCTION__ << dm->itemFromIndex(dm->index(750, 0))->icon().isNull();
 
 //    qDebug() << dm->sf->index(750, G::PathColumn).data(Qt::DecorationRole).size();
@@ -12822,7 +12840,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    dm->itemFromIndex(dm->index(750, 0))->setIcon(nullIcon);
 //    qDebug() << dm->sf->index(750, G::PathColumn).data(Qt::DecorationRole);
 //    return;
-//    qDebug() << __FUNCTION__ << useLinearLoadProcess;
+    qDebug() << __FUNCTION__ << "useLinearLoadProcess" << G::useLinearLoading;
 //    folderAndFileChangePath = "D:/Pictures/2018-01-14_Lillian/2018-01-14_0038.NEF"; // pos = 871
 //    folderAndFileSelectionChange(folderAndFileChangePath);
 }

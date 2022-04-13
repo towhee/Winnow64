@@ -315,6 +315,7 @@ bool ImageCache::nextToCache(int id)
     // find next priority item
     for (int i = icd->cache.targetFirst; i <= icd->cache.targetLast; ++i) {
         if (i >= icd->cacheItemList.length()) break;
+        if (!icd->cacheItemList.at(i).isMetadata) continue;
         int priority = icd->cacheItemList.at(i).priority;
         if (priority >= lastPriority) break;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
@@ -812,6 +813,37 @@ void ImageCache::reportRunStatus()
              << "currentPath =" << currentPath;
 }
 
+// Same as ImageCache2, but not used in ImageCache yet
+void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
+{
+    QMutexLocker locker(&mutex);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    int row = cacheKeyHash[m.fPath];
+//    qDebug() << "ImageCache::addCacheItemImageMetadata" << row << m.fPath;
+    /* cacheItemList is a list of cacheItem used to track the current
+       cache status and make future caching decisions for each image
+       8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
+    */
+    qDebug() << "ImageCache::addCacheItemImageMetadat"
+             << "m.row =" << m.row
+             << "m.width =" << m.width
+             << "m.height =" << m.height
+             << "m.fPath =" << m.fPath
+                ;
+    icd->cacheItemList[row].sizeMB = static_cast<int>(m.width * m.height * 1.0 / 262144);
+    icd->cacheItemList[row].isMetadata = m.width > 0;
+    // decoder parameters
+    icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
+    icd->cacheItemList[row].orientation = m.orientation;
+    icd->cacheItemList[row].rotationDegrees = m.rotationDegrees;
+    icd->cacheItemList[row].offsetFull = m.offsetFull;
+    icd->cacheItemList[row].lengthFull = m.lengthFull;
+    icd->cacheItemList[row].samplesPerPixel = m.samplesPerPixel;
+    icd->cacheItemList[row].iccBuf = m.iccBuf;
+
+//    icd->cache.folderMB += icd->cacheItem.sizeMB; // req'd?
+}
+
 void ImageCache::buildImageCacheList()
 {
 /*
@@ -837,7 +869,6 @@ void ImageCache::buildImageCacheList()
         QString fPath = dm->sf->index(i, G::PathColumn).data(G::PathRole).toString();
         cacheKeyHash[fPath] = i;
         if (fPath == "") continue;
-        ImageMetadata m = dm->imMetadata(fPath);
         /* cacheItemList is a list of cacheItem used to track the current
            cache status and make future caching decisions for each image  */
         icd->cacheItem.key = i;              // need to be able to sync with imageList
@@ -849,31 +880,38 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.isCached = false;
         icd->cacheItem.isTarget = false;
         icd->cacheItem.priority = i;
-        // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
-        icd->cacheItem.sizeMB = static_cast<int>(m.width * m.height * 1.0 / 262144);
-        icd->cacheItem.isMetadata = m.width > 0;
-        // decoder parameters
-        icd->cacheItem.metadataLoaded = m.metadataLoaded;
-        icd->cacheItem.orientation = m.orientation;
-        icd->cacheItem.rotationDegrees = m.rotationDegrees;
-        icd->cacheItem.offsetFull = m.offsetFull;
-        icd->cacheItem.lengthFull = m.lengthFull;
-        icd->cacheItem.samplesPerPixel = m.samplesPerPixel;
-        icd->cacheItem.iccBuf = m.iccBuf;
+        if (G::useLinearLoading) {
+            ImageMetadata m = dm->imMetadata(fPath);
+            // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
+            icd->cacheItem.sizeMB = static_cast<int>(m.width * m.height * 1.0 / 262144);
+            icd->cacheItem.isMetadata = m.width > 0;
+            // decoder parameters
+            icd->cacheItem.metadataLoaded = m.metadataLoaded;
+            icd->cacheItem.orientation = m.orientation;
+            icd->cacheItem.rotationDegrees = m.rotationDegrees;
+            icd->cacheItem.offsetFull = m.offsetFull;
+            icd->cacheItem.lengthFull = m.lengthFull;
+            icd->cacheItem.samplesPerPixel = m.samplesPerPixel;
+            icd->cacheItem.iccBuf = m.iccBuf;
 
-        icd->cacheItemList.append(icd->cacheItem);
-        folderMB += icd->cacheItem.sizeMB;
-        if (G::isLogger || G::isFlowLogger) {
-            if (i % 1000 == 0) {
-                QString msg = "Building Image Cache: ";
-                msg += QString::number(i) + " of " + QString::number(dm->sf->rowCount());
-//                G::log(__FUNCTION__, msg);
-                emit centralMsg(msg);
+            icd->cacheItemList.append(icd->cacheItem);
+            folderMB += icd->cacheItem.sizeMB;
+            if (G::isLogger || G::isFlowLogger) {
+                if (i % 1000 == 0) {
+                    QString msg = "Building Image Cache: ";
+                    msg += QString::number(i) + " of " + QString::number(dm->sf->rowCount());
+    //                G::log(__FUNCTION__, msg);
+                    emit centralMsg(msg);
+                }
             }
+            QApplication::processEvents();
         }
-        QApplication::processEvents();
+        else {
+            icd->cacheItem.metadataLoaded = false;
+            icd->cacheItemList.append(icd->cacheItem);
+        }
     }
-    icd->cache.folderMB = folderMB;
+    if (G::useLinearLoading) icd->cache.folderMB = folderMB;
 }
 
 void ImageCache::initImageCache(int &cacheMaxMB,

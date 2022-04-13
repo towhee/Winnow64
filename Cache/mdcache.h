@@ -90,7 +90,7 @@ public:
     int metadataTry = 3;
     int iconTry = 3;
 
-
+    bool loadIcon(int sfRow);
     void createCacheStatus();
     void updateCacheStatus(int row);
     void readAllMetadata();

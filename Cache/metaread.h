@@ -9,7 +9,7 @@
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 //#include "Metadata/imagemetadata.h"
-#include "Cache/imagecache2.h"
+//#include "Cache/imagecache2.h"
 #include "Image/thumb.h"
 
 class MetaRead : public QThread
@@ -17,7 +17,7 @@ class MetaRead : public QThread
     Q_OBJECT
 
 public:
-    MetaRead(QObject *parent, DataModel *dm, ImageCache2 *imageCacheThread2);
+    MetaRead(QObject *parent, DataModel *dm);
     ~MetaRead() override;
     void stop();
     void read();
@@ -48,7 +48,7 @@ private:
     bool abort;
     DataModel *dm;
     Metadata *metadata;
-    ImageCache2 *imageCacheThread2;
+//    ImageCache2 *imageCacheThread2;
     Thumb *thumb;
     int adjIconChunkSize;
     int sfRowCount;
