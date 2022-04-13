@@ -326,7 +326,7 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
     added to the datamodel. The image cache is updated.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
+//    qDebug() << __FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -478,6 +478,32 @@ void MetadataCache::iconMax(QPixmap &thumb)
     if (h > G::iconHMax) G::iconHMax = h;
 }
 
+bool MetadataCache::loadIcon(int sfRow)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(sfRow, 0));
+    QStandardItem *item = dm->itemFromIndex(dmIdx);
+//        bool isNullIcon = item->icon().isNull();
+    if (dmIdx.isValid() && !dm->iconLoaded(sfRow)) {
+        int dmRow = dmIdx.row();
+        QImage image;
+        QString fPath = dmIdx.data(G::PathRole).toString();
+        /*
+        if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
+        bool thumbLoaded = thumb->loadThumb(fPath, image);
+        if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
+        */
+        bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIconChunk");
+        if (thumbLoaded) {
+            QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+            item->setIcon(pm);
+            iconMax(pm);
+            iconsCached.append(dmRow);
+        }
+    }
+    return true;
+}
+
 void MetadataCache::readAllMetadata()
 {
 /*
@@ -575,28 +601,7 @@ void MetadataCache::readIconChunk()
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
-
-        // load icon
-        QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, 0));
-        QStandardItem *item = dm->itemFromIndex(dmIdx);
-//        bool isNullIcon = item->icon().isNull();
-        if (dmIdx.isValid() && !dm->iconLoaded(row)) {
-            int dmRow = dmIdx.row();
-            QImage image;
-            QString fPath = dmIdx.data(G::PathRole).toString();
-            /*
-            if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
-            bool thumbLoaded = thumb->loadThumb(fPath, image);
-            if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
-            */
-            bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIconChunk");
-            if (thumbLoaded) {
-                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                item->setIcon(pm);
-                iconMax(pm);
-                iconsCached.append(dmRow);
-            }
-        }
+        loadIcon(row);
     }
 
     // process entire range
@@ -606,30 +611,11 @@ void MetadataCache::readIconChunk()
             return;
         }
 
-        // load icon
-        QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, 0));
-        QStandardItem *item = dm->itemFromIndex(dmIdx);
-//        bool isNullIcon = item->icon().isNull();
-        if (dmIdx.isValid() && !dm->iconLoaded(row)) {
-            int dmRow = dmIdx.row();
-            QImage image;
-            QString fPath = dmIdx.data(G::PathRole).toString();
-            /*
-            if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
-            bool thumbLoaded = thumb->loadThumb(fPath, image);
-            if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
-            */
-            bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIconChunk");
-            if (thumbLoaded) {
-                QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                item->setIcon(pm);
-                iconMax(pm);
-                iconsCached.append(dmRow);
-            }
-        }
+        loadIcon(row);
 
         // show progress
         if (!G::isNewFolderLoaded) {
+            QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, 0));
             QString fPath = dmIdx.data(G::PathRole).toString();
             /*
             if (G::isLogger || G::isFlowLogger)

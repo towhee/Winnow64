@@ -90,7 +90,7 @@ namespace G
     bool modifySourceFiles;
     bool useSidecar;
     bool embedTifThumb;
-    bool tryConcurrentLoading;
+    bool useLinearLoading;
 
     // ingest
     bool isRunningBackgroundIngest;

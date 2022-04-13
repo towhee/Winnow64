@@ -322,6 +322,7 @@ bool ImageCache2::nextToCache(int id)
     // find next priority item
     for (int i = icd->cache.targetFirst; i <= icd->cache.targetLast; ++i) {
         if (i >= icd->cacheItemList.length()) break;
+        if (!icd->cacheItemList.at(i).isMetadata) continue;
         int priority = icd->cacheItemList.at(i).priority;
         if (priority >= lastPriority) break;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
@@ -392,7 +393,7 @@ bool ImageCache2::nextToDecache(int id)
         if (debugCaching) {
             QString k = QString::number(key).leftJustified((4));
             qDebug().noquote() << __FUNCTION__ << "  decoder" << id << "key =" << k;
-        }
+         }
         return true;
     }
     return false;
@@ -859,6 +860,10 @@ void ImageCache2::buildImageCacheList()
     The rest of the information is added as it is collected in MetaRead.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    icd->cacheItemList.clear();
+    cacheKeyHash.clear();
+    // the total memory size of all the images in the folder currently selected
+    icd->cache.totFiles = dm->sf->rowCount();
 
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
@@ -886,7 +891,7 @@ void ImageCache2::initImageCache(int &cacheMaxMB,
                                 bool &isShowCacheStatus,
                                 int &cacheWtAhead)
 {
-    mutex.lock();
+//    QMutexLocker locker(&mutex);
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
 
     abort = false;
@@ -915,14 +920,9 @@ void ImageCache2::initImageCache(int &cacheMaxMB,
     }
 
     // populate the new folder image list
-    icd->cacheItemList.clear();
-    cacheKeyHash.clear();
-    // the total memory size of all the images in the folder currently selected
-    icd->cache.totFiles = dm->sf->rowCount();
     buildImageCacheList();
 
     source = __FUNCTION__;
-    mutex.unlock();
 }
 
 void ImageCache2::updateImageCacheParam(int &cacheSizeMB,
@@ -1090,7 +1090,7 @@ void ImageCache2::cacheImage(int id, int cacheKey)
 */
     if (debugCaching) {
         QString k = QString::number(cacheKey).leftJustified((4));
-        qDebug().noquote() << __FUNCTION__ << "     decoder" << id << "key =" << k
+        qDebug().noquote() << "ImageCache2::cacheImage" << "     decoder" << id << "key =" << k
                  << decoder[id]->fPath;
     }
     makeRoom(id, cacheKey);

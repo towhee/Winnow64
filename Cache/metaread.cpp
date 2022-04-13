@@ -11,13 +11,13 @@
 */
 
 MetaRead::MetaRead(QObject *parent,
-                   DataModel *dm,
-                   ImageCache2 *imageCacheThread2)
+                   DataModel *dm/*,
+                   ImageCache2 *imageCacheThread2*/)
     : QThread(parent)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     this->dm = dm;
-    this->imageCacheThread2 = imageCacheThread2;
+//    this->imageCacheThread2 = imageCacheThread2;
     metadata = new Metadata;
     thumb = new Thumb(this, dm, metadata);
 //    iconChunkSize = 4000;
@@ -224,10 +224,9 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
         metadata->m.row = dmRow;
         if (abort) return;
-//        emit addToDatamodel(metadata->m);
-        dm->addMetadataForItem(metadata->m);
-//        emit addToImageCache(metadata->m);
-        imageCacheThread2->addCacheItemImageMetadata(metadata->m);
+        qDebug() << "MetaRead::readMetadata" << dmRow << "w =" << metadata->m.width << fPath;
+        emit addToDatamodel(metadata->m);
+        emit addToImageCache(metadata->m);
     }
 }
 

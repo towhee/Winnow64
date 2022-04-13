@@ -1,4 +1,5 @@
 BUGS / TO DO
+- Unstable if metadata cannot be read for an image
 - Filtering can get bogged down
 - Filter progress not showing
 - InfoView context remove "set fixed size" and add "copy field"
