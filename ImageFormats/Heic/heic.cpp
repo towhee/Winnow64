@@ -11,7 +11,7 @@ Heic::Heic(/*QFile &file*/)
 
     QFileInfo info(file);
     qDebug();
-    qDebug() << __FUNCTION__ << info.filePath() << "\n";
+    qDebug() << __PRETTY_FUNCTION__ << info.filePath() << "\n";
 
     // iterate box structures
     while (offset < eof) {
@@ -30,23 +30,23 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
     QElapsedTimer t; t.restart();
     auto error = heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
     if (error.code) {
-        qDebug() << __FUNCTION__ << "heif_context_read_from_file" << error.message;
+        qDebug() << __PRETTY_FUNCTION__ << "heif_context_read_from_file" << error.message;
         return false;
     }
     /*
-    qDebug() << __FUNCTION__ << "Error:"
+    qDebug() << __PRETTY_FUNCTION__ << "Error:"
              << "code =" << error.code
              << "subcode =" << error.subcode
              << "message =" << error.message
             ;
 //    */
-//    qDebug() << __FUNCTION__ << "Read heif context =" << t.nsecsElapsed() << fPath;
+//    qDebug() << __PRETTY_FUNCTION__ << "Read heif context =" << t.nsecsElapsed() << fPath;
 
     // get a handle to the primary image
     heif_image_handle* handle = nullptr;
     error = heif_context_get_primary_image_handle(ctx, &handle);
     if (error.code) {
-        qDebug() << __FUNCTION__ << "heif_context_get_primary_image_handle" << error.message;
+        qDebug() << __PRETTY_FUNCTION__ << "heif_context_get_primary_image_handle" << error.message;
         return false;
     }
 
@@ -58,7 +58,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
     QByteArray exifData(length, 0);
     error = heif_image_handle_get_metadata(handle, id, exifData.data());
     if (error.code) {
-        qDebug() << __FUNCTION__ << "heif_image_handle_get_metadata" << error.message;
+        qDebug() << __PRETTY_FUNCTION__ << "heif_image_handle_get_metadata" << error.message;
         return false;
     }
     p.buf.setBuffer(&exifData);
@@ -82,7 +82,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
         count++;
         if (count > 100) {
             // err endian order not found
-            G::error(__FUNCTION__, fPath, "Endian order not found.");
+            G::error(__PRETTY_FUNCTION__, fPath, "Endian order not found.");
             p.buf.close();
             return false;
         }
@@ -114,7 +114,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
                           ifd->ifdDataHash.value(33432).tagCount);
 
 //    // read IFD1
-//    qDebug() << __FUNCTION__ << "nextIFDOffset IFD1 =" << nextIFDOffset;
+//    qDebug() << __PRETTY_FUNCTION__ << "nextIFDOffset IFD1 =" << nextIFDOffset;
 //    if (nextIFDOffset) {
 //        p.hdr = "IFD1";
 //        p.offset = nextIFDOffset + startOffset;
@@ -302,7 +302,7 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
     heif_context* ctx = heif_context_alloc();
     auto error = heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
     if (error.code) {
-        qDebug() << __FUNCTION__ << "heif_context_read_from_file" << error.message;
+        qDebug() << __PRETTY_FUNCTION__ << "heif_context_read_from_file" << error.message;
         return false;
     }
 
@@ -310,7 +310,7 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
     heif_image_handle* handle = nullptr;
     error = heif_context_get_primary_image_handle(ctx, &handle);
     if (error.code) {
-        qDebug() << __FUNCTION__ << "heif_context_get_primary_image_handle" << error.message;
+        qDebug() << __PRETTY_FUNCTION__ << "heif_context_get_primary_image_handle" << error.message;
         return false;
     }
 
@@ -322,7 +322,7 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
                       heif_chroma_interleaved_RGB,
                       nullptr);
     if (error.code || !img) {
-        qDebug() << __FUNCTION__ << "heif_decode_image" << error.message;
+        qDebug() << __PRETTY_FUNCTION__ << "heif_decode_image" << error.message;
         return false;
     }
 
@@ -345,7 +345,7 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
         return false;
     }
     /*
-    qDebug() << __FUNCTION__ << fPath
+    qDebug() << __PRETTY_FUNCTION__ << fPath
              << "w =" << w << "h =" << h
              << "stride =" << stride;
 //             */
@@ -371,7 +371,7 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
     const uint8_t* data = heif_image_get_plane_readonly(srcImage.get(),
                                                         heif_channel_interleaved,
                                                         &stride);
-    qDebug() << __FUNCTION__ << fPath
+    qDebug() << __PRETTY_FUNCTION__ << fPath
              << "imgSize =" << imgSize
              << "stride =" << stride;
     // move data ownership to QImage
@@ -401,7 +401,7 @@ bool Heic::decodeThumbnail(QString &fPath, QImage &image)
     if (count > 0) {
         heif_item_id ids[1];
         heif_image_handle_get_list_of_thumbnail_IDs(handle, ids, count);
-//        qDebug() << __FUNCTION__ << ids[0];
+//        qDebug() << __PRETTY_FUNCTION__ << ids[0];
         heif_image_handle_get_thumbnail(handle, ids[0], &thumbHandle);
         handle = thumbHandle;
     }
@@ -419,7 +419,7 @@ bool Heic::decodeThumbnail(QString &fPath, QImage &image)
     int stride;
     const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
     /*
-    qDebug() << __FUNCTION__ << fPath
+    qDebug() << __PRETTY_FUNCTION__ << fPath
              << "w =" << w << "h =" << h
              << "stride =" << stride;   //*/
     image = QImage(data, w, h, stride, QImage::Format_RGB888);
@@ -432,7 +432,7 @@ bool Heic::nextHeifBox(quint32 &length, QString &type)
     length = Utilities::get32(file.read(4));
     if (length < 2) length = static_cast<quint32>(eof - offset);
     type = file.read(4);
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "offset:" << offset
              << "length:" << length
              << "type:" << type;
@@ -464,9 +464,9 @@ bool Heic::getHeifBox(QString &type, quint32 &offset, quint32 &length)
 
     // err
     QString err = "Box type " + type + " is unknown";
-    G::error(__FUNCTION__, fPath, err);
+    G::error(__PRETTY_FUNCTION__, fPath, err);
     qDebug();
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "**************************************** Failed to get box for type ="
              << type
              << "****************************************\n";
@@ -478,7 +478,7 @@ bool Heic::ftypBox(quint32 &offset, quint32 &length)
 {
     if (length == 0) {
         // err
-        qDebug() << __FUNCTION__ << "ftyp not found";
+        qDebug() << __PRETTY_FUNCTION__ << "ftyp not found";
         return false;
     }
 
@@ -497,8 +497,8 @@ bool Heic::ftypBox(quint32 &offset, quint32 &length)
     if (!isHeic) {
         // err
         QString err = "Brand heic or HEIC not found.";
-        G::error(__FUNCTION__, fPath, err);
-        qDebug() << __FUNCTION__ << "heic not found";
+        G::error(__PRETTY_FUNCTION__, fPath, err);
+        qDebug() << __PRETTY_FUNCTION__ << "heic not found";
         return false;
     }
     offset += length;
@@ -513,7 +513,7 @@ bool Heic::metaBox(quint32 &offset, quint32 &length)
     quint32 metaEnd = offset + length;
     offset += 12;
 
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "offset =" << offset
              << "length =" << length;
 
@@ -532,7 +532,7 @@ bool Heic::hdlrBox(quint32 &offset, quint32 &length)
 {
     file.seek(offset + 16);
     QString hdlrType = file.read(4);
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "hdlrType =" << hdlrType;
     if (hdlrType != "pict") {
         // err
@@ -566,12 +566,12 @@ bool Heic::drefBox(quint32 &offset, quint32 &length)
     file.seek(offset + 12);
     quint32 entry_count = Utilities::get32(file.read(4));
     qDebug();
-    qDebug() << __FUNCTION__ << "entry_count =" << entry_count;
+    qDebug() << __PRETTY_FUNCTION__ << "entry_count =" << entry_count;
 
     for (quint32 i = 0; i < entry_count; i++) {
         if (offset > drefEnd) return false;
         nextHeifBox(length, type);
-        qDebug() << __FUNCTION__ << "entry#" << i;
+        qDebug() << __PRETTY_FUNCTION__ << "entry#" << i;
         if (type == "url ") getHeifBox(type, offset, length);
 //        if (type == "urln") getHeifBox(type, offset, length);
     }
@@ -589,7 +589,7 @@ bool Heic::urlBox(quint32 &offset, quint32 &length)
     if (urlLength > 0) {
         location = file.read(length - 12);
     }
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "    location =" << location;
 
     offset += length;
@@ -606,7 +606,7 @@ bool Heic::urnBox(quint32 &offset, quint32 &length)
         name = Utilities::getCString(file);
         if (file.pos() < offset + length) location = Utilities::getCString(file);
     }
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "    name =" << name
              << "location =" << location;
 
@@ -619,7 +619,7 @@ bool Heic::colrBox(quint32 &offset, quint32 &length)
     file.seek(offset + 8);
 
     QString colrType = file.read(4);
-    qDebug() << __FUNCTION__ << "colrType =" << colrType;
+    qDebug() << __PRETTY_FUNCTION__ << "colrType =" << colrType;
     QByteArray colorProfile;
     if (colrType == "nclx") {
         quint16 colour_primaries = Utilities::get16(file.read(2));
@@ -627,7 +627,7 @@ bool Heic::colrBox(quint32 &offset, quint32 &length)
         quint16 matrix_coefficients = Utilities::get16(file.read(2));
         quint8 x = Utilities::get8(file.read(1));
         quint8 full_range_flag = (x & 0b10000000) >> 7;             // first 1 bit
-        qDebug() << __FUNCTION__
+        qDebug() << __PRETTY_FUNCTION__
                  << "colour_primaries =" << colour_primaries
                  << "transfer_characteristics =" << transfer_characteristics
                  << "matrix_coefficients =" << matrix_coefficients
@@ -635,11 +635,11 @@ bool Heic::colrBox(quint32 &offset, quint32 &length)
     }
     else if (colrType == "rICC" || colrType == "prof") {
         colorProfile = file.read(length - 8);
-        qDebug() << __FUNCTION__ << colorProfile;
+        qDebug() << __PRETTY_FUNCTION__ << colorProfile;
     }
     else {
         // err
-        qDebug() << __FUNCTION__ << "*** color type" << colrType << "is not recognized";
+        qDebug() << __PRETTY_FUNCTION__ << "*** color type" << colrType << "is not recognized";
         offset += length;
         return false;
     }
@@ -655,7 +655,7 @@ bool Heic::pixiBox(quint32 &offset, quint32 &length)
 
     for (quint8 i = 0; i < num_channels; i++) {
         quint8 bits_per_channel = Utilities::get8(file.read(1));
-        qDebug() << __FUNCTION__ << "channel#" << i << "bits_per_channel =" << bits_per_channel;
+        qDebug() << __PRETTY_FUNCTION__ << "channel#" << i << "bits_per_channel =" << bits_per_channel;
     }
 
     offset += length;
@@ -668,7 +668,7 @@ bool Heic::irotBox(quint32 &offset, quint32 &length)
     quint8 x = Utilities::get8(file.read(1));
     quint8 angle = (x & 0b00000011);             // first 1 bit
     quint16 angle_degrees = angle * 90;
-    qDebug() << __FUNCTION__ << "angle =" << angle << "angle degrees =" << angle_degrees;
+    qDebug() << __PRETTY_FUNCTION__ << "angle =" << angle << "angle degrees =" << angle_degrees;
 
     offset += length;
     return true;
@@ -679,7 +679,7 @@ bool Heic::pitmBox(quint32 &offset, quint32 &length)
 
     file.seek(offset + 16);
     pitmId = Utilities::get16(file.read(2));
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "pitmId =" << pitmId;
 
     offset += length;
@@ -697,13 +697,13 @@ bool Heic::ilocBox(quint32 &offset, quint32 &length)
     ilocBaseOffsetSize = Utilities::get4_1st(c);
     ilocItemCount = Utilities::get16(file.read(2));
     qDebug();
-    qDebug()  << __FUNCTION__
+    qDebug()  << __PRETTY_FUNCTION__
              << "ilocOffsetSize =" << ilocOffsetSize
              << "ilocLengthSize =" << ilocLengthSize
              << "ilocBaseOffsetSize =" << ilocBaseOffsetSize
              << "ilocItemCount =" << ilocItemCount;
     if (ilocItemCount > 100) {
-        qDebug() << __FUNCTION__ << "*** Quiting because ilocItemCount =" << ilocItemCount;
+        qDebug() << __PRETTY_FUNCTION__ << "*** Quiting because ilocItemCount =" << ilocItemCount;
         offset += length;
         return false;
     }
@@ -716,15 +716,15 @@ bool Heic::ilocBox(quint32 &offset, quint32 &length)
         if (ilocBaseOffsetSize == 2) base_offset = Utilities::get16(file.read(2));
         if (ilocBaseOffsetSize == 4) base_offset = Utilities::get32(file.read(4));
         quint16 extent_count = Utilities::get16(file.read(2));
-        qDebug() << __FUNCTION__ << "Item:" << i
+        qDebug() << __PRETTY_FUNCTION__ << "Item:" << i
                  << "itemId" << item_ID
                  << "data_reference_index" << data_reference_index
                  << "base_offset" << base_offset
                  << "extent_count" << extent_count;
         if (extent_count > 100) {
             QString err = "Quiting because extent_count has reached " + extent_count;
-            G::error(__FUNCTION__, fPath, err);
-            qDebug() << __FUNCTION__ << "*** Quiting because extent_count =" << extent_count;
+            G::error(__PRETTY_FUNCTION__, fPath, err);
+            qDebug() << __PRETTY_FUNCTION__ << "*** Quiting because extent_count =" << extent_count;
             offset += length;
             return false;
         }
@@ -739,12 +739,12 @@ bool Heic::ilocBox(quint32 &offset, quint32 &length)
             if (ilocLengthSize == 1) extent_length = Utilities::get8(file.read(1));
             if (ilocLengthSize == 2) extent_length = Utilities::get16(file.read(2));
             if (ilocLengthSize == 4) extent_length = Utilities::get32(file.read(4));
-            qDebug() <<__FUNCTION__ << "    Extent:" << i
+            qDebug() <<__PRETTY_FUNCTION__ << "    Extent:" << i
                      << "extent_offset" << extent_offset
                      << "extent_length" << extent_length;
         }
     }
-    qDebug() << __FUNCTION__ << "file.pos()" << file.pos();
+    qDebug() << __PRETTY_FUNCTION__ << "file.pos()" << file.pos();
     //    if (hdlrType != "pict") {
     //        // err
     //        return false;
@@ -766,7 +766,7 @@ bool Heic::infeBox(quint32 &offset, quint32 &length)
     if (content_type.length()) content_encoding = Utilities::getCString(file);
     else content_encoding = "";
 
-    qDebug() << "   " << __FUNCTION__
+    qDebug() << "   " << __PRETTY_FUNCTION__
              << "item_ID =" << item_ID
              << "item_protection_index =" << item_protection_index
              << "item_name =" << item_name
@@ -780,10 +780,10 @@ bool Heic::iinfBox(quint32 &offset, quint32 &length)
 {
     file.seek(offset + 14);
     quint16 entry_count = Utilities::get16(file.read(2));
-    qDebug() << __FUNCTION__ << "iint entry count =" << entry_count << file.pos();
+    qDebug() << __PRETTY_FUNCTION__ << "iint entry count =" << entry_count << file.pos();
     if (entry_count == 0) {
         // err
-        qDebug() << __FUNCTION__ << "No iint entries found";
+        qDebug() << __PRETTY_FUNCTION__ << "No iint entries found";
         offset += length;
         return false;
     }
@@ -793,7 +793,7 @@ bool Heic::iinfBox(quint32 &offset, quint32 &length)
     for (int i = 0; i < entry_count; i++) {
         QString infeType;
         nextHeifBox(infeLength, infeType);
-        qDebug() << __FUNCTION__ << "   Item Info Entry " << i;
+        qDebug() << __PRETTY_FUNCTION__ << "   Item Info Entry " << i;
         infeBox(infeOffset, infeLength);
         infeOffset += infeLength;
     }
@@ -809,13 +809,13 @@ bool Heic::sitrBox(quint32 &offset, quint32 &length)
     quint16 from_item_ID = Utilities::get16(file.read(2));
     quint16 reference_count = Utilities::get16(file.read(2));
 
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "from_item_ID =" << from_item_ID
              << "reference_count =" << reference_count;
 
     for (int i = 0; i < reference_count; i++) {
         quint32 to_item_ID = Utilities::get32(file.read(4));
-        qDebug() << __FUNCTION__ << i << ": to_item_ID =" << to_item_ID;
+        qDebug() << __PRETTY_FUNCTION__ << i << ": to_item_ID =" << to_item_ID;
     }
     offset += length;
     return true;
@@ -829,7 +829,7 @@ bool Heic::irefBox(quint32 &offset, quint32 &length)
     file.seek(offset + 8);
     uint version = Utilities::get8(file.read(1));
     quint32 sitrOffset = offset + 12;
-    qDebug() << __FUNCTION__ << "offset =" << offset
+    qDebug() << __PRETTY_FUNCTION__ << "offset =" << offset
              << "length =" << length << "sitrOffset" << sitrOffset;
     while (sitrOffset < irefEndOffset) {
         quint32 sitrLength;
@@ -838,7 +838,7 @@ bool Heic::irefBox(quint32 &offset, quint32 &length)
         nextHeifBox(sitrLength, type);
         if (version == 0) sitrBox(sitrOffset, sitrLength);
 //        else sitrBoxL(sitrOffset, sitrLength);
-        qDebug() << __FUNCTION__ << "irefEndOffset =" << irefEndOffset << "sitrOffset" << sitrOffset;
+        qDebug() << __PRETTY_FUNCTION__ << "irefEndOffset =" << irefEndOffset << "sitrOffset" << sitrOffset;
     }
 
     offset += length;
@@ -847,7 +847,7 @@ bool Heic::irefBox(quint32 &offset, quint32 &length)
 
 bool Heic::hvcCBox(quint32 &offset, quint32 &length)
 {
-    qDebug() << __FUNCTION__ << "file position:" << file.pos();
+    qDebug() << __PRETTY_FUNCTION__ << "file position:" << file.pos();
     uint configurationVersion = Utilities::get8(file.read(1));
     quint8 x = Utilities::get8(file.read(1));
     int general_profile_space = (x & 0b11000000) >> 6;             // first 2 bits
@@ -885,24 +885,24 @@ bool Heic::hvcCBox(quint32 &offset, quint32 &length)
 
     quint8 numOfArrays = Utilities::get8(file.read(1));
 
-    qDebug() << __FUNCTION__ << "configurationVersion =" << configurationVersion;
-    qDebug() << __FUNCTION__ << "general_profile_space =" << general_profile_space;
-    qDebug() << __FUNCTION__ << "general_tier_flag =" << general_tier_flag;
-    qDebug() << __FUNCTION__ << "general_profile_idc =" << general_profile_idc;
-    qDebug() << __FUNCTION__ << "general_profile_compatibility_flags =" << general_profile_compatibility_flags;
-    qDebug() << __FUNCTION__ << "general_constraint_indicator_flags =" << general_constraint_indicator_flags;
-    qDebug() << __FUNCTION__ << "general_level_idc =" << general_level_idc;
-    qDebug() << __FUNCTION__ << "min_spatial_segmentation_idc =" << min_spatial_segmentation_idc;
-    qDebug() << __FUNCTION__ << "parallelismType =" << parallelismType;
-    qDebug() << __FUNCTION__ << "chroma_format_idc =" << chroma_format_idc;
-    qDebug() << __FUNCTION__ << "bit_depth_luma_minus8 =" << bit_depth_luma_minus8;
-    qDebug() << __FUNCTION__ << "bit_depth_chroma_minus8 =" << bit_depth_chroma_minus8;
-    qDebug() << __FUNCTION__ << "avgFrameRate =" << avgFrameRate;
-    qDebug() << __FUNCTION__ << "constantFrameRate =" << constantFrameRate;
-    qDebug() << __FUNCTION__ << "numTemporalLayers =" << numTemporalLayers;
-    qDebug() << __FUNCTION__ << "temporalIdNested =" << temporalIdNested;
-    qDebug() << __FUNCTION__ << "lengthSizeMinusOne =" << lengthSizeMinusOne;
-    qDebug() << __FUNCTION__ << "numOfArrays =" << numOfArrays;
+    qDebug() << __PRETTY_FUNCTION__ << "configurationVersion =" << configurationVersion;
+    qDebug() << __PRETTY_FUNCTION__ << "general_profile_space =" << general_profile_space;
+    qDebug() << __PRETTY_FUNCTION__ << "general_tier_flag =" << general_tier_flag;
+    qDebug() << __PRETTY_FUNCTION__ << "general_profile_idc =" << general_profile_idc;
+    qDebug() << __PRETTY_FUNCTION__ << "general_profile_compatibility_flags =" << general_profile_compatibility_flags;
+    qDebug() << __PRETTY_FUNCTION__ << "general_constraint_indicator_flags =" << general_constraint_indicator_flags;
+    qDebug() << __PRETTY_FUNCTION__ << "general_level_idc =" << general_level_idc;
+    qDebug() << __PRETTY_FUNCTION__ << "min_spatial_segmentation_idc =" << min_spatial_segmentation_idc;
+    qDebug() << __PRETTY_FUNCTION__ << "parallelismType =" << parallelismType;
+    qDebug() << __PRETTY_FUNCTION__ << "chroma_format_idc =" << chroma_format_idc;
+    qDebug() << __PRETTY_FUNCTION__ << "bit_depth_luma_minus8 =" << bit_depth_luma_minus8;
+    qDebug() << __PRETTY_FUNCTION__ << "bit_depth_chroma_minus8 =" << bit_depth_chroma_minus8;
+    qDebug() << __PRETTY_FUNCTION__ << "avgFrameRate =" << avgFrameRate;
+    qDebug() << __PRETTY_FUNCTION__ << "constantFrameRate =" << constantFrameRate;
+    qDebug() << __PRETTY_FUNCTION__ << "numTemporalLayers =" << numTemporalLayers;
+    qDebug() << __PRETTY_FUNCTION__ << "temporalIdNested =" << temporalIdNested;
+    qDebug() << __PRETTY_FUNCTION__ << "lengthSizeMinusOne =" << lengthSizeMinusOne;
+    qDebug() << __PRETTY_FUNCTION__ << "numOfArrays =" << numOfArrays;
 
     for (int i = 0; i < numOfArrays; i++) {
         x = Utilities::get8(file.read(1));
@@ -910,19 +910,19 @@ bool Heic::hvcCBox(quint32 &offset, quint32 &length)
                                                                     // 2nd bit reserved
         int NAL_unit_type = (x & 0b00111111);                         // last 6 bits
         quint16 numNalus = Utilities::get16(file.read(2));
-        qDebug() << __FUNCTION__ << "    array # =" << i;
-        qDebug() << __FUNCTION__ << "    array_completeness =" << array_completeness;
-        qDebug() << __FUNCTION__ << "    NAL_unit_type =" << NAL_unit_type;
-        qDebug() << __FUNCTION__ << "    numNalus =" << numNalus;
+        qDebug() << __PRETTY_FUNCTION__ << "    array # =" << i;
+        qDebug() << __PRETTY_FUNCTION__ << "    array_completeness =" << array_completeness;
+        qDebug() << __PRETTY_FUNCTION__ << "    NAL_unit_type =" << NAL_unit_type;
+        qDebug() << __PRETTY_FUNCTION__ << "    numNalus =" << numNalus;
 
         for (quint16 j = 0; j < numNalus; j++) {
             quint16 nalUnitLength = Utilities::get16(file.read(2));
             QByteArray nalUnit = file.read(nalUnitLength);
-            qDebug() << __FUNCTION__ << "        nalUnitLength =" << nalUnitLength;
+            qDebug() << __PRETTY_FUNCTION__ << "        nalUnitLength =" << nalUnitLength;
         }
     }
 
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "offset:" << offset
              << "length:" << length
              << "offset + length" << offset + length
@@ -937,8 +937,8 @@ bool Heic::ispeBox(quint32 &offset, quint32 &length)
     file.seek(offset + 12);
     quint32 image_width = Utilities::get32(file.read(4));
     quint32 image_height = Utilities::get32(file.read(4));
-    qDebug() << __FUNCTION__ << "image_width =" << image_width;
-    qDebug() << __FUNCTION__ << "image_height =" << image_height << "\n";
+    qDebug() << __PRETTY_FUNCTION__ << "image_width =" << image_width;
+    qDebug() << __PRETTY_FUNCTION__ << "image_height =" << image_height << "\n";
 
     offset += length;       // temp for testing
     return true;
@@ -953,7 +953,7 @@ bool Heic::ipmaBox(quint32 &offset, quint32 &length)
 
     file.seek(offset + 12);
     quint32 entry_count = Utilities::get32(file.read(4));
-    qDebug() << __FUNCTION__ << "entry_count =" << entry_count;
+    qDebug() << __PRETTY_FUNCTION__ << "entry_count =" << entry_count;
 
     for (quint16 i = 0; i < entry_count; i++ ) {
         quint32 item_ID;
@@ -986,7 +986,7 @@ bool Heic::ipmaBox(quint32 &offset, quint32 &length)
         }
     }
 
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "offset:" << offset
              << "length:" << length
              << "offset + length" << offset + length
@@ -1010,8 +1010,8 @@ bool Heic::iprpBox(quint32 &offset, quint32 &length)
     if (ipcoType != "ipco") {
         // err
         QString err = "Type ipco not found in iprp box.";
-        G::error(__FUNCTION__, fPath, err);
-        qDebug() << __FUNCTION__ << "ipco not found in iprp box";
+        G::error(__PRETTY_FUNCTION__, fPath, err);
+        qDebug() << __PRETTY_FUNCTION__ << "ipco not found in iprp box";
         return false;
     }
 
@@ -1030,14 +1030,14 @@ bool Heic::iprpBox(quint32 &offset, quint32 &length)
 
 bool Heic::mdatBox(quint32 &offset, quint32 &length)
 {
-    qDebug() << __FUNCTION__ << "offset =" << offset;
+    qDebug() << __PRETTY_FUNCTION__ << "offset =" << offset;
     offset += length;
     return true;
 }
 
 bool Heic::idatBox(quint32 &offset, quint32 &length)
 {
-    qDebug() << __FUNCTION__ << "offset =" << offset;
+    qDebug() << __PRETTY_FUNCTION__ << "offset =" << offset;
     offset += length;       // temp for testing
     return true;
 }

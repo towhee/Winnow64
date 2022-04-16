@@ -84,7 +84,7 @@ FSModel::FSModel(QWidget *parent, Metadata *metadata, QHash<QString, QString> &c
 
 //bool FSModel::event(QEvent *event)
 //{
-//    qDebug() << __FUNCTION__ << event;
+//    qDebug() << __PRETTY_FUNCTION__ << event;
 //    return QFileSystemModel::event(event);
 //}
 
@@ -158,7 +158,7 @@ CLASS FSTree subclassing QTreeView
 
 FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     this->metadata = metadata;
     fileFilters = new QStringList;
     dir = new QDir();
@@ -202,7 +202,7 @@ void FSTree::createModel()
     Create the model and filter in a separate function as it is also used to refresh
     the folders by deleting the model and re-creating it.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     fsModel = new FSModel(this, metadata, count, combineCount, combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     fsModel->setRootPath(fsModel->myComputer().toString());
@@ -261,14 +261,14 @@ void FSTree::refreshModel()
     Most common use is to refresh the folder panel after inserting a USB connected
     media card.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     delete fsModel;
     createModel();
 }
 
 bool FSTree::isShowImageCount()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     return fsModel->showImageCount;
 }
 
@@ -282,7 +282,7 @@ void FSTree::updateFolderImageCount(QString dirPath)
 /*
 
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__);
     getImageCount(dirPath, true, "updateImageCount");
     fsFilter->invalidate();
 }
@@ -299,14 +299,14 @@ void FSTree::scrollToCurrent()
 /*
 
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QModelIndex idx = getCurrentIndex();
     if (idx.isValid()) scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
 bool FSTree::select(QString dirPath)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
 
     QDir test(dirPath);
     if (test.exists()) {
@@ -322,13 +322,13 @@ bool FSTree::select(QString dirPath)
 
 //QModelIndex FSTree::index(QString dirPath)
 //{
-//    if (G::isLogger) G::log(__FUNCTION__);
+//    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
 //    return fsFilter->mapFromSource(fsModel->index(dirPath));
 //}
 
 QModelIndex FSTree::getCurrentIndex()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QModelIndex idx;
     if (selectedIndexes().size() > 0)
 //        idx = fsFilter->mapFromSource(selectedIndexes().first());
@@ -339,7 +339,7 @@ QModelIndex FSTree::getCurrentIndex()
 
 void FSTree::resizeColumns()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     if (fsModel->showImageCount) {
 //        imageCountColumnWidth = 45;
         QFont font = this->font();
@@ -363,10 +363,10 @@ void FSTree::expand(const QModelIndex &/*idx*/)
     Get the image count when a user expands the folder hierarchy.  This can also occur when a
     bookmark is selected and the matching folder is shown in the FSTree.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
-//    qDebug() << __FUNCTION__ << idx << t.elapsed();
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+//    qDebug() << __PRETTY_FUNCTION__ << idx << t.elapsed();
     if (t.elapsed() > 25) {
-        QString src = __FUNCTION__;
+        QString src = __PRETTY_FUNCTION__;
         QTimer::singleShot(50, [this, src]() {getVisibleImageCount(src);});
     }
     t.restart();
@@ -383,7 +383,7 @@ void FSTree::getVisibleImageCount(QString src)
     Two QHash are updated: count for the total eligible image files and combineCount for when
     raw+jpg are combined.
 */
-    if (G::isLogger) G::log(__FUNCTION__, "Source: " + src);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__, "Source: " + src);
 //    emit updateFileCount("Counting images in folders.");
 
     QModelIndex idx = indexAt(rect().topLeft());  // delta
@@ -399,8 +399,8 @@ void FSTree::getVisibleImageCount(QString src)
 
 void FSTree::getImageCount(QString const dirPath, bool changed, QString src)
 {
-    if (G::isLogger) G::log(__FUNCTION__, dirPath + "  Source: " + src);
-//    qDebug() << __FUNCTION__ << src << dirPath;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__, dirPath + "  Source: " + src);
+//    qDebug() << __PRETTY_FUNCTION__ << src << dirPath;
     // counts is combineRawJpg
     if (!combineCount.contains(dirPath) || changed) {
         dir->setPath(dirPath);
@@ -430,13 +430,13 @@ void FSTree::getImageCount(QString const dirPath, bool changed, QString src)
 
 //bool FSTree::event(QEvent *event)
 //{
-//    qDebug() << __FUNCTION__ << event;
+//    qDebug() << __PRETTY_FUNCTION__ << event;
 //    return QTreeView::event(event);
 //}
 
 void FSTree::resizeEvent(QResizeEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     resizeColumns();
 }
 
@@ -445,12 +445,12 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
     QTreeView::selectionChanged(selected, deselected);
     emit selectionChange();
 //    QtConcurrent::run(this, &FSTree::updateVisibleImageCount);
-//    qDebug() << __FUNCTION__ << count;
+//    qDebug() << __PRETTY_FUNCTION__ << count;
 }
 
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
 
     // do not allow if there is a background ingest in progress
     if (G::isRunningBackgroundIngest) {
@@ -478,7 +478,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
 void FSTree::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QTreeView::mouseReleaseEvent(event);
 }
 
@@ -490,7 +490,7 @@ void FSTree::mouseMoveEvent(QMouseEvent *event)
 
 void FSTree::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
 	QModelIndexList selectedDirs = selectionModel()->selectedRows();
 	if (selectedDirs.size() > 0) {
 		dndOrigSelection = selectedDirs[0];
@@ -505,7 +505,7 @@ void FSTree::dragMoveEvent(QDragMoveEvent *event)
 
 void FSTree::dropEvent(QDropEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
 	if (event->source())
 	{
         QString fstreeStr = "FSTree";

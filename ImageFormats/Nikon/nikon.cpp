@@ -1243,7 +1243,7 @@ bool Nikon::parse(MetadataParameters &p,
                   Exif *exif,
                   Jpeg *jpeg)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // moved file.open to readMetadata
     p.file.seek(0);
 
@@ -1255,7 +1255,7 @@ bool Nikon::parse(MetadataParameters &p,
     }
     else {
         // err, should have been endian order
-        G::error(__FUNCTION__, m.fPath, "Endian order not found.");
+        G::error(__PRETTY_FUNCTION__, m.fPath, "Endian order not found.");
         return false;
     }
     p.file.read(2);       // skip over 0x2A
@@ -1441,7 +1441,7 @@ bool Nikon::parse(MetadataParameters &p,
             step++;
             if (step > 100) {
                 // err endian order not found
-                G::error(__FUNCTION__, m.fPath, "Endian order not found.");
+                G::error(__PRETTY_FUNCTION__, m.fPath, "Endian order not found.");
                break;
             }
         }

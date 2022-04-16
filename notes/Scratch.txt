@@ -1,47 +1,96 @@
-CACHING STRATEGY
-- get visible range: thumbnails (icons) based on 16:9 aspect
-- launch MetaRead
-- read metadata for all image files, starting with visible range*, sf range and dm range
-- when visible metadata read:
-    - calc best fit, tweak visible range, iterate to finalize visible range
-    - launch ReadIcon
-- read icons for visible range*, visible + range, visible - range, rest to limit
-- when visible icons read, launch ImageCache
 
-NEW CLASSES
-- MetaRead
-- MetaReader
-- IconLoad
-- IconLoader
+void MW::thumbsEnlarge()
+        5 void MW::thumbsEnlarge()
+        1 void IconView::justify(IconView::JustifyAction)
+void IconView::setThumbParameters() iconWidth = 132 iconHeight = 132
+       54 void IconView::setThumbParameters()
+       32 bool IconView::calcViewportRange(int)
+        3 void MW::scrollToCurrentRow()
+      320 void IconView::scrollToRow(int, QString)
+        9 void MW::updateIconsVisible(int)
+bool IconView::calcViewportRange(int)
+              i: 0
+              row = 0
+              rows = 1
+              viewport: QSize(908, 729) cell: QSize(148, 148)
+              firstVisibleVPRow = -4
+              firstVisibleCell = -28
+              lastVisibleCell = 6
+              cellsPerVPRow = 7
+              rowsPerVP = 4.92568 5
+              visibleCells = 35
+              rowInView = 0
+              firstVPRowScrollReq = 3
+              lastVRowReqScroll = -3
+              firstCellReqScroll = 21
+              lastCellReqScroll = -21
+void MW::updateIconsVisible(int)
+      thumbView->firstVisibleCell = 0 thumbView->lastVisibleCell = 7143535
+      gridView->firstVisibleCell = -28 gridView->lastVisibleCell = 6
+      tableView->firstVisibleCell = 2 tableView->lastVisibleCell = 0
+      first = -28 last = 6
+       25 bool IconView::calcViewportRange(int)
+        3 void MetadataCache::scrollChange(QString)          called by =void MW::scrollToCurrentRow()
+        3 void MetadataCache::setRange()
+      475 void MW::numberIconsVisibleChange()
+        0 virtual void MetadataCache::run()                  action = Scroll foundItemsToLoad = false
+        1 void MW::updateIconsVisible(int)
+bool IconView::calcViewportRange(int)
+              i: 0
+              row = 0
+              rows = 1
+              viewport: QSize(908, 729) cell: QSize(148, 148)
+              firstVisibleVPRow = -4
+              firstVisibleCell = -28
+              lastVisibleCell = 6
+              cellsPerVPRow = 7
+              rowsPerVP = 4.92568 5
+              visibleCells = 35
+              rowInView = 0
+              firstVPRowScrollReq = 3
+              lastVRowReqScroll = -3
+              firstCellReqScroll = 21
+              lastCellReqScroll = -21
+void MW::updateIconsVisible(int)
+      thumbView->firstVisibleCell = 0 thumbView->lastVisibleCell = 7143535
+      gridView->firstVisibleCell = -28 gridView->lastVisibleCell = 6
+      tableView->firstVisibleCell = 2 tableView->lastVisibleCell = 0
+      first = -28 last = 6
+       23 bool IconView::calcViewportRange(int)
+void MetadataCache::sizeChange(QString)
+        4 void MetadataCache::sizeChange(QString)            called by = void MW::numberIconsVisibleChange()
+        0 void MetadataCache::setRange()
 
-Metadata reading in class metaread (replace mdcache) - new thread
+bool IconView::calcViewportRange(int)
+                i: 0
+                row = 0
+                rows = 1
+                viewport: QSize(908, 729) cell: QSize(126, 126)
+                firstVisibleVPRow = -5
+                firstVisibleCell = -40
+                lastVisibleCell = 7
+                cellsPerVPRow = 8
+                rowsPerVP = 5.78571 6
+                visibleCells = 48
+                rowInView = 0
+                firstVPRowScrollReq = 3
+                lastVRowReqScroll = -3
+                firstCellReqScroll = 24
+                lastCellReqScroll = -24
 
-QVector<bool> dmRowRead;  // match rows in datamodel
-
-Like the image decoders, create n MetaReader:
-// create n MetaReader threads
-QVector<ReaderDecoder*> reader;     // all the decoders in header
-readerCount = QThread::idealThreadCount();
-for (int id = 0; id < readerCount; ++id) {
-    MetaReader *r = new MetaReader(this, id, dm, metadata);
-    readers.append(r);
-    connect(decoder[id], &MetaReader::done, this, &MetaCache::fillCache);
-}
-
-MetaRead::fillDataModel(int id, int dmRow)    // id for reader[id]
-- update dmRowRead
-- get next dmRow to read metadata
-- relaunch reader[id](nextDmRow)
-
-MetaReader::read(int dmRow)
-- readMetadata(fPath) into a ImageMetadata structure m
-- emit a signal to pass m to dm->addMetadataForItem
-- emit done to connect to MetaRead::fillDataModel
-
-PROGRESS QGraphicsView
-Visible   =====*******=========================
-Metadata  ******************===================
-Icons     ==+++++++++++++======================
-Images    =====00000===========================
-          0                                   n = dm->sf->rowCount()
-
+bool IconView::calcViewportRange(int)
+                i: 0
+                row = 0
+                rows = 1
+                viewport: QSize(908, 729) cell: QSize(148, 148)
+                firstVisibleVPRow = -4
+                firstVisibleCell = -28
+                lastVisibleCell = 6
+                cellsPerVPRow = 7
+                rowsPerVP = 4.92568 5
+                visibleCells = 35
+                rowInView = 0
+                firstVPRowScrollReq = 3
+                lastVRowReqScroll = -3
+                firstCellReqScroll = 21
+                lastCellReqScroll = -21

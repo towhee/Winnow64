@@ -80,7 +80,7 @@ When the user selects a thumbnail or a filter or sort has been invoked.
 MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
                   Metadata *metadata) : QThread(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     this->dm = dm;
     this->metadata = metadata;
     thumb = new Thumb(this, dm, metadata);
@@ -109,8 +109,8 @@ MetadataCache::~MetadataCache()
 
 void MetadataCache::stopMetadataCache()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
-//    qDebug() << __FUNCTION__;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+//    qDebug() << __PRETTY_FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -118,14 +118,14 @@ void MetadataCache::stopMetadataCache()
         mutex.unlock();
         wait();
         abort = false;
-        emit updateIsRunning(false, false, __FUNCTION__);
+        emit updateIsRunning(false, false, __PRETTY_FUNCTION__);
     }
 }
 
 bool MetadataCache::isAllMetadataLoaded()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
-//    qDebug() << __FUNCTION__;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+//    qDebug() << __PRETTY_FUNCTION__;
     G::allMetadataLoaded = true;
     for (int i = 0; i < dm->rowCount(); ++i) {
         if (!dm->index(i, G::MetadataLoadedColumn).data().toBool()) {
@@ -138,7 +138,7 @@ bool MetadataCache::isAllMetadataLoaded()
 
 bool MetadataCache::isAllIconLoaded()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     // not being used
     bool loaded = true;
     for (int i = 0; i < dm->rowCount(); ++i) {
@@ -164,15 +164,15 @@ bool MetadataCache::isAllIconLoaded()
 
 //    MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
 //*/
-//    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__;
+//    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__);
+//    qDebug() << __PRETTY_FUNCTION__;
 //    if (isRunning()) {
 //        mutex.lock();
 //        abort = true;
 //        condition.wakeOne();
 //        mutex.unlock();
 //        wait();
-//        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Was Running - stopped");
+//        if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__, "Was Running - stopped");
 //    }
 //    abort = false;
 //    G::allMetadataLoaded = false;
@@ -210,20 +210,20 @@ bool MetadataCache::isAllIconLoaded()
 //     - maxChunkSize
 //    metadata and icons are loaded into the datamodel.
 //*/
-//    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+//    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__);
 //    if (isRunning()) {
 //        mutex.lock();
 //        abort = true;
 //        condition.wakeOne();
 //        mutex.unlock();
 //        wait();
-//        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Was Running - stopped");
+//        if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__, "Was Running - stopped");
 //    }
 //    abort = false;
 //    action = Action::NewFolder2ndPass;
 //    setRange();
 //    foundItemsToLoad = anyItemsToLoad();
-////    qDebug() << __FUNCTION__ << foundItemsToLoad;
+////    qDebug() << __PRETTY_FUNCTION__ << foundItemsToLoad;
 //    start(LowPriority);
 ////    start(TimeCriticalPriority);
 //}
@@ -240,8 +240,8 @@ bool MetadataCache::isAllIconLoaded()
 //    Loading all the metadata in a separate high priority thread is slightly faster, but if the
 //    progress bar update is more important then use the datamodel function dm::addAllMetadata.
 //*/
-//    if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__;
+//    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+//    qDebug() << __PRETTY_FUNCTION__;
 //    if (isRunning()) {
 //        mutex.lock();
 //        abort = true;
@@ -249,7 +249,7 @@ bool MetadataCache::isAllIconLoaded()
 //        mutex.unlock();
 //        wait();
 //    }
-////    qDebug() << __FUNCTION__;
+////    qDebug() << __PRETTY_FUNCTION__;
 //    abort = false;
 //    startRow = 0;
 //    endRow = dm->sf->rowCount();
@@ -267,7 +267,7 @@ void MetadataCache::scrollChange(QString source)
     limits are removed (not visible and not with chunk range)
 */
 //    return;
-    if (G::isLogger) G::log(__FUNCTION__, "called by =" + source);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__, "called by =" + source);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -275,7 +275,7 @@ void MetadataCache::scrollChange(QString source)
         mutex.unlock();
         wait();
         if (isRunning()) {
-            qDebug() << __FUNCTION__ << "ABORT FAILED";
+            qDebug() << __PRETTY_FUNCTION__ << "ABORT FAILED";
             return;
         }
     }
@@ -285,7 +285,7 @@ void MetadataCache::scrollChange(QString source)
     setRange();
     foundItemsToLoad = anyItemsToLoad();
         /*
-        qDebug() << __FUNCTION__ << "foundItemsToLoad =" << foundItemsToLoad
+        qDebug() << __PRETTY_FUNCTION__ << "foundItemsToLoad =" << foundItemsToLoad
                  << "start =" << startRow << "end =" << endRow
                  << "firstIconVisible =" << firstIconVisible
                  << "firstIconVisible =" << firstIconVisible
@@ -302,8 +302,7 @@ void MetadataCache::sizeChange(QString source)
     icon size or the viewport change size.
 */
 //    return;
-    if (G::isLogger) G::log(__FUNCTION__, "called by = " + source);
-    qDebug() << __FUNCTION__;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__, "called by = " + source);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -311,7 +310,7 @@ void MetadataCache::sizeChange(QString source)
         mutex.unlock();
         wait();
     }
-//    qDebug() << __FUNCTION__ << "called by =" << source;
+//    qDebug() << __PRETTY_FUNCTION__ << "called by =" << source;
     abort = false;
     action = Action::Resize;
     setRange();
@@ -325,8 +324,8 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
     This function is called from MW::fileSelectionChange. A chunk of metadata and icons are
     added to the datamodel. The image cache is updated.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__;
+    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__);
+//    qDebug() << __PRETTY_FUNCTION__;
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -343,6 +342,7 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
 
 bool MetadataCache::anyItemsToLoad()
 {
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     for (int i = startRow; i < endRow; ++i) {
         // ignore if image does not have metadata  (rgh include so can show video thumbs)
 //        QString ext = dm->sf->index(i, G::TypeColumn).data().toString().toLower();
@@ -355,7 +355,7 @@ bool MetadataCache::anyItemsToLoad()
             return true;
     }
     // update status of metadataThreadRunningLabel in statusbar
-    emit updateIsRunning(false, true, __FUNCTION__);
+    emit updateIsRunning(false, true, __PRETTY_FUNCTION__);
     return false;
 }
 
@@ -365,7 +365,7 @@ void MetadataCache::setRange()
     Define the range of icons to cache: prev + current + next viewports/pages of icons
     Variables are set in MW::updateIconsVisible
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     int rowCount = dm->sf->rowCount();
 
     // default total per page (prev, curr and next pages)
@@ -392,7 +392,7 @@ void MetadataCache::setRange()
 
 
     /*
-    qDebug()  <<  __FUNCTION__
+    qDebug()  <<  __PRETTY_FUNCTION__
               << "source =" << actionList.at(action)
               << "firstIconVisible =" << firstIconVisible
               << "midIconVisible =" << midIconVisible
@@ -413,7 +413,7 @@ void MetadataCache::iconCleanup()
     other rows that have icons previously loaded in order to minimize memory consumption. Rows
     that have icons are tracked in the list iconsCached as the dm row (not dm->sf proxy).
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     QMutableListIterator<int> i(iconsCached);
     QPixmap nullPm;
     QIcon nullIcon;
@@ -434,7 +434,7 @@ void MetadataCache::iconCleanup()
         if (sfRow < startRow || sfRow > endRow) {
             i.remove();
             dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(nullPm);
-//            qDebug() << __FUNCTION__ << actionList[action]
+//            qDebug() << __PRETTY_FUNCTION__ << actionList[action]
 //                     << "Removing icon for row" << sfRow;
         }
     }
@@ -447,8 +447,8 @@ qint32 MetadataCache::memRequired()
     to store the metadata excluding the icons. The icons are only stored for the part of the
     datamodel about to be viewed. Icon memory = w*h*3 bytes. Return mem reqd in MB.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
-//    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+//    mutex.lock(); qDebug() << __PRETTY_FUNCTION__; mutex.unlock();
     int rowsWithIcons = endRow - startRow;
     quint32 iconMem;
     iconMem = static_cast<quint32>(G::iconHMax * G::iconHMax * 3 * rowsWithIcons);
@@ -456,7 +456,7 @@ qint32 MetadataCache::memRequired()
     int averageMetaMemReqdPerRow = 18900;   // bytes per row
     metaMem = static_cast<quint32>(dm->rowCount() * averageMetaMemReqdPerRow);
     /*
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "rowsWithIcons =" << rowsWithIcons
              << "iconMem =" << iconMem / 1024 / 1024
              << "metaMem =" << metaMem / 1024 / 1024
@@ -467,8 +467,8 @@ qint32 MetadataCache::memRequired()
 
 void MetadataCache::iconMax(QPixmap &thumb)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
-//    mutex.lock(); qDebug() << __FUNCTION__; mutex.unlock();
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+//    mutex.lock(); qDebug() << __PRETTY_FUNCTION__; mutex.unlock();
     if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
 
     // for best aspect calc
@@ -480,7 +480,7 @@ void MetadataCache::iconMax(QPixmap &thumb)
 
 bool MetadataCache::loadIcon(int sfRow)
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(sfRow, 0));
     QStandardItem *item = dm->itemFromIndex(dmIdx);
 //        bool isNullIcon = item->icon().isNull();
@@ -491,7 +491,7 @@ bool MetadataCache::loadIcon(int sfRow)
         /*
         if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
         bool thumbLoaded = thumb->loadThumb(fPath, image);
-        if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
+        if (G::isTest) qDebug() << __PRETTY_FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
         */
         bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIconChunk");
         if (thumbLoaded) {
@@ -509,7 +509,7 @@ void MetadataCache::readAllMetadata()
 /*
     Load the thumb (icon) for all the image files in the folder(s).
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     int count = 0;
     int rows = dm->rowCount();
     for (int row = 0; row < rows; ++row) {
@@ -518,7 +518,7 @@ void MetadataCache::readAllMetadata()
 
         QString fPath = dm->index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __PRETTY_FUNCTION__)) {
             metadata->m.row = row;
             dm->addMetadataForItem(metadata->m);
             count++;
@@ -529,7 +529,7 @@ void MetadataCache::readAllMetadata()
             QString msg = "Reading metadata: ";
             msg += QString::number(row) + " of " + QString::number(end-1);
             msg += " " + fPath;
-            G::log(__FUNCTION__, msg);
+            G::log(__PRETTY_FUNCTION__, msg);
         }
         //*/
         if (row % countInterval == 0) {
@@ -545,7 +545,7 @@ void MetadataCache::readAllMetadata()
 void MetadataCache::readMetadataIcon(const QModelIndex &idx)
 {
 /* rgh Currently not used */
-    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger) {mutex.lock(); G::log(__PRETTY_FUNCTION__); mutex.unlock();}
 
     int sfRow = idx.row();
     int dmRow = dm->sf->mapToSource(idx).row();
@@ -553,7 +553,7 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
 
     if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __PRETTY_FUNCTION__)) {
             metadata->m.row = dmRow;
             dm->addMetadataForItem(metadata->m);
         }
@@ -562,7 +562,7 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
     // load icon
     if (!dm->iconLoaded(sfRow)) {
         QImage image;
-//        qDebug() << __FUNCTION__ << "row =" << sfRow << fPath;
+//        qDebug() << __PRETTY_FUNCTION__ << "row =" << sfRow << fPath;
         bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readMetadataIcon");
         if (thumbLoaded) {
             QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
@@ -579,7 +579,7 @@ void MetadataCache::readIconChunk()
     Load the thumb (icon) for all the image files in the target range.  This is called after a
     sort/filter change and all metadata has been loaded, but the icons visible have changed.
 */
-    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(__PRETTY_FUNCTION__); mutex.unlock();}
     int start = startRow;
     int end = endRow;
     if (end > dm->sf->rowCount()) end = dm->sf->rowCount();
@@ -588,7 +588,7 @@ void MetadataCache::readIconChunk()
         end = dm->sf->rowCount();
     }
     /*
-    qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
+    qDebug() << __PRETTY_FUNCTION__ << "start =" << start << "end =" << end
              << "firstIconVisible =" << firstIconVisible
              << "firstIconVisible =" << firstIconVisible
              << "rowCount =" << dm->sf->rowCount()
@@ -598,7 +598,7 @@ void MetadataCache::readIconChunk()
     // process visible icons first
     for (int row = firstIconVisible; row <= lastIconVisible; ++row) {
         if (abort) {
-            emit updateIsRunning(false, true, __FUNCTION__);
+            emit updateIsRunning(false, true, __PRETTY_FUNCTION__);
             return;
         }
         loadIcon(row);
@@ -607,7 +607,7 @@ void MetadataCache::readIconChunk()
     // process entire range
     for (int row = start; row < end; ++row) {
         if (abort) {
-            emit updateIsRunning(false, true, __FUNCTION__);
+            emit updateIsRunning(false, true, __PRETTY_FUNCTION__);
             return;
         }
 
@@ -623,7 +623,7 @@ void MetadataCache::readIconChunk()
                 QString msg = "Loading thumbnails: ";
                 msg += QString::number(row) + " of " + QString::number(end-1);
                 msg += " " + fPath;
-                G::log(__FUNCTION__, msg);
+                G::log(__PRETTY_FUNCTION__, msg);
             }
             //*/
             if (row % countInterval == 0) {
@@ -643,7 +643,7 @@ void MetadataCache::readMetadataChunk()
 /*
     Load the metadata for all the image files in the target range.
 */
-    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(__PRETTY_FUNCTION__); mutex.unlock();}
 
     int tryAgain = 0;
     bool metadataLoadFailed;
@@ -658,7 +658,7 @@ void MetadataCache::readMetadataChunk()
 
         for (int row = start; row < end; ++row) {
             if (abort) {
-                emit updateIsRunning(false, true, __FUNCTION__);
+                emit updateIsRunning(false, true, __PRETTY_FUNCTION__);
                 return;
             }
             if (dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) continue;
@@ -668,7 +668,7 @@ void MetadataCache::readMetadataChunk()
             if (!dm->readMetadataForItem(dmRow)) {
                 metadataLoadFailed = true;
 //                /*
-                qDebug() << __FUNCTION__
+                qDebug() << __PRETTY_FUNCTION__
                          << "tryAgain =" << tryAgain
                          << "row =" << row
                             ;
@@ -681,7 +681,7 @@ void MetadataCache::readMetadataChunk()
                 QString msg = "Reading metadata: ";
                 msg += QString::number(row) + " of " + QString::number(end-1);
                 msg += " " + fPath;
-                G::log(__FUNCTION__, msg);
+                G::log(__PRETTY_FUNCTION__, msg);
             }
             //*/
             if (row % countInterval == 0) {
@@ -706,11 +706,11 @@ void MetadataCache::run()
 */
     QString msg = "action = " + actionList.at(action) +
                   " foundItemsToLoad = " + QVariant(foundItemsToLoad).toString();
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, msg);
-//    qDebug() << __FUNCTION__ << actionList.at(action) << "foundItemsToLoad =" << foundItemsToLoad;
+    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__, msg);
+//    qDebug() << __PRETTY_FUNCTION__ << actionList.at(action) << "foundItemsToLoad =" << foundItemsToLoad;
 
     if (foundItemsToLoad) {
-        emit updateIsRunning(true, true, __FUNCTION__);
+        emit updateIsRunning(true, true, __PRETTY_FUNCTION__);
         int rowCount = dm->sf->rowCount();
         dm->loadingModel = true;
 
@@ -725,7 +725,7 @@ void MetadataCache::run()
 
         if (abort) {
             dm->loadingModel = false;
-            emit updateIsRunning(false, true, __FUNCTION__);
+            emit updateIsRunning(false, true, __PRETTY_FUNCTION__);
             return;
         }
 
@@ -749,5 +749,5 @@ void MetadataCache::run()
     }
 
     // update status of metadataThreadRunningLabel in statusbar
-    emit updateIsRunning(false, true, __FUNCTION__);
+    emit updateIsRunning(false, true, __PRETTY_FUNCTION__);
 }

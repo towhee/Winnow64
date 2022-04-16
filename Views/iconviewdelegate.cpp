@@ -179,6 +179,11 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight, int l
     thumbSize.setWidth(thumbWidth);
     thumbSize.setHeight(thumbHeight);
 
+    qDebug() << "IconViewDelegate::setThumbDimensions"
+             << "thumbWidth =" << thumbWidth
+             << "thumbHeight =" << thumbHeight
+             << "thumbSize =" << thumbSize
+                ;
     frameSize.setWidth(thumbWidth + tPad2);
     frameSize.setHeight(thumbHeight + tPad2 + textHeight);
 
@@ -275,14 +280,14 @@ int IconViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
 
 void IconViewDelegate::setCurrentIndex(QModelIndex current)
 {
-    qDebug() << __FUNCTION__ << current << current.row();
+    qDebug() << __PRETTY_FUNCTION__ << current << current.row();
     currentRow = current.row();     // this slot not being used
     qDebug() << "IconViewDelegate::onCurrentChanged" << currentRow;
 }
 
 void IconViewDelegate::setCurrentRow(int row)
 {
-    qDebug() << __FUNCTION__ << row ;
+    qDebug() << __PRETTY_FUNCTION__ << row ;
     currentRow = row;
 }
 
@@ -322,9 +327,6 @@ void IconViewDelegate::paint(QPainter *painter,
     border.setWidth(1);
     border.setColor(QColor(l40,l40,l40));
 
-    QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
-    QSize iconsize = icon.actualSize(thumbSize);
-
     // get data from model
     int row = index.row();
     QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
@@ -335,6 +337,17 @@ void IconViewDelegate::paint(QPainter *painter,
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
+    double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
+
+    // icon size
+    QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
+    QSize iconSize = thumbSize;
+    if (aspectRatio > 1) {
+        iconSize.setHeight(thumbSize.width() * 1.0 / aspectRatio);
+    }
+    else {
+        iconSize.setWidth(thumbSize.width() * aspectRatio);
+    }
 
     // Make the item border rect smaller to accommodate the border.
     QRect cellRect(option.rect);
@@ -342,10 +355,21 @@ void IconViewDelegate::paint(QPainter *painter,
     QRect thumbRect(frameRect.topLeft() + tPadOffset, thumbSize);
 
      // the icon rect is aligned within the thumb rect
-    int alignVertPad = (thumbRect.height() - iconsize.height()) / 2;
-    int alignHorPad = (thumbRect.width() - iconsize.width()) / 2;
+    int alignVertPad = (thumbRect.height() - iconSize.height()) / 2;
+    int alignHorPad = (thumbRect.width() - iconSize.width()) / 2;
     QRect iconRect(thumbRect.left() + alignHorPad, thumbRect.top() + alignVertPad,
-                   iconsize.width(), iconsize.height());
+                   iconSize.width(), iconSize.height());
+
+    /*
+    qDebug() << "IconViewDelegate::paint "
+             << "cellRect =" << cellRect
+//             << "frameRect =" << frameRect
+             << "thumbRect =" << thumbRect
+             << "thumbSize =" << thumbSize
+             << "iconsize =" << iconsize
+             << "iconRect =" << iconRect
+                ;
+//             */
 
     // label/rating rect located top-right as containment for circle
     QPoint ratingTopLeft(option.rect.right() - badgeSize, option.rect.top());
@@ -382,14 +406,14 @@ void IconViewDelegate::paint(QPainter *painter,
 
     painter->setClipping(true);
     painter->setClipPath(iconPath);
-    painter->drawPixmap(iconRect, icon.pixmap(iconsize.width(),iconsize.height()));
+    painter->drawPixmap(iconRect, icon.pixmap(iconSize.width(),iconSize.height()));
     painter->setClipping(false);
 
     // default thumb border
     painter->setPen(border);
     painter->drawRoundedRect(frameRect, 8, 8);
     /*
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "row =" << row
              << "currentRow =" << currentRow
              << "selected item =" << option.state.testFlag(QStyle::State_Selected);
