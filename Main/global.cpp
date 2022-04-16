@@ -20,7 +20,7 @@ namespace G
     QMap<QString,QStringList> err;
 
     // system display
-    QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitor
+    QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitoriconLoaded
     QString winOutProfilePath;
     int displayPhysicalHorizontalPixels;// current monitor
     int displayPhysicalVerticalPixels;  // current monitor

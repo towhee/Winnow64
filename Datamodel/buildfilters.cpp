@@ -8,7 +8,7 @@ BuildFilters::BuildFilters(QObject *parent,
                            QThread(parent),
                            combineRawJpg(combineRawJpg)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     this->dm = dm;
     this->metadata = metadata;
     this->filters = filters;
@@ -32,14 +32,14 @@ void BuildFilters::stop()
         filters->disableZeroCountItems(true);
         filters->setEnabled(true);
         filters->collapseAll();
-        qDebug() << __FUNCTION__ << "filtersBuilt = " << filters->filtersBuilt;
+        qDebug() << __PRETTY_FUNCTION__ << "filtersBuilt = " << filters->filtersBuilt;
 //        emit updateIsRunning(false);
     }
 }
 
 void BuildFilters::build()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -64,10 +64,10 @@ void BuildFilters::build()
 
 void BuildFilters::done()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     if (!abort) emit finishedBuildFilters();
 //    qint64 msec = buildFiltersTimer.elapsed();
-//    qDebug() << __FUNCTION__ << QString("%L1").arg(msec) << "msec";
+//    qDebug() << __PRETTY_FUNCTION__ << QString("%L1").arg(msec) << "msec";
 }
 
 void BuildFilters::unfilteredItemSearchCount()
@@ -79,7 +79,7 @@ void BuildFilters::unfilteredItemSearchCount()
 
     This function is run everytime the search string changes.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     int col = G::SearchColumn;
 
     // get total matches for searchTrue
@@ -115,7 +115,7 @@ void BuildFilters::unfilteredItemSearchCount()
 
 void BuildFilters::updateCountFiltered()
 {
-    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger) {mutex.lock(); G::log(__PRETTY_FUNCTION__); mutex.unlock();}
     filters->filtersBuilt = false;
     filters->buildingFilters = true;
     QTreeWidgetItemIterator it(filters);
@@ -151,7 +151,7 @@ void BuildFilters::updateCountFiltered()
 
 void BuildFilters::countFiltered()
 {
-    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger) {mutex.lock(); G::log(__PRETTY_FUNCTION__); mutex.unlock();}
     // count filtered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
@@ -177,7 +177,7 @@ void BuildFilters::countFiltered()
                 emit updateProgress(progress);
                 qApp->processEvents();
                 /*
-                qDebug() << __FUNCTION__
+                qDebug() << __PRETTY_FUNCTION__
                          << cat
                          << "instances =" << instances[cat]
                          << "total instances =" << totInstances
@@ -199,7 +199,7 @@ void BuildFilters::countFiltered()
 
 void BuildFilters::countUnfiltered()
 {
-    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger) {mutex.lock(); G::log(__PRETTY_FUNCTION__); mutex.unlock();}
     // count unfiltered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
@@ -232,7 +232,7 @@ void BuildFilters::countUnfiltered()
                 emit updateProgress(progress);
                 qApp->processEvents();
                 /*
-                qDebug() << __FUNCTION__
+                qDebug() << __PRETTY_FUNCTION__
                          << cat
                          << "instances =" << instances[cat]
                          << "total instances =" << totInstances
@@ -253,7 +253,7 @@ void BuildFilters::countUnfiltered()
 
 void BuildFilters::loadAllMetadata()
 {
-    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger) {mutex.lock(); G::log(__PRETTY_FUNCTION__); mutex.unlock();}
     if (!G::allMetadataLoaded) {
         for (int row = 0; row < dmRows; ++row) {
             if (abort) return;
@@ -262,7 +262,7 @@ void BuildFilters::loadAllMetadata()
             if (dm->index(row, G::MetadataLoadedColumn).data().toBool()) continue;
             QString fPath = dm->index(row, 0).data(G::PathRole).toString();
             QFileInfo fileInfo(fPath);
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __PRETTY_FUNCTION__)) {
                 metadata->m.row = row;
                 dm->addMetadataForItem(metadata->m);
                 if (row % 100 == 0 || row == 0) {
@@ -280,7 +280,7 @@ void BuildFilters::loadAllMetadata()
 
 void BuildFilters::mapUniqueInstances()
 {
-    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger) {mutex.lock(); G::log(__PRETTY_FUNCTION__); mutex.unlock();}
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QString, QString> typesMap;
     QMap<QString, QString> modelMap;
@@ -349,7 +349,7 @@ void BuildFilters::mapUniqueInstances()
 
 void BuildFilters::run()
 {
-    if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
+    if (G::isLogger) {mutex.lock(); G::log(__PRETTY_FUNCTION__); mutex.unlock();}
     if (filters->filtersBuilt) return;
 
     if (!abort) loadAllMetadata();

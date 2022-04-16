@@ -35,6 +35,7 @@ public:
     void getJpgSegments(MetadataParameters &p, ImageMetadata &m);
     bool getWidthHeight(MetadataParameters &p, int &w, int &h);
     bool getDimensions(MetadataParameters &p, ImageMetadata &m);
+    bool getDimensions2(MetadataParameters &p, ImageMetadata &m);
 
     QHash<QString, quint32> segmentHash;
 

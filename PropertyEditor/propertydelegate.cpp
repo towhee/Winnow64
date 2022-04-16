@@ -30,7 +30,7 @@ QWidget *PropertyDelegate::createEditor(QWidget *parent,
                                         const QStyleOptionViewItem &option,
                                         const QModelIndex &index ) const
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0: return nullptr;
@@ -137,7 +137,7 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 void PropertyDelegate::setEditorData(QWidget *editor,
                                     const QModelIndex &index) const
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     switch (index.data(UR_DelegateType).toInt()) {
         case DT_None:
         case DT_Label: {
@@ -195,8 +195,8 @@ void PropertyDelegate::fontSizeChanged(int fontSize)
 
 void PropertyDelegate::commit(QWidget *editor)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
-//    qDebug() << __FUNCTION__ << submitted;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+//    qDebug() << __PRETTY_FUNCTION__ << submitted;
     emit commitData(editor);
     emit closeEditor(editor);
 }
@@ -204,8 +204,8 @@ void PropertyDelegate::commit(QWidget *editor)
 void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
                                    const QModelIndex &index) const
 {
-//    qDebug() << __FUNCTION__ << index;
-    if (G::isLogger) G::log(__FUNCTION__); 
+//    qDebug() << __PRETTY_FUNCTION__ << index;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     int type = index.data(UR_DelegateType).toInt();
     switch (type) {
         case 0:
@@ -305,7 +305,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
     /*
     static int i = 0;
-    qDebug() << __FUNCTION__ << i++
+    qDebug() << __PRETTY_FUNCTION__ << i++
              << index.row()
              << index.column()
              << "Value =" << index.data().toString().leftJustified(25)

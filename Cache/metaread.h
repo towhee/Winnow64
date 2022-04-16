@@ -52,6 +52,7 @@ private:
     Thumb *thumb;
     int adjIconChunkSize;
     int sfRowCount;
+    int visibleIcons;
 
     QList<int> priorityQueue;
     QList<int> iconsLoaded;

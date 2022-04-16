@@ -40,7 +40,7 @@ CanonCR3::CanonCR3(MetadataParameters &p,
 bool CanonCR3::parse()
 
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     quint32 offset = 0;
     quint32 length;
     QString type;
@@ -71,7 +71,7 @@ bool CanonCR3::parse()
 
 bool CanonCR3::nextHeifBox(quint32 &length, QString &type)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     qint64 offset = p.file.pos();
     length = Utilities::get32(p.file.read(4), true);
 //    if (length < 2) length = static_cast<quint32>(eof - offset);
@@ -101,7 +101,7 @@ bool CanonCR3::nextHeifBox(quint32 &length, QString &type)
 
 bool CanonCR3::getHeifBox(QString &type, quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     if (p.report) {
         p.rpt << "\n";
         p.rpt.setFieldWidth(6);
@@ -162,13 +162,13 @@ bool CanonCR3::getHeifBox(QString &type, quint32 &offset, quint32 &length)
     if (type == "vmhd") return vmhdBox(offset, length);
 
     // err
-//    qDebug() << __FUNCTION__
+//    qDebug() << __PRETTY_FUNCTION__
 //             << "offset:" << offset
 //             << "length:" << length
 //             << "type:" << type
 //             << "(Undefined)"
 //                ;
-    G::error(__FUNCTION__, m.fPath, "Box type " + type + " unknown.");
+    G::error(__PRETTY_FUNCTION__, m.fPath, "Box type " + type + " unknown.");
     offset += length;
     return true;
 //    return false;
@@ -176,11 +176,11 @@ bool CanonCR3::getHeifBox(QString &type, quint32 &offset, quint32 &length)
 
 bool CanonCR3::ftypBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     if (length == 0) {
         // err
-        G::error(__FUNCTION__, m.fPath, "ftyp not found.");
-        qDebug() << __FUNCTION__ << "ftyp not found";
+        G::error(__PRETTY_FUNCTION__, m.fPath, "ftyp not found.");
+        qDebug() << __PRETTY_FUNCTION__ << "ftyp not found";
         return false;
     }
 
@@ -198,8 +198,8 @@ bool CanonCR3::ftypBox(quint32 &offset, quint32 &length)
     }
     if (!isCR3) {
         // err
-        G::error(__FUNCTION__, m.fPath, "crx not found");
-        qDebug() << __FUNCTION__ << "crx not found";
+        G::error(__PRETTY_FUNCTION__, m.fPath, "crx not found");
+        qDebug() << __PRETTY_FUNCTION__ << "crx not found";
         return false;
     }
     offset += length;
@@ -208,14 +208,14 @@ bool CanonCR3::ftypBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::metaBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QString type;
 //    heif.metaOffset = offset;
 //    heif.metaLength = length;
     quint32 metaEnd = offset + length;
     offset += 12;
 
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "offset =" << offset
              << "length =" << length;
 
@@ -232,32 +232,32 @@ bool CanonCR3::metaBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::hdlrBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     offset += length;
     return true;
 }
 
 bool CanonCR3::dinfBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     offset += length;
     return true;
 }
 
 bool CanonCR3::drefBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QString type;
     quint32 drefEnd = offset + length;
     p.file.seek(offset + 12);
     quint32 entry_count = Utilities::get32(p.file.read(4));
     qDebug();
-    qDebug() << __FUNCTION__ << "entry_count =" << entry_count;
+    qDebug() << __PRETTY_FUNCTION__ << "entry_count =" << entry_count;
 
     for (quint32 i = 0; i < entry_count; i++) {
         if (offset > drefEnd) return false;
         nextHeifBox(length, type);
-        qDebug() << __FUNCTION__ << "entry#" << i;
+        qDebug() << __PRETTY_FUNCTION__ << "entry#" << i;
         if (type == "url ") getHeifBox(type, offset, length);
 //        if (type == "urln") getHeifBox(type, offset, length);
     }
@@ -268,14 +268,14 @@ bool CanonCR3::drefBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::urlBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QString location = "";
     uint urlLength = length - 12;
     p.file.seek(offset + 12);
     if (urlLength > 0) {
         location = p.file.read(length - 12);
     }
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "    location =" << location;
 
     offset += length;
@@ -284,7 +284,7 @@ bool CanonCR3::urlBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::urnBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QString name = "";
     QString location = "";
     uint urnLength = length - 12;
@@ -293,7 +293,7 @@ bool CanonCR3::urnBox(quint32 &offset, quint32 &length)
         name = Utilities::getCString(p.file);
         if (p.file.pos() < offset + length) location = Utilities::getCString(p.file);
     }
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "    name =" << name
              << "location =" << location;
 
@@ -303,11 +303,11 @@ bool CanonCR3::urnBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::colrBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.file.seek(offset + 8);
 
     QString colrType = p.file.read(4);
-    qDebug() << __FUNCTION__ << "colrType =" << colrType;
+    qDebug() << __PRETTY_FUNCTION__ << "colrType =" << colrType;
     QByteArray colorProfile;
     if (colrType == "nclx") {
         quint16 colour_primaries = Utilities::get16(p.file.read(2));
@@ -315,7 +315,7 @@ bool CanonCR3::colrBox(quint32 &offset, quint32 &length)
         quint16 matrix_coefficients = Utilities::get16(p.file.read(2));
         quint8 x = Utilities::get8(p.file.read(1));
         quint8 full_range_flag = (x & 0b10000000) >> 7;             // first 1 bit
-        qDebug() << __FUNCTION__
+        qDebug() << __PRETTY_FUNCTION__
                  << "colour_primaries =" << colour_primaries
                  << "transfer_characteristics =" << transfer_characteristics
                  << "matrix_coefficients =" << matrix_coefficients
@@ -323,11 +323,11 @@ bool CanonCR3::colrBox(quint32 &offset, quint32 &length)
     }
     else if (colrType == "rICC" || colrType == "prof") {
         colorProfile = p.file.read(length - 8);
-        qDebug() << __FUNCTION__ << colorProfile;
+        qDebug() << __PRETTY_FUNCTION__ << colorProfile;
     }
     else {
         // err
-        G::error(__FUNCTION__, m.fPath, "Color type " + colrType + " is not recognized");
+        G::error(__PRETTY_FUNCTION__, m.fPath, "Color type " + colrType + " is not recognized");
         offset += length;
         return false;
     }
@@ -338,13 +338,13 @@ bool CanonCR3::colrBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::pixiBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.file.seek(offset + 12);
     quint8 num_channels = Utilities::get8(p.file.read(1));
 
     for (quint8 i = 0; i < num_channels; i++) {
         quint8 bits_per_channel = Utilities::get8(p.file.read(1));
-        qDebug() << __FUNCTION__ << "channel#" << i << "bits_per_channel =" << bits_per_channel;
+        qDebug() << __PRETTY_FUNCTION__ << "channel#" << i << "bits_per_channel =" << bits_per_channel;
     }
 
     offset += length;
@@ -353,12 +353,12 @@ bool CanonCR3::pixiBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::irotBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.file.seek(offset + 8);
     quint8 x = Utilities::get8(p.file.read(1));
     quint8 angle = (x & 0b00000011);             // first 1 bit
     quint16 angle_degrees = angle * 90;
-    qDebug() << __FUNCTION__ << "angle =" << angle << "angle degrees =" << angle_degrees;
+    qDebug() << __PRETTY_FUNCTION__ << "angle =" << angle << "angle degrees =" << angle_degrees;
 
     offset += length;
     return true;
@@ -366,10 +366,10 @@ bool CanonCR3::irotBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::pitmBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.file.seek(offset + 16);
     pitmId = Utilities::get16(p.file.read(2));
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "pitmId =" << pitmId;
 
     offset += length;
@@ -378,7 +378,7 @@ bool CanonCR3::pitmBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.file.seek(offset + 12);
     QByteArray c = p.file.read(1);
     ilocOffsetSize = Utilities::get4_1st(c);
@@ -387,13 +387,13 @@ bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
     ilocBaseOffsetSize = Utilities::get4_1st(c);
     ilocItemCount = Utilities::get16(p.file.read(2));
     qDebug();
-    qDebug()  << __FUNCTION__
+    qDebug()  << __PRETTY_FUNCTION__
              << "ilocOffsetSize =" << ilocOffsetSize
              << "ilocLengthSize =" << ilocLengthSize
              << "ilocBaseOffsetSize =" << ilocBaseOffsetSize
              << "ilocItemCount =" << ilocItemCount;
     if (ilocItemCount > 100) {
-        qDebug() << __FUNCTION__ << "*** Quiting because ilocItemCount =" << ilocItemCount;
+        qDebug() << __PRETTY_FUNCTION__ << "*** Quiting because ilocItemCount =" << ilocItemCount;
         offset += length;
         return false;
     }
@@ -406,7 +406,7 @@ bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
         if (ilocBaseOffsetSize == 2) base_offset = Utilities::get16(p.file.read(2));
         if (ilocBaseOffsetSize == 4) base_offset = Utilities::get32(p.file.read(4));
         quint16 extent_count = Utilities::get16(p.file.read(2));
-        qDebug() << __FUNCTION__ << "Item:" << i
+        qDebug() << __PRETTY_FUNCTION__ << "Item:" << i
                  << "itemId" << item_ID
                  << "data_reference_index" << data_reference_index
                  << "base_offset" << base_offset
@@ -414,8 +414,8 @@ bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
         if (extent_count > 100) {
             QString err = "Quiting because extent_count has reached = " +
                     QString::number(extent_count);
-            G::error(__FUNCTION__, m.fPath, err);
-            qDebug() << __FUNCTION__ << err;
+            G::error(__PRETTY_FUNCTION__, m.fPath, err);
+            qDebug() << __PRETTY_FUNCTION__ << err;
             offset += length;
             return false;
         }
@@ -430,12 +430,12 @@ bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
             if (ilocLengthSize == 1) extent_length = Utilities::get8(p.file.read(1));
             if (ilocLengthSize == 2) extent_length = Utilities::get16(p.file.read(2));
             if (ilocLengthSize == 4) extent_length = Utilities::get32(p.file.read(4));
-            qDebug() <<__FUNCTION__ << "    Extent:" << i
+            qDebug() <<__PRETTY_FUNCTION__ << "    Extent:" << i
                      << "extent_offset" << extent_offset
                      << "extent_length" << extent_length;
         }
     }
-    qDebug() << __FUNCTION__ << "p.file.pos()" << p.file.pos();
+    qDebug() << __PRETTY_FUNCTION__ << "p.file.pos()" << p.file.pos();
     //    if (hdlrType != "pict") {
     //        // err
     //        return false;
@@ -447,7 +447,7 @@ bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::infeBox(quint32 &offset, quint32 &/*length*/)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.file.seek(offset + 12);
     quint16 item_ID = Utilities::get16(p.file.read(2));
     quint16 item_protection_index = Utilities::get16(p.file.read(2));
@@ -457,7 +457,7 @@ bool CanonCR3::infeBox(quint32 &offset, quint32 &/*length*/)
     if (content_type.length()) content_encoding = Utilities::getCString(p.file);
     else content_encoding = "";
 
-    qDebug() << "   " << __FUNCTION__
+    qDebug() << "   " << __PRETTY_FUNCTION__
              << "item_ID =" << item_ID
              << "item_protection_index =" << item_protection_index
              << "item_name =" << item_name
@@ -469,14 +469,14 @@ bool CanonCR3::infeBox(quint32 &offset, quint32 &/*length*/)
 
 bool CanonCR3::iinfBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.file.seek(offset + 14);
     quint16 entry_count = Utilities::get16(p.file.read(2));
-//    qDebug() << __FUNCTION__ << "iint entry count =" << entry_count << p.file.pos();
+//    qDebug() << __PRETTY_FUNCTION__ << "iint entry count =" << entry_count << p.file.pos();
     if (entry_count == 0) {
         // err
         QString err = "No iint entries found.";
-        G::error(__FUNCTION__, m.fPath, err);
+        G::error(__PRETTY_FUNCTION__, m.fPath, err);
         offset += length;
         return false;
     }
@@ -486,7 +486,7 @@ bool CanonCR3::iinfBox(quint32 &offset, quint32 &length)
     for (int i = 0; i < entry_count; i++) {
         QString infeType;
         nextHeifBox(infeLength, infeType);
-        qDebug() << __FUNCTION__ << "   Item Info Entry " << i;
+        qDebug() << __PRETTY_FUNCTION__ << "   Item Info Entry " << i;
         infeBox(infeOffset, infeLength);
         infeOffset += infeLength;
     }
@@ -498,18 +498,18 @@ bool CanonCR3::iinfBox(quint32 &offset, quint32 &length)
 // add a large version sitrBoxL
 bool CanonCR3::sitrBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.file.seek(offset + 8);
     quint16 from_item_ID = Utilities::get16(p.file.read(2));
     quint16 reference_count = Utilities::get16(p.file.read(2));
 
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "from_item_ID =" << from_item_ID
              << "reference_count =" << reference_count;
 
     for (int i = 0; i < reference_count; i++) {
         quint32 to_item_ID = Utilities::get32(p.file.read(4));
-        qDebug() << __FUNCTION__ << i << ": to_item_ID =" << to_item_ID;
+        qDebug() << __PRETTY_FUNCTION__ << i << ": to_item_ID =" << to_item_ID;
     }
     offset += length;
     return true;
@@ -517,14 +517,14 @@ bool CanonCR3::sitrBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::irefBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     irefOffset = offset;
     irefLength = length;
     quint32 irefEndOffset = offset + length;
     p.file.seek(offset + 8);
     uint version = Utilities::get8(p.file.read(1));
     quint32 sitrOffset = offset + 12;
-    qDebug() << __FUNCTION__ << "offset =" << offset
+    qDebug() << __PRETTY_FUNCTION__ << "offset =" << offset
              << "length =" << length << "sitrOffset" << sitrOffset;
     while (sitrOffset < irefEndOffset) {
         quint32 sitrLength;
@@ -533,7 +533,7 @@ bool CanonCR3::irefBox(quint32 &offset, quint32 &length)
         nextHeifBox(sitrLength, type);
         if (version == 0) sitrBox(sitrOffset, sitrLength);
 //        else sitrBoxL(sitrOffset, sitrLength);
-        qDebug() << __FUNCTION__ << "irefEndOffset =" << irefEndOffset << "sitrOffset" << sitrOffset;
+        qDebug() << __PRETTY_FUNCTION__ << "irefEndOffset =" << irefEndOffset << "sitrOffset" << sitrOffset;
     }
 
     offset += length;
@@ -542,8 +542,8 @@ bool CanonCR3::irefBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::hvcCBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__ << "p.file position:" << p.file.pos();
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    qDebug() << __PRETTY_FUNCTION__ << "p.file position:" << p.file.pos();
     uint configurationVersion = Utilities::get8(p.file.read(1));
     quint8 x = Utilities::get8(p.file.read(1));
     int general_profile_space = (x & 0b11000000) >> 6;             // first 2 bits
@@ -581,24 +581,24 @@ bool CanonCR3::hvcCBox(quint32 &offset, quint32 &length)
 
     quint8 numOfArrays = Utilities::get8(p.file.read(1));
 
-    qDebug() << __FUNCTION__ << "configurationVersion =" << configurationVersion;
-    qDebug() << __FUNCTION__ << "general_profile_space =" << general_profile_space;
-    qDebug() << __FUNCTION__ << "general_tier_flag =" << general_tier_flag;
-    qDebug() << __FUNCTION__ << "general_profile_idc =" << general_profile_idc;
-    qDebug() << __FUNCTION__ << "general_profile_compatibility_flags =" << general_profile_compatibility_flags;
-    qDebug() << __FUNCTION__ << "general_constraint_indicator_flags =" << general_constraint_indicator_flags;
-    qDebug() << __FUNCTION__ << "general_level_idc =" << general_level_idc;
-    qDebug() << __FUNCTION__ << "min_spatial_segmentation_idc =" << min_spatial_segmentation_idc;
-    qDebug() << __FUNCTION__ << "parallelismType =" << parallelismType;
-    qDebug() << __FUNCTION__ << "chroma_format_idc =" << chroma_format_idc;
-    qDebug() << __FUNCTION__ << "bit_depth_luma_minus8 =" << bit_depth_luma_minus8;
-    qDebug() << __FUNCTION__ << "bit_depth_chroma_minus8 =" << bit_depth_chroma_minus8;
-    qDebug() << __FUNCTION__ << "avgFrameRate =" << avgFrameRate;
-    qDebug() << __FUNCTION__ << "constantFrameRate =" << constantFrameRate;
-    qDebug() << __FUNCTION__ << "numTemporalLayers =" << numTemporalLayers;
-    qDebug() << __FUNCTION__ << "temporalIdNested =" << temporalIdNested;
-    qDebug() << __FUNCTION__ << "lengthSizeMinusOne =" << lengthSizeMinusOne;
-    qDebug() << __FUNCTION__ << "numOfArrays =" << numOfArrays;
+    qDebug() << __PRETTY_FUNCTION__ << "configurationVersion =" << configurationVersion;
+    qDebug() << __PRETTY_FUNCTION__ << "general_profile_space =" << general_profile_space;
+    qDebug() << __PRETTY_FUNCTION__ << "general_tier_flag =" << general_tier_flag;
+    qDebug() << __PRETTY_FUNCTION__ << "general_profile_idc =" << general_profile_idc;
+    qDebug() << __PRETTY_FUNCTION__ << "general_profile_compatibility_flags =" << general_profile_compatibility_flags;
+    qDebug() << __PRETTY_FUNCTION__ << "general_constraint_indicator_flags =" << general_constraint_indicator_flags;
+    qDebug() << __PRETTY_FUNCTION__ << "general_level_idc =" << general_level_idc;
+    qDebug() << __PRETTY_FUNCTION__ << "min_spatial_segmentation_idc =" << min_spatial_segmentation_idc;
+    qDebug() << __PRETTY_FUNCTION__ << "parallelismType =" << parallelismType;
+    qDebug() << __PRETTY_FUNCTION__ << "chroma_format_idc =" << chroma_format_idc;
+    qDebug() << __PRETTY_FUNCTION__ << "bit_depth_luma_minus8 =" << bit_depth_luma_minus8;
+    qDebug() << __PRETTY_FUNCTION__ << "bit_depth_chroma_minus8 =" << bit_depth_chroma_minus8;
+    qDebug() << __PRETTY_FUNCTION__ << "avgFrameRate =" << avgFrameRate;
+    qDebug() << __PRETTY_FUNCTION__ << "constantFrameRate =" << constantFrameRate;
+    qDebug() << __PRETTY_FUNCTION__ << "numTemporalLayers =" << numTemporalLayers;
+    qDebug() << __PRETTY_FUNCTION__ << "temporalIdNested =" << temporalIdNested;
+    qDebug() << __PRETTY_FUNCTION__ << "lengthSizeMinusOne =" << lengthSizeMinusOne;
+    qDebug() << __PRETTY_FUNCTION__ << "numOfArrays =" << numOfArrays;
 
     for (int i = 0; i < numOfArrays; i++) {
         x = Utilities::get8(p.file.read(1));
@@ -606,19 +606,19 @@ bool CanonCR3::hvcCBox(quint32 &offset, quint32 &length)
                                                                     // 2nd bit reserved
         int NAL_unit_type = (x & 0b00111111);                         // last 6 bits
         quint16 numNalus = Utilities::get16(p.file.read(2));
-        qDebug() << __FUNCTION__ << "    array # =" << i;
-        qDebug() << __FUNCTION__ << "    array_completeness =" << array_completeness;
-        qDebug() << __FUNCTION__ << "    NAL_unit_type =" << NAL_unit_type;
-        qDebug() << __FUNCTION__ << "    numNalus =" << numNalus;
+        qDebug() << __PRETTY_FUNCTION__ << "    array # =" << i;
+        qDebug() << __PRETTY_FUNCTION__ << "    array_completeness =" << array_completeness;
+        qDebug() << __PRETTY_FUNCTION__ << "    NAL_unit_type =" << NAL_unit_type;
+        qDebug() << __PRETTY_FUNCTION__ << "    numNalus =" << numNalus;
 
         for (quint16 j = 0; j < numNalus; j++) {
             quint16 nalUnitLength = Utilities::get16(p.file.read(2));
             QByteArray nalUnit = p.file.read(nalUnitLength);
-            qDebug() << __FUNCTION__ << "        nalUnitLength =" << nalUnitLength;
+            qDebug() << __PRETTY_FUNCTION__ << "        nalUnitLength =" << nalUnitLength;
         }
     }
 
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "offset:" << offset
              << "length:" << length
              << "offset + length" << offset + length
@@ -630,7 +630,7 @@ bool CanonCR3::hvcCBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::trakBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // container for track
     trakCount++;
     // if 1st instance of track then drill in to get offset and length of embedded JPG in mdat
@@ -648,7 +648,7 @@ bool CanonCR3::trakBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::tkhdBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // container for track - skip
     offset += length;       // temp for testing
     return true;
@@ -656,7 +656,7 @@ bool CanonCR3::tkhdBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::mdiaBox(quint32 &offset, quint32 &/*length*/)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // container for media info - drill into
     offset += 8;       // temp for testing
     return true;
@@ -664,7 +664,7 @@ bool CanonCR3::mdiaBox(quint32 &offset, quint32 &/*length*/)
 
 bool CanonCR3::mdhdBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // container for media info - drill into
     offset += length;       // temp for testing
     return true;
@@ -672,7 +672,7 @@ bool CanonCR3::mdhdBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::minfBox(quint32 &offset, quint32 &/*length*/)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // container
     offset += 8;       // temp for testing
     return true;
@@ -680,7 +680,7 @@ bool CanonCR3::minfBox(quint32 &offset, quint32 &/*length*/)
 
 bool CanonCR3::vmhdBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // container
     offset += length;       // temp for testing
     return true;
@@ -688,7 +688,7 @@ bool CanonCR3::vmhdBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::stblBox(quint32 &offset, quint32 &/*length*/)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // container
     offset += 8;       // temp for testing
     return true;
@@ -696,7 +696,7 @@ bool CanonCR3::stblBox(quint32 &offset, quint32 &/*length*/)
 
 bool CanonCR3::stsdBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // embedded image width and height (not used)
     if (p.report) p.rpt << "Width and Height of full size JPG in mdat (not used)";
     p.file.seek(offset + 48);
@@ -708,7 +708,7 @@ bool CanonCR3::stsdBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::sttsBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     //
     offset += length;       // temp for testing
     return true;
@@ -716,7 +716,7 @@ bool CanonCR3::sttsBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::stscBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     //
     offset += length;       // temp for testing
     return true;
@@ -724,36 +724,36 @@ bool CanonCR3::stscBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::stszBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // length of embedded JPG
     if (p.report) p.rpt << "Length of full size JPG in mdat";
     p.file.seek(offset + 20);
     m.lengthFull = Utilities::get32(p.file.read(4));
-//    qDebug() << __FUNCTION__ << "m.lengthFull =" << m.lengthFull;
+//    qDebug() << __PRETTY_FUNCTION__ << "m.lengthFull =" << m.lengthFull;
     offset += length;       // temp for testing
     return true;
 }
 
 bool CanonCR3::co64Box(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // length of embedded JPG
     if (p.report) p.rpt << "Absolute offset to full size JPG in mdat";
     p.file.seek(offset + 20);
     m.offsetFull = Utilities::get32(p.file.read(4));
-//    qDebug() << __FUNCTION__ << "m.offsetFull =" << m.offsetFull;
+//    qDebug() << __PRETTY_FUNCTION__ << "m.offsetFull =" << m.offsetFull;
     offset += length;       // temp for testing
     return true;
 }
 
 bool CanonCR3::ispeBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.file.seek(offset + 12);
     quint32 image_width = Utilities::get32(p.file.read(4));
     quint32 image_height = Utilities::get32(p.file.read(4));
-    qDebug() << __FUNCTION__ << "image_width =" << image_width;
-    qDebug() << __FUNCTION__ << "image_height =" << image_height << "\n";
+    qDebug() << __PRETTY_FUNCTION__ << "image_width =" << image_width;
+    qDebug() << __PRETTY_FUNCTION__ << "image_height =" << image_height << "\n";
 
     offset += length;       // temp for testing
     return true;
@@ -761,7 +761,7 @@ bool CanonCR3::ispeBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::ipmaBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.file.seek(offset + 8);
     quint16 x = Utilities::get16(p.file.read(2));
     auto version = (x & 0b1111000000000000) >> 12;       // first 4 bits
@@ -769,7 +769,7 @@ bool CanonCR3::ipmaBox(quint32 &offset, quint32 &length)
 
     p.file.seek(offset + 12);
     quint32 entry_count = Utilities::get32(p.file.read(4));
-//    qDebug() << __FUNCTION__ << "entry_count =" << entry_count;
+//    qDebug() << __PRETTY_FUNCTION__ << "entry_count =" << entry_count;
 
     for (quint16 i = 0; i < entry_count; i++ ) {
         quint32 item_ID;
@@ -802,7 +802,7 @@ bool CanonCR3::ipmaBox(quint32 &offset, quint32 &length)
         }
     }
 
-//    qDebug() << __FUNCTION__
+//    qDebug() << __PRETTY_FUNCTION__
 //             << "offset:" << offset
 //             << "length:" << length
 //             << "offset + length" << offset + length
@@ -814,7 +814,7 @@ bool CanonCR3::ipmaBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::iprpBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QString type;
     quint32 iprpEnd = offset + length;
     p.file.seek(offset + 8);
@@ -827,8 +827,8 @@ bool CanonCR3::iprpBox(quint32 &offset, quint32 &length)
     if (ipcoType != "ipco") {
         // err
         QString err = "ipco not found in iprp box";
-        G::error(__FUNCTION__, m.fPath, err);
-        qDebug() << __FUNCTION__ << "ipco not found in iprp box";
+        G::error(__PRETTY_FUNCTION__, m.fPath, err);
+        qDebug() << __PRETTY_FUNCTION__ << "ipco not found in iprp box";
         return false;
     }
 
@@ -847,7 +847,7 @@ bool CanonCR3::iprpBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::mdatBox(quint32 &offset, quint32 &/*length*/)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     if (p.report) p.rpt << "Full size embedded JPG starting at " << offset + 16;
     offset = 999999999;
     return true;
@@ -855,15 +855,15 @@ bool CanonCR3::mdatBox(quint32 &offset, quint32 &/*length*/)
 
 bool CanonCR3::idatBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
-//    qDebug() << __FUNCTION__ << "offset =" << offset;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+//    qDebug() << __PRETTY_FUNCTION__ << "offset =" << offset;
     offset += length;       // temp for testing
     return true;
 }
 
 bool CanonCR3::freeBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // free space - ignore
     offset += length;
     return true;
@@ -871,7 +871,7 @@ bool CanonCR3::freeBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::uuidBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // Canon custom object
     p.file.seek(offset + 8);
     QByteArray thisUUID = p.file.read(16);
@@ -893,7 +893,7 @@ bool CanonCR3::uuidBox(quint32 &offset, quint32 &length)
     }
     s = "eaf42b5E1c984b88b9fbb7dc406E4d16";
     QByteArray prvdUUID = QByteArray::fromHex(s.toLatin1());
-//    qDebug() << __FUNCTION__ << prvdUUID.toHex() << thisUUID.toHex();
+//    qDebug() << __PRETTY_FUNCTION__ << prvdUUID.toHex() << thisUUID.toHex();
     // get preview if no full size jpg found in track 1
     if (thisUUID == prvdUUID && m.offsetFull == 0) {
         if (p.report) p.rpt << s << " Preview embedded JPG";
@@ -912,7 +912,7 @@ bool CanonCR3::uuidBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::thmbBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // embedded JPG thumbnail
     if (p.report) p.rpt << "Embedded JPG thumbnail";
     p.file.read(4);     // skip
@@ -927,7 +927,7 @@ bool CanonCR3::thmbBox(quint32 &offset, quint32 &length)
 
 bool CanonCR3::cmt1Box(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // IFD0
     if (p.report) p.rpt << "IFD0 data";
     ifd0Offset = offset;
@@ -937,7 +937,7 @@ bool CanonCR3::cmt1Box(quint32 &offset, quint32 &length)
 
 bool CanonCR3::cmt2Box(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // IFD EXIF
     if (p.report) p.rpt << "Exif data";
     exifOffset = offset + 16;
@@ -947,7 +947,7 @@ bool CanonCR3::cmt2Box(quint32 &offset, quint32 &length)
 
 bool CanonCR3::cmt3Box(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // Canon maker notes IFD
     if (p.report) p.rpt << "Canon maker notes";
     offset += length;
@@ -955,7 +955,7 @@ bool CanonCR3::cmt3Box(quint32 &offset, quint32 &length)
 }
 bool CanonCR3::cmt4Box(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // Exif GPS IFD
     if (p.report) p.rpt << "GPS data";
     offset += length;
@@ -964,7 +964,7 @@ bool CanonCR3::cmt4Box(quint32 &offset, quint32 &length)
 
 bool CanonCR3::moovBox(quint32 &offset, quint32 &length)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
 /* container for metadata moov
   UUID = Canon custom object
   CMT1 = IDF0               EXIF tags
@@ -983,7 +983,7 @@ bool CanonCR3::moovBox(quint32 &offset, quint32 &length)
     QString type;
     quint32 moovEnd = offset + length;
 
-//    qDebug() << __FUNCTION__ << "offset:" << offset << "length:" << length << "type:" << type;
+//    qDebug() << __PRETTY_FUNCTION__ << "offset:" << offset << "length:" << length << "type:" << type;
 
     offset += 8;
     // uuid container
@@ -1007,7 +1007,7 @@ bool CanonCR3::moovBox(quint32 &offset, quint32 &length)
 
 void CanonCR3::parseIfd0()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.hdr = "IFD0";
     p.offset = ifd0Offset + 16;
     p.hash = &exif->hash;
@@ -1023,7 +1023,7 @@ void CanonCR3::parseIfd0()
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset, ifd->ifdDataHash.value(33432).tagCount);
     /*
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << m.widthPreview
              << m.heightPreview
              << m.make
@@ -1036,7 +1036,7 @@ void CanonCR3::parseIfd0()
 
 void CanonCR3::parseExif()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     p.hdr = "IFD Exif";
     p.offset = exifOffset;
     ifd->readIFD(p);
@@ -1137,7 +1137,7 @@ void CanonCR3::parseExif()
     }
 
     /*
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << m.createdDate
              << m.exposureTime
              << m.aperture

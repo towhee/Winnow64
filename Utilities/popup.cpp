@@ -83,7 +83,7 @@ void PopUp::keyReleaseEvent(QKeyEvent *event)
 
 void PopUp::focusOutEvent(QFocusEvent *event)
 {
-    qDebug() << __FUNCTION__ << event;
+    qDebug() << __PRETTY_FUNCTION__ << event;
 }
 
 void PopUp::showPopup(const QString &text,
@@ -112,7 +112,7 @@ void PopUp::showPopup(const QString &text,
 //    */
     setWindowOpacity(static_cast<double>(popupOpacity));
     /*
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "source->geometry()  =" << source->geometry()
              << "centralWidget->geometry() =" << centralWidget->geometry()
                 ;

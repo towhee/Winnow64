@@ -101,7 +101,7 @@ bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
         p.file.seek(p.offset);                  // APP1 FFE*
         marker = Utilities::get16(p.file.read(2), isBigEnd);
         if (marker < 0xFF01) {
-            qDebug() << "Jpeg::getDimensions"
+            qWarning() << "Jpeg::getDimensions"
                      << "FAIL: MARKER < 0xFFC0"
                      << "m.fPath =" << m.fPath
                         ;
@@ -112,11 +112,17 @@ bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
     p.file.seek(p.file.pos()+3);
     m.height = Utilities::get16(p.file.read(2), isBigEnd);
     m.width = Utilities::get16(p.file.read(2), isBigEnd);
-    qDebug() << "Jpeg::getDimensions"
-             << "m.width =" << m.width
-             << "m.height =" << m.height
-             << "m.fPath =" << m.fPath
-                ;
+    return true;
+}
+
+bool Jpeg::getDimensions2(MetadataParameters &p, ImageMetadata &m)
+{
+    if (!segmentHash.contains("SOF0")) return false;
+    p.offset = segmentHash.value("SOF0") + 5;
+    bool isBigEnd = true;                  // only IFD/EXIF can be little endian
+    p.file.seek(p.offset);
+    m.height = Utilities::get16(p.file.read(2), isBigEnd);
+    m.width = Utilities::get16(p.file.read(2), isBigEnd);
     return true;
 }
 
@@ -127,9 +133,9 @@ bool Jpeg::parse(MetadataParameters &p,
                  Exif *exif,
                  GPS *gps)
 {
-//    qDebug() << __FUNCTION__ << p.file.fileName();
+//    qDebug() << __PRETTY_FUNCTION__ << p.file.fileName();
     // init
-    m.parseSource = __FUNCTION__;
+    m.parseSource = __PRETTY_FUNCTION__;
     initSegCodeHash();
     m.iccSegmentOffset = 0;
 
@@ -137,8 +143,8 @@ bool Jpeg::parse(MetadataParameters &p,
     bool isBigEnd = true;
 
     if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-        G::error(__FUNCTION__, m.fPath, "JPG does not start with 0xFFD8.");
-        qDebug() << "Jpeg::parse FAILED JPG does not start with 0xFFD8."
+        G::error(__PRETTY_FUNCTION__, m.fPath, "JPG does not start with 0xFFD8.");
+        qWarning() << "Jpeg::parse FAILED JPG does not start with 0xFFD8."
                  << m.fPath
                     ;
         return false;
@@ -157,14 +163,11 @@ bool Jpeg::parse(MetadataParameters &p,
         // metadata available
         m.offsetFull = 0;
         m.lengthFull = static_cast<uint>(p.file.size());
-        qDebug() << "Jpeg::parse JFIF type JPG"
-                 << m.fPath
-                   ;
-        getDimensions(p, m);
+        getDimensions2(p, m);
         return true;
     }
     else {
-        G::error(__FUNCTION__, m.fPath, "JPG does not contain EXIF information.");
+        G::error(__PRETTY_FUNCTION__, m.fPath, "JPG does not contain EXIF information.");
         qDebug() << "Jpeg::parse JPG does not contain EXIF information."
                  << m.fPath
                     ;
@@ -183,7 +186,7 @@ bool Jpeg::parse(MetadataParameters &p,
             startOffset = static_cast<quint32>(p.file.pos()) - 2;
             foundEndian = true;
             /*
-            qDebug() << __FUNCTION__ << p.file.fileName()
+            qDebug() << __PRETTY_FUNCTION__ << p.file.fileName()
                      << "isBigEnd =" << isBigEnd
                      << "startOffset =" << startOffset;
             //*/
@@ -192,7 +195,7 @@ bool Jpeg::parse(MetadataParameters &p,
         count++;
         if (count > 100) {
             // err endian order not found
-            G::error(__FUNCTION__, m.fPath, "Endian order not found.");
+            G::error(__PRETTY_FUNCTION__, m.fPath, "Endian order not found.");
             return false;
         }
     }
@@ -252,14 +255,8 @@ bool Jpeg::parse(MetadataParameters &p,
 
     m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
-    qDebug() << "Jpeg::PARSE"
-             << "m.width =" << m.width
-             << "m.height =" << m.height
-             << "m.fPath =" << m.fPath
-                ;
-
     p.offset = 0;
-    if (!m.width || !m.height) getDimensions(p, m);
+    if (!m.width || !m.height) getDimensions2(p, m);
     m.widthPreview = m.width;
     m.heightPreview = m.height;
 
@@ -624,9 +621,9 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
             components[i] = component;
          }
     }
-/*    qDebug() << "\n" << __FUNCTION__ << "Marker"
+/*    qDebug() << "\n" << __PRETTY_FUNCTION__ << "Marker"
              << "0x" + QString::number(marker, 16).toUpper().rightJustified(4, '0');
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "marker" << QString::number(marker, 16)
              << "segment" << segCodeHash[marker]
              << "length" << len
@@ -636,7 +633,7 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
              << "mcuCols =" << mcuCols << "mcuRows =" << mcuRows
              << "componentsInFrame" << componentsInFrame;
     for (int i = 0; i < componentsInFrame; i++) {
-        qDebug() << __FUNCTION__
+        qDebug() << __PRETTY_FUNCTION__
                  << componentDescription[i]
                  << i
                  << "Id" << components.at(i).Id
@@ -652,7 +649,7 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
     quint32 endOffset = pos + len - 2;
 
 //    qDebug() << "\n";
-//    qDebug() << __FUNCTION__ << "DEBUG HUFFMAN DECODING";
+//    qDebug() << __PRETTY_FUNCTION__ << "DEBUG HUFFMAN DECODING";
     while (p.file.pos() < endOffset) {
         DHT dht;
         QMap<uint, uint> dhtCodeMap;  // code value, value width
@@ -674,7 +671,7 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
 //            qDebug() << "Table =" << dhtType << "Length =" << i << "Count =" << counts[i];
         }
         /*
-         qDebug() << __FUNCTION__
+         qDebug() << __PRETTY_FUNCTION__
          << "  Table type =" << QString::number(dhtType, 16).rightJustified(2)
          << "Class =" << QString::number(dht.classID).rightJustified(2)
          << "TableID =" << QString::number(dht.tableID).rightJustified(2)
@@ -687,7 +684,7 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
             for  (int j = 0; j < counts[i]; j++) {
                 dhtCodeMap[huffCode] = Utilities::get8(p.file.read(1));
 
-                /*qDebug() << __FUNCTION__
+                /*qDebug() << __PRETTY_FUNCTION__
                          << "HuffBitLength" << QString::number(i+1).rightJustified(2)
                          << "HuffCode =" << QString::number(huffVal).rightJustified(5)
                          << QString::number(huffVal, 2).rightJustified(16)
@@ -729,11 +726,11 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
     }
 
     // report
-//    qDebug() << "\n" << __FUNCTION__;
+//    qDebug() << "\n" << __PRETTY_FUNCTION__;
     QMapIterator<int, QVector<int>> table(dqt);
     while (table.hasNext()) {
         table.next();
-//        qDebug() << __FUNCTION__ << "Quantization Table" << table.key()
+//        qDebug() << __PRETTY_FUNCTION__ << "Quantization Table" << table.key()
 //                 << dqtDescription[table.key()];
         int i = 0;
         for (int r = 0; r < 8; r++) {
@@ -742,7 +739,7 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
                 rStr += QString::number(dqt[table.key()][i]).rightJustified(4);
                 i++;
             }
-//            qDebug() << __FUNCTION__ << "  "
+//            qDebug() << __PRETTY_FUNCTION__ << "  "
 //                     << "Row" << r << " " << rStr;
         }
     }
@@ -759,11 +756,11 @@ void Jpeg::parseSOSHeader(MetadataParameters &p, quint16 len)
     }
 
     // report
-//    qDebug() << "\n" << __FUNCTION__
+//    qDebug() << "\n" << __PRETTY_FUNCTION__
 //             << "Scan data offset =" << scanDataOffset
 //             << "Number of components =" << sosComponentCount;
 //    for (int i = 0; i < sosComponentCount; i++) {
-//        qDebug() << __FUNCTION__ << "  "
+//        qDebug() << __PRETTY_FUNCTION__ << "  "
 //        << "ComponentID =" << i
 //        << componentDescription[i]
 //        << "Huffman table ID =" << huffTblToUse[i];
@@ -790,7 +787,7 @@ void Jpeg::decodeScan(MetadataParameters &p)
 
 void Jpeg::decodeScan(QFile &file, QImage &image)
 {
-//    qDebug() << __FUNCTION__ << file.fileName();
+//    qDebug() << __PRETTY_FUNCTION__ << file.fileName();
     if (!file.exists()) return;                 // guard for usb drive ejection
 
     MetadataParameters p;
@@ -799,7 +796,7 @@ void Jpeg::decodeScan(QFile &file, QImage &image)
     if (p.file.open(QIODevice::ReadOnly)) {
         bool isBigEnd = true;
         if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-            G::error(__FUNCTION__, file.fileName(), "JPG does not start with 0xFFD8.");
+            G::error(__PRETTY_FUNCTION__, file.fileName(), "JPG does not start with 0xFFD8.");
             p.file.close();
             return;
         }
@@ -828,7 +825,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
     - Convert to RGB
 
     */
-    qDebug() << __FUNCTION__;
+    qDebug() << __PRETTY_FUNCTION__;
 
     QBuffer buffer(&ba);
     buffer.open(QIODevice::ReadOnly);
@@ -881,7 +878,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
     buffer.seek(scanDataOffset);
     quint32 offset = scanDataOffset;
 
-    G::log(__FUNCTION__, "Starting to decode scan data");
+    G::log(__PRETTY_FUNCTION__, "Starting to decode scan data");
 
     // Iterate through scan data MCU blocks row by row
     int mcuCount = 0;
@@ -948,14 +945,14 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                             }
                             if (!eos && !isMarkerByte) {
                                 bufAppend(buf, nextByte, consumed);
-                                /*qDebug() << __FUNCTION__
+                                /*qDebug() << __PRETTY_FUNCTION__
                                          << "Appended nextByte =" << QString::number(nextByte, 16)
                                          << "Consumed =" << consumed;*/
                             }
                         }
                     }
                     /*
-                    qDebug() << __FUNCTION__
+                    qDebug() << __PRETTY_FUNCTION__
                              << "initial buf ="
                              << QString::number(buf, 16)
                              << QString::number(buf, 2);*/
@@ -1115,7 +1112,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                     if (!huffFound) {
                         // err
                         if (isReport) qDebug()
-                            << __FUNCTION__ << "HUFF CODE NOT FOUND"
+                            << __PRETTY_FUNCTION__ << "HUFF CODE NOT FOUND"
                             << "buf =" << QString::number(buf, 2).rightJustified(32, '0')
                             << "mcuRow =" << mcuRow << "mcuCol =" << mcuCol
                             << "c =" << c << "m =" << m;
@@ -1126,7 +1123,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
 
             } // end components and MCU
 
-//            if (mcuCount == 10) G::log(__FUNCTION__, "Loaded DCU");
+//            if (mcuCount == 10) G::log(__PRETTY_FUNCTION__, "Loaded DCU");
 
 //            if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
 //                rptMCU(mcuCol, mcuRow);
@@ -1175,7 +1172,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                     }
                 }
             }*/
-//            if (mcuCount == 10) G::log(__FUNCTION__, "IDCT transform and level shift");
+//            if (mcuCount == 10) G::log(__PRETTY_FUNCTION__, "IDCT transform and level shift");
 
             // RGB transform
             for (int y = 0; y != 8; ++y) {
@@ -1198,7 +1195,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                 }
             }
 
-//            if (mcuCount == 10) G::log(__FUNCTION__, "RGB transform");
+//            if (mcuCount == 10) G::log(__PRETTY_FUNCTION__, "RGB transform");
 
             /* testing: add mcu rgb to QImage image using setPixel
             for (int x = 0; x < 8; x++) {
@@ -1230,7 +1227,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                 }
             }
 
-//            if (mcuCount == 10) G::log(__FUNCTION__, "Add mcu pixels to image");
+//            if (mcuCount == 10) G::log(__PRETTY_FUNCTION__, "Add mcu pixels to image");
 
             // Debug reporting
             if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1 && isReport) {
@@ -1242,7 +1239,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
 
             if (mcuCount == 10) G::t.restart();
 //            QString s = QString::number(mcuCount);
-//            if (G::isLogger) G::log(__FUNCTION__, s);
+//            if (G::isLogger) G::log(__PRETTY_FUNCTION__, s);
 
 //            qDebug() << "Processed MCU" << mcuCol << mcuRow;
 
@@ -1256,7 +1253,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                 stream << x;
             int line = mcuRow * 8 + y;
 //            if (line < 40)
-            qDebug() << __FUNCTION__
+            qDebug() << __PRETTY_FUNCTION__
                      << "mcuRow =" << mcuRow
                      << "y =" << y
                      << "line =" << line
@@ -1266,7 +1263,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
             std::memcpy(im.scanLine(line), data, im.bytesPerLine());
             scanLine[y].clear();
         }
-//        qDebug() << __FUNCTION__ << mcuRow;
+//        qDebug() << __PRETTY_FUNCTION__ << mcuRow;
 
     } // end all rows of MCUs
 
@@ -1276,7 +1273,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
     image.operator=(im);
 
     // write image for review
-    qDebug() << __FUNCTION__ << *image.scanLine(0);
+    qDebug() << __PRETTY_FUNCTION__ << *image.scanLine(0);
     image.save("D:/Pictures/_Jpg/test/test.jpg", "JPG");
 }
 
