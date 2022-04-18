@@ -20,9 +20,16 @@ public:
     MetaRead(QObject *parent, DataModel *dm);
     ~MetaRead() override;
     void stop();
-    void read();
+    enum Action {
+        FileSelection,
+        Scroll,
+        SizeChange
+    } action;
+    void read(Action action = Action::FileSelection, QString src = "");
     void initialize();
     int iconChunkSize;
+    int firstVisible;
+    int lastVisible;
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -33,15 +40,18 @@ signals:
     void addToImageCache(ImageMetadata m);
     void setImageCachePosition(QString fPath);
     void delayedStartImageCache();
+    void updateIconBestFit();
 
 private:
     void readRow(int sfRow);
     void readMetadata(QModelIndex sfIdx, QString fPath);
     void readIcon(QModelIndex sfIdx, QString fPath);
     void iconMax(QPixmap &thumb);
-    void iconCleanup();
-    void buildPriorityQueue();
+    void cleanupIcons();
+    void updateIcons();
+    void buildMetadataPriorityQueue();
     bool isNotLoaded(int sfRow);
+    bool isVisible(int sfRow);
 
     QMutex mutex;
     QWaitCondition condition;
@@ -52,10 +62,12 @@ private:
     Thumb *thumb;
     int adjIconChunkSize;
     int sfRowCount;
-    int visibleIcons;
+    int visibleIconCount;
 
     QList<int> priorityQueue;
     QList<int> iconsLoaded;
+    QList<int> visibleIcons;
+
 };
 
 #endif // METAREAD_H

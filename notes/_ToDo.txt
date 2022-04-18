@@ -32,7 +32,7 @@ EMBELLISH
 - Eliminate shadow blur in sunward direction
 - Sharpen needs TLC
 MAC
-- Add HEIC files to Mac
+- Add HEIC files to Mac https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/ImageIOGuide/imageio_source/ikpg_source.html#//apple_ref/doc/uid/TP40005462-CH218-SW3
 - DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
 - Mac check for updates not done yet
 - Open with ... (doesn't work on macOS)
