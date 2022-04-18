@@ -258,10 +258,12 @@ void IconView::setThumbParameters()
     if (labelFontSize == 0) labelFontSize = 10;
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
         labelFontSize, showIconLabels, badgeSize);
+    /*
     qDebug() << __PRETTY_FUNCTION__
              << "iconWidth =" << iconWidth
              << "iconHeight =" << iconHeight
                 ;
+                //*/
 }
 
 void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight, /*int _thumbPadding,*/
@@ -388,6 +390,7 @@ So we have to determine when scrolling will first occur, how many rows of icons 
 visible in the viewport, how many icons are visible and the first/last icons visible.
 */
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    qDebug() << __FUNCTION__ << "sfRow =" << sfRow;
     int i = sfRow;
     QSize vp = viewport()->size();
     int rowWidth = vp.width() - G::scrollBarThickness;
@@ -606,7 +609,7 @@ void IconView::scannedViewportRange()
     }
     visibleCells = lastVisibleCell - firstVisibleCell + 1;
     midVisibleCell = firstVisibleCell + visibleCells / 2;
-    /*
+//    /*
    qDebug() << __PRETTY_FUNCTION__ << objectName().leftJustified(10, ' ')
              << "isInitializing =" << G::isInitializing
              << "isVisible =" << isVisible()
@@ -779,7 +782,10 @@ void IconView::selectThumb(QModelIndex idx)
         G::isNewSelection = true;
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
-//        qDebug() << __PRETTY_FUNCTION__ << "idx =" << idx;
+        qDebug() << __PRETTY_FUNCTION__
+                 << "idx =" << idx
+                 << "obj =" << objectName()
+                    ;
     }
     else {
         qWarning() << "Failed to select" << idx.data(G::PathRole).toString();
@@ -1014,7 +1020,7 @@ void IconView::justify(JustifyAction action)
 
     iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
     iconHeight = static_cast<int>(iconWidth * bestAspectRatio);
-//    /*
+    /*
     qDebug() << "IconView::justify"
              << "wRow =" << wRow
              << "tpr =" << tpr

@@ -485,12 +485,12 @@ private slots:
                                 QString source);
     // caching
     // loadversion2
-    void loadNew0();
-    void loadNew1();
-    void loadNew2();
-    void loadNew3();
+    void loadConcurrent(MetaRead::Action action = MetaRead::FileSelection, QString src = "");
+    void loadConcurrentNewFolder();
+    void loadConcurrentMetaDone();
+    void loadConcurrentStartImageCache();
 
-    void loadNewFolder();
+    void loadLinearNewFolder();
 //    void loadMetadataCache2ndPass();
     void refreshCurrentAfterReload();
     void updateIconsVisible(int row);

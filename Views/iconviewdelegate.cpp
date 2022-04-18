@@ -179,11 +179,6 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight, int l
     thumbSize.setWidth(thumbWidth);
     thumbSize.setHeight(thumbHeight);
 
-    qDebug() << "IconViewDelegate::setThumbDimensions"
-             << "thumbWidth =" << thumbWidth
-             << "thumbHeight =" << thumbHeight
-             << "thumbSize =" << thumbSize
-                ;
     frameSize.setWidth(thumbWidth + tPad2);
     frameSize.setHeight(thumbHeight + tPad2 + textHeight);
 
