@@ -2,7 +2,7 @@
 
 bool Utilities::integrityCheck(const QString &path1, const QString &path2)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QFile file1(path1);
     file1.open(QIODevice::ReadOnly);
     QByteArray ba1 = file1.readAll();
@@ -16,7 +16,7 @@ bool Utilities::integrityCheck(const QString &path1, const QString &path2)
 
 QSize Utilities::fitScreen(QSize preferred)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     int w = preferred.width();
     int h = preferred.height();
     int headerH = static_cast<int>(30 * G::actDevicePixelRatio);
@@ -48,7 +48,7 @@ QString Utilities::getDrive(QString path)
         if (path.at(0) == '/') drivePath = "/";
     }
 #endif
-//    qDebug() << __PRETTY_FUNCTION__ << path << drivePath;
+//    qDebug() << __FUNCTION__ << path << drivePath;
     return drivePath;
 }
 
@@ -60,7 +60,7 @@ void Utilities::uniqueInList(QString &name, const QStringList &list, QString del
 
     Usage:  Utilities::uniqueInList(name, list);
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     int count = 0;
     QString originalName = name;
     do {
@@ -79,7 +79,7 @@ void Utilities::uniqueFolderPath(QString &path, QString delimiter)
     Usage:  Utilities::uniqueFolder(dPath);
     if dPath = ".../zen2048" exists then dPath changed to ".../zen2048_1"
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     int count = 0;
     bool folderAlreadyExists = true;
     if (path.right(1) != "/") path += "/";
@@ -103,7 +103,7 @@ void Utilities::uniqueFilePath(QString &path, QString delimiter)
     Usage:  Utilities::uniqueFolder(fPath);
     if fPath = ".../zen2048.json" exists then fPath changed to ".../zen2048_1.json"
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     int count = 0;
     bool fileAlreadyExists = true;
     QFileInfo info(path);
@@ -247,7 +247,7 @@ quint16 Utilities::get16(QByteArray c, bool isBigEnd)
     if (isBigEnd) {
         // c might be longer than 2 bytes so use last two bytes if big endian
 //        c = c.right(2);
-//        qDebug() << __PRETTY_FUNCTION__ << c.toHex() << a << b << c[a] << c[b];
+//        qDebug() << __FUNCTION__ << c.toHex() << a << b << c[a] << c[b];
         quint16 x = c[0]&0xFF;
         x = static_cast<quint16>((x << 8) | (c[1]&0xFF));
         return x;

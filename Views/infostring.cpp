@@ -27,7 +27,7 @@ InfoString::InfoString(QWidget *parent, DataModel *dm, QSettings *setting/*,
                        EmbelProperties *embelProperties*/) :
                        QWidget(parent)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     mw4 = qobject_cast<MW*>(parent);
     this->dm = dm;
     this->setting = setting;
@@ -51,7 +51,7 @@ void InfoString::usingToken()
     for (int i = 0; i < templates.length(); ++i) {
         QString templateName = templates.at(i);
         QString templateTextPath = "Embel/Templates/" + templateName + "/Texts";
-//        qDebug() << __PRETTY_FUNCTION__ << templateName << templateTextPath;
+//        qDebug() << __FUNCTION__ << templateName << templateTextPath;
         setting->beginGroup(templateTextPath);
         QStringList texts = setting->childGroups();
         setting->endGroup();
@@ -326,7 +326,7 @@ QString InfoString::parseTokenString(QString &tokenString,
    Use when datamodel is NOT available.  For example EmbelExport::exportFile, which can be
    called from startup arguments, and will not have the datamodel loaded for the file.
 */
-//    Utilities::log(__PRETTY_FUNCTION__, fPath);
+//    Utilities::log(__FUNCTION__, fPath);
     QFileInfo info(fPath);
     Metadata metadata;
     metadata.loadImageMetadata(info);
@@ -469,7 +469,7 @@ QString InfoString::tokenValue(QString &token,
 Finds the token in the datamodel and returns the datamodel value.
 */
     QString msg = "Token = " + token + "fPath = " + fPath;
-//    Utilities::log(__PRETTY_FUNCTION__, msg);
+//    Utilities::log(__FUNCTION__, msg);
     if (token == "Path")
         return fPath;
     if (token == "Filename")

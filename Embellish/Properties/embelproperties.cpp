@@ -73,7 +73,7 @@ MW *mw3;
 
 EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyEditor(parent)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     mw3 = qobject_cast<MW*>(parent);
     this->setting = setting;
 
@@ -115,7 +115,7 @@ EmbelProperties::EmbelProperties(QWidget *parent, QSettings* setting): PropertyE
 
 void EmbelProperties::initialize()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (longSidePx < 1) longSidePx = 500;
     anchorPoints << "Top Left" << "Top Center" << "Top Right"
                  << "Middle Left" << "Middle Center" << "Middle Right"
@@ -286,7 +286,7 @@ void EmbelProperties::initialize()
 
 void EmbelProperties::effectContextMenu()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
 //    effectParentIdx = btn->index;
     effectParentIdx = getItemIndex(btn->itemIndex);
@@ -295,9 +295,9 @@ void EmbelProperties::effectContextMenu()
 
 void EmbelProperties::newEffect()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString effect = (static_cast<QAction*>(sender()))->text();
-    qDebug() << __PRETTY_FUNCTION__ << "effect =" << effect;
+    qDebug() << __FUNCTION__ << "effect =" << effect;
     if (effect == "Blur") addBlurEffect(effectParentIdx);
     if (effect == "Sharpen") addSharpenEffect(effectParentIdx);
     if (effect == "Highlighter") addHighlighterEffect(effectParentIdx);
@@ -313,7 +313,7 @@ void EmbelProperties::newEffect()
     selectionModel()->clear();
     selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
 
-    e->build("", __PRETTY_FUNCTION__);
+    e->build("", __FUNCTION__);
 }
 
 void EmbelProperties::updateEffectOrderAfterDeletion(QModelIndex parIdx)
@@ -325,7 +325,7 @@ Before:                 1, 2, 3, 4
 Delete the 2nd row:     1, 3, 4
 Update to:              1, 2, 3
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // Get a standardItem as it supports sorting of the children, and the borders may be sorted
     QStandardItem *effectItem = new QStandardItem;
     effectItem = model->itemFromIndex(parIdx);
@@ -346,7 +346,7 @@ Before:                 1, 2, 3, 4
 Delete the 2nd row:     1, 3, 4
 Update to:              1, 2, 3
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // Get a standardItem as it supports sorting of the children, and the borders may be sorted
     QStandardItem *borders = new QStandardItem;
     borders = model->itemFromIndex(bordersIdx);
@@ -363,7 +363,7 @@ void EmbelProperties::updateBorderLists()
 /*
     Called from new and delete borders to rebuild the lists that have the borders
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     borderList.clear();
     anchorObjectList.clear();
     int borderCount = model->rowCount(bordersIdx);
@@ -396,7 +396,7 @@ void EmbelProperties::updateAnchorObjects()
     graphicAnchorObjectEditor trigger itemChange which in turn updates settings and local
     vectors.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // update texts anchor lists
     for (int i = 0; i < t.size(); ++i) {
         QString oldAnchorName = textAnchorObjectEditor.at(i)->value();
@@ -422,7 +422,7 @@ void EmbelProperties::updateAnchorObjects()
 
 void EmbelProperties::diagnosticStyles(QTextStream &rpt)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     using namespace winnow_effects;
     QMapIterator<QString, QList<Effect>> s(styleMap);
     while (s.hasNext()) {
@@ -498,7 +498,7 @@ void EmbelProperties::diagnosticStyles(QTextStream &rpt)
 
 void EmbelProperties::diagnosticVectors(QTextStream &rpt)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     rpt << "\n" << "\nVectors:";
     if (b.length()) rpt << "\n" << "Border(s)";
     for (int i = 0; i < b.length(); ++i) {
@@ -561,7 +561,7 @@ void EmbelProperties::diagnosticVectors(QTextStream &rpt)
 
 void EmbelProperties::diagnosticModel(QTextStream &rpt, QModelIndex parent)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     static int iteration = 0;
     if (iteration == 0) {
         rpt << "\n\n" "Embellish Properties Model:\n\n";  // << rowCount << " items.\n\n";
@@ -653,7 +653,7 @@ void EmbelProperties::diagnosticModel(QTextStream &rpt, QModelIndex parent)
 
 /* void EmbelProperties::diagnosticModel(QModelIndex parent)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     // model
     // Report headers
     QString c1 = "Idx";
@@ -701,7 +701,7 @@ void EmbelProperties::diagnosticModel(QTextStream &rpt, QModelIndex parent)
 */
 
 void EmbelProperties::rename() {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     if (currentIdx.parent() == templateIdx) renameCurrentTemplate();
     if (currentIdx == templateIdx) renameCurrentTemplate();
     if (currentIdx.parent() == stylesIdx) renameCurrentStyle();
@@ -721,10 +721,10 @@ void EmbelProperties::moveDown() {
 
 void EmbelProperties::renameSettingKey(QString path, QString oldName, QString newName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // if name is blank then could remove all child items in settings
     if (oldName == "") {
-        qDebug() << __PRETTY_FUNCTION__ << "Error: Blank name";
+        qDebug() << __FUNCTION__ << "Error: Blank name";
         return;
     }
     QString path1 = path + "/" + oldName;
@@ -742,7 +742,7 @@ void EmbelProperties::renameSettingKey(QString path, QString oldName, QString ne
 
 void EmbelProperties::renameCurrentStyle()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
 //    BarBtn *btn = qobject_cast<BarBtn*>(sender());
 //    QModelIndex idx = btn->index;
     QModelIndex idx = currentIdx;
@@ -783,7 +783,7 @@ void EmbelProperties::renameCurrentStyle()
 
 void EmbelProperties::renameCurrentTemplate()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString name = Utilities::inputText("Rename Template",
                                         "Rename template " + templateName,
                                         templateList,
@@ -802,7 +802,7 @@ void EmbelProperties::setCurrentTemplate(QString name)
     Sets the current template to templateName, which must be assigned before calling this
     function. The templatePath and isCurrent are defined. The template is selected.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, name);
+    if (G::isLogger) G::log(__FUNCTION__, name);
     if (name == "") return;
     templateName = name;
     for (int i = 0; i < templateList.length(); ++i) {
@@ -817,7 +817,7 @@ void EmbelProperties::setCurrentTemplate(QString name)
     }
     templateListEditor->setValue(templateName);
 
-//    qDebug() << __PRETTY_FUNCTION__ << templateId << templateName << templatePath;
+//    qDebug() << __FUNCTION__ << templateId << templateName << templatePath;
 }
 
 void EmbelProperties::sortTemplateList()
@@ -827,7 +827,7 @@ void EmbelProperties::sortTemplateList()
     items in alphabetical order. The template items are read from settings to a temp list,
     sorted, and then appended to templateList.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     if (templateList.length() < 2) return;
     QStringList list;
     for (int i = 1; i < templateList.length(); ++i) {
@@ -846,7 +846,7 @@ void EmbelProperties::readTemplateList()
     are read from settings to a temp list, sorted, and then appended to templateList.
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     templateList.clear();
     templateId = 0;
     templateName = "Do not Embellish";
@@ -884,7 +884,7 @@ void EmbelProperties::readTemplateList()
 
 QString EmbelProperties::uniqueTemplateName(QString name)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     setting->beginGroup("Embel/Templates");
     QStringList keys = setting->childGroups();
     setting->endGroup();
@@ -900,11 +900,11 @@ QString EmbelProperties::uniqueTemplateName(QString name)
 
 QString EmbelProperties::uniqueTileName(QString name)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     setting->beginGroup("Embel/Tiles");
     QStringList keys = setting->childKeys();
     setting->endGroup();
-    qDebug() << __PRETTY_FUNCTION__ << name << keys;
+    qDebug() << __FUNCTION__ << name << keys;
     bool nameExists = true;
     QString newName = name;
     int count = 0;
@@ -917,7 +917,7 @@ QString EmbelProperties::uniqueTileName(QString name)
 
 QString EmbelProperties::uniqueGraphicName(QString name)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     setting->beginGroup("Embel/Graphics");
     QStringList keys = setting->childKeys();
     setting->endGroup();
@@ -933,7 +933,7 @@ QString EmbelProperties::uniqueGraphicName(QString name)
 
 QString EmbelProperties::uniqueTokenName(QString name)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     setting->beginGroup("InfoTemplates");
     QStringList keys = setting->childKeys();
     setting->endGroup();
@@ -949,13 +949,13 @@ QString EmbelProperties::uniqueTokenName(QString name)
 
 void EmbelProperties::copyStyle()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString style = currentIdx.data().toString();
     QString toTemplate = "";
     CopyStyleDlg copyDlg(style, toTemplate, templateList);
     if (!copyDlg.exec()) return;
     QString copyName = style;  //uniqueTemplateName(templateName + " copy");
-    qDebug() << __PRETTY_FUNCTION__ << toTemplate << copyName;
+    qDebug() << __FUNCTION__ << toTemplate << copyName;
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/";
     QString copyPath = "Embel/Templates/" + toTemplate + "/Styles/" + copyName + "/";;
     setting->beginGroup(path);
@@ -970,7 +970,7 @@ void EmbelProperties::copyStyle()
 
 void EmbelProperties::copyTemplate()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/";
     QString copyName = uniqueTemplateName(templateName + " copy");
     QString copyPath = "Embel/Templates/" + copyName + "/";
@@ -1007,7 +1007,7 @@ bool EmbelProperties::saveTemplateToFile()
 
     Remove the temporary subfolder.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     // cannot save "Do not Embellish"
     if (templateName == "Do not Embellish") {
         QString msg = "Cannot save template 'Do not Embellish'";
@@ -1093,7 +1093,7 @@ bool EmbelProperties::saveTemplateToFile()
         QModelIndex tIdx = model->index(i, 0, textsIdx);
         keys << getItemValue("metadataTemplate", tIdx).toString();
     }
-//    qDebug() << __PRETTY_FUNCTION__ << keys; return true;
+//    qDebug() << __FUNCTION__ << keys; return true;
     /*
     setting->beginGroup("InfoTemplates");
         keys = setting->allKeys();
@@ -1157,7 +1157,7 @@ bool EmbelProperties::readTemplateFromFile()
     Load the new template.
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     // select compressed temple file
     QString srcPath = QFileDialog::getOpenFileName(this, tr("Select template"),
                                                  "/home", "*.embeltemplate");
@@ -1196,7 +1196,7 @@ bool EmbelProperties::readTemplateFromFile()
 //    QString tPath = dstPath + "/" + srcTemplateName + ".template";
     QFile tFile(tPath);
     if (!tFile.open(QIODevice::ReadOnly)) {
-        qDebug() << __PRETTY_FUNCTION__ << "Could not open template file.";
+        qDebug() << __FUNCTION__ << "Could not open template file.";
         qWarning("Couldn't open template file.");
         return false;
     }
@@ -1207,7 +1207,7 @@ bool EmbelProperties::readTemplateFromFile()
     if (dupTemplateName) {
         QString a = "Templates/" + srcTName;
         QString b = "Templates/" + uniqueTName;
-//        qDebug() << __PRETTY_FUNCTION__ << a << b;
+//        qDebug() << __FUNCTION__ << a << b;
         ba.replace(a.toUtf8(), b.toUtf8());
     }
 
@@ -1313,7 +1313,7 @@ bool EmbelProperties::readTemplateFromFile()
 
 void EmbelProperties::readTileList()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     tileList.clear();
     tileList << "Do not tile";
     setting->beginGroup("Embel/Tiles");
@@ -1323,7 +1323,7 @@ void EmbelProperties::readTileList()
 
 void EmbelProperties::readGraphicsList()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     graphicList.clear();
     setting->beginGroup("Embel/Graphics");
     graphicList << setting->allKeys();
@@ -1332,7 +1332,7 @@ void EmbelProperties::readGraphicsList()
 
 void EmbelProperties::manageTiles()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     ManageImagesDlg dlg("Manage Embellish Tiles", setting, "Embel/Tiles");
     connect(&dlg, &ManageImagesDlg::itemRenamed, this, &EmbelProperties::updateTileList);
     dlg.exec();
@@ -1342,7 +1342,7 @@ void EmbelProperties::manageTiles()
 
 void EmbelProperties::updateTileList(QString oldName, QString newName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     tileList.clear();
     setting->beginGroup("Embel/Tiles");
     tileList << setting->allKeys();
@@ -1365,12 +1365,12 @@ void EmbelProperties::updateTileList(QString oldName, QString newName)
 
 void EmbelProperties::manageGraphics()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     ManageImagesDlg dlg("Manage Embellish Graphics", setting, "Embel/Graphics");
     connect(&dlg, &ManageImagesDlg::itemRenamed, this, &EmbelProperties::updateGraphicList);
     dlg.exec();
     updateGraphicList();
-    qDebug() << __PRETTY_FUNCTION__ << graphicList;
+    qDebug() << __FUNCTION__ << graphicList;
 }
 
 void EmbelProperties::updateGraphicList(QString oldName, QString newName)
@@ -1380,7 +1380,7 @@ void EmbelProperties::updateGraphicList(QString oldName, QString newName)
     graphicList << setting->allKeys();
     setting->endGroup();
     graphicList.sort();
-    qDebug() << __PRETTY_FUNCTION__ << graphicList;
+    qDebug() << __FUNCTION__ << graphicList;
     // update graphicList in each graphic item
     for (int i = 0; i < graphicsObjectEditor.size(); ++i) {
         QString oldGraphicName = graphicsObjectEditor.at(i)->value();
@@ -1394,7 +1394,7 @@ void EmbelProperties::updateGraphicList(QString oldName, QString newName)
 
 void EmbelProperties::readMetadataTemplateList()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     metadataTemplatesList.clear();
     QMapIterator<QString, QString> i(mw3->infoString->infoTemplates);
     while (i.hasNext()) {
@@ -1426,7 +1426,7 @@ void EmbelProperties::updateMetadataTemplateList()
     After the token editor has been invoked and closed the text metadataTemplate lists
     are updated in case the template list has changed (new items or deleted items).
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // reread the metadata template list
     readMetadataTemplateList();
 
@@ -1449,11 +1449,11 @@ void EmbelProperties::updateMetadataTemplateList()
 
 void EmbelProperties::newTemplate()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     templateName = Utilities::inputText("New Template",
                                         "Enter new template name",
                                         templateList);
-    qDebug() << __PRETTY_FUNCTION__ << templateName;
+    qDebug() << __FUNCTION__ << templateName;
     if (templateName == "") return;
     templateId = templateList.count();
 //    // set all templates except templateName isCurrent = false
@@ -1475,7 +1475,7 @@ void EmbelProperties::newTemplateFromImport(QString name)
     // refresh dropdown with appended and sorted list
     templateListEditor->refresh(templateList);
     // select the imported template, which triggers itemChange
-    qDebug() << __PRETTY_FUNCTION__ << "templateListEditor->setValue(templateName)" << name;
+    qDebug() << __FUNCTION__ << "templateListEditor->setValue(templateName)" << name;
     templateListEditor->setValue(name);
     emit syncEmbellishMenu();
     syncWinnets();
@@ -1508,7 +1508,7 @@ void EmbelProperties::syncWinnets()
     when a new template is created.  The Winnets need to be synced when templates are created,
     renamed or deleted.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // windows executables end in .exe and macos have no extension
     QString ext = "";
     #ifdef Q_OS_WIN
@@ -1569,7 +1569,7 @@ void EmbelProperties::syncWinnets()
 
 void EmbelProperties::newStyle()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // rgh prevent duplicate style names
     QString name = Utilities::inputText("New Style",
                                         "Enter new style name (not created until you add an effect)",
@@ -1590,7 +1590,7 @@ void EmbelProperties::newStyle()
 
 void EmbelProperties::invokeFromAction(QAction *embelAction)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     if (templateName == embelAction->text()) return;
     for (int i = 0; i < templateList.count(); ++i) {
         if (templateList.at(i)  == embelAction->text()) {
@@ -1601,7 +1601,7 @@ void EmbelProperties::invokeFromAction(QAction *embelAction)
 
 void EmbelProperties::doNotEmbellish()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     templateListEditor->setValue("Do not Embellish");
 }
 
@@ -1618,7 +1618,7 @@ The border vector is rebuilt using syncBorderVector.
 
 The sortOrder is updated in settings.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // swap the current row with the one above
     QStandardItem *item = borders->child(row);
     QStandardItem *swapItem = borders->child(swapRow);
@@ -1644,7 +1644,7 @@ The sortOrder is updated in settings.
     }
 
     // refresh the graphicsScene
-    e->build("", __PRETTY_FUNCTION__);
+    e->build("", __FUNCTION__);
 }
 
 void EmbelProperties::moveBorderUp()
@@ -1652,7 +1652,7 @@ void EmbelProperties::moveBorderUp()
 /*
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
 //    QModelIndex idx = btn->index;
     QModelIndex idx = getItemIndex(btn->itemIndex);
@@ -1677,7 +1677,7 @@ void EmbelProperties::moveBorderUp()
 
 void EmbelProperties::moveBorderDown()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
 //    QModelIndex idx = btn->index;
     QModelIndex idx = getItemIndex(btn->itemIndex);
@@ -1712,14 +1712,14 @@ void EmbelProperties::swapEffects(QStandardItem *styleItem, int row, int swapRow
     QStandardItem::sortChildren. styleItem is the parent and the effects are the children
     being sorted.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // swap the current row with the swap row
     QStandardItem *item = styleItem->child(row);
     QStandardItem *swapItem = styleItem->child(swapRow);
 
     QModelIndex par = styleItem->index();   // for debugging
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "item->data() =" << item->data()
              << "swapItem->data() =" << swapItem->data()
                 ;
@@ -1728,7 +1728,7 @@ void EmbelProperties::swapEffects(QStandardItem *styleItem, int row, int swapRow
     for (int i = 0; i < model->rowCount(par); ++i) {
         QModelIndex idx = model->index(i, 0, par);
         QString name = idx.data().toString();
-        qDebug() << __PRETTY_FUNCTION__ << "Before swap"
+        qDebug() << __FUNCTION__ << "Before swap"
                  << "row =" << i
                  << "name =" << name.leftJustified(8)
                  << "order =" << idx.data(UR_SortOrder).toInt()
@@ -1743,7 +1743,7 @@ void EmbelProperties::swapEffects(QStandardItem *styleItem, int row, int swapRow
     for (int i = 0; i < model->rowCount(par); ++i) {
         QModelIndex idx = model->index(i, 0, par);
         QString name = idx.data().toString();
-        qDebug() << __PRETTY_FUNCTION__ << "After  swap"
+        qDebug() << __FUNCTION__ << "After  swap"
                  << "row =" << i
                  << "name =" << name.leftJustified(8)
                  << "order =" << idx.data(UR_SortOrder).toInt()
@@ -1768,7 +1768,7 @@ void EmbelProperties::swapEffects(QStandardItem *styleItem, int row, int swapRow
     sortEffectList(style);
 
     // refresh the graphicsScene
-    e->build("", __PRETTY_FUNCTION__);
+    e->build("", __FUNCTION__);
 
     return;
 }
@@ -1779,13 +1779,13 @@ void EmbelProperties::moveEffectUp()
     Move an effect up one item in a group of effects within a style in the property tree.
     The effects may have been sorted
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
     /*
     QWindow *wBtn = new QWindow;
     btn->createWindowContainer(wBtn);
     if (wBtn == nullptr) qDebug() << "NULL";
-    qDebug() << __PRETTY_FUNCTION__;
+    qDebug() << __FUNCTION__;
     qDebug() << "btn->window()->pos()            =" << btn->window()->pos();
     qDebug() << "btn->pos()                      =" << btn->pos();
     qDebug() << "wBtn->position();               =" << wBtn->position();
@@ -1800,30 +1800,30 @@ void EmbelProperties::moveEffectUp()
     QModelIndex idx = getItemIndex(btn->itemIndex);
 //    QModelIndex idx = btn->index;
     if (!idx.isValid()) {
-        qDebug() << __PRETTY_FUNCTION__ << "idx.isValid() =" << idx.isValid();
+        qDebug() << __FUNCTION__ << "idx.isValid() =" << idx.isValid();
         return;
     }
 
     // get current row for this index as it may have been sorted already
     QString effectName = btn->name;
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "effectName =" << effectName
              << "idx.data() =" << idx.data()
              << "idx.parent().data() =" << idx.parent().data()
                 ;
 //                */
-    qDebug() << __PRETTY_FUNCTION__ << "effectName =" << effectName;
+    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     QStandardItem *styleItem = new QStandardItem;
     styleItem = model->itemFromIndex(idx.parent());
     int row;
     int rowCount = styleItem->rowCount();
-    qDebug() << __PRETTY_FUNCTION__ << rowCount;
+    qDebug() << __FUNCTION__ << rowCount;
     for (row = 0; row < styleItem->rowCount(); ++row) {
         QString sortedItemName = styleItem->child(row)->data(Qt::DisplayRole).toString();
         if (sortedItemName == effectName) break;
     }
-    qDebug() << __PRETTY_FUNCTION__ << "row =" << row;
+    qDebug() << __FUNCTION__ << "row =" << row;
     if (row == 0) return;
 
     // swap the current row with the one above
@@ -1835,7 +1835,7 @@ void EmbelProperties::moveEffectUp()
 
 void EmbelProperties::moveEffectDown()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
     QModelIndex idx = getItemIndex(btn->itemIndex);
 //    QModelIndex idx = btn->index;
@@ -1853,7 +1853,7 @@ void EmbelProperties::moveEffectDown()
     for (row = 0; row < styleItem->rowCount(); ++row) {
         QString sortedItemName = styleItem->child(row)->data(Qt::DisplayRole).toString();
 //        /*
-        qDebug() << __PRETTY_FUNCTION__
+        qDebug() << __FUNCTION__
                  << "row =" << row
                  << "effectName =" << effectName
                  << "sortedItemName =" << sortedItemName
@@ -1872,7 +1872,7 @@ void EmbelProperties::moveEffectDown()
 
 void EmbelProperties::syncBorderVector()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     for (int i = 0; i < model->rowCount(bordersIdx); ++i) {
         QModelIndex bIdx = model->index(i, 0, bordersIdx);
         b[i].name = bIdx.data(UR_Name).toString();
@@ -1895,9 +1895,9 @@ void EmbelProperties::syncBorderVector()
 
 bool EmbelProperties::sortEffectList(QString style)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, "Style: " + style);
+    if (G::isLogger) G::log(__FUNCTION__, "Style: " + style);
     if (!styleMap.contains(style)) {
-        qDebug() << __PRETTY_FUNCTION__ << style << "not in list";
+        qDebug() << __FUNCTION__ << style << "not in list";
         return false;
     }
     std::sort(styleMap[style].begin(), styleMap[style].end(),
@@ -1921,7 +1921,7 @@ void EmbelProperties::itemChange(QModelIndex idx)
     The connection is defined in the parent PropertyEditor to fire the virtual function
     itemChange, which is subclassed here.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
 
 //    if (!propertyDelegate->submitted) return;
 //    propertyDelegate->submitted = false;
@@ -1934,7 +1934,7 @@ void EmbelProperties::itemChange(QModelIndex idx)
     templatePath = "Embel/Templates/" + templateName + "/";
     /*
 //    QModelIndex index = idx.data(UR_QModelIndex).toModelIndex();
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << " =" << templateId
              << "idx.isValid() =" << idx.isValid()
              << "v =" << v
@@ -1965,7 +1965,7 @@ void EmbelProperties::itemChange(QModelIndex idx)
 
 void EmbelProperties::itemChangeTemplate(QVariant v)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     isTemplateChange = true;
 
     // save which template is current and set templateId and templateName
@@ -2013,15 +2013,15 @@ void EmbelProperties::itemChangeTemplate(QVariant v)
     collapseAll();
     expand(model->index(_templates, 0));
     isTemplateChange = false;
-//    qDebug() << __PRETTY_FUNCTION__ << "loadImage..."
+//    qDebug() << __FUNCTION__ << "loadImage..."
 //             << "mw3->dm->currentFilePath =" << mw3->dm->currentFilePath;
-    mw3->imageView->loadImage(mw3->dm->currentFilePath, __PRETTY_FUNCTION__);
+    mw3->imageView->loadImage(mw3->dm->currentFilePath, __FUNCTION__);
     mw3->imageView->setAlignment(Qt::AlignCenter);
 }
 
 void EmbelProperties::itemChangeExport(QModelIndex idx, QVariant v, QString source)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // prevent template "Export" is being mysteriously created
     if (source == "") return;
 
@@ -2040,7 +2040,7 @@ void EmbelProperties::itemChangeExport(QModelIndex idx, QVariant v, QString sour
     if (source == "saveMethod") {
         setting->setValue(path, v.toString());
         saveMethod = v.toString();
-        qDebug() << __PRETTY_FUNCTION__ << source << saveMethod;
+        qDebug() << __FUNCTION__ << source << saveMethod;
         int row = idx.row();
         // also hidden on creation using updateHiddenRows(QModelIndex parent)
         if (saveMethod == "Another folder somewhere else") {
@@ -2076,9 +2076,9 @@ void EmbelProperties::itemChangeExport(QModelIndex idx, QVariant v, QString sour
 
 void EmbelProperties::itemChangeGeneral(QVariant v, QString source)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = templatePath + "General/" + source;
-//    qDebug() << __PRETTY_FUNCTION__ << path;
+//    qDebug() << __FUNCTION__ << path;
 
     if (source == "horizontalFit") {
         setting->setValue(path, v.toInt());
@@ -2101,12 +2101,12 @@ void EmbelProperties::itemChangeGeneral(QVariant v, QString source)
         setting->setValue(path, v.toString());
         image.style = v.toString();
     }
-    e->build("", __PRETTY_FUNCTION__);
+    e->build("", __FUNCTION__);
 }
 
 void EmbelProperties::itemChangeBorder(QModelIndex idx)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
     QString parent = idx.parent().data(UR_Name).toString();
@@ -2120,7 +2120,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
         setting->setValue(path, x);
         b[index].top = x;
         // build embel as change in border dimension changes all coordinates
-        e->build("", __PRETTY_FUNCTION__);
+        e->build("", __FUNCTION__);
         return;
     }
 
@@ -2129,7 +2129,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
         setting->setValue(path, x);
         b[index].left = x;
         // build embel as change in border dimension changes all coordinates
-        e->build("", __PRETTY_FUNCTION__);
+        e->build("", __FUNCTION__);
         return;
     }
 
@@ -2138,7 +2138,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
         setting->setValue(path, x);
         b[index].right = x;
         // build embel as change in border dimension changes all coordinates
-        e->build("", __PRETTY_FUNCTION__);
+        e->build("", __FUNCTION__);
         return;
     }
 
@@ -2147,7 +2147,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
         setting->setValue(path, x);
         b[index].bottom = x;
         // build embel as change in border dimension changes all coordinates
-        e->build("", __PRETTY_FUNCTION__);
+        e->build("", __FUNCTION__);
         return;
     }
 
@@ -2164,7 +2164,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
 
     if (source == "opacity") {
         setting->setValue(path, v.toInt());
-        qDebug() << __PRETTY_FUNCTION__ << index;
+        qDebug() << __FUNCTION__ << index;
         b[index].opacity = v.toInt();
     }
 
@@ -2178,7 +2178,7 @@ void EmbelProperties::itemChangeBorder(QModelIndex idx)
 
 void EmbelProperties::itemChangeText(QModelIndex idx)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QVariant v = idx.data(Qt::EditRole);
     QString source = idx.data(UR_Source).toString();
     QString parent = idx.parent().data(UR_Name).toString();
@@ -2186,7 +2186,7 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
     int index = getItemIndex(idx.parent().data(UR_ItemIndex).toInt()).row();
     QString path = templatePath + "Texts/" + parent + "/" + source;
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "source =" << source
              << "parent =" << parent;
 //    */
@@ -2262,7 +2262,7 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
 
     if (source == "metadataTemplate") {
         QString value = v.toString();
-        qDebug() << __PRETTY_FUNCTION__ << "metadataTemplate" << value;
+        qDebug() << __FUNCTION__ << "metadataTemplate" << value;
         setting->setValue(path, value);
         t[index].metadataTemplate = value;
     }
@@ -2299,7 +2299,7 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
     }
 
     if (source == "style") {
-        qDebug() << __PRETTY_FUNCTION__ << source;
+        qDebug() << __FUNCTION__ << source;
         setting->setValue(path, v.toString());
         t[index].style = v.toString();
     }
@@ -2309,23 +2309,23 @@ void EmbelProperties::itemChangeText(QModelIndex idx)
 
 void EmbelProperties::itemChangeRectangle(QVariant v, QString source, QString parent)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
 
 }
 
 void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString source, QString parent)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // see PropertyEditor::getItemIndex for details on using itemIndex
     int index = getItemIndex(idx.parent().data(UR_ItemIndex).toInt()).row();
     QString path = templatePath + "Graphics/" + parent + "/" + source;
-//    qDebug() << __PRETTY_FUNCTION__ << "row =" << index << path << source << v.toInt();
+//    qDebug() << __FUNCTION__ << "row =" << index << path << source << v.toInt();
 
     if (source == "graphic") {
         setting->setValue(path, v.toString());
         g[index].name = v.toString();
         g[index].graphic = setting->value("Embel/Graphics/" + v.toString()).toByteArray();
-        e->build("", __PRETTY_FUNCTION__);
+        e->build("", __FUNCTION__);
         return;
     }
 
@@ -2371,7 +2371,7 @@ void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString sou
     if (source == "size") {
         setting->setValue(path, v.toDouble());
         g[index].size = v.toDouble();
-        qDebug() << __PRETTY_FUNCTION__ << "g[index].size =" << g[index].size;
+        qDebug() << __FUNCTION__ << "g[index].size =" << g[index].size;
     }
 
     if (source == "rotation") {
@@ -2385,7 +2385,7 @@ void EmbelProperties::itemChangeGraphic(QModelIndex idx, QVariant v, QString sou
     }
 
     if (source == "style") {
-        qDebug() << __PRETTY_FUNCTION__ << source;
+        qDebug() << __FUNCTION__ << source;
         setting->setValue(path, v.toString());
         g[index].style = v.toString();
     }
@@ -2398,9 +2398,9 @@ void EmbelProperties::itemChangeShadowEffect(QVariant v, QString source, QString
 /*
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
-//    qDebug() << __PRETTY_FUNCTION__ << path << source << v.toInt();
+//    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "length") {
         setting->setValue(path, v.toDouble());
@@ -2449,9 +2449,9 @@ void EmbelProperties::itemChangeStrokeEffect(QVariant v, QString source, QString
 /*
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
-    //    qDebug() << __PRETTY_FUNCTION__ << path << source << v.toInt();
+    //    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "width") {
         setting->setValue(path, v.toDouble());
@@ -2493,9 +2493,9 @@ void EmbelProperties::itemChangeGlowEffect(QVariant v, QString source, QString e
 /*
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
-    //    qDebug() << __PRETTY_FUNCTION__ << path << source << v.toInt();
+    //    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "width") {
         setting->setValue(path, v.toDouble());
@@ -2534,9 +2534,9 @@ void EmbelProperties::itemChangeGlowEffect(QVariant v, QString source, QString e
 
 void EmbelProperties::itemChangeBlurEffect(QVariant v, QString source, QString effectName, QString style)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
-    qDebug() << __PRETTY_FUNCTION__ << path << source << v.toInt();
+    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "radius") {
         setting->setValue(path, v.toDouble());
@@ -2557,7 +2557,7 @@ void EmbelProperties::itemChangeBlurEffect(QVariant v, QString source, QString e
 
 void EmbelProperties::itemChangeSharpenEffect(QVariant v, QString source, QString effectName, QString style)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
 
     if (source == "radius") {
@@ -2579,9 +2579,9 @@ void EmbelProperties::itemChangeSharpenEffect(QVariant v, QString source, QStrin
 
 void EmbelProperties::itemChangeHighlighterEffect(QVariant v, QString source, QString effectName, QString style)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
-//    qDebug() << __PRETTY_FUNCTION__ << path << source << v.toInt();
+//    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "top") {
         setting->setValue(path, v.toInt());
@@ -2641,9 +2641,9 @@ void EmbelProperties::itemChangeHighlighterEffect(QVariant v, QString source, QS
 
 void EmbelProperties::itemChangeBrightnessEffect(QVariant v, QString source, QString effectName, QString style)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
-//    qDebug() << __PRETTY_FUNCTION__ << path << source << v.toInt();
+//    qDebug() << __FUNCTION__ << path << source << v.toInt();
 
     if (source == "evDelta") {
         setting->setValue(path, v.toDouble());
@@ -2665,9 +2665,9 @@ void EmbelProperties::itemChangeBrightnessEffect(QVariant v, QString source, QSt
 void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QString source,
                                              QString effectName, QString style)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString path = "Embel/Templates/" + templateName + "/Styles/" + style + "/" + effectName + "/" + source;
-//    qDebug() << __PRETTY_FUNCTION__ << path << source << v.toInt();
+//    qDebug() << __FUNCTION__ << path << source << v.toInt();
     // item 0
 //    if (source == "contour") {
 //        int index = embossContourList.indexOf(v.toString());
@@ -2752,7 +2752,7 @@ void EmbelProperties::itemChangeEmbossEffect(QModelIndex idx, QVariant v, QStrin
 
 void EmbelProperties::addTemplateHeader()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // Templates header (Root)
     i.name = "TemplatesHeader";
     i.parentName = "???";
@@ -2814,7 +2814,7 @@ void EmbelProperties::addTemplateHeader()
 
 void EmbelProperties::addTemplateItems()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     addExport();
     addStyles();
     addGeneral();
@@ -2825,7 +2825,7 @@ void EmbelProperties::addTemplateItems()
 
 void EmbelProperties::addExport()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // EXPORT File header (Root)
     i.name = "ExportHeader";
     i.parentName = "???";
@@ -3051,7 +3051,7 @@ void EmbelProperties::addExport()
 
 void EmbelProperties::addGeneral()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // IMAGE Image header (Root)
     i.name = "GeneralHeader";
     i.parentName = "???";
@@ -3177,7 +3177,7 @@ void EmbelProperties::addGeneral()
 
 void EmbelProperties::addBorders()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // BORDER header (Borders)
     i.name = "Borders";
     i.parentName = "???";
@@ -3216,14 +3216,14 @@ void EmbelProperties::addBorders()
     /*
     for (int row = 0; row < model->rowCount(bordersIdx); ++row) {
         QModelIndex bIdx = model->index(row, 0, bordersIdx);
-        qDebug() << __PRETTY_FUNCTION__ << "DATA MODEL AND B VECTOR"
+        qDebug() << __FUNCTION__ << "DATA MODEL AND B VECTOR"
                  << "row =" << row
                  << "name =" << bIdx.data(UR_Name).toString()
                  << "order =" << bIdx.data(UR_SortOrder).toInt()
                  << "\t b[row].name = " << b[row].name
                     ;
     }
-    qDebug() << __PRETTY_FUNCTION__ << "BORDER VECTOR";
+    qDebug() << __FUNCTION__ << "BORDER VECTOR";
     for (int i = 0; i < b.length(); ++i) {
         qDebug().noquote()
             << i << " "
@@ -3242,7 +3242,7 @@ void EmbelProperties::addBorders()
 
 void EmbelProperties::addTexts()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // Texts header (Root)
     i.name = "Texts";
     i.parentName = "???";
@@ -3271,7 +3271,7 @@ void EmbelProperties::addTexts()
 
 void EmbelProperties::addGraphics()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // Graphics header (Root)
     i.name = "Graphics";
     i.parentName = "???";
@@ -3300,8 +3300,8 @@ void EmbelProperties::addGraphics()
 
 void EmbelProperties::addStyles()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
-    //    qDebug() << __PRETTY_FUNCTION__;
+    if (G::isLogger) G::log(__FUNCTION__);
+    //    qDebug() << __FUNCTION__;
     // Styles header (Root)
     i.name = "Styles";
     i.parentName = "???";
@@ -3326,18 +3326,18 @@ void EmbelProperties::addStyles()
     styleList = setting->childGroups();
     int count = setting->childGroups().size();
     setting->endGroup();
-//    qDebug() << __PRETTY_FUNCTION__ << stylesList;
+//    qDebug() << __FUNCTION__ << stylesList;
     styleMap.clear();
     for (int i = 0; i < count; ++i) addStyle(styleList.at(i), i);
 }
 
 void EmbelProperties::addStyle(QString name, int n)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, name);
+    if (G::isLogger) G::log(__FUNCTION__, name);
     // add the style header
     styleName = name;
     styleId = n;
-//    qDebug() << __PRETTY_FUNCTION__ << styleName << name << n;
+//    qDebug() << __FUNCTION__ << styleName << name << n;
     QString settingRootPath = "Embel/Templates/" + templateName + "/Styles/" + styleName;
     i.isHeader = true;
     i.isDecoration = true;
@@ -3405,7 +3405,7 @@ void EmbelProperties::addStyle(QString name, int n)
 
 void EmbelProperties::addBorderHeaderButtons()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     effectUpBtn = new BarBtn();
     effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
     effectUpBtn->setToolTip("Move border up");
@@ -3442,7 +3442,7 @@ void EmbelProperties::addBorderHeaderButtons()
 
 void EmbelProperties::addEffectBtns()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     effectUpBtn = new BarBtn();
     effectUpBtn->setIcon(":/images/icon16/up.png", G::iconOpacity);
     effectUpBtn->setToolTip("Move effect up");
@@ -3479,13 +3479,13 @@ void EmbelProperties::addEffectBtns()
 
 void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, effectName);
+    if (G::isLogger) G::log(__FUNCTION__, effectName);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::blur;
-//    qDebug() << __PRETTY_FUNCTION__ << "effectName =" << effectName;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::blur, "Blur");
     effect.effectName = effectName;
@@ -3507,7 +3507,7 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_BarBtns;
     // get settings data
     QString key = i.path + "/sortOrder";
-//    qDebug() << __PRETTY_FUNCTION__
+//    qDebug() << __FUNCTION__
 //             << "key =" << key
 //             << "value =" << setting->value(key).toInt();
     if (setting->contains(key)) {
@@ -3580,13 +3580,13 @@ void EmbelProperties::addBlurEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, effectName);
+    if (G::isLogger) G::log(__FUNCTION__, effectName);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::sharpen;
-//    qDebug() << __PRETTY_FUNCTION__ << "effectName =" << effectName;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::sharpen, "Sharpen");
     effect.effectName = effectName;
@@ -3608,7 +3608,7 @@ void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_BarBtns;
     // get settings data
     QString key = i.path + "/sortOrder";
-//    qDebug() << __PRETTY_FUNCTION__
+//    qDebug() << __FUNCTION__
 //             << "key =" << key
 //             << "value =" << setting->value(key).toInt();
     if (setting->contains(key)) {
@@ -3681,13 +3681,13 @@ void EmbelProperties::addSharpenEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::addHighlighterEffect(QModelIndex parIdx, QString effectName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, effectName);
+    if (G::isLogger) G::log(__FUNCTION__, effectName);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::highlighter;
-//    qDebug() << __PRETTY_FUNCTION__ << "effectName =" << effectName;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::highlighter, "Highlighter");
     effect.effectName = effectName;
@@ -3913,13 +3913,13 @@ void EmbelProperties::addHighlighterEffect(QModelIndex parIdx, QString effectNam
 
 void EmbelProperties::addStrokeEffect(QModelIndex parIdx, QString effectName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, effectName);
+    if (G::isLogger) G::log(__FUNCTION__, effectName);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::stroke;
-//    qDebug() << __PRETTY_FUNCTION__ << "effectName =" << effectName;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::stroke, "Stroke");
     effect.effectName = effectName;
@@ -3941,12 +3941,12 @@ void EmbelProperties::addStrokeEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_BarBtns;
     // get settings data
     QString key = i.path + "/sortOrder";
-//    qDebug() << __PRETTY_FUNCTION__
+//    qDebug() << __FUNCTION__
 //             << "key =" << key
 //             << "value =" << setting->value(key).toInt();
     if (setting->contains(key)) {
         i.sortOrder = setting->value(key).toInt();
-//        qDebug() << __PRETTY_FUNCTION__ << i.path << i.sortOrder;
+//        qDebug() << __FUNCTION__ << i.path << i.sortOrder;
     }
     else {
         i.sortOrder = model->rowCount(parIdx);
@@ -4069,13 +4069,13 @@ void EmbelProperties::addStrokeEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::addGlowEffect(QModelIndex parIdx, QString effectName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::glow;
-//    qDebug() << __PRETTY_FUNCTION__ << "effectName =" << effectName;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::glow, "Glow");
     effect.effectName = effectName;
@@ -4097,12 +4097,12 @@ void EmbelProperties::addGlowEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_BarBtns;
     // get settings data
     QString key = i.path + "/sortOrder";
-//    qDebug() << __PRETTY_FUNCTION__
+//    qDebug() << __FUNCTION__
 //             << "key =" << key
 //             << "value =" << setting->value(key).toInt();
     if (setting->contains(key)) {
         i.sortOrder = setting->value(key).toInt();
-//        qDebug() << __PRETTY_FUNCTION__ << i.path << i.sortOrder;
+//        qDebug() << __FUNCTION__ << i.path << i.sortOrder;
     }
     else {
         i.sortOrder = model->rowCount(parIdx);
@@ -4249,7 +4249,7 @@ void EmbelProperties::addGlowEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::addBrightnessEffect(QModelIndex parIdx, QString effectName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
@@ -4348,7 +4348,7 @@ void EmbelProperties::addBrightnessEffect(QModelIndex parIdx, QString effectName
 
 void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
@@ -4670,13 +4670,13 @@ void EmbelProperties::addEmbossEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // styleName = parent
     QString parentName = parIdx.data(UR_Name).toString();
     styleName = parentName;
     winnow_effects::Effect effect;
     effect.effectType = winnow_effects::shadow;
-//    qDebug() << __PRETTY_FUNCTION__ << "effectName =" << effectName;
+//    qDebug() << __FUNCTION__ << "effectName =" << effectName;
     if (effectName == "")
         effectName = uniqueEffectName(parentName, winnow_effects::shadow, "Shadow");
     effect.effectName = effectName;
@@ -4698,12 +4698,12 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
     i.delegateType = DT_BarBtns;
     // get settings data
     QString key = i.path + "/sortOrder";
-//    qDebug() << __PRETTY_FUNCTION__
+//    qDebug() << __FUNCTION__
 //             << "key =" << key
 //             << "value =" << setting->value(key).toInt();
     if (setting->contains(key)) {
         i.sortOrder = setting->value(key).toInt();
-//        qDebug() << __PRETTY_FUNCTION__ << i.path << i.sortOrder;
+//        qDebug() << __FUNCTION__ << i.path << i.sortOrder;
     }
     else {
         i.sortOrder = model->rowCount(parIdx);
@@ -4850,13 +4850,13 @@ void EmbelProperties::addShadowEffect(QModelIndex parIdx, QString effectName)
 
 void EmbelProperties::newBorderFromBtn()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     newBorder("");
 }
 
 void EmbelProperties::newBorder(QString name)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     int rowCount = model->rowCount(bordersIdx);
     QString borderName = "";
     QStack<QString> bNum;
@@ -4888,13 +4888,13 @@ void EmbelProperties::newBorder(QString name)
 //    selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
     expand(bordersIdx);
     expand(idx);
-    e->build("", __PRETTY_FUNCTION__);
+    e->build("", __FUNCTION__);
     updateBorderLists();
 }
 
 void EmbelProperties::newText()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     int row = model->rowCount(textsIdx);
     addText(row);
     if (G::isInitializing || isTemplateChange) return;
@@ -4903,12 +4903,12 @@ void EmbelProperties::newText()
     expand(idx);
     selectionModel()->clear();
     selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-    e->build("", __PRETTY_FUNCTION__);
+    e->build("", __FUNCTION__);
 }
 
 void EmbelProperties::newGraphic()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     int row = model->rowCount(graphicsIdx);
     addGraphic(row);
     if (G::isInitializing || isTemplateChange) return;
@@ -4917,15 +4917,15 @@ void EmbelProperties::newGraphic()
     expand(idx);
     selectionModel()->clear();
     selectionModel()->select(idx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
-    e->build("", __PRETTY_FUNCTION__);
+    e->build("", __FUNCTION__);
 }
 
 void EmbelProperties::deleteTemplate()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // a blank template name could delete all templates
     if (templateName == "") {
-        qDebug() << __PRETTY_FUNCTION__ << "Error: Blank template name";
+        qDebug() << __FUNCTION__ << "Error: Blank template name";
         return;
     }
 
@@ -4953,12 +4953,12 @@ here. The item (row in model) has to be removed from the data model, local vecto
 items in Embel and from QSettings. Also, if it is referred to elsewhere, such as a style in a
 stylelist for a text or graphic, or an anchorObject, then the lists need to be updated.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     BarBtn *btn = qobject_cast<BarBtn*>(sender());
     QModelIndex idx = getItemIndex(btn->itemIndex);
 
         /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "btn->type =" << btn->type
              << "btn->parName =" << btn->parName
              << "btn->name =" << btn->name
@@ -4978,13 +4978,13 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
 
     // make sure not templatePath as this could delete all templates
     if (path == "Embel/Templates" || path == "Embel/Templates/" || path == "Embel/Templates//") {
-        qDebug() << __PRETTY_FUNCTION__ << "ERROR: path to delte =" << path
+        qDebug() << __FUNCTION__ << "ERROR: path to delte =" << path
                  << "would delete all templates!";
         return;
     }
 
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "row =" << row
              << "name =" << name
              << "parName =" << parName
@@ -5086,16 +5086,16 @@ stylelist for a text or graphic, or an anchorObject, then the lists need to be u
     }
 
     // refresh the graphicsScene
-    e->build("", __PRETTY_FUNCTION__);
+    e->build("", __FUNCTION__);
 }
 
 QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QString effectName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
 //    using namespace winnow_effects;
     /*
     qDebug();
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "styleName =" << styleName
              << "effectType =" << effectType
              << "effectName =" << effectName
@@ -5107,7 +5107,7 @@ QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QSt
         if (effectType == styleMap[styleName].at(i).effectType) {
             effectCount++;
         }
-        qDebug() << __PRETTY_FUNCTION__ << "Iterate styleMap[styleName]:"
+        qDebug() << __FUNCTION__ << "Iterate styleMap[styleName]:"
                  << "i =" << i
                  << "effectType =" << effectType
                  << "styleMap[styleName].at(i).effectType =" << styleMap[styleName].at(i).effectType
@@ -5115,7 +5115,7 @@ QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QSt
     }
     if (effectCount > 0) effectName += QString::number(effectCount);
     /*
-    qDebug() << __PRETTY_FUNCTION__ << "New effectName =" << effectName;
+    qDebug() << __FUNCTION__ << "New effectName =" << effectName;
     qDebug();
 //    */
     return effectName;
@@ -5123,12 +5123,12 @@ QString EmbelProperties::uniqueEffectName(QString styleName, int effectType, QSt
 
 int EmbelProperties::effectIndex(QString style, QString effectName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     using namespace winnow_effects;
     // effects in style
-//    qDebug() << __PRETTY_FUNCTION__ << style << effectName;
+//    qDebug() << __FUNCTION__ << style << effectName;
     for (int i = 0; i < styleMap[style].length(); ++i) {
-//        qDebug() << __PRETTY_FUNCTION__
+//        qDebug() << __FUNCTION__
 //                 << "i =" << i
 //                 << "effectName =" << effectName
 //                 << "styleMap[style].at(i).effectName =" << styleMap[style].at(i).effectName;
@@ -5139,7 +5139,7 @@ int EmbelProperties::effectIndex(QString style, QString effectName)
 
 void EmbelProperties::flash(QModelIndex idx)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // check index range (triggered by mouse movement while tree painting)
     if (idx.row() < 0) return;
 
@@ -5163,7 +5163,7 @@ void EmbelProperties::flash(QModelIndex idx)
 
 void EmbelProperties::mouseMoveEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     // nothing to flash
     if (!G::isEmbellish) return;
 
@@ -5186,7 +5186,7 @@ void EmbelProperties::mouseMoveEvent(QMouseEvent *event)
     {
         /*
         static int count = 0;
-        qDebug() << __PRETTY_FUNCTION__ << count
+        qDebug() << __FUNCTION__ << count
                  << idx.data().toString()
                  << idx.parent().data().toString()
                  << idx.parent().parent().data().toString()
@@ -5201,7 +5201,7 @@ void EmbelProperties::mouseMoveEvent(QMouseEvent *event)
 
 //void EmbelProperties::mouseDoubleClickEvent(QMouseEvent *event)
 //{
-//    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+//    if (G::isLogger) G::log(__FUNCTION__);
 //    QModelIndex idx = indexAt(event->pos());
 //    idx = model->index(idx.row(), ValColumn, idx.parent());
 //    QVariant value = idx.data(UR_DefaultValue);
@@ -5217,7 +5217,7 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
     Do not pass on to QTreeView as this will enable QTreeView expanding and collapsing when
     the decoration is clicked.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
 
     QModelIndex idx = indexAt(event->pos());
     currentIdx = model->index(idx.row(), CapColumn, idx.parent());
@@ -5247,7 +5247,7 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
 //        QModelIndex idx = indexAt(event->pos());
 //        currentIdx = model->index(idx.row(), 0, idx.parent());
         /*
-        qDebug() << __PRETTY_FUNCTION__
+        qDebug() << __FUNCTION__
                  << currentIdx.data().toString()
                  << currentIdx.parent().data().toString()
                  << templateIdx.data().toString()
@@ -5294,7 +5294,7 @@ void EmbelProperties::mousePressEvent(QMouseEvent *event)
 
 void EmbelProperties::treeChange(QModelIndex idx)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     if (!idx.isValid()) return;
 //    return;
     if (idx.column() != 0) idx = model->index(idx.row(), CapColumn, idx.parent());
@@ -5306,7 +5306,7 @@ void EmbelProperties::treeChange(QModelIndex idx)
     bool isStyle = styleList.contains(selName) || effectList.contains(selName);
     isStyle = true;
 //    /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "hasChildren =" << hasChildren
              << "hasGrandChildren =" << hasGrandChildren
              << "templateHdr =" << templateHdr
@@ -5316,7 +5316,7 @@ void EmbelProperties::treeChange(QModelIndex idx)
 //    */
     if ((hasChildren && !hasGrandChildren && !templateHdr) || isStyle) {
         bool wasExpanded = isExpanded(idx);
-//        qDebug() << __PRETTY_FUNCTION__ << idx.data(UR_Name).toString();
+//        qDebug() << __FUNCTION__ << idx.data(UR_Name).toString();
         // clear selection and delete buttons (re-instated after selection change)
         selectionModel()->clear();
         if (okToSelect(idx, selName)) {
@@ -5340,7 +5340,7 @@ void EmbelProperties::treeChange(QModelIndex idx)
 
 bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QModelIndex parIdx = idx.parent();
     if (!parIdx.isValid()) return false;
     if (parIdx == model->index(_borders,0)) return true;
@@ -5349,7 +5349,7 @@ bool EmbelProperties::okToSelect(QModelIndex idx, QString selName)
     if (parIdx == model->index(_styles,0)) return true;
     if (styleList.contains(selName)) return true;
     if (effectList.contains(selName)) return true;
-//    qDebug() << __PRETTY_FUNCTION__ << "false for" << selName << effectList;
+//    qDebug() << __FUNCTION__ << "false for" << selName << effectList;
     return false;
 }
 
@@ -5358,7 +5358,7 @@ QString EmbelProperties::metaString(QString key)
 /*
     Local information (datamodel, currentImage etc) is available.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     if (mw3->infoString->infoTemplates.contains(key)) {
         QString tokenString = mw3->infoString->infoTemplates[key];
         QString path = mw3->imageView->currentImagePath;
@@ -5374,14 +5374,14 @@ QString EmbelProperties::metaString(QString key, QString fPath)
     Look up information using Metadata if the image will not be active
     in Winnow (ie triggered by EmbelExport).
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     QString tokenString = mw3->infoString->infoTemplates[key];
     return mw3->infoString->parseTokenString(tokenString, fPath);
 }
 
 QString EmbelProperties::diagnostics()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -5410,34 +5410,34 @@ QString EmbelProperties::diagnostics()
 
 void EmbelProperties::expandAllRows()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     expandAll();
 }
 
 void EmbelProperties::collapseAllRows()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     collapseAll();
     expand(model->index(_templates,0));
 }
 
 void EmbelProperties::solo()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     setSolo(soloAction->isChecked());
     setting->setValue("Embel/isSolo", soloAction->isChecked());
 }
 
 void EmbelProperties::expandRecursively()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     setExpandRecursively(expandRecursivelyAction->isChecked());
     setting->setValue("Embel/expandRecursively", expandRecursivelyAction->isChecked());
 }
 
 void EmbelProperties::test1(QIcon icon)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
 //    syncWinnets();
 //    e->test();
 //    diagnosticVectors();
@@ -5446,13 +5446,13 @@ void EmbelProperties::test1(QIcon icon)
 
 void EmbelProperties::test2()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
 
 }
 
 void EmbelProperties::coordHelp()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     HtmlWindow *w = new HtmlWindow("Winnow - Embel Container and Coordinate System",
                                    ":/Docs/embelcoordsystem.html",
                                    QSize(939,736));
@@ -5460,11 +5460,11 @@ void EmbelProperties::coordHelp()
 
 void EmbelProperties::addBorder(int count, QString borderName)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // Name (used as node in settings and treeview)
 //    QString borderName = "Border" + QString::number(count + 1);
     border.name = borderName;
-//    qDebug() << __PRETTY_FUNCTION__ << borderName << count;
+//    qDebug() << __FUNCTION__ << borderName << count;
     QString settingRootPath = templatePath + "Borders/" + borderName + "/";
 
     // subheader for this border
@@ -5660,7 +5660,7 @@ void EmbelProperties::addBorder(int count, QString borderName)
         // start with a random color
         quint32 x = QRandomGenerator::global()->generateDouble() * 16777215;
         i.value = "#" + QString::number(x, 16);
-//        qDebug() << __PRETTY_FUNCTION__ << i.value;
+//        qDebug() << __FUNCTION__ << i.value;
         setting->setValue(settingRootPath + i.key, i.value);
     }
     i.delegateType = DT_Color;
@@ -5722,7 +5722,7 @@ void EmbelProperties::addBorder(int count, QString borderName)
 
 void EmbelProperties::addText(int count)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // Name (used as node in settings and treeview)
     QString textName = "Text" + QString::number(count + 1);
     QString settingRootPath = templatePath + "Texts/" + textName + "/";
@@ -6171,7 +6171,7 @@ void EmbelProperties::addText(int count)
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
         if (!styleList.contains(i.value.toString())) {
-            qDebug() << __PRETTY_FUNCTION__ << "Style " << i.value << "no longer exists";
+            qDebug() << __FUNCTION__ << "Style " << i.value << "no longer exists";
             i.value = "No style";
         }
     }
@@ -6194,7 +6194,7 @@ void EmbelProperties::addText(int count)
 
 void EmbelProperties::addGraphic(int count)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     // Name (used as node in settings and treeview)
     QString graphicName = "Graphic" + QString::number(count + 1);
     QString settingRootPath = templatePath + "Graphics/" + graphicName + "/";
@@ -6244,7 +6244,7 @@ void EmbelProperties::addGraphic(int count)
     i.path = settingRootPath + i.key;
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
-//        qDebug() << __PRETTY_FUNCTION__ << i.value;
+//        qDebug() << __FUNCTION__ << i.value;
         graphic.graphic = setting->value("Embel/Graphics/" + i.value.toString()).toByteArray();
     }
 //    else {

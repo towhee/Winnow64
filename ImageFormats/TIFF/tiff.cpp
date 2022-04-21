@@ -116,7 +116,7 @@ bool Tiff::parse(MetadataParameters &p,
     thumbnail, either in an IRB or IFB, and G::embedTifThumb == true, then a thumbnail will be
     added at the end of file.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     //file.open happens in readMetadata
 
     quint32 startOffset = 0;
@@ -546,13 +546,13 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
 
     If reporting, then p.hash must be set to Exif::hash.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
 
     // IFD has already been read once, so if reporting do not want to report again
 
     // endianess
     isBigEnd = isBigEndian(p);
-//    qDebug() << __PRETTY_FUNCTION__ << p.fPath << "isBigEnd =" << isBigEnd;
+//    qDebug() << __FUNCTION__ << p.fPath << "isBigEnd =" << isBigEnd;
 
     bool isReport = p.report;
     p.report = false;
@@ -675,7 +675,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
     if (planarConfiguration == 2 && compression == 5) {
         err = "LZW compression not supported for per channel planar configuration.  \n";
     }
-    if (err != "") G::error(__PRETTY_FUNCTION__, p.fPath, err);
+    if (err != "") G::error(__FUNCTION__, p.fPath, err);
     if (err != "" && !isReport) return false;
 
     // rgh used for debugging - req'd?
@@ -719,18 +719,18 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
 /*
     Decode using unmapped QFile.  Set p.file, p.offset and call main decode.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, " load file from fPath");
+    if (G::isLogger) G::log(__FUNCTION__, " load file from fPath");
     QFileInfo fileInfo(fPath);
     if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
 
     MetadataParameters p;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
-        G::error(__PRETTY_FUNCTION__, fPath, "Unable to open file.");
+        G::error(__FUNCTION__, fPath, "Unable to open file.");
         return false;
     }
 
-    /* qDebug() << __PRETTY_FUNCTION__
+    /* qDebug() << __FUNCTION__
              << "isThumb =" << thumb
              << "newSize =" << newSize
              << "m.offsetThumb =" << m.offsetThumb
@@ -747,7 +747,7 @@ bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
 /*
    The version is used by decoders in image cache.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, " load file from fPath");
+    if (G::isLogger) G::log(__FUNCTION__, " load file from fPath");
     QFileInfo fileInfo(fPath);
     if (!fileInfo.exists()) return false;                 // guard for usb drive ejection
 
@@ -755,12 +755,12 @@ bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
     p.fPath = fPath;
     p.file.setFileName(fPath);
     if (!p.file.open(QIODevice::ReadOnly)) {
-        G::error(__PRETTY_FUNCTION__, fPath, "Unable to open file.");
+        G::error(__FUNCTION__, fPath, "Unable to open file.");
         return false;
     }
     p.offset = offset;
     /*
-    qDebug() << __PRETTY_FUNCTION__ << fPath << "offset =" << offset;
+    qDebug() << __FUNCTION__ << fPath << "offset =" << offset;
     //*/
     return decode(p, image);
 }
@@ -779,7 +779,7 @@ bool Tiff::decode(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image, in
     newSize is the resized long side in pixels.  If newSize = 0 then no resizing.
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, "Main decode with p.file assigned");
+    if (G::isLogger) G::log(__FUNCTION__, "Main decode with p.file assigned");
     IFD *ifd = new IFD;
     p.report = false;
     if (!parseForDecoding(p, /*m, */ifd)) {
@@ -823,7 +823,7 @@ bool Tiff::decode(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image, in
 
 void Tiff::decodeBase(MetadataParameters &p, QImage &image)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     int strips = stripOffsets.count();
     int line = 0;
     quint32 scanBytes = 0;
@@ -836,7 +836,7 @@ void Tiff::decodeBase(MetadataParameters &p, QImage &image)
         buf.open(QBuffer::ReadOnly);
         for (int row = 0; row < rowsPerStrip; row++) {
             /*
-            qDebug() << __PRETTY_FUNCTION__
+            qDebug() << __FUNCTION__
                      << "strip =" << strip
                      << "row =" << row
                      << "buf.pos() =" << buf.pos()
@@ -1101,7 +1101,7 @@ void Tiff::sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h)
     int nthH = height / h;
     nthW < nthH ? nth = nthW : nth = nthH;
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "width =" << width
              << "height =" << height
              << "w =" << w
@@ -1208,7 +1208,7 @@ Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
     TiffStrips tiffStrips;
     int alphaRowComponent = t.bytesPerRow / 3;
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "t.predictor =" << t.predictor
              << "t.bytesPerRow =" << t.bytesPerRow
              << "t.fName =" << t.fName
@@ -1434,7 +1434,7 @@ Tiff::TiffStrips Tiff::lzwDecompress(TiffStrip t)
         }
 
     } // end while
-    qDebug() << __PRETTY_FUNCTION__ << "finish thread" << QThread::currentThreadId();
+    qDebug() << __FUNCTION__ << "finish thread" << QThread::currentThreadId();
 
     return tiffStrips;
 }

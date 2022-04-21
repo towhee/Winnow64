@@ -4,7 +4,7 @@
 #include <QtWidgets>
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
-#include "progressbar.h"
+#include "progressbar.h"        // rgh used??
 #include "Main/global.h"
 //#include "Datamodel/HashMap.h"
 //#include "Datamodel/HashNode.h"

@@ -2,7 +2,7 @@
 
 void Mac::availableMemory()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     vm_size_t page_size;
     mach_port_t mach_port;
     mach_msg_type_number_t count;
@@ -69,7 +69,7 @@ bool Mac::colorSyncIterateCallback(CFDictionaryRef dict, void *data)
 
 QString Mac::getDisplayProfileURL()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     ColorSyncIteratorData data;
     data.dispuuid = CGDisplayCreateUUIDFromDisplayID(CGMainDisplayID());
     data.url = nullptr;//NULL;
@@ -77,7 +77,7 @@ QString Mac::getDisplayProfileURL()
     CFRelease(data.dispuuid);
     CFStringRef urlstr = CFURLCopyFileSystemPath(data.url, kCFURLPOSIXPathStyle);
     CFRelease(data.url);
-//    qDebug() << __PRETTY_FUNCTION__ << QString::fromCFString(urlstr);
+//    qDebug() << __FUNCTION__ << QString::fromCFString(urlstr);
     return QString::fromCFString(urlstr);
 }
 

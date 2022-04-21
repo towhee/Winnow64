@@ -68,7 +68,7 @@ int defaultConvolveMatrixSize(float radius, float sigma,
 
     if(sigma == 0.0){
         qWarning("Blitz::convolve(): Zero sigma is invalid!");
-        G::error(__PRETTY_FUNCTION__, "", "Blitz::convolve(): Zero sigma is invalid.");
+        G::error(__FUNCTION__, "", "Blitz::convolve(): Zero sigma is invalid.");
         return(5);
     }
 
@@ -99,7 +99,7 @@ QImage convolve(QImage &img, int matrix_size, float *matrix)
 
     if(!(matrix_size % 2)){
         qWarning("convolve(): kernel width must be an odd number!");
-        G::error(__PRETTY_FUNCTION__, "", "Blitz::convolve(): Kernel width must be an odd number.");
+        G::error(__FUNCTION__, "", "Blitz::convolve(): Kernel width must be an odd number.");
         return(img);
     }
 
@@ -107,7 +107,7 @@ QImage convolve(QImage &img, int matrix_size, float *matrix)
     h = img.height();
     if (w < 3 || h < 3) {
         qWarning("convolve(): Image is too small!");
-        G::error(__PRETTY_FUNCTION__, "", "Blitz::convolve(): Image is too small.");
+        G::error(__FUNCTION__, "", "Blitz::convolve(): Image is too small.");
         return(img);
     }
 
@@ -888,7 +888,7 @@ QImage emboss(QImage &img, float radius = 0.0, float sigma = 1.0,
 {
     if(sigma == 0.0){
         qWarning("emboss(): Zero sigma is invalid!");
-        G::error(__PRETTY_FUNCTION__, "", "Zero sigma is invalid.");
+        G::error(__FUNCTION__, "", "Zero sigma is invalid.");
         return(img);
     }
 
@@ -927,7 +927,7 @@ QImage oilPaint(QImage &img, float radius = 0.0, EffectQuality quality = High)
     h = img.height();
     if (w < 3 || h < 3){
         qWarning("oilPaint(): Image is too small!");
-        G::error(__PRETTY_FUNCTION__, "", "Image is too small. Width and height must be > 2.");
+        G::error(__FUNCTION__, "", "Image is too small. Width and height must be > 2.");
         return(img);
     }
 

@@ -485,7 +485,9 @@ private slots:
                                 QString source);
     // caching
     // loadversion2
-    void loadConcurrent(MetaRead::Action action = MetaRead::FileSelection, QString src = "");
+    void loadConcurrent(MetaRead::Action action = MetaRead::FileSelection,
+                        int sfRow = 0,
+                        QString src = "");
     void loadConcurrentNewFolder();
     void loadConcurrentMetaDone();
     void loadConcurrentStartImageCache();

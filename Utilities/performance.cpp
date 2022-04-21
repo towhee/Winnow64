@@ -17,7 +17,7 @@ double Performance::mediaReadSpeed(QFile &file)
     double bytes = static_cast<double>(file.size());
     // bytes to gigibits = bytes * 8 / (1024*1024*1024) = bytes / 134217728
     double gbs = bytes / 134217728 / sec;
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "bytes =" << bytes
              << "nSec =" << nSec
              << "sec =" << sec

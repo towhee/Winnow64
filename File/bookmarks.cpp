@@ -36,7 +36,7 @@ BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount,
                    : QTreeWidget(parent),
                      combineRawJpg(combineRawJpg)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     this->metadata = metadata;
     this->showImageCount = showImageCount;
     viewport()->setObjectName("bookmarksViewPort");
@@ -66,7 +66,7 @@ BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount,
 
 void BookMarks::reloadBookmarks()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
 	clear();
     QSetIterator<QString> it(bookmarkPaths);
 	while (it.hasNext()) {
@@ -121,7 +121,7 @@ void BookMarks::select(QString fPath)
     This is called from MW::folderSelectionChange to attempt to sync bookmarks with
     the FSTree folders view.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (bookmarkPaths.contains(fPath)) {
         QList <QTreeWidgetItem *> items;
         items = findItems(QFileInfo(fPath).fileName(), Qt::MatchExactly);
@@ -157,7 +157,7 @@ void BookMarks::resizeColumns()
 
 void BookMarks::resizeEvent(QResizeEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     resizeColumns();
     QTreeWidget::resizeEvent(event);
 }
@@ -195,9 +195,9 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 
 void BookMarks::removeBookmark()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (rightClickItem) {
-        qDebug() << __PRETTY_FUNCTION__<< rightClickItem->toolTip(0);
+        qDebug() << __FUNCTION__<< rightClickItem->toolTip(0);
         bookmarkPaths.remove(rightClickItem->toolTip(0));
         reloadBookmarks();
     }
@@ -215,7 +215,7 @@ void BookMarks::contextMenuEvent(QContextMenuEvent *event)
 
 void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
 	QModelIndexList selectedDirs = selectionModel()->selectedRows();
 
 	if (selectedDirs.size() > 0) {
@@ -226,13 +226,13 @@ void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 
 void BookMarks::dragMoveEvent(QDragMoveEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     setCurrentIndex(indexAt(event->pos()));
 }
 
 void BookMarks::dropEvent(QDropEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
 	if (event->source()) {
 		QString fstreeStr("FSTree");
 		bool dirOp = (event->source()->metaObject()->className() == fstreeStr);
