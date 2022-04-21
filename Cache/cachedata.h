@@ -17,7 +17,7 @@ public:
     // cache parameters in struct (used in ImageCache and MainWindow)
     struct Cache {
         int key;                    // current image
-        int prevKey;                // used to establish directiono f travel
+        int prevKey;                // used to establish direction of travel
         int toCacheKey;             // next file to cache
         int toDecacheKey;           // next file to remove from cache
         bool isForward;             // direction of travel for caching algorithm

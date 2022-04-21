@@ -62,8 +62,8 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     being properly read or the file is corrupted.  In this case the metadata
     will be updated to show the file is not readable.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, fPath);
-//    qDebug() << __PRETTY_FUNCTION__ << "fPath =" << fPath << "src =" << src;
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
+//    qDebug() << __FUNCTION__ << "fPath =" << fPath << "src =" << src;
     QElapsedTimer t;
     t.restart();
 //    QElapsedTimer readTime;
@@ -87,7 +87,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
         if (!dm->readMetadataForItem(dmRow)) {
             QString err = "Could not load metadata.";
-            G::error(__PRETTY_FUNCTION__, fPath, err);
+            G::error(__FUNCTION__, fPath, err);
             return false;
         }
     }
@@ -95,7 +95,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     // is file already open by another process
     if (imFile.isOpen()) {
         QString err = "File already open.";
-        G::error(__PRETTY_FUNCTION__, fPath, err);
+        G::error(__FUNCTION__, fPath, err);
         return false;
     }
 
@@ -103,7 +103,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     if (!imFile.open(QIODevice::ReadOnly)) {
         imFile.close();
         QString err = "Could not open file for image.";
-        G::error(__PRETTY_FUNCTION__, fPath, err);
+        G::error(__FUNCTION__, fPath, err);
         return false;
     }
 
@@ -117,7 +117,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (lengthFullJpg == 0) {
             imFile.close();
             QString err = "Jpg length = zero.";
-            G::error(__PRETTY_FUNCTION__, fPath, err);
+            G::error(__FUNCTION__, fPath, err);
             return false;
         }
 
@@ -125,7 +125,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (!imFile.seek(offsetFullJpg)) {
             imFile.close();
             QString err = "Illegal offset to image.";
-            G::error(__PRETTY_FUNCTION__, fPath, err);
+            G::error(__FUNCTION__, fPath, err);
             return false;
         }
 
@@ -134,7 +134,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 //        tRead = readTime.elapsed();
 //        decodeTime.start();
 
-//        qDebug() << __PRETTY_FUNCTION__ << "use decodeScan";
+//        qDebug() << __FUNCTION__ << "use decodeScan";
 //        Jpeg jpg;
 //        jpg.decodeScan(buf, image);
 
@@ -142,7 +142,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (!image.loadFromData(buf, "JPEG")) {
             imFile.close();
             QString err = "Could not read image from buffer.";
-            G::error(__PRETTY_FUNCTION__, fPath, err);
+            G::error(__FUNCTION__, fPath, err);
             return false;
         }
 //        tDecode = decodeTime.elapsed() ;
@@ -153,7 +153,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     // HEIC format
     // rgh remove heic
     else if (metadata->hasHeic.contains(ext)) {
-//        qDebug() << __PRETTY_FUNCTION__ << "hasHEIC" << fPath;
+//        qDebug() << __FUNCTION__ << "hasHEIC" << fPath;
         ImageMetadata m = dm->imMetadata(fPath);
         #ifdef Q_OS_WIN
         Heic heic;
@@ -162,11 +162,11 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (!heic.decodePrimaryImage(fPath, image)) {
             if (imFile.isOpen()) imFile.close();
             QString err = "Unable to decode.";
-            G::error(__PRETTY_FUNCTION__, fPath, err);
+            G::error(__FUNCTION__, fPath, err);
             return false;
         }
         if (imFile.isOpen()) imFile.close();
-//        qDebug() << __PRETTY_FUNCTION__ << "HEIC image" << image.width() << image.height();
+//        qDebug() << __FUNCTION__ << "HEIC image" << image.width() << image.height();
         #endif
     }
 
@@ -180,7 +180,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
             imFile.close();
             QString err = "Could not read tiff because " + QString::number(samplesPerPixel)
                     + " samplesPerPixel > 3. " + fPath + ". ";
-            G::error(__PRETTY_FUNCTION__, fPath, err);
+            G::error(__FUNCTION__, fPath, err);
             return false;
         }
 
@@ -206,7 +206,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         double mp = double(w * h) / 1024 / 1024;
         double pxPerMs = mp / secs;
         qDebug().noquote()
-                 << __PRETTY_FUNCTION__ << fPath << "decoded full size using" << decoderUsed
+                 << __FUNCTION__ << fPath << "decoded full size using" << decoderUsed
                  << "ms =" << ms
                  << "MP =" << QString::number(mp, 'g', 2)
                  << "MP/sec ="
@@ -220,7 +220,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (!tiff.decode(m, fPath, image)) {
             imFile.close();
 //            err += "Could not decode " + fPath + ". ";
-            qDebug() << __PRETTY_FUNCTION__
+            qDebug() << __FUNCTION__
                      << "Could not decode using Winnow Tiff decoder.  "
                         "Trying Qt tiff library to decode" + fPath + ". ";
 
@@ -229,7 +229,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
             if (!image.load(fPath)) {
                 imFile.close();
                 QString err = "Could not decode.";
-                G::error(__PRETTY_FUNCTION__, fPath, err);
+                G::error(__FUNCTION__, fPath, err);
                 return false;
             }
         }
@@ -241,11 +241,11 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     // All other formats
     else {
         // try to decode
-        qDebug() << __PRETTY_FUNCTION__ << fPath;
+        qDebug() << __FUNCTION__ << fPath;
         if (!image.load(fPath)) {
             imFile.close();
             QString err = "Could not decode.";
-            G::error(__PRETTY_FUNCTION__, fPath, err);
+            G::error(__FUNCTION__, fPath, err);
             return false;
         }
         imFile.close();
@@ -304,7 +304,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     int msecPerMp = static_cast<int>(msec / mp);
     dm->setData(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, Qt::EditRole);
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "Decode:" << tDecode << "ms"
              << "ICC:" << tICC << "ms"
              << "Total:" << msec << "ms"

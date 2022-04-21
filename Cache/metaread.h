@@ -25,7 +25,7 @@ public:
         Scroll,
         SizeChange
     } action;
-    void read(Action action = Action::FileSelection, QString src = "");
+    void read(Action action = Action::FileSelection, int sfRow = 0, QString src = "");
     void initialize();
     int iconChunkSize;
     int firstVisible;
@@ -49,7 +49,7 @@ private:
     void iconMax(QPixmap &thumb);
     void cleanupIcons();
     void updateIcons();
-    void buildMetadataPriorityQueue();
+    void buildMetadataPriorityQueue(int sfRow);
     bool isNotLoaded(int sfRow);
     bool isVisible(int sfRow);
 
@@ -63,7 +63,9 @@ private:
     int adjIconChunkSize;
     int sfRowCount;
     int visibleIconCount;
+    int sfStart;
 
+    bool imageCachingStarted = false;
     QList<int> priorityQueue;
     QList<int> iconsLoaded;
     QList<int> visibleIcons;

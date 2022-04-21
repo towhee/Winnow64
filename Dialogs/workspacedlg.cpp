@@ -31,7 +31,7 @@ WorkspaceDlg::~WorkspaceDlg()
 
 void WorkspaceDlg::on_deleteBtn_clicked()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     int n = ui->workspaceCB->currentIndex();
     emit deleteWorkspace(n);
     ui->workspaceCB->removeItem(n);
@@ -39,7 +39,7 @@ void WorkspaceDlg::on_deleteBtn_clicked()
 
 void WorkspaceDlg::on_reassignBtn_clicked()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     int n = ui->workspaceCB->currentIndex();
     emit reassignWorkspace(n);
     ui->status->setText(ui->workspaceCB->itemText(n) + " has been reassigned");
@@ -53,7 +53,7 @@ void WorkspaceDlg::clearStatus()
 
 void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     if (editMode) {
         bool isOkay = true;
         int n = ui->workspaceCB->currentIndex();
@@ -76,7 +76,7 @@ void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
 
 void WorkspaceDlg::on_workspaceCB_highlighted(int /*index*/)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__); 
     editMode = false;
 }
 

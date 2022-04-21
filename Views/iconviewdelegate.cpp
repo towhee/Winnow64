@@ -275,14 +275,14 @@ int IconViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
 
 void IconViewDelegate::setCurrentIndex(QModelIndex current)
 {
-    qDebug() << __PRETTY_FUNCTION__ << current << current.row();
+    qDebug() << __FUNCTION__ << current << current.row();
     currentRow = current.row();     // this slot not being used
     qDebug() << "IconViewDelegate::onCurrentChanged" << currentRow;
 }
 
 void IconViewDelegate::setCurrentRow(int row)
 {
-    qDebug() << __PRETTY_FUNCTION__ << row ;
+    qDebug() << __FUNCTION__ << row ;
     currentRow = row;
 }
 
@@ -408,7 +408,7 @@ void IconViewDelegate::paint(QPainter *painter,
     painter->setPen(border);
     painter->drawRoundedRect(frameRect, 8, 8);
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << __FUNCTION__
              << "row =" << row
              << "currentRow =" << currentRow
              << "selected item =" << option.state.testFlag(QStyle::State_Selected);

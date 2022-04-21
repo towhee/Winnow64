@@ -6,7 +6,7 @@ MetaReader::MetaReader(QObject *parent,
                        Metadata *metadata*/)
     : QThread(parent)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(__FUNCTION__);
     this->dm = dm;
     metadata = new Metadata;
     threadId = id;
@@ -39,7 +39,7 @@ bool MetaReader::isBusy()
 
 void MetaReader::read(int row)
 {
-//    qDebug() << __PRETTY_FUNCTION__ << row;
+//    qDebug() << __FUNCTION__ << row;
     this->row = row;
     if (isRunning()) wait();
     start();
@@ -52,7 +52,7 @@ void MetaReader::run()
     while (row < dm->rowCount()) {
         QString fPath = dm->index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __PRETTY_FUNCTION__)) {
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->m.row = row;
             if (abort) stop();
             dm->addMetadataForItem(metadata->m);
@@ -60,6 +60,6 @@ void MetaReader::run()
         row += 8;
     }
     if (abort) stop();
-//    qDebug() << __PRETTY_FUNCTION__ << "reader emit done" << threadId;
+//    qDebug() << __FUNCTION__ << "reader emit done" << threadId;
     emit done(threadId);
 }

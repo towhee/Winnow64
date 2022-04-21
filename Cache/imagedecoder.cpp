@@ -25,7 +25,7 @@ ImageDecoder::ImageDecoder(QObject *parent,
                            Metadata *metadata)
     : QThread(parent)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, "Thread " + QString::number(id));
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(id));
     threadId = id;
     status = Status::Ready;
     fPath = "";
@@ -75,9 +75,9 @@ bool ImageDecoder::load()
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
 //    QMutexLocker locker(&mutex);
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, fPath);
+    if (G::isLogger) G::log(__FUNCTION__, fPath);
     /*
-    qDebug() << __PRETTY_FUNCTION__ << "fPath =" << fPath;
+    qDebug() << __FUNCTION__ << "fPath =" << fPath;
     //*/
 
     // null fPath when caching is cycling, waiting to finish.
@@ -92,7 +92,7 @@ bool ImageDecoder::load()
 
     // is metadata loaded rgh use isMeta in cacheItemList?
     if (!n.metadataLoaded && metadata->hasMetadataFormats.contains(ext)) {
-        G::error(__PRETTY_FUNCTION__, fPath, "Could not load metadata.");
+        G::error(__FUNCTION__, fPath, "Could not load metadata.");
         return false;
     }
 
@@ -100,14 +100,14 @@ bool ImageDecoder::load()
 
     // is file already open by another process
     if (imFile.isOpen()) {
-        G::error(__PRETTY_FUNCTION__, fPath, "File already open.");
+        G::error(__FUNCTION__, fPath, "File already open.");
         return false;
     }
 
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
         imFile.close();
-        G::error(__PRETTY_FUNCTION__, fPath, "Could not open file for image.");
+        G::error(__FUNCTION__, fPath, "Could not open file for image.");
         return false;
     }
 
@@ -116,21 +116,21 @@ bool ImageDecoder::load()
         // make sure legal offset by checking the length
         if (n.lengthFull == 0) {
             imFile.close();
-            G::error(__PRETTY_FUNCTION__, n.fPath, "Jpg length = zero.");
+            G::error(__FUNCTION__, n.fPath, "Jpg length = zero.");
             return false;
         }
 
         // try to read the data
         if (!imFile.seek(n.offsetFull)) {
             imFile.close();
-            G::error(__PRETTY_FUNCTION__, fPath, "Illegal offset to image.");
+            G::error(__FUNCTION__, fPath, "Illegal offset to image.");
             return false;
         }
 
         QByteArray buf = imFile.read(n.lengthFull);
         if (buf.length() == 0) {
-            qWarning() << __PRETTY_FUNCTION__ << "Zero JPG buffer";
-            G::error(__PRETTY_FUNCTION__, fPath, "Zero JPG buffer.");
+            qWarning() << __FUNCTION__ << "Zero JPG buffer";
+            G::error(__FUNCTION__, fPath, "Zero JPG buffer.");
             imFile.close();
             return false;
         }
@@ -139,7 +139,7 @@ bool ImageDecoder::load()
 
         // try to decode the jpg data
         if (!image.loadFromData(buf, "JPEG")) {
-            G::error(__PRETTY_FUNCTION__, fPath, "image.loadFromData failed.");
+            G::error(__FUNCTION__, fPath, "image.loadFromData failed.");
             imFile.close();
             return false;
         }
@@ -152,12 +152,12 @@ bool ImageDecoder::load()
         #ifdef Q_OS_WIN
         Heic heic;
         if (!heic.decodePrimaryImage(fPath, image)) {
-            G::error(__PRETTY_FUNCTION__, fPath, "heic.decodePrimaryImage failed.");
+            G::error(__FUNCTION__, fPath, "heic.decodePrimaryImage failed.");
             imFile.close();
             return false;
         }
         /*
-        qDebug() << __PRETTY_FUNCTION__ << "HEIC image" << image.width() << image.height();
+        qDebug() << __FUNCTION__ << "HEIC image" << image.width() << image.height();
         //*/
         #endif
     }
@@ -169,7 +169,7 @@ bool ImageDecoder::load()
             imFile.close();
             QString err = "Could not read tiff because " + QString::number(n.samplesPerPixel)
                     + " samplesPerPixel > 3.";
-            G::error(__PRETTY_FUNCTION__, fPath, err);
+            G::error(__FUNCTION__, fPath, err);
             return false;
         }
 
@@ -179,8 +179,8 @@ bool ImageDecoder::load()
             imFile.close();
             QString err = "Could not decode using Winnow Tiff decoder.  "
                         "Trying Qt tiff library to decode" + fPath + ". ";
-            G::error(__PRETTY_FUNCTION__, fPath, err);
-            qWarning() << __PRETTY_FUNCTION__
+            G::error(__FUNCTION__, fPath, err);
+            qWarning() << __FUNCTION__
                      << "Could not decode using Winnow Tiff decoder.  "
                         "Trying Qt tiff library to decode " + fPath + ". ";
             if (abort) quit();
@@ -188,8 +188,8 @@ bool ImageDecoder::load()
             if (!image.load(fPath)) {
                 imFile.close();
                 QString err = "Could not decode using Qt.";
-                G::error(__PRETTY_FUNCTION__, fPath, err);
-                qDebug() << __PRETTY_FUNCTION__
+                G::error(__FUNCTION__, fPath, err);
+                qDebug() << __FUNCTION__
                          << "Could not decode using Qt decoder.  " + fPath + ".";
                 return false;
             }
@@ -203,7 +203,7 @@ bool ImageDecoder::load()
         // try to decode
         ImageMetadata m;
         /*
-        qDebug() << __PRETTY_FUNCTION__
+        qDebug() << __FUNCTION__
                  << "USEQT: "
                  << "Id =" << threadId
                  << "decoder->fPath =" << fPath
@@ -211,7 +211,7 @@ bool ImageDecoder::load()
                     //*/
         if (!image.load(fPath)) {
             imFile.close();
-            G::error(__PRETTY_FUNCTION__, fPath, "Could not decode using Qt.");
+            G::error(__FUNCTION__, fPath, "Could not decode using Qt.");
             return false;
         }
         imFile.close();
@@ -221,13 +221,13 @@ bool ImageDecoder::load()
 
 void ImageDecoder::setReady()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, "Thread " + QString::number(threadId));
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     status = Status::Ready;
 }
 
 void ImageDecoder::rotate()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, "Thread " + QString::number(threadId));
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     QTransform trans;
     int degrees;
     if (n.orientation > 0) {
@@ -260,7 +260,7 @@ void ImageDecoder::rotate()
 
 void ImageDecoder::colorManage()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, "Thread " + QString::number(threadId));
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     if (metadata->iccFormats.contains(ext)) {
         ICC::transform(n.iccBuf, image);
     }
@@ -268,7 +268,7 @@ void ImageDecoder::colorManage()
 
 void ImageDecoder::run()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, "Thread " + QString::number(threadId));
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     if (load()) {
         if (metadata->rotateFormats.contains(ext) && !abort) rotate();
         if (G::colorManage && !abort) colorManage();
