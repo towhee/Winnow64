@@ -64,6 +64,7 @@ public:
     bool allMetadataLoaded();
     void clearAllIcons();
     bool allIconsLoaded();
+    void setIcon(QModelIndex dmIdx, QPixmap &pm);
     bool iconLoaded(int sfRow);
     int rowFromPath(QString fPath);
     void refreshRowFromPath();

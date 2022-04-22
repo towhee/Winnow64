@@ -4732,7 +4732,7 @@ void MW::createMDCache()
         metadataCacheThread->cacheAllMetadata = true;
         metadataCacheThread->cacheAllIcons = false;
     }
-    metadataCacheThread->metadataChunkSize = 200;
+    metadataCacheThread->metadataChunkSize = 3000;
 
     // not being used
     metadataCacheScrollTimer = new QTimer(this);

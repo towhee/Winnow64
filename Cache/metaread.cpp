@@ -203,6 +203,7 @@ void MetaRead::cleanupIcons()
     QPixmap nullPm;
     for (int i = 0; i < iconsLoaded.size(); ++i) {
         int dmRow = iconsLoaded.at(i);
+        QModelIndex dmIdx = dm->index(dmRow, 0);
         int sfRow = dm->proxyRowFromModelRow(dmRow);
         /*
         qDebug() << __FUNCTION__
@@ -215,7 +216,8 @@ void MetaRead::cleanupIcons()
                     ;
                     //*/
         if (isVisible(sfRow)) continue;
-        dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(nullPm);
+//        dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(nullPm);
+        dm->setIcon(dmIdx, nullPm);
         #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
         iconsLoaded.remove(i);
         #endif
@@ -231,15 +233,18 @@ void MetaRead::updateIcons()
 
     // load any missing visible icons
     for (int sfRow = dm->firstVisibleRow; sfRow <= dm->lastVisibleRow; ++sfRow) {
-        QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(sfRow,0));
-        int dmRow = dmIdx.row();
+//        QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(sfRow,0));
+//        int dmRow = dmIdx.row();
+        int dmRow = dm->modelRowFromProxyRow(sfRow);
+        QModelIndex dmIdx = dm->index(dmRow, 0);
         if (!dm->iconLoaded(sfRow)) {
             QImage image;
             QString fPath = dmIdx.data(G::PathRole).toString();
             bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
             if (thumbLoaded) {
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                dm->itemFromIndex(dmIdx)->setIcon(pm);
+//                dm->itemFromIndex(dmIdx)->setIcon(pm);
+                dm->setIcon(dmIdx, pm);
                 iconMax(pm);
                 iconsLoaded.append(dmRow);
             }
@@ -310,7 +315,7 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     QFileInfo fileInfo(fPath);
     if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
         metadata->m.row = dmRow;
-        if (abort) return;
+//        if (abort) return;
         emit addToDatamodel(metadata->m);
     }
 }
@@ -323,7 +328,8 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
     if (thumbLoaded) {
         QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-        dm->itemFromIndex(dmIdx)->setIcon(pm);
+//        dm->itemFromIndex(dmIdx)->setIcon(pm);
+        dm->setIcon(dmIdx, pm);
         iconMax(pm);
         iconsLoaded.append(dmIdx.row());
     }
@@ -339,8 +345,7 @@ void MetaRead::readRow(int sfRow)
         bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
         if (!metaLoaded) {
             readMetadata(sfIdx, fPath);
-            emit addToImageCache(metadata->m);
-//            if (abort) return;
+//            emit addToImageCache(metadata->m);
         }
     }
 
@@ -354,13 +359,11 @@ void MetaRead::readRow(int sfRow)
              << "adjIconChunkSize =" << adjIconChunkSize
              ;
     //*/
-//    int dmRow = dm->modelRowFromProxyRow(sfRow);
-    if (/*!dm->iconLoaded(dmRow) && */isVisible(sfRow)) {
+    if (isVisible(sfRow)) {
         readIcon(sfIdx, fPath);
-//        if (abort) return;
     }
     // update the imageCache item data
-//    emit addToImageCache(metadata->m);
+    emit addToImageCache(metadata->m);
 }
 
 void MetaRead::run()

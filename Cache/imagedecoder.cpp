@@ -63,6 +63,7 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item)
     n = item;
     fPath = n.fPath;
     cacheKey = n.key;       // not being used
+    qDebug() << "ImageDecoder::decode" << fPath;
     start();
 }
 
@@ -276,6 +277,7 @@ void ImageDecoder::run()
     }
     else {
         image = QPixmap(":/images/error_image.png").toImage();
+        qDebug() << "ImageDecoder::run error for" << fPath;
 //        status = Status::Failed;
 //        fPath = "";
     }
