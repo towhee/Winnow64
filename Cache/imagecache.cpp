@@ -63,6 +63,7 @@ ImageCache::ImageCache(QObject *parent,
     }
     restart = false;
     abort = false;
+    debugCaching = false;
 }
 
 ImageCache::~ImageCache()
@@ -320,7 +321,7 @@ bool ImageCache::nextToCache(int id)
 
     for (int p = 0; p < priorityList.size(); p++) {
         int i = priorityList.at(p);
-        if (!icd->cacheItemList.at(i).isMetadata) continue;
+//        if (!icd->cacheItemList.at(i).isMetadata) continue;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
         bool isCached = icd->cacheItemList.at(i).isCached;
         int attempts = icd->cacheItemList.at(i).attempts;
@@ -806,6 +807,7 @@ QString ImageCache::reportImCache()
         icd->imCache.find(keys.at(i), image);
         int w = image.width();
         int h = image.height();
+        int bytes = image.sizeInBytes();
         rpt << "\n";
         rpt.reset();
         rpt.setFieldAlignment(QTextStream::AlignLeft);
@@ -819,6 +821,9 @@ QString ImageCache::reportImCache()
         rpt << " h = ";
         rpt.setFieldWidth(6);
         rpt << h;
+        rpt << " bytes = ";
+        rpt.setFieldWidth(10);
+        rpt << bytes;
         rpt.reset();
         rpt << " ";
         rpt << keys.at(i);
@@ -1184,6 +1189,9 @@ void ImageCache::cacheImage(int id, int cacheKey)
         qDebug().noquote() << "  " << __FUNCTION__ << "  decoder" << id << "key =" << k
                  << decoder[id]->fPath;
     }
+    QString k = QString::number(cacheKey).leftJustified((4));
+    qDebug().noquote() << "  " << __FUNCTION__ << "  decoder" << id << "key =" << k
+             << decoder[id]->fPath;
     makeRoom(id, cacheKey);
     icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
     icd->cacheItemList[cacheKey].isCaching = false;

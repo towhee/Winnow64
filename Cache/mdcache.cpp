@@ -466,12 +466,16 @@ bool MetadataCache::loadIcon(int sfRow)
         if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
         */
         bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIconChunk");
+        QPixmap pm;
         if (thumbLoaded) {
-            QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-            item->setIcon(pm);
-            iconMax(pm);
-            iconsCached.append(dmRow);
+            pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
         }
+        else {
+            pm = QPixmap(":/images/error_image.png");
+        }
+        item->setIcon(pm);
+        iconMax(pm);
+        iconsCached.append(dmRow);
     }
     return true;
 }

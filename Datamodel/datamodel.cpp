@@ -1033,6 +1033,14 @@ bool DataModel::metadataLoaded(int dmRow)
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
 }
 
+void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    mutex.lock();
+    itemFromIndex(dmIdx)->setIcon(pm);
+    mutex.unlock();
+}
+
 bool DataModel::iconLoaded(int sfRow)
 {
     if (G::isLogger) G::log(__FUNCTION__);

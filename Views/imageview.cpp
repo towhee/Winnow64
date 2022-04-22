@@ -205,6 +205,8 @@ bool ImageView::loadImage(QString fPath, QString src)
         }
         // not cached
         else {
+            pmItem->setPixmap(QPixmap(":/images/error_image.png"));
+            isLoaded = true;
             // MacOS: if showPopup thumbs do not scroll when hold arrow key down
             #ifdef Q_OS_WIN
                 if (G::isNewFolderLoaded) {
