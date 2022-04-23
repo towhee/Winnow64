@@ -183,30 +183,24 @@ bool ImageView::loadImage(QString fPath, QString src)
             pmItem->setPixmap(displayPixmap);
         }
         else {
-            pmItem->setPixmap(QPixmap(":/images/error_image.png"));
-            isLoaded = true;
+            // set null pixmap
+            QPixmap nullPm;
+            pmItem->setPixmap(nullPm);
+            return false;
         }
     }
-    // get cached image
-    else {
-        /* Must check if image has been cached before calling icd->imCache.find(fPath, image)
-        to prevent a mismatch between the fPath index and the image in icd->imCache hash
-        table. */
-        int row = dm->rowFromPath(fPath);
-        bool isCached = dm->index(row, 0).data(G::CachedRole).toBool();
-        QImage image;
-        // confirm the cached image is in the image cache
-        bool imageAvailable = false;
-        if (isCached) imageAvailable = icd->imCache.find(fPath, image);
+
+    /* get cached image.   Must check if image has been cached before calling
+    icd->imCache.find(fPath, image) to prevent a mismatch between the fPath index and the
+    image in icd->imCache hash table. */
+    int row = dm->rowFromPath(fPath); bool isCached = dm->index(row, 0).data(G::CachedRole).toBool();
+    if (isCached) { QImage image; // confirm the cached image is in the image cache
+        bool imageAvailable = icd->imCache.find(fPath, image);
         if (imageAvailable) {
             pmItem->setPixmap(QPixmap::fromImage(image));
-//            G::popUp->hide();
             isLoaded = true;
         }
-        // not cached
-        else {
-            pmItem->setPixmap(QPixmap(":/images/error_image.png"));
-            isLoaded = true;
+        else { // not available
             // MacOS: if showPopup thumbs do not scroll when hold arrow key down
             #ifdef Q_OS_WIN
                 if (G::isNewFolderLoaded) {
@@ -244,7 +238,16 @@ bool ImageView::loadImage(QString fPath, QString src)
         if (G::isEmbellish) emit embellish("", __FUNCTION__);
         else pmItem->setGraphicsEffect(nullptr);
     }
-    return isLoaded;
+
+    if (isLoaded) return true;
+    else {
+        // set null pixmap
+        QPixmap nullPm;
+        pmItem->setPixmap(nullPm);
+        QString msg = "Could not read " + fPath;
+        G::popUp->showPopup(msg, 0);
+        return false;
+    }
 }
 
 void ImageView::clear()
