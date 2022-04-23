@@ -276,10 +276,8 @@ void ImageDecoder::run()
         status = Status::Done;
     }
     else {
-        image = QPixmap(":/images/error_image.png").toImage();
-        qDebug() << "ImageDecoder::run error for" << fPath;
-//        status = Status::Failed;
-//        fPath = "";
+        status = Status::Failed;
+        fPath = "";
     }
     if (!abort) emit done(threadId);
 }

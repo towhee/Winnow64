@@ -457,6 +457,7 @@ bool MetadataCache::loadIcon(int sfRow)
     QStandardItem *item = dm->itemFromIndex(dmIdx);
 //        bool isNullIcon = item->icon().isNull();
     if (dmIdx.isValid() && !dm->iconLoaded(sfRow)) {
+        qDebug() << __FUNCTION__ << sfRow;
         int dmRow = dmIdx.row();
         QImage image;
         QString fPath = dmIdx.data(G::PathRole).toString();

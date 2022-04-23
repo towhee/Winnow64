@@ -213,7 +213,6 @@ void TableView::paintEvent(QPaintEvent *event)
 //    resizeColumns();      // prevents user changing column widths
     int d = static_cast<int>(G::fontSize.toInt() * G::ptToPx * 1.5);
     setIconSize(QSize(d, d));
-//    setColumnWidth(0, ht + 10);
     verticalHeader()->setDefaultSectionSize(d);
     horizontalHeader()->setFixedHeight(d);
     QTableView::paintEvent(event);
@@ -237,7 +236,7 @@ void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)
 void TableView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-
+    QTableView::selectionChanged(selected, deselected);
 }
 
 void TableView::createOkToShow()
