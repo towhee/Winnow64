@@ -396,6 +396,7 @@ private slots:
     void setShowImageCount();
     void about();
     void ingest();
+    void exportEmbelFromAction(QAction *embelExportAction);
     void exportEmbel();
     void enableSelectionDependentMenus();
     void enableEjectUsbMenu(QString path);
@@ -521,6 +522,7 @@ private slots:
     void tokenEditor();
 //    void toggleThumbWrap();
     void setIngested();
+    QStringList getSelectionOrPicks();
     void togglePick();
     void togglePickMouseOver();
     void togglePickMouseOverItem(QModelIndex idx);
@@ -645,6 +647,7 @@ private:
     QMenu *filterMenu;
     QMenu *sortMenu;
     QMenu *embelMenu;
+    QMenu *embelExportMenu;
     QMenu *viewMenu;
        QMenu *zoomSubMenu;
     QMenu *windowMenu;
@@ -811,7 +814,7 @@ private:
     QAction *embelManageTilesAction;
     QAction *embelManageGraphicsAction;
     QAction *embelRevealWinnetsAction;
-    QActionGroup *embelGroupAction;
+    QActionGroup *embelExportGroupAction;
     QList<QAction *> embelTemplatesActions;
 
     // View Menu

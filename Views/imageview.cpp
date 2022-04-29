@@ -244,8 +244,8 @@ bool ImageView::loadImage(QString fPath, QString src)
         // set null pixmap
         QPixmap nullPm;
         pmItem->setPixmap(nullPm);
-        QString msg = "Could not read " + fPath;
-        G::popUp->showPopup(msg, 0);
+//        QString msg = "Could not read " + fPath;
+//        G::popUp->showPopup(msg, 0);
         return false;
     }
 }

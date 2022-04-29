@@ -1363,7 +1363,8 @@ void MW::folderSelectionChange()
     stopAndClearAll("folderSelectionChange");
 
     // do not embellish
-    if (turnOffEmbellish) embelProperties->invokeFromAction(embelTemplatesActions.at(0));
+//    if (turnOffEmbellish) embelProperties->invokeFromAction(embelTemplatesActions.at(0));
+    if (turnOffEmbellish) embelProperties->doNotEmbellish();
 
     // ImageView set zoom = fit for the first image of a new folder
     imageView->isFirstImageNewFolder = true;
@@ -3485,11 +3486,11 @@ void MW::createActions()
 
     // Embellish menu
 
-    embelExportAction = new QAction(tr("Export embellished image"), this);
+    embelExportAction = new QAction(tr("Export ..."), this);
     embelExportAction->setObjectName("embelExportAct");
     embelExportAction->setShortcutVisibleInContextMenu(true);
     addAction(embelExportAction);
-    connect(embelExportAction, &QAction::triggered, this, &MW::exportEmbel);
+//    connect(embelExportAction, &QAction::triggered, this, &MW::exportEmbel);
 
     embelNewTemplateAction = new QAction(tr("New template"), this);
     embelNewTemplateAction->setObjectName("newEmbelTemplateAct");
@@ -3544,15 +3545,15 @@ void MW::createActions()
      ie to execute "Do not embellish" (always the first action)
      EmbelProperties::invokeFromAction(embelTemplatesActions.at(0))
     */
-    embelGroupAction = new QActionGroup(this);
-    embelGroupAction->setExclusive(true);
-    n = embelProperties->templateList.count();
+    embelExportGroupAction = new QActionGroup(this);
+    embelExportGroupAction->setExclusive(true);
+    n = embelProperties->templateList.count() - 1;
     for (int i = 0; i < 30; i++) {
         QString name;
         QString objName = "";
         if (i < n) {
-            name = embelProperties->templateList.at(i);
-            objName = "template" + QString::number(i);
+            name = embelProperties->templateList.at(i+1);
+            objName = "template" + QString::number(i+1);
         }
         else name = "Future Template" + QString::number(i);
 
@@ -3560,32 +3561,35 @@ void MW::createActions()
 
         if (i < n) {
             embelTemplatesActions.at(i)->setObjectName(objName);
-            embelTemplatesActions.at(i)->setCheckable(true);
+//            embelTemplatesActions.at(i)->setCheckable(true);
             embelTemplatesActions.at(i)->setText(name);
         }
-
+        /*
         if (i == 0) {
             embelTemplatesActions.at(i)->setShortcut(QKeySequence("N"));
             embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
         }
 
-//        if (i < 10 && i < n) {
-//            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Alt+Shift+" + QString::number(i)));
-//            embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
-//            embelTemplatesActions.at(i)->setVisible(true);
-//            addAction(embelTemplatesActions.at(i));
-//        }
+        if (i < 10 && i < n) {
+            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Alt+Shift+" + QString::number(i)));
+            embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
+            embelTemplatesActions.at(i)->setVisible(true);
+            addAction(embelTemplatesActions.at(i));
+        }
+        */
 
         if (i < n) addAction(embelTemplatesActions.at(i));
 
         if (i >= n) embelTemplatesActions.at(i)->setVisible(false);
 //        embelTemplatesActions.at(i)->setShortcut(QKeySequence("Ctrl+Shift+" + QString::number(i)));
-        embelGroupAction->addAction(embelTemplatesActions.at(i));
+        embelExportGroupAction->addAction(embelTemplatesActions.at(i));
     }
     addActions(embelTemplatesActions);
+    /*
     // sync menu with QSettings last active embel template
     if (embelProperties->templateId < n)
         embelTemplatesActions.at(embelProperties->templateId)->setChecked(true);
+        */
 
     // View menu
     slideShowAction = new QAction(tr("Slide Show"), this);
@@ -4171,7 +4175,7 @@ void MW::createMenus()
 
     // Sort Menu
 
-    /*QMenu **/sortMenu = new QMenu(this);
+    sortMenu = new QMenu(this);
     QAction *sortGroupAct = new QAction("Sort", this);
     sortGroupAct->setMenu(sortMenu);
     sortMenu->addActions(sortGroupAction->actions());
@@ -4181,25 +4185,24 @@ void MW::createMenus()
     // Embellish Menu
 
     embelMenu = new QMenu(this);
-//    embelMenu->setIcon(QIcon(":/images/icon16/lightning.png"));
-    embelMenu->addAction(embelExportAction);
+    /*
+    embelMenu->setIcon(QIcon(":/images/icon16/lightning.png"));
+    */
+    QAction *embelGroupAct = new QAction("Embellish", this);
+    embelGroupAct->setMenu(embelMenu);
+    embelExportMenu = embelMenu->addMenu(tr("Export..."));
+    embelExportMenu->addActions(embelExportGroupAction->actions());
     embelMenu->addSeparator();
     embelMenu->addAction(embelNewTemplateAction);
     embelMenu->addAction(embelReadTemplateAction);
     embelMenu->addAction(embelSaveTemplateAction);
     embelMenu->addSeparator();
-//    embelMenu->addAction(embelTileAction);
     embelMenu->addAction(embelManageTilesAction);
     embelMenu->addAction(embelManageGraphicsAction);
-//    #ifdef Q_OS_WIN
     embelMenu->addSeparator();
     embelMenu->addAction(embelRevealWinnetsAction);
-//    #endif
-    QAction *embelGroupAct = new QAction("Embellish", this);
-    embelGroupAct->setMenu(embelMenu);
-    embelMenu->addSeparator();
-    embelMenu->addActions(embelGroupAction->actions());
-    connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
+    connect(embelMenu, &QMenu::triggered, this, &MW::exportEmbelFromAction);
+//    connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
 
     // View Menu
 
@@ -5674,8 +5677,8 @@ void MW::folderDockVisibilityChange()
 void MW::embelDockVisibilityChange()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    // rgh ??
-    //    if (embelDock->isVisible()) newEmbelTemplate();
+    loupeDisplay();
+    embelProperties->doNotEmbellish();
 }
 
 void MW::embelDockActivated(QDockWidget *dockWidget)
@@ -5701,6 +5704,7 @@ void MW::embelTemplateChange(int id)
         setShootingInfoVisibility();
     }
     else {
+        loupeDisplay();
         embelRunBtn->setVisible(true);
         isRatingBadgeVisible = false;
         thumbView->refreshThumbs();
@@ -9955,6 +9959,14 @@ void MW::gridDisplay()
     painting itself.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+
+    if (embelProperties->templateId > 0) {
+        G::popUp->showPopup(
+            "Only loupe mode is available while the Embellish Editor "
+            "is active.", 2000);
+        return;
+    }
+
     G::mode = "Grid";
     asGridAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
@@ -10016,6 +10028,14 @@ void MW::gridDisplay()
 void MW::tableDisplay()
 {
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+
+    if (embelProperties->templateId > 0) {
+        G::popUp->showPopup(
+            "Only loupe mode is available while the Embellish Editor "
+            "is active.", 2000);
+        return;
+    }
+
     G::mode = "Table";
     asTableAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
@@ -10095,6 +10115,14 @@ void MW::tableDisplay()
 void MW::compareDisplay()
 {
     if (G::isLogger) G::log(__FUNCTION__);
+
+    if (embelProperties->templateId > 0) {
+        G::popUp->showPopup(
+            "Only loupe mode is available while the Embellish Editor "
+            "is active.", 2000);
+        return;
+    }
+
     asCompareAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
     int n = selectionModel->selectedRows().count();
@@ -10851,12 +10879,10 @@ qulonglong MW::memoryReqdForSelection()
     return memTot;
 }
 
-void MW::exportEmbel()
+QStringList MW::getSelectionOrPicks()
 {
-/*
-
-*/
     if (G::isLogger) G::log(__FUNCTION__);
+
     QStringList picks;
 
     // build QStringList of picks
@@ -10881,6 +10907,19 @@ void MW::exportEmbel()
         }
     }
 
+    return picks;
+}
+
+void MW::exportEmbelFromAction(QAction *embelExportAction)
+{
+/*
+    Called from main menu Embellish > Export > Export action.  The embellish editor
+    may not be active, but the embellish template has been chosen by the action.
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+
+    QStringList picks = getSelectionOrPicks();
+
     if (picks.size() == 0)  {
         QMessageBox::information(this,
             "Oops", "There are no picks or selected images to export.    ",
@@ -10890,6 +10929,29 @@ void MW::exportEmbel()
 
     EmbelExport embelExport(metadata, dm, icd, embelProperties);
     connect(this, &MW::abortEmbelExport, &embelExport, &EmbelExport::abortEmbelExport);
+
+    embelExport.exportRemoteFiles(embelExportAction->text(), picks);
+}
+
+void MW::exportEmbel()
+{
+/*
+    Called when embellish editor is active and an embellish template has been selected.
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+
+    QStringList picks = getSelectionOrPicks();
+
+    if (picks.size() == 0)  {
+        QMessageBox::information(this,
+            "Oops", "There are no picks or selected images to export.    ",
+            QMessageBox::Ok);
+        return;
+    }
+
+    EmbelExport embelExport(metadata, dm, icd, embelProperties);
+    connect(this, &MW::abortEmbelExport, &embelExport, &EmbelExport::abortEmbelExport);
+
     embelExport.exportImages(picks);
 }
 
