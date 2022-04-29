@@ -2,7 +2,7 @@
 
 namespace G
 {
-    bool stop = false;                  // flag to stop everything
+    bool stop = true;                  // flag to stop everything
 
     QSettings *settings;
 
