@@ -227,6 +227,8 @@ bool Olympus::parse(MetadataParameters &p,
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
     m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
+    m.width = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
+    m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
 
     // get the offset for ExifIFD and read it
     quint32 offsetEXIF;
@@ -347,8 +349,9 @@ bool Olympus::parse(MetadataParameters &p,
                 m.offsetFull = ifd->ifdDataHash.value(257).tagValue + makerOffset;
                 m.lengthFull = ifd->ifdDataHash.value(258).tagValue;
                 p.offset = m.offsetFull;
+                qDebug() << __FUNCTION__ << "p.offset =" << p.offset;
                 jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
-                jpeg->getDimensions(p, m);
+//                jpeg->getDimensions(p, m);
             }
         }
     }

@@ -87,13 +87,23 @@ bool EmbelExport::loadImage(QString fPath)
     return true;
 }
 
-QString EmbelExport::exportFolderPath(QString fPath)
+QString EmbelExport::exportSubfolderPath(QString fPath, bool allowOverride)
 {
 /*
     The incoming fPath is the file path for one of the images being exported.  Its folder is
     fromFolderPath.  If the export folder save method == "Subfolder", then the subfolder name
     is used, otherwise, all this is ignored and embelProperties->exportSubfolder is used.
 */
+    if (G::isLogger) G::log(__FUNCTION__);
+    QFileInfo filedir(fPath);
+    QString fromFolderPath = filedir.dir().path();
+    QString exportFolder;
+    exportFolder = fromFolderPath + "/" + embelProperties->exportSubfolder;
+    QDir dir(fromFolderPath);
+    dir.mkdir(embelProperties->exportSubfolder);
+    return exportFolder;
+
+    /*
     if (G::isLogger) G::log(__FUNCTION__); 
     QFileInfo filedir(fPath);
     QString fromFolderPath = filedir.dir().path();
@@ -105,7 +115,26 @@ QString EmbelExport::exportFolderPath(QString fPath)
     }
     else exportFolder = embelProperties->exportFolderPath;
 
+    // override default export folder
+    if (allowOverride) {
+        QString msg = "Select export destination folder";
+        exportFolder = QFileDialog::getExistingDirectory(this, msg, exportFolder,
+            QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    }
     return exportFolder;
+    */
+}
+
+bool EmbelExport::isValidExportFolder()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (embelProperties->saveMethod == "Subfolder") {
+        if (embelProperties->exportSubfolder == "") return false;
+    }
+    else {
+        if (embelProperties->exportFolderPath == "") return false;
+    }
+    return true;
 }
 
 QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathList)
@@ -127,25 +156,29 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     QString prevTemplate = embelProperties->templateName;
     // set the embellish template, which updates all the parameters
     embelProperties->setCurrentTemplate(templateName);
+    // make sure export folder has been set
+    if (!isValidExportFolder()) {
+        return "";
+    }
     embellish->setRemote(true);
 
 //    QMessageBox::information(this, "EmbelExport::exportRemoteFiles", pathList.at(0));
     Utilities::log("EmbelExport::exportRemoteFiles", pathList.at(0));
 
-    exportImages(pathList);
+    exportImages(pathList, true);
 
-    embellish->setRemote(false);
+//    embellish->setRemote(false);
 
-    int n = pathList.length() - 1;
-    QString fPath = pathList.at(n);
-    QString exportFolder = exportFolderPath(fPath);
-    QFileInfo info(fPath);
-    QString exportPathToLastFile = exportFolder + "/" + info.fileName();
+//    int n = pathList.length() - 1;
+//    QString fPath = pathList.at(n);
+//    QString exportFolder = exportSubfolderPath(fPath);
+//    QFileInfo info(fPath);
+//    QString exportPathToLastFile = exportFolder + "/" + info.fileName();
 
     return lastFileExportedPath;
 }
 
-void EmbelExport::exportImages(const QStringList &srcList)
+void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
 {
 /*
     Each image in the list is rendered to the assigned embellish template. The metadata is
@@ -161,6 +194,7 @@ void EmbelExport::exportImages(const QStringList &srcList)
         G::popUp->showPopup("No images picked or selected");
         return;
     }
+
     qDebug() << __FUNCTION__ << embelProperties->templateName;
     if (embelProperties->templateName == "Do not Embellish") {
         G::popUp->showPopup("The current embellish template is 'Do not Embellish'<p>"
@@ -168,6 +202,19 @@ void EmbelExport::exportImages(const QStringList &srcList)
                             "Press <font color=\"red\"><b>Esc</b></font> to continue.",
                             0);
         return;
+    }
+
+    exportFolderIfNotSubfolder = embelProperties->exportFolderPath;
+    // Set export folder if not remote, not a subfolder and no export folder set
+    if (!isRemote && embelProperties->saveMethod == "Another folder somewhere else") {
+        if (exportFolderIfNotSubfolder == "") {
+            QString msg = "Select export destination folder";
+            exportFolderIfNotSubfolder = QFileDialog::getExistingDirectory(this, msg,
+                "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+            if (exportFolderIfNotSubfolder == "") {
+                return;
+            }
+        }
     }
 
     QElapsedTimer t;
@@ -254,7 +301,13 @@ void EmbelExport::exportImage(const QString &fPath)
     QString extension = embelProperties->exportFileType;
     QFileInfo fileInfo(fPath);
     QString baseName = fileInfo.baseName() + embelProperties->exportSuffix;
-    QString exportFolder = exportFolderPath(fPath);
+    QString exportFolder;
+    if (embelProperties->saveMethod == "Subfolder") {
+       exportFolder = exportSubfolderPath(fPath);
+    }
+    else {
+        exportFolder = exportFolderIfNotSubfolder;
+    }
     qDebug() << __FUNCTION__ << fPath << exportFolder;
     QString exportPath = exportFolder + "/" + baseName + "." + extension;
     QString exportThumbPath = exportFolder + "/" + baseName + "_thumb." + extension;

@@ -729,12 +729,15 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
     For some reason the selectionModel rowCount is not up-to-date and the selection is updated
     after the MD::fileSelectionChange occurs, hence update the status bar from here.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    QString s = "";
+    if (selected.isEmpty() || !selected.at(0).isValid() || G::isInitializing)
+        s = "Ignore invalid selection change";
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, s);
     if (G::stop || selected.isEmpty() || !selected.at(0).isValid()) {
         return;
     }
-    QListView::selectionChanged(selected, deselected);
     if (!G::isInitializing) {
+        QListView::selectionChanged(selected, deselected);
         emit fileSelectionChange(selected.at(0).indexes().at(0), QModelIndex(), __FUNCTION__);
         QString s = "";
         if (m2->isStressTest) s = "   Stress count: " + QString::number(m2->slideCount);
@@ -791,7 +794,7 @@ void IconView::selectThumb(QModelIndex idx)
                     //*/
     }
     else {
-        qWarning() << "Failed to select" << idx.data(G::PathRole).toString();
+//        qWarning() << "Failed to select" << idx.data(G::PathRole).toString();
     }
 }
 

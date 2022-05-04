@@ -250,7 +250,6 @@ void ImageCache::setTargetRange()
     if (debugCaching) {
         qDebug().noquote() << __FUNCTION__ << " decoder-1";
     }
-    qDebug().noquote() << __FUNCTION__ << " decoder-1";
 
     // sort by priority to make it easy to find highest priority not already cached
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::prioritySort);
@@ -443,7 +442,6 @@ void ImageCache::setPriorities(int key)
     if (debugCaching) {
         qDebug().noquote() << __FUNCTION__ << "  decoder-1" << "key =" << key;
     }
-    qDebug().noquote() << __FUNCTION__ << "  decoder-1" << "key =" << key;
     // key = current position = current selected thumbnail
     int aheadAmount = 1;
     int behindAmount = 1;                   // default 50/50 weighting
@@ -945,9 +943,16 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.priority = i;
         if (G::useLinearLoading) {
             ImageMetadata m = dm->imMetadata(fPath);
+            qDebug() << __FUNCTION__ << fPath
+                     << "m.row =" << m.row
+                     << "m.width =" << m.width
+                     << "m.height =" << m.height
+                     << "m.lengthFull =" << m.lengthFull
+                        ;
             // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
             icd->cacheItem.sizeMB = static_cast<int>(m.width * m.height * 1.0 / 262144);
             icd->cacheItem.isMetadata = m.width > 0;
+//            icd->cacheItem.isMetadata = true;
             // decoder parameters
             icd->cacheItem.metadataLoaded = m.metadataLoaded;
             icd->cacheItem.orientation = m.orientation;
@@ -1141,7 +1146,6 @@ void ImageCache::setCurrentPosition(QString path)
     if (debugCaching) {
         qDebug().noquote() << __FUNCTION__ << path;
     }
-    qDebug() << __FUNCTION__;
     mutex.lock();
     currentPath = path;
     mutex.unlock();

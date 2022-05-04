@@ -111,6 +111,32 @@ A new image is selected which triggers fileSelectionChange
 
 • Update the cursor position on the image caching progress bar.
 
+Flow by function call:
+
+    MW::folderSelectionChange
+    MW::stopAndClearAll
+    DataModel::clearDataModel
+    DataModel::load
+    DataModel::addFileData
+    FSTree::updateFolderImageCount
+    MW::loadLinearNewFolder
+    DataModel::addAllMetadata
+    MW::updateIconBestFit
+    MW::updateIconsVisible
+    IconView::calcViewportRange
+    MetadataCache::readIconChunk
+    MW::loadImageCacheForNewFolder
+    ImageCache::initImageCache
+    ImageCache::buildImageCacheList
+    IconView::selectionChanged              Call MW::fileSelectionChange ~ flags
+    MW::fileSelectionChange
+    ImageView::loadImage                    If image is cached
+    MetadataCache::fileSelectionChange
+    ImageCache::setCurrentPosition
+    MetadataCache::readIconChunk
+    MW::updateCachedStatus                  Calls ImageView::LoadImage if current just cached
+    ImageView::loadImage
+
 Flow Flags:
 
     G::allMetadataLoaded
@@ -1666,7 +1692,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (okToLoadImage && useImageView) {
     */
     if (useImageView) {
-//        setCentralMessage("");
         if (imageView->loadImage(fPath, __FUNCTION__)) {
             updateClassification();
             centralLayout->setCurrentIndex(prevCentralView);
@@ -1678,7 +1703,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (G::isNewFolderLoaded) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
         updateIconsVisible(currentRow);
-        qDebug() << __FUNCTION__ << "G::useLinearLoading =" << G::useLinearLoading;
         if (G::useLinearLoading)
             metadataCacheThread->fileSelectionChange();
 //        else
@@ -3564,19 +3588,6 @@ void MW::createActions()
 //            embelTemplatesActions.at(i)->setCheckable(true);
             embelTemplatesActions.at(i)->setText(name);
         }
-        /*
-        if (i == 0) {
-            embelTemplatesActions.at(i)->setShortcut(QKeySequence("N"));
-            embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
-        }
-
-        if (i < 10 && i < n) {
-            embelTemplatesActions.at(i)->setShortcut(QKeySequence("Alt+Shift+" + QString::number(i)));
-            embelTemplatesActions.at(i)->setShortcutVisibleInContextMenu(true);
-            embelTemplatesActions.at(i)->setVisible(true);
-            addAction(embelTemplatesActions.at(i));
-        }
-        */
 
         if (i < n) addAction(embelTemplatesActions.at(i));
 
@@ -4185,9 +4196,9 @@ void MW::createMenus()
     // Embellish Menu
 
     embelMenu = new QMenu(this);
-    /*
+//    /*
     embelMenu->setIcon(QIcon(":/images/icon16/lightning.png"));
-    */
+    //*/
     QAction *embelGroupAct = new QAction("Embellish", this);
     embelGroupAct->setMenu(embelMenu);
     embelExportMenu = embelMenu->addMenu(tr("Export..."));
@@ -4201,7 +4212,7 @@ void MW::createMenus()
     embelMenu->addAction(embelManageGraphicsAction);
     embelMenu->addSeparator();
     embelMenu->addAction(embelRevealWinnetsAction);
-    connect(embelMenu, &QMenu::triggered, this, &MW::exportEmbelFromAction);
+    connect(embelExportMenu, &QMenu::triggered, this, &MW::exportEmbelFromAction);
 //    connect(embelMenu, &QMenu::triggered, embelProperties, &EmbelProperties::invokeFromAction);
 
     // View Menu
@@ -4803,8 +4814,8 @@ void MW::createImageCache()
             this, SLOT(loadImageCacheForNewFolder()));
 
     // 2nd pass loading image cache for a new folder
-    connect(metadataCacheThread, SIGNAL(loadMetadataCache2ndPass()),
-            this, SLOT(loadMetadataCache2ndPass())/*, Qt::DirectConnection*/);
+//    connect(metadataCacheThread, SIGNAL(loadMetadataCache2ndPass()),
+//            this, SLOT(loadMetadataCache2ndPass())/*, Qt::DirectConnection*/);
 
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
@@ -4815,7 +4826,7 @@ void MW::createImageCache()
 
     // Signal from ImageCache::run() to update cache status in datamodel
     connect(imageCacheThread, &ImageCache::updateCacheOnThumbs,
-            this, &MW::setCachedStatus);
+            this, &MW::updateCachedStatus);
 
     // Signal to ImageCache new image selection
     connect(this, SIGNAL(setImageCachePosition(QString)),
@@ -7035,7 +7046,7 @@ void MW::toggleColorManage(Tog n)
     // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
     for (int row = 0; row < dm->rowCount(); ++row) {
         QString fPath = dm->index(row, G::PathColumn).data(G::PathRole).toString();
-        setCachedStatus(fPath, false, "MW::toggleColorManage");
+        updateCachedStatus(fPath, false, "MW::toggleColorManage");
     }
     // reload image cache
     imageCacheThread->colorManageChange();
@@ -10930,7 +10941,12 @@ void MW::exportEmbelFromAction(QAction *embelExportAction)
     EmbelExport embelExport(metadata, dm, icd, embelProperties);
     connect(this, &MW::abortEmbelExport, &embelExport, &EmbelExport::abortEmbelExport);
 
-    embelExport.exportRemoteFiles(embelExportAction->text(), picks);
+//    embelExport.exportRemoteFiles(embelExportAction->text(), picks);
+
+    embelProperties->setCurrentTemplate(embelExportAction->text());
+//    G::isEmbellish = false;
+    embelExport.exportImages(picks);
+    embelProperties->doNotEmbellish();
 }
 
 void MW::exportEmbel()
@@ -11300,7 +11316,7 @@ void MW::setCombineRawJpg()
     G::popUp->close();
 }
 
-void MW::setCachedStatus(QString fPath, bool isCached, QString src)
+void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
 {
 /*
     When an image is added or removed from the image cache in ImageCache a signal triggers
@@ -11321,13 +11337,14 @@ void MW::setCachedStatus(QString fPath, bool isCached, QString src)
         return;
     }
     int dmRow = dm->fPathRow[fPath];
-    bool metaLoaded = dm->index(dmRow, G::MetadataLoadedColumn).data().toBool();
+//    bool metaLoaded = dm->index(dmRow, G::MetadataLoadedColumn).data().toBool();
     QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
 
-    if (sfIdx.isValid() && metaLoaded) {
+    if (sfIdx.isValid()/* && metaLoaded*/) {
         dm->sf->setData(sfIdx, isCached, G::CachedRole);
         if (isCached) {
             if (sfIdx.row() == currentRow) {
+                if (G::isFlowLogger) G::log(__FUNCTION__, fPath);
                 imageView->loadImage(fPath, __FUNCTION__);
                 updateClassification();
                 centralLayout->setCurrentIndex(prevCentralView);

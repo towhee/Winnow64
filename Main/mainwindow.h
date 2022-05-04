@@ -403,7 +403,7 @@ private slots:
     void ejectUsb(QString path);
     void ejectUsbFromMainMenu();
     void ejectUsbFromContextMenu();
-    void setCachedStatus(QString fPath, bool isCached, QString src);
+    void updateCachedStatus(QString fPath, bool isCached, QString src);
     void searchTextEdit();
 
     int ratingLogCount();
@@ -647,7 +647,8 @@ private:
     QMenu *filterMenu;
     QMenu *sortMenu;
     QMenu *embelMenu;
-    QMenu *embelExportMenu;
+        QMenu *embelExportMenu;
+        QMenu *embelExportOverrideMenu;
     QMenu *viewMenu;
        QMenu *zoomSubMenu;
     QMenu *windowMenu;

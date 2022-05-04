@@ -63,7 +63,7 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item)
     n = item;
     fPath = n.fPath;
     cacheKey = n.key;       // not being used
-    qDebug() << "ImageDecoder::decode" << fPath;
+//    qDebug() << "ImageDecoder::decode" << fPath;
     start();
 }
 

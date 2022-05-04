@@ -107,8 +107,8 @@ public:
     quint32 xmpSegmentOffset = 0;
     quint32 xmpSegmentLength = 0;
     bool isXmp = false;
-    quint32 iccSegmentOffset;
-    quint32 iccSegmentLength;
+    quint32 iccSegmentOffset = 0;
+    quint32 iccSegmentLength = 0;
     QByteArray iccBuf;
     QString iccSpace;
     QString parseSource;
