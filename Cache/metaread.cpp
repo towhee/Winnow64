@@ -243,8 +243,10 @@ void MetaRead::updateIcons()
             bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
             if (thumbLoaded) {
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-//                dm->itemFromIndex(dmIdx)->setIcon(pm);
-                dm->setIcon(dmIdx, pm);
+                mutex.lock();
+                dm->itemFromIndex(dmIdx)->setIcon(pm);
+                mutex.unlock();
+//                dm->setIcon(dmIdx, pm);
                 iconMax(pm);
                 iconsLoaded.append(dmRow);
             }
