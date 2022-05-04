@@ -55,7 +55,6 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     // let thumbReader do its thing
     thumbReader.setFileName(fPath);
     QSize size = thumbReader.size();
-    qDebug() << __FUNCTION__ << size;
 
     dm->setData(dm->index(row, G::WidthColumn), size.width());
     dm->setData(dm->index(row, G::WidthPreviewColumn), size.width());
@@ -101,15 +100,16 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
     uint lengthThumb = dm->index(row, G::LengthThumbColumn).data().toUInt();
 
-//    QFileInfo info(imFile);   // qt6.2
     QString ext = info.suffix().toLower();
 
+    /*
     QString s = "File size = " + QString::number(imFile.size());
     s += " Offset embedded thumb = " + QString::number(offsetThumb);
     s += " Length embedded thumb = " + QString::number(lengthThumb);
     s += " " + fPath;
     qDebug() << __FUNCTION__ << s;
 //    G::log(__FUNCTION__, s);
+//*/
 
     if (imFile.isOpen()) imFile.close();
     if (imFile.open(QIODevice::ReadOnly)) {

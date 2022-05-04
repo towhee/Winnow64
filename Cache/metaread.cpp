@@ -247,6 +247,7 @@ void MetaRead::updateIcons()
                 dm->itemFromIndex(dmIdx)->setIcon(pm);
                 mutex.unlock();
 //                dm->setIcon(dmIdx, pm);
+                emit setIcon(dmIdx, pm);
                 iconMax(pm);
                 iconsLoaded.append(dmRow);
             }
@@ -331,7 +332,11 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     if (thumbLoaded) {
         QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
 //        dm->itemFromIndex(dmIdx)->setIcon(pm);
-        dm->setIcon(dmIdx, pm);
+//        dm->setIcon(dmIdx, pm);
+//        mutex.lock();
+//        dm->itemFromIndex(dmIdx)->setIcon(pm);
+//        mutex.unlock();
+        emit setIcon(dmIdx, pm);
         iconMax(pm);
         iconsLoaded.append(dmIdx.row());
     }
@@ -347,7 +352,6 @@ void MetaRead::readRow(int sfRow)
         bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
         if (!metaLoaded) {
             readMetadata(sfIdx, fPath);
-//            emit addToImageCache(metadata->m);
         }
     }
 

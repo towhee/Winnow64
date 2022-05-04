@@ -64,7 +64,6 @@ public:
     bool allMetadataLoaded();
     void clearAllIcons();
     bool allIconsLoaded();
-    void setIcon(QModelIndex dmIdx, QPixmap &pm);
     bool iconLoaded(int sfRow);
     int rowFromPath(QString fPath);
     void refreshRowFromPath();
@@ -103,6 +102,7 @@ public slots:
 //    void unfilteredItemSearchCount();
     void addAllMetadata();
     bool addMetadataForItem(ImageMetadata m);
+    void setIcon(QModelIndex dmIdx, QPixmap &pm);
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
 

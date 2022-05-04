@@ -325,19 +325,21 @@ bool ImageCache::nextToCache(int id)
         bool isCached = icd->cacheItemList.at(i).isCached;
         int attempts = icd->cacheItemList.at(i).attempts;
         int threadId = icd->cacheItemList.at(i).threadId;
-        if (debugCaching) {
-            qDebug() << __FUNCTION__
-                 << "    decoder" << id
-                 << "row =" << i
-                 << "threadId =" << threadId
-                 << "priority =" << p
-                 << "isCaching =" << isCaching
-                 << "isCached =" << isCached
-                 << "attempts =" << attempts
-                    ;
-        }
         if (!isCached && attempts < maxAttemptsToCacheImage) {
             if (!isCaching || (isCaching && id == threadId)) {
+                if (debugCaching) {
+                    QString k = QString::number(i).leftJustified((4));
+                    qDebug().noquote()
+                         << __FUNCTION__
+                         << "    decoder" << id
+                         << "row =" << k
+                         << "threadId =" << threadId
+                         << "priority =" << p
+                         << "isCaching =" << isCaching
+                         << "isCached =" << isCached
+                         << "attempts =" << attempts
+                            ;
+                }
                 icd->cache.toCacheKey = i;
                 return true;
             }
@@ -523,9 +525,6 @@ void ImageCache::fixOrphans()
     is shown as isCaching it is reset, and if the image is cached then it is removed from the
     imCache and the cached flag is reset to false.
 */
-    if (debugCaching) {
-        qDebug() << __FUNCTION__;
-    }
     checkForOrphans = false;
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
         QString fPath = icd->cacheItemList.at(i).fPath;
@@ -543,6 +542,14 @@ void ImageCache::fixOrphans()
                     // reset isCaching to false
                     icd->cacheItemList[i].isCaching = false;
                     checkForOrphans = true;
+                    if (debugCaching) {
+                        QString k = QString::number(i).leftJustified((4));
+                        qDebug().noquote()
+                            << __FUNCTION__
+                            << "     row " << k
+                            << "orphaned"
+                               ;
+                    }
                 }
             }
         }
@@ -552,6 +559,13 @@ void ImageCache::fixOrphans()
             if (inImageCache) icd->imCache.remove(fPath);
             emit updateCacheOnThumbs(fPath, false, "ImageCache::fixOrphans");
 //            if (isCached) emit updateCacheOnThumbs(fPath, false, icd->cache.targetFirst,icd->cache.targetLast);
+        }
+    }
+
+    // no orphans found
+    if (!checkForOrphans) {
+        if (debugCaching) {
+            qDebug().noquote() << __FUNCTION__ << "     No orphans found";
         }
     }
 }
@@ -679,6 +693,8 @@ QString ImageCache::diagnostics()
     QTextStream rpt;
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', objectName() + " ImageCache Diagnostics");
+    rpt << "\n" ;
+    rpt << "Load algorithm: " << (G::useLinearLoading == true ? "Linear" : "Concurrent");
     rpt << "\n" ;
     rpt << reportCache("");
     rpt << reportImCache();
@@ -943,12 +959,14 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.priority = i;
         if (G::useLinearLoading) {
             ImageMetadata m = dm->imMetadata(fPath);
+            /*
             qDebug() << __FUNCTION__ << fPath
                      << "m.row =" << m.row
                      << "m.width =" << m.width
                      << "m.height =" << m.height
                      << "m.lengthFull =" << m.lengthFull
                         ;
+                        //*/
             // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
             icd->cacheItem.sizeMB = static_cast<int>(m.width * m.height * 1.0 / 262144);
             icd->cacheItem.isMetadata = m.width > 0;
@@ -1168,8 +1186,8 @@ void ImageCache::decodeNextImage(int id)
     icd->cacheItemList[row].attempts += 1;
     if (debugCaching) {
         QString k = QString::number(row).leftJustified((4));
-        if (debugCaching) {
-            qDebug().noquote() << __FUNCTION__
+        qDebug().noquote()
+            << __FUNCTION__
             << "decoder" << id
             << "row =" << k
             << "threadId =" << icd->cacheItemList.at(row).threadId
@@ -1178,7 +1196,6 @@ void ImageCache::decodeNextImage(int id)
             << "attempts =" << icd->cacheItemList.at(row).attempts
             << icd->cacheItemList.at(row).fPath
               ;
-        }
     }
     decoder[id]->decode(icd->cacheItemList.at(row));
 }
@@ -1190,12 +1207,9 @@ void ImageCache::cacheImage(int id, int cacheKey)
 */
     if (debugCaching) {
         QString k = QString::number(cacheKey).leftJustified((4));
-        qDebug().noquote() << "  " << __FUNCTION__ << "  decoder" << id << "key =" << k
+        qDebug().noquote() << __FUNCTION__ << "     decoder" << id << "row =" << k
                  << decoder[id]->fPath;
     }
-    QString k = QString::number(cacheKey).leftJustified((4));
-    qDebug().noquote() << "  " << __FUNCTION__ << "  decoder" << id << "key =" << k
-             << decoder[id]->fPath;
     makeRoom(id, cacheKey);
     icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
     icd->cacheItemList[cacheKey].isCaching = false;
@@ -1268,7 +1282,7 @@ bool ImageCache::fillCache(int id, bool positionChange)
         QString k = QString::number(cacheKey).leftJustified((4));
         qDebug().noquote() << __FUNCTION__
                  << "      decoder" << id
-                 << "key =" << k
+                 << "row =" << k    // row = key
                  << "isRunning =" << decoder[id]->isRunning()
                  << decoder[id]->fPath
                     ;

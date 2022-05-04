@@ -2178,7 +2178,6 @@ void MW::thumbHasScrolled()
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << "1";
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
@@ -2190,10 +2189,8 @@ void MW::thumbHasScrolled()
             tableView->scrollToRow(thumbView->midVisibleCell, __FUNCTION__);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
-            qDebug() << __FUNCTION__ << "1";
             if (G::useLinearLoading) metadataCacheThread->scrollChange(__FUNCTION__);
             else loadConcurrent(MetaRead::Scroll, thumbView->midVisibleCell, __FUNCTION__);
-//            metadataCacheThread->scrollChange(__FUNCTION__);
         }
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
@@ -4779,6 +4776,8 @@ void MW::createMDCache()
 
     // add metadata to datamodel
     connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
+    // update icon in datamodel
+    connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon);
     // message metadata reading completed
     connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadNew3 to prep and run fileSelectionChange
@@ -12940,28 +12939,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    for (int x = 100; x < 200; ++x) {
-//        QSize thumbSize(x,x);
-//        QModelIndex idx = dm->index(0,0);
-//        QIcon icon = qvariant_cast<QIcon>(idx.data(Qt::DecorationRole));
-//        QSize iconSize = icon.actualSize(thumbSize);
-//        qDebug() << "thumbSize =" << thumbSize
-//                 << "iconSize =" << iconSize;
-//    }
-//    qDebug() << __FUNCTION__ << metaRead->iconChunkSize;
-    for (int i = 0; i < dm->rowCount(); ++i) {
-        if (dm->iconLoaded(i)) qDebug() << i << __FUNCTION__ << "Icon loaded";
-    }
-//    qDebug() << __FUNCTION__ << dm->itemFromIndex(dm->index(750, 0))->icon().isNull();
-
-//    qDebug() << dm->sf->index(750, G::PathColumn).data(Qt::DecorationRole).size();
-//    QIcon nullIcon;
-//    qDebug() << __FUNCTION__ << nullIcon.isNull();
-//    dm->itemFromIndex(dm->index(750, 0))->setIcon(nullIcon);
-//    qDebug() << dm->sf->index(750, G::PathColumn).data(Qt::DecorationRole);
-//    return;
-    qDebug() << __FUNCTION__ << "useLinearLoadProcess" << G::useLinearLoading;
-//    folderAndFileChangePath = "D:/Pictures/2018-01-14_Lillian/2018-01-14_0038.NEF"; // pos = 871
-//    folderAndFileSelectionChange(folderAndFileChangePath);
+    stressTest(100);
 }
 // End MW
