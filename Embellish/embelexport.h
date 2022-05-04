@@ -26,10 +26,10 @@ public:
                 QWidget *parent = nullptr);
     ~EmbelExport();
 
-    void exportImages(const QStringList &srcList);
+    void exportImages(const QStringList &srcList, bool isRemote = false);
     QString exportRemoteFiles(QString templateName, QStringList &pathList);
     void exportImage(const QString &fPath);
-    QString exportFolderPath(QString folderPath = "");
+    QString exportSubfolderPath(QString folderPath = "", bool allowOverride = false);
 
     bool exportingEmbellishedImages = false;
 
@@ -38,6 +38,7 @@ public slots:
 
 private:
     bool loadImage(QString fPath);
+    bool isValidExportFolder();
     Metadata *metadata;
     DataModel *dm;
     ImageCacheData *icd;
@@ -46,6 +47,7 @@ private:
     Embel *embellish;
     QGraphicsScene *scene;
     QGraphicsPixmapItem *pmItem;
+    QString exportFolderIfNotSubfolder;
     QString lastFileExportedPath;
     QString lastFileExportedThumbPath;
     bool abort = false;

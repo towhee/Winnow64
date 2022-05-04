@@ -1067,7 +1067,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
     if (!hasMetadataFormats.contains(ext)) {
-        clearMetadata();
+//        clearMetadata();
         return false;
     }
 

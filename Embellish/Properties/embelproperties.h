@@ -42,6 +42,7 @@ public:
     QString exportSuffix;
     bool copyMetadata;
     bool overwriteFiles;
+    bool overrideExportDestination;
 
     struct Image {
         QString style;

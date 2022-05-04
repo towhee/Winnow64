@@ -193,8 +193,13 @@ bool ImageView::loadImage(QString fPath, QString src)
     /* get cached image.   Must check if image has been cached before calling
     icd->imCache.find(fPath, image) to prevent a mismatch between the fPath index and the
     image in icd->imCache hash table. */
-    int row = dm->rowFromPath(fPath); bool isCached = dm->index(row, 0).data(G::CachedRole).toBool();
-    if (isCached) { QImage image; // confirm the cached image is in the image cache
+    int row = dm->rowFromPath(fPath);
+    bool isCached = dm->index(row, 0).data(G::CachedRole).toBool();
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__,
+                                               fPath + " isCached =" +
+                                               (isCached ? "true" : "false"));
+    if (isCached) {
+        QImage image; // confirm the cached image is in the image cache
         bool imageAvailable = icd->imCache.find(fPath, image);
         if (imageAvailable) {
             pmItem->setPixmap(QPixmap::fromImage(image));

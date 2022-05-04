@@ -55,20 +55,24 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     // let thumbReader do its thing
     thumbReader.setFileName(fPath);
     QSize size = thumbReader.size();
+    qDebug() << __FUNCTION__ << size;
 
     dm->setData(dm->index(row, G::WidthColumn), size.width());
     dm->setData(dm->index(row, G::WidthPreviewColumn), size.width());
     dm->setData(dm->index(row, G::HeightColumn), size.height());
     dm->setData(dm->index(row, G::HeightPreviewColumn), size.height());
     // needed when loading concurrently
-    metadata->m.width = size.width();
-    metadata->m.height = size.height();
+//    if (!G::useLinearLoading) {
+        metadata->m.width = size.width();
+        metadata->m.height = size.height();
+//    }
 
     size.scale(thumbMax, Qt::KeepAspectRatio);
     thumbReader.setScaledSize(size);
     image = thumbReader.read();
     if (image.isNull()) {
         G::error(__FUNCTION__, fPath, "Could not read thumb using thumbReader.");
+        qWarning() << __FUNCTION__ << "Could not read thumb using thumbReader." << fPath;
         return false;
     }
     return true;
@@ -103,6 +107,8 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     QString s = "File size = " + QString::number(imFile.size());
     s += " Offset embedded thumb = " + QString::number(offsetThumb);
     s += " Length embedded thumb = " + QString::number(lengthThumb);
+    s += " " + fPath;
+    qDebug() << __FUNCTION__ << s;
 //    G::log(__FUNCTION__, s);
 
     if (imFile.isOpen()) imFile.close();
@@ -110,8 +116,10 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
         if (imFile.seek(offsetThumb)) {
             QByteArray buf = imFile.read(lengthThumb);
             if (image.loadFromData(buf, "JPEG")) {
-                if (image.isNull())
+                if (image.isNull()) {
                     G::error(__FUNCTION__, fPath, "Empty thumb.");
+                    qWarning() << "Error loading thumbnail" << imFile.fileName();
+                }
                 image = image.scaled(thumbMax, Qt::KeepAspectRatio);
                 success = true;
             }
@@ -245,7 +253,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
         // read the image file (supported by Qt), scaling to thumbnail size
         if (!loadFromEntireFile(fPath, image, dmRow)) {
             G::error(__FUNCTION__, fPath, "Could not load thumb.");
-            qDebug() << __FUNCTION__ << err << fPath;
+            qWarning() << __FUNCTION__ << "Could not load thumb." << fPath;
             return false;
         }
         image.convertTo(QImage::Format_RGB32);
