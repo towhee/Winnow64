@@ -49,6 +49,7 @@ public:
 
     QString diagnostics();
     void updateStatus(QString instruction, QString source); // update cached send signal
+    QString reportCacheParameters();
     QString reportCache(QString title = "");
     QString reportCacheProgress(QString action);
     void reportRunStatus();
@@ -75,7 +76,7 @@ protected:
 public slots:
     void addCacheItemImageMetadata(ImageMetadata m);
     bool fillCache(int id, bool positionChange = false);
-    void setCurrentPosition(QString path);
+    void setCurrentPosition(QString path, QString src);
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();
 
@@ -91,6 +92,7 @@ private:
     QString currentPath;
     int maxAttemptsToCacheImage = 10000;
     bool checkForOrphans;           // prevent multiple orphan checks as each decoder finishes
+    bool isCacheUpToDate = false;
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;

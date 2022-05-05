@@ -1383,8 +1383,11 @@ void MW::folderSelectionChange()
     setCentralMessage("Loading information for folder " + currentViewDirPath);
 
     if (G::isLogger || G::isFlowLogger) {
+        qDebug();
         G::log(__FUNCTION__, currentViewDirPath);
     }
+    qDebug();
+    G::log(__FUNCTION__, currentViewDirPath);
 
     stopAndClearAll("folderSelectionChange");
 
@@ -1446,22 +1449,9 @@ void MW::folderSelectionChange()
     // update menu
     enableEjectUsbMenu(currentViewDirPath);
 
-    /* We do not want to update the imageCache while metadata is still being loaded. The
-    imageCache update is triggered in fileSelectionChange, which is also executed when the
-    change file event is fired.
-    */
-    metadataLoaded = false;
-
-    /* The first time a folder is selected the datamodel is loaded with all the
-    supported images.  If there are no supported images then do some cleanup. If
-    this function has been executed by the load subfolders command then all the
-    subfolders will be recursively loaded into the datamodel.
-    */
-
     uncheckAllFilters();
 
-//    if (G::isTest) testTime.restart();
-
+    // load datamodel
     if (!dm->load(currentViewDirPath, subFoldersAction->isChecked())) {
         qWarning() << "Datamodel Failed To Load for" << currentViewDirPath;
         stopAndClearAll();
@@ -1576,8 +1566,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     G::isNewSelection = false;
 //    if (current == previous) return;
 
-   /*
+//   /*
     qDebug() << "\n" << __FUNCTION__
+             << "src =" << src
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
@@ -1730,7 +1721,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
            )
         {
 //            if (G::useLinearLoading)
-                emit setImageCachePosition(dm->currentFilePath);
+                emit setImageCachePosition(dm->currentFilePath, __FUNCTION__);
 //            else
 //                emit setImageCachePosition2(dm->currentFilePath);
         }
@@ -2092,7 +2083,6 @@ void MW::loadLinearNewFolder()
     Load metadata and thumbnails in GUI thread instead of MdCache.  metadataCacheThread is
     still used (as a separate thread) for updating icons when scroll, resize or change icon
     selection.
-
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     MetadataCache *mct = metadataCacheThread;
@@ -2123,21 +2113,76 @@ void MW::loadLinearNewFolder()
 
     setCentralMessage("Reading all metadata.");
     updateMetadataThreadRunStatus(true, true, __FUNCTION__);
-//    mct->readAllMetadata();
     dm->addAllMetadata();
-//    qDebug() << __FUNCTION__ << G::t.elapsed() << "ms";
 
-//    mct->readMetadataChunk();
+    // have to wait for the data before resize table columns
+    tableView->resizeColumnsToContents();
+    tableView->setColumnWidth(G::PathColumn, 24+8);
+
+    // read icons
     updateIconBestFit();
     updateIconsVisible(currentRow);
     setCentralMessage("Reading icon chunk (up to 3000).");
     mct->readIconChunk();
     updateMetadataThreadRunStatus(false, true, __FUNCTION__);
-    // no sorting or filtering until all metadata loaded
+
+    // re-enable sorting and filtering
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
+
+    // start image cache
     G::metaCacheMB = mct->memRequired();
     loadImageCacheForNewFolder();
+}
+
+void MW::loadImageCacheForNewFolder()
+{
+/*
+    This function is called from MW::loadLinearNewFolder after the metadata chunk has been
+    loaded for a new folder selection. The imageCache loads images until the assigned amount
+    of memory has been consumed or all the images are cached.
+*/
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
+
+    // clear the cache progress bar
+    if(isShowCacheProgressBar) {
+        cacheProgressBar->clearProgress();
+    }
+
+    // set image cache parameters and build image cacheItemList
+    int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
+    if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
+    imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
+        isShowCacheProgressBar, cacheWtAhead);
+
+    // have to wait until image caching thread running before setting flag
+    G::isNewFolderLoaded = true;
+    dm->loadingModel = false;
+
+    /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
+    including current index and file path req'd by mdCache and EmbelProperties...  If
+    folderAndFileSelectionChange has been executed then folderAndFileChangePath will be
+    the file to select in the new folder; otherwise the first file in dm->sf will be
+    selected. */
+    QString fPath = folderAndFileChangePath;
+    folderAndFileChangePath = "";
+    if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
+        thumbView->selectThumb(fPath);
+        gridView->selectThumb(fPath);
+        currentSfIdx = dm->proxyIndexFromPath(fPath);
+    }
+    else {
+        thumbView->selectFirst();
+        gridView->selectFirst();
+        currentSfIdx = dm->sf->index(0,0);
+    }
+//    fileSelectionChange(currentSfIdx, currentSfIdx, __FUNCTION__);
+
+    /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
+       InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
+       would prematurally trigger Metadata::writeXMP */
+    G::isNewFolderLoadedAndInfoViewUpToDate = true;
 }
 
 //void MW::loadMetadataCache2ndPass()
@@ -2478,63 +2523,6 @@ void MW::updateIconBestFit()
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     gridView->bestAspect();
     thumbView->bestAspect();
-}
-
-void MW::loadImageCacheForNewFolder()
-{
-/*
-    This function is signaled from the metadataCacheThread after the metadata chunk has been
-    loaded for a new folder selection. The imageCache loads images until the assigned amount
-    of memory has been consumed or all the images are cached.
-*/
-    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-    setCentralMessage("Initializing the Image Cache");
-    // now that metadata is loaded populate the data model
-    if(isShowCacheProgressBar) {
-        cacheProgressBar->clearProgress();
-//        qApp->processEvents();
-    }
-//    updateIconBestFit();      // rgh make sure req'd
-
-    // have to wait for the data before resize table columns
-    tableView->resizeColumnsToContents();
-    tableView->setColumnWidth(G::PathColumn, 24+8);
-
-    // set image cache parameters and build image cacheItemList
-    int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
-    if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
-    imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
-        isShowCacheProgressBar, cacheWtAhead);
-
-    // have to wait until image caching thread running before setting flag
-    metadataLoaded = true;
-
-    G::isNewFolderLoaded = true;
-    dm->loadingModel = false;
-
-    /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
-    including current index and file path req'd by mdCache and EmbelProperties...  If
-    folderAndFileSelectionChange has been executed then folderAndFileChangePath will be
-    the file to select in the new folder; otherwise the first file in dm->sf will be
-    selected. */
-    QString fPath = folderAndFileChangePath;
-    folderAndFileChangePath = "";
-    if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
-        thumbView->selectThumb(fPath);
-        gridView->selectThumb(fPath);
-        currentSfIdx = dm->proxyIndexFromPath(fPath);
-    }
-    else {
-        thumbView->selectFirst();
-        gridView->selectFirst();
-        currentSfIdx = dm->sf->index(0,0);
-    }
-    fileSelectionChange(currentSfIdx, currentSfIdx, __FUNCTION__);
-
-    /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
-       InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
-       would prematurally trigger Metadata::writeXMP */
-    G::isNewFolderLoadedAndInfoViewUpToDate = true;
 }
 
 void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
@@ -4828,8 +4816,8 @@ void MW::createImageCache()
             this, &MW::updateCachedStatus);
 
     // Signal to ImageCache new image selection
-    connect(this, SIGNAL(setImageCachePosition(QString)),
-            imageCacheThread, SLOT(setCurrentPosition(QString)));
+    connect(this, &MW::setImageCachePosition,
+            imageCacheThread, &ImageCache::setCurrentPosition);
 
     // Send message to setCentralMsg
     connect(imageCacheThread, &ImageCache::centralMsg,
@@ -6101,7 +6089,7 @@ void MW::setImageCacheParameters()
     QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     // set position in image cache
     if (fPath.length())
-        imageCacheThread->setCurrentPosition(fPath);
+        imageCacheThread->setCurrentPosition(fPath, __FUNCTION__);
 
     // cache progress bar
     progressLabel->setVisible(isShowCacheProgressBar);
@@ -6368,7 +6356,7 @@ void MW::resortImageCache()
     QString currentFilePath = currentDmIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(currentFilePath, __FUNCTION__);
     // change to ImageCache
-    imageCacheThread->setCurrentPosition(dm->currentFilePath);
+    imageCacheThread->setCurrentPosition(dm->currentFilePath, __FUNCTION__);
 //    emit setImageCachePosition(dm->currentFilePath);
 }
 
@@ -7814,7 +7802,6 @@ QString MW::diagnostics()
     rpt << "\n" << "dragDropFolderPath = " << G::s(dragDropFolderPath);
     rpt << "\n" << "maxThumbSpaceHeight = " << G::s(maxThumbSpaceHeight);
     rpt << "\n" << "pickMemSize = " << G::s(pickMemSize);
-    rpt << "\n" << "metadataLoaded = " << G::s(metadataLoaded);
     rpt << "\n" << "ignoreDockResize = " << G::s(ignoreDockResize);
     rpt << "\n" << "wasThumbDockVisible = " << G::s(wasThumbDockVisible);
     rpt << "\n" << "workspaceChange = " << G::s(workspaceChange);
@@ -12048,7 +12035,8 @@ void MW::slideShow()
         delete slideShowTimer;
         cacheProgressBar->setVisible(true);
         // change to ImageCache
-        if (useImageCache) imageCacheThread->setCurrentPosition(dm->currentFilePath);
+        if (useImageCache)
+            imageCacheThread->setCurrentPosition(dm->currentFilePath, __FUNCTION__);
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
         for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);
