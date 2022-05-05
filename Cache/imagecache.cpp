@@ -580,6 +580,7 @@ bool ImageCache::cacheUpToDate()
 */
     isCacheUpToDate = false;
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
+        if (i >= icd->cacheItemList.count()) break;
         // check if image was passed over while rapidly traversing the folder
         if (icd->cacheItemList.at(i).isCached && icd->cacheItemList.at(i).threadId == -1) {
             icd->cacheItemList[i].isCached = false;
@@ -678,6 +679,7 @@ void ImageCache::removeFromCache(QStringList &pathList)
     for (int i = pathList.count() - 1; i > -1; --i) {
         QString fPath = pathList.at(i);
         icd->imCache.remove(fPath);
+        if (cacheKeyHash.contains(fPath)) cacheKeyHash.remove(fPath);
         for (int j = 0; j < icd->cacheItemList.length(); ++j) {
             if (icd->cacheItemList.at(j).fPath == fPath) {
                 icd->cacheItemList.removeAt(j);
