@@ -1325,19 +1325,19 @@ void MW::handleStartupArgs(const QString &args)
             }
         }
 
-        // create an instance of EmbelExport and process the incoming
+        // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
 
-        // get the location for the embellished files
+        // export get the location for the embellished files
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
+        setCentralMessage("Loading " + fPath + " ...");
+        QApplication::processEvents();
         info.setFile(fPath);
         QString fDir = info.dir().absolutePath();
         fsTree->getImageCount(fDir, true, __FUNCTION__);
         // go there ...
         fsTree->select(fDir);
         folderAndFileSelectionChange(fPath);
-//        loupeDisplay();
-//        thumbView->selectThumb(fPath);
     }
     else {
         QFileInfo f(argList.at(1));

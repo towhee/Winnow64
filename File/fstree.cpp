@@ -393,7 +393,7 @@ void FSTree::getVisibleImageCount(QString src)
         getImageCount(dirPath, false, src);
         idx = indexBelow(idx);
     }
-    emit updateFileCount("Select folder.");
+//    emit updateFileCount("Select folder.");
 
 }
 
