@@ -379,7 +379,7 @@ public slots:
     void slideshowHelpMsg();
 
 signals:
-    void setImageCachePosition(QString);
+    void setImageCachePosition(QString, QString);
     void setImageCachePosition2(QString);
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     void closeZoomDlg();
@@ -1041,7 +1041,6 @@ private:
     QPoint prevScreenLoc = QPoint(-1,-1);   // the centroid of Winnow window in monitor
     qreal prevDevicePixelRatio = -1;
 
-    bool metadataLoaded;
     bool ignoreDockResize;
     bool wasThumbDockVisible;
     bool workspaceChange;

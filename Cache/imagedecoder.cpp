@@ -44,6 +44,7 @@ void ImageDecoder::stop()
         wait();
         abort = false;
     }
+    quit();
 }
 
 bool ImageDecoder::quit()

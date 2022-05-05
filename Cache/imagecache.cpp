@@ -129,6 +129,9 @@ int ImageCache::getImCacheSize()
             cacheMB += icd->cacheItemList.at(i).sizeMB;
         }
     }
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__ << "   cache size =" << cacheMB;
+    }
     return cacheMB;
 }
 
@@ -149,14 +152,14 @@ void ImageCache::setKeyToCurrent()
 /*
     cache.key is the index of the item in cacheItemList that matches dm->currentFilePath
 */
-    if (debugCaching) {
-        qDebug().noquote() << __FUNCTION__ << "decoder-1";
-    }
     if (G::isLogger) G::log(__FUNCTION__);
-    icd->cache.key = 0;
+    icd->cache.key = -1;
     for (int i = 0; i < icd->cacheItemList.count(); i++) {
         if (icd->cacheItemList.at(i).fPath == currentPath) {
             icd->cache.key = i;
+            if (debugCaching) {
+                qDebug().noquote() << __FUNCTION__ << "key =" << i;
+            }
             return;
         }
     }
@@ -173,7 +176,7 @@ void ImageCache::setDirection()
 */
     if (G::isLogger) G::log(__FUNCTION__);
     if (debugCaching) {
-        qDebug().noquote() << __FUNCTION__ << "   decoder-1";
+        qDebug().noquote() << __FUNCTION__ << "   decoder -1";
     }
 
     int prevKey = icd->cache.prevKey;
@@ -247,9 +250,9 @@ void ImageCache::setTargetRange()
 */
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    if (debugCaching) {
-        qDebug().noquote() << __FUNCTION__ << " decoder-1";
-    }
+//    if (debugCaching) {
+//        qDebug().noquote() << __FUNCTION__ << " decoder-1";
+//    }
 
     // sort by priority to make it easy to find highest priority not already cached
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::prioritySort);
@@ -293,11 +296,11 @@ void ImageCache::setTargetRange()
 
 //    fixOrphans();     // this slows thngs down
 
-    /*
+//    /*
     if (debugCaching) {
-        qDebug();
+//        qDebug();
         qDebug() << __FUNCTION__
-                 << "targetFirst =" << icd->cache.targetFirst
+                 << " targetFirst =" << icd->cache.targetFirst
                  << "targetLast =" << icd->cache.targetLast
                  << "isForward =" << icd->cache.isForward
                     ;
@@ -575,9 +578,7 @@ bool ImageCache::cacheUpToDate()
 /*
     Determine if all images in the target range are cached or being cached.
 */
-    if (debugCaching) {
-        qDebug() << __FUNCTION__;
-    }
+    isCacheUpToDate = false;
     for (int i = icd->cache.targetFirst; i < icd->cache.targetLast + 1; ++i) {
         // check if image was passed over while rapidly traversing the folder
         if (icd->cacheItemList.at(i).isCached && icd->cacheItemList.at(i).threadId == -1) {
@@ -589,6 +590,14 @@ bool ImageCache::cacheUpToDate()
         // check if caching image is in progress
         if (!icd->cacheItemList.at(i).isCached && !icd->cacheItemList.at(i).isCaching)
             return false;
+    }
+    isCacheUpToDate = true;
+    if (debugCaching) {
+        qDebug() << __FUNCTION__
+                 << "true"
+                 << "targetFirst =" << icd->cache.targetFirst
+                 << "targetLast =" << icd->cache.targetLast
+                    ;
     }
     return true;
 }
@@ -678,7 +687,7 @@ void ImageCache::removeFromCache(QStringList &pathList)
     }
 
     // trigger change to ImageCache
-    setCurrentPosition(dm->currentFilePath);
+    setCurrentPosition(dm->currentFilePath, __FUNCTION__);
 }
 
 void ImageCache::updateStatus(QString instruction, QString source)
@@ -696,6 +705,7 @@ QString ImageCache::diagnostics()
     rpt << "\n" ;
     rpt << "Load algorithm: " << (G::useLinearLoading == true ? "Linear" : "Concurrent");
     rpt << "\n" ;
+    rpt << reportCacheParameters();
     rpt << reportCache("");
     rpt << reportImCache();
 
@@ -703,10 +713,35 @@ QString ImageCache::diagnostics()
     return reportString;
 }
 
+QString ImageCache::reportCacheParameters()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QString reportString;
+    QTextStream rpt;
+    rpt.flush();
+    reportString = "";
+    rpt.setString(&reportString);
+
+    rpt << "\n";
+    rpt << "directionChangeThreshold = " << icd->cache.directionChangeThreshold << "\n";
+    rpt << "wtAhead = " << icd->cache.wtAhead << "\n";
+    rpt << "totFiles = " << icd->cache.wtAhead << "\n";
+    rpt << "currMB = " << icd->cache.currMB << "\n";
+    rpt << "maxMB = " << icd->cache.maxMB << "\n";
+    rpt << "minMB = " << icd->cache.minMB << "\n";
+    rpt << "folderMB = " << icd->cache.folderMB << "\n";
+    rpt << "targetFirst = " << icd->cache.targetFirst << "\n";
+    rpt << "targetLast = " << icd->cache.targetLast << "\n";
+    rpt << "decoderCount = " << icd->cache.decoderCount << "\n";
+    rpt << "\n";
+    rpt << "currentPath = " << currentPath << "\n";
+    rpt << "isCacheUpToDate = " << (isCacheUpToDate ? "true" : "false") << "\n";
+    return reportString;
+}
+
 QString ImageCache::reportCache(QString title)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
     QString reportString;
     QTextStream rpt;
     rpt.flush();
@@ -1062,7 +1097,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     surplus cached images (not in the filtered dataset) are removed from imCache.
     The image cache is now ready to run by calling setCachePosition().
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     if(dm->sf->rowCount() == 0) return;
 
     /*
@@ -1154,7 +1189,7 @@ void ImageCache::cacheSizeChange()
     }
 }
 
-void ImageCache::setCurrentPosition(QString path)
+void ImageCache::setCurrentPosition(QString path, QString src)
 {
     /*
     Called from MW::fileSelectionChange to reset the position in the image cache. The image
@@ -1162,7 +1197,8 @@ void ImageCache::setCurrentPosition(QString path)
     */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, path);
     if (debugCaching) {
-        qDebug().noquote() << __FUNCTION__ << path;
+        qDebug();
+        qDebug().noquote() << __FUNCTION__ << path << "src =" << src;
     }
     mutex.lock();
     currentPath = path;
@@ -1269,10 +1305,16 @@ bool ImageCache::fillCache(int id, bool positionChange)
             setTargetRange();
             if (cacheSizeHasChanged) makeRoom(0, 0);
         }
-   }
+    }
     if (id == -1) {
-        if (cacheUpToDate()) return true;
-        else return false;
+        if (cacheUpToDate()) {
+            qDebug().noquote() << __FUNCTION__ << "      cacheUpToDate = true  id = -1";
+            return true;
+        }
+        else {
+            qDebug().noquote() << __FUNCTION__ << "      cacheUpToDate = false  id = -1";
+            return false;
+        }
     }
 
     int cacheKey = -1;

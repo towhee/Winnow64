@@ -1,0 +1,83 @@
+10 MW::folderSelectionChange                          D:/Pictures/Calendar_Cats v
+1,364 MW::stopAndClearAll
+30,861 DataModel::clearDataModel
+ 0 DataModel::load                                    clearDataModel
+28,963 DataModel::clearDataModel
+2,572 DataModel::load                                    continue loading
+857 DataModel::addFileData                             13 images
+ 8 FSTree::updateFolderImageCount
+810 MW::loadLinearNewFolder
+919,413 DataModel::addAllMetadata
+184 MW::updateIconBestFit
+ 1 MW::updateIconsVisible                             0
+29 IconView::calcViewportRange
+48,099 MetadataCache::readIconChunk
+4,494 MW::loadImageCacheForNewFolder
+90 ImageCache::initImageCache
+6,019 ImageCache::buildImageCacheList
+27 IconView::selectionChanged
+185 MW::fileSelectionChange                            IconView::selectionChanged D:/Pictures/Calendar_Cats v/2013-07-18_0002.jpg
+ 8 ImageView::loadImage                               D:/Pictures/Calendar_Cats v/2013-07-18_0002.jpg Src:MW::fileSelectionChange
+2,197 ImageView::loadImage                               D:/Pictures/Calendar_Cats v/2013-07-18_0002.jpg isCached =false
+ 6 MW::updateIconsVisible                             0
+ 4 IconView::calcViewportRange
+434 MetadataCache::fileSelectionChange
+ImageCache::setCurrentPosition D:/Pictures/Calendar_Cats v/2013-07-18_0002.jpg
+1,355 ImageCache::setCurrentPosition                     D:/Pictures/Calendar_Cats v/2013-07-18_0002.jpg
+1,352 ImageCache::setCurrentPosition                     D:/Pictures/Calendar_Cats v/2013-07-18_0002.jpg
+1,466 MetadataCache::run                                 action = NewFileSelected foundItemsToLoad = false
+ImageCache::run
+ImageCache::setKeyToCurrent decoder-1
+ImageCache::setDirection    decoder-1
+ImageCache::setPriorities   decoder-1 key = 0
+ImageCache::setTargetRange  decoder-1
+177 ImageCache::run
+ImageCache::cacheUpToDate
+ 2 MW::updateIconsVisible                             -1
+ImageCache::fillCache       decoder 0 row = -1   isRunning = false
+ImageCache::nextToCache     decoder 0 row = 0    threadId = -1 priority = 0 isCaching = false isCached = false attempts = 0
+ImageCache::decodeNextImage decoder 0 row = 0    threadId = 0 isCaching = true isCached = false attempts = 1 D:/Pictures/Calendar_Cats v/2013-07-18_0002.jpg
+138 IconView::scannedViewportRange
+ImageCache::fillCache       decoder 1 row = -1   isRunning = false
+ImageCache::nextToCache     decoder 1 row = 1    threadId = -1 priority = 1 isCaching = false isCached = false attempts = 0
+ImageCache::decodeNextImage decoder 1 row = 1    threadId = 1 isCaching = true isCached = false attempts = 1 D:/Pictures/Calendar_Cats v/2013-08-03_0097.jpg
+
+
+DataModel::imMetadata Metadata not loaded to model for "D:/Pictures/Test/Eva painting PNG.png"
+ImageCache::setCurrentPosition D:/Pictures/Test/Eva painting PNG.png src = MW::fileSelectionChange
+ImageCache::run
+ImageCache::setKeyToCurrent decoder-1
+ImageCache::setDirection    decoder-1
+ImageCache::setPriorities   decoder-1 key = 0
+ImageCache::setTargetRange  targetFirst = 0 targetLast = 0 isForward = false
+ImageCache::fillCache       cacheUpToDate  id = 1
+ImageCache::fillCache       decoder 0 row = -1   isRunning = false
+ImageCache::nextToCache     decoder 0 row = 0    threadId = -1 priority = 0 isCaching = false isCached = false attempts = 0
+ImageCache::decodeNextImage decoder 0 row = 0    threadId = 0 isCaching = true isCached = false attempts = 1 D:/Pictures/Test/Eva painting PNG.png
+ImageCache::fillCache       decoder 1 row = -1   isRunning = false
+ImageCache::fixOrphans      No orphans found
+ImageCache::fillCache       decoder 1 cacheUpToDate = true
+ImageCache::fillCache       decoder 2 row = -1   isRunning = false
+ImageCache::fillCache       decoder 2 cacheUpToDate = true
+ImageCache::fillCache       decoder 3 row = -1   isRunning = false
+ImageCache::fillCache       decoder 3 cacheUpToDate = true
+ImageCache::fillCache       decoder 4 row = -1   isRunning = false
+ImageCache::fillCache       decoder 4 cacheUpToDate = true
+ImageCache::fillCache       decoder 5 row = -1   isRunning = false
+ImageCache::fillCache       decoder 5 cacheUpToDate = true
+ImageCache::fillCache       decoder 6 row = -1   isRunning = false
+ImageCache::fillCache       decoder 6 cacheUpToDate = true
+ImageCache::fillCache       decoder 7 row = -1   isRunning = false
+ImageCache::fillCache       decoder 7 cacheUpToDate = true
+ImageCache::setCurrentPosition D:/Pictures/Test/Eva painting PNG.png src = MW::fileSelectionChange
+ImageCache::run
+ImageCache::setKeyToCurrent decoder-1
+ImageCache::setDirection    decoder-1
+ImageCache::setPriorities   decoder-1 key = 0
+ImageCache::setTargetRange  targetFirst = 0 targetLast = 0 isForward = false
+ImageCache::fillCache       cacheUpToDate  id = 1
+ImageCache::cacheUpToDate true targetFirst = 0 targetLast = 0
+ImageCache::run Cache up to date
+ImageCache::fillCache       decoder 0 row = 0    isRunning = false D:/Pictures/Test/Eva painting PNG.png
+ImageCache::cacheImage      decoder 0 row = 0    D:/Pictures/Test/Eva painting PNG.png
+ImageCache::fillCache       decoder 0 cacheUpToDate = true
