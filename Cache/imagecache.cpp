@@ -166,6 +166,17 @@ void ImageCache::setKeyToCurrent()
     qWarning() << __FUNCTION__ << "FPATH NOT FOUND:" << currentPath;
 }
 
+int ImageCache::keyFromPath(QString path)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    for (int i = 0; i < icd->cacheItemList.count(); i++) {
+        if (icd->cacheItemList.at(i).fPath == path) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 void ImageCache::setDirection()
 {
 /*
@@ -675,7 +686,8 @@ void ImageCache::removeFromCache(QStringList &pathList)
     Called when delete an image.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
+
+    // remove items from icd->cacheItemList, i
     for (int i = pathList.count() - 1; i > -1; --i) {
         QString fPath = pathList.at(i);
         icd->imCache.remove(fPath);
@@ -688,8 +700,20 @@ void ImageCache::removeFromCache(QStringList &pathList)
         icd->cache.totFiles = icd->cacheItemList.length();
     }
 
+    // redo keys (rows) in icd->cacheItemList to make contiguous ie 1,2,3; not 1,2,4
+    // and update cache memory
+    icd->cache.currMB = 0;
+    for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+        icd->cacheItemList[i].key = i;
+        icd->cacheItemList[i].origKey = i;
+        if (icd->cacheItemList[i].isCached) {
+            icd->cache.currMB += icd->cacheItemList[i].sizeMB;
+        }
+    }
+    memChk();
+
     // trigger change to ImageCache
-    setCurrentPosition(dm->currentFilePath, __FUNCTION__);
+//    setCurrentPosition(dm->currentFilePath, __FUNCTION__);
 }
 
 void ImageCache::updateStatus(QString instruction, QString source)
@@ -843,18 +867,112 @@ QString ImageCache::reportCache(QString title)
 
 QString ImageCache::reportImCache()
 {
-    QString reportString;
-    QTextStream rpt;
-    rpt.flush();
-    reportString = "";
-    rpt.setString(&reportString);
-    rpt << "\nimCache hash:";
     QHash<QString, QImage>::iterator i;
     QVector<QString> keys;
     // check when imCache is empty
     QImage image;
     icd->imCache.getKeys(keys);
+
+    // build list of report items
+    struct ImRptItem {
+        int hashKey;
+        int cacheItemListKey;
+        int priorityKey;
+        int w;
+        int h;
+        int bytes;
+        QString fPath;
+    } imRptItem;
+    QList<ImRptItem> rptList;
     for (int i = 0; i < keys.length(); ++i) {
+        imRptItem.hashKey = i;
+        imRptItem.fPath = keys.at(i);
+        imRptItem.cacheItemListKey = keyFromPath(imRptItem.fPath);
+        for (int j = 0; j < priorityList.length(); j++) {
+            if (priorityList.at(j) == imRptItem.cacheItemListKey) {
+                imRptItem.priorityKey = j;
+                break;
+            }
+        }
+        icd->imCache.find(keys.at(i), image);
+        imRptItem.w = image.width();
+        imRptItem.h = image.height();
+        imRptItem.bytes = image.sizeInBytes();
+        rptList.append(imRptItem);
+    }
+
+    // report header
+    QString reportString;
+    QTextStream rpt;
+    rpt.flush();
+    reportString = "";
+    rpt.setString(&reportString);
+    rpt << "\nimCache hash: ";
+    rpt << keys.length() << " items";
+
+    rpt << "\n";
+    rpt.reset();
+    rpt.setFieldAlignment(QTextStream::AlignRight);
+    rpt.setFieldWidth(6);
+    rpt << "Hash";
+    rpt.setFieldWidth(10);
+    rpt << "Priority";
+    rpt.setFieldWidth(6);
+    rpt << "Key" << "W" << "H";
+    rpt.setFieldWidth(10);
+    rpt << "Bytes";
+    rpt.reset();
+    rpt.setFieldAlignment(QTextStream::AlignLeft);
+    rpt << "  " << "Path";
+    rpt << "\n";
+
+    // report each item, sorted by priority
+    int lastPriority = -1;
+    int nextPriority;
+    int item;
+    for (int i = 0; i < rptList.length(); ++i) {
+        nextPriority = 999999;
+        // find next lowest priority item
+        for (int j = 0; j < rptList.length(); ++j) {
+            int thisPriority = rptList.at(j).priorityKey;
+            if (thisPriority > lastPriority && thisPriority < nextPriority) {
+                nextPriority = thisPriority;
+                item = j;
+            }
+        }
+        lastPriority = nextPriority;
+
+        // report this item
+        rpt.reset();
+        rpt.setFieldAlignment(QTextStream::AlignRight);
+        rpt.setFieldWidth(6);
+        rpt << rptList.at(item).hashKey;
+        rpt.setFieldWidth(10);
+        rpt << rptList.at(item).priorityKey;
+        rpt.setFieldWidth(6);
+        rpt << rptList.at(item).cacheItemListKey;
+        rpt << rptList.at(item).w;
+        rpt << rptList.at(item).h;
+        rpt.setFieldWidth(10);
+        rpt << rptList.at(item).bytes;
+        rpt.reset();
+        rpt.setFieldAlignment(QTextStream::AlignLeft);
+        rpt << "  ";
+        rpt << rptList.at(item).fPath;
+        rpt << "\n";
+    }
+    return reportString;
+
+    for (int i = 0; i < keys.length(); ++i) {
+        QString fPath = keys.at(i);
+        int cacheItemListKey = keyFromPath(fPath);
+        int priorityKey;
+        for (int j = 0; j < priorityList.length(); j++) {
+            if (priorityList.at(j) == cacheItemListKey) {
+                priorityKey = j;
+                break;
+            }
+        }
         icd->imCache.find(keys.at(i), image);
         int w = image.width();
         int h = image.height();
@@ -864,6 +982,11 @@ QString ImageCache::reportImCache()
         rpt.setFieldAlignment(QTextStream::AlignLeft);
         rpt.setFieldWidth(6);
         rpt << i;
+        rpt << " row = " << cacheItemListKey;
+        rpt.setFieldWidth(12);
+        rpt << " priority = ";
+        rpt.setFieldWidth(6);
+        rpt << priorityKey;
         rpt.setFieldWidth(4);
         rpt << " w = ";
         rpt.setFieldWidth(6);

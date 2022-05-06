@@ -12428,10 +12428,17 @@ void MW::copy()
 void MW::deleteFiles()
 {
 /*
-    Build a QStringList of the selected files, delete from disk, remove from datamodel, remove
-    from ImageCache and update the image cache status bar.
+    Build a QStringList of the selected files, delete from disk, remove from datamodel,
+    remove from ImageCache and update the image cache status bar.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+
+    // make sure datamodel is loaded
+    if (!G::allMetadataLoaded) {
+        G::popUp->showPopup("Cannot delete images before all images have been added, 1500");
+        return;
+    }
+
     if (deleteWarning) {
         QMessageBox msgBox;
         int msgBoxWidth = 300;

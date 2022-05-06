@@ -113,6 +113,7 @@ private:
     void fixOrphans();              // outside target range with isCached == true
     void makeRoom(int id, int cacheKey); // remove images from cache until there is roomRqd
     void memChk();                  // still room in system memory for cache?
+    int keyFromPath(QString path);
     static bool prioritySort(const ImageCacheData::CacheItem &p1,
                              const ImageCacheData::CacheItem &p2);
     static bool keySort(const ImageCacheData::CacheItem &k1,

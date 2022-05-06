@@ -314,7 +314,10 @@ void DataModel::remove(QString fPath)
     for (row = 0; row < rowCount(); ++row) {
         QString rowPath = index(row, 0).data(G::PathRole).toString();
         if (rowPath == fPath) {
+            QModelIndex par;
+            beginRemoveRows(par, row, row);
             removeRow(row);
+            endRemoveRows();
             break;
         }
     }
