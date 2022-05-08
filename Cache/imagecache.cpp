@@ -65,7 +65,7 @@ ImageCache::ImageCache(QObject *parent,
     }
     restart = false;
     abort = false;
-    debugCaching = true;
+    debugCaching = false;
 }
 
 ImageCache::~ImageCache()
@@ -1403,11 +1403,9 @@ bool ImageCache::fillCache(int id, bool positionChange)
     }
     if (id == -1) {
         if (cacheUpToDate()) {
-            qDebug().noquote() << __FUNCTION__ << "      cacheUpToDate = true  id = -1";
             return true;
         }
         else {
-            qDebug().noquote() << __FUNCTION__ << "      cacheUpToDate = false  id = -1";
             return false;
         }
     }

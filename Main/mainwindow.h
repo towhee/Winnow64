@@ -18,6 +18,9 @@
 
 #include "Main/global.h"
 #include "Main/widgetcss.h"
+
+//#include "Main/menusandactions.h"
+
 #include "appdlg.h"
 #include "Datamodel/datamodel.h"
 #include "Datamodel/filters.h"
@@ -99,6 +102,7 @@ class MW : public QMainWindow
     friend class IconView;          // mw2
     friend class EmbelProperties;   // mw3
     friend class InfoString;        // mw4
+//    friend class MenusAndActions;   // mw
 
 public:
     MW(const QString args, QWidget *parent = nullptr);
