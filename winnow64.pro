@@ -163,9 +163,14 @@ SOURCES += Cache/cachedata.cpp \
     Cache/metareader.cpp \
     Main/diagnostics.cpp \
     Main/initialize.cpp \
+    Main/log.cpp \
     Main/menusandactions.cpp \
+    Main/navigate.cpp \
+    Main/selection.cpp \
+    Main/setandupdate.cpp \
     Main/slideshow.cpp \
     Main/sortandfilter.cpp \
+    Main/test.cpp \
     Main/viewmodes.cpp \
     Main/workspaces.cpp
 SOURCES += Cache/imagecache.cpp
