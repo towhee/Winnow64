@@ -160,7 +160,9 @@ HEADERS += Views/tableview.h
 
 SOURCES += Cache/cachedata.cpp \
     Cache/metaread.cpp \
-    Cache/metareader.cpp
+    Cache/metareader.cpp \
+    Main/menusandactions.cpp \
+    Main/workspaces.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/mdcache.cpp
