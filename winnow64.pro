@@ -45,7 +45,6 @@ QT += concurrent
 QT += network
 
 HEADERS += Cache/mdcache.h \
-    Cache/imagecache2.h \
     Cache/metaread.h \
     Cache/metareader.h
 HEADERS += Cache/cachedata.h
@@ -160,7 +159,6 @@ HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
 SOURCES += Cache/cachedata.cpp \
-    Cache/imagecache2.cpp \
     Cache/metaread.cpp \
     Cache/metareader.cpp
 SOURCES += Cache/imagecache.cpp

@@ -42,8 +42,6 @@
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
 
-// loadversion2
-#include "Cache/imagecache2.h"
 #include "Cache/metaread.h"
 
 //#ifdef Q_OS_WIN
@@ -127,9 +125,6 @@ public:
     bool useImageView = true;
     bool useUpdateStatus = true;
     bool useFilterView = true;
-
-    // loadversion2
-//    bool useLinearLoadProcess = false;
 
     int copyCutCount;   // rgh req'd?
     QTextStream rpt;
@@ -485,7 +480,6 @@ private slots:
                                 ImageCacheData::Cache cache,
                                 QString source);
     // caching
-    // loadversion2
     void loadConcurrent(MetaRead::Action action = MetaRead::FileSelection,
                         int sfRow = 0,
                         QString src = "");
@@ -991,7 +985,6 @@ private:
 
     // loadversion2
     MetaRead *metaRead = nullptr;
-    ImageCache2 *imageCacheThread2;
 
     Thumb *thumb;
     InfoView *infoView;
@@ -1112,7 +1105,6 @@ private:
     void createBookmarks();
     void createMDCache();
     void createImageCache();
-    void createImageCache2();
     void createCentralWidget();
     void createCompareView();
     void createDataModel();
