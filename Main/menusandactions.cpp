@@ -1916,3 +1916,138 @@ void MW::addMenuSeparator(QWidget *widget)
     widget->addAction(separator);
 }
 
+void MW::enableEjectUsbMenu(QString path)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    if(Usb::isUsb(path)) ejectAction->setEnabled(true);
+    else ejectAction->setEnabled(false);
+}
+
+void MW::enableSelectionDependentMenus()
+{
+/*
+    rgh check if still working
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
+
+    if(selectionModel->selectedRows().count() > 0) {
+        openWithMenu->setEnabled(true);
+        ingestAction->setEnabled(true);
+        revealFileAction->setEnabled(true);
+//        subFoldersAction->setEnabled(true);
+        addBookmarkAction->setEnabled(true);
+        reportMetadataAction->setEnabled(true);
+        selectAllAction->setEnabled(true);
+        invertSelectionAction->setEnabled(true);
+        refineAction->setEnabled(true);
+        pickAction->setEnabled(true);
+        filterPickAction->setEnabled(true);
+        popPickHistoryAction->setEnabled(true);
+        copyAction->setEnabled(true);
+        rate0Action->setEnabled(true);
+        rate1Action->setEnabled(true);
+        rate2Action->setEnabled(true);
+        rate3Action->setEnabled(true);
+        rate4Action->setEnabled(true);
+        rate5Action->setEnabled(true);
+        label0Action->setEnabled(true);
+        label1Action->setEnabled(true);
+        label2Action->setEnabled(true);
+        label3Action->setEnabled(true);
+        label4Action->setEnabled(true);
+        label5Action->setEnabled(true);
+        rotateRightAction->setEnabled(true);
+        rotateLeftAction->setEnabled(true);
+        keyRightAction->setEnabled(true);
+        keyLeftAction->setEnabled(true);
+        keyUpAction->setEnabled(true);
+        keyDownAction->setEnabled(true);
+        keyHomeAction->setEnabled(true);
+        keyEndAction->setEnabled(true);
+        nextPickAction->setEnabled(true);
+        prevPickAction->setEnabled(true);
+//        clearAllFiltersAction->setEnabled(true);
+        filterPickAction->setEnabled(true);
+        filterRating1Action->setEnabled(true);
+        filterRating2Action->setEnabled(true);
+        filterRating3Action->setEnabled(true);
+        filterRating4Action->setEnabled(true);
+        filterRating5Action->setEnabled(true);
+        filterRedAction->setEnabled(true);
+        filterYellowAction->setEnabled(true);
+        filterGreenAction->setEnabled(true);
+        filterBlueAction->setEnabled(true);
+        filterPurpleAction->setEnabled(true);
+//        filterInvertAction->setEnabled(true);
+        sortGroupAction->setEnabled(true);
+        sortReverseAction->setEnabled(true);
+        zoomToAction->setEnabled(true);
+        zoomInAction->setEnabled(true);
+        zoomOutAction->setEnabled(true);
+        zoomToggleAction->setEnabled(true);
+//        thumbsWrapAction->setEnabled(true);
+        thumbsEnlargeAction->setEnabled(true);
+        thumbsShrinkAction->setEnabled(true);
+    }
+    else {
+        openWithMenu->setEnabled(false);
+        ingestAction->setEnabled(false);
+        revealFileAction->setEnabled(false);
+//        subFoldersAction->setEnabled(false);
+        addBookmarkAction->setEnabled(false);
+        reportMetadataAction->setEnabled(false);
+        selectAllAction->setEnabled(false);
+        invertSelectionAction->setEnabled(false);
+        refineAction->setEnabled(false);
+        pickAction->setEnabled(false);
+        filterPickAction->setEnabled(false);
+        popPickHistoryAction->setEnabled(false);
+        copyAction->setEnabled(false);
+        rate0Action->setEnabled(false);
+        rate1Action->setEnabled(false);
+        rate2Action->setEnabled(false);
+        rate3Action->setEnabled(false);
+        rate4Action->setEnabled(false);
+        rate5Action->setEnabled(false);
+        label0Action->setEnabled(false);
+        label1Action->setEnabled(false);
+        label2Action->setEnabled(false);
+        label3Action->setEnabled(false);
+        label4Action->setEnabled(false);
+        label5Action->setEnabled(false);
+        rotateRightAction->setEnabled(false);
+        rotateLeftAction->setEnabled(false);
+        keyRightAction->setEnabled(false);
+        keyLeftAction->setEnabled(false);
+        keyUpAction->setEnabled(false);
+        keyDownAction->setEnabled(false);
+        keyHomeAction->setEnabled(false);
+        keyEndAction->setEnabled(false);
+        nextPickAction->setEnabled(false);
+        prevPickAction->setEnabled(false);
+//        clearAllFiltersAction->setEnabled(false);
+//        filterPickAction->setEnabled(false);
+//        filterRating1Action->setEnabled(false);
+//        filterRating2Action->setEnabled(false);
+//        filterRating3Action->setEnabled(false);
+//        filterRating4Action->setEnabled(false);
+//        filterRating5Action->setEnabled(false);
+//        filterRedAction->setEnabled(false);
+//        filterYellowAction->setEnabled(false);
+//        filterGreenAction->setEnabled(false);
+//        filterBlueAction->setEnabled(false);
+//        filterPurpleAction->setEnabled(false);
+//        filterInvertAction->setEnabled(false);
+//        sortGroupAction->setEnabled(false);
+//        sortReverseAction->setEnabled(false);
+
+        zoomToAction->setEnabled(false);
+        zoomInAction->setEnabled(false);
+        zoomOutAction->setEnabled(false);
+        zoomToggleAction->setEnabled(false);
+//        thumbsWrapAction->setEnabled(false);
+        thumbsEnlargeAction->setEnabled(false);
+        thumbsShrinkAction->setEnabled(false);
+    }
+}
+

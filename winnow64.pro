@@ -161,7 +161,12 @@ HEADERS += Views/tableview.h
 SOURCES += Cache/cachedata.cpp \
     Cache/metaread.cpp \
     Cache/metareader.cpp \
+    Main/diagnostics.cpp \
+    Main/initialize.cpp \
     Main/menusandactions.cpp \
+    Main/slideshow.cpp \
+    Main/sortandfilter.cpp \
+    Main/viewmodes.cpp \
     Main/workspaces.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
