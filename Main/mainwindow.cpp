@@ -612,11 +612,10 @@ void MW::closeEvent(QCloseEvent *event)
     }
 
     setCentralMessage("Closing Winnow ...");
+    metaRead->stop();
+    imageCacheThread->stop();
     metadataCacheThread->stopMetadataCache();
-    imageCacheThread->stopImageCache();
-    // loadversion2
     if (!G::useLinearLoading) {
-        metaRead->stop();
     }
     if (filterDock->isVisible()) {
         folderDock->raise();
@@ -1819,11 +1818,11 @@ void MW::stopAndClearAll(QString src)
     G::stop = true;
     // Stop any threads that might be running.
     metadataCacheThread->stopMetadataCache();
-    imageCacheThread->stopImageCache();
+    imageCacheThread->stop();
     buildFilters->stop();
 
     imageView->clear();
-    setCentralMessage("Preparing to load new folder.");
+//    setCentralMessage("Preparing to load new folder.");
     setWindowTitle(winnowWithVersion);
     G::isNewFolderLoaded = false;
     G::allMetadataLoaded = false;
@@ -12517,14 +12516,13 @@ void MW::deleteFiles()
     // remove selected from imageCache
     imageCacheThread->removeFromCache(sldm);
 
-    // update cursor position on progressBar
-    imageCacheThread->updateStatus("Update all rows", __FUNCTION__);
+//    // update cursor position on progressBar
+//    imageCacheThread->updateStatus("Update all rows", __FUNCTION__);
 
     // update current index
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
     thumbView->setCurrentIndex(sfIdx);
-    qDebug() << __FUNCTION__ << "Calling fileSelectionChange";
     fileSelectionChange(sfIdx, sfIdx, __FUNCTION__);
 }
 

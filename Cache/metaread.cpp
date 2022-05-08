@@ -383,18 +383,10 @@ void MetaRead::run()
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
 
-//    if (action == Scroll || action == SizeChange) {
-//        if (G::allMetadataLoaded) {
-//            updateIcons();
-//            return;
-//        }
-//    }
-
     // new folder or file selection change
     buildMetadataPriorityQueue(sfStart);
     if (abort) return;
     int n = static_cast<int>(priorityQueue.size());
-//    bool imageCachingStarted = false;
     for (int i = 0; i < n; i++) {
         readRow(priorityQueue.at(i));
         if (abort) return;
