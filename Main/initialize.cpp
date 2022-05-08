@@ -1178,3 +1178,12 @@ void MW::createDocks()
     if (!hideEmbellish) if (useInfoView) MW::tabifyDockWidget(metadataDock, embelDock);
 }
 
+void MW::createMessageView()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    messageView = new QWidget;
+    msg.setupUi(messageView);
+//    Ui::message ui;
+//    ui.setupUi(messageView);
+}
+

@@ -1,5 +1,20 @@
 #include "Main/mainwindow.h"
 
+void MW::setCentralView()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (!isSettings) return;
+    if (asLoupeAction->isChecked()) loupeDisplay();
+    if (asGridAction->isChecked()) gridDisplay();
+    if (asTableAction->isChecked()) tableDisplay();
+    if (asCompareAction->isChecked()) compareDisplay();
+    if (currentViewDirPath == "") {
+        QString msg = "Select a folder or bookmark to get started.";
+        setCentralMessage(msg);
+        prevMode = "Loupe";
+    }
+}
+
 void MW::loupeDisplay()
 {
 /*

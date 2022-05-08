@@ -890,3 +890,24 @@ void MW::updateColorClassLog(QString fPath, QString label)
     setting->endGroup();
 }
 
+void MW::searchTextEdit()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    // set visibility
+    if (!filterDock->isVisible()) {
+        filterDock->setVisible(true);
+    }
+    // set focus
+    if (filterDock->visibleRegion().isEmpty()) {
+        filterDock->raise();
+    }
+    // set menu status for filterDock in window menu
+    filterDockVisibleAction->setChecked(true);
+
+    // Goto item and edit
+    filters->scrollToItem(filters->search);
+    filters->expandItem(filters->search);
+    filters->editItem(filters->searchTrue, 0);
+    return;
+}
+
