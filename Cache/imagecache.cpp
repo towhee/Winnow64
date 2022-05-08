@@ -694,16 +694,14 @@ void ImageCache::memChk()
 void ImageCache::removeFromCache(QStringList &pathList)
 {
 /*
-    Called when delete an image.
+    Called when delete image(s).
 */
     if (G::isLogger) G::log(__FUNCTION__);
 
     // remove items from icd->cacheItemList, i
-//    for (int i = pathList.count() - 1; i > -1; --i) {
     for (int i = 0; i < pathList.count(); ++i) {
         QString fPath = pathList.at(i);
         icd->imCache.remove(fPath);
-//        if (cacheKeyHash.contains(fPath)) cacheKeyHash.remove(fPath);
         for (int j = 0; j < icd->cacheItemList.length(); ++j) {
             if (icd->cacheItemList.at(j).fPath == fPath) {
                 icd->cacheItemList.removeAt(j);
@@ -712,10 +710,9 @@ void ImageCache::removeFromCache(QStringList &pathList)
     }
     icd->cache.totFiles = icd->cacheItemList.length();
 
-    // rebuild cacheKeyHash
+    /* redo keys (rows) in icd->cacheItemList to make contiguous ie 1,2,3; not 1,2,4;
+       redo cacheKeyHash and update cache current size */
     cacheKeyHash.clear();
-    // redo keys (rows) in icd->cacheItemList to make contiguous ie 1,2,3; not 1,2,4
-    // and update cache memory
     icd->cache.currMB = 0;
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
         QString fPath = icd->cacheItemList.at(i).fPath;
@@ -726,7 +723,6 @@ void ImageCache::removeFromCache(QStringList &pathList)
         }
         cacheKeyHash[fPath] = i;
     }
-//    memChk();
 }
 
 void ImageCache::updateStatus(QString instruction, QString source)
@@ -880,7 +876,6 @@ QString ImageCache::reportCache(QString title)
 
 QString ImageCache::reportImCache()
 {
-//    QHash<QString, QImage>::iterator i;
     QVector<QString> keys;
     // check when imCache is empty
     QImage image;

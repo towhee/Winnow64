@@ -360,7 +360,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
     createMDCache();            // dependent on DataModel, Metadata, ThumbView
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
-//    createImageCache2();        // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
@@ -615,8 +614,6 @@ void MW::closeEvent(QCloseEvent *event)
     metaRead->stop();
     imageCacheThread->stop();
     metadataCacheThread->stopMetadataCache();
-    if (!G::useLinearLoading) {
-    }
     if (filterDock->isVisible()) {
         folderDock->raise();
         folderDockVisibleAction->setChecked(true);
@@ -1957,7 +1954,7 @@ void MW::updateIconsVisible(int row)
 //    metadataCacheThread->sizeChange(__FUNCTION__);
 }
 
-void MW::loadConcurrent(MetaRead::Action action, int sfRow, QString src)   // loadversion2
+void MW::loadConcurrent(MetaRead::Action action, int sfRow, QString src)
 {
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
@@ -1966,7 +1963,7 @@ void MW::loadConcurrent(MetaRead::Action action, int sfRow, QString src)   // lo
     }
 }
 
-void MW::loadConcurrentNewFolder()   // loadversion2
+void MW::loadConcurrentNewFolder()
 {
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     G::allMetadataLoaded = false;
@@ -1999,7 +1996,7 @@ void MW::loadConcurrentNewFolder()   // loadversion2
     loadConcurrent(MetaRead::FileSelection, 0, __FUNCTION__);
 }
 
-void MW::loadConcurrentMetaDone()   // loadversion2
+void MW::loadConcurrentMetaDone()
 {
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
 
@@ -2034,7 +2031,7 @@ void MW::loadConcurrentMetaDone()   // loadversion2
     tableView->setColumnWidth(G::PathColumn, 24+8);
 }
 
-void MW::loadConcurrentStartImageCache()  // loadversion2
+void MW::loadConcurrentStartImageCache()
 {
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     if (isShowCacheProgressBar) {
@@ -4741,22 +4738,8 @@ void MW::createMDCache()
     connect(metadataCacheThread, &MetadataCache::updateIsRunning,
             this, &MW::updateMetadataThreadRunStatus);
 
-//    connect(metadataCacheThread, &MetadataCache::updateIconBestFit,
-//            this, &MW::updateIconBestFit);
-
     connect(metadataCacheThread, &MetadataCache::selectFirst,
             thumbView, &IconView::selectFirst);
-
-//    connect(metadataCacheThread, &MetadataCache::finished2ndPass,
-//            this, &MW::launchBuildFilters);
-
-//    connect(metadataCacheThread, &MetadataCache::showCacheStatus,
-//            this, &MW::setCentralMessage);
-
-    //    connect(metadataCacheThread, SIGNAL(refreshCurrentAfterReload()),
-    //            this, SLOT(refreshCurrentAfterReload()));
-
-//    connect(metadataCacheThread, &MetadataCache::scrollToCurrent, this, &MW::scrollToCurrentRow);
 
     metaRead = new MetaRead(this, dm);
     metaRead->iconChunkSize = 20;
@@ -4799,10 +4782,6 @@ void MW::createImageCache()
     connect(metadataCacheThread, SIGNAL(loadImageCache()),
             this, SLOT(loadImageCacheForNewFolder()));
 
-    // 2nd pass loading image cache for a new folder
-//    connect(metadataCacheThread, SIGNAL(loadMetadataCache2ndPass()),
-//            this, SLOT(loadMetadataCache2ndPass())/*, Qt::DirectConnection*/);
-
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
 
@@ -4830,47 +4809,6 @@ void MW::createImageCache()
 //    connect(metaRead, &MetaRead::setImageCachePosition,
 //            imageCacheThread, &ImageCache::setCurrentPosition);
 
-}
-
-void MW::createImageCache2()
-{
-//    if (G::isLogger) G::log(__FUNCTION__);
-//    // loadversion2
-//    imageCacheThread2 = new ImageCache2(this, icd, dm);
-
-//    connect(imageCacheThread2, &ImageCache2::updateIsRunning,
-//            this, &MW::updateImageCachingThreadRunStatus);
-
-//    // Update the cache status progress bar when changed in ImageCache
-//    connect(imageCacheThread2, &ImageCache2::showCacheStatus,
-//            this, &MW::updateImageCacheStatus);
-
-//    // Signal from ImageCache::run() to update cache status in datamodel
-//    connect(imageCacheThread2, &ImageCache2::updateCacheOnThumbs,
-//            this, &MW::setCachedStatus);
-
-//    // Signal to ImageCache new image selection
-//    connect(this, &MW::setImageCachePosition2,
-//            imageCacheThread2, &ImageCache2::setCurrentPosition);
-
-//    // Send message to setCentralMsg
-//    connect(imageCacheThread2, &ImageCache2::centralMsg, this, &MW::setCentralMessage);
-
-//    metaRead = new MetaRead(this, dm);
-//    metaRead->iconChunkSize = 20;
-
-//    // add metadata to datamodel
-//    connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
-//    // add to image cache list
-//    connect(metaRead, &MetaRead::addToImageCache,
-//            imageCacheThread2, &ImageCache2::addCacheItemImageMetadata);
-//    // message metadata reading completed
-//    connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
-//    // Signal to MW::loadNew3 to prep and run fileSelectionChange
-//    connect(metaRead, &MetaRead::delayedStartImageCache, this, &MW::loadConcurrentStartImageCache);
-//    // signal to ImageCache new image selection req'd?
-//    connect(metaRead, &MetaRead::setImageCachePosition,
-//            imageCacheThread2, &ImageCache2::setCurrentPosition);
 }
 
 void MW::createThumbView()
@@ -7842,11 +7780,7 @@ void MW::diagnosticsMetadata()
 }
 void MW::diagnosticsXMP() {}
 void MW::diagnosticsMetadataCache() {}
-// loadversion2
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
-//    if (useLinearLoadProcess) diagnosticsReport(imageCacheThread->diagnostics());
-//    else diagnosticsReport(imageCacheThread2->diagnostics());
-//}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
 void MW::diagnosticsErrors() {diagnosticsReport(dm->diagnosticsErrors());}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics());}
@@ -12515,9 +12449,6 @@ void MW::deleteFiles()
 
     // remove selected from imageCache
     imageCacheThread->removeFromCache(sldm);
-
-//    // update cursor position on progressBar
-//    imageCacheThread->updateStatus("Update all rows", __FUNCTION__);
 
     // update current index
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
