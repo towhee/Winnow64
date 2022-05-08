@@ -48,11 +48,13 @@ ImageCache::ImageCache(QObject *parent,
     : QThread(parent)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    // Data is kept in ImageCacheData icd, a concurrent hash table
+
+    // data is kept in ImageCacheData icd, a concurrent hash table
     this->icd = icd;
     this->dm = dm;
+    // new metadata to avoid thread collisions
     metadata = new Metadata;
-//    this->metadata = metadata;
+
     // create n decoder threads
     decoderCount = QThread::idealThreadCount();
     icd->cache.decoderCount = decoderCount;
@@ -63,7 +65,7 @@ ImageCache::ImageCache(QObject *parent,
     }
     restart = false;
     abort = false;
-    debugCaching = false;
+    debugCaching = true;
 }
 
 ImageCache::~ImageCache()
@@ -87,7 +89,7 @@ void ImageCache::clearImageCache(bool includeList)
     updateStatus("Clear", __FUNCTION__);
 }
 
-void ImageCache::stopImageCache()
+void ImageCache::stop()
 {
 /*
     Note that initImageCache and updateImageCache both check if isRunning and stop a running
@@ -96,6 +98,7 @@ void ImageCache::stopImageCache()
     bar will be hidden.
 */
     if (G::isLogger) G::log(__FUNCTION__);
+    abort = true;
 
     // stop decoders
     for (int id = 0; id < decoderCount; ++id) {
@@ -249,7 +252,7 @@ void ImageCache::setDirection()
     //*/
 }
 
-void ImageCache::setTargetRange()
+bool ImageCache::setTargetRange()
 /*
     The target range is the list of images being targeted to cache, based on the current image,
     the direction of travel, the caching strategy and the maximum memory allotted to the image
@@ -261,9 +264,7 @@ void ImageCache::setTargetRange()
 */
 {
     if (G::isLogger) G::log(__FUNCTION__);
-//    if (debugCaching) {
-//        qDebug().noquote() << __FUNCTION__ << " decoder-1";
-//    }
+    bool zeroSizeFound = false;
 
     // sort by priority to make it easy to find highest priority not already cached
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::prioritySort);
@@ -272,6 +273,11 @@ void ImageCache::setTargetRange()
     int sumMB = 0;
     priorityList.clear();
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+        if (icd->cacheItemList.at(i).sizeMB == 0) {
+            qDebug() << __FUNCTION__ << i << "ZERO SIZE" ;
+            zeroSizeFound = false;
+            break;
+        }
         sumMB += icd->cacheItemList.at(i).sizeMB;
         if (sumMB < icd->cache.maxMB) {
             icd->cacheItemList[i].isTarget = true;
@@ -290,6 +296,10 @@ void ImageCache::setTargetRange()
     // return order to key - same as dm->sf (sorted or filtered datamodel)
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::keySort);
 
+    // quit if unable to complete target range
+    if (zeroSizeFound) return false;
+
+    // targetFirst, targetLast
     int i;
     for (i = 0; i < icd->cacheItemList.length(); ++i) {
         if (icd->cacheItemList.at(i).isTarget) {
@@ -333,6 +343,7 @@ bool ImageCache::nextToCache(int id)
     if (G::isLogger) G::log(__FUNCTION__);
 
     for (int p = 0; p < priorityList.size(); p++) {
+        if (abort) return false;
         int i = priorityList.at(p);
 //        if (!icd->cacheItemList.at(i).isMetadata) continue;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
@@ -638,7 +649,7 @@ void ImageCache::makeRoom(int id, int cacheKey)
             room = icd->cache.maxMB - icd->cache.currMB;
             if (debugCaching) {
                 QString k = QString::number(icd->cache.toDecacheKey).leftJustified((4));
-                /*
+//                /*
                 qDebug().noquote() << __FUNCTION__
                          << "       decoder" << id << "key =" << k
                          << "room =" << room
@@ -688,32 +699,34 @@ void ImageCache::removeFromCache(QStringList &pathList)
     if (G::isLogger) G::log(__FUNCTION__);
 
     // remove items from icd->cacheItemList, i
-    for (int i = pathList.count() - 1; i > -1; --i) {
+//    for (int i = pathList.count() - 1; i > -1; --i) {
+    for (int i = 0; i < pathList.count(); ++i) {
         QString fPath = pathList.at(i);
         icd->imCache.remove(fPath);
-        if (cacheKeyHash.contains(fPath)) cacheKeyHash.remove(fPath);
+//        if (cacheKeyHash.contains(fPath)) cacheKeyHash.remove(fPath);
         for (int j = 0; j < icd->cacheItemList.length(); ++j) {
             if (icd->cacheItemList.at(j).fPath == fPath) {
                 icd->cacheItemList.removeAt(j);
             }
         }
-        icd->cache.totFiles = icd->cacheItemList.length();
     }
+    icd->cache.totFiles = icd->cacheItemList.length();
 
+    // rebuild cacheKeyHash
+    cacheKeyHash.clear();
     // redo keys (rows) in icd->cacheItemList to make contiguous ie 1,2,3; not 1,2,4
     // and update cache memory
     icd->cache.currMB = 0;
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+        QString fPath = icd->cacheItemList.at(i).fPath;
         icd->cacheItemList[i].key = i;
         icd->cacheItemList[i].origKey = i;
         if (icd->cacheItemList[i].isCached) {
             icd->cache.currMB += icd->cacheItemList[i].sizeMB;
         }
+        cacheKeyHash[fPath] = i;
     }
-    memChk();
-
-    // trigger change to ImageCache
-//    setCurrentPosition(dm->currentFilePath, __FUNCTION__);
+//    memChk();
 }
 
 void ImageCache::updateStatus(QString instruction, QString source)
@@ -796,7 +809,7 @@ QString ImageCache::reportCache(QString title)
                 << "Caching"
                 << "Thread"
                 << "Cached"
-                << "Contains"
+                << "imCache"
                 << "dmCached"
                 << "SizeMB"
                 << "Loaded"
@@ -867,10 +880,11 @@ QString ImageCache::reportCache(QString title)
 
 QString ImageCache::reportImCache()
 {
-    QHash<QString, QImage>::iterator i;
+//    QHash<QString, QImage>::iterator i;
     QVector<QString> keys;
     // check when imCache is empty
     QImage image;
+    int mem = 0;
     icd->imCache.getKeys(keys);
 
     // build list of report items
@@ -880,7 +894,7 @@ QString ImageCache::reportImCache()
         int priorityKey;
         int w;
         int h;
-        int bytes;
+        int mb;
         QString fPath;
     } imRptItem;
     QList<ImRptItem> rptList;
@@ -897,7 +911,8 @@ QString ImageCache::reportImCache()
         icd->imCache.find(keys.at(i), image);
         imRptItem.w = image.width();
         imRptItem.h = image.height();
-        imRptItem.bytes = image.sizeInBytes();
+        imRptItem.mb = static_cast<int>(imRptItem.w * imRptItem.h * 1.0 / 262144);
+//        imRptItem.mb = image.sizeInBytes() / 1024 / 1024;
         rptList.append(imRptItem);
     }
 
@@ -919,8 +934,7 @@ QString ImageCache::reportImCache()
     rpt << "Priority";
     rpt.setFieldWidth(6);
     rpt << "Key" << "W" << "H";
-    rpt.setFieldWidth(10);
-    rpt << "Bytes";
+    rpt << "MB";
     rpt.reset();
     rpt.setFieldAlignment(QTextStream::AlignLeft);
     rpt << "  " << "Path";
@@ -953,56 +967,17 @@ QString ImageCache::reportImCache()
         rpt << rptList.at(item).cacheItemListKey;
         rpt << rptList.at(item).w;
         rpt << rptList.at(item).h;
-        rpt.setFieldWidth(10);
-        rpt << rptList.at(item).bytes;
+        rpt << rptList.at(item).mb;
         rpt.reset();
         rpt.setFieldAlignment(QTextStream::AlignLeft);
         rpt << "  ";
         rpt << rptList.at(item).fPath;
         rpt << "\n";
+        mem += (rptList.at(item).mb / 1024 / 1024);
     }
-    return reportString;
 
-    for (int i = 0; i < keys.length(); ++i) {
-        QString fPath = keys.at(i);
-        int cacheItemListKey = keyFromPath(fPath);
-        int priorityKey;
-        for (int j = 0; j < priorityList.length(); j++) {
-            if (priorityList.at(j) == cacheItemListKey) {
-                priorityKey = j;
-                break;
-            }
-        }
-        icd->imCache.find(keys.at(i), image);
-        int w = image.width();
-        int h = image.height();
-        int bytes = image.sizeInBytes();
-        rpt << "\n";
-        rpt.reset();
-        rpt.setFieldAlignment(QTextStream::AlignLeft);
-        rpt.setFieldWidth(6);
-        rpt << i;
-        rpt << " row = " << cacheItemListKey;
-        rpt.setFieldWidth(12);
-        rpt << " priority = ";
-        rpt.setFieldWidth(6);
-        rpt << priorityKey;
-        rpt.setFieldWidth(4);
-        rpt << " w = ";
-        rpt.setFieldWidth(6);
-        rpt << w;
-        rpt.setFieldWidth(4);
-        rpt << " h = ";
-        rpt.setFieldWidth(6);
-        rpt << h;
-        rpt << " bytes = ";
-        rpt.setFieldWidth(10);
-        rpt << bytes;
-        rpt.reset();
-        rpt << " ";
-        rpt << keys.at(i);
-    }
     rpt << "\n" << keys.length() << " images in image cache.";
+    rpt << "\n" << mem << " MB consumed";
 
     return reportString;
 }
@@ -1173,7 +1148,7 @@ void ImageCache::initImageCache(int &cacheMaxMB,
     if (!dm->sf->rowCount()) return;
 
     // just in case stopImageCache not called before this
-    if (isRunning()) stopImageCache();
+    if (isRunning()) stop();
 
     // cache is a structure to hold cache management parameters
     icd->cache.key = 0;
@@ -1256,7 +1231,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 
     QVector<QString> keys;
     icd->imCache.getKeys(keys);
-    for (int i =  - 1; i > -1; --i) {
+    for (int i = - 1; i > -1; --i) {
         if (!filteredList.contains(keys.at(i))) icd->imCache.remove(keys.at(i));
     }
 //    for (int i = 0; i < keys.length(); ++i) {
@@ -1377,7 +1352,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
     icd->cacheItemList[cacheKey].isCached = true;
     icd->cache.currMB = getImCacheSize();
     emit updateCacheOnThumbs(decoder[id]->fPath, true, "ImageCache::cacheImage");
-    updateStatus("Update all rows", "ImageCache::run inside loop");
+    updateStatus("Update all rows", "ImageCache::cacheImage");
 }
 
 bool ImageCache::fillCache(int id, bool positionChange)
@@ -1478,7 +1453,8 @@ bool ImageCache::fillCache(int id, bool positionChange)
     }
 
     // get next image to cache (nextToCache() defines cache.toCacheKey)
-    if (!abort && nextToCache(id)) {
+    if (abort) return false;
+    if (nextToCache(id)) {
         decodeNextImage(id);
     }
     else { // caching completed
