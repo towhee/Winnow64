@@ -27,6 +27,7 @@ public:
     } action;
     void read(Action action = Action::FileSelection, int sfRow = 0, QString src = "");
     void initialize();
+    void dmRowRemoved(int dmRow);
     int iconChunkSize;
     int firstVisible;
     int lastVisible;

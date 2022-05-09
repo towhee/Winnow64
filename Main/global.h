@@ -211,9 +211,9 @@ namespace G
 //    extern bool buildingFilters;
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;
-    extern bool isProcessingExportedImages;
     extern bool isRunningColorAnalysis;
     extern bool isRunningStackOperation;
+    extern bool isProcessingExportedImages;
     extern bool isEmbellish;
     extern bool colorManage;
     extern bool modifySourceFiles;

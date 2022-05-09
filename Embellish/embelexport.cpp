@@ -195,7 +195,6 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
         return;
     }
 
-    qDebug() << __FUNCTION__ << embelProperties->templateName;
     if (embelProperties->templateName == "Do not Embellish") {
         G::popUp->showPopup("The current embellish template is 'Do not Embellish'<p>"
                             "Please select an embellish template and try again.<p><hr>"
@@ -308,7 +307,6 @@ void EmbelExport::exportImage(const QString &fPath)
     else {
         exportFolder = exportFolderIfNotSubfolder;
     }
-    qDebug() << __FUNCTION__ << fPath << exportFolder;
     QString exportPath = exportFolder + "/" + baseName + "." + extension;
     QString exportThumbPath = exportFolder + "/" + baseName + "_thumb." + extension;
 

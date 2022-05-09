@@ -707,6 +707,7 @@ private:
     QAction *copyAction;
     QAction *copyImageAction;
     QAction *deleteAction;
+    QAction *deleteAction1;
     QAction *deleteActiveFolderAction;
     QAction *deleteBookmarkFolderAction;
     QAction *deleteFSTreeFolderAction;

@@ -82,9 +82,9 @@ namespace G
     bool allIconsLoaded;
     bool ignoreScrollSignal;
     bool isSlideShow;
-    bool isProcessingExportedImages;
     bool isRunningColorAnalysis;
     bool isRunningStackOperation;
+    bool isProcessingExportedImages;
     bool isEmbellish;
     bool colorManage;
     bool modifySourceFiles;

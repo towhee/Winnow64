@@ -393,13 +393,20 @@ void MW::createActions()
     addAction(popPickHistoryAction);
     connect(popPickHistoryAction, &QAction::triggered, this, &MW::popPick);
 
-    // Copy, Cut
+    // Delete
     deleteAction = new QAction(tr("Delete"), this);
     deleteAction->setObjectName("deleteFiles");
     deleteAction->setShortcutVisibleInContextMenu(true);
     deleteAction->setShortcut(QKeySequence("Delete"));
     addAction(deleteAction);
     connect(deleteAction, &QAction::triggered, this, &MW::deleteFiles);
+
+    deleteAction1 = new QAction(tr("Delete"), this);
+    deleteAction1->setObjectName("backspaceDeleteFiles");
+    deleteAction1->setShortcutVisibleInContextMenu(true);
+    deleteAction1->setShortcut(QKeySequence("Backspace"));
+    addAction(deleteAction1);
+    connect(deleteAction1, &QAction::triggered, this, &MW::deleteFiles);
 
     deleteActiveFolderAction = new QAction(tr("Delete Folder"), this);
     deleteActiveFolderAction->setObjectName("deleteActiveFolder");
@@ -919,7 +926,6 @@ void MW::createActions()
     embelExportAction->setObjectName("embelExportAct");
     embelExportAction->setShortcutVisibleInContextMenu(true);
     addAction(embelExportAction);
-//    connect(embelExportAction, &QAction::triggered, this, &MW::exportEmbel);
 
     embelNewTemplateAction = new QAction(tr("New template"), this);
     embelNewTemplateAction->setObjectName("newEmbelTemplateAct");

@@ -157,6 +157,9 @@ bool ImageView::loadImage(QString fPath, QString src)
     // could be a popup from a prior uncached image being loaded
     G::popUp->hide();
 
+    // do not load image if triggered by embellish remote export
+    if (G::isProcessingExportedImages) return false;
+
     /* important to keep currentImagePath. It is used to check if there isn't an image (when
     currentImagePath.isEmpty() == true) - for example when no folder has been chosen or the
     same image is being reloaded. It is also used by Embellish.  */
