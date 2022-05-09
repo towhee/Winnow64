@@ -361,8 +361,15 @@ bool Sony::parse(MetadataParameters &p,
     p.hdr = "SubIFD0";
     p.offset = offset;
     ifd->readIFD(p);
-    m.width = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
-    m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
+
+    if (m.orientation == 6 || m.orientation == 8) {
+        m.width = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
+        m.height = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
+    }
+    else {
+        m.width = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
+        m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
+    }
 
     // IFD 1:
     p.hdr = "IFD1";

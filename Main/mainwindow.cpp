@@ -2213,7 +2213,7 @@ void MW::gridHasScrolled()
         updateIconsVisible(-1);
         thumbView->scrollToRow(gridView->midVisibleCell, __FUNCTION__);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
-        if (!G::isNewSelection) {
+        if (!G::isNewSelection && gridView->isVisible()) {
             qDebug() << __FUNCTION__ << "1";
             if (G::useLinearLoading) metadataCacheThread->scrollChange(__FUNCTION__);
             else loadConcurrent(MetaRead::Scroll, gridView->midVisibleCell, __FUNCTION__);
@@ -5128,9 +5128,13 @@ void MW::exportEmbelFromAction(QAction *embelExportAction)
 //    embelExport.exportRemoteFiles(embelExportAction->text(), picks);
 
     embelProperties->setCurrentTemplate(embelExportAction->text());
-//    G::isEmbellish = false;
-    embelExport.exportImages(picks);
+    G::isProcessingExportedImages = true;
+    bool isRemote = true;
+    embelExport.exportImages(picks, isRemote);
     embelProperties->doNotEmbellish();
+    G::isProcessingExportedImages = false;
+    fsTree->updateVisibleImageCount();
+    bookmarks->count();
 }
 
 void MW::exportEmbel()
@@ -5826,7 +5830,6 @@ void MW::deleteFiles()
     remove from ImageCache and update the image cache status bar.
 */
     if (G::isLogger) G::log(__FUNCTION__);
-
     // make sure datamodel is loaded
     if (!G::allMetadataLoaded) {
         G::popUp->showPopup("Cannot delete images before all images have been added, 1500");
@@ -5840,7 +5843,7 @@ void MW::deleteFiles()
         msgBox.setText("This operation will delete all selected images.");
         msgBox.setInformativeText("Do you want continue?");
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-        msgBox.setDefaultButton(QMessageBox::Cancel);
+        msgBox.setDefaultButton(QMessageBox::Yes);
         msgBox.setIcon(QMessageBox::Warning);
         QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
                     "QPushButton:default {background-color: rgb(68,95,118);}";
@@ -5874,8 +5877,9 @@ void MW::deleteFiles()
         QString dirPath = info.dir().path();
         if (!slDir.contains(dirPath)) slDir.append(dirPath);
     }
-    thumbView->selectionModel()->clearSelection();
+//    thumbView->selectionModel()->clearSelection();
 
+    G::ignoreScrollSignal = true;
     // delete file(s) in folder on disk, including any xmp sidecars
     for (int i = 0; i < sl.count(); ++i) {
         QString fPath = sl.at(i);
@@ -5899,6 +5903,12 @@ void MW::deleteFiles()
         return;
     }
 
+    // remove row from MetaRead::iconsLoaded
+    for (int i = 0; i < sldm.count(); ++i) {
+        QString fPath = sldm.at(i);
+        metaRead->dmRowRemoved(dm->rowFromPath(fPath));
+    }
+
     // remove fPath from datamodel dm if successfully deleted
     for (int i = 0; i < sldm.count(); ++i) {
         QString fPath = sldm.at(i);
@@ -5911,11 +5921,19 @@ void MW::deleteFiles()
     // remove selected from imageCache
     imageCacheThread->removeFromCache(sldm);
 
+    G::ignoreScrollSignal = false;
+
     // update current index
     if (lowRow >= dm->sf->rowCount()) lowRow = dm->sf->rowCount() - 1;
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
     thumbView->setCurrentIndex(sfIdx);
     fileSelectionChange(sfIdx, sfIdx, __FUNCTION__);
+
+    // make sure all thumbs/icons are updated
+//    if (!G::isNewSelection) {
+//        if (G::useLinearLoading) metadataCacheThread->scrollChange(__FUNCTION__);
+//        else loadConcurrent(MetaRead::Scroll, thumbView->midVisibleCell, __FUNCTION__);
+//    }
 }
 
 void MW::deleteFolder()
