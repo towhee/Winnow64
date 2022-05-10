@@ -61,10 +61,10 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     dm->setData(dm->index(row, G::HeightColumn), size.height());
     dm->setData(dm->index(row, G::HeightPreviewColumn), size.height());
     // needed when loading concurrently
-//    if (!G::useLinearLoading) {
+    if (!G::useLinearLoading) {
         metadata->m.width = size.width();
         metadata->m.height = size.height();
-//    }
+    }
 
     size.scale(thumbMax, Qt::KeepAspectRatio);
     thumbReader.setScaledSize(size);

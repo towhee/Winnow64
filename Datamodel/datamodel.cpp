@@ -1293,6 +1293,7 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("imageCount", 27) << G::s(imageCount);
     rpt << "\n" << G::sj("countInterval", 27) << G::s(countInterval);
     for(int row = 0; row < rowCount(); row++) {
+        rpt << "\n";
         getDiagnosticsForRow(row, rpt);
     }
     rpt << "\n\n" ;

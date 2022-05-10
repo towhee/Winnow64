@@ -252,7 +252,7 @@ void ImageCache::setDirection()
     //*/
 }
 
-bool ImageCache::setTargetRange()
+void ImageCache::setTargetRange()
 /*
     The target range is the list of images being targeted to cache, based on the current image,
     the direction of travel, the caching strategy and the maximum memory allotted to the image
@@ -264,7 +264,6 @@ bool ImageCache::setTargetRange()
 */
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    bool zeroSizeFound = false;
 
     // sort by priority to make it easy to find highest priority not already cached
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::prioritySort);
@@ -274,9 +273,7 @@ bool ImageCache::setTargetRange()
     priorityList.clear();
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
         if (icd->cacheItemList.at(i).sizeMB == 0) {
-            qDebug() << __FUNCTION__ << i << "ZERO SIZE" ;
-            zeroSizeFound = false;
-            break;
+            continue;
         }
         sumMB += icd->cacheItemList.at(i).sizeMB;
         if (sumMB < icd->cache.maxMB) {
@@ -296,9 +293,6 @@ bool ImageCache::setTargetRange()
     // return order to key - same as dm->sf (sorted or filtered datamodel)
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::keySort);
 
-    // quit if unable to complete target range
-    if (zeroSizeFound) return false;
-
     // targetFirst, targetLast
     int i;
     for (i = 0; i < icd->cacheItemList.length(); ++i) {
@@ -315,11 +309,8 @@ bool ImageCache::setTargetRange()
         icd->cache.targetLast = icd->cache.totFiles - 1;
     }
 
-//    fixOrphans();     // this slows thngs down
-
 //    /*
     if (debugCaching) {
-//        qDebug();
         qDebug() << __FUNCTION__
                  << " targetFirst =" << icd->cache.targetFirst
                  << "targetLast =" << icd->cache.targetLast
