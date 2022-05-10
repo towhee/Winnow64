@@ -107,7 +107,7 @@ private:
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead
-    bool setTargetRange();          // define start and end key in the target range to cache
+    void setTargetRange();          // define start and end key in the target range to cache
     bool nextToCache(int id);       // find highest priority not cached
     bool nextToDecache(int id);     // find lowest priority cached - return -1 if none cached
     void fixOrphans();              // outside target range with isCached == true

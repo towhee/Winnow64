@@ -332,10 +332,12 @@ void IconViewDelegate::paint(QPainter *painter,
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
-    double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
+//    double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
 
     // icon size
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
+    QSize iconSize = icon.actualSize(thumbSize);
+    /*
     QSize iconSize = thumbSize;
     if (aspectRatio > 1) {
         iconSize.setHeight(thumbSize.width() * 1.0 / aspectRatio);
@@ -343,6 +345,7 @@ void IconViewDelegate::paint(QPainter *painter,
     else {
         iconSize.setWidth(thumbSize.width() * aspectRatio);
     }
+    //*/
 
     // Make the item border rect smaller to accommodate the border.
     QRect cellRect(option.rect);

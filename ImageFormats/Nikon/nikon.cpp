@@ -1315,8 +1315,6 @@ bool Nikon::parse(MetadataParameters &p,
             // D2H and older
                 m.width = ifd->ifdDataHash.value(256).tagValue;
                 m.height = ifd->ifdDataHash.value(257).tagValue;
-//                m.offsetFull = ifd->ifdDataHash.value(273).tagValue;
-//                m.lengthFull = ifd->ifdDataHash.value(279).tagValue;
             }
         }
 
@@ -1330,6 +1328,12 @@ bool Nikon::parse(MetadataParameters &p,
             m.width = ifd->ifdDataHash.value(256).tagValue;
             m.height = ifd->ifdDataHash.value(257).tagValue;
         }
+
+//        if (m.orientation == 6 || m.orientation == 8) {
+//            int swap = m.width;
+//            m.width = m.height;
+//            m.height = swap;
+//        }
 
         // SubIFD3 contains small size jpg offset and length
 //        if (ifdOffsets.count() > 2) {
@@ -1502,7 +1506,6 @@ bool Nikon::parse(MetadataParameters &p,
                 m.offsetFull = m.offsetThumb;
                 m.lengthFull = m.lengthThumb;
                 p.offset = m.offsetFull;
-                jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
             }
 //            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
         }
