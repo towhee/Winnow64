@@ -124,25 +124,19 @@ void MW::filterChange(QString source)
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
 
-//    centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true, "", __FUNCTION__);
 
     // sync image cache with datamodel filtered proxy dm->sf
     imageCacheThread->rebuildImageCacheParameters(fPath, __FUNCTION__);
-    /*
-    if (thumbView->waitUntilOkToScroll()) {
-        // setting the selection index also triggers fileSelectionChange()
-        selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
-        thumbView->selectThumb(idx);
-    }
-//    */
-//    qDebug() << __FUNCTION__ << idx.data() << "Calling fileSelectionChange(idx, idx)";
 
     QApplication::restoreOverrideCursor();
 
     qDebug() << __FUNCTION__ << "Calling fileSelectionChange";
     fileSelectionChange(idx, idx, __FUNCTION__);
     source = "";    // suppress compiler warning
+
+    // force refresh thumbnails
+    thumbHasScrolled();
 }
 
 void MW::quickFilter()

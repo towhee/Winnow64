@@ -1078,7 +1078,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.isCached = false;
         icd->cacheItem.isTarget = false;
         icd->cacheItem.priority = i;
-        if (G::useLinearLoading) {
+        if (G::useLinearLoading || G::allMetadataLoaded) {
             ImageMetadata m = dm->imMetadata(fPath);
             /*
             qDebug() << __FUNCTION__ << fPath
@@ -1207,6 +1207,7 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
         if (fPath == currentImageFullPath) icd->cache.key = row;
         // update cacheItemList for images already cached
         if (icd->imCache.contains(fPath)) icd->cacheItemList[row].isCached = true;
+        else icd->imCache.remove(fPath);
     }
 
     // if the sort has been reversed
@@ -1217,17 +1218,14 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
 
     QVector<QString> keys;
     icd->imCache.getKeys(keys);
-    for (int i = - 1; i > -1; --i) {
+    for (int i = keys.length() - 1; i > -1; --i) {
         if (!filteredList.contains(keys.at(i))) icd->imCache.remove(keys.at(i));
     }
-//    for (int i = 0; i < keys.length(); ++i) {
-//        if (!filteredList.contains(keys.at(i))) icd->imCache.remove(keys.at(i));
-//    }
 
     if (icd->cache.isShowCacheStatus)
         updateStatus("Update all rows", "ImageCache::rebuildImageCacheParameters");
 
-//    setCurrentPosition(currentImageFullPath);
+    setCurrentPosition(currentPath, __FUNCTION__);
 }
 
 void ImageCache::refreshImageCache()

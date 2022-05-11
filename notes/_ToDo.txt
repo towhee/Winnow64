@@ -1,4 +1,5 @@
 BUGS / TO DO
+- Embellish not resetting properly
 - No image cached for D:/Pictures/_ThumbTest/2020-01-05_0005-denoise.dng
 - Unstable if metadata cannot be read for an image
 - Filtering can get bogged down
