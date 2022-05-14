@@ -2,10 +2,6 @@
 
 #define GLOBAL_H
 
-//#define ISDEBUG        // Uncomment this line to show debugging output
-//#define ISFLOW         // Uncomment this line to show debugging output
-//#define ISLOGGER       // Uncomment this line to show debugging output
-
 #include <QtWidgets>
 #include <QColor>
 #include <QModelIndexList>
@@ -208,7 +204,6 @@ namespace G
 
     extern bool allMetadataLoaded;
     extern bool allIconsLoaded;
-//    extern bool buildingFilters;
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;
     extern bool isRunningColorAnalysis;
@@ -234,7 +229,6 @@ namespace G
     extern int scrollBarThickness;
     extern int propertyWidgetMarginLeft;
     extern int propertyWidgetMarginRight;
-//    extern qreal actDevicePixelRatio;
     extern QModelIndexList copyCutIdxList;  // req'd?
     extern QStringList copyCutFileList;     // req'd?
 

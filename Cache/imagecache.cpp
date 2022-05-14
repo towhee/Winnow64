@@ -1111,7 +1111,7 @@ void ImageCache::buildImageCacheList()
                     emit centralMsg(msg);
                 }
             }
-            QApplication::processEvents();
+//            QApplication::processEvents();
         }
         else {
             icd->cacheItem.metadataLoaded = false;

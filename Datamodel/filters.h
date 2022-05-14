@@ -86,7 +86,9 @@ public slots:
     void toggleExpansion();
     void checkPicks(bool check);
     void updateProgress(int progress);
+    void startBuildFilters();
     void finishedBuildFilters();
+    void loadedDataModel(bool isLoaded);
     void setSoloMode(bool isSolo);
 
 public slots:

@@ -24,8 +24,7 @@
 void MW::filterDockVisibilityChange(bool isVisible)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__ << isVisible;
-    if (isVisible && !G::isInitializing) launchBuildFilters();
+    if (isVisible && !G::isInitializing && G::allMetadataLoaded) launchBuildFilters();
 }
 
 void MW::launchBuildFilters()
@@ -46,7 +45,6 @@ void MW::launchBuildFilters()
         return;
     }
 
-    filters->msgFrame->setVisible(true);
     buildFilters->build();
 }
 
@@ -70,7 +68,7 @@ void MW::filterChange(QString source)
     if (G::stop) return;
 
     // update filter checkbox
-    qApp->processEvents();
+//    qApp->processEvents();
 
     // if filter chnage source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();

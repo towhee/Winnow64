@@ -118,7 +118,6 @@ datamodel.
     filterLabel->setWordWrap(true);
     filterLabel->setText(buildingFiltersMsg);
     filterLabel->setAlignment(Qt::AlignCenter);
-//    filterLabel->setStyleSheet("QLabel {color:lightgray;}");
     filterLabel->setStyleSheet("QLabel {color:cadetblue;}");
     filterLabel->setVisible(false);
 
@@ -381,7 +380,7 @@ void Filters::removeChildrenDynamicFilters()
 folder is selected.  This function removes any pre-existing children to
 prevent duplication and orphans.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     types->takeChildren();
     years->takeChildren();
     days->takeChildren();
@@ -540,6 +539,38 @@ void Filters::invertFilters()
     // emit filterChange();  // this is done in MW::invertFilters - which calls this function
 }
 
+void Filters::loadedDataModel(bool isLoaded)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (isLoaded) {
+        msgFrame->setVisible(false);
+        filterLabel->setText("");
+        filterLabel->setVisible(false);
+        setEnabled(true);
+    }
+    else {
+        msgFrame->setVisible(true);
+        filterLabel->setText("Filters disabled while loading all metadata...");
+        filterLabel->setVisible(true);
+        setEnabled(false);
+    }
+}
+
+void Filters::startBuildFilters()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    removeChildrenDynamicFilters();
+    filtersBuilt = false;
+    buildingFilters = true;
+    msgFrame->setVisible(true);
+    filterLabel->setText(buildingFiltersMsg);
+    filterLabel->setVisible(true);
+    setProgressBarStyle();
+    bfProgressBar->setVisible(true);
+    collapseAll();
+    setEnabled(false);
+}
+
 void Filters::finishedBuildFilters()
 {
     if (G::isLogger) G::log(__FUNCTION__);
@@ -553,7 +584,6 @@ void Filters::finishedBuildFilters()
     setEnabled(true);
     if (isSolo) collapseAll();
     else expandAll();
-    if (G::isLogger) G::log(__FUNCTION__, "Finished");
 }
 
 void Filters::clearAll()
@@ -562,7 +592,7 @@ void Filters::clearAll()
     Uncheck all the filter items but do not signal filter change.  This is called when a new
     folder is selected to reset the filter criteria.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent()) {            
@@ -839,8 +869,6 @@ void Filters::resizeColumns()
     int countFilteredColumnWidth = fm.boundingRect("999999").width();
     int col0Width = viewport()->width() - countColumnWidth -
                     countFilteredColumnWidth - 5 /*- decorationWidth*/;
-//    int col0Width = width() - G::scrollBarThickness - countColumnWidth -
-//            countFilteredColumnWidth - 5 /*- decorationWidth*/;
     setColumnWidth(4, countColumnWidth);
     setColumnWidth(2, countFilteredColumnWidth);
     setColumnWidth(0, col0Width);
@@ -856,7 +884,6 @@ void Filters::resizeEvent(QResizeEvent *event)
 void Filters::paintEvent(QPaintEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-//    resizeColumns();
     QTreeWidget::paintEvent(event);
 }
 
@@ -874,7 +901,6 @@ void Filters::mousePressEvent(QMouseEvent *event)
     bool notIndentation = p.x() >= indentation;
     bool isValid = idx.isValid();
     bool isCtrlModifier = event->modifiers() & Qt::ControlModifier;
-    qDebug() << __FUNCTION__ << otherHdrExpanded(idx);
     if (isLeftBtn && isHdr && isValid && notIndentation) {
         if (isSolo && !isCtrlModifier) {
             if (isExpanded(idx)) {

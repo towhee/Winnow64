@@ -505,15 +505,18 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
     Make sure the file path exists in the datamodel. The most likely failure will be if a new
     folder has been selected but the image cache has not been rebuilt.
 */
-    if (G::isLogger) G::log(__FUNCTION__, fPath);
+    int dmRow = dm->fPathRow[fPath];
+
+    if (G::isLogger) {
+        int row = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
+        QString msg = "Row " + QString::number(row) + " " + fPath;
+        G::log(__FUNCTION__, msg);
+    }
 //    qDebug() << __FUNCTION__ << "Src:" << src << fPath;
-//    QModelIndex sfIdx = dm->proxyIndexFromPath(fPath);
-    if (!dm->fPathRow.contains(fPath)) {
-        qDebug() << __FUNCTION__ << "Not in dm->fPathrow" << fPath;
+    if (dmRow == -1) {
+        qWarning() << __FUNCTION__ << "dm->fPathrow does not contain" << fPath;
         return;
     }
-    int dmRow = dm->fPathRow[fPath];
-//    bool metaLoaded = dm->index(dmRow, G::MetadataLoadedColumn).data().toBool();
     QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
 
     if (sfIdx.isValid()/* && metaLoaded*/) {
@@ -525,23 +528,11 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
                 updateClassification();
                 centralLayout->setCurrentIndex(prevCentralView);
             }
-            /*
-            else {
-                qWarning() << __FUNCTION__ << "sfIdx.row()" << sfIdx.row()
-                           << "DOES NOT EQUAL currentRow" << currentRow;
-            }
-            //*/
         }
-        /*
-        else {
-            qWarning() << __FUNCTION__ << "NOT CACHED" << fPath;
-        }
-        //*/
         thumbView->refreshThumb(sfIdx, G::CachedRole);
         gridView->refreshThumb(sfIdx, G::CachedRole);
     }
     else {
-
         qWarning() << __FUNCTION__ << "INVALID INDEX FOR" << sfIdx;
     }
     return;

@@ -1075,7 +1075,6 @@ int IngestDlg::getSequenceStart(const QString &path)
     for (int f = 0; f < dir.entryList().size(); ++f) {
         seq = "";
         QString fName = dir.entryList().at(f);
-        qDebug() << __FUNCTION__ << "fName" << fName;
         int period = fName.indexOf(".", 0);
         if (period < 1) continue;
         foundNumber = false;

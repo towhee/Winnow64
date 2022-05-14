@@ -304,7 +304,7 @@ void Thumb::insertThumbnails(QModelIndexList &selection)
     QStringList thumbList;
     for (int i = 0; i < count; ++i) {
         G::popUp->setProgress(i+1);
-        qApp->processEvents();
+//        qApp->processEvents();
         if (abort) break;
 
         // check if already a thumbnail

@@ -8,12 +8,6 @@ which has a border, and must be over-ridden.
 BarBtn::BarBtn(/*QWidget *parent*/) : QToolButton()
 {
     setStyleSheet(G::css);
-//    setStyleSheet
-//    (
-//    "QToolTip {"
-//        "background:yellow;"
-//    "}"
-//    );
     int bg = G::backgroundShade + 30;
     btnHover = QColor(bg,bg,bg);
 }
@@ -250,12 +244,14 @@ void DockWidget::moveEvent(QMoveEvent *event)
     if (isFloating()) {
 //        dw.screen = QApplication::desktop()->screenNumber(this);
         dw.pos = QPoint(frameGeometry().x(), frameGeometry().y());
+        /*
         qDebug() << __FUNCTION__ << "Redefine dw.pos:"
                  << "dw.pos =" << dw.pos
                  << "frameGeometry() =" << frameGeometry()
                  << "dw.devicePixelRatio " << dw.devicePixelRatio
                  << "prevDpr " << prevDpr
                     ;
+                    //*/
         return;
     }
     QDockWidget::moveEvent(event);

@@ -122,114 +122,6 @@ void MetadataCache::stopMetadataCache()
     }
 }
 
-//void MetadataCache::loadNewFolder(bool isRefresh)
-//{
-///*
-//    This function is called from MW::folderSelectionChange and will not have any filtering so
-//    we can use the datamodel dm directly. The greater of:
-
-//        - the number of visible cells in the gridView or
-//        - maxChunkSize
-
-//    metadata and icons are loaded into the datamodel. The number of visible cells are not
-//    known yet because IconView::bestAspect has not been determined.
-
-//    MetadataCache::loadNewFolder2ndPass is executed immediately after this function.
-//*/
-//    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__;
-//    if (isRunning()) {
-//        mutex.lock();
-//        abort = true;
-//        condition.wakeOne();
-//        mutex.unlock();
-//        wait();
-//        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Was Running - stopped");
-//    }
-//    abort = false;
-//    G::allMetadataLoaded = false;
-//    isRefreshFolder = isRefresh;
-//    iconsCached.clear();
-//    foundItemsToLoad = true;
-//    startRow = 0;
-//    int rowCount = dm->sf->rowCount();
-//    // rgh fix (are we going to read all metadata all of the time?)
-//    if (metadataChunkSize > rowCount) {
-//        endRow = rowCount;
-//        lastIconVisible = rowCount;
-//    }
-//    else {
-//        endRow = metadataChunkSize;
-//        lastIconVisible = metadataChunkSize;
-//    }
-//    // reset for bestAspect calc
-//    G::iconWMax = G::minIconSize;
-//    G::iconHMax = G::minIconSize;
-//    action = Action::NewFolder;
-//    start(LowPriority);
-////    start(TimeCriticalPriority);
-//}
-
-//void MetadataCache::loadNewFolder2ndPass()
-//{
-///*
-//    This function is initiated after MetadataCache::loadNewFolder has called run. A signal is
-//    emitted back to MW, which in turn calculates the best aspect and number of cells visible
-//    in the gridview, based on the metadata read in the first pass.
-
-//    The greater of:
-//     - the number of visible cells in the gridView or
-//     - maxChunkSize
-//    metadata and icons are loaded into the datamodel.
-//*/
-//    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-//    if (isRunning()) {
-//        mutex.lock();
-//        abort = true;
-//        condition.wakeOne();
-//        mutex.unlock();
-//        wait();
-//        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "Was Running - stopped");
-//    }
-//    abort = false;
-//    action = Action::NewFolder2ndPass;
-//    setRange();
-//    foundItemsToLoad = anyItemsToLoad();
-////    qDebug() << __FUNCTION__ << foundItemsToLoad;
-//    start(LowPriority);
-////    start(TimeCriticalPriority);
-//}
-
-//void MetadataCache::loadAllMetadata()
-//{
-///*
-//    Using dm::addAllMetadata instead (see why below) so not being used
-
-//    All the metadata if loaded into the datamodel. This is called prior to filtering or
-//    sorting the datamodel. This is duplicated in the datamodel, where is can be run in the
-//    main thread, allowing for real time updates to the progress bar.
-
-//    Loading all the metadata in a separate high priority thread is slightly faster, but if the
-//    progress bar update is more important then use the datamodel function dm::addAllMetadata.
-//*/
-//    if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__;
-//    if (isRunning()) {
-//        mutex.lock();
-//        abort = true;
-//        condition.wakeOne();
-//        mutex.unlock();
-//        wait();
-//    }
-////    qDebug() << __FUNCTION__;
-//    abort = false;
-//    startRow = 0;
-//    endRow = dm->sf->rowCount();
-//    action = Action::AllMetadata;
-//    foundItemsToLoad = true;
-//    start(TimeCriticalPriority);
-//}
-
 void MetadataCache::scrollChange(QString source)
 {
 /*
@@ -340,7 +232,7 @@ void MetadataCache::setRange()
     if (G::isLogger) G::log(__FUNCTION__);
     int rowCount = dm->sf->rowCount();
 
-    // default total per page (prev, curr and next pages)
+    // default total per page (dtpp) (prev, curr and next pages)
     int dtpp = metadataChunkSize / 3;
 
     // total per page (tpp)
@@ -485,13 +377,13 @@ void MetadataCache::readAllMetadata()
 {
 /*
     Load the thumb (icon) for all the image files in the folder(s).
+    Not being used.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     int count = 0;
     int rows = dm->rowCount();
     for (int row = 0; row < rows; ++row) {
         // is metadata already cached
-//        if (dm->index(row, G::MetadataLoadedColumn).data().toBool()) continue;
         if (dm->metadataLoaded(row)) continue;
 
         QString fPath = dm->index(row, 0).data(G::PathRole).toString();
@@ -515,7 +407,7 @@ void MetadataCache::readAllMetadata()
             msg += QString::number(row) + " of " + QString::number(rows);
             emit showCacheStatus(msg);
         }
-        QApplication::processEvents();
+//        QApplication::processEvents();
     }
     G::allMetadataLoaded = true;
 }
@@ -611,7 +503,7 @@ void MetadataCache::readIconChunk()
             }
 
             // keep event processing up-to-date to improve signal/slot performance emit loadMetadataCache2ndPass()
-            QApplication::processEvents();
+//            QApplication::processEvents();
         }
     }
 }
@@ -669,7 +561,7 @@ void MetadataCache::readMetadataChunk()
             }
 
             // keep event processing up-to-date to improve signal/slot performance emit loadMetadataCache2ndPass()
-            QApplication::processEvents();
+//            QApplication::processEvents();
         }
     } while (metadataLoadFailed && metadataTry > tryAgain++);
 }
@@ -709,7 +601,7 @@ void MetadataCache::run()
 
         // update allMetadataLoaded flag if metadata has been loaded for every row in dm
         if (!G::allMetadataLoaded) {
-            G::allMetadataLoaded = dm->allMetadataLoaded();
+            G::allMetadataLoaded = dm->isAllMetadataLoaded();
         }
 
         // clean up orphaned icons outside icon range   rgh what about other actions

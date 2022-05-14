@@ -2,12 +2,7 @@
 
 /*
     to do:
-        memRequired - done except checking
-        iconCleanup - done except checking
         iconChunkSize
-        run when scroll event
-        file selection change while not allMetadataLoaded
-        viewport size change
 */
 
 MetaRead::MetaRead(QObject *parent,
@@ -193,6 +188,10 @@ bool MetaRead::isNotLoaded(int sfRow)
 bool MetaRead::isVisible(int sfRow)
 {
     if (sfRow >= dm->firstVisibleRow && sfRow <= dm->lastVisibleRow) return true;
+    /*
+    if (sfRow >= dm->firstIconRow && sfRow <= dm->lastIconRow) return true;
+    if (sfRow >= 0 && sfRow < dm->sf->rowCount()) return true;
+    */
     else return false;
 }
 
@@ -249,8 +248,6 @@ void MetaRead::updateIcons()
 
     // load any missing visible icons
     for (int sfRow = dm->firstVisibleRow; sfRow <= dm->lastVisibleRow; ++sfRow) {
-//        QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(sfRow,0));
-//        int dmRow = dmIdx.row();
         int dmRow = dm->modelRowFromProxyRow(sfRow);
         QModelIndex dmIdx = dm->index(dmRow, 0);
         if (!dm->iconLoaded(sfRow)) {
@@ -259,10 +256,6 @@ void MetaRead::updateIcons()
             bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
             if (thumbLoaded) {
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-//                mutex.lock();
-//                dm->itemFromIndex(dmIdx)->setIcon(pm);
-//                mutex.unlock();
-//                dm->setIcon(dmIdx, pm);
                 emit setIcon(dmIdx, pm);
                 iconMax(pm);
                 iconsLoaded.append(dmRow);
@@ -280,42 +273,16 @@ void MetaRead::buildMetadataPriorityQueue(int sfRow)
     priorityQueue.clear();
     firstVisible = dm->firstVisibleRow;
     lastVisible = dm->lastVisibleRow;
-    /*
-    visibleIconCount = lastVisible - firstVisible + 1;
-    if (visibleIcons > iconChunkSize) adjIconChunkSize = visibleIcons;
-    else adjIconChunkSize = iconChunkSize;
-    adjIconChunkSize = dm->rowCount();
-    bool noIconsLoaded = iconsLoaded.size() == 0;
-    */
-
-//    /*
-    qDebug() << __FUNCTION__
-             << "dm->firstVisibleRow =" << dm->firstVisibleRow
-             << "dm->lastVisibleRow =" << dm->lastVisibleRow
-             << "dm->sf->rowCount() =" << dm->sf->rowCount()
-                ;
-    //*/
-
-//    // visible rows (thumbnails)
-//    for (int sfRow = firstVisible; sfRow < lastVisible; ++sfRow) {
-//        if (isNotLoaded(sfRow)) priorityQueue.append(sfRow);
-//        if (abort) return;
-//    }
 
     // icon cleanup all icons no longer visible
     cleanupIcons();
 
     // alternate ahead/behind until finished
-//    int behind = firstVisible;
-//    int ahead = lastVisible - 1;
     int behind = sfRow;
     int ahead = sfRow + 1;
     while (behind >= 0 || ahead < sfRowCount) {
-//        qDebug() << __FUNCTION__ << behind << ahead;
         priorityQueue.append(behind--);
         priorityQueue.append(ahead++);
-//        if (behind > -1) priorityQueue.append(behind--);
-//        if (ahead < sfRowCount) priorityQueue.append(ahead++);
         if (abort) return;
     }
         /*
@@ -348,11 +315,6 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
     if (thumbLoaded) {
         QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-//        dm->itemFromIndex(dmIdx)->setIcon(pm);
-//        dm->setIcon(dmIdx, pm);
-//        mutex.lock();
-//        dm->itemFromIndex(dmIdx)->setIcon(pm);
-//        mutex.unlock();
         emit setIcon(dmIdx, pm);
         iconMax(pm);
         iconsLoaded.append(dmIdx.row());
