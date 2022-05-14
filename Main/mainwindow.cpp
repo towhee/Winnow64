@@ -278,6 +278,8 @@ thumbs) it can take a number of paint events and 100s of ms to complete. A flag 
 (scrollWhenReady) to show when we need to monitor so not checking needlessly. Unfortunately
 there does not appear to be any signal or event when ListView is finished hence this cludge.
 
+QT VERSIONS
+
 */
 
 MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
@@ -1256,13 +1258,14 @@ void MW::handleStartupArgs(const QString &args)
             }
         }
 
+        setCentralMessage("Loading Embellished ...");
+        QApplication::processEvents();
+
         // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
 
         // export get the location for the embellished files
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
-        setCentralMessage("Loading " + fPath + " ...");
-        QApplication::processEvents();
         info.setFile(fPath);
         QString fDir = info.dir().absolutePath();
         fsTree->getImageCount(fDir, true, __FUNCTION__);
@@ -1390,6 +1393,7 @@ void MW::folderSelectionChange()
         if (dm->timeToQuit) {
             updateStatus(false, "Image loading has been cancelled", __FUNCTION__);
             setCentralMessage("Image loading has been cancelled");
+//            QApplication::processEvents();
             return;
         }
         QDir dir(currentViewDirPath);
@@ -1716,12 +1720,6 @@ void MW::folderAndFileSelectionChange(QString fPath)
              << "currentViewDir =" << currentViewDir
                 ;
                 //*/
-    /*
-    if (!isStartupArgs && (folder == currentViewDir)) {
-        qDebug() << __FUNCTION__ << "returning: isStartupArgs =" << isStartupArgs;
-        return;
-    }
-    //*/
 
     if (!fsTree->select(folder)) {
         qWarning() << __FUNCTION__ << "fsTree failed to select" << fPath;
@@ -1825,40 +1823,30 @@ void MW::updateIconsVisible(int row)
     This is used in the metadataCacheThread to determine the range of files to cache.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, QString::number(row));
-    int first = dm->sf->rowCount();
-    int last = 0;
-//    qDebug() << __FUNCTION__ << "row =" << row;
-    /*
-    Alternate where calculate first / last for case where you need to know in advance what
-    they will be, not what they are now.
-    int _first;
-    int _last;
-    thumbView->viewportRange(currentRow, _first, _last);
-    if (_first < first) first = _first;
-    gridView->viewportRange(currentRow, _first, _last);
-    if (_first < first) first = _first;
-    */
+    int firstVisible = dm->sf->rowCount();
+    int lastVisible = 0;
+
 //    // Grid might not be selected in CentralWidget
     if (G::mode == "Grid") centralLayout->setCurrentIndex(GridTab);
 
     if (thumbView->isVisible()) {
         if (row >= 0) thumbView->calcViewportRange(row);
         else thumbView->scannedViewportRange();
-        if (thumbView->firstVisibleCell < first) first = thumbView->firstVisibleCell;
-        if (thumbView->lastVisibleCell > last) last = thumbView->lastVisibleCell;
+        if (thumbView->firstVisibleCell < firstVisible) firstVisible = thumbView->firstVisibleCell;
+        if (thumbView->lastVisibleCell > lastVisible) lastVisible = thumbView->lastVisibleCell;
     }
 
     if (gridView->isVisible()) {
         if (row >= 0) gridView->calcViewportRange(row);
         else gridView->scannedViewportRange();
-        if (gridView->firstVisibleCell < first) first = gridView->firstVisibleCell;
-        if (gridView->lastVisibleCell > last) last = gridView->lastVisibleCell;
+        if (gridView->firstVisibleCell < firstVisible) firstVisible = gridView->firstVisibleCell;
+        if (gridView->lastVisibleCell > lastVisible) lastVisible = gridView->lastVisibleCell;
     }
 
     if (tableView->isVisible()) {
         tableView->setViewportParameters();
-        if (tableView->firstVisibleRow < first) first = tableView->firstVisibleRow;
-        if (tableView->lastVisibleRow > last) last = tableView->lastVisibleRow;
+        if (tableView->firstVisibleRow < firstVisible) firstVisible = tableView->firstVisibleRow;
+        if (tableView->lastVisibleRow > lastVisible) lastVisible = tableView->lastVisibleRow;
     }
 
     /*
@@ -1874,19 +1862,37 @@ void MW::updateIconsVisible(int row)
              << "last =" << last;
 //        */
 
-//    if (G::useLinearLoading) {
-        metadataCacheThread->firstIconVisible = first;
-        metadataCacheThread->midIconVisible = (first + last) / 2;// rgh qCeil ??
-        metadataCacheThread->lastIconVisible = last;
-        metadataCacheThread->visibleIcons = last - first + 1;
-//    }
-//    else {
-        dm->firstVisibleRow = first;
-        dm->lastVisibleRow = last;
-//    }
+    int visibleIcons = lastVisible - firstVisible + 1;
 
-//    if (G::isInitializing || !G::isNewFolderLoaded) return;
-//    metadataCacheThread->sizeChange(__FUNCTION__);
+    /*
+    // icons to range based on caching icons for prev, curr and next page of thumbnails
+    int toCacheIcons = visibleIcons * 3;
+    int firstIconRow = firstVisible - visibleIcons;
+    int lastIconRow = lastVisible + visibleIcons;
+    if (firstIconRow < 0) firstIconRow = 0;
+    if (lastIconRow >= dm->sf->rowCount()) lastIconRow = dm->sf->rowCount();
+
+    // icons to range based on iconChunkSize
+    int firstSuggested = row - dm->iconChunkSize / 2;
+    if (firstSuggested < 0) firstSuggested == 0;
+    int lastSuggested = firstSuggested + dm->iconChunkSize;
+    if (lastSuggested >= dm->sf->rowCount()) lastSuggested = dm->sf->rowCount() - 1;
+
+    // icon range to use:
+    */
+
+    metadataCacheThread->firstIconVisible = firstVisible;
+    metadataCacheThread->midIconVisible = (firstVisible + lastVisible) / 2;// rgh qCeil ??
+    metadataCacheThread->lastIconVisible = lastVisible;
+    metadataCacheThread->visibleIcons = visibleIcons;
+
+    dm->firstVisibleRow = firstVisible;
+    dm->lastVisibleRow = lastVisible;
+    /*
+    dm->firstIconRow = firstIconRow;
+    dm->lastIconRow = lastIconRow;
+    */
+
 }
 
 void MW::loadConcurrent(MetaRead::Action action, int sfRow, QString src)
@@ -1924,11 +1930,12 @@ void MW::loadConcurrentNewFolder()
     imageCacheThread->initImageCache(netCacheMBSize, cacheMinMB,
         isShowCacheProgressBar, cacheWtAhead);
     // no sorting or filtering until all metadata loaded
+    filters->setEnabled(false);
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
     // read metadata
     metaRead->initialize();     // only when change folders
-    loadConcurrent(MetaRead::FileSelection, 0, __FUNCTION__);
+    loadConcurrent(MetaRead::FileSelection, currentRow, __FUNCTION__);
 }
 
 void MW::loadConcurrentMetaDone()
@@ -1950,16 +1957,16 @@ void MW::loadConcurrentMetaDone()
        would prematurally trigger Metadata::writeXMP */
     G::isNewFolderLoadedAndInfoViewUpToDate = true;
     G::isNewFolderLoaded = true;
-    G::allMetadataLoaded = true;//dm->allMetadataLoaded();
+    dm->setAllMetadataLoaded(true);    //G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
-//    if (G::allMetadataLoaded) {
-        filterMenu->setEnabled(true);
-        sortMenu->setEnabled(true);
-//    }
-//    else {
-//        qDebug() << __FUNCTION__ << "Not all metadata loaded";
-//    }
+    filters->setEnabled(true);
+    filterMenu->setEnabled(true);
+    sortMenu->setEnabled(true);
     dm->loadingModel = false;
+    if (!filterDock->visibleRegion().isNull()) {
+        launchBuildFilters();
+    }
+
     updateMetadataThreadRunStatus(false, true, __FUNCTION__);
     // resize table columns with all data loaded
     tableView->resizeColumnsToContents();
@@ -2045,6 +2052,13 @@ void MW::loadLinearNewFolder()
     setCentralMessage("Reading all metadata.");
     updateMetadataThreadRunStatus(true, true, __FUNCTION__);
     dm->addAllMetadata();
+
+    if (dm->timeToQuit) {
+        updateStatus(false, "Image loading has been cancelled", __FUNCTION__);
+        setCentralMessage("Image loading has been cancelled");
+//        QApplication::processEvents();
+        return;
+    }
 
     // have to wait for the data before resize table columns
     tableView->resizeColumnsToContents();
@@ -2346,7 +2360,7 @@ void MW::loadEntireMetadataCache(QString source)
              << "G::isInitializing: " << G::isInitializing
              ;
     if (G::isInitializing) return;
-    if (dm->allMetadataLoaded()) return;
+    if (dm->isAllMetadataLoaded()) return;
 
     updateIconsVisible(currentRow);
 
@@ -2573,7 +2587,7 @@ void MW::embelDockVisibilityChange()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     loupeDisplay();
-    embelProperties->doNotEmbellish();
+    if (turnOffEmbellish) embelProperties->doNotEmbellish();
 }
 
 void MW::embelDockActivated(QDockWidget *dockWidget)
@@ -4177,7 +4191,7 @@ void MW::setRotation(int degrees)
         pm = pm.transformed(trans, Qt::SmoothTransformation);
         item->setIcon(pm);
         thumbView->refreshThumbs();
-        QApplication::processEvents();
+//        QApplication::processEvents();
 
         // rotate selected cached full size images
         QImage image;

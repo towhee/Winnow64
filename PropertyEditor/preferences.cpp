@@ -116,6 +116,7 @@ itemChange, which is subclassed here.
     if (source == "metadataChunkSize") {
         mw->metadataCacheThread->metadataChunkSize = v.toInt();
         mw->metaRead->iconChunkSize = v.toInt();
+        mw->dm->iconChunkSize = v.toInt();
     }
 
     if (source == "maxIconSize") {

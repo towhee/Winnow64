@@ -113,7 +113,6 @@ namespace G
     QString tiffData;                   // temp for testing tiff decoder performance
 
     QElapsedTimer t;
-//    QElapsedTimer t1;
     bool isTimer;
     bool isTest;
 
@@ -132,7 +131,6 @@ namespace G
 
     void wait(int ms)
     {
-//        return;
         QTime t = QTime::currentTime().addMSecs(ms);
         while (QTime::currentTime() < t) qApp->processEvents(QEventLoop::AllEvents, 10);
     }
@@ -190,7 +188,6 @@ namespace G
 
     void errlog(QString functionName, QString fPath, QString err)
     {
-//        return;
         if (!isErrorLogger) return;
         QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
         QString f = functionName.leftJustified(40, '.') + " ";

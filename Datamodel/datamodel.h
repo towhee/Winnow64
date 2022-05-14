@@ -61,12 +61,14 @@ public:
     void getDiagnosticsForRow(int row, QTextStream& rpt);
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);
-    bool allMetadataLoaded();
+    bool isAllMetadataLoaded();
     void clearAllIcons();
     bool allIconsLoaded();
     bool iconLoaded(int sfRow);
     int rowFromPath(QString fPath);
     void refreshRowFromPath();
+
+    QMutex mutex;
 
     SortFilter *sf;
     QHash<QString, int> fPathRow;
@@ -77,6 +79,9 @@ public:
     int currentRow;                     // used in caching to check if new image selected
     int firstVisibleRow;                // used to determine MetaRead priority queue
     int lastVisibleRow;                 // used to determine MetaRead priority queue
+    int firstIconRow;                   // used to determine MetaRead priority queue
+    int lastIconRow;                    // used to determine MetaRead priority queue
+    int iconChunkSize;                  // max suggested number of icons to cache
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
     bool basicFileInfoLoaded = false;   // do not navigate until basic info loaded in datamodel
@@ -101,6 +106,7 @@ signals:
 public slots:
 //    void unfilteredItemSearchCount();
     void addAllMetadata();
+    void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, QPixmap &pm);
     void rebuildTypeFilter();
@@ -114,7 +120,7 @@ private:
     QList<QFileInfo> fileInfoList;
     static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
 
-    QMutex mutex;
+//    QMutex mutex;
 
     QDir *dir;
     QStringList *fileFilters;

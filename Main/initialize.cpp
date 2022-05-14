@@ -914,6 +914,16 @@ void MW::createFilterDock()
 
     // add widgets to the right side of the title bar layout
     // toggle expansion button
+    BarBtn *updateFiltersBtn = new BarBtn();
+    updateFiltersBtn->setIcon(QIcon(":/images/icon16/refresh.png"));
+    updateFiltersBtn->setToolTip("Update filters");
+    connect(updateFiltersBtn, &BarBtn::clicked, buildFilters, &BuildFilters::build);
+    filterTitleLayout->addWidget(updateFiltersBtn);
+
+    // Spacer
+    filterTitleLayout->addSpacing(5);
+
+    // toggle expansion button
     BarBtn *toggleExpansionBtn = new BarBtn();
     toggleExpansionBtn->setIcon(QIcon(":/images/icon16/foldertree.png"));
     toggleExpansionBtn->setToolTip("Toggle expand all / collapse all");

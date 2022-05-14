@@ -28,6 +28,11 @@ BUGS / TO DO
 - Add hif file format
 - Rotate heic files
 - Slideshow of all images on F drive eventually crashed (85000+ images)
+
+CAMERAS NOT SUPPORTED
+- Canon: 1D, 1DS, D2000, DCS1, A3200, G5X, S120, SD450, SX100, SCX130, SX1, SX260, SX50, SX510, SX60, S90
+- Fuji: S2PRO
+
 EMBELLISH
 - Highlighter opacity not always used
 - Sometimes effect controls do not trigger effect changes

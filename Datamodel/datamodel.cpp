@@ -369,11 +369,15 @@ Steps:
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "clearDataModel");
     currentFolderPath = folderPath;
     filters->filtersBuilt = false;
+    filters->loadedDataModel(false);
     loadingModel = true;
     t.restart();            // timer for addFilesMaxDelay
 
+    emit centralMsg("Commencing to load folder " + folderPath);    // rghmsg
+//    QCoreApplication::processEvents();
+
     // clear the model
-    clearDataModel();
+//    clearDataModel();
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "continue loading");
 
     // do some initializing
@@ -580,7 +584,7 @@ bool DataModel::addFileData()
         // Load folder progress
         if (row % 100 == 0) {
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
-                        " loaded.";
+                        " system file info loaded.";
             emit centralMsg(s);    // rghmsg
 //            QCoreApplication::processEvents();
         }
@@ -796,8 +800,9 @@ void DataModel::addAllMetadata()
     G::t.restart();
     timeToQuit = false;
     loadingModel = true;
+    /*
     QString x = QString::number(rowCount());
-    /* G::popUp->setProgressVisible(true);
+    G::popUp->setProgressVisible(true);
     G::popUp->setProgressMax(rowCount());
     QString msg = "It may take a moment to load all the metadata for " + x + " files<p>"
             "This is required before any filtering or sorting of metadata can be done.<p>"
@@ -807,17 +812,14 @@ void DataModel::addAllMetadata()
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
         // Load folder progress
-        if (row % 100 == 0 ) {
+        if (G::useLinearLoading && row % 100 == 0) {
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " secondary metadata loading...";
             emit centralMsg(s);    // rghmsg
-            QCoreApplication::processEvents();
+//            QCoreApplication::processEvents();
         }
-//        qApp->processEvents();
         if (timeToQuit) break;
         // is metadata already cached
-        /* G::popUp->setProgress(row);
-           */
         if (index(row, G::MetadataLoadedColumn).data().toBool()) continue;
 
         QString fPath = index(row, 0).data(G::PathRole).toString();
@@ -831,13 +833,8 @@ void DataModel::addAllMetadata()
 //            qWarning() << __FUNCTION__ << "Failed to load metadata." << fPath;
         }
     }
-    G::allMetadataLoaded = true;
+    setAllMetadataLoaded(true);
     loadingModel = false;
-//    G::popUp->setProgressVisible(false);
-//    G::popUp->hide();
-
-    timeToQuit = false;
-
     /*
     qint64 ms = G::t.elapsed();
     qreal msperfile = static_cast<double>(ms) / count;
@@ -901,7 +898,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */
 //    mutex.lock();
-    QMutexLocker locker(&mutex);
+//    QMutexLocker locker(&mutex);
     if (G::isLogger) G::log(__FUNCTION__);
     int row = m.row;
 //    qDebug() << __FUNCTION__ << row;
@@ -1073,7 +1070,13 @@ void DataModel::clearAllIcons()
     mutex.unlock();
 }
 
-bool DataModel::allMetadataLoaded()
+void DataModel::setAllMetadataLoaded(bool isLoaded)
+{
+    G::allMetadataLoaded = isLoaded;
+    filters->loadedDataModel(isLoaded);
+}
+
+bool DataModel::isAllMetadataLoaded()
 {
     for (int row = 0; row < rowCount(); ++row) {
         if (!index(row, G::MetadataLoadedColumn).data().toBool()) return false;
@@ -1084,8 +1087,8 @@ bool DataModel::allMetadataLoaded()
 int DataModel::rowFromPath(QString fPath)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-//    QMutexLocker locker(&mutex);
-    return fPathRow[fPath];
+    if (fPathRow.contains(fPath)) return fPathRow[fPath];
+    else return -1;
 }
 
 void DataModel::refreshRowFromPath()
@@ -1192,7 +1195,7 @@ When Raw+Jpg is toggled in the main program MW the file type filter must be rebu
         }
     }
     filters->addCategoryFromData(typesMap, filters->types);
-    qApp->processEvents();
+//    qApp->processEvents();
 }
 
 QModelIndex DataModel::proxyIndexFromPath(QString fPath)
@@ -1448,7 +1451,7 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
                     QModelIndex idx = sourceModel()->index(sourceRow, dataModelColumn, sourceParent);
                     QVariant dataValue = idx.data(Qt::EditRole);
                     QVariant filterValue = (*filter)->data(1, Qt::EditRole);
-//                    /*
+                    /*
                     QString itemName = (*filter)->text(0);      // for debugging
                     qDebug() << G::t.restart() << "\t" << itemCategory << itemName
                              << "sfRow" << sourceRow

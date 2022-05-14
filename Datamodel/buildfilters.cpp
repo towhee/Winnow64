@@ -48,14 +48,7 @@ void BuildFilters::build()
         wait();
     }
     abort = false;
-    filters->removeChildrenDynamicFilters();
-    filters->filtersBuilt = false;
-    filters->buildingFilters = true;
-    filters->filterLabel->setVisible(true);
-    filters->setProgressBarStyle();
-    filters->bfProgressBar->setVisible(true);
-    filters->collapseAll();
-    filters->setEnabled(false);
+    filters->startBuildFilters();
     progress = 0;
     dmRows = dm->rowCount();
     buildFiltersTimer.restart();
@@ -100,7 +93,7 @@ void BuildFilters::unfilteredItemSearchCount()
     tot = 0;
     totRawJpgCombined = 0;
     matchText = filters->searchFalse->text(1);
-//    mutex.lock();
+    dm->mutex.lock();
     for (int row = 0; row < dmRows; ++row) {
         bool hideRaw = dm->index(row, 0).data(G::DupHideRawRole).toBool();
         if (dm->index(row, col).data().toString() == matchText) {
@@ -108,7 +101,7 @@ void BuildFilters::unfilteredItemSearchCount()
             if (combineRawJpg && !hideRaw) totRawJpgCombined++;
         }
     }
-//    mutex.unlock();
+    dm->mutex.unlock();
     filters->searchFalse->setData(3, Qt::EditRole, QString::number(tot));
     filters->searchFalse->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
 }
@@ -128,9 +121,11 @@ void BuildFilters::updateCountFiltered()
             QString searchValue = (*it)->text(1);
             int tot = 0;
             // filtered counts
+            dm->mutex.lock();
             for (int row = 0; row < dm->sf->rowCount(); ++row) {
                 if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
             }
+            dm->mutex.unlock();
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
             // unfiltered counts
@@ -162,11 +157,11 @@ void BuildFilters::countFiltered()
             int col = filters->filterCategoryToDmColumn[cat];
             QString searchValue = (*it)->text(1);
             int tot = 0;
-//            mutex.lock();
+            dm->mutex.lock();
             for (int row = 0; row < dm->sf->rowCount(); ++row) {
                 if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
             }
-//            mutex.unlock();
+            dm->mutex.unlock();
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         }
@@ -174,8 +169,7 @@ void BuildFilters::countFiltered()
             if (instances.contains(cat)) {
                 int itemProgress = 40 * instances[cat] / totInstances;
                 progress += itemProgress;
-                emit updateProgress(progress);
-                qApp->processEvents();
+                emit updateProgress(progress); // do not qApp->processEvents() from another thread
                 /*
                 qDebug() << __FUNCTION__
                          << cat
@@ -188,13 +182,8 @@ void BuildFilters::countFiltered()
         }
         ++it;
     }
-    if (instances.contains(cat)) {
-        int itemProgress = 40 * instances[cat] / totInstances;
-        progress += itemProgress;
-        emit updateProgress(progress);
-        qApp->processEvents();
-    }
     filters->disableZeroCountItems(true);
+    progress = 60;
 }
 
 void BuildFilters::countUnfiltered()
@@ -211,7 +200,7 @@ void BuildFilters::countUnfiltered()
             QString searchValue = (*it)->text(1);
             int tot = 0;
             int totRawJpgCombined = 0;
-//            mutex.lock();
+            dm->mutex.lock();
             for (int row = 0; row < dmRows; ++row) {
                 bool hideRaw = dm->index(row, 0).data(G::DupHideRawRole).toBool();
                 if (dm->index(row, col).data().toString() == searchValue) {
@@ -219,7 +208,7 @@ void BuildFilters::countUnfiltered()
                     if (combineRawJpg && !hideRaw) totRawJpgCombined++;
                 }
             }
-//            mutex.unlock();
+            dm->mutex.unlock();
             (*it)->setData(3, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
@@ -229,8 +218,7 @@ void BuildFilters::countUnfiltered()
             if (instances.contains(cat)) {
                 int itemProgress = 40 * instances[cat] / totInstances;
                 progress += itemProgress;
-                emit updateProgress(progress);
-                qApp->processEvents();
+                emit updateProgress(progress); // do not qApp->processEvents() from another thread
                 /*
                 qDebug() << __FUNCTION__
                          << cat
@@ -243,12 +231,7 @@ void BuildFilters::countUnfiltered()
         }
         ++it;
     }
-    if (instances.contains(cat)) {
-        int itemProgress = 40 * instances[cat] / totInstances;
-        progress += itemProgress;
-        emit updateProgress(progress);
-        qApp->processEvents();
-    }
+    progress = 100;
 }
 
 void BuildFilters::loadAllMetadata()
@@ -257,7 +240,7 @@ void BuildFilters::loadAllMetadata()
     if (!G::allMetadataLoaded) {
         for (int row = 0; row < dmRows; ++row) {
             if (abort) return;
-//            mutex.lock();
+            dm->mutex.lock();
             // is metadata already cached
             if (dm->index(row, G::MetadataLoadedColumn).data().toBool()) continue;
             QString fPath = dm->index(row, 0).data(G::PathRole).toString();
@@ -267,15 +250,14 @@ void BuildFilters::loadAllMetadata()
                 dm->addMetadataForItem(metadata->m);
                 if (row % 100 == 0 || row == 0) {
                     progress = static_cast<int>(static_cast<double>(20 * row) / dmRows);
-                    emit updateProgress(progress);
-                    qApp->processEvents();
+                    emit updateProgress(progress); // do not qApp->processEvents() from another thread
                 }
             }
-//            mutex.unlock();
+            dm->mutex.unlock();
         }
-        progress = 20;
         G::allMetadataLoaded = true;
     }
+    progress = 20;
 }
 
 void BuildFilters::mapUniqueInstances()
@@ -313,28 +295,28 @@ void BuildFilters::mapUniqueInstances()
     totInstances = 0;      // total fixed instances ie search, rating, labels etc
     int x = typesMap.count();
     totInstances += x;
-    instances["File type"] = x;
+    instances[" File type"] = x;
     x = modelMap.count();
     totInstances += x;
-    instances["Camera model"] = x;
+    instances[" Camera model"] = x;
     x = lensMap.count();
     totInstances += x;
-    instances["Lenses"] = lensMap.count();
+    instances[" Lenses"] = lensMap.count();
     x = titleMap.count();
     totInstances += x;
-    instances["Title"] = titleMap.count();
+    instances[" Title"] = titleMap.count();
     x = flMap.count();
     totInstances += x;
-    instances["FocalLengths"] = flMap.count();
+    instances[" FocalLengths"] = flMap.count();
     x = creatorMap.count();
     totInstances += x;
-    instances["Creators"] = creatorMap.count();
+    instances[" Creators"] = creatorMap.count();
     x = yearMap.count();
     totInstances += x;
-    instances["Years"] = yearMap.count();
+    instances[" Years"] = yearMap.count();
     x = dayMap.count();
     totInstances += x;
-    instances["Days"] = dayMap.count();
+    instances[" Days"] = dayMap.count();
 
     // build filter item maps
     filters->addCategoryFromData(typesMap, filters->types);
@@ -351,7 +333,6 @@ void BuildFilters::run()
 {
     if (G::isLogger) {mutex.lock(); G::log(__FUNCTION__); mutex.unlock();}
     if (filters->filtersBuilt) return;
-
     if (!abort) loadAllMetadata();
     if (!abort) mapUniqueInstances();
     if (!abort) countFiltered();

@@ -18,7 +18,6 @@ public:
     BuildFilters(QObject *parent, DataModel *dm, Metadata *metadata, Filters *filters,
                  bool &combineRawJpg);
     void stop();
-    void build();
     void done();
     void loadAllMetadata();
     void mapUniqueInstances();
@@ -33,6 +32,9 @@ protected:
 signals:
     void updateProgress(int progress);
     void finishedBuildFilters();
+
+public slots:
+    void build();
 
 private:
     QMutex mutex;

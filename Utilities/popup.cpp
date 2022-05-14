@@ -133,7 +133,7 @@ void PopUp::showPopup(const QString &text,
 //    // set popupDuration = 0 to keep open and manually close like a msgbox
     if (popupDuration > 0) timer->start(popupDuration);
 
-    qApp->processEvents();
+//    qApp->processEvents();
 }
 
 void PopUp::hideAnimation()
@@ -202,7 +202,7 @@ void PopUp::setPopupText(const QString &text)
 {
     label.setText(text);
     repaint(0, 0, width(), height());
-    qApp->processEvents();
+//    qApp->processEvents();
 }
 
 void PopUp::setPopupOpacity(float opacity)
@@ -225,5 +225,5 @@ void PopUp::setPopUpSize(int w, int h)
 {
 //    setFixedSize(w, h);
     setGeometry(0, 0, w, h);
-    qApp->processEvents();
+//    qApp->processEvents();
 }
