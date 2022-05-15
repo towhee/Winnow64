@@ -550,7 +550,7 @@ void MW::closeEvent(QCloseEvent *event)
     setCentralMessage("Closing Winnow ...");
     metaRead->stop();
     imageCacheThread->stop();
-    metadataCacheThread->stopMetadataCache();
+    metadataCacheThread->stop();
     if (filterDock->isVisible()) {
         folderDock->raise();
         folderDockVisibleAction->setChecked(true);
@@ -1311,6 +1311,8 @@ void MW::folderSelectionChange()
         return;
     }
 
+    stopAndClearAll("folderSelectionChange");
+
     currentViewDirPath = getSelectedPath();
     setting->setValue("lastDir", currentViewDirPath);
 
@@ -1320,10 +1322,10 @@ void MW::folderSelectionChange()
         qDebug();
         G::log(__FUNCTION__, currentViewDirPath);
     }
-    qDebug();
-    G::log(__FUNCTION__, currentViewDirPath);
+    qDebug() << currentViewDirPath;
+//    G::log(__FUNCTION__, currentViewDirPath);
 
-    stopAndClearAll("folderSelectionChange");
+//    stopAndClearAll("folderSelectionChange");
 
     // do not embellish
 //    if (turnOffEmbellish) embelProperties->invokeFromAction(embelTemplatesActions.at(0));
@@ -1597,7 +1599,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     G::fileSelectionChangeSource = "";
     G::ignoreScrollSignal = false;
 
-    if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stopMetadataCache();
+    if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stop();
 
     // updates ********************************************************************************
 
@@ -1747,17 +1749,16 @@ void MW::stopAndClearAll(QString src)
 
     G::stop = true;
     // Stop any threads that might be running.
-    metadataCacheThread->stopMetadataCache();
+    metaRead->stop();
+    metadataCacheThread->stop();
     imageCacheThread->stop();
     buildFilters->stop();
 
     imageView->clear();
-//    setCentralMessage("Preparing to load new folder.");
     setWindowTitle(winnowWithVersion);
     G::isNewFolderLoaded = false;
     G::allMetadataLoaded = false;
     G::isNewFolderLoadedAndInfoViewUpToDate = false;
-    if (!G::useLinearLoading) metaRead->stop();
     imageView->clear();
     if (useInfoView) {
         infoView->clearInfo();
@@ -1941,6 +1942,7 @@ void MW::loadConcurrentNewFolder()
 void MW::loadConcurrentMetaDone()
 {
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    if (G::stop) return;
 
     // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
@@ -2465,6 +2467,7 @@ void MW::updateIconBestFit()
     the bestAspect is called and the IconView is returned to its previous position after.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    if (G::stop) return;
     gridView->bestAspect();
     thumbView->bestAspect();
 }

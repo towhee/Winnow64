@@ -109,7 +109,7 @@ void MW::keyEnd()
 */
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::isNewFolderLoaded /*&& !G::isInitializing*/) {
-        metadataCacheThread->stopMetadataCache();
+        metadataCacheThread->stop();
         if (G::mode == "Compare") compareImages->go("End");
         if (G::mode == "Grid") gridView->selectLast();
         else {

@@ -40,6 +40,9 @@ void MetaRead::stop()
         wait();
         abort = false;
     }
+    iconsLoaded.clear();
+    visibleIcons.clear();
+    priorityQueue.clear();
 }
 
 void MetaRead::initialize()
@@ -47,6 +50,7 @@ void MetaRead::initialize()
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     iconsLoaded.clear();
     visibleIcons.clear();
+    priorityQueue.clear();
     imageCachingStarted = false;
 }
 
@@ -376,6 +380,7 @@ void MetaRead::run()
             }
         }
     }
+    if (abort) return;
     emit updateIconBestFit();
     emit done();
 }
