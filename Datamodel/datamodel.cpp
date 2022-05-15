@@ -898,7 +898,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */
 //    mutex.lock();
-//    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&mutex);
     if (G::isLogger) G::log(__FUNCTION__);
     int row = m.row;
 //    qDebug() << __FUNCTION__ << row;
