@@ -107,7 +107,7 @@ MetadataCache::~MetadataCache()
     delete thumb;
 }
 
-void MetadataCache::stopMetadataCache()
+void MetadataCache::stop()
 {
     if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__;

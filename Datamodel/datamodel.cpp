@@ -899,6 +899,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 */
 //    mutex.lock();
     QMutexLocker locker(&mutex);
+<<<<<<< Updated upstream
+=======
+    if (G::stop) return false;
+>>>>>>> Stashed changes
     if (G::isLogger) G::log(__FUNCTION__);
     int row = m.row;
 //    qDebug() << __FUNCTION__ << row;
@@ -1044,6 +1048,7 @@ void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm)
 
 bool DataModel::iconLoaded(int sfRow)
 {
+    if (G::stop) return false;
     if (G::isLogger) G::log(__FUNCTION__);
     QModelIndex dmIdx = sf->mapToSource(sf->index(sfRow, 0));
     return !(itemFromIndex(dmIdx)->icon().isNull());

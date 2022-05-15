@@ -37,7 +37,7 @@ public:
     void sizeChange(QString source);
     void fileSelectionChange(/*bool okayToImageCache*/); // rghcachechange
     void readMetadataIcon(const QModelIndex &idx);
-    void stopMetadataCache();
+    void stop();
     void setRange();
     void iconMax(QPixmap &thumb);
     qint32 memRequired();

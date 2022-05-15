@@ -192,8 +192,7 @@ void MW::createMDCache()
     // Signal to MW::loadNew3 to prep and run fileSelectionChange
     connect(metaRead, &MetaRead::delayedStartImageCache, this, &MW::loadConcurrentStartImageCache);
     // check icons visible is correct
-//    connect(metaRead, &MetaRead::updateIconBestFit,
-//            this, &MW::updateIconBestFit);
+    connect(metaRead, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
 
 }
 

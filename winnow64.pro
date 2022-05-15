@@ -4,7 +4,7 @@ CONFIG += sdk_no_version_check
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 greaterThan(QT_MAJOR_VERSION, 5) {
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x051500
-    win32:QT += core5compat   # huge performance hit without this
+#    win32:QT += core5compat   # huge performance hit without this
 }
 
 #QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
