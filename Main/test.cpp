@@ -14,7 +14,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QApplication::beep();
-    qDebug() << __FUNCTION__ << "filterDock->visibleRegion().isNull() ="
-             << filterDock->visibleRegion().isNull();
+    static bool b = true;
+    QString p1 = "D:/Pictures/Calendar_Cats √";
+    QString p2 = "D:/Pictures/Calendar_Beach";
+    QString fPath;
+    if (b) fPath = p1;
+    else fPath = p2;
+    QModelIndex idx = fsTree->fsModel->index(fPath);
+    QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
+    fsTree->setCurrentIndex(filterIdx);
+    fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
+    folderSelectionChange();
+    b = !b;
 }

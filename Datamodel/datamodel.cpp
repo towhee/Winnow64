@@ -240,6 +240,7 @@ void DataModel::setModelProperties()
 void DataModel::clearDataModel()
 {
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
     /* clear the model
        // takes a very long time
        beginRemoveRows(QModelIndex(), 0, n-1);
@@ -479,6 +480,7 @@ bool DataModel::addFileData()
     • ErrColumn
 */
     QString logmsg = QString::number(fileInfoList.count()) + " images";
+    qDebug() << __FUNCTION__ << logmsg;
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, logmsg);
     // make sure if raw+jpg pair that raw file is first to make combining easier
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
@@ -597,7 +599,7 @@ bool DataModel::addFileData()
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-
+    qDebug() << __FUNCTION__ << row;
     // append hash index of datamodel row for fPath for fast lookups
     QString fPath = fileInfo.filePath();
     // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
@@ -897,12 +899,20 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     been loaded, but editable data, (such as rating, label, title, email, url) may have been
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */
-//    mutex.lock();
-    QMutexLocker locker(&mutex);
-    if (G::stop) return false;
+//    QMutexLocker locker(&mutex);
+//    if (G::stop) return false;
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__
+             << m.row
+             << "rowCount() =" << rowCount()
+             << "m.fPath =" << m.fPath
+             << "currentFolderPath =" << currentFolderPath
+                ;
     int row = m.row;
-//    qDebug() << __FUNCTION__ << row;
+//    if (rowCount() >= row) return false;
+
+    qDebug() << __FUNCTION__ << "test0";
+    mutex.lock();
     if (!metadata->ratings.contains(m.rating)) {
         m.rating = "";
         m._rating = "";
@@ -932,6 +942,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::HeightColumn), QString::number(m.height));
     setData(index(row, G::HeightColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::DimensionsColumn), QString::number(m.width) + "x" + QString::number(m.height));
+//    qDebug() << __FUNCTION__ << "test1";
     setData(index(row, G::DimensionsColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
     setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
@@ -1021,10 +1032,12 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
+    qDebug() << __FUNCTION__ << "test1";
 
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
-//    mutex.unlock();
+    mutex.unlock();
+    qDebug() << __FUNCTION__ << "test2";
     return true;
 }
 
@@ -1037,8 +1050,12 @@ bool DataModel::metadataLoaded(int dmRow)
 
 void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm)
 {
+//    itemFromIndex(dmIdx)->setIcon(pm);
+//    return;
+    qDebug() << __FUNCTION__ << currentFolderPath << dmIdx;
     if (G::isLogger) G::log(__FUNCTION__);
-    if (G::stop) return;
+//    if (G::stop) return;
+//    return;
     mutex.lock();
     if (dmIdx.isValid()) itemFromIndex(dmIdx)->setIcon(pm);
     mutex.unlock();
