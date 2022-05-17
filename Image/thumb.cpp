@@ -15,6 +15,7 @@ Thumb::Thumb(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(paren
 void Thumb::checkOrientation(QString &fPath, QImage &image)
 {
     if (G::isLogger) G::log(__FUNCTION__, fPath);
+    qDebug() << __FUNCTION__ << fPath;
     // check orientation and rotate if portrait
     QTransform trans;
     int row = dm->fPathRow[fPath];

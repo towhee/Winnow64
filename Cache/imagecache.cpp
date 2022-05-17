@@ -65,7 +65,7 @@ ImageCache::ImageCache(QObject *parent,
     }
     restart = false;
     abort = false;
-    debugCaching = false;
+    debugCaching = true;
 }
 
 ImageCache::~ImageCache()
@@ -272,9 +272,9 @@ void ImageCache::setTargetRange()
     int sumMB = 0;
     priorityList.clear();
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
-        if (icd->cacheItemList.at(i).sizeMB == 0) {
-            continue;
-        }
+//        if (icd->cacheItemList.at(i).sizeMB == 0) {
+//            continue;
+//        }
         sumMB += icd->cacheItemList.at(i).sizeMB;
         if (sumMB < icd->cache.maxMB) {
             icd->cacheItemList[i].isTarget = true;

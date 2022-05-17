@@ -1050,9 +1050,10 @@ void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
 {
 /*
     thumbViewDelegate triggers this to provide rect data to calc thumb mouse
-    click position that is then sent to imageView to zoom to the same spot
+    click position that is then sent to imageView to zoom to the same spot.
 */
 //    if (G::isLogger) G::log(__FUNCTION__);
+//    qDebug() << __FUNCTION__ << index;
     dm->sf->setData(index, iconRect, G::IconRectRole);
 }
 

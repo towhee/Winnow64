@@ -1311,6 +1311,7 @@ void MW::folderSelectionChange()
         return;
     }
 
+    qDebug() << "stopAndClearAll" << currentViewDirPath;
     stopAndClearAll("folderSelectionChange");
 
     currentViewDirPath = getSelectedPath();
@@ -1322,7 +1323,6 @@ void MW::folderSelectionChange()
         qDebug();
         G::log(__FUNCTION__, currentViewDirPath);
     }
-    qDebug() << currentViewDirPath;
 //    G::log(__FUNCTION__, currentViewDirPath);
 
 //    stopAndClearAll("folderSelectionChange");
@@ -1385,9 +1385,11 @@ void MW::folderSelectionChange()
     // update menu
     enableEjectUsbMenu(currentViewDirPath);
 
+    qDebug() << "uncheckAllFilters" << currentViewDirPath;
     uncheckAllFilters();
 
     // load datamodel
+    qDebug() << "load datamodel" << currentViewDirPath;
     if (!dm->load(currentViewDirPath, subFoldersAction->isChecked())) {
         qWarning() << "Datamodel Failed To Load for" << currentViewDirPath;
         stopAndClearAll();
@@ -1499,6 +1501,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     delegate use of the current index must check the column.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, src + " " + current.data(G::PathRole).toString());
+    qDebug() << __FUNCTION__ << G::stop << src << current.data(G::PathRole).toString();
     if (G::stop) return;
     G::isNewSelection = false;
 //    if (current == previous) return;
@@ -1628,6 +1631,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 
 //    G::track(__FUNCTION__, "Return from imageView->loadImage " + fPath);
     // update caching if folder has been loaded
+    qDebug() << __FUNCTION__ << "G::isNewFolderLoaded =" << G::isNewFolderLoaded;
     if (G::isNewFolderLoaded) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
         updateIconsVisible(currentRow);
@@ -1749,9 +1753,9 @@ void MW::stopAndClearAll(QString src)
 
     G::stop = true;
     // Stop any threads that might be running.
+    imageCacheThread->stop();
     metaRead->stop();
     metadataCacheThread->stop();
-    imageCacheThread->stop();
     buildFilters->stop();
 
     imageView->clear();

@@ -1410,6 +1410,13 @@ void MW::createActions()
     testAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+T"));
     connect(testAction, &QAction::triggered, this, &MW::test);
 
+    testAction1 = new QAction(tr("Test1"), this);
+    testAction1->setObjectName("test1");
+    testAction1->setShortcutVisibleInContextMenu(true);
+    addAction(testAction1);
+    testAction1->setShortcut(QKeySequence("/"));
+    connect(testAction1, &QAction::triggered, this, &MW::test);
+
     testNewFileFormatAction = new QAction(tr("Test Metadata"), this);
     testNewFileFormatAction->setObjectName("testNewFileFormat");
     testNewFileFormatAction->setShortcutVisibleInContextMenu(true);

@@ -307,7 +307,8 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
         metadata->m.row = dmRow;
 //        if (abort) return;
-        emit addToDatamodel(metadata->m);
+//        emit addToDatamodel(metadata->m);
+        dm->addMetadataForItem(metadata->m);
     }
 }
 
@@ -319,7 +320,8 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
     if (thumbLoaded) {
         QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-        emit setIcon(dmIdx, pm);
+//        emit setIcon(dmIdx, pm);
+        dm->setIcon(dmIdx, pm);
         iconMax(pm);
         iconsLoaded.append(dmIdx.row());
     }

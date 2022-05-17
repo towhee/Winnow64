@@ -909,6 +909,7 @@ private:
     QAction *moderateCacheAction;        // only available via shortcut key "F11"
     QAction *greedyCacheAction;          // only available via shortcut key "F12"
     QAction *testAction;                 // only available via shortcut key "Shift+Ctrl+Alt+T"
+    QAction *testAction1;                // only available via shortcut key "*"
     QAction *testNewFileFormatAction;    // only available via shortcut key "Shift+Ctrl+Alt+F"
 
     // Might need
