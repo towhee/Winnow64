@@ -19,6 +19,9 @@ public:
     bool insertingThumbnails = false;
     bool abort = false;
 
+signals:
+    void setValue(QModelIndex dmIdx, QVariant value, int role);
+
 private:
     DataModel *dm;
     Metadata *metadata;

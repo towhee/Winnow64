@@ -282,6 +282,7 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
         case DT_SelectFile: {
             SelectFileEditor *selectFileEditor = static_cast<SelectFileEditor*>(editor);
             QString value = selectFileEditor->value();
+//            emit setValue(index, value, Qt::EditRole);
             model->setData(index, value, Qt::EditRole);
             emit itemChanged(index);
             break;

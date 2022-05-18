@@ -83,6 +83,7 @@ public:
     };
 
 signals:
+    void setValueSf(QModelIndex sfIdx, QVariant value, int role);
     void dataEdited();
 
 public slots:

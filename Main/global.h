@@ -202,6 +202,7 @@ namespace G
     extern int backgroundShade;
     extern QString css;
 
+    extern QString currRootFolder;
     extern bool allMetadataLoaded;
     extern bool allIconsLoaded;
     extern bool ignoreScrollSignal;

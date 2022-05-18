@@ -78,6 +78,7 @@ namespace G
     int iconHMax;                       // highest icon found in datamodel
 
     // status
+    QString currRootFolder;
     bool allMetadataLoaded;
     bool allIconsLoaded;
     bool ignoreScrollSignal;

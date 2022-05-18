@@ -109,6 +109,8 @@ public slots:
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, QPixmap &pm);
+    void setValue(QModelIndex dmIdx, QVariant value, int role = Qt::EditRole);
+    void setValueSf(QModelIndex sfIdx, QVariant value, int role = Qt::EditRole);
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
 

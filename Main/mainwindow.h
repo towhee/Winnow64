@@ -378,6 +378,8 @@ public slots:
     void slideshowHelpMsg();
 
 signals:
+    void setValue(QModelIndex dmIdx, QVariant value, int role);
+    void setValueSf(QModelIndex sfIdx, QVariant value, int role);
     void setImageCachePosition(QString, QString);
     void setImageCachePosition2(QString);
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);

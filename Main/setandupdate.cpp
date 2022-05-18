@@ -386,8 +386,10 @@ void MW::setIngested()
     if (G::isLogger) G::log(__FUNCTION__);
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         if (dm->sf->index(row, G::PickColumn).data().toString() == "true") {
-            dm->sf->setData(dm->sf->index(row, G::IngestedColumn), "true");
-            dm->sf->setData(dm->sf->index(row, G::PickColumn), "false");
+            emit setValueSf(dm->sf->index(row, G::IngestedColumn), "true", Qt::EditRole);
+            emit setValueSf(dm->sf->index(row, G::PickColumn), "true", Qt::EditRole);
+//            dm->sf->setData(dm->sf->index(row, G::IngestedColumn), "true");
+//            dm->sf->setData(dm->sf->index(row, G::PickColumn), "false");
         }
     }
 }
@@ -425,7 +427,8 @@ void MW::toggleReject()
         pushPick(fPath, priorPickStatus);
         // set pick status
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
-        dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
+        emit setValueSf(pickIdx, pickStatus, Qt::EditRole);
+//        dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
     }
     if (idxList.length() > 1) pushPick("End multiple select");
 
@@ -478,8 +481,10 @@ void MW::setCombineRawJpg()
         if (idx.data(G::DupIsJpgRole).toBool()) {
             QString rawType = idx.data(G::DupRawTypeRole).toString();
             QModelIndex typeIdx = dm->index(row, G::TypeColumn);
-            if (combineRawJpg) dm->setData(typeIdx, "JPG+" + rawType);
-            else dm->setData(typeIdx, "JPG");
+            if (combineRawJpg) emit setValue(typeIdx, "JPG+" + rawType, Qt::EditRole);
+            else emit setValue(typeIdx, "JPG", Qt::EditRole);
+//            if (combineRawJpg) dm->setData(typeIdx, "JPG+" + rawType);
+//            else dm->setData(typeIdx, "JPG");
         }
     }
 
@@ -520,7 +525,8 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
     QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
 
     if (sfIdx.isValid()/* && metaLoaded*/) {
-        dm->sf->setData(sfIdx, isCached, G::CachedRole);
+        emit setValueSf(sfIdx, isCached, G::CachedRole);
+//        dm->sf->setData(sfIdx, isCached, G::CachedRole);
         if (isCached) {
             if (sfIdx.row() == currentRow) {
                 if (G::isFlowLogger) G::log(__FUNCTION__, fPath);

@@ -40,7 +40,7 @@ signals:
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, QPixmap &pm);
-    void setImageCachePosition(QString fPath);
+    void setImageCachePosition(QString fPath);      // not used
     void delayedStartImageCache();
     void updateIconBestFit();
 

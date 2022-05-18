@@ -120,6 +120,8 @@ void MW::createDataModel()
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     connect(dm, &DataModel::centralMsg, this, &MW::setCentralMessage);
     connect(dm, &DataModel::updateStatus, this, &MW::updateStatus);
+    connect(this, &MW::setValue, dm, &DataModel::setValue);
+    connect(this, &MW::setValueSf, dm, &DataModel::setValueSf);
 
     buildFilters = new BuildFilters(this, dm, metadata, filters, combineRawJpg);
 
@@ -173,6 +175,9 @@ void MW::createMDCache()
     metadataCacheScrollTimer->setSingleShot(true);
     // next connect to update
     connect(metadataCacheScrollTimer, &QTimer::timeout, this, &MW::loadMetadataChunk);
+
+    // update icon in datamodel
+    connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon);
 
     connect(metadataCacheThread, &MetadataCache::updateIsRunning,
             this, &MW::updateMetadataThreadRunStatus);

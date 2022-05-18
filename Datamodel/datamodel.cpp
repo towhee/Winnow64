@@ -480,7 +480,7 @@ bool DataModel::addFileData()
     • ErrColumn
 */
     QString logmsg = QString::number(fileInfoList.count()) + " images";
-    qDebug() << __FUNCTION__ << logmsg;
+//    qDebug() << __FUNCTION__ << logmsg;
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, logmsg);
     // make sure if raw+jpg pair that raw file is first to make combining easier
     std::sort(fileInfoList.begin(), fileInfoList.end(), lessThan);
@@ -599,7 +599,7 @@ bool DataModel::addFileData()
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << row;
+//    qDebug() << __FUNCTION__ << row;
     // append hash index of datamodel row for fPath for fast lookups
     QString fPath = fileInfo.filePath();
     // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
@@ -673,6 +673,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     // file info (calling Metadata not required)
     m.row = row;
+    m.currRootFolder = G::currRootFolder;
     m.fPath = fPath;
     m.fName = index(row, G::NameColumn).data().toString();
     m.type = index(row, G::TypeColumn).data().toString();
@@ -898,20 +899,25 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     If a folder is opened with combineRawJpg all the metadata for the raw file may not have
     been loaded, but editable data, (such as rating, label, title, email, url) may have been
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
-*/
-//    QMutexLocker locker(&mutex);
-//    if (G::stop) return false;
+*/    
     if (G::isLogger) G::log(__FUNCTION__);
+
+    // deal with lagging signals when new folder selected suddenly
+    if (G::stop) return false;
+    if (m.currRootFolder != G::currRootFolder) return false;
+
+    /*
     qDebug() << __FUNCTION__
              << m.row
              << "rowCount() =" << rowCount()
              << "m.fPath =" << m.fPath
              << "currentFolderPath =" << currentFolderPath
                 ;
+                //*/
     int row = m.row;
 //    if (rowCount() >= row) return false;
 
-    qDebug() << __FUNCTION__ << "test0";
+//    qDebug() << __FUNCTION__ << "test0";
     mutex.lock();
     if (!metadata->ratings.contains(m.rating)) {
         m.rating = "";
@@ -921,6 +927,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
         m.label = "";
         m._label = "";
     }
+
+    if (!index(row, 0).isValid()) return false;
 
     QString search = index(row, G::SearchTextColumn).data().toString();
 
@@ -1032,12 +1040,12 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
-    qDebug() << __FUNCTION__ << "test1";
+//    qDebug() << __FUNCTION__ << "test1";
 
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
     mutex.unlock();
-    qDebug() << __FUNCTION__ << "test2";
+//    qDebug() << __FUNCTION__ << "test2";
     return true;
 }
 
@@ -1048,16 +1056,27 @@ bool DataModel::metadataLoaded(int dmRow)
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
 }
 
+void DataModel::setValue(QModelIndex dmIdx, QVariant value, int role)
+{
+    setData(dmIdx, value, role);
+}
+
+void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int role)
+{
+    sf->setData(sfIdx, value, role);
+}
+
 void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm)
 {
 //    itemFromIndex(dmIdx)->setIcon(pm);
 //    return;
-    qDebug() << __FUNCTION__ << currentFolderPath << dmIdx;
+//    qDebug() << __FUNCTION__ << currentFolderPath << dmIdx;
     if (G::isLogger) G::log(__FUNCTION__);
-//    if (G::stop) return;
+    if (G::stop) return;
+    if (!dmIdx.isValid()) return;
 //    return;
     mutex.lock();
-    if (dmIdx.isValid()) itemFromIndex(dmIdx)->setIcon(pm);
+    itemFromIndex(dmIdx)->setIcon(pm);
     mutex.unlock();
 }
 

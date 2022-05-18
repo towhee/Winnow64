@@ -65,7 +65,7 @@ ImageCache::ImageCache(QObject *parent,
     }
     restart = false;
     abort = false;
-    debugCaching = true;
+    debugCaching = false;
 }
 
 ImageCache::~ImageCache()
@@ -104,6 +104,9 @@ void ImageCache::stop()
     for (int id = 0; id < decoderCount; ++id) {
         decoder[id]->stop();
     }
+//    for (int id = 0; id < decoderCount; ++id) {
+//        qDebug() << __FUNCTION__ << "decoder[id]->isRunning()" << id << decoder[id]->isRunning();
+//    }
 
     // stop imagecache thread
     if (isRunning()) {
@@ -1020,6 +1023,10 @@ void ImageCache::reportRunStatus()
 // Same as ImageCache2, but not used in ImageCache yet
 void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 {
+    // deal with lagging signals when new folder selected suddenly
+    if (G::stop) return;
+//    if (m.currRootFolder != G::currRootFolder) return;
+
     QMutexLocker locker(&mutex);
     if (G::isLogger /*|| G::isFlowLogger*/) G::log(__FUNCTION__);
     int row = cacheKeyHash[m.fPath];
