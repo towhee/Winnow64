@@ -21,6 +21,7 @@ public:
     bool cacheRole = false;
     bool dupHideRawRole = false;
 
+    QString currRootFolder = "";
     QString fName = "";
     QDateTime createdDate;
     QDateTime modifiedDate;

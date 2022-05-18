@@ -337,10 +337,13 @@ void MW::refine()
             QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
             pushPick(fPath, "true");
             // clear picks
-            dm->setData(dm->index(row, G::RefineColumn), true);
-            dm->setData(dm->index(row, G::PickColumn), "false");
+            emit setValue(dm->index(row, G::RefineColumn), true, Qt::EditRole);
+            emit setValue(dm->index(row, G::PickColumn), "false", Qt::EditRole);
+//            dm->setData(dm->index(row, G::RefineColumn), true);
+//            dm->setData(dm->index(row, G::PickColumn), "false");
         }
-        else dm->setData(dm->index(row, G::RefineColumn), false);
+        emit setValue(dm->index(row, G::RefineColumn), false, Qt::EditRole);
+//        else dm->setData(dm->index(row, G::RefineColumn), false);
     }
     pushPick("End multiple select");
 
@@ -613,7 +616,8 @@ void MW::setRating()
     for (int i = 0; i < n; ++i) {
         int row = selection.at(i).row();
         QModelIndex ratingIdx = dm->sf->index(row, G::RatingColumn);
-        dm->sf->setData(ratingIdx, rating, Qt::EditRole);
+        emit setValueSf(ratingIdx, rating, Qt::EditRole);
+//        dm->sf->setData(ratingIdx, rating, Qt::EditRole);
         // update rating crash log
         QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
         updateRatingLog(fPath, rating);
@@ -626,7 +630,8 @@ void MW::setRating()
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 row = rawIdx.row();
                 ratingIdx = dm->index(row, G::RatingColumn);
-                dm->setData(ratingIdx, rating, Qt::EditRole);
+                emit setValueSf(ratingIdx, rating, Qt::EditRole);
+//                dm->setData(ratingIdx, rating, Qt::EditRole);
                 // update rating crash log
                 QString jpgPath  = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
                 updateRatingLog(jpgPath, rating);
@@ -679,7 +684,8 @@ void MW::recoverRatingLog()
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         if (idx.isValid()) {
             QModelIndex ratingIdx = dm->sf->index(idx.row(), G::RatingColumn);
-            dm->sf->setData(ratingIdx, pickStatus, Qt::EditRole);
+            emit setValueSf(ratingIdx, pickStatus, Qt::EditRole);
+//            dm->sf->setData(ratingIdx, pickStatus, Qt::EditRole);
 //            qDebug() << __FUNCTION__ << pickStatus << fPath << "updated";
         }
         else {
@@ -774,7 +780,8 @@ void MW::setColorClass()
     for (int i = 0; i < n; ++i) {
         int row = selection.at(i).row();
         QModelIndex labelIdx = dm->sf->index(row, G::LabelColumn);
-        dm->sf->setData(labelIdx, colorClass, Qt::EditRole);
+        emit setValueSf(labelIdx, colorClass, Qt::EditRole);
+//        dm->sf->setData(labelIdx, colorClass, Qt::EditRole);
         // update color class crash log
         QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
         updateColorClassLog(fPath, colorClass);
@@ -787,7 +794,8 @@ void MW::setColorClass()
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 row = rawIdx.row();
                 labelIdx = dm->index(row, G::LabelColumn);
-                dm->setData(labelIdx, colorClass, Qt::EditRole);
+                emit setValue(labelIdx, colorClass, Qt::EditRole);
+//                dm->setData(labelIdx, colorClass, Qt::EditRole);
                 // update color class crash log
                 QString jpgPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
                 updateColorClassLog(jpgPath, colorClass);
@@ -842,7 +850,8 @@ void MW::recoverColorClassLog()
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         if (idx.isValid()) {
             QModelIndex colorClassIdx = dm->sf->index(idx.row(), G::LabelColumn);
-            dm->sf->setData(colorClassIdx, colorClassStatus, Qt::EditRole);
+            emit setValueSf(colorClassIdx, colorClassStatus, Qt::EditRole);
+//            dm->sf->setData(colorClassIdx, colorClassStatus, Qt::EditRole);
 //            qDebug() << __FUNCTION__ << colorClassStatus << fPath << "updated";
         }
         else {

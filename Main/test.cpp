@@ -15,8 +15,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
     static bool b = true;
-    QString p1 = "D:/Pictures/Calendar_Cats √";
-    QString p2 = "D:/Pictures/Calendar_Beach";
+    QString p1 = "/Users/roryhill/Pictures/2022/202204/2022-04-11_Nora";
+    QString p2 = "/Users/roryhill/Pictures/2022/202204/2022-04-12_Nora";
+//    QString p1 = "/Users/roryhill/Pictures";
+//    QString p2 = "/Users/roryhill/Pictures/_test";
     QString fPath;
     if (b) fPath = p1;
     else fPath = p2;

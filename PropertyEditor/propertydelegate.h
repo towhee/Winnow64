@@ -34,6 +34,7 @@ public:
     bool isAlternatingRows;
 
 signals:
+//    void setValue(QModelIndex dmIdx, QVariant value, int role);
     void itemChanged(QModelIndex idx) const;
     void editorWidgetToDisplay(QModelIndex idx, QWidget *editor) const;
     void drawBranchesAgain(QPainter *painter, QRect rect, QModelIndex index) const;

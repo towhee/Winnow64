@@ -201,6 +201,7 @@ private:
     bool skipResize;
 
 signals:
+    void setValueSf(QModelIndex sfIdx, QVariant value, int role);
     void fileSelectionChange(QModelIndex current, QModelIndex previous, QString src);
     void togglePick();
     void thumbClick(float xPct, float yPct);        // used in ThumbView::mousePressEvent

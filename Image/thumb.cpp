@@ -10,12 +10,13 @@ Thumb::Thumb(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(paren
 {
     this->dm = dm;
     this->metadata = metadata;
+    connect(this, &Thumb::setValue, dm, &DataModel::setValue);
 }
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
 {
     if (G::isLogger) G::log(__FUNCTION__, fPath);
-    qDebug() << __FUNCTION__ << fPath;
+//    qDebug() << __FUNCTION__ << fPath;
     // check orientation and rotate if portrait
     QTransform trans;
     int row = dm->fPathRow[fPath];
@@ -57,10 +58,15 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     thumbReader.setFileName(fPath);
     QSize size = thumbReader.size();
 
-    dm->setData(dm->index(row, G::WidthColumn), size.width());
-    dm->setData(dm->index(row, G::WidthPreviewColumn), size.width());
-    dm->setData(dm->index(row, G::HeightColumn), size.height());
-    dm->setData(dm->index(row, G::HeightPreviewColumn), size.height());
+    emit setValue(dm->index(row, G::WidthColumn), size.width(), Qt::EditRole);
+    emit setValue(dm->index(row, G::WidthPreviewColumn), size.width(), Qt::EditRole);
+    emit setValue(dm->index(row, G::HeightColumn), size.height(), Qt::EditRole);
+    emit setValue(dm->index(row, G::HeightPreviewColumn), size.height(), Qt::EditRole);
+
+//    dm->setData(dm->index(row, G::WidthColumn), size.width());
+//    dm->setData(dm->index(row, G::WidthPreviewColumn), size.width());
+//    dm->setData(dm->index(row, G::HeightColumn), size.height());
+//    dm->setData(dm->index(row, G::HeightPreviewColumn), size.height());
     // needed when loading concurrently
     if (!G::useLinearLoading) {
         metadata->m.width = size.width();

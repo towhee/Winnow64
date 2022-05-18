@@ -1311,6 +1311,7 @@ void MW::folderSelectionChange()
         return;
     }
 
+    G::currRootFolder = currentViewDirPath;
     qDebug() << "stopAndClearAll" << currentViewDirPath;
     stopAndClearAll("folderSelectionChange");
 
@@ -1749,7 +1750,7 @@ void MW::stopAndClearAll(QString src)
     a bookmark or ejects a drive and the resulting folder does not have any eligible images.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
+    qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
 
     G::stop = true;
     // Stop any threads that might be running.
@@ -1787,12 +1788,14 @@ void MW::stopAndClearAll(QString src)
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
     currentRow = 0;
-    G::stop = false;
 
     if (src == "folderSelectionChange")
         setCentralMessage("Loading folder.");
     else
         setCentralMessage("Select a folder.");
+
+//    G::wait(1000);
+    G::stop = false;
 }
 
 void MW::nullFiltration()
@@ -4185,7 +4188,8 @@ void MW::setRotation(int degrees)
         case 270: newOrientation = 8; break;
         }
 
-        dm->sf->setData(orientationIdx, newOrientation);
+        emit setValueSf(orientationIdx, newOrientation, Qt::EditRole);
+//        dm->sf->setData(orientationIdx, newOrientation);
 
         // rotate thumbnail(s)
         QTransform trans;
@@ -5523,17 +5527,20 @@ void MW::metadataChanged(QStandardItem* item)
         // build list of files to send to Metadata::writeMetadata
         paths << dm->sf->index(row, G::PathColumn).data().toString();
         // update data model
-        QModelIndex idx = dm->sf->index(row, col[tagName]);
-        dm->sf->setData(idx, tagValue, Qt::EditRole);
+        QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, col[tagName]));
+        emit setValue(dmIdx, tagValue, Qt::EditRole);
+//        QModelIndex idx = dm->sf->index(row, col[tagName]);
+//        dm->sf->setData(idx, tagValue, Qt::EditRole);
         // check if combined raw+jpg and also set the tag item for the hidden raw file
         if (combineRawJpg) {
-            QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
+//            QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
             // is this part of a raw+jpg pair
-            if(idx.data(G::DupIsJpgRole).toBool()) {
+            if (dmIdx.data(G::DupIsJpgRole).toBool()) {
                 // set tag item for raw file row as well
-                QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
-                idx = dm->index(rawIdx.row(), col[tagName]);
-                dm->setData(idx, tagValue, Qt::EditRole);
+                QModelIndex rawIdx = qvariant_cast<QModelIndex>(dmIdx.data(G::DupOtherIdxRole));
+                QModelIndex idx = dm->index(rawIdx.row(), col[tagName]);
+                emit setValue(idx, tagValue, Qt::EditRole);
+//                dm->setData(idx, tagValue, Qt::EditRole);
             }
         }
     }

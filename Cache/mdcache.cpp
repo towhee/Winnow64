@@ -297,7 +297,9 @@ void MetadataCache::iconCleanup()
         // remove all loaded icons outside target range
         if (sfRow < startRow || sfRow > endRow) {
             i.remove();
-            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(nullPm);
+//            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(nullPm);
+            QModelIndex dmIdx = dm->index(dmRow, 0);
+            emit setIcon(dmIdx, nullPm);
 //            qDebug() << __FUNCTION__ << actionList[action]
 //                     << "Removing icon for row" << sfRow;
         }
@@ -367,7 +369,8 @@ bool MetadataCache::loadIcon(int sfRow)
             pm = QPixmap(":/images/error_image.png");
             qWarning() << __FUNCTION__ << "Failed to load thumbnail." << fPath;
         }
-        item->setIcon(pm);
+//        item->setIcon(pm);
+        emit setIcon(dmIdx, pm);
         iconMax(pm);
         iconsCached.append(dmRow);
     }
@@ -437,7 +440,9 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
         bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readMetadataIcon");
         if (thumbLoaded) {
             QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+//            dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+            QModelIndex dmIdx = dm->index(dmRow, 0);
+            emit setIcon(dmIdx, pm);
             iconMax(pm);
             iconsCached.append(dmRow);
         }

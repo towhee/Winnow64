@@ -24,6 +24,9 @@ public:
     bool load(QString &fPath, QPixmap &pm, QString src = "");
     bool load(QString &fPath, QImage &image, QString src = "");
 
+signals:
+    void setValue(QModelIndex dmIdx, QVariant value, int role);
+
 private:
     DataModel *dm;
     Metadata *metadata;

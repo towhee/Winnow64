@@ -162,6 +162,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     // in imageView
     connect(iconViewDelegate, SIGNAL(update(QModelIndex, QRect)),
             this, SLOT(updateThumbRectRole(QModelIndex, QRect)));
+    connect(this, &IconView::setValueSf, dm, &DataModel::setValueSf);
 }
 
 void IconView::reportThumbs()
@@ -1054,7 +1055,8 @@ void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
 */
 //    if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__ << index;
-    dm->sf->setData(index, iconRect, G::IconRectRole);
+    emit setValueSf(index, iconRect, G::IconRectRole);
+//    dm->sf->setData(index, iconRect, G::IconRectRole);
 }
 
 void IconView::resizeEvent(QResizeEvent *event)
