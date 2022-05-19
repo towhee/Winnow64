@@ -1311,7 +1311,7 @@ void MW::folderSelectionChange()
         return;
     }
 
-    G::currRootFolder = currentViewDirPath;
+    G::currRootFolder = getSelectedPath();
     qDebug() << "stopAndClearAll" << currentViewDirPath;
     stopAndClearAll("folderSelectionChange");
 
@@ -1755,7 +1755,7 @@ void MW::stopAndClearAll(QString src)
     G::stop = true;
     // Stop any threads that might be running.
     imageCacheThread->stop();
-    metaRead->stop();
+    if (!G::useLinearLoading) metaRead->stop();
     metadataCacheThread->stop();
     buildFilters->stop();
 
@@ -2076,7 +2076,8 @@ void MW::loadLinearNewFolder()
     // read icons
     updateIconBestFit();
     updateIconsVisible(currentRow);
-    setCentralMessage("Reading icon chunk (up to 3000).");
+
+    setCentralMessage("Reading icons.");
     mct->readIconChunk();
     updateMetadataThreadRunStatus(false, true, __FUNCTION__);
 

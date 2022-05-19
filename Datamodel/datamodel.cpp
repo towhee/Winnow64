@@ -829,6 +829,7 @@ void DataModel::addAllMetadata()
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->m.row = row;
+            qDebug() << __FUNCTION__ << row;
             addMetadataForItem(metadata->m);
             count++;
         }
@@ -837,6 +838,7 @@ void DataModel::addAllMetadata()
         }
     }
     setAllMetadataLoaded(true);
+    qDebug() << __FUNCTION__ << "Done";
     loadingModel = false;
     /*
     qint64 ms = G::t.elapsed();
@@ -904,6 +906,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 
     // deal with lagging signals when new folder selected suddenly
     if (G::stop) return false;
+    qDebug() << __FUNCTION__ << m.currRootFolder << G::currRootFolder;
     if (m.currRootFolder != G::currRootFolder) return false;
 
     /*

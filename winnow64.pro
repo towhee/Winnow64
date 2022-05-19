@@ -1,5 +1,7 @@
 #CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 CONFIG += sdk_no_version_check
+#CONFIG += sanitizer
+#CONFIG += sanitize_address
 
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 greaterThan(QT_MAJOR_VERSION, 5) {

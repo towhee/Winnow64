@@ -1081,11 +1081,13 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
 //        G::error(__FUNCTION__, fPath, "Failed to read metadata.");
+        qWarning() << "Metadata not loaded for" << fPath;
         return false;
     }
 
 //    m.isPicked = false;
 
+    m.currRootFolder = G::currRootFolder;
     m.copyFileNamePrefix = m.createdDate.toString("yyyy-MM-dd");
 
     QString s = m.model;
