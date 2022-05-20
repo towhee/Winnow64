@@ -5,14 +5,10 @@
         iconChunkSize
 */
 
-MetaRead::MetaRead(QObject *parent,
-                   DataModel *dm/*,
-                   ImageCache2 *imageCacheThread2*/)
-    : QThread(parent)
+MetaRead::MetaRead(QObject *parent, DataModel *dm) : QThread(parent)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     this->dm = dm;
-//    this->imageCacheThread2 = imageCacheThread2;
     metadata = new Metadata;
     thumb = new Thumb(this, dm, metadata);
 //    iconChunkSize = 4000;
@@ -21,11 +17,9 @@ MetaRead::MetaRead(QObject *parent,
 
 MetaRead::~MetaRead()
 {
-    mutex.lock();
-    abort = true;
-    condition.wakeOne();
-    mutex.unlock();
-    wait();
+    stop();
+    delete metadata;
+    delete thumb;
 }
 
 void MetaRead::stop()
@@ -40,9 +34,6 @@ void MetaRead::stop()
         wait();
         abort = false;
     }
-//    iconsLoaded.clear();
-//    visibleIcons.clear();
-//    priorityQueue.clear();
 }
 
 void MetaRead::initialize()
@@ -285,8 +276,8 @@ void MetaRead::buildMetadataPriorityQueue(int sfRow)
     int behind = sfRow;
     int ahead = sfRow + 1;
     while (behind >= 0 || ahead < sfRowCount) {
-        priorityQueue.append(behind--);
-        priorityQueue.append(ahead++);
+        if (behind >= 0) priorityQueue.append(behind--);
+        if (ahead < sfRowCount) priorityQueue.append(ahead++);
         if (abort) return;
     }
         /*
@@ -358,7 +349,7 @@ void MetaRead::readRow(int sfRow)
         readIcon(sfIdx, fPath);
     }
     // update the imageCache item data
-    if (!abort) emit dm->addMetadataForItem(metadata->m);
+//    if (!abort) dm->addMetadataForItem(metadata->m);
     if (!abort) emit addToImageCache(metadata->m);
 }
 

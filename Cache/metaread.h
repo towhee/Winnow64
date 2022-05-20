@@ -60,7 +60,6 @@ private:
     bool abort;
     DataModel *dm;
     Metadata *metadata;
-//    ImageCache2 *imageCacheThread2;
     Thumb *thumb;
     int adjIconChunkSize;
     int sfRowCount;
