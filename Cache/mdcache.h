@@ -7,7 +7,7 @@
 #include <QWaitCondition>
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
-#include "Cache/imagecache.h"
+//#include "Cache/imagecache.h"
 #include "Image/thumb.h"
 
 

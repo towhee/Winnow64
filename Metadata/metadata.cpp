@@ -1087,7 +1087,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
 //    m.isPicked = false;
 
-    m.currRootFolder = G::currRootFolder;
+    m.currRootFolder = fileInfo.absoluteDir().absolutePath();
     m.copyFileNamePrefix = m.createdDate.toString("yyyy-MM-dd");
 
     QString s = m.model;
