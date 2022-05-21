@@ -906,7 +906,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 
     // deal with lagging signals when new folder selected suddenly
     if (G::stop) return false;
-    qDebug() << __FUNCTION__ << m.currRootFolder << G::currRootFolder;
+//    qDebug() << __FUNCTION__ << m.currRootFolder << G::currRootFolder;
     if (m.currRootFolder != G::currRootFolder) return false;
 
     /*

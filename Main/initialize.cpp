@@ -4,6 +4,7 @@ void MW::initialize()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     this->setWindowTitle(winnowWithVersion);
+    G::stop = false;
     G::isProcessingExportedImages = false;
     G::isDev = isDevelopment();
     G::isInitializing = true;
