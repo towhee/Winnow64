@@ -1304,6 +1304,12 @@ void MW::folderSelectionChange()
    This is invoked when there is a folder selection change in the folder or bookmark views.
    See PROGRAM FLOW at top of file for more information.
 */
+    // ignore if vewry rapid selection and current folder is still at stopAndClearAll
+    if (G::stop) {
+        fsTree->selectionModel()->clear();
+        return;
+    }
+
     // ignore if selection change triggered by deletion of prior selected folder
     if (ignoreFolderSelectionChange) {
         ignoreFolderSelectionChange = false;
@@ -1485,6 +1491,7 @@ void MW::folderSelectionChange()
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
     updateStatus(true, "", __FUNCTION__);
 
+    G::stop = false;
     G::isInitializing = false;
 }
 
@@ -1755,7 +1762,7 @@ void MW::stopAndClearAll(QString src)
     G::stop = true;
     // Stop any threads that might be running.
     imageCacheThread->stop();
-    if (!G::useLinearLoading) metaRead->stop();
+    /*if (!G::useLinearLoading)*/ metaRead->stop();
     metadataCacheThread->stop();
     buildFilters->stop();
 
@@ -1794,8 +1801,7 @@ void MW::stopAndClearAll(QString src)
     else
         setCentralMessage("Select a folder.");
 
-//    G::wait(1000);
-    G::stop = false;
+//    G::stop = false;
 }
 
 void MW::nullFiltration()
