@@ -1305,9 +1305,12 @@ void MW::folderSelectionChange()
    See PROGRAM FLOW at top of file for more information.
 */
     // ignore if vewry rapid selection and current folder is still at stopAndClearAll
+    // also checked in FSTree and Bookmarks mousePressEvent
     qDebug() << __FUNCTION__ << G::stop;
     if (!G::okayToChangeFolders) {
         fsTree->selectionModel()->clear();
+        G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
+        qDebug() << __FUNCTION__ << "Not okay to change folder";
         return;
     }
 
@@ -2042,6 +2045,7 @@ void MW::loadLinearNewFolder()
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     MetadataCache *mct = metadataCacheThread;
+    G::okayToChangeFolders = true;
     G::allMetadataLoaded = false;
     mct->isRefreshFolder = isRefreshingDM;
     mct->iconsCached.clear();
@@ -2068,6 +2072,8 @@ void MW::loadLinearNewFolder()
     sortMenu->setEnabled(false);
 
     setCentralMessage("Reading all metadata.");
+    qApp->processEvents();
+
     updateMetadataThreadRunStatus(true, true, __FUNCTION__);
     dm->addAllMetadata();
 
@@ -2147,15 +2153,6 @@ void MW::loadImageCacheForNewFolder()
        would prematurally trigger Metadata::writeXMP */
     G::isNewFolderLoadedAndInfoViewUpToDate = true;
 }
-
-//void MW::loadMetadataCache2ndPass()
-//{
-//    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-////    qDebug() << __FUNCTION__;
-//    updateIconBestFit();
-//    updateIconsVisible(currentRow);
-//    metadataCacheThread->loadNewFolder2ndPass();
-//}
 
 void MW::thumbHasScrolled()
 {

@@ -171,6 +171,12 @@ void BookMarks::mouseDoubleClickEvent(QMouseEvent *)
 void BookMarks::mousePressEvent(QMouseEvent *event)
 {
     // do not allow if there is a background ingest in progress
+
+    if (!G::okayToChangeFolders) {
+        G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
+        return;
+    }
+
     if (G::isRunningBackgroundIngest) {
         QString msg =
                 "There is a background ingest in progress.  When it<br>"

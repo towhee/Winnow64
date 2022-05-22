@@ -819,7 +819,7 @@ void DataModel::addAllMetadata()
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " secondary metadata loading...";
             emit centralMsg(s);    // rghmsg
-//            QCoreApplication::processEvents();
+            QCoreApplication::processEvents();
         }
         if (timeToQuit) break;
         // is metadata already cached
@@ -905,11 +905,16 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     if (G::isLogger) G::log(__FUNCTION__);
 
     // deal with lagging signals when new folder selected suddenly
-    if (G::stop) return false;
-//    qDebug() << __FUNCTION__ << m.currRootFolder << G::currRootFolder;
-    if (m.currRootFolder != G::currRootFolder) return false;
+    if (G::stop) {
+        qDebug() << __FUNCTION__ << "G::stop =" << G::stop;
+        return false;
+    }
+    if (m.currRootFolder != G::currRootFolder) {
+        qDebug() << __FUNCTION__ << m.currRootFolder << G::currRootFolder;
+        return false;
+    }
 
-    /*
+//    /*
     qDebug() << __FUNCTION__
              << m.row
              << "rowCount() =" << rowCount()
@@ -918,7 +923,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
                 ;
                 //*/
     int row = m.row;
-    if (rowCount() >= row) return false;
+    if (rowCount() <= row) return false;
 
     mutex.lock();
     if (!metadata->ratings.contains(m.rating)) {
@@ -931,6 +936,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     }
 
     if (!index(row, 0).isValid()) return false;
+    qDebug() << __FUNCTION__ << "1";
 
     QString search = index(row, G::SearchTextColumn).data().toString();
 
@@ -1067,9 +1073,6 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int role)
 
 void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm)
 {
-//    itemFromIndex(dmIdx)->setIcon(pm);
-//    return;
-//    qDebug() << __FUNCTION__ << currentFolderPath << dmIdx;
     if (G::isLogger) G::log(__FUNCTION__);
     if (G::stop) return;
     if (!dmIdx.isValid()) return;
@@ -1077,7 +1080,7 @@ void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm)
     mutex.lock();
     QStandardItem *item = itemFromIndex(dmIdx);
     if (item != nullptr) item->setIcon(pm);
-//    itemFromIndex(dmIdx)->setIcon(pm);
+    itemFromIndex(dmIdx)->setIcon(pm);
     mutex.unlock();
 }
 

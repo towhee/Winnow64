@@ -346,10 +346,11 @@ void MetaRead::readRow(int sfRow)
              ;
     //*/
     if (isVisible(sfRow) && !abort) {
+        qDebug() << __FUNCTION__ << sfRow << fPath;
         readIcon(sfIdx, fPath);
     }
+
     // update the imageCache item data
-//    if (!abort) dm->addMetadataForItem(metadata->m);
     if (!abort) emit addToImageCache(metadata->m);
 }
 
