@@ -1305,7 +1305,8 @@ void MW::folderSelectionChange()
    See PROGRAM FLOW at top of file for more information.
 */
     // ignore if vewry rapid selection and current folder is still at stopAndClearAll
-    if (G::stop) {
+    qDebug() << __FUNCTION__ << G::stop;
+    if (!G::okayToChangeFolders) {
         fsTree->selectionModel()->clear();
         return;
     }
@@ -1760,6 +1761,7 @@ void MW::stopAndClearAll(QString src)
     qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
 
     G::stop = true;
+    G::okayToChangeFolders = false;
     // Stop any threads that might be running.
     imageCacheThread->stop();
     /*if (!G::useLinearLoading)*/ metaRead->stop();
@@ -1801,7 +1803,7 @@ void MW::stopAndClearAll(QString src)
     else
         setCentralMessage("Select a folder.");
 
-//    G::stop = false;
+    G::stop = false;
 }
 
 void MW::nullFiltration()
@@ -1969,7 +1971,8 @@ void MW::loadConcurrentMetaDone()
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
        InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
-       would prematurally trigger Metadata::writeXMP */
+       would prematurely trigger Metadata::writeXMP */
+    G::okayToChangeFolders = true;
     G::isNewFolderLoadedAndInfoViewUpToDate = true;
     G::isNewFolderLoaded = true;
     dm->setAllMetadataLoaded(true);    //G::allMetadataLoaded = true;

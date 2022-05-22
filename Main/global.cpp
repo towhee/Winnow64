@@ -101,6 +101,8 @@ namespace G
     // not persistent
     bool isThreadTrackingOn;
     bool showAllTableColumns;
+
+    bool okayToChangeFolders;
     bool isNewFolderLoaded;
     bool isNewFolderLoadedAndInfoViewUpToDate;
     bool isInitializing;

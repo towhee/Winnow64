@@ -918,9 +918,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
                 ;
                 //*/
     int row = m.row;
-//    if (rowCount() >= row) return false;
+    if (rowCount() >= row) return false;
 
-//    qDebug() << __FUNCTION__ << "test0";
     mutex.lock();
     if (!metadata->ratings.contains(m.rating)) {
         m.rating = "";
@@ -953,7 +952,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::HeightColumn), QString::number(m.height));
     setData(index(row, G::HeightColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::DimensionsColumn), QString::number(m.width) + "x" + QString::number(m.height));
-//    qDebug() << __FUNCTION__ << "test1";
     setData(index(row, G::DimensionsColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::MegaPixelsColumn), QString::number((m.width * m.height) / 1000000.0, 'f', 2));
     setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
@@ -1043,12 +1041,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::MetadataLoadedColumn), m.metadataLoaded);
     setData(index(row, G::SearchTextColumn), search.toLower());
     setData(index(row, G::SearchTextColumn), search.toLower(), Qt::ToolTipRole);
-//    qDebug() << __FUNCTION__ << "test1";
 
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
     mutex.unlock();
-//    qDebug() << __FUNCTION__ << "test2";
     return true;
 }
 
@@ -1079,7 +1075,9 @@ void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm)
     if (!dmIdx.isValid()) return;
 //    return;
     mutex.lock();
-    itemFromIndex(dmIdx)->setIcon(pm);
+    QStandardItem *item = itemFromIndex(dmIdx);
+    if (item != nullptr) item->setIcon(pm);
+//    itemFromIndex(dmIdx)->setIcon(pm);
     mutex.unlock();
 }
 
