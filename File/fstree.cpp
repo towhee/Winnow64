@@ -452,6 +452,11 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
 
+    if (!G::okayToChangeFolders) {
+        G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
+        return;
+    }
+
     // do not allow if there is a background ingest in progress
     if (G::isRunningBackgroundIngest) {
         QString msg =

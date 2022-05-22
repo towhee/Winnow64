@@ -211,7 +211,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
 
     /* Reading the thumb directly from the image file is faster than using QImageReader
     (thumbReader) to read the entire image and then scaling it down. However, not all
-    images have embedded thumbs so make a quick check.*/
+    images have embedded thumbs, so make a quick check.*/
     if (thumbFound) {
         if (ext == "tif" && lengthThumb == 0) {
             // test for too many samples which causes libTiff to crash

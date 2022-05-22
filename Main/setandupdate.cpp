@@ -387,7 +387,7 @@ void MW::setIngested()
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         if (dm->sf->index(row, G::PickColumn).data().toString() == "true") {
             emit setValueSf(dm->sf->index(row, G::IngestedColumn), "true", Qt::EditRole);
-            emit setValueSf(dm->sf->index(row, G::PickColumn), "true", Qt::EditRole);
+            emit setValueSf(dm->sf->index(row, G::PickColumn), "false", Qt::EditRole);
 //            dm->sf->setData(dm->sf->index(row, G::IngestedColumn), "true");
 //            dm->sf->setData(dm->sf->index(row, G::PickColumn), "false");
         }

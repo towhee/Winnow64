@@ -494,7 +494,6 @@ private slots:
     void loadConcurrentStartImageCache();
 
     void loadLinearNewFolder();
-//    void loadMetadataCache2ndPass();
     void refreshCurrentAfterReload();
     void updateIconsVisible(int row);
     bool isCurrentThumbVisible();
