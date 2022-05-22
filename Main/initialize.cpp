@@ -4,6 +4,7 @@ void MW::initialize()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     this->setWindowTitle(winnowWithVersion);
+    G::okayToChangeFolders = true;
     G::stop = false;
     G::isProcessingExportedImages = false;
     G::isDev = isDevelopment();
@@ -186,21 +187,19 @@ void MW::createMDCache()
     connect(metadataCacheThread, &MetadataCache::selectFirst,
             thumbView, &IconView::selectFirst);
 
-//    if (!G::useLinearLoading)  {
-        metaRead = new MetaRead(this, dm);
-        metaRead->iconChunkSize = 20;
+    metaRead = new MetaRead(this, dm);
+    metaRead->iconChunkSize = 20;
 
-        // add metadata to datamodel
-        connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
-        // update icon in datamodel
-        connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon);
-        // message metadata reading completed
-        connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
-        // Signal to MW::loadNew3 to prep and run fileSelectionChange
-        connect(metaRead, &MetaRead::delayedStartImageCache, this, &MW::loadConcurrentStartImageCache);
-        // check icons visible is correct
-        connect(metaRead, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
-//    }
+    // add metadata to datamodel
+    connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
+    // update icon in datamodel
+    connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon);
+    // message metadata reading completed
+    connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
+    // Signal to MW::loadNew3 to prep and run fileSelectionChange
+    connect(metaRead, &MetaRead::delayedStartImageCache, this, &MW::loadConcurrentStartImageCache);
+    // check icons visible is correct
+    connect(metaRead, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
 
 }
 

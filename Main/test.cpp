@@ -14,12 +14,18 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    static bool b = true;
-//    QString p1 = "/Users/roryhill/Pictures/2022/202204/2022-04-11_Nora";
-//    QString p2 = "/Users/roryhill/Pictures/2022/202204/2022-04-12_Nora";
+#ifdef Q_OS_WIN
     QString p1 = "D:/Pictures/Coaster";
     QString p2 = "D:/Pictures/Zenfolio/pbase2048";
+#endif
+
+#ifdef Q_OS_MAC
+QString p1 = "/Users/roryhill/Pictures/3840x2160";
+QString p2 = "/Users/roryhill/Pictures/Test";
+#endif
+
     QString fPath;
+    static bool b = true;
     if (b) fPath = p1;
     else fPath = p2;
     QModelIndex idx = fsTree->fsModel->index(fPath);
