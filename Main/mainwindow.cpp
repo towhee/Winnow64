@@ -60,6 +60,8 @@ A new folder is selected which triggers folderSelectionChange:
 
 • The first image thumbnail is selected in thumbView.
 
+Following is out of date:
+
 • metadataCacheThread->loadNewFolder reads all the metadata for the first chunk of images. The
   signal loadMetadataCache2ndPass is emitted.
 
@@ -139,11 +141,26 @@ Flow by function call:
 
 Flow Flags:
 
+    G::isInitializing
+    G::stop
     G::allMetadataLoaded
     G::allIconsLoaded
     G::isNewFolderLoaded
     G::isNewFolderLoadedAndInfoViewUpToDate
     dm->loadingModel
+    G::useLinearLoading
+    G::ignoreScrollSignal
+    isCurrentFolderOkay
+    isFilterChange
+    G::isNewSelection
+
+Current model row:
+
+    currentRow
+    dm->currentRow
+    dm->currentFilePath
+    currentDmIdx
+    currentSfIdx
 
 ***********************************************************************************************
 
@@ -1304,9 +1321,10 @@ void MW::folderSelectionChange()
    This is invoked when there is a folder selection change in the folder or bookmark views.
    See PROGRAM FLOW at top of file for more information.
 */
+
     // ignore if vewry rapid selection and current folder is still at stopAndClearAll
     // also checked in FSTree and Bookmarks mousePressEvent
-    qDebug() << __FUNCTION__ << G::stop;
+//    if (G::isNewFolderLoaded)
     if (!G::okayToChangeFolders) {
         fsTree->selectionModel()->clear();
         G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
@@ -1322,7 +1340,6 @@ void MW::folderSelectionChange()
     }
 
     G::currRootFolder = getSelectedPath();
-    qDebug() << "stopAndClearAll" << currentViewDirPath;
     stopAndClearAll("folderSelectionChange");
 
     currentViewDirPath = getSelectedPath();
@@ -1334,12 +1351,8 @@ void MW::folderSelectionChange()
         qDebug();
         G::log(__FUNCTION__, currentViewDirPath);
     }
-//    G::log(__FUNCTION__, currentViewDirPath);
-
-//    stopAndClearAll("folderSelectionChange");
 
     // do not embellish
-//    if (turnOffEmbellish) embelProperties->invokeFromAction(embelTemplatesActions.at(0));
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
 
     // ImageView set zoom = fit for the first image of a new folder
@@ -1384,7 +1397,7 @@ void MW::folderSelectionChange()
         return;
     }
 
-    // sync the favs / bookmarks with the folders view fsTree
+    // sync the bookmarks with the folders view fsTree
     bookmarks->select(currentViewDirPath);
 
     // add to recent folders
@@ -1396,11 +1409,10 @@ void MW::folderSelectionChange()
     // update menu
     enableEjectUsbMenu(currentViewDirPath);
 
-    qDebug() << "uncheckAllFilters" << currentViewDirPath;
+    // clear filters
     uncheckAllFilters();
 
     // load datamodel
-    qDebug() << "load datamodel" << currentViewDirPath;
     if (!dm->load(currentViewDirPath, subFoldersAction->isChecked())) {
         qWarning() << "Datamodel Failed To Load for" << currentViewDirPath;
         stopAndClearAll();
@@ -1408,7 +1420,7 @@ void MW::folderSelectionChange()
         if (dm->timeToQuit) {
             updateStatus(false, "Image loading has been cancelled", __FUNCTION__);
             setCentralMessage("Image loading has been cancelled");
-//            QApplication::processEvents();
+            QApplication::processEvents();
             return;
         }
         QDir dir(currentViewDirPath);
@@ -1421,21 +1433,18 @@ void MW::folderSelectionChange()
             setCentralMessage("The folder \"" + currentViewDirPath + "\" does not have any eligible images");
         }
         G::isInitializing = false;
+        G::okayToChangeFolders = true;
         return;
     }
 
     // update FSTree count column for folder in case it has changed
     fsTree->updateFolderImageCount(currentViewDirPath);
 
-    /* update sort if necessary (DataModel loads sorted by name in ascending order)
-    qDebug() << __FUNCTION__ << "Sort new folder if necessary"
-             << "sortColumn =" << sortColumn
-             << "sortReverseAction->isChecked() =" << sortReverseAction->isChecked();
-    //*/
+    // reset sort if necessary (DataModel loads sorted by name in ascending order)
     if (sortColumn != G::NameColumn || sortReverseAction->isChecked()) {
-        setCentralMessage("Sorting the data model.");
-        sortChange("folderSelectionChange");
-        setCentralMessage("");
+        sortColumn = G::NameColumn;
+        sortFileNameAction->setChecked(true);
+        sortReverseAction->setChecked(false);
     }
 
     // datamodel loaded - initialize indexes
@@ -1480,7 +1489,6 @@ void MW::folderSelectionChange()
     */
 
     // start loading new folder
-//    metadataCacheThread->loadNewFolder(isRefreshingDM);
     G::t.restart();
     if (G::useLinearLoading) {
         // metadata and icons loaded in GUI thread
@@ -1513,10 +1521,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     delegate use of the current index must check the column.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, src + " " + current.data(G::PathRole).toString());
-    qDebug() << __FUNCTION__ << G::stop << src << current.data(G::PathRole).toString();
+//    qDebug() << __FUNCTION__ << G::stop << src << current.data(G::PathRole).toString();
     if (G::stop) return;
     G::isNewSelection = false;
-//    if (current == previous) return;
 
    /*
     qDebug() << "\n" << __FUNCTION__
@@ -1531,7 +1538,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
              << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
                 ;
                 //*/
-//    bool isStart = false;
 
     if (!isCurrentFolderOkay
             || G::isInitializing
@@ -1545,9 +1551,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         return;
     }
 
-//    qDebug() << __FUNCTION__ << "current.row() =" << current.row();
-//    qDebug() << __FUNCTION__ << "thumbView->selectionModel()->selection() ="
-//             << thumbView->selectionModel()->selection();
     // if starting program, set first image to display
     if (current.row() == -1) {
         thumbView->selectThumb(0);
@@ -1563,10 +1566,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         isDragDrop = false;
     }
     */
-
-    // user clicks outside thumb but inside treeView dock
-//    QModelIndexList selected = selectionModel->selectedIndexes();
-//    if (selected.isEmpty() && !G::isInitializing) return;
 
     // record current proxy row (dm->sf) as it is used to sync everything
     currentRow = current.row();
@@ -1591,19 +1590,16 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
     }
-
     else if(G::fileSelectionChangeSource == "ThumbMouseClick") {
         G::ignoreScrollSignal = true;
         if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollToRow(currentRow, __FUNCTION__);
     }
-
     else if(G::fileSelectionChangeSource == "GridMouseClick") {
         G::ignoreScrollSignal = true;
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollToRow(currentRow, __FUNCTION__);
     }
-
     else {
         if (gridView->isVisible()) gridView->scrollToRow(currentRow, __FUNCTION__);
         if (thumbView->isVisible()) thumbView->scrollToRow(currentRow, __FUNCTION__);
@@ -1616,24 +1612,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 
     if (G::isSlideShow && isSlideShowRandom) metadataCacheThread->stop();
 
-    // updates ********************************************************************************
-
     // new file name appended to window title
     setWindowTitle(winnowWithVersion + "   " + fPath);
 
     if (!G::isSlideShow) progressLabel->setVisible(isShowCacheProgressBar);
 
-    /*
-    // update imageView immediately unless weird sort or folder not loaded yet
-    qDebug() << __FUNCTION__
-             << "sortColumn =" << sortColumn
-             << "G::NameColumn =" << G::NameColumn
-             << "G::ModifiedColumn =" << G::ModifiedColumn
-                ;
-    bool okToLoadImage = (sortColumn == G::NameColumn
-                      || sortColumn == G::ModifiedColumn);
-    if (okToLoadImage && useImageView) {
-    */
+    // update loupe view
     if (useImageView) {
         if (imageView->loadImage(fPath, __FUNCTION__)) {
             updateClassification();
@@ -1641,22 +1625,20 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         }
     }
 
-//    G::track(__FUNCTION__, "Return from imageView->loadImage " + fPath);
     // update caching if folder has been loaded
-    qDebug() << __FUNCTION__ << "G::isNewFolderLoaded =" << G::isNewFolderLoaded;
     if (G::isNewFolderLoaded) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
         updateIconsVisible(currentRow);
-        if (G::useLinearLoading)
+        if (G::useLinearLoading) {
             metadataCacheThread->fileSelectionChange();
-//        else
-//            metaRead->read(MetaRead::FileSelection);
-//        G::track(__FUNCTION__, "Return from metadataCacheThread->fileSelectionChange() " + fPath);
+        }
 
-        // Do not image cache if there is an active random slide show or a
-        // modifier key is pressed
-        // (turn off image caching for testing with useImageCache = false. set in header)
         Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
+
+        /* Do not image cache if there is an active random slide show or a modifier key
+        is pressed. (turn off image caching for testing with useImageCache = false. set in
+        MW::MW) */
+
         /*
         qDebug() << __FUNCTION__ << "IMAGECACHE"
                  << "isNoModifier =" << (key == Qt::NoModifier)
@@ -1673,10 +1655,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
             && useImageCache
            )
         {
-//            if (G::useLinearLoading)
                 emit setImageCachePosition(dm->currentFilePath, __FUNCTION__);
-//            else
-//                emit setImageCachePosition2(dm->currentFilePath);
         }
     }
 
@@ -1701,11 +1680,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     // update cursor position on progressBar
     cacheProgressBar->updateCursor(currentRow, dm->sf->rowCount());
 
-//    if (!G::isInitializing) centralLayout->setCurrentIndex(prevCentralView);
-
     if (G::isLogger) G::log(__FUNCTION__, "Finished " + fPath);
-//    G::track(__FUNCTION__, "Finished " + fPath);
-
 }
 
 void MW::folderAndFileSelectionChange(QString fPath)
@@ -1761,13 +1736,14 @@ void MW::stopAndClearAll(QString src)
     a bookmark or ejects a drive and the resulting folder does not have any eligible images.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
+//    qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
 
     G::stop = true;
     G::okayToChangeFolders = false;
+
     // Stop any threads that might be running.
     imageCacheThread->stop();
-    /*if (!G::useLinearLoading)*/ metaRead->stop();
+    metaRead->stop();
     metadataCacheThread->stop();
     buildFilters->stop();
 
@@ -1794,17 +1770,14 @@ void MW::stopAndClearAll(QString src)
     gridView->setUpdatesEnabled(false);
     tableView->setUpdatesEnabled(false);
     tableView->setSortingEnabled(false);
+
     dm->clearDataModel();
+
     thumbView->setUpdatesEnabled(true);
     gridView->setUpdatesEnabled(true);
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
     currentRow = 0;
-
-    if (src == "folderSelectionChange")
-        setCentralMessage("Loading folder.");
-    else
-        setCentralMessage("Select a folder.");
 
     G::stop = false;
 }
@@ -1920,6 +1893,9 @@ void MW::loadConcurrent(MetaRead::Action action, int sfRow, QString src)
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         updateMetadataThreadRunStatus(true, true, __FUNCTION__);
         metaRead->read(action, sfRow, src);
+    }
+    else {
+        G::okayToChangeFolders = true;
     }
 }
 

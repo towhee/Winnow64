@@ -239,12 +239,13 @@ void BookMarks::dragMoveEvent(QDragMoveEvent *event)
 void BookMarks::dropEvent(QDropEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
-	if (event->source()) {
-		QString fstreeStr("FSTree");
-		bool dirOp = (event->source()->metaObject()->className() == fstreeStr);
-        emit dropOp(event->keyboardModifiers(), dirOp,
-                    event->mimeData()->urls().at(0).toLocalFile());
-	}
+//	if (event->source()) {
+//        qDebug() << __FUNCTION__ << "event->source()";
+//		QString fstreeStr("FSTree");
+//		bool dirOp = (event->source()->metaObject()->className() == fstreeStr);
+//        emit dropOp(event->keyboardModifiers(), dirOp,
+//                    event->mimeData()->urls().at(0).toLocalFile());
+//	}
     const QMimeData *mimeData = event->mimeData();
     if (mimeData->hasUrls())
     {
@@ -252,9 +253,14 @@ void BookMarks::dropEvent(QDropEvent *event)
         QFileInfo fInfo = QFileInfo(mimeData->urls().at(0).toLocalFile());
         if (fInfo.isDir()) dPath = fInfo.absoluteFilePath();
         else dPath = fInfo.absoluteDir().absolutePath();
+        if (dPath.length() == 0) return;
+        // trim ending "/"
+        int endPos = dPath.length() - 1;
+        if (dPath[endPos] == '/') dPath.chop(1);
         if (!bookmarkPaths.contains(dPath)) {
             bookmarkPaths.insert(dPath);
             reloadBookmarks();
         }
+        // no popup as focus will be on drag app
     }
 }

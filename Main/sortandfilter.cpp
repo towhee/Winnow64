@@ -36,10 +36,10 @@ void MW::launchBuildFilters()
 //        G::popUp->showPopup("Filters will only be updated when the filters panel is visible.");
 //        return;
     }
-    if (filters->filtersBuilt) {
-        G::popUp->showPopup("Filters are up-to-date.");
-        return;
-    }
+//    if (filters->filtersBuilt) {
+//        G::popUp->showPopup("Filters are up-to-date.");
+//        return;
+//    }
     if (dm->loadingModel) {
         G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
         return;
@@ -508,12 +508,6 @@ void MW::sortChange(QString source)
 void MW::updateSortColumn(int sortColumn)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    /*
-    qDebug() << __FUNCTION__
-             << "sortColumn =" << sortColumn
-             << "prevSortColumn =" << prevSortColumn
-             ;
-    //    */
 
     if (sortColumn == 0) sortColumn = G::NameColumn;
 
