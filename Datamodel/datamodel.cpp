@@ -240,13 +240,7 @@ void DataModel::setModelProperties()
 void DataModel::clearDataModel()
 {
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
-    /* clear the model
-       // takes a very long time
-       beginRemoveRows(QModelIndex(), 0, n-1);
-       removeRows(0, n-1);
-       endRemoveRows();
-       */
+    // clear the model
     clear();
     setModelProperties();
     // clear all items for filters based on data content ie file types, camera model
@@ -829,7 +823,6 @@ void DataModel::addAllMetadata()
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
             metadata->m.row = row;
-            qDebug() << __FUNCTION__ << row;
             addMetadataForItem(metadata->m);
             count++;
         }
@@ -838,7 +831,6 @@ void DataModel::addAllMetadata()
         }
     }
     setAllMetadataLoaded(true);
-    qDebug() << __FUNCTION__ << "Done";
     loadingModel = false;
     /*
     qint64 ms = G::t.elapsed();
@@ -906,15 +898,15 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 
     // deal with lagging signals when new folder selected suddenly
     if (G::stop) {
-        qDebug() << __FUNCTION__ << "G::stop =" << G::stop;
+        qWarning() << __FUNCTION__ << "G::stop =" << G::stop;
         return false;
     }
     if (m.currRootFolder != G::currRootFolder) {
-        qDebug() << __FUNCTION__ << m.currRootFolder << G::currRootFolder;
+        qWarning() << __FUNCTION__ << m.currRootFolder << G::currRootFolder;
         return false;
     }
 
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << m.row
              << "rowCount() =" << rowCount()
@@ -936,7 +928,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     }
 
     if (!index(row, 0).isValid()) return false;
-    qDebug() << __FUNCTION__ << "1";
 
     QString search = index(row, G::SearchTextColumn).data().toString();
 

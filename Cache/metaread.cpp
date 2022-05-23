@@ -346,7 +346,6 @@ void MetaRead::readRow(int sfRow)
              ;
     //*/
     if (isVisible(sfRow) && !abort) {
-        qDebug() << __FUNCTION__ << sfRow << fPath;
         readIcon(sfIdx, fPath);
     }
 

@@ -601,7 +601,6 @@ bool ImageCache::cacheUpToDate()
         if (icd->cacheItemList.at(i).isCached && icd->cacheItemList.at(i).threadId == -1) {
             icd->cacheItemList[i].isCached = false;
             icd->cacheItemList[i].isCaching = false;
-            qDebug() << __FUNCTION__ << "set isCaching = false";
             return false;
         }
         // check if caching image is in progress
