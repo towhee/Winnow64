@@ -377,6 +377,7 @@ Steps:
   demand when the user selects the filter panel or a menu filter command.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "clearDataModel");
+    instance++;
     currentFolderPath = folderPath;
     filters->filtersBuilt = false;
     filters->loadedDataModel(false);
@@ -914,27 +915,37 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 //    qDebug() << __FUNCTION__ << "G::stop =" << G::stop;
 
     // deal with lagging signals when new folder selected suddenly
+    if (m.dmInstance > 0 && m.dmInstance != instance) {
+        qWarning() << __FUNCTION__ << "Instance conflict:"
+                   << "DM instance =" << instance
+                   << "m.dmInstance =" << m.dmInstance
+                      ;
+        return false;
+    }
     if (G::stop) {
         qWarning() << __FUNCTION__ << "G::stop =" << G::stop;
         return false;
     }
-    if (m.currRootFolder != G::currRootFolder) {
-        qWarning() << __FUNCTION__ << m.currRootFolder << G::currRootFolder;
-        return false;
-    }
+//    if (m.currRootFolder != G::currRootFolder) {
+//        qWarning() << __FUNCTION__ << m.currRootFolder << G::currRootFolder
+//                   << instance << m.dmInstance;
+//        return false;
+//    }
 
-    /*
+//    /*
     qDebug() << __FUNCTION__
              << m.row
              << "rowCount() =" << rowCount()
-             << "m.fPath =" << m.fPath
-             << "currentFolderPath =" << currentFolderPath
+             << m.dmInstance
+             << instance
+//             << "m.fPath =" << m.fPath
+//             << "currentFolderPath =" << currentFolderPath
                 ;
                 //*/
     int row = m.row;
     if (rowCount() <= row) return false;
 
-//    mutex.lock();
+    mutex.lock();
     if (!metadata->ratings.contains(m.rating)) {
         m.rating = "";
         m._rating = "";
@@ -1058,7 +1069,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
-//    mutex.unlock();
+    mutex.unlock();
     return true;
 }
 
@@ -1079,13 +1090,24 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int role)
     sf->setData(sfIdx, value, role);
 }
 
-void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm)
+void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance)
 {
     if (G::isLogger) G::log(__FUNCTION__);
 //    if (loadingModel) {
 //        qWarning() << __FUNCTION__ << "loadingModel =" << loadingModel;
 //        return;
 //    }
+
+    qDebug() << __FUNCTION__ << dmIdx << fromInstance << instance;
+    if (fromInstance != instance) {
+        qDebug() << __FUNCTION__ << dmIdx << "Instance conflict = "
+                 << instance << fromInstance;
+        return;
+    }
+    if (loadingModel) {
+        qDebug() << __FUNCTION__ << dmIdx << "loadingModel = " << loadingModel;
+        return;
+    }
     if (G::stop) {
         qDebug() << __FUNCTION__ << dmIdx << "G::stop = " << G::stop;
         return;
@@ -1094,11 +1116,10 @@ void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm)
         qWarning() << __FUNCTION__ << "dmIdx.isValid() =" << dmIdx.isValid();
         return;
     }
-//    return;
+
     mutex.lock();
     QStandardItem *item = itemFromIndex(dmIdx);
     if (item != nullptr) item->setIcon(pm);
-    itemFromIndex(dmIdx)->setIcon(pm);
     mutex.unlock();
 }
 

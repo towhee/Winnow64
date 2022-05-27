@@ -1332,7 +1332,7 @@ void MW::folderSelectionChange()
 
     // ignore if very rapid selection and current folder is still at stopAndClearAll
     // also checked in FSTree and Bookmarks mousePressEvent
-    if (/*!G::okayToChangeFolders ||*/ dm->loadingModel) {
+    if (!G::okayToChangeFolders || dm->loadingModel) {
 //        fsTree->selectionModel()->clear();
 //        G::track(__FUNCTION__, "G::okayToChangeFolders = false, stopAndClearAll");
 //        if (!G::stop) stopAndClearAll("folderSelectionChange");
@@ -1438,11 +1438,11 @@ void MW::folderSelectionChange()
             setCentralMessage("The folder \"" + currentViewDirPath + "\" does not have any eligible images");
         }
         G::isInitializing = false;
-        G::okayToChangeFolders = true;
+//        G::okayToChangeFolders = true;
         return;
     }
 
-    G::okayToChangeFolders = true;
+//    G::okayToChangeFolders = true;
 //    dm->loadingModel = false;
 
     // update FSTree count column for folder in case it has changed

@@ -74,6 +74,7 @@ public:
     QHash<QString, int> fPathRow;
     QStringList imageFilePathList;
     QDir::SortFlags thumbsSortFlags;
+    int instance = 0;                   // used in setIcon to confirm model state
     QString currentFolderPath;
     QString currentFilePath;            // used in caching to update image cache
     int currentRow;                     // used in caching to check if new image selected
@@ -108,7 +109,7 @@ public slots:
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m);
-    void setIcon(QModelIndex dmIdx, QPixmap &pm);
+    void setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance);
     void setValue(QModelIndex dmIdx, QVariant value, int role = Qt::EditRole);
     void setValueSf(QModelIndex sfIdx, QVariant value, int role = Qt::EditRole);
     void abortLoad();
