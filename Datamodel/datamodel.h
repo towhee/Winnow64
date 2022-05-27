@@ -84,7 +84,7 @@ public:
     int iconChunkSize;                  // max suggested number of icons to cache
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
-    bool basicFileInfoLoaded = false;   // do not navigate until basic info loaded in datamodel
+    bool basicFileInfoLoaded = false;   // not used. do not navigate until basic info loaded in datamodel
 
     // rgh check if reqd still
     bool forceBuildFilters = false;     // ignore buildFiltersMaxDelay if true
@@ -95,7 +95,7 @@ public:
 
     /* can be set from keyPressEvent in MW to terminate if recursive folder scan or
        building filters too long */
-    bool timeToQuit;
+    bool abortLoadingModel;
     bool alt;
 
 signals:
@@ -111,6 +111,7 @@ public slots:
     void setIcon(QModelIndex dmIdx, QPixmap &pm);
     void setValue(QModelIndex dmIdx, QVariant value, int role = Qt::EditRole);
     void setValueSf(QModelIndex sfIdx, QVariant value, int role = Qt::EditRole);
+    void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
 
@@ -131,6 +132,7 @@ private:
     QImage emptyImg;
     bool includeSubfolders = false;
 
+    bool endLoad(bool success);
     bool addFileData();
     void addFileDataForRow(int row, QFileInfo fileInfo);
     void rawPlusJpg();

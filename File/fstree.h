@@ -96,6 +96,7 @@ signals:
     void updateFileCount(QString msg);
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void selectionChange();
+    void abortLoadDataModel();
 
 private:
 //    void walkTree(const QModelIndex &row);

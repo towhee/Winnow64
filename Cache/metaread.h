@@ -71,6 +71,7 @@ private:
     QList<int> iconsLoaded;
     QList<int> visibleIcons;
 
+    bool debugCaching = false;
 };
 
 #endif // METAREAD_H

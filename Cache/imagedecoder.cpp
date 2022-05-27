@@ -272,6 +272,7 @@ void ImageDecoder::run()
 {
     if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId));
     if (load()) {
+        if (G::isLogger) G::log(__FUNCTION__, "Image width =" + QString::number(image.width()));
         if (metadata->rotateFormats.contains(ext) && !abort) rotate();
         if (G::colorManage && !abort) colorManage();
         status = Status::Done;
@@ -280,5 +281,7 @@ void ImageDecoder::run()
         status = Status::Failed;
         fPath = "";
     }
+
+    if (G::isLogger) G::log(__FUNCTION__, "Thread " + QString::number(threadId) + " done");
     if (!abort) emit done(threadId);
 }

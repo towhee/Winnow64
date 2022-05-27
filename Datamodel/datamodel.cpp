@@ -340,6 +340,21 @@ void DataModel::find(QString text)
     }
 }
 
+void DataModel::abortLoad()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << __FUNCTION__;
+    abortLoadingModel = true;
+}
+
+bool DataModel::endLoad(bool success)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    loadingModel = false;
+    abortLoadingModel = false;
+    return (success);
+}
+
 bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
 {
 /*
@@ -383,7 +398,7 @@ Steps:
     dir->setFilter(QDir::Files);
     dir->setPath(currentFolderPath);
 
-    timeToQuit = false;
+    abortLoadingModel = false;
     imageCount = 0;
     countInterval = 100;
 
@@ -397,7 +412,7 @@ Steps:
     int folderImageCount = dir->entryInfoList().size();
 
     // bail if no images and not including subfolders
-    if (!folderImageCount && !includeSubfoldersFlag) return false;
+    if (!folderImageCount && !includeSubfoldersFlag) return endLoad(false);
 
     int folderCount = 1;
     // add supported images in folder to image list
@@ -413,19 +428,19 @@ Steps:
             emit centralMsg(s);        // rghmsg
 //            QCoreApplication::processEvents();
         }
-        if (timeToQuit) return false;
+        if (abortLoadingModel) return endLoad(false);
     }
 
     if (!includeSubfoldersFlag) {
         includeSubfolders = false;
-        return addFileData();
+        return endLoad(addFileData());
     }
 
     // if include subfolders
     includeSubfolders = true;
     QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
     while (it.hasNext()) {
-        if (timeToQuit) return false;
+        if (abortLoadingModel) return endLoad(false);
         it.next();
 //        qDebug() << __FUNCTION__ << "Scanning" << it.filePath();
         if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
@@ -452,8 +467,8 @@ Steps:
         }
     }
     // if images were found and added to data model
-    if (imageCount) return addFileData();
-    else return false;
+    if (imageCount) return endLoad(addFileData());
+    else return endLoad(false);
 }
 
 bool DataModel::addFileData()
@@ -493,7 +508,7 @@ bool DataModel::addFileData()
     setColumnCount(G::TotalColumns);
 
     for (int row = 0; row < fileInfoList.count(); ++row) {
-        if (timeToQuit) return false;
+        if (abortLoadingModel) return false;
         // get file info
         fileInfo = fileInfoList.at(row);
         addFileDataForRow(row, fileInfo);
@@ -586,8 +601,9 @@ bool DataModel::addFileData()
         }
 
     }
-    loadingModel = false;
-    return true;
+    return endLoad(true);
+//    loadingModel = false;
+//    return true;
 }
 
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
@@ -795,8 +811,8 @@ void DataModel::addAllMetadata()
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     G::t.restart();
-    timeToQuit = false;
-    loadingModel = true;
+    abortLoadingModel = false;
+//    loadingModel = true;
     /*
     QString x = QString::number(rowCount());
     G::popUp->setProgressVisible(true);
@@ -815,7 +831,7 @@ void DataModel::addAllMetadata()
             emit centralMsg(s);    // rghmsg
             QCoreApplication::processEvents();
         }
-        if (timeToQuit) break;
+        if (abortLoadingModel) break;
         // is metadata already cached
         if (index(row, G::MetadataLoadedColumn).data().toBool()) continue;
 
@@ -887,7 +903,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 {
 /*
     This function is called after the metadata for each eligible image in the selected
-    folder(s) is being cached or when addAllMetadata is called prior of filtering or sorting.
+    folder(s) has been cached or when addAllMetadata is called prior of filtering or sorting.
     The metadata is displayed in tableView and InfoView.
 
     If a folder is opened with combineRawJpg all the metadata for the raw file may not have
@@ -895,6 +911,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */    
     if (G::isLogger) G::log(__FUNCTION__);
+//    qDebug() << __FUNCTION__ << "G::stop =" << G::stop;
 
     // deal with lagging signals when new folder selected suddenly
     if (G::stop) {
@@ -917,7 +934,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     int row = m.row;
     if (rowCount() <= row) return false;
 
-    mutex.lock();
+//    mutex.lock();
     if (!metadata->ratings.contains(m.rating)) {
         m.rating = "";
         m._rating = "";
@@ -1041,7 +1058,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 
     // req'd for 1st image, probably loaded before metadata cached
     if (row == 0) emit updateClassification();
-    mutex.unlock();
+//    mutex.unlock();
     return true;
 }
 
@@ -1065,8 +1082,18 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int role)
 void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    if (G::stop) return;
-    if (!dmIdx.isValid()) return;
+//    if (loadingModel) {
+//        qWarning() << __FUNCTION__ << "loadingModel =" << loadingModel;
+//        return;
+//    }
+    if (G::stop) {
+        qDebug() << __FUNCTION__ << dmIdx << "G::stop = " << G::stop;
+        return;
+    }
+    if (!dmIdx.isValid()) {
+        qWarning() << __FUNCTION__ << "dmIdx.isValid() =" << dmIdx.isValid();
+        return;
+    }
 //    return;
     mutex.lock();
     QStandardItem *item = itemFromIndex(dmIdx);
@@ -1326,7 +1353,7 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("currentRow", 27) << G::s(currentRow);
     rpt << "\n" << G::sj("hasDupRawJpg", 27) << G::s(hasDupRawJpg);
     rpt << "\n" << G::sj("filtersBuilt", 27) << G::s(filters->filtersBuilt);
-    rpt << "\n" << G::sj("timeToQuit", 27) << G::s(timeToQuit);
+    rpt << "\n" << G::sj("timeToQuit", 27) << G::s(abortLoadingModel);
     rpt << "\n" << G::sj("imageCount", 27) << G::s(imageCount);
     rpt << "\n" << G::sj("countInterval", 27) << G::s(countInterval);
     for(int row = 0; row < rowCount(); row++) {

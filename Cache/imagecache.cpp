@@ -108,6 +108,11 @@ void ImageCache::stop()
 //        qDebug() << __FUNCTION__ << "decoder[id]->isRunning()" << id << decoder[id]->isRunning();
 //    }
 
+    QString isRun;
+    if (isRunning()) isRun = "true";
+    else isRun = "false";
+    G::track(__FUNCTION__, "Start: isRunning = " + isRun);
+
     // stop imagecache thread
     if (isRunning()) {
         mutex.lock();
@@ -117,6 +122,10 @@ void ImageCache::stop()
         wait();
         abort = false;
     }
+
+    if (isRunning()) isRun = "true";
+    else isRun = "false";
+    G::track(__FUNCTION__, "Done:  isRunning = " + isRun);
 
     // turn off caching activity lights on statusbar
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
@@ -339,6 +348,7 @@ bool ImageCache::nextToCache(int id)
     for (int p = 0; p < priorityList.size(); p++) {
         if (abort) return false;
         int i = priorityList.at(p);
+        if (i >= icd->cacheItemList.length()) break;    // debugging
 //        if (!icd->cacheItemList.at(i).isMetadata) continue;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
         bool isCached = icd->cacheItemList.at(i).isCached;
@@ -1023,12 +1033,24 @@ void ImageCache::reportRunStatus()
 void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 {
     // deal with lagging signals when new folder selected suddenly
-    if (G::stop) return;
+//    if (G::stop) return;
 //    if (m.currRootFolder != G::currRootFolder) return;
 
     QMutexLocker locker(&mutex);
     if (G::isLogger /*|| G::isFlowLogger*/) G::log(__FUNCTION__);
-    int row = cacheKeyHash[m.fPath];
+    int row;
+    if (cacheKeyHash.contains(m.fPath)) {
+        row = cacheKeyHash[m.fPath];
+    }
+    else {
+        qWarning() << __FUNCTION__ << m.fPath << "not in cacheKeyHash";
+        return;
+    }
+
+    if (row >= icd->cacheItemList.length()) {
+        qWarning() << __FUNCTION__<< "row not in icd->cacheItemList";
+        return;
+    }
 //    qDebug() << "ImageCache::addCacheItemImageMetadata" << row << m.fPath;
     /* cacheItemList is a list of cacheItem used to track the current
        cache status and make future caching decisions for each image

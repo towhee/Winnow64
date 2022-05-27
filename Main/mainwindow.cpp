@@ -647,13 +647,13 @@ void MW::keyReleaseEvent(QKeyEvent *event)
            tested.
         */
         G::popUp->hide();
-        if (!G::isNewFolderLoaded) stopAndClearAll();
+        if (!G::isNewFolderLoaded) stopAndClearAll("Escape key");
         // end stress test
         else if (isStressTest) isStressTest = false;
         // cancel slideshow
         else if (G::isSlideShow) slideShow();
         // quit loading datamodel
-        else if (dm->loadingModel) dm->timeToQuit = true;
+        else if (dm->loadingModel) dm->abortLoadingModel = true;
         // quit adding thumbnails
         else if (thumb->insertingThumbnails) thumb->abort = true;
         // abort Embellish export process
@@ -1321,36 +1321,41 @@ void MW::folderSelectionChange()
    This is invoked when there is a folder selection change in the folder or bookmark views.
    See PROGRAM FLOW at top of file for more information.
 */
+//    stopAndClearAll("folderSelectionChange");
+//    reportState("folderSelectionChange");
+    if (G::isLogger || G::isFlowLogger) {
+        qDebug();
+        G::log(__FUNCTION__);
+    }
+//    if (G::stop) return;
+//    qDebug() << __FUNCTION__ << "G::okayToChangeFolders =" << G::okayToChangeFolders;
 
-    // ignore if vewry rapid selection and current folder is still at stopAndClearAll
+    // ignore if very rapid selection and current folder is still at stopAndClearAll
     // also checked in FSTree and Bookmarks mousePressEvent
-//    if (G::isNewFolderLoaded)
-    if (!G::okayToChangeFolders) {
-        fsTree->selectionModel()->clear();
-        G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
-        qDebug() << __FUNCTION__ << "Not okay to change folder";
+    if (/*!G::okayToChangeFolders ||*/ dm->loadingModel) {
+//        fsTree->selectionModel()->clear();
+//        G::track(__FUNCTION__, "G::okayToChangeFolders = false, stopAndClearAll");
+//        if (!G::stop) stopAndClearAll("folderSelectionChange");
+//        G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
         return;
     }
+
+    G::okayToChangeFolders = false;
 
     // ignore if selection change triggered by deletion of prior selected folder
-    if (ignoreFolderSelectionChange) {
-        ignoreFolderSelectionChange = false;
-        fsTree->selectionModel()->clear();
-        return;
-    }
+//    if (ignoreFolderSelectionChange) {
+//        ignoreFolderSelectionChange = false;
+//        fsTree->selectionModel()->clear();
+//        return;
+//    }
 
-    G::currRootFolder = getSelectedPath();
     stopAndClearAll("folderSelectionChange");
+    G::currRootFolder = getSelectedPath();
 
     currentViewDirPath = getSelectedPath();
     setting->setValue("lastDir", currentViewDirPath);
 
     setCentralMessage("Loading information for folder " + currentViewDirPath);
-
-    if (G::isLogger || G::isFlowLogger) {
-        qDebug();
-        G::log(__FUNCTION__, currentViewDirPath);
-    }
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
@@ -1390,7 +1395,7 @@ void MW::folderSelectionChange()
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(currentViewDirPath, true /*report*/, false /*isRemembered*/)) {
-        stopAndClearAll();
+        stopAndClearAll("Invalid folder");
         G::isInitializing = false;
         setWindowTitle(winnowWithVersion);
         if (G::isLogger) Utilities::log(__FUNCTION__, "Invalid folder " + currentViewDirPath);
@@ -1415,9 +1420,9 @@ void MW::folderSelectionChange()
     // load datamodel
     if (!dm->load(currentViewDirPath, subFoldersAction->isChecked())) {
         qWarning() << "Datamodel Failed To Load for" << currentViewDirPath;
-        stopAndClearAll();
+        stopAndClearAll("Load datamodel failed");
         enableSelectionDependentMenus();
-        if (dm->timeToQuit) {
+        if (dm->abortLoadingModel) {
             updateStatus(false, "Image loading has been cancelled", __FUNCTION__);
             setCentralMessage("Image loading has been cancelled");
             QApplication::processEvents();
@@ -1437,6 +1442,9 @@ void MW::folderSelectionChange()
         return;
     }
 
+    G::okayToChangeFolders = true;
+//    dm->loadingModel = false;
+
     // update FSTree count column for folder in case it has changed
     fsTree->updateFolderImageCount(currentViewDirPath);
 
@@ -1451,7 +1459,7 @@ void MW::folderSelectionChange()
     currentRow = 0;
     currentSfIdx = dm->sf->index(currentRow, 0);
     dm->currentRow = currentRow;
-    currentDmIdx = dm->sf->mapToSource(currentSfIdx);
+    currentSfIdx = dm->sf->mapToSource(currentSfIdx);
 
     // made it this far, folder must have eligible images and is good-to-go
     isCurrentFolderOkay = true;
@@ -1736,15 +1744,23 @@ void MW::stopAndClearAll(QString src)
     a bookmark or ejects a drive and the resulting folder does not have any eligible images.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__ << "COMMENCE STOPANDCLEARALL";
+//    qDebug() << __FUNCTION__ << src;
+//    qDebug();
+//    G::t.restart();
+    G::track(__FUNCTION__, "Start " + src + "  Old folder: " + G::currRootFolder);
 
+//    G::okayToChangeFolders = false;
     G::stop = true;
-    G::okayToChangeFolders = false;
+
+    // force completion of all signals to DataModel from MetaRead
+//    qApp->processEvents();
+//    G::track(__FUNCTION__, "processEvents");
 
     // Stop any threads that might be running.
-    imageCacheThread->stop();
-    metaRead->stop();
+//    imageCacheThread->stop();
     metadataCacheThread->stop();
+    metaRead->stop();
+    imageCacheThread->stop();
     buildFilters->stop();
 
     imageView->clear();
@@ -1779,7 +1795,11 @@ void MW::stopAndClearAll(QString src)
     tableView->setSortingEnabled(true);
     currentRow = 0;
 
+    G::track(__FUNCTION__, "Done");
     G::stop = false;
+//    G::okayToChangeFolders = true;
+
+//    reportState("MW::stopAndClearAll completed");
 }
 
 void MW::nullFiltration()
@@ -1903,7 +1923,7 @@ void MW::loadConcurrentNewFolder()
 {
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     G::allMetadataLoaded = false;
-    dm->loadingModel = true;
+//    dm->loadingModel = true;
     // reset for bestAspect calc
     G::iconWMax = G::minIconSize;
     G::iconHMax = G::minIconSize;
@@ -1935,6 +1955,7 @@ void MW::loadConcurrentNewFolder()
 
 void MW::loadConcurrentMetaDone()
 {
+    G::track(__FUNCTION__);
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     if (G::stop) return;
 
@@ -1959,7 +1980,7 @@ void MW::loadConcurrentMetaDone()
     filters->setEnabled(true);
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
-    dm->loadingModel = false;
+//    dm->loadingModel = false;
     if (!filterDock->visibleRegion().isNull()) {
         launchBuildFilters();
     }
@@ -1972,6 +1993,7 @@ void MW::loadConcurrentMetaDone()
 
 void MW::loadConcurrentStartImageCache()
 {
+    G::track(__FUNCTION__);
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     if (isShowCacheProgressBar) {
         cacheProgressBar->clearProgress();
@@ -1982,7 +2004,8 @@ void MW::loadConcurrentStartImageCache()
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
     G::isNewFolderLoaded = true;
-    dm->loadingModel = false;
+//    dm->loadingModel = false;
+//    G::okayToChangeFolders = true;
 
     /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
     including current index and file path req'd by mdCache and EmbelProperties...  If
@@ -2041,7 +2064,7 @@ void MW::loadLinearNewFolder()
     G::iconWMax = G::minIconSize;
     G::iconHMax = G::minIconSize;
 
-    dm->loadingModel = true;
+//    dm->loadingModel = true;
 
     // no sorting or filtering until all metadta loaded
     filterMenu->setEnabled(false);
@@ -2053,7 +2076,7 @@ void MW::loadLinearNewFolder()
     updateMetadataThreadRunStatus(true, true, __FUNCTION__);
     dm->addAllMetadata();
 
-    if (dm->timeToQuit) {
+    if (dm->abortLoadingModel) {
         updateStatus(false, "Image loading has been cancelled", __FUNCTION__);
         setCentralMessage("Image loading has been cancelled");
 //        QApplication::processEvents();
@@ -2103,7 +2126,7 @@ void MW::loadImageCacheForNewFolder()
 
     // have to wait until image caching thread running before setting flag
     G::isNewFolderLoaded = true;
-    dm->loadingModel = false;
+//    dm->loadingModel = false;
 
     /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
     including current index and file path req'd by mdCache and EmbelProperties...  If
@@ -2479,7 +2502,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         folderSelectionChange();
     }
     else {
-        stopAndClearAll();
+        stopAndClearAll("Bookmark clicked");
         setWindowTitle(winnowWithVersion);
         enableSelectionDependentMenus();
     }
@@ -5414,7 +5437,7 @@ void MW::ejectUsb(QString path)
                  << "ejectDrive.rootPath() =" << ejectDrive.rootPath()
                     ;
                     //*/
-        stopAndClearAll();
+        stopAndClearAll("ejectUSB");
     }
 
     QString driveName = ejectDrive.name();      // ie WIN "D:\" or MAC "Untitled"
@@ -5446,6 +5469,7 @@ void MW::ejectUsb(QString path)
         G::popUp->showPopup("Drive " + d
               + " is not removable and cannot be ejected", 2000);
     }
+    G::okayToChangeFolders = true;
 }
 
 void MW::ejectUsbFromMainMenu()
@@ -5909,7 +5933,8 @@ void MW::deleteFiles()
 
     // if all images in folder were deleted
     if (sldm.count() == dm->rowCount()) {
-        stopAndClearAll();
+        stopAndClearAll("deleteFiles");
+        G::okayToChangeFolders = true;
         folderSelectionChange();
         return;
     }
@@ -5985,7 +6010,8 @@ void MW::deleteFolder()
 
     if (currentViewDirPath == dirToDelete) {
         ignoreFolderSelectionChange = true;
-        stopAndClearAll();
+        stopAndClearAll("deleteFolder");
+        G::okayToChangeFolders = TRUE;
     }
 
     QDir dir(dirToDelete);

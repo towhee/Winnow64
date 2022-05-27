@@ -195,11 +195,13 @@ void MW::createMDCache()
     // update icon in datamodel
     connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon);
     // message metadata reading completed
-    connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
-    // Signal to MW::loadNew3 to prep and run fileSelectionChange
+    connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone/*,
+            Qt::BlockingQueuedConnection*/);
+    // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
     connect(metaRead, &MetaRead::delayedStartImageCache, this, &MW::loadConcurrentStartImageCache);
     // check icons visible is correct
-    connect(metaRead, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
+    connect(metaRead, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit/*,
+            Qt::BlockingQueuedConnection*/);
 
 }
 
@@ -634,6 +636,8 @@ void MW::createFSTree()
     // this works for touchpad tap
 //    connect(fsTree, SIGNAL(pressed(const QModelIndex&)), this, SLOT(folderSelectionChange()));
     connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChange);
+
+    connect(fsTree, &FSTree::pressed, dm, &DataModel::abortLoad);
 
     // this does not work for touchpad tap
 //    connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));

@@ -442,7 +442,9 @@ void FSTree::resizeEvent(QResizeEvent *event)
 
 void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     QTreeView::selectionChanged(selected, deselected);
+//    emit abortLoadDataModel();
     emit selectionChange();
 //    QtConcurrent::run(this, &FSTree::updateVisibleImageCount);
 //    qDebug() << __FUNCTION__ << count;
@@ -452,10 +454,10 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
 
-    if (!G::okayToChangeFolders) {
-        G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
-        return;
-    }
+//    if (!G::okayToChangeFolders) {
+//        G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
+//        return;
+//    }
 
     // do not allow if there is a background ingest in progress
     if (G::isRunningBackgroundIngest) {
@@ -478,6 +480,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         }
         return;
     }
+
     QTreeView::mousePressEvent(event);
 }
 

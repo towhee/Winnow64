@@ -588,7 +588,8 @@ private slots:
     void setMenuBarVisibility();
     void setStatusBarVisibility();
 
-    void reportState();
+    void reportWorkspaceState();
+    void reportState(QString title);
 
     void openFolder();
     void refreshCurrentFolder();
