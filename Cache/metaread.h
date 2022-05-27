@@ -39,7 +39,7 @@ signals:
     void done();
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
-    void setIcon(QModelIndex dmIdx, QPixmap &pm);
+    void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance);
     void setImageCachePosition(QString fPath);      // not used
     void delayedStartImageCache();
     void updateIconBestFit();
@@ -61,6 +61,7 @@ private:
     DataModel *dm;
     Metadata *metadata;
     Thumb *thumb;
+    int dmInstance;
     int adjIconChunkSize;
     int sfRowCount;
     int visibleIconCount;

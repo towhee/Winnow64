@@ -255,7 +255,7 @@ void MetaRead::cleanupIcons()
                     //*/
         if (isVisible(sfRow)) continue;
 //        if (abort) return;
-        /*if (!abort)*/ emit setIcon(dmIdx, nullPm);
+        /*if (!abort)*/ emit setIcon(dmIdx, nullPm, dmInstance);
         #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
         /*if (!abort) */iconsLoaded.remove(i);
         #endif
@@ -287,7 +287,7 @@ void MetaRead::updateIcons()
             if (thumbLoaded && !abort) {
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
 //                if (abort) return;
-                /*if (!abort) */emit setIcon(dmIdx, pm);
+                /*if (!abort) */emit setIcon(dmIdx, pm, dmInstance);
                 /*if (!abort) */iconMax(pm);
                 /*if (!abort) */iconsLoaded.append(dmRow);
             }
@@ -350,6 +350,7 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     QFileInfo fileInfo(fPath);
     if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
         metadata->m.row = dmRow;
+        metadata->m.dmInstance = dmInstance;
 //        if (abort) return;
 //        qDebug() << __FUNCTION__ << "addToDatamodel: start  row =" << sfIdx.row();
         if (debugCaching) qDebug().noquote() << __FUNCTION__ << "start  addToDatamodel"
@@ -379,7 +380,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     if (thumbLoaded) {
         QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
 //        qDebug() << __FUNCTION__ << "setIcon: start  row =" << sfIdx.row();
-        if (!abort) emit setIcon(dmIdx, pm);
+        if (!abort) emit setIcon(dmIdx, pm, dmInstance);
 //        qDebug() << __FUNCTION__ << "setIcon: done   row =" << sfIdx.row();
 //        dm->setIcon(dmIdx, pm);
         /*if (!abort) */iconMax(pm);
@@ -445,6 +446,8 @@ void MetaRead::run()
     priorityQueue is a list of sfRow with lowest = highest priority
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+
+    dmInstance = dm->instance;
 
     // new folder or file selection change
     buildMetadataPriorityQueue(sfStart);
