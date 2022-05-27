@@ -394,21 +394,21 @@ void MW::createActions()
     connect(popPickHistoryAction, &QAction::triggered, this, &MW::popPick);
 
     // Delete
-    deleteAction = new QAction(tr("Delete"), this);
+    deleteAction = new QAction(tr("Delete image(s)"), this);
     deleteAction->setObjectName("deleteFiles");
     deleteAction->setShortcutVisibleInContextMenu(true);
     deleteAction->setShortcut(QKeySequence("Delete"));
     addAction(deleteAction);
     connect(deleteAction, &QAction::triggered, this, &MW::deleteFiles);
 
-    deleteAction1 = new QAction(tr("Delete"), this);
+    deleteAction1 = new QAction(tr("Delete image(s)"), this);
     deleteAction1->setObjectName("backspaceDeleteFiles");
     deleteAction1->setShortcutVisibleInContextMenu(true);
     deleteAction1->setShortcut(QKeySequence("Backspace"));
     addAction(deleteAction1);
     connect(deleteAction1, &QAction::triggered, this, &MW::deleteFiles);
 
-    deleteActiveFolderAction = new QAction(tr("Delete Folder"), this);
+    deleteActiveFolderAction = new QAction(tr("Delete folder"), this);
     deleteActiveFolderAction->setObjectName("deleteActiveFolder");
     addAction(deleteActiveFolderAction);
     connect(deleteActiveFolderAction, &QAction::triggered, this, &MW::deleteFolder);

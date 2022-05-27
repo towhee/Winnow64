@@ -1,3 +1,29 @@
+C:\Qt6.2\6.2.2\Src\qtbase\src\corelib\itemmodels\qabstractitemmodel.cpp
+void QAbstractItemModel::beginInsertRows(const QModelIndex &parent, int first, int last)
+{
+    Q_ASSERT(first >= 0);
+CRASH    Q_ASSERT(first <= rowCount(parent)); // == is allowed, to insert at the end
+    Q_ASSERT(last >= first);
+    Q_D(QAbstractItemModel);
+    d->changes.push(QAbstractItemModelPrivate::Change(parent, first, last));
+    emit rowsAboutToBeInserted(parent, first, last, QPrivateSignal());
+    d->rowsAboutToBeInserted(parent, first, last);
+}
+
+C:\Qt6.2\6.2.2\Src\qtbase\src\gui\itemmodels\qstandarditemmodel.cpp
+QModelIndex QStandardItemModel::indexFromItem(const QStandardItem *item) const
+{
+CRASH    if (item && item->d_func()->parent) {
+        QPair<int, int> pos = item->d_func()->position();
+        return createIndex(pos.first, pos.second, item->d_func()->parent);
+    }
+    return QModelIndex();
+}
+
+
+
+
+
 DataModel::addMetadataForItem 11 rowCount() = 13 m.fPath = "D:/Pictures/Calendar_Cats v/2014-10-28_0009.jpg" currentFolderPath = "D:/Pictures/Calendar_Cats v"
 DataModel::addMetadataForItem test0
 DataModel::addMetadataForItem test1

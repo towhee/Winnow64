@@ -13,6 +13,7 @@ MetaRead::MetaRead(QObject *parent, DataModel *dm) : QThread(parent)
     thumb = new Thumb(this, dm, metadata);
 //    iconChunkSize = 4000;
     abort = false;
+    debugCaching = false;
 }
 
 MetaRead::~MetaRead()
@@ -26,6 +27,10 @@ void MetaRead::stop()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     // stop metaRead thread
+    QString isRun;
+    if (isRunning()) isRun = "true";
+    else isRun = "false";
+    G::track(__FUNCTION__, "Start: isRunning = " + isRun);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -34,6 +39,9 @@ void MetaRead::stop()
         wait();
         abort = false;
     }
+    if (isRunning()) isRun = "true";
+    else isRun = "false";
+    G::track(__FUNCTION__, "Done:  isRunning = " + isRun);
 }
 
 void MetaRead::initialize()
@@ -51,12 +59,20 @@ void MetaRead::read(Action action, int sfRow, QString src)
     /*
     qDebug() << __FUNCTION__ << "src =" << src;
     //*/
-    stop();
+//    stop();
+
     this->action = action;
     sfRowCount = dm->sf->rowCount();
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__
+                           << "src =" << src
+                           << " action =" << QString::number(action)
+                           << "sfRowCount =" << sfRowCount
+                              ;
+    }
     if (sfRow >= sfRowCount) return;
     sfStart = sfRow;
-    start();
+    if (!abort) start();
 }
 
 void MetaRead::iconMax(QPixmap &thumb)
@@ -174,6 +190,8 @@ void MetaRead::iconCleanup()
 
 bool MetaRead::isNotLoaded(int sfRow)
 {
+    /* not used  */
+
     QModelIndex sfIdx = dm->sf->index(sfRow, G::MetadataLoadedColumn);
     if (!sfIdx.data().toBool()) return true;
     if (!dm->iconLoaded(sfRow)) return true;
@@ -193,6 +211,7 @@ bool MetaRead::isVisible(int sfRow)
 void MetaRead::dmRowRemoved(int dmRow)
 {
     if (G::isLogger) G::log(__FUNCTION__);
+//    if (abort) return;
     int idx = iconsLoaded.indexOf(dmRow);
     iconsLoaded.removeAt(idx);
 }
@@ -201,6 +220,11 @@ void MetaRead::cleanupIcons()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     // cleanup non-visible icons
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__
+                           << "start"
+                              ;
+    }
     QPixmap nullPm;
     for (int i = 0; i < iconsLoaded.size(); ++i) {
         int dmRow = iconsLoaded.at(i);
@@ -213,7 +237,7 @@ void MetaRead::cleanupIcons()
                         ;
                         //*/
             #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
-            iconsLoaded.remove(i);
+            if (!abort) iconsLoaded.remove(i);
             #endif
             continue;
         }
@@ -230,16 +254,27 @@ void MetaRead::cleanupIcons()
                     ;
                     //*/
         if (isVisible(sfRow)) continue;
-        emit setIcon(dmIdx, nullPm);
+//        if (abort) return;
+        /*if (!abort)*/ emit setIcon(dmIdx, nullPm);
         #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
-        iconsLoaded.remove(i);
+        /*if (!abort) */iconsLoaded.remove(i);
         #endif
+    }
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__
+                           << "done"
+                              ;
     }
 }
 
 void MetaRead::updateIcons()
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__
+                           << "start"
+                              ;
+    }
 
     // load any missing visible icons
     for (int sfRow = dm->firstVisibleRow; sfRow <= dm->lastVisibleRow; ++sfRow) {
@@ -249,17 +284,23 @@ void MetaRead::updateIcons()
             QImage image;
             QString fPath = dmIdx.data(G::PathRole).toString();
             bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
-            if (thumbLoaded) {
+            if (thumbLoaded && !abort) {
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                emit setIcon(dmIdx, pm);
-                iconMax(pm);
-                iconsLoaded.append(dmRow);
+//                if (abort) return;
+                /*if (!abort) */emit setIcon(dmIdx, pm);
+                /*if (!abort) */iconMax(pm);
+                /*if (!abort) */iconsLoaded.append(dmRow);
             }
         }
-        if (abort) return;
+//        if (abort) return;
     }
 
     cleanupIcons();
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__
+                           << "done"
+                              ;
+    }
 }
 
 void MetaRead::buildMetadataPriorityQueue(int sfRow)
@@ -269,8 +310,17 @@ void MetaRead::buildMetadataPriorityQueue(int sfRow)
     firstVisible = dm->firstVisibleRow;
     lastVisible = dm->lastVisibleRow;
 
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__
+                           << "start"
+                           << "firstVisible =" << firstVisible
+                           << "lastVisible =" << lastVisible
+                           << "priorityQueue.size() =" << priorityQueue.size()
+                           << "sfRowCount =" << sfRowCount
+                              ;
+    }
     // icon cleanup all icons no longer visible
-    cleanupIcons();
+    if (!abort) cleanupIcons();
 
     // alternate ahead/behind until finished
     int behind = sfRow;
@@ -278,58 +328,85 @@ void MetaRead::buildMetadataPriorityQueue(int sfRow)
     while (behind >= 0 || ahead < sfRowCount) {
         if (behind >= 0) priorityQueue.append(behind--);
         if (ahead < sfRowCount) priorityQueue.append(ahead++);
-        if (abort) return;
+//        if (abort) return;
     }
-        /*
-        qDebug() << __FUNCTION__
-                 << "firstVisible =" << firstVisible
-                 << "lastVisible =" << lastVisible
-                 << "priorityQueue.size() =" << priorityQueue.size()
-                 << "sfRowCount =" << sfRowCount
-                    ;
-                 //*/
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__
+                           << "start"
+                           << "firstVisible =" << firstVisible
+                           << "lastVisible =" << lastVisible
+                           << "priorityQueue.size() =" << priorityQueue.size()
+                           << "sfRowCount =" << sfRowCount
+                              ;
+    }
 }
 
 void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 {
-    if (abort) return;
+//    if (abort) return;
     if (G::isLogger) G::log(__FUNCTION__);
     int dmRow = dm->sf->mapToSource(sfIdx).row();
+    if (debugCaching) qDebug().noquote() << __FUNCTION__ << "start  row =" << sfIdx.row();
     QFileInfo fileInfo(fPath);
     if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
         metadata->m.row = dmRow;
-        if (abort) return;
-        emit addToDatamodel(metadata->m);
+//        if (abort) return;
+//        qDebug() << __FUNCTION__ << "addToDatamodel: start  row =" << sfIdx.row();
+        if (debugCaching) qDebug().noquote() << __FUNCTION__ << "start  addToDatamodel"
+                                             << "G::stop =" << G::stop
+                                             << "abort =" << abort
+                                                ;
+        if (!abort) emit addToDatamodel(metadata->m);
+        if (debugCaching) qDebug().noquote() << __FUNCTION__ << "done   addToDatamodel";
+//        qDebug() << __FUNCTION__ << "addToDatamodel: done   row =" << sfIdx.row();
 //        dm->addMetadataForItem(metadata->m);
     }
+    if (debugCaching) qDebug().noquote() << __FUNCTION__ << "done row =" << sfIdx.row();
 }
 
 void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 {
-    if (abort) return;
+//    if (abort) return;
     if (G::isLogger) G::log(__FUNCTION__);
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__
+                           << "start  row =" << sfIdx.row()
+                              ;
+    }
     QModelIndex dmIdx = dm->sf->mapToSource(sfIdx);
     QImage image;
     bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
     if (thumbLoaded) {
         QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-        emit setIcon(dmIdx, pm);
+//        qDebug() << __FUNCTION__ << "setIcon: start  row =" << sfIdx.row();
+        if (!abort) emit setIcon(dmIdx, pm);
+//        qDebug() << __FUNCTION__ << "setIcon: done   row =" << sfIdx.row();
 //        dm->setIcon(dmIdx, pm);
-        iconMax(pm);
-        iconsLoaded.append(dmIdx.row());
+        /*if (!abort) */iconMax(pm);
+        /*if (!abort) */iconsLoaded.append(dmIdx.row());
+    }
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__
+                           << "done   row =" << sfIdx.row()
+                              ;
     }
 }
 
 void MetaRead::readRow(int sfRow)
 {
-    if (abort) return;
+//    if (abort) return;
     if (G::isLogger) G::log(__FUNCTION__);
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__
+                           << "start  row =" << sfRow
+                              ;
+    }
     if (sfRow >= dm->sf->rowCount()) return;
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
     if (!sfIdx.isValid()) return;
     QString fPath = sfIdx.data(G::PathRole).toString();
     if (!G::allMetadataLoaded) {
-        if (abort) return;
+//        if (abort) return;
         bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
         if (!metaLoaded && !abort) {
             readMetadata(sfIdx, fPath);
@@ -350,7 +427,12 @@ void MetaRead::readRow(int sfRow)
     }
 
     // update the imageCache item data
-    if (!abort) emit addToImageCache(metadata->m);
+    if (!G::stop) emit addToImageCache(metadata->m);
+    if (debugCaching) {
+        qDebug().noquote() << __FUNCTION__
+                           << "done   row =" << sfRow
+                              ;
+    }
 }
 
 void MetaRead::run()
@@ -366,19 +448,27 @@ void MetaRead::run()
 
     // new folder or file selection change
     buildMetadataPriorityQueue(sfStart);
-    if (abort) return;
     int n = static_cast<int>(priorityQueue.size());
     for (int i = 0; i < n; i++) {
-        if (abort) return;
+        if (abort) {
+            G::track(__FUNCTION__, "Aborting MetaRead.  Row = " + QString::number(i));
+            return;
+        }
+        if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "i =" + QString::number(i));
         readRow(priorityQueue.at(i));
-        if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
+        if (!G::allMetadataLoaded && !imageCachingStarted && !abort && !G::stop) {
             if (i == (n - 1) || i == 50) {
-                emit delayedStartImageCache();
+                G::track(__FUNCTION__, "emit delayedStartImageCache.");
+                if (!abort) emit delayedStartImageCache();
                 imageCachingStarted = true;
             }
         }
     }
-    if (abort) return;
-    emit updateIconBestFit();
-    emit done();
+    if (abort) {
+        G::track(__FUNCTION__, "Aborting MetaRead.  All rows read.");
+        return;
+    }
+    if (!abort) emit updateIconBestFit();
+    if (!abort) emit done();
+    G::track(__FUNCTION__, "Finished naturally.");
 }

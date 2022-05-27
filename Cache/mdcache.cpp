@@ -111,6 +111,10 @@ void MetadataCache::stop()
 {
     if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__;
+    QString isRun;
+    if (isRunning()) isRun = "true";
+    else isRun = "false";
+    G::track(__FUNCTION__, "Start: isRunning = " + isRun);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -120,6 +124,9 @@ void MetadataCache::stop()
         abort = false;
         emit updateIsRunning(false, false, __FUNCTION__);
     }
+    if (isRunning()) isRun = "true";
+    else isRun = "false";
+    G::track(__FUNCTION__, "Done:  isRunning = " + isRun);
 }
 
 void MetadataCache::scrollChange(QString source)
@@ -588,7 +595,7 @@ void MetadataCache::run()
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);
         int rowCount = dm->sf->rowCount();
-        dm->loadingModel = true;
+//        dm->loadingModel = true;
 
         // read next metadata and icon chunk
         if (action == Action::Scroll ||
@@ -600,7 +607,7 @@ void MetadataCache::run()
         }
 
         if (abort) {
-            dm->loadingModel = false;
+//            dm->loadingModel = false;
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
@@ -615,13 +622,13 @@ void MetadataCache::run()
             if (action == Action::NewFileSelected || action == Action::Scroll)  {
                 iconCleanup();
                 if (abort) {
-                    dm->loadingModel = false;
+//                    dm->loadingModel = false;
                     return;
                 }
             }
         }
 
-        dm->loadingModel = false;
+//        dm->loadingModel = false;
     }
 
     // update status of metadataThreadRunningLabel in statusbar

@@ -40,7 +40,7 @@ void MW::launchBuildFilters()
 //        G::popUp->showPopup("Filters are up-to-date.");
 //        return;
 //    }
-    if (dm->loadingModel) {
+    if (!G::allMetadataLoaded) {
         G::popUp->showPopup("Not all data required for filtering has been loaded yet.", 2000);
         return;
     }

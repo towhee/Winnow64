@@ -1,11 +1,62 @@
 #include "Main/mainwindow.h"
 
-void MW::reportState()
+void MW::reportState(QString title)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    qDebug()
+        << "\nWINNOW STATE" << title
+        << "\nFLAGS:"
+        << "\nG::useLinearLoading                    " << G::useLinearLoading
+        << "\nG::isInitializing                      " << G::isInitializing
+        << "\ndm->loadingModel                       " << dm->loadingModel
+        << "\ndm->basicFileInfoLoaded                " << dm->basicFileInfoLoaded
+        << "\nG::isNewFolderLoaded                   " << G::isNewFolderLoaded
+        << "\nG::allMetadataLoaded                   " << G::allMetadataLoaded
+        << "\nG::allIconsLoaded                      " << G::allIconsLoaded
+        << "\nG::isNewFolderLoadedAndInfoViewUpToDate" << G::isNewFolderLoadedAndInfoViewUpToDate
+        << "\nG::isNewSelection                      " << G::isNewSelection
+        << "\nignoreFolderSelectionChange            " << ignoreFolderSelectionChange
+        << "\nG::stop                                " << G::stop
+        << "\nG::okayToChangeFolders                 " << G::okayToChangeFolders
+        << "\ndm->forceBuildFilters                  " << dm->forceBuildFilters
+        << "\nisCurrentFolderOkay                    " << isCurrentFolderOkay
+        << "\nimageView->isFirstImageNewFolder       " << imageView->isFirstImageNewFolder
+
+//        << "\nisDragDrop                             " << isDragDrop
+//        << "\nG::ignoreScrollSignal                  " << G::ignoreScrollSignal
+//        << "\nG::isRunningBackgroundIngest           " << G::isRunningBackgroundIngest
+//        << "\nturnOffEmbellish                       " << turnOffEmbellish
+
+        << "\nTHREADS:"
+        << "\nMDCache      isRunning                 " << metadataCacheThread->isRunning()
+        << "\nMetaRead     isRunning                 " << metaRead->isRunning()
+        << "\nImageCache   isRunning                 " << imageCacheThread->isRunning()
+        << "\nBuildFilters isRunning                 " << buildFilters->isRunning()
+
+        << "\nPOSITION:"
+        << "\nG::mode                                " << G::mode
+        << "\ncentralLayout->currentIndex()          " << centralLayout->currentIndex()
+        << "\nG::currRootFolder                      " << G::currRootFolder
+        << "\ncurrentViewDirPath                     " << currentViewDirPath
+        << "\ncurrentRow                             " << currentRow
+        << "\ncurrentSfIdx                           " << currentSfIdx
+        << "\ncurrentSfIdx                           " << currentSfIdx
+        << "\ndm->currentRow                         " << dm->currentRow
+        << "\ndm->firstVisibleRow                    " << dm->firstVisibleRow
+        << "\ndm->lastVisibleRow                     " << dm->lastVisibleRow
+        << "\nG::availableMemoryMB                   " << G::availableMemoryMB
+        << "\nG::winnowMemoryBeforeCacheMB           " << G::winnowMemoryBeforeCacheMB
+        << "\nG::metaCacheMB                         " << G::metaCacheMB
+        ;
+}
+
+void MW::reportWorkspaceState()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     workspaceData w;
     snapshotWorkspace(w);
-    qDebug() << G::t.restart() << "\t" << "\nisMaximized" << w.isFullScreen
+    qDebug() << G::t.restart()
+             << "\t" << "\nisMaximized" << w.isFullScreen
              << "\nisWindowTitleBarVisible" << w.isWindowTitleBarVisible
              << "\nisMenuBarVisible" << w.isMenuBarVisible
              << "\nisStatusBarVisible" << w.isStatusBarVisible
