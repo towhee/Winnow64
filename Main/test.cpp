@@ -11,6 +11,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    fsTree->selectionModel()->clearSelection();
+    bookmarks->selectionModel()->clearSelection();
+    return;
+
 #ifdef Q_OS_WIN
     QString p1 = "D:/Pictures/Coaster";
     QString p2 = "D:/Pictures/Zenfolio/pbase2048";

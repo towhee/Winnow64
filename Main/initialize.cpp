@@ -184,6 +184,9 @@ void MW::createMDCache()
     connect(metadataCacheThread, &MetadataCache::updateIsRunning,
             this, &MW::updateMetadataThreadRunStatus);
 
+    connect(metadataCacheThread, &MetadataCache::showCacheStatus,
+            this, &MW::setCentralMessage);
+
     connect(metadataCacheThread, &MetadataCache::selectFirst,
             thumbView, &IconView::selectFirst);
 

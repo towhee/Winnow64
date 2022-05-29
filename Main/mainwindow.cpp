@@ -647,13 +647,14 @@ void MW::keyReleaseEvent(QKeyEvent *event)
            tested.
         */
         G::popUp->hide();
-        if (!G::isNewFolderLoaded) stopAndClearAll("Escape key");
+        // stop loading a new folder
+        if (!G::isNewFolderLoaded && G::useLinearLoading) stopAndClearAll("Escape key");
         // end stress test
         else if (isStressTest) isStressTest = false;
         // cancel slideshow
         else if (G::isSlideShow) slideShow();
         // quit loading datamodel
-        else if (dm->loadingModel) dm->abortLoadingModel = true;
+//        else if (dm->loadingModel) dm->abortLoadingModel = true;
         // quit adding thumbnails
         else if (thumb->insertingThumbnails) thumb->abort = true;
         // abort Embellish export process
@@ -1744,10 +1745,10 @@ void MW::stopAndClearAll(QString src)
     a bookmark or ejects a drive and the resulting folder does not have any eligible images.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__ << src;
+    qDebug() << __FUNCTION__ << src;
 //    qDebug();
 //    G::t.restart();
-    G::track(__FUNCTION__, "Start " + src + "  Old folder: " + G::currRootFolder);
+//    G::track(__FUNCTION__, "Start " + src + "  Old folder: " + G::currRootFolder);
 
 //    G::okayToChangeFolders = false;
     G::stop = true;
@@ -1756,8 +1757,9 @@ void MW::stopAndClearAll(QString src)
 //    qApp->processEvents();
 //    G::track(__FUNCTION__, "processEvents");
 
+    dm->abortLoadingModel = true;
+
     // Stop any threads that might be running.
-//    imageCacheThread->stop();
     metadataCacheThread->stop();
     metaRead->stop();
     imageCacheThread->stop();
@@ -1795,7 +1797,12 @@ void MW::stopAndClearAll(QString src)
     tableView->setSortingEnabled(true);
     currentRow = 0;
 
-    G::track(__FUNCTION__, "Done");
+    if (src == "Escape key") {
+        fsTree->selectionModel()->clearSelection();
+        bookmarks->selectionModel()->clearSelection();
+    }
+
+//    G::track(__FUNCTION__, "Done");
     G::stop = false;
 //    G::okayToChangeFolders = true;
 
@@ -1912,10 +1919,19 @@ void MW::loadConcurrent(MetaRead::Action action, int sfRow, QString src)
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         updateMetadataThreadRunStatus(true, true, __FUNCTION__);
-        metaRead->read(action, sfRow, src);
+        if (!dm->abortLoadingModel) {
+            metaRead->read(action, sfRow, src);
+        }
     }
     else {
         G::okayToChangeFolders = true;
+    }
+
+    if (dm->abortLoadingModel || !G::allMetadataLoaded) {
+        updateStatus(false, "Image loading has been cancelled", __FUNCTION__);
+        setCentralMessage("Image loading has been cancelled.");
+        QApplication::processEvents();
+        return;
     }
 }
 
@@ -2076,10 +2092,10 @@ void MW::loadLinearNewFolder()
     updateMetadataThreadRunStatus(true, true, __FUNCTION__);
     dm->addAllMetadata();
 
-    if (dm->abortLoadingModel) {
+    if (dm->abortLoadingModel || !G::allMetadataLoaded) {
         updateStatus(false, "Image loading has been cancelled", __FUNCTION__);
-        setCentralMessage("Image loading has been cancelled");
-//        QApplication::processEvents();
+        setCentralMessage("Image loading has been cancelled.");
+        QApplication::processEvents();
         return;
     }
 
@@ -2092,6 +2108,7 @@ void MW::loadLinearNewFolder()
     updateIconsVisible(currentRow);
 
     setCentralMessage("Reading icons.");
+    QApplication::processEvents();
     mct->readIconChunk();
     updateMetadataThreadRunStatus(false, true, __FUNCTION__);
 

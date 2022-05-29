@@ -111,10 +111,10 @@ void MetadataCache::stop()
 {
     if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__;
-    QString isRun;
-    if (isRunning()) isRun = "true";
-    else isRun = "false";
-    G::track(__FUNCTION__, "Start: isRunning = " + isRun);
+//    QString isRun;
+//    if (isRunning()) isRun = "true";
+//    else isRun = "false";
+//    G::track(__FUNCTION__, "Start: isRunning = " + isRun);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -124,9 +124,9 @@ void MetadataCache::stop()
         abort = false;
         emit updateIsRunning(false, false, __FUNCTION__);
     }
-    if (isRunning()) isRun = "true";
-    else isRun = "false";
-    G::track(__FUNCTION__, "Done:  isRunning = " + isRun);
+//    if (isRunning()) isRun = "true";
+//    else isRun = "false";
+//    G::track(__FUNCTION__, "Done:  isRunning = " + isRun);
 }
 
 void MetadataCache::scrollChange(QString source)
@@ -510,7 +510,7 @@ void MetadataCache::readIconChunk()
             }
             //*/
             if (row % countInterval == 0) {
-                QString msg = "Reading metadata: ";
+                QString msg = "Loading thumbnails: ";
                 msg += QString::number(row) + " of " + QString::number(end)/* + " " + fPath*/;
                 emit showCacheStatus(msg);
             }

@@ -27,10 +27,10 @@ void MetaRead::stop()
 {
     if (G::isLogger) G::log(__FUNCTION__);
     // stop metaRead thread
-    QString isRun;
-    if (isRunning()) isRun = "true";
-    else isRun = "false";
-    G::track(__FUNCTION__, "Start: isRunning = " + isRun);
+//    QString isRun;
+//    if (isRunning()) isRun = "true";
+//    else isRun = "false";
+//    G::track(__FUNCTION__, "Start: isRunning = " + isRun);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -39,9 +39,9 @@ void MetaRead::stop()
         wait();
         abort = false;
     }
-    if (isRunning()) isRun = "true";
-    else isRun = "false";
-    G::track(__FUNCTION__, "Done:  isRunning = " + isRun);
+//    if (isRunning()) isRun = "true";
+//    else isRun = "false";
+//    G::track(__FUNCTION__, "Done:  isRunning = " + isRun);
 }
 
 void MetaRead::initialize()

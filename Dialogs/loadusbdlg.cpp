@@ -57,8 +57,6 @@ void LoadUsbDlg::setScreenDependencies()
     int w = fm.boundingRect("==Select USB drive to view images=====").width();
     int h = fm.boundingRect("X").height();
 
-    qDebug() << __FUNCTION__ << "w =" << w;
-
     // set row width/height
     for (int i = 0; i < ui->usbList->count(); ++i) {
         QListWidgetItem *item = ui->usbList->item(i);

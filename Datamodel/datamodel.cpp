@@ -832,7 +832,9 @@ void DataModel::addAllMetadata()
             emit centralMsg(s);    // rghmsg
             QCoreApplication::processEvents();
         }
-        if (abortLoadingModel) break;
+        if (abortLoadingModel) {
+            return;
+        }
         // is metadata already cached
         if (index(row, G::MetadataLoadedColumn).data().toBool()) continue;
 
@@ -848,7 +850,7 @@ void DataModel::addAllMetadata()
         }
     }
     setAllMetadataLoaded(true);
-    loadingModel = false;
+//    loadingModel = false;
     /*
     qint64 ms = G::t.elapsed();
     qreal msperfile = static_cast<double>(ms) / count;
@@ -916,15 +918,15 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 
     // deal with lagging signals when new folder selected suddenly
     if (m.dmInstance > 0 && m.dmInstance != instance) {
-        qWarning() << __FUNCTION__ << "Instance conflict:"
-                   << "DM instance =" << instance
-                   << "m.dmInstance =" << m.dmInstance
-                      ;
+//        qWarning() << __FUNCTION__ << "Instance conflict:"
+//                   << "DM instance =" << instance
+//                   << "m.dmInstance =" << m.dmInstance
+//                      ;
         return false;
     }
     if (G::stop) {
-        qWarning() << __FUNCTION__ << "G::stop =" << G::stop;
-        return false;
+//        qWarning() << __FUNCTION__ << "G::stop =" << G::stop;
+//        return false;
     }
 //    if (m.currRootFolder != G::currRootFolder) {
 //        qWarning() << __FUNCTION__ << m.currRootFolder << G::currRootFolder
@@ -932,7 +934,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 //        return false;
 //    }
 
-//    /*
+    /*
     qDebug() << __FUNCTION__
              << m.row
              << "rowCount() =" << rowCount()
@@ -1098,7 +1100,7 @@ void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance)
 //        return;
 //    }
 
-    qDebug() << __FUNCTION__ << dmIdx << fromInstance << instance;
+//    qDebug() << __FUNCTION__ << dmIdx << fromInstance << instance;
     if (fromInstance != instance) {
         qDebug() << __FUNCTION__ << dmIdx << "Instance conflict = "
                  << instance << fromInstance;
