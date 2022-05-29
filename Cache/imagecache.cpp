@@ -108,10 +108,10 @@ void ImageCache::stop()
 //        qDebug() << __FUNCTION__ << "decoder[id]->isRunning()" << id << decoder[id]->isRunning();
 //    }
 
-    QString isRun;
-    if (isRunning()) isRun = "true";
-    else isRun = "false";
-    G::track(__FUNCTION__, "Start: isRunning = " + isRun);
+//    QString isRun;
+//    if (isRunning()) isRun = "true";
+//    else isRun = "false";
+//    G::track(__FUNCTION__, "Start: isRunning = " + isRun);
 
     // stop imagecache thread
     if (isRunning()) {
@@ -123,9 +123,9 @@ void ImageCache::stop()
         abort = false;
     }
 
-    if (isRunning()) isRun = "true";
-    else isRun = "false";
-    G::track(__FUNCTION__, "Done:  isRunning = " + isRun);
+//    if (isRunning()) isRun = "true";
+//    else isRun = "false";
+//    G::track(__FUNCTION__, "Done:  isRunning = " + isRun);
 
     // turn off caching activity lights on statusbar
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
