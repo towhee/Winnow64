@@ -101,6 +101,13 @@ void MW::loupeDisplay()
 
 }
 
+void MW::videoDisplay()
+{
+    if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
+    G::mode = "Video";
+    centralLayout->setCurrentIndex(VideoTab);
+}
+
 void MW::gridDisplay()
 {
 /*

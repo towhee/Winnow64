@@ -11,6 +11,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    centralLayout->setCurrentIndex(VideoTab);
+    QString path = "/Users/roryhill/Downloads/IMG_2411.MOV";
+    videoView->load(path);
+    return;
+
+
     fsTree->selectionModel()->clearSelection();
     bookmarks->selectionModel()->clearSelection();
     return;
