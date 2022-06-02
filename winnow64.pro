@@ -43,13 +43,16 @@ Debug:RCC_DIR = debug/.rcc
 Debug:UI_DIR = debug/.ui
 
 QT += widgets
+QT += multimedia
+QT += multimediawidgets
 QT += concurrent
 QT += network
 
-HEADERS += Cache/mdcache.h \
-    Cache/metaread.h \
-    Cache/metareader.h
-HEADERS += Cache/cachedata.h
+HEADERS += Cache/cachedata.h \
+    Views/videoview.h
+HEADERS += Cache/mdcache.h
+HEADERS += Cache/metaread.h
+HEADERS += Cache/metareader.h
 HEADERS += Cache/tshash.h
 HEADERS += Cache/imagecache.h
 HEADERS += Cache/imagedecoder.h
@@ -144,13 +147,13 @@ HEADERS += Utilities/foldercompressor.h
 HEADERS += Utilities/htmlwindow.h
 HEADERS += Utilities/icc.h
 mac:HEADERS += Utilities/mac.h
+win32:HEADERS += Utilities/win.h
 HEADERS += Utilities/inputdlg.h
 HEADERS += Utilities/performance.h
 HEADERS += Utilities/popup.h
 HEADERS += Utilities/progressbar.h
 HEADERS += Utilities/usb.h
 HEADERS += Utilities/utilities.h
-win32:HEADERS += Utilities/win.h
 HEADERS += Views/compareImages.h
 HEADERS += Views/compareview.h
 HEADERS += Views/iconview.h
@@ -161,23 +164,12 @@ HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
 SOURCES += Cache/cachedata.cpp \
-    Cache/metaread.cpp \
-    Cache/metareader.cpp \
-    Main/diagnostics.cpp \
-    Main/initialize.cpp \
-    Main/log.cpp \
-    Main/menusandactions.cpp \
-    Main/navigate.cpp \
-    Main/selection.cpp \
-    Main/setandupdate.cpp \
-    Main/slideshow.cpp \
-    Main/sortandfilter.cpp \
-    Main/test.cpp \
-    Main/viewmodes.cpp \
-    Main/workspaces.cpp
+    Views/videoview.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/mdcache.cpp
+SOURCES += Cache/metaread.cpp
+SOURCES += Cache/metareader.cpp
 SOURCES += Datamodel/buildfilters.cpp
 SOURCES += Datamodel/datamodel.cpp
 SOURCES += Datamodel/filters.cpp
@@ -254,10 +246,23 @@ SOURCES += Lcms2/cmsvirt.c
 SOURCES += Lcms2/cmswtpnt.c
 SOURCES += Lcms2/cmsxform.c
 
-SOURCES += Main/dockwidget.cpp
-SOURCES += Main/global.cpp
 SOURCES += Main/main.cpp
 SOURCES += Main/mainwindow.cpp
+SOURCES += Main/diagnostics.cpp
+SOURCES += Main/initialize.cpp
+SOURCES += Main/log.cpp
+SOURCES += Main/menusandactions.cpp
+SOURCES += Main/navigate.cpp
+SOURCES += Main/selection.cpp
+SOURCES += Main/setandupdate.cpp
+SOURCES += Main/slideshow.cpp
+SOURCES += Main/sortandfilter.cpp
+SOURCES += Main/test.cpp
+SOURCES += Main/viewmodes.cpp
+SOURCES += Main/workspaces.cpp
+
+SOURCES += Main/dockwidget.cpp
+SOURCES += Main/global.cpp
 SOURCES += Main/qtlocalpeer.cpp
 SOURCES += Main/qtlockedfile.cpp
 mac:SOURCES += Main/qtlockedfile_unix.cpp

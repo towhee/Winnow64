@@ -33,6 +33,7 @@
 #include "Views/iconview.h"
 #include "Views/tableview.h"
 #include "Views/imageview.h"
+#include "Views/videoview.h"
 #include "Views/infoview.h"
 #include "Views/infostring.h"
 #include "Metadata/metadata.h"
@@ -102,7 +103,6 @@ class MW : public QMainWindow
     friend class IconView;          // mw2
     friend class EmbelProperties;   // mw3
     friend class InfoString;        // mw4
-//    friend class MenusAndActions;   // mw
 
 public:
     MW(const QString args, QWidget *parent = nullptr);
@@ -294,6 +294,7 @@ public:
 
     enum centralWidgetTabs {
         LoupeTab,       // 0
+        VideoTab,
         CompareTab,     // 1
         TableTab,       // 2
         GridTab,        // 3
@@ -448,6 +449,7 @@ private slots:
     void toggleFullScreen();
     void escapeFullScreen();
     void loupeDisplay();
+    void videoDisplay();
     void gridDisplay();
     void tableDisplay();
     void compareDisplay();
@@ -976,6 +978,7 @@ private:
     IconView *gridView;
     TableView *tableView;
     ImageView *imageView;
+    VideoView *videoView;
     EmbelExport *embelExport;
     EmbelProperties *embelProperties;
     Preferences *pref;
@@ -1119,6 +1122,7 @@ private:
     void createFilterView();
     void createFSTree();
     void createImageView();
+    void createVideoView();
     void createInfoView();
     void createInfoString();
     void createMenus();

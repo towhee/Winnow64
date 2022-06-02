@@ -87,6 +87,7 @@ void MW::setupCentralWidget()
     ui.setupUi(welcome);
 
     centralLayout->addWidget(imageView);
+    centralLayout->addWidget(videoView);
     centralLayout->addWidget(compareImages);
     centralLayout->addWidget(tableView);
     centralLayout->addWidget(gridView);
@@ -383,6 +384,12 @@ void MW::createTableView()
     // sync scrolling between tableview and thumbview
     connect(tableView->verticalScrollBar(), &QScrollBar::valueChanged,
             this, &MW::tableHasScrolled);
+}
+
+void MW::createVideoView()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    videoView = new VideoView(this);
 }
 
 void MW::createImageView()

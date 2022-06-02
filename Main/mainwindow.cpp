@@ -380,6 +380,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createMDCache();            // dependent on DataModel, Metadata, ThumbView
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
+    createVideoView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
     createBookmarks();          // dependent on loadSettings
@@ -1628,9 +1629,18 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 
     // update loupe view
     if (useImageView) {
-        if (imageView->loadImage(fPath, __FUNCTION__)) {
-            updateClassification();
-            centralLayout->setCurrentIndex(prevCentralView);
+        videoView->stop();
+        QString ext = dm->sf->index(currentRow, G::TypeColumn).data().toString().toLower();
+        if (metadata->videoFormats.contains(ext)) {
+            centralLayout->setCurrentIndex(VideoTab);
+            videoView->load(fPath);
+        }
+        else {
+            centralLayout->setCurrentIndex(LoupeTab);
+            if (imageView->loadImage(fPath, __FUNCTION__)) {
+                updateClassification();
+                centralLayout->setCurrentIndex(prevCentralView);
+            }
         }
     }
 
