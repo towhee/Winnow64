@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "Metadata/metadata.h"
 #include "Datamodel/filters.h"
+#include "Cache/framedecoder.h"
 #include "progressbar.h"        // rgh used??
 #include "Main/global.h"
 //#include "Datamodel/HashMap.h"
@@ -110,6 +111,8 @@ public slots:
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance);
+    void setIconFromFrame(QModelIndex dmIdx, QPixmap &pm,
+                          int fromInstance, FrameDecoder *frameDecoder);
     void setValue(QModelIndex dmIdx, QVariant value, int role = Qt::EditRole);
     void setValueSf(QModelIndex sfIdx, QVariant value, int role = Qt::EditRole);
     void abortLoad();

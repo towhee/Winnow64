@@ -386,6 +386,13 @@ void MW::createTableView()
             this, &MW::tableHasScrolled);
 }
 
+void MW::createVideoFrame()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    videoFrame = new VideoFrame(dm);
+    connect(videoFrame, &VideoFrame::setIcon, dm, &DataModel::setIcon);
+}
+
 void MW::createVideoView()
 {
     if (G::isLogger) G::log(__FUNCTION__);

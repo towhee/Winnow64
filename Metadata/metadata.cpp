@@ -318,6 +318,7 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("fPath", n) << G::s(m.fPath) << "\n";
     p.rpt << G::sj("fName", n) << G::s(m.fName) << "\n";
     p.rpt << G::sj("type", n) << G::s(m.type) << "\n";
+    p.rpt << G::sj("video", n) << G::s(m.video) << "\n";
     p.rpt << G::sj("size", n) << G::s(m.size) << "\n";
     p.rpt << G::sj("createdDate", n) << G::s(m.createdDate) << "\n";
     p.rpt << G::sj("modifiedDate", n) << G::s(m.modifiedDate) << "\n";

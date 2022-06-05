@@ -7,6 +7,8 @@
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
+//#include "Image/videoframe.h"
+#include "Cache/framedecoder.h"
 #include "ImageFormats/TIFF/tiff.h"
 
 class Thumb : public QObject
@@ -21,6 +23,7 @@ public:
 
 signals:
     void setValue(QModelIndex dmIdx, QVariant value, int role);
+    void getFrame(QString fPath);
 
 private:
     DataModel *dm;
@@ -31,6 +34,7 @@ private:
     bool loadFromJpgData(QString &fPath, QImage &image);
     bool loadFromTiffData(QString &fPath, QImage &image);
     bool loadFromEntireFile(QString &fPath, QImage &image, int row);
+    void loadFromVideo(QString &fPath, int dmRow);
     void checkOrientation(QString &fPath, QImage &image);
 };
 

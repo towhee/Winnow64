@@ -47,6 +47,7 @@ namespace G
         RatingColumn,
         SearchColumn,
         TypeColumn,
+        VideoColumn,
         ApertureColumn,
         ShutterspeedColumn,
         ISOColumn,

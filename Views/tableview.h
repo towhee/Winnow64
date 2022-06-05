@@ -94,6 +94,13 @@ public:
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 
+class VideoItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit VideoItemDelegate(QObject* parent = nullptr);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
+};
+
 class DimensionItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:

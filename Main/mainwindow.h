@@ -34,6 +34,7 @@
 #include "Views/tableview.h"
 #include "Views/imageview.h"
 #include "Views/videoview.h"
+#include "Image/videoframe.h"
 #include "Views/infoview.h"
 #include "Views/infostring.h"
 #include "Metadata/metadata.h"
@@ -91,8 +92,6 @@
 #include "Utilities/mac.h"
 #endif
 
-
-
 class MW : public QMainWindow
 {
     Q_OBJECT
@@ -107,7 +106,7 @@ class MW : public QMainWindow
 public:
     MW(const QString args, QWidget *parent = nullptr);
 
-    QString versionNumber = "1.32" ;
+    QString versionNumber = "1.33" ;
 
     QString version = "Version: " + versionNumber;
     QString winnowWithVersion = "Winnow " + versionNumber;
@@ -449,7 +448,6 @@ private slots:
     void toggleFullScreen();
     void escapeFullScreen();
     void loupeDisplay();
-    void videoDisplay();
     void gridDisplay();
     void tableDisplay();
     void compareDisplay();
@@ -978,6 +976,7 @@ private:
     IconView *gridView;
     TableView *tableView;
     ImageView *imageView;
+    VideoFrame *videoFrame;
     VideoView *videoView;
     EmbelExport *embelExport;
     EmbelProperties *embelProperties;
@@ -1122,6 +1121,7 @@ private:
     void createFilterView();
     void createFSTree();
     void createImageView();
+    void createVideoFrame();
     void createVideoView();
     void createInfoView();
     void createInfoString();

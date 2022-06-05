@@ -176,6 +176,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::RatingColumn, new QStandardItem("Rating")); horizontalHeaderItem(G::RatingColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::SearchColumn, new QStandardItem("🔎")); horizontalHeaderItem(G::SearchColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type")); horizontalHeaderItem(G::TypeColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::VideoColumn, new QStandardItem("Video")); horizontalHeaderItem(G::VideoColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size")); horizontalHeaderItem(G::SizeColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::WidthColumn, new QStandardItem("Width")); horizontalHeaderItem(G::WidthColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::HeightColumn, new QStandardItem("Height")); horizontalHeaderItem(G::HeightColumn)->setData(false, G::GeekRole);
@@ -613,6 +614,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 //    qDebug() << __FUNCTION__ << row;
     // append hash index of datamodel row for fPath for fast lookups
     QString fPath = fileInfo.filePath();
+    QString ext = fileInfo.suffix().toLower();
     // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
     fPathRow[fPath] = row;
 
@@ -629,6 +631,8 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
     setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
     QString s = fileInfo.suffix().toUpper();
+    setData(index(row, G::VideoColumn), metadata->videoFormats.contains(ext));
+    setData(index(row, G::VideoColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::TypeColumn), s);
     setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
     setData(index(row, G::SizeColumn), fileInfo.size());
@@ -689,6 +693,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.fName = index(row, G::NameColumn).data().toString();
     m.type = index(row, G::TypeColumn).data().toString();
     m.size = index(row, G::SizeColumn).data().toInt();
+    m.video = index(row, G::VideoColumn).data().toInt();
     m.label = index(row, G::LabelColumn).data().toString();
     m._label = index(row, G::_LabelColumn).data().toString();
     m.rating = index(row, G::RatingColumn).data().toString();
@@ -1092,6 +1097,22 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int role)
     sf->setData(sfIdx, value, role);
 }
 
+void DataModel::setIconFromFrame(QModelIndex dmIdx, QPixmap &pm,
+                                 int fromInstance, FrameDecoder *frameDecoder)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (fromInstance != instance) {
+        qWarning() << __FUNCTION__ << dmIdx << "Instance conflict = "
+                 << instance << fromInstance;
+        return;
+    }
+    mutex.lock();
+    QStandardItem *item = itemFromIndex(dmIdx);
+    if (item != nullptr) item->setIcon(pm);
+    mutex.unlock();
+    delete frameDecoder;
+}
+
 void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance)
 {
     if (G::isLogger) G::log(__FUNCTION__);
@@ -1100,14 +1121,14 @@ void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance)
 //        return;
 //    }
 
-//    qDebug() << __FUNCTION__ << dmIdx << fromInstance << instance;
+    qDebug() << __FUNCTION__ << dmIdx << fromInstance << instance;
     if (fromInstance != instance) {
-        qDebug() << __FUNCTION__ << dmIdx << "Instance conflict = "
+        qWarning() << __FUNCTION__ << dmIdx << "Instance conflict = "
                  << instance << fromInstance;
         return;
     }
     if (loadingModel) {
-        qDebug() << __FUNCTION__ << dmIdx << "loadingModel = " << loadingModel;
+        qWarning() << __FUNCTION__ << dmIdx << "loadingModel = " << loadingModel;
         return;
     }
     if (G::stop) {
@@ -1421,6 +1442,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("dupIsJpg", 25) << G::s(index(row, 0).data(G::DupIsJpgRole));
     rpt << "\n  " << G::sj("dupRawType", 25) << G::s(index(row, 0).data(G::DupRawTypeRole));
     rpt << "\n  " << G::sj("type", 25) << G::s(index(row, G::TypeColumn).data());
+    rpt << "\n  " << G::sj("video", 25) << G::s(index(row, G::VideoColumn).data());
     rpt << "\n  " << G::sj("bytes", 25) << G::s(index(row, G::SizeColumn).data());
     rpt << "\n  " << G::sj("refine", 25) << G::s(index(row, G::RefineColumn).data());
     rpt << "\n  " << G::sj("pick", 25) << G::s(index(row, G::PickColumn).data());

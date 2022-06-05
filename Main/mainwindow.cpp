@@ -371,16 +371,17 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel (dm)
     createDataModel();          // dependent on FilterView, creates Metadata, Thumb
+    createVideoFrame();         // dependent on DataModel
     createThumbView();          // dependent on QSetting, filterView
     createGridView();           // dependent on QSetting, filterView
     createTableView();          // dependent on centralWidget
     createSelectionModel();     // dependent on ThumbView, ImageView
     createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
-    createMDCache();            // dependent on DataModel, Metadata, ThumbView
+    createVideoView();          // dependent on centralWidget
+    createMDCache();            // dependent on DataModel, Metadata, ThumbView, VideoView
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget
-    createVideoView();          // dependent on centralWidget
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
     createBookmarks();          // dependent on loadSettings
@@ -1633,6 +1634,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         QString ext = dm->sf->index(currentRow, G::TypeColumn).data().toString().toLower();
         if (metadata->videoFormats.contains(ext)) {
             centralLayout->setCurrentIndex(VideoTab);
+            if (!dm->iconLoaded(currentRow)) {
+                metadataCacheThread->loadIcon(currentRow);
+            }
             videoView->load(fPath);
         }
         else {
@@ -2985,7 +2989,7 @@ QString magnify = "🔎🔍";
 QString fileSym = "📁📂📗🕎📷🎨👍";
 QString camera = "📈📌🔈📎🔗🔑🧾🛈";
 //    https://www.vertex42.com/ExcelTips/unicode-symbols.html
-QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵🔶🔷🔸🔹🔺🔻🖐🧲🛑⛬";
+QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵🔶🔷🔸🔹🔺🔻🖐🧲🛑⛬🎞";
 //        */
 
     // update G::availableMemory

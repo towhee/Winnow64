@@ -116,6 +116,8 @@ IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
     ingestedColor = QColor(Qt::blue);
     cacheColor = QColor(Qt::red);
     cacheBorderColor = QColor(Qt::lightGray);
+    videoTextcolor = QColor(149,69,53);
+//    videoTextcolor = QColor(255,0,0);
 
     // define pens
     currentPen.setColor(currentItemColor);
@@ -332,6 +334,7 @@ void IconViewDelegate::paint(QPainter *painter,
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
+    bool isVideo = index.model()->index(row, G::VideoColumn).data().toBool();
 //    double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
 
     // icon size
@@ -470,6 +473,28 @@ void IconViewDelegate::paint(QPainter *painter,
             painter->setFont(font);
             painter->drawText(ratingTextRect, Qt::AlignCenter, rating);
         }
+    }
+
+    // draw video if video file 🎥
+    if (isVideo) {
+        QFont videoFont = painter->font();
+        videoFont.setPixelSize(12);
+        painter->setFont(videoFont);
+//        QRectF bRect = painter->boundingRect(thumbRect, "Video");
+//        qreal h = bRect.height();                               // text height
+//        qreal w = bRect.width();                                // text width
+//        qreal b = thumbRect.bottom();                           // bottom y
+//        qreal m = thumbRect.left() + thumbRect.width() / 2;     // middle
+//        bRect.setX(m - w / 2);
+//        bRect.setY(b + h);
+        QRectF bRect;
+        painter->setPen(G::backgroundColor);
+        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, "Video", &bRect);
+//        painter->drawText(frameRect, Qt::AlignCenter, "Video");
+        painter->setBrush(G::backgroundColor);
+        painter->drawRect(bRect);
+        painter->setPen(videoTextcolor);
+        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, "Video");
     }
 
     // draw the cache circle

@@ -84,6 +84,7 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
     this->dm = dm;
     this->metadata = metadata;
     thumb = new Thumb(this, dm, metadata);
+
     abort = false;
 
     // list to make debugging easier
@@ -354,32 +355,34 @@ void MetadataCache::iconMax(QPixmap &thumb)
 bool MetadataCache::loadIcon(int sfRow)
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    QString ext = dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
+//    bool isVideo = metadata->videoFormats.contains(ext);
 //    qDebug() << __FUNCTION__ << "sfRow =" << sfRow;
     QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(sfRow, 0));
-    QStandardItem *item = dm->itemFromIndex(dmIdx);
+//    QStandardItem *item = dm->itemFromIndex(dmIdx);
 //        bool isNullIcon = item->icon().isNull();
     if (dmIdx.isValid() && !dm->iconLoaded(sfRow)) {
         int dmRow = dmIdx.row();
         QImage image;
         QString fPath = dmIdx.data(G::PathRole).toString();
-        /*
-        if (G::isTest) QElapsedTimer t; if (G::isTest) t.restart();
-        bool thumbLoaded = thumb->loadThumb(fPath, image);
-        if (G::isTest) qDebug() << __FUNCTION__ << "Load thumbnail =" << t.nsecsElapsed() << fPath;
-        */
-        bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIconChunk");
         QPixmap pm;
+        bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIconChunk");
         if (thumbLoaded) {
             pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+            emit setIcon(dmIdx, pm, dm->instance);
+            iconMax(pm);
+            iconsCached.append(dmRow);
         }
         else {
             pm = QPixmap(":/images/error_image.png");
             qWarning() << __FUNCTION__ << "Failed to load thumbnail." << fPath;
         }
 //        item->setIcon(pm);
-        emit setIcon(dmIdx, pm, dm->instance);
-        iconMax(pm);
-        iconsCached.append(dmRow);
+//        if (thumbLoaded) {
+//            emit setIcon(dmIdx, pm, dm->instance);
+//            iconMax(pm);
+//            iconsCached.append(dmRow);
+//        }
     }
     return true;
 }
