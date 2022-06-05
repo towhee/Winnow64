@@ -31,6 +31,7 @@ public:
     bool refine = false;
     bool pick = false;
     bool ingested = false;
+    bool video = false;
     bool metadataLoaded = false;            // all metadata except thumb
 
     bool isThumbLoaded = false;             // refers to thumb only

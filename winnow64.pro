@@ -49,6 +49,8 @@ QT += concurrent
 QT += network
 
 HEADERS += Cache/cachedata.h \
+    Cache/framedecoder.h \
+    Image/videoframe.h \
     Views/videoview.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/metaread.h
@@ -164,6 +166,8 @@ HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
 
 SOURCES += Cache/cachedata.cpp \
+    Cache/framedecoder.cpp \
+    Image/videoframe.cpp \
     Views/videoview.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp

@@ -45,6 +45,9 @@ TableView::TableView(DataModel *dm)
     IngestedItemDelegate *ingestedItemDelegate = new IngestedItemDelegate;
     setItemDelegateForColumn(G::IngestedColumn, ingestedItemDelegate);
 
+    VideoItemDelegate *videoItemDelegate = new VideoItemDelegate;
+    setItemDelegateForColumn(G::VideoColumn, videoItemDelegate);
+
     DimensionItemDelegate *dimensionItemDelegate = new DimensionItemDelegate;
     setItemDelegateForColumn(G::DimensionsColumn, dimensionItemDelegate);
 
@@ -108,6 +111,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::PathColumn) return fm.boundingRect("Icon").width();
     if (column == G::NameColumn) return fm.boundingRect("2019-02-25_0001.jpg========").width();
     if (column == G::TypeColumn) return fm.boundingRect("=JPG+NEF=").width();
+    if (column == G::VideoColumn) return fm.boundingRect("=Video=").width();
     if (column == G::SizeColumn) return fm.boundingRect("=999,999,999=").width();
     if (column == G::CreatedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
     if (column == G::ModifiedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
@@ -362,6 +366,15 @@ IngestedItemDelegate::IngestedItemDelegate(QObject* parent): QStyledItemDelegate
 }
 
 QString IngestedItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+    return (value == "true") ? "✓" : "";
+}
+
+VideoItemDelegate::VideoItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString VideoItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
     return (value == "true") ? "✓" : "";
 }

@@ -16,8 +16,7 @@ class MetadataCache : public QThread
     Q_OBJECT
 
 public:
-    MetadataCache(QObject *parent, DataModel *dm,
-                  Metadata *metadata);
+    MetadataCache(QObject *parent, DataModel *dm, Metadata *metadata);
     ~MetadataCache() override;
 
     enum Action {

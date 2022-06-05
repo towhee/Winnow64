@@ -11,10 +11,11 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    centralLayout->setCurrentIndex(VideoTab);
-    QString path = "/Users/roryhill/Downloads/IMG_2411.MOV";
-    videoView->load(path);
-    return;
+//    FrameDecoder *frameDecoder = new FrameDecoder(dm);
+//    connect(frameDecoder, &FrameDecoder::test, this, &MW::testFrameDecoder);
+//    qDebug() << __FUNCTION__ << frameDecoder << frameDecoder->testString;
+//    frameDecoder->getFrame("test");
+//    return;
 
 
     fsTree->selectionModel()->clearSelection();
