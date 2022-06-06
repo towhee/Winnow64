@@ -7,7 +7,6 @@
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
-//#include "Image/videoframe.h"
 #include "Cache/framedecoder.h"
 #include "ImageFormats/TIFF/tiff.h"
 

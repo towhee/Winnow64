@@ -30,9 +30,7 @@ private:
     QAudioOutput *audioOutput = nullptr;
 
 protected:
-//    void wheelEvent(QWheelEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
-//    void mouseMoveEvent(QMouseEvent *event) override;
 //    void keyPressEvent(QKeyEvent *event) override;
 };
 

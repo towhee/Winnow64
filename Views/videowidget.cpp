@@ -36,7 +36,6 @@ void VideoWidget::stop()
 int VideoWidget::duration()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << mediaPlayer->duration();
     return static_cast<int>(mediaPlayer->duration());
 }
 
@@ -89,18 +88,4 @@ void VideoWidget::mousePressEvent(QMouseEvent *event)
     case PlayState::Unavailable:
         break;
     }
-
-//    if (mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::LoadedMedia ||
-//        mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferingMedia ||
-//        mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferedMedia ||
-//        mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::EndOfMedia
-//       )
-//    {
-//        if (mediaPlayer->playbackState() == QMediaPlayer::PlaybackState::PlayingState) {
-//            mediaPlayer->pause();
-//        }
-//        else {
-//            mediaPlayer->play();
-//        }
-//    }
 }
