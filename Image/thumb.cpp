@@ -41,7 +41,7 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
 void Thumb::loadFromVideo(QString &fPath, int dmRow)
 {
     if (G::isLogger) G::log(__FUNCTION__, fPath);
-    qDebug() << "Thumb::loadFromVideo" << fPath;
+    // see top of FrameDecoder.cpp for documentation
     QModelIndex dmIdx = dm->index(dmRow, 0);
     FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance);
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromFrame);
@@ -191,10 +191,6 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     if (metadata->videoFormats.contains(ext)) {
         loadFromVideo(fPath, dmRow);
         return true;
-//        // show video image png
-//        QString path = ":/images/video.png";
-//        loadFromEntireFile(path, image, dmRow);
-//        return true;
     }
 
     // The image type might not have metadata we can read, so load entire image and resize

@@ -371,7 +371,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel (dm)
     createDataModel();          // dependent on FilterView, creates Metadata, Thumb
-    createVideoFrame();         // dependent on DataModel
     createThumbView();          // dependent on QSetting, filterView
     createGridView();           // dependent on QSetting, filterView
     createTableView();          // dependent on centralWidget
@@ -1638,6 +1637,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
                 metadataCacheThread->loadIcon(currentRow);
             }
             videoView->load(fPath);
+            videoView->play();
+            videoView->pause();
         }
         else {
             centralLayout->setCurrentIndex(LoupeTab);
@@ -4014,23 +4015,16 @@ void MW::toggleFullScreen()
         embelDock->setVisible(fullScreenDocks.isMetadata);
         thumbDockVisibleAction->setChecked(fullScreenDocks.isThumbs);
         thumbDock->setVisible(fullScreenDocks.isThumbs);
-//        thumbView->selectThumb(currentRow);
-//        gridView->selectThumb(currentRow);
         menuBarVisibleAction->setChecked(false);
         setMenuBarVisibility();
         statusBarVisibleAction->setChecked(fullScreenDocks.isStatusBar);
         setStatusBarVisibility();
-//        fileSelectionChange(currentSfIdx, currentSfIdx);
     }
     else
     {
         isNormalScreen = true;
         showNormal();
         invokeWorkspace(ws);
-//        fileSelectionChange(currentSfIdx, currentSfIdx);
-//        thumbView->selectThumb(currentRow);
-//        gridView->selectThumb(currentRow);
-//        imageView->setCursorHiding(false);
     }
 }
 

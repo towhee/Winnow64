@@ -34,7 +34,6 @@
 #include "Views/tableview.h"
 #include "Views/imageview.h"
 #include "Views/videoview.h"
-#include "Image/videoframe.h"
 #include "Views/infoview.h"
 #include "Views/infostring.h"
 #include "Metadata/metadata.h"
@@ -976,7 +975,6 @@ private:
     IconView *gridView;
     TableView *tableView;
     ImageView *imageView;
-    VideoFrame *videoFrame;
     VideoView *videoView;
     EmbelExport *embelExport;
     EmbelProperties *embelProperties;
@@ -1121,7 +1119,6 @@ private:
     void createFilterView();
     void createFSTree();
     void createImageView();
-    void createVideoFrame();
     void createVideoView();
     void createInfoView();
     void createInfoString();

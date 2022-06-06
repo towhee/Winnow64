@@ -132,6 +132,10 @@ void MW::invokeWorkspace(const workspaceData &w)
     updateState();
     workspaceChanged = true;
     sortChange(__FUNCTION__);
+    // chk if a video file
+    if (dm->sf->index(currentRow, G::VideoColumn).data().toBool()) {
+        centralLayout->setCurrentIndex(VideoTab);
+    }
     // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
 //    setThumbDockVisibity();
 }

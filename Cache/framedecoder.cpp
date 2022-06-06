@@ -1,5 +1,30 @@
 #include "framedecoder.h"
 
+/*
+    Generate a thumbnail from the first video frame in a video file.
+
+    This is accomplished by creating a QMediaPlayer that decodes and plays the video file
+    to the virtual canvas QVideoSink. Each time the video frame changes QVideoSink emits
+    a videoFrameChanged signal. FrameDecoder::thumbnail receives the signal, converts the
+    frame into a QImage, emits setFrameIcon and stops the QMediaPlayer. The setFrameIcon
+    signal is received by DataModel::setIconFromFrame, where the icon is added to the
+    datamodel and then the instance of FrameDecoder is deallocated (deleted).
+
+    This convoluted process is required because QVideoSink does not know which file the
+    video frame came from.  When processing many files, it is not guaranteed that the
+    signal/slots will be sequential.  To solve this a separate instance of FrameDecoder
+    is created for each file.  When the thumbnail (icon) has been received by the datamodel
+    the FrameDecoder instance is deleted.
+
+    Summary of sequence:
+        - thumb->loadFromVideo creates FrameDecoder instance frameDecoder
+        - thumb->loadFromVideo calls frameDecoder->getFrame
+        - frameDecoder->getFrame starts mediaPlayer
+        - mediaPlayer signals frameDecoder->thumbnail
+        - frameDecoder->thumbnail signals dm->setIconFromFrame
+        - dm->setIconFromFrame deletes frameDecoder
+*/
+
 FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance, QObject *parent)
 {
     thisFrameDecoder = this;
@@ -9,11 +34,11 @@ FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance, QObject *parent)
     videoSink = new QVideoSink;
     mediaPlayer->setVideoOutput(videoSink);
     connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::thumbnail);
-//    connect(this, &FrameDecoder::setFrameIcon, dm, &DataModel::setIcon);
 }
 
 void FrameDecoder::stop()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -27,29 +52,26 @@ void FrameDecoder::stop()
 
 void FrameDecoder::getFrame(QString path)
 {
-    qDebug() << "FrameDecoder::thumbnail" << fPath << this;
+    if (G::isLogger) G::log(__FUNCTION__);
     fPath = path;
     start();
 }
 
 void FrameDecoder::thumbnail(const QVideoFrame frame)
 {
-    qDebug() << "FrameDecoder::thumbnail this =" << this;
+    if (G::isLogger) G::log(__FUNCTION__);
     QPixmap pm;
     QImage im;
     im = frame.toImage();
-    qDebug() << "FrameDecoder::thumbnail isNull =" << im.isNull();
     if (im.isNull()) return;
     pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
     emit setFrameIcon(dmIdx, pm, dmInstance, thisFrameDecoder);
     mediaPlayer->stop();
-    qDebug() << "FrameDecoder::thumbnail"
-             << fPath
-             << "width =" << pm.width();
 }
 
 void FrameDecoder::run()
 {
+    if (G::isLogger) G::log(__FUNCTION__);
     mediaPlayer->setSource(fPath);
     mediaPlayer->play();
 }

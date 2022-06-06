@@ -50,7 +50,6 @@ QT += network
 
 HEADERS += Cache/cachedata.h \
     Cache/framedecoder.h \
-    Image/videoframe.h \
     Views/videoview.h \
     Views/videowidget.h
 HEADERS += Cache/mdcache.h
@@ -168,7 +167,6 @@ HEADERS += Views/tableview.h
 
 SOURCES += Cache/cachedata.cpp \
     Cache/framedecoder.cpp \
-    Image/videoframe.cpp \
     Views/videoview.cpp \
     Views/videowidget.cpp
 SOURCES += Cache/imagecache.cpp
