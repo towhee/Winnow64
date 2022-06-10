@@ -88,6 +88,7 @@ public:
     int iconTry = 3;
 
     bool loadIcon(int sfRow);
+    void updateIconLoadingProgress(int count, int end);
     void createCacheStatus();
     void updateCacheStatus(int row);
     void readAllMetadata();

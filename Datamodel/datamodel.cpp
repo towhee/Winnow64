@@ -11,7 +11,7 @@ The data is structured in columns:
                         from QFileInfoList  ToolTipRole
                                             G::IconRectRole (icon)
                                             G::CachedRole
-                                            G::BusyRole (not used)
+                                            G::CachingIcon
                                             G::DupIsJpgRole
                                             G::DupOtherIdxRole
                                             G::DupHideRawRole
@@ -626,6 +626,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
     setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
     setData(index(row, G::PathColumn), false, G::CachedRole);
+    setData(index(row, G::PathColumn), false, G::CachingIconRole);
     setData(index(row, G::PathColumn), false, G::DupHideRawRole);
     setData(index(row, G::NameColumn), fileInfo.fileName());
     setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
@@ -1101,6 +1102,7 @@ void DataModel::setIconFromFrame(QModelIndex dmIdx, QPixmap &pm,
                                  int fromInstance, FrameDecoder *frameDecoder)
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    qDebug() << "DataModel::setIconFromFrame" << dmIdx;
     if (fromInstance != instance) {
         qWarning() << __FUNCTION__ << dmIdx << "Instance conflict = "
                  << instance << fromInstance;
@@ -1143,7 +1145,24 @@ void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance)
     mutex.lock();
     QStandardItem *item = itemFromIndex(dmIdx);
     if (item != nullptr) item->setIcon(pm);
+    setData(dmIdx, false, G::CachingIconRole);
     mutex.unlock();
+}
+
+bool DataModel::isIconCaching(int sfRow)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    return sf->index(sfRow,0).data(G::CachingIconRole).toBool();
+}
+
+void DataModel::setIconCaching(int sfRow, bool state)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    mutex.lock();
+    QModelIndex dmIdx = sf->mapToSource(sf->index(sfRow, 0));
+    setData(dmIdx, state, G::CachingIconRole);
+    mutex.unlock();
+
 }
 
 bool DataModel::iconLoaded(int sfRow)

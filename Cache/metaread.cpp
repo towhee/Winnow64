@@ -254,10 +254,9 @@ void MetaRead::cleanupIcons()
                     ;
                     //*/
         if (isVisible(sfRow)) continue;
-//        if (abort) return;
-        /*if (!abort)*/ emit setIcon(dmIdx, nullPm, dmInstance);
+        emit setIcon(dmIdx, nullPm, dmInstance);
         #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
-        /*if (!abort) */iconsLoaded.remove(i);
+        iconsLoaded.remove(i);
         #endif
     }
     if (debugCaching) {
@@ -286,13 +285,11 @@ void MetaRead::updateIcons()
             bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
             if (thumbLoaded && !abort) {
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-//                if (abort) return;
-                /*if (!abort) */emit setIcon(dmIdx, pm, dmInstance);
-                /*if (!abort) */iconMax(pm);
-                /*if (!abort) */iconsLoaded.append(dmRow);
+                emit setIcon(dmIdx, pm, dmInstance);
+                iconMax(pm);
+                iconsLoaded.append(dmRow);
             }
         }
-//        if (abort) return;
     }
 
     cleanupIcons();
@@ -351,7 +348,6 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
         metadata->m.row = dmRow;
         metadata->m.dmInstance = dmInstance;
-//        if (abort) return;
 //        qDebug() << __FUNCTION__ << "addToDatamodel: start  row =" << sfIdx.row();
         if (debugCaching) qDebug().noquote() << __FUNCTION__ << "start  addToDatamodel"
                                              << "G::stop =" << G::stop
@@ -367,24 +363,32 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 
 void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 {
-//    if (abort) return;
     if (G::isLogger) G::log(__FUNCTION__);
     if (debugCaching) {
         qDebug().noquote() << __FUNCTION__
                            << "start  row =" << sfIdx.row()
                               ;
     }
+
+    // check if already caching icon (video icons)
+    if (dm->isIconCaching(sfIdx.row())) return;
+
     QModelIndex dmIdx = dm->sf->mapToSource(sfIdx);
+    int dmRow = dmIdx.row();
+    bool isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
+
+    // get thumbnail
     QImage image;
     bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
+    if (isVideo) {
+        iconsLoaded.append(dmRow);
+        return;
+    }
     if (thumbLoaded) {
         QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-//        qDebug() << __FUNCTION__ << "setIcon: start  row =" << sfIdx.row();
         if (!abort) emit setIcon(dmIdx, pm, dmInstance);
-//        qDebug() << __FUNCTION__ << "setIcon: done   row =" << sfIdx.row();
-//        dm->setIcon(dmIdx, pm);
-        /*if (!abort) */iconMax(pm);
-        /*if (!abort) */iconsLoaded.append(dmIdx.row());
+        iconMax(pm);
+        iconsLoaded.append(dmRow);
     }
     if (debugCaching) {
         qDebug().noquote() << __FUNCTION__
@@ -395,7 +399,6 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 
 void MetaRead::readRow(int sfRow)
 {
-//    if (abort) return;
     if (G::isLogger) G::log(__FUNCTION__);
     if (debugCaching) {
         qDebug().noquote() << __FUNCTION__
@@ -407,7 +410,6 @@ void MetaRead::readRow(int sfRow)
     if (!sfIdx.isValid()) return;
     QString fPath = sfIdx.data(G::PathRole).toString();
     if (!G::allMetadataLoaded) {
-//        if (abort) return;
         bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
         if (!metaLoaded && !abort) {
             readMetadata(sfIdx, fPath);

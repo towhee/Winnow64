@@ -26,6 +26,7 @@
 */
 
 FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance, QObject *parent)
+    : QThread(parent)
 {
     thisFrameDecoder = this;
     this->dmIdx = dmIdx;
@@ -33,7 +34,7 @@ FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance, QObject *parent)
     mediaPlayer = new QMediaPlayer(/*this*/);
     videoSink = new QVideoSink;
     mediaPlayer->setVideoOutput(videoSink);
-    connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::thumbnail);
+    connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChenged);
 }
 
 void FrameDecoder::stop()
@@ -47,31 +48,39 @@ void FrameDecoder::stop()
         wait();
         abort = false;
     }
-    quit();
 }
 
 void FrameDecoder::getFrame(QString path)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     fPath = path;
+    qDebug() << "FrameDecoder::getFrame" << fPath;
     start();
 }
 
-void FrameDecoder::thumbnail(const QVideoFrame frame)
+void FrameDecoder::frameChenged(const QVideoFrame frame)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    QPixmap pm;
-    QImage im;
-    im = frame.toImage();
+    qDebug() << "FrameDecoder::frameChenged" << fPath;
+    if (thumbnailAcquired) return;
+    QImage im = frame.toImage();
+    qDebug() << "FrameDecoder::frameChenged 1" << "im.isNull()"<< im.isNull();
     if (im.isNull()) return;
-    pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-    emit setFrameIcon(dmIdx, pm, dmInstance, thisFrameDecoder);
+    thumbnailAcquired = true;
     mediaPlayer->stop();
+    QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+    emit setFrameIcon(dmIdx, pm, dmInstance, thisFrameDecoder);
 }
 
 void FrameDecoder::run()
 {
     if (G::isLogger) G::log(__FUNCTION__);
+    QFile f(fPath);
+    qDebug() << "FrameDecoder::run  File open:" << f.isOpen() << fPath;
+//    mediaPlayer = new QMediaPlayer(/*this*/);
+//    videoSink = new QVideoSink;
+//    mediaPlayer->setVideoOutput(videoSink);
+//    connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChenged);
     mediaPlayer->setSource(fPath);
     mediaPlayer->play();
 }

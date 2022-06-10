@@ -517,16 +517,16 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
         QString msg = "Row " + QString::number(row) + " " + fPath;
         G::log(__FUNCTION__, msg);
     }
-//    qDebug() << __FUNCTION__ << "Src:" << src << fPath;
+
     if (dmRow == -1) {
         qWarning() << __FUNCTION__ << "dm->fPathrow does not contain" << fPath;
         return;
     }
+
     QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
 
     if (sfIdx.isValid()/* && metaLoaded*/) {
         emit setValueSf(sfIdx, isCached, G::CachedRole);
-//        dm->sf->setData(sfIdx, isCached, G::CachedRole);
         if (isCached) {
             if (sfIdx.row() == currentRow) {
                 if (G::isFlowLogger) G::log(__FUNCTION__, fPath);

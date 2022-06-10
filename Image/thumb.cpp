@@ -42,8 +42,9 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 {
     if (G::isLogger) G::log(__FUNCTION__, fPath);
     // see top of FrameDecoder.cpp for documentation
+    qDebug() << "Thumb::loadFromVideo" << dmRow << fPath;
     QModelIndex dmIdx = dm->index(dmRow, 0);
-    FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance);
+    FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance, this);
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromFrame);
     frameDecoder->getFrame(fPath);
 }
@@ -180,8 +181,8 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     This thumbnail is used by the grid and filmstrip views.
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
-    /*
-    qDebug() << __FUNCTION__ << "fPath =" << fPath << "src =" << src;
+//    /*
+    qDebug() << "Thumb::loadThumb" << "fPath =" << fPath << "src =" << src;
 //    */
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.suffix().toLower();

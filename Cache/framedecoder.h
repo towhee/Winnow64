@@ -26,17 +26,20 @@ signals:
     void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance,
                       FrameDecoder *thisFrameDecoder);
 
+private slots:
+    void frameChenged(const QVideoFrame frame);
+
 private:
     FrameDecoder *thisFrameDecoder;
     QMutex mutex;
     QWaitCondition condition;
-    void thumbnail(const QVideoFrame frame);
     QVideoSink *videoSink;
     QMediaPlayer *mediaPlayer;
     QString fPath;
     int dmInstance;
     QModelIndex dmIdx;
-    bool abort;
+    bool thumbnailAcquired = false;
+    bool abort = false;
 
 };
 #endif // FRAMEDECODER_H

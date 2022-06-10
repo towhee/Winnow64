@@ -8,8 +8,6 @@
 #include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
-//#include "Metadata/imagemetadata.h"
-//#include "Cache/imagecache2.h"
 #include "Image/thumb.h"
 
 class MetaRead : public QThread

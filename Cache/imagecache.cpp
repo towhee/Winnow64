@@ -1029,7 +1029,6 @@ void ImageCache::reportRunStatus()
              << "currentPath =" << currentPath;
 }
 
-// Same as ImageCache2, but not used in ImageCache yet
 void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 {
     // deal with lagging signals when new folder selected suddenly
@@ -1038,6 +1037,12 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 
     QMutexLocker locker(&mutex);
     if (G::isLogger /*|| G::isFlowLogger*/) G::log(__FUNCTION__);
+
+    // ignore videos
+    if (m.video) {
+        return;
+    }
+
     int row;
     if (cacheKeyHash.contains(m.fPath)) {
         row = cacheKeyHash[m.fPath];

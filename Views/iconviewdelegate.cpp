@@ -110,14 +110,12 @@ IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
     defaultBorderColor = QColor(l20,l20,l20);
     currentItemColor = QColor(Qt::yellow);
     selectedColor = QColor(Qt::white);
-//    selectedColor = QColor(Qt::lightGray);
     pickColor = QColor(Qt::green);
     rejectColor = QColor(Qt::red);
     ingestedColor = QColor(Qt::blue);
     cacheColor = QColor(Qt::red);
     cacheBorderColor = QColor(Qt::lightGray);
-    videoTextcolor = QColor(149,69,53);
-//    videoTextcolor = QColor(255,0,0);
+    videoTextcolor = G::textColor;
 
     // define pens
     currentPen.setColor(currentItemColor);
@@ -335,12 +333,12 @@ void IconViewDelegate::paint(QPainter *painter,
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
     bool isVideo = index.model()->index(row, G::VideoColumn).data().toBool();
-//    double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
 
     // icon size
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     QSize iconSize = icon.actualSize(thumbSize);
     /*
+//    double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
     QSize iconSize = thumbSize;
     if (aspectRatio > 1) {
         iconSize.setHeight(thumbSize.width() * 1.0 / aspectRatio);
@@ -475,22 +473,14 @@ void IconViewDelegate::paint(QPainter *painter,
         }
     }
 
-    // draw video if video file 🎥
+    // show video text if video file
     if (isVideo) {
         QFont videoFont = painter->font();
         videoFont.setPixelSize(12);
         painter->setFont(videoFont);
-//        QRectF bRect = painter->boundingRect(thumbRect, "Video");
-//        qreal h = bRect.height();                               // text height
-//        qreal w = bRect.width();                                // text width
-//        qreal b = thumbRect.bottom();                           // bottom y
-//        qreal m = thumbRect.left() + thumbRect.width() / 2;     // middle
-//        bRect.setX(m - w / 2);
-//        bRect.setY(b + h);
         QRectF bRect;
         painter->setPen(G::backgroundColor);
         painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, "Video", &bRect);
-//        painter->drawText(frameRect, Qt::AlignCenter, "Video");
         painter->setBrush(G::backgroundColor);
         painter->drawRect(bRect);
         painter->setPen(videoTextcolor);
@@ -498,7 +488,7 @@ void IconViewDelegate::paint(QPainter *painter,
     }
 
     // draw the cache circle
-    if (!isCached && metaLoaded && !G::isSlideShow) {
+    if (!isCached && !isVideo && metaLoaded && !G::isSlideShow) {
         painter->setPen(cacheBorderColor);
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect);
