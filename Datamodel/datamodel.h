@@ -66,6 +66,8 @@ public:
     void clearAllIcons();
     bool allIconsLoaded();
     bool iconLoaded(int sfRow);
+    bool isIconCaching(int sfRow);
+    void setIconCaching(int sfRow, bool state);
     int rowFromPath(QString fPath);
     void refreshRowFromPath();
 

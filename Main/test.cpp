@@ -11,6 +11,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    qDebug() << dm->iconLoaded(0);
+    return;
+
+    int dmRow = 0;
+    bool isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
+    qDebug() << "MW::updateCachedStatus" << dmRow << isVideo;;
+
 //    FrameDecoder *frameDecoder = new FrameDecoder(dm);
 //    connect(frameDecoder, &FrameDecoder::test, this, &MW::testFrameDecoder);
 //    qDebug() << __FUNCTION__ << frameDecoder << frameDecoder->testString;

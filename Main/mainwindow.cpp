@@ -1633,9 +1633,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         QString ext = dm->sf->index(currentRow, G::TypeColumn).data().toString().toLower();
         if (metadata->videoFormats.contains(ext)) {
             centralLayout->setCurrentIndex(VideoTab);
-            if (!dm->iconLoaded(currentRow)) {
-                metadataCacheThread->loadIcon(currentRow);
-            }
+//            if (!dm->iconLoaded(currentRow)) {
+//                qDebug() << "MW::fileSelectionChangeSource call loadIcon";
+//                metadataCacheThread->loadIcon(currentRow);
+//            }
             videoView->load(fPath);
             videoView->play();
             videoView->pause();
@@ -1760,7 +1761,7 @@ void MW::stopAndClearAll(QString src)
     a bookmark or ejects a drive and the resulting folder does not have any eligible images.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << src;
+//    qDebug() << __FUNCTION__ << src;
 //    qDebug();
 //    G::t.restart();
 //    G::track(__FUNCTION__, "Start " + src + "  Old folder: " + G::currRootFolder);
