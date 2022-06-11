@@ -77,10 +77,6 @@ void FrameDecoder::run()
     if (G::isLogger) G::log(__FUNCTION__);
     QFile f(fPath);
     qDebug() << "FrameDecoder::run  File open:" << f.isOpen() << fPath;
-//    mediaPlayer = new QMediaPlayer(/*this*/);
-//    videoSink = new QVideoSink;
-//    mediaPlayer->setVideoOutput(videoSink);
-//    connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChenged);
     mediaPlayer->setSource(fPath);
     mediaPlayer->play();
 }
