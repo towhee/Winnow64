@@ -11,7 +11,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << dm->iconLoaded(0);
+    MetaRead2 *metaread2 = new MetaRead2(dm);
     return;
 
     int dmRow = 0;

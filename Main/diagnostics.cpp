@@ -29,7 +29,7 @@ void MW::reportState(QString title)
 
         << "\nTHREADS:"
         << "\nMDCache      isRunning                 " << metadataCacheThread->isRunning()
-        << "\nMetaRead     isRunning                 " << metaRead->isRunning()
+//        << "\nMetaRead     isRunning                 " << metaRead->isRunning()
         << "\nImageCache   isRunning                 " << imageCacheThread->isRunning()
         << "\nBuildFilters isRunning                 " << buildFilters->isRunning()
 

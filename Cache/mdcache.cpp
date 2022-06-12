@@ -83,7 +83,7 @@ MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
     if (G::isLogger) G::log(__FUNCTION__);
     this->dm = dm;
     this->metadata = metadata;
-    thumb = new Thumb(this, dm, metadata);
+    thumb = new Thumb(dm, metadata);
 
     abort = false;
 

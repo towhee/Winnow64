@@ -6,7 +6,7 @@
    and scaled to thumbMax.
 */
 
-Thumb::Thumb(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(parent)
+Thumb::Thumb(/*QObject *parent, */DataModel *dm, Metadata *metadata)/* : QObject(parent)*/
 {
     this->dm = dm;
     this->metadata = metadata;
@@ -44,9 +44,19 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
     // see top of FrameDecoder.cpp for documentation
     qDebug() << "Thumb::loadFromVideo" << dmRow << fPath;
     QModelIndex dmIdx = dm->index(dmRow, 0);
-    FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance, this);
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromFrame);
-    frameDecoder->getFrame(fPath);
+
+//    FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance);
+//    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromFrame);
+//    connect(frameDecoder->videoSink, &QVideoSink::videoFrameChanged,
+//            frameDecoder, &FrameDecoder::frameChanged, Qt::QueuedConnection);
+//    frameDecoder->getFrame(fPath);
+
+    FrameDecoder2 *frameDecoder2 = new FrameDecoder2(dmIdx, dm->instance);
+    connect(frameDecoder2, &FrameDecoder2::setFrameIcon, dm, &DataModel::setIconFromFrame);
+//    connect(frameDecoder2->videoSink, &QVideoSink::videoFrameChanged,
+//            frameDecoder2, &FrameDecoder2::frameChanged, Qt::QueuedConnection);
+//    frameDecoder2->moveToThread(&frameDecoderthread);
+    frameDecoder2->getFrame(fPath);
 }
 
 bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
