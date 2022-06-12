@@ -107,7 +107,7 @@ void MW::createDataModel()
     if (isSettings && setting->contains("combineRawJpg")) combineRawJpg = setting->value("combineRawJpg").toBool();
     else combineRawJpg = true;
     dm = new DataModel(this, metadata, filters, combineRawJpg);
-    thumb = new Thumb(this, dm, metadata);
+    thumb = new Thumb(dm, metadata);
 
     // show appropriate count column in filters
     if (combineRawJpg) {
@@ -193,6 +193,9 @@ void MW::createMDCache()
 
     metaRead = new MetaRead(this, dm);
     metaRead->iconChunkSize = 20;
+
+    QThread metaReadThread;
+    metaRead->moveToThread(&metaReadThread);
 
     // add metadata to datamodel
     connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);

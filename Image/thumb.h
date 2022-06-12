@@ -13,8 +13,9 @@
 class Thumb : public QObject
 {
     Q_OBJECT
+    QThread frameDecoderthread;
 public:
-    explicit Thumb(QObject *parent, DataModel *dm, Metadata *metadata);
+    explicit Thumb(/*QObject *parent, */DataModel *dm, Metadata *metadata);
     bool loadThumb(QString &fPath, QImage &image, QString src);
     void insertThumbnails(QModelIndexList &selection);
     bool insertingThumbnails = false;

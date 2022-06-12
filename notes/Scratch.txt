@@ -1,77 +1,120 @@
-C:\Qt6.2\6.2.2\Src\qtbase\src\corelib\itemmodels\qabstractitemmodel.cpp
-void QAbstractItemModel::beginInsertRows(const QModelIndex &parent, int first, int last)
+Classes:
+    ThumbReader     - calls instance of Thumb for each image in a folder
+    Thumb           - calls appropriate decoder ie FrameDecoder
+    FrameDecoder    - gets the first frame in a video file, signals DataModel
+    DataModel       - sets icon and deletes FrameDecoder instance
+
+FrameDecoder:
+    Run a QMediaPlayer, set to a QVideoSink. The QVideoSink emits a videoFrameChanged
+    signal for each frame.  Capture the frame in the slot FrameDecoder::frameChanged.
+    Signal DataModel to add the frame as an icon.
+
+This only works if ThumbReader is in the main GUI thread.  If ThumbReader is in another
+thread the connection between QVideoSink::videoFrameChanged and FrameDecoder::frameChanged
+fails.
+
+Thumb code to create instance of FrameDecoder:
+    FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance);
+    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromFrame);
+    frameDecoder->getFrame(fPath);
+
+framedecoder.h
+
+#ifndef FRAMEDECODER_H
+#define FRAMEDECODER_H
+
+#include <QtWidgets>
+#include <QMutex>
+#include <QThread>
+#include <QWaitCondition>
+#include "Main/global.h"
+#include <QMediaPlayer>
+#include <QVideoSink>
+#include <QVideoFrame>
+
+class FrameDecoder : public QThread
 {
-    Q_ASSERT(first >= 0);
-CRASH    Q_ASSERT(first <= rowCount(parent)); // == is allowed, to insert at the end
-    Q_ASSERT(last >= first);
-    Q_D(QAbstractItemModel);
-    d->changes.push(QAbstractItemModelPrivate::Change(parent, first, last));
-    emit rowsAboutToBeInserted(parent, first, last, QPrivateSignal());
-    d->rowsAboutToBeInserted(parent, first, last);
+    Q_OBJECT
+
+public:
+    FrameDecoder(QModelIndex dmIdx, int dmInstance, QObject *parent = nullptr);
+    void stop();
+    void getFrame(QString fPath);
+
+protected:
+    void run() Q_DECL_OVERRIDE;
+
+signals:
+    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance,
+                      FrameDecoder *thisFrameDecoder);
+
+private slots:
+    void frameChanged(const QVideoFrame frame);
+
+private:
+    FrameDecoder *thisFrameDecoder;
+    QMutex mutex;
+    QWaitCondition condition;
+    QVideoSink *videoSink;
+    QMediaPlayer *mediaPlayer;
+    QString fPath;
+    int dmInstance;
+    QModelIndex dmIdx;
+    bool thumbnailAcquired = false;
+    bool abort = false;
+
+};
+#endif // FRAMEDECODER_H
+
+framedecoder.cpp
+
+#include "framedecoder.h"
+
+FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance, QObject *parent)
+    : QThread(parent)
+{
+    thisFrameDecoder = this;
+    this->dmIdx = dmIdx;
+    this->dmInstance = dmInstance;
+    mediaPlayer = new QMediaPlayer(/*this*/);
+    videoSink = new QVideoSink;
+    mediaPlayer->setVideoOutput(videoSink);
+    connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChanged);
 }
 
-C:\Qt6.2\6.2.2\Src\qtbase\src\gui\itemmodels\qstandarditemmodel.cpp
-QModelIndex QStandardItemModel::indexFromItem(const QStandardItem *item) const
+void FrameDecoder::stop()
 {
-CRASH    if (item && item->d_func()->parent) {
-        QPair<int, int> pos = item->d_func()->position();
-        return createIndex(pos.first, pos.second, item->d_func()->parent);
+    if (isRunning()) {
+        mutex.lock();
+        abort = true;
+        condition.wakeOne();
+        mutex.unlock();
+        wait();
+        abort = false;
     }
-    return QModelIndex();
+}
+
+void FrameDecoder::getFrame(QString path)
+{
+    fPath = path;
+    start();
+}
+
+void FrameDecoder::frameChanged(const QVideoFrame frame)
+{
+    if (thumbnailAcquired) return;
+    QImage im = frame.toImage();
+    if (im.isNull()) return;
+    thumbnailAcquired = true;
+    mediaPlayer->stop();
+    QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
+    emit setFrameIcon(dmIdx, pm, dmInstance, thisFrameDecoder);
+}
+
+void FrameDecoder::run()
+{
+    mediaPlayer->setSource(fPath);
+    mediaPlayer->play();
 }
 
 
-
-
-
-DataModel::addMetadataForItem 11 rowCount() = 13 m.fPath = "D:/Pictures/Calendar_Cats v/2014-10-28_0009.jpg" currentFolderPath = "D:/Pictures/Calendar_Cats v"
-DataModel::addMetadataForItem test0
-DataModel::addMetadataForItem test1
-DataModel::addMetadataForItem test2
-        202 DataModel::addMetadataForItem
-        633 Thumb::loadFromJpgData                             D:/Pictures/Calendar_Cats v/2014-10-28_0009.jpg
-          5 Thumb::checkOrientation                            D:/Pictures/Calendar_Cats v/2014-10-28_0009.jpg
-          2 MetaRead::iconMax
-          0 MetaRead::readRow
-          2 MetaRead::readRow
-          2 MetaRead::readMetadata
-          1 Metadata::loadImageMetadata                        D:/Pictures/Calendar_Cats v/2014-11-10_0003.jpg  Source: MetaRead::readMetadata
-         16 Metadata::readMetadata                             Source: MetaRead::readMetadata
-         20 Metadata::clearMetadata
-        789 Metadata::parseJPG
-         63 Xmp::Xmp
-         70 Xmp::initialize
-         14 Xmp::getItem
-          4 Xmp::getItem
-          7 Xmp::getItem
-         13 Xmp::getItem
-         12 Xmp::getItem
-         12 Xmp::getItem
-         12 Xmp::getItem
-         12 Xmp::getItem
-         36 Xmp::getItem
-        115 Metadata::parseSidecar
-          4 MetaRead::readIcon
-          9 Thumb::loadThumb                                   D:/Pictures/Calendar_Cats v/2014-11-10_0003.jpg
-          5 DataModel::readMetadataForItem                     D:/Pictures/Calendar_Cats v/2014-11-10_0003.jpg
-          5 Metadata::loadImageMetadata                        D:/Pictures/Calendar_Cats v/2014-11-10_0003.jpg  Source: DataModel::readMetadataForItem
-         17 Metadata::readMetadata                             Source: DataModel::readMetadataForItem
-         40 Metadata::clearMetadata
-        529 Metadata::parseJPG
-         37 Xmp::Xmp
-         32 Xmp::initialize
-         15 Xmp::getItem
-          4 Xmp::getItem
-          9 Xmp::getItem
-         22 Xmp::getItem
-         13 Xmp::getItem
-         16 Xmp::getItem
-         12 Xmp::getItem
-         12 Xmp::getItem
-         32 Xmp::getItem
-         49 Metadata::parseSidecar
-DataModel::addMetadataForItem 12 rowCount() = 13 m.fPath = "D:/Pictures/Calendar_Cats v/2014-11-10_0003.jpg" currentFolderPath = "D:/Pictures/Calendar_Cats v"
-
-DataModel::addMetadataForItem test2
-Thumb::checkOrientation "D:/Pictures/Calendar_Cats v/2014-11-10_0003.jpg"
-DataModel::setIcon "D:/Pictures/Calendar_Cats v" QModelIndex(12,0,0x23fa776fa90,DataModel(0x23f9a8a52d0))
