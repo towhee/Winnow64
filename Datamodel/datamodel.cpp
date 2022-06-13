@@ -1102,7 +1102,7 @@ void DataModel::setIconFromFrame(QModelIndex dmIdx, QPixmap &pm,
                                  int fromInstance, FrameDecoder2 *frameDecoder)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << "DataModel::setIconFromFrame" << dmIdx;
+
     if (fromInstance != instance) {
         qWarning() << __FUNCTION__ << dmIdx << "Instance conflict = "
                  << instance << fromInstance;
@@ -1123,7 +1123,6 @@ void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance)
 //        return;
 //    }
 
-    qDebug() << __FUNCTION__ << dmIdx << fromInstance << instance;
     if (fromInstance != instance) {
         qWarning() << __FUNCTION__ << dmIdx << "Instance conflict = "
                  << instance << fromInstance;

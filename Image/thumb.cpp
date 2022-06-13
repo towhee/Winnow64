@@ -6,7 +6,7 @@
    and scaled to thumbMax.
 */
 
-Thumb::Thumb(/*QObject *parent, */DataModel *dm, Metadata *metadata)/* : QObject(parent)*/
+Thumb::Thumb(DataModel *dm, Metadata *metadata)
 {
     this->dm = dm;
     this->metadata = metadata;
@@ -42,19 +42,10 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 {
     if (G::isLogger) G::log(__FUNCTION__, fPath);
     // see top of FrameDecoder.cpp for documentation
-    qDebug() << "Thumb::loadFromVideo" << dmRow << fPath;
     QModelIndex dmIdx = dm->index(dmRow, 0);
-
-//    FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance);
-//    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromFrame);
-//    connect(frameDecoder->videoSink, &QVideoSink::videoFrameChanged,
-//            frameDecoder, &FrameDecoder::frameChanged, Qt::QueuedConnection);
-//    frameDecoder->getFrame(fPath);
 
     FrameDecoder2 *frameDecoder2 = new FrameDecoder2(dmIdx, dm->instance);
     connect(frameDecoder2, &FrameDecoder2::setFrameIcon, dm, &DataModel::setIconFromFrame);
-//    connect(frameDecoder2->videoSink, &QVideoSink::videoFrameChanged,
-//            frameDecoder2, &FrameDecoder2::frameChanged, Qt::QueuedConnection);
 //    frameDecoder2->moveToThread(&frameDecoderthread);
     frameDecoder2->getFrame(fPath);
 }
@@ -192,7 +183,6 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
 */
     if (G::isLogger) G::log(__FUNCTION__, fPath);
 //    /*
-    qDebug() << "Thumb::loadThumb" << "fPath =" << fPath << "src =" << src;
 //    */
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.suffix().toLower();

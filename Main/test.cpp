@@ -11,23 +11,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    MetaRead2 *metaread2 = new MetaRead2(dm);
-    return;
 
-    int dmRow = 0;
-    bool isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
-    qDebug() << "MW::updateCachedStatus" << dmRow << isVideo;;
 
-//    FrameDecoder *frameDecoder = new FrameDecoder(dm);
-//    connect(frameDecoder, &FrameDecoder::test, this, &MW::testFrameDecoder);
-//    qDebug() << __FUNCTION__ << frameDecoder << frameDecoder->testString;
-//    frameDecoder->getFrame("test");
+
+//    fsTree->selectionModel()->clearSelection();
+//    bookmarks->selectionModel()->clearSelection();
 //    return;
-
-
-    fsTree->selectionModel()->clearSelection();
-    bookmarks->selectionModel()->clearSelection();
-    return;
 
 #ifdef Q_OS_WIN
     QString p1 = "D:/Pictures/Coaster";
