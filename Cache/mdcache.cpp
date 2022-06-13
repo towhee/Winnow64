@@ -603,7 +603,7 @@ void MetadataCache::run()
     QString msg = "action = " + actionList.at(action) +
                   " foundItemsToLoad = " + QVariant(foundItemsToLoad).toString();
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, msg);
-//    qDebug() << __FUNCTION__ << actionList.at(action) << "foundItemsToLoad =" << foundItemsToLoad;
+    qDebug() << "METADATACACHE::RUN" << actionList.at(action) << "foundItemsToLoad =" << foundItemsToLoad;
 
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);

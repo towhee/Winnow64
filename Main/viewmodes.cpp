@@ -32,7 +32,7 @@ void MW::loupeDisplay()
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
-    updateIconsVisible(-1);
+    updateIconRange(-1);
 
     // save selection as tableView is hidden and not synced
     saveSelection();
@@ -76,7 +76,7 @@ void MW::loupeDisplay()
     thumbView->setThumbParameters();
 
     // sync scrolling between modes (loupe, grid and table)
-    updateIconsVisible(-1);
+    updateIconRange(-1);
     if (prevMode == "Table") {
         if (tableView->isRowVisible(currentRow)) scrollRow = currentRow;
         else scrollRow = tableView->midVisibleRow;
@@ -123,7 +123,7 @@ void MW::gridDisplay()
     G::mode = "Grid";
     asGridAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
-    updateIconsVisible(-1);
+    updateIconRange(-1);
 
     // save selection as gridView is hidden and not synced
     saveSelection();
@@ -166,7 +166,7 @@ void MW::gridDisplay()
     G::ignoreScrollSignal = false;
 //    gridView->waitUntilOkToScroll();
      gridView->scrollToRow(scrollRow, __FUNCTION__);
-    updateIconsVisible(-1);
+    updateIconRange(-1);
 
     if (gridView->justifyMargin() > 3) gridView->rejustify();
 
@@ -192,7 +192,7 @@ void MW::tableDisplay()
     G::mode = "Table";
     asTableAction->setChecked(true);
     updateStatus(true, "", __FUNCTION__);
-    updateIconsVisible(-1);
+    updateIconRange(-1);
 
     // save selection as tableView is hidden and not synced
     saveSelection();
@@ -255,7 +255,7 @@ void MW::tableDisplay()
 //    G::wait(100);
     tableView->scrollToRow(scrollRow, __FUNCTION__);
     if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, __FUNCTION__);
-    updateIconsVisible(-1);
+    updateIconRange(-1);
 //    qDebug() << __FUNCTION__ << scrollRow << tableView->midVisibleRow;
 
     // if the zoom dialog was open then hide it as no image visible to zoom

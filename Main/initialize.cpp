@@ -109,6 +109,8 @@ void MW::createDataModel()
     dm = new DataModel(this, metadata, filters, combineRawJpg);
     thumb = new Thumb(dm, metadata);
 
+    dm->iconChunkSize = 3000;
+
     // show appropriate count column in filters
     if (combineRawJpg) {
         filters->hideColumn(3);

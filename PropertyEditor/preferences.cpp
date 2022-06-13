@@ -119,6 +119,10 @@ itemChange, which is subclassed here.
         mw->dm->iconChunkSize = v.toInt();
     }
 
+    if (source == "loadOnlyVisibleIcons") {
+        G::loadOnlyVisibleIcons = v.toBool();
+    }
+
     if (source == "maxIconSize") {
         G::maxIconSize = v.toInt();
     }
@@ -835,7 +839,21 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);   // set to 3000
 
-    // Maximum icon size
+    // Load icons just in time (only visible icons)
+    i.name = "loadOnlyVisibleIcons";
+    i.parentName = "CacheHeader";
+    i.captionText = "Only load visible thumbnails";
+    i.tooltip = "Only load thumbnails visible in the grid view or film strip.  Ignore"
+                "the maximumthumbnails to cache setting";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::loadOnlyVisibleIcons;
+    i.key = "loadOnlyVisibleIcons";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Maximum icon size (not used)
     i.name = "maxIconSize";
     i.parentName = "CacheThumbnailHeader";
     i.captionText = "Maximum Icon Size";
@@ -856,7 +874,7 @@ void Preferences::addItems()
     i.fixedWidth = 50;
 //    addItem(i);   // set to 256
 
-    // Cache Full Image Header
+    // Cache Full Image Header (not used)
     i.name = "CacheImagesHeader";
     i.parentName = "CacheHeader";
     i.captionText = "Full size images";
@@ -868,7 +886,7 @@ void Preferences::addItems()
     // Memory required for the metadata cache (includes thumbnails)
     i.name = "metaCacheReqd";
     i.parentName = "CacheHeader";
-    i.captionText = "Metadata and thumb memory";
+    i.captionText = "Metadata and thumb memory used";
     i.tooltip = "Memory required for the metadata cache (includes thumbnails).";
     i.hasValue = true;
     i.captionIsEditable = false;

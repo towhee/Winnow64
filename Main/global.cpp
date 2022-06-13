@@ -63,6 +63,7 @@ namespace G
     double iconOpacity = 0.4;
 
     // caching
+    bool loadOnlyVisibleIcons;
     int availableMemoryMB;
     int winnowMemoryBeforeCacheMB;
     int metaCacheMB;

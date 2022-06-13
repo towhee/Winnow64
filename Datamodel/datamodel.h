@@ -83,8 +83,8 @@ public:
     int currentRow;                     // used in caching to check if new image selected
     int firstVisibleRow;                // used to determine MetaRead priority queue
     int lastVisibleRow;                 // used to determine MetaRead priority queue
-    int firstIconRow;                   // used to determine MetaRead priority queue
-    int lastIconRow;                    // used to determine MetaRead priority queue
+    int startIconRange;                   // used to determine MetaRead priority queue
+    int endIconRange;                    // used to determine MetaRead priority queue
     int iconChunkSize;                  // max suggested number of icons to cache
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
@@ -116,7 +116,7 @@ public slots:
 //    void setIconFromFrame(QModelIndex dmIdx, QPixmap &pm,
 //                          int fromInstance, FrameDecoder *frameDecoder);
     void setIconFromFrame(QModelIndex dmIdx, QPixmap &pm,
-                          int fromInstance, FrameDecoder2 *frameDecoder);
+                          int fromInstance, FrameDecoder *frameDecoder);
     void setValue(QModelIndex dmIdx, QVariant value, int role = Qt::EditRole);
     void setValueSf(QModelIndex sfIdx, QVariant value, int role = Qt::EditRole);
     void abortLoad();
