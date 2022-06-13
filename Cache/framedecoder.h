@@ -11,37 +11,37 @@
 #include <QVideoSink>
 #include <QVideoFrame>
 
-class FrameDecoder : public QThread
-{
-    Q_OBJECT
+//class FrameDecoder : public QThread
+//{
+//    Q_OBJECT
 
-public:
-    FrameDecoder(QModelIndex dmIdx, int dmInstance, QObject *parent = nullptr);
-    void stop();
-    void getFrame(QString fPath);
-    QVideoSink *videoSink;
+//public:
+//    FrameDecoder(QModelIndex dmIdx, int dmInstance, QObject *parent = nullptr);
+//    void stop();
+//    void getFrame(QString fPath);
+//    QVideoSink *videoSink;
 
-protected:
-    void run() Q_DECL_OVERRIDE;
+//protected:
+//    void run() Q_DECL_OVERRIDE;
 
-signals:
-    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance,
-                      FrameDecoder *thisFrameDecoder);
+//signals:
+//    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance,
+//                      FrameDecoder *thisFrameDecoder);
 
-public slots:
-    void frameChanged(const QVideoFrame frame);
+//public slots:
+//    void frameChanged(const QVideoFrame frame);
 
-private:
-    FrameDecoder *thisFrameDecoder;
-    QMutex mutex;
-    QWaitCondition condition;
-    QMediaPlayer *mediaPlayer;
-    QString fPath;
-    int dmInstance;
-    QModelIndex dmIdx;
-    bool thumbnailAcquired = false;
-    bool abort = false;
-};
+//private:
+//    FrameDecoder *thisFrameDecoder;
+//    QMutex mutex;
+//    QWaitCondition condition;
+//    QMediaPlayer *mediaPlayer;
+//    QString fPath;
+//    int dmInstance;
+//    QModelIndex dmIdx;
+//    bool thumbnailAcquired = false;
+//    bool abort = false;
+//};
 
 class FrameDecoder2 : public QObject
 {
