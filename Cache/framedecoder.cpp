@@ -25,77 +25,18 @@
         - dm->setIconFromFrame deletes frameDecoder
 */
 
-//FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance, QObject *parent)
-//    : QThread(parent)
-//{
-//    thisFrameDecoder = this;
-//    this->dmIdx = dmIdx;
-//    this->dmInstance = dmInstance;
-//    mediaPlayer = new QMediaPlayer(/*this*/);
-//    videoSink = new QVideoSink;
-//    mediaPlayer->setVideoOutput(videoSink);
-////    connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChanged);
-//}
-
-//void FrameDecoder::stop()
-//{
-//    if (G::isLogger) G::log(__FUNCTION__);
-//    if (isRunning()) {
-//        mutex.lock();
-//        abort = true;
-//        condition.wakeOne();
-//        mutex.unlock();
-//        wait();
-//        abort = false;
-//    }
-//}
-
-//void FrameDecoder::getFrame(QString path)
-//{
-//    if (G::isLogger) G::log(__FUNCTION__);
-//    fPath = path;
-//    qDebug() << "FrameDecoder::getFrame" << fPath;
-//    start();
-//}
-
-//void FrameDecoder::frameChanged(const QVideoFrame frame)
-//{
-//    if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << "FrameDecoder::frameChenged" << fPath;
-//    if (thumbnailAcquired) return;
-//    QImage im = frame.toImage();
-//    qDebug() << "FrameDecoder::frameChenged 1" << "im.isNull()"<< im.isNull();
-//    if (im.isNull()) return;
-//    thumbnailAcquired = true;
-//    mediaPlayer->stop();
-//    QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-//    emit setFrameIcon(dmIdx, pm, dmInstance, thisFrameDecoder);
-//}
-
-//void FrameDecoder::run()
-//{
-//    if (G::isLogger) G::log(__FUNCTION__);
-////    exec();
-//    QFile f(fPath);
-//    qDebug() << "FrameDecoder::run  File open:" << f.isOpen() << fPath;
-//    mediaPlayer->setSource(fPath);
-//    mediaPlayer->play();
-//}
-
-
-
-FrameDecoder2::FrameDecoder2(QModelIndex dmIdx, int dmInstance)
+FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
 {
-    thisFrameDecoder2 = this;
+    thisFrameDecoder = this;
     this->dmIdx = dmIdx;
     this->dmInstance = dmInstance;
     mediaPlayer = new QMediaPlayer();
     videoSink = new QVideoSink;
     mediaPlayer->setVideoOutput(videoSink);
-    connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder2::frameChanged);
+    connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChanged);
 }
 
-void FrameDecoder2::getFrame(QString path)
+void FrameDecoder::getFrame(QString path)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     fPath = path;
@@ -104,7 +45,7 @@ void FrameDecoder2::getFrame(QString path)
     mediaPlayer->play();
 }
 
-void FrameDecoder2::frameChanged(const QVideoFrame frame)
+void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     if (thumbnailAcquired) return;
@@ -113,5 +54,5 @@ void FrameDecoder2::frameChanged(const QVideoFrame frame)
     thumbnailAcquired = true;
     mediaPlayer->stop();
     QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-    emit setFrameIcon(dmIdx, pm, dmInstance, thisFrameDecoder2);
+    emit setFrameIcon(dmIdx, pm, dmInstance, thisFrameDecoder);
 }

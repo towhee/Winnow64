@@ -27,8 +27,8 @@ public:
     void initialize();
     void dmRowRemoved(int dmRow);
     int iconChunkSize;
-    int firstVisible;
-    int lastVisible;
+    int firstIconRow;
+    int lastIconRow;
 
 signals:
     void done();
@@ -48,7 +48,7 @@ private:
     void updateIcons();
     void buildMetadataPriorityQueue(int sfRow);
     bool isNotLoaded(int sfRow);
-    bool isVisible(int sfRow);
+    bool okToLoadIcon(int sfRow);
 
     QMutex mutex;
     QWaitCondition condition;

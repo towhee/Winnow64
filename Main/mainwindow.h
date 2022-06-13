@@ -494,7 +494,7 @@ private slots:
 
     void loadLinearNewFolder();
     void refreshCurrentAfterReload();
-    void updateIconsVisible(int row);
+    void updateIconRange(int row);
     bool isCurrentThumbVisible();
     void numberIconsVisibleChange();
     void loadMetadataChunk();

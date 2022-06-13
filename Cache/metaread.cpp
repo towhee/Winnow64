@@ -206,13 +206,8 @@ bool MetaRead::isNotLoaded(int sfRow)
     return false;
 }
 
-bool MetaRead::isVisible(int sfRow)
-{
-    if (sfRow >= dm->firstVisibleRow && sfRow <= dm->lastVisibleRow) return true;
-    /*
-    if (sfRow >= dm->firstIconRow && sfRow <= dm->lastIconRow) return true;
-    if (sfRow >= 0 && sfRow < dm->sf->rowCount()) return true;
-    */
+bool MetaRead::okToLoadIcon(int sfRow) {
+    if (sfRow >= dm->startIconRange && sfRow <= dm->endIconRange) return true;
     else return false;
 }
 
@@ -261,7 +256,7 @@ void MetaRead::cleanupIcons()
                  << "isVisible(sfRow) =" << isVisible(sfRow)
                     ;
                     //*/
-        if (isVisible(sfRow)) continue;
+        if (okToLoadIcon(sfRow)) continue;
         emit setIcon(dmIdx, nullPm, dmInstance);
         #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
         iconsLoaded.remove(i);
@@ -274,7 +269,7 @@ void MetaRead::cleanupIcons()
     }
 }
 
-void MetaRead::updateIcons()
+void MetaRead::updateIcons()    // not used
 {
     if (G::isLogger) G::log(__FUNCTION__);
     if (debugCaching) {
@@ -284,7 +279,8 @@ void MetaRead::updateIcons()
     }
 
     // load any missing visible icons
-    for (int sfRow = dm->firstVisibleRow; sfRow <= dm->lastVisibleRow; ++sfRow) {
+//    for (int sfRow = dm->firstVisibleRow; sfRow <= dm->lastVisibleRow; ++sfRow) {
+    for (int sfRow = dm->startIconRange; sfRow <= dm->endIconRange; ++sfRow) {
         int dmRow = dm->modelRowFromProxyRow(sfRow);
         QModelIndex dmIdx = dm->index(dmRow, 0);
         if (!dm->iconLoaded(sfRow)) {
@@ -312,14 +308,15 @@ void MetaRead::buildMetadataPriorityQueue(int sfRow)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     priorityQueue.clear();
-    firstVisible = dm->firstVisibleRow;
-    lastVisible = dm->lastVisibleRow;
+    firstIconRow = dm->startIconRange;
+    lastIconRow = dm->endIconRange;
+    qDebug() << "MetaRead::buildMetadataPriorityQueue" << firstIconRow << lastIconRow;
 
     if (debugCaching) {
         qDebug().noquote() << __FUNCTION__
                            << "start"
-                           << "firstVisible =" << firstVisible
-                           << "lastVisible =" << lastVisible
+                           << "firstVisible =" << firstIconRow
+                           << "lastVisible =" << lastIconRow
                            << "priorityQueue.size() =" << priorityQueue.size()
                            << "sfRowCount =" << sfRowCount
                               ;
@@ -338,8 +335,8 @@ void MetaRead::buildMetadataPriorityQueue(int sfRow)
     if (debugCaching) {
         qDebug().noquote() << __FUNCTION__
                            << "start"
-                           << "firstVisible =" << firstVisible
-                           << "lastVisible =" << lastVisible
+                           << "firstVisible =" << firstIconRow
+                           << "lastVisible =" << lastIconRow
                            << "priorityQueue.size() =" << priorityQueue.size()
                            << "sfRowCount =" << sfRowCount
                               ;
@@ -433,7 +430,7 @@ void MetaRead::readRow(int sfRow)
              << "adjIconChunkSize =" << adjIconChunkSize
              ;
     //*/
-    if (isVisible(sfRow) && !abort) {
+    if (okToLoadIcon(sfRow) && !abort) {
         readIcon(sfIdx, fPath);
     }
 

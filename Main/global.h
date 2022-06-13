@@ -147,7 +147,7 @@ namespace G
     extern bool isDev;
 
     extern QPoint mousePos;
-
+    extern bool loadOnlyVisibleIcons;
     extern int availableMemoryMB;
     extern int winnowMemoryBeforeCacheMB;
     extern int metaCacheMB;

@@ -1099,7 +1099,7 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int role)
 }
 
 void DataModel::setIconFromFrame(QModelIndex dmIdx, QPixmap &pm,
-                                 int fromInstance, FrameDecoder2 *frameDecoder)
+                                 int fromInstance, FrameDecoder *frameDecoder)
 {
     if (G::isLogger) G::log(__FUNCTION__);
 

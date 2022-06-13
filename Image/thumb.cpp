@@ -44,10 +44,10 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
     // see top of FrameDecoder.cpp for documentation
     QModelIndex dmIdx = dm->index(dmRow, 0);
 
-    FrameDecoder2 *frameDecoder2 = new FrameDecoder2(dmIdx, dm->instance);
-    connect(frameDecoder2, &FrameDecoder2::setFrameIcon, dm, &DataModel::setIconFromFrame);
+    FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance);
+    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromFrame);
 //    frameDecoder2->moveToThread(&frameDecoderthread);
-    frameDecoder2->getFrame(fPath);
+    frameDecoder->getFrame(fPath);
 }
 
 bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)

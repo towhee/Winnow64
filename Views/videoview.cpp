@@ -67,21 +67,18 @@ void VideoView::stop()
 void VideoView::scrubMoved(int ms)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << "VideoView::seek" << ms;
     video->setPosition(ms * 1000);
 }
 
 void VideoView::scrubPressed()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << "VideoView::seek" << scrub->value();
     video->setPosition(scrub->value() * 1000);
 }
 
 void VideoView::durationChanged(qint64 duration)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << "VideoView::durationChanged" << duration;
     this->duration = duration / 1000;
 }
 

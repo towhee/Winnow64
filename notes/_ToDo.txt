@@ -1,5 +1,4 @@
 BUGS / TO DO
-- Wait for background ingest to complete before quit Winnow
 - Embellish not resetting properly
 - No image cached for D:/Pictures/_ThumbTest/2020-01-05_0005-denoise.dng
 - Unstable if metadata cannot be read for an image
