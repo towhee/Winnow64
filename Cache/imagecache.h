@@ -90,7 +90,7 @@ private:
     bool filterOrSortHasChanged;
     bool refreshCache;
     QString currentPath;
-    int maxAttemptsToCacheImage = 10;
+    int maxAttemptsToCacheImage = 100;
     bool checkForOrphans;           // prevent multiple orphan checks as each decoder finishes
     bool isCacheUpToDate = false;
 

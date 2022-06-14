@@ -246,7 +246,7 @@ void MW::diagnosticsMetadata()
     diagnosticsReport(metadata->diagnostics(dm->currentFilePath));
 }
 void MW::diagnosticsXMP() {}
-void MW::diagnosticsMetadataCache() {}
+void MW::diagnosticsMetadataCache() {diagnosticsReport(metaRead->diagnostics());}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
 void MW::diagnosticsErrors() {diagnosticsReport(dm->diagnosticsErrors());}

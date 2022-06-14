@@ -26,6 +26,9 @@ public:
     void read(Action action = Action::FileSelection, int sfRow = 0, QString src = "");
     void initialize();
     void dmRowRemoved(int dmRow);
+    QString diagnostics();
+    QString reportMetaCache();
+
     int iconChunkSize;
     int firstIconRow;
     int lastIconRow;

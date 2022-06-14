@@ -113,7 +113,7 @@ itemChange, which is subclassed here.
         mw->setImageCacheParameters();
     }
 
-    if (source == "metadataChunkSize") {
+    if (source == "iconChunkSize") {
         mw->metadataCacheThread->metadataChunkSize = v.toInt();
         mw->metaRead->iconChunkSize = v.toInt();
         mw->dm->iconChunkSize = v.toInt();
@@ -821,7 +821,7 @@ void Preferences::addItems()
 //    addItem(i);   // setting default thumbnail cache parameters so remove as preference
 
     // Metadata chunk size (number of thumbnails)
-    i.name = "metadataChunkSize";
+    i.name = "iconChunkSize";
     i.parentName = "CacheHeader";
     i.captionText = "Maximum thumbnails to cache";
     i.tooltip = "Enter the number of minimum thumbnails and metadata you want to cache.\n"
@@ -830,8 +830,8 @@ void Preferences::addItems()
                 "what works best.  250 is the default amount.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = mw->metadataCacheThread->metadataChunkSize;
-    i.key = "metadataChunkSize";
+    i.value = mw->dm->iconChunkSize;
+    i.key = "iconChunkSize";
     i.delegateType = DT_Spinbox;
     i.type = "int";
     i.min = 1;

@@ -173,7 +173,13 @@ void MW::createMDCache()
         metadataCacheThread->cacheAllMetadata = true;
         metadataCacheThread->cacheAllIcons = false;
     }
-    metadataCacheThread->metadataChunkSize = 3000;
+
+    if (setting->contains("iconChunkSize")) {
+        metadataCacheThread->metadataChunkSize = setting->value("iconChunkSize").toInt();
+    }
+    else {
+        metadataCacheThread->metadataChunkSize = 3000;
+    }
 
     // not being used
     metadataCacheScrollTimer = new QTimer(this);
@@ -198,6 +204,13 @@ void MW::createMDCache()
 
     QThread metaReadThread;
     metaRead->moveToThread(&metaReadThread);
+
+    if (setting->contains("iconChunkSize")) {
+        dm->iconChunkSize = setting->value("iconChunkSize").toInt();
+    }
+    else {
+        dm->iconChunkSize = 3000;
+    }
 
     // add metadata to datamodel
     connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);

@@ -1366,6 +1366,12 @@ void MW::createActions()
     addAction(diagnosticsDataModelAction);
     connect(diagnosticsDataModelAction, &QAction::triggered, this, &MW::diagnosticsDataModel);
 
+    diagnosticsMetadataCacheAction = new QAction(tr("MetadataCache"), this);
+    diagnosticsMetadataCacheAction->setObjectName("diagnosticsMetadataCache");
+    diagnosticsMetadataCacheAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsMetadataCacheAction);
+    connect(diagnosticsMetadataCacheAction, &QAction::triggered, this, &MW::diagnosticsMetadataCache);
+
     diagnosticsImageCacheAction = new QAction(tr("ImageCache"), this);
     diagnosticsImageCacheAction->setObjectName("diagnosticsImageCache");
     diagnosticsImageCacheAction->setShortcutVisibleInContextMenu(true);
@@ -1714,6 +1720,7 @@ void MW::createMenus()
     helpDiagnosticsMenu->addAction(diagnosticsImageViewAction);
     helpDiagnosticsMenu->addAction(diagnosticsMetadataAction);
     helpDiagnosticsMenu->addAction(diagnosticsDataModelAction);
+    helpDiagnosticsMenu->addAction(diagnosticsMetadataCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsEmbellishAction);
     testMenu->addAction(stressTestAction);

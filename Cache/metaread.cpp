@@ -83,6 +83,41 @@ void MetaRead::read(Action action, int sfRow, QString src)
 
 }
 
+QString MetaRead::diagnostics()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    rpt << Utilities::centeredRptHdr('=', objectName() + " MetaRead Diagnostics");
+    rpt << "\n" ;
+    rpt << "\n" << "Load algorithm:     " << (G::useLinearLoading == true ? "Linear" : "Concurrent");
+    rpt << "\n" << "dmInstance:         " << dmInstance;
+    rpt << "\n" << "sfRowCount:         " << sfRowCount;
+    rpt << "\n" << "visibleIconCount:   " << visibleIconCount;
+    rpt << "\n" << "iconChunkSize:      " << iconChunkSize;
+    rpt << "\n" << "firstIconRow:       " << firstIconRow;
+    rpt << "\n" << "lastIconRow:        " << lastIconRow;
+    rpt << "\n" ;
+    rpt << reportMetaCache();
+
+    rpt << "\n\n" ;
+    return reportString;
+}
+
+QString MetaRead::reportMetaCache()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    QString reportString;
+    QTextStream rpt;
+    rpt.flush();
+    reportString = "MetaCache";
+    rpt.setString(&reportString);
+
+    rpt << "\n";
+    return reportString;
+}
+
 void MetaRead::iconMax(QPixmap &thumb)
 {
     if (G::isLogger) G::log(__FUNCTION__);

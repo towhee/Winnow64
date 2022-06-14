@@ -383,13 +383,10 @@ Steps:
     filters->filtersBuilt = false;
     filters->loadedDataModel(false);
     loadingModel = true;
-    t.restart();            // timer for addFilesMaxDelay
 
     emit centralMsg("Commencing to load folder " + folderPath);    // rghmsg
-//    QCoreApplication::processEvents();
+    QCoreApplication::processEvents();
 
-    // clear the model
-//    clearDataModel();
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "continue loading");
 
     // do some initializing
@@ -428,7 +425,7 @@ Steps:
                         QString::number(folderCount) + " folders" +
                         escapeClause;
             emit centralMsg(s);        // rghmsg
-//            QCoreApplication::processEvents();
+            QCoreApplication::processEvents();
         }
         if (abortLoadingModel) return endLoad(false);
     }
