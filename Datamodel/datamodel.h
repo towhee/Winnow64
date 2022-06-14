@@ -77,14 +77,14 @@ public:
     QHash<QString, int> fPathRow;
     QStringList imageFilePathList;
     QDir::SortFlags thumbsSortFlags;
-    int instance = 0;                   // used in setIcon to confirm model state
+    int instance = 0;                   // used in setIcon to confirm model folder
     QString currentFolderPath;
     QString currentFilePath;            // used in caching to update image cache
     int currentRow;                     // used in caching to check if new image selected
     int firstVisibleRow;                // used to determine MetaRead priority queue
     int lastVisibleRow;                 // used to determine MetaRead priority queue
-    int startIconRange;                   // used to determine MetaRead priority queue
-    int endIconRange;                    // used to determine MetaRead priority queue
+    int startIconRange;                 // used to determine MetaRead priority queue
+    int endIconRange;                   // used to determine MetaRead priority queue
     int iconChunkSize;                  // max suggested number of icons to cache
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
@@ -95,12 +95,11 @@ public:
     int buildFiltersMaxDelay = 1000;    // quit if exceed and not forceBuildFilters
     QElapsedTimer buildFiltersTimer;
 
-    QList<QFileInfo> modifiedFiles;
+    QList<QFileInfo> modifiedFiles;     // used by MW::refreshCurrentFolder
 
     /* can be set from keyPressEvent in MW to terminate if recursive folder scan or
        building filters too long */
     bool abortLoadingModel;
-    bool alt;
 
 signals:
     void updateClassification();        // req'd for 1st image, loaded before metadata cached
@@ -113,8 +112,6 @@ public slots:
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance);
-//    void setIconFromFrame(QModelIndex dmIdx, QPixmap &pm,
-//                          int fromInstance, FrameDecoder *frameDecoder);
     void setIconFromFrame(QModelIndex dmIdx, QPixmap &pm,
                           int fromInstance, FrameDecoder *frameDecoder);
     void setValue(QModelIndex dmIdx, QVariant value, int role = Qt::EditRole);
@@ -135,7 +132,6 @@ private:
 
     QDir *dir;
     QStringList *fileFilters;
-//    QList<QStandardItem*> *thumbList;
     QFileInfo fileInfo;
     QImage emptyImg;
     bool includeSubfolders = false;
@@ -145,11 +141,8 @@ private:
     void addFileDataForRow(int row, QFileInfo fileInfo);
     void rawPlusJpg();
 
-    int addFilesMaxDelay = 1000;    // quit if exceed and not forceBuildFilters
-
     int imageCount;
     int countInterval = 0;
-    QElapsedTimer t;
     QString buildMsg = "Building filters.  This could take a while to complete.<p>"
                        "Press \"Esc\" to stop<p>";
     QString buildSteps = "3";

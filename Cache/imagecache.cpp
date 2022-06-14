@@ -145,7 +145,7 @@ int ImageCache::getImCacheSize()
         }
     }
     if (debugCaching) {
-        qDebug().noquote() << __FUNCTION__ << "   cache size =" << cacheMB;
+        qDebug().noquote() << __FUNCTION__ << " cache size =" << cacheMB;
     }
     return cacheMB;
 }
@@ -291,11 +291,6 @@ void ImageCache::setTargetRange()
         if (sumMB < icd->cache.maxMB) {
             icd->cacheItemList[i].isTarget = true;
             priorityList.append(icd->cacheItemList[i].key);
-            /*
-            qDebug() << __FUNCTION__
-                     << "priority =" << i
-                     << "key =" << priorityList.at(i);
-                     //*/
         }
         else {
             icd->cacheItemList[i].isTarget = false;
@@ -1072,7 +1067,8 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     icd->cacheItemList[row].samplesPerPixel = m.samplesPerPixel;
     icd->cacheItemList[row].iccBuf = m.iccBuf;
 
-//    icd->cache.folderMB += icd->cacheItem.sizeMB; // req'd?
+    icd->cache.folderMB += icd->cacheItem.sizeMB; // req'd?
+    setTargetRange();
 }
 
 void ImageCache::buildImageCacheList()
