@@ -125,6 +125,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setTabKeyNavigation(true);  // not working
     setResizeMode(QListView::Adjust);
+    setMouseTracking(true);
 //    setLayoutMode(QListView::Batched);    // causes delay that makes scrollTo a headache
     setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
     verticalScrollBar()->setObjectName("VerticalScrollBar");
@@ -1473,6 +1474,36 @@ void IconView::wheelEvent(QWheelEvent *event)
     QListView::wheelEvent(event);
 }
 
+bool IconView::event(QEvent *event) {
+    if (G::isLogger) G::log(__FUNCTION__);
+//    qDebug() << "IconView::event" << event;
+    if (event->type() == QEvent::NativeGesture) {
+        QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);
+        QPoint d = m2->thumbDock->pos();
+        QPoint i = pos();
+        QPoint c = e->pos();
+        QPoint p;
+        if (m2->thumbDock->isFloating()) p = c;
+        else p = c - i - d;
+        QModelIndex idx = indexAt(p);
+        QRect vr = visualRect(model()->index(6,0));
+        /*
+        qDebug() << "IconView::event"
+                 << "\n  d =" << d
+                 << "\n  i =" << i
+                 << "\n  c =" << c
+                 << "\n  p =" << p
+                 << "\n  idx =" << idx
+                 << "\n  visualRect =" << vr
+                    ;
+        //*/
+        if (idx.isValid()) {
+             m2->togglePickMouseOverItem(idx);
+        }
+    }
+    QWidget::event(event);
+}
+
 void IconView::mousePressEvent(QMouseEvent *event)
 {
 /*
@@ -1481,6 +1512,8 @@ void IconView::mousePressEvent(QMouseEvent *event)
     when the user wants to view a specific part of another image that is in a
     different position than the current image.
 */
+//    qDebug() << "IconView::mousePressEvent" << event->pos() << hasMouseTracking();
+
     if (G::isLogger) G::log(__FUNCTION__);
     if (event->button() == Qt::RightButton) {
         // save mouse over index for toggle pick
@@ -1547,6 +1580,8 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     if (isLeftMouseBtnPressed) isMouseDrag = true;
+//    mousePosition = event->pos();
+//    qDebug() << "IconView::mouseMoveEvent" << mousePosition;
     QListView::mouseMoveEvent(event);
 }
 

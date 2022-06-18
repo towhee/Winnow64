@@ -1,8 +1,11 @@
 #include "videoview.h"
 
-VideoView::VideoView(QWidget *parent) : QWidget{parent}
+VideoView::VideoView(QWidget *parent, IconView *thumbView) : QWidget{parent}
 {
     if (G::isLogger) G::log(__FUNCTION__);
+
+    this->thumbView = thumbView;
+
     video = new VideoWidget(this);
 
     setStyleSheet("QSlider{min-height: 24;}");
@@ -125,3 +128,54 @@ void VideoView::playOrPause()
         break;
     }
 }
+
+void VideoView::wheelEvent(QWheelEvent *event)
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+
+    // wheel scrolling / trackpad swiping = next/previous image
+    static int deltaSum = 0;
+    static int prevDelta = 0;
+    int delta = event->angleDelta().y();
+    if ((delta > 0 && prevDelta < 0) || (delta < 0 && prevDelta > 0)) {
+        deltaSum = delta;
+    }
+    deltaSum += delta;
+
+    /*
+    qDebug() << "ImageView::wheelEvent"
+             << "event->angleDelta() =" << event->angleDelta()
+             << "event->angleDelta().y() =" << event->angleDelta().y()
+             << "deltaSum =" << deltaSum
+//             << "event->pixelDelta().y() =" << event->pixelDelta().y()
+                ;
+                //*/
+
+    if (deltaSum > G::wheelSensitivity) {
+        thumbView->selectPrev();
+        deltaSum = 0;
+    }
+
+    if (deltaSum < (-G::wheelSensitivity)) {
+        thumbView->selectNext();
+        deltaSum = 0;
+    }
+}
+
+bool VideoView::event(QEvent *event) {
+    if (G::isLogger) G::log(__FUNCTION__);
+    if (event->type() == QEvent::NativeGesture) {
+        emit togglePick();
+        /*
+        QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);
+        if (e->value() == 0) {
+            // forward
+        }
+        else {
+            // back
+        }
+        //*/
+    }
+    QWidget::event(event);
+}
+

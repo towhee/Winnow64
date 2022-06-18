@@ -74,11 +74,6 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     emit setValue(dm->index(row, G::WidthPreviewColumn), size.width(), Qt::EditRole);
     emit setValue(dm->index(row, G::HeightColumn), size.height(), Qt::EditRole);
     emit setValue(dm->index(row, G::HeightPreviewColumn), size.height(), Qt::EditRole);
-
-//    dm->setData(dm->index(row, G::WidthColumn), size.width());
-//    dm->setData(dm->index(row, G::WidthPreviewColumn), size.width());
-//    dm->setData(dm->index(row, G::HeightColumn), size.height());
-//    dm->setData(dm->index(row, G::HeightPreviewColumn), size.height());
     // needed when loading concurrently
     if (!G::useLinearLoading) {
         metadata->m.width = size.width();
@@ -99,7 +94,6 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
 {
     if (G::isLogger) G::log(__FUNCTION__, fPath);
-//    qDebug() << __FUNCTION__ << fPath;
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
     bool success = false;
@@ -119,7 +113,7 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
     uint lengthThumb = dm->index(row, G::LengthThumbColumn).data().toUInt();
 
-    QString ext = info.suffix().toLower();
+//    QString ext = info.suffix().toLower();
 
     /*
     QString s = "File size = " + QString::number(imFile.size());

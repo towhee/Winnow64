@@ -44,6 +44,7 @@ public:
     qreal refZoom;                      // adjusted to real screen pixels
     qreal toggleZoom;
     bool isRubberBand;
+    int wheelDeltaThreshold = 20;
 
     DropShadowLabel *infoOverlay;
     DropShadowLabel *titleDropShadow;
@@ -108,6 +109,8 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
     void scrollContentsBy(int dx, int dy) override;
     void wheelEvent(QWheelEvent *event) override;
+    void nativeGestureEvent(QNativeGestureEvent *event);
+    bool event(QEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -141,6 +144,7 @@ private:
     InfoString *infoString;
 
     QTimer *mouseMovementTimer;
+//    QElapsedTimer wheelEventElapse;
 
     struct intSize
     {

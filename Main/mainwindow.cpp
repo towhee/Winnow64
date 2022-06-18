@@ -377,10 +377,10 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createSelectionModel();     // dependent on ThumbView, ImageView
     createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
-    createVideoView();          // dependent on centralWidget
     createMDCache();            // dependent on DataModel, Metadata, ThumbView, VideoView
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
-    createImageView();          // dependent on centralWidget
+    createImageView();          // dependent on centralWidget, ThumbView
+    createVideoView();          // dependent on centralWidget, ThumbView
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
     createBookmarks();          // dependent on loadSettings
@@ -587,6 +587,10 @@ void MW::closeEvent(QCloseEvent *event)
         QApplication::clipboard()->clear();
     }
 
+    if (preferencesDlg != nullptr) {
+        delete pref;
+        delete preferencesDlg;
+    }
     delete workspaces;
     delete recentFolders;
     delete ingestHistoryFolders;
@@ -621,11 +625,11 @@ void MW::resizeEvent(QResizeEvent *event)
     updateProgressBarWidth();
 }
 
-void MW::mouseMoveEvent(QMouseEvent *event)
-{
-    QMainWindow::mouseMoveEvent(event);
-//    qDebug() << __FUNCTION__ << event;
-}
+//void MW::mouseMoveEvent(QMouseEvent *event)
+//{
+//    QMainWindow::mouseMoveEvent(event);
+////    qDebug() << __FUNCTION__ << event;
+//}
 
 void MW::keyPressEvent(QKeyEvent *event)
 {
@@ -3599,12 +3603,20 @@ void MW::preferences(QString text)
 
 */
     if (G::isLogger) G::log(__FUNCTION__);
-    pref = new Preferences(this);
-    if (text != "") pref->expandBranch(text);
-    preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
+    if (preferencesDlg == nullptr) {
+        pref = new Preferences(this);
+        if (text != "") pref->expandBranch(text);
+        preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, css);
+    }
+    // non-modal
+    preferencesDlg->setWindowModality(Qt::NonModal);
+    preferencesDlg->show();
+    // modal
+    /*
     preferencesDlg->exec();
     delete pref;
     delete preferencesDlg;
+    //*/
 
     /* Create a preferences tree as a docking panel:
     propertiesDock = new DockWidget(tr("  Preferencess  "), this);
@@ -4328,6 +4340,7 @@ void MW::writeSettings()
     setting->setValue("tryConcurrentLoading", !G::useLinearLoading);
     setting->setValue("isLogger", G::isLogger);
     setting->setValue("isErrorLogger", G::isErrorLogger);
+    setting->setValue("wheelSensitivity", G::wheelSensitivity);
 
     // datamodel
     setting->setValue("maxIconSize", G::maxIconSize);
@@ -4608,6 +4621,7 @@ bool MW::loadSettings()
         G::mode = "Loupe";
 //        G::isLogger = false;
         G::isErrorLogger = false;
+        G::wheelSensitivity = 40;
 
         // appearance
         G::backgroundShade = 50;
@@ -4708,6 +4722,10 @@ bool MW::loadSettings()
         G::useLinearLoading = !setting->value("tryConcurrentLoading").toBool();
     else
         G::useLinearLoading = true;
+    if (setting->contains("wheelSensitivity"))
+        G::wheelSensitivity = setting->value("wheelSensitivity").toInt();
+    else
+        G::wheelSensitivity = 40;
 
     lastFileIfCrash = setting->value("lastFileSelection").toString();
 

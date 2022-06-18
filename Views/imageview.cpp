@@ -817,30 +817,51 @@ void ImageView::wheelEvent(QWheelEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
 
-    /* if trackpad scrolling set in preferences then default behavior
-    if(useWheelToScroll && isScrollable) {
-        qDebug() << __FUNCTION__ << zoom << isScrollable;
-        QGraphicsView::wheelEvent(event);
-        isTrackpadScroll = true;
-        return;
-    }
-    //*/
-
     // wheel scrolling / trackpad swiping = next/previous image
-    static int delta;
-//    delta += event->pixelDelta();
-    delta += event->angleDelta().y();    // deprecated
-    int deltaThreshold = 40;
+    static int deltaSum = 0;
+    static int prevDelta = 0;
+    int delta = event->angleDelta().y();
+    if ((delta > 0 && prevDelta < 0) || (delta < 0 && prevDelta > 0)) {
+        deltaSum = delta;
+    }
+    deltaSum += delta;
 
-    if(delta > deltaThreshold) {
+    /*
+    qDebug() << "ImageView::wheelEvent"
+             << "event->angleDelta() =" << event->angleDelta()
+             << "event->angleDelta().y() =" << event->angleDelta().y()
+             << "deltaSum =" << deltaSum
+//             << "event->pixelDelta().y() =" << event->pixelDelta().y()
+                ;
+                //*/
+
+    if (deltaSum > G::wheelSensitivity) {
         thumbView->selectPrev();
-        delta = 0;
+        deltaSum = 0;
     }
 
-    if(delta < (-deltaThreshold)) {
+    if (deltaSum < (-G::wheelSensitivity)) {
         thumbView->selectNext();
-        delta = 0;
+        deltaSum = 0;
     }
+}
+
+bool ImageView::event(QEvent *event) {
+    if (G::isLogger) G::log(__FUNCTION__);
+//    qDebug() << "ImageView::event" << event;
+    if (event->type() == QEvent::NativeGesture) {
+        emit togglePick();
+        /*
+        QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);
+        if (e->value() == 0) {
+            // forward
+        }
+        else {
+            // back
+        }
+        //*/
+    }
+    QWidget::event(event);
 }
 
 // not used
@@ -856,8 +877,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
 
-//    static int n = 0;
-//    n++;
+    qDebug() << "ImageView::mousePressEvent" << event->button();
 
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;

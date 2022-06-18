@@ -260,10 +260,13 @@ itemChange, which is subclassed here.
         mw->imageView->refresh();
     }
 
+    if (source == "wheelSensitivity") {
+        G::wheelSensitivity = v.toInt();
+    }
+
     if (source == "globalFontSize") {
         mw->setFontSize(v.toInt());
         setStyleSheet(mw->css);
-//        resizeColumns();
     }
 
     if (source == "globalBackgroundShade") {
@@ -532,6 +535,24 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
 //    addItem(i);
+
+    // Mouse wheel sensitivity
+    i.name = "wheelSensitivity";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Next/prev image scroll sensitivity";
+    i.tooltip = "Fine tune the sensitivity of the mouse wheel or trackpad\n"
+                "to trigger the next or previous image in loupe view.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.defaultValue = 40;
+    i.value = G::wheelSensitivity;
+    i.key = "wheelSensitivity";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 5;
+    i.max = 80;
+    i.fixedWidth = 50;
+    addItem(i);
 
     // Thumbnails Header (Root) ---------------------------------------------------------------
     i.name = "AppearanceHeader";

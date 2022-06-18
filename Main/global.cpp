@@ -62,6 +62,9 @@ namespace G
 
     double iconOpacity = 0.4;
 
+    // ui
+    int wheelSensitivity = 40;
+
     // caching
     bool loadOnlyVisibleIcons;
     int availableMemoryMB;

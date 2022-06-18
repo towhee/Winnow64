@@ -407,7 +407,10 @@ void MW::createTableView()
 void MW::createVideoView()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    videoView = new VideoView(this);
+    videoView = new VideoView(this, thumbView);
+
+    // back and forward mouse buttons toggle pick
+    connect(videoView, &VideoView::togglePick, this, &MW::togglePick);
 }
 
 void MW::createImageView()
