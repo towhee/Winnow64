@@ -361,7 +361,6 @@ bool MetadataCache::loadIcon(int sfRow)
 //    QString ext = dm->sf->index(sfRow, G::TypeColumn).data().toString().toLower();
     QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(sfRow, 0));
     if (!dmIdx.isValid()) return false;
-    qDebug() << "MetadataCache::loadIcon isIconCaching" << sfRow << dm->isIconCaching(sfRow);
     if (!dm->isIconCaching(sfRow) && !dm->iconLoaded(sfRow)) {
         dm->setIconCaching(sfRow, true);
         int dmRow = dmIdx.row();
@@ -488,7 +487,7 @@ void MetadataCache::readIconChunk()
         end = dm->sf->rowCount();
     }
     int count = 0;
-//    /*
+    /*
     qDebug() << __FUNCTION__ << "start =" << start << "end =" << end
              << "firstIconVisible =" << firstIconVisible
              << "lastIconVisible =" << lastIconVisible
@@ -502,7 +501,7 @@ void MetadataCache::readIconChunk()
             emit updateIsRunning(false, true, __FUNCTION__);
             return;
         }
-        qDebug() << "MetadataCache::readIconChunk 0 row =" << row;
+//        qDebug() << "MetadataCache::readIconChunk 0 row =" << row;
         loadIcon(row);
         updateIconLoadingProgress(count++, end);
     }
@@ -514,7 +513,7 @@ void MetadataCache::readIconChunk()
                 emit updateIsRunning(false, true, __FUNCTION__);
                 return;
             }
-            qDebug() << "MetadataCache::readIconChunk 1 row =" << row;
+//            qDebug() << "MetadataCache::readIconChunk 1 row =" << row;
             loadIcon(row);
             updateIconLoadingProgress(count++, end);
         }
@@ -527,7 +526,7 @@ void MetadataCache::readIconChunk()
                 emit updateIsRunning(false, true, __FUNCTION__);
                 return;
             }
-            qDebug() << "MetadataCache::readIconChunk 2 row =" << row;
+//            qDebug() << "MetadataCache::readIconChunk 2 row =" << row;
             loadIcon(row);
             updateIconLoadingProgress(count++, end);
         }

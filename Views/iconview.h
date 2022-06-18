@@ -161,6 +161,7 @@ private slots:
 protected:
     void startDrag(Qt::DropActions) override;
     void wheelEvent(QWheelEvent *event) override;
+    bool event(QEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
@@ -195,6 +196,7 @@ private:
     QRect cursorRect;
     QRect iconRect;
     QLabel *zoomFrame;
+    QPoint mousePosition;
 
     // used during gridView resize to keep close to beginning thumb size
     int assignedIconWidth;
