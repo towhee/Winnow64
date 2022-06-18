@@ -625,11 +625,11 @@ void MW::resizeEvent(QResizeEvent *event)
     updateProgressBarWidth();
 }
 
-//void MW::mouseMoveEvent(QMouseEvent *event)
-//{
-//    QMainWindow::mouseMoveEvent(event);
-////    qDebug() << __FUNCTION__ << event;
-//}
+void MW::mouseMoveEvent(QMouseEvent *event)
+{
+    QMainWindow::mouseMoveEvent(event);
+//    qDebug() << __FUNCTION__ << event;
+}
 
 void MW::keyPressEvent(QKeyEvent *event)
 {
