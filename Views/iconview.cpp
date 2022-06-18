@@ -125,7 +125,6 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setTabKeyNavigation(true);  // not working
     setResizeMode(QListView::Adjust);
-    setMouseTracking(true);
 //    setLayoutMode(QListView::Batched);    // causes delay that makes scrollTo a headache
     setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
     verticalScrollBar()->setObjectName("VerticalScrollBar");
@@ -1476,8 +1475,8 @@ void IconView::wheelEvent(QWheelEvent *event)
 
 bool IconView::event(QEvent *event) {
     if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << "IconView::event" << event;
     if (event->type() == QEvent::NativeGesture) {
+        qDebug() << "IconView::event" << event;
         QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);
         QPoint d = m2->thumbDock->pos();
         QPoint i = pos();
@@ -1501,7 +1500,7 @@ bool IconView::event(QEvent *event) {
              m2->togglePickMouseOverItem(idx);
         }
     }
-    QWidget::event(event);
+    QListView::event(event);
 }
 
 void IconView::mousePressEvent(QMouseEvent *event)

@@ -63,6 +63,7 @@ ENHANCEMENTS
 - Read keywords
 - Write xmp into eligible files ??
 DONE/FIXED
+- Logitech forward/Back mouse buttons
 - Added mouse wheel sensitivity preference
 - Play video
 - Release 1.32

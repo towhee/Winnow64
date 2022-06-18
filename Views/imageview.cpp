@@ -848,7 +848,6 @@ void ImageView::wheelEvent(QWheelEvent *event)
 
 bool ImageView::event(QEvent *event) {
     if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << "ImageView::event" << event;
     if (event->type() == QEvent::NativeGesture) {
         emit togglePick();
         /*
@@ -861,7 +860,7 @@ bool ImageView::event(QEvent *event) {
         }
         //*/
     }
-    QWidget::event(event);
+    QGraphicsView::event(event);
 }
 
 // not used
@@ -869,7 +868,7 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     // placeholder function pending use
-    QWidget::mouseDoubleClickEvent(event);
+    QGraphicsView::mouseDoubleClickEvent(event);
 
 }
 
