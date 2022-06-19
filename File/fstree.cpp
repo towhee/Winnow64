@@ -126,27 +126,33 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
 
 QVariant FSModel::data(const QModelIndex &index, int role) const
 {
-    /* Return image count for each folder by looking it up in the QHash count which is built
+/*
+    Return image count for each folder by looking it up in the QHash count which is built
     in FSTree::getImageCount and referenced here. This is much faster than performing the
-    image count "on-the-fly" here, which causes scroll latency. */
+    image count "on-the-fly" here, which causes scroll latency.
+*/
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
             QString path = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
             if (combineRawJpg) return combineCount.value(path);
             else return count.value(path);
         }
-        if (role == Qt::TextAlignmentRole)
+        if (role == Qt::TextAlignmentRole) {
+            qDebug() << "FSModel::data" << index << "Alignment role";
             return static_cast<QVariant>(Qt::AlignRight | Qt::AlignVCenter);
-        else
+        }
+        else {
             return QVariant();
+        }
     }
     // return tooltip for folder path
     if (index.column() == 0) {
         if (role == Qt::ToolTipRole) {
             return QFileSystemModel::data(index, QFileSystemModel::FilePathRole);
         }
-        else
+        else {
             return QFileSystemModel::data(index, role);
+        }
     }
     // return parent class data
     return QFileSystemModel::data(index, role);
@@ -169,8 +175,9 @@ FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
     createModel();
 
     // setup treeview
-    for (int i = 1; i <= 3; ++i)
+    for (int i = 1; i <= 3; ++i) {
         hideColumn(i);
+    }
 
     setRootIsDecorated(true);
     setSortingEnabled(false);
@@ -206,10 +213,6 @@ void FSTree::createModel()
     fsModel = new FSModel(this, metadata, count, combineCount, combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     fsModel->setRootPath(fsModel->myComputer().toString());
-//    fsModel->setRootPath("");
-
-    // watcher
-//    watch = new QFileSystemWatcher;
 
     // get mounted drives only
     foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
@@ -225,27 +228,6 @@ void FSTree::createModel()
             }
         }
     }
-//    watch->addPaths(mountedDrives);
-
-    /*
-#ifdef Q_OS_LINIX   // not recognized for some reason
-    fsModel->setRootPath("");
-//    fsModel->setRootPath("/home");
-#endif
-
-#ifdef Q_OS_WIN
-    fsModel->setRootPath("");
-//    fsModel->setRootPath(fsModel->myComputer().toString());
-//    for (int i = 0; i < mountedDrives.length(); ++i) {
-//        fsModel->setRootPath(mountedDrives.at(i));
-//    }
-#endif
-
-#ifdef Q_OS_MACOS
-    fsModel->setRootPath("/Volumes");
-    fsModel->setRootPath("/Users");
-#endif
-    //*/
 
     fsFilter = new FSFilter(fsModel);
     fsFilter->setSourceModel(fsModel);
@@ -341,7 +323,6 @@ void FSTree::resizeColumns()
 {
     if (G::isLogger) G::log(__FUNCTION__); 
     if (fsModel->showImageCount) {
-//        imageCountColumnWidth = 45;
         QFont font = this->font();
         font.setPointSize(G::fontSize.toInt());
         QFontMetrics fm(font);

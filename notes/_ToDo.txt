@@ -1,4 +1,6 @@
 BUGS / TO DO
+- folder not readable
+- folder image counts missing
 - Painter not active, state will be reset by begin
 - Embellish not resetting properly
 - No image cached for D:/Pictures/_ThumbTest/2020-01-05_0005-denoise.dng
@@ -57,12 +59,11 @@ ENHANCEMENTS
 - Add glow (inner/outer)
 - Add guassian blur (inner/outer)
 - Copy files between folders using drag'n'drop
-- Rename file(s)
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 - Read keywords
-- Write xmp into eligible files ??
 DONE/FIXED
+- Apple style sliders in preferences
 - Logitech forward/Back mouse buttons
 - Added mouse wheel sensitivity preference
 - Play video

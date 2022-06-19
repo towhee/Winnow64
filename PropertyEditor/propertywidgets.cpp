@@ -87,7 +87,6 @@ Double mode : div != 0
     slider->setMaximum(max);
     slider->setSingleStep(step);
     slider->setPageStep(step * 10);
-//    slider->setStyleSheet("QSlider {background: transparent; border:none;}");
     slider->setStyleSheet(
          "QSlider {"
             "background: transparent;"

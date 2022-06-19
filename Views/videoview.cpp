@@ -177,5 +177,6 @@ bool VideoView::event(QEvent *event) {
         //*/
     }
     QWidget::event(event);
+    return true;
 }
 
