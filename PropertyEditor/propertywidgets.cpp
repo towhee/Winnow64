@@ -87,11 +87,35 @@ Double mode : div != 0
     slider->setMaximum(max);
     slider->setSingleStep(step);
     slider->setPageStep(step * 10);
+//    slider->setStyleSheet("QSlider {background: transparent; border:none;}");
     slider->setStyleSheet(
-         "QSlider {background: transparent;}"
-         "QSlider::groove:horizontal {border:1px solid gray; height:1px;}"
-         "QSlider::handle:horizontal {background:silver; width:6px; margin:-6px 0; height:8px;}"
-         "QSlider::handle:focus, QSlider::handle:hover{background:red;}"
+         "QSlider {"
+            "background: transparent;"
+            "margin-left:2;"
+         "}"
+         "QSlider::sub-page:horizontal {"
+            "background:#1571d3;"   // apple blue
+            "height:3px;"
+         "}"
+         "QSlider::add-page:horizontal {"
+             "background:transparent;"
+             "height:3px;"
+         "}"
+         "QSlider::groove:horizontal {"
+            "background: #646464;"
+            "border:none;"
+            "height:3px;"
+         "}"
+         "QSlider::handle:horizontal {"
+            "background:solid gray;"
+            "width:14px;"
+            "margin:-6px 0;"
+            "height:8px;"
+            "border-radius: 7px;"
+         "}"
+         "QSlider::handle:focus, QSlider::handle:hover{"
+            "background:#1571d3;"
+         "}"
     );
     slider->setWindowFlags(Qt::FramelessWindowHint);
     slider->setAttribute(Qt::WA_TranslucentBackground);
