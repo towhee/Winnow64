@@ -1501,6 +1501,7 @@ bool IconView::event(QEvent *event) {
         }
     }
     QListView::event(event);
+    return true;
 }
 
 void IconView::mousePressEvent(QMouseEvent *event)

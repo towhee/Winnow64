@@ -861,6 +861,7 @@ bool ImageView::event(QEvent *event) {
         //*/
     }
     QGraphicsView::event(event);
+    return true;
 }
 
 // not used
