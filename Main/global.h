@@ -180,6 +180,7 @@ namespace G
     extern QColor scrollBarHandleBackgroundColor;
     extern QColor selectionColor;
     extern QColor mouseOverColor;
+    extern QColor appleBlue;
 
     extern QColor labelNoneColor;
     extern QColor labelRedColor;
