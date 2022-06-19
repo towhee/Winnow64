@@ -536,9 +536,39 @@ void Preferences::addItems()
     i.type = "bool";
 //    addItem(i);
 
+    // Thumbnails Header (Root) ---------------------------------------------------------------
+    i.name = "UserInterfaceHeader";
+    i.parentName = "";
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.decorateGradient = true;
+    i.captionText = "User Interface";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+    // Application background luminousity
+    i.name = "globalBackgroundShade";
+    i.parentName = "UserInterfaceHeader";
+    i.captionText = "Application background luminousity";
+    i.tooltip = "Change the background shade throughout the application.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.defaultValue = 50;
+    i.value = G::backgroundShade;
+    i.key = "globalBackgroundShade";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 10;
+    i.max = 100;
+    i.fixedWidth = 50;
+    addItem(i);
+
     // Mouse wheel sensitivity
     i.name = "wheelSensitivity";
-    i.parentName = "GeneralHeader";
+    i.parentName = "UserInterfaceHeader";
     i.captionText = "Next/prev image scroll sensitivity";
     i.tooltip = "Fine tune the sensitivity of the mouse wheel or trackpad\n"
                 "to trigger the next or previous image in loupe view.";
@@ -554,39 +584,9 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);
 
-    // Thumbnails Header (Root) ---------------------------------------------------------------
-    i.name = "AppearanceHeader";
-    i.parentName = "";
-    i.isHeader = true;
-    i.isDecoration = true;
-    i.decorateGradient = true;
-    i.captionText = "Appearance";
-    i.tooltip = "";
-    i.hasValue = false;
-    i.captionIsEditable = false;
-    i.delegateType = DT_None;
-    addItem(i);
-
-    // Application background luminousity
-    i.name = "globalBackgroundShade";
-    i.parentName = "AppearanceHeader";
-    i.captionText = "Application background luminousity";
-    i.tooltip = "Change the background shade throughout the application.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.defaultValue = 50;
-    i.value = G::backgroundShade;
-    i.key = "globalBackgroundShade";
-    i.delegateType = DT_Slider;
-    i.type = "int";
-    i.min = 10;
-    i.max = 100;
-    i.fixedWidth = 50;
-    addItem(i);
-
     // Font size header
     i.name = "FontSizeHeader";
-    i.parentName = "AppearanceHeader";
+    i.parentName = "UserInterfaceHeader";
     i.captionText = "Font size";
     i.tooltip = "";
     i.hasValue = false;
@@ -632,7 +632,7 @@ void Preferences::addItems()
 
     // General category::Badge size subcategory
     i.name = "BadgeSizeHeader";
-    i.parentName = "AppearanceHeader";
+    i.parentName = "UserInterfaceHeader";
     i.captionText = "Classification badge size";
     i.tooltip = "";
     i.hasValue = false;
@@ -679,7 +679,7 @@ void Preferences::addItems()
 
     // Filmstrip Header
     i.name = "FilmstripHeader";
-    i.parentName = "AppearanceHeader";
+    i.parentName = "UserInterfaceHeader";
     i.captionText = "Film strip";
     i.tooltip = "";
     i.hasValue = false;
@@ -732,7 +732,7 @@ void Preferences::addItems()
 
     // Grid Header
     i.name = "GridHeader";
-    i.parentName = "AppearanceHeader";
+    i.parentName = "UserInterfaceHeader";
     i.captionText = "Grid";
     i.tooltip = "";
     i.hasValue = false;
