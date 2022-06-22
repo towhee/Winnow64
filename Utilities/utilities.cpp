@@ -79,7 +79,7 @@ void Utilities::uniqueFolderPath(QString &path, QString delimiter)
     Usage:  Utilities::uniqueFolder(dPath);
     if dPath = ".../zen2048" exists then dPath changed to ".../zen2048_1"
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     int count = 0;
     bool folderAlreadyExists = true;
     if (path.right(1) != "/") path += "/";
@@ -103,7 +103,7 @@ void Utilities::uniqueFilePath(QString &path, QString delimiter)
     Usage:  Utilities::uniqueFolder(fPath);
     if fPath = ".../zen2048.json" exists then fPath changed to ".../zen2048_1.json"
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     int count = 0;
     bool fileAlreadyExists = true;
     QFileInfo info(path);

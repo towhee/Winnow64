@@ -1,5 +1,5 @@
 BUGS / TO DO
-- folder not readable
+- Open with permissions issue
 - folder image counts missing
 - Painter not active, state will be reset by begin
 - Embellish not resetting properly
@@ -63,6 +63,9 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 - Read keywords
 DONE/FIXED
+- Esc does not stop folderSelectionChange with includeSubfolders
+- Right mouse click starts video
+- Show class::function replacement for __FUNCTION__ on mac: __FUNCTION__
 - Apple style sliders in preferences
 - Logitech forward/Back mouse buttons
 - Added mouse wheel sensitivity preference

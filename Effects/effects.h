@@ -2,7 +2,6 @@
 #define EFFECTS_H
 
 #include <QtWidgets>
-#include "Main/global.h"
 #include "Utilities/utilities.h"
 
 enum Contour {contour_flat,

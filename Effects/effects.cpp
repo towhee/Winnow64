@@ -279,13 +279,10 @@ Utilities::log(__FUNCTION__, "");
 
 void Effects::setOpacity(QImage &img, double opacity)
 {
-#ifdef ISLOGGER
-Utilities::log(__FUNCTION__, "");
-#endif
     // pointer to source image pixels
     quint32 *p = reinterpret_cast<quint32*>(img.scanLine(0));
     int pixels = img.width() * img.height();
-    qDebug() << __FUNCTION__ << pixels;
+    qDebug() << "Effects::setOpacity" << pixels;
 
     for (int i = 0; i < pixels; i++) {
         int opac = (*p >> 24) * opacity;
@@ -939,7 +936,7 @@ void fastblur(BImage img,int radius){
   (0xffu << 24) | ((r & 0xffu) << 16) | ((g & 0xffu) << 8) | (b & 0xffu)
 }
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
 #ifdef ISLOGGER
 Utilities::log(__FUNCTION__, "");
 #endif
@@ -1188,7 +1185,7 @@ void fastblur(BImage img,int radius){
 }
 
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     qDebug() << __FUNCTION__ << QTime::currentTime();
 
     if (radius < 1) return;
@@ -1442,7 +1439,7 @@ void fastblur(BImage img,int radius){
 }
 
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     if (radius < 1) return;
 
     QElapsedTimer t;

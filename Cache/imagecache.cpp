@@ -1027,7 +1027,6 @@ void ImageCache::reportRunStatus()
 void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 {
     // deal with lagging signals when new folder selected suddenly
-//    if (G::stop) return;
 //    if (m.currRootFolder != G::currRootFolder) return;
 
     QMutexLocker locker(&mutex);

@@ -217,13 +217,14 @@ void MW::createMDCache()
     // update icon in datamodel
     connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon);
     // message metadata reading completed
-    connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone/*,
-            Qt::BlockingQueuedConnection*/);
+    connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
     connect(metaRead, &MetaRead::delayedStartImageCache, this, &MW::loadConcurrentStartImageCache);
     // check icons visible is correct
     connect(metaRead, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit/*,
             Qt::BlockingQueuedConnection*/);
+    connect(metaRead, &MetaRead::metaCacheIsRunning,
+            this, &MW::updateMetadataThreadRunStatus);
 
 }
 

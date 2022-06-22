@@ -35,7 +35,7 @@ ImageView::ImageView(QWidget *parent,
 
                      QGraphicsView(centralWidget)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
 
     this->mainWindow = parent;
 //    this->centralWidget = centralWidget;
@@ -260,7 +260,7 @@ bool ImageView::loadImage(QString fPath, QString src)
 
 void ImageView::clear()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     shootingInfo = "";
     infoOverlay->setText("");
     QPixmap nullPm;
@@ -291,7 +291,7 @@ void ImageView::scale()
 
     If isSlideshow then hide mouse cursor unless is moves.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     /* qDebug() << __FUNCTION__
              << "isScrollable =" << isScrollable
              << "isFit =" << isFit
@@ -343,7 +343,7 @@ void ImageView::scale()
 
 bool ImageView::sceneBiggerThanView()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     QPoint pTL = mapFromScene(0, 0);
     QPoint pBR = mapFromScene(scene->width(), scene->height());
     int sceneViewWidth = pBR.x() - pTL.x();
@@ -356,7 +356,7 @@ bool ImageView::sceneBiggerThanView()
 
 qreal ImageView::getFitScaleFactor(QRectF container, QRectF content)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__ << container << content;
     qreal hScale = static_cast<qreal>(container.width() - 2) / content.width() * G::actDevicePixelRatio;
     qreal vScale = static_cast<qreal>(container.height() - 2) / content.height() * G::actDevicePixelRatio;
@@ -365,7 +365,7 @@ qreal ImageView::getFitScaleFactor(QRectF container, QRectF content)
 
 void ImageView::setScrollBars(QPointF scrollPct)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     getScrollBarStatus();
     scrl.hVal = scrl.hMin + scrollPct.x() * (scrl.hMax - scrl.hMin);
     scrl.vVal = scrl.vMin + scrollPct.y() * (scrl.vMax - scrl.vMin);
@@ -375,7 +375,7 @@ void ImageView::setScrollBars(QPointF scrollPct)
 
 void ImageView::getScrollBarStatus()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     scrl.hMin = horizontalScrollBar()->minimum();
     scrl.hMax = horizontalScrollBar()->maximum();
     scrl.hVal = horizontalScrollBar()->value();
@@ -404,7 +404,7 @@ QPointF ImageView::getScrollPct()
    The view center is defined by the scrollbar values. The value is converted to a percentage
    to be used to match position in the next image if zoomed.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     getScrollBarStatus();
     return QPointF(scrl.hPct, scrl.vPct);
 }
@@ -424,7 +424,7 @@ void ImageView::placeClassificationBadge()
     image is resized and zoomed, adjusting for the aspect ratio of the image and
     size.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     QPoint sceneBottomRight = mapFromScene(sceneRect().bottomRight());
 
     int x, y = 0;                       // bottom right coordinates of visible image
@@ -475,7 +475,7 @@ void ImageView::resizeEvent(QResizeEvent *event)
     ● if view larger than image and resize to clip image then engage zoomFit.
     ● move and size pick icon and shooting info as necessary
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     /*
     qDebug() << __FUNCTION__
              << "G::isInitializing =" << G::isInitializing
@@ -502,7 +502,7 @@ void ImageView::thumbClick(float xPct, float yPct)
    main image is panned to the same location as on the thumb. This makes it quick to check
    eyes and other details in many images.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     if (zoom > zoomFit) {
         centerOn(QPointF(xPct * sceneRect().width(), yPct * sceneRect().height()));
     }
@@ -529,13 +529,13 @@ void ImageView::updateToggleZoom(qreal toggleZoomValue)
     Slot for signal from update zoom dialog to set the amount to zoom when user
     clicks on the unzoomed image.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     toggleZoom = toggleZoomValue;
 }
 
 void ImageView::refresh()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     qDebug() << __FUNCTION__;
     setFitZoom();
     scale();
@@ -543,7 +543,7 @@ void ImageView::refresh()
 
 void ImageView::zoomIn()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     zoom *= (1.0 + zoomInc);
     zoom = zoom > zoomMax ? zoomMax: zoom;
     scale();
@@ -551,7 +551,7 @@ void ImageView::zoomIn()
 
 void ImageView::zoomOut()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     zoom *= (1.0 - zoomInc);
     zoom = zoom < zoomMin ? zoomMin : zoom;
     scale();
@@ -559,7 +559,7 @@ void ImageView::zoomOut()
 
 void ImageView::zoomToFit()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     zoom = zoomFit;
     scale();
 }
@@ -570,7 +570,7 @@ void ImageView::zoomTo(qreal zoomTo)
     Called from ZoomDlg when the zoom is changed. From here the message is passed
     on to ImageView::scale(), which in turn makes the proper scale change.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     zoom = zoomTo;
     isFit = false;
     scale();
@@ -578,7 +578,7 @@ void ImageView::zoomTo(qreal zoomTo)
 
 void ImageView::resetFitZoom()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     setSceneRect(scene->itemsBoundingRect());
     /*
     qDebug() << __FUNCTION__
@@ -594,7 +594,7 @@ void ImageView::resetFitZoom()
 
 void ImageView::setFitZoom()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > toggleZoom) zoom = toggleZoom;
 }
@@ -606,7 +606,7 @@ void ImageView::zoomToggle()
     detail).  The other zoom value (toggleZoom) can be assigned in ZoomDlg and
     defaults to 1.0
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     isFit = !isFit;
     isFit ? zoom = zoomFit : zoom = toggleZoom;
     scale();
@@ -694,7 +694,7 @@ void ImageView::sceneGeometry(QPoint &sceneOrigin, QRectF &scene_Rect, QRect &cw
     Return the top left corner of the image showing in the central widget in percent.  This is
     used to determine the zoomCursor aspect in ThumbView.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     sceneOrigin = mapFromScene(0.0, 0.0);
     scene_Rect = sceneRect();
     cwRect = rect();
@@ -721,7 +721,7 @@ void ImageView::setShootingInfo(QString infoString)
 
     window (w) and view (v) sizes are updated during resize
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
 
     int offset = 10;                        // offset pixels from the edge of image
     int x, y = 0;                           // top left coordinates of info symbol
@@ -750,7 +750,7 @@ void ImageView::setShootingInfo(QString infoString)
 
 void ImageView::monitorCursorState()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     static QPoint lastPos;
 
     if (QCursor::pos() != lastPos) {
@@ -776,7 +776,7 @@ void ImageView::setBackgroundColor(QColor bg)
 
 void ImageView::setCursorHiding(bool hide)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     if (hide) {
         mouseMovementTimer->start(500);
     } else {
@@ -815,7 +815,7 @@ void ImageView::scrollContentsBy(int dx, int dy)
 
 void ImageView::wheelEvent(QWheelEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
 
     // wheel scrolling / trackpad swiping = next/previous image
     static int deltaSum = 0;
@@ -867,7 +867,7 @@ bool ImageView::event(QEvent *event) {
 // not used
 void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     // placeholder function pending use
     QGraphicsView::mouseDoubleClickEvent(event);
 
@@ -875,7 +875,7 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 
 void ImageView::mousePressEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
 
     qDebug() << "ImageView::mousePressEvent" << event->button();
 
@@ -975,7 +975,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 
 void ImageView::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     /* rubberband
     if (isRubberBand) {
         setCursor(Qt::ArrowCursor);
@@ -1110,7 +1110,7 @@ void ImageView::exportImage()
 
 void ImageView::copyImage()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     QPixmap pm = pmItem->pixmap();
     if (pm.isNull()) {
         QImage image;
@@ -1136,7 +1136,7 @@ void ImageView::copyImage()
 
 static inline int hslValue(double n1, double n2, double hue)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     double value;
 
     if (hue > 255) {
@@ -1160,7 +1160,7 @@ static inline int hslValue(double n1, double n2, double hue)
 
 void rgbToHsl(int r, int g, int b, unsigned char *hue, unsigned char *sat, unsigned char *light)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     double h, s, l;
     int		min, max;
     int		delta;
@@ -1211,7 +1211,7 @@ void rgbToHsl(int r, int g, int b, unsigned char *hue, unsigned char *sat, unsig
 void hslToRgb(double h, double s, double l,
                     unsigned char *red, unsigned char *green, unsigned char *blue)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     if (s == 0) {
         /* achromatic case */
         *red = l;

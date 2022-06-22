@@ -16,6 +16,8 @@
 #define ICON_MAX	480  // 256 is default
 #define EXISTS if(p.file.exists())
 
+#define CLASSFUNCTION QString::fromUtf8(metaObject()->className()) + "::" + __func__
+
 namespace G
 {
     enum UserRoles {
@@ -248,7 +250,8 @@ namespace G
 
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
     extern QStringList doNotLog;
-    extern void log(QString functionName = "", QString comment = "",
+    extern void log(QString functionName = "",
+                    QString comment = "",
                     bool zeroElapsedTime = false);
     extern void errlog(QString functionName, QString fPath, QString err);
     extern void error(QString functionName, QString fPath, QString err);

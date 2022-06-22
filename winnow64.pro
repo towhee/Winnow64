@@ -46,10 +46,8 @@ QT += multimediawidgets
 QT += concurrent
 QT += network
 
-HEADERS += Cache/cachedata.h \
-    Cache/framedecoder.h \
-    Views/videoview.h \
-    Views/videowidget.h
+HEADERS += Cache/cachedata.h
+HEADERS += Cache/framedecoder.h
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/metaread.h
 HEADERS += Cache/metareader.h
@@ -162,11 +160,12 @@ HEADERS += Views/imageview.h
 HEADERS += Views/infostring.h
 HEADERS += Views/infoview.h
 HEADERS += Views/tableview.h
+HEADERS += Views/videoview.h
+HEADERS += Views/videowidget.h
 
 SOURCES += Cache/cachedata.cpp \
-    Cache/framedecoder.cpp \
-    Views/videoview.cpp \
-    Views/videowidget.cpp
+    Main/status.cpp
+SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/mdcache.cpp
@@ -248,9 +247,11 @@ SOURCES += Lcms2/cmsvirt.c
 SOURCES += Lcms2/cmswtpnt.c
 SOURCES += Lcms2/cmsxform.c
 
+# all part of MW
 SOURCES += Main/main.cpp
 SOURCES += Main/mainwindow.cpp
 SOURCES += Main/diagnostics.cpp
+SOURCES += Main/draganddrop.cpp
 SOURCES += Main/initialize.cpp
 SOURCES += Main/log.cpp
 SOURCES += Main/menusandactions.cpp
@@ -310,6 +311,8 @@ SOURCES += Views/imageview.cpp
 SOURCES += Views/infoview.cpp
 SOURCES += Views/tableview.cpp
 SOURCES += Views/infostring.cpp
+SOURCES += Views/videoview.cpp
+SOURCES += Views/videowidget.cpp
 
 FORMS += Dialogs/aboutdlg.ui
 FORMS += Dialogs/aligndlg.ui

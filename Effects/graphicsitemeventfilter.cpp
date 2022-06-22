@@ -7,7 +7,7 @@ GraphicsItemEventFilter::GraphicsItemEventFilter(/*QObject *parent*/)
 
 bool GraphicsItemEventFilter::sceneEventFilter(QGraphicsItem *watched, QEvent *event)
 {
-    qDebug() << __FUNCTION__ << watched << event;
+    qDebug() << "GraphicsItemEventFilter::sceneEventFilter" << watched << event;
     return QGraphicsItem::sceneEventFilter(watched, event);
 }
 

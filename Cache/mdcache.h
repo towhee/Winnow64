@@ -9,6 +9,7 @@
 #include "Metadata/metadata.h"
 //#include "Cache/imagecache.h"
 #include "Image/thumb.h"
+#include "Main/global.h"
 
 
 class MetadataCache : public QThread
