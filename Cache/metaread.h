@@ -35,6 +35,7 @@ public:
 
 signals:
     void done();
+    void metaCacheIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance);

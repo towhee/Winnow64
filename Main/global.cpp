@@ -47,7 +47,7 @@ namespace G
     QColor scrollBarHandleBackgroundColor = QColor(90,130,100);
     QColor selectionColor = QColor(68,95,118);
     QColor mouseOverColor = QColor(40,54,66);
-    QColor appleBlue = QColor(21, 113,211);
+    QColor appleBlue = QColor(21,113,211);
 
     QString css;                        // app stylesheet;
 

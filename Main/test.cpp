@@ -60,11 +60,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+//    qDebug() << "MW::test"
+//           << this->whatsThis()
+//           << this->objectName()
+//           << __FUNCTION__
+//           << __func__
+//           << Q_FUNC_INFO
+//           << __FUNCTION__
+//              ;
 
 
-
-//    fsTree->selectionModel()->clearSelection();
-//    bookmarks->selectionModel()->clearSelection();
 //    return;
 
 #ifdef Q_OS_WIN

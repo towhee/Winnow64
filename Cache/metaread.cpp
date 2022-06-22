@@ -51,30 +51,33 @@ void MetaRead::read(Action action, int sfRow, QString src)
                               ;
     }
     if (sfRow >= sfRowCount) return;
-    sfStart = sfRow;
 
+    sfStart = sfRow;
     dmInstance = dm->instance;
+    emit metaCacheIsRunning(true, true, "MetaRead::read");
 
     // new folder or file selection change
     buildMetadataPriorityQueue(sfStart);
     int n = static_cast<int>(priorityQueue.size());
     for (int i = 0; i < n; i++) {
         if (abort) {
-            G::track(__FUNCTION__, "Aborting MetaRead.  Row = " + QString::number(i));
-            return;
+//            G::track(__FUNCTION__, "Aborting MetaRead.  Row = " + QString::number(i));
+            break;
         }
         if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, "i =" + QString::number(i));
         readRow(priorityQueue.at(i));
-        if (!G::allMetadataLoaded && !imageCachingStarted && !abort && !G::stop) {
+        if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
             if (i == (n - 1) || i == 50) {
-                G::track(__FUNCTION__, "emit delayedStartImageCache.");
+//                G::track(__FUNCTION__, "emit delayedStartImageCache.");
                 if (!abort) emit delayedStartImageCache();
                 imageCachingStarted = true;
             }
         }
     }
+    emit metaCacheIsRunning(false, true, "MetaRead::read");
+    qDebug() << CLASSFUNCTION << "Ended MetaRead::read";
     if (abort) {
-        G::track(__FUNCTION__, "Aborting MetaRead.  All rows read.");
+//        G::track(__FUNCTION__, "Aborting MetaRead.  All rows read.");
         return;
     }
     if (!abort) emit updateIconBestFit();
@@ -389,12 +392,11 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
         metadata->m.row = dmRow;
         metadata->m.dmInstance = dmInstance;
 //        qDebug() << __FUNCTION__ << "addToDatamodel: start  row =" << sfIdx.row();
-        if (debugCaching) qDebug().noquote() << __FUNCTION__ << "start  addToDatamodel"
-                                             << "G::stop =" << G::stop
-                                             << "abort =" << abort
-                                                ;
+//        if (debugCaching) qDebug().noquote() << __FUNCTION__ << "start  addToDatamodel"
+//                                             << "abort =" << abort
+//                                                ;
         if (!abort) emit addToDatamodel(metadata->m);
-        if (debugCaching) qDebug().noquote() << __FUNCTION__ << "done   addToDatamodel";
+//        if (debugCaching) qDebug().noquote() << __FUNCTION__ << "done   addToDatamodel";
 //        qDebug() << __FUNCTION__ << "addToDatamodel: done   row =" << sfIdx.row();
 //        dm->addMetadataForItem(metadata->m);
     }
@@ -470,7 +472,7 @@ void MetaRead::readRow(int sfRow)
     }
 
     // update the imageCache item data
-    if (!G::stop) emit addToImageCache(metadata->m);
+    if (!abort) emit addToImageCache(metadata->m);
     if (debugCaching) {
         qDebug().noquote() << __FUNCTION__
                            << "done   row =" << sfRow

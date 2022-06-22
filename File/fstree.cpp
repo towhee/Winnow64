@@ -163,7 +163,7 @@ CLASS FSTree subclassing QTreeView
 
 FSTree::FSTree(QWidget *parent, Metadata *metadata) : QTreeView(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     this->metadata = metadata;
     fileFilters = new QStringList;
     dir = new QDir();
@@ -208,7 +208,7 @@ void FSTree::createModel()
     Create the model and filter in a separate function as it is also used to refresh
     the folders by deleting the model and re-creating it.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     fsModel = new FSModel(this, metadata, count, combineCount, combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     fsModel->setRootPath(fsModel->myComputer().toString());
@@ -242,14 +242,14 @@ void FSTree::refreshModel()
     Most common use is to refresh the folder panel after inserting a USB connected
     media card.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     delete fsModel;
     createModel();
 }
 
 bool FSTree::isShowImageCount()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     return fsModel->showImageCount;
 }
 
@@ -280,14 +280,14 @@ void FSTree::scrollToCurrent()
 /*
 
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     QModelIndex idx = getCurrentIndex();
     if (idx.isValid()) scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
 bool FSTree::select(QString dirPath)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
 
     QDir test(dirPath);
     if (test.exists()) {
@@ -309,7 +309,7 @@ bool FSTree::select(QString dirPath)
 
 QModelIndex FSTree::getCurrentIndex()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     QModelIndex idx;
     if (selectedIndexes().size() > 0)
 //        idx = fsFilter->mapFromSource(selectedIndexes().first());
@@ -320,7 +320,7 @@ QModelIndex FSTree::getCurrentIndex()
 
 void FSTree::resizeColumns()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     if (fsModel->showImageCount) {
         QFont font = this->font();
         font.setPointSize(G::fontSize.toInt());
@@ -343,7 +343,7 @@ void FSTree::expand(const QModelIndex &/*idx*/)
     Get the image count when a user expands the folder hierarchy.  This can also occur when a
     bookmark is selected and the matching folder is shown in the FSTree.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
 //    qDebug() << __FUNCTION__ << idx << t.elapsed();
     if (t.elapsed() > 25) {
         QString src = __FUNCTION__;
@@ -416,7 +416,7 @@ void FSTree::getImageCount(QString const dirPath, bool changed, QString src)
 
 void FSTree::resizeEvent(QResizeEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     resizeColumns();
 }
 
@@ -432,7 +432,7 @@ void FSTree::selectionChanged(const QItemSelection &selected, const QItemSelecti
 
 void FSTree::mousePressEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
 
 //    if (!G::okayToChangeFolders) {
 //        G::popUp->showPopup("Busy, try new folder in a sec.", 1000);
@@ -466,7 +466,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
 
 void FSTree::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     QTreeView::mouseReleaseEvent(event);
 }
 
@@ -478,7 +478,7 @@ void FSTree::mouseMoveEvent(QMouseEvent *event)
 
 void FSTree::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
 	QModelIndexList selectedDirs = selectionModel()->selectedRows();
 	if (selectedDirs.size() > 0) {
 		dndOrigSelection = selectedDirs[0];
@@ -493,7 +493,10 @@ void FSTree::dragMoveEvent(QDragMoveEvent *event)
 
 void FSTree::dropEvent(QDropEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+/*
+    - get drop folder and select
+*/
+    if (G::isLogger) G::log(__FUNCTION__);
 	if (event->source())
 	{
         QString fstreeStr = "FSTree";

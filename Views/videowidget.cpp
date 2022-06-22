@@ -75,8 +75,11 @@ VideoWidget::PlayState VideoWidget::playOrPause()
 void VideoWidget::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__ << "mediaPlayer->playbackState()" << mediaPlayer->playbackState();
-    qDebug() << __FUNCTION__ << "mediaPlayer->mediaStatus()" << mediaPlayer->mediaStatus();
+
+    // ignore right click
+    if (event->button() == Qt::RightButton) {
+        return;
+    }
 
     switch (playOrPause()) {
     case PlayState::Playing:

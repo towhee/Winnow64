@@ -10,6 +10,7 @@
 #include <QMediaPlayer>
 #include <QVideoSink>
 #include <QVideoFrame>
+#include "Main/global.h"
 
 class FrameDecoder : public QObject
 {

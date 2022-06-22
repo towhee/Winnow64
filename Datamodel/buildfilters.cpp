@@ -8,7 +8,7 @@ BuildFilters::BuildFilters(QObject *parent,
                            QThread(parent),
                            combineRawJpg(combineRawJpg)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     this->dm = dm;
     this->metadata = metadata;
     this->filters = filters;
@@ -39,7 +39,7 @@ void BuildFilters::stop()
 
 void BuildFilters::build()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -57,7 +57,7 @@ void BuildFilters::build()
 
 void BuildFilters::done()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     if (!abort) emit finishedBuildFilters();
 //    qint64 msec = buildFiltersTimer.elapsed();
 //    qDebug() << __FUNCTION__ << QString("%L1").arg(msec) << "msec";
@@ -72,7 +72,7 @@ void BuildFilters::unfilteredItemSearchCount()
 
     This function is run everytime the search string changes.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__FUNCTION__);
     int col = G::SearchColumn;
 
     // get total matches for searchTrue

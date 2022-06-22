@@ -344,7 +344,6 @@ void DataModel::find(QString text)
 void DataModel::abortLoad()
 {
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << __FUNCTION__;
     abortLoadingModel = true;
 }
 
@@ -352,7 +351,6 @@ bool DataModel::endLoad(bool success)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     loadingModel = false;
-    abortLoadingModel = false;
     return (success);
 }
 
@@ -397,7 +395,6 @@ Steps:
     dir->setFilter(QDir::Files);
     dir->setPath(currentFolderPath);
 
-    abortLoadingModel = false;
     imageCount = 0;
     countInterval = 100;
 
@@ -439,9 +436,8 @@ Steps:
     includeSubfolders = true;
     QDirIterator it(currentFolderPath, QDirIterator::Subdirectories);
     while (it.hasNext()) {
-        if (abortLoadingModel) return endLoad(false);
+        if (abortLoadingModel) break;
         it.next();
-//        qDebug() << __FUNCTION__ << "Scanning" << it.filePath();
         if (it.fileInfo().isDir() && it.fileName() != "." && it.fileName() != "..") {
             folderCount++;
             dir->setPath(it.filePath());
@@ -450,6 +446,7 @@ Steps:
             if (!folderImageCount) continue;
             // add supported images in folder to image list
             for (int i = 0; i < folderImageCount; ++i) {
+                if (abortLoadingModel) break;
                 fileInfoList.append(dir->entryInfoList().at(i));
                 imageCount++;
                 // report file progress within folder
@@ -460,14 +457,13 @@ Steps:
                                 escapeClause;
                     emit centralMsg(s);    // rghmsg
 //                    QCoreApplication::processEvents();
-//                    qApp->processEvents();
                 }
             }
         }
     }
+    if (abortLoadingModel || !imageCount) return endLoad(false);
     // if images were found and added to data model
-    if (imageCount) return endLoad(addFileData());
-    else return endLoad(false);
+    return endLoad(addFileData());
 }
 
 bool DataModel::addFileData()
@@ -507,51 +503,10 @@ bool DataModel::addFileData()
     setColumnCount(G::TotalColumns);
 
     for (int row = 0; row < fileInfoList.count(); ++row) {
-        if (abortLoadingModel) return false;
+        if (abortLoadingModel) return endLoad(false);
         // get file info
         fileInfo = fileInfoList.at(row);
         addFileDataForRow(row, fileInfo);
-        /*
-        // append hash index of datamodel row for fPath for fast lookups
-        QString fPath = fileInfo.filePath();
-        // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
-        fPathRow[fPath] = row;
-
-        // string to hold aggregated text for searching
-        QString search = fPath;
-
-        setData(index(row, G::PathColumn), fPath, G::PathRole);
-        QString tip = QString::number(row) + ": " + fileInfo.absoluteFilePath();
-        setData(index(row, G::PathColumn), tip, Qt::ToolTipRole);
-        setData(index(row, G::PathColumn), QRect(), G::IconRectRole);
-        setData(index(row, G::PathColumn), false, G::CachedRole);
-        setData(index(row, G::PathColumn), false, G::DupHideRawRole);
-        setData(index(row, G::NameColumn), fileInfo.fileName());
-        setData(index(row, G::NameColumn), fileInfo.fileName(), Qt::ToolTipRole);
-        setData(index(row, G::TypeColumn), fileInfo.suffix().toUpper());
-        QString s = fileInfo.suffix().toUpper();
-        setData(index(row, G::TypeColumn), s);
-        setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
-        setData(index(row, G::SizeColumn), fileInfo.size());
-        setData(index(row, G::SizeColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        s = fileInfo.birthTime().toString("yyyy-MM-dd hh:mm:ss");
-        search += s;
-        setData(index(row, G::CreatedColumn), s);
-        s = fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
-        search += s;
-        setData(index(row, G::ModifiedColumn), s);
-        setData(index(row, G::RefineColumn), false);
-        setData(index(row, G::RefineColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        setData(index(row, G::PickColumn), "false");
-        setData(index(row, G::PickColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        setData(index(row, G::IngestedColumn), "false");
-        setData(index(row, G::IngestedColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
-        setData(index(row, G::MetadataLoadedColumn), "false");
-        setData(index(row, G::SearchColumn), "false");
-        setData(index(row, G::SearchColumn), Qt::AlignLeft, Qt::TextAlignmentRole);
-        setData(index(row, G::SearchTextColumn), search);
-        setData(index(row, G::SearchTextColumn), search, Qt::ToolTipRole);
-        //*/
 
         /* Save info for duplicated raw and jpg files, which generally are the result of
         setting raw+jpg in the camera. The datamodel is sorted by file path, except raw files
@@ -601,8 +556,6 @@ bool DataModel::addFileData()
 
     }
     return endLoad(true);
-//    loadingModel = false;
-//    return true;
 }
 
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
@@ -814,18 +767,7 @@ void DataModel::addAllMetadata()
     to run as a separate thread and can be executed directly.
 */
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__);
-    G::t.restart();
-    abortLoadingModel = false;
-//    loadingModel = true;
-    /*
-    QString x = QString::number(rowCount());
-    G::popUp->setProgressVisible(true);
-    G::popUp->setProgressMax(rowCount());
-    QString msg = "It may take a moment to load all the metadata for " + x + " files<p>"
-            "This is required before any filtering or sorting of metadata can be done.<p>"
-            "Press <font color=\"red\"><b>Esc</b></font> to cancel.";
-    G::popUp->showPopup(msg, 0, true, 1);
-    //*/
+//    G::t.restart();
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
         // Load folder progress
@@ -836,6 +778,7 @@ void DataModel::addAllMetadata()
             QCoreApplication::processEvents();
         }
         if (abortLoadingModel) {
+            endLoad(false);
             return;
         }
         // is metadata already cached
@@ -868,8 +811,6 @@ bool DataModel::readMetadataForItem(int row)
 /*
     Reads the image metadata into the datamodel for the row.
 */
-//    QMutexLocker locker(&mutex);
-//    mutex.lock();
     if (G::isLogger) G::log(__FUNCTION__, index(row, 0).data(G::PathRole).toString());
     QString fPath = index(row, 0).data(G::PathRole).toString();
 
@@ -901,7 +842,6 @@ bool DataModel::readMetadataForItem(int row)
             return false;
         }
     }
-//    mutex.unlock();
     return true;
 }
 
@@ -917,40 +857,17 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */    
     if (G::isLogger) G::log(__FUNCTION__);
-//    qDebug() << __FUNCTION__ << "G::stop =" << G::stop;
 
     // deal with lagging signals when new folder selected suddenly
     if (m.dmInstance > 0 && m.dmInstance != instance) {
-//        qWarning() << __FUNCTION__ << "Instance conflict:"
-//                   << "DM instance =" << instance
-//                   << "m.dmInstance =" << m.dmInstance
-//                      ;
         return false;
     }
-    if (G::stop) {
-//        qWarning() << __FUNCTION__ << "G::stop =" << G::stop;
-//        return false;
-    }
-//    if (m.currRootFolder != G::currRootFolder) {
-//        qWarning() << __FUNCTION__ << m.currRootFolder << G::currRootFolder
-//                   << instance << m.dmInstance;
-//        return false;
-//    }
 
-    /*
-    qDebug() << __FUNCTION__
-             << m.row
-             << "rowCount() =" << rowCount()
-             << m.dmInstance
-             << instance
-//             << "m.fPath =" << m.fPath
-//             << "currentFolderPath =" << currentFolderPath
-                ;
-                //*/
     int row = m.row;
     if (rowCount() <= row) return false;
 
     mutex.lock();
+
     if (!metadata->ratings.contains(m.rating)) {
         m.rating = "";
         m._rating = "";
@@ -1114,6 +1031,12 @@ void DataModel::setIconFromFrame(QModelIndex dmIdx, QPixmap &pm,
 
 void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance)
 {
+/*
+    setIcon is a slot that can be signalled from another thread.  If the user is rapidly
+    changing folders it is possible to receive a delayed signal from the previous folder.
+    To prevent this, the datamodel instance is incremented every time a new folder is
+    loaded, and this is checked against the signal instance.
+*/
     if (G::isLogger) G::log(__FUNCTION__);
 //    if (loadingModel) {
 //        qWarning() << __FUNCTION__ << "loadingModel =" << loadingModel;
@@ -1163,7 +1086,7 @@ void DataModel::setIconCaching(int sfRow, bool state)
 
 bool DataModel::iconLoaded(int sfRow)
 {
-    if (G::stop) return false;
+//    if (G::stop) return false;
     if (G::isLogger) G::log(__FUNCTION__);
     QModelIndex dmIdx = sf->mapToSource(sf->index(sfRow, 0));
     return !(itemFromIndex(dmIdx)->icon().isNull());
