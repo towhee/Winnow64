@@ -138,7 +138,8 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
             else return count.value(path);
         }
         if (role == Qt::TextAlignmentRole) {
-            return static_cast<QVariant>(Qt::AlignRight | Qt::AlignVCenter);
+//            return static_cast<QVariant>(Qt::AlignRight | Qt::AlignVCenter);
+            return QVariant::fromValue(Qt::AlignRight | Qt::AlignVCenter);
         }
         else {
             return QVariant();
