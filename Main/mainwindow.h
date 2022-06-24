@@ -14,12 +14,14 @@
 //#include <QtMacExtras>
 #include <CoreServices/CoreServices.h>
 #include "CoreGraphics/CoreGraphics.h"
+////#include "Foundation/Foundation.h"
+////#include "UserPreferenceUtility.h"
+//#import <Foundation/Foundation.h>
+//#include "UserPreferenceUtility.h"
 #endif
 
 #include "Main/global.h"
 #include "Main/widgetcss.h"
-
-//#include "Main/menusandactions.h"
 
 #include "appdlg.h"
 #include "Datamodel/datamodel.h"

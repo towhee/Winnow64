@@ -1,6 +1,9 @@
 #ifndef MAC_H
 #define MAC_H
 
+//#include "Foundation/Foundation.h"
+//#include "Foundation/NSDictionary.h"
+
 #include <sys/types.h>
 #include <sys/sysctl.h>
 
@@ -9,9 +12,10 @@
 #include <mach/mach_init.h>
 #include <mach/mach_host.h>
 
-#include <ApplicationServices/ApplicationServices.h>
+//#include <ApplicationServices/ApplicationServices.h>
 #include <CoreServices/CoreServices.h>
-#include "CoreGraphics/CoreGraphics.h"
+#include <CoreGraphics/CoreGraphics.h>
+
 #include "Main/global.h"                // req'd by availableMemory
 
 class Mac
@@ -19,6 +23,7 @@ class Mac
 public:
     static void availableMemory();
     static QString getDisplayProfileURL();
+    static float getMouseCursorMagnification();
 
 private:
     typedef struct {

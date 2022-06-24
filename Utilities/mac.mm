@@ -1,4 +1,6 @@
 #include "mac.h"
+#import <Foundation/Foundation.h>
+#import <ApplicationServices/ApplicationServices.h>
 
 void Mac::availableMemory()
 {
@@ -79,5 +81,14 @@ QString Mac::getDisplayProfileURL()
     CFRelease(data.url);
 //    qDebug() << __FUNCTION__ << QString::fromCFString(urlstr);
     return QString::fromCFString(urlstr);
+}
+
+float Mac::getMouseCursorMagnification()
+{
+    if (G::isLogger) G::log(__FUNCTION__);
+    NSDictionary *dict = [[NSUserDefaults standardUserDefaults] persistentDomainForName:@"com.apple.universalaccess"];
+//    float cur_scale = dict[@"mouseDriverCursorSize"]; // returns 1.0 to 4.0
+    float cur_scale = [dict[@"mouseDriverCursorSize"] floatValue]; // returns 1.0 to 4.0
+    return cur_scale;
 }
 

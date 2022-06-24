@@ -445,6 +445,7 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->drawPath(iconPath);
     }
 
+    // rating badge (color filled circle with rating number in center)
     if (isRatingBadgeVisible) {
         QColor labelColorToUse;
         QColor textColor(Qt::white);

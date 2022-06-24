@@ -295,8 +295,9 @@ SOURCES += Utilities/dropshadowlabel.cpp
 SOURCES += Utilities/foldercompressor.cpp
 SOURCES += Utilities/htmlwindow.cpp
 SOURCES += Utilities/icc.cpp
-mac:SOURCES += Utilities/mac.cpp
-SOURCES += Utilities/inputdlg.cpp
+mac:SOURCES +=
+SOURCES += Utilities/inputdlg.cpp \
+    Utilities/mac.mm
 SOURCES += Utilities/performance.cpp
 SOURCES += Utilities/popup.cpp
 SOURCES += Utilities/progressbar.cpp
@@ -384,7 +385,7 @@ DISTFILES += notes/xmp.txt
 macx:LIBS += -framework ApplicationServices
 macx:LIBS += -framework AppKit
 #macx:LIBS += -framework ColorSync
-#macx:LIBS += -framework Foundation
+macx:LIBS += -framework CoreFoundation
 
 # lcms
 #macx: LIBS += -L$$PWD/Lib/lcms2/release/ -llcms2

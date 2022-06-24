@@ -1473,7 +1473,10 @@ void IconView::wheelEvent(QWheelEvent *event)
     QListView::wheelEvent(event);
 }
 
-bool IconView::event(QEvent *event) {
+bool IconView::event(QEvent *event) {   
+/*
+    Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
+*/
     if (G::isLogger) G::log(__FUNCTION__);
     if (event->type() == QEvent::NativeGesture) {
         qDebug() << "IconView::event" << event;
@@ -1580,8 +1583,6 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(__FUNCTION__);
     if (isLeftMouseBtnPressed) isMouseDrag = true;
-//    mousePosition = event->pos();
-//    qDebug() << "IconView::mouseMoveEvent" << mousePosition;
     QListView::mouseMoveEvent(event);
 }
 
@@ -1622,18 +1623,22 @@ center.
 void IconView::zoomCursor(const QModelIndex &idx, bool forceUpdate, QPoint mousePos)
 {
 /*
-Turns the cursor into a frame showing the cropped ImageView zoom window in the thumbnail. This
-is handy for the user to see where a click on thumbnail to instantly pan to in same spot in
-the imageView zoomed window.
+    Turns the cursor into a frame showing the cropped ImageView zoom window in the
+    thumbnail. This is handy for the user to see where a click on thumbnail to instantly
+    pan to in same spot in the imageView zoomed window.
 
-This is predicated on the zoom > zoomFit and the mouse position pointing to a valid thumbnail.
-This function is called from MW::eventFilter when there is mouse movement in the thumbView
-viewport. It is also called from MW::thumbHasScrolled as the mouse pointer might be on a
-different thumbnail after the thumbnails scroll.  Finally it is called when there is a window
-resize MW::resizeEvent that will change the centralWidget geometry.
+    This is predicated on the zoom > zoomFit and the mouse position pointing to a valid
+    thumbnail. This function is called from MW::eventFilter when there is mouse movement
+    in the thumbView viewport. It is also called from MW::thumbHasScrolled as the mouse
+    pointer might be on a different thumbnail after the thumbnails scroll. Finally it is
+    called when there is a window resize MW::resizeEvent that will change the
+    centralWidget geometry.
 */
 //    if (G::isLogger) G::log(__FUNCTION__);
     if (G::isEmbellish) return;
+    bool isVideo = dm->index(m2->currentRow, G::VideoColumn).data().toBool();
+    if (isVideo) return;
+
     if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
         setCursor(Qt::ArrowCursor);
         prevIdx = model()->index(-1, -1);
@@ -1708,7 +1713,7 @@ resize MW::resizeEvent that will change the centralWidget geometry.
             iconW = static_cast<int>(iconH * imA);
         }
 
-        // determine cursor frame dimensions : w, h
+        // determine cursor frame dimensions: w, h
         if (hScale < vScale) {
             w = static_cast<int>(iconW * scale);
             h = static_cast<int>(w / ivA);
@@ -1760,11 +1765,22 @@ resize MW::resizeEvent that will change the centralWidget geometry.
     }
 
     // draw the new cursor as a frame
+
+    // check if mac Accessibility has scaled pointer size
+    float scale = 1.0;
+    #ifdef Q_OS_MAC
+    scale = Mac::getMouseCursorMagnification();
+    qDebug() << __FUNCTION__ << scale;
+    #endif
+    w /= scale;
+    h /= scale;
+
     // make room for border
     int pw = 1;                                     // pen width
     w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
     h += (pw * 8);
     cursorRect = QRect(0, 0, w, h);
+    qDebug() << __FUNCTION__ << cursorRect << G::actDevicePixelRatio << G::sysDevicePixelRatio;
     auto frame = QImage(w, h, QImage::Format_ARGB32);
     int opacity = 0;                                // Set this between 0 and 255
     frame.fill(QColor(0,0,0,opacity));

@@ -24,7 +24,7 @@ public:
                 ImageCacheData *icd,
                 EmbelProperties *embelProperties,
                 QWidget *parent = nullptr);
-    ~EmbelExport();
+    ~EmbelExport() override;
 
     void exportImages(const QStringList &srcList, bool isRemote = false);
     QString exportRemoteFiles(QString templateName, QStringList &pathList);

@@ -60,6 +60,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+
+
+
+    qDebug() << __FUNCTION__ << Mac::getMouseCursorMagnification();
+    return;
+
 //    qDebug() << "MW::test"
 //           << this->whatsThis()
 //           << this->objectName()
