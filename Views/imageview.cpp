@@ -691,8 +691,8 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 void ImageView::sceneGeometry(QPoint &sceneOrigin, QRectF &scene_Rect, QRect &cwRect)
 {
 /*
-    Return the top left corner of the image showing in the central widget in percent.  This is
-    used to determine the zoomCursor aspect in ThumbView.
+    Return the top left corner of the image showing in the central widget in percent.
+    This is used to determine the zoomCursor aspect in ThumbView.
 */
     if (G::isLogger) G::log(__FUNCTION__);
     sceneOrigin = mapFromScene(0.0, 0.0);

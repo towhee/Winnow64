@@ -233,7 +233,6 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
 
     ExifTool et;
     et.setOverWrite(true);
-//    QStringList dstList;
     for (int i = 0; i < count; i++) {
         G::popUp->setProgress(i+1);
         qApp->processEvents();

@@ -5,16 +5,15 @@ For windows PuTTY Key generator and winscp.exe for file transfers.
 
 NORMAL DEPLOYMENT
 
-	For all platforms do this first
-	---------------------------------------------------------------------
-	- Update version in mainwindow.h
-	- global.cpp: isLogger and isFlowLogger = false
-	- compile release mode
-
 	For Mac:
 	---------------------------------------------------------------------
 	Using an installer: (as of 2021-01-01)
-	- Update ExifTool (see above).
+        - Make sure release build qmake details x86 and arm are both checked (Universal build)
+        - Update version in mainwindow.h
+        - global.cpp: isLogger and isFlowLogger = false
+        - compile release mode
+        - Update ExifTool.  Make sure a copy of /Users/roryhill/Projects/ExifTool is in
+          Winnow.app/Contents/MacOS.
 	- Duplicate current on http://165.227.46.158/winnow_mac as version number
         - Compile Winnow in /Users/roryhill/Projects/Winnow64 as a universal binary
 	- Update version and test/current in /Users/roryhill/Projects/WinnowInstall/Config/config.xml
@@ -25,17 +24,20 @@ NORMAL DEPLOYMENT
 
 	For Win: 
 	---------------------------------------------------------------------
-	-  Update winnow.exe by compiling in release mode without shadow build
-        -  Duplicate (DO NOT USE local temp copy) in winSCP the prior version in current to an archive
-           folder (change target remote path).  DO NOT DELETE repository in current folder.
-        -  Update and save the version and folder paths and test/current in
-           D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
-	-  Update and save the version and release date in
-	   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.bin\meta\package.xml
-	-  If changes other than binary, update and save the releaseDate in
-	   D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
-	-  Run the test batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallationtest.bat
-	   to test installation works (download at http://winnow.ca/winnow_win/test/winnowinstalleronline.exe) or in
+        - Update version in mainwindow.h
+        - global.cpp: isLogger and isFlowLogger = false
+        - Compile release mode
+        - Update winnow.exe by compiling in release mode without shadow build
+        - Duplicate (DO NOT USE local temp copy) in winSCP the prior version in current to an archive
+          folder (change target remote path).  DO NOT DELETE repository in current folder.
+        - Update and save the version and folder paths and test/current in
+          D:\My Projects\Winnow Project\WinnowInstall\Config\config.xml
+        - Update and save the version and release date in
+          D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.bin\meta\package.xml
+        - If changes other than binary, update and save the releaseDate in
+          D:\My Projects\Winnow Project\WinnowInstallOnline\packages\com.rh.prod\meta\package.xml
+        - Run the test batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallationtest.bat
+          to test installation works (download at http://winnow.ca/winnow_win/test/winnowinstalleronline.exe) or in
 		- changes drive to D:
 		- changes dir to D:\My Projects\Winnow Project\WinnowInstallOnline
 		- copies winnow.exe from release to package
@@ -43,9 +45,9 @@ NORMAL DEPLOYMENT
 		- creates a new binary installer winnowinstalleronline.exe
 		- runs WinSCP script (installscript.txt) to copy repository and winnowinstalleronline.exe
 		  to http://165.227.46.158/winnow_win/current
-	-  If installation works then either run onlineinstallation.bat (next item) or use WinSCP to duplicate
-	   in folder /var/www/html/winnow_win/  test to current and 1.xx where 1.xx = current version for history.
-	-  Run the batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallation.bat
+        - If installation works then either run onlineinstallation.bat (next item) or use WinSCP to duplicate
+          in folder /var/www/html/winnow_win/  test to current and 1.xx where 1.xx = current version for history.
+        - Run the batch file: D:\My Projects\Winnow Project\WinnowInstallOnline\Batch\onlineinstallation.bat
 		- changes drive to D:
 		- changes dir to D:\My Projects\Winnow Project\WinnowInstallOnline
 		- copies winnow.exe from release to package
@@ -56,9 +58,9 @@ NORMAL DEPLOYMENT
 	- Open C:\Program Files\Winnow\Winnow.exe and perform update if auto update is enabled or perform
 	  "Help > Check for updates" to confirm that the update works.
 	  Or run C:\Program Files\Winnow\maintenancetool.exe to update Winnow on local machine.
-	-  Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
-	-  Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
-	   download url for the archived version.
+        - Edit in winSCP winnow.html download version and url which updates at http://165.227.46.158/winnow/winnow.html
+        - Edit in winSCP versions.html which updates at http://165.227.46.158/winnow/versions.html.  Do not forget to add the
+          download url for the archived version.
 
 Qt VERSION CHANGE
 
