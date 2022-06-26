@@ -1,7 +1,6 @@
 BUGS / TO DO
 -
 - Open with permissions issue
-- folder image counts missing
 - Painter not active, state will be reset by begin
 - Embellish not resetting properly
 - No image cached for D:/Pictures/_ThumbTest/2020-01-05_0005-denoise.dng
@@ -64,6 +63,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 - Read keywords
 DONE/FIXED
+- folder image counts missing
 - Account for Mac Accessibility cursor scaling in IconView::zoomCursor
 - Esc does not stop folderSelectionChange with includeSubfolders
 - Right mouse click starts video

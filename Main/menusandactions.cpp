@@ -180,12 +180,6 @@ void MW::createActions()
     addAction(showImageCountAction);
     connect(showImageCountAction, &QAction::triggered, this, &MW::setShowImageCount);
 
-    updateImageCountAction = new QAction(tr("Update image counts"), this);
-    updateImageCountAction->setObjectName("updateImageCount");
-    updateImageCountAction->setShortcutVisibleInContextMenu(true);
-    addAction(updateImageCountAction);
-    connect(updateImageCountAction, &QAction::triggered, fsTree, &FSTree::updateVisibleImageCount);
-
     addBookmarkAction = new QAction(tr("Add Bookmark"), this);
     addBookmarkAction->setObjectName("addBookmark");
     addBookmarkAction->setShortcutVisibleInContextMenu(true);
@@ -1743,7 +1737,7 @@ void MW::createMenus()
     fsTreeActions = new QList<QAction *>;
 //    QList<QAction *> *fsTreeActions = new QList<QAction *>;
     fsTreeActions->append(refreshFoldersAction);
-    fsTreeActions->append(updateImageCountAction);
+//    fsTreeActions->append(updateImageCountAction);
     fsTreeActions->append(collapseFoldersAction);
     fsTreeActions->append(ejectActionFromContextMenu);
     fsTreeActions->append(separatorAction);

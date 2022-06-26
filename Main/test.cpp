@@ -60,31 +60,6 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    fsTree->refreshModel();
-    return;
-
-    fsTree->fsModel->setRootPath(fsTree->fsModel->myComputer().toString());
-    return;
-
-    qDebug() << __FUNCTION__ << fsTree->isVisibleMissingCount();
-    if (fsTree->isVisibleMissingCount()) fsTree->getVisibleImageCount("test");
-    return;
-
-
-
-
-
-
-
-    //    qDebug() << "MW::test"
-//           << this->whatsThis()
-//           << this->objectName()
-//           << __FUNCTION__
-//           << __func__
-//           << Q_FUNC_INFO
-//           << __FUNCTION__
-//              ;
-
 
 //    return;
 
