@@ -150,6 +150,8 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
             QString dPath = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
+//            qDebug() << "FSModel::data" << combineCount.value(dPath) << dPath;
+
             dir->setPath(dPath);
             int n = 0;
             QString nStr = "0";
@@ -181,6 +183,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
             return nStr;
         }
         if (role == Qt::TextAlignmentRole) {
+//            return static_cast<QVariant>(Qt::AlignRight | Qt::AlignVCenter);
             return QVariant::fromValue(Qt::AlignRight | Qt::AlignVCenter);
         }
         else {
@@ -405,7 +408,7 @@ bool FSTree::isVisibleMissingCount()
 //        }
 //        idx = indexBelow(idx);
 //    }
-    return false;
+//    return false;
 }
 
 void FSTree::updateFolderImageCount(QString dirPath)
