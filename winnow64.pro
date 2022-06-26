@@ -163,8 +163,7 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    Main/status.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
@@ -260,6 +259,7 @@ SOURCES += Main/selection.cpp
 SOURCES += Main/setandupdate.cpp
 SOURCES += Main/slideshow.cpp
 SOURCES += Main/sortandfilter.cpp
+SOURCES += Main/status.cpp
 SOURCES += Main/test.cpp
 SOURCES += Main/viewmodes.cpp
 SOURCES += Main/workspaces.cpp
