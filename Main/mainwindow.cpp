@@ -527,10 +527,6 @@ void MW::showEvent(QShowEvent *event)
     // check for updates
     if(checkIfUpdate && !isStartupArgs) QTimer::singleShot(100, this, SLOT(checkForUpdate()));
 
-    // show image count in folder panel
-    QString src = __FUNCTION__;
-    QTimer::singleShot(50, [this, src]() {fsTree->getVisibleImageCount(src);});
-
     // get the monitor screen for testing against movement to an new screen in setDisplayResolution()
     QPoint loc = centralWidget->window()->geometry().center();
     prevScreenName = qApp->screenAt(loc)->name();
@@ -1258,9 +1254,11 @@ void MW::handleStartupArgs(const QString &args)
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
         info.setFile(fPath);
         QString fDir = info.dir().absolutePath();
-        fsTree->getFolderImageCount(fDir, true, __FUNCTION__);
+//        fsTree->getFolderImageCount(fDir, true, __FUNCTION__);
         // go there ...
         fsTree->select(fDir);
+        // refresh FSTree counts
+        fsTree->refreshModel();
         folderAndFileSelectionChange(fPath);
     }
     else {
@@ -1419,7 +1417,7 @@ void MW::folderSelectionChange()
 //    dm->loadingModel = false;
 
     // update FSTree count column for folder in case it has changed
-    fsTree->updateFolderImageCount(currentViewDirPath);
+//    fsTree->updateFolderImageCount(currentViewDirPath);
 
     // reset sort if necessary (DataModel loads sorted by name in ascending order)
     if (sortColumn != G::NameColumn || sortReverseAction->isChecked()) {
@@ -4671,7 +4669,6 @@ void MW::refreshFolders()
     bool showImageCount = fsTree->isShowImageCount();
     fsTree->refreshModel();
     fsTree->setShowImageCount(showImageCount);
-    fsTree->updateVisibleImageCount();
 
     // make folder panel visible and set focus
     folderDock->raise();
@@ -4742,7 +4739,6 @@ void MW::exportEmbelFromAction(QAction *embelExportAction)
     embelExport.exportImages(picks, isRemote);
     embelProperties->doNotEmbellish();
     G::isProcessingExportedImages = false;
-    fsTree->updateVisibleImageCount();
     bookmarks->count();
 }
 
@@ -5379,7 +5375,7 @@ void MW::deleteFiles()
     }
 
     // refresh image count in folders and bookmarks
-    fsTree->updateFolderImageCount(currentViewDirPath);
+//    fsTree->updateFolderImageCount(currentViewDirPath);
     bookmarks->count();
 
     // if all images in folder were deleted
