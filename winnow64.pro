@@ -295,9 +295,8 @@ SOURCES += Utilities/dropshadowlabel.cpp
 SOURCES += Utilities/foldercompressor.cpp
 SOURCES += Utilities/htmlwindow.cpp
 SOURCES += Utilities/icc.cpp
-macx:SOURCES +=
-SOURCES += Utilities/inputdlg.cpp \
-    Utilities/mac.mm
+SOURCES += Utilities/inputdlg.cpp
+macx:SOURCES += Utilities/mac.mm
 SOURCES += Utilities/performance.cpp
 SOURCES += Utilities/popup.cpp
 SOURCES += Utilities/progressbar.cpp
