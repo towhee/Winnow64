@@ -207,7 +207,7 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
         mutex.unlock();
         wait();
     }
-    qDebug() << "MetadataCache::fileSelectionChange";
+//    qDebug() << "MetadataCache::fileSelectionChange";
     abort = false;
     action = Action::NewFileSelected;
     setRange();
@@ -602,7 +602,7 @@ void MetadataCache::run()
     QString msg = "action = " + actionList.at(action) +
                   " foundItemsToLoad = " + QVariant(foundItemsToLoad).toString();
     if (G::isLogger || G::isFlowLogger) G::log(__FUNCTION__, msg);
-    qDebug() << "METADATACACHE::RUN" << actionList.at(action) << "foundItemsToLoad =" << foundItemsToLoad;
+//    qDebug() << CLASSFUNCTION << actionList.at(action) << "foundItemsToLoad =" << foundItemsToLoad;
 
     if (foundItemsToLoad) {
         emit updateIsRunning(true, true, __FUNCTION__);

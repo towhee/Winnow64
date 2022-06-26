@@ -60,13 +60,23 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-
-
-
-    qDebug() << __FUNCTION__ << Mac::getMouseCursorMagnification();
+    fsTree->refreshModel();
     return;
 
-//    qDebug() << "MW::test"
+    fsTree->fsModel->setRootPath(fsTree->fsModel->myComputer().toString());
+    return;
+
+    qDebug() << __FUNCTION__ << fsTree->isVisibleMissingCount();
+    if (fsTree->isVisibleMissingCount()) fsTree->getVisibleImageCount("test");
+    return;
+
+
+
+
+
+
+
+    //    qDebug() << "MW::test"
 //           << this->whatsThis()
 //           << this->objectName()
 //           << __FUNCTION__
