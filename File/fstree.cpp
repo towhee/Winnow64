@@ -408,7 +408,7 @@ bool FSTree::isVisibleMissingCount()
 //        }
 //        idx = indexBelow(idx);
 //    }
-//    return false;
+    return false;
 }
 
 void FSTree::updateFolderImageCount(QString dirPath)
