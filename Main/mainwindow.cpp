@@ -1258,7 +1258,7 @@ void MW::handleStartupArgs(const QString &args)
         QString fPath = embelExport.exportRemoteFiles(templateName, pathList);
         info.setFile(fPath);
         QString fDir = info.dir().absolutePath();
-        fsTree->getImageCount(fDir, true, __FUNCTION__);
+        fsTree->getFolderImageCount(fDir, true, __FUNCTION__);
         // go there ...
         fsTree->select(fDir);
         folderAndFileSelectionChange(fPath);

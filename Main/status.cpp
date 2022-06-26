@@ -238,7 +238,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QStr
 {
 //    return;  //rghmacdelay
     if (G::isLogger) G::log(__FUNCTION__);
-    qDebug() << CLASSFUNCTION << isRunning;
+//    qDebug() << CLASSFUNCTION << isRunning;
     if (isRunning) {
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
         #ifdef Q_OS_WIN

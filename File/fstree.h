@@ -1,6 +1,7 @@
 
 
 #include <QtWidgets>
+#include <QHash>
 #include "Main/global.h"
 #include "Metadata/metadata.h"
 
@@ -22,17 +23,21 @@ protected:
 
 class FSModel : public QFileSystemModel
 {
+//    Q_OBJECT
 public:
-    FSModel(QWidget *parent, Metadata *metadata, QHash<QString, QString> &count,
-            QHash<QString, QString> &combineCount, bool &combineRawJpg);
+    FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg);
+//    FSModel(QWidget *parent, Metadata &metadata, QHash<QString, QString> &count,
+//                    QHash<QString, QString> &combineCount, bool &combineRawJpg);
 	bool hasChildren(const QModelIndex &parent) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QVariant data(const QModelIndex &index, int role) const;
     bool showImageCount;
     bool &combineRawJpg;
-    QHash <QString, QString> &count;
-    QHash <QString, QString> &combineCount;
+    bool forceRefresh = false;
+//    QHash <QString, QString> &count;
+//    QHash <QString, QString> &combineCount;
+    Metadata &metadata;
 
 protected:
 //    bool event(QEvent *event) override;       // debugging
@@ -40,6 +45,10 @@ protected:
 private:
     QDir *dir;
     int imageCountColumn = 4;
+    void insertCount(QString dPath, QString value);
+    void insertCombineCount(QString dPath, QString value);
+    mutable QHash <QString, QString> count;
+    mutable QHash <QString, QString> combineCount;
 };
 
 class FSTree : public QTreeView
@@ -52,6 +61,7 @@ public:
     void refreshModel();
     void setShowImageCount(bool showImageCount);
     bool isShowImageCount();
+    bool isVisibleMissingCount();
     void updateFolderImageCount(QString dirPath);
     void updateVisibleImageCount();
 
@@ -69,14 +79,14 @@ public:
 //    bool newData;
     bool combineRawJpg;
     QString rightMouseClickPath;
-    QHash <QString, QString> count;
-    QHash <QString, QString> combineCount;
+//    QHash <QString, QString> count;
+//    QHash <QString, QString> combineCount;
 
 public slots:
     void resizeColumns();
     void expand(const QModelIndex &);
     void getVisibleImageCount(QString src);
-    void getImageCount(const QString dirPath, bool changed = false, QString src = "");
+    void getFolderImageCount(const QString dirPath, bool changed = false, QString src = "");
 
 private slots:
 
@@ -93,7 +103,6 @@ protected:
 //    void focusInEvent(QFocusEvent *event);
 
 signals:
-    void updateFileCount(QString msg);
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void selectionChange();
     void abortLoadDataModel();

@@ -659,9 +659,6 @@ void MW::createFSTree()
     // watch for drive removal (not working)
 //    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
 
-    // counting eligible image files in folders
-    connect(fsTree, &FSTree::updateFileCount, this, &MW::setCentralMessage);
-
     // selection change check if triggered by ejecting USB drive
     connect(fsTree, &FSTree::selectionChange, this, &MW::watchCurrentFolder);
 
