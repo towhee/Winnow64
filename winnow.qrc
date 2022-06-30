@@ -170,5 +170,7 @@
         <file>images/icon16/norainbow1.png</file>
         <file>images/checkbox_unchecked_blue.png</file>
         <file>images/checkbox_checked_blue.png</file>
+        <file>images/icon16/media_pause.png</file>
+        <file>images/icon16/media_play.png</file>
     </qresource>
 </RCC>

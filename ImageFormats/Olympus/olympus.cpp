@@ -204,7 +204,7 @@ bool Olympus::parse(MetadataParameters &p,
                     Exif *exif,
                     Jpeg *jpeg)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     //file.open in Metadata::readMetadata
     // first two bytes is the endian order (skip next 2 bytes)
     quint16 order = Utilities::get16(p.file.read(4));
@@ -349,7 +349,7 @@ bool Olympus::parse(MetadataParameters &p,
                 m.offsetFull = ifd->ifdDataHash.value(257).tagValue + makerOffset;
                 m.lengthFull = ifd->ifdDataHash.value(258).tagValue;
                 p.offset = m.offsetFull;
-                qDebug() << __FUNCTION__ << "p.offset =" << p.offset;
+                qDebug() << __PRETTY_FUNCTION__ << "p.offset =" << p.offset;
                 jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
 //                jpeg->getDimensions(p, m);
             }

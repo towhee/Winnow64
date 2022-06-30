@@ -2,7 +2,7 @@
 
 VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     mediaPlayer = new QMediaPlayer(this);
     audioOutput = new QAudioOutput(this);
     mediaPlayer->setAudioOutput(audioOutput);
@@ -11,31 +11,31 @@ VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
 
 void VideoWidget::load(QString fPath)
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     mediaPlayer->setSource(fPath);
 }
 
 void VideoWidget::play()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     mediaPlayer->play();
 }
 
 void VideoWidget::pause()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     mediaPlayer->pause();
 }
 
 void VideoWidget::stop()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     mediaPlayer->stop();
 }
 
 int VideoWidget::duration()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     return static_cast<int>(mediaPlayer->duration());
 }
 
@@ -55,7 +55,7 @@ void VideoWidget::setPosition(int ms)
 
 VideoWidget::PlayState VideoWidget::playOrPause()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     if (mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::LoadedMedia ||
         mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferingMedia ||
         mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferedMedia ||
@@ -74,21 +74,12 @@ VideoWidget::PlayState VideoWidget::playOrPause()
 
 void VideoWidget::mousePressEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
 
     // ignore right click
     if (event->button() == Qt::RightButton) {
         return;
     }
 
-    switch (playOrPause()) {
-    case PlayState::Playing:
-        mediaPlayer->pause();
-        break;
-    case PlayState::Paused:
-        mediaPlayer->play();
-        break;
-    case PlayState::Unavailable:
-        break;
-    }
+    togglePlayOrPause();
 }

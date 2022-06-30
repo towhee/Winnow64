@@ -380,7 +380,7 @@ void TokenDlg::on_okBtn_clicked()
     using the old keys which are retained in templatesCB in the toolTipRole. Then swap
     templatesMap with newTemplatesMap.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QMap<QString, QString> newTemplatesMap;
     for (int i = 0; i < ui->templatesCB->count(); i++) {
         QString key = ui->templatesCB->itemText(i);
@@ -440,7 +440,7 @@ void TokenDlg::on_newBtn_clicked()
     }
     delete nameDlg;
 
-    qDebug() << __FUNCTION__ << newTemplate << existing;
+    qDebug() << __PRETTY_FUNCTION__ << newTemplate << existing;
 //    if (newTemplate)
 
     ui->templatesCB->addItem(newTemplate);

@@ -275,14 +275,14 @@ int IconViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
 
 void IconViewDelegate::setCurrentIndex(QModelIndex current)
 {
-    qDebug() << __FUNCTION__ << current << current.row();
+    qDebug() << __PRETTY_FUNCTION__ << current << current.row();
     currentRow = current.row();     // this slot not being used
     qDebug() << "IconViewDelegate::onCurrentChanged" << currentRow;
 }
 
 void IconViewDelegate::setCurrentRow(int row)
 {
-    qDebug() << __FUNCTION__ << row ;
+    qDebug() << __PRETTY_FUNCTION__ << row ;
     currentRow = row;
 }
 
@@ -297,8 +297,8 @@ QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
 }
 
 void IconViewDelegate::paint(QPainter *painter,
-                              const QStyleOptionViewItem &option,
-                              const QModelIndex &index) const
+                             const QStyleOptionViewItem &option,
+                             const QModelIndex &index) const
 {
 /*  The delegate cell size is defined in setThumbDimensions and assigned in sizeHint.
     The thumbSize cell contains a number of cells or rectangles:
@@ -313,8 +313,12 @@ void IconViewDelegate::paint(QPainter *painter,
     painter->save();
     /*
     qDebug() << "IconViewDelegate::paint  "
-             << "option =" << option.rect
-             << "row =" << index.row();  */
+             << "row =" << index.row()
+             << painter
+             << "option.state =" << option.state
+             << "option.type =" << option.type
+                ;
+            //*/
 
     // make default border relative to background
     int l40 = G::backgroundShade + 40;
@@ -328,6 +332,7 @@ void IconViewDelegate::paint(QPainter *painter,
     QString colorClass = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
+    QString duration = index.model()->index(row, G::DurationColumn).data(Qt::DisplayRole).toString();
     bool isSelected = option.state.testFlag(QStyle::State_Selected);
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
@@ -412,7 +417,7 @@ void IconViewDelegate::paint(QPainter *painter,
     painter->setPen(border);
     painter->drawRoundedRect(frameRect, 8, 8);
     /*
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << "row =" << row
              << "currentRow =" << currentRow
              << "selected item =" << option.state.testFlag(QStyle::State_Selected);
@@ -474,18 +479,17 @@ void IconViewDelegate::paint(QPainter *painter,
         }
     }
 
-    // show video text if video file
     if (isVideo) {
         QFont videoFont = painter->font();
         videoFont.setPixelSize(12);
         painter->setFont(videoFont);
         QRectF bRect;
         painter->setPen(G::backgroundColor);
-        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, "Video", &bRect);
+        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, "03:45:00", &bRect);
         painter->setBrush(G::backgroundColor);
         painter->drawRect(bRect);
         painter->setPen(videoTextcolor);
-        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, "Video");
+        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
     }
 
     // draw the cache circle

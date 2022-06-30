@@ -81,6 +81,7 @@ itemChange, which is subclassed here.
     if (source == "thumbViewShowLabel") {
         mw->thumbView->showIconLabels = v.toBool();
         mw->thumbView->setThumbParameters();
+        mw->updateIconBestFit();
     }
 
     if (source == "showZoomFrame") {
@@ -175,7 +176,7 @@ itemChange, which is subclassed here.
     }
 
     if (source == "cacheSizeMB") {
-        qDebug() << __FUNCTION__ << v << source;
+        qDebug() << __PRETTY_FUNCTION__ << v << source;
         mw->cacheMaxMB = v.toInt();
         mw->setImageCacheParameters();
     }
@@ -191,7 +192,7 @@ itemChange, which is subclassed here.
     }
 
     if (source == "slideShowDelay") {
-        qDebug() << __FUNCTION__ << v << source;
+        qDebug() << __PRETTY_FUNCTION__ << v << source;
         mw->slideShowDelay = v.toInt();
     }
 
@@ -275,7 +276,7 @@ itemChange, which is subclassed here.
     }
 
     if (source == "infoOverlayFontSize") {
-        qDebug() << __FUNCTION__ << v;
+        qDebug() << __PRETTY_FUNCTION__ << v;
         mw->imageView->infoOverlayFontSize = v.toInt();
         mw->setInfoFontSize();
     }

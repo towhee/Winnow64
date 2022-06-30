@@ -24,7 +24,7 @@ namespace ICC
 
     bool setOutProfile()
     {
-        if (G::isLogger) G::log(__FUNCTION__);
+        if (G::isLogger) G::log(__PRETTY_FUNCTION__);
         if (G::winOutProfilePath == "") {
             qWarning() << "The outProfilePath has not been assigned";
             cmsSetLogErrorHandler(err);
@@ -36,7 +36,7 @@ namespace ICC
 
     void transform(const QByteArray &buf, QImage &image)
     {
-        if (G::isLogger) G::log(__FUNCTION__);
+        if (G::isLogger) G::log(__PRETTY_FUNCTION__);
 
         cmsHPROFILE hInProfile;
         if (buf == nullptr) {
@@ -45,7 +45,7 @@ namespace ICC
         else {
             hInProfile = cmsOpenProfileFromMem(buf.data(), static_cast<uint32_t>(buf.length()));
             if (!hInProfile) {
-                qWarning() << __FUNCTION__ << "ICC hInProfile failed.";
+                qWarning() << __PRETTY_FUNCTION__ << "ICC hInProfile failed.";
                 return;
             }
         }
@@ -60,13 +60,13 @@ namespace ICC
             quint32 size = static_cast<quint32>(image.height()*image.bytesPerLine()/4);
             cmsDoTransform(hTransform, image.constBits(), image.bits(), size);
             if (!cmsCloseProfile(hInProfile)) {
-                qWarning() << __FUNCTION__ << "ICC cmsCloseProfile failed.";
+                qWarning() << __PRETTY_FUNCTION__ << "ICC cmsCloseProfile failed.";
                 cmsSetLogErrorHandler(err);
             }
             cmsDeleteTransform(hTransform);
         }
         else {
-            qWarning() << __FUNCTION__
+            qWarning() << __PRETTY_FUNCTION__
                        << "ICC cmsCreateTransform failed."
                           ;
             cmsSetLogErrorHandler(err);

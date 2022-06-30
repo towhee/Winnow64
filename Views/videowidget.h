@@ -29,6 +29,9 @@ public:
 private:
     QAudioOutput *audioOutput = nullptr;
 
+signals:
+    void togglePlayOrPause();
+
 protected:
     void mousePressEvent(QMouseEvent *event) override;
 //    void keyPressEvent(QKeyEvent *event) override;
