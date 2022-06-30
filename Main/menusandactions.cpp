@@ -2,7 +2,7 @@
 
 void MW::createActions()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
 
     // disable go keys when property editors have focus
     connect(qApp, &QApplication::focusChanged, this, &MW::focusChange);
@@ -1441,7 +1441,7 @@ void MW::createActions()
 
 void MW::createMenus()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     // Main Menu
 
     // File Menu
@@ -1932,7 +1932,7 @@ void MW::addMenuSeparator(QWidget *widget)
 
 void MW::enableEjectUsbMenu(QString path)
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     if(Usb::isUsb(path)) ejectAction->setEnabled(true);
     else ejectAction->setEnabled(false);
 }
@@ -1942,7 +1942,7 @@ void MW::enableSelectionDependentMenus()
 /*
     rgh check if still working
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
 
     if(selectionModel->selectedRows().count() > 0) {
         openWithMenu->setEnabled(true);

@@ -26,7 +26,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
     The metadata is copied from the source image file to the exported image file. Finally, the
     ICC color space is updated.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     this->metadata = metadata;
     this->dm = dm;
     this->icd = icd;
@@ -42,7 +42,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
 
 EmbelExport::~EmbelExport()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
 //    delete embellish;
 //    delete scene;
 //    delete pmItem;
@@ -54,7 +54,7 @@ bool EmbelExport::loadImage(QString fPath)
     Read the image file, extract metadata, apply ICC profile and convert to
     QGraphicsPixmapItem.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QImage image;
     if (icd->imCache.find(fPath, image)) {
         pmItem->setPixmap(QPixmap::fromImage(image));
@@ -64,7 +64,7 @@ bool EmbelExport::loadImage(QString fPath)
     int dmRow = dm->fPathRow[fPath];
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __FUNCTION__)) {
+        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __PRETTY_FUNCTION__)) {
             metadata->m.row = dmRow;
             dm->addMetadataForItem(metadata->m);
         }
@@ -94,7 +94,7 @@ QString EmbelExport::exportSubfolderPath(QString fPath, bool allowOverride)
     fromFolderPath.  If the export folder save method == "Subfolder", then the subfolder name
     is used, otherwise, all this is ignored and embelProperties->exportSubfolder is used.
 */
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     QFileInfo filedir(fPath);
     QString fromFolderPath = filedir.dir().path();
     QString exportFolder;
@@ -104,7 +104,7 @@ QString EmbelExport::exportSubfolderPath(QString fPath, bool allowOverride)
     return exportFolder;
 
     /*
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QFileInfo filedir(fPath);
     QString fromFolderPath = filedir.dir().path();
     QString exportFolder;
@@ -127,7 +127,7 @@ QString EmbelExport::exportSubfolderPath(QString fPath, bool allowOverride)
 
 bool EmbelExport::isValidExportFolder()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     if (embelProperties->saveMethod == "Subfolder") {
         if (embelProperties->exportSubfolder == "") return false;
     }
@@ -150,7 +150,7 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     datamodel is expected to be loaded and up-to-date.  For remote situations, the data model
     may not be loaded, and Embel will call Metadata to load the image data.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
 
     // save current embellish template
     QString prevTemplate = embelProperties->templateName;
@@ -185,7 +185,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     copied from the source image file to the exported image file. Finally, the ICC color space
     is updated.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
 
     G::isProcessingExportedImages = true;
     abort = false;
@@ -295,7 +295,7 @@ void EmbelExport::exportImage(const QString &fPath)
     QImage and saved to the assigned image format (jpg, png or tif).  A thumbnail is created
     and saved to ":/thumb.jpg" in the export folder.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QString extension = embelProperties->exportFileType;
     QFileInfo fileInfo(fPath);
     QString baseName = fileInfo.baseName() + embelProperties->exportSuffix;
@@ -356,6 +356,6 @@ void EmbelExport::abortEmbelExport()
     qApp->processEvents();
     G::isProcessingExportedImages = false;
     G::popUp->showPopup("Export has been aborted", 1500);
-    qDebug() << __FUNCTION__ << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+    qDebug() << __PRETTY_FUNCTION__ << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
     abort = true;
 }

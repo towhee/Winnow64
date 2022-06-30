@@ -70,6 +70,7 @@ public:
     QString lens = "";
     QString focalLength = "";
     int focalLengthNum = 0;
+    QString duration = "";
     QString cameraSN = "";
     QString lensSN = "";
     int shutterCount = 0;

@@ -6,7 +6,7 @@
 
 ExifTool::ExifTool()
 {
-    Utilities::log(__FUNCTION__, exifToolPath);
+    Utilities::log(__PRETTY_FUNCTION__, exifToolPath);
 #ifdef Q_OS_WIN
     exifToolPath = qApp->applicationDirPath() + "/et.exe";
 #endif
@@ -15,7 +15,7 @@ ExifTool::ExifTool()
 #endif
     // confirm exifToolPath exists
     if (!QFile(exifToolPath).exists())
-        qWarning() << __FUNCTION__ << exifToolPath << "is missing";
+        qWarning() << __PRETTY_FUNCTION__ << exifToolPath << "is missing";
     QStringList startArgs;
     startArgs << "-stay_open";
     startArgs << "True";
@@ -24,14 +24,14 @@ ExifTool::ExifTool()
     startArgs << "-execute";
     process.start(exifToolPath, startArgs);   // exifToolPath = path to ExifTool.exe or ExifTool.app
     process.waitForStarted(3000);
-//    qDebug() << __FUNCTION__ << process.errorString();
+//    qDebug() << __PRETTY_FUNCTION__ << process.errorString();
 }
 
 int ExifTool::execute(QStringList &args)
 {
     /* all args that are a path to an image should be converted to a url
        ie  QUrl("D:/Pictures/Zenfolio/2021-02-12_0006.jpg").path();  */
-    Utilities::log(__FUNCTION__, exifToolPath);
+    Utilities::log(__PRETTY_FUNCTION__, exifToolPath);
     return QProcess::execute(exifToolPath, args);
 }
 
@@ -47,7 +47,7 @@ int ExifTool::close()
     closeArgs += "False\n";
     process.write(closeArgs);
     if (!process.waitForFinished(30000))
-        /*qDebug() << __FUNCTION__ << "ExifTool exit code =" << process.exitCode();
+        /*qDebug() << __PRETTY_FUNCTION__ << "ExifTool exit code =" << process.exitCode();
     else*/ qWarning("ExifTool::copyAll process.waitForFinished failed");
 
     return process.exitCode();
@@ -179,7 +179,7 @@ int ExifTool::copyAll(const QStringList &src, QStringList &dst)
     // stdin
     process.write(args);
     if (process.waitForFinished(30000))
-        qDebug() << __FUNCTION__ << "ExifTool exit code =" << process.exitCode();
+        qDebug() << __PRETTY_FUNCTION__ << "ExifTool exit code =" << process.exitCode();
     else qWarning("ExifTool::copyAll process.waitForFinished failed");
 
     return process.exitCode();
@@ -207,7 +207,7 @@ args << "D:/Pictures/Zenfolio/2021-02-12_0006.jpg";
 et.setArguments(args);
 et.setProgram(exifToolPath);
 bool started = et.startDetached();
-qDebug() << __FUNCTION__ << args << started;
+qDebug() << __PRETTY_FUNCTION__ << args << started;
 return;
 //    */
 
@@ -223,9 +223,9 @@ et->setArguments(args);
 et->setProgram(exifToolPath);
 et->setStandardOutputFile("D:/output.txt");
 et->start();
-qDebug() << __FUNCTION__ << args;
+qDebug() << __PRETTY_FUNCTION__ << args;
 bool success = et->waitForFinished(3000);
-qDebug() << __FUNCTION__ << "success =" << success;
+qDebug() << __PRETTY_FUNCTION__ << "success =" << success;
 delete et;
 return;
 //    */
@@ -253,8 +253,8 @@ stayOpen << "-";
 et.start(exifToolPath, stayOpen);
 et.waitForStarted(3000);
 et.write(args);
-if (et.waitForFinished(3000)) qDebug() << __FUNCTION__ << "ExifTool exit code =" << et.exitCode();
-else qDebug() << __FUNCTION__ << "et.waitForFinished failed";
+if (et.waitForFinished(3000)) qDebug() << __PRETTY_FUNCTION__ << "ExifTool exit code =" << et.exitCode();
+else qDebug() << __PRETTY_FUNCTION__ << "et.waitForFinished failed";
 //    */
 
     /* This works
@@ -280,6 +280,6 @@ stayOpen << "-";
 et->start(exifToolPath, stayOpen);
 et->waitForStarted(3000);
 et->write(args);
-if (et->waitForFinished(3000)) qDebug() << __FUNCTION__ << "ExifTool exit code =" << et->exitCode();
-else qDebug() << __FUNCTION__ << "et.waitForFinished failed";
+if (et->waitForFinished(3000)) qDebug() << __PRETTY_FUNCTION__ << "ExifTool exit code =" << et->exitCode();
+else qDebug() << __PRETTY_FUNCTION__ << "et.waitForFinished failed";
 //    */

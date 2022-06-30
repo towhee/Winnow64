@@ -22,7 +22,7 @@ public:
     QVideoSink *videoSink;
 
 signals:
-    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance,
+    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration,
                       FrameDecoder *thisFrameDecoder);
 
 public slots:

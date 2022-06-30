@@ -294,13 +294,13 @@ public:
 
     enum centralWidgetTabs {
         LoupeTab,       // 0
-        VideoTab,
-        CompareTab,     // 1
-        TableTab,       // 2
-        GridTab,        // 3
-        StartTab,       // 4
-        MessageTab,     // 5
-        EmbelTab        // 6    rgh req'd? for coord help?
+        VideoTab,       // 1
+        CompareTab,     // 2
+        TableTab,       // 3
+        GridTab,        // 4
+        StartTab,       // 5
+        MessageTab,     // 6
+        EmbelTab        // 7    rgh req'd? for coord help?
     };
 
     enum Tog {

@@ -15,6 +15,7 @@ public:
     void play();
     void pause();
     void stop();
+    void updatePositionLabel();
 
 signals:
     void togglePick();
@@ -24,20 +25,20 @@ protected:
     bool event(QEvent *event) override;
 
 public slots:
-    void durationChanged(qint64 duration);
-    void positionChanged(qint64 progress);
+    void durationChanged(qint64 duration_ms);
+    void positionChanged(qint64 progress_ms);
     void scrubMoved(int ms);
     void scrubPressed();
     void playOrPause();
 
 private:
-    void updateDurationInfo(qint64 currentInfo);
     IconView *thumbView;
     VideoWidget *video;
     QToolButton *playPauseBtn;
     QSlider *scrub;
-    QLabel *position;
-    qint64 duration;
+    QLabel *positionLabel;
+    qint64 duration = 0;
+    qint64 position = 0;
 };
 
 #endif // VIDEOVIEW_H

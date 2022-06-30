@@ -38,7 +38,7 @@ FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
 
 void FrameDecoder::getFrame(QString path)
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     fPath = path;
     QFile f(fPath);
     mediaPlayer->setSource(fPath);
@@ -47,12 +47,13 @@ void FrameDecoder::getFrame(QString path)
 
 void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     if (thumbnailAcquired) return;
     QImage im = frame.toImage();
     if (im.isNull()) return;
     thumbnailAcquired = true;
     mediaPlayer->stop();
+    qint64 duration = mediaPlayer->duration();
     QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-    emit setFrameIcon(dmIdx, pm, dmInstance, thisFrameDecoder);
+    emit setFrameIcon(dmIdx, pm, dmInstance, duration, thisFrameDecoder);
 }

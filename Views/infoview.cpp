@@ -8,7 +8,7 @@ public:
 
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const override
     {
-//        qDebug() << __FUNCTION__ << index;
+//        qDebug() << __PRETTY_FUNCTION__ << index;
         static int count = 0;
         count++;
         index.isValid();          // suppress compiler warning
@@ -89,7 +89,7 @@ public:
 InfoView::InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView *thumbView)
     : QTreeView(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__);    this->dm = dm;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);    this->dm = dm;
     this->metadata = metadata;
     this->thumbView = thumbView;        // req'd to update metadata in dm for selections
 
@@ -180,7 +180,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
 //                    dm->setData(dm->sf->index(row, G::TitleColumn), s);
 //                    dm->setData(dm->sf->index(row, G::TitleColumn), s, Qt::ToolTipRole);
                     /*
-                    qDebug() << __FUNCTION__
+                    qDebug() << __PRETTY_FUNCTION__
                              << "dm->currentRow =" << dm->currentRow
                              << "idx0.data() =" << idx0.data()
                              << "idx1.data() =" << idx1.data()
@@ -220,7 +220,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 // write to sidecar
                 if (isSidecarChange) {
                     dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-                    metadata->writeXMP(metadata->sidecarPath(fPath), __FUNCTION__);
+                    metadata->writeXMP(metadata->sidecarPath(fPath), __PRETTY_FUNCTION__);
                     G::popUp->setProgress(i+1);
                 }
             }
@@ -238,21 +238,21 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
 
 void InfoView::refreshLayout()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     setColumn0Width();
     scheduleDelayedItemsLayout();
 }
 
 void InfoView::showInfoViewMenu(QPoint pt)
 {
-    if (G::isLogger) G::log(__FUNCTION__);    selectedEntry = indexAt(pt);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);    selectedEntry = indexAt(pt);
 	if (selectedEntry.isValid())
     	infoMenu->popup(viewport()->mapToGlobal(pt));
 }
 
 void InfoView::setColumn0Width()
 {
-    if (G::isLogger) G::log(__FUNCTION__);    QFont ft = this->font();
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);    QFont ft = this->font();
     ft.setPixelSize(static_cast<int>(G::fontSize.toInt() * 1.333/* * G::ptToPx*/));
     QFontMetrics fm(ft);
     #ifdef Q_OS_WIN
@@ -279,7 +279,7 @@ status information, such as number of items picked or current item selected.
 
 If any of the editable fields change then MW::metadataChanged is triggered.
 */
-    if (G::isLogger) G::log(__FUNCTION__);    ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);    ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
     ok->setHorizontalHeaderItem(1, new QStandardItem(QString("Value")));
     ok->setHorizontalHeaderItem(2, new QStandardItem(QString("Show")));
 
@@ -376,7 +376,7 @@ When called, the function iterates through all the metadata items in ok and
 looks for the field in ok. It then shows or hides the table row based on the ok
 show flag.
 */
-    if (G::isLogger) G::log(__FUNCTION__);    bool okToShow;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);    bool okToShow;
     for(int row = 0; row < ok->rowCount(); row++) {
         QModelIndex parentIdx = ok->index(row, 0);
         okToShow = ok->index(row, 2).data().toBool();
@@ -393,7 +393,7 @@ void InfoView::clearInfo()
 /*
 Clear all the values but leave the keys and flags alone
 */
-    if (G::isLogger) G::log(__FUNCTION__);    for(int row = 0; row < ok->rowCount(); row++) {
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);    for(int row = 0; row < ok->rowCount(); row++) {
         QModelIndex parentIdx = ok->index(row, 0);
         for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
             ok->setData(ok->index(childRow, 1, parentIdx), "");
@@ -403,13 +403,13 @@ Clear all the values but leave the keys and flags alone
 
 void InfoView::copyEntry()
 {
-    if (G::isLogger) G::log(__FUNCTION__);	if (selectedEntry.isValid())
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);	if (selectedEntry.isValid())
         QApplication::clipboard()->setText(ok->itemFromIndex(selectedEntry)->toolTip());
 }
 
 void InfoView::updateInfo(const int &row)
 {
-    if (G::isLogger) G::log(__FUNCTION__);//    qDebug() << __FUNCTION__ << row;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);//    qDebug() << __PRETTY_FUNCTION__ << row;
 
     // flag updates so itemChanged will be ignored in MW::metadataChanged
     isNewImageDataChange = true;
@@ -419,7 +419,7 @@ void InfoView::updateInfo(const int &row)
 
     // make sure there is metadata for this image
     if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
-        metadata->loadImageMetadata(imageInfo, true, true, false, true, __FUNCTION__);
+        metadata->loadImageMetadata(imageInfo, true, true, false, true, __PRETTY_FUNCTION__);
         metadata->m.row = dm->fPathRow[fPath];
         dm->addMetadataForItem(metadata->m);
     }
@@ -512,7 +512,7 @@ void InfoView::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::LeftButton) {
         QModelIndex idx = indexAt(event->pos());
         // check if click on category row. If so, expand or collapse branch
-        qDebug() << __FUNCTION__ << idx.parent() << idx.parent().isValid();
+        qDebug() << __PRETTY_FUNCTION__ << idx.parent() << idx.parent().isValid();
         if (!idx.parent().isValid()) isExpanded(idx) ? collapse(idx) : expand(idx);
 
         else if (idx.column() == 1) { // column you want to use for one click
@@ -525,7 +525,7 @@ void InfoView::mousePressEvent(QMouseEvent *event)
                               selectedCount + " selected images.";
                 G::popUp->showPopup(msg, 3000);
             }
-            qDebug() << __FUNCTION__ << "selected =" << selectedCount;
+            qDebug() << __PRETTY_FUNCTION__ << "selected =" << selectedCount;
             // alternating colors
             int row = idx.row();
             int a = G::backgroundShade + 5;

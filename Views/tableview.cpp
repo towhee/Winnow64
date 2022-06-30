@@ -5,7 +5,7 @@ TableView::TableView(DataModel *dm)
 /*
 
 */
-    if (G::isLogger) G::log(__FUNCTION__);    
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);    
     this->dm = dm;
 //    int ht = G::fontSize.toInt();
 
@@ -74,7 +74,7 @@ TableView::TableView(DataModel *dm)
 
 void TableView::setViewportParameters()
 {
-    if (G::isLogger) G::log(__FUNCTION__);        
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);        
 		firstVisibleRow = rowAt(0);
     midVisibleRow = rowAt(height() / 2);
     lastVisibleRow = rowAt(height());
@@ -85,8 +85,8 @@ void TableView::setViewportParameters()
 
 void TableView::scrollToRow(int row, QString source)
 {
-    if (G::isLogger) G::log(__FUNCTION__);    
-//    qDebug() << __FUNCTION__ << objectName() << "row =" << row
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);    
+//    qDebug() << __PRETTY_FUNCTION__ << objectName() << "row =" << row
 //             << "source =" << source;
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
@@ -100,7 +100,7 @@ bool TableView::isRowVisible(int row)
 
 void TableView::scrollToCurrent()
 {
-    if (G::isLogger) G::log(__FUNCTION__);    		
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);    		
     QModelIndex idx = dm->sf->index(currentIndex().row(), 1);
     scrollTo(idx, ScrollHint::PositionAtCenter);
 }
@@ -136,6 +136,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::ShutterspeedColumn) return fm.boundingRect("=1/8000 sec=").width();
     if (column == G::ISOColumn) return fm.boundingRect("999999").width();
     if (column == G::ExposureCompensationColumn) return fm.boundingRect("==-2 EV===").width();
+    if (column == G::DurationColumn) return fm.boundingRect("=Duration=").width();
     if (column == G::CameraMakeColumn) return fm.boundingRect("Nikon ========").width();
     if (column == G::CameraModelColumn) return fm.boundingRect("Nikon D850============").width();
     if (column == G::LensColumn) return fm.boundingRect("Lens======================").width();
@@ -183,14 +184,14 @@ int TableView::sizeHintForColumn(int column) const
 
 void TableView::selectPageUp()
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
 }
 
 void TableView::selectPageDown()
 {
-    if (G::isLogger) G::log(__FUNCTION__);       
-		qDebug() << __FUNCTION__;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);       
+		qDebug() << __PRETTY_FUNCTION__;
     setCurrentIndex(moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier));
 }
 
@@ -233,33 +234,33 @@ void TableView::mousePressEvent(QMouseEvent *event)
 
 void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     emit displayLoupe();
 }
 
 void TableView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     QTableView::selectionChanged(selected, deselected);
 }
 
 void TableView::createOkToShow()
 {
 /*
-This function is called from the tableView constructor.
+    This function is called from the tableView constructor.
 
-Create a datamodel called (ok) to hold all the columns available to the
-tableView, which = all the columns in the datamodel dm.  dm (datamodel class)
-holds significant information about all images in the current folder.
+    Create a datamodel called (ok) to hold all the columns available to the
+    tableView, which = all the columns in the datamodel dm.  dm (datamodel class)
+    holds significant information about all images in the current folder.
 
-Assign a default show flag = true to each column. This will be updated when
-QSettings has been loaded.
+    Assign a default show flag = true to each column. This will be updated when
+    QSettings has been loaded.
 
-Column 0 = TableView column name
-Column 1 = Show/hide TableView column
-Column 2 = Geek role for the TableView column
+    Column 0 = TableView column name
+    Column 1 = Show/hide TableView column
+    Column 2 = Geek role for the TableView column
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     ok = new QStandardItemModel;
 
     ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
@@ -298,7 +299,7 @@ and this slot is then signalled to update which fields are visible.
         else hideColumn(i + 1);
         /*
         QString s = ok->index(i, 0).data().toString();
-        qDebug() << __FUNCTION__ << i << s << showField;  */
+        qDebug() << __PRETTY_FUNCTION__ << i << s << showField;  */
     }
 }
 

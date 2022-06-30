@@ -38,7 +38,7 @@ void Slider::mousePressEvent(QMouseEvent *event)
     int value = event->pos().x() * 1.0 / width() * (max - min) + min;
     setValue(value);
     /*
-    qDebug() << __FUNCTION__
+    qDebug() << __PRETTY_FUNCTION__
              << event->pos().x()
              << width()
              << minimum()
@@ -67,7 +67,7 @@ sliderEditor value.
 Integer mode: div == 0
 Double mode : div != 0
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     this->idx = idx;
     int lineEditWidth = idx.data(UR_FixedWidth).toInt();
     int min = idx.data(UR_Min).toInt();
@@ -145,26 +145,26 @@ Double mode : div != 0
 
 double SliderEditor::value()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     return lineEdit->text().toDouble();
 //    return slider->value();
 }
 
 void SliderEditor::setValue(QVariant value)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     slider->setValue(value.toInt());
 }
 
 void SliderEditor::sliderMoved()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     outOfRange = false;
 }
 
 void SliderEditor::change(double value)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     if (outOfRange) return;
     double v = static_cast<double>(value) / div;
     if (isInt) lineEdit->setText(QString::number(v));
@@ -174,7 +174,7 @@ void SliderEditor::change(double value)
 
 void SliderEditor::updateSliderWhenLineEdited()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     int sliderValue = static_cast<int>(lineEdit->text().toDouble() * div);
     if (sliderValue >= slider->minimum() && sliderValue <= slider->maximum()) {
         outOfRange = false;
@@ -191,7 +191,7 @@ void SliderEditor::updateSliderWhenLineEdited()
 
 void SliderEditor::fontSizeChanged(int fontSize)
 {
-    qDebug() << __FUNCTION__ << fontSize;
+    qDebug() << __PRETTY_FUNCTION__ << fontSize;
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
@@ -209,7 +209,7 @@ void SliderEditor::paintEvent(QPaintEvent */*event*/)
 
 LabelEditor::LabelEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
@@ -244,13 +244,13 @@ LabelEditor::LabelEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
 
 QString LabelEditor::value()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     return label->text();
 }
 
 void LabelEditor::setValue(QVariant value)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     label->setText(value.toString());
 }
 
@@ -270,7 +270,7 @@ void LabelEditor::paintEvent(QPaintEvent */*event*/)
 
 LineEditor::LineEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
@@ -309,19 +309,19 @@ LineEditor::LineEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent
 
 QString LineEditor::value()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     return lineEdit->text();
 }
 
 void LineEditor::setValue(QVariant value)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     lineEdit->setText(value.toString());
 }
 
 void LineEditor::change(/*QString value*/)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
 //    QVariant v = value;
 //    emit editorValueChanged(this);
     emit editorValueChanged(this);
@@ -342,7 +342,7 @@ void LineEditor::paintEvent(QPaintEvent */*event*/)
 
 SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     this->idx = idx;
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
@@ -387,19 +387,19 @@ SpinBoxEditor::SpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(
 
 int SpinBoxEditor::value()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     return spinBox->value();
 }
 
 void SpinBoxEditor::setValue(QVariant value)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     spinBox->setValue(value.toInt());
 }
 
 void SpinBoxEditor::change(/*int value*/)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
 //    QVariant v = value;
     emit editorValueChanged(this);
 }
@@ -407,7 +407,7 @@ void SpinBoxEditor::change(/*int value*/)
 void SpinBoxEditor::fontSizeChanged(int fontSize)
 {
 //    setStyleSheet(G::css);
-    qDebug() << __FUNCTION__ << fontSize;
+    qDebug() << __PRETTY_FUNCTION__ << fontSize;
     setStyleSheet("QWidget {font-size:" + QString::number(fontSize) + "pt;}");
 }
 
@@ -421,7 +421,7 @@ void SpinBoxEditor::paintEvent(QPaintEvent */*event*/)
 
 DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
    this->idx = idx;
     double min = idx.data(UR_Min).toDouble();
     double max = idx.data(UR_Max).toDouble();
@@ -479,14 +479,14 @@ DoubleSpinBoxEditor::DoubleSpinBoxEditor(const QModelIndex &idx, QWidget *parent
 
 double DoubleSpinBoxEditor::value()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     return doubleSpinBox->value();
 }
 
 void DoubleSpinBoxEditor::setValue(QVariant value)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__ << value;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    qDebug() << __PRETTY_FUNCTION__ << value;
     doubleSpinBox->setValue(value.toDouble());
 }
 
@@ -526,7 +526,7 @@ bool DoubleSpinBoxEditor::eventFilter(QObject *object, QEvent *event)
 
 CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
@@ -548,19 +548,19 @@ CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
 
 bool CheckBoxEditor::value()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     return checkBox->isChecked();
 }
 
 void CheckBoxEditor::setValue(QVariant value)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     checkBox->setChecked(value.toBool());
 }
 
 void CheckBoxEditor::change()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     emit editorValueChanged(this);
 }
 
@@ -579,7 +579,7 @@ void CheckBoxEditor::paintEvent(QPaintEvent */*event*/)
 
 ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
@@ -631,7 +631,7 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     else {
         QStringList iconList = idx.data(UR_IconList).toStringList();
         QStringList textList = idx.data(UR_StringList).toStringList();
-        qDebug() << __FUNCTION__ << textList << iconList;
+        qDebug() << __PRETTY_FUNCTION__ << textList << iconList;
         for (int i = 0; i < iconList.length(); ++i) {
             comboBox->addItem(QIcon(iconList.at(i)), textList.at(i));
         }
@@ -641,14 +641,14 @@ ComboBoxEditor::ComboBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
 
 QString ComboBoxEditor::value()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     // crash here when rename in token editor sometimes
     return comboBox->currentText();
 }
 
 void ComboBoxEditor::setValue(QVariant value)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     int i = comboBox->findText(value.toString());
     comboBox->setCurrentIndex(i);
 }
@@ -659,7 +659,7 @@ void ComboBoxEditor::addItem(QString item, QIcon icon)
 This is used to add new templates to the template, style, general,
 border, text and graphic dropdown lists
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     if (icon.isNull()) comboBox->addItem(item);
     else comboBox->addItem(icon, item);
 }
@@ -670,7 +670,7 @@ void ComboBoxEditor::removeItem(QString item)
     This is used to remove deleted templates from the template drop list, styles from
     the style dropdowns
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     int i = comboBox->findText(item);
     comboBox->removeItem(i);
 }
@@ -680,8 +680,8 @@ void ComboBoxEditor::renameItem(QString oldText, QString newText)
 /*
     This is used to when a style is renamed and all the style lists need to be updated.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
-    qDebug() << __FUNCTION__ << oldText << newText;
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    qDebug() << __PRETTY_FUNCTION__ << oldText << newText;
     int i = comboBox->findText(oldText);
     comboBox->setItemText(i, newText);
     change(i);
@@ -699,7 +699,7 @@ void ComboBoxEditor::refresh(QStringList items)
 
 void ComboBoxEditor::change(int index)
 {    
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QVariant v = comboBox->itemText(index);
     emit editorValueChanged(this);
 }
@@ -720,7 +720,7 @@ void ComboBoxEditor::paintEvent(QPaintEvent */*event*/)
 
 PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     this->idx = idx;
     source = idx.data(UR_Source).toString();
 
@@ -756,20 +756,20 @@ PlusMinusEditor::PlusMinusEditor(const QModelIndex &idx, QWidget *parent) : QWid
 
 int PlusMinusEditor::value()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     return plusMinus;
 }
 
 void PlusMinusEditor::minusChange()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     plusMinus = -1;
     emit editorValueChanged(this);
 }
 
 void PlusMinusEditor::plusChange()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     plusMinus = 1;
     emit editorValueChanged(this);
 }
@@ -788,7 +788,7 @@ QVector<BarBtn*> btns;
 BarBtnEditor::BarBtnEditor(const QModelIndex, QWidget *parent)
     : QWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->setContentsMargins(0,2,0,2);
     layout->setSpacing(0);
@@ -810,7 +810,7 @@ void BarBtnEditor::paintEvent(QPaintEvent */*event*/)
 
 ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     lineEdit = new QLineEdit;
     lineEdit->setObjectName("DisableGoActions");    // used in MW::focusChange
     lineEdit->setAlignment(Qt::AlignLeft);
@@ -863,7 +863,7 @@ ColorEditor::ColorEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pare
 
 QString ColorEditor::value()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     return lineEdit->text();
 }
 
@@ -878,7 +878,7 @@ void ColorEditor::dlgColorChanged(const QColor &color)
     colorDlg signals to dlgColorChanged when the color changes so we can we the changes
     without closing the dialog or an more interactive experience.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     lineEdit->setText(color.name());
 }
 
@@ -893,14 +893,14 @@ void ColorEditor::setValueFromColorDlg()
     colorDlg signals to dlgColorChanged when the color changes so we can we the changes
     without closing the dialog or an more interactive experience.
 */
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     colorDlg->setCurrentColor(QColor(lineEdit->text()));
     colorDlg->open();
 }
 
 void ColorEditor::updateLabelWhenLineEdited(QString value)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     btn->setStyleSheet("QPushButton"
                         "{"
                             "background-color:" + value + ";"
@@ -934,7 +934,7 @@ void ColorEditor::paintEvent(QPaintEvent */*event*/)
 
 SelectFolderEditor::SelectFolderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     lineEdit = new QLineEdit;
     lineEdit->setObjectName("DisableGoActions");                // used in MW::focusChange
     lineEdit->setAlignment(Qt::AlignLeft);
@@ -966,7 +966,7 @@ SelectFolderEditor::SelectFolderEditor(const QModelIndex &idx, QWidget *parent) 
 
 QString SelectFolderEditor::value()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     return lineEdit->text();
 }
 
@@ -977,14 +977,14 @@ void SelectFolderEditor::setValue(QVariant value)
 
 void SelectFolderEditor::change(QString value)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QVariant v = value;
     emit editorValueChanged(this);
 }
 
 void SelectFolderEditor::setValueFromSaveFileDlg()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QString path = QFileDialog::getExistingDirectory
             (this, tr("Select or create folder"), "/home",
             QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
@@ -1004,7 +1004,7 @@ void SelectFolderEditor::paintEvent(QPaintEvent */*event*/)
 
 SelectFileEditor::SelectFileEditor(const QModelIndex &idx, QWidget *parent) : QWidget(parent)
 {
-    if (G::isLogger) G::log(__FUNCTION__);
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     lineEdit = new QLineEdit;
     lineEdit->setObjectName("DisableGoActions");                // used in MW::focusChange
     lineEdit->setAlignment(Qt::AlignLeft);
@@ -1037,13 +1037,13 @@ SelectFileEditor::SelectFileEditor(const QModelIndex &idx, QWidget *parent) : QW
 
 QString SelectFileEditor::value()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     return lineEdit->text();
 }
 
 void SelectFileEditor::change(QString value)
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QVariant v = value;
     emit editorValueChanged(this);
 }
@@ -1055,7 +1055,7 @@ void SelectFileEditor::setValue(QVariant value)
 
 void SelectFileEditor::setValueFromSaveFileDlg()
 {
-    if (G::isLogger) G::log(__FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
     QString path = QFileDialog::getOpenFileName(this, tr("Select file"), "/home");
     lineEdit->setText(path);
 }
