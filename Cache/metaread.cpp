@@ -61,14 +61,12 @@ void MetaRead::read(Action action, int sfRow, QString src)
     int n = static_cast<int>(priorityQueue.size());
     for (int i = 0; i < n; i++) {
         if (abort) {
-//            G::track(__PRETTY_FUNCTION__, "Aborting MetaRead.  Row = " + QString::number(i));
             break;
         }
         if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__, "i =" + QString::number(i));
         readRow(priorityQueue.at(i));
         if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
             if (i == (n - 1) || i == 50) {
-//                G::track(__PRETTY_FUNCTION__, "emit delayedStartImageCache.");
                 if (!abort) emit delayedStartImageCache();
                 imageCachingStarted = true;
             }
@@ -76,12 +74,10 @@ void MetaRead::read(Action action, int sfRow, QString src)
     }
     emit metaCacheIsRunning(false, true, "MetaRead::read");
     if (abort) {
-//        G::track(__PRETTY_FUNCTION__, "Aborting MetaRead.  All rows read.");
         return;
     }
     if (!abort) emit updateIconBestFit();
     if (!abort) emit done();
-//    G::track(__PRETTY_FUNCTION__, "Finished naturally.");
 
 }
 

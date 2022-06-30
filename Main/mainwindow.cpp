@@ -1645,7 +1645,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
             && useImageCache
            )
         {
-                emit setImageCachePosition(dm->currentFilePath, __PRETTY_FUNCTION__);
+            emit setImageCachePosition(dm->currentFilePath, __PRETTY_FUNCTION__);
         }
     }
 
@@ -2027,6 +2027,7 @@ void MW::loadConcurrentStartImageCache()
         gridView->selectFirst();
         currentSfIdx = dm->sf->index(0,0);
     }
+
     fileSelectionChange(currentSfIdx, currentSfIdx, __PRETTY_FUNCTION__);
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
