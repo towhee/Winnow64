@@ -15,13 +15,13 @@ Thumb::Thumb(DataModel *dm, Metadata *metadata)
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, fPath);
-//    qDebug() << __PRETTY_FUNCTION__ << fPath;
+    if (G::isLogger) G::log(CLASSFUNCTION, fPath);
+//    qDebug() << CLASSFUNCTION << fPath;
     // check orientation and rotate if portrait
     QTransform trans;
     int row = dm->fPathRow[fPath];
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
-//    qDebug() << __PRETTY_FUNCTION__ << orientation << fPath;
+//    qDebug() << CLASSFUNCTION << orientation << fPath;
     switch(orientation) {
         case 3:
             trans.rotate(180);
@@ -40,7 +40,7 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
 
 void Thumb::loadFromVideo(QString &fPath, int dmRow)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, fPath);
+    if (G::isLogger) G::log(CLASSFUNCTION, fPath);
     // see top of FrameDecoder.cpp for documentation
     QModelIndex dmIdx = dm->index(dmRow, 0);
 
@@ -52,7 +52,7 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 
 bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, fPath);
+    if (G::isLogger) G::log(CLASSFUNCTION, fPath);
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
     QFile imFile(fPath);
@@ -60,7 +60,7 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     QImageReader thumbReader;
     /*
     if (!imFile.open(QIODevice::ReadOnly)) {
-        dm->error(row, "Unable to open file.", __PRETTY_FUNCTION__);
+        dm->error(row, "Unable to open file.", CLASSFUNCTION);
         return false;
     }
     // close file to allow qt thumbReader to work
@@ -84,8 +84,8 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     thumbReader.setScaledSize(size);
     image = thumbReader.read();
     if (image.isNull()) {
-        G::error(__PRETTY_FUNCTION__, fPath, "Could not read thumb using thumbReader.");
-        qWarning() << __PRETTY_FUNCTION__ << "Could not read thumb using thumbReader." << fPath;
+        G::error(CLASSFUNCTION, fPath, "Could not read thumb using thumbReader.");
+        qWarning() << CLASSFUNCTION << "Could not read thumb using thumbReader." << fPath;
         return false;
     }
     return true;
@@ -93,13 +93,13 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 
 bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, fPath);
+    if (G::isLogger) G::log(CLASSFUNCTION, fPath);
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
     bool success = false;
     QFile imFile(fPath);
      if (imFile.isOpen()) {
-         qDebug() << __PRETTY_FUNCTION__ << fPath << "is already open - return";
+         qDebug() << CLASSFUNCTION << fPath << "is already open - return";
          return false;
      }
     int row = dm->fPathRow[fPath];
@@ -107,7 +107,7 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     // Check if metadata has been cached for this image
     QFileInfo info(imFile);  // qt6.2
     if (dm->index(row, G::OffsetThumbColumn).data().isNull()) {
-        metadata->loadImageMetadata(info, true, false, false, false, __PRETTY_FUNCTION__); // qt6.2
+        metadata->loadImageMetadata(info, true, false, false, false, CLASSFUNCTION); // qt6.2
         dm->addMetadataForItem(metadata->m);
     }
     uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
@@ -120,8 +120,8 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     s += " Offset embedded thumb = " + QString::number(offsetThumb);
     s += " Length embedded thumb = " + QString::number(lengthThumb);
     s += " " + fPath;
-    qDebug() << __PRETTY_FUNCTION__ << s;
-//    G::log(__PRETTY_FUNCTION__, s);
+    qDebug() << CLASSFUNCTION << s;
+//    G::log(CLASSFUNCTION, s);
 //*/
 
     if (imFile.isOpen()) imFile.close();
@@ -130,7 +130,7 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
             QByteArray buf = imFile.read(lengthThumb);
             if (image.loadFromData(buf, "JPEG")) {
                 if (image.isNull()) {
-                    G::error(__PRETTY_FUNCTION__, fPath, "Empty thumb.");
+                    G::error(CLASSFUNCTION, fPath, "Empty thumb.");
                     qWarning() << "Error loading thumbnail" << imFile.fileName();
                 }
                 image = image.scaled(thumbMax, Qt::KeepAspectRatio);
@@ -138,20 +138,20 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
             }
         }
         else {
-            G::error(__PRETTY_FUNCTION__, fPath, "Could not open file for thumb.");
+            G::error(CLASSFUNCTION, fPath, "Could not open file for thumb.");
         }
         imFile.close();
     }
     else {
         // file busy, wait a bit and try again
-        G::error(__PRETTY_FUNCTION__, fPath, "Could not open file for thumb.");
+        G::error(CLASSFUNCTION, fPath, "Could not open file for thumb.");
     }
     return success;
 }
 
 bool Thumb::loadFromTiffData(QString &fPath, QImage &image)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, fPath);
+    if (G::isLogger) G::log(CLASSFUNCTION, fPath);
     QFile imFile(fPath);
     if (imFile.isOpen()) imFile.close();
     // check if file is locked by another process
@@ -175,7 +175,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     as that is faster than loading the entire full resolution image just to get a thumbnail.
     This thumbnail is used by the grid and filmstrip views.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, fPath);
+    if (G::isLogger) G::log(CLASSFUNCTION, fPath);
 //    /*
 //    */
     QFileInfo fileInfo(fPath);
@@ -196,13 +196,13 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     // Check if metadata has been loaded for this image
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
         if (!dm->readMetadataForItem(dmRow)) {
-            G::error(__PRETTY_FUNCTION__, fPath, "Could not load metadata.");
+            G::error(CLASSFUNCTION, fPath, "Could not load metadata.");
             return false;
         }
     }
     /*
     if (dm->index(dmRow, G::MetadataLoadedColumn).data().isNull()) {
-        metadata->loadImageMetadata(fPath, true, false, false, false, __PRETTY_FUNCTION__);
+        metadata->loadImageMetadata(fPath, true, false, false, false, CLASSFUNCTION);
         dm->addMetadataForItem(metadata->m);
     }  */
 
@@ -222,23 +222,23 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
             if (samplesPerPixel > 3) {
                 QString err = "Could not read tiff because " + QString::number(samplesPerPixel)
                       + " samplesPerPixel > 3.";
-                G::error(__PRETTY_FUNCTION__, fPath, err);
+                G::error(CLASSFUNCTION, fPath, err);
                 return false;
             }
             // try to get thumb ourselves
             if (!loadFromTiffData(fPath, image)) {
-                G::error(__PRETTY_FUNCTION__, fPath, "loadFromTiffData Failed, trying loadFromEntireFile.");
+                G::error(CLASSFUNCTION, fPath, "loadFromTiffData Failed, trying loadFromEntireFile.");
                 // no thumb, try read entire full size image
                 if (!loadFromEntireFile(fPath, image, dmRow)) {
-                    G::error(__PRETTY_FUNCTION__, fPath, "Failed to load thumb from loadFromEntireFile.");
+                    G::error(CLASSFUNCTION, fPath, "Failed to load thumb from loadFromEntireFile.");
                     // show bad image png
                     QString path = ":/images/badImage1.png";
                     loadFromEntireFile(path, image, dmRow);
                     return false;
                 }
-                qDebug() << __PRETTY_FUNCTION__ << fPath << "Loaded thumb using Qt";
+                qDebug() << CLASSFUNCTION << fPath << "Loaded thumb using Qt";
             }
-//            qDebug() << __PRETTY_FUNCTION__ << fPath << "Loaded thumb by resampling tiff";
+//            qDebug() << CLASSFUNCTION << fPath << "Loaded thumb by resampling tiff";
         }
         // rgh remove heic
         else if (ext == "heic") {
@@ -247,14 +247,14 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
             Heic heic;
             // try to read heic thumbnail
             if (!heic.decodeThumbnail(fPath, image)) {
-                G::error(__PRETTY_FUNCTION__, fPath, "Unable to read heic thumbnail.");
+                G::error(CLASSFUNCTION, fPath, "Unable to read heic thumbnail.");
                 return false;
             }
             #endif
         }
         // all other cases where embedded thumbnail - most raw file formats
         else if (!loadFromJpgData(fPath, image)) {
-            G::error(__PRETTY_FUNCTION__, fPath, "Failed to load thumb.");
+            G::error(CLASSFUNCTION, fPath, "Failed to load thumb.");
             // rgh should we be trying to read the full size thumb in this case?
             return false;
         }
@@ -262,8 +262,8 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     else  {
         // read the image file (supported by Qt), scaling to thumbnail size
         if (!loadFromEntireFile(fPath, image, dmRow)) {
-            G::error(__PRETTY_FUNCTION__, fPath, "Could not load thumb.");
-            qWarning() << __PRETTY_FUNCTION__ << "Could not load thumb." << fPath;
+            G::error(CLASSFUNCTION, fPath, "Could not load thumb.");
+            qWarning() << CLASSFUNCTION << "Could not load thumb." << fPath;
             return false;
         }
         image.convertTo(QImage::Format_RGB32);
@@ -278,7 +278,7 @@ void Thumb::insertThumbnails(QModelIndexList &selection)
 /*
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     int count = selection.count();
     if (count == 0) {
@@ -332,7 +332,7 @@ void Thumb::insertThumbnails(QModelIndexList &selection)
         // add this thumbPath to the list
         thumbList << thumbPath;
 
-//        qDebug() << __PRETTY_FUNCTION__ << i
+//        qDebug() << CLASSFUNCTION << i
 //                 << "fPath =" << fPath
 //                 << "thumbPath =" << thumbPath
 //                 ;

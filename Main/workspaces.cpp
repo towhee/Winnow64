@@ -29,7 +29,7 @@
 
 void MW::newWorkspace()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     int n = workspaces->count();
     if (n > 9) {
         QString msg = "Only ten workspaces allowed.  Use Manage Workspaces\nto delete or reassign workspaces.";
@@ -63,7 +63,7 @@ QString MW::fixDupWorkspaceName(QString name)
     found then "_1" is appended.  The function is recursive since the original name
     with "_1" appended also might exist.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == name) {
             name += "_1";
@@ -75,7 +75,7 @@ QString MW::fixDupWorkspaceName(QString name)
 
 void MW::invokeWorkspaceFromAction(QAction *workAction)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == workAction->text()) {
             invokeWorkspace(workspaces->at(i));
@@ -91,7 +91,7 @@ void MW::invokeWorkspace(const workspaceData &w)
     are a list of actions, the workspaceMenu triggered signal is captured, and the
     workspace with a matching name to the action is used.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     restoreGeometry(w.geometry);
     restoreState(w.state);
     // two restoreState req'd for going from docked to floating docks
@@ -131,9 +131,9 @@ void MW::invokeWorkspace(const workspaceData &w)
     else toggleSortDirection(Tog::off);
     updateState();
     workspaceChanged = true;
-    sortChange(__PRETTY_FUNCTION__);
+    sortChange(CLASSFUNCTION);
     // chk if a video file
-    if (dm->sf->index(currentRow, G::VideoColumn).data().toBool()) {
+    if (dm->sf->index(currSfRow, G::VideoColumn).data().toBool()) {
         centralLayout->setCurrentIndex(VideoTab);
     }
     // in case thumbdock visibility changed by status of wasThumbDockVisible in loupeDisplay etc
@@ -142,7 +142,7 @@ void MW::invokeWorkspace(const workspaceData &w)
 
 void MW::snapshotWorkspace(workspaceData &wsd)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
     wsd.isFullScreen = isFullScreen();
@@ -184,7 +184,7 @@ void MW::manageWorkspaces()
 /*
     Delete, rename and reassign workspaces.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     // Update a list of workspace names for the manager dialog
     QList<QString> wsList;
     for (int i=0; i<workspaces->count(); i++)
@@ -204,7 +204,7 @@ void MW::manageWorkspaces()
 
 void MW::deleteWorkspace(int n)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (workspaces->count() < 1) return;
 
     // remove workspace from list of workspaces
@@ -221,7 +221,7 @@ void MW::deleteWorkspace(int n)
 
 void MW::syncWorkspaceMenu()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     int count = workspaces->count();
     for (int i = 0; i < 10; i++) {
         if (i < count) {
@@ -238,7 +238,7 @@ void MW::syncWorkspaceMenu()
 
 void MW::reassignWorkspace(int n)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QString name = workspaces->at(n).name;
     populateWorkspace(n, name);
     reportWorkspace(n);
@@ -251,10 +251,10 @@ void MW::defaultWorkspace()
     there are not any QSettings to read.  It is also useful if part or all of the
     app is "stranded" on secondary monitors that are not attached.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QRect desktop = QGuiApplication::screens().first()->geometry();
 //    QRect desktop = qApp->desktop()->availableGeometry();
-//    qDebug() << __PRETTY_FUNCTION__ << desktop << desktop1;
+//    qDebug() << CLASSFUNCTION << desktop << desktop1;
     resize(static_cast<int>(0.75 * desktop.width()),
            static_cast<int>(0.75 * desktop.height()));
     setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
@@ -324,13 +324,13 @@ void MW::defaultWorkspace()
     infoVisibleAction->setChecked(true);
     sortReverseAction->setChecked(false);
     sortColumn = 0;
-    sortChange(__PRETTY_FUNCTION__);
+    sortChange(CLASSFUNCTION);
     updateState();
 }
 
 void MW::renameWorkspace(int n, QString name)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     // do not rename if duplicate
     if (workspaces->count() > 0) {
         for (int i=1; i<workspaces->count(); i++) {
@@ -344,14 +344,14 @@ void MW::renameWorkspace(int n, QString name)
 
 void MW::populateWorkspace(int n, QString name)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     snapshotWorkspace((*workspaces)[n]);
     (*workspaces)[n].name = name;
 }
 
 void MW::reportWorkspace(int n)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     ws = workspaces->at(n);
     qDebug() << G::t.restart() << "\t" << "\n\nName" << ws.name
              << "\nGeometry" << ws.geometry
@@ -393,7 +393,7 @@ void MW::reportWorkspace(int n)
 
 void MW::loadWorkspaces()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (!isSettings) return;
     int size = setting->beginReadArray("Workspaces");
     for (int i = 0; i < size; ++i) {
@@ -440,7 +440,7 @@ void MW::loadWorkspaces()
 
 void MW::saveWorkspaces()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginWriteArray("Workspaces");
     for (int i = 0; i < workspaces->count(); ++i) {
         ws = workspaces->at(i);

@@ -4,13 +4,13 @@
 
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     event->acceptProposedAction();
 }
 
 void MW::dropEvent(QDropEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (event->mimeData()->hasUrls()) {
         QString fPath = event->mimeData()->urls().at(0).toLocalFile();
         handleDrop(fPath);
@@ -19,7 +19,7 @@ void MW::dropEvent(QDropEvent *event)
 
 void MW::handleDrop(QString fPath)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QFileInfo info(fPath);
     QDir incoming = info.dir();
     if (incoming != currentViewDir) folderAndFileSelectionChange(fPath);
@@ -30,7 +30,7 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
 /*
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QApplication::restoreOverrideCursor();
     copyOp = (keyMods == Qt::ControlModifier);
     QMessageBox msgBox;

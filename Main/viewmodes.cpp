@@ -2,7 +2,7 @@
 
 void MW::setCentralView()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (!isSettings) return;
     if (asLoupeAction->isChecked()) loupeDisplay();
     if (asGridAction->isChecked()) gridDisplay();
@@ -28,10 +28,10 @@ void MW::loupeDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
-    updateStatus(true, "", __PRETTY_FUNCTION__);
+    updateStatus(true, "", CLASSFUNCTION);
     updateIconRange(-1);
 
     // save selection as tableView is hidden and not synced
@@ -40,7 +40,7 @@ void MW::loupeDisplay()
     /* show imageView or videoView in the central widget. This makes thumbView visible,
     and it updates the index to its previous state. The index update triggers
     fileSelectionChange */
-    bool isVideo = dm->sf->index(currentRow,
+    bool isVideo = dm->sf->index(currSfRow,
     G::VideoColumn).data().toBool(); if (isVideo) {
     centralLayout->setCurrentIndex(VideoTab);
     }
@@ -54,13 +54,13 @@ void MW::loupeDisplay()
     if(isNormalScreen && wasThumbDockVisible) {
         thumbDock->setVisible(true);
         thumbDockVisibleAction->setChecked(wasThumbDockVisible);
-        thumbView->selectThumb(currentRow);
+        thumbView->selectThumb(currSfRow);
     }
 
     if (thumbView->isVisible()) thumbView->setFocus();
     else imageView->setFocus();
 
-    QModelIndex idx = dm->sf->index(currentRow, 0);
+    QModelIndex idx = dm->sf->index(currSfRow, 0);
     thumbView->setCurrentIndex(idx);
 
     // do not show classification badge if no folder or nothing selected
@@ -78,19 +78,19 @@ void MW::loupeDisplay()
     // sync scrolling between modes (loupe, grid and table)
     updateIconRange(-1);
     if (prevMode == "Table") {
-        if (tableView->isRowVisible(currentRow)) scrollRow = currentRow;
+        if (tableView->isRowVisible(currSfRow)) scrollRow = currSfRow;
         else scrollRow = tableView->midVisibleRow;
     }
     if (prevMode == "Grid") {
-        if(gridView->isRowVisible(currentRow)) scrollRow = currentRow;
+        if(gridView->isRowVisible(currSfRow)) scrollRow = currSfRow;
         else scrollRow = gridView->midVisibleCell;
     }
     if (prevMode == "Compare") {
-        qDebug() << __PRETTY_FUNCTION__ << currentRow;
-        scrollRow = currentRow;
+        qDebug() << CLASSFUNCTION << currSfRow;
+        scrollRow = currSfRow;
     }
     G::ignoreScrollSignal = false;
-    thumbView->scrollToRow(scrollRow, __PRETTY_FUNCTION__);
+    thumbView->scrollToRow(scrollRow, CLASSFUNCTION);
 
     // If the zoom dialog was active, but hidden by gridView or tableView, then show it
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);
@@ -109,7 +109,7 @@ void MW::gridDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
 
     if (embelProperties->templateId > 0) {
         G::popUp->showPopup(
@@ -120,7 +120,7 @@ void MW::gridDisplay()
 
     G::mode = "Grid";
     asGridAction->setChecked(true);
-    updateStatus(true, "", __PRETTY_FUNCTION__);
+    updateStatus(true, "", CLASSFUNCTION);
     updateIconRange(-1);
 
     // save selection as gridView is hidden and not synced
@@ -134,7 +134,7 @@ void MW::gridDisplay()
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
 
-    QModelIndex idx = dm->sf->index(currentRow, 0);
+    QModelIndex idx = dm->sf->index(currSfRow, 0);
     gridView->setCurrentIndex(idx);
     thumbView->setCurrentIndex(idx);
 
@@ -152,18 +152,18 @@ void MW::gridDisplay()
 
     // sync scrolling between modes (loupe, grid and table)
     if (prevMode == "Table") {
-        if (tableView->isRowVisible(currentRow)) scrollRow = currentRow;
+        if (tableView->isRowVisible(currSfRow)) scrollRow = currSfRow;
         else scrollRow = tableView->midVisibleRow;
     }
     if (prevMode == "Loupe" /*&& thumbView->isVisible() == true*/) {
-        if (thumbView->isRowVisible(currentRow)) scrollRow = currentRow;
+        if (thumbView->isRowVisible(currSfRow)) scrollRow = currSfRow;
         else scrollRow = thumbView->midVisibleCell;
     }
 
     // when okToScroll scroll gridView to current row
     G::ignoreScrollSignal = false;
 //    gridView->waitUntilOkToScroll();
-     gridView->scrollToRow(scrollRow, __PRETTY_FUNCTION__);
+     gridView->scrollToRow(scrollRow, CLASSFUNCTION);
     updateIconRange(-1);
 
     if (gridView->justifyMargin() > 3) gridView->rejustify();
@@ -178,7 +178,7 @@ void MW::gridDisplay()
 
 void MW::tableDisplay()
 {
-    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
 
     if (embelProperties->templateId > 0) {
         G::popUp->showPopup(
@@ -189,7 +189,7 @@ void MW::tableDisplay()
 
     G::mode = "Table";
     asTableAction->setChecked(true);
-    updateStatus(true, "", __PRETTY_FUNCTION__);
+    updateStatus(true, "", CLASSFUNCTION);
     updateIconRange(-1);
 
     // save selection as tableView is hidden and not synced
@@ -209,7 +209,7 @@ void MW::tableDisplay()
        turn updates currentRow to the current index.
     */
     // get the current index from currentRow
-    QModelIndex idx = dm->sf->index(currentRow, 0);
+    QModelIndex idx = dm->sf->index(currSfRow, 0);
     // set the current index for all views that could be visible
     tableView->setCurrentIndex(idx);
     thumbView->setCurrentIndex(idx);
@@ -220,7 +220,7 @@ void MW::tableDisplay()
         if(wasThumbDockVisible && !thumbDock->isVisible()) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);
-            thumbView->selectThumb(currentRow);
+            thumbView->selectThumb(currSfRow);
         }
         if(!wasThumbDockVisible && thumbDock->isVisible()) {
             thumbDock->setVisible(false);
@@ -242,19 +242,19 @@ void MW::tableDisplay()
     // sync scrolling between modes (loupe, grid and table)
 //    updateMetadataCacheIconviewState(false);
     if (prevMode == "Grid") {
-        if (gridView->isRowVisible(currentRow)) scrollRow = currentRow;
+        if (gridView->isRowVisible(currSfRow)) scrollRow = currSfRow;
         else scrollRow = gridView->midVisibleCell;
     }
     if (prevMode == "Loupe") {
-        if(thumbView->isRowVisible(currentRow)) scrollRow = currentRow;
+        if(thumbView->isRowVisible(currSfRow)) scrollRow = currSfRow;
         else scrollRow = thumbView->midVisibleCell;
     }
     G::ignoreScrollSignal = false;
 //    G::wait(100);
-    tableView->scrollToRow(scrollRow, __PRETTY_FUNCTION__);
-    if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, __PRETTY_FUNCTION__);
+    tableView->scrollToRow(scrollRow, CLASSFUNCTION);
+    if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, CLASSFUNCTION);
     updateIconRange(-1);
-//    qDebug() << __PRETTY_FUNCTION__ << scrollRow << tableView->midVisibleRow;
+//    qDebug() << CLASSFUNCTION << scrollRow << tableView->midVisibleRow;
 
     // if the zoom dialog was open then hide it as no image visible to zoom
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(false);
@@ -265,7 +265,7 @@ void MW::tableDisplay()
 
 void MW::compareDisplay()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     if (embelProperties->templateId > 0) {
         G::popUp->showPopup(
@@ -286,7 +286,7 @@ void MW::compareDisplay()
     }
 
     asCompareAction->setChecked(true);
-    updateStatus(true, "", __PRETTY_FUNCTION__);
+    updateStatus(true, "", CLASSFUNCTION);
     if (n < 2) {
         G::popUp->showPopup("Select more than one image to compare.");
         return;

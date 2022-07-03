@@ -2,7 +2,7 @@
 
 void MW::initialize()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     this->setWindowTitle(winnowWithVersion);
     G::okayToChangeFolders = true;
     G::stop = false;
@@ -53,7 +53,7 @@ void MW::initialize()
 
 void MW::setupPlatform()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     #ifdef Q_OS_LINIX
         G::actDevicePixelRatio = 1;
     #endif
@@ -70,7 +70,7 @@ void MW::setupPlatform()
 
 void MW::createCentralWidget()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     // centralWidget required by ImageView/CompareView constructors
     centralWidget = new QWidget(this);
     centralWidget->setObjectName("centralWidget");
@@ -81,7 +81,7 @@ void MW::createCentralWidget()
 
 void MW::setupCentralWidget()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     welcome = new QScrollArea;
     Ui::welcomeScrollArea ui;
     ui.setupUi(welcome);
@@ -99,7 +99,7 @@ void MW::setupCentralWidget()
 
 void MW::createDataModel()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     metadata = new Metadata;
     cacheProgressBar = new ProgressBar(this);
 
@@ -140,7 +140,7 @@ void MW::createSelectionModel()
     The application only has one selection model which is shared by ThumbView, GridView and
     TableView, insuring that each view is in sync, except when a view is hidden.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     // set a common selection model for all views
     selectionModel = new QItemSelectionModel(dm->sf);
     thumbView->setSelectionModel(selectionModel);
@@ -162,7 +162,7 @@ void MW::createMDCache()
     inefficient, so this timer is used to wait for a pause in the scrolling before triggering
     a restart at the new place.
     */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     metadataCacheThread = new MetadataCache(this, dm, metadata);
 
     if (isSettings) {
@@ -202,7 +202,9 @@ void MW::createMDCache()
     metaRead = new MetaRead(this, dm);
     metaRead->iconChunkSize = 20;
 
-    QThread metaReadThread;
+
+    // MetaRead
+//    QThread metaReadThread;  // moved to header
     metaRead->moveToThread(&metaReadThread);
 
     if (setting->contains("iconChunkSize")) {
@@ -212,6 +214,10 @@ void MW::createMDCache()
         dm->iconChunkSize = 3000;
     }
 
+    // delete thread when finished
+    connect(&metaReadThread, &QThread::finished, metaRead, &QObject::deleteLater);
+    // read metadata
+    connect(this, &MW::readMetadata, metaRead, &MetaRead::read);
     // add metadata to datamodel
     connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
     // update icon in datamodel
@@ -223,14 +229,14 @@ void MW::createMDCache()
     // check icons visible is correct
     connect(metaRead, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit/*,
             Qt::BlockingQueuedConnection*/);
-    connect(metaRead, &MetaRead::metaCacheIsRunning,
-            this, &MW::updateMetadataThreadRunStatus);
+    connect(metaRead, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
 
+    metaReadThread.start();
 }
 
 void MW::createImageCache()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     /* When a new folder is selected the metadataCacheThread is started to load all the
     metadata and thumbs for each image. If the user scrolls during the cache process then the
@@ -283,7 +289,7 @@ void MW::createImageCache()
 
 void MW::createThumbView()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     thumbView = new IconView(this, dm, "Thumbnails");
     thumbView->setObjectName("Thumbnails");
 //    thumbView->setSpacing(0);                // thumbView not visible without this
@@ -332,7 +338,7 @@ void MW::createThumbView()
 
 void MW::createGridView()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     gridView = new IconView(this, dm, "Grid");
     gridView->setObjectName("Grid");
     gridView->setSpacing(0);                // gridView not visible without this
@@ -372,7 +378,7 @@ void MW::createTableView()
     column and to check for information to filter. Creation is dependent on datamodel and
     thumbView.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     tableView = new TableView(dm);
     tableView->setAutoScroll(false);
 
@@ -407,7 +413,7 @@ void MW::createTableView()
 
 void MW::createVideoView()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     videoView = new VideoView(this, thumbView);
 
     // back and forward mouse buttons toggle pick
@@ -421,7 +427,7 @@ void MW::createImageView()
     cache or read from the file if the cache is unavailable. Creation is dependent on
     metadata, imageCacheThread, thumbView, datamodel and settings.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     /* This is the info displayed on top of the image in loupe view. It is
        dependent on template data stored in QSettings */
     // start with defaults
@@ -488,7 +494,7 @@ void MW::createImageView()
 
 void MW::createCompareView()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     compareImages = new CompareImages(this, centralWidget, metadata, dm, thumbView, icd);
 
     if (isSettings) {
@@ -513,7 +519,7 @@ void MW::createInfoString()
     This is the info displayed on top of the image in loupe view. It is
     dependent on template data stored in QSettings
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     infoString = new InfoString(this, dm, setting/*, embelProperties*/);
 
 }
@@ -524,7 +530,7 @@ void MW::createInfoView()
     InfoView shows basic metadata in a dock widget.
 */
     if (!useInfoView) return;
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     infoView = new InfoView(this, dm, metadata, thumbView);
     infoView->setMaximumWidth(folderMaxWidth);
 
@@ -637,7 +643,7 @@ void MW::createInfoView()
 
 void MW::createEmbel()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QString src = "Internal";
     embel = new Embel(imageView->scene, imageView->pmItem, embelProperties, dm, icd);
     connect(imageView, &ImageView::embellish, embel, &Embel::build);
@@ -649,28 +655,22 @@ void MW::createEmbel()
 
 void MW::createFSTree()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     // loadSettings has not run yet (dependencies, but QSettings has been opened
     fsTree = new FSTree(this, metadata);
     fsTree->setMaximumWidth(folderMaxWidth);
     fsTree->setShowImageCount(true);
     fsTree->combineRawJpg = combineRawJpg;
 
-    // watch for drive removal (not working)
-//    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
-
     // selection change check if triggered by ejecting USB drive
     connect(fsTree, &FSTree::selectionChange, this, &MW::watchCurrentFolder);
 
     // this works for touchpad tap
-//    connect(fsTree, SIGNAL(pressed(const QModelIndex&)), this, SLOT(folderSelectionChange()));
     connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChange);
 
-    connect(fsTree, &FSTree::pressed, dm, &DataModel::abortLoad);
 
-    // this does not work for touchpad tap
-//    connect(fsTree, SIGNAL(clicked(const QModelIndex&)), this, SLOT(folderSelectionChange()));
-
+    // watch for drive removal (not working)
+//    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
     // this does not work to detect ejecting a drive
 //    connect(fsTree->fsModel, SIGNAL(rowsRemoved(const QModelIndex &, int, int)),
 //            this, SLOT(checkDirState(const QModelIndex &, int, int)));
@@ -681,7 +681,7 @@ void MW::createFSTree()
 
 void MW::createFilterView()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     filters = new Filters(this);
     filters->setMaximumWidth(folderMaxWidth);
 
@@ -692,7 +692,7 @@ void MW::createFilterView()
 
 void MW::createBookmarks()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     bookmarks = new BookMarks(this, metadata, true /*showImageCount*/, combineRawJpg);
 
     if (isSettings) {
@@ -720,7 +720,7 @@ void MW::createBookmarks()
 
 void MW::createAppStyle()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     widgetCSS.fontSize = G::fontSize.toInt();
     int bg = G::backgroundShade;
     widgetCSS.widgetBackgroundColor = QColor(bg,bg,bg);
@@ -732,7 +732,7 @@ void MW::createAppStyle()
 
 void MW::createStatusBar()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     statusBar()->setObjectName("WinnowStatusBar");
     statusBar()->setStyleSheet("QStatusBar::item { border: none; };");
 
@@ -775,7 +775,7 @@ void MW::createStatusBar()
     QString mtrl = "Turns red when metadata/icon caching in progress";
     metadataThreadRunningLabel->setToolTip(mtrl);
     metadataThreadRunningLabel->setFixedWidth(runLabelWidth);
-    updateMetadataThreadRunStatus(false, true, __PRETTY_FUNCTION__);
+    updateMetadataThreadRunStatus(false, true, CLASSFUNCTION);
     statusBar()->addPermanentWidget(metadataThreadRunningLabel);
 
     // label to show imageThreadRunning status
@@ -826,7 +826,7 @@ void MW::createStatusBar()
 
 void MW::createFolderDock()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     folderDockTabText = "  📁  ";
     folderDock = new DockWidget(folderDockTabText, this);  // Folders 📁
     folderDock->setObjectName("FoldersDock");
@@ -883,7 +883,7 @@ void MW::createFolderDock()
 
 void MW::createFavDock()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     favDockTabText = "  🔖  ";
     favDock = new DockWidget(favDockTabText, this);  // Bookmarks📗 🔖 🏷️ 🗂️
     favDock->setObjectName("Bookmarks");
@@ -939,7 +939,7 @@ void MW::createFavDock()
 
 void MW::createFilterDock()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     filterDockTabText = "  🤏  ";
     filterDock = new DockWidget(filterDockTabText, this);  // Filters 🤏♆🔻 🕎  <font color=\"red\"><b>♆</b></font> does not work
     filterDock->setObjectName("Filters");
@@ -1025,7 +1025,7 @@ void MW::createFilterDock()
 void MW::createMetadataDock()
 {
     if (!useInfoView) return;
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     metadataDockTabText = "  📷  ";
     metadataDock = new DockWidget(metadataDockTabText, this);    // Metadata
     metadataDock->setObjectName("Image Info");
@@ -1071,7 +1071,7 @@ void MW::createMetadataDock()
 
 void MW::createThumbDock()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     thumbDockTabText = "Thumbnails";
     thumbDock = new DockWidget(thumbDockTabText, this);  // Thumbnails
     thumbDock->setObjectName("thumbDock");
@@ -1097,7 +1097,7 @@ void MW::createThumbDock()
 
 void MW::createEmbelDock()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     embelProperties = new EmbelProperties(this, setting);
 
     connect (embelProperties, &EmbelProperties::templateChanged, this, &MW::embelTemplateChange);
@@ -1204,7 +1204,7 @@ void MW::createEmbelDock()
 
 void MW::createDocks()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     createFolderDock();
     createFavDock();
     createFilterDock();
@@ -1230,7 +1230,7 @@ void MW::createDocks()
 
 void MW::createMessageView()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     messageView = new QWidget;
     msg.setupUi(messageView);
 //    Ui::message ui;

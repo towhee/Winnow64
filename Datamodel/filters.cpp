@@ -39,7 +39,7 @@ The actual filtering is executed in SortFilter subclass of QSortFilterProxy (sf)
 datamodel.
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     setRootIsDecorated(true);
     setSelectionMode(QAbstractItemView::NoSelection);
     setColumnCount(5);
@@ -137,7 +137,7 @@ void Filters::createPredefinedFilters()
 {
 /* Predefined filters are edited by the user: Search, Picks, Ratings and Color Class.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     search = new QTreeWidgetItem(this);
     search->setText(0, " Search");
     search->setFont(0, categoryFont);
@@ -264,7 +264,7 @@ file type, camera model etc.  When a new folder is selected each dynamic filter
 column is scanned for unique elements which are added to the dynamic filter
 by addCategoryFromData.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     types = new QTreeWidgetItem(this);
     types->setText(0, " File type");
     types->setData(0, G::ColumnRole, G::TypeColumn);
@@ -304,7 +304,7 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     Sets the background gradient for the category items. This function is also called when the
     user changes the background shade in preferences.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     categoryBackground.setColorAt(0, QColor(a,a,a));
     categoryBackground.setColorAt(1, QColor(b,b,b));
 
@@ -380,7 +380,7 @@ void Filters::removeChildrenDynamicFilters()
 folder is selected.  This function removes any pre-existing children to
 prevent duplication and orphans.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     types->takeChildren();
     years->takeChildren();
     days->takeChildren();
@@ -393,7 +393,7 @@ prevent duplication and orphans.
 
 void Filters::checkPicks(bool check)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (check) {
         picksFalse->setCheckState(0, Qt::Unchecked);
         picksTrue->setCheckState(0, Qt::Checked);
@@ -407,14 +407,14 @@ void Filters::checkPicks(bool check)
 
 void Filters::setSearchNewFolder()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     searchTrue->setText(0, enterSearchString);
     searchTrue->setCheckState(0, Qt::Checked);
 }
 
 void Filters::disableZeroCountItems(bool disable)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     return;
     QTreeWidgetItemIterator it(this);
     while (*it) {
@@ -431,7 +431,7 @@ void Filters::disableZeroCountItems(bool disable)
 
 void Filters::disableAllItems(bool disable)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent() && (*it)->parent()->text(0) != "Search") {
@@ -443,7 +443,7 @@ void Filters::disableAllItems(bool disable)
 
 void Filters::updateProgress(int progress)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     bfProgressBar->setValue(progress);
 }
 
@@ -457,7 +457,7 @@ bool Filters::isAnyFilter()
 /*
     This is used to determine the filter status in MW::updateFilterStatus
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QTreeWidgetItemIterator it(this);
     if (searchTrue->checkState(0) == Qt::Checked && searchTrue->text(0) != enterSearchString)
         return true;
@@ -475,7 +475,7 @@ bool Filters::isOnlyMostRecentDayChecked()
 /*
     This is used to sync MW filters menu chech state with Filters panel (here)
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     int n = days->childCount();
     for (int i = 0; i < n; i++) {
         bool isChecked = days->child(i)->checkState(0);
@@ -487,7 +487,7 @@ bool Filters::isOnlyMostRecentDayChecked()
 
 void Filters::invertFilters()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QList<QString> catWithCheckedItems;
     QString cat = "";
     QTreeWidgetItemIterator it(this);
@@ -541,7 +541,7 @@ void Filters::invertFilters()
 
 void Filters::loadedDataModel(bool isLoaded)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (isLoaded) {
         msgFrame->setVisible(false);
         filterLabel->setText("");
@@ -558,7 +558,7 @@ void Filters::loadedDataModel(bool isLoaded)
 
 void Filters::startBuildFilters()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     removeChildrenDynamicFilters();
     filtersBuilt = false;
     buildingFilters = true;
@@ -573,7 +573,7 @@ void Filters::startBuildFilters()
 
 void Filters::finishedBuildFilters()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     filtersBuilt = true;
     buildingFilters = false;
     filterLabel->setVisible(false);
@@ -592,7 +592,7 @@ void Filters::clearAll()
     Uncheck all the filter items but do not signal filter change.  This is called when a new
     folder is selected to reset the filter criteria.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent()) {            
@@ -633,7 +633,7 @@ void Filters::uncheckAllFilters()
 /*
     Uncheck all the filter items
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent()) {
@@ -652,7 +652,7 @@ void Filters::uncheckTypesFilters()
 /*
     Uncheck types.  This is required when raw + jpg are either combined or not combined.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent() == types) {
@@ -667,19 +667,19 @@ void Filters::uncheckTypesFilters()
 
 void Filters::expandAllFilters()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     expandAll();
 }
 
 void Filters::collapseAllFilters()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     collapseAll();
 }
 
 void Filters::toggleExpansion()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     bool isExpanded = false;
     QTreeWidgetItemIterator it(this);
     while (*it) {
@@ -693,7 +693,7 @@ void Filters::toggleExpansion()
     }
     if (isExpanded) collapseAll();
     else expandAll();
-    qDebug() << __PRETTY_FUNCTION__ << "isExpanded =" << isExpanded;
+    qDebug() << CLASSFUNCTION << "isExpanded =" << isExpanded;
 }
 
 void Filters::addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetItem *category)
@@ -706,7 +706,7 @@ void Filters::addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetIte
     the same order as the tableView. This function should only be used for dynamic categories
     - see createDynamicFilters;
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     static QTreeWidgetItem *item;
     // qt 6.2
     QMap<QString, QString> uniqueItems;
@@ -748,7 +748,7 @@ void Filters::dataChanged(const QModelIndex &topLeft,
     signal and updates the datamodel searchColumn match to true or false for each row. The
     filteredItemCount is updated.
 */
-//    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+//    if (G::isLogger) G::log(CLASSFUNCTION);
 
     // checkstate has changed
     if (roles.contains(Qt::CheckStateRole)) {
@@ -809,9 +809,9 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
     signal and updates the datamodel searchColumn match to true or false for each row. The
     filteredItemCount is updated.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     /*
-    qDebug() << "\n" << __PRETTY_FUNCTION__ << "Entering:   "
+    qDebug() << "\n" << CLASSFUNCTION << "Entering:   "
              << "column =" << column
              << "!item->parent() =" << !item->parent()
              << "itemCheckStateHasChanged" << itemCheckStateHasChanged             << "!G::isNewFolderLoaded =" << !G::isNewFolderLoaded
@@ -829,7 +829,7 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
 
     if (!itemCheckStateHasChanged) {
         /*
-        qDebug() << __PRETTY_FUNCTION__
+        qDebug() << CLASSFUNCTION
                  << "item->parent() =" << item->parent()->text(0)
                  << "item =" << item->text(0)
                  << "itemCheckStateHasChanged =" << itemCheckStateHasChanged;
@@ -852,13 +852,13 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
 
 void Filters::setSoloMode(bool isSolo)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     this->isSolo = isSolo;
 }
 
 void Filters::resizeColumns()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     hideColumn(1);
     hideColumn(3);
     QFont font = this->font();
@@ -876,14 +876,14 @@ void Filters::resizeColumns()
 
 void Filters::resizeEvent(QResizeEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     resizeColumns();
     QTreeWidget::resizeEvent(event);
 }
 
 void Filters::paintEvent(QPaintEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QTreeWidget::paintEvent(event);
 }
 
@@ -892,7 +892,7 @@ void Filters::mousePressEvent(QMouseEvent *event)
 /*
     Single mouse click on item triggers expand/collapse same as clicking on decoration.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (buildingFilters) return;
     QPoint p = event->pos();
     QModelIndex idx = indexAt(p);

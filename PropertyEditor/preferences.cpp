@@ -176,7 +176,7 @@ itemChange, which is subclassed here.
     }
 
     if (source == "cacheSizeMB") {
-        qDebug() << __PRETTY_FUNCTION__ << v << source;
+        qDebug() << CLASSFUNCTION << v << source;
         mw->cacheMaxMB = v.toInt();
         mw->setImageCacheParameters();
     }
@@ -192,7 +192,7 @@ itemChange, which is subclassed here.
     }
 
     if (source == "slideShowDelay") {
-        qDebug() << __PRETTY_FUNCTION__ << v << source;
+        qDebug() << CLASSFUNCTION << v << source;
         mw->slideShowDelay = v.toInt();
     }
 
@@ -276,7 +276,7 @@ itemChange, which is subclassed here.
     }
 
     if (source == "infoOverlayFontSize") {
-        qDebug() << __PRETTY_FUNCTION__ << v;
+        qDebug() << CLASSFUNCTION << v;
         mw->imageView->infoOverlayFontSize = v.toInt();
         mw->setInfoFontSize();
     }

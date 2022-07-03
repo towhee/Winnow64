@@ -35,7 +35,7 @@ ImageView::ImageView(QWidget *parent,
 
                      QGraphicsView(centralWidget)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     this->mainWindow = parent;
 //    this->centralWidget = centralWidget;
@@ -148,8 +148,8 @@ bool ImageView::loadImage(QString fPath, QString src)
     the next is a preview, requires the zoom factor to be normalized to prevent jarring
     changes in perceived scale by the user.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__, fPath + " Src:" + src);
-//    qDebug() << __PRETTY_FUNCTION__ << fPath << src;
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, fPath + " Src:" + src);
+//    qDebug() << CLASSFUNCTION << fPath << src;
 
     // No folder selected yet
     if (!fPath.length()) return false;
@@ -173,7 +173,7 @@ bool ImageView::loadImage(QString fPath, QString src)
         int dmRow = dm->fPathRow[fPath];
         if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
             QFileInfo fileInfo(fPath);
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, __PRETTY_FUNCTION__)) {
+            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
                 metadata->m.row = dmRow;
                 dm->addMetadataForItem(metadata->m);
             }
@@ -198,7 +198,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     image in icd->imCache hash table. */
     int row = dm->rowFromPath(fPath);
     bool isCached = dm->index(row, 0).data(G::CachedRole).toBool();
-    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__,
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION,
                                                fPath + " isCached =" +
                                                (isCached ? "true" : "false"));
     if (isCached) {
@@ -243,7 +243,7 @@ bool ImageView::loadImage(QString fPath, QString src)
         scale();
         /* send signal to Embel::build (with new image), blank first parameter means
            local vs remote (ie exported from lightroom to embellish)  */
-        if (G::isEmbellish) emit embellish("", __PRETTY_FUNCTION__);
+        if (G::isEmbellish) emit embellish("", CLASSFUNCTION);
         else pmItem->setGraphicsEffect(nullptr);
     }
 
@@ -260,7 +260,7 @@ bool ImageView::loadImage(QString fPath, QString src)
 
 void ImageView::clear()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     shootingInfo = "";
     infoOverlay->setText("");
     QPixmap nullPm;
@@ -270,7 +270,7 @@ void ImageView::clear()
 
 void ImageView::noJpgAvailable()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     pmItem->setVisible(false);
     infoOverlay->setText("");
 }
@@ -291,8 +291,8 @@ void ImageView::scale()
 
     If isSlideshow then hide mouse cursor unless is moves.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
-    /* qDebug() << __PRETTY_FUNCTION__
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    /* qDebug() << CLASSFUNCTION
              << "isScrollable =" << isScrollable
              << "isFit =" << isFit
              << "zoom =" << zoom
@@ -326,12 +326,12 @@ void ImageView::scale()
 
     placeClassificationBadge();
     setShootingInfo(shootingInfo);
-    emit updateStatus(true, "", __PRETTY_FUNCTION__);
+    emit updateStatus(true, "", CLASSFUNCTION);
 
     isMouseDoubleClick = false;
 
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION
              << "isScrollable =" << isScrollable
              << "isFit =" << isFit
              << "zoom =" << zoom
@@ -343,7 +343,7 @@ void ImageView::scale()
 
 bool ImageView::sceneBiggerThanView()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QPoint pTL = mapFromScene(0, 0);
     QPoint pBR = mapFromScene(scene->width(), scene->height());
     int sceneViewWidth = pBR.x() - pTL.x();
@@ -356,8 +356,8 @@ bool ImageView::sceneBiggerThanView()
 
 qreal ImageView::getFitScaleFactor(QRectF container, QRectF content)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
-//    qDebug() << __PRETTY_FUNCTION__ << container << content;
+    if (G::isLogger) G::log(CLASSFUNCTION);
+//    qDebug() << CLASSFUNCTION << container << content;
     qreal hScale = static_cast<qreal>(container.width() - 2) / content.width() * G::actDevicePixelRatio;
     qreal vScale = static_cast<qreal>(container.height() - 2) / content.height() * G::actDevicePixelRatio;
     return (hScale < vScale) ? hScale : vScale;
@@ -365,7 +365,7 @@ qreal ImageView::getFitScaleFactor(QRectF container, QRectF content)
 
 void ImageView::setScrollBars(QPointF scrollPct)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     getScrollBarStatus();
     scrl.hVal = scrl.hMin + scrollPct.x() * (scrl.hMax - scrl.hMin);
     scrl.vVal = scrl.vMin + scrollPct.y() * (scrl.vMax - scrl.vMin);
@@ -375,7 +375,7 @@ void ImageView::setScrollBars(QPointF scrollPct)
 
 void ImageView::getScrollBarStatus()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     scrl.hMin = horizontalScrollBar()->minimum();
     scrl.hMax = horizontalScrollBar()->maximum();
     scrl.hVal = horizontalScrollBar()->value();
@@ -385,7 +385,7 @@ void ImageView::getScrollBarStatus()
     scrl.vVal = verticalScrollBar()->value();
     scrl.vPct = qreal(scrl.vVal - scrl.vMin) / (scrl.vMax - scrl.vMin);
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION
              << "scrl.hMin =" << scrl.hMin
              << "scrl.hMax =" << scrl.hMax
              << "scrl.hVal =" << scrl.hVal
@@ -404,14 +404,14 @@ QPointF ImageView::getScrollPct()
    The view center is defined by the scrollbar values. The value is converted to a percentage
    to be used to match position in the next image if zoomed.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     getScrollBarStatus();
     return QPointF(scrl.hPct, scrl.vPct);
 }
 
 void ImageView::setClassificationBadgeImageDiam(int d)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     classificationBadgeDiam = d;
     placeClassificationBadge();
 }
@@ -424,7 +424,7 @@ void ImageView::placeClassificationBadge()
     image is resized and zoomed, adjusting for the aspect ratio of the image and
     size.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QPoint sceneBottomRight = mapFromScene(sceneRect().bottomRight());
 
     int x, y = 0;                       // bottom right coordinates of visible image
@@ -449,7 +449,7 @@ void ImageView::placeClassificationBadge()
 
 void ImageView::activateRubberBand()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     isRubberBand = true;
     setCursor(Qt::CrossCursor);
     QString msg = "Rubberband activated.  Make a selection in the ImageView.\n"
@@ -459,7 +459,7 @@ void ImageView::activateRubberBand()
 
 void ImageView::quitRubberBand()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     isRubberBand = false;
     setCursor(Qt::ArrowCursor);
 }
@@ -475,9 +475,9 @@ void ImageView::resizeEvent(QResizeEvent *event)
     ● if view larger than image and resize to clip image then engage zoomFit.
     ● move and size pick icon and shooting info as necessary
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "isFirstImageNewFolder =" << isFirstImageNewFolder;
@@ -502,7 +502,7 @@ void ImageView::thumbClick(float xPct, float yPct)
    main image is panned to the same location as on the thumb. This makes it quick to check
    eyes and other details in many images.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (zoom > zoomFit) {
         centerOn(QPointF(xPct * sceneRect().width(), yPct * sceneRect().height()));
     }
@@ -511,7 +511,7 @@ void ImageView::thumbClick(float xPct, float yPct)
 qreal ImageView::getZoom()
 {
     // use view center to make sure inside scene item
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     qreal x1 = mapToScene(rect().center()).x();
     qreal x2 = mapToScene(rect().center() + QPoint(1, 0)).x();
     qreal calcZoom = 1.0 / (x2 - x1);
@@ -529,21 +529,21 @@ void ImageView::updateToggleZoom(qreal toggleZoomValue)
     Slot for signal from update zoom dialog to set the amount to zoom when user
     clicks on the unzoomed image.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     toggleZoom = toggleZoomValue;
 }
 
 void ImageView::refresh()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
-    qDebug() << __PRETTY_FUNCTION__;
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
     setFitZoom();
     scale();
 }
 
 void ImageView::zoomIn()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     zoom *= (1.0 + zoomInc);
     zoom = zoom > zoomMax ? zoomMax: zoom;
     scale();
@@ -551,7 +551,7 @@ void ImageView::zoomIn()
 
 void ImageView::zoomOut()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     zoom *= (1.0 - zoomInc);
     zoom = zoom < zoomMin ? zoomMin : zoom;
     scale();
@@ -559,7 +559,7 @@ void ImageView::zoomOut()
 
 void ImageView::zoomToFit()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     zoom = zoomFit;
     scale();
 }
@@ -570,7 +570,7 @@ void ImageView::zoomTo(qreal zoomTo)
     Called from ZoomDlg when the zoom is changed. From here the message is passed
     on to ImageView::scale(), which in turn makes the proper scale change.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     zoom = zoomTo;
     isFit = false;
     scale();
@@ -578,10 +578,10 @@ void ImageView::zoomTo(qreal zoomTo)
 
 void ImageView::resetFitZoom()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setSceneRect(scene->itemsBoundingRect());
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION
              << "rect() =" << rect()
              << "sceneRect() =" << sceneRect()
              << "scene->itemsBoundingRect() =" << scene->itemsBoundingRect();
@@ -594,7 +594,7 @@ void ImageView::resetFitZoom()
 
 void ImageView::setFitZoom()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     zoom = zoomFit;
     if (limitFit100Pct  && zoom > toggleZoom) zoom = toggleZoom;
 }
@@ -606,7 +606,7 @@ void ImageView::zoomToggle()
     detail).  The other zoom value (toggleZoom) can be assigned in ZoomDlg and
     defaults to 1.0
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     isFit = !isFit;
     isFit ? zoom = zoomFit : zoom = toggleZoom;
     scale();
@@ -624,8 +624,8 @@ void ImageView::rotateImage(int degrees)
     The initial image rotation, based on the image metadata orientation, is done in either
     ImageDecoder, Pixmap or Thumb, depending on where the load image is called from.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
-    qDebug() << __PRETTY_FUNCTION__ << degrees;
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION << degrees;
 
     // extract pixmap, rotate and reset to pmItem
     QPixmap pm = pmItem->pixmap();
@@ -648,8 +648,8 @@ void ImageView::rotateImage(int degrees)
 
 void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, imageFullPath);
-    qDebug() << __PRETTY_FUNCTION__ << imageFullPath;
+    if (G::isLogger) G::log(CLASSFUNCTION, imageFullPath);
+    qDebug() << CLASSFUNCTION << imageFullPath;
 
     QTransform trans;
     int row = dm->fPathRow[imageFullPath];
@@ -694,7 +694,7 @@ void ImageView::sceneGeometry(QPoint &sceneOrigin, QRectF &scene_Rect, QRect &cw
     Return the top left corner of the image showing in the central widget in percent.
     This is used to determine the zoomCursor aspect in ThumbView.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     sceneOrigin = mapFromScene(0.0, 0.0);
     scene_Rect = sceneRect();
     cwRect = rect();
@@ -702,14 +702,14 @@ void ImageView::sceneGeometry(QPoint &sceneOrigin, QRectF &scene_Rect, QRect &cw
 
 void ImageView::updateShootingInfo()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QModelIndex idx = thumbView->currentIndex();
     QString current = infoString->getCurrentInfoTemplate();
     shootingInfo = infoString->parseTokenString(infoString->infoTemplates[current],
                                                 currentImagePath, idx);
     infoOverlay->setText(shootingInfo);
 //    moveShootingInfo(shootingInfo);
-//    qDebug() << __PRETTY_FUNCTION__ << shootingInfo;
+//    qDebug() << CLASSFUNCTION << shootingInfo;
 }
 
 void ImageView::setShootingInfo(QString infoString)
@@ -721,7 +721,7 @@ void ImageView::setShootingInfo(QString infoString)
 
     window (w) and view (v) sizes are updated during resize
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     int offset = 10;                        // offset pixels from the edge of image
     int x, y = 0;                           // top left coordinates of info symbol
@@ -750,7 +750,7 @@ void ImageView::setShootingInfo(QString infoString)
 
 void ImageView::monitorCursorState()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     static QPoint lastPos;
 
     if (QCursor::pos() != lastPos) {
@@ -770,13 +770,13 @@ void ImageView::monitorCursorState()
 
 void ImageView::setBackgroundColor(QColor bg)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     scene->setBackgroundBrush(bg);
 }
 
 void ImageView::setCursorHiding(bool hide)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (hide) {
         mouseMovementTimer->start(500);
     } else {
@@ -793,7 +793,7 @@ void ImageView::hideCursor()
 /*
     Called from mouse move event in a delay if in slideshow mode.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setCursor(Qt::BlankCursor);
 }
 
@@ -801,7 +801,7 @@ void ImageView::hideCursor()
 
 void ImageView::scrollContentsBy(int dx, int dy)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     scrollCount++;
     QGraphicsView::scrollContentsBy(dx, dy);
 }
@@ -815,7 +815,7 @@ void ImageView::scrollContentsBy(int dx, int dy)
 
 void ImageView::wheelEvent(QWheelEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     // wheel scrolling / trackpad swiping = next/previous image
     static int deltaSum = 0;
@@ -856,7 +856,7 @@ bool ImageView::event(QEvent *event) {
     /*
         Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
     */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (event->type() == QEvent::NativeGesture) {
         emit togglePick();
         /*
@@ -876,7 +876,7 @@ bool ImageView::event(QEvent *event) {
 // not used
 void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     // placeholder function pending use
     QGraphicsView::mouseDoubleClickEvent(event);
 
@@ -884,7 +884,7 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 
 void ImageView::mousePressEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     qDebug() << "ImageView::mousePressEvent" << event->button();
 
@@ -984,7 +984,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
 
 void ImageView::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     /* rubberband
     if (isRubberBand) {
         setCursor(Qt::ArrowCursor);
@@ -1001,7 +1001,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         QBuffer buffer(&tileBa);
         buffer.open(QIODevice::WriteOnly);
         tile.save(&buffer, "PNG");
-        qDebug() << __PRETTY_FUNCTION__ << "new tile";
+        qDebug() << CLASSFUNCTION << "new tile";
 //        emit newTile();
         return;
     }
@@ -1042,7 +1042,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 // qt6.2
 //void ImageView::enterEvent(QEvent *event)
 //{
-//    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+//    if (G::isLogger) G::log(CLASSFUNCTION);
 //    QVariant x = event->type();     // suppress compiler warning
 ////    this->setFocus();
 //}
@@ -1051,14 +1051,14 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 
 void ImageView::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
-    qDebug() << "ImageView::" << __PRETTY_FUNCTION__;
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << "ImageView::" << CLASSFUNCTION;
 //    event->acceptProposedAction();
 }
 
 void ImageView::dropEvent(QDropEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 //    QFileInfo info(event->mimeData()->urls().at(0).toLocalFile());
 //    emit handleDrop(event->mimeData()->urls().at(0).toLocalFile());
 //    emit handleDrop(event->mimeData());
@@ -1066,7 +1066,7 @@ void ImageView::dropEvent(QDropEvent *event)
 
 QString ImageView::diagnostics()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -1110,7 +1110,7 @@ QString ImageView::diagnostics()
 
 void ImageView::exportImage()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QImage image = grab().toImage();
 //    image.save();
 }
@@ -1119,7 +1119,7 @@ void ImageView::exportImage()
 
 void ImageView::copyImage()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QPixmap pm = pmItem->pixmap();
     if (pm.isNull()) {
         QImage image;
@@ -1139,7 +1139,7 @@ void ImageView::copyImage()
 // not being used, but maybe in the future
 //static inline int bound0To255(int val)
 //{
-//    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+//    if (G::isLogger) G::log(CLASSFUNCTION);
 //    return ((val > 255) ? 255 : (val < 0) ? 0 : val);
 //}
 

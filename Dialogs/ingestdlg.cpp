@@ -96,7 +96,7 @@ IngestDlg::IngestDlg(QWidget *parent,
                      manualFolderPath2(manualFolderPath2),
                      filenameTemplateSelected(filenameTemplateSelected)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     this->dm = dm;
     this->css = css;
     normalText = "QLabel {color:" + G::textColor.name() + ";}";
@@ -210,7 +210,7 @@ void IngestDlg::renameIfExists(QString &destination,
                                QString &baseName,
                                QString dotSuffix)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     int count = 0;
     bool fileAlreadyExists = true;
     QString newBaseName = baseName + "_";
@@ -242,7 +242,7 @@ void IngestDlg::getPicks()
     Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
     Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(2,0)
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
 //    combinedIncludeJpg = ui->combinedIncludeJpgChk->isChecked();
 //    bool inclDupJpg = ui->combinedIncludeJpgChk->isChecked();
     QString fPath;
@@ -261,7 +261,7 @@ void IngestDlg::getPicks()
                         fPath = idx.data(G::PathRole).toString();
                         QFileInfo fileInfo(fPath);
                         pickList.append(fileInfo);
-//                        qDebug() << __PRETTY_FUNCTION__ << "appending" << fPath;
+//                        qDebug() << CLASSFUNCTION << "appending" << fPath;
                     }
                     // append combined raw file
                     if (idx.data(G::DupIsJpgRole).toBool()) {
@@ -271,7 +271,7 @@ void IngestDlg::getPicks()
                 fPath = idx.data(G::PathRole).toString();
                 QFileInfo fileInfo(fPath);
                 pickList.append(fileInfo);
-//                qDebug() << __PRETTY_FUNCTION__ << "appending" << fPath;
+//                qDebug() << CLASSFUNCTION << "appending" << fPath;
             }
         }
     }
@@ -280,7 +280,7 @@ void IngestDlg::getPicks()
     if (pickList.count()) {
         seqDate = pickList.at(0).birthTime().date();
         /*
-        qDebug() << __PRETTY_FUNCTION__
+        qDebug() << CLASSFUNCTION
                  << pickList.at(0).absoluteFilePath()
                  << seqDate
                  << G::ingestLastSeqDate
@@ -306,7 +306,7 @@ void IngestDlg::getPicks()
 
 void IngestDlg::quitIfNotEnoughSpace()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     // check if room on destination drives for images
     bool isFull = picksMB > availableMB;
@@ -396,7 +396,7 @@ void IngestDlg::ingest()
         qint64 fileBytesToWrite = 0;
         int progress = (i + 1) * 100 * n / (pickList.size());
         /*
-        qDebug() << __PRETTY_FUNCTION__
+        qDebug() << CLASSFUNCTION
                  << "progress =" << progress
                  << "ui->progressBar->minimum() = " << ui->progressBar->minimum()
                  << "ui->progressBar->maximum() = " << ui->progressBar->maximum();
@@ -459,12 +459,12 @@ void IngestDlg::ingest()
         integrityFailure << sourcePath + " not same as " + destinationPath;
         // */
         if (!copyOk) {
-            qDebug() << __PRETTY_FUNCTION__ << "Failed to copy" << sourcePath << "to" << destinationPath;
+            qDebug() << CLASSFUNCTION << "Failed to copy" << sourcePath << "to" << destinationPath;
             failedToCopy << sourcePath + " to " + destinationPath;
         }
         if (copyOk && integrityCheck) {
             if (!Utilities::integrityCheck(sourcePath, destinationPath)) {
-                qDebug() << __PRETTY_FUNCTION__ << "Integrity failure" << sourcePath << "not same as" << destinationPath;
+                qDebug() << CLASSFUNCTION << "Integrity failure" << sourcePath << "not same as" << destinationPath;
                 integrityFailure << sourcePath + " not same as " + destinationPath;
             }
         }
@@ -474,12 +474,12 @@ void IngestDlg::ingest()
             fileBytesToWrite += fileInfo.size();
             bool backupCopyOk = QFile::copy(sourcePath, backupPath);
             if (!backupCopyOk) {
-                qDebug() << __PRETTY_FUNCTION__ << "Failed to copy" << sourcePath << "to" << backupPath;
+                qDebug() << CLASSFUNCTION << "Failed to copy" << sourcePath << "to" << backupPath;
                 failedToCopy << sourcePath + " to " + backupPath;
             }
             if (backupCopyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(sourcePath, backupPath)) {
-                    qDebug() << __PRETTY_FUNCTION__ << "Integrity failure" << sourcePath << "not same as" << backupPath;
+                    qDebug() << CLASSFUNCTION << "Integrity failure" << sourcePath << "not same as" << backupPath;
                     integrityFailure << sourcePath + " not same as " + backupPath;
                 }
             }
@@ -490,7 +490,7 @@ void IngestDlg::ingest()
         if (copyOk && QFile(sourceSidecarPath).exists()) {
             sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
             if (!sidecarOk) {
-                qWarning() << __PRETTY_FUNCTION__ << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
+                qWarning() << CLASSFUNCTION << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
                 failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
             }
 
@@ -499,7 +499,7 @@ void IngestDlg::ingest()
         // check if copied xmp = original xmp
         if (copyOk && integrityCheck) {
             if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
-                qWarning() << __PRETTY_FUNCTION__ << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
+                qWarning() << CLASSFUNCTION << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
                 integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
             }
         }
@@ -508,12 +508,12 @@ void IngestDlg::ingest()
         if (isBackup && sidecarOk) {
             bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
             if (!backupSidecarCopyOk) {
-                qWarning() << __PRETTY_FUNCTION__ << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
+                qWarning() << CLASSFUNCTION << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
                 failedToCopy << destSidecarPath + " to " + backupSidecarPath;
             }
             if (copyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
-                    qWarning() << __PRETTY_FUNCTION__ << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
+                    qWarning() << CLASSFUNCTION << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
                     integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
                 }
             }
@@ -528,7 +528,7 @@ void IngestDlg::ingest()
                 fileBytesToCopy += newFile.size();
                 newFile.open(QIODevice::WriteOnly);
                 qint64 bytesWritten = newFile.write(buffer);
-                qDebug() << __PRETTY_FUNCTION__ << bytesWritten << buffer.length();
+                qDebug() << CLASSFUNCTION << bytesWritten << buffer.length();
                 newFile.close();
             }
         }
@@ -541,7 +541,7 @@ void IngestDlg::ingest()
         ui->gbsLabel->setText(s);
     }
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION
              << "bytesCopied =" << bytesCopied
              << "msec =" << t.elapsed()
                 ;
@@ -550,7 +550,7 @@ void IngestDlg::ingest()
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();
     G::ingestLastSeqDate = seqDate;
-    qDebug() << __PRETTY_FUNCTION__ << seqDate<< G::ingestCount << G::ingestLastSeqDate;
+    qDebug() << CLASSFUNCTION << seqDate<< G::ingestCount << G::ingestLastSeqDate;
 
     // show any ingest errors
     if (failedToCopy.length() || integrityFailure.length()) {
@@ -564,7 +564,7 @@ void IngestDlg::ingest()
 
 bool IngestDlg::parametersOk()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QString errStr;
     bool err = false;
 //    bool backup = ui->backupChk->isChecked();
@@ -629,7 +629,7 @@ void IngestDlg::updateExistingSequence()
     The sequence is a part of the file name to make sure the file name is unique, and defined
     in the file name template with XX... (ie dscn0001.jpg).
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (isInitializing) return;
 
     QString tokenKey = ui->filenameTemplatesCB->currentText();
@@ -675,7 +675,7 @@ void IngestDlg::on_selectFolderBtn_clicked()
 /*
     Manually select the primary folder.  Set up file sequencing.  Show renaming example.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     QString path = ui->manualFolderLabel->text();
     if (path.right(1) == "/") path = path.left(path.length() - 1);
@@ -696,7 +696,7 @@ void IngestDlg::on_selectFolderBtn_clicked()
 
 void IngestDlg::on_selectFolderBtn_2_clicked()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     QString path = ui->manualFolderLabel_2->text();
     if (path.right(1) == "/") path = path.left(path.length() - 1);
@@ -717,7 +717,7 @@ void IngestDlg::on_selectFolderBtn_2_clicked()
 
 void IngestDlg::on_selectRootFolderBtn_clicked()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     rootFolderPath = QFileDialog::getExistingDirectory
         (this, tr("Choose Root Folder for Primary Ingest Location"), root,
@@ -734,7 +734,7 @@ void IngestDlg::on_selectRootFolderBtn_clicked()
 
 void IngestDlg::on_selectRootFolderBtn_2_clicked()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QString root = QStandardPaths::displayName(QStandardPaths::HomeLocation);
     rootFolderPath2 = QFileDialog::getExistingDirectory
         (this, tr("Choose Root Folder for Backup Location"), root,
@@ -751,7 +751,7 @@ void IngestDlg::on_selectRootFolderBtn_2_clicked()
 
 bool IngestDlg::isToken(QString tokenString, int pos)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QChar ch = tokenString.at(pos);
     if (ch.unicode() == 8233) return false;     // Paragraph Separator
     if (ch == '{') return false;                // qt6.2 changed " to '
@@ -794,12 +794,12 @@ bool IngestDlg::isToken(QString tokenString, int pos)
 
 QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QString fPath = info.absoluteFilePath();
     if (fPath == "") return "";
     ImageMetadata m = dm->imMetadata(fPath);
     createdDate = m.createdDate;
-//    qDebug() << __PRETTY_FUNCTION__ << fPath << createdDate;
+//    qDebug() << CLASSFUNCTION << fPath << createdDate;
     QString s;
     int i = 0;
     while (i < tokenString.length()) {
@@ -876,7 +876,7 @@ QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
 
 void IngestDlg::updateFolderPaths()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QStorageInfo d;
 
     // Auto folders
@@ -884,7 +884,7 @@ void IngestDlg::updateFolderPaths()
         baseFolderDescription = (ui->descriptionLineEdit->text().length() > 0)
                 ? ui->descriptionLineEdit->text() : "";
         /*
-        qDebug() << __PRETTY_FUNCTION__
+        qDebug() << CLASSFUNCTION
                  << "rootFolderPath =" << rootFolderPath
                  << "fromRootToBaseFolder =" << fromRootToBaseFolder
                  << "baseFolderDescription =" << baseFolderDescription;
@@ -893,7 +893,7 @@ void IngestDlg::updateFolderPaths()
         ui->folderLabel->setText(folderPath);
         ui->folderLabel->setToolTip(ui->folderLabel->text());
         drivePath = Utilities::getDrive(rootFolderPath);
-//        qDebug() << __PRETTY_FUNCTION__ << "pathDrive =" << drivePath;
+//        qDebug() << CLASSFUNCTION << "pathDrive =" << drivePath;
         d.setPath(drivePath);
         autoDriveAvailable = d.isValid();
         autoDriveAvailable ? ui->folderLabel->setStyleSheet(normalText) : ui->folderLabel->setStyleSheet(redText);
@@ -904,7 +904,7 @@ void IngestDlg::updateFolderPaths()
         ui->folderLabel_2->setText(folderPath2);
         ui->folderLabel_2->setToolTip(ui->folderLabel_2->text());
         drive2Path = Utilities::getDrive(rootFolderPath2);
-//        qDebug() << __PRETTY_FUNCTION__ << "pathDrive2 =" << drive2Path;
+//        qDebug() << CLASSFUNCTION << "pathDrive2 =" << drive2Path;
         d.setPath(drive2Path);
         autoDrive2Available = d.isValid();
         autoDrive2Available ? ui->folderLabel_2->setStyleSheet(normalText) : ui->folderLabel_2->setStyleSheet(redText);
@@ -953,7 +953,7 @@ void IngestDlg::buildFileNameSequence()
     file. If the primary location tab is selected the paths to the primary location are shown.
     If the backup location tab is chosen then the backup location paths are shown.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (isInitializing) return;
     // build filename from tokenString
     QString key = ui->filenameTemplatesCB->currentText();
@@ -1020,7 +1020,7 @@ void IngestDlg::buildFileNameSequence()
 
 void IngestDlg::on_descriptionLineEdit_textChanged(const QString& arg1)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     static QString prevText = "";
     // copy primary description to backup description unless it is already different
     QString desc2 = ui->descriptionLineEdit_2->text();
@@ -1037,7 +1037,7 @@ void IngestDlg::on_descriptionLineEdit_textChanged(const QString& arg1)
 
 void IngestDlg::on_descriptionLineEdit_2_textChanged(const QString/* &arg1*/)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     // add description to completer list (move to after dialog closes)
 //    QString desc = ui->descriptionLineEdit->text();
 //    if (desc.length() > 0) {
@@ -1049,13 +1049,13 @@ void IngestDlg::on_descriptionLineEdit_2_textChanged(const QString/* &arg1*/)
 
 void IngestDlg::on_spinBoxStartNumber_textChanged(const QString /* &arg1 */)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     buildFileNameSequence();
 }
 
 int IngestDlg::getSequenceStart(const QString &path)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QDir dir(path);
     if (!dir.exists()) return 0;
 
@@ -1117,7 +1117,7 @@ void IngestDlg::getAvailableStorageMB()
 
     QStorageInfo info(drivePath);
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION
              << "drivePath =" << drivePath
              << "folderPath =" << folderPath
              << "info.name() =" << info.name()
@@ -1153,7 +1153,7 @@ void IngestDlg::getAvailableStorageMB()
     // backup drive
     info.setPath(drive2Path);
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION
              << "drive2Path =" << drive2Path
              << "folderPath2 =" << folderPath2
              << "info.name() =" << info.name()
@@ -1189,7 +1189,7 @@ void IngestDlg::getAvailableStorageMB()
 
 void IngestDlg::updateEnabledState()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (isAuto) {
         // auto widgets
         ui->autoIngestTab->tabBar()->setStyleSheet(G::css);
@@ -1257,7 +1257,7 @@ void IngestDlg::updateEnabledState()
 
 void IngestDlg::on_autoRadio_toggled(bool checked)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     isAuto = checked;
     updateFolderPaths();
 }
@@ -1267,7 +1267,7 @@ void IngestDlg::initTokenList()
 /*
 The list of tokens in the token editor will appear in this order.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     tokens  << "ORIGINAL FILENAME"
             << "YYYY"
             << "YY"
@@ -1306,7 +1306,7 @@ The list of tokens in the token editor will appear in this order.
 
 void IngestDlg::initExampleMap()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     exampleMap["ORIGINAL FILENAME"] = "_C8I0024";
     exampleMap["YYYY"] = "2018";
     exampleMap["YY"] = "18";
@@ -1344,7 +1344,7 @@ void IngestDlg::initExampleMap()
 
 void IngestDlg::on_pathTemplatesCB_currentTextChanged(const QString &arg1)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QString tokenString = pathTemplatesMap[arg1];
     fromRootToBaseFolder = parseTokenString(pickList.at(0), tokenString);
     if (!isInitializing) pathTemplateSelected = ui->pathTemplatesCB->currentIndex();
@@ -1355,7 +1355,7 @@ void IngestDlg::on_pathTemplatesCB_currentTextChanged(const QString &arg1)
 
 void IngestDlg::on_pathTemplatesCB_2_currentTextChanged(const QString &arg1)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (arg1 == "") return;
     QString tokenString = pathTemplatesMap[arg1];
     fromRootToBaseFolder2 = parseTokenString(pickList.at(0), tokenString);
@@ -1365,7 +1365,7 @@ void IngestDlg::on_pathTemplatesCB_2_currentTextChanged(const QString &arg1)
 
 void IngestDlg::on_filenameTemplatesCB_currentTextChanged(const QString &arg1)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (arg1 == "") return;
     QString tokenString = filenameTemplatesMap[arg1];
     if (!isInitializing) filenameTemplateSelected = ui->filenameTemplatesCB->currentIndex();
@@ -1377,7 +1377,7 @@ void IngestDlg::on_pathTemplatesBtn_clicked()
 /*
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     // setup TokenDlg
     QMap<QString,QString> usingTokenMap;
     QString title = "Token Editor - Path from Root to Destination Folder";
@@ -1406,13 +1406,13 @@ void IngestDlg::on_pathTemplatesBtn_2_clicked()
 /* Performs same function as button on primary tab - just here for convenience and to
 make the ui more intuitive
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     on_pathTemplatesBtn_clicked();
 }
 
 void IngestDlg::on_filenameTemplatesBtn_clicked()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     // setup TokenDlg
     // title is also used to filter warnings, so if you change it here also change
     // it in TokenDlg::updateUniqueFileNameWarning
@@ -1451,26 +1451,26 @@ void IngestDlg::on_editDescriptionListBtn_2_clicked()
 
 void IngestDlg::on_combinedIncludeJpgChk_clicked()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     combinedIncludeJpg = ui->combinedIncludeJpgChk->isChecked();
     getPicks();
 }
 
 void IngestDlg::on_ejectChk_stateChanged(int /*arg1*/)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     autoEjectUsb = ui->ejectChk->isChecked();
 }
 
 void IngestDlg::on_integrityChk_stateChanged(int /*arg1*/)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     integrityCheck = ui->integrityChk->isChecked();
 }
 
 void IngestDlg::on_backgroundIngestChk_stateChanged(int /*arg1*/)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     isBackgroundIngest = ui->backgroundIngestChk->isChecked();
     ui->openIngestFolderChk->setEnabled(!isBackgroundIngest);
     ui->ejectChk->setEnabled(!isBackgroundIngest);
@@ -1482,20 +1482,20 @@ void IngestDlg::on_backgroundIngestChk_stateChanged(int /*arg1*/)
 
 void IngestDlg::on_beepChk_stateChanged(int /*arg1*/)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     isBackgroundIngestBeep = ui->beepChk->isChecked();
 }
 
 void IngestDlg::on_backupChk_stateChanged(int arg1)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     isBackup = arg1;
     getAvailableStorageMB();
 }
 
 void IngestDlg::on_helpBtn_clicked()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QFile f(":/Docs/ingestautopath.html");
     f.open(QIODevice::ReadOnly);
     QDialog *dlg = new QDialog;
@@ -1515,7 +1515,7 @@ void IngestDlg::on_helpBtn_clicked()
 
 void IngestDlg::on_cancelBtn_clicked()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
 //    test();
 //    return;
     reject();
@@ -1523,7 +1523,7 @@ void IngestDlg::on_cancelBtn_clicked()
 
 void IngestDlg::on_okBtn_clicked()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     // check parameters
     if(!parametersOk()) return;
 
@@ -1568,13 +1568,13 @@ void IngestDlg::on_okBtn_clicked()
 
 void IngestDlg::on_autoIngestTab_currentChanged(int /*index*/)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     buildFileNameSequence();
 }
 
 void IngestDlg::on_openIngestFolderChk_stateChanged(int arg1)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
      gotoIngestFolder = arg1;
 }
 
@@ -1596,7 +1596,7 @@ void IngestDlg::fontSize()
     QString fs = "QWidget {font-size: " + G::fontSize + "pt;}";
 //    QString fs = "QWidget {font-size: " + QString::number(fontPtSize) + "pt;}";
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION
              << "G::fontSize" << G::fontSize
              << "screenScaling" << screenScaling
              << "adjustedFontPtSize" << adjustedFontPtSize

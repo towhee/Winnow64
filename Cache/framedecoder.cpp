@@ -38,7 +38,7 @@ FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
 
 void FrameDecoder::getFrame(QString path)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     fPath = path;
     QFile f(fPath);
     mediaPlayer->setSource(fPath);
@@ -47,7 +47,7 @@ void FrameDecoder::getFrame(QString path)
 
 void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (thumbnailAcquired) return;
     QImage im = frame.toImage();
     if (im.isNull()) return;

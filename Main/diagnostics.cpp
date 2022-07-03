@@ -2,7 +2,7 @@
 
 void MW::reportState(QString title)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     qDebug()
         << "\nWINNOW STATE" << title
         << "\nFLAGS:"
@@ -38,7 +38,7 @@ void MW::reportState(QString title)
         << "\ncentralLayout->currentIndex()          " << centralLayout->currentIndex()
         << "\nG::currRootFolder                      " << G::currRootFolder
         << "\ncurrentViewDirPath                     " << currentViewDirPath
-        << "\ncurrentRow                             " << currentRow
+        << "\ncurrentRow                             " << currSfRow
         << "\ncurrentSfIdx                           " << currentSfIdx
         << "\ncurrentSfIdx                           " << currentSfIdx
         << "\ndm->currentRow                         " << dm->currentRow
@@ -52,7 +52,7 @@ void MW::reportState(QString title)
 
 void MW::reportWorkspaceState()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     workspaceData w;
     snapshotWorkspace(w);
     qDebug() << G::t.restart()
@@ -91,7 +91,7 @@ void MW::reportWorkspaceState()
 
 void MW::reportMetadata()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     diagnosticsMetadata();
 }
 
@@ -105,7 +105,7 @@ void MW::reportMetadata()
 
 void MW::diagnosticsAll()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -121,7 +121,7 @@ void MW::diagnosticsAll()
 
 void MW::diagnosticsCurrent()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -132,7 +132,7 @@ void MW::diagnosticsCurrent()
 
 QString MW::diagnostics()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -206,7 +206,7 @@ QString MW::diagnostics()
     rpt << "\n" << "isNormalScreen = " << G::s(isNormalScreen);
     rpt << "\n" << "currentViewDir = " << G::s(currentViewDirPath);
     rpt << "\n" << "prevMode = " << G::s(prevMode);
-    rpt << "\n" << "currentRow = " << G::s(currentRow);
+    rpt << "\n" << "currentRow = " << G::s(currSfRow);
     rpt << "\n" << "scrollRow = " << G::s(scrollRow);
     rpt << "\n" << "currentDmIdx = row" << G::s(currentDmIdx.row()) << " col " << G::s(currentDmIdx.column());
     rpt << "\n" << "modeChangeJustHappened = " << G::s(modeChangeJustHappened);
@@ -276,7 +276,7 @@ void MW::diagnosticsZoom() {}
 
 void MW::diagnosticsReport(QString reportString)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QDialog *dlg = new QDialog;
     dlg->setStyleSheet(G::css);
     Ui::metadataReporttDlg md;
@@ -297,7 +297,7 @@ void MW::diagnosticsReport(QString reportString)
 
 void MW::errorReport()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QDialog *dlg = new QDialog;
     dlg->setStyleSheet(G::css);
     Ui::metadataReporttDlg md;
@@ -307,7 +307,7 @@ void MW::errorReport()
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     G::errlogFile.seek(0);
     QString errString(G::errlogFile.readAll());
-//    qDebug() << __PRETTY_FUNCTION__ << G::errlogFile.isOpen() << errString;
+//    qDebug() << CLASSFUNCTION << G::errlogFile.isOpen() << errString;
     md.textBrowser->setText(errString);
     dlg->show();
 }

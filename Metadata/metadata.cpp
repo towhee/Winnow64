@@ -4,7 +4,7 @@
 
 Metadata::Metadata(QObject *parent) : QObject(parent)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     // some initialization
     initOrientationHash();
     initSupportedFiles();
@@ -45,14 +45,14 @@ TIF data types:
 
 void Metadata::initSupportedLabelsRatings()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     ratings << "" << "1" << "2" << "3" << "4" << "5";
     labels << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
 }
 
 void Metadata::initSupportedFiles()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     // add raw file types here as they are supported
     hasJpg              << "arw"
                         << "cr2"
@@ -283,7 +283,7 @@ void Metadata::initSupportedFiles()
 
 void Metadata::initOrientationHash()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     orientationDescription[1] = "Horizontal";
     orientationDescription[2] = "Mirrow horizontal";
     orientationDescription[3] = "Rotate 180";
@@ -307,7 +307,7 @@ void Metadata::initOrientationHash()
 void Metadata::reportMetadata()
 {
 
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     QString createdExif = m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
     MetaReport::header("Winnow datamodel", p.rpt);
 //    p.rpt << "\nDATAMODEL:\n\n";
@@ -477,13 +477,13 @@ void Metadata::reportMetadata()
 
 QString Metadata::diagnostics(QString fPath)
 {
-    readMetadata(true, fPath, __PRETTY_FUNCTION__);
+    readMetadata(true, fPath, CLASSFUNCTION);
     return reportString;
 }
 
 int Metadata::getNewOrientation(int orientation, int rotation)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     int degrees = orientationToDegrees[orientation];
     degrees += rotation;
     if (degrees > 270) degrees -= 360;
@@ -518,7 +518,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     for existing and changed metadata is written to buffer and the original image file is
     copied unchanged.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     // is xmp supported for this file
     QFileInfo info(fPath);
@@ -528,7 +528,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     if (suffix != "xmp") return false;
 
 //    if (!sidecarFormats.contains(suffix)) {
-////        qDebug() << __PRETTY_FUNCTION__ << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
+////        qDebug() << CLASSFUNCTION << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
 //        return false;
 //    }
 
@@ -540,16 +540,16 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     int newOrientation = getNewOrientation(m.orientation, m.rotationDegrees);
 
     /* debug
-    qDebug() << __PRETTY_FUNCTION__ << "m.rating =" << m.rating << "m._rating = " << m._rating;
-    qDebug() << __PRETTY_FUNCTION__ << "m.label =" << m.label << "m._label = " << m._label;
-    qDebug() << __PRETTY_FUNCTION__ << "m.title =" << m.title << "m._title = " << m._title;
-    qDebug() << __PRETTY_FUNCTION__ << "m.creator =" << m.creator << "m._creator = " << m._creator;
-    qDebug() << __PRETTY_FUNCTION__ << "m.copyright =" << m.copyright << "m._copyright = " << m._copyright;
-    qDebug() << __PRETTY_FUNCTION__ << "m.email =" << m.email << "m._email = " << m._email;
-    qDebug() << __PRETTY_FUNCTION__ << "m.url =" << m.url << "m._url = " << m._url;
+    qDebug() << CLASSFUNCTION << "m.rating =" << m.rating << "m._rating = " << m._rating;
+    qDebug() << CLASSFUNCTION << "m.label =" << m.label << "m._label = " << m._label;
+    qDebug() << CLASSFUNCTION << "m.title =" << m.title << "m._title = " << m._title;
+    qDebug() << CLASSFUNCTION << "m.creator =" << m.creator << "m._creator = " << m._creator;
+    qDebug() << CLASSFUNCTION << "m.copyright =" << m.copyright << "m._copyright = " << m._copyright;
+    qDebug() << CLASSFUNCTION << "m.email =" << m.email << "m._email = " << m._email;
+    qDebug() << CLASSFUNCTION << "m.url =" << m.url << "m._url = " << m._url;
 
-//    qDebug() << __PRETTY_FUNCTION__ << "m.orientation =" << m.orientation << "m._orientation = " << m._orientation;
-//    qDebug() << __PRETTY_FUNCTION__ << "m.rotationDegrees =" << m.rotationDegrees << "m._rotationDegrees = " << m._rotationDegrees;
+//    qDebug() << CLASSFUNCTION << "m.orientation =" << m.orientation << "m._orientation = " << m._orientation;
+//    qDebug() << CLASSFUNCTION << "m.rotationDegrees =" << m.rotationDegrees << "m._rotationDegrees = " << m._rotationDegrees;
     qDebug();
     //*/
 
@@ -573,7 +573,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
 //        && !orientationChanged
 //        && !rotationChanged
        ) {
-        qDebug() << __PRETTY_FUNCTION__ << "Unable to write xmp buffer. No metadata has been edited.";
+        qDebug() << CLASSFUNCTION << "Unable to write xmp buffer. No metadata has been edited.";
         return false;
     }
 
@@ -657,7 +657,7 @@ found returns 0.
 
 QFile p.file must be assigned and open.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     uint firstCharCode = static_cast<unsigned int>(s[0].unicode());
     p.file.seek(offset);
     for (quint32 i = offset; i < offset + range; i++) {
@@ -685,7 +685,7 @@ checked to make sure there is valid data.
 
 ** Not being used **
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     p.file.seek(offset);
     if (Utilities::get16(p.file.peek(2)) == 0xFFD8) {
         p.file.seek(offset + length - 2);
@@ -701,7 +701,7 @@ checked to make sure there is valid data.
 
 bool Metadata::parseNikon()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (nikon == nullptr) nikon = new Nikon;
     nikon->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -710,7 +710,7 @@ bool Metadata::parseNikon()
 
 bool Metadata::parseCanon()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (canon == nullptr) canon = new Canon;
     canon->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -719,7 +719,7 @@ bool Metadata::parseCanon()
 
 bool Metadata::parseCanonCR3()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     CanonCR3 canonCR3(p, m, ifd, exif, jpeg);
     canonCR3.parse();
     if (p.report) reportMetadata();
@@ -728,7 +728,7 @@ bool Metadata::parseCanonCR3()
 
 bool Metadata::parseOlympus()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (olympus == nullptr) olympus = new Olympus;
     olympus->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -737,7 +737,7 @@ bool Metadata::parseOlympus()
 
 bool Metadata::parseSony()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (sony == nullptr) sony = new Sony;
     sony->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -746,7 +746,7 @@ bool Metadata::parseSony()
 
 bool Metadata::parseFuji()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (fuji == nullptr) fuji = new Fuji;
     fuji->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -755,7 +755,7 @@ bool Metadata::parseFuji()
 
 bool Metadata::parseDNG()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (dng == nullptr) dng = new DNG;
     if (iptc == nullptr) iptc = new IPTC;
     dng->parse(p, m, ifd, iptc, exif, jpeg);
@@ -765,7 +765,7 @@ bool Metadata::parseDNG()
 
 bool Metadata::parseTIF()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (tiff == nullptr) tiff = new Tiff;
     if (irb == nullptr) irb = new IRB;
     tiff->parse(p, m, ifd, irb, iptc, exif, gps);
@@ -775,7 +775,7 @@ bool Metadata::parseTIF()
 
 bool Metadata::parsePanasonic()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (panasonic == nullptr) panasonic = new Panasonic;
     panasonic->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -784,15 +784,15 @@ bool Metadata::parsePanasonic()
 
 bool Metadata::parseJPG(quint32 startOffset)
 {
-//    qDebug() << __PRETTY_FUNCTION__ << p.file.fileName();
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+//    qDebug() << CLASSFUNCTION << p.file.fileName();
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     if (!p.file.isOpen()) {
-        qDebug() << __PRETTY_FUNCTION__ << p.file.fileName() << "is not open";
+        qDebug() << CLASSFUNCTION << p.file.fileName() << "is not open";
         return false;
     }
     p.offset = startOffset;
     if (p.file.fileName() == "") {
-        qDebug() << __PRETTY_FUNCTION__ << "Blank file name";
+        qDebug() << CLASSFUNCTION << "Blank file name";
         return false;
     }
     bool ok = jpeg->parse(p, m, ifd, iptc, exif, gps);
@@ -802,7 +802,7 @@ bool Metadata::parseJPG(quint32 startOffset)
 
 bool Metadata::parseHEIF()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
 #ifdef Q_OS_WIN
     // rgh remove heic
     if (heic == nullptr) heic = new Heic;
@@ -814,7 +814,7 @@ bool Metadata::parseHEIF()
 
 bool Metadata::parseSidecar()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (G::stop) return false;
 
     QFileInfo info(p.file);
@@ -827,7 +827,7 @@ bool Metadata::parseSidecar()
     }
 
     if (!sidecarFile.open(QIODevice::ReadOnly)) {
-        qWarning() << __PRETTY_FUNCTION__ << "Failed to open sidecar file" << sidecarPath;
+        qWarning() << CLASSFUNCTION << "Failed to open sidecar file" << sidecarPath;
         return false;
     }
 
@@ -870,14 +870,14 @@ QString Metadata::sidecarPath(QString fPath)
     The sidecar file has the same name as the image file, but uses the extension "xmp".
 */
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QFileInfo info(fPath);
     return info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
 }
 
 void Metadata::clearMetadata()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     p.fPath = "";
     m.offsetFull = 0;
     m.lengthFull = 0;
@@ -953,7 +953,7 @@ void Metadata::testNewFileFormat(const QString &path)
 
 bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, "Source: " + source);
+    if (G::isLogger) G::log(CLASSFUNCTION, "Source: " + source);
 
     // make sure file is available ie usb drive has been ejected
     QFileInfo fileInfo(path);
@@ -972,7 +972,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     p.fPath = path;
 
     if (p.file.isOpen()) {
-        qDebug() << __PRETTY_FUNCTION__ << "File already open" << path;
+        qDebug() << CLASSFUNCTION << "File already open" << path;
         return false;
     }
     p.file.setFileName(path);
@@ -1003,13 +1003,13 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ext == "tif")  parsed = parseTIF();
         p.file.close();
         if (p.file.isOpen()) {
-            qDebug() << __PRETTY_FUNCTION__ << "Could not close" << path << "after format was read";
+            qDebug() << CLASSFUNCTION << "Could not close" << path << "after format was read";
         }
         if (!parsed) {
             p.file.close();
             QString msg =  "Unable to parse metadata for " + path + ". ";
             m.err += msg;
-            qWarning() << __PRETTY_FUNCTION__ << msg;
+            qWarning() << CLASSFUNCTION << msg;
             return false;
         }
         if (G::useSidecar) {
@@ -1018,7 +1018,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     }
     else {
         if (p.file.isOpen()) p.file.close();
-        G::error(__PRETTY_FUNCTION__, path, "Could not open p.file to read metadata.");
+        G::error(CLASSFUNCTION, path, "Could not open p.file to read metadata.");
         return false;
     }
 
@@ -1026,7 +1026,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 
     // not all files have thumb or small jpg embedded
     if (m.offsetFull == 0 && ext != "jpg" && parsed) {
-        G::error(__PRETTY_FUNCTION__, path, "No embedded JPG found.");
+        G::error(CLASSFUNCTION, path, "No embedded JPG found.");
     }
 
     if (m.lengthFull == 0 && m.lengthThumb > 0) {
@@ -1043,11 +1043,11 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     thumbUnavailable = imageUnavailable = false;
     if (m.lengthFull == 0) {
         imageUnavailable = true;
-        G::error(__PRETTY_FUNCTION__, path, "No embedded preview found.");
+        G::error(CLASSFUNCTION, path, "No embedded preview found.");
     }
     if (m.lengthThumb == 0) {
         thumbUnavailable = true;
-        G::error(__PRETTY_FUNCTION__, path, "No embedded thumbnail or preview found.");
+        G::error(CLASSFUNCTION, path, "No embedded thumbnail or preview found.");
     }
 
     return true;
@@ -1057,12 +1057,12 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
                                  bool essential, bool nonEssential,
                                  bool isReport, bool isLoadXmp, QString source)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__, fileInfo.filePath() + "  Source: " + source);
+    if (G::isLogger) G::log(CLASSFUNCTION, fileInfo.filePath() + "  Source: " + source);
 
     // check if already loaded
     QString fPath = fileInfo.filePath();
     if (fPath == "") {
-        qWarning() << __PRETTY_FUNCTION__ << "NULL FILE REQUESTED FROM "
+        qWarning() << CLASSFUNCTION << "NULL FILE REQUESTED FROM "
                    << source;
         return false;
     }
@@ -1083,7 +1083,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     // read metadata
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
-//        G::error(__PRETTY_FUNCTION__, fPath, "Failed to read metadata.");
+//        G::error(CLASSFUNCTION, fPath, "Failed to read metadata.");
         qWarning() << "Metadata not loaded for" << fPath;
         return false;
     }
@@ -1111,7 +1111,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 // duplicate function - do we need this??
 //bool Metadata::writeXMP(QStringList &paths, const QString tag, const QString tagValue)
 //{
-//    if (G::isLogger) G::log(__PRETTY_FUNCTION__, tag);
+//    if (G::isLogger) G::log(CLASSFUNCTION, tag);
 //    QString tagName;
 //    if (tag == "Title") tagName = "XMP-dc:Title";
 //    if (tag == "Creator") tagName = "XMP-dc:creator";

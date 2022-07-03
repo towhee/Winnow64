@@ -121,9 +121,9 @@ DockWidget::DockWidget(const QString &title, QWidget *parent)
 bool DockWidget::event(QEvent *event)
 {
     if (event->type() == QEvent::MouseButtonDblClick) {
-        if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+        if (G::isLogger) G::log(CLASSFUNCTION);
         /*
-        qDebug() << __PRETTY_FUNCTION__ << event << objectName()
+        qDebug() << CLASSFUNCTION << event << objectName()
                  << "isFloating =" << isFloating()
                  << "dw.devicePixelRatio " << dw.devicePixelRatio
                  << "prevDpr " << prevDpr
@@ -151,10 +151,10 @@ bool DockWidget::event(QEvent *event)
 
 void DockWidget::showEvent(QShowEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     /*
     if (isFloating())
-        qDebug() << __PRETTY_FUNCTION__ << event << objectName()
+        qDebug() << CLASSFUNCTION << event << objectName()
                  << "isInitializing =" << isInitializing
                  << "isFloating =" << isFloating()
                  << "dprSize =" << dprSize
@@ -174,10 +174,10 @@ void DockWidget::showEvent(QShowEvent *event)
 
 QSize DockWidget::sizeHint() const
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (isFloating()) {
         /*
-        qDebug() << __PRETTY_FUNCTION__ << "dprSize =" << dprSize;
+        qDebug() << CLASSFUNCTION << "dprSize =" << dprSize;
         //*/
         return dprSize;
     }
@@ -186,10 +186,10 @@ QSize DockWidget::sizeHint() const
 
 void DockWidget::resizeEvent(QResizeEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     /*
     if (isFloating())
-        qDebug() << __PRETTY_FUNCTION__ << event << objectName()
+        qDebug() << CLASSFUNCTION << event << objectName()
                  << "isInitializing =" << isInitializing
                  << "ignoreResize =" << ignoreResize
                  << "isFloating =" << isFloating()
@@ -215,7 +215,7 @@ void DockWidget::resizeEvent(QResizeEvent *event)
         dw.size = event->size();
         dprSize = dw.size;
         /*
-        qDebug() << __PRETTY_FUNCTION__ << event << "Define dw:"
+        qDebug() << CLASSFUNCTION << event << "Define dw:"
                  << "dprSize =" << dprSize
                  << "dw.size =" << dw.size
                  << "dw.devicePixelRatio " << dw.devicePixelRatio
@@ -228,10 +228,10 @@ void DockWidget::resizeEvent(QResizeEvent *event)
 
 void DockWidget::moveEvent(QMoveEvent *event)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     /*
     if (isFloating())
-        qDebug() << __PRETTY_FUNCTION__ << event << objectName()
+        qDebug() << CLASSFUNCTION << event << objectName()
                  << "ignore =" << ignoreResize
                  << "isFloating =" << isFloating()
                  << "spontaneous =" << event->spontaneous()
@@ -245,7 +245,7 @@ void DockWidget::moveEvent(QMoveEvent *event)
 //        dw.screen = QApplication::desktop()->screenNumber(this);
         dw.pos = QPoint(frameGeometry().x(), frameGeometry().y());
         /*
-        qDebug() << __PRETTY_FUNCTION__ << "Redefine dw.pos:"
+        qDebug() << CLASSFUNCTION << "Redefine dw.pos:"
                  << "dw.pos =" << dw.pos
                  << "frameGeometry() =" << frameGeometry()
                  << "dw.devicePixelRatio " << dw.devicePixelRatio

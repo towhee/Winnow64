@@ -65,9 +65,9 @@ void ManageTilesDlg::editingFinished()
     int index = ui->tileBox->currentIndex();
     QString oldKey = tiles.at(textEditedIndex);
     QString newKey = ui->tileBox->lineEdit()->text();
-    qDebug() << __PRETTY_FUNCTION__ << "tiles   " << tiles;
-    qDebug() << __PRETTY_FUNCTION__ << "tileBox " << tileBoxModel->stringList();
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION << "tiles   " << tiles;
+    qDebug() << CLASSFUNCTION << "tileBox " << tileBoxModel->stringList();
+    qDebug() << CLASSFUNCTION
              << "oldKey =" << oldKey
              << "newKey =" << newKey
              << "textHasBeenEdited =" << textHasBeenEdited
@@ -112,9 +112,9 @@ void ManageTilesDlg::textChange(QString text)
     }
     /*
     qDebug();
-    qDebug() << __PRETTY_FUNCTION__ << "tiles   " << tiles;
-    qDebug() << __PRETTY_FUNCTION__ << "tileBox " << tileBoxModel->stringList();
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION << "tiles   " << tiles;
+    qDebug() << CLASSFUNCTION << "tileBox " << tileBoxModel->stringList();
+    qDebug() << CLASSFUNCTION
              << "text =" << text
              << "tilesText =" << tilesText
              << "textHasBeenEdited =" << textHasBeenEdited
@@ -132,13 +132,13 @@ void ManageTilesDlg::activate(int index)
     // if trigged by textChange but the text is being edited then not a new tile selection
     if (textHasBeenEdited) return;
     if (index >= tiles.size()) {
-        qDebug() << __PRETTY_FUNCTION__
+        qDebug() << CLASSFUNCTION
                  << "Invalidindex =" << index;
         return;
     }
     QString sKey = "Embel/Tiles/" + tiles.at(index);
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION
              << "textHasBeenEdited =" << textHasBeenEdited
              << "textEditedIndex =" << textEditedIndex
              << "index =" << index
@@ -167,9 +167,9 @@ void ManageTilesDlg::on_deleteBtn_clicked()
     QString sKey = "Embel/Tiles/" + tileName;
     /*
     qDebug();
-    qDebug() << __PRETTY_FUNCTION__ << "tiles   " << tiles;
-    qDebug() << __PRETTY_FUNCTION__ << "tileBox " << tileBoxModel->stringList();
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION << "tiles   " << tiles;
+    qDebug() << CLASSFUNCTION << "tileBox " << tileBoxModel->stringList();
+    qDebug() << CLASSFUNCTION
              << "index =" << index
              << "sKey =" << sKey
                 ;

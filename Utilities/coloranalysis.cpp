@@ -65,6 +65,6 @@ void ColorAnalysis::abortHueReport()
     G::popUp->setProgressVisible(false);
     G::popUp->hide();
     G::popUp->showPopup("Hue report has been aborted.");
-    qDebug() << __PRETTY_FUNCTION__ << abort;
+    qDebug() << CLASSFUNCTION << abort;
     qApp->processEvents();
 }

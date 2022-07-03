@@ -311,7 +311,7 @@ public:
 
     // mode change
     QString prevMode;
-    int currentRow;             // the current row in MW::fileSelection
+    int currSfRow;             // the current row in MW::fileSelection
     int scrollRow;              // the row to scroll to when change mode
     QModelIndex currentSfIdx;   // the current proxy index in MW::fileSelection
     QModelIndex currentDmIdx;   // the datamodel index for the current proxy index
@@ -381,6 +381,7 @@ public slots:
 signals:
     void setValue(QModelIndex dmIdx, QVariant value, int role);
     void setValueSf(QModelIndex sfIdx, QVariant value, int role);
+    void readMetadata(int sfRow, QString src);
     void setImageCachePosition(QString, QString);
     void setImageCachePosition2(QString);
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
@@ -487,7 +488,7 @@ private slots:
                                 ImageCacheData::Cache cache,
                                 QString source);
     // caching
-    void loadConcurrent(MetaRead::Action action = MetaRead::FileSelection,
+    void loadConcurrent(/*MetaRead::Action action = MetaRead::FileSelection,*/
                         int sfRow = 0,
                         QString src = "");
     void loadConcurrentNewFolder();
@@ -987,6 +988,7 @@ private:
     QHeaderView *headerView;
     CompareImages *compareImages;
 
+    QThread metaReadThread;
     MetadataCache *metadataCacheThread;
     ImageCache *imageCacheThread;
 //    MdCacheMgr *mdCacheMgr;
@@ -1007,11 +1009,6 @@ private:
     UpdateApp *updateAppDlg;
     ZoomDlg *zoomDlg = nullptr;
     QTimer *slideShowTimer;
-//    QWidget *folderDockOrigWidget;
-//    QWidget *favDockOrigWidget;
-//    QWidget *filterDockOrigWidget;
-//    QWidget *metadataDockOrigWidget;
-//    QWidget *thumbDockOrigWidget;
     QWidget *folderDockEmptyWidget;
     QWidget *favDockEmptyWidget;
     QWidget *filterDockEmptyWidget;
