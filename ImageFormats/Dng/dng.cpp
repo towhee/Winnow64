@@ -151,7 +151,7 @@ bool DNG::parse(MetadataParameters &p,
                 jpgInfo.width = ifd->ifdDataHash.value(256).tagValue;
                 jpgInfo.height = ifd->ifdDataHash.value(257).tagValue;
                 /*
-                qDebug() << __PRETTY_FUNCTION__ << "i =" << i
+                qDebug() << CLASSFUNCTION << "i =" << i
                          << "jpgInfo.offset =" << jpgInfo.offset
                          << "jpgInfo.length" << jpgInfo.length
                          << "jpgInfo.width" << jpgInfo.width

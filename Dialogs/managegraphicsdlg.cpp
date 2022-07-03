@@ -32,10 +32,10 @@ ManageGraphicsDlg::ManageGraphicsDlg(QSettings *setting, QWidget *parent) :
     // read list of graphics from QSettings
     this->setting = setting;
     setting->beginGroup("Embel/Graphics");
-    qDebug() << __PRETTY_FUNCTION__ << setting->allKeys();
+    qDebug() << CLASSFUNCTION << setting->allKeys();
     graphicsList << setting->allKeys();
     setting->endGroup();
-    qDebug() << __PRETTY_FUNCTION__ << graphicsList;
+    qDebug() << CLASSFUNCTION << graphicsList;
 
     // load combobox with list of graphics
     ui->graphicsBox->addItems(graphicsList);
@@ -67,9 +67,9 @@ void ManageGraphicsDlg::editingFinished()
     int index = ui->graphicsBox->currentIndex();
     QString oldKey = graphicsList.at(textEditedIndex);
     QString newKey = ui->graphicsBox->lineEdit()->text();
-    qDebug() << __PRETTY_FUNCTION__ << "graphicss   " << graphicsList;
-//    qDebug() << __PRETTY_FUNCTION__ << "graphicsBox " << graphicsBoxModel->stringList();
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION << "graphicss   " << graphicsList;
+//    qDebug() << CLASSFUNCTION << "graphicsBox " << graphicsBoxModel->stringList();
+    qDebug() << CLASSFUNCTION
              << "oldKey =" << oldKey
              << "newKey =" << newKey
              << "textHasBeenEdited =" << textHasBeenEdited
@@ -114,9 +114,9 @@ void ManageGraphicsDlg::textChange(QString text)
     }
     /*
     qDebug();
-    qDebug() << __PRETTY_FUNCTION__ << "graphics   " << graphics;
-    qDebug() << __PRETTY_FUNCTION__ << "graphicsBox " << graphicsBoxModel->stringList();
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION << "graphics   " << graphics;
+    qDebug() << CLASSFUNCTION << "graphicsBox " << graphicsBoxModel->stringList();
+    qDebug() << CLASSFUNCTION
              << "text =" << text
              << "graphicsText =" << graphicsText
              << "textHasBeenEdited =" << textHasBeenEdited
@@ -132,16 +132,16 @@ void ManageGraphicsDlg::activate(int index)
     Show pixmap when the graphicsBox selection changes.
 */
     // if trigged be textChange but the text is being edited then not a new graphic selection
-qDebug() << __PRETTY_FUNCTION__ << "textHasBeenEdited =" << textHasBeenEdited;
+qDebug() << CLASSFUNCTION << "textHasBeenEdited =" << textHasBeenEdited;
 //    if (textHasBeenEdited) return;
     if (index >= graphicsList.size()) {
-        qDebug() << __PRETTY_FUNCTION__
+        qDebug() << CLASSFUNCTION
                  << "Invalidindex =" << index;
         return;
     }
     QString sKey = "Embel/Graphics/" + graphicsList.at(index);
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION
              << "textHasBeenEdited =" << textHasBeenEdited
              << "textEditedIndex =" << textEditedIndex
              << "index =" << index
@@ -170,9 +170,9 @@ void ManageGraphicsDlg::on_deleteBtn_clicked()
     QString sKey = "Embel/Graphics/" + graphicName;
     /*
     qDebug();
-    qDebug() << __PRETTY_FUNCTION__ << "graphics   " << graphics;
-    qDebug() << __PRETTY_FUNCTION__ << "graphicsBox " << graphicsBoxModel->stringList();
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION << "graphics   " << graphics;
+    qDebug() << CLASSFUNCTION << "graphicsBox " << graphicsBoxModel->stringList();
+    qDebug() << CLASSFUNCTION
              << "index =" << index
              << "sKey =" << sKey
                 ;
@@ -212,7 +212,7 @@ void ManageGraphicsDlg::updateList()
     graphicsList << setting->allKeys();
     setting->endGroup();
 
-    qDebug() << __PRETTY_FUNCTION__ << graphicsList;
+    qDebug() << CLASSFUNCTION << graphicsList;
 
     ui->graphicsBox->clear();
     ui->graphicsBox->addItems(graphicsList);

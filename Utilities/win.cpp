@@ -18,13 +18,13 @@ void Win::availableMemory()
         Really good resource for getting memory info for various OS
         https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
     */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     quint32 mb = 1024 *1024;
     MEMORYSTATUSEX statex;
     statex.dwLength = sizeof(statex);
     GlobalMemoryStatusEx (&statex);
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << CLASSFUNCTION
              << "Physical memory:" << statex.ullTotalPhys / mb
              << "Available memory:" << statex.ullAvailPhys / mb;
     */
@@ -34,7 +34,7 @@ void Win::availableMemory()
     PROCESS_MEMORY_COUNTERS pmc;
     GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
     SIZE_T virtualMemUsedByMe = pmc.PagefileUsage;
-//    qDebug() << __PRETTY_FUNCTION__ << virtualMemUsedByMe;
+//    qDebug() << CLASSFUNCTION << virtualMemUsedByMe;
 }
 
 void Win::collectScreensInfo()
@@ -42,7 +42,7 @@ void Win::collectScreensInfo()
     /*
     Populates G::winScreenHash with the attached adaptors, monitors and icc profiles.
     */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(CLASSFUNCTION); 
     DISPLAY_DEVICE displayDevice = {};
     displayDevice.cb = sizeof(DISPLAY_DEVICE);
 

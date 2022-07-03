@@ -23,8 +23,6 @@ public:
         Scroll,
         SizeChange
     } action;
-    void read(Action action = Action::FileSelection, int sfRow = 0, QString src = "");
-    void initialize();
     void dmRowRemoved(int dmRow);
     QString diagnostics();
     QString reportMetaCache();
@@ -35,13 +33,19 @@ public:
 
 signals:
     void done();
-    void metaCacheIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
+    void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance);
     void setImageCachePosition(QString fPath);      // not used
     void delayedStartImageCache();
     void updateIconBestFit();
+
+public slots:
+    void initialize();
+    void read(int sfRow = 0, QString src = "");
+//    void scroll(int sfRow, QString src = "");
+//    void sizeChange(int sfRow, QString src = "");
 
 private:
     void readRow(int sfRow);
@@ -65,6 +69,7 @@ private:
     int sfRowCount;
     int visibleIconCount;
     int sfStart;
+    int sfRow;
 
     bool imageCachingStarted = false;
     QList<int> priorityQueue;
@@ -72,5 +77,6 @@ private:
     QList<int> visibleIcons;
 
     bool debugCaching = false;
+    QElapsedTimer t;
 };
 #endif // METAREAD_H

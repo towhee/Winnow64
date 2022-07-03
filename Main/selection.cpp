@@ -8,14 +8,14 @@ void MW::saveSelection()
     is hidden it loses the current index and selection, which has to be re-established each
     time it is made visible.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     selectedRows = selectionModel->selectedRows();
     currentIdx = selectionModel->currentIndex();
 }
 
 void MW::recoverSelection()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QItemSelection selection;
     QModelIndex idx;
     foreach (idx, selectedRows)
@@ -29,7 +29,7 @@ bool MW::getSelection(QStringList &list)
     Adds each image that is selected or picked as a file path to list. If there are picks and
     a selection then a dialog offers the user a choice to use.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     bool usePicks = false;
 
@@ -86,7 +86,7 @@ bool MW::getSelection(QStringList &list)
 
 QStringList MW::getSelectionOrPicks()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     QStringList picks;
 
@@ -123,7 +123,7 @@ void MW::togglePickUnlessRejected()
     If the entire selection is unpicked then pick them all.
     Push the changes onto the pick history stack.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QModelIndex idx;
     QModelIndexList idxList = selectionModel->selectedRows();
     QString pickStatus;
@@ -163,7 +163,7 @@ void MW::togglePickUnlessRejected()
     gridView->refreshThumbs();
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "", __PRETTY_FUNCTION__);
+    updateStatus(true, "", CLASSFUNCTION);
 
     // update filter counts
     buildFilters->updateCountFiltered();
@@ -178,7 +178,7 @@ void MW::togglePickMouseOver()
     Triggered by ThumbView context menu MW::pickMouseOverAction.  ThumbView mousePressEvent
     stores the mouse click indexAt(position).  Use this to call togglePickMouseOverItem.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     togglePickMouseOverItem(thumbView->mouseOverIndex);
 }
 
@@ -188,7 +188,7 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     This is called from IconView forward or back mouse click. The pick status item the mouse is
     over is toggled, but the selection is not changed.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
     QString pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
     pickStatus == "false" ? pickStatus = "true" : pickStatus = "false";
@@ -200,7 +200,7 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     gridView->refreshThumbs();
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "", __PRETTY_FUNCTION__);
+    updateStatus(true, "", CLASSFUNCTION);
 
     // update filter counts
     buildFilters->updateCountFiltered();
@@ -214,7 +214,7 @@ void MW::togglePick()
     If the entire selection is unpicked then pick them all.
     Push the changes onto the pick history stack.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QModelIndex idx;
     QModelIndexList idxList = selectionModel->selectedRows();
     QString pickStatus;
@@ -251,7 +251,7 @@ void MW::togglePick()
     gridView->refreshThumbs();
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "", __PRETTY_FUNCTION__);
+    updateStatus(true, "", CLASSFUNCTION);
 
     // update filter counts
     buildFilters->updateCountFiltered();
@@ -262,7 +262,7 @@ void MW::togglePick()
 
 int MW::pickLogCount()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("PickLog");
     int count = setting->allKeys().size();
     setting->endGroup();
@@ -271,7 +271,7 @@ int MW::pickLogCount()
 
 void MW::recoverPickLog()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("PickLog");
     QStringList keys = setting->allKeys();
     for (int i = 0; i < keys.length(); ++i) {
@@ -283,10 +283,10 @@ void MW::recoverPickLog()
             QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
             emit setValueSf(pickIdx, pickStatus, Qt::EditRole);
 //            dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
-            qDebug() << __PRETTY_FUNCTION__ << pickStatus << fPath << "updated";
+            qDebug() << CLASSFUNCTION << pickStatus << fPath << "updated";
         }
         else {
-            qDebug() << __PRETTY_FUNCTION__ << fPath << "not found";
+            qDebug() << CLASSFUNCTION << fPath << "not found";
         }
     }
     setting->endGroup();
@@ -296,7 +296,7 @@ void MW::recoverPickLog()
 
 void MW::clearPickLog()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("PickLog");
     QStringList keys = setting->allKeys();
     for (int i = 0; i < keys.length(); ++i) {
@@ -307,16 +307,16 @@ void MW::clearPickLog()
 
 void MW::updatePickLog(QString fPath, QString pickStatus)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("PickLog");
     QString sKey = fPath;
     sKey.replace("/", "🔸");
     if (pickStatus == "true") {
-//        qDebug() << __PRETTY_FUNCTION__ << "adding" << sKey;
+//        qDebug() << CLASSFUNCTION << "adding" << sKey;
         setting->setValue(sKey, pickStatus);
     }
     else {
-//        qDebug() << __PRETTY_FUNCTION__ << "removing" << sKey;
+//        qDebug() << CLASSFUNCTION << "removing" << sKey;
         setting->remove(sKey);
     }
     setting->endGroup();
@@ -329,7 +329,7 @@ void MW::pushPick(QString fPath, QString status)
     recover a prior pick history state if the picks have been lost due to an accidental
     erasure.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     pick.path = fPath;
     pick.status = status;
     pickStack->push(pick);
@@ -337,7 +337,7 @@ void MW::pushPick(QString fPath, QString status)
 
 void MW::popPick()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (pickStack->isEmpty()) return;
     pick = pickStack->pop();
     if (pick.path != "End multiple select") {
@@ -354,7 +354,7 @@ void MW::popPick()
 
 void MW::updatePickFromHistory(QString fPath, QString status)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (dm->fPathRow.contains(fPath)) {
         int row = dm->fPathRow[fPath];
         QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
@@ -365,7 +365,7 @@ void MW::updatePickFromHistory(QString fPath, QString status)
         gridView->refreshThumbs();
 
         pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-        updateStatus(true, "", __PRETTY_FUNCTION__);
+        updateStatus(true, "", CLASSFUNCTION);
 
         // update filter counts
         buildFilters->updateCountFiltered();
@@ -374,7 +374,7 @@ void MW::updatePickFromHistory(QString fPath, QString status)
 
 qulonglong MW::memoryReqdForPicks()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     qulonglong memTot = 0;
     for(int row = 0; row < dm->sf->rowCount(); row++) {
         QModelIndex idx = dm->sf->index(row, G::PickColumn);
@@ -388,7 +388,7 @@ qulonglong MW::memoryReqdForPicks()
 
 qulonglong MW::memoryReqdForSelection()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     qulonglong memTot = 0;
     QModelIndexList selection = selectionModel->selectedRows();
     for(int row = 0; row < selection.count(); row++) {

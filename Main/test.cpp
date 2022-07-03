@@ -2,8 +2,8 @@
 
 void MW::stressTest(int ms)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
-    qDebug() << __PRETTY_FUNCTION__ << ms;
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION << ms;
     ms = QInputDialog::getInt(this, "Enter ms delay between images", "Delay (1-1000 ms) ",
                               50, 1, 1000);
 
@@ -13,12 +13,12 @@ void MW::stressTest(int ms)
     slideCount = 0;
     QElapsedTimer t;
     t.start();
-    qDebug() << __PRETTY_FUNCTION__ << "-1";
+    qDebug() << CLASSFUNCTION << "-1";
     while (isStressTest) {
         G::wait(ms);
         ++slideCount;
-        if (isForward && currentRow == dm->sf->rowCount() - 1) isForward = false;
-        if (!isForward && currentRow == 0) isForward = true;
+        if (isForward && currSfRow == dm->sf->rowCount() - 1) isForward = false;
+        if (!isForward && currSfRow == 0) isForward = true;
         if (isForward) keyRight();
         else keyLeft();
         qApp->processEvents();
@@ -35,14 +35,14 @@ void MW::stressTest(int ms)
 //                  + "<br><br>Press <font color=\"red\"><b>Esc</b></font> to cancel this popup."
                   ;
     G::popUp->showPopup(msg, 0);
-    qDebug() << __PRETTY_FUNCTION__ << "Executed stress test" << slideCount << "times.  "
+    qDebug() << CLASSFUNCTION << "Executed stress test" << slideCount << "times.  "
              << msElapsed << "ms elapsed  "
              << ms << "ms delay  "
              << imagePerSec << "images per second  "
              << msPerImage << "ms per image."
                 ;
     return;
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     getSubfolders("/users/roryhill/pictures");
     QString fPath;
     int r = static_cast<int>(QRandomGenerator::global()->generate());
@@ -60,7 +60,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << centralLayout->currentIndex();
+    qDebug() << metaReadThread.isRunning();
 //    centralLayout->setCurrentIndex(LoupeTab);
     return;
 
@@ -85,7 +85,7 @@ QString p2 = "/Users/roryhill/Pictures/Test";
 
     qDebug();
     G::t.restart();
-    G::track(__PRETTY_FUNCTION__, "New folder: " + fPath);
+    G::track(CLASSFUNCTION, "New folder: " + fPath);
     folderSelectionChange();
     b = !b;
 }

@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 
     // instance already running
     if (instance.sendMessage(args)) {
-//        Utilities::log(__PRETTY_FUNCTION__, "Instance already running");
+//        Utilities::log(CLASSFUNCTION, "Instance already running");
         return 0;
     }
 

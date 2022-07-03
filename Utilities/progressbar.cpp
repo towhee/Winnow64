@@ -60,7 +60,7 @@ void ProgressBar::setBackgroundColor(const QColor &bg)
     the app background is changed this function selectively paints the non-progressbar part of
     the pixmap the new background shade.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 //    int w = m1->progressLabel->pixmap().width();     // Qt 6.2
 //    int h = m1->progressLabel->pixmap().height();    // Qt 6.2
 //    /*

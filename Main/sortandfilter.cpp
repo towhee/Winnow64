@@ -23,13 +23,13 @@
 
 void MW::filterDockVisibilityChange(bool isVisible)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (isVisible && !G::isInitializing && G::allMetadataLoaded) launchBuildFilters();
 }
 
 void MW::launchBuildFilters()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (G::isInitializing) return;
     if (filterDock->visibleRegion().isNull()) {
         filters->setSoloMode(filterSoloAction->isChecked());
@@ -57,8 +57,8 @@ void MW::filterChange(QString source)
     available is set, the thumb and grid first/last/thumbsPerPage parameters are recalculated
     and icons are loaded if necessary.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__, "Src: " + source);
-    qDebug() << __PRETTY_FUNCTION__ << "called from:" << source;
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Src: " + source);
+    qDebug() << CLASSFUNCTION << "called from:" << source;
     // ignore if new folder is being loaded
     if (!G::isNewFolderLoaded) {
         G::popUp->showPopup("Please wait for the folder to complete loading...", 2000);
@@ -110,27 +110,27 @@ void MW::filterChange(QString source)
     }
 
     // get the current selected item
-    currentRow = dm->sf->mapFromSource(currentDmIdx).row();
+    currSfRow = dm->sf->mapFromSource(currentDmIdx).row();
     // check if still in filtered set, if not select first item in filtered set
-    if (currentRow == -1) currentRow = 0;
-    thumbView->iconViewDelegate->currentRow = currentRow;
-    gridView->iconViewDelegate->currentRow = currentRow;
-    thumbView->selectThumb(currentRow);
-    QModelIndex idx = dm->sf->index(currentRow, 0);
+    if (currSfRow == -1) currSfRow = 0;
+    thumbView->iconViewDelegate->currentRow = currSfRow;
+    gridView->iconViewDelegate->currentRow = currSfRow;
+    thumbView->selectThumb(currSfRow);
+    QModelIndex idx = dm->sf->index(currSfRow, 0);
     // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(currSfRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
 
-    updateStatus(true, "", __PRETTY_FUNCTION__);
+    updateStatus(true, "", CLASSFUNCTION);
 
     // sync image cache with datamodel filtered proxy dm->sf
-    imageCacheThread->rebuildImageCacheParameters(fPath, __PRETTY_FUNCTION__);
+    imageCacheThread->rebuildImageCacheParameters(fPath, CLASSFUNCTION);
 
     QApplication::restoreOverrideCursor();
 
-    qDebug() << __PRETTY_FUNCTION__ << "Calling fileSelectionChange";
-    fileSelectionChange(idx, idx, __PRETTY_FUNCTION__);
+    qDebug() << CLASSFUNCTION << "Calling fileSelectionChange";
+    fileSelectionChange(idx, idx, CLASSFUNCTION);
     source = "";    // suppress compiler warning
 
     // force refresh thumbnails
@@ -139,7 +139,7 @@ void MW::filterChange(QString source)
 
 void MW::quickFilter()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     // make sure the filters have been built
     if (!filters->filtersBuilt) buildFilters->build();
@@ -174,7 +174,7 @@ void MW::quickFilter()
 
 void MW::filterSyncActionsWithFilters()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     filterRating1Action->setChecked(filters->ratings1->checkState(0));
     filterRating2Action->setChecked(filters->ratings2->checkState(0));
     filterRating3Action->setChecked(filters->ratings3->checkState(0));
@@ -193,7 +193,7 @@ void MW::invertFilters()
 /*
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (!G::allMetadataLoaded) loadEntireMetadataCache("FilterChange");
 
     if (dm->rowCount() == 0) {
@@ -213,7 +213,7 @@ void MW::invertFilters()
 
 void MW::uncheckAllFilters()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     filters->uncheckAllFilters();
     filterPickAction->setChecked(false);
     filterRating1Action->setChecked(false);
@@ -231,7 +231,7 @@ void MW::uncheckAllFilters()
 
 void MW::clearAllFilters()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (!G::allMetadataLoaded) loadEntireMetadataCache("FilterChange");   // rgh is this reqd
     uncheckAllFilters();
     filters->searchString = "";
@@ -241,7 +241,7 @@ void MW::clearAllFilters()
 
 void MW::setFilterSolo()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     filters->setSoloMode(filterSoloAction->isChecked());
     setting->setValue("isSoloFilters", filterSoloAction->isChecked());
 }
@@ -251,7 +251,7 @@ void MW::filterLastDay()
 /*
 .
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (dm->sf->rowCount() == 0) {
         G::popUp->showPopup("No images available to filter", 2000);
         filterLastDayAction->setChecked(false);
@@ -260,7 +260,7 @@ void MW::filterLastDay()
 
     // if the additional filters have not been built then do an update
     if (!filters->filtersBuilt) {
-        qDebug() << __PRETTY_FUNCTION__ << "build filters";
+        qDebug() << CLASSFUNCTION << "build filters";
         launchBuildFilters();
         G::popUp->showPopup("Building filters.", 0);
         buildFilters->wait();
@@ -292,7 +292,7 @@ void MW::refine()
     Clears refine for all rows, sets refine = true if pick = true, and clears pick
     for all rows.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     // if slideshow then do not refine
     if (G::isSlideShow) return;
 
@@ -360,7 +360,7 @@ void MW::sortChangeFromAction()
     When a sort change menu item is picked this function is called, and then redirects to
     sortChange.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     if (sortFileNameAction->isChecked()) sortColumn = G::NameColumn;        // core
     if (sortFileTypeAction->isChecked()) sortColumn = G::TypeColumn;        // core
@@ -392,12 +392,12 @@ void MW::sortChange(QString source)
     The sort order (ascending or descending) can be set by the menu, the button icon on the
     statusbar or a workspace change.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(__PRETTY_FUNCTION__, "Src: " + source);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Src: " + source);
 
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
         /*
-    qDebug() << __PRETTY_FUNCTION__ << "source =" << source
+    qDebug() << CLASSFUNCTION << "source =" << source
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "G::isInitializing =" << G::isInitializing
              << "prevSortColumn =" << prevSortColumn
@@ -441,7 +441,7 @@ void MW::sortChange(QString source)
     // failed to load all metadata, restore prior sort in menu and return
     if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn) {
         /*
-        qDebug() << __PRETTY_FUNCTION__ << "failed"
+        qDebug() << CLASSFUNCTION << "failed"
                  << "sortColumn =" << sortColumn
                  << "prevSortColumn =" << prevSortColumn
                  ;
@@ -452,7 +452,7 @@ void MW::sortChange(QString source)
 
     prevSortColumn = sortColumn;
     /*
-    qDebug() << __PRETTY_FUNCTION__ << "succeeded"
+    qDebug() << CLASSFUNCTION << "succeeded"
              << "sortColumn =" << sortColumn
              << "prevSortColumn =" << prevSortColumn
              << "  Commencing sort"
@@ -471,22 +471,22 @@ void MW::sortChange(QString source)
 //    if (!G::allMetadataLoaded) return;
 
     // get the current selected item
-    if (G::isNewFolderLoaded) currentRow = dm->sf->mapFromSource(currentDmIdx).row();
-    else currentRow = 0;
+    if (G::isNewFolderLoaded) currSfRow = dm->sf->mapFromSource(currentDmIdx).row();
+    else currSfRow = 0;
 
-    thumbView->iconViewDelegate->currentRow = currentRow;
-    gridView->iconViewDelegate->currentRow = currentRow;
-    QModelIndex idx = dm->sf->index(currentRow, 0);
+    thumbView->iconViewDelegate->currentRow = currSfRow;
+    gridView->iconViewDelegate->currentRow = currSfRow;
+    QModelIndex idx = dm->sf->index(currSfRow, 0);
     selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
     // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(currentRow, 0).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(currSfRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache and EmbelProperties
     dm->currentFilePath = fPath;
 
 //    if (!G::allMetadataLoaded) return;
 
     centralLayout->setCurrentIndex(prevCentralView);
-    updateStatus(true, "", __PRETTY_FUNCTION__);
+    updateStatus(true, "", CLASSFUNCTION);
 
     // sync image cache with datamodel filtered proxy unless sort has been triggered by a
     // filter change, which will do its own rebuildImageCacheParameters
@@ -496,9 +496,9 @@ void MW::sortChange(QString source)
     /* if the previous selected image is also part of the filtered datamodel then the
        selected index does not change and fileSelectionChange will not be signalled.
        Therefore we call it here to force the update to caching and icons */
-//    qDebug() << __PRETTY_FUNCTION__ << idx.data() << "Calling fileSelectionChange(idx, idx)";
-    qDebug() << __PRETTY_FUNCTION__ << "Calling fileSelectionChange";
-    fileSelectionChange(idx, idx, __PRETTY_FUNCTION__);
+//    qDebug() << CLASSFUNCTION << idx.data() << "Calling fileSelectionChange(idx, idx)";
+    qDebug() << CLASSFUNCTION << "Calling fileSelectionChange";
+    fileSelectionChange(idx, idx, CLASSFUNCTION);
 
     scrollToCurrentRow();
     G::popUp->hide();
@@ -507,7 +507,7 @@ void MW::sortChange(QString source)
 
 void MW::updateSortColumn(int sortColumn)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
 
     if (sortColumn == 0) sortColumn = G::NameColumn;
 
@@ -536,14 +536,14 @@ void MW::toggleSortDirectionClick()
     call is redirected to toggleSortDirection, which has a parameter which is not supported
     by the action and button signals.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     toggleSortDirection(Tog::toggle);
-    sortChange(__PRETTY_FUNCTION__);
+    sortChange(CLASSFUNCTION);
 }
 
 void MW::toggleSortDirection(Tog n)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (prevIsReverseSort == isReverseSort)
     prevIsReverseSort = isReverseSort;
     if (n == Tog::toggle) isReverseSort = !isReverseSort;
@@ -565,7 +565,7 @@ void MW::setRating()
     Resolve the source menu action that called (could be any rating) and then set the rating
     for all the selected thumbs.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     // do not set rating if slideshow is on
     if (G::isSlideShow) return;
 
@@ -634,7 +634,7 @@ void MW::setRating()
         // write to sidecar
         if (G::useSidecar) {
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-            metadata->writeXMP(metadata->sidecarPath(fPath), __PRETTY_FUNCTION__);
+            metadata->writeXMP(metadata->sidecarPath(fPath), CLASSFUNCTION);
             G::popUp->setProgress(i+1);
         }
     }
@@ -659,7 +659,7 @@ void MW::setRating()
 
 int MW::ratingLogCount()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("RatingLog");
     int count = setting->allKeys().size();
     setting->endGroup();
@@ -668,7 +668,7 @@ int MW::ratingLogCount()
 
 void MW::recoverRatingLog()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("RatingLog");
     QStringList keys = setting->allKeys();
     for (int i = 0; i < keys.length(); ++i) {
@@ -680,10 +680,10 @@ void MW::recoverRatingLog()
             QModelIndex ratingIdx = dm->sf->index(idx.row(), G::RatingColumn);
             emit setValueSf(ratingIdx, pickStatus, Qt::EditRole);
 //            dm->sf->setData(ratingIdx, pickStatus, Qt::EditRole);
-//            qDebug() << __PRETTY_FUNCTION__ << pickStatus << fPath << "updated";
+//            qDebug() << CLASSFUNCTION << pickStatus << fPath << "updated";
         }
         else {
-//            qDebug() << __PRETTY_FUNCTION__ << fPath << "not found";
+//            qDebug() << CLASSFUNCTION << fPath << "not found";
         }
     }
     setting->endGroup();
@@ -693,7 +693,7 @@ void MW::recoverRatingLog()
 
 void MW::clearRatingLog()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("RatingLog");
     QStringList keys = setting->allKeys();
     for (int i = 0; i < keys.length(); ++i) {
@@ -704,19 +704,19 @@ void MW::clearRatingLog()
 
 void MW::updateRatingLog(QString fPath, QString rating)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("RatingLog");
     QString sKey = fPath;
     sKey.replace("/", "🔸");
     if (rating == "") {
         /*
-        qDebug() << __PRETTY_FUNCTION__ << "removing" << sKey;
+        qDebug() << CLASSFUNCTION << "removing" << sKey;
         //*/
         setting->remove(sKey);
     }
     else {
         /*
-        qDebug() << __PRETTY_FUNCTION__ << "adding" << sKey;
+        qDebug() << CLASSFUNCTION << "adding" << sKey;
         //*/
         setting->setValue(sKey, rating);
     }
@@ -729,7 +729,7 @@ void MW::setColorClass()
     Resolve the source menu action that called (could be any color class) and then set the
     color class for all the selected thumbs.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     // do not set color class if slideshow is on
     if (G::isSlideShow) return;
 
@@ -798,7 +798,7 @@ void MW::setColorClass()
         // write to sidecar
         if (G::useSidecar) {
             dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-            metadata->writeXMP(metadata->sidecarPath(fPath), __PRETTY_FUNCTION__);
+            metadata->writeXMP(metadata->sidecarPath(fPath), CLASSFUNCTION);
             G::popUp->setProgress(i+1);
         }
     }
@@ -825,7 +825,7 @@ void MW::setColorClass()
 
 int MW::colorClassLogCount()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("ColorClassLog");
     int count = setting->allKeys().size();
     setting->endGroup();
@@ -834,7 +834,7 @@ int MW::colorClassLogCount()
 
 void MW::recoverColorClassLog()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("ColorClassLog");
     QStringList keys = setting->allKeys();
     for (int i = 0; i < keys.length(); ++i) {
@@ -846,10 +846,10 @@ void MW::recoverColorClassLog()
             QModelIndex colorClassIdx = dm->sf->index(idx.row(), G::LabelColumn);
             emit setValueSf(colorClassIdx, colorClassStatus, Qt::EditRole);
 //            dm->sf->setData(colorClassIdx, colorClassStatus, Qt::EditRole);
-//            qDebug() << __PRETTY_FUNCTION__ << colorClassStatus << fPath << "updated";
+//            qDebug() << CLASSFUNCTION << colorClassStatus << fPath << "updated";
         }
         else {
-//            qDebug() << __PRETTY_FUNCTION__ << fPath << "not found";
+//            qDebug() << CLASSFUNCTION << fPath << "not found";
         }
     }
     setting->endGroup();
@@ -859,7 +859,7 @@ void MW::recoverColorClassLog()
 
 void MW::clearColorClassLog()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("ColorClassLog");
     QStringList keys = setting->allKeys();
     for (int i = 0; i < keys.length(); ++i) {
@@ -870,16 +870,16 @@ void MW::clearColorClassLog()
 
 void MW::updateColorClassLog(QString fPath, QString label)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("ColorClassLog");
     QString sKey = fPath;
     sKey.replace("/", "🔸");
     if (label == "") {
-//        qDebug() << __PRETTY_FUNCTION__ << "removing" << sKey;
+//        qDebug() << CLASSFUNCTION << "removing" << sKey;
         setting->remove(sKey);
     }
     else {
-//        qDebug() << __PRETTY_FUNCTION__ << "adding" << sKey;
+//        qDebug() << CLASSFUNCTION << "adding" << sKey;
         setting->setValue(sKey, label);
     }
     setting->endGroup();
@@ -887,7 +887,7 @@ void MW::updateColorClassLog(QString fPath, QString label)
 
 void MW::searchTextEdit()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     // set visibility
     if (!filterDock->isVisible()) {
         filterDock->setVisible(true);

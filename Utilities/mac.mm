@@ -4,7 +4,7 @@
 
 void Mac::availableMemory()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__); 
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     vm_size_t page_size;
     mach_port_t mach_port;
     mach_msg_type_number_t count;

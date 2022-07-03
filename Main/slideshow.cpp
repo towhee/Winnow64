@@ -2,7 +2,7 @@
 
 void MW::slideShow()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (G::isSlideShow) {
         // stop slideshow
         G::popUp->showPopup("Slideshow has been terminated.");
@@ -10,7 +10,7 @@ void MW::slideShow()
         useImageCache = true;
         imageView->setCursor(Qt::ArrowCursor);
         slideShowStatusLabel->setText("");
-        updateStatus(true, "", __PRETTY_FUNCTION__);
+        updateStatus(true, "", CLASSFUNCTION);
         updateStatusBar();
         slideShowAction->setText(tr("Slide Show"));
         slideShowTimer->stop();
@@ -18,7 +18,7 @@ void MW::slideShow()
         cacheProgressBar->setVisible(true);
         // change to ImageCache
         if (useImageCache)
-            imageCacheThread->setCurrentPosition(dm->currentFilePath, __PRETTY_FUNCTION__);
+            imageCacheThread->setCurrentPosition(dm->currentFilePath, CLASSFUNCTION);
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
         for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);
@@ -62,7 +62,7 @@ void MW::slideShow()
 
 void MW::nextSlide()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (isSlideshowPaused) return;
     slideCount++;
     if (isSlideShowRandom) {
@@ -73,7 +73,7 @@ void MW::nextSlide()
         thumbView->selectRandom();
     }
     else {
-        if (currentRow == dm->sf->rowCount() - 1) {
+        if (currSfRow == dm->sf->rowCount() - 1) {
             if (isSlideShowWrap) thumbView->selectFirst();
             else slideShow();
         }
@@ -81,13 +81,13 @@ void MW::nextSlide()
     }
 
     QString msg = "  Slide # "+ QString::number(slideCount) + "  (press H for slideshow shortcuts)";
-    updateStatus(true, msg, __PRETTY_FUNCTION__);
+    updateStatus(true, msg, CLASSFUNCTION);
 
 }
 
 void MW::prevRandomSlide()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (slideshowRandomHistoryStack->isEmpty()) {
         G::popUp->showPopup("End of random slide history");
         return;
@@ -99,14 +99,14 @@ void MW::prevRandomSlide()
                  "Slideshow random history."
                  "  Press <font color=\"white\"><b>Spacebar</b></font> to continue slideshow, "
                  "press <font color=\"white\"><b>Esc</b></font> to quit slideshow."
-                 , __PRETTY_FUNCTION__);
+                 , CLASSFUNCTION);
     // hide popup if showing
     G::popUp->hide();
 }
 
 void MW::slideShowResetDelay()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     slideShowTimer->setInterval(slideShowDelay * 1000);
 }
 
@@ -116,7 +116,7 @@ void MW::slideShowResetSequence()
     Called from MW::keyReleaseEvent when R is pressed and isSlideShow == true.
     The slideshow is toggled between sequential and random progress.
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QString msg = "Setting slideshow progress to ";
     if (isSlideShowRandom) {
         msg += "random";
@@ -131,7 +131,7 @@ void MW::slideShowResetSequence()
 
 void MW::slideshowHelpMsg()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     QString selection;
     if (isSlideShowRandom)  selection = "Random selection";
     else selection = "Sequential selection";
