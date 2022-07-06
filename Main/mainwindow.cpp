@@ -1908,7 +1908,8 @@ void MW::loadConcurrentNewFolder()
        ImageCache is starting before all the metadata has been read.  Icons average ~180K and
        metadata ~20K  */
     int rows = dm->rowCount();
-    int maxIconsToLoad = rows < metaRead->iconChunkSize ? rows : metaRead->iconChunkSize;
+//    int maxIconsToLoad = rows < metaRead->iconChunkSize ? rows : metaRead->iconChunkSize;
+    int maxIconsToLoad = rows < metadataCacheThread->iconChunkSize ? rows : metadataCacheThread->iconChunkSize;
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
     // target image
     if (folderAndFileChangePath != "") {
@@ -1926,7 +1927,8 @@ void MW::loadConcurrentNewFolder()
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
     // read metadata
-    metaRead->initialize();     // only when change folders
+//    metaRead->initialize();     // only when change folders
+    metadataCacheThread->initialize();     // only when change folders
     loadConcurrent(/*MetaRead::FileSelection, */currSfRow, CLASSFUNCTION);
 }
 
@@ -1936,11 +1938,8 @@ void MW::loadConcurrent(int sfRow, QString src)
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
         if (!dm->abortLoadingModel) {
-            if (metaReadThread.isRunning()) {
-                metaRead->stop();
-
-            }
             metaRead->read(sfRow, src);
+//            metadataCacheThread->mr_read(sfRow, src);
         }
     }
     else {
@@ -1974,10 +1973,16 @@ void MW::loadConcurrentMetaDone()
     // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
     updateIconRange(-1);
-    if (dm->startIconRange < metaRead->firstIconRow ||
-        dm->endIconRange > metaRead->lastIconRow)
+//    if (dm->startIconRange < metaRead->firstIconRow ||
+//        dm->endIconRange > metaRead->lastIconRow)
+//    {
+//        metaRead->read(MetaRead::SizeChange);
+//        return;
+//    }
+    if (dm->startIconRange < metadataCacheThread->firstIconRow ||
+            dm->endIconRange > metadataCacheThread->lastIconRow)
     {
-        metaRead->read(MetaRead::SizeChange);
+        metadataCacheThread->scrollChange(CLASSFUNCTION);
         return;
     }
 
@@ -2171,36 +2176,38 @@ void MW::loadImageCacheForNewFolder()
 void MW::thumbHasScrolled()
 {
 /*
-    This function is called after a thumbView scrollbar change signal.  The visible thumbnails
-    are determined and loaded if necessary.
+    This function is called after a thumbView scrollbar change signal. The visible
+    thumbnails are determined and loaded if necessary.
 
-    If the change was caused by the user scrolling then we want to process it, as defined by
-    G::ignoreScrollSignal == false. However, if the scroll change was caused by syncing with
-    another view then we do not want to process again and get into a loop.
+    If the change was caused by the user scrolling then we want to process it, as defined
+    by G::ignoreScrollSignal == false. However, if the scroll change was caused by
+    syncing with another view then we do not want to process again and get into a loop.
 
-    Also, we do not need to process scrolling if it was the result of a new selection, which
-    will trigger a thumbnail update in MW::fileSelectionChange.  G::isNewSelection is set true
-    in IconView when a selection is made, and set false in fileSelectionChange.
+    Also, we do not need to process scrolling if it was the result of a new selection,
+    which will trigger a thumbnail update in MW::fileSelectionChange. G::isNewSelection
+    is set true in IconView when a selection is made, and set false in
+    fileSelectionChange.
 
-    MW::updateMetadataCacheIconviewState polls setViewportParameters() in all visible views
-    (thumbView, gridView and tableView) to assign the firstVisibleRow, midVisibleRow and
-    lastVisibleRow in metadataCacheThread.
+    MW::updateMetadataCacheIconviewState polls setViewportParameters() in all visible
+    views (thumbView, gridView and tableView) to assign the firstVisibleRow,
+    midVisibleRow and lastVisibleRow in metadataCacheThread.
 
     The gridView and tableView, if visible, are scrolled to sync with thumbView.
 
-    Finally metadataCacheThread->scrollChange is called to load any necessary metadata and
-    icons within the cache range.
+    Finally metadataCacheThread->scrollChange is called to load any necessary metadata
+    and icons within the cache range.
 
-    Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay to
-    call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread. This
-    was to prevent many scroll calls from bunching up. The new approach just aborts the
-    metadataCacheThread thread and starts over. It is simpler and faster.
+    Scrolling used to use a singleshot timer triggered by MW::loadMetadataCacheAfterDelay
+    to call MW::loadMetadataChunk which, in turn, finally called the metadataCacheThread.
+    This was to prevent many scroll calls from bunching up. The new approach just aborts
+    the metadataCacheThread thread and starts over. It is simpler and faster.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
+        G::log(CLASSFUNCTION);
         updateIconRange(-1);
         gridView->scrollToRow(thumbView->midVisibleCell, CLASSFUNCTION);
         updateIconRange(-1);
@@ -2248,7 +2255,7 @@ void MW::gridHasScrolled()
     was to prevent many scroll calls from bunching up. The new approach just aborts the
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
 //    qDebug() << CLASSFUNCTION << "0";
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
@@ -2295,7 +2302,7 @@ void MW::tableHasScrolled()
     was to prevent many scroll calls from bunching up. The new approach just aborts the
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
@@ -5399,7 +5406,8 @@ void MW::deleteFiles()
     // remove row from MetaRead::iconsLoaded
     for (int i = 0; i < sldm.count(); ++i) {
         QString fPath = sldm.at(i);
-        metaRead->dmRowRemoved(dm->rowFromPath(fPath));
+//        metaRead->dmRowRemoved(dm->rowFromPath(fPath));
+        metadataCacheThread->dmRowRemoved(dm->rowFromPath(fPath));
     }
 
     // remove fPath from datamodel dm if successfully deleted

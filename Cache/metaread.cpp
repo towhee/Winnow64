@@ -241,7 +241,37 @@ void MetaRead::cleanupIcons()
                            << "start"
                               ;
     }
+
+    // check if datamodel size is less than assigned icon cache chunk size
+    if (G::loadOnlyVisibleIcons && visibleIconCount >= sfRowCount) return;
+    if (iconChunkSize >= sfRowCount) return;
+
+    firstIconRow = dm->startIconRange;
+    lastIconRow = dm->endIconRange;
     QPixmap nullPm;
+
+//    goto B;
+
+    //  OPTION A: search dm outside icon range
+    A:
+    // dm rows outside icon range
+    for (int dmRow = 0; dmRow < dm->rowCount(); ++dmRow) {
+        if (abort) return;
+        int sfRow = dm->proxyRowFromModelRow(dmRow);
+        // in range?
+        if (sfRow >= firstIconRow && sfRow <= lastIconRow) continue;
+        // icon not loaded?
+        QModelIndex dmIdx = dm->index(dmRow, 0);
+        if (dm->itemFromIndex(dmIdx)->icon().isNull()) continue;
+        // remove unwanted icon
+        emit setIcon(dmIdx, nullPm, dmInstance);
+    }
+    return;
+
+    // OPTION B: search iconsLoaded for icons outside range
+    B:
+    int n = iconsLoaded.size();
+//    QPixmap nullPm;
     for (int i = 0; i < iconsLoaded.size(); ++i) {
         if (abort) {
             return;
@@ -338,17 +368,14 @@ void MetaRead::buildMetadataPriorityQueue(int sfRow)
     }
     // icon cleanup all icons no longer visible
 
-    // alternate ahead/behind until finished
+    // priority alternate ahead/behind until finished
     int behind = sfRow;
     int ahead = sfRow + 1;
     while (behind >= 0 || ahead < sfRowCount) {
         if (behind >= 0) priorityQueue.append(behind--);
         if (ahead < sfRowCount) priorityQueue.append(ahead++);
-//        if (abort) return;
+        if (abort) return;
     }
-//    t.restart();
-//    if (!abort) cleanupIcons();
-    qDebug() << CLASSFUNCTION << "cleanupIcons:" << t.nsecsElapsed() << sfRow << sfRowCount;
     if (debugCaching) {
         qDebug().noquote() << CLASSFUNCTION
                            << "start"
@@ -463,8 +490,17 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, src + " action = " + QString::number(action));
 
+    if (isRunning) {
+        G::log(CLASSFUNCTION, "ROW: " + QString::number(sfRow) + " running");
+        mutex.lock();
+        abort = true;
+        mutex.unlock();
+        while (isRunning) {}
+        G::log(CLASSFUNCTION, "ROW: " + QString::number(sfRow) + " aborted");
+    }
+
     abort = false;
-    this->action = action;
+    isRunning = true;
     sfRowCount = dm->sf->rowCount();
     if (debugCaching) {
         qDebug().noquote() << CLASSFUNCTION
@@ -479,11 +515,15 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
     dmInstance = dm->instance;
     emit runStatus(true, true, "MetaRead::read");
 
-    // new folder or file selection change
-    t.restart();
+    // build priority queue for reading metadata and icons
+//    G::log(CLASSFUNCTION, "Build priority queue");
     buildMetadataPriorityQueue(sfStart);
-//    qDebug() << CLASSFUNCTION << "Build priority queue:" << t.nsecsElapsed() << sfRowCount;
+
+    // cleanup unneeded icons
+//    G::log(CLASSFUNCTION, "Cleanup icons");
     if (!abort) cleanupIcons();
+
+    G::log(CLASSFUNCTION, "Read metadata and icons");
     int n = static_cast<int>(priorityQueue.size());
     for (int i = 0; i < n; i++) {
         if (abort) {
@@ -502,9 +542,13 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
 
     emit runStatus(false, true, "MetaRead::read");
     if (abort) {
+        G::log(CLASSFUNCTION, "aborted");
+        abort = false;
+        isRunning = false;
         return;
     }
+    G::log(CLASSFUNCTION, "Finished without abort");
     if (!abort) emit updateIconBestFit();
     if (!abort) emit done();
-
+    isRunning = false;
 }
