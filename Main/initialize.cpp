@@ -199,6 +199,22 @@ void MW::createMDCache()
     connect(metadataCacheThread, &MetadataCache::selectFirst,
             thumbView, &IconView::selectFirst);
 
+    // MetaRead connections added to metadataCacheThread
+    // add metadata to datamodel
+    connect(metadataCacheThread, &MetadataCache::addToDatamodel, dm, &DataModel::addMetadataForItem);
+    // update icon in datamodel
+    connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon);
+    // message metadata reading completed
+    connect(metadataCacheThread, &MetadataCache::done, this, &MW::loadConcurrentMetaDone);
+    // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
+    connect(metadataCacheThread, &MetadataCache::delayedStartImageCache, this, &MW::loadConcurrentStartImageCache);
+    // check icons visible is correct
+    connect(metadataCacheThread, &MetadataCache::updateIconBestFit, this, &MW::updateIconBestFit/*,
+            Qt::BlockingQueuedConnection*/);
+    connect(metadataCacheThread, &MetadataCache::runStatus, this, &MW::updateMetadataThreadRunStatus);
+
+
+
     metaRead = new MetaRead(this, dm);
     metaRead->iconChunkSize = 20;
 

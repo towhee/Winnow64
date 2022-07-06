@@ -53,14 +53,15 @@ private:
     void readIcon(QModelIndex sfIdx, QString fPath);
     void iconMax(QPixmap &thumb);
     void cleanupIcons();
-    void updateIcons();
     void buildMetadataPriorityQueue(int sfRow);
     bool isNotLoaded(int sfRow);
     bool okToLoadIcon(int sfRow);
+    void updateIcons();
 
     QMutex mutex;
     QWaitCondition condition;
     bool abort;
+    bool isRunning = false;
     DataModel *dm;
     Metadata *metadata;
     Thumb *thumb;
@@ -75,6 +76,7 @@ private:
     QList<int> priorityQueue;
     QList<int> iconsLoaded;
     QList<int> visibleIcons;
+    QList<int> outsideIconRange;
 
     bool debugCaching = false;
     QElapsedTimer t;

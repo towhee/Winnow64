@@ -782,20 +782,11 @@ void IconView::selectThumb(QModelIndex idx)
 /*
     Used for thumbnail navigation (left, right, up, down etc)
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, QString::number(idx.row()));
     if (idx.isValid()) {
         G::isNewSelection = true;
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
-        /*
-        qDebug() << CLASSFUNCTION
-                 << "idx =" << idx
-                 << "obj =" << objectName()
-                    ;
-                    //*/
-    }
-    else {
-//        qWarning() << "Failed to select" << idx.data(G::PathRole).toString();
     }
 }
 
@@ -1489,7 +1480,7 @@ bool IconView::event(QEvent *event) {
         else p = c - i - d;
         QModelIndex idx = indexAt(p);
         QRect vr = visualRect(model()->index(6,0));
-        /*
+//        /*
         qDebug() << "IconView::event"
                  << "\n  d =" << d
                  << "\n  i =" << i

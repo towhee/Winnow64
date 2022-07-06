@@ -30,6 +30,8 @@ void MW::keyRight()
 /*
 
 */
+    qDebug() << " ";
+    G::log(CLASSFUNCTION, "ROW: " + QString::number(currSfRow));
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (G::mode == "Compare") compareImages->go("Right");
     if (G::mode == "Loupe") thumbView->selectNext();
