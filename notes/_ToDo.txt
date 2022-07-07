@@ -1,5 +1,5 @@
 BUGS / TO DO
-- Move MDCache to MetaRead, then eliminate MDCache
+- Move MDCache to MetaRead, then eliminate MDCache or vice versa
 - Change MetaRead buildMetadataPriorityQueue to algorithm (takes too long for
   very large folders).
 

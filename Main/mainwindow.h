@@ -313,8 +313,8 @@ public:
     QString prevMode;
     int currSfRow;             // the current row in MW::fileSelection
     int scrollRow;              // the row to scroll to when change mode
-    QModelIndex currentSfIdx;   // the current proxy index in MW::fileSelection
-    QModelIndex currentDmIdx;   // the datamodel index for the current proxy index
+    QModelIndex currSfIdx;   // the current proxy index in MW::fileSelection
+    QModelIndex currDmIdx;   // the datamodel index for the current proxy index
     bool allIconsLoaded;
     bool modeChangeJustHappened;
     bool gridDisplayFirstOpen = true;

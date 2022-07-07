@@ -545,9 +545,9 @@ void ImageCache::fixOrphans()
 {
 /*
     If the caching process fails, then an image in the target range may be orphaned while
-    caching is still active. isCaching is reset to false. If an image outside the target range
-    is shown as isCaching it is reset, and if the image is cached then it is removed from the
-    imCache and the cached flag is reset to false.
+    caching is still active. isCaching is reset to false. If an image outside the target
+    range is shown as isCaching it is reset, and if the image is cached then it is
+    removed from the imCache and the cached flag is reset to false.
 */
     checkForOrphans = false;
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {

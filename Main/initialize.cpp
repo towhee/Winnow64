@@ -202,8 +202,8 @@ void MW::createMDCache()
     // MetaRead connections added to metadataCacheThread
     // add metadata to datamodel
     connect(metadataCacheThread, &MetadataCache::addToDatamodel, dm, &DataModel::addMetadataForItem);
-    // update icon in datamodel
-    connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon);
+    // update icon in datamodel (duplicate)
+//    connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon);
     // message metadata reading completed
     connect(metadataCacheThread, &MetadataCache::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
@@ -295,9 +295,11 @@ void MW::createImageCache()
 
     // concurrent load
     // add to image cache list
+    // signal to ImageCache new image selection req'd?
     connect(metaRead, &MetaRead::addToImageCache,
             imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-    // signal to ImageCache new image selection req'd?
+    connect(metadataCacheThread, &MetadataCache::addToImageCache,
+            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
 //    connect(metaRead, &MetaRead::setImageCachePosition,
 //            imageCacheThread, &ImageCache::setCurrentPosition);
 

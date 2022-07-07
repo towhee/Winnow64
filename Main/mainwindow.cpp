@@ -44,74 +44,87 @@ PROGRAM FLOW
 
 A new folder is selected which triggers folderSelectionChange:
 
-• Housekeeping:
-  - all threads that may be running are stopped.
-  - set flags to start condition.
-  - folders and bookmarks synced.
-  - filters are cleared (uncheckAllFilters).
+    • Housekeeping:
+      - all threads that may be running are stopped.
+      - set flags to start condition.
+      - folders and bookmarks synced.
+      - filters are cleared (uncheckAllFilters).
 
-• All eligible image files (and associated QFileInfo: path, name, type, size, created date and
-  last modified date) in the folder are added to the DataModel (dm).
+    • All eligible image files (and associated QFileInfo: path, name, type, size, created
+      date and last modified date) in the folder are added to the DataModel (dm).
 
-• Sort to current sort item and forward/reverse, as the datamodel always loads in the order
-  from QFileInfo - by file name in forward order.
+    • Sort to current sort item and forward/reverse, as the datamodel always loads in the
+      order from QFileInfo - by file name in forward order.
 
-• Current row indexes set to 0.
+    • Current row indexes set to 0.
 
-• The first image thumbnail is selected in thumbView.
+    • The first image thumbnail is selected in thumbView.
 
 Following is out of date:
 
-• metadataCacheThread->loadNewFolder reads all the metadata for the first chunk of images. The
-  signal loadMetadataCache2ndPass is emitted.
+    • metadataCacheThread->loadNewFolder reads all the metadata for the first chunk of
+      images. The signal loadMetadataCache2ndPass is emitted.
 
-• Based on the data collected in the first metadataCacheThread pass the icon dimension best fit
-  is determined, which is required to calculate the number of icons visible in the thumbView
-  and gridview.
+    • Based on the data collected in the first metadataCacheThread pass the icon
+      dimension best fit is determined, which is required to calculate the number of icons
+      visible in the thumbView and gridview.
 
-• metadataCacheThread->loadNewFolder2ndPass reads the requisite number of icons and emits
-  loadImageCache.
+    • metadataCacheThread->loadNewFolder2ndPass reads the requisite number of icons and
+      emits loadImageCache.
 
-• The imageCacheThread is initialized.  fileSelectionChange is called for the current image
-  (the user may have already advanced).
+    • The imageCacheThread is initialized. fileSelectionChange is called for the current
+      image (the user may have already advanced).
 
-• fileSelectionChange synchronizes the views and starts three processes:
-  1. ImageView::loadImage loads the full size image into the graphicsview scene.
-  2. The metadataCacheThread is started to read the rest of the metadata and icons.   If the
-     number of images in the folder(s) is greater than the threshold only a chunck of metadata
-     is collected.
-  3. The imageCacheThread is started to cache as many full size images as
-     assigned memory permits.
+    • fileSelectionChange synchronizes the views and starts three processes:
+      1. ImageView::loadImage loads the full size image into the graphicsview scene.
+      2. The metadataCacheThread is started to read the rest of the metadata and icons.
+         If the number of images in the folder(s) is greater than the threshold only a
+         chunck of metadata is collected.
+      3. The imageCacheThread is started to cache as many full size images as assigned
+         memory permits.
 
-• The first image is loaded. The metadata and thumbnail generation threads will still be
-  running, but things should appear to be speedy for the user.
+    • The first image is loaded. The metadata and thumbnail generation threads will still
+      be running, but things should appear to be speedy for the user.
 
-• The metadata caching thread collects information required by the image cache thread. If the
-  number of images in the folder(s) is greater than the threshold only a chunck of metadata is
-  collected.
+    • The metadata caching thread collects information required by the image cache
+      thread. If the number of images in the folder(s) is greater than the threshold only
+      a chunck of metadata is collected.
 
-• The image caching thread requires the offset and length for the full size embedded jpg, the
-  image width and height in order to calculate memory requirements, update the image priority
-  queues, the target range and limit the cache to the assigned maximum size.
+    • The image caching thread requires the offset and length for the full size embedded
+      jpg, the image width and height in order to calculate memory requirements, update
+      the image priority queues, the target range and limit the cache to the assigned
+      maximum size.
 
 A new image is selected which triggers fileSelectionChange
 
-• If starting the program select the first image in the folder.
+    • If starting the program select the first image in the folder.
 
-• Record the current datamodel row and its file path.
+    • Record the current datamodel row and its file path.
 
-• Update the thumbView and gridView delegates.
+    • Update the thumbView and gridView delegates.
 
-• Synchronize the thumb, grid and table views.   If in loupe mode load the current image.
+    • Synchronize the thumb, grid and table views.   If in loupe mode load the current
+      image.
 
-• Update window title, statusbar, info panel and classification badges.
+    • Update window title, statusbar, info panel and classification badges.
 
-• Update the metadata and image caching.
+    • Update the metadata and image caching.
 
-• If the metadata has not been cached yet for the selected image (usually the first in a new
-  folder) then load the thumbnail.
+    • If the metadata has not been cached yet for the selected image (usually the first
+      in a new folder) then load the thumbnail.
 
-• Update the cursor position on the image caching progress bar.
+    • Update the cursor position on the image caching progress bar.
+
+A new image is selected which triggers a scroll event
+
+    • IconView selection change may trigger scroll signal, based on the current view:
+      thumb, grid or table.  MW::thumb/grid/tableHasScrolled are signalled.
+
+    • Update the icon range (firstVisible/lastVisible)
+
+Idea: if change file and not all metadata read then restart readMeta if new file meta not
+read, else just keep current readMeta going.  Have a separate thread to update icons when
+scroll.
 
 Flow by function call:
 
@@ -137,6 +150,7 @@ Flow by function call:
     MetadataCache::readIconChunk
     MW::updateCachedStatus                  Calls ImageView::LoadImage if current just cached
     ImageView::loadImage
+
 
 Flow Flags:
 
@@ -1433,9 +1447,9 @@ void MW::folderSelectionChange()
 
     // datamodel loaded - initialize indexes
     currSfRow = 0;
-    currentSfIdx = dm->sf->index(currSfRow, 0);
+    currSfIdx = dm->sf->index(currSfRow, 0);
     dm->currentRow = currSfRow;
-    currentSfIdx = dm->sf->mapToSource(currentSfIdx);
+    currSfIdx = dm->sf->mapToSource(currSfIdx);
 
     // made it this far, folder must have eligible images and is good-to-go
     isCurrentFolderOkay = true;
@@ -1496,13 +1510,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 /*
     Triggered when file selection changes (folder change selects new image, so it also
     triggers this function). The new image is loaded, the pick status is updated and the
-    infoView metadata is updated. The imageCache is updated if necessary. The imageCache will
-    not be updated if triggered by folderSelectionChange since a new one will be Update. The
-    metadataCache is updated to include metadata and icons for all the visible thumbnails.
+    infoView metadata is updated. The imageCache is updated if necessary. The imageCache
+    will not be updated if triggered by folderSelectionChange since a new one will be
+    created. The metadataCache is updated to include metadata and icons for all the
+    visible thumbnails.
 
     Note that the datamodel includes multiple columns for each row and the index sent to
-    fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo and
-    delegate use of the current index must check the column.
+    fileSelectionChange could be for a column other than 0 (from tableView) so scrollTo
+    and delegate use of the current index must check the column.
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, src + " " + current.data(G::PathRole).toString());
 
@@ -1555,11 +1570,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     currSfRow = current.row();
     // also record in datamodel so can be accessed by MdCache
     // proxy index for col 0
-    currentSfIdx = dm->sf->index(currSfRow, 0);
+    currSfIdx = dm->sf->index(currSfRow, 0);
     dm->currentRow = currSfRow;
-    currentDmIdx = dm->sf->mapToSource(currentSfIdx);
+    currDmIdx = dm->sf->mapToSource(currSfIdx);
     // the file path is used as an index in ImageView
-    QString fPath = currentSfIdx.data(G::PathRole).toString();
+    QString fPath = currSfIdx.data(G::PathRole).toString();
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
     setting->setValue("lastFileSelection", fPath);
@@ -1569,17 +1584,17 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     gridView->iconViewDelegate->currentRow = currSfRow;
 
     // don't scroll mouse click source (screws up double clicks and disorients users)
-    if(G::fileSelectionChangeSource == "TableMouseClick") {
+    if (G::fileSelectionChangeSource == "TableMouseClick") {
         G::ignoreScrollSignal = true;
         if (gridView->isVisible()) gridView->scrollToRow(currSfRow, __FUNCTION__);
         if (thumbView->isVisible()) thumbView->scrollToRow(currSfRow, __FUNCTION__);
     }
-    else if(G::fileSelectionChangeSource == "ThumbMouseClick") {
+    else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
         G::ignoreScrollSignal = true;
         if (gridView->isVisible()) gridView->scrollToRow(currSfRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollToRow(currSfRow, __FUNCTION__);
     }
-    else if(G::fileSelectionChangeSource == "GridMouseClick") {
+    else if (G::fileSelectionChangeSource == "GridMouseClick") {
         G::ignoreScrollSignal = true;
         if (thumbView->isVisible()) thumbView->scrollToRow(currSfRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollToRow(currSfRow, __FUNCTION__);
@@ -1616,6 +1631,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
             }
         }
     }
+
+    // force scroll in case not up-to-date after holding nav key down
+//    if (thumbView->isVisible()) {
+//        thumbView->scrollToRow(currSfRow, CLASSFUNCTION);
+//    }
 
     // update caching if folder has been loaded
     if (G::isNewFolderLoaded) {
@@ -1693,8 +1713,8 @@ void MW::folderAndFileSelectionChange(QString fPath)
         if (dm->proxyIndexFromPath(fPath).isValid()) {
             thumbView->selectThumb(fPath);
             gridView->selectThumb(fPath);
-            currentSfIdx = dm->proxyIndexFromPath(fPath);
-            fileSelectionChange(currentSfIdx, currentSfIdx, CLASSFUNCTION);
+            currSfIdx = dm->proxyIndexFromPath(fPath);
+            fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
         }
         return;
     }
@@ -1809,8 +1829,10 @@ bool MW::isCurrentThumbVisible()
 void MW::updateIconRange(int row)
 {
 /*
-    Polls both thumbView and gridView to determine the first, mid and last thumbnail visible.
-    This is used in the metadataCacheThread to determine the range of files to cache.
+    Polls both thumbView and gridView to determine the first and last thumbnail visible.
+    This is used in the metadataCacheThread to determine the range of files to cache. If
+    row == -1 then scan the current view to determine the first/last. Otherwise,
+    calculate first/last.
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, QString::number(row));
     int firstVisible = dm->sf->rowCount();
@@ -1838,18 +1860,6 @@ void MW::updateIconRange(int row)
         if (tableView->firstVisibleRow < firstVisible) firstVisible = tableView->firstVisibleRow;
         if (tableView->lastVisibleRow > lastVisible) lastVisible = tableView->lastVisibleRow;
     }
-
-    /*
-    qDebug()
-         << CLASSFUNCTION
-         << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
-         << "thumbView->lastVisibleCell =" << thumbView->lastVisibleCell
-         << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
-         << "gridView->lastVisibleCell =" << gridView->lastVisibleCell
-         << "\n\ttableView->firstVisibleCell =" << tableView->firstVisibleRow
-         << "tableView->lastVisibleCell =" << tableView->lastVisibleRow
-            ;
-//        */
 
     int visibleIcons = lastVisible - firstVisible + 1;
 
@@ -1879,13 +1889,31 @@ void MW::updateIconRange(int row)
     }
     else {
         // icons to range based on iconChunkSize
-        int firstIconRow = row - dm->iconChunkSize / 2;
+        int firstIconRow = currSfRow - dm->iconChunkSize / 2;
         if (firstIconRow < 0) firstIconRow = 0;
         int lastIconRow = firstIconRow + dm->iconChunkSize;
         if (lastIconRow >= dm->sf->rowCount()) lastIconRow = dm->sf->rowCount() - 1;
         dm->startIconRange = firstIconRow;
         dm->endIconRange = lastIconRow;
     }
+
+//    /*
+    qDebug()
+         << CLASSFUNCTION << "row =" << row
+         << "dm->iconChunkSize =" << dm->iconChunkSize
+         << "G::loadOnlyVisibleIcons =" << G::loadOnlyVisibleIcons
+         << "\n\tthumbView->firstVisibleCell =" << thumbView->firstVisibleCell
+         << "thumbView->lastVisibleCell =" << thumbView->lastVisibleCell
+         << "\n\tgridView->firstVisibleCell =" << gridView->firstVisibleCell
+         << "gridView->lastVisibleCell =" << gridView->lastVisibleCell
+         << "\n\ttableView->firstVisibleCell =" << tableView->firstVisibleRow
+         << "tableView->lastVisibleCell =" << tableView->lastVisibleRow
+         << "\n\tfirstVisible =" << firstVisible
+         << "lastVisible =" << lastVisible
+         << "\n\tdm->startIconRange =" << dm->startIconRange
+         << "dm->endIconRange =" << dm->endIconRange
+            ;
+//        */
 
     /*
     qDebug()
@@ -1929,17 +1957,17 @@ void MW::loadConcurrentNewFolder()
     // read metadata
 //    metaRead->initialize();     // only when change folders
     metadataCacheThread->initialize();     // only when change folders
-    loadConcurrent(/*MetaRead::FileSelection, */currSfRow, CLASSFUNCTION);
+    loadConcurrent(currSfRow, CLASSFUNCTION);
 }
 
 void MW::loadConcurrent(int sfRow, QString src)
 {
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Row =" + QString::number(sfRow));
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
         if (!dm->abortLoadingModel) {
-            metaRead->read(sfRow, src);
-//            metadataCacheThread->mr_read(sfRow, src);
+//            metaRead->read(sfRow, src);
+            metadataCacheThread->mr_read(sfRow);
         }
     }
     else {
@@ -1954,10 +1982,10 @@ void MW::loadConcurrent(int sfRow, QString src)
                  << "dm->abortLoadingModel =" << dm->abortLoadingModel
                     ;
                     //*/
-        updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
-        setCentralMessage("Image loading has been cancelled 1.");
-        QApplication::processEvents();
-        return;
+//        updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
+//        setCentralMessage("Image loading has been cancelled 1.");
+//        QApplication::processEvents();
+//        return;
     }
 }
 
@@ -2037,15 +2065,15 @@ void MW::loadConcurrentStartImageCache()
         if (gridView->isVisible()) gridView->selectThumb(fPath);
 
         gridView->selectThumb(fPath);
-        currentSfIdx = dm->proxyIndexFromPath(fPath);
+        currSfIdx = dm->proxyIndexFromPath(fPath);
     }
     else {
         thumbView->selectFirst();
         gridView->selectFirst();
-        currentSfIdx = dm->sf->index(0,0);
+        currSfIdx = dm->sf->index(0,0);
     }
 
-    fileSelectionChange(currentSfIdx, currentSfIdx, CLASSFUNCTION);
+    fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
        InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
@@ -2158,12 +2186,12 @@ void MW::loadImageCacheForNewFolder()
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
         thumbView->selectThumb(fPath);
         gridView->selectThumb(fPath);
-        currentSfIdx = dm->proxyIndexFromPath(fPath);
+        currSfIdx = dm->proxyIndexFromPath(fPath);
     }
     else {
         thumbView->selectFirst();
         gridView->selectFirst();
-        currentSfIdx = dm->sf->index(0,0);
+        currSfIdx = dm->sf->index(0,0);
     }
 //    fileSelectionChange(currentSfIdx, currentSfIdx, CLASSFUNCTION);
 
@@ -2215,8 +2243,10 @@ void MW::thumbHasScrolled()
             tableView->scrollToRow(thumbView->midVisibleCell, CLASSFUNCTION);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
+            metadataCacheThread->scrollChange(CLASSFUNCTION);
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else loadConcurrent(/*MetaRead::Scroll, */thumbView->midVisibleCell, CLASSFUNCTION);
+            else loadConcurrent(thumbView->midVisibleCell, CLASSFUNCTION);
+//            else loadConcurrent(/*MetaRead::Scroll, */thumbView->midVisibleCell, CLASSFUNCTION);
         }
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
@@ -2798,7 +2828,7 @@ void MW::scrollToCurrentRow()
     visible hence need to scroll to the current row.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    currSfRow = dm->sf->mapFromSource(currentDmIdx).row();
+    currSfRow = dm->sf->mapFromSource(currDmIdx).row();
     QModelIndex idx = dm->sf->index(currSfRow, 0);
 //    G::wait(100);
 

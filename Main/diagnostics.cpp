@@ -39,8 +39,8 @@ void MW::reportState(QString title)
         << "\nG::currRootFolder                      " << G::currRootFolder
         << "\ncurrentViewDirPath                     " << currentViewDirPath
         << "\ncurrentRow                             " << currSfRow
-        << "\ncurrentSfIdx                           " << currentSfIdx
-        << "\ncurrentSfIdx                           " << currentSfIdx
+        << "\ncurrentSfIdx                           " << currSfIdx
+        << "\ncurrentSfIdx                           " << currSfIdx
         << "\ndm->currentRow                         " << dm->currentRow
         << "\ndm->firstVisibleRow                    " << dm->firstVisibleRow
         << "\ndm->lastVisibleRow                     " << dm->lastVisibleRow
@@ -208,7 +208,7 @@ QString MW::diagnostics()
     rpt << "\n" << "prevMode = " << G::s(prevMode);
     rpt << "\n" << "currentRow = " << G::s(currSfRow);
     rpt << "\n" << "scrollRow = " << G::s(scrollRow);
-    rpt << "\n" << "currentDmIdx = row" << G::s(currentDmIdx.row()) << " col " << G::s(currentDmIdx.column());
+    rpt << "\n" << "currentDmIdx = row" << G::s(currDmIdx.row()) << " col " << G::s(currDmIdx.column());
     rpt << "\n" << "modeChangeJustHappened = " << G::s(modeChangeJustHappened);
     rpt << "\n" << "justUpdatedBestFit = " << G::s(justUpdatedBestFit);
     rpt << "\n" << "sortColumn = " << G::s(sortColumn);

@@ -1,120 +1,54 @@
-Classes:
-    ThumbReader     - calls instance of Thumb for each image in a folder
-    Thumb           - calls appropriate decoder ie FrameDecoder
-    FrameDecoder    - gets the first frame in a video file, signals DataModel
-    DataModel       - sets icon and deletes FrameDecoder instance
+423,061,390 MetadataCache::run                                 action = Scroll foundItemsToLoad = false
+         14 MW::keyRight                                       ROW: 26
+         32 IconView::selectThumb                              27
+         49 IconView::selectionChanged
+        740 MW::fileSelectionChange                            IconView::selectionChanged /Users/roryhill/Pictures/TheFrame/2007-06-17_0252.jpg
+          1 MW::thumbHasScrolled
+          2 MW::thumbHasScrolled
+          3 MW::updateIconRange                                -1
+        342 IconView::scannedViewportRange
+          3 MW::gridHasScrolled
+          1 MW::updateIconRange                                -1
+         11 IconView::scannedViewportRange
+      8,195 MW::loadConcurrent
+      4,588 MetaRead::read                                     MW::thumbHasScrolled action = 0
+     96,240 MetaRead::read                                     Read metadata and icons
+          1 MetaRead::read                                     Finished without abort
+         31 MW::updateIconBestFit
+          0 MW::loadConcurrentMetaDone
+         13 MW::updateIconBestFit
+          0 MW::updateIconRange                                -1
+      3,554 IconView::scannedViewportRange
+      1,044 MetadataCache::run                                 action = Scroll foundItemsToLoad = false
+          2 ImageView::loadImage                               /Users/roryhill/Pictures/TheFrame/2007-06-17_0252.jpg Src:MW::fileSelectionChange
+        689 ImageView::loadImage                               /Users/roryhill/Pictures/TheFrame/2007-06-17_0252.jpg isCached =true
+          0 MW::updateIconRange                                27
+          3 IconView::calcViewportRange
+         44 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/TheFrame/2007-06-17_0252.jpg
+        824 ImageCache::run
 
-FrameDecoder:
-    Run a QMediaPlayer, set to a QVideoSink. The QVideoSink emits a videoFrameChanged
-    signal for each frame.  Capture the frame in the slot FrameDecoder::frameChanged.
-    Signal DataModel to add the frame as an icon.
 
-This only works if ThumbReader is in the main GUI thread.  If ThumbReader is in another
-thread the connection between QVideoSink::videoFrameChanged and FrameDecoder::frameChanged
-fails.
 
-Thumb code to create instance of FrameDecoder:
-    FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance);
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromFrame);
-    frameDecoder->getFrame(fPath);
 
-framedecoder.h
 
-#ifndef FRAMEDECODER_H
-#define FRAMEDECODER_H
 
-#include <QtWidgets>
-#include <QMutex>
-#include <QThread>
-#include <QWaitCondition>
-#include "Main/global.h"
-#include <QMediaPlayer>
-#include <QVideoSink>
-#include <QVideoFrame>
 
-class FrameDecoder : public QThread
-{
-    Q_OBJECT
 
-public:
-    FrameDecoder(QModelIndex dmIdx, int dmInstance, QObject *parent = nullptr);
-    void stop();
-    void getFrame(QString fPath);
 
-protected:
-    void run() Q_DECL_OVERRIDE;
 
-signals:
-    void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance,
-                      FrameDecoder *thisFrameDecoder);
 
-private slots:
-    void frameChanged(const QVideoFrame frame);
 
-private:
-    FrameDecoder *thisFrameDecoder;
-    QMutex mutex;
-    QWaitCondition condition;
-    QVideoSink *videoSink;
-    QMediaPlayer *mediaPlayer;
-    QString fPath;
-    int dmInstance;
-    QModelIndex dmIdx;
-    bool thumbnailAcquired = false;
-    bool abort = false;
 
-};
-#endif // FRAMEDECODER_H
 
-framedecoder.cpp
 
-#include "framedecoder.h"
 
-FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance, QObject *parent)
-    : QThread(parent)
-{
-    thisFrameDecoder = this;
-    this->dmIdx = dmIdx;
-    this->dmInstance = dmInstance;
-    mediaPlayer = new QMediaPlayer(/*this*/);
-    videoSink = new QVideoSink;
-    mediaPlayer->setVideoOutput(videoSink);
-    connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChanged);
-}
 
-void FrameDecoder::stop()
-{
-    if (isRunning()) {
-        mutex.lock();
-        abort = true;
-        condition.wakeOne();
-        mutex.unlock();
-        wait();
-        abort = false;
-    }
-}
 
-void FrameDecoder::getFrame(QString path)
-{
-    fPath = path;
-    start();
-}
 
-void FrameDecoder::frameChanged(const QVideoFrame frame)
-{
-    if (thumbnailAcquired) return;
-    QImage im = frame.toImage();
-    if (im.isNull()) return;
-    thumbnailAcquired = true;
-    mediaPlayer->stop();
-    QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-    emit setFrameIcon(dmIdx, pm, dmInstance, thisFrameDecoder);
-}
 
-void FrameDecoder::run()
-{
-    mediaPlayer->setSource(fPath);
-    mediaPlayer->play();
-}
+
+
+
+
 
 

@@ -110,7 +110,7 @@ void MW::filterChange(QString source)
     }
 
     // get the current selected item
-    currSfRow = dm->sf->mapFromSource(currentDmIdx).row();
+    currSfRow = dm->sf->mapFromSource(currDmIdx).row();
     // check if still in filtered set, if not select first item in filtered set
     if (currSfRow == -1) currSfRow = 0;
     thumbView->iconViewDelegate->currentRow = currSfRow;
@@ -471,7 +471,7 @@ void MW::sortChange(QString source)
 //    if (!G::allMetadataLoaded) return;
 
     // get the current selected item
-    if (G::isNewFolderLoaded) currSfRow = dm->sf->mapFromSource(currentDmIdx).row();
+    if (G::isNewFolderLoaded) currSfRow = dm->sf->mapFromSource(currDmIdx).row();
     else currSfRow = 0;
 
     thumbView->iconViewDelegate->currentRow = currSfRow;
