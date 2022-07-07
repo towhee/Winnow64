@@ -60,8 +60,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << metaReadThread.isRunning();
-//    centralLayout->setCurrentIndex(LoupeTab);
+    thumbView->scrollToRow(currSfRow, CLASSFUNCTION);
     return;
 
 #ifdef Q_OS_WIN

@@ -598,9 +598,9 @@ void MetadataCache::run()
 
     If there has been a file selection change and not a new folder then update image cache.
 */
-    QString msg = "action = " + actionList.at(action) +
-                  " foundItemsToLoad = " + QVariant(foundItemsToLoad).toString();
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, msg);
+//    QString msg = "action = " + actionList.at(action) +
+//                  " foundItemsToLoad = " + QVariant(foundItemsToLoad).toString();
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
 //    qDebug() << CLASSFUNCTION << actionList.at(action) << "foundItemsToLoad =" << foundItemsToLoad;
 
     if (action == Action::MR_Read) {
@@ -683,6 +683,7 @@ void MetadataCache::mr_read(int sfRow, QString source)
 //    if (G::isInitializing || !G::isNewFolderLoaded) return;
     abort = false;
     action = Action::MR_Read;
+    this->sfRow = sfRow;
 //    setRange();
 //    foundItemsToLoad = anyItemsToLoad();
     /*
@@ -756,9 +757,9 @@ void MetadataCache::cleanupIcons()
     // dm rows outside icon range
     for (int dmRow = 0; dmRow < dm->rowCount(); ++dmRow) {
         if (abort) return;
-        int sfRow = dm->proxyRowFromModelRow(dmRow);
+        int row = dm->proxyRowFromModelRow(dmRow);
         // in range?
-        if (sfRow >= firstIconRow && sfRow <= lastIconRow) continue;
+        if (row >= firstIconRow && row <= lastIconRow) continue;
         // icon not loaded?
         QModelIndex dmIdx = dm->index(dmRow, 0);
         if (dm->itemFromIndex(dmIdx)->icon().isNull()) continue;
@@ -909,7 +910,7 @@ void MetadataCache::readIcon(QModelIndex sfIdx, QString fPath)
     }
 }
 
-void MetadataCache::readRow(int sfRow)
+void MetadataCache::readRow(int row)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (debugCaching) {
@@ -917,12 +918,12 @@ void MetadataCache::readRow(int sfRow)
                            << "start  row =" << sfRow
                               ;
     }
-    if (sfRow >= dm->sf->rowCount()) return;
-    QModelIndex sfIdx = dm->sf->index(sfRow, 0);
+    if (row >= dm->sf->rowCount()) return;
+    QModelIndex sfIdx = dm->sf->index(row, 0);
     if (!sfIdx.isValid()) return;
     QString fPath = sfIdx.data(G::PathRole).toString();
     if (!G::allMetadataLoaded) {
-        bool metaLoaded = dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool();
+        bool metaLoaded = dm->sf->index(row, G::MetadataLoadedColumn).data().toBool();
         if (!metaLoaded && !abort) {
             readMetadata(sfIdx, fPath);
         }
@@ -937,7 +938,7 @@ void MetadataCache::readRow(int sfRow)
              << "adjIconChunkSize =" << adjIconChunkSize
              ;
     //*/
-    if (okToLoadIcon(sfRow) && !abort) {
+    if (okToLoadIcon(row) && !abort) {
         readIcon(sfIdx, fPath);
     }
 
@@ -952,13 +953,11 @@ void MetadataCache::readRow(int sfRow)
 
 void MetadataCache::read()
 {
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, src + " action = " + QString::number(action));
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
 
     sfRowCount = dm->sf->rowCount();
     if (debugCaching) {
         qDebug().noquote() << CLASSFUNCTION
-                           << "src =" << src
-                           << " action =" << QString::number(action)
                            << "sfRowCount =" << sfRowCount
                               ;
     }
@@ -976,7 +975,6 @@ void MetadataCache::read()
 //    G::log(CLASSFUNCTION, "Cleanup icons");
     if (!abort) cleanupIcons();
 
-    G::log(CLASSFUNCTION, "Read metadata and icons");
     int n = static_cast<int>(priorityQueue.size());
     for (int i = 0; i < n; i++) {
         if (abort) {
@@ -991,7 +989,6 @@ void MetadataCache::read()
             }
         }
     }
-
 
     emit runStatus(false, true, "MetadataCache::read");
     if (abort) {

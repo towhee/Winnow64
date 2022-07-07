@@ -254,7 +254,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QStr
     metadataThreadRunningLabel->setText("◉");
     if (isShowCacheProgressBar && !G::isSlideShow) progressLabel->setVisible(showCacheLabel);
     calledBy = "";  // suppress compiler warning
-    qApp->processEvents();
+//    qApp->processEvents();  // can cause crash
 }
 
 void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
@@ -305,7 +305,7 @@ void MW::resortImageCache()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (!dm->sf->rowCount()) return;
-    QString currentFilePath = currentDmIdx.data(G::PathRole).toString();
+    QString currentFilePath = currDmIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(currentFilePath, CLASSFUNCTION);
     // change to ImageCache
     imageCacheThread->setCurrentPosition(dm->currentFilePath, CLASSFUNCTION);
@@ -371,7 +371,7 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     sortMenuUpdateToMatchTable = false;
 
     // get the current selected item
-    currSfRow = dm->sf->mapFromSource(currentDmIdx).row();
+    currSfRow = dm->sf->mapFromSource(currDmIdx).row();
     thumbView->iconViewDelegate->currentRow = currSfRow;
     gridView->iconViewDelegate->currentRow = currSfRow;
 

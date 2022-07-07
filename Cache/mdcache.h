@@ -123,7 +123,7 @@ public:
     int lastIconRow;
 private:
     void read();
-    void readRow(int sfRow);
+    void readRow(int row);
     void readMetadata(QModelIndex sfIdx, QString fPath);
     void readIcon(QModelIndex sfIdx, QString fPath);
 //    void mr_iconMax(QPixmap &thumb);
@@ -145,12 +145,12 @@ private:
     bool debugCaching = false;
 
 signals:
-    void done();
-    void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
-    void setImageCachePosition(QString fPath);      // not used
+    void done();
     void delayedStartImageCache();
+    void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
+    void setImageCachePosition(QString fPath);      // not used
 
 };
 
