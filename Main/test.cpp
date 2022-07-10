@@ -51,7 +51,7 @@ void MW::stressTest(int ms)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-    metaRead->stop();
+//    metaRead->restart();
     return;
 
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889

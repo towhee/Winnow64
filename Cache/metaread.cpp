@@ -39,9 +39,27 @@ MetaRead::MetaRead(QObject *parent, DataModel *dm)
 
 MetaRead::~MetaRead()
 {
-    stop();
+//    restart();
     delete metadata;
     delete thumb;
+}
+
+void MetaRead::restart(int sfRow)
+{
+    mutex.lock();
+    if (isRunning) {
+        newRow = sfRow;
+        abort = true;
+    }
+    else {
+        emit okayToStart*(sfRow);
+    }
+    mutex.unlock();
+}
+
+void MetaRead::start()
+{
+    abort = false;
 }
 
 void MetaRead::stop()
@@ -543,6 +561,7 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
     emit runStatus(false, true, "MetaRead::read");
     if (abort) {
         G::log(CLASSFUNCTION, "aborted");
+        emit okayToStart(newRow);
         abort = false;
         isRunning = false;
         return;

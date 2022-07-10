@@ -1622,6 +1622,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         bool isVideo = dm->sf->index(currSfRow, G::VideoColumn).data().toBool();
         if (isVideo) {
             videoView->load(fPath);
+//            videoView->pause();
             if (G::mode == "Loupe") centralLayout->setCurrentIndex(VideoTab);
         }
         else {
@@ -1897,7 +1898,7 @@ void MW::updateIconRange(int row)
         dm->endIconRange = lastIconRow;
     }
 
-//    /*
+    /*
     qDebug()
          << CLASSFUNCTION << "row =" << row
          << "dm->iconChunkSize =" << dm->iconChunkSize
@@ -1955,8 +1956,8 @@ void MW::loadConcurrentNewFolder()
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
     // read metadata
-//    metaRead->initialize();     // only when change folders
-    metadataCacheThread->initialize();     // only when change folders
+    metaRead->initialize();     // only when change folders
+//    metadataCacheThread->initialize();     // only when change folders
     loadConcurrent(currSfRow, CLASSFUNCTION);
 }
 
@@ -1966,8 +1967,20 @@ void MW::loadConcurrent(int sfRow, QString src)
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
         if (!dm->abortLoadingModel) {
+            emit restartMetaRead(sfRow);
+//            if (metaRead->isRunning) {
+//                QTimer timer;
+//                timer.setSingleShot(true);
+//                QEventLoop loop;
+//                connect( metaRead, &MetaRead::stopped, &loop, &QEventLoop::quit );
+//                connect( &timer, &QTimer::timeout, &loop, &QEventLoop::quit );
+//                timer.start(5000);
+//                loop.exec();
+//            }
+//            emit startMetaRead(sfRow, src);
+
 //            metaRead->read(sfRow, src);
-            metadataCacheThread->mr_read(sfRow);
+//            metadataCacheThread->mr_read(sfRow);
         }
     }
     else {
@@ -1987,6 +2000,11 @@ void MW::loadConcurrent(int sfRow, QString src)
 //        QApplication::processEvents();
 //        return;
     }
+}
+
+void MW::loadConcurrent1(int sfRow)
+{
+    emit startMetaRead(sfRow, CLASSFUNCTION);
 }
 
 void MW::loadConcurrentMetaDone()

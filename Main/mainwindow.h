@@ -381,7 +381,8 @@ public slots:
 signals:
     void setValue(QModelIndex dmIdx, QVariant value, int role);
     void setValueSf(QModelIndex sfIdx, QVariant value, int role);
-    void readMetadata(int sfRow, QString src);
+    void restartMetaRead(int newRow);
+    void startMetaRead(int sfRow, QString src);
     void setImageCachePosition(QString, QString);
     void setImageCachePosition2(QString);
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
@@ -488,9 +489,8 @@ private slots:
                                 ImageCacheData::Cache cache,
                                 QString source);
     // caching
-    void loadConcurrent(/*MetaRead::Action action = MetaRead::FileSelection,*/
-                        int sfRow = 0,
-                        QString src = "");
+    void loadConcurrent(int sfRow = 0, QString src = "");
+    void loadConcurrent1(int sfRow = 0);
     void loadConcurrentNewFolder();
     void loadConcurrentMetaDone();
     void loadConcurrentStartImageCache();

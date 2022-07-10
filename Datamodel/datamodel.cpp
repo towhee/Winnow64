@@ -1024,6 +1024,7 @@ void DataModel::setIconFromFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstanc
     rest are ignored.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
 
     if (fromInstance != instance) {
         qWarning() << CLASSFUNCTION << dmIdx << "Instance conflict = "
