@@ -233,7 +233,11 @@ void MW::createMDCache()
     // delete thread when finished
     connect(&metaReadThread, &QThread::finished, metaRead, &QObject::deleteLater);
     // read metadata
-    connect(this, &MW::readMetadata, metaRead, &MetaRead::read);
+    connect(this, &MW::startMetaRead, metaRead, &MetaRead::read);
+    // add metadata to datamodel
+    connect(this, &MW::restartMetaRead, metaRead, &MetaRead::restart);
+    // message metadata reading completed
+    connect(metaRead, &MetaRead::okayToStart, this, &MW::loadConcurrent1);
     // add metadata to datamodel
     connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
     // update icon in datamodel

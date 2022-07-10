@@ -17,7 +17,6 @@ class MetaRead : public QObject
 public:
     MetaRead(QObject *parent, DataModel *dm);
     ~MetaRead() override;
-    void stop();
     enum Action {
         FileSelection,
         Scroll,
@@ -27,12 +26,17 @@ public:
     QString diagnostics();
     QString reportMetaCache();
 
+    QWaitCondition condition;
+    bool abort;
+    bool isRunning = false;
+
     int iconChunkSize;
     int firstIconRow;
     int lastIconRow;
 
 signals:
     void done();
+    void okayToStart(int newRow);
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
@@ -43,6 +47,9 @@ signals:
 
 public slots:
     void initialize();
+    void restart(int newRow);
+    void stop();
+    void start();
     void read(int sfRow = 0, QString src = "");
 //    void scroll(int sfRow, QString src = "");
 //    void sizeChange(int sfRow, QString src = "");
@@ -59,9 +66,10 @@ private:
     void updateIcons();
 
     QMutex mutex;
-    QWaitCondition condition;
-    bool abort;
-    bool isRunning = false;
+//    QWaitCondition condition;
+//    bool abort;
+//    bool isRunning = false;
+    int newRow;
     DataModel *dm;
     Metadata *metadata;
     Thumb *thumb;

@@ -893,10 +893,13 @@ void MetadataCache::readIcon(QModelIndex sfIdx, QString fPath)
     // get thumbnail
     QImage image;
     bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readIcon");
+
+    // video frame icons are automatically set in datamodel
     if (isVideo) {
         iconsLoaded.append(dmRow);
         return;
     }
+
     if (thumbLoaded) {
         QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
         if (!abort) emit setIcon(dmIdx, pm, dmInstance);
@@ -922,6 +925,8 @@ void MetadataCache::readRow(int row)
     QModelIndex sfIdx = dm->sf->index(row, 0);
     if (!sfIdx.isValid()) return;
     QString fPath = sfIdx.data(G::PathRole).toString();
+
+    // load metadata
     if (!G::allMetadataLoaded) {
         bool metaLoaded = dm->sf->index(row, G::MetadataLoadedColumn).data().toBool();
         if (!metaLoaded && !abort) {
@@ -929,7 +934,6 @@ void MetadataCache::readRow(int row)
         }
     }
 
-    // load icon
     /*
     qDebug() << CLASSFUNCTION
              << "sfRow =" << sfRow
@@ -938,12 +942,14 @@ void MetadataCache::readRow(int row)
              << "adjIconChunkSize =" << adjIconChunkSize
              ;
     //*/
+    // load icon
     if (okToLoadIcon(row) && !abort) {
         readIcon(sfIdx, fPath);
     }
 
     // update the imageCache item data
     if (!abort) emit addToImageCache(metadata->m);
+
     if (debugCaching) {
         qDebug().noquote() << CLASSFUNCTION
                            << "done   row =" << sfRow
@@ -980,7 +986,6 @@ void MetadataCache::read()
         if (abort) {
             break;
         }
-//        if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "i =" + QString::number(i));
         readRow(priorityQueue.at(i));
         if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
             if (i == (n - 1) || i == 50) {
@@ -993,7 +998,6 @@ void MetadataCache::read()
     emit runStatus(false, true, "MetadataCache::read");
     if (abort) {
         G::log(CLASSFUNCTION, "aborted");
-//        abort = false;
         return;
     }
     G::log(CLASSFUNCTION, "Finished without abort");

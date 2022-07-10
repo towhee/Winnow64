@@ -5,10 +5,11 @@
 
     This is accomplished by creating a QMediaPlayer that decodes and plays the video file
     to the virtual canvas QVideoSink. Each time the video frame changes QVideoSink emits
-    a videoFrameChanged signal. FrameDecoder::thumbnail receives the signal, converts the
-    frame into a QImage, emits setFrameIcon and stops the QMediaPlayer. The setFrameIcon
-    signal is received by DataModel::setIconFromFrame, where the icon is added to the
-    datamodel and then the instance of FrameDecoder is deallocated (deleted).
+    a videoFrameChanged signal. FrameDecoder::frameChanged receives the signal, converts
+    the frame into a QImage, emits setFrameIcon and stops the QMediaPlayer. The
+    setFrameIcon signal is received by DataModel::setIconFromFrame, where the icon is
+    added to the datamodel and then the instance of FrameDecoder is deallocated
+    (deleted).
 
     This convoluted process is required because QVideoSink does not know which file the
     video frame came from.  When processing many files, it is not guaranteed that the
@@ -27,6 +28,8 @@
 
 FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
 {
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
     thisFrameDecoder = this;
     this->dmIdx = dmIdx;
     this->dmInstance = dmInstance;
@@ -39,6 +42,7 @@ FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
 void FrameDecoder::getFrame(QString path)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION << path;
     fPath = path;
     QFile f(fPath);
     mediaPlayer->setSource(fPath);
@@ -48,6 +52,7 @@ void FrameDecoder::getFrame(QString path)
 void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
     if (thumbnailAcquired) return;
     QImage im = frame.toImage();
     if (im.isNull()) return;

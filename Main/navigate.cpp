@@ -30,9 +30,10 @@ void MW::keyRight()
 /*
 
 */
-    qDebug() << " ";
-    G::log(CLASSFUNCTION, "ROW: " + QString::number(currSfRow));
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) {
+        qDebug() << " ";
+        G::log(CLASSFUNCTION, "ROW: " + QString::number(currSfRow));
+    }
     if (G::mode == "Compare") compareImages->go("Right");
     if (G::mode == "Loupe") thumbView->selectNext();
     if (G::mode == "Table") thumbView->selectNext();
@@ -44,7 +45,11 @@ void MW::keyLeft()
 /*
 
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) {
+//        qDebug() << " ";
+        G::log();   // show blank line
+        G::log(CLASSFUNCTION, "ROW: " + QString::number(currSfRow));
+    }
     if (G::mode == "Compare") compareImages->go("Left");
     if (G::mode == "Loupe") thumbView->selectPrev();
     if (G::mode == "Table") thumbView->selectPrev();

@@ -189,6 +189,9 @@ namespace G
                 if (logFile.isOpen()) logFile.write(msg.toUtf8());
             }
         }
+        else {
+            qDebug();
+        }
         prevFunctionName = functionName;
         prevComment = comment;
         t.restart();

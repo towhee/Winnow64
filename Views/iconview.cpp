@@ -727,8 +727,9 @@ void IconView::sortThumbs(int sortColumn, bool isReverse)
 void IconView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
 /*
-    For some reason the selectionModel rowCount is not up-to-date and the selection is updated
-    after the MD::fileSelectionChange occurs, hence update the status bar from here.
+    For some reason the selectionModel rowCount is not up-to-date and the selection is
+    updated after the MD::fileSelectionChange occurs, hence update the status bar from
+    here.
 */
     QString s = "";
     if (selected.isEmpty() || !selected.at(0).isValid() || G::isInitializing)
