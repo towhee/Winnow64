@@ -1752,11 +1752,21 @@ void MW::stopAndClearAll(QString src)
 //    qDebug() << CLASSFUNCTION << src;
     G::stop = true;
 
-    dm->abortLoad();
+    dm->abortLoad();   
 
-    // Stop any threads that might be running.
-    metadataCacheThread->stop();
+    if (src == "Escape key") {
+        fsTree->selectionModel()->clearSelection();
+        bookmarks->selectionModel()->clearSelection();
+    }
+
+    // metaRead siganls to .
     metaRead->stop();
+}
+
+void MW::stopAndClearAllAfterMetaReadStopped()
+{
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    metadataCacheThread->stop();
     imageCacheThread->stop();
     buildFilters->stop();
 
@@ -1793,12 +1803,13 @@ void MW::stopAndClearAll(QString src)
     // turn thread activity buttons gray
     setThreadRunStatusInactive();
 
-    if (src == "Escape key") {
-        fsTree->selectionModel()->clearSelection();
-        bookmarks->selectionModel()->clearSelection();
+    G::stop = false;
+
+    if (metaRead->isRunning) {
+        qDebug() << "MW::stopAndClearAll metaRead still isRunning";
     }
 
-    G::stop = false;
+    qDebug() << "MW::stopAndClearAll completed";
 }
 
 void MW::nullFiltration()
@@ -1956,55 +1967,28 @@ void MW::loadConcurrentNewFolder()
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
     // read metadata
-    metaRead->initialize();     // only when change folders
-//    metadataCacheThread->initialize();     // only when change folders
-    loadConcurrent(currSfRow, CLASSFUNCTION);
+//    metaRead->initialize();     // only when change folders
+//    emit restartMetaRead(currSfRow);
+    metadataCacheThread->initialize();     // only when change folders
+    metadataCacheThread->mr_read(currSfRow);
+//    signalWhenOkayToStart(currSfRow, CLASSFUNCTION);
 }
 
-void MW::loadConcurrent(int sfRow, QString src)
+void MW::signalWhenOkayToStart(int newRow, QString src)
 {
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Row =" + QString::number(sfRow));
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Row =" + QString::number(newRow));
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
-        updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
         if (!dm->abortLoadingModel) {
-            emit restartMetaRead(sfRow);
-//            if (metaRead->isRunning) {
-//                QTimer timer;
-//                timer.setSingleShot(true);
-//                QEventLoop loop;
-//                connect( metaRead, &MetaRead::stopped, &loop, &QEventLoop::quit );
-//                connect( &timer, &QTimer::timeout, &loop, &QEventLoop::quit );
-//                timer.start(5000);
-//                loop.exec();
-//            }
-//            emit startMetaRead(sfRow, src);
-
-//            metaRead->read(sfRow, src);
-//            metadataCacheThread->mr_read(sfRow);
+            emit restartMetaRead(newRow);
         }
     }
-    else {
-        G::okayToChangeFolders = true;
-    }
-
-    if (dm->abortLoadingModel || !G::allMetadataLoaded) {
-        /*
-        qDebug() << CLASSFUNCTION << src
-                 << "G::allMetadataLoaded =" << G::allMetadataLoaded
-                 << "G::allIconsLoaded =" << G::allIconsLoaded
-                 << "dm->abortLoadingModel =" << dm->abortLoadingModel
-                    ;
-                    //*/
-//        updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
-//        setCentralMessage("Image loading has been cancelled 1.");
-//        QApplication::processEvents();
-//        return;
-    }
 }
 
-void MW::loadConcurrent1(int sfRow)
+void MW::loadConcurrent(int sfRow)
 {
+    updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
     emit startMetaRead(sfRow, CLASSFUNCTION);
+//    metadataCacheThread->mr_read(sfRow);
 }
 
 void MW::loadConcurrentMetaDone()
@@ -2263,7 +2247,7 @@ void MW::thumbHasScrolled()
         if (!G::isNewSelection) {
             metadataCacheThread->scrollChange(CLASSFUNCTION);
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else loadConcurrent(thumbView->midVisibleCell, CLASSFUNCTION);
+            else signalWhenOkayToStart(thumbView->midVisibleCell, CLASSFUNCTION);
 //            else loadConcurrent(/*MetaRead::Scroll, */thumbView->midVisibleCell, CLASSFUNCTION);
         }
         // update thumbnail zoom frame cursor
@@ -2315,7 +2299,7 @@ void MW::gridHasScrolled()
         if (!G::isNewSelection && gridView->isVisible()) {
             qDebug() << CLASSFUNCTION << "1";
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else loadConcurrent(/*MetaRead::Scroll, */gridView->midVisibleCell, CLASSFUNCTION);
+            else signalWhenOkayToStart(/*MetaRead::Scroll, */gridView->midVisibleCell, CLASSFUNCTION);
 //            metadataCacheThread->scrollChange(CLASSFUNCTION);
         }
     }
@@ -2362,7 +2346,7 @@ void MW::tableHasScrolled()
         if (!G::isNewSelection) {
             qDebug() << CLASSFUNCTION;
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else loadConcurrent(/*MetaRead::Scroll, */tableView->midVisibleRow, CLASSFUNCTION);
+            else signalWhenOkayToStart(/*MetaRead::Scroll, */tableView->midVisibleRow, CLASSFUNCTION);
 //            metadataCacheThread->scrollChange(CLASSFUNCTION);
         }
     }

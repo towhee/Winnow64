@@ -384,7 +384,7 @@ Steps:
     loadingModel = true;
 
     emit centralMsg("Commencing to load folder " + folderPath);    // rghmsg
-    QCoreApplication::processEvents();
+//    QCoreApplication::processEvents();
 
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "continue loading");
 
@@ -423,7 +423,7 @@ Steps:
                         QString::number(folderCount) + " folders" +
                         escapeClause;
             emit centralMsg(s);        // rghmsg
-            QCoreApplication::processEvents();
+//            QCoreApplication::processEvents();
         }
         if (abortLoadingModel) return endLoad(false);
     }

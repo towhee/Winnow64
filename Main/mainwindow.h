@@ -489,8 +489,8 @@ private slots:
                                 ImageCacheData::Cache cache,
                                 QString source);
     // caching
-    void loadConcurrent(int sfRow = 0, QString src = "");
-    void loadConcurrent1(int sfRow = 0);
+    void signalWhenOkayToStart(int newRow = 0, QString src = "");
+    void loadConcurrent(int sfRow = 0);
     void loadConcurrentNewFolder();
     void loadConcurrentMetaDone();
     void loadConcurrentStartImageCache();
@@ -1104,6 +1104,7 @@ private:
     void embelDockVisibilityChange();
     void updateState();
     void stopAndClearAll(QString src = "");
+    void stopAndClearAllAfterMetaReadStopped();
     void deleteViewerImage();
     void selectCurrentViewDir();
     void addMenuSeparator(QWidget *widget);

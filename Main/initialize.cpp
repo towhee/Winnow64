@@ -215,7 +215,7 @@ void MW::createMDCache()
 
 
 
-    metaRead = new MetaRead(this, dm);
+    metaRead = new MetaRead(this, dm, metadata);
     metaRead->iconChunkSize = 20;
 
 
@@ -237,11 +237,13 @@ void MW::createMDCache()
     // add metadata to datamodel
     connect(this, &MW::restartMetaRead, metaRead, &MetaRead::restart);
     // message metadata reading completed
-    connect(metaRead, &MetaRead::okayToStart, this, &MW::loadConcurrent1);
+    connect(metaRead, &MetaRead::okayToStart, this, &MW::loadConcurrent);
     // add metadata to datamodel
     connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
     // update icon in datamodel
     connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon);
+    // message metadata reading stopped (for new folder)
+    connect(metaRead, &MetaRead::stopped, this, &MW::stopAndClearAllAfterMetaReadStopped);
     // message metadata reading completed
     connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange

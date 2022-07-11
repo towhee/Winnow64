@@ -5,7 +5,7 @@ void MW::setCentralMessage(QString message)
     if (G::isLogger) G::log(CLASSFUNCTION);
     msg.msgLabel->setText(message);
     centralLayout->setCurrentIndex(MessageTab);
-    QApplication::processEvents();
+//    QApplication::processEvents();
 }
 
 /**********************************************************************************************
