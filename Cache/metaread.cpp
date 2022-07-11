@@ -27,11 +27,12 @@
         iconChunkSize
 */
 
-MetaRead::MetaRead(QObject *parent, DataModel *dm)
+MetaRead::MetaRead(QObject *parent, DataModel *dm, Metadata *metadata)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     this->dm = dm;
-    metadata = new Metadata;
+    this->metadata = metadata;
+//    metadata = new Metadata;
     thumb = new Thumb(dm, metadata);
     abort = false;
     debugCaching = false;
@@ -50,9 +51,10 @@ void MetaRead::restart(int sfRow)
     if (isRunning) {
         newRow = sfRow;
         abort = true;
+        isRestart = true;
     }
     else {
-        emit okayToStart*(sfRow);
+        emit okayToStart(sfRow);
     }
     mutex.unlock();
 }
@@ -64,7 +66,16 @@ void MetaRead::start()
 
 void MetaRead::stop()
 {
-    abort = true;
+    mutex.lock();
+    if (isRunning) {
+        abort = true;
+        isRestart = false;
+    }
+    else {
+        emit stopped();
+    }
+//    condition.wakeOne();
+    mutex.unlock();
 }
 
 void MetaRead::initialize()
@@ -508,14 +519,14 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, src + " action = " + QString::number(action));
 
-    if (isRunning) {
-        G::log(CLASSFUNCTION, "ROW: " + QString::number(sfRow) + " running");
-        mutex.lock();
-        abort = true;
-        mutex.unlock();
-        while (isRunning) {}
-        G::log(CLASSFUNCTION, "ROW: " + QString::number(sfRow) + " aborted");
-    }
+//    if (isRunning) {
+//        G::log(CLASSFUNCTION, "ROW: " + QString::number(sfRow) + " running");
+//        mutex.lock();
+//        abort = true;
+//        mutex.unlock();
+//        while (isRunning) {}
+//        G::log(CLASSFUNCTION, "ROW: " + QString::number(sfRow) + " aborted");
+//    }
 
     abort = false;
     isRunning = true;
@@ -560,13 +571,14 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
 
     emit runStatus(false, true, "MetaRead::read");
     if (abort) {
-        G::log(CLASSFUNCTION, "aborted");
-        emit okayToStart(newRow);
+        qDebug() << "MetaRead::read aborted";
         abort = false;
         isRunning = false;
+        if (isRestart) emit okayToStart(newRow);
+        else emit stopped();
         return;
     }
-    G::log(CLASSFUNCTION, "Finished without abort");
+    qDebug() << "MetaRead::read Finished without abort";
     if (!abort) emit updateIconBestFit();
     if (!abort) emit done();
     isRunning = false;

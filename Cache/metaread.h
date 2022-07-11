@@ -15,7 +15,7 @@ class MetaRead : public QObject
     Q_OBJECT
 
 public:
-    MetaRead(QObject *parent, DataModel *dm);
+    MetaRead(QObject *parent, DataModel *dm, Metadata *metadata);
     ~MetaRead() override;
     enum Action {
         FileSelection,
@@ -29,6 +29,7 @@ public:
     QWaitCondition condition;
     bool abort;
     bool isRunning = false;
+    bool isRestart;
 
     int iconChunkSize;
     int firstIconRow;
@@ -36,6 +37,7 @@ public:
 
 signals:
     void done();
+    void stopped();
     void okayToStart(int newRow);
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
