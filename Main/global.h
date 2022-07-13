@@ -256,7 +256,7 @@ namespace G
                     bool zeroElapsedTime = false);
     extern void errlog(QString functionName, QString fPath, QString err);
     extern void error(QString functionName, QString fPath, QString err);
-    extern void wait(int ms);
+    extern int wait(int ms);
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);
 

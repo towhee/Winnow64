@@ -67,14 +67,21 @@ void MetaRead::start()
 void MetaRead::stop()
 {
     mutex.lock();
+    isRestart = false;
+
+//    abort = true;
+//    emit stopped();
+
+    QString msg = "isRunning = ";
+    isRunning ? msg += "true" : msg += "false";
+    G::log(CLASSFUNCTION, msg);
+
     if (isRunning) {
         abort = true;
-        isRestart = false;
     }
     else {
         emit stopped();
     }
-//    condition.wakeOne();
     mutex.unlock();
 }
 
@@ -102,6 +109,10 @@ QString MetaRead::diagnostics()
     rpt << "\n" << "iconChunkSize:      " << iconChunkSize;
     rpt << "\n" << "firstIconRow:       " << firstIconRow;
     rpt << "\n" << "lastIconRow:        " << lastIconRow;
+    rpt << "\n" ;
+    rpt << "\n" << "abort:              " << (abort ? "true" : "false");
+    rpt << "\n" << "isRunning:          " << (isRunning ? "true" : "false");
+    rpt << "\n" << "isRestart:          " << (isRestart ? "true" : "false");
     rpt << "\n" ;
     rpt << reportMetaCache();
 
@@ -545,17 +556,18 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
     emit runStatus(true, true, "MetaRead::read");
 
     // build priority queue for reading metadata and icons
-//    G::log(CLASSFUNCTION, "Build priority queue");
+    G::log(CLASSFUNCTION, "Build priority queue");
     buildMetadataPriorityQueue(sfStart);
 
     // cleanup unneeded icons
-//    G::log(CLASSFUNCTION, "Cleanup icons");
+    G::log(CLASSFUNCTION, "Cleanup icons");
     if (!abort) cleanupIcons();
 
     G::log(CLASSFUNCTION, "Read metadata and icons");
     int n = static_cast<int>(priorityQueue.size());
     for (int i = 0; i < n; i++) {
         if (abort) {
+            qDebug() << CLASSFUNCTION << "aborting: i =" << i;
             break;
         }
 //        if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "i =" + QString::number(i));
@@ -571,7 +583,7 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
 
     emit runStatus(false, true, "MetaRead::read");
     if (abort) {
-        qDebug() << "MetaRead::read aborted";
+        qDebug() << "MetaRead::read aborted: isRestart =" << isRestart;
         abort = false;
         isRunning = false;
         if (isRestart) emit okayToStart(newRow);

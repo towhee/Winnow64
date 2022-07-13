@@ -591,7 +591,7 @@ void IconView::scannedViewportRange()
     when the application show event occurs, when there is a viewport scroll event or when an
     icon justification happens.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log(CLASSFUNCTION);
     int row;    // an item, not a row in the grid
     firstVisibleCell = 0;
     QRect iconViewRect = viewport()->rect();
@@ -734,7 +734,7 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
     QString s = "";
     if (selected.isEmpty() || !selected.at(0).isValid() || G::isInitializing)
         s = "Ignore invalid selection change";
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, s);
+    if (G::isLogger) G::log(CLASSFUNCTION, s);
     if (G::stop || selected.isEmpty() || !selected.at(0).isValid()) {
         return;
     }

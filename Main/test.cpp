@@ -60,6 +60,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    G::wait(0);
+    int n = 0;
+    QElapsedTimer t;
+    t.start();
+    while (G::wait(10) < 50); /*{
+        qDebug() << ++n;
+    }*/
+    qDebug() << t.nsecsElapsed();
+    return;
+
     thumbView->scrollToRow(currSfRow, CLASSFUNCTION);
     return;
 

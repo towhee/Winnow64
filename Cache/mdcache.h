@@ -27,7 +27,7 @@ public:
         Scroll,             // 3
         Resize,             // 4
         AllMetadata,        // 5
-        MR_Read
+        MR_Read             // 6
     };
     QStringList actionList;
 
