@@ -41,7 +41,6 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
 void Thumb::loadFromVideo(QString &fPath, int dmRow)
 {
     if (G::isLogger) G::log(CLASSFUNCTION, fPath);
-    qDebug() << CLASSFUNCTION << fPath;
     // see top of FrameDecoder.cpp for documentation
     QModelIndex dmIdx = dm->index(dmRow, 0);
 

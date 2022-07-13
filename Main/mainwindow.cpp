@@ -1317,7 +1317,7 @@ void MW::folderSelectionChange()
 //    stopAndClearAll("folderSelectionChange");
 //    reportState("folderSelectionChange");
     if (G::isLogger || G::isFlowLogger) {
-        qDebug();
+        G::log("skipline");
         G::log(CLASSFUNCTION);
     }
 
@@ -1337,7 +1337,17 @@ void MW::folderSelectionChange()
 //        return;
 //    }
 
+    // Reset
+    G::stop = true;
+    G::wait(0);
     stopAndClearAll("folderSelectionChange");
+    while (G::stop && G::wait(10) < 2000);
+    if (G::stop) {
+        qWarning() << "stopAndClearAll exceeded 2000 ms, cancelled folderSelectionChange";
+        return;
+    }
+    G::log(CLASSFUNCTION, "After stopAndClearAll");
+
     dm->abortLoadingModel = false;
     G::currRootFolder = getSelectedPath();
 
@@ -1418,7 +1428,7 @@ void MW::folderSelectionChange()
         if (dm->abortLoadingModel) {
             updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
             setCentralMessage("Image loading has been cancelled");
-            QApplication::processEvents();
+//            QApplication::processEvents();  // MetaRead new folder crash?
             return;
         }
         QDir dir(currentViewDirPath);
@@ -1759,7 +1769,7 @@ void MW::stopAndClearAll(QString src)
         bookmarks->selectionModel()->clearSelection();
     }
 
-    // metaRead siganls to .
+    // metaRead signals to stopAndClearAllAfterMetaReadStopped when stopped.
     metaRead->stop();
 }
 
@@ -1805,11 +1815,7 @@ void MW::stopAndClearAllAfterMetaReadStopped()
 
     G::stop = false;
 
-    if (metaRead->isRunning) {
-        qDebug() << "MW::stopAndClearAll metaRead still isRunning";
-    }
-
-    qDebug() << "MW::stopAndClearAll completed";
+    G::log("MW::stopAndClearAll completed");
 }
 
 void MW::nullFiltration()
@@ -1846,7 +1852,7 @@ void MW::updateIconRange(int row)
     row == -1 then scan the current view to determine the first/last. Otherwise,
     calculate first/last.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, QString::number(row));
+    if (G::isLogger) G::log(CLASSFUNCTION, QString::number(row));
     int firstVisible = dm->sf->rowCount();
     int lastVisible = 0;
 
@@ -1966,15 +1972,15 @@ void MW::loadConcurrentNewFolder()
     filters->setEnabled(false);
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
-    // read metadata
-//    metaRead->initialize();     // only when change folders
-//    emit restartMetaRead(currSfRow);
-    metadataCacheThread->initialize();     // only when change folders
-    metadataCacheThread->mr_read(currSfRow);
-//    signalWhenOkayToStart(currSfRow, CLASSFUNCTION);
+    // read metadata using MetaRead
+    metaRead->initialize();     // only when change folders
+    emit restartMetaRead(currSfRow);
+    // read metadata using concurrent in metadataCacheThread
+//    metadataCacheThread->initialize();     // only when change folders
+//    metadataCacheThread->mr_read(currSfRow);
 }
 
-void MW::signalWhenOkayToStart(int newRow, QString src)
+void MW::loadConcurrentWhenOkay(int newRow, QString src)
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Row =" + QString::number(newRow));
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
@@ -2139,6 +2145,7 @@ void MW::loadLinearNewFolder()
     updateIconBestFit();
     updateIconRange(currSfRow);
 
+
     setCentralMessage("Reading icons.");
     QApplication::processEvents();
     mct->readIconChunk();
@@ -2247,7 +2254,7 @@ void MW::thumbHasScrolled()
         if (!G::isNewSelection) {
             metadataCacheThread->scrollChange(CLASSFUNCTION);
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else signalWhenOkayToStart(thumbView->midVisibleCell, CLASSFUNCTION);
+            else loadConcurrentWhenOkay(thumbView->midVisibleCell, CLASSFUNCTION);
 //            else loadConcurrent(/*MetaRead::Scroll, */thumbView->midVisibleCell, CLASSFUNCTION);
         }
         // update thumbnail zoom frame cursor
@@ -2299,7 +2306,7 @@ void MW::gridHasScrolled()
         if (!G::isNewSelection && gridView->isVisible()) {
             qDebug() << CLASSFUNCTION << "1";
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else signalWhenOkayToStart(/*MetaRead::Scroll, */gridView->midVisibleCell, CLASSFUNCTION);
+            else loadConcurrentWhenOkay(/*MetaRead::Scroll, */gridView->midVisibleCell, CLASSFUNCTION);
 //            metadataCacheThread->scrollChange(CLASSFUNCTION);
         }
     }
@@ -2346,7 +2353,7 @@ void MW::tableHasScrolled()
         if (!G::isNewSelection) {
             qDebug() << CLASSFUNCTION;
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else signalWhenOkayToStart(/*MetaRead::Scroll, */tableView->midVisibleRow, CLASSFUNCTION);
+            else loadConcurrentWhenOkay(/*MetaRead::Scroll, */tableView->midVisibleRow, CLASSFUNCTION);
 //            metadataCacheThread->scrollChange(CLASSFUNCTION);
         }
     }
@@ -5122,10 +5129,10 @@ void MW::metadataChanged(QStandardItem* item)
     If the change was a result of a new image selection then ignore.
 
     If the metadata in the tags section of the InfoView panel has been editied (title,
-    creator, copyright, email or url) then all selected image tag(s) are updated to the new
-    value(s) in the data model. If xmp edits are enabled the new tag(s) are embedded in the
-    image metadata, either internally or as a sidecar when ingesting. If raw+jpg are combined
-    then the raw file rows are also updated in the data model.
+    creator, copyright, email or url) then all selected image tag(s) are updated to the
+    new value(s) in the data model. If xmp edits are enabled the new tag(s) are embedded
+    in the image metadata, either internally or as a sidecar when ingesting. If raw+jpg
+    are combined then the raw file rows are also updated in the data model.
 */
      if (!useInfoView) return;
     if (G::isLogger) G::log(CLASSFUNCTION);

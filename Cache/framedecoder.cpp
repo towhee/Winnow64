@@ -29,7 +29,6 @@
 FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
     thisFrameDecoder = this;
     this->dmIdx = dmIdx;
     this->dmInstance = dmInstance;
@@ -52,7 +51,6 @@ void FrameDecoder::getFrame(QString path)
 void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
     if (thumbnailAcquired) return;
     QImage im = frame.toImage();
     if (im.isNull()) return;

@@ -600,7 +600,7 @@ void MetadataCache::run()
 */
 //    QString msg = "action = " + actionList.at(action) +
 //                  " foundItemsToLoad = " + QVariant(foundItemsToLoad).toString();
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, actionList.at(action));
 //    qDebug() << CLASSFUNCTION << actionList.at(action) << "foundItemsToLoad =" << foundItemsToLoad;
 
     if (action == Action::MR_Read) {
@@ -684,16 +684,6 @@ void MetadataCache::mr_read(int sfRow, QString source)
     abort = false;
     action = Action::MR_Read;
     this->sfRow = sfRow;
-//    setRange();
-//    foundItemsToLoad = anyItemsToLoad();
-    /*
-        qDebug() << CLASSFUNCTION << "foundItemsToLoad =" << foundItemsToLoad
-                 << "start =" << startRow << "end =" << endRow
-                 << "firstIconVisible =" << firstIconVisible
-                 << "firstIconVisible =" << firstIconVisible
-                 << "rowCount =" << dm->sf->rowCount()
-                 << "action =" << action;
-    //    */
     start(TimeCriticalPriority);
 }
 

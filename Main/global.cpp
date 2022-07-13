@@ -137,10 +137,22 @@ namespace G
         return s.leftJustified(x, '.') + " ";
     }
 
-    void wait(int ms)
+    int wait(int ms)
+    /*
+        Reset duration by calling G::wait(0).
+    */
     {
+        static int duration = 0;
+        if (ms == 0) {
+            duration = 0;
+            return 0;
+        }
         QTime t = QTime::currentTime().addMSecs(ms);
-        while (QTime::currentTime() < t); // qApp->processEvents(QEventLoop::AllEvents, 10);
+        while (QTime::currentTime() < t) {
+            qApp->processEvents(QEventLoop::AllEvents, 10);
+        }
+        duration += ms;
+        return duration;
     }
 
     void track(QString functionName, QString comment, bool hideTime)
@@ -174,7 +186,7 @@ namespace G
         if (zeroElapsedTime) {
             t.restart();
         }
-        if (functionName != "") {
+        if (functionName != "skipline") {
             QString microSec = QString("%L1").arg(t.nsecsElapsed() / 1000);
             QString d = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + " ";
             QString e = microSec.rightJustified(11, ' ') + " ";
@@ -182,16 +194,17 @@ namespace G
             QString c = prevComment;
             if (sendLogToConsole) {
                 QString msg = e + f + c;
-                qDebug().noquote() << msg;
+                if (prevFunctionName == "skipline") qDebug().noquote() << " ";
+                else qDebug().noquote() << msg;
             }
             else {
                 QString msg = d + e + f + c + "\n";
                 if (logFile.isOpen()) logFile.write(msg.toUtf8());
             }
         }
-        else {
-            qDebug();
-        }
+//        else {
+//            qDebug().noquote() << "";
+//        }
         prevFunctionName = functionName;
         prevComment = comment;
         t.restart();
