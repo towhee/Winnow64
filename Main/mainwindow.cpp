@@ -1338,15 +1338,15 @@ void MW::folderSelectionChange()
 //    }
 
     // Reset
-    G::stop = true;
-    G::wait(0);
+//    G::stop = true;
     stopAndClearAll("folderSelectionChange");
-    while (G::stop && G::wait(10) < 2000);
-    if (G::stop) {
-        qWarning() << "stopAndClearAll exceeded 2000 ms, cancelled folderSelectionChange";
-        return;
-    }
-    G::log(CLASSFUNCTION, "After stopAndClearAll");
+//    G::wait(0);
+//    while (G::stop && G::wait(1) < 2000);
+//    if (G::stop) {
+//        qWarning() << "stopAndClearAll exceeded 2000 ms, cancelled folderSelectionChange";
+//        return;
+//    }
+//    G::log(CLASSFUNCTION, "After stopAndClearAll");
 
     dm->abortLoadingModel = false;
     G::currRootFolder = getSelectedPath();
@@ -1771,11 +1771,16 @@ void MW::stopAndClearAll(QString src)
 
     // metaRead signals to stopAndClearAllAfterMetaReadStopped when stopped.
     metaRead->stop();
-}
 
-void MW::stopAndClearAllAfterMetaReadStopped()
-{
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    G::wait(0);
+    while (metaRead->isRunning && G::wait(1) < 1000);
+
+//    stopAndClearAllAfterMetaReadStopped();
+//}
+
+//void MW::stopAndClearAllAfterMetaReadStopped()
+//{
+//    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     metadataCacheThread->stop();
     imageCacheThread->stop();
     buildFilters->stop();
@@ -1954,8 +1959,7 @@ void MW::loadConcurrentNewFolder()
        ImageCache is starting before all the metadata has been read.  Icons average ~180K and
        metadata ~20K  */
     int rows = dm->rowCount();
-//    int maxIconsToLoad = rows < metaRead->iconChunkSize ? rows : metaRead->iconChunkSize;
-    int maxIconsToLoad = rows < metadataCacheThread->iconChunkSize ? rows : metadataCacheThread->iconChunkSize;
+    int maxIconsToLoad = rows < metaRead->iconChunkSize ? rows : metaRead->iconChunkSize;
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
     // target image
     if (folderAndFileChangePath != "") {
@@ -2015,8 +2019,8 @@ void MW::loadConcurrentMetaDone()
 //        metaRead->read(MetaRead::SizeChange);
 //        return;
 //    }
-    if (dm->startIconRange < metadataCacheThread->firstIconRow ||
-            dm->endIconRange > metadataCacheThread->lastIconRow)
+    if (dm->startIconRange < metaRead->firstIconRow ||
+            dm->endIconRange > metaRead->lastIconRow)
     {
         metadataCacheThread->scrollChange(CLASSFUNCTION);
         return;
@@ -5445,8 +5449,7 @@ void MW::deleteFiles()
     // remove row from MetaRead::iconsLoaded
     for (int i = 0; i < sldm.count(); ++i) {
         QString fPath = sldm.at(i);
-//        metaRead->dmRowRemoved(dm->rowFromPath(fPath));
-        metadataCacheThread->dmRowRemoved(dm->rowFromPath(fPath));
+        metaRead->dmRowRemoved(dm->rowFromPath(fPath));
     }
 
     // remove fPath from datamodel dm if successfully deleted

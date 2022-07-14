@@ -201,17 +201,17 @@ void MW::createMDCache()
 
     // MetaRead connections added to metadataCacheThread
     // add metadata to datamodel
-    connect(metadataCacheThread, &MetadataCache::addToDatamodel, dm, &DataModel::addMetadataForItem);
-    // update icon in datamodel (duplicate)
-//    connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon);
-    // message metadata reading completed
-    connect(metadataCacheThread, &MetadataCache::done, this, &MW::loadConcurrentMetaDone);
-    // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
-    connect(metadataCacheThread, &MetadataCache::delayedStartImageCache, this, &MW::loadConcurrentStartImageCache);
-    // check icons visible is correct
-    connect(metadataCacheThread, &MetadataCache::updateIconBestFit, this, &MW::updateIconBestFit/*,
-            Qt::BlockingQueuedConnection*/);
-    connect(metadataCacheThread, &MetadataCache::runStatus, this, &MW::updateMetadataThreadRunStatus);
+//    connect(metadataCacheThread, &MetadataCache::addToDatamodel, dm, &DataModel::addMetadataForItem);
+//    // update icon in datamodel (duplicate)
+////    connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon);
+//    // message metadata reading completed
+//    connect(metadataCacheThread, &MetadataCache::done, this, &MW::loadConcurrentMetaDone);
+//    // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
+//    connect(metadataCacheThread, &MetadataCache::delayedStartImageCache, this, &MW::loadConcurrentStartImageCache);
+//    // check icons visible is correct
+//    connect(metadataCacheThread, &MetadataCache::updateIconBestFit, this, &MW::updateIconBestFit/*,
+//            Qt::BlockingQueuedConnection*/);
+//    connect(metadataCacheThread, &MetadataCache::runStatus, this, &MW::updateMetadataThreadRunStatus);
 
 
 
@@ -242,8 +242,8 @@ void MW::createMDCache()
     connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
     // update icon in datamodel
     connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon);
-    // message metadata reading stopped (for new folder)
-    connect(metaRead, &MetaRead::stopped, this, &MW::stopAndClearAllAfterMetaReadStopped);
+//    // message metadata reading stopped (for new folder)
+//    connect(metaRead, &MetaRead::stopped, this, &MW::stopAndClearAllAfterMetaReadStopped);
     // message metadata reading completed
     connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
@@ -303,8 +303,6 @@ void MW::createImageCache()
     // add to image cache list
     // signal to ImageCache new image selection req'd?
     connect(metaRead, &MetaRead::addToImageCache,
-            imageCacheThread, &ImageCache::addCacheItemImageMetadata);
-    connect(metadataCacheThread, &MetadataCache::addToImageCache,
             imageCacheThread, &ImageCache::addCacheItemImageMetadata);
 //    connect(metaRead, &MetaRead::setImageCachePosition,
 //            imageCacheThread, &ImageCache::setCurrentPosition);

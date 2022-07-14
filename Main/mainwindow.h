@@ -1104,7 +1104,7 @@ private:
     void embelDockVisibilityChange();
     void updateState();
     void stopAndClearAll(QString src = "");
-    void stopAndClearAllAfterMetaReadStopped();
+//    void stopAndClearAllAfterMetaReadStopped();
     void deleteViewerImage();
     void selectCurrentViewDir();
     void addMenuSeparator(QWidget *widget);
