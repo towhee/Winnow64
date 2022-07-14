@@ -31,9 +31,6 @@ public:
     };
     QStringList actionList;
 
-//    void loadNewFolder(bool isRefresh = false);
-//    void loadNewFolder2ndPass();
-    void mr_read(int sfRow = 0, QString source = "");
     void scrollChange(QString source);
     void sizeChange(QString source);
     void fileSelectionChange(/*bool okayToImageCache*/); // rghcachechange
@@ -113,44 +110,6 @@ signals:
     void selectFirst();
     void showCacheStatus(QString);            // row, clear progress bar
     void finished2ndPass();                   // buildFilters
-
-// MetaRead stuff
-public:
-    void initialize();
-    void dmRowRemoved(int dmRow);
-    int iconChunkSize;
-    int firstIconRow;
-    int lastIconRow;
-private:
-    void read();
-    void readRow(int row);
-    void readMetadata(QModelIndex sfIdx, QString fPath);
-    void readIcon(QModelIndex sfIdx, QString fPath);
-//    void mr_iconMax(QPixmap &thumb);
-    void cleanupIcons();
-    void buildMetadataPriorityQueue(int sfRow);
-    bool isNotLoaded(int sfRow);
-    bool okToLoadIcon(int sfRow);
-    int dmInstance;
-    int adjIconChunkSize;
-    int sfRowCount;
-    int visibleIconCount;
-    int sfStart;
-    int sfRow;
-    bool imageCachingStarted = false;
-    QList<int> priorityQueue;
-    QList<int> iconsLoaded;
-//    QList<int> mr_visibleIcons;
-    QList<int> outsideIconRange;
-    bool debugCaching = false;
-
-signals:
-    void addToDatamodel(ImageMetadata m);
-    void addToImageCache(ImageMetadata m);
-    void done();
-    void delayedStartImageCache();
-    void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
-    void setImageCachePosition(QString fPath);      // not used
 
 };
 
