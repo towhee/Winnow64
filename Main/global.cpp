@@ -9,7 +9,7 @@ namespace G
     // system messaging
     bool isLogger = false;              // Writes log messages to file or console
     bool isErrorLogger = false;         // Writes error log messages to file or console
-    bool isFlowLogger = true;          // Writes key program flow points to file or console
+    bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool isTestLogger = false;          // Writes test points to file or console
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
     QFile logFile;                      // MW::openLog(), MW::closeLog()
@@ -149,7 +149,7 @@ namespace G
         }
         QTime t = QTime::currentTime().addMSecs(ms);
         while (QTime::currentTime() < t) {
-            qApp->processEvents(QEventLoop::AllEvents, 10);
+            qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
         }
         duration += ms;
         return duration;

@@ -40,8 +40,6 @@ MetaRead::MetaRead(QObject *parent, DataModel *dm, Metadata *metadata)
 
 MetaRead::~MetaRead()
 {
-//    restart();
-    delete metadata;
     delete thumb;
 }
 
@@ -380,7 +378,8 @@ void MetaRead::updateIcons()    // not used
     }
 }
 
-void MetaRead::buildMetadataPriorityQueue(int sfRow)
+void MetaRead::buildMetadataPriorityQueue(int sfRow)  // cancelled use
+
 {
     if (G::isLogger) G::log("MetaRead::buildMetadataPriorityQueue");
     priorityQueue.clear();
@@ -520,15 +519,6 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::read", src + " action = " + QString::number(action));
 
-//    if (isRunning) {
-//        G::log(CLASSFUNCTION, "ROW: " + QString::number(sfRow) + " running");
-//        mutex.lock();
-//        abort = true;
-//        mutex.unlock();
-//        while (isRunning) {}
-//        G::log(CLASSFUNCTION, "ROW: " + QString::number(sfRow) + " aborted");
-//    }
-
     abort = false;
     isRunning = true;
     sfRowCount = dm->sf->rowCount();
@@ -541,46 +531,61 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
     }
     if (sfRow >= sfRowCount) return;
 
-    sfStart = sfRow;
     dmInstance = dm->instance;
     emit runStatus(true, true, "MetaRead::read");
 
-    // build priority queue for reading metadata and icons
-    G::log("MetaRead::read", "Build priority queue");
-    buildMetadataPriorityQueue(sfStart);
-
     // cleanup unneeded icons
-    G::log("MetaRead::read", "Cleanup icons");
-    if (!abort) cleanupIcons();
+//    G::log("MetaRead::read", "Cleanup icons");
+//    if (!abort) cleanupIcons();
 
-    G::log("MetaRead::read", "Read metadata and icons");
-    int n = static_cast<int>(priorityQueue.size());
-    for (int i = 0; i < n; i++) {
-        if (abort) {
-            qDebug() << "MetaRead::read" << "aborting: i =" << i;
-            break;
-        }
-//        if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "i =" + QString::number(i));
-        readRow(priorityQueue.at(i));
+    int i = 0;
+    int row = sfRow;
+    bool ahead = true;
+    int lastRow = sfRowCount - 1;
+    bool moreAhead = row < lastRow;
+    bool moreBehind = row >= 0;
+    int rowAhead = row;
+    int rowBehind = row;
+    while (i++ < sfRowCount) {
+        if (abort) break;
+        // do something with row
+        readRow(row);
         if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
-            if (i == (n - 1) || i == 50) {
-                if (!abort) emit delayedStartImageCache();
+            if (i == lastRow || i == 50) {
+                // start image caching thread after head start
+                emit startImageCache();
                 imageCachingStarted = true;
+            }
+        }
+        // next row to process
+        if (ahead) {
+            if (moreBehind) ahead = false;
+            if (moreAhead) {
+                ++rowAhead;
+                row = rowAhead;
+                moreAhead = rowAhead < lastRow;
+            }
+        }
+        else {
+            if (moreAhead) ahead = true;
+            if (moreBehind) {
+                --rowBehind;
+                row = rowBehind;
+                moreBehind = row >= 0;
             }
         }
     }
 
-
     emit runStatus(false, true, "MetaRead::read");
     if (abort) {
-        qDebug() << "MetaRead::read aborted: isRestart =" << isRestart;
+//        qDebug() << "MetaRead::read aborted: isRestart =" << isRestart;
         abort = false;
         isRunning = false;
         if (isRestart) emit okayToStart(newRow);
 //        else emit stopped();
         return;
     }
-    qDebug() << "MetaRead::read Finished without abort";
+//    qDebug() << "MetaRead::read Finished without abort";
     if (!abort) emit updateIconBestFit();
     if (!abort) emit done();
     isRunning = false;

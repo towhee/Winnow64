@@ -63,7 +63,6 @@ void Metadata::initSupportedFiles()
                         << "raf"
                         << "sr2"
                         << "rw2"
-//                        << "jpg"
                            ;
 
     hasHeic

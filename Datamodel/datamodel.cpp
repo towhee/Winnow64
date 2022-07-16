@@ -680,9 +680,10 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     }
 
     if (!success) {
-        // rgh to finish err proofing this
-        m.metadataLoaded = true;
-        qWarning() << CLASSFUNCTION << "Metadata not loaded to model for" << fPath;
+         m.metadataLoaded = true;
+        if (metadata->hasMetadataFormats.contains(m.type.toLower())) {
+            qWarning() << CLASSFUNCTION << "Metadata not loaded to model for" << fPath;
+        }
         return m;
     }
 
@@ -1014,17 +1015,20 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int role)
     sf->setData(sfIdx, value, role);
 }
 
-void DataModel::setIconFromFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
-                                 qint64 duration, FrameDecoder *frameDecoder)
+void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
+                                      qint64 duration, FrameDecoder *frameDecoder)
 {
 /*
     This slot is signalled from FrameDecoder, where the thumbnail and video duration are
     defined.  The FrameDecoder is generated from Thumb, which may be called more than once
     for a datamodel row.  We only need the first definition of duration and icon, so the
     rest are ignored.
+
+    If the user is rapidly changing folders it is possible to receive a delayed signal
+    from the previous folder. To prevent this, the datamodel instance is incremented
+    every time a new folder is loaded, and this is checked against the signal instance.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
 
     if (fromInstance != instance) {
         qWarning() << CLASSFUNCTION << dmIdx << "Instance conflict = "

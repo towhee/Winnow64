@@ -578,6 +578,8 @@ void MW::closeEvent(QCloseEvent *event)
 //    metaRead->stop();
     metaReadThread.quit();
     metaReadThread.wait();
+    iconCacheThread.quit();
+    iconCacheThread.wait();
     imageCacheThread->stop();
     metadataCacheThread->stop();
     if (filterDock->isVisible()) {
@@ -1771,16 +1773,8 @@ void MW::stopAndClearAll(QString src)
 
     // metaRead signals to stopAndClearAllAfterMetaReadStopped when stopped.
     metaRead->stop();
-
-    G::wait(0);
+    G::wait(0);         // reset wait duration timer
     while (metaRead->isRunning && G::wait(1) < 1000);
-
-//    stopAndClearAllAfterMetaReadStopped();
-//}
-
-//void MW::stopAndClearAllAfterMetaReadStopped()
-//{
-//    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     metadataCacheThread->stop();
     imageCacheThread->stop();
     buildFilters->stop();
@@ -1820,7 +1814,7 @@ void MW::stopAndClearAll(QString src)
 
     G::stop = false;
 
-    G::log("MW::stopAndClearAll completed");
+//    G::log("MW::stopAndClearAll completed");
 }
 
 void MW::nullFiltration()
@@ -1998,7 +1992,6 @@ void MW::loadConcurrent(int sfRow)
 {
     updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
     emit startMetaRead(sfRow, CLASSFUNCTION);
-//    metadataCacheThread->mr_read(sfRow);
 }
 
 void MW::loadConcurrentMetaDone()
@@ -2248,7 +2241,6 @@ void MW::thumbHasScrolled()
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
-        G::log(CLASSFUNCTION);
         updateIconRange(-1);
         gridView->scrollToRow(thumbView->midVisibleCell, CLASSFUNCTION);
         updateIconRange(-1);
@@ -2256,9 +2248,15 @@ void MW::thumbHasScrolled()
             tableView->scrollToRow(thumbView->midVisibleCell, CLASSFUNCTION);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
-            metadataCacheThread->scrollChange(CLASSFUNCTION);
+//            metadataCacheThread->scrollChange(CLASSFUNCTION);
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else loadConcurrentWhenOkay(thumbView->midVisibleCell, CLASSFUNCTION);
+            else {
+                iconCache->stop();
+                G::wait(0);
+                while (iconCache->isRunning && G::wait(1) < 5);
+                emit startIconCache(thumbView->midVisibleCell, "MW::thumbHasScrolled");
+            }
+//            else loadConcurrentWhenOkay(thumbView->midVisibleCell, CLASSFUNCTION);
 //            else loadConcurrent(/*MetaRead::Scroll, */thumbView->midVisibleCell, CLASSFUNCTION);
         }
         // update thumbnail zoom frame cursor

@@ -215,14 +215,11 @@ void MW::createMDCache()
 
 
 
-    metaRead = new MetaRead(this, dm, metadata);
-    metaRead->iconChunkSize = 20;
-
-
     // MetaRead
-//    QThread metaReadThread;  // moved to header
+    metaRead = new MetaRead(this, dm, metadata);
     metaRead->moveToThread(&metaReadThread);
 
+    metaRead->iconChunkSize = 200;
     if (setting->contains("iconChunkSize")) {
         dm->iconChunkSize = setting->value("iconChunkSize").toInt();
     }
@@ -247,13 +244,30 @@ void MW::createMDCache()
     // message metadata reading completed
     connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
-    connect(metaRead, &MetaRead::delayedStartImageCache, this, &MW::loadConcurrentStartImageCache);
+    connect(metaRead, &MetaRead::startImageCache, this, &MW::loadConcurrentStartImageCache);
     // check icons visible is correct
     connect(metaRead, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit/*,
             Qt::BlockingQueuedConnection*/);
     connect(metaRead, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
 
     metaReadThread.start();
+
+    // IconCache
+    iconCache = new IconCache(this, dm, metadata);
+    iconCache->moveToThread(&iconCacheThread);
+
+    iconCache->iconChunkSize = 200;
+
+    // delete thread when finished
+    connect(&iconCacheThread, &QThread::finished, iconCache, &QObject::deleteLater);
+    // read iconCache
+    connect(this, &MW::startIconCache, iconCache, &IconCache::read);
+    // add metadata to datamodel
+    connect(iconCache, &IconCache::addToDatamodel, dm, &DataModel::addMetadataForItem);
+    // update icon in datamodel
+    connect(iconCache, &IconCache::setIcon, dm, &DataModel::setIcon);
+
+    iconCacheThread.start();
 }
 
 void MW::createImageCache()

@@ -28,7 +28,7 @@
 
 FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("FrameDecoder::FrameDecoder");
     thisFrameDecoder = this;
     this->dmIdx = dmIdx;
     this->dmInstance = dmInstance;
@@ -40,8 +40,7 @@ FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
 
 void FrameDecoder::getFrame(QString path)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION << path;
+    if (G::isLogger) G::log("FrameDecoder::getFrame");
     fPath = path;
     QFile f(fPath);
     mediaPlayer->setSource(fPath);
@@ -50,7 +49,7 @@ void FrameDecoder::getFrame(QString path)
 
 void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("FrameDecoder::frameChanged");
     if (thumbnailAcquired) return;
     QImage im = frame.toImage();
     if (im.isNull()) return;

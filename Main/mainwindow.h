@@ -49,6 +49,7 @@
 #include "Cache/imagecache.h"
 
 #include "Cache/metaread.h"
+#include "Cache/iconcache.h"
 
 //#ifdef Q_OS_WIN
 #include "Utilities/icc.h"
@@ -383,6 +384,7 @@ signals:
     void setValueSf(QModelIndex sfIdx, QVariant value, int role);
     void restartMetaRead(int newRow);
     void startMetaRead(int sfRow, QString src);
+    void startIconCache(int sfRow, QString src);
     void setImageCachePosition(QString, QString);
     void setImageCachePosition2(QString);
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
@@ -989,6 +991,7 @@ private:
     CompareImages *compareImages;
 
     QThread metaReadThread;
+    QThread iconCacheThread;
     MetadataCache *metadataCacheThread;
     ImageCache *imageCacheThread;
 //    MdCacheMgr *mdCacheMgr;
@@ -996,6 +999,7 @@ private:
 
     // loadversion2
     MetaRead *metaRead = nullptr;
+    IconCache *iconCache = nullptr;
 
     Thumb *thumb;
     InfoView *infoView;
