@@ -44,7 +44,7 @@ signals:
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance);
     void setImageCachePosition(QString fPath);      // not used
-    void delayedStartImageCache();
+    void startImageCache();
     void updateIconBestFit();
 
 public slots:

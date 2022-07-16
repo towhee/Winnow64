@@ -1,4 +1,5 @@
 BUGS / TO DO
+- Save preview as PNG include color manage corrections
 - Move MDCache to MetaRead, then eliminate MDCache or vice versa
 - Change MetaRead buildMetadataPriorityQueue to algorithm (takes too long for
   very large folders).
@@ -70,7 +71,7 @@ DONE/FIXED
 - Account for Mac Accessibility cursor scaling in IconView::zoomCursor
 - Esc does not stop folderSelectionChange with includeSubfolders
 - Right mouse click starts video
-- Show class::function replacement for __PRETTY_FUNCTION__ on mac: __PRETTY_FUNCTION__
+- CLASSFUNCTION in GUI thread
 - Apple style sliders in preferences
 - Logitech forward/Back mouse buttons
 - Added mouse wheel sensitivity preference

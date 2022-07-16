@@ -60,15 +60,75 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    G::wait(0);
-    int n = 0;
     QElapsedTimer t;
     t.start();
-    while (G::wait(10) < 50); /*{
-        qDebug() << ++n;
-    }*/
-    qDebug() << t.nsecsElapsed();
+    int quitRow = 400;
+
+//    /*
+    int sfRowCount = 10;
+
+    int count = 0;
+    int row = 7;
+    bool ahead = true;
+    int lastRow = sfRowCount - 1;
+    bool moreAhead = row < lastRow;
+    bool moreBehind = row >= 0;
+    int rowAhead = row;
+    int rowBehind = row;
+    while (count++ < sfRowCount) {
+//        count++;
+        if (count > quitRow)  break;
+        // do something with sfRow
+
+        qDebug() << count << row ;
+        // next sfRow to process
+        if (ahead) {
+            if (moreBehind) ahead = false;
+            if (moreAhead) {
+                ++rowAhead;
+                row = rowAhead;
+                moreAhead = rowAhead < lastRow;
+            }
+        }
+        else {
+            if (moreAhead) ahead = true;
+            if (moreBehind) {
+                --rowBehind;
+                row = rowBehind;
+                moreBehind = row >= 0;
+            }
+        }
+    }
+    double ms = t.nsecsElapsed() * 1.0 / 1000000;
+    qDebug() << ms << "ms";
     return;
+    //*/
+
+/*
+    int rows = 100000;
+    int row = 7000;
+    int behind = row;
+    int ahead = row + 1;
+    bool abort = false;
+    QList<int> queue(rows);
+    t.start();
+    queue.clear();
+    while (behind >= 0 || ahead < rows) {
+        if (behind >= 0) queue.append(behind--);
+        if (ahead < rows) queue.append(ahead++);
+        if (abort) return;
+    }
+    for (int count = 0; count < rows; count++) {
+        if (count > quitRow)  break;
+        row = queue.at(count);
+        qDebug() << count << row;
+    }
+    double ms = t.nsecsElapsed() * 1.0 / 1000000;
+    qDebug() << ms << "ms";
+    return;
+//*/
+
+
 
     thumbView->scrollToRow(currSfRow, CLASSFUNCTION);
     return;
