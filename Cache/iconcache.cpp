@@ -28,6 +28,7 @@
     Issues:
         • icon cleanup.
         • set G::AllIconsLoaded
+        • if no metadata read, then only read preview offset
 */
 
 IconCache::IconCache(QObject *parent, DataModel *dm, Metadata *metadata)
@@ -139,6 +140,10 @@ void IconCache::read(int sfRow, QString src)
                 metadata->m.row = dmRow;
                 metadata->m.dmInstance = dmInstance;
                 if (!abort) emit addToDatamodel(metadata->m);
+            }
+            else {
+                // metadata could not be read
+                continue;
             }
         }
 

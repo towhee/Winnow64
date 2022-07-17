@@ -498,6 +498,11 @@ void MW::setCombineRawJpg()
     G::popUp->close();
 }
 
+void MW::imageCachePrevCentralView()
+{
+    centralLayout->setCurrentIndex(prevCentralView);
+}
+
 void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
 {
 /*
@@ -508,8 +513,8 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
     Note that the datamodel is used (dm), not the proxy (dm->sf). If the proxy is used and
     the user then sorts or filters the index could go out of range and the app will crash.
 
-    Make sure the file path exists in the datamodel. The most likely failure will be if a new
-    folder has been selected but the image cache has not been rebuilt.
+    Make sure the file path exists in the datamodel. The most likely failure will be if a
+    new folder has been selected but the image cache has not been rebuilt.
 */
     int dmRow = dm->fPathRow[fPath];
 

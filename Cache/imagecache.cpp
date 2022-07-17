@@ -581,7 +581,9 @@ void ImageCache::fixOrphans()
             if (isCached) icd->cacheItemList[i].isCached = false;
             if (isCaching) icd->cacheItemList[i].isCaching = false;
             if (inImageCache) icd->imCache.remove(fPath);
-            emit updateCacheOnThumbs(fPath, false, "ImageCache::fixOrphans");
+            if (sendStatusUpdates) {
+                emit updateCacheOnThumbs(fPath, false, "ImageCache::fixOrphans");
+            }
 //            if (isCached) emit updateCacheOnThumbs(fPath, false, icd->cache.targetFirst,icd->cache.targetLast);
         }
     }
@@ -636,11 +638,14 @@ void ImageCache::makeRoom(int id, int cacheKey)
     int room = icd->cache.maxMB - icd->cache.currMB;
     int roomRqd = icd->cacheItemList.at(cacheKey).sizeMB;
     while (room < roomRqd) {
-        // make some room by removing lowest priority cached image(s)
+        // make some room by removing lowest priority cached image(fPath)
         if (nextToDecache(id)) {
-            QString s = icd->cacheItemList[icd->cache.toDecacheKey].fPath;
-            icd->imCache.remove(s);
-            emit updateCacheOnThumbs(s, false, "ImageCache::makeRoom");
+            QString fPath = icd->cacheItemList[icd->cache.toDecacheKey].fPath;
+            icd->imCache.remove(fPath);
+            if (sendStatusUpdates) {
+                emit setValuePath(fPath, 0, false, G::CachedRole);
+                emit updateCacheOnThumbs(fPath, false, "ImageCache::makeRoom");
+            }
             icd->cacheItemList[icd->cache.toDecacheKey].isCached = false;
             icd->cacheItemList[icd->cache.toDecacheKey].isCaching = false;
             icd->cache.currMB -= icd->cacheItemList[icd->cache.toDecacheKey].sizeMB;
@@ -652,7 +657,7 @@ void ImageCache::makeRoom(int id, int cacheKey)
                          << "       decoder" << id << "key =" << k
                          << "room =" << room
                          << "roomRqd =" << roomRqd
-                         << "Removed image" << s
+                         << "Removed image" << fPath
                             ;
                             //*/
             }
@@ -1050,7 +1055,6 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
         qWarning() << "ImageCache::addCacheItemImageMetadata" << "row not in icd->cacheItemList";
         return;
     }
-//    qDebug() << "ImageCache::addCacheItemImageMetadata" << row << m.fPath;
     /* cacheItemList is a list of cacheItem used to track the current
        cache status and make future caching decisions for each image
        8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
@@ -1065,6 +1069,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     icd->cacheItemList[row].lengthFull = m.lengthFull;
     icd->cacheItemList[row].samplesPerPixel = m.samplesPerPixel;
     icd->cacheItemList[row].iccBuf = m.iccBuf;
+
 
     icd->cache.folderMB += icd->cacheItem.sizeMB; // req'd?
     setTargetRange();
@@ -1362,7 +1367,22 @@ void ImageCache::cacheImage(int id, int cacheKey)
     icd->cacheItemList[cacheKey].isCaching = false;
     icd->cacheItemList[cacheKey].isCached = true;
     icd->cache.currMB = getImCacheSize();
-    emit updateCacheOnThumbs(decoder[id]->fPath, true, "ImageCache::cacheImage");
+    if (sendStatusUpdates) {
+        emit updateCacheOnThumbs(decoder[id]->fPath, true, "ImageCache::cacheImage");
+    }
+    else {
+        emit setValuePath(decoder[id]->fPath, 0, true, G::CachedRole);
+        if (decoder[id]->fPath == dm->currentFilePath) {
+            qDebug().noquote()
+                    << "ImageCache::cacheImage"
+                    << "curr row =" << dm->currentRow
+                    << "curr path =" << dm->currentFilePath
+                    << "decoder" << id
+                    << decoder[id]->fPath;
+            emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
+            emit imageCachePrevCentralView();
+        }
+    }
     updateStatus("Update all rows", "ImageCache::cacheImage");
 }
 

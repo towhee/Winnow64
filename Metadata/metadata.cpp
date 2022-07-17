@@ -954,7 +954,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
     if (G::isLogger) G::log(CLASSFUNCTION, "Source: " + source);
 
-    // make sure file is available ie usb drive has been ejected
+    // make sure file is available ie usb drive might have been ejected
     QFileInfo fileInfo(path);
     if (!fileInfo.exists()) return false;
 
@@ -1016,7 +1016,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         }
     }
     else {
-        if (p.file.isOpen()) p.file.close();
+//        if (p.file.isOpen()) p.file.close();
         G::error(CLASSFUNCTION, path, "Could not open p.file to read metadata.");
         return false;
     }

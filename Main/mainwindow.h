@@ -378,10 +378,12 @@ public slots:
     void slideShowResetDelay();
     void slideShowResetSequence();
     void slideshowHelpMsg();
+    void imageCachePrevCentralView();
 
 signals:
     void setValue(QModelIndex dmIdx, QVariant value, int role);
     void setValueSf(QModelIndex sfIdx, QVariant value, int role);
+    void setValuePath(QString fPath, int col, QVariant value, int role);
     void restartMetaRead(int newRow);
     void startMetaRead(int sfRow, QString src);
     void startIconCache(int sfRow, QString src);

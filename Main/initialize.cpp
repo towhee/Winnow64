@@ -305,6 +305,10 @@ void MW::createImageCache()
     connect(imageCacheThread, &ImageCache::updateCacheOnThumbs,
             this, &MW::updateCachedStatus);
 
+    // Signal from ImageCache::run() update central view
+    connect(imageCacheThread, &ImageCache::imageCachePrevCentralView,
+            this, &MW::imageCachePrevCentralView);
+
     // Signal to ImageCache new image selection
     connect(this, &MW::setImageCachePosition,
             imageCacheThread, &ImageCache::setCurrentPosition);
@@ -312,6 +316,11 @@ void MW::createImageCache()
     // Send message to setCentralMsg
     connect(imageCacheThread, &ImageCache::centralMsg,
             this, &MW::setCentralMessage);
+
+    // set values in the datamodel
+    connect(imageCacheThread, &ImageCache::setValue, dm, &DataModel::setValue);
+    connect(imageCacheThread, &ImageCache::setValueSf, dm, &DataModel::setValueSf);
+    connect(imageCacheThread, &ImageCache::setValuePath, dm, &DataModel::setValuePath);
 
     // concurrent load
     // add to image cache list
@@ -526,6 +535,7 @@ void MW::createImageView()
     connect(thumbView, &IconView::thumbClick, imageView, &ImageView::thumbClick);
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
     connect(imageView, &ImageView::killSlideshow, this, &MW::slideShow);
+    connect(imageCacheThread, &ImageCache::loadImage, imageView, &ImageView::loadImage);
 }
 
 void MW::createCompareView()

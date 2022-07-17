@@ -426,14 +426,7 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
         metadata->m.row = dmRow;
         metadata->m.dmInstance = dmInstance;
-//        qDebug() << CLASSFUNCTION << "addToDatamodel: start  row =" << sfIdx.row();
-//        if (debugCaching) qDebug().noquote() << CLASSFUNCTION << "start  addToDatamodel"
-//                                             << "abort =" << abort
-//                                                ;
         if (!abort) emit addToDatamodel(metadata->m);
-//        if (debugCaching) qDebug().noquote() << CLASSFUNCTION << "done   addToDatamodel";
-//        qDebug() << CLASSFUNCTION << "addToDatamodel: done   row =" << sfIdx.row();
-//        dm->addMetadataForItem(metadata->m);
     }
     if (debugCaching) qDebug().noquote() << "MetaRead::readMetadata" << "done row =" << sfIdx.row();
 }
@@ -546,7 +539,8 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
     bool moreBehind = row >= 0;
     int rowAhead = row;
     int rowBehind = row;
-    while (i++ < sfRowCount) {
+
+    while (i++ <= sfRowCount) {
         if (abort) break;
         // do something with row
         readRow(row);
@@ -563,7 +557,7 @@ void MetaRead::read(/*Action action, */int sfRow, QString src)
             if (moreAhead) {
                 ++rowAhead;
                 row = rowAhead;
-                moreAhead = rowAhead < lastRow;
+                moreAhead = rowAhead <= sfRowCount;
             }
         }
         else {

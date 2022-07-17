@@ -116,6 +116,7 @@ public slots:
                           qint64 duration, FrameDecoder *frameDecoder);
     void setValue(QModelIndex dmIdx, QVariant value, int role = Qt::EditRole);
     void setValueSf(QModelIndex sfIdx, QVariant value, int role = Qt::EditRole);
+    void setValuePath(QString fPath, int col, QVariant value, int role = Qt::EditRole);
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);

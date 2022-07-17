@@ -88,13 +88,16 @@ bool ImageDecoder::load()
     QFileInfo fileInfo(fPath);
     ext = fileInfo.completeSuffix().toLower();
 
-    if (metadata->videoFormats.contains(ext)) return false;
+    if (metadata->videoFormats.contains(ext)) {
+        G::error(CLASSFUNCTION, fPath, "Ignore video formats.");
+        return false;
+    }
 
     QFile imFile(fPath);
 
     // is metadata loaded rgh use isMeta in cacheItemList?
     if (!n.metadataLoaded && metadata->hasMetadataFormats.contains(ext)) {
-        G::error(CLASSFUNCTION, fPath, "Could not load metadata.");
+        G::error(CLASSFUNCTION, fPath, "Metadata not loaded.");
         return false;
     }
 
@@ -109,6 +112,7 @@ bool ImageDecoder::load()
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
         imFile.close();
+        qWarning() << "ImageDecoder::load" << fPath << "Could not open file for image.";
         G::error("ImageDecoder::load", fPath, "Could not open file for image.");
         return false;
     }
@@ -118,13 +122,14 @@ bool ImageDecoder::load()
         // make sure legal offset by checking the length
         if (n.lengthFull == 0) {
             imFile.close();
-            G::error("ImageDecoder::load", n.fPath, "Jpg length = zero.");
+            G::error("ImageDecoder::load", fPath, "Jpg length = zero.");
             return false;
         }
 
         // try to read the data
         if (!imFile.seek(n.offsetFull)) {
             imFile.close();
+            qWarning() << "ImageDecoder::load" << fPath << "Illegal offset to image.";
             G::error("ImageDecoder::load", fPath, "Illegal offset to image.");
             return false;
         }
@@ -142,6 +147,7 @@ bool ImageDecoder::load()
         // try to decode the jpg data
         if (!image.loadFromData(buf, "JPEG")) {
             G::error("ImageDecoder::load", fPath, "image.loadFromData failed.");
+            qWarning() << CLASSFUNCTION << "Failed to loadFromData" << fPath;
             imFile.close();
             return false;
         }
@@ -278,7 +284,7 @@ void ImageDecoder::run()
         status = Status::Done;
     }
     else {
-        status = Status::Failed;
+        G::error("ImageDecoder::run", fPath, "Could not load " + fPath);        status = Status::Failed;
         fPath = "";
     }
 

@@ -197,7 +197,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     icd->imCache.find(fPath, image) to prevent a mismatch between the fPath index and the
     image in icd->imCache hash table. */
     int row = dm->rowFromPath(fPath);
-    bool isCached = dm->index(row, 0).data(G::CachedRole).toBool();
+    bool isCached = dm->index(row, 0).data(G::CachedRole).toBool() || src == "ImageCache::cacheImage";
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION,
                                                fPath + " isCached =" +
                                                (isCached ? "true" : "false"));
