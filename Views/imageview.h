@@ -52,7 +52,6 @@ public:
     QByteArray tileBa;
     QString tileName;
 
-    bool loadImage(QString fPath, QString src);
     void exportImage();
     qreal getFitScaleFactor(QRectF container, QRectF content);
     void clear();
@@ -74,6 +73,7 @@ public:
     QString diagnostics();
 
 public slots:
+    bool loadImage(QString fPath, QString src);
     void monitorCursorState();
     void copyImage();
     void thumbClick(float xPct, float yPct);

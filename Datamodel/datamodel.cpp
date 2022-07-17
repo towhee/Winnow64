@@ -1015,6 +1015,19 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int role)
     sf->setData(sfIdx, value, role);
 }
 
+void DataModel::setValuePath(QString fPath, int col, QVariant value, int role)
+{
+    /*
+    qDebug() << "DataModel::setValuePath"
+             << fPath
+             << fPathRow[fPath]
+             << col
+                ;
+                //*/
+    QModelIndex dmIdx = index(fPathRow[fPath], col);
+    setData(dmIdx, value, role);
+}
+
 void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
                                       qint64 duration, FrameDecoder *frameDecoder)
 {
@@ -1403,13 +1416,16 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     if (G::isLogger) G::log(CLASSFUNCTION);
     QString s = "";
     rpt << "\n"   << G::sj("DataModel row", 27) << G::s(row);
-    rpt << "\n  " << G::sj("isIcon", 25) << G::s(!itemFromIndex(index(row, G::PathColumn))->icon().isNull());
     rpt << "\n  " << G::sj("FileName", 25) << G::s(index(row, G::NameColumn).data());
     rpt << "\n  " << G::sj("FilePath", 25) << G::s(index(row, 0).data(G::PathRole));
+    rpt << "\n  " << G::sj("isIcon", 25) << G::s(!itemFromIndex(index(row, G::PathColumn))->icon().isNull());
+    rpt << "\n  " << G::sj("isCached", 25) << G::s(index(row, 0).data(G::CachedRole));
     rpt << "\n  " << G::sj("dupHideRaw", 25) << G::s(index(row, 0).data(G::DupHideRawRole));
     rpt << "\n  " << G::sj("dupRawRow", 25) << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
     rpt << "\n  " << G::sj("dupIsJpg", 25) << G::s(index(row, 0).data(G::DupIsJpgRole));
     rpt << "\n  " << G::sj("dupRawType", 25) << G::s(index(row, 0).data(G::DupRawTypeRole));
+    rpt << "\n  " << G::sj("Column", 25) << G::s(index(row, 0).data(G::ColumnRole));
+    rpt << "\n  " << G::sj("isGeek", 25) << G::s(index(row, 0).data(G::GeekRole));
     rpt << "\n  " << G::sj("type", 25) << G::s(index(row, G::TypeColumn).data());
     rpt << "\n  " << G::sj("video", 25) << G::s(index(row, G::VideoColumn).data());
     rpt << "\n  " << G::sj("duration", 25) << G::s(index(row, G::DurationColumn).data());

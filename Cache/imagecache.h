@@ -62,6 +62,11 @@ public:
 //    ImageCacheData::Cache icd->cache;
 
 signals:
+    void setValue(QModelIndex dmIdx, QVariant value, int role);
+    void setValueSf(QModelIndex sfIdx, QVariant value, int role);
+    void setValuePath(QString fPath, int col, QVariant value, int role);
+    void loadImage(QString fPath, QString src);
+    void imageCachePrevCentralView();
     void showCacheStatus(QString instruction,
                          ImageCacheData::Cache cache,
                          QString source = "");
@@ -93,6 +98,7 @@ private:
     int maxAttemptsToCacheImage = 100;
     bool checkForOrphans;           // prevent multiple orphan checks as each decoder finishes
     bool isCacheUpToDate = false;
+    bool sendStatusUpdates = false; // if true, slows scrolling while image cache loading
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;

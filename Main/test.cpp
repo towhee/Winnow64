@@ -60,6 +60,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+//    imageCacheThread->fixOrphans();
+//    return;
+
+    QString path = "/Users/roryhill/Pictures/2022/202204/2022-04-11_Nora/2022-04-11_0001.arw";
+    emit setValuePath(path, 0, true, G::CachedRole);
+    return;
+
     QElapsedTimer t;
     t.start();
     int quitRow = 400;

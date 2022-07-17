@@ -392,7 +392,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
     createMDCache();            // dependent on DataModel, Metadata, ThumbView, VideoView
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
-    createImageView();          // dependent on centralWidget, ThumbView
+    createImageView();          // dependent on centralWidget, ThumbView, ImageCache
     createVideoView();          // dependent on centralWidget, ThumbView
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
@@ -2237,7 +2237,8 @@ void MW::thumbHasScrolled()
     the metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-    if (G::isInitializing || !G::isNewFolderLoaded) return;
+    if (G::isInitializing) return;
+    if (G::useLinearLoading && !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
