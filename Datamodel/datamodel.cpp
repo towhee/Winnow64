@@ -1043,6 +1043,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
 
+    QMutexLocker ml(&mutex);
     if (fromInstance != instance) {
         qWarning() << CLASSFUNCTION << dmIdx << "Instance conflict = "
                  << instance << fromInstance;
@@ -1066,7 +1067,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
     delete frameDecoder;
 }
 
-void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance)
+void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance, QString src)
 {
 /*
     setIcon is a slot that can be signalled from another thread.  If the user is rapidly
@@ -1074,6 +1075,7 @@ void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance)
     To prevent this, the datamodel instance is incremented every time a new folder is
     loaded, and this is checked against the signal instance.
 */
+    QMutexLocker ml(&mutex);
     if (G::isLogger) G::log(CLASSFUNCTION);
 //    if (loadingModel) {
 //        qWarning() << CLASSFUNCTION << "loadingModel =" << loadingModel;
@@ -1098,11 +1100,16 @@ void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance)
         return;
     }
 
-    mutex.lock();
+//    qDebug() << "DataModel::setIcon" << dmIdx.row()
+//             << G::rowsWithIcon.size()
+//             << src
+//                ;
+
+//    mutex.lock();
     QStandardItem *item = itemFromIndex(dmIdx);
     if (item != nullptr) item->setIcon(pm);
     setData(dmIdx, false, G::CachingIconRole);
-    mutex.unlock();
+//    mutex.unlock();
 }
 
 bool DataModel::isIconCaching(int sfRow)
@@ -1129,6 +1136,15 @@ bool DataModel::iconLoaded(int sfRow)
     return !(itemFromIndex(dmIdx)->icon().isNull());
 }
 
+int DataModel::iconCount()
+{
+    int count = 0;
+    for (int row = 0; row < rowCount(); ++row) {
+        if (!itemFromIndex(index(row, 0))->icon().isNull()) count++;
+    }
+    return count;
+}
+
 bool DataModel::allIconsLoaded()
 {
     for (int row = 0; row < rowCount(); ++row) {
@@ -1141,13 +1157,40 @@ void DataModel::clearAllIcons()
 {
     mutex.lock();
     QPixmap nullPm;
+    QStandardItem *item;
     for (int row = 0; row < rowCount(); ++row) {
-        QStandardItem *item = itemFromIndex(index(row, 0));
+        item = itemFromIndex(index(row, 0));
+//        QStandardItem *item = itemFromIndex(index(row, 0));
         if (!item->icon().isNull()) {
             item->setIcon(nullPm);
         }
     }
     mutex.unlock();
+}
+
+void DataModel::clearOutOfRangeIcons(int startRow)
+{
+    QMutexLocker ml(&mutex);
+    qDebug() << "DataModel::clearOutOfRangeIcons" << startRow;
+//    mutex.lock();
+    QIcon nullIcon;
+    startIconRange = startRow - iconChunkSize / 2;
+    if (startIconRange< 0) startIconRange = 0;
+    endIconRange = startIconRange + iconChunkSize;
+    for (int row = 0; row < rowCount(); ++row) {
+        int sfRow = sf->mapFromSource(index(row, 0)).row();
+        if (sfRow >= startIconRange && sfRow <= endIconRange) {
+            continue;
+        }
+        QStandardItem *item = itemFromIndex(index(row, 0));
+        if (item->icon().isNull()) {
+            continue;
+        }
+//        item->setIcon(nullIcon);
+//        item->setData(0, Qt::DecorationRole);
+        setData(index(row,0), 0, Qt::DecorationRole);
+    }
+//    mutex.unlock();
 }
 
 void DataModel::setAllMetadataLoaded(bool isLoaded)
@@ -1420,6 +1463,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("FilePath", 25) << G::s(index(row, 0).data(G::PathRole));
     rpt << "\n  " << G::sj("isIcon", 25) << G::s(!itemFromIndex(index(row, G::PathColumn))->icon().isNull());
     rpt << "\n  " << G::sj("isCached", 25) << G::s(index(row, 0).data(G::CachedRole));
+    rpt << "\n  " << G::sj("isMetadataLoaded", 25) << G::s(index(row, G::MetadataLoadedColumn).data());
     rpt << "\n  " << G::sj("dupHideRaw", 25) << G::s(index(row, 0).data(G::DupHideRawRole));
     rpt << "\n  " << G::sj("dupRawRow", 25) << G::s(qvariant_cast<QModelIndex>(index(row, 0).data(G::DupOtherIdxRole)).row());
     rpt << "\n  " << G::sj("dupIsJpg", 25) << G::s(index(row, 0).data(G::DupIsJpgRole));

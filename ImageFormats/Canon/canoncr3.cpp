@@ -73,7 +73,7 @@ bool CanonCR3::nextHeifBox(quint32 &length, QString &type)
 {
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     qint64 offset = p.file.pos();
-    length = Utilities::get32(p.file.read(4), true);
+    length = u.get32(p.file.read(4), true);
 //    if (length < 2) length = static_cast<quint32>(eof - offset);
     type = p.file.read(4);
     if (p.report) {
@@ -250,7 +250,7 @@ bool CanonCR3::drefBox(quint32 &offset, quint32 &length)
     QString type;
     quint32 drefEnd = offset + length;
     p.file.seek(offset + 12);
-    quint32 entry_count = Utilities::get32(p.file.read(4));
+    quint32 entry_count = u.get32(p.file.read(4));
     qDebug();
     qDebug() << __PRETTY_FUNCTION__ << "entry_count =" << entry_count;
 
@@ -290,8 +290,8 @@ bool CanonCR3::urnBox(quint32 &offset, quint32 &length)
     uint urnLength = length - 12;
     p.file.seek(offset + 12);
     if (urnLength > 0) {
-        name = Utilities::getCString(p.file);
-        if (p.file.pos() < offset + length) location = Utilities::getCString(p.file);
+        name = u.getCString(p.file);
+        if (p.file.pos() < offset + length) location = u.getCString(p.file);
     }
     qDebug() << __PRETTY_FUNCTION__
              << "    name =" << name
@@ -310,10 +310,10 @@ bool CanonCR3::colrBox(quint32 &offset, quint32 &length)
     qDebug() << __PRETTY_FUNCTION__ << "colrType =" << colrType;
     QByteArray colorProfile;
     if (colrType == "nclx") {
-        quint16 colour_primaries = Utilities::get16(p.file.read(2));
-        quint16 transfer_characteristics = Utilities::get16(p.file.read(2));
-        quint16 matrix_coefficients = Utilities::get16(p.file.read(2));
-        quint8 x = Utilities::get8(p.file.read(1));
+        quint16 colour_primaries = u.get16(p.file.read(2));
+        quint16 transfer_characteristics = u.get16(p.file.read(2));
+        quint16 matrix_coefficients = u.get16(p.file.read(2));
+        quint8 x = u.get8(p.file.read(1));
         quint8 full_range_flag = (x & 0b10000000) >> 7;             // first 1 bit
         qDebug() << __PRETTY_FUNCTION__
                  << "colour_primaries =" << colour_primaries
@@ -340,10 +340,10 @@ bool CanonCR3::pixiBox(quint32 &offset, quint32 &length)
 {
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     p.file.seek(offset + 12);
-    quint8 num_channels = Utilities::get8(p.file.read(1));
+    quint8 num_channels = u.get8(p.file.read(1));
 
     for (quint8 i = 0; i < num_channels; i++) {
-        quint8 bits_per_channel = Utilities::get8(p.file.read(1));
+        quint8 bits_per_channel = u.get8(p.file.read(1));
         qDebug() << __PRETTY_FUNCTION__ << "channel#" << i << "bits_per_channel =" << bits_per_channel;
     }
 
@@ -355,7 +355,7 @@ bool CanonCR3::irotBox(quint32 &offset, quint32 &length)
 {
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     p.file.seek(offset + 8);
-    quint8 x = Utilities::get8(p.file.read(1));
+    quint8 x = u.get8(p.file.read(1));
     quint8 angle = (x & 0b00000011);             // first 1 bit
     quint16 angle_degrees = angle * 90;
     qDebug() << __PRETTY_FUNCTION__ << "angle =" << angle << "angle degrees =" << angle_degrees;
@@ -368,7 +368,7 @@ bool CanonCR3::pitmBox(quint32 &offset, quint32 &length)
 {
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     p.file.seek(offset + 16);
-    pitmId = Utilities::get16(p.file.read(2));
+    pitmId = u.get16(p.file.read(2));
     qDebug() << __PRETTY_FUNCTION__
              << "pitmId =" << pitmId;
 
@@ -381,11 +381,11 @@ bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     p.file.seek(offset + 12);
     QByteArray c = p.file.read(1);
-    ilocOffsetSize = Utilities::get4_1st(c);
-    ilocLengthSize = Utilities::get4_2nd(c);
+    ilocOffsetSize = u.get4_1st(c);
+    ilocLengthSize = u.get4_2nd(c);
     c = p.file.read(1);
-    ilocBaseOffsetSize = Utilities::get4_1st(c);
-    ilocItemCount = Utilities::get16(p.file.read(2));
+    ilocBaseOffsetSize = u.get4_1st(c);
+    ilocItemCount = u.get16(p.file.read(2));
     qDebug();
     qDebug()  << __PRETTY_FUNCTION__
              << "ilocOffsetSize =" << ilocOffsetSize
@@ -398,14 +398,14 @@ bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
         return false;
     }
     for (int i = 0; i < ilocItemCount; i++) {
-        quint16 item_ID = Utilities::get16(p.file.read(2));
-        quint16 data_reference_index = Utilities::get16(p.file.read(2));
+        quint16 item_ID = u.get16(p.file.read(2));
+        quint16 data_reference_index = u.get16(p.file.read(2));
         quint32 base_offset = 0;
-        if (ilocBaseOffsetSize == 0) base_offset = Utilities::get8(p.file.read(2));
-        if (ilocBaseOffsetSize == 1) base_offset = Utilities::get8(p.file.read(1));
-        if (ilocBaseOffsetSize == 2) base_offset = Utilities::get16(p.file.read(2));
-        if (ilocBaseOffsetSize == 4) base_offset = Utilities::get32(p.file.read(4));
-        quint16 extent_count = Utilities::get16(p.file.read(2));
+        if (ilocBaseOffsetSize == 0) base_offset = u.get8(p.file.read(2));
+        if (ilocBaseOffsetSize == 1) base_offset = u.get8(p.file.read(1));
+        if (ilocBaseOffsetSize == 2) base_offset = u.get16(p.file.read(2));
+        if (ilocBaseOffsetSize == 4) base_offset = u.get32(p.file.read(4));
+        quint16 extent_count = u.get16(p.file.read(2));
         qDebug() << __PRETTY_FUNCTION__ << "Item:" << i
                  << "itemId" << item_ID
                  << "data_reference_index" << data_reference_index
@@ -421,15 +421,15 @@ bool CanonCR3::ilocBox(quint32 &offset, quint32 &length)
         }
         for (int j = 0; j < extent_count; j++) {
             quint32 extent_offset = 0;
-            if (ilocOffsetSize == 0) extent_offset = Utilities::get8(p.file.read(2));
-            if (ilocOffsetSize == 1) extent_offset = Utilities::get8(p.file.read(1));
-            if (ilocOffsetSize == 2) extent_offset = Utilities::get16(p.file.read(2));
-            if (ilocOffsetSize == 4) extent_offset = Utilities::get32(p.file.read(4));
+            if (ilocOffsetSize == 0) extent_offset = u.get8(p.file.read(2));
+            if (ilocOffsetSize == 1) extent_offset = u.get8(p.file.read(1));
+            if (ilocOffsetSize == 2) extent_offset = u.get16(p.file.read(2));
+            if (ilocOffsetSize == 4) extent_offset = u.get32(p.file.read(4));
             quint32 extent_length = 0;
-            if (ilocLengthSize == 0) extent_length = Utilities::get8(p.file.read(2));
-            if (ilocLengthSize == 1) extent_length = Utilities::get8(p.file.read(1));
-            if (ilocLengthSize == 2) extent_length = Utilities::get16(p.file.read(2));
-            if (ilocLengthSize == 4) extent_length = Utilities::get32(p.file.read(4));
+            if (ilocLengthSize == 0) extent_length = u.get8(p.file.read(2));
+            if (ilocLengthSize == 1) extent_length = u.get8(p.file.read(1));
+            if (ilocLengthSize == 2) extent_length = u.get16(p.file.read(2));
+            if (ilocLengthSize == 4) extent_length = u.get32(p.file.read(4));
             qDebug() <<__PRETTY_FUNCTION__ << "    Extent:" << i
                      << "extent_offset" << extent_offset
                      << "extent_length" << extent_length;
@@ -449,12 +449,12 @@ bool CanonCR3::infeBox(quint32 &offset, quint32 &/*length*/)
 {
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     p.file.seek(offset + 12);
-    quint16 item_ID = Utilities::get16(p.file.read(2));
-    quint16 item_protection_index = Utilities::get16(p.file.read(2));
-    QString item_name = Utilities::getCString(p.file);
-    QString content_type = Utilities::getCString(p.file);
+    quint16 item_ID = u.get16(p.file.read(2));
+    quint16 item_protection_index = u.get16(p.file.read(2));
+    QString item_name = u.getCString(p.file);
+    QString content_type = u.getCString(p.file);
     QString content_encoding;
-    if (content_type.length()) content_encoding = Utilities::getCString(p.file);
+    if (content_type.length()) content_encoding = u.getCString(p.file);
     else content_encoding = "";
 
     qDebug() << "   " << __PRETTY_FUNCTION__
@@ -471,7 +471,7 @@ bool CanonCR3::iinfBox(quint32 &offset, quint32 &length)
 {
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     p.file.seek(offset + 14);
-    quint16 entry_count = Utilities::get16(p.file.read(2));
+    quint16 entry_count = u.get16(p.file.read(2));
 //    qDebug() << __PRETTY_FUNCTION__ << "iint entry count =" << entry_count << p.file.pos();
     if (entry_count == 0) {
         // err
@@ -500,15 +500,15 @@ bool CanonCR3::sitrBox(quint32 &offset, quint32 &length)
 {
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     p.file.seek(offset + 8);
-    quint16 from_item_ID = Utilities::get16(p.file.read(2));
-    quint16 reference_count = Utilities::get16(p.file.read(2));
+    quint16 from_item_ID = u.get16(p.file.read(2));
+    quint16 reference_count = u.get16(p.file.read(2));
 
     qDebug() << __PRETTY_FUNCTION__
              << "from_item_ID =" << from_item_ID
              << "reference_count =" << reference_count;
 
     for (int i = 0; i < reference_count; i++) {
-        quint32 to_item_ID = Utilities::get32(p.file.read(4));
+        quint32 to_item_ID = u.get32(p.file.read(4));
         qDebug() << __PRETTY_FUNCTION__ << i << ": to_item_ID =" << to_item_ID;
     }
     offset += length;
@@ -522,7 +522,7 @@ bool CanonCR3::irefBox(quint32 &offset, quint32 &length)
     irefLength = length;
     quint32 irefEndOffset = offset + length;
     p.file.seek(offset + 8);
-    uint version = Utilities::get8(p.file.read(1));
+    uint version = u.get8(p.file.read(1));
     quint32 sitrOffset = offset + 12;
     qDebug() << __PRETTY_FUNCTION__ << "offset =" << offset
              << "length =" << length << "sitrOffset" << sitrOffset;
@@ -544,42 +544,42 @@ bool CanonCR3::hvcCBox(quint32 &offset, quint32 &length)
 {
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     qDebug() << __PRETTY_FUNCTION__ << "p.file position:" << p.file.pos();
-    uint configurationVersion = Utilities::get8(p.file.read(1));
-    quint8 x = Utilities::get8(p.file.read(1));
+    uint configurationVersion = u.get8(p.file.read(1));
+    quint8 x = u.get8(p.file.read(1));
     int general_profile_space = (x & 0b11000000) >> 6;             // first 2 bits
     int general_tier_flag =     (x & 0b00100000) >> 5;             // 3rd bit
     int general_profile_idc =   (x & 0b00011111);                  // last 5 bits
-    quint32 general_profile_compatibility_flags = Utilities::get32(p.file.read(4));
-    auto general_constraint_indicator_flags = Utilities::get48(p.file.read(6));
-    quint8 general_level_idc  = Utilities::get8(p.file.read(1));
-    quint16 min_spatial_segmentation_idc = Utilities::get16(p.file.read(2));
+    quint32 general_profile_compatibility_flags = u.get32(p.file.read(4));
+    auto general_constraint_indicator_flags = u.get48(p.file.read(6));
+    quint8 general_level_idc  = u.get8(p.file.read(1));
+    quint16 min_spatial_segmentation_idc = u.get16(p.file.read(2));
     // 4 bits reserved, last 12 = min_spatial_segmentation_idc
     min_spatial_segmentation_idc = min_spatial_segmentation_idc & 0b0000111111111111;
 
-    quint8 parallelismType = Utilities::get8(p.file.read(1));
+    quint8 parallelismType = u.get8(p.file.read(1));
     // 6 bits reserved, last 2 = parallelismType
     parallelismType = parallelismType & 0b00000011;
 
-    quint8 chroma_format_idc = Utilities::get8(p.file.read(1));
+    quint8 chroma_format_idc = u.get8(p.file.read(1));
     // 6 bits reserved, last 2 = chroma_format_idc
     chroma_format_idc = chroma_format_idc & 0b00000011;
 
-    quint8 bit_depth_luma_minus8 = Utilities::get8(p.file.read(1));
+    quint8 bit_depth_luma_minus8 = u.get8(p.file.read(1));
     // 5 bits reserved, last 3 = bit_depth_luma_minus8
     bit_depth_luma_minus8 = bit_depth_luma_minus8 & 0b00000111;
-    quint8 bit_depth_chroma_minus8 = Utilities::get8(p.file.read(1));
+    quint8 bit_depth_chroma_minus8 = u.get8(p.file.read(1));
     // 5 bits reserved, last 3 = bit_depth_chroma_minus8
     bit_depth_chroma_minus8 = bit_depth_chroma_minus8 & 0b00000111;
 
-    quint16 avgFrameRate = Utilities::get16(p.file.read(2));
+    quint16 avgFrameRate = u.get16(p.file.read(2));
 
-    x = Utilities::get8(p.file.read(1));
+    x = u.get8(p.file.read(1));
     int constantFrameRate = (x & 0b11000000) >> 6;             // first 2 bits
     int numTemporalLayers =     (x & 0b00111000) >> 3;         // next 3 bits
     int temporalIdNested =     (x & 0b00000100) >> 5;          // next bit
     int lengthSizeMinusOne =   (x & 0b00000011);               // last 2 bits
 
-    quint8 numOfArrays = Utilities::get8(p.file.read(1));
+    quint8 numOfArrays = u.get8(p.file.read(1));
 
     qDebug() << __PRETTY_FUNCTION__ << "configurationVersion =" << configurationVersion;
     qDebug() << __PRETTY_FUNCTION__ << "general_profile_space =" << general_profile_space;
@@ -601,18 +601,18 @@ bool CanonCR3::hvcCBox(quint32 &offset, quint32 &length)
     qDebug() << __PRETTY_FUNCTION__ << "numOfArrays =" << numOfArrays;
 
     for (int i = 0; i < numOfArrays; i++) {
-        x = Utilities::get8(p.file.read(1));
+        x = u.get8(p.file.read(1));
         int array_completeness = (x & 0b10000000) >> 6;             // first bit
                                                                     // 2nd bit reserved
         int NAL_unit_type = (x & 0b00111111);                         // last 6 bits
-        quint16 numNalus = Utilities::get16(p.file.read(2));
+        quint16 numNalus = u.get16(p.file.read(2));
         qDebug() << __PRETTY_FUNCTION__ << "    array # =" << i;
         qDebug() << __PRETTY_FUNCTION__ << "    array_completeness =" << array_completeness;
         qDebug() << __PRETTY_FUNCTION__ << "    NAL_unit_type =" << NAL_unit_type;
         qDebug() << __PRETTY_FUNCTION__ << "    numNalus =" << numNalus;
 
         for (quint16 j = 0; j < numNalus; j++) {
-            quint16 nalUnitLength = Utilities::get16(p.file.read(2));
+            quint16 nalUnitLength = u.get16(p.file.read(2));
             QByteArray nalUnit = p.file.read(nalUnitLength);
             qDebug() << __PRETTY_FUNCTION__ << "        nalUnitLength =" << nalUnitLength;
         }
@@ -700,8 +700,8 @@ bool CanonCR3::stsdBox(quint32 &offset, quint32 &length)
     // embedded image width and height (not used)
     if (p.report) p.rpt << "Width and Height of full size JPG in mdat (not used)";
     p.file.seek(offset + 48);
-    m.width = Utilities::get16(p.file.read(2));    // width
-    m.height = Utilities::get16(p.file.read(2));   // height
+    m.width = u.get16(p.file.read(2));    // width
+    m.height = u.get16(p.file.read(2));   // height
     offset += length;       // temp for testing
     return true;
 }
@@ -728,7 +728,7 @@ bool CanonCR3::stszBox(quint32 &offset, quint32 &length)
     // length of embedded JPG
     if (p.report) p.rpt << "Length of full size JPG in mdat";
     p.file.seek(offset + 20);
-    m.lengthFull = Utilities::get32(p.file.read(4));
+    m.lengthFull = u.get32(p.file.read(4));
 //    qDebug() << __PRETTY_FUNCTION__ << "m.lengthFull =" << m.lengthFull;
     offset += length;       // temp for testing
     return true;
@@ -740,7 +740,7 @@ bool CanonCR3::co64Box(quint32 &offset, quint32 &length)
     // length of embedded JPG
     if (p.report) p.rpt << "Absolute offset to full size JPG in mdat";
     p.file.seek(offset + 20);
-    m.offsetFull = Utilities::get32(p.file.read(4));
+    m.offsetFull = u.get32(p.file.read(4));
 //    qDebug() << __PRETTY_FUNCTION__ << "m.offsetFull =" << m.offsetFull;
     offset += length;       // temp for testing
     return true;
@@ -750,8 +750,8 @@ bool CanonCR3::ispeBox(quint32 &offset, quint32 &length)
 {
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     p.file.seek(offset + 12);
-    quint32 image_width = Utilities::get32(p.file.read(4));
-    quint32 image_height = Utilities::get32(p.file.read(4));
+    quint32 image_width = u.get32(p.file.read(4));
+    quint32 image_height = u.get32(p.file.read(4));
     qDebug() << __PRETTY_FUNCTION__ << "image_width =" << image_width;
     qDebug() << __PRETTY_FUNCTION__ << "image_height =" << image_height << "\n";
 
@@ -763,37 +763,37 @@ bool CanonCR3::ipmaBox(quint32 &offset, quint32 &length)
 {
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     p.file.seek(offset + 8);
-    quint16 x = Utilities::get16(p.file.read(2));
+    quint16 x = u.get16(p.file.read(2));
     auto version = (x & 0b1111000000000000) >> 12;       // first 4 bits
     auto flags =   (x & 0b0000111111111111);             // last 12 bits
 
     p.file.seek(offset + 12);
-    quint32 entry_count = Utilities::get32(p.file.read(4));
+    quint32 entry_count = u.get32(p.file.read(4));
 //    qDebug() << __PRETTY_FUNCTION__ << "entry_count =" << entry_count;
 
     for (quint16 i = 0; i < entry_count; i++ ) {
         quint32 item_ID;
         if (version < 1) {
-            item_ID = Utilities::get16(p.file.read(2));
+            item_ID = u.get16(p.file.read(2));
         }
         else {
-            item_ID = Utilities::get32(p.file.read(4));
+            item_ID = u.get32(p.file.read(4));
         }
-        quint8 association_count = Utilities::get8(p.file.read(1));
+        quint8 association_count = u.get8(p.file.read(1));
 //        qDebug() << "    entry#" << i
 //                 << "item_ID =" << item_ID
 //                 << "association_count =" << association_count;
 
         for (int j = 0; j < association_count; j++) {
-            int x = Utilities::get8(p.file.peek(1));
+            int x = u.get8(p.file.peek(1));
 //            int essential =  (x & 0b10000000) >> 7;
             quint16 property_index;
             if (flags & 1) {
-                property_index = Utilities::get16(p.file.read(2));
+                property_index = u.get16(p.file.read(2));
                 property_index  = property_index & 0b0111111111111111;
             }
             else {
-                property_index = Utilities::get16(p.file.read(1));
+                property_index = u.get16(p.file.read(1));
                 property_index  = property_index & 0b01111111;
             }
 //            qDebug() << "        association#" << j
@@ -918,7 +918,7 @@ bool CanonCR3::thmbBox(quint32 &offset, quint32 &length)
     p.file.read(4);     // skip
     p.file.read(2);     // thumbnail width
     p.file.read(2);     // thumbnail height
-    m.lengthThumb = Utilities::get32(p.file.read(4));
+    m.lengthThumb = u.get32(p.file.read(4));
     p.file.read(4);     // skip
     m.offsetThumb = static_cast<quint32>(p.file.pos());
     offset += length;
@@ -1018,10 +1018,10 @@ void CanonCR3::parseIfd0()
     m.heightPreview = ifd->ifdDataHash.value(257).tagValue;
     m.width = m.widthPreview;
     m.height = m.heightPreview;
-    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset, ifd->ifdDataHash.value(271).tagCount);
-    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset, ifd->ifdDataHash.value(272).tagCount);
+    m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset, ifd->ifdDataHash.value(271).tagCount);
+    m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset, ifd->ifdDataHash.value(272).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
-    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset, ifd->ifdDataHash.value(33432).tagCount);
+    m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset, ifd->ifdDataHash.value(33432).tagCount);
     /*
     qDebug() << __PRETTY_FUNCTION__
              << m.widthPreview
@@ -1045,13 +1045,13 @@ void CanonCR3::parseExif()
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue + startOffset,
+    createdExif = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue + startOffset,
         ifd->ifdDataHash.value(36868).tagCount).left(19);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       false);
         if (x < 1 ) {
@@ -1070,7 +1070,7 @@ void CanonCR3::parseExif()
 
     // aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       false);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -1093,7 +1093,7 @@ void CanonCR3::parseExif()
     // Exposure compensation
     if (ifd->ifdDataHash.contains(37380)) {
         // tagType = 10 signed rational
-        double x = Utilities::getReal_s(p.file,
+        double x = u.getReal_s(p.file,
                                       ifd->ifdDataHash.value(37380).tagValue + startOffset,
                                       false);
         m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
@@ -1105,7 +1105,7 @@ void CanonCR3::parseExif()
 
     // focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue + startOffset,
                                       false);
         m.focalLengthNum = static_cast<int>(x);
@@ -1116,15 +1116,15 @@ void CanonCR3::parseExif()
     }
 
     // IFD Exif: lens
-    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
+    m.lens = u.getString(p.file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
             ifd->ifdDataHash.value(42036).tagCount);
 
     // IFD Exif: camera serial number
-    m.cameraSN = Utilities::getString(p.file, ifd->ifdDataHash.value(42033).tagValue + startOffset,
+    m.cameraSN = u.getString(p.file, ifd->ifdDataHash.value(42033).tagValue + startOffset,
             ifd->ifdDataHash.value(42033).tagCount);
 
     // IFD Exif: lens serial nember
-    m.lensSN = Utilities::getString(p.file, ifd->ifdDataHash.value(42037).tagValue + startOffset,
+    m.lensSN = u.getString(p.file, ifd->ifdDataHash.value(42037).tagValue + startOffset,
             ifd->ifdDataHash.value(42037).tagCount);
 
     // jpg preview metadata report information

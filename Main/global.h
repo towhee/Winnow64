@@ -23,7 +23,7 @@ namespace G
     enum UserRoles {
         PathRole = Qt::UserRole + 1,    // path to image file
         IconRectRole,                   // used in IconView
-        CachedRole,                     // used in ImageView
+        CachedRole,                     // used in ImageView, IconViewDelegate
         CachingIconRole,
         DupIsJpgRole,                   // manage raw/jpg pairs
         DupOtherIdxRole,                // manage raw/jpg pairs
@@ -248,6 +248,8 @@ namespace G
     extern QElapsedTimer t1;
     extern bool isTimer;
     extern bool isTest;
+
+    extern QList<int>rowsWithIcon;
 
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
     extern QStringList doNotLog;

@@ -46,7 +46,7 @@ class IconView : public QListView
     Q_OBJECT
 
 public:
-    IconView(QWidget *parent, DataModel *dm, QString objName);
+    IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString objName);
 
     int iconWidth;
     int iconHeight;
@@ -188,6 +188,7 @@ private:
     int getPrevPick();
 
     DataModel *dm;
+    ImageCacheData *icd;
 
     bool isLeftMouseBtnPressed;
     bool isMouseDrag;

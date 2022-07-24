@@ -5,6 +5,7 @@
 #include <QtWidgets>
 #include <QStyleOptionViewItem>
 #include <QFont>
+#include "Cache/cachedata.h"
 #include "Main/global.h"
 
 class IconViewDelegate : public QStyledItemDelegate
@@ -12,7 +13,7 @@ class IconViewDelegate : public QStyledItemDelegate
     Q_OBJECT
 
 public:
-    IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible);
+    IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible, ImageCacheData *icd);
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
                const QModelIndex &index) const override;
@@ -55,6 +56,7 @@ public slots:
 
 private:
     QObject parent;
+    ImageCacheData *icd;
     bool &isRatingBadgeVisible;
     bool delegateShowThumbLabels;
     QFont font;

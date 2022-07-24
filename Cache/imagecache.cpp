@@ -596,6 +596,11 @@ void ImageCache::fixOrphans()
     }
 }
 
+bool ImageCache::isCached(int sfRow)
+{
+    return icd->cacheItemList.at(sfRow).isCached;
+}
+
 bool ImageCache::cacheUpToDate()
 {
 /*
@@ -642,10 +647,13 @@ void ImageCache::makeRoom(int id, int cacheKey)
         if (nextToDecache(id)) {
             QString fPath = icd->cacheItemList[icd->cache.toDecacheKey].fPath;
             icd->imCache.remove(fPath);
-            if (sendStatusUpdates) {
-                emit setValuePath(fPath, 0, false, G::CachedRole);
-                emit updateCacheOnThumbs(fPath, false, "ImageCache::makeRoom");
-            }
+//            if (sendStatusUpdates) {
+//                emit setValuePath(fPath, 0, false, G::CachedRole);
+//                emit updateCacheOnThumbs(fPath, false, "ImageCache::makeRoom");
+//            }
+//            else {
+//                emit setValuePath(decoder[id]->fPath, 0, true, G::CachedRole);
+//            }
             icd->cacheItemList[icd->cache.toDecacheKey].isCached = false;
             icd->cacheItemList[icd->cache.toDecacheKey].isCaching = false;
             icd->cache.currMB -= icd->cacheItemList[icd->cache.toDecacheKey].sizeMB;
@@ -1152,7 +1160,7 @@ void ImageCache::buildImageCacheList()
         }
     }
     if (G::useLinearLoading) icd->cache.folderMB = folderMB;
-    G::log("ImageCache::buildImageCacheList completed");
+//    G::log("ImageCache::buildImageCacheList completed");
 }
 
 void ImageCache::initImageCache(int &cacheMaxMB,
@@ -1311,6 +1319,7 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     cache direction, priorities and target are reset and the cache is updated in fillCache.
     */
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::setCurrentPosition", path);
+    qDebug() << CLASSFUNCTION << path;
     if (debugCaching) {
         qDebug();
         qDebug().noquote() << "ImageCache::setCurrentPosition" << path << "src =" << src;
@@ -1368,17 +1377,14 @@ void ImageCache::cacheImage(int id, int cacheKey)
     icd->cacheItemList[cacheKey].isCached = true;
     icd->cache.currMB = getImCacheSize();
     if (sendStatusUpdates) {
+        // rgh if true, slows scrolling while image cache loading (chk if get rid of this)
         emit updateCacheOnThumbs(decoder[id]->fPath, true, "ImageCache::cacheImage");
     }
     else {
+        // set datamodel isCached = true
         emit setValuePath(decoder[id]->fPath, 0, true, G::CachedRole);
+        // if current image signal ImageView::loadImage
         if (decoder[id]->fPath == dm->currentFilePath) {
-            qDebug().noquote()
-                    << "ImageCache::cacheImage"
-                    << "curr row =" << dm->currentRow
-                    << "curr path =" << dm->currentFilePath
-                    << "decoder" << id
-                    << decoder[id]->fPath;
             emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
             emit imageCachePrevCentralView();
         }

@@ -110,11 +110,12 @@ Loading icons
 extern MW *m2;
 MW *m2;
 
-IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
+IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString objName)
     : QListView(parent)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     this->dm = dm;
+    this->icd = icd;
     setObjectName(objName);
 
     // this works because ThumbView is a friend class of MW.  It is used in the
@@ -148,7 +149,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
 
     setModel(this->dm->sf);
 
-    iconViewDelegate = new IconViewDelegate(this, m2->isRatingBadgeVisible);
+    iconViewDelegate = new IconViewDelegate(this, m2->isRatingBadgeVisible, icd);
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
         labelFontSize, showIconLabels, badgeSize);
     setItemDelegate(iconViewDelegate);
@@ -1762,7 +1763,6 @@ void IconView::zoomCursor(const QModelIndex &idx, bool forceUpdate, QPoint mouse
     float scale = 1.0;
     #ifdef Q_OS_MAC
     scale = Mac::getMouseCursorMagnification();
-    qDebug() << CLASSFUNCTION << scale;
     #endif
     w /= scale;
     h /= scale;

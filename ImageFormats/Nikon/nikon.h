@@ -30,6 +30,7 @@ private:
     QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
     QHash<quint32, QString> nikonMakerHash;
     QHash<QString, QString> nikonLensHash;
+    Utilities u;
 };
 
 #endif // NIKON_H

@@ -119,10 +119,11 @@ bool Tiff::parse(MetadataParameters &p,
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     //file.open happens in readMetadata
 
+    Utilities u;
     quint32 startOffset = 0;
 
     // first two bytes is the endian order
-    quint16 order = Utilities::get16(p.file.read(2));
+    quint16 order = u.get16(p.file.read(2));
     if (order != 0x4D4D && order != 0x4949) return false;
 
     bool isBigEnd;
@@ -135,10 +136,10 @@ bool Tiff::parse(MetadataParameters &p,
     }
 
     // should be magic number 42 next
-    if (Utilities::get16(p.file.read(2), isBigEnd) != 42) return false;
+    if (u.get16(p.file.read(2), isBigEnd) != 42) return false;
 
     // read offset to first IFD
-    quint32 ifdOffset = Utilities::get32(p.file.read(4), isBigEnd);
+    quint32 ifdOffset = u.get32(p.file.read(4), isBigEnd);
     m.ifd0Offset = ifdOffset;
     m.offsetFull = ifdOffset;
     m.offsetThumb = ifdOffset;
@@ -158,30 +159,30 @@ bool Tiff::parse(MetadataParameters &p,
 
     // IFD0: Model
     (ifd->ifdDataHash.contains(272))
-        ? m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount)
+        ? m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount)
         : m.model = "";
 
     // IFD0: Make
     (ifd->ifdDataHash.contains(271))
-        ? m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
+        ? m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
         ifd->ifdDataHash.value(271).tagCount)
         : m.make = "";
 
     // IFD0: Title (ImageDescription)
     (ifd->ifdDataHash.contains(270))
-        ? m.title = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+        ? m.title = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
         ifd->ifdDataHash.value(270).tagCount)
         : m.title = "";
 
     // IFD0: Creator (artist)
     (ifd->ifdDataHash.contains(315))
-        ? m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+        ? m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
         ifd->ifdDataHash.value(315).tagCount)
         : m.creator = "";
 
     // IFD0: Copyright
     (ifd->ifdDataHash.contains(33432))
-            ? m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
+            ? m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
                                   ifd->ifdDataHash.value(33432).tagCount)
             : m.copyright = "";
 
@@ -395,13 +396,13 @@ bool Tiff::parse(MetadataParameters &p,
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
+    createdExif = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
         ifd->ifdDataHash.value(36868).tagCount).left(19);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue,
                                       isBigEnd);
         if (x < 1 ) {
@@ -420,7 +421,7 @@ bool Tiff::parse(MetadataParameters &p,
 
     // EXIF: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -443,7 +444,7 @@ bool Tiff::parse(MetadataParameters &p,
     // EXIF: Exposure compensation
     if (ifd->ifdDataHash.contains(37380)) {
         // tagType = 10 signed rational
-        double x = Utilities::getReal_s(p.file,
+        double x = u.getReal_s(p.file,
                                       ifd->ifdDataHash.value(37380).tagValue,
                                       isBigEnd);
         m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
@@ -454,7 +455,7 @@ bool Tiff::parse(MetadataParameters &p,
     }
     // EXIF: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -466,7 +467,7 @@ bool Tiff::parse(MetadataParameters &p,
 
     // EXIF: lens model
     (ifd->ifdDataHash.contains(42036))
-            ? m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
+            ? m.lens = u.getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
                                   ifd->ifdDataHash.value(42036).tagCount)
             : m.lens = "";
 
@@ -474,7 +475,7 @@ bool Tiff::parse(MetadataParameters &p,
     and it is sRGB then no point in saving the byte array of the profile since we already have
     it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
     if (m.iccSegmentOffset && m.iccSegmentLength) {
-        m.iccSpace = Utilities::getString(p.file, m.iccSegmentOffset + 16, 4);
+        m.iccSpace = u.getString(p.file, m.iccSegmentOffset + 16, 4);
         if (m.iccSpace != "sRGB") {
             p.file.seek(m.iccSegmentOffset);
             m.iccBuf = p.file.read(m.iccSegmentLength);
@@ -527,7 +528,7 @@ bool Tiff::isBigEndian(MetadataParameters &p)
 */
     // first two bytes is the endian order
     p.file.seek(0);
-    quint16 order = Utilities::get16(p.file.read(2));
+    quint16 order = u.get16(p.file.read(2));
     if (order == 0x4D4D) return true;
     else return false;
 }
@@ -571,7 +572,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
             quint32 offset = ifd->ifdDataHash.value(273).tagValue;
             p.file.seek(offset);
             for (int i = 0; i < offsetCount; ++i) {
-                stripOffsets[i] = Utilities::get32(p.file.read(4), isBigEnd);
+                stripOffsets[i] = u.get32(p.file.read(4), isBigEnd);
             }
         }
     }
@@ -590,7 +591,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
             quint32 offset = ifd->ifdDataHash.value(279).tagValue;
             p.file.seek(offset);
             for (int i = 0; i < stripCount; ++i) {
-                stripByteCounts[i] = Utilities::get32(p.file.read(4), isBigEnd);
+                stripByteCounts[i] = u.get32(p.file.read(4), isBigEnd);
             }
         }
     }
@@ -601,7 +602,7 @@ bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *if
     // IFD: bitsPerSample
     if (ifd->ifdDataHash.contains(258)) {
         p.file.seek(static_cast<int>(ifd->ifdDataHash.value(258).tagValue));
-        bitsPerSample = Utilities::get16(p.file.read(2), isBigEnd);
+        bitsPerSample = u.get16(p.file.read(2), isBigEnd);
     }
     else {
        err = "No BitsPerSample.  \n";
@@ -933,7 +934,7 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     // go to last main IFD offset and replace with offset to new IFD at end of file
     m.offsetThumb = p.file.size();
     p.file.seek(lastIFDOffsetPosition);
-    p.file.write(Utilities::put32(m.offsetThumb, m.isBigEnd));
+    p.file.write(u.put32(m.offsetThumb, m.isBigEnd));
 
     // Go to new thumbIFDOffset and write the count of IFD entries (15)
     p.offset = m.offsetThumb;
@@ -968,16 +969,16 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
     ifd->writeIFDItem(p, m, 283, 5, 1, yresOffset);             // YResolution
     ifd->writeIFDItem(p, m, 284, 3, 1, 1);                      // PlanarConfiguration
     ifd->writeIFDItem(p, m, 296, 3, 1, 2);                      // ResolutionUnit
-    p.file.write(Utilities::put32(0, m.isBigEnd));              // Next IFD = zero
+    p.file.write(u.put32(0, m.isBigEnd));              // Next IFD = zero
 
     // write values at offset locations
-    p.file.write(Utilities::put16(8, m.isBigEnd));              // BitsPerSample R
-    p.file.write(Utilities::put16(8, m.isBigEnd));              // BitsPerSample G
-    p.file.write(Utilities::put16(8, m.isBigEnd));              // BitsPerSample B
-    p.file.write(Utilities::put32(1200000, m.isBigEnd));        // XResolution Numerator
-    p.file.write(Utilities::put32(10000, m.isBigEnd));          // XResolution Denominator
-    p.file.write(Utilities::put32(1200000, m.isBigEnd));        // YResolution Numerator
-    p.file.write(Utilities::put32(10000, m.isBigEnd));          // YResolution Denominator
+    p.file.write(u.put16(8, m.isBigEnd));              // BitsPerSample R
+    p.file.write(u.put16(8, m.isBigEnd));              // BitsPerSample G
+    p.file.write(u.put16(8, m.isBigEnd));              // BitsPerSample B
+    p.file.write(u.put32(1200000, m.isBigEnd));        // XResolution Numerator
+    p.file.write(u.put32(10000, m.isBigEnd));          // XResolution Denominator
+    p.file.write(u.put32(1200000, m.isBigEnd));        // YResolution Numerator
+    p.file.write(u.put32(10000, m.isBigEnd));          // YResolution Denominator
 
     bytesPerPixel = bitsPerSample / 8 * samplesPerPixel;
     bytesPerRow = (uint)(bytesPerPixel * width);

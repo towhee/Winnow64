@@ -44,6 +44,7 @@ public:
     void decodeScan(QByteArray &ba, QImage &image);
 
 private:
+    Utilities u;
     void readAppSegments(MetadataParameters &p);
     void parseFrameHeader(MetadataParameters &p, uint marker, quint16 len);
     void parseHuffmanTable(MetadataParameters &p, quint16 len);

@@ -84,7 +84,7 @@ bool Canon::parse(MetadataParameters &p,
     quint32 startOffset = 0;
 
     // first two bytes is the endian order
-    quint16 order = Utilities::get16(p.file.read(2));
+    quint16 order = u.get16(p.file.read(2));
     if (order != 0x4D4D && order != 0x4949) return false;
     bool isBigEnd;
     order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
@@ -102,11 +102,11 @@ bool Canon::parse(MetadataParameters &p,
     m.offsetThumb = m.offsetFull;
     m.lengthThumb =  m.lengthFull;
 
-    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
-    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
+    m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
+    m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
-    m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
-    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
+    m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
+    m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
 
     // xmp offset
     m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
@@ -156,13 +156,13 @@ bool Canon::parse(MetadataParameters &p,
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
+    createdExif = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
         ifd->ifdDataHash.value(36868).tagCount).left(19);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
         if (x < 1 ) {
@@ -189,7 +189,7 @@ bool Canon::parse(MetadataParameters &p,
     m.height = ifd->ifdDataHash.value(40963).tagValue;
     // aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -211,7 +211,7 @@ bool Canon::parse(MetadataParameters &p,
     // Exposure compensation
     if (ifd->ifdDataHash.contains(37380)) {
         // tagType = 10 signed rational
-        double x = Utilities::getReal_s(p.file,
+        double x = u.getReal_s(p.file,
                                       ifd->ifdDataHash.value(37380).tagValue + startOffset,
                                       isBigEnd);
         m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
@@ -222,7 +222,7 @@ bool Canon::parse(MetadataParameters &p,
     }
     // focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue + startOffset,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -232,15 +232,15 @@ bool Canon::parse(MetadataParameters &p,
         m.focalLengthNum = 0;
     }
     // IFD Exif: lens
-    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
+    m.lens = u.getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
             ifd->ifdDataHash.value(42036).tagCount);
 
     // IFD Exif: camera serial number
-    m.cameraSN = Utilities::getString(p.file, ifd->ifdDataHash.value(42033).tagValue,
+    m.cameraSN = u.getString(p.file, ifd->ifdDataHash.value(42033).tagValue,
             ifd->ifdDataHash.value(42033).tagCount);
 
     // IFD Exif: lens serial nember
-    m.lensSN = Utilities::getString(p.file, ifd->ifdDataHash.value(42037).tagValue,
+    m.lensSN = u.getString(p.file, ifd->ifdDataHash.value(42037).tagValue,
             ifd->ifdDataHash.value(42037).tagCount);
 
     // Exif: read makernoteIFD

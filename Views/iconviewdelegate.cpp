@@ -94,10 +94,14 @@ IconView thumbDock Anatomy
 
 */
 
-IconViewDelegate::IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible)
+IconViewDelegate::IconViewDelegate(QObject *parent,
+                                   bool &isRatingBadgeVisible,
+                                   ImageCacheData *icd
+                                   )
         : isRatingBadgeVisible(isRatingBadgeVisible)
 {
     parent->isWidgetType();         // suppress compiler warning
+    this->icd = icd;
     fPad = 4;
     tPad = 4;         // allow small gap between thumb and outer border
 

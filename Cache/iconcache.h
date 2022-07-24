@@ -9,12 +9,16 @@
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/thumb.h"
+#include "Cache/cachedata.h"
 
 class IconCache : public QObject
 {
     Q_OBJECT
 public:
-    explicit IconCache(QObject *parent, DataModel *dm, Metadata *metadata);
+    explicit IconCache(QObject *parent,
+                       DataModel *dm,
+                       Metadata *metadata,
+                       IconCacheData *iconCacheData);
     ~IconCache() override;
 
     bool abort;
@@ -26,7 +30,9 @@ public:
 
 signals:
     void addToDatamodel(ImageMetadata m);
-    void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance);
+    void addToIconCache(int dmRow);
+    void removeFromIconCache(int dmRow);
+    void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance, QString src);
 
 public slots:
     void stop();
@@ -34,12 +40,15 @@ public slots:
     void read(int sfRow = 0, QString src = "");
 
 private:
+    void cleanupIcons();
     void iconMax(QPixmap &thumb);
     QMutex mutex;
     DataModel *dm;
     Metadata *metadata;
     Thumb *thumb;
+    IconCacheData *iconCacheData;
     int dmInstance;
+    QPixmap nullPm;
     bool debugCaching;
 };
 

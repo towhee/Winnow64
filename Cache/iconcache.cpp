@@ -7,13 +7,13 @@
     event.
 
     The icons are loaded, starting with the visible middle icon, alternating ahead and
-    behind; until the iconChunkSize is reached, all icons are loaded or another scroll or
+    behind until the iconChunkSize is reached, all icons are loaded or another scroll or
     resize or file selection event occurs.
 
     For each row:
         • check if icon has been loaded already.
         • if not, check if metadata loaded.
-        • if not, then load preview offset and length (minimal metadata for thumbnail).
+        • if not, then load matadata  // maybe preview offset and length (minimal metadata for thumbnail).
         • read the QImage, convert to QPixmap, resize to IconMax.
         • siganl datamodel to setIcon.
 
@@ -26,12 +26,14 @@
     a signal/slot connection must be created in a separate thread while running.
 
     Issues:
-        • icon cleanup.
         • set G::AllIconsLoaded
         • if no metadata read, then only read preview offset
 */
 
-IconCache::IconCache(QObject *parent, DataModel *dm, Metadata *metadata)
+IconCache::IconCache(QObject *parent,
+                     DataModel *dm,
+                     Metadata *metadata,
+                     IconCacheData *iconCacheData)
 {
     if (G::isLogger) G::log("MetaRead::MetaRead");
     this->dm = dm;
@@ -75,24 +77,52 @@ void IconCache::iconMax(QPixmap &thumb)
     if (h > G::iconHMax) G::iconHMax = h;
 }
 
+void IconCache::cleanupIcons()
+{
+    if (G::isLogger) G::log("IconCache::cleanupIcons");
+    int i = 0;
+    while (G::rowsWithIcon.size() > iconChunkSize) {
+        if (i >= G::rowsWithIcon.size()) break;
+        int dmRow = G::rowsWithIcon.at(i);
+        QModelIndex dmIdx = dm->index(dmRow, 0);
+        int sfRow = dm->sf->mapFromSource(dmIdx).row();
+        // is row in icon chunk range
+        if (sfRow >= firstIconRow && sfRow <= lastIconRow) {
+            ++i;
+            continue;
+        }
+        // remove icon
+        emit setIcon(dmIdx, nullPm, dmInstance, "IconCache::cleanupIcons");
+        G::rowsWithIcon.remove(i);
+    }
+}
+
 void IconCache::read(int sfRow, QString src)
 {
-    if (G::isLogger || G::isFlowLogger) G::log("IconCache::read", src);
+/*
+    See doc at top of file.
+*/
+    if (G::isLogger) G::log("IconCache::read", src);
     abort = false;
     isRunning = true;
     int sfRowCount = dm->sf->rowCount();
     if (sfRow >= sfRowCount) return;
     dmInstance = dm->instance;
-    int i = 0;
+
+    firstIconRow = sfRow - iconChunkSize / 2;
+    if (firstIconRow < 0) firstIconRow = 0;
+    lastIconRow = firstIconRow + iconChunkSize;
+
+    int iconRangeSize;
+    iconChunkSize > sfRowCount ? iconRangeSize = sfRowCount : iconRangeSize = iconChunkSize;
+
+    int i = 0;                          // datamodel rows processed
     bool ahead = true;
     int lastRow = sfRowCount - 1;
     bool moreAhead = sfRow < lastRow;
     bool moreBehind = sfRow >= 0;
     int rowAhead = sfRow;
     int rowBehind = sfRow;
-    int startIconRange = sfRow - iconChunkSize / 2;
-    if (startIconRange < 0) startIconRange = 0;
-    int endIconRange = startIconRange + iconChunkSize;
 
     /*
     qDebug() << "IconCache::read  i =" << i
@@ -103,8 +133,8 @@ void IconCache::read(int sfRow, QString src)
                 ;
                 //*/
 
-    while (i++ < sfRowCount) {
-        // next sfRow to process
+    while (i++ < iconRangeSize) {
+        // next sfRow to process by iterating ahead, behind, ahead, behind...
         if (ahead && i > 1) {
             if (moreBehind) ahead = false;
             if (moreAhead) {
@@ -123,8 +153,9 @@ void IconCache::read(int sfRow, QString src)
         }
 
         if (abort) break;
-        // in icon range?
-        if (sfRow < startIconRange || sfRow > endIconRange) continue;
+
+        // is the row within icon range?
+        if (sfRow < firstIconRow || sfRow > lastIconRow) continue;
         // check if icon already loaded
         if (dm->iconLoaded(sfRow)) continue;
 
@@ -155,14 +186,21 @@ void IconCache::read(int sfRow, QString src)
         QImage image;
         bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
         if (isVideo) {
-//            iconsLoaded.append(dmRow);
             continue;
         }
+
+        // add icon to datamodel and rowsWithIcon list
         if (thumbLoaded) {
             QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-            if (!abort) emit setIcon(dmIdx, pm, dmInstance);
-            iconMax(pm);
-//            iconsLoaded.append(dmRow);
+            if (!abort) {
+                emit setIcon(dmIdx, pm, dmInstance, "IconCache::read");
+                iconMax(pm);
+                G::rowsWithIcon.append(dmRow);
+                // if exceed max icons to cache then cleanup excess icons
+                if (G::rowsWithIcon.size() > iconChunkSize + 50) {
+                    cleanupIcons();
+                }
+            }
         }
     }
 

@@ -507,6 +507,7 @@ private slots:
     void loadMetadataChunk();
 //    void loadMetadataChunkAfterScroll();
 //    void loadMetadataCacheThumbScrollEvent();
+    void scrollChange(int sfRow, QString src);
     void thumbHasScrolled();
     void gridHasScrolled();
     void tableHasScrolled();
@@ -974,6 +975,7 @@ private:
     QStackedLayout *centralLayout;
     DataModel *dm;
     ImageCacheData *icd;
+    IconCacheData *iconCacheData;
     BuildFilters *buildFilters;
     QItemSelectionModel *selectionModel;
     Metadata *metadata;

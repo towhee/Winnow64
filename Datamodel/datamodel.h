@@ -63,7 +63,9 @@ public:
     bool updateFileData(QFileInfo fileInfo);
     bool metadataLoaded(int dmRow);
     bool isAllMetadataLoaded();
+    int iconCount();
     void clearAllIcons();
+    void clearOutOfRangeIcons(int startRow);
     bool allIconsLoaded();
     bool iconLoaded(int sfRow);
     bool isIconCaching(int sfRow);
@@ -111,7 +113,7 @@ public slots:
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m);
-    void setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance);
+    void setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
                           qint64 duration, FrameDecoder *frameDecoder);
     void setValue(QModelIndex dmIdx, QVariant value, int role = Qt::EditRole);

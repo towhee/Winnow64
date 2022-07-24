@@ -38,11 +38,13 @@ public:
 signals:
     void done();
     void stopped();
+    void startAtRow(int row, QString src);
     void okayToStart(int newRow);
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
-    void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance);
+    void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance, QString src);
+    void clearOutOfRangeIcons(int startRow);
     void setImageCachePosition(QString fPath);      // not used
     void startImageCache();
     void updateIconBestFit();
@@ -51,8 +53,8 @@ public slots:
     void initialize();
     void restart(int newRow);
     void stop();
-    void start();
-    void read(int sfRow = 0, QString src = "");
+    void start(int row = 0, QString src = "");
+    void read(int startRow = 0, QString src = "");
 //    void scroll(int sfRow, QString src = "");
 //    void sizeChange(int sfRow, QString src = "");
 
@@ -64,14 +66,13 @@ private:
     void cleanupIcons();
     void buildMetadataPriorityQueue(int sfRow);
     bool isNotLoaded(int sfRow);
-    bool okToLoadIcon(int sfRow);
+    bool inIconRange(int sfRow);
     void updateIcons();
 
     QMutex mutex;
 //    QWaitCondition condition;
 //    bool abort;
 //    bool isRunning = false;
-    int newRow;
     DataModel *dm;
     Metadata *metadata;
     Thumb *thumb;
@@ -80,10 +81,17 @@ private:
     int sfRowCount;
     int visibleIconCount;
     int sfStart;
+
     int sfRow;
+    int newStartRow = -1;
+    int newRow;
+
+    QPixmap nullPm;
 
     bool imageCachingStarted = false;
     QList<int> priorityQueue;
+
+    // lists not req'd
     QList<int> iconsLoaded;
     QList<int> visibleIcons;
     QList<int> outsideIconRange;

@@ -80,15 +80,15 @@ bool Jpeg::getWidthHeight(MetadataParameters &p, int &w, int &h)
     p.offset += 2;
     while (marker != 0xFFC0) {
         p.file.seek(p.offset);                  // APP1 FFE*
-        marker = Utilities::get16(p.file.read(2), isBigEnd);
+        marker = u.get16(p.file.read(2), isBigEnd);
         if (marker < 0xFF01) {
             return false;
         }
-        p.offset = Utilities::get16(p.file.peek(2), isBigEnd) + static_cast<quint32>(p.file.pos());
+        p.offset = u.get16(p.file.peek(2), isBigEnd) + static_cast<quint32>(p.file.pos());
     }
     p.file.seek(p.file.pos()+3);
-    h = Utilities::get16(p.file.read(2), isBigEnd);
-    w = Utilities::get16(p.file.read(2), isBigEnd);
+    h = u.get16(p.file.read(2), isBigEnd);
+    w = u.get16(p.file.read(2), isBigEnd);
     return true;
 }
 
@@ -99,7 +99,7 @@ bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
     p.offset += 2;
     while (marker != 0xFFC0) {
         p.file.seek(p.offset);                  // APP1 FFE*
-        marker = Utilities::get16(p.file.read(2), isBigEnd);
+        marker = u.get16(p.file.read(2), isBigEnd);
         if (marker < 0xFF01) {
             qWarning() << "Jpeg::getDimensions"
                      << "FAIL: MARKER < 0xFFC0"
@@ -107,11 +107,11 @@ bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
                         ;
             return false;
         }
-        p.offset = Utilities::get16(p.file.peek(2), isBigEnd) + static_cast<quint32>(p.file.pos());
+        p.offset = u.get16(p.file.peek(2), isBigEnd) + static_cast<quint32>(p.file.pos());
     }
     p.file.seek(p.file.pos()+3);
-    m.height = Utilities::get16(p.file.read(2), isBigEnd);
-    m.width = Utilities::get16(p.file.read(2), isBigEnd);
+    m.height = u.get16(p.file.read(2), isBigEnd);
+    m.width = u.get16(p.file.read(2), isBigEnd);
     return true;
 }
 
@@ -121,8 +121,8 @@ bool Jpeg::getDimensions2(MetadataParameters &p, ImageMetadata &m)
     p.offset = segmentHash.value("SOF0") + 5;
     bool isBigEnd = true;                  // only IFD/EXIF can be little endian
     p.file.seek(p.offset);
-    m.height = Utilities::get16(p.file.read(2), isBigEnd);
-    m.width = Utilities::get16(p.file.read(2), isBigEnd);
+    m.height = u.get16(p.file.read(2), isBigEnd);
+    m.width = u.get16(p.file.read(2), isBigEnd);
     return true;
 }
 
@@ -142,7 +142,7 @@ bool Jpeg::parse(MetadataParameters &p,
     //file.open happens in readMetadata
     bool isBigEnd = true;
 
-    if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
+    if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
         G::error(CLASSFUNCTION, m.fPath, "JPG does not start with 0xFFD8.");
         qWarning() << "Jpeg::parse FAILED JPG does not start with 0xFFD8."
                  << m.fPath
@@ -178,7 +178,7 @@ bool Jpeg::parse(MetadataParameters &p,
     bool foundEndian = false;
     int count = 0;
     while (!foundEndian) {
-        quint32 order = Utilities::get16(p.file.read(2));
+        quint32 order = u.get16(p.file.read(2));
         if (order == 0x4949 || order == 0x4D4D) {
             order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
             // offsets are from the start of endian position in JPEGs
@@ -202,8 +202,8 @@ bool Jpeg::parse(MetadataParameters &p,
 
     if (p.report) p.rpt << "\nstartOffset = " << startOffset;
 
-    quint32 a = Utilities::get16(p.file.read(2), isBigEnd);  // magic 42
-    a = Utilities::get32(p.file.read(4), isBigEnd);
+    quint32 a = u.get16(p.file.read(2), isBigEnd);  // magic 42
+    a = u.get32(p.file.read(4), isBigEnd);
     quint32 offsetIfd0 = a + startOffset;
 
     // it's a jpg so the whole thing is the full length jpg
@@ -226,13 +226,13 @@ bool Jpeg::parse(MetadataParameters &p,
         offsetGPS = ifd->ifdDataHash.value(34853).tagValue + startOffset;
 
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
-    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
+    m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
                      ifd->ifdDataHash.value(271).tagCount);
-    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset,
+    m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset,
                       ifd->ifdDataHash.value(272).tagCount);
-    m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+    m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
                         ifd->ifdDataHash.value(315).tagCount);
-    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
+    m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
                           ifd->ifdDataHash.value(33432).tagCount);
 
     // read IFD1
@@ -262,12 +262,12 @@ bool Jpeg::parse(MetadataParameters &p,
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue + startOffset,
+    createdExif = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue + startOffset,
         ifd->ifdDataHash.value(36868).tagCount).left(19);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
     // try DateTimeOriginal
     if (createdExif.length() == 0) {
-        createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36867).tagValue + startOffset,
+        createdExif = u.getString(p.file, ifd->ifdDataHash.value(36867).tagValue + startOffset,
             ifd->ifdDataHash.value(36867).tagCount);
         if (createdExif.length() > 0) {
             m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
@@ -276,7 +276,7 @@ bool Jpeg::parse(MetadataParameters &p,
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
         if (x < 1) {
@@ -296,7 +296,7 @@ bool Jpeg::parse(MetadataParameters &p,
 
     // EXIF: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -319,7 +319,7 @@ bool Jpeg::parse(MetadataParameters &p,
     // EXIF: Exposure compensation
     if (ifd->ifdDataHash.contains(37380)) {
         // tagType = 10 signed rational
-        double x = Utilities::getReal_s(p.file,
+        double x = u.getReal_s(p.file,
                                       ifd->ifdDataHash.value(37380).tagValue + startOffset,
                                       isBigEnd);
         m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
@@ -331,7 +331,7 @@ bool Jpeg::parse(MetadataParameters &p,
 
     // EXIF: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue + startOffset,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -342,7 +342,7 @@ bool Jpeg::parse(MetadataParameters &p,
     }
 
     // EXIF: lens model
-    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
+    m.lens = u.getString(p.file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
                      ifd->ifdDataHash.value(42036).tagCount);
 
     /* Read embedded ICC. The default color space is sRGB. If there is an embedded icc profile
@@ -350,7 +350,7 @@ bool Jpeg::parse(MetadataParameters &p,
     it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
     if (segmentHash.contains("ICC")) {
         if (m.iccSegmentOffset && m.iccSegmentLength) {
-            m.iccSpace = Utilities::getString(p.file, m.iccSegmentOffset + 52, 4);
+            m.iccSpace = u.getString(p.file, m.iccSegmentOffset + 52, 4);
             if (m.iccSpace != "sRGB") {
                 p.file.seek(m.iccSegmentOffset);
                 m.iccBuf = p.file.read(m.iccSegmentLength);
@@ -421,10 +421,10 @@ void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
     uint marker = 0xFFFF;
     while (marker > 0xFFBF) {
         p.file.seek(p.offset);           // APP1 FFE*
-        marker = static_cast<uint>(Utilities::get16(p.file.read(2)));
+        marker = static_cast<uint>(u.get16(p.file.read(2)));
         if (marker < 0xFFC0) break;
         quint32 pos = static_cast<quint32>(p.file.pos());
-        quint16 len = Utilities::get16(p.file.read(2));
+        quint16 len = u.get16(p.file.read(2));
         quint32 nextOffset = pos + len;
 
         // populate segmentCodeHash
@@ -469,7 +469,7 @@ void Jpeg::getJpgSegments(MetadataParameters &p, ImageMetadata &m)
             break;
         // Define restart interval
         case 0xFFDD:
-            restartInterval = Utilities::get16(p.file.read(2));
+            restartInterval = u.get16(p.file.read(2));
             break;
         case 0xFFE1: {
             QString segName = p.file.read(4);
@@ -561,10 +561,10 @@ void Jpeg::readAppSegments(MetadataParameters &p)
     int len;
     if (segmentHash.contains("APP14")) {
         p.file.seek(segmentHash["APP14"] + 2);
-        len = Utilities::get16(p.file.read(2));
+        len = u.get16(p.file.read(2));
         if (len > 6) {
             p.file.seek(p.file.pos() + len - 4);
-            colorModel =  Utilities::get16(p.file.read(2));
+            colorModel =  u.get16(p.file.read(2));
         }
     }
 }
@@ -601,23 +601,23 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
     } // end switch
 
     // get frame header length
-    precision = Utilities::get8(p.file.read(1));
-    lines = Utilities::get16(p.file.read(2));
+    precision = u.get8(p.file.read(1));
+    lines = u.get16(p.file.read(2));
     iHeight = lines;
     mcuRows = (lines / 8) + (lines % 8);
-    samplesPerLine = Utilities::get16(p.file.read(2));
+    samplesPerLine = u.get16(p.file.read(2));
     iWidth = samplesPerLine;
     mcuCols = (samplesPerLine / 8) + (samplesPerLine % 8);
-    componentsInFrame = Utilities::get8(p.file.read(1));
+    componentsInFrame = u.get8(p.file.read(1));
     components.resize(componentsInFrame);
     Component component;
     if (componentsInFrame) {
         for (int i = 0; i < componentsInFrame; i++) {
-            component.Id = Utilities::get8(p.file.read(1));
+            component.Id = u.get8(p.file.read(1));
             QByteArray c = p.file.read(1);
-            component.horSampleFactor = Utilities::get4_1st(c);
-            component.verSampleFactor = Utilities::get4_2nd(c);
-            component.QTableSel = Utilities::get8(p.file.read(1));
+            component.horSampleFactor = u.get4_1st(c);
+            component.verSampleFactor = u.get4_2nd(c);
+            component.QTableSel = u.get8(p.file.read(1));
             components[i] = component;
          }
     }
@@ -657,9 +657,9 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
         int dhtType;
 //        dht.codeLengths.resize(16);
         QByteArray c = p.file.read(1);
-        dhtType = Utilities::get8(c);
-        dht.classID = Utilities::get4_1st(c);
-        dht.tableID = Utilities::get4_2nd(c);
+        dhtType = u.get8(c);
+        dht.classID = u.get4_1st(c);
+        dht.tableID = u.get4_2nd(c);
 
         // get count of codes with bit length i
         QVector<int> counts;
@@ -667,7 +667,7 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
         quint16 huffCode = 0;
         // get count of codes for each bit length i
         for (int i = 0; i < 16; i++) {
-            counts[i] = Utilities::get8(p.file.read(1));
+            counts[i] = u.get8(p.file.read(1));
 //            qDebug() << "Table =" << dhtType << "Length =" << i << "Count =" << counts[i];
         }
         /*
@@ -682,7 +682,7 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
             dhtCodeMap.clear();
             // iterate huffman codes for bit width
             for  (int j = 0; j < counts[i]; j++) {
-                dhtCodeMap[huffCode] = Utilities::get8(p.file.read(1));
+                dhtCodeMap[huffCode] = u.get8(p.file.read(1));
 
                 /*qDebug() << CLASSFUNCTION
                          << "HuffBitLength" << QString::number(i+1).rightJustified(2)
@@ -712,15 +712,15 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
 
     while (p.file.pos() < endOffset) {
         QByteArray c = p.file.read(1);
-//        quint8 table = Utilities::get8(c);
-        int precision = Utilities::get4_1st(c);
-        int table = Utilities::get4_2nd(c);
+//        quint8 table = u.get8(c);
+        int precision = u.get4_1st(c);
+        int table = u.get4_2nd(c);
         QVector<int> q(64);
         if (precision == 0) {
-            for (int i = 0; i < 64; i++) q[i] = Utilities::get8(p.file.read(1));
+            for (int i = 0; i < 64; i++) q[i] = u.get8(p.file.read(1));
         }
         else {
-            for (int i = 0; i < 64; i++) q[i] = Utilities::get16(p.file.read(2));
+            for (int i = 0; i < 64; i++) q[i] = u.get16(p.file.read(2));
         }
         dqt[table] = q;
     }
@@ -749,10 +749,10 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
 void Jpeg::parseSOSHeader(MetadataParameters &p, quint16 len)
 {
     scanDataOffset = p.file.pos() + len - 2;
-    sosComponentCount = Utilities::get8(p.file.read(1));
+    sosComponentCount = u.get8(p.file.read(1));
     for (int i = 0; i < sosComponentCount; i++) {
-        int componentID = Utilities::get8(p.file.read(1));
-        huffTblToUse[componentID] = Utilities::get8(p.file.read(1));
+        int componentID = u.get8(p.file.read(1));
+        huffTblToUse[componentID] = u.get8(p.file.read(1));
     }
 
     // report
@@ -795,7 +795,7 @@ void Jpeg::decodeScan(QFile &file, QImage &image)
     if (p.file.isOpen()) p.file.close();
     if (p.file.open(QIODevice::ReadOnly)) {
         bool isBigEnd = true;
-        if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) {
+        if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
             G::error(CLASSFUNCTION, file.fileName(), "JPG does not start with 0xFFD8.");
             p.file.close();
             return;
@@ -917,7 +917,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                     while (consumed > 7 && !eos) {
                         // load another byte
                         if (!eos) {
-//                            quint8 nextByte = Utilities::get8(buffer.read(1));
+//                            quint8 nextByte = u.get8(buffer.read(1));
 //                            quint8 nextByte = buffer.read(1)[0]&0xFF;
                             quint8 nextByte = ba[offset++]&0xFF;
                             sBytes += QString::number(nextByte, 2).rightJustified(8, '0') + " ";
@@ -926,7 +926,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                                      << "consumed =" << consumed;*/
                             bool isMarkerByte = false;
                             if (nextByte == 0xFF) {
-//                                uint markerByte = Utilities::get8(buffer.read(1));
+//                                uint markerByte = u.get8(buffer.read(1));
                                 uint markerByte = ba[offset++]&0xFF;
                                 if (markerByte != 0) {
                                     isMarkerByte = true;

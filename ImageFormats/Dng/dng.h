@@ -21,6 +21,8 @@ public:
                IPTC *iptc,
                Exif *exif,
                Jpeg *jpeg);
+private:
+    Utilities u;
 };
 
 #endif // DNG_H
