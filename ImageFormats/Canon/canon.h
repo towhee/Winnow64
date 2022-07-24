@@ -24,6 +24,7 @@ public:
                Jpeg *jpeg);
 private:
     QHash<quint32, QString> canonMakerHash, canonFileInfoHash;
+    Utilities u;
 };
 
 #endif // CANON_H

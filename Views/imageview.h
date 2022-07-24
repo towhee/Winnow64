@@ -5,6 +5,7 @@
 #include <QHash>
 #include "Datamodel/datamodel.h"
 #include "Cache/imagecache.h"
+//#include "Cache/cachedata.h"
 #include "Views/iconview.h"
 #include "Views/infostring.h"
 #include "Utilities/dropshadowlabel.h"

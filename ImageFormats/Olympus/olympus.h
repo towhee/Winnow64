@@ -24,6 +24,7 @@ public:
                Jpeg *jpeg);
 private:
     QHash<quint32, QString> olympusMakerHash, olympusCameraSettingsHash;
+    Utilities u;
 };
 
 #endif // OLYMPUS_H

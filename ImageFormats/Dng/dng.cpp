@@ -16,16 +16,16 @@ bool DNG::parse(MetadataParameters &p,
     quint32 startOffset = 0;
 
     // first two bytes is the endian order
-    quint16 order = Utilities::get16(p.file.read(2));
+    quint16 order = u.get16(p.file.read(2));
     if (order != 0x4D4D && order != 0x4949) return false;
     bool isBigEnd;
     order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
 
     // should be magic number 42 next
-    if (Utilities::get16(p.file.read(2), isBigEnd) != 42) return false;
+    if (u.get16(p.file.read(2), isBigEnd) != 42) return false;
 
     // read offset to first IFD
-    quint32 ifdOffset = Utilities::get32(p.file.read(4), isBigEnd);
+    quint32 ifdOffset = u.get32(p.file.read(4), isBigEnd);
     p.hdr = "IFD0";
     p.offset = ifdOffset;
     p.hash = &exif->hash;
@@ -38,30 +38,30 @@ bool DNG::parse(MetadataParameters &p,
 
     // IFD0: Model
     (ifd->ifdDataHash.contains(272))
-        ? m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount)
+        ? m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount)
         : m.model = "";
 
     // IFD0: Make
     (ifd->ifdDataHash.contains(271))
-        ? m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
+        ? m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
         ifd->ifdDataHash.value(271).tagCount)
         : m.make = "";
 
     // IFD0: Title (ImageDescription)
     (ifd->ifdDataHash.contains(270))
-        ? m.title = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+        ? m.title = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
         ifd->ifdDataHash.value(270).tagCount)
         : m.title = "";
 
     // IFD0: Creator (artist)
     (ifd->ifdDataHash.contains(315))
-        ? m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+        ? m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
         ifd->ifdDataHash.value(315).tagCount)
         : m.creator = "";
 
     // IFD0: Copyright
     (ifd->ifdDataHash.contains(33432))
-            ? m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
+            ? m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
                                   ifd->ifdDataHash.value(33432).tagCount)
             : m.copyright = "";
 
@@ -144,7 +144,7 @@ bool DNG::parse(MetadataParameters &p,
                 quint32 offset = ifd->ifdDataHash.value(273).tagValue;
                 p.file.seek(offset);
 //                quint32 x = get2(file.read(2));
-                if (Utilities::get16(p.file.read(2), true) != 0xFFD8) break;  // order = 4949 so reverse
+                if (u.get16(p.file.read(2), true) != 0xFFD8) break;  // order = 4949 so reverse
                 // yes it is a JPG
                 jpgInfo.offset = offset;
                 jpgInfo.length = ifd->ifdDataHash.value(279).tagValue;
@@ -197,14 +197,14 @@ bool DNG::parse(MetadataParameters &p,
     // EXIF: created datetime
     QString createdExif;
     (ifd->ifdDataHash.contains(36868))
-        ? createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
+        ? createdExif = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
         ifd->ifdDataHash.value(36868).tagCount).left(19)
         : createdExif = "";
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
         if (x < 1 ) {
@@ -225,7 +225,7 @@ bool DNG::parse(MetadataParameters &p,
 
     // EXIF: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -248,7 +248,7 @@ bool DNG::parse(MetadataParameters &p,
     // EXIF: Exposure compensation
     if (ifd->ifdDataHash.contains(37380)) {
         // tagType = 10 signed rational
-        double x = Utilities::getReal_s(p.file,
+        double x = u.getReal_s(p.file,
                                       ifd->ifdDataHash.value(37380).tagValue + startOffset,
                                       isBigEnd);
         m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
@@ -260,7 +260,7 @@ bool DNG::parse(MetadataParameters &p,
 
     // EXIF: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue + startOffset,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -272,7 +272,7 @@ bool DNG::parse(MetadataParameters &p,
 
     // EXIF: lens model
     (ifd->ifdDataHash.contains(42036))
-            ? m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
+            ? m.lens = u.getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
                                   ifd->ifdDataHash.value(42036).tagCount)
             : m.lens = "";
 

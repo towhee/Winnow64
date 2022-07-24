@@ -44,6 +44,7 @@ public:
 //    void pauseImageCache();
 //    void resumeImageCache();
     bool cacheUpToDate();           // target range all cached
+    bool isCached(int sfRow);
     void removeFromCache(QStringList &pathList);
 //    QSize getPreviewSize();
 

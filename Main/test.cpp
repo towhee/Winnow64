@@ -60,6 +60,46 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+//    QStandardItem *item = dm->itemFromIndex(dm->index(0, 0));
+//    item->setData(0, Qt::DecorationRole);
+//    dm->setData(dm->index(0,0), 0, Qt::DecorationRole);
+//    QVariant v = dm->index(0,0).data(Qt::DecorationRole);
+//    QVariant v1 = dm->index(600,0).data(Qt::DecorationRole);
+//    qDebug() << v << v1 << v1.isValid() << dm->index(600,0).data(Qt::DecorationRole).isNull();
+//    return;
+
+//    thumbView->selectThumb(600);
+//    return;
+
+    QPixmap nullPm;
+    QModelIndex dmIdx = dm->index(0,0);
+    dm->setIcon(dmIdx, nullPm, dm->instance, "test");
+    diagnosticsMetadataCache();
+    return;
+
+    QByteArray bx = "www";
+    quint16 x = Utilities::get16(bx);
+    Utilities util;
+    quint16 x1 = util.get16(bx);
+    qDebug() << x << x1;
+    return;
+
+
+    QElapsedTimer t;
+    t.start();
+
+    qDebug() << G::rowsWithIcon.count();
+    return;
+
+    dm->clearAllIcons();
+    qDebug() << t.nsecsElapsed() << "nanosec";
+    return;
+
+
+    int sfRow = 8;
+    bool isCached = icd->cacheItemList.at(sfRow).isCached;
+    QString p = icd->cacheItemList.at(sfRow).fPath;
+    qDebug() << p << isCached;
 //    imageCacheThread->fixOrphans();
 //    return;
 
@@ -67,9 +107,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     emit setValuePath(path, 0, true, G::CachedRole);
     return;
 
-    QElapsedTimer t;
-    t.start();
-    int quitRow = 400;
+   int quitRow = 400;
 
 //    /*
     int sfRowCount = 10;

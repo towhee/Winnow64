@@ -320,13 +320,14 @@ bool Sony::parse(MetadataParameters &p,
 {
     //file.open in Metadata::readMetadata
     // first two bytes is the endian order (skip next 2 bytes)
-    quint16 order = Utilities::get16(p.file.read(4));
+//    Utilities u;
+    quint16 order = u.get16(p.file.read(4));
     if (order != 0x4D4D && order != 0x4949) return false;
     bool isBigEnd;
     order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
 
     // get offset to first IFD and read it
-    quint32 offsetIfd0 = Utilities::get32(p.file.read(4), isBigEnd);
+    quint32 offsetIfd0 = u.get32(p.file.read(4), isBigEnd);
     p.hdr = "IFD0";
     p.offset = offsetIfd0;
     p.hash = &exif->hash;
@@ -344,10 +345,10 @@ bool Sony::parse(MetadataParameters &p,
     m.lengthThumb = ifd->ifdDataHash.value(279).tagValue;
 
 //    if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumb, lengthThumb);
-    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
-    m.model = "Sony " + Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
-    m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
-    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
+    m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
+    m.model = "Sony " + u.getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
+    m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
+    m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
 
     quint32 offsetEXIF;
@@ -403,13 +404,13 @@ bool Sony::parse(MetadataParameters &p,
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
+    createdExif = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
         ifd->ifdDataHash.value(36868).tagCount).left(19);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // Exif: get shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue,
                                       isBigEnd);
         if (x < 1) {
@@ -428,7 +429,7 @@ bool Sony::parse(MetadataParameters &p,
 
     // Exif: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -452,7 +453,7 @@ bool Sony::parse(MetadataParameters &p,
     // EXIF: Exposure compensation
     if (ifd->ifdDataHash.contains(37380)) {
         // tagType = 10 signed rational
-        double x = Utilities::getReal_s(p.file,
+        double x = u.getReal_s(p.file,
                                       ifd->ifdDataHash.value(37380).tagValue,
                                       isBigEnd);
         m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
@@ -464,7 +465,7 @@ bool Sony::parse(MetadataParameters &p,
 
     // Exif: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -475,7 +476,7 @@ bool Sony::parse(MetadataParameters &p,
     }
 
     // Exif: lens
-    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
+    m.lens = u.getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
         ifd->ifdDataHash.value(42036).tagCount);
 
     // Exif: read makernoteIFD
@@ -494,10 +495,10 @@ bool Sony::parse(MetadataParameters &p,
     if (sonyMakerHash.contains(36944)) {
         quint32 shutterCountOffset = ifd->ifdDataHash.value(36944).tagValue + 58;
         p.file.seek(shutterCountOffset);
-        int d1 = sonyCypherHash[Utilities::get8(p.file.read(1))];
-        int d2 = sonyCypherHash[Utilities::get8(p.file.read(1))] * 256;
-        int d3 = sonyCypherHash[Utilities::get8(p.file.read(1))] * 256 * 256;
-        int d4 = sonyCypherHash[Utilities::get8(p.file.read(1))] * 256 * 256 * 256;
+        int d1 = sonyCypherHash[u.get8(p.file.read(1))];
+        int d2 = sonyCypherHash[u.get8(p.file.read(1))] * 256;
+        int d3 = sonyCypherHash[u.get8(p.file.read(1))] * 256 * 256;
+        int d4 = sonyCypherHash[u.get8(p.file.read(1))] * 256 * 256 * 256;
         m.shutterCount = d1 + d2 + d3 + d4;
     }
 

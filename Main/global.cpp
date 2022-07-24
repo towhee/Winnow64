@@ -124,6 +124,8 @@ namespace G
     bool isTimer;
     bool isTest;
 
+    QList<int>rowsWithIcon;
+
     QString s(QVariant x)
     // helper function to convert variable values to a string for reporting
     {

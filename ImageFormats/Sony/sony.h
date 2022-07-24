@@ -25,6 +25,7 @@ public:
 private:
     QHash<quint32, QString> sonyMakerHash;
     QHash<int, int> sonyCypherHash;
+    Utilities u;
 };
 
 #endif // SONY_H

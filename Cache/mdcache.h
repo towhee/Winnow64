@@ -102,7 +102,7 @@ protected:
     void run() Q_DECL_OVERRIDE;
 
 signals:
-    void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance);
+    void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance, QString src);
     void loadImageCache();
     void updateIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void updateIconBestFit();

@@ -40,6 +40,7 @@ public:
     quint32 irefLength;
 
 private:
+    Utilities u;
     bool nextHeifBox(quint32 &length, QString &type);
     bool getHeifBox(QString &type, quint32 &offset, quint32 &length);
 

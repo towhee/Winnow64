@@ -113,15 +113,15 @@ bool Fuji::parse(MetadataParameters &p,
 
     // seek JPEG image offset
     p.file.seek(84);
-    m.offsetFull = Utilities::get32(p.file.read(4));
-    m.lengthFull = Utilities::get32(p.file.read(4));
+    m.offsetFull = u.get32(p.file.read(4));
+    m.lengthFull = u.get32(p.file.read(4));
     // default values for thumbnail
     m.offsetThumb = m.offsetFull;
     m.lengthThumb =  m.lengthFull;
     p.file.seek(m.offsetFull);
 
     // start on embedded JPEG
-    if (Utilities::get16(p.file.read(2)) != 0xFFD8) return false;
+    if (u.get16(p.file.read(2)) != 0xFFD8) return false;
 
     // build a hash of jpg segment offsets
     p.offset = p.file.pos();
@@ -134,7 +134,7 @@ bool Fuji::parse(MetadataParameters &p,
     bool foundEndian = false;
     int count = 0;
     while (!foundEndian) {
-        quint32 order = Utilities::get16(p.file.read(2));
+        quint32 order = u.get16(p.file.read(2));
         if (order == 0x4949 || order == 0x4D4D) {
             order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
             // offsets are from the endian position in JPEGs
@@ -154,8 +154,8 @@ bool Fuji::parse(MetadataParameters &p,
 
     if (p.report) p.rpt << "\n startOffset = " << startOffset;
 
-    quint32 a = Utilities::get16(p.file.read(2), isBigEnd);  // magic 42
-    a = Utilities::get32(p.file.read(4), isBigEnd);
+    quint32 a = u.get16(p.file.read(2), isBigEnd);  // magic 42
+    a = u.get32(p.file.read(4), isBigEnd);
     quint32 offsetIfd0 = a + startOffset;
 
 //    getDimensions(offsetFullJPG);
@@ -168,11 +168,11 @@ bool Fuji::parse(MetadataParameters &p,
 
     quint32 offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
-    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
+    m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
                      ifd->ifdDataHash.value(271).tagCount);
-    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset,
+    m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset,
                       ifd->ifdDataHash.value(272).tagCount);
-    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
+    m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
                           ifd->ifdDataHash.value(33432).tagCount);
 
     // read IFD1
@@ -198,7 +198,7 @@ bool Fuji::parse(MetadataParameters &p,
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
         if (x < 1 ) {
@@ -217,7 +217,7 @@ bool Fuji::parse(MetadataParameters &p,
 
     // EXIF: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -239,7 +239,7 @@ bool Fuji::parse(MetadataParameters &p,
 
     // EXIF: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue + startOffset,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -250,7 +250,7 @@ bool Fuji::parse(MetadataParameters &p,
     }
 
     // EXIF: lens model
-    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
+    m.lens = u.getString(p.file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
                      ifd->ifdDataHash.value(42036).tagCount);
 
     // Exif: read makernoteIFD

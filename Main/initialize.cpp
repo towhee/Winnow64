@@ -100,6 +100,8 @@ void MW::setupCentralWidget()
 void MW::createDataModel()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    icd = new ImageCacheData(this);
+    iconCacheData = new IconCacheData(this);
     metadata = new Metadata;
     cacheProgressBar = new ProgressBar(this);
 
@@ -219,9 +221,10 @@ void MW::createMDCache()
     metaRead = new MetaRead(this, dm, metadata);
     metaRead->moveToThread(&metaReadThread);
 
-    metaRead->iconChunkSize = 200;
+//    metaRead->iconChunkSize = 200;
     if (setting->contains("iconChunkSize")) {
         dm->iconChunkSize = setting->value("iconChunkSize").toInt();
+        metaRead->iconChunkSize = setting->value("iconChunkSize").toInt();
     }
     else {
         dm->iconChunkSize = 3000;
@@ -230,7 +233,7 @@ void MW::createMDCache()
     // delete thread when finished
     connect(&metaReadThread, &QThread::finished, metaRead, &QObject::deleteLater);
     // read metadata
-    connect(this, &MW::startMetaRead, metaRead, &MetaRead::read);
+    connect(this, &MW::startMetaRead, metaRead, &MetaRead::start);
     // add metadata to datamodel
     connect(this, &MW::restartMetaRead, metaRead, &MetaRead::restart);
     // message metadata reading completed
@@ -238,7 +241,10 @@ void MW::createMDCache()
     // add metadata to datamodel
     connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
     // update icon in datamodel
-    connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon);
+    connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
+    // cleanup icons in datamodel
+    connect(metaRead, &MetaRead::clearOutOfRangeIcons,
+            dm, &DataModel::clearOutOfRangeIcons, Qt::QueuedConnection);
 //    // message metadata reading stopped (for new folder)
 //    connect(metaRead, &MetaRead::stopped, this, &MW::stopAndClearAllAfterMetaReadStopped);
     // message metadata reading completed
@@ -253,7 +259,7 @@ void MW::createMDCache()
     metaReadThread.start();
 
     // IconCache
-    iconCache = new IconCache(this, dm, metadata);
+    iconCache = new IconCache(this, dm, metadata, iconCacheData);
     iconCache->moveToThread(&iconCacheThread);
 
     iconCache->iconChunkSize = 200;
@@ -266,6 +272,10 @@ void MW::createMDCache()
     connect(iconCache, &IconCache::addToDatamodel, dm, &DataModel::addMetadataForItem);
     // update icon in datamodel
     connect(iconCache, &IconCache::setIcon, dm, &DataModel::setIcon);
+    // add model row to list of icons cached
+    connect(iconCache, &IconCache::addToIconCache, iconCacheData, &IconCacheData::add);
+    // remove model row from list of icons cached
+    connect(iconCache, &IconCache::removeFromIconCache, iconCacheData, &IconCacheData::remove);
 
     iconCacheThread.start();
 }
@@ -282,7 +292,7 @@ void MW::createImageCache()
     a restart at the new place.
     */
 
-    icd = new ImageCacheData(this);
+//    icd = new ImageCacheData(this);
     imageCacheThread = new ImageCache(this, icd, dm);
 
     /* Image caching is triggered from the metadataCacheThread to avoid the two threads
@@ -335,7 +345,7 @@ void MW::createImageCache()
 void MW::createThumbView()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    thumbView = new IconView(this, dm, "Thumbnails");
+    thumbView = new IconView(this, dm, icd, "Thumbnails");
     thumbView->setObjectName("Thumbnails");
 //    thumbView->setSpacing(0);                // thumbView not visible without this
     thumbView->setAutoScroll(false);
@@ -384,7 +394,7 @@ void MW::createThumbView()
 void MW::createGridView()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    gridView = new IconView(this, dm, "Grid");
+    gridView = new IconView(this, dm, icd, "Grid");
     gridView->setObjectName("Grid");
     gridView->setSpacing(0);                // gridView not visible without this
     gridView->setWrapping(true);

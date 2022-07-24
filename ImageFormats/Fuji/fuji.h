@@ -22,6 +22,7 @@ public:
                Jpeg *jpeg);
 private:
     QHash<quint32, QString> fujiMakerHash;
+    Utilities u;
 };
 
 #endif // FUJI_H

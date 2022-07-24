@@ -24,6 +24,7 @@ public:
                Jpeg *jpeg);
 private:
     QHash<quint32, QString> panasonicMakerHash;
+    Utilities u;
 };
 
 #endif // PANASONIC_H

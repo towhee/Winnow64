@@ -207,13 +207,13 @@ bool Olympus::parse(MetadataParameters &p,
     if (G::isLogger) G::log(CLASSFUNCTION); 
     //file.open in Metadata::readMetadata
     // first two bytes is the endian order (skip next 2 bytes)
-    quint16 order = Utilities::get16(p.file.read(4));
+    quint16 order = u.get16(p.file.read(4));
     if (order != 0x4D4D && order != 0x4949) return false;
     bool isBigEnd;
     order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
 
     // get offset to first IFD and read it
-    quint32 offsetIfd0 = Utilities::get32(p.file.read(4), isBigEnd);
+    quint32 offsetIfd0 = u.get32(p.file.read(4), isBigEnd);
 
     // Olympus does not chain IFDs
     p.hdr = "IFD0";
@@ -222,11 +222,11 @@ bool Olympus::parse(MetadataParameters &p,
     ifd->readIFD(p);
 
     // pull data reqd from IFD0
-    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount).trimmed();
-    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount).trimmed();
+    m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount).trimmed();
+    m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount).trimmed();
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
-    m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
-    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
+    m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
+    m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
     m.width = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
     m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
 
@@ -239,13 +239,13 @@ bool Olympus::parse(MetadataParameters &p,
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
+    createdExif = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
         ifd->ifdDataHash.value(36868).tagCount).left(19);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // get shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue,
                                       isBigEnd);
         if (x <1 ) {
@@ -263,7 +263,7 @@ bool Olympus::parse(MetadataParameters &p,
     }
     // aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -285,7 +285,7 @@ bool Olympus::parse(MetadataParameters &p,
     // EXIF: Exposure compensation
     if (ifd->ifdDataHash.contains(37380)) {
         // tagType = 10 signed rational
-        double x = Utilities::getReal_s(p.file,
+        double x = u.getReal_s(p.file,
                                       ifd->ifdDataHash.value(37380).tagValue,
                                       isBigEnd);
         m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
@@ -296,7 +296,7 @@ bool Olympus::parse(MetadataParameters &p,
     }
     // focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -306,7 +306,7 @@ bool Olympus::parse(MetadataParameters &p,
         m.focalLengthNum = 0;
     }
     // lens
-    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
+    m.lens = u.getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
                 ifd->ifdDataHash.value(42036).tagCount);
 
     // read makernoteIFD
@@ -321,7 +321,7 @@ bool Olympus::parse(MetadataParameters &p,
     if (ifd->ifdDataHash.contains(37500)) {
         int off;
         for (off = 0; off < 30; off++) {
-            quint16 order = Utilities::get16(p.file.read(2));
+            quint16 order = u.get16(p.file.read(2));
             off++;
             if (order == 0x4949) {
                 foundMakerNotes = true;
@@ -349,7 +349,6 @@ bool Olympus::parse(MetadataParameters &p,
                 m.offsetFull = ifd->ifdDataHash.value(257).tagValue + makerOffset;
                 m.lengthFull = ifd->ifdDataHash.value(258).tagValue;
                 p.offset = m.offsetFull;
-                qDebug() << CLASSFUNCTION << "p.offset =" << p.offset;
                 jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
 //                jpeg->getDimensions(p, m);
             }

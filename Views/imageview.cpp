@@ -196,8 +196,10 @@ bool ImageView::loadImage(QString fPath, QString src)
     /* get cached image.   Must check if image has been cached before calling
     icd->imCache.find(fPath, image) to prevent a mismatch between the fPath index and the
     image in icd->imCache hash table. */
-    int row = dm->rowFromPath(fPath);
-    bool isCached = dm->index(row, 0).data(G::CachedRole).toBool() || src == "ImageCache::cacheImage";
+    int dmRow = dm->rowFromPath(fPath);
+    int sfRow = dm->proxyRowFromModelRow(dmRow);
+//    bool isCached = dm->index(dmRow, 0).data(G::CachedRole).toBool() || src == "ImageCache::cacheImage";
+    bool isCached = icd->cacheItemList.at(sfRow).isCached || src == "ImageCache::cacheImage";
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION,
                                                fPath + " isCached =" +
                                                (isCached ? "true" : "false"));
@@ -885,8 +887,6 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
 void ImageView::mousePressEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-
-    qDebug() << "ImageView::mousePressEvent" << event->button();
 
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;

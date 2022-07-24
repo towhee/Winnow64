@@ -130,13 +130,13 @@ bool Panasonic::parse(MetadataParameters &p,
     //file.open in Metadata::readMetadata
 
     // first two bytes is the endian order (skip next 2 bytes)
-    quint16 order = Utilities::get16(p.file.read(4));
+    quint16 order = u.get16(p.file.read(4));
     if (order != 0x4D4D && order != 0x4949) return false;
     bool isBigEnd;
     order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
 
     // get offset to first IFD and read it
-    quint32 offsetIfd0 = Utilities::get32(p.file.read(4), isBigEnd);
+    quint32 offsetIfd0 = u.get32(p.file.read(4), isBigEnd);
 
     // Panasonic does not chain IFDs
     p.hdr = "Panasonic IFD0";
@@ -145,11 +145,11 @@ bool Panasonic::parse(MetadataParameters &p,
     ifd->readIFD(p);
 
     // pull data reqd from main file IFD0
-    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount).trimmed();
-    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount).trimmed();
+    m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount).trimmed();
+    m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount).trimmed();
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
-    m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
-    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
+    m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
+    m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
     m.offsetFull = ifd->ifdDataHash.value(46).tagValue;
     m.lengthFull = ifd->ifdDataHash.value(46).tagCount;
     // default values for thumbnail
@@ -179,13 +179,13 @@ bool Panasonic::parse(MetadataParameters &p,
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
+    createdExif = u.getString(p.file, ifd->ifdDataHash.value(36868).tagValue,
         ifd->ifdDataHash.value(36868).tagCount).left(19);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
 
     // shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue,
                                       isBigEnd);
         if (x <1 ) {
@@ -203,7 +203,7 @@ bool Panasonic::parse(MetadataParameters &p,
     }
     // aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -215,7 +215,7 @@ bool Panasonic::parse(MetadataParameters &p,
     // exposure compensation
     if (ifd->ifdDataHash.contains(37380)) {
         // tagType = 10 signed rational
-        double x = Utilities::getReal_s(p.file,
+        double x = u.getReal_s(p.file,
                                       ifd->ifdDataHash.value(37380).tagValue,
                                       isBigEnd);
         m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
@@ -226,7 +226,7 @@ bool Panasonic::parse(MetadataParameters &p,
     }
     // focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(p.file,
+        double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -242,7 +242,7 @@ bool Panasonic::parse(MetadataParameters &p,
     quint32 startOffset = m.offsetFull;
     p.file.seek(m.offsetFull);
 
-    if (Utilities::get16(p.file.read(2), isBigEnd) != 0xFFD8) return 0;
+    if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) return 0;
 
     // build a hash of jpg segment offsets
     p.offset = static_cast<quint32>(p.file.pos());
@@ -255,7 +255,7 @@ bool Panasonic::parse(MetadataParameters &p,
         bool foundEndian = false;
         int counter = 0;
         while (!foundEndian) {
-            quint32 a = Utilities::get16(p.file.read(2), isBigEnd);
+            quint32 a = u.get16(p.file.read(2), isBigEnd);
             if (a == 0x4949 || a == 0x4D4D) {
                 a == 0x4D4D ? isBigEnd = true : isBigEnd = false;
                 // offsets are from the endian position in JPEGs
@@ -269,8 +269,8 @@ bool Panasonic::parse(MetadataParameters &p,
 
         if (p.report) p.rpt << "\n startOffset = " << startOffset;
 
-        quint32 a = Utilities::get16(p.file.read(2));  // skip magic 42
-        a = Utilities::get32(p.file.read(4), isBigEnd);
+        quint32 a = u.get16(p.file.read(2));  // skip magic 42
+        a = u.get32(p.file.read(4), isBigEnd);
         quint32 offsetIfd0 = a + startOffset;
 
         // read JPG IFD0
@@ -305,11 +305,11 @@ bool Panasonic::parse(MetadataParameters &p,
             p.hash = &panasonicMakerHash;
             ifd->readIFD(p);
             // get lens
-            m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(81).tagValue + startOffset, ifd->ifdDataHash.value(81).tagCount);
+            m.lens = u.getString(p.file, ifd->ifdDataHash.value(81).tagValue + startOffset, ifd->ifdDataHash.value(81).tagCount);
             // get lens serial number
-            m.lensSN = Utilities::getString(p.file, ifd->ifdDataHash.value(82).tagValue + startOffset, ifd->ifdDataHash.value(82).tagCount);
+            m.lensSN = u.getString(p.file, ifd->ifdDataHash.value(82).tagValue + startOffset, ifd->ifdDataHash.value(82).tagCount);
             // get camera serial number
-            m.cameraSN = Utilities::getString(p.file, ifd->ifdDataHash.value(37).tagValue + startOffset, ifd->ifdDataHash.value(37).tagCount);
+            m.cameraSN = u.getString(p.file, ifd->ifdDataHash.value(37).tagValue + startOffset, ifd->ifdDataHash.value(37).tagCount);
         }
     }
 

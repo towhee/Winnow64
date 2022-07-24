@@ -291,7 +291,7 @@ void MetadataCache::iconCleanup()
         if (sfRow < startRow || sfRow > endRow) {
             i.remove();
             QModelIndex dmIdx = dm->index(dmRow, 0);
-            emit setIcon(dmIdx, nullPm, dm->instance);
+            emit setIcon(dmIdx, nullPm, dm->instance, "MetadataCache::iconCleanup");
         }
     }
 }
@@ -351,7 +351,7 @@ bool MetadataCache::loadIcon(int sfRow)
         }
         if (thumbLoaded) {
             pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-            emit setIcon(dmIdx, pm, dm->instance);
+            emit setIcon(dmIdx, pm, dm->instance, "MetadataCache::loadIcon");
             iconMax(pm);
             iconsCached.append(dmRow);
         }
@@ -430,7 +430,7 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
         if (thumbLoaded) {
             QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
             QModelIndex dmIdx = dm->index(dmRow, 0);
-            emit setIcon(dmIdx, pm, dm->instance);
+            emit setIcon(dmIdx, pm, dm->instance, "MetadataCache::readMetadataIcon");
             iconMax(pm);
             iconsCached.append(dmRow);
         }

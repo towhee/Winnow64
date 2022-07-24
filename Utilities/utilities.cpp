@@ -221,16 +221,19 @@ This is useful to save a bytearray and then examine using HxD hex editor or Qt C
 
 int Utilities::get4_1st(QByteArray c)
 {
+    if (c == "") return 0;
     return static_cast<int>(c[0] >> 4);
 }
 
 int Utilities::get4_2nd(QByteArray c)
 {
+    if (c == "") return 0;
     return static_cast<int>(c[0]&0xF);
 }
 
 quint8 Utilities::get8(QByteArray c)
 {
+    if (c == "") return 0;
     return c[0]&0xFF;
 }
 
@@ -244,6 +247,7 @@ QByteArray Utilities::put8(quint8 x)
 
 quint16 Utilities::get16(QByteArray c, bool isBigEnd)
 {
+    if (c == "") return 0;
     if (isBigEnd) {
         // c might be longer than 2 bytes so use last two bytes if big endian
 //        c = c.right(2);
@@ -276,6 +280,7 @@ QByteArray Utilities::put16(quint16 x, bool isBigEnd)
 
 quint32 Utilities::get24(QByteArray c, bool isBigEnd)
 {
+    if (c == "") return 0;
     if (isBigEnd) {
         quint32 x = c[0]&0xFF;
         x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
@@ -292,6 +297,7 @@ quint32 Utilities::get24(QByteArray c, bool isBigEnd)
 
 quint32 Utilities::get32(QByteArray c, bool isBigEnd)
 {
+    if (c == "") return 0;
     if (isBigEnd) {
         quint32 x = c[0]&0xFF;
         x = static_cast<quint32>((x << 8) | (c[1]&0xFF));
@@ -329,6 +335,7 @@ QByteArray Utilities::put32(quint32 x, bool isBigEnd)
 
 quint64 Utilities::get40(QByteArray c, bool isBigEnd)
 {
+    if (c == "") return 0;
     if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
@@ -349,6 +356,7 @@ quint64 Utilities::get40(QByteArray c, bool isBigEnd)
 
 quint64 Utilities::get48(QByteArray c, bool isBigEnd)
 {
+    if (c == "") return 0;
     if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));
@@ -371,6 +379,7 @@ quint64 Utilities::get48(QByteArray c, bool isBigEnd)
 
 quint64 Utilities::get64(QByteArray c, bool isBigEnd)
 {
+    if (c == "") return 0;
     if (isBigEnd) {
         quint64 x = c[0]&0xFF;
         x = static_cast<quint64>((x << 8) | (c[1]&0xFF));

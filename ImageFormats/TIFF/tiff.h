@@ -40,6 +40,7 @@ public:
     bool encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd);
 
 private:
+    Utilities u;
     QImage *im;
 
     quint32 lastIFDOffsetPosition = 0;      // used to add thumbnail IFD to IFD chain

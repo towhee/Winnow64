@@ -1536,7 +1536,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (G::stop) return;
     G::isNewSelection = false;
 
-   /*
+//   /*
     qDebug() << "\n" << CLASSFUNCTION
              << "src =" << src
              << "G::isInitializing =" << G::isInitializing
@@ -1794,6 +1794,7 @@ void MW::stopAndClearAll(QString src)
     updateStatus(false, "", CLASSFUNCTION);
     cacheProgressBar->clearProgress();
     progressLabel->setVisible(false);
+    filterStatusLabel->setVisible(false);
     updateClassification();
     selectionModel->clear();
     thumbView->setUpdatesEnabled(false);
@@ -1972,7 +1973,8 @@ void MW::loadConcurrentNewFolder()
     sortMenu->setEnabled(false);
     // read metadata using MetaRead
     metaRead->initialize();     // only when change folders
-    emit restartMetaRead(currSfRow);
+    emit startMetaRead(currSfRow, CLASSFUNCTION);
+//    emit restartMetaRead(currSfRow);
     // read metadata using concurrent in metadataCacheThread
 //    metadataCacheThread->initialize();     // only when change folders
 //    metadataCacheThread->mr_read(currSfRow);
@@ -1983,7 +1985,8 @@ void MW::loadConcurrentWhenOkay(int newRow, QString src)
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Row =" + QString::number(newRow));
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
-            emit restartMetaRead(newRow);
+            emit startMetaRead(newRow, CLASSFUNCTION);
+//            emit restartMetaRead(newRow);
         }
     }
 }
@@ -2012,12 +2015,12 @@ void MW::loadConcurrentMetaDone()
 //        metaRead->read(MetaRead::SizeChange);
 //        return;
 //    }
-    if (dm->startIconRange < metaRead->firstIconRow ||
-            dm->endIconRange > metaRead->lastIconRow)
-    {
-        metadataCacheThread->scrollChange(CLASSFUNCTION);
-        return;
-    }
+//    if (dm->startIconRange < metaRead->firstIconRow ||
+//            dm->endIconRange > metaRead->lastIconRow)
+//    {
+//        metadataCacheThread->scrollChange(CLASSFUNCTION);
+//        return;
+//    }
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
        InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
@@ -2207,6 +2210,20 @@ void MW::loadImageCacheForNewFolder()
     G::isNewFolderLoadedAndInfoViewUpToDate = true;
 }
 
+void MW::scrollChange(int sfRow, QString src)
+{
+    emit startMetaRead(sfRow, CLASSFUNCTION);
+//    if (metaRead->isRunning) {
+//        metaRead->stop();
+//        G::wait(0);
+//        while (metaRead->isRunning && G::wait(1) < 5);
+//    }
+//    iconCache->stop();
+//    G::wait(0);
+//    while (iconCache->isRunning && G::wait(1) < 5);
+//    emit startIconCache(sfRow, src);
+}
+
 void MW::thumbHasScrolled()
 {
 /*
@@ -2249,16 +2266,8 @@ void MW::thumbHasScrolled()
             tableView->scrollToRow(thumbView->midVisibleCell, CLASSFUNCTION);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
-//            metadataCacheThread->scrollChange(CLASSFUNCTION);
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else {
-                iconCache->stop();
-                G::wait(0);
-                while (iconCache->isRunning && G::wait(1) < 5);
-                emit startIconCache(thumbView->midVisibleCell, "MW::thumbHasScrolled");
-            }
-//            else loadConcurrentWhenOkay(thumbView->midVisibleCell, CLASSFUNCTION);
-//            else loadConcurrent(/*MetaRead::Scroll, */thumbView->midVisibleCell, CLASSFUNCTION);
+            else scrollChange(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         }
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
@@ -2309,8 +2318,7 @@ void MW::gridHasScrolled()
         if (!G::isNewSelection && gridView->isVisible()) {
             qDebug() << CLASSFUNCTION << "1";
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else loadConcurrentWhenOkay(/*MetaRead::Scroll, */gridView->midVisibleCell, CLASSFUNCTION);
-//            metadataCacheThread->scrollChange(CLASSFUNCTION);
+            else scrollChange(gridView->midVisibleCell, CLASSFUNCTION);
         }
     }
     G::ignoreScrollSignal = false;
@@ -2356,8 +2364,7 @@ void MW::tableHasScrolled()
         if (!G::isNewSelection) {
             qDebug() << CLASSFUNCTION;
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else loadConcurrentWhenOkay(/*MetaRead::Scroll, */tableView->midVisibleRow, CLASSFUNCTION);
-//            metadataCacheThread->scrollChange(CLASSFUNCTION);
+            else scrollChange(tableView->midVisibleRow, CLASSFUNCTION);
         }
     }
     G::ignoreScrollSignal = false;
@@ -2521,10 +2528,10 @@ void MW::updateImageCacheStatus(QString instruction,
         // cached
         for (int i = 0; i < rows; ++i) {
 //            bool metaLoaded = dm->sf->index(i, G::MetadataLoadedColumn).data().toBool();
-            bool cached = dm->sf->index(i, G::PathColumn).data(G::CachedRole).toBool();
-            if (/*metaLoaded && */cached)
+//            bool cached = dm->sf->index(i, G::PathColumn).data(G::CachedRole).toBool();
+            if (icd->cacheItemList.at(i).isCached)
                 cacheProgressBar->updateProgress(i, i + 1, rows,
-                                            cacheProgressBar->imageCacheColorGradient);
+                                  cacheProgressBar->imageCacheColorGradient);
         }
 
         // cursor
