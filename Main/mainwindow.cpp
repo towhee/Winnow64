@@ -1536,7 +1536,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (G::stop) return;
     G::isNewSelection = false;
 
-//   /*
+   /*
     qDebug() << "\n" << CLASSFUNCTION
              << "src =" << src
              << "G::isInitializing =" << G::isInitializing
@@ -5776,7 +5776,7 @@ bool MW::isFolderValid(QString dirPath, bool report, bool isRemembered)
     // check if unmounted USB drive
     if (!testDir.isReadable()) {
         if (report) {
-            msg = "The folder (" + dirPath + ") is not readable.  Perhaps it was a USB drive that is not currently mounted or that has been ejected.";
+            msg = "The folder " + Utilities::enquote(dirPath) + " is not readable.\n\nPerhaps it was a USB drive that is not currently mounted or that has been ejected, \nor you may not have permission to view this folder.";
             statusLabel->setText("");
             setCentralMessage(msg);
         }

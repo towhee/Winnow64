@@ -1102,17 +1102,15 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         return;
     }
 
-    qDebug() << "DataModel::setIcon" << dmIdx.row() << src;
+//    qDebug() << "DataModel::setIcon" << dmIdx.row() << src;
 
     mutex.lock();
     QStandardItem *item = itemFromIndex(dmIdx);
-    /*
-    if (pm.isNull()) {
-        item->setIcon(QIcon());
-    }
-    else {
-    const QIcon icon(pm);
-        if (item != nullptr) item->setIcon(icon);
+    /* const required to prevent occasional malloc deallocation error in qarraydata.h
+    static void deallocate(QArrayData *data) noexcept
+    {
+        static_assert(sizeof(QTypedArrayData) == sizeof(QArrayData));
+        QArrayData::deallocate(data, sizeof(T), alignof(AlignmentDummy)); // crashes here
     }
     */
     const QIcon icon(pm);
@@ -1165,13 +1163,11 @@ bool DataModel::allIconsLoaded()
 void DataModel::clearAllIcons()
 {
     mutex.lock();
-    QPixmap nullPm;
     QStandardItem *item;
     for (int row = 0; row < rowCount(); ++row) {
         item = itemFromIndex(index(row, 0));
-//        QStandardItem *item = itemFromIndex(index(row, 0));
         if (!item->icon().isNull()) {
-            item->setIcon(nullPm);
+            item->setIcon(QIcon());
         }
     }
     mutex.unlock();
@@ -1179,10 +1175,11 @@ void DataModel::clearAllIcons()
 
 void DataModel::clearOutOfRangeIcons(int startRow)
 {
-    QMutexLocker ml(&mutex);
-    qDebug() << "DataModel::clearOutOfRangeIcons" << startRow;
-//    mutex.lock();
-    QIcon nullIcon;
+/*
+    Not used.  See MetaRead::cleanupIcons
+*/
+//    qDebug() << "DataModel::clearOutOfRangeIcons" << startRow;
+    mutex.lock();
     startIconRange = startRow - iconChunkSize / 2;
     if (startIconRange< 0) startIconRange = 0;
     endIconRange = startIconRange + iconChunkSize;
@@ -1195,11 +1192,9 @@ void DataModel::clearOutOfRangeIcons(int startRow)
         if (item->icon().isNull()) {
             continue;
         }
-//        item->setIcon(nullIcon);
-//        item->setData(0, Qt::DecorationRole);
-        setData(index(row,0), 0, Qt::DecorationRole);
+        item->setIcon(QIcon());
     }
-//    mutex.unlock();
+    mutex.unlock();
 }
 
 void DataModel::setAllMetadataLoaded(bool isLoaded)

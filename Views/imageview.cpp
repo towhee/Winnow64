@@ -200,9 +200,9 @@ bool ImageView::loadImage(QString fPath, QString src)
     int sfRow = dm->proxyRowFromModelRow(dmRow);
 //    bool isCached = dm->index(dmRow, 0).data(G::CachedRole).toBool() || src == "ImageCache::cacheImage";
     bool isCached = icd->cacheItemList.at(sfRow).isCached || src == "ImageCache::cacheImage";
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION,
-                                               fPath + " isCached =" +
-                                               (isCached ? "true" : "false"));
+//    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION,
+//                                               fPath + " isCached = " +
+//                                               (isCached ? "true" : "false"));
     if (isCached) {
         QImage image; // confirm the cached image is in the image cache
         bool imageAvailable = icd->imCache.find(fPath, image);

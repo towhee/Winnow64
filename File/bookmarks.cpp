@@ -197,7 +197,7 @@ void BookMarks::removeBookmark()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (rightClickItem) {
-        qDebug() << CLASSFUNCTION<< rightClickItem->toolTip(0);
+//        qDebug() << CLASSFUNCTION<< rightClickItem->toolTip(0);
         bookmarkPaths.remove(rightClickItem->toolTip(0));
         reloadBookmarks();
     }
