@@ -60,6 +60,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QList<int> list;  // force crash
+    int a = list.at(17);
+    qDebug() << "a =" << a;
+    return;
 //    QStandardItem *item = dm->itemFromIndex(dm->index(0, 0));
 //    item->setData(0, Qt::DecorationRole);
 //    dm->setData(dm->index(0,0), 0, Qt::DecorationRole);

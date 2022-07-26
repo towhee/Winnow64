@@ -234,8 +234,6 @@ void MW::createMDCache()
     connect(&metaReadThread, &QThread::finished, metaRead, &QObject::deleteLater);
     // read metadata
     connect(this, &MW::startMetaRead, metaRead, &MetaRead::start);
-    // add metadata to datamodel
-    connect(this, &MW::restartMetaRead, metaRead, &MetaRead::restart);
     // message metadata reading completed
     connect(metaRead, &MetaRead::okayToStart, this, &MW::loadConcurrent);
     // add metadata to datamodel

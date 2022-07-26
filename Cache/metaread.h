@@ -43,7 +43,7 @@ signals:
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
-    void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance, QString src);
+    void setIcon(QModelIndex dmIdx, const QPixmap &pm, int instance, QString src);
     void clearOutOfRangeIcons(int startRow);
     void setImageCachePosition(QString fPath);      // not used
     void startImageCache();
@@ -51,7 +51,6 @@ signals:
 
 public slots:
     void initialize();
-    void restart(int newRow);
     void stop();
     void start(int row = 0, QString src = "");
     void read(int startRow = 0, QString src = "");
@@ -64,10 +63,8 @@ private:
     void readIcon(QModelIndex sfIdx, QString fPath);
     void iconMax(QPixmap &thumb);
     void cleanupIcons();
-    void buildMetadataPriorityQueue(int sfRow);
     bool isNotLoaded(int sfRow);
     bool inIconRange(int sfRow);
-    void updateIcons();
 
     QMutex mutex;
 //    QWaitCondition condition;
@@ -86,7 +83,7 @@ private:
     int newStartRow = -1;
     int newRow;
 
-    QPixmap nullPm;
+    const QPixmap nullPm;
 
     bool imageCachingStarted = false;
     QList<int> priorityQueue;

@@ -1974,7 +1974,6 @@ void MW::loadConcurrentNewFolder()
     // read metadata using MetaRead
     metaRead->initialize();     // only when change folders
     emit startMetaRead(currSfRow, CLASSFUNCTION);
-//    emit restartMetaRead(currSfRow);
     // read metadata using concurrent in metadataCacheThread
 //    metadataCacheThread->initialize();     // only when change folders
 //    metadataCacheThread->mr_read(currSfRow);
@@ -1986,7 +1985,6 @@ void MW::loadConcurrentWhenOkay(int newRow, QString src)
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
             emit startMetaRead(newRow, CLASSFUNCTION);
-//            emit restartMetaRead(newRow);
         }
     }
 }
