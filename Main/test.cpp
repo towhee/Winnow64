@@ -60,10 +60,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QList<int> list;  // force crash
+    // cause a crash
+    QList<int> list;
     int a = list.at(17);
     qDebug() << "a =" << a;
     return;
+
 //    QStandardItem *item = dm->itemFromIndex(dm->index(0, 0));
 //    item->setData(0, Qt::DecorationRole);
 //    dm->setData(dm->index(0,0), 0, Qt::DecorationRole);
@@ -75,9 +77,9 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    thumbView->selectThumb(600);
 //    return;
 
-    QPixmap nullPm;
-    QModelIndex dmIdx = dm->index(0,0);
-    dm->setIcon(dmIdx, nullPm, dm->instance, "test");
+//    QPixmap nullPm;
+//    QModelIndex dmIdx = dm->index(0,0);
+//    dm->setIcon(dmIdx, nullPm, dm->instance, "test");
     diagnosticsMetadataCache();
     return;
 
@@ -92,8 +94,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     QElapsedTimer t;
     t.start();
 
-    qDebug() << G::rowsWithIcon.count();
-    return;
 
     dm->clearAllIcons();
     qDebug() << t.nsecsElapsed() << "nanosec";

@@ -1319,7 +1319,7 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     cache direction, priorities and target are reset and the cache is updated in fillCache.
     */
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::setCurrentPosition", path);
-    qDebug() << CLASSFUNCTION << path;
+//    qDebug() << CLASSFUNCTION << path;
     if (debugCaching) {
         qDebug();
         qDebug().noquote() << "ImageCache::setCurrentPosition" << path << "src =" << src;

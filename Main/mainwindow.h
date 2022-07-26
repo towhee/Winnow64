@@ -45,11 +45,9 @@
 #include "Embellish/embel.h"
 
 #include "Cache/cachedata.h"
+#include "Cache/metaread.h"
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
-
-#include "Cache/metaread.h"
-#include "Cache/iconcache.h"
 
 //#ifdef Q_OS_WIN
 #include "Utilities/icc.h"
@@ -996,14 +994,9 @@ private:
 
     QThread metaReadThread;
     QThread iconCacheThread;
+    MetaRead *metaRead = nullptr;
     MetadataCache *metadataCacheThread;
     ImageCache *imageCacheThread;
-//    MdCacheMgr *mdCacheMgr;
-//    MetaHash metaHash;
-
-    // loadversion2
-    MetaRead *metaRead = nullptr;
-    IconCache *iconCache = nullptr;
 
     Thumb *thumb;
     InfoView *infoView;

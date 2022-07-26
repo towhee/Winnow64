@@ -48,7 +48,7 @@ QT += network
 
 HEADERS += Cache/cachedata.h
 HEADERS += Cache/framedecoder.h
-HEADERS += Cache/iconcache.h
+HEADERS +=
 HEADERS += Cache/mdcache.h
 HEADERS += Cache/metaread.h
 HEADERS += Cache/metareader.h
@@ -166,7 +166,7 @@ HEADERS += Views/videowidget.h
 
 SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/framedecoder.cpp
-SOURCES += Cache/iconcache.cpp
+SOURCES +=
 SOURCES += Cache/imagecache.cpp
 SOURCES += Cache/imagedecoder.cpp
 SOURCES += Cache/mdcache.cpp

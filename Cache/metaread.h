@@ -17,47 +17,33 @@ class MetaRead : public QObject
 public:
     MetaRead(QObject *parent, DataModel *dm, Metadata *metadata);
     ~MetaRead() override;
-    enum Action {
-        FileSelection,
-        Scroll,
-        SizeChange
-    } action;
+
     void dmRowRemoved(int dmRow);
     QString diagnostics();
     QString reportMetaCache();
 
-    QWaitCondition condition;
-    bool abort;
     bool isRunning = false;
-    bool isRestart;
 
     int iconChunkSize;
     int firstIconRow;
     int lastIconRow;
 
 signals:
-    void done();
-    void stopped();
-    void startAtRow(int row, QString src);
-    void okayToStart(int newRow);
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
-    void setIcon(QModelIndex dmIdx, const QPixmap &pm, int instance, QString src);
-    void clearOutOfRangeIcons(int startRow);
-    void setImageCachePosition(QString fPath);      // not used
     void startImageCache();
-    void updateIconBestFit();
+
+    void updateIconBestFit();  // req'd?
+    void done();               // not being used - req'd?
 
 public slots:
     void initialize();
     void stop();
     void start(int row = 0, QString src = "");
-    void read(int startRow = 0, QString src = "");
-//    void scroll(int sfRow, QString src = "");
-//    void sizeChange(int sfRow, QString src = "");
 
 private:
+    void read(int startRow = 0, QString src = "");
     void readRow(int sfRow);
     void readMetadata(QModelIndex sfIdx, QString fPath);
     void readIcon(QModelIndex sfIdx, QString fPath);
@@ -68,28 +54,23 @@ private:
 
     QMutex mutex;
 //    QWaitCondition condition;
-//    bool abort;
-//    bool isRunning = false;
+    bool abort;
+
     DataModel *dm;
     Metadata *metadata;
     Thumb *thumb;
     int dmInstance;
-    int adjIconChunkSize;
-    int sfRowCount;
     int visibleIconCount;
-    int sfStart;
+    int sfRowCount;
+    int iconLimit;                  // iconChunkSize * expansionFactor
 
-    int sfRow;
     int newStartRow = -1;
-    int newRow;
-
-    const QPixmap nullPm;
 
     bool imageCachingStarted = false;
-    QList<int> priorityQueue;
+
+    QList<int> rowsWithIcon;
 
     // lists not req'd
-    QList<int> iconsLoaded;
     QList<int> visibleIcons;
     QList<int> outsideIconRange;
 

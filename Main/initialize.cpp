@@ -235,14 +235,14 @@ void MW::createMDCache()
     // read metadata
     connect(this, &MW::startMetaRead, metaRead, &MetaRead::start);
     // message metadata reading completed
-    connect(metaRead, &MetaRead::okayToStart, this, &MW::loadConcurrent);
+//    connect(metaRead, &MetaRead::okayToStart, this, &MW::loadConcurrent);
     // add metadata to datamodel
     connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
     // update icon in datamodel
-    connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
+//    connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
     // cleanup icons in datamodel
-    connect(metaRead, &MetaRead::clearOutOfRangeIcons,
-            dm, &DataModel::clearOutOfRangeIcons, Qt::QueuedConnection);
+//    connect(metaRead, &MetaRead::clearOutOfRangeIcons,
+//            dm, &DataModel::clearOutOfRangeIcons, Qt::QueuedConnection);
 //    // message metadata reading stopped (for new folder)
 //    connect(metaRead, &MetaRead::stopped, this, &MW::stopAndClearAllAfterMetaReadStopped);
     // message metadata reading completed
@@ -256,26 +256,26 @@ void MW::createMDCache()
 
     metaReadThread.start();
 
-    // IconCache
-    iconCache = new IconCache(this, dm, metadata, iconCacheData);
-    iconCache->moveToThread(&iconCacheThread);
+//    // IconCache
+//    iconCache = new IconCache(this, dm, metadata, iconCacheData);
+//    iconCache->moveToThread(&iconCacheThread);
 
-    iconCache->iconChunkSize = 200;
+//    iconCache->iconChunkSize = 200;
 
-    // delete thread when finished
-    connect(&iconCacheThread, &QThread::finished, iconCache, &QObject::deleteLater);
-    // read iconCache
-    connect(this, &MW::startIconCache, iconCache, &IconCache::read);
-    // add metadata to datamodel
-    connect(iconCache, &IconCache::addToDatamodel, dm, &DataModel::addMetadataForItem);
-    // update icon in datamodel
-    connect(iconCache, &IconCache::setIcon, dm, &DataModel::setIcon);
-    // add model row to list of icons cached
-    connect(iconCache, &IconCache::addToIconCache, iconCacheData, &IconCacheData::add);
-    // remove model row from list of icons cached
-    connect(iconCache, &IconCache::removeFromIconCache, iconCacheData, &IconCacheData::remove);
+//    // delete thread when finished
+//    connect(&iconCacheThread, &QThread::finished, iconCache, &QObject::deleteLater);
+//    // read iconCache
+//    connect(this, &MW::startIconCache, iconCache, &IconCache::read);
+//    // add metadata to datamodel
+//    connect(iconCache, &IconCache::addToDatamodel, dm, &DataModel::addMetadataForItem);
+//    // update icon in datamodel
+//    connect(iconCache, &IconCache::setIcon, dm, &DataModel::setIcon);
+//    // add model row to list of icons cached
+//    connect(iconCache, &IconCache::addToIconCache, iconCacheData, &IconCacheData::add);
+//    // remove model row from list of icons cached
+//    connect(iconCache, &IconCache::removeFromIconCache, iconCacheData, &IconCacheData::remove);
 
-    iconCacheThread.start();
+//    iconCacheThread.start();
 }
 
 void MW::createImageCache()
