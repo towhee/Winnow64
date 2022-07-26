@@ -113,7 +113,7 @@ public slots:
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
     bool addMetadataForItem(ImageMetadata m);
-    void setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance, QString src = "");
+    void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
                           qint64 duration, FrameDecoder *frameDecoder);
     void setValue(QModelIndex dmIdx, QVariant value, int role = Qt::EditRole);

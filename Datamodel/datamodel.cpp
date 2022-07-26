@@ -423,7 +423,7 @@ Steps:
                         QString::number(folderCount) + " folders" +
                         escapeClause;
             emit centralMsg(s);        // rghmsg
-//            QCoreApplication::processEvents();
+            QCoreApplication::processEvents();
         }
         if (abortLoadingModel) return endLoad(false);
     }
@@ -457,7 +457,7 @@ Steps:
                                 QString::number(folderCount) + " folders" +
                                 escapeClause;
                     emit centralMsg(s);    // rghmsg
-//                    QCoreApplication::processEvents();
+                    QCoreApplication::processEvents();
                 }
             }
         }
@@ -1067,21 +1067,23 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
     delete frameDecoder;
 }
 
-void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance, QString src)
+void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src)
 {
 /*
     setIcon is a slot that can be signalled from another thread.  If the user is rapidly
     changing folders it is possible to receive a delayed signal from the previous folder.
     To prevent this, the datamodel instance is incremented every time a new folder is
     loaded, and this is checked against the signal instance.
-*/
-    QMutexLocker ml(&mutex);
-    if (G::isLogger) G::log(CLASSFUNCTION);
-//    if (loadingModel) {
-//        qWarning() << CLASSFUNCTION << "loadingModel =" << loadingModel;
-//        return;
-//    }
 
+    Signaled from:
+
+*/
+//    QMutexLocker ml(&mutex);
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (loadingModel) {
+        qWarning() << CLASSFUNCTION << "loadingModel =" << loadingModel;
+        return;
+    }
     if (fromInstance != instance) {
         qWarning() << CLASSFUNCTION << dmIdx << "Instance conflict = "
                  << instance << fromInstance;
@@ -1100,16 +1102,23 @@ void DataModel::setIcon(QModelIndex dmIdx, QPixmap &pm, int fromInstance, QStrin
         return;
     }
 
-//    qDebug() << "DataModel::setIcon" << dmIdx.row()
-//             << G::rowsWithIcon.size()
-//             << src
-//                ;
+    qDebug() << "DataModel::setIcon" << dmIdx.row() << src;
 
-//    mutex.lock();
+    mutex.lock();
     QStandardItem *item = itemFromIndex(dmIdx);
-    if (item != nullptr) item->setIcon(pm);
+    /*
+    if (pm.isNull()) {
+        item->setIcon(QIcon());
+    }
+    else {
+    const QIcon icon(pm);
+        if (item != nullptr) item->setIcon(icon);
+    }
+    */
+    const QIcon icon(pm);
+    item->setIcon(icon);
     setData(dmIdx, false, G::CachingIconRole);
-//    mutex.unlock();
+    mutex.unlock();
 }
 
 bool DataModel::isIconCaching(int sfRow)
@@ -1366,7 +1375,7 @@ int DataModel::modelRowFromProxyRow(int sfRow)
 void DataModel::clearPicks()
 {
 /*
-reset all the picks to false.
+    reset all the picks to false.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     for(int row = 0; row < sf->rowCount(); row++) {

@@ -1772,7 +1772,7 @@ void IconView::zoomCursor(const QModelIndex &idx, bool forceUpdate, QPoint mouse
     w += (pw * 8);                                  // 2 pens * 2 sides * 2 gaps
     h += (pw * 8);
     cursorRect = QRect(0, 0, w, h);
-    qDebug() << CLASSFUNCTION << cursorRect << G::actDevicePixelRatio << G::sysDevicePixelRatio;
+//    qDebug() << CLASSFUNCTION << cursorRect << G::actDevicePixelRatio << G::sysDevicePixelRatio;
     auto frame = QImage(w, h, QImage::Format_ARGB32);
     int opacity = 0;                                // Set this between 0 and 255
     frame.fill(QColor(0,0,0,opacity));
