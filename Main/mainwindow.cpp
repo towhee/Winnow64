@@ -2115,7 +2115,7 @@ void MW::loadLinearNewFolder()
     sortMenu->setEnabled(false);
 
     setCentralMessage("Reading all metadata.");
-    qApp->processEvents();
+//    qApp->processEvents();
 
     updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
     dm->addAllMetadata();
@@ -2123,7 +2123,7 @@ void MW::loadLinearNewFolder()
     if (dm->abortLoadingModel || !G::allMetadataLoaded) {
         updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
         setCentralMessage("Image loading has been cancelled 2.");
-        QApplication::processEvents();
+//        QApplication::processEvents();
         return;
     }
 
@@ -2137,7 +2137,7 @@ void MW::loadLinearNewFolder()
 
 
     setCentralMessage("Reading icons.");
-    QApplication::processEvents();
+//    QApplication::processEvents();
     mct->readIconChunk();
     G::allIconsLoaded = dm->allIconsLoaded();
     updateMetadataThreadRunStatus(false, true, CLASSFUNCTION);

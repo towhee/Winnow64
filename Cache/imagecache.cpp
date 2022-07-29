@@ -290,7 +290,8 @@ void ImageCache::setTargetRange()
         sumMB += icd->cacheItemList.at(i).sizeMB;
         if (sumMB < icd->cache.maxMB) {
             icd->cacheItemList[i].isTarget = true;
-            priorityList.append(icd->cacheItemList[i].key);
+            int tKey = icd->cacheItemList.at(i).key;
+            priorityList.append(icd->cacheItemList.at(i).key);
         }
         else {
             icd->cacheItemList[i].isTarget = false;
@@ -1082,7 +1083,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 
 
     icd->cache.folderMB += icd->cacheItem.sizeMB; // req'd?
-    setTargetRange();
+//    setTargetRange();
 }
 
 void ImageCache::buildImageCacheList()
@@ -1439,7 +1440,7 @@ bool ImageCache::fillCache(int id, bool positionChange)
       - nextToDecache
 */
 
-    QMutexLocker locker(&mutex);        // required? - seems to run fine without mutex.
+//    QMutexLocker locker(&mutex);        // required? - seems to run fine without mutex.
     if (abort) return false;
 
     // new image selected?
