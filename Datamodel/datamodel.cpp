@@ -423,7 +423,7 @@ Steps:
                         QString::number(folderCount) + " folders" +
                         escapeClause;
             emit centralMsg(s);        // rghmsg
-            QCoreApplication::processEvents();
+//            QCoreApplication::processEvents();
         }
         if (abortLoadingModel) return endLoad(false);
     }
@@ -457,7 +457,7 @@ Steps:
                                 QString::number(folderCount) + " folders" +
                                 escapeClause;
                     emit centralMsg(s);    // rghmsg
-                    QCoreApplication::processEvents();
+//                    QCoreApplication::processEvents();
                 }
             }
         }
@@ -778,7 +778,7 @@ void DataModel::addAllMetadata()
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " secondary metadata loading...";
             emit centralMsg(s);    // rghmsg
-            QCoreApplication::processEvents();  // MetaRead new folder crash?
+//            QCoreApplication::processEvents();  // MetaRead new folder crash?
         }
         if (abortLoadingModel) {
             endLoad(false);

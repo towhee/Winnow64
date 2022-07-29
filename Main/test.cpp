@@ -83,14 +83,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     diagnosticsMetadataCache();
     return;
 
-    QByteArray bx = "www";
-    quint16 x = Utilities::get16(bx);
-    Utilities util;
-    quint16 x1 = util.get16(bx);
-    qDebug() << x << x1;
-    return;
-
-
     QElapsedTimer t;
     t.start();
 
@@ -98,85 +90,6 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
     dm->clearAllIcons();
     qDebug() << t.nsecsElapsed() << "nanosec";
     return;
-
-
-    int sfRow = 8;
-    bool isCached = icd->cacheItemList.at(sfRow).isCached;
-    QString p = icd->cacheItemList.at(sfRow).fPath;
-    qDebug() << p << isCached;
-//    imageCacheThread->fixOrphans();
-//    return;
-
-    QString path = "/Users/roryhill/Pictures/2022/202204/2022-04-11_Nora/2022-04-11_0001.arw";
-    emit setValuePath(path, 0, true, G::CachedRole);
-    return;
-
-   int quitRow = 400;
-
-//    /*
-    int sfRowCount = 10;
-
-    int count = 0;
-    int row = 7;
-    bool ahead = true;
-    int lastRow = sfRowCount - 1;
-    bool moreAhead = row < lastRow;
-    bool moreBehind = row >= 0;
-    int rowAhead = row;
-    int rowBehind = row;
-    while (count++ < sfRowCount) {
-//        count++;
-        if (count > quitRow)  break;
-        // do something with sfRow
-
-        qDebug() << count << row ;
-        // next sfRow to process
-        if (ahead) {
-            if (moreBehind) ahead = false;
-            if (moreAhead) {
-                ++rowAhead;
-                row = rowAhead;
-                moreAhead = rowAhead < lastRow;
-            }
-        }
-        else {
-            if (moreAhead) ahead = true;
-            if (moreBehind) {
-                --rowBehind;
-                row = rowBehind;
-                moreBehind = row >= 0;
-            }
-        }
-    }
-    double ms = t.nsecsElapsed() * 1.0 / 1000000;
-    qDebug() << ms << "ms";
-    return;
-    //*/
-
-/*
-    int rows = 100000;
-    int row = 7000;
-    int behind = row;
-    int ahead = row + 1;
-    bool abort = false;
-    QList<int> queue(rows);
-    t.start();
-    queue.clear();
-    while (behind >= 0 || ahead < rows) {
-        if (behind >= 0) queue.append(behind--);
-        if (ahead < rows) queue.append(ahead++);
-        if (abort) return;
-    }
-    for (int count = 0; count < rows; count++) {
-        if (count > quitRow)  break;
-        row = queue.at(count);
-        qDebug() << count << row;
-    }
-    double ms = t.nsecsElapsed() * 1.0 / 1000000;
-    qDebug() << ms << "ms";
-    return;
-//*/
-
 
 
     thumbView->scrollToRow(currSfRow, CLASSFUNCTION);
