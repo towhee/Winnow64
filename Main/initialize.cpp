@@ -4,7 +4,6 @@ void MW::initialize()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     this->setWindowTitle(winnowWithVersion);
-    G::okayToChangeFolders = true;
     G::stop = false;
     G::isProcessingExportedImages = false;
     G::isDev = isDevelopment();
@@ -255,27 +254,6 @@ void MW::createMDCache()
     connect(metaRead, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
 
     metaReadThread.start();
-
-//    // IconCache
-//    iconCache = new IconCache(this, dm, metadata, iconCacheData);
-//    iconCache->moveToThread(&iconCacheThread);
-
-//    iconCache->iconChunkSize = 200;
-
-//    // delete thread when finished
-//    connect(&iconCacheThread, &QThread::finished, iconCache, &QObject::deleteLater);
-//    // read iconCache
-//    connect(this, &MW::startIconCache, iconCache, &IconCache::read);
-//    // add metadata to datamodel
-//    connect(iconCache, &IconCache::addToDatamodel, dm, &DataModel::addMetadataForItem);
-//    // update icon in datamodel
-//    connect(iconCache, &IconCache::setIcon, dm, &DataModel::setIcon);
-//    // add model row to list of icons cached
-//    connect(iconCache, &IconCache::addToIconCache, iconCacheData, &IconCacheData::add);
-//    // remove model row from list of icons cached
-//    connect(iconCache, &IconCache::removeFromIconCache, iconCacheData, &IconCacheData::remove);
-
-//    iconCacheThread.start();
 }
 
 void MW::createImageCache()

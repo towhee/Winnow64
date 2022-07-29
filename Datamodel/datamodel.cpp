@@ -778,7 +778,7 @@ void DataModel::addAllMetadata()
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " secondary metadata loading...";
             emit centralMsg(s);    // rghmsg
-//            QCoreApplication::processEvents();  // MetaRead new folder crash?
+            QCoreApplication::processEvents();  // MetaRead new folder crash?
         }
         if (abortLoadingModel) {
             endLoad(false);
@@ -799,6 +799,7 @@ void DataModel::addAllMetadata()
         }
     }
     setAllMetadataLoaded(true);
+    endLoad(true);
 //    loadingModel = false;
     /*
     qint64 ms = G::t.elapsed();
@@ -1094,7 +1095,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         return;
     }
     if (G::stop) {
-        qDebug() << CLASSFUNCTION << dmIdx << "G::stop = " << G::stop;
+        qWarning() << CLASSFUNCTION << dmIdx << "G::stop = " << G::stop;
         return;
     }
     if (!dmIdx.isValid()) {
@@ -1137,7 +1138,6 @@ void DataModel::setIconCaching(int sfRow, bool state)
 
 bool DataModel::iconLoaded(int sfRow)
 {
-//    if (G::stop) return false;
     if (G::isLogger) G::log(CLASSFUNCTION);
     QModelIndex dmIdx = sf->mapToSource(sf->index(sfRow, 0));
     return !(itemFromIndex(dmIdx)->icon().isNull());

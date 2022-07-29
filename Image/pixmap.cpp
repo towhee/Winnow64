@@ -239,6 +239,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 
     // All other formats
     else {
+        qDebug() << "Pixmap::load all other formats" << fPath;
         // try to decode
         if (!image.load(fPath)) {
             imFile.close();

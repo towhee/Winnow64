@@ -220,7 +220,8 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
         metadata->m.row = dmRow;
         metadata->m.dmInstance = dmInstance;
-        if (!abort) emit addToDatamodel(metadata->m);
+        emit addToDatamodel(metadata->m);
+        emit addToImageCache(metadata->m);
     }
     if (debugCaching) qDebug().noquote() << "MetaRead::readMetadata" << "done row =" << sfIdx.row();
 }
@@ -245,8 +246,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     QImage image;
     bool thumbLoaded = thumb->loadThumb(fPath, image, "MetaRead::readIcon");
     if (isVideo) {
-//        iconsLoaded.append(dmRow);
-//        rowsWithIcon.append(dmRow);
+        rowsWithIcon.append(dmRow);
         return;
     }
     if (thumbLoaded) {
@@ -298,6 +298,9 @@ void MetaRead::readRow(int sfRow)
              << "adjIconChunkSize =" << adjIconChunkSize
              ;
     //*/
+
+//    G::log("MetaRead::readRow  Icon for row", QString::number(sfRow));
+
     if (inIconRange(sfRow)) {
         if (!dm->iconLoaded(sfRow)) {
             readIcon(sfIdx, fPath);
@@ -307,8 +310,6 @@ void MetaRead::readRow(int sfRow)
         }
     }
 
-    // update the imageCache item data
-    if (!abort) emit addToImageCache(metadata->m);
     if (debugCaching) {
         qDebug().noquote() << "MetaRead::readRow"
                            << "done   row =" << sfRow

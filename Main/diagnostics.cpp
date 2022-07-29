@@ -17,7 +17,6 @@ void MW::reportState(QString title)
         << "\nG::isNewSelection                      " << G::isNewSelection
         << "\nignoreFolderSelectionChange            " << ignoreFolderSelectionChange
         << "\nG::stop                                " << G::stop
-        << "\nG::okayToChangeFolders                 " << G::okayToChangeFolders
         << "\ndm->forceBuildFilters                  " << dm->forceBuildFilters
         << "\nisCurrentFolderOkay                    " << isCurrentFolderOkay
         << "\nimageView->isFirstImageNewFolder       " << imageView->isFirstImageNewFolder
@@ -143,17 +142,16 @@ QString MW::diagnostics()
     rpt << "\n";
 
     rpt << "\n" << "G::stop = " << G::s(G::stop);
-    rpt << "\n" << "G::okayToChangeFolders = " << G::s(G::okayToChangeFolders);
     rpt << "\n" << "G::isNewFolderLoaded = " << G::s(G::isNewFolderLoaded);
     rpt << "\n" << "G::isInitializing = " << G::s(G::isInitializing);
     rpt << "\n" << "G::isNewSelection = " << G::s(G::isNewSelection);
     rpt << "\n" << "G::allMetadataLoaded = " << G::s(G::allMetadataLoaded);
-    rpt << "\n" << "allIconsLoaded = " << G::s(allIconsLoaded);
     rpt << "\n" << "G::allIconsLoaded = " << G::s(G::allIconsLoaded);
     rpt << "\n" << "G::isNewFolderLoadedAndInfoViewUpToDate = " << G::s(G::isNewFolderLoadedAndInfoViewUpToDate);
     rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abortLoadingModel);
     rpt << "\n" << "dm->loadingModel = " << G::s(dm->loadingModel);
-//    rpt << "\n" << "allIconsLoaded = " << G::s(allIconsLoaded);
+    rpt << "\n" << "dm->instance = " << G::s(dm->instance);
+    rpt << "\n" << "icd->cache.dmInstance = " << G::s(icd->cache.dmInstance);
 
     rpt << "\n";
     rpt << "\n" << "isShift = " << G::s(isShift);

@@ -170,6 +170,13 @@ void BookMarks::mouseDoubleClickEvent(QMouseEvent *)
 
 void BookMarks::mousePressEvent(QMouseEvent *event)
 {
+    // rapid mouse press ignore if still running MW::stopAndClearAll
+    if (G::stop) {
+        qDebug() << CLASSFUNCTION << "G::stop =" << G::stop;
+        qApp->beep();
+        G::popUp->showPopup("Busy, try new bookmark in a sec.", 1000);
+        return;
+    }
     // do not allow if there is a background ingest in progress
     if (G::isRunningBackgroundIngest) {
         QString msg =
@@ -190,6 +197,7 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         }
         return;
     }
+    qDebug() << CLASSFUNCTION << "G::stop =" << G::stop;
     QTreeWidget::mousePressEvent(event);
 }
 
