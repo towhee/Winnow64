@@ -34,6 +34,7 @@ public:
         int targetFirst;            // beginning of target range to cache
         int targetLast;             // end of the target range to cache
         int decoderCount;           // number of separate threads used to decode images
+        int dmInstance;             // new instance of data model when new folder
         bool isShowCacheStatus;     // show in app status bar
     } cache;
 

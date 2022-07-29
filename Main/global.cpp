@@ -84,8 +84,6 @@ namespace G
 
     // status
     QString currRootFolder;
-    bool allMetadataLoaded;
-    bool allIconsLoaded;
     bool ignoreScrollSignal;
     bool isSlideShow;
     bool isRunningColorAnalysis;
@@ -107,11 +105,14 @@ namespace G
     bool isThreadTrackingOn;
     bool showAllTableColumns;
 
-    bool okayToChangeFolders;
+    // flow
     bool isNewFolderLoaded;
     bool isNewFolderLoadedAndInfoViewUpToDate;
     bool isInitializing;
     bool isNewSelection;
+    bool allMetadataLoaded;
+    bool allIconsLoaded;
+
     int scrollBarThickness = 14;        // Also set in winnowstyle.css for vertical and horizontal
     int propertyWidgetMarginLeft = 5;
     int propertyWidgetMarginRight = 2;

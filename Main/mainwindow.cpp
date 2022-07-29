@@ -161,6 +161,7 @@ Flow Flags:
     G::isNewFolderLoaded
     G::isNewFolderLoadedAndInfoViewUpToDate
     dm->loadingModel
+    dm->basicFileInfoLoaded  // not used
     G::useLinearLoading
     G::ignoreScrollSignal
     isCurrentFolderOkay
@@ -1324,13 +1325,13 @@ void MW::folderSelectionChange()
     }
 
     // ignore if very rapid selection and current folder is still at stopAndClearAll
+    if (G::stop) {
+        return;
+    }
     // also checked in FSTree and Bookmarks mousePressEvent
-//    if (!G::okayToChangeFolders || dm->loadingModel) {
     if (dm->loadingModel) {
         return;
     }
-
-    G::okayToChangeFolders = false;
 
     // ignore if selection change triggered by deletion of prior selected folder
 //    if (ignoreFolderSelectionChange) {
@@ -1397,7 +1398,6 @@ void MW::folderSelectionChange()
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(currentViewDirPath, true /*report*/, false /*isRemembered*/)) {
         stopAndClearAll("Invalid folder");
-        G::isInitializing = false;
         setWindowTitle(winnowWithVersion);
         if (G::isLogger) Utilities::log(CLASSFUNCTION, "Invalid folder " + currentViewDirPath);
         return;
@@ -1442,8 +1442,6 @@ void MW::folderSelectionChange()
             updateStatus(false, "No supported images in this folder", CLASSFUNCTION);
             setCentralMessage("The folder \"" + currentViewDirPath + "\" does not have any eligible images");
         }
-        G::isInitializing = false;
-//        G::okayToChangeFolders = true;
         return;
     }
 
@@ -1514,7 +1512,6 @@ void MW::folderSelectionChange()
     updateStatus(true, "", CLASSFUNCTION);
 
     G::stop = false;
-    G::isInitializing = false;
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString src)
@@ -1814,8 +1811,6 @@ void MW::stopAndClearAll(QString src)
     setThreadRunStatusInactive();
 
     G::stop = false;
-
-//    G::log("MW::stopAndClearAll completed");
 }
 
 void MW::nullFiltration()
@@ -1945,6 +1940,7 @@ void MW::updateIconRange(int row)
 void MW::loadConcurrentNewFolder()
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+//    G::isNewFolderLoaded = true;
     G::allMetadataLoaded = false;
 //    dm->loadingModel = true;
     // reset for bestAspect calc
@@ -1997,11 +1993,10 @@ void MW::loadConcurrent(int sfRow)
 
 void MW::loadConcurrentMetaDone()
 {
-//    G::track(CLASSFUNCTION);
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
 
     if (G::stop) {
-        return;
+//        return;
     }
 
     // double check all visible icons loaded, depending on best fit
@@ -2023,9 +2018,8 @@ void MW::loadConcurrentMetaDone()
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
        InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
        would prematurely trigger Metadata::writeXMP */
-    G::okayToChangeFolders = true;
     G::isNewFolderLoadedAndInfoViewUpToDate = true;
-    G::isNewFolderLoaded = true;
+//    G::isNewFolderLoaded = true;
     dm->setAllMetadataLoaded(true);    //G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
     filters->setEnabled(true);
@@ -2056,7 +2050,6 @@ void MW::loadConcurrentStartImageCache()
 
     G::isNewFolderLoaded = true;
 //    dm->loadingModel = false;
-//    G::okayToChangeFolders = true;
 
     /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
     including current index and file path req'd by mdCache and EmbelProperties...  If
@@ -2096,7 +2089,6 @@ void MW::loadLinearNewFolder()
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     MetadataCache *mct = metadataCacheThread;
-    G::okayToChangeFolders = true;
     G::allMetadataLoaded = false;
     mct->isRefreshFolder = isRefreshingDM;
     mct->iconsCached.clear();
@@ -2181,7 +2173,6 @@ void MW::loadImageCacheForNewFolder()
 
     // have to wait until image caching thread running before setting flag
     G::isNewFolderLoaded = true;
-//    dm->loadingModel = false;
 
     /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
     including current index and file path req'd by mdCache and EmbelProperties...  If
@@ -2253,7 +2244,7 @@ void MW::thumbHasScrolled()
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     if (G::isInitializing) return;
-    if (G::useLinearLoading && !G::isNewFolderLoaded) return;
+    if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
@@ -5107,7 +5098,6 @@ void MW::ejectUsb(QString path)
         G::popUp->showPopup("Drive " + d
               + " is not removable and cannot be ejected", 2000);
     }
-    G::okayToChangeFolders = true;
 }
 
 void MW::ejectUsbFromMainMenu()
@@ -5445,7 +5435,6 @@ void MW::deleteFiles()
     // if all images in folder were deleted
     if (sldm.count() == dm->rowCount()) {
         stopAndClearAll("deleteFiles");
-        G::okayToChangeFolders = true;
         folderSelectionChange();
         return;
     }
@@ -5522,7 +5511,6 @@ void MW::deleteFolder()
     if (currentViewDirPath == dirToDelete) {
         ignoreFolderSelectionChange = true;
         stopAndClearAll("deleteFolder");
-        G::okayToChangeFolders = TRUE;
     }
 
     QDir dir(dirToDelete);

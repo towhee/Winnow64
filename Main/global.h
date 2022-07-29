@@ -210,8 +210,6 @@ namespace G
     extern QString css;
 
     extern QString currRootFolder;
-    extern bool allMetadataLoaded;
-    extern bool allIconsLoaded;
     extern bool ignoreScrollSignal;
     extern bool isSlideShow;
     extern bool isRunningColorAnalysis;
@@ -231,11 +229,13 @@ namespace G
     extern bool isThreadTrackingOn;
     extern bool showAllTableColumns;
 
-    extern bool okayToChangeFolders;
     extern bool isNewFolderLoaded;
     extern bool isNewFolderLoadedAndInfoViewUpToDate;
     extern bool isInitializing;
     extern bool isNewSelection;
+    extern bool allMetadataLoaded;
+    extern bool allIconsLoaded;
+
     extern int scrollBarThickness;
     extern int propertyWidgetMarginLeft;
     extern int propertyWidgetMarginRight;

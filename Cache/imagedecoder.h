@@ -25,12 +25,13 @@ public:
                  int id,
                  DataModel *dm,
                  Metadata *metadata);
-    void decode(ImageCacheData::CacheItem item);
+    void decode(ImageCacheData::CacheItem item, int instance);
 //    void decode(QString fPath);
     void setReady();
     void stop();
 
     int threadId;
+    int dmInstance;
     QImage image;
     QString fPath;
     int cacheKey;

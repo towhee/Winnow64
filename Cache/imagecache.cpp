@@ -1058,6 +1058,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 //        qWarning() << CLASSFUNCTION << m.fPath << "not in cacheKeyHash";
         return;
     }
+//    qDebug() << "     " << CLASSFUNCTION << row << m.metadataLoaded << m.width << m.fPath;
 
     if (row >= icd->cacheItemList.length()) {
         qWarning() << "ImageCache::addCacheItemImageMetadata" << "row not in icd->cacheItemList";
@@ -1068,7 +1069,8 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
        8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
     */
     icd->cacheItemList[row].sizeMB = static_cast<int>(m.width * m.height * 1.0 / 262144);
-    icd->cacheItemList[row].isMetadata = m.width > 0;
+//    icd->cacheItemList[row].isMetadata = m.width > 0;
+    icd->cacheItemList[row].isMetadata = m.metadataLoaded;
     // decoder parameters
     icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
     icd->cacheItemList[row].orientation = m.orientation;
@@ -1155,7 +1157,7 @@ void ImageCache::buildImageCacheList()
 //            QApplication::processEvents();
         }
         else {
-            icd->cacheItem.metadataLoaded = false;
+//            icd->cacheItem.metadataLoaded = false;
             icd->cacheItemList.append(icd->cacheItem);
         }
     }
@@ -1190,6 +1192,7 @@ void ImageCache::initImageCache(int &cacheMaxMB,
     icd->cache.wtAhead = cacheWtAhead;
     icd->cache.targetFirst = 0;
     icd->cache.targetLast = 0;
+    icd->cache.dmInstance = dm->instance;
 
     if (icd->cache.isShowCacheStatus) {
         updateStatus("Clear", "ImageCache::initImageCache");
@@ -1357,7 +1360,7 @@ void ImageCache::decodeNextImage(int id)
             << icd->cacheItemList.at(row).fPath
               ;
     }
-    decoder[id]->decode(icd->cacheItemList.at(row));
+    decoder[id]->decode(icd->cacheItemList.at(row), icd->cache.dmInstance);
 }
 
 void ImageCache::cacheImage(int id, int cacheKey)
@@ -1395,30 +1398,37 @@ void ImageCache::cacheImage(int id, int cacheKey)
 bool ImageCache::fillCache(int id, bool positionChange)
 {
 /*
-    A number of ImageDecoders are created when ImageCache is created.  Each ImageDecoder runs
-    in a separate thread.  The decoders convert an image file into a QImage and then signal
-    this function with their id so the QImage can be inserted into the image cache.
-    ImageDecoders are launched from CacheImage::run. CacheImage makes sure the necessary
-    metadata is available and reads the file and then runs the decoder. This is very
-    important, as file reads have to be sequential while the decoding can be performed
-    synchronously, which significantly improves performance.
+    A number of ImageDecoders are created when ImageCache is created. Each ImageDecoder
+    runs in a separate thread. The decoders convert an image file into a QImage and then
+    signal this function with their id so the QImage can be inserted into the image
+    cache. ImageDecoders are launched from CacheImage::run. CacheImage makes sure the
+    necessary metadata is available and reads the file and then runs the decoder. This is
+    very important, as file reads have to be sequential while the decoding can be
+    performed synchronously, which significantly improves performance.
 
-    The ImageDecoder has a status attribute that can be Ready, Busy or Done. When the decoder
-    is created and when the QImage has been inserted into the image cache the status is set to
-    Ready. When the decoder is called from CacheImage the status is set to Busy. Finally, when
-    the decoder finishes the decoding in ImageDecoder::run the status is set to Done. Each
-    decoder signals fillCache when the image has been converted into a QImage. Here the QImage
-    is added to the imCache. If there are more targeted images to be cached, the next one is
-    assigned to the decoder, which is run again. The decoders keep running until all the
-    targeted images have been cached.
+    The ImageDecoder has a status attribute that can be Ready, Busy or Done. When the
+    decoder is created and when the QImage has been inserted into the image cache the
+    status is set to Ready. When the decoder is called from CacheImage the status is set
+    to Busy. Finally, when the decoder finishes the decoding in ImageDecoder::run the
+    status is set to Done. Each decoder signals fillCache when the image has been
+    converted into a QImage. Here the QImage is added to the imCache. If there are more
+    targeted images to be cached, the next one is assigned to the decoder, which is run
+    again. The decoders keep running until all the targeted images have been cached.
 
     Every time the ImageCache::run function encounters a change trigger (file selection
     change, cache size, color manage or sort/filter change) the image cache parameters are
     updated and this function is called for each Ready decoder. The decoders not Ready are
     Busy and already in the fillCache loop.
 
-    This function is protected with a mutex as it could be signalled simultaneously by several
-    ImageDecoders.
+    An image decoder can be running when a new folder is selected, returning an image
+    from the previous folder. When an image decoder is run it is seeded with the
+    datamodel instance (which is incremented every time a new folder is selected). When
+    the decoder signals back to DM::fillCache the decoder dmInstance is checked against
+    the current dm->instance to confirm the decoder image is from the current datamodel
+    instance.
+
+    This function is protected with a mutex as it could be signalled simultaneously by
+    several ImageDecoders.
 
     Each decoder follows this basic pattern:
     - nextToCache
@@ -1453,7 +1463,19 @@ bool ImageCache::fillCache(int id, bool positionChange)
     }
 
     int cacheKey = -1;
-    if (decoder[id]->fPath != "") cacheKey = cacheKeyHash[decoder[id]->fPath];
+    // DM instance check
+    if (decoder[id]->dmInstance == dm->instance) {
+        // Unassigned decoder check
+        if (decoder[id]->fPath != "") {
+            cacheKey = cacheKeyHash[decoder[id]->fPath];
+        }
+    }
+    else {
+        qWarning() << "ImageCache::fillCache DataModel instance clash:"
+                   << "Decoder DM instance" << decoder[id]->dmInstance
+                   << "DM instance" << dm->instance
+                      ;
+    }
 
     if (debugCaching) {
         QString k = QString::number(cacheKey).leftJustified((4));

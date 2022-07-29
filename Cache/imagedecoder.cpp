@@ -57,12 +57,13 @@ bool ImageDecoder::quit()
     return false;
 }
 
-void ImageDecoder::decode(ImageCacheData::CacheItem item)
+void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
 //void ImageDecoder::decode(QString fPath)
 {
     status = Status::Busy;
     n = item;
     fPath = n.fPath;
+    dmInstance = instance;
     cacheKey = n.key;       // not being used
 //    qDebug() << "ImageDecoder::decode" << fPath;
     start();
@@ -136,7 +137,7 @@ bool ImageDecoder::load()
 
         QByteArray buf = imFile.read(n.lengthFull);
         if (buf.length() == 0) {
-            qWarning() << "ImageDecoder::load" << "Zero JPG buffer";
+            qWarning() << "ImageDecoder::load" << "Zero JPG buffer" << fPath;
             G::error("ImageDecoder::load", fPath, "Zero JPG buffer.");
             imFile.close();
             return false;
