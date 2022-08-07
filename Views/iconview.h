@@ -52,6 +52,7 @@ public:
     int iconHeight;
     int labelFontSize = 13;
     bool showIconLabels;
+    QString labelChoice;
     bool showZoomFrame;
     int badgeSize;
     QSize cellSize;

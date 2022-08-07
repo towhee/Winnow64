@@ -175,6 +175,7 @@ public:
         int thumbHeightGrid;
         int labelFontSizeGrid;
         bool showThumbLabelsGrid;
+        QString labelChoice;
         bool isImageInfoVisible;
         bool includeSubfolders;
         bool isLoupeDisplay;

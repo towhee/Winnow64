@@ -142,7 +142,12 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     currOffset.setY(currentOffsetWidth);
 }
 
-void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight, int labelFontSize, bool showThumbLabels, int badgeSize)
+void IconViewDelegate::setThumbDimensions(int thumbWidth,
+                                          int thumbHeight,
+                                          int labelFontSize,
+                                          bool showThumbLabels,
+                                          QString labelChoice,
+                                          int badgeSize)
 
 {
 /*
@@ -169,6 +174,7 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth, int thumbHeight, int l
     textHeadroom = 6;
     textHeight = 0;
     if (delegateShowThumbLabels) textHeight = fontHt + textHeadroom;
+    this->labelChoice = labelChoice;
     this->badgeSize = badgeSize;
     if (thumbWidth < ICON_MIN) thumbWidth = ICON_MIN;
     if (thumbHeight < ICON_MIN) thumbHeight = ICON_MIN;
@@ -332,7 +338,13 @@ void IconViewDelegate::paint(QPainter *painter,
 
     // get data from model
     int row = index.row();
-    QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
+//    QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
+//    QString title = index.model()->index(row, G::TitleColumn).data(Qt::DisplayRole).toString();
+    QString labelText;
+    if (labelChoice == "Title")
+        labelText = index.model()->index(row, G::TitleColumn).data(Qt::DisplayRole).toString();
+    else
+        labelText = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
     QString colorClass = index.model()->index(row, G::LabelColumn).data(Qt::EditRole).toString();
     QString rating = index.model()->index(row, G::RatingColumn).data(Qt::EditRole).toString();
     QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
@@ -409,7 +421,7 @@ void IconViewDelegate::paint(QPainter *painter,
 
     if (delegateShowThumbLabels) {
         painter->setFont(font);
-        painter->drawText(textRect, Qt::AlignHCenter, fName);
+        painter->drawText(textRect, Qt::AlignHCenter, labelText);
     }
 
     painter->setClipping(true);

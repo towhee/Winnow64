@@ -118,6 +118,7 @@ void MW::invokeWorkspace(const workspaceData &w)
     gridView->iconHeight = w.thumbHeightGrid;
     gridView->labelFontSize = w.labelFontSizeGrid;
     gridView->showIconLabels = w.showThumbLabelsGrid;
+    gridView->labelChoice = w.labelChoice;
     thumbView->rejustify();
     gridView->rejustify();
     thumbView->setThumbParameters();
@@ -170,6 +171,7 @@ void MW::snapshotWorkspace(workspaceData &wsd)
     wsd.thumbHeightGrid = gridView->iconHeight;
     wsd.labelFontSizeGrid = gridView->labelFontSize;
     wsd.showThumbLabelsGrid = gridView->showIconLabels;
+    wsd.labelChoice = gridView->labelChoice;
 
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
 
@@ -378,6 +380,7 @@ void MW::reportWorkspace(int n)
              << "\nthumbHeightGrid" << ws.thumbHeightGrid
              << "\nlabelFontSizeGrid" << ws.labelFontSizeGrid
              << "\nshowThumbLabelsGrid" << ws.showThumbLabelsGrid
+             << "\nsgridViewLabelChoice" << ws.labelChoice
              << "\nshowShootingInfo" << ws.isImageInfoVisible
              << "\nisLoupeDisplay" << ws.isLoupeDisplay
              << "\nisGridDisplay" << ws.isGridDisplay
@@ -423,6 +426,7 @@ void MW::loadWorkspaces()
         ws.thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
         ws.labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
         ws.showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
+        ws.labelChoice = setting->value("gridViewLabelChoice").toString();
         ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
         ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
         ws.isGridDisplay = setting->value("isGridDisplay").toBool();
@@ -469,6 +473,7 @@ void MW::saveWorkspaces()
         setting->setValue("thumbHeightGrid", ws.thumbHeightGrid);
         setting->setValue("labelFontSizeGrid", ws.labelFontSizeGrid);
         setting->setValue("showThumbLabelsGrid", ws.showThumbLabelsGrid);
+        setting->setValue("gridViewLabelChoice", ws.labelChoice);
         setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
         setting->setValue("isLoupeDisplay", ws.isLoupeDisplay);
         setting->setValue("isGridDisplay", ws.isGridDisplay);

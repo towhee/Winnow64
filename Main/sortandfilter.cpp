@@ -260,12 +260,12 @@ void MW::filterLastDay()
 
     // if the additional filters have not been built then do an update
     if (!filters->filtersBuilt) {
-        qDebug() << CLASSFUNCTION << "build filters";
+//        qDebug() << CLASSFUNCTION << "build filters";
         launchBuildFilters();
         G::popUp->showPopup("Building filters.", 0);
         buildFilters->wait();
         G::popUp->hide();
-//    if (!filters->days->childCount()) launchBuildFilters();
+    if (!filters->days->childCount()) launchBuildFilters();
     }
 
     // if there still are no days then tell user and return
