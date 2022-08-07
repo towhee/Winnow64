@@ -382,6 +382,7 @@ void MW::createGridView()
         if (setting->contains("thumbHeightGrid")) gridView->iconHeight = setting->value("thumbHeightGrid").toInt();
         if (setting->contains("labelFontSizeGrid")) gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
         if (setting->contains("showThumbLabelsGrid")) gridView->showIconLabels = setting->value("showThumbLabelsGrid").toBool();
+        if (setting->contains("gridViewLabelChoice")) gridView->labelChoice = setting->value("gridViewLabelChoice").toString();
         if (setting->contains("classificationBadgeInThumbDiameter")) gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
         if (setting->contains("thumbsPerPage")) gridView->visibleCells = setting->value("thumbsPerPage").toInt();
     }

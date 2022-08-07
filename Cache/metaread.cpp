@@ -403,6 +403,6 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
     cleanupIcons();
 
     emit updateIconBestFit();
-//    if (!abort) emit done();
+    emit done();
     isRunning = false;
 }

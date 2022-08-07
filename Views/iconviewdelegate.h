@@ -21,8 +21,8 @@ public:
     QSize sizeHint(const QStyleOptionViewItem &option,
                    const QModelIndex &/*index*/ ) const override;
 
-    void setThumbDimensions(int thumbWidth, int thumbHeight,
-          int labelFontSize, bool showThumbLabels, int badgeSize);
+    void setThumbDimensions(int thumbWidth, int thumbHeight, int labelFontSize,
+          bool showThumbLabels, QString labelChoice, int badgeSize);
 
     QSize getCellSize();
     QSize getCellSize(QSize icon);
@@ -59,6 +59,7 @@ private:
     ImageCacheData *icd;
     bool &isRatingBadgeVisible;
     bool delegateShowThumbLabels;
+    QString labelChoice;
     QFont font;
 
     // define colors

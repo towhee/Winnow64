@@ -123,7 +123,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString 
     m2 = qobject_cast<MW*>(parent);
 
     setViewMode(QListView::IconMode);
-    setSelectionMode(QAbstractItemView::ExtendedSelection);
+    setSelectionMode(QAbstractItemView::ExtendedSelection);//
     setTabKeyNavigation(true);  // not working
     setResizeMode(QListView::Adjust);
 //    setLayoutMode(QListView::Batched);    // causes delay that makes scrollTo a headache
@@ -151,7 +151,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString 
 
     iconViewDelegate = new IconViewDelegate(this, m2->isRatingBadgeVisible, icd);
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
-        labelFontSize, showIconLabels, badgeSize);
+        labelFontSize, showIconLabels, labelChoice, badgeSize);
     setItemDelegate(iconViewDelegate);
 
     zoomFrame = new QLabel;
@@ -192,6 +192,7 @@ QString IconView::diagnostics()
     rpt << "\n" << "iconHeight = " << G::s(iconHeight);
     rpt << "\n" << "labelFontSize = " << G::s(labelFontSize);
     rpt << "\n" << "showIconLabels = " << G::s(showIconLabels);
+    rpt << "\n" << "gridViewLabelChoice = " << G::s(labelChoice);
     rpt << "\n" << "badgeSize = " << G::s(badgeSize);
     rpt << "\n" << "scrollWhenReady = " << G::s(scrollWhenReady);
     rpt << "\n" << "assignedIconWidth = " << G::s(assignedIconWidth);
@@ -259,7 +260,7 @@ void IconView::setThumbParameters()
     setSpacing(0);
     if (labelFontSize == 0) labelFontSize = 10;
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
-        labelFontSize, showIconLabels, badgeSize);
+        labelFontSize, showIconLabels, labelChoice, badgeSize);
     /*
     qDebug() << CLASSFUNCTION
              << "iconWidth =" << iconWidth
@@ -1200,7 +1201,7 @@ void IconView::thumbsFitTopOrBottom()
 
     // this will change the icon size, which will trigger the resize event
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
-                                         showIconLabels, badgeSize);
+                                         showIconLabels, labelChoice, badgeSize);
 }
 
 void IconView::updateLayout()

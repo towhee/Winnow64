@@ -60,6 +60,19 @@ itemChange, which is subclassed here.
         mw->gridView->setThumbParameters();
     }
 
+    if (source == "gridViewLabelChoice") {
+        mw->gridView->labelChoice = v.toString();
+        mw->gridView->iconViewDelegate->setThumbDimensions(
+                    mw->gridView->iconWidth,
+                    mw->gridView->iconHeight,
+                    mw->gridView->labelFontSize,
+                    mw->gridView->showIconLabels,
+                    mw->gridView->labelChoice,
+                    mw->gridView->badgeSize
+                    );
+        mw->gridView->repaint();
+    }
+
     if (source == "gridViewLabelSize") {
         mw->gridView->labelFontSize = v.toInt();
         mw->gridView->setThumbParameters();
@@ -781,6 +794,22 @@ void Preferences::addItems()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
+
+    // Show grid thumbnail label
+    i.name = "gridViewLabelChoice";
+    i.parentName = "GridHeader";
+    i.captionText = "What to show";
+    i.tooltip = "Select what to show: file name or title.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = mw->gridView->labelChoice;
+    i.key = "gridViewLabelChoice";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "File name"
+               << "Title";
+    addItem(i);
+
     }
 
     // Cache Header (Root)
