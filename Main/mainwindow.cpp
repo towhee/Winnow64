@@ -1464,7 +1464,7 @@ void MW::folderSelectionChange()
     // made it this far, folder must have eligible images and is good-to-go
     isCurrentFolderOkay = true;
 
-    // folder change triggered by dragdrop event
+    // folder change triggered by dragdrop event (see main/draganddrop.cpp)
     bool dragFileSelected = false;
     if (isDragDrop) {
         if (dragDropFilePath.length() > 0) {
@@ -1776,11 +1776,14 @@ void MW::stopAndClearAll(QString src)
     imageCacheThread->stop();
     buildFilters->stop();
 
+    G::allMetadataLoaded = false;
+    G::allIconsLoaded = false;
+    G::isNewFolderLoaded = false;
+    G::isNewSelection = false;
+    G::isNewFolderLoadedAndInfoViewUpToDate = false;
+
     imageView->clear();
     setWindowTitle(winnowWithVersion);
-    G::isNewFolderLoaded = false;
-    G::allMetadataLoaded = false;
-    G::isNewFolderLoadedAndInfoViewUpToDate = false;
     imageView->clear();
     if (useInfoView) {
         infoView->clearInfo();

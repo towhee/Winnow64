@@ -141,9 +141,10 @@ QString MW::diagnostics()
     rpt << "\n" << "version = " << G::s(version);
     rpt << "\n";
 
-    rpt << "\n" << "G::stop = " << G::s(G::stop);
-    rpt << "\n" << "G::isNewFolderLoaded = " << G::s(G::isNewFolderLoaded);
     rpt << "\n" << "G::isInitializing = " << G::s(G::isInitializing);
+    rpt << "\n" << "G::stop = " << G::s(G::stop);
+    rpt << "\n";
+    rpt << "\n" << "G::isNewFolderLoaded = " << G::s(G::isNewFolderLoaded);
     rpt << "\n" << "G::isNewSelection = " << G::s(G::isNewSelection);
     rpt << "\n" << "G::allMetadataLoaded = " << G::s(G::allMetadataLoaded);
     rpt << "\n" << "G::allIconsLoaded = " << G::s(G::allIconsLoaded);

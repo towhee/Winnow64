@@ -22,7 +22,16 @@ void MW::handleDrop(QString fPath)
     if (G::isLogger) G::log(CLASSFUNCTION);
     QFileInfo info(fPath);
     QDir incoming = info.dir();
-    if (incoming != currentViewDir) folderAndFileSelectionChange(fPath);
+    if (incoming == currentViewDir) {
+        QString fileType = info.suffix().toLower();
+        if (metadata->supportedFormats.contains(fileType)) {
+            thumbView->selectThumb(dragDropFilePath);
+        }
+    }
+    else {
+        folderAndFileSelectionChange(fPath);
+    }
+
 }
 
 void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)

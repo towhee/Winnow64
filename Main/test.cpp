@@ -60,14 +60,12 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    enableSelectionDependentMenus();
-    return;
 
     // cause a crash
-    QList<int> list;
-    int a = list.at(17);
-    qDebug() << "a =" << a;
-    return;
+//    QList<int> list;
+//    int a = list.at(17);
+//    qDebug() << "a =" << a;
+//    return;
 
 //    QStandardItem *item = dm->itemFromIndex(dm->index(0, 0));
 //    item->setData(0, Qt::DecorationRole);
@@ -83,20 +81,22 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    QPixmap nullPm;
 //    QModelIndex dmIdx = dm->index(0,0);
 //    dm->setIcon(dmIdx, nullPm, dm->instance, "test");
-    diagnosticsMetadataCache();
-    return;
 
-    QElapsedTimer t;
-    t.start();
+    // quickly show diagnostics
+//    diagnosticsMetadataCache();
+//    return;
 
-
-    dm->clearAllIcons();
-    qDebug() << t.nsecsElapsed() << "nanosec";
-    return;
+//    QElapsedTimer t;
+//    t.start();
 
 
-    thumbView->scrollToRow(currSfRow, CLASSFUNCTION);
-    return;
+//    dm->clearAllIcons();
+//    qDebug() << t.nsecsElapsed() << "nanosec";
+//    return;
+
+
+//    thumbView->scrollToRow(currSfRow, CLASSFUNCTION);
+//    return;
 
 #ifdef Q_OS_WIN
     QString p1 = "D:/Pictures/Coaster";
@@ -104,7 +104,8 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 #endif
 
 #ifdef Q_OS_MAC
-QString p1 = "/Users/roryhill/Pictures/3840x2160";
+//QString p1 = "/Users/roryhill/Pictures/3840x2160";
+QString p1 = "/Users/roryhill/Pictures/TheFrame";
 QString p2 = "/Users/roryhill/Pictures/Test";
 #endif
 
