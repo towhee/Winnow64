@@ -83,19 +83,19 @@ datamodel.
     setItemDelegate(new FiltersDelegate(this));
     setFocusPolicy(Qt::NoFocus);
 
-    setStyleSheet(
-        "QTreeWidget::item {"
-            "margin-left: -4px;"  // aligns edit box with cell contents
-        "}"
-        "QLineEdit {"
-            "font: italic;"
-            "border: none;"
-        "}"
-        "QLineEdit:focus {"
-            "background-color:" + G::backgroundColor.name() + ";"
-        "}"
-        ";"
-    );
+//    setStyleSheet(
+//        "QTreeWidget::item {"
+//            "margin-left: -4px;"  // aligns edit box with cell contents
+//        "}"
+//        "QLineEdit {"
+//            "font: italic;"
+//            "border: none;"
+//        "}"
+//        "QLineEdit:focus {"
+//            "background-color:" + G::backgroundColor.name() + ";"
+//        "}"
+//        ";"
+//    );
 
     filterCategoryToDmColumn[" Search"] = G::SearchColumn;
 

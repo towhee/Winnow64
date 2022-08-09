@@ -631,8 +631,8 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     Used by ImageDecoder, InfoString, IngestDlg and XMP sidecars.
 */
-//    QMutexLocker locker(&mutex);
     if (G::isLogger) G::log(CLASSFUNCTION, fPath);
+    mutex.lock();
     ImageMetadata m;
     if (fPath == "") return m;
     int row = fPathRow[fPath];
@@ -684,6 +684,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
         if (metadata->hasMetadataFormats.contains(m.type.toLower())) {
             qWarning() << CLASSFUNCTION << "Metadata not loaded to model for" << fPath;
         }
+        mutex.unlock();
         return m;
     }
 
@@ -758,6 +759,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     if (updateInMetadata) metadata->m = m;
 
+    mutex.unlock();
     return m;
 }
 
@@ -1002,18 +1004,21 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
 bool DataModel::metadataLoaded(int dmRow)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-//    QMutexLocker locker(&mutex);
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
 }
 
 void DataModel::setValue(QModelIndex dmIdx, QVariant value, int role)
 {
+    mutex.lock();
     setData(dmIdx, value, role);
+    mutex.unlock();
 }
 
 void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int role)
 {
+    mutex.lock();
     sf->setData(sfIdx, value, role);
+    mutex.unlock();
 }
 
 void DataModel::setValuePath(QString fPath, int col, QVariant value, int role)
@@ -1025,8 +1030,10 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int role)
              << col
                 ;
                 //*/
+    mutex.lock();
     QModelIndex dmIdx = index(fPathRow[fPath], col);
     setData(dmIdx, value, role);
+    mutex.unlock();
 }
 
 void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
@@ -1044,7 +1051,6 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
 
-    QMutexLocker ml(&mutex);
     if (fromInstance != instance) {
         qWarning() << CLASSFUNCTION << dmIdx << "Instance conflict = "
                  << instance << fromInstance;
@@ -1079,7 +1085,6 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     Signaled from:
 
 */
-//    QMutexLocker ml(&mutex);
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (loadingModel) {
         qWarning() << CLASSFUNCTION << "loadingModel =" << loadingModel;

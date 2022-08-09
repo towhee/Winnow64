@@ -333,6 +333,7 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
     if (debugCaching) {
         qDebug().noquote() << CLASSFUNCTION
                            << "src =" << src
+                           << "startRow =" << startRow
                            << "sfRowCount =" << sfRowCount
                               ;
     }
@@ -366,7 +367,7 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
         // do something with row
         readRow(row);
         if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
-            if (i == lastRow || i == 50) {
+            if (i == sfRowCount || i == 50) {
                 // start image caching thread after head start
                 emit startImageCache();
                 imageCachingStarted = true;

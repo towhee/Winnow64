@@ -1,9 +1,9 @@
 BUGS / TO DO
+- Filter checkbox glitch overlap
 - Not reading Title, Email etc when NOT concurrent loading selected
 - Save preview as PNG include color manage corrections
 - Move MDCache to MetaRead, then eliminate MDCache or vice versa
-- Change MetaRead buildMetadataPriorityQueue to algorithm (takes too long for
-  very large folders).
+
 
 - Open with permissions issue
 - Painter not active, state will be reset by begin
@@ -67,6 +67,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 - Read keywords
 DONE/FIXED
+- Change MetaRead buildMetadataPriorityQueue to algorithm
 - Tweaked VideoView
 - Folder image counts missing
 - Account for Mac Accessibility cursor scaling in IconView::zoomCursor

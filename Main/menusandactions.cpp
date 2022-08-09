@@ -916,7 +916,7 @@ void MW::createActions()
 
     // Embellish menu
 
-    embelExportAction = new QAction(tr("Export ..."), this);
+    embelExportAction = new QAction(tr("Export using ..."), this);
     embelExportAction->setObjectName("embelExportAct");
     embelExportAction->setShortcutVisibleInContextMenu(true);
     addAction(embelExportAction);

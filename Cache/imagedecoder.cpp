@@ -77,7 +77,6 @@ bool ImageDecoder::load()
 
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
-//    QMutexLocker locker(&mutex);
     if (G::isLogger) G::log(CLASSFUNCTION, fPath);
     /*
     qDebug() << CLASSFUNCTION << "fPath =" << fPath;

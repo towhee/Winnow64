@@ -81,11 +81,12 @@ ImageCache::~ImageCache()
 void ImageCache::clearImageCache(bool includeList)
 {
     if (G::isLogger) G::log("ImageCache::clearImageCache");
-    QMutexLocker locker(&mutex);
+    mutex.lock();
     icd->imCache.clear();
     icd->cache.currMB = 0;
     // do not clear cacheItemList if called from start slideshow
     if (includeList) icd->cacheItemList.clear();
+    mutex.unlock();
     updateStatus("Clear", CLASSFUNCTION);
 }
 
@@ -1026,7 +1027,6 @@ QString ImageCache::reportCacheProgress(QString action)
 
 void ImageCache::reportRunStatus()
 {
-    QMutexLocker locker(&mutex);
     bool isRun = isRunning();
     qDebug() << "ImageCache::reportRunStatus"
              << "isRunning =" << isRun
@@ -1043,7 +1043,6 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     // deal with lagging signals when new folder selected suddenly
 //    if (m.currRootFolder != G::currRootFolder) return;
 
-    QMutexLocker locker(&mutex);
     if (G::isLogger /*|| G::isFlowLogger*/) G::log("ImageCache::addCacheItemImageMetadata");
 
     // ignore videos
@@ -1051,15 +1050,12 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
         return;
     }
 
-    int row;
-    if (cacheKeyHash.contains(m.fPath)) {
-        row = cacheKeyHash[m.fPath];
-    }
-    else {
-//        qWarning() << CLASSFUNCTION << m.fPath << "not in cacheKeyHash";
+    if (!cacheKeyHash.contains(m.fPath)) {
         return;
     }
-//    qDebug() << "     " << CLASSFUNCTION << row << m.metadataLoaded << m.width << m.fPath;
+
+    int row;
+    row = cacheKeyHash[m.fPath];
 
     if (row >= icd->cacheItemList.length()) {
         qWarning() << "ImageCache::addCacheItemImageMetadata" << "row not in icd->cacheItemList";
@@ -1069,6 +1065,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
        cache status and make future caching decisions for each image
        8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
     */
+    mutex.lock();
     icd->cacheItemList[row].sizeMB = static_cast<int>(m.width * m.height * 1.0 / 262144);
 //    icd->cacheItemList[row].isMetadata = m.width > 0;
     icd->cacheItemList[row].isMetadata = m.metadataLoaded;
@@ -1083,6 +1080,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 
 
     icd->cache.folderMB += icd->cacheItem.sizeMB; // req'd?
+    mutex.unlock();
 //    setTargetRange();
 }
 
@@ -1214,11 +1212,12 @@ void ImageCache::updateImageCacheParam(int &cacheSizeMB,
     When various image cache parameters are changed in preferences they are updated here.
 */
     if (G::isLogger) G::log("ImageCache::updateImageCacheParam");
-    QMutexLocker locker(&mutex);
+    mutex.lock();
     icd->cache.maxMB = cacheSizeMB;
     icd->cache.minMB = cacheMinMB;
     icd->cache.isShowCacheStatus = isShowCacheStatus;
     icd->cache.wtAhead = cacheWtAhead;
+    mutex.unlock();
 }
 
 void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QString source)
@@ -1280,7 +1279,7 @@ void ImageCache::refreshImageCache()
     Reload all images in the cache.
 */
     if (G::isLogger) G::log("ImageCache::refreshImageCache");
-    QMutexLocker locker(&mutex);
+    mutex.lock();
     // make all isCached = false
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
         if (icd->cacheItemList[i].isCached == true) {
@@ -1288,6 +1287,7 @@ void ImageCache::refreshImageCache()
         }
     }
     refreshCache = true;
+    mutex.unlock();
     if (!isRunning()) {
         start();
     }
@@ -1309,8 +1309,9 @@ void ImageCache::cacheSizeChange()
     direction, priorities and target are reset.  makeRoom is executed.
     */
     if (G::isLogger) G::log("ImageCache::cacheSizeChang");
-    QMutexLocker locker(&mutex);
+    mutex.lock();
     cacheSizeHasChanged = true;
+    mutex.unlock();
     if (!isRunning()) {
         start();
     }
