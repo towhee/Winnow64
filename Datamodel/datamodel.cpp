@@ -632,9 +632,10 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     Used by ImageDecoder, InfoString, IngestDlg and XMP sidecars.
 */
     if (G::isLogger) G::log(CLASSFUNCTION, fPath);
-    mutex.lock();
     ImageMetadata m;
     if (fPath == "") return m;
+
+    mutex.lock();
     int row = fPathRow[fPath];
     metadata->m.row = row;  // rgh is this req'd
 
@@ -674,7 +675,9 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
             m.metadataLoaded = true;
+            mutex.unlock();
             addMetadataForItem(metadata->m);
+            mutex.lock();
             success = true;
         }
     }
@@ -1338,17 +1341,16 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (!fPathRow.contains(fPath)) {
-        qDebug() << CLASSFUNCTION << "Not in fPathrow";
+        qWarning() << CLASSFUNCTION << "Not in fPathrow";
         return index(-1, -1);
     }
     int dmRow = fPathRow[fPath];
     QModelIndex sfIdx = sf->mapFromSource(index(dmRow, 0));
     if (sfIdx.isValid()) {
-        qDebug() << CLASSFUNCTION << "Valid" << sfIdx;
         return sfIdx;
     }
     else {
-        qDebug() << CLASSFUNCTION << "Invalid proxy";
+        qWarning() << CLASSFUNCTION << "Invalid proxy";
         return index(-1, -1);       // invalid index
     }
 

@@ -60,6 +60,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QString fPath = dm->currentFilePath;
+    ImageMetadata m = dm->imMetadata(fPath);
+    QFile f(fPath);
+    f.open(QIODevice::ReadWrite);
+    Xmp xmp(f, m.xmpSegmentOffset, m.xmpSegmentLength);
+    QString v = xmp.getItem("title");
+    qDebug() << v;
 
     // cause a crash
 //    QList<int> list;
@@ -67,60 +74,29 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    qDebug() << "a =" << a;
 //    return;
 
-//    QStandardItem *item = dm->itemFromIndex(dm->index(0, 0));
-//    item->setData(0, Qt::DecorationRole);
-//    dm->setData(dm->index(0,0), 0, Qt::DecorationRole);
-//    QVariant v = dm->index(0,0).data(Qt::DecorationRole);
-//    QVariant v1 = dm->index(600,0).data(Qt::DecorationRole);
-//    qDebug() << v << v1 << v1.isValid() << dm->index(600,0).data(Qt::DecorationRole).isNull();
-//    return;
+//#ifdef Q_OS_WIN
+//    QString p1 = "D:/Pictures/Coaster";
+//    QString p2 = "D:/Pictures/Zenfolio/pbase2048";
+//#endif
 
-//    thumbView->selectThumb(600);
-//    return;
+//#ifdef Q_OS_MAC
+////QString p1 = "/Users/roryhill/Pictures/3840x2160";
+//QString p1 = "/Users/roryhill/Pictures/TheFrame";
+//QString p2 = "/Users/roryhill/Pictures/Test";
+//#endif
 
-//    QPixmap nullPm;
-//    QModelIndex dmIdx = dm->index(0,0);
-//    dm->setIcon(dmIdx, nullPm, dm->instance, "test");
+//    QString fPath;
+//    static bool b = true;
+//    if (b) fPath = p1;
+//    else fPath = p2;
+//    QModelIndex idx = fsTree->fsModel->index(fPath);
+//    QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
+//    fsTree->setCurrentIndex(filterIdx);
+//    fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
 
-    // quickly show diagnostics
-//    diagnosticsMetadataCache();
-//    return;
-
-//    QElapsedTimer t;
-//    t.start();
-
-
-//    dm->clearAllIcons();
-//    qDebug() << t.nsecsElapsed() << "nanosec";
-//    return;
-
-
-//    thumbView->scrollToRow(currSfRow, CLASSFUNCTION);
-//    return;
-
-#ifdef Q_OS_WIN
-    QString p1 = "D:/Pictures/Coaster";
-    QString p2 = "D:/Pictures/Zenfolio/pbase2048";
-#endif
-
-#ifdef Q_OS_MAC
-//QString p1 = "/Users/roryhill/Pictures/3840x2160";
-QString p1 = "/Users/roryhill/Pictures/TheFrame";
-QString p2 = "/Users/roryhill/Pictures/Test";
-#endif
-
-    QString fPath;
-    static bool b = true;
-    if (b) fPath = p1;
-    else fPath = p2;
-    QModelIndex idx = fsTree->fsModel->index(fPath);
-    QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
-    fsTree->setCurrentIndex(filterIdx);
-    fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
-
-    qDebug();
-    G::t.restart();
-    G::track(CLASSFUNCTION, "New folder: " + fPath);
-    folderSelectionChange();
-    b = !b;
+//    qDebug();
+//    G::t.restart();
+//    G::track(CLASSFUNCTION, "New folder: " + fPath);
+//    folderSelectionChange();
+//    b = !b;
 }

@@ -51,6 +51,7 @@ public:
         QString parentName;         // req'd if attrName = ""
         ElementType type;           // node or attribute
         QString value;
+        QStringList valueList;
         bool operator==(const XmpElement& x) const {
             return (x.name == name && x.parentName == parentName);
         }
@@ -60,6 +61,7 @@ public:
     };
 
     QString getItem(QByteArray item);
+    QStringList getItemList(QByteArray item);
     bool setItem(QByteArray item, QByteArray value);
     void fix();
 

@@ -1,8 +1,8 @@
 BUGS / TO DO
-- Filter checkbox glitch overlap
-- Not reading Title, Email etc when NOT concurrent loading selected
+- Add GPS
+- Add keywords
+- Review Olympus metadata ie serial number
 - Save preview as PNG include color manage corrections
-- Move MDCache to MetaRead, then eliminate MDCache or vice versa
 
 
 - Open with permissions issue
@@ -67,6 +67,8 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 - Read keywords
 DONE/FIXED
+- Drag and drop not selecting first image
+- Drag and drop onto VideoView and CompareView fixed
 - Change MetaRead buildMetadataPriorityQueue to algorithm
 - Tweaked VideoView
 - Folder image counts missing

@@ -1741,12 +1741,15 @@ void MW::folderAndFileSelectionChange(QString fPath)
         return;
     }
 
+    if (centralLayout->currentIndex() == CompareTab) {
+        centralLayout->setCurrentIndex(LoupeTab);
+    }
+    thumbView->selectionModel()->clear();
+
     // path to image, used in loadImageCacheForNewFolder to select image
     folderAndFileChangePath = fPath;
     folderSelectionChange();
 
-    centralLayout->setCurrentIndex(LoupeTab);
-    thumbView->selectionModel()->clear();
     return;
 }
 

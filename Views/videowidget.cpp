@@ -1,5 +1,11 @@
 #include "videowidget.h"
 
+/*
+     QVideoWidget uses a QWindow to speed up painting and this is added as a child of the
+     QVideoWidget so the drag and drop event is not propagated to the parent. An event
+     filter is used to listen for the drop event.
+*/
+
 VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
@@ -7,6 +13,8 @@ VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
     audioOutput = new QAudioOutput(this);
     mediaPlayer->setAudioOutput(audioOutput);
     mediaPlayer->setVideoOutput(this);
+    QWidget *child = findChild<QWidget *>();
+    child->installEventFilter(this);
 }
 
 void VideoWidget::load(QString fPath)
@@ -80,6 +88,26 @@ void VideoWidget::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::RightButton) {
         return;
     }
+    emit togglePlayOrPause();
+}
 
-    togglePlayOrPause();
+bool VideoWidget::eventFilter(QObject *obj, QEvent *event)
+{
+    /*
+    qDebug() << CLASSFUNCTION
+             << "event:" <<event << "\t"
+             << "event->type:" << event->type() << "\t"
+             << "obj:" << obj << "\t"
+             << "obj->objectName:" << obj->objectName()
+             << "object->metaObject()->className:" << obj->metaObject()->className()
+                ;
+                //*/
+    if (event->type() == QEvent::Drop) {
+        QDropEvent *e = static_cast<QDropEvent *>(event);
+        if (e->mimeData()->hasUrls()) {
+            QString fPath = e->mimeData()->urls().at(0).toLocalFile();
+            emit handleDrop(fPath);
+        }
+    }
+    return QWidget::eventFilter(obj, event);
 }

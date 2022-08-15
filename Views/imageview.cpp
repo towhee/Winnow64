@@ -1051,17 +1051,10 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
 
 void ImageView::dragEnterEvent(QDragEnterEvent *event)
 {
+/*
+    Empty function required to propagate drop event (not sure why)
+*/
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << "ImageView::" << CLASSFUNCTION;
-//    event->acceptProposedAction();
-}
-
-void ImageView::dropEvent(QDropEvent *event)
-{
-    if (G::isLogger) G::log(CLASSFUNCTION);
-//    QFileInfo info(event->mimeData()->urls().at(0).toLocalFile());
-//    emit handleDrop(event->mimeData()->urls().at(0).toLocalFile());
-//    emit handleDrop(event->mimeData());
 }
 
 QString ImageView::diagnostics()

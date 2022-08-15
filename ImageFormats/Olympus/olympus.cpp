@@ -230,6 +230,10 @@ bool Olympus::parse(MetadataParameters &p,
     m.width = static_cast<int>(ifd->ifdDataHash.value(256).tagValue);
     m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
 
+    // get the offset for GPSIFD
+    quint32 offsetGPS;
+    offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
+
     // get the offset for ExifIFD and read it
     quint32 offsetEXIF;
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
@@ -309,16 +313,30 @@ bool Olympus::parse(MetadataParameters &p,
     m.lens = u.getString(p.file, ifd->ifdDataHash.value(42036).tagValue,
                 ifd->ifdDataHash.value(42036).tagCount);
 
+    // maker note offset while still have EXIF IFD
+    bool isMakerNotes = false;
+    quint32 makerOffset = 0;
+    if (ifd->ifdDataHash.contains(37500)) {
+        isMakerNotes = true;
+        makerOffset = ifd->ifdDataHash.value(37500).tagValue;
+    }
+
+    // read GPSIFD
+    qDebug() << CLASSFUNCTION << "offsetGPS =" << offsetGPS;
+    p.file.seek(offsetGPS);
+    p.hdr = "IFD GPS";
+    p.offset = offsetGPS;
+    ifd->readIFD(p);
+
     // read makernoteIFD
 
     /* the makernotes IFD is preceeded with either
        "OLYMPUS " + 49 49  03 00
        "OM SYSTEM   " + 49 49  04 00
      */
-    quint32 makerOffset = ifd->ifdDataHash.value(37500).tagValue;
     p.file.seek(makerOffset);
     bool foundMakerNotes = false;
-    if (ifd->ifdDataHash.contains(37500)) {
+    if (isMakerNotes) {
         int off;
         for (off = 0; off < 30; off++) {
             quint16 order = u.get16(p.file.read(2));

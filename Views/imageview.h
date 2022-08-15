@@ -117,7 +117,8 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
 //    void enterEvent(QEvent *event) override;  // qt6.2
-    void dropEvent(QDropEvent *event) override;
+
+//    void dropEvent(QDropEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
 
 //    void paintEvent(QPaintEvent *event) override;

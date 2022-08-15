@@ -25,7 +25,7 @@ ImageDecoder::ImageDecoder(QObject *parent,
                            Metadata *metadata)
     : QThread(parent)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION, "Thread " + QString::number(id));
+    if (G::isLogger) G::log("ImageDecoder::ImageDecoder", "Thread " + QString::number(id));
     threadId = id;
     status = Status::Ready;
     fPath = "";
@@ -77,9 +77,9 @@ bool ImageDecoder::load()
 
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION, fPath);
+    if (G::isLogger) G::log("ImageDecoder::load", fPath);
     /*
-    qDebug() << CLASSFUNCTION << "fPath =" << fPath;
+    qDebug() << "ImageDecoder::load" << "fPath =" << fPath;
     //*/
 
     // null fPath when caching is cycling, waiting to finish.
@@ -89,7 +89,7 @@ bool ImageDecoder::load()
     ext = fileInfo.completeSuffix().toLower();
 
     if (metadata->videoFormats.contains(ext)) {
-        G::error(CLASSFUNCTION, fPath, "Ignore video formats.");
+        G::error("ImageDecoder::load", fPath, "Ignore video formats.");
         return false;
     }
 
@@ -97,7 +97,7 @@ bool ImageDecoder::load()
 
     // is metadata loaded rgh use isMeta in cacheItemList?
     if (!n.metadataLoaded && metadata->hasMetadataFormats.contains(ext)) {
-        G::error(CLASSFUNCTION, fPath, "Metadata not loaded.");
+        G::error("ImageDecoder::load", fPath, "Metadata not loaded.");
         return false;
     }
 
@@ -147,7 +147,7 @@ bool ImageDecoder::load()
         // try to decode the jpg data
         if (!image.loadFromData(buf, "JPEG")) {
             G::error("ImageDecoder::load", fPath, "image.loadFromData failed.");
-            qWarning() << CLASSFUNCTION << "Failed to loadFromData" << fPath;
+            qWarning() << "ImageDecoder::load" << "Failed to loadFromData" << fPath;
             imFile.close();
             return false;
         }
@@ -160,12 +160,12 @@ bool ImageDecoder::load()
         #ifdef Q_OS_WIN
         Heic heic;
         if (!heic.decodePrimaryImage(fPath, image)) {
-            G::error(CLASSFUNCTION, fPath, "heic.decodePrimaryImage failed.");
+            G::error("ImageDecoder::load", fPath, "heic.decodePrimaryImage failed.");
             imFile.close();
             return false;
         }
         /*
-        qDebug() << CLASSFUNCTION << "HEIC image" << image.width() << image.height();
+        qDebug() << "ImageDecoder::load" << "HEIC image" << image.width() << image.height();
         //*/
         #endif
     }
@@ -211,7 +211,7 @@ bool ImageDecoder::load()
         // try to decode
         ImageMetadata m;
         /*
-        qDebug() << CLASSFUNCTION
+        qDebug() << "ImageDecoder::load"
                  << "USEQT: "
                  << "Id =" << threadId
                  << "decoder->fPath =" << fPath
@@ -224,6 +224,10 @@ bool ImageDecoder::load()
         }
         imFile.close();
     }
+
+    // check for null image
+    if (image.width() == 0 || image.height() == 0) return false;
+
     return true;
 }
 
@@ -284,7 +288,8 @@ void ImageDecoder::run()
         status = Status::Done;
     }
     else {
-        G::error("ImageDecoder::run", fPath, "Could not load " + fPath);        status = Status::Failed;
+        G::error("ImageDecoder::run", fPath, "Could not load " + fPath);
+        status = Status::Failed;
         fPath = "";
     }
 

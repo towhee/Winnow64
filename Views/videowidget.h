@@ -15,7 +15,7 @@ class VideoWidget: public QVideoWidget
 {
     Q_OBJECT
 public:
-    explicit VideoWidget(QWidget *parent = nullptr);
+    explicit VideoWidget(QWidget *parent);
     enum PlayState { Playing, Paused, Unavailable };
     void load(QString fPath);
     void play();
@@ -31,10 +31,13 @@ private:
 
 signals:
     void togglePlayOrPause();
+    void handleDrop(QString fPath);
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
-//    void keyPressEvent(QKeyEvent *event) override;
+    bool eventFilter(QObject *obj, QEvent *event) override;
+//    void dropEvent(QDropEvent *event) override;
+//    void dragEnterEvent(QDragEnterEvent *event) override;
 };
 
 #endif // VIDEOWIDGET_H

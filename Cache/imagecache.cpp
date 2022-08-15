@@ -332,21 +332,22 @@ void ImageCache::setTargetRange()
 bool ImageCache::nextToCache(int id)
 {
 /*
-    The next image to cache is determined by traversing the cacheItemList in ascending order
-    to find the highest priority item to cache in the target range based on these criteria:
+    The next image to cache is determined by traversing the cacheItemList in ascending
+    order to find the highest priority item to cache in the target range based on these
+    criteria:
 
     - isCaching and isCached are false.
-    - decoderId matches item, isCaching is true and isCached = false.  If this is the case then
-      we know the previous attempt failed, and we should try again, unless the attempts are
-      greater than maxAttemptsToCacheImage.
+
+    - decoderId matches item, isCaching is true and isCached = false. If this is the case
+      then we know the previous attempt failed, and we should try again, unless the
+      attempts are greater than maxAttemptsToCacheImage.
 */
     if (G::isLogger) G::log("ImageCache::nextToCache");
 
     for (int p = 0; p < priorityList.size(); p++) {
         if (abort) return false;
         int i = priorityList.at(p);
-        if (i >= icd->cacheItemList.length()) break;    // debugging
-//        if (!icd->cacheItemList.at(i).isMetadata) continue;
+//        if (i >= icd->cacheItemList.length()) break;    // debugging
         bool isCaching = icd->cacheItemList.at(i).isCaching;
         bool isCached = icd->cacheItemList.at(i).isCached;
         int attempts = icd->cacheItemList.at(i).attempts;
@@ -1341,9 +1342,9 @@ void ImageCache::setCurrentPosition(QString path, QString src)
 void ImageCache::decodeNextImage(int id)
 {
 /*
-    Called from fillCache to run a decoder for the next image to decode into a QImage.  The
-    decoders run in separate threads.  When they complete the decoding they signal back to
-    fillCache.
+    Called from fillCache to run a decoder for the next image to decode into a QImage.
+    The decoders run in separate threads. When they complete the decoding they signal
+    back to fillCache.
 */
     int row = icd->cache.toCacheKey;
     icd->cacheItemList[row].isCaching = true;
@@ -1374,6 +1375,7 @@ void ImageCache::cacheImage(int id, int cacheKey)
         QString k = QString::number(cacheKey).leftJustified((4));
         qDebug().noquote() << "ImageCache::cacheImage" << "     decoder" << id
                            << "row =" << k
+                           << "image size =" << decoder[id]->image.size()
                            << decoder[id]->fPath;
     }
     makeRoom(id, cacheKey);
@@ -1464,7 +1466,49 @@ bool ImageCache::fillCache(int id, bool positionChange)
         }
     }
 
+    // assume success
+    int cacheKey = cacheKeyHash[decoder[id]->fPath];
+
+    // DM instance check
+    if (decoder[id]->dmInstance != dm->instance) {
+        cacheKey = -1;
+    }
+
+    // unassigned decoder check
+    if (cacheKey != -1 && decoder[id]->fPath == "") {
+        cacheKey = -1;
+    }
+
+    // range check
+    if (cacheKey != -1 && cacheKey >= icd->cacheItemList.length()) {
+        if (icd->cacheItemList.length() > 0) {
+            qWarning() << "ImageCache::fillCache"
+                       << "Decoder" << id << decoder[id]->fPath
+                       << "cacheKey =" << cacheKey
+                       << "EXCEEDS icd->cacheItemList.length() of"
+                       << icd->cacheItemList.length()
+                          ;
+            QString err = "cacheKey = " + QString::number(cacheKey) +
+                          " exceeds icd->cacheItemList.length() of " +
+                          QString::number(icd->cacheItemList.length());
+            G::error("ImageCache::fillCache", decoder[id]->fPath, err);
+        }
+        cacheKey = -1;
+    }
+
+    // null image check
+    if (cacheKey != -1 && decoder[id]->image.width() == 0) {
+        cacheKey = -1;
+        qWarning() << "ImageCache::fillCache"
+                   << "Decoder" << id
+                   << "Image width = 0"
+                   << decoder[id]->fPath
+                      ;
+    }
+
+    /*
     int cacheKey = -1;
+
     // DM instance check
     if (decoder[id]->dmInstance == dm->instance) {
         // Unassigned decoder check
@@ -1476,18 +1520,11 @@ bool ImageCache::fillCache(int id, bool positionChange)
         qWarning() << "ImageCache::fillCache DataModel instance clash:"
                    << "Decoder DM instance" << decoder[id]->dmInstance
                    << "DM instance" << dm->instance
+                   << "Decoder id =" << id
+                   << decoder[id]->fPath
                       ;
     }
 
-    if (debugCaching) {
-        QString k = QString::number(cacheKey).leftJustified((4));
-        qDebug().noquote() << "ImageCache::fillCache"
-                 << "      decoder" << id
-                 << "row =" << k    // row = key
-                 << "isRunning =" << decoder[id]->isRunning()
-                 << decoder[id]->fPath
-                    ;
-    }
 
     // range check
     if (cacheKey >= icd->cacheItemList.length()) {
@@ -1504,6 +1541,27 @@ bool ImageCache::fillCache(int id, bool positionChange)
             G::error("ImageCache::fillCache", decoder[id]->fPath, err);
         }
         cacheKey = -1;
+    }
+
+    // null image check
+    if (decoder[id]->image.width() == 0) {
+        cacheKey = -1;
+        qWarning() << "ImageCache::fillCache"
+                   << "Decoder" << id
+                   << "Image width = 0"
+                   << decoder[id]->fPath
+                      ;
+    }
+    //*/
+
+    if (debugCaching) {
+        QString k = QString::number(cacheKey).leftJustified((4));
+        qDebug().noquote() << "ImageCache::fillCache"
+                 << "      decoder" << id
+                 << "row =" << k    // row = key
+                 << "isRunning =" << decoder[id]->isRunning()
+                 << decoder[id]->fPath
+                    ;
     }
 
     // add decoded QImage to imCache.

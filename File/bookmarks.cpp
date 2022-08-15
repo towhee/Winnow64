@@ -197,7 +197,6 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
         }
         return;
     }
-    qDebug() << CLASSFUNCTION << "G::stop =" << G::stop;
     QTreeWidget::mousePressEvent(event);
 }
 

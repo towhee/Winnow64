@@ -5,7 +5,6 @@
 #include "Main/global.h"
 #include "Views/iconview.h"
 
-//class VideoView : public QVideoWidget
 class VideoView : public QWidget
 {
     Q_OBJECT
@@ -19,6 +18,7 @@ public:
 
 signals:
     void togglePick();
+    void handleDrop(QString fPath);
 
 protected:
     void wheelEvent(QWheelEvent *event) override;
@@ -30,6 +30,7 @@ public slots:
     void scrubMoved(int ms);
     void scrubPressed();
     void playOrPause();
+    void relayDrop(QString fPath);
 
 private:
     IconView *thumbView;
