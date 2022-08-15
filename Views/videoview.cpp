@@ -2,17 +2,21 @@
 
 VideoView::VideoView(QWidget *parent, IconView *thumbView) : QWidget{parent}
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::VideoView");
 
     this->thumbView = thumbView;
 
     video = new VideoWidget(this);
+
+    setAcceptDrops(true);
+    video->setAcceptDrops(true);
 
     setStyleSheet("QSlider{min-height: 24;}");
 
     connect(video->mediaPlayer, &QMediaPlayer::durationChanged, this, &VideoView::durationChanged);
     connect(video->mediaPlayer, &QMediaPlayer::positionChanged, this, &VideoView::positionChanged);
     connect(video, &VideoWidget::togglePlayOrPause, this, &VideoView::playOrPause);
+    connect(video, &VideoWidget::handleDrop, this, &VideoView::handleDrop);
 
     playPauseBtn = new QToolButton;
     playPauseBtn->setIcon(QIcon(":/images/icon16/media_play.png"));
@@ -46,7 +50,7 @@ VideoView::VideoView(QWidget *parent, IconView *thumbView) : QWidget{parent}
 
 void VideoView::load(QString fPath)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::load");
     video->load(fPath);
     play();
     pause();
@@ -54,7 +58,7 @@ void VideoView::load(QString fPath)
 
 void VideoView::play()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::play");
     if (position >= duration) video->setPosition(0);
     video->play();
     playPauseBtn->setIcon(QIcon(":/images/icon16/media_pause.png"));
@@ -62,32 +66,36 @@ void VideoView::play()
 
 void VideoView::pause()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::pause");
     video->pause();
     playPauseBtn->setIcon(QIcon(":/images/icon16/media_play.png"));
 }
 
 void VideoView::stop()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::stop");
     video->stop();
 }
 
 void VideoView::scrubMoved(int ms)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::scrubMoved");
     video->setPosition(ms * 1000);
+    video->pause();
+    playPauseBtn->setIcon(QIcon(":/images/icon16/media_play.png"));
 }
 
 void VideoView::scrubPressed()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::scrubPressed");
     video->setPosition(scrub->value() * 1000);
+    video->pause();
+    playPauseBtn->setIcon(QIcon(":/images/icon16/media_play.png"));
 }
 
 void VideoView::durationChanged(qint64 duration_ms)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::durationChanged");
     duration = duration_ms / 1000;
     scrub->setMaximum(duration);
     updatePositionLabel();
@@ -95,7 +103,7 @@ void VideoView::durationChanged(qint64 duration_ms)
 
 void VideoView::positionChanged(qint64 progress_ms)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::positionChanged");
     position = progress_ms / 1000;
     if (!duration) return;
     if (duration > 0 && !scrub->isSliderDown()) {
@@ -109,7 +117,7 @@ void VideoView::positionChanged(qint64 progress_ms)
 
 void VideoView::updatePositionLabel()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::updatePositionLabel");
     QString tStr;
     if (position || duration) {
         QTime currentTime((position / 3600) % 60, (position / 60) % 60,
@@ -126,8 +134,8 @@ void VideoView::updatePositionLabel()
 
 void VideoView::playOrPause()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
+    if (G::isLogger) G::log("VideoView::playOrPause");
+    qDebug() << "";
     switch (video->playOrPause()) {
     case VideoWidget::PlayState::Playing:
         pause();
@@ -142,7 +150,7 @@ void VideoView::playOrPause()
 
 void VideoView::wheelEvent(QWheelEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::wheelEvent");
 
     // wheel scrolling / trackpad swiping = next/previous image
     static int deltaSum = 0;
@@ -177,7 +185,7 @@ bool VideoView::event(QEvent *event) {
     /*
         Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
     */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoView::event");
     if (event->type() == QEvent::NativeGesture) {
         emit togglePick();
         /*
@@ -194,3 +202,7 @@ bool VideoView::event(QEvent *event) {
     return true;
 }
 
+void VideoView::relayDrop(QString fPath)
+{
+    emit handleDrop(fPath);
+}

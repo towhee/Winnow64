@@ -40,6 +40,7 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
 
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
     QApplication::restoreOverrideCursor();
     copyOp = (keyMods == Qt::ControlModifier);
     QMessageBox msgBox;

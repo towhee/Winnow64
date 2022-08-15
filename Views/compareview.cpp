@@ -88,6 +88,9 @@ CompareView::CompareView(QWidget *parent,
     pmItem->setBoundingRegionGranularity(1);
     scene->addItem(pmItem);
 
+    setAcceptDrops(true);
+    pmItem->setAcceptDrops(true);
+
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -299,21 +302,22 @@ current value information in a more compact form for subsequent panning.
 void CompareView::reportScrollBarStatus(QString info)
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
-//    qDebug() << G::t.restart() << "\t" << "ScrollBarStatus:" << currentImagePath// << "\n"
-//             << "hMin" << scrl.hMin << "hMax" << scrl.hMax << "hVal" << scrl.hVal
-//             << "vMin" << scrl.vMin << "vMax" << scrl.vMax << "vVal" << scrl.vVal
-//             << "hPct" << scrl.hPct << "vPct" << scrl.vPct
-//             << "\n";
+    /*
+    qDebug() << G::t.restart() << "\t" << "ScrollBarStatus:" << currentImagePath// << "\n"
+             << "hMin" << scrl.hMin << "hMax" << scrl.hMax << "hVal" << scrl.hVal
+             << "vMin" << scrl.vMin << "vMax" << scrl.vMax << "vVal" << scrl.vVal
+             << "hPct" << scrl.hPct << "vPct" << scrl.vPct
+             << "\n";
+             //*/
     getScrollBarStatus();
     int row = imageIndex.row();
-    qDebug() << row << info << "Zoom" << zoom << "hPct" << scrl.hPct << "vPct" << scrl.vPct;
 }
 
 QPointF CompareView::getScrollDeltaPct()
 {
 /*
-Called by the focus instance from scrollEvent to calculate the delta between the
-last scroll point and the current one.
+    Called by the focus instance from scrollEvent to calculate the delta between the
+    last scroll point and the current one.
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
     getScrollBarStatus();
@@ -321,14 +325,13 @@ last scroll point and the current one.
     QPointF delta(scrl.hPct - scrollPosPct.x(), scrl.vPct - scrollPosPct.y());
     // update current scroll position
     scrollPosPct = QPointF(scrl.hPct, scrl.vPct);
-//    reportScrollBarStatus();
     return delta;
 }
 
 QPointF CompareView::getScrollPct()
 {
 /*
-Returns coordinates in percent for the current scroll position.
+    Returns coordinates in percent for the current scroll position.
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
     // update scrl struct with current scrollbar parameters
@@ -339,7 +342,7 @@ Returns coordinates in percent for the current scroll position.
 QPointF CompareView::getScrollPct(QPoint p)
 {
 /*
-Returns coordinates in percent for point p, where p is in scrollbar coordinates
+    Returns coordinates in percent for point p, where p is in scrollbar coordinates
 */
     int hMin = horizontalScrollBar()->minimum();
     int hMax = horizontalScrollBar()->maximum();
@@ -355,9 +358,9 @@ Returns coordinates in percent for point p, where p is in scrollbar coordinates
 qreal CompareView::getZoom()
 {
 /*
-Zoom (or scale factor) is the ratio of monitor (viewport) pixels to image
-pixels. In other words, how many viewport pixels = one image pixel. A zoom of
-100% means each viewport pixel equals an image pixel.
+    Zoom (or scale factor) is the ratio of monitor (viewport) pixels to image
+    pixels. In other words, how many viewport pixels = one image pixel. A zoom of
+    100% means each viewport pixel equals an image pixel.
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
     // use view center to make sure inside scene item
@@ -370,7 +373,7 @@ pixels. In other words, how many viewport pixels = one image pixel. A zoom of
 qreal CompareView::getFitScaleFactor(QSize container, QRectF content)
 {
 /*
-Return the scale factor (or zoom) to fit the image inside the viewport.
+    Return the scale factor (or zoom) to fit the image inside the viewport.
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
     qreal hScale = static_cast<qreal>(container.width() - 2) / content.width() * G::actDevicePixelRatio;
@@ -403,7 +406,6 @@ void CompareView::scale(bool okayToPropagate)
     setTransform(matrix);   // qt6.2
 
     // notify ZoomDlg of change in scale
-    qDebug() << CLASSFUNCTION << zoom << "zoomChange";
     emit zoomChange(zoom, hasFocus());
 
     // if focus instance (originator of scale change)
@@ -424,8 +426,8 @@ void CompareView::scale(bool okayToPropagate)
 void CompareView::placeClassificationBadge()
 {
 /*
-The classification label (ratings / color class / pick status) is positioned in
-the bottom right corner of the image.
+    The classification label (ratings / color class / pick status) is positioned in
+    the bottom right corner of the image.
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
     QPoint sceneBottomRight = mapFromScene(sceneRect().bottomRight());
@@ -445,14 +447,15 @@ the bottom right corner of the image.
         y = rect().height();
 
     // resize if necessary
-/*    qreal f = 0.05;
+    /*
+    qreal f = 0.05;
     w *= f;
     h *= f;
     int d;                          // dimension of pick image
     w > h ? d = w : d = h;
     if (d < 20) d = 18;
     if (d > 40) d = 40;
-    */
+    //*/
 
     int o = 5;                          // offset margin from edge
     int d = 20;                         // diameter of the classification label
@@ -516,7 +519,7 @@ void CompareView::zoomToggle()
     Called from MW menu action to CompareImages and then to each compare instance
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
-    qDebug() << CLASSFUNCTION << toggleZoom << G::actDevicePixelRatio;
+//    qDebug() << CLASSFUNCTION << toggleZoom << G::actDevicePixelRatio;
     if (!isZoom) zoom = toggleZoom;
 }
 
@@ -525,9 +528,9 @@ void CompareView::zoomToggle()
 void CompareView::wheelEvent(QWheelEvent *wheelEvent)
 {
 /*
-Called when trackpad scroll occurs.  The Focus instance is panned by the default
-QGraphicsView behavior.  The panning is not propagated to the slave instances if
-the shift modifier key is pressed.
+    Called when trackpad scroll occurs.  The Focus instance is panned by the default
+    QGraphicsView behavior.  The panning is not propagated to the slave instances if
+    the shift modifier key is pressed.
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
     propagate = true;
@@ -552,7 +555,6 @@ void CompareView::mousePressEvent(QMouseEvent *event)
         return;
     }
     if (event->button() == Qt::ForwardButton) {
-//        thumbView->selectNext();
         emit togglePick();
         return;
     }
@@ -575,16 +577,16 @@ void CompareView::mousePressEvent(QMouseEvent *event)
 void CompareView::mouseMoveEvent(QMouseEvent *event)
 {
 /*
-Pan the image during a mouse drag operation.  If the shift key is also pressed
-then the pan will not be signaled to the other instances and only the
-focus instance will pan.  The modifier key test is in the scroll event.
+    Pan the image during a mouse drag operation.  If the shift key is also pressed
+    then the pan will not be signaled to the other instances and only the
+    focus instance will pan.  The modifier key test is in the scroll event.
 */
     if (isLeftMouseBtnPressed) {
         isMouseDrag = true;
         setCursor(Qt::ClosedHandCursor);
 
         /* scroll to pan with the mouse drag.  All operations are relative so
-           calculate the delta amount between mouse events.  Thehe scroll event
+           calculate the delta amount between mouse events.  The scroll event
            is fired by changes to the scrollbars which signals the other
            instances to mirror the pan  */
         horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
@@ -677,4 +679,12 @@ void CompareView::deselect()
                         "border-style: solid; "
                         "border-width: 2; "
                         "border-color: rgb(111,111,111);}");
+}
+
+void CompareView::dragEnterEvent(QDragEnterEvent *event)
+{
+/*
+    Empty function required to propagate drop event (not sure why)
+*/
+    if (G::isLogger) G::log(CLASSFUNCTION);
 }

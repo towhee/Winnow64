@@ -69,6 +69,7 @@ protected:
     void wheelEvent(QWheelEvent *wheelEvent);
     void enterEvent(QEvent *event);
     void leaveEvent(QEvent *event);
+    void dragEnterEvent(QDragEnterEvent *event) override;
 
 private:
     QWidget *mainWindow;

@@ -5,11 +5,11 @@ bool showDebug = false;
 class parseInStream
 {
 /*
-    The incoming stream is read 8 bits at a time into a bit buffer called pending. The buffer
-    is consumed (most significant) n bits at a time (inCode), where n = codesize. currCode
-    starts at 258 and is incremented each time an inCode is consumed. codeSize starts at 9
-    bits, and is incremented each time currCode exceeds the bit capacity. codeSize maximum is
-    12 bits.
+    The incoming stream is read 8 bits at a time into a bit buffer called pending. The
+    buffer is consumed (most significant) n bits at a time (inCode), where n = codesize.
+    currCode starts at 258 and is incremented each time an inCode is consumed. codeSize
+    starts at 9 bits, and is incremented each time currCode exceeds the bit capacity.
+    codeSize maximum is 12 bits.
 
 */
 public :
@@ -112,9 +112,9 @@ bool Tiff::parse(MetadataParameters &p,
            GPS *gps)
 {
 /*
-    This function reads the metadata from a tiff file.  If the tiff file does not contains a
-    thumbnail, either in an IRB or IFB, and G::embedTifThumb == true, then a thumbnail will be
-    added at the end of file.
+    This function reads the metadata from a tiff file. If the tiff file does not contain
+    a thumbnail, either in an IRB or IFB, and G::embedTifThumb == true, then a thumbnail
+    will be added at the end of file.
 */
     if (G::isLogger) G::log(__PRETTY_FUNCTION__);
     //file.open happens in readMetadata
@@ -536,11 +536,12 @@ bool Tiff::isBigEndian(MetadataParameters &p)
 bool Tiff::parseForDecoding(MetadataParameters &p, /*ImageMetadata &m, */IFD *ifd)
 {
 /*
-    Get IFD parameters required for TIF decoding: stripOffsets, stripByteCounts, bitsPerSample,
-    photoInterp, samplesPerPixel, rowsPerStrip, compression and planarConfiguration.
+    Get IFD parameters required for TIF decoding: stripOffsets, stripByteCounts,
+    bitsPerSample, photoInterp, samplesPerPixel, rowsPerStrip, compression and
+    planarConfiguration.
 
     This function can be called from the main thread (for reporting) or from the metadata
-    generation thread or from any of the image decoder threads.  The reporting parameter
+    generation thread or from any of the image decoder threads. The reporting parameter
     p.rpt can only be used from the main thread.
 
     p.offset must be set to start of IFD before calling parseForDecoding.
@@ -746,7 +747,7 @@ bool Tiff::decode(ImageMetadata &m, QString &fPath, QImage &image, bool thumb, i
 bool Tiff::decode(QString fPath, quint32 offset, QImage &image)
 {
 /*
-   The version is used by decoders in image cache.
+    The version is used by decoders in image cache.
 */
     if (G::isLogger) G::log(__PRETTY_FUNCTION__, " load file from fPath");
     QFileInfo fileInfo(fPath);

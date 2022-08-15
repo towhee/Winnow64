@@ -2,42 +2,44 @@
 
 /*
 
-Xmp reads xmp tags from from the source file buffer (xmpBa), which could be an image file or
-an xmp sidecar file. If there are no offsets to the buffer then a sidecar file will be used.
+Xmp reads xmp tags from from the source file buffer (xmpBa), which could be an image file
+or an xmp sidecar file. If there are no offsets to the buffer then a sidecar file will be
+used.
 
 Read/Write to a sidecar:   Xmp xmp(file);
 Read/Write to image file:  Xmp xmp(file, offset, nextOffset);  // no writing yet
 
 Terms:
 
-    "Element" is a node or attribute in the xmp. If it is an attribute then the parent is the
-    node. If it is a node then the parent is the parent node.
+    "Element" is a node or attribute in the xmp. If it is an attribute then the parent is
+    the node. If it is a node then the parent is the parent node.
 
-    "Item" is a string to identify the associated element ie rating, label... All items are
-    converted to lower case.
+    "Item" is a string to identify the associated element ie rating, label... All items
+    are converted to lower case.
 
     "Node" is an element enclosed with < and /> brackets.
 
-    "Attribute" is an element name/value inside a node ie rating = 5.  The node is the parent.
+    "Attribute" is an element name/value inside a node ie rating = 5. The node is the
+    parent.
 
     "Schema" is the definition for the element ie "xmp", "dc", "aux"...
 
     "Namespace" is the source of the schema ie xmlns:xmp = "http://ns.adobe.com/xap/1.0/"
 
-Xmp uses the library rapidxml to parse the xmp text into a DOM rapidxml::xml_document. The
-library uses pointers for all operations, so any data passed to rapidxml must be Xmp class
-variables to insure their lifespan. Two QByteArrayList, a (element name) and v (element value),
-are used.
+Xmp uses the library rapidxml to parse the xmp text into a DOM rapidxml::xml_document.
+The library uses pointers for all operations, so any data passed to rapidxml must be Xmp
+class variables to insure their lifespan. Two QByteArrayList, a (element name) and v
+(element value), are used.
 
-The struct XmpElement is used to describe everything Xmp needs to find, create, get and set
-items (ie rating, label, title etc).  The hash of XmpElement called defineElements contains
-the definitions for all the items that Winnow uses including: rating, label, createdate,
-modifydate, title, rights, creator, lens, lensserialnumber, serialnumber, email, url,
-orientation and winnowaddthumb.
+The struct XmpElement is used to describe everything Xmp needs to find, create, get and
+set items (ie rating, label, title etc). The hash of XmpElement called defineElements
+contains the definitions for all the items that Winnow uses including: rating, label,
+createdate, modifydate, title, rights, creator, lens, lensserialnumber, serialnumber,
+email, url, orientation and winnowaddthumb.
 
-Xmp::xmlDocElement searches xmlDoc for an item.  If found, it returns a XmpElement with the
-pointers to it in xmlDoc and its name, parent name and value.  The element can be matched in
-definedElements for more information.
+Xmp::xmlDocElement searches xmlDoc for an item. If found, it returns a XmpElement with
+the pointers to it in xmlDoc and its name, parent name and value. The element can be
+matched in definedElements for more information.
 
 */
 
@@ -427,6 +429,13 @@ void Xmp::initialize()
     definedElements["modifydate"] = e;
 
     // title
+    e.name = "dc:subject";
+    e.parentName = "rdf:Description";
+    e.type = ElementType::Attribute;
+    e.schema = "dc";
+    definedElements["subject"] = e;
+
+    // title
     e.name = "dc:title";
     e.parentName = "rdf:Description";
     e.type = ElementType::Attribute;
@@ -661,8 +670,8 @@ QString Xmp::getItem(QByteArray item)
     if (!element.exists()) return "";
     // found a simple node or an attribute that has a value
     if (!element.value.isEmpty()) return element.value;
-    QStringList propertyElements;
     // check if child node is a property element
+    QStringList propertyElements;
     propertyElements << "rdf:Seq" << "rdf:Bag" << "rdf:Alt";
     // try drilling into node found
     rapidxml::xml_node<> *node = element.node->first_node();
@@ -711,6 +720,50 @@ QString Xmp::getItem(QByteArray item)
     }
     return "";
     */
+}
+
+QStringList Xmp::getItemList(QByteArray item)
+{
+    /*
+    Returns the value for the item.  ie getItem("creator") = "Rory"
+    items: Rating, Label, title ...
+    item case does not matter
+*/
+    if (G::isLogger) G::log(CLASSFUNCTION);
+
+    item = item.toLower();
+    QStringList valueList;
+//    /*
+//    qDebug() << CLASSFUNCTION << item << definedElements[item].nodeName << definedElements.contains(item);
+//    //*/
+//    if (!definedElements.contains(item)) {
+//        qWarning() << CLASSFUNCTION << item << "not found in xmpObjs";
+//        return valueList;
+//    }
+//    XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
+//    if (!element.exists()) return valueList;
+//    // found a simple node or an attribute that has a value
+//    if (!element.value.isEmpty()) return element.valueList;
+//    QStringList propertyElements;
+//    // check if child node is a property element
+//    propertyElements << "rdf:Seq" << "rdf:Bag" << "rdf:Alt";
+//    // try drilling into node found
+//    rapidxml::xml_node<> *node = element.node->first_node();
+//    if (node == 0) return valueList;
+//    QString nodeName = xmlNodeName(node);
+//    if (propertyElements.contains(nodeName)) {
+//        rapidxml::xml_node<> *list = node->first_node();
+//        if (list == 0) return valueList;
+//        nodeName = xmlNodeName(list);
+//        if (nodeName == "rdf:li") {
+//            QString val = xmlNodeValue(list);
+//            if (val != "") return val;
+//            rapidxml::xml_attribute<>* a = list->first_attribute();
+//            if (a == 0) return "";
+//            return xmlAttributeName(a);
+//        }
+//    }
+    return valueList;
 }
 
 bool Xmp::setItem(QByteArray item, QByteArray value)
@@ -791,8 +844,8 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
 }
 
 Xmp::XmpElement Xmp::xmlDocElement(QString name,
-                           rapidxml::xml_node<> *node,
-                           rapidxml::xml_node<> *parNode)
+                                   rapidxml::xml_node<> *node,
+                                   rapidxml::xml_node<> *parNode)
 {
 /*
     Return an XmlElement struct for the element name, starting from *node in xmlDoc.
@@ -805,6 +858,7 @@ Xmp::XmpElement Xmp::xmlDocElement(QString name,
     - parentName
     - type (node vs attribute)
     - value
+    - valueList (if contains list ie subject = list of key words)
 
     Input:
 
@@ -816,7 +870,9 @@ Xmp::XmpElement Xmp::xmlDocElement(QString name,
     XmpElement element = nullXmpElement;
     QString nodeName = xmlNodeName(node);
     QString parName = "";
-    if (parNode) parName = xmlNodeName(parNode);
+    if (parNode) {
+        parName = xmlNodeName(parNode);
+    }
     if (nodeName == name) {
         element.node = node;
         element.parent = parNode;
@@ -841,7 +897,7 @@ Xmp::XmpElement Xmp::xmlDocElement(QString name,
             return element;
         }
     }
-    // child nodes
+    // recurse child nodes
     rapidxml::xml_node<>* n;
     for (n = node->first_node(); n; n = n->next_sibling() ) {
         element = xmlDocElement(name, n, node);
@@ -891,7 +947,7 @@ void Xmp::walk(QTextStream &rpt, rapidxml::xml_node<>* node, int indentSize, int
 
         // child nodes
         rapidxml::xml_node<>* n;
-        for(n = node->first_node(); n; n = n->next_sibling() ) {
+        for (n = node->first_node(); n; n = n->next_sibling() ) {
             walk(rpt, n, indentSize, indentCount+1);
         }
 
@@ -959,11 +1015,12 @@ void Xmp::report(XmpElement o)
     QString elType;
     o.type == ElementType::Node ? elType = "node" : elType = "attribute";
     qDebug() << CLASSFUNCTION
-             << "name =" << o.name
-             << "parent =" << o.parentName
-             << "type =" << elType
-             << "value =" << o.value
-             << "exists =" << o.exists()
+             << "\n  name =" << o.name
+             << "\n  parent =" << o.parentName
+             << "\n  type =" << elType
+             << "\n  exists =" << o.exists()
+             << "\n  value =" << o.value
+             << "\n  value list =" << o.valueList
                 ;
 }
 

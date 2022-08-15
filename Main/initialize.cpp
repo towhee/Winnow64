@@ -450,6 +450,8 @@ void MW::createVideoView()
 
     // back and forward mouse buttons toggle pick
     connect(videoView, &VideoView::togglePick, this, &MW::togglePick);
+    // drop event
+    connect(videoView, &VideoView::handleDrop, this, &MW::handleDrop);
 }
 
 void MW::createImageView()
