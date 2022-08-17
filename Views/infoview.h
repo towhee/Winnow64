@@ -60,6 +60,7 @@ public:
         ISORow,
         ExposureCompensationRow,
         FocalLengthRow,
+        GPSCoordRow,
         imageInfoRowsEnd    // insert additional items before this
     };
 

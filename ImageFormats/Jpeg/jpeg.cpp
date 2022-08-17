@@ -364,6 +364,12 @@ bool Jpeg::parse(MetadataParameters &p,
         p.offset = offsetGPS;
         p.hash = &gps->hash;
         ifd->readIFD(p, isBigEnd);
+
+        if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
+            // process GPS info
+            QString gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd, 12);
+            m.gpsCoord = gpsCoord;
+        }
     }
 
     // read IPTC

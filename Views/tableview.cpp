@@ -141,6 +141,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::CameraModelColumn) return fm.boundingRect("Nikon D850============").width();
     if (column == G::LensColumn) return fm.boundingRect("Lens======================").width();
     if (column == G::FocalLengthColumn) return fm.boundingRect("=Focal length==").width();
+    if (column == G::GPSCoordColumn) return fm.boundingRect("=49°13'13.477  N 123°57'22.22 W=").width();
     if (column == G::TitleColumn) return fm.boundingRect("=Title=========================").width();
     if (column == G::CopyrightColumn) return fm.boundingRect("=Copyright=====").width();
     if (column == G::EmailColumn) return fm.boundingRect("=Email================").width();

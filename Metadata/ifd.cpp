@@ -6,7 +6,7 @@ IFD::IFD()
 
 }
 
-quint32 IFD::readIFD(MetadataParameters &p, /*ImageMetadata &m,*/ bool isBigEnd)
+quint32 IFD::readIFD(MetadataParameters &p, bool isBigEnd)
 {
     /* hash is the hash for the image format ie jpeg, nikon nef etc
        the hash has a description for each tagID and is used for reporting
