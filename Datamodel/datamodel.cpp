@@ -199,6 +199,7 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::CameraModelColumn, new QStandardItem("Model")); horizontalHeaderItem(G::CameraModelColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::LensColumn, new QStandardItem("Lens")); horizontalHeaderItem(G::LensColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::FocalLengthColumn, new QStandardItem("Focal length")); horizontalHeaderItem(G::FocalLengthColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::GPSCoordColumn, new QStandardItem("GPS Coord")); horizontalHeaderItem(G::GPSCoordColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::TitleColumn, new QStandardItem("Title")); horizontalHeaderItem(G::TitleColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::CopyrightColumn, new QStandardItem("Copyright")); horizontalHeaderItem(G::CopyrightColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::EmailColumn, new QStandardItem("Email")); horizontalHeaderItem(G::EmailColumn)->setData(false, G::GeekRole);
@@ -729,6 +730,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.lens = index(row, G::LensColumn).data().toString();
     m.focalLengthNum = index(row, G::FocalLengthColumn).data().toInt();
     m.focalLength = QString::number(m.focalLengthNum, 'f', 0) + "mm";
+    m.gpsCoord = index(row, G::GPSCoordColumn).data().toString();
     m.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
     m.duration = index(row, G::DurationColumn).data().toString();
 
@@ -938,7 +940,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     search += m.lens;
     setData(index(row, G::FocalLengthColumn), m.focalLengthNum);
     setData(index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
-//    if (index(row, G::TitleColumn).data().toString() != "") m.title = index(row, G::TitleColumn).data().toString();
+    setData(index(row, G::GPSCoordColumn), m.gpsCoord);
+    setData(index(row, G::GPSCoordColumn), m.gpsCoord, Qt::ToolTipRole);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo, Qt::ToolTipRole);
     search += m.shootingInfo;
@@ -1512,6 +1515,7 @@ void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
     rpt << "\n  " << G::sj("model", 25) << G::s(index(row, G::CameraModelColumn).data());
     rpt << "\n  " << G::sj("lens", 25) << G::s(index(row, G::LensColumn).data());
     rpt << "\n  " << G::sj("focalLengthNum", 25) << G::s(index(row, G::FocalLengthColumn).data());
+    rpt << "\n  " << G::sj("gpsCoord", 25) << G::s(index(row, G::GPSCoordColumn).data());
     rpt << "\n  " << G::sj("title", 25) << G::s(index(row, G::TitleColumn).data());
     rpt << "\n  " << G::sj("_title", 25) << G::s(index(row, G::_TitleColumn).data());
     rpt << "\n  " << G::sj("creator", 25) << G::s(index(row, G::CreatorColumn).data());

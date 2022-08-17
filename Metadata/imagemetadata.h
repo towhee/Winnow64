@@ -74,7 +74,7 @@ public:
     QString cameraSN = "";
     QString lensSN = "";
     int shutterCount = 0;
-    QString copyFileNamePrefix = "";        // rgh do we need?
+    QString gpsCoord;
     QString shootingInfo = "";
 
     QString title = "";

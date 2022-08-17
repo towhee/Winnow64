@@ -202,7 +202,8 @@ bool Olympus::parse(MetadataParameters &p,
                     ImageMetadata &m,
                     IFD *ifd,
                     Exif *exif,
-                    Jpeg *jpeg)
+                    Jpeg *jpeg,
+                    GPS *gps)
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
     //file.open in Metadata::readMetadata
@@ -231,8 +232,9 @@ bool Olympus::parse(MetadataParameters &p,
     m.height = static_cast<int>(ifd->ifdDataHash.value(257).tagValue);
 
     // get the offset for GPSIFD
-    quint32 offsetGPS;
-    offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
+    quint32 offsetGPS = 0;
+    if (ifd->ifdDataHash.contains(34853))
+        offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
 
     // get the offset for ExifIFD and read it
     quint32 offsetEXIF;
@@ -301,8 +303,8 @@ bool Olympus::parse(MetadataParameters &p,
     // focal length
     if (ifd->ifdDataHash.contains(37386)) {
         double x = u.getReal(p.file,
-                                      ifd->ifdDataHash.value(37386).tagValue,
-                                      isBigEnd);
+                             ifd->ifdDataHash.value(37386).tagValue,
+                             isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
         m.focalLength = QString::number(x, 'f', 0) + "mm";
     } else {
@@ -322,14 +324,21 @@ bool Olympus::parse(MetadataParameters &p,
     }
 
     // read GPSIFD
-    qDebug() << CLASSFUNCTION << "offsetGPS =" << offsetGPS;
-    p.file.seek(offsetGPS);
-    p.hdr = "IFD GPS";
-    p.offset = offsetGPS;
-    ifd->readIFD(p);
+    if (offsetGPS) {
+        p.file.seek(offsetGPS);
+        p.hdr = "IFD GPS";
+        p.hash = &gps->hash;
+        p.offset = offsetGPS;
+        ifd->readIFD(p);
+
+        if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
+            // process GPS info
+            QString gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd);
+            m.gpsCoord = gpsCoord;
+        }
+    }
 
     // read makernoteIFD
-
     /* the makernotes IFD is preceeded with either
        "OLYMPUS " + 49 49  03 00
        "OM SYSTEM   " + 49 49  04 00

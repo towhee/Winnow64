@@ -325,6 +325,7 @@ If any of the editable fields change then MW::metadataChanged is triggered.
     ok->setData(ok->index(ISORow, 0, imageInfoIdx), "ISO");
     ok->setData(ok->index(ExposureCompensationRow, 0, imageInfoIdx), "EC");
     ok->setData(ok->index(FocalLengthRow, 0, imageInfoIdx), "Focal length");
+    ok->setData(ok->index(GPSCoordRow, 0, imageInfoIdx), "GPS");
     ok->setData(ok->index(TitleRow, 0, tagInfoIdx), "Title");
     ok->setData(ok->index(CreatorRow, 0, tagInfoIdx), "Creator");
     ok->setData(ok->index(CopyrightRow, 0, tagInfoIdx), "Copyright");
@@ -472,11 +473,13 @@ void InfoView::updateInfo(const int &row)
     ok->setData(ok->index(ExposureCompensationRow, 1, imageInfoIdx), s);
     s = dm->sf->index(row, G::FocalLengthColumn).data().toString() + "mm";
     ok->setData(ok->index(FocalLengthRow, 1, imageInfoIdx), s);
+    s = dm->sf->index(row, G::GPSCoordColumn).data().toString();
+    ok->setData(ok->index(GPSCoordRow, 1, imageInfoIdx), s);
+
     s = dm->sf->index(row, G::TitleColumn).data().toString();
     ok->setData(ok->index(TitleRow, 1, tagInfoIdx), s);
     s = dm->sf->index(row, G::CreatorColumn).data().toString();
     ok->setData(ok->index(CreatorRow, 1, tagInfoIdx), s);
-
     s = dm->sf->index(row, G::CopyrightColumn).data().toString();
     ok->setData(ok->index(CopyrightRow, 1, tagInfoIdx), s);
     s = dm->sf->index(row, G::EmailColumn).data().toString();

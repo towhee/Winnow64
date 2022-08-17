@@ -8,6 +8,7 @@
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
 #include "Metadata/xmp.h"
+#include "Metadata/gps.h"
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "Metadata/metareport.h"
 
@@ -21,7 +22,8 @@ public:
                ImageMetadata &m,
                IFD *ifd,
                Exif *exif,
-               Jpeg *jpeg);
+               Jpeg *jpeg,
+               GPS *gps);
 private:
     QHash<quint32, QString> olympusMakerHash, olympusCameraSettingsHash;
     Utilities u;

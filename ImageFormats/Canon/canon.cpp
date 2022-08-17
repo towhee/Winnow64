@@ -77,7 +77,8 @@ bool Canon::parse(MetadataParameters &p,
                   ImageMetadata &m,
                   IFD *ifd,
                   Exif *exif,
-                  Jpeg *jpeg)
+                  Jpeg *jpeg,
+                  GPS *gps)
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
     //p.file.open in Metadata::readMetadata
@@ -107,6 +108,11 @@ bool Canon::parse(MetadataParameters &p,
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
     m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
+
+    // get the offset for GPSIFD
+    quint32 offsetGPS = 0;
+    if (ifd->ifdDataHash.contains(34853))
+        offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
 
     // xmp offset
     m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
@@ -251,6 +257,21 @@ bool Canon::parse(MetadataParameters &p,
         p.offset = makerOffset;
         p.hash = &canonMakerHash;
         ifd->readIFD(p);
+    }
+
+    // read GPSIFD
+    if (offsetGPS) {
+        p.file.seek(offsetGPS);
+        p.hdr = "IFD GPS";
+        p.hash = &gps->hash;
+        p.offset = offsetGPS;
+        ifd->readIFD(p);
+
+        if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
+            // process GPS info
+            QString gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd);
+            m.gpsCoord = gpsCoord;
+        }
     }
 
     // jpg preview metadata report information

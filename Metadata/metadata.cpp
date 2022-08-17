@@ -351,6 +351,7 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("focalLength", n) << G::s(m.focalLength) << "\n";
     p.rpt << G::sj("lens", n) << G::s(m.lens) << "\n";
     p.rpt << G::sj("shootingInfo", n) << G::s(m.shootingInfo) << "\n";
+    p.rpt << G::sj("gpsCoord", n) << G::s(m.gpsCoord) << "\n";
     p.rpt << G::sj("duration", n) << G::s(m.duration) << "\n";
     p.rpt << G::sj("cameraSN", n) << G::s(m.cameraSN) << "\n";
     p.rpt << G::sj("lensSN", n) << G::s(m.lensSN) << "\n";
@@ -711,7 +712,7 @@ bool Metadata::parseCanon()
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
     if (canon == nullptr) canon = new Canon;
-    canon->parse(p, m, ifd, exif, jpeg);
+    canon->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
     return true;
 }
@@ -729,7 +730,7 @@ bool Metadata::parseOlympus()
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
     if (olympus == nullptr) olympus = new Olympus;
-    olympus->parse(p, m, ifd, exif, jpeg);
+    olympus->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
     return true;
 }
@@ -913,6 +914,7 @@ void Metadata::clearMetadata()
     m.exposureCompensationNum = 0;
     m.focalLength = "";
     m.focalLengthNum = 0;
+    m.gpsCoord = "";
     m.title = "";
     m.lens = "";
     m.creator = "";
@@ -1090,7 +1092,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 //    m.isPicked = false;
 
     m.currRootFolder = fileInfo.absoluteDir().absolutePath();
-    m.copyFileNamePrefix = m.createdDate.toString("yyyy-MM-dd");
 
     QString s = m.model;
     s += "  " + m.focalLength;
