@@ -703,7 +703,7 @@ bool Metadata::parseNikon()
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
     if (nikon == nullptr) nikon = new Nikon;
-    nikon->parse(p, m, ifd, exif, jpeg);
+    nikon->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
     return true;
 }
@@ -739,7 +739,7 @@ bool Metadata::parseSony()
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
     if (sony == nullptr) sony = new Sony;
-    sony->parse(p, m, ifd, exif, jpeg);
+    sony->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
     return true;
 }
@@ -758,7 +758,7 @@ bool Metadata::parseDNG()
     if (G::isLogger) G::log(CLASSFUNCTION); 
     if (dng == nullptr) dng = new DNG;
     if (iptc == nullptr) iptc = new IPTC;
-    dng->parse(p, m, ifd, iptc, exif, jpeg);
+    dng->parse(p, m, ifd, iptc, exif, jpeg, gps);
     if (p.report) reportMetadata();
     return true;
 }

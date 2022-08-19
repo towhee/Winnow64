@@ -316,7 +316,8 @@ bool Sony::parse(MetadataParameters &p,
                  ImageMetadata &m,
                  IFD *ifd,
                  Exif *exif,
-                 Jpeg *jpeg)
+                 Jpeg *jpeg,
+                 GPS *gps)
 {
     //file.open in Metadata::readMetadata
     // first two bytes is the endian order (skip next 2 bytes)
@@ -350,6 +351,11 @@ bool Sony::parse(MetadataParameters &p,
     m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
     m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
+
+    // get the offset for GPSIFD
+    quint32 offsetGPS = 0;
+    if (ifd->ifdDataHash.contains(34853))
+        offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
 
     quint32 offsetEXIF;
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
@@ -500,6 +506,21 @@ bool Sony::parse(MetadataParameters &p,
         int d3 = sonyCypherHash[u.get8(p.file.read(1))] * 256 * 256;
         int d4 = sonyCypherHash[u.get8(p.file.read(1))] * 256 * 256 * 256;
         m.shutterCount = d1 + d2 + d3 + d4;
+    }
+
+    // read GPSIFD
+    if (offsetGPS) {
+        p.file.seek(offsetGPS);
+        p.hdr = "IFD GPS";
+        p.hash = &gps->hash;
+        p.offset = offsetGPS;
+        ifd->readIFD(p);
+
+        if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
+            // process GPS info
+            QString gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd);
+            m.gpsCoord = gpsCoord;
+        }
     }
 
     // Sony does not embed xmp in raw files

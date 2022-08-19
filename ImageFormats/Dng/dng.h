@@ -20,7 +20,8 @@ public:
                IFD *ifd,
                IPTC *iptc,
                Exif *exif,
-               Jpeg *jpeg);
+               Jpeg *jpeg,
+               GPS *gps);
 private:
     Utilities u;
 };

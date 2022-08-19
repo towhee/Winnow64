@@ -9,7 +9,8 @@ bool DNG::parse(MetadataParameters &p,
                 IFD *ifd,
                 IPTC */*iptc*/,
                 Exif *exif,
-                Jpeg *jpeg)
+                Jpeg *jpeg,
+                GPS *gps)
 {
     // p.file.open happens in readMetadata
 
@@ -35,6 +36,36 @@ bool DNG::parse(MetadataParameters &p,
                           // have full size embedded jpg
 
     // IFD0: *******************************************************************
+
+    // IFD0 Offsets
+    // IFD0: offset for GPSIFD
+    quint32 offsetGPS = 0;
+    if (ifd->ifdDataHash.contains(34853))
+        offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
+
+    // IFD0: EXIF offset
+    quint32 ifdEXIFOffset = 0;
+    if (ifd->ifdDataHash.contains(34665))
+        ifdEXIFOffset = ifd->ifdDataHash.value(34665).tagValue;
+
+    // IFD0: Photoshop offset
+    quint32 ifdPhotoshopOffset = 0;
+    if (ifd->ifdDataHash.contains(34377))
+        ifdPhotoshopOffset = ifd->ifdDataHash.value(34377).tagValue;
+
+    // IFD0: IPTC offset
+    quint32 ifdIPTCOffset = 0;
+    if (ifd->ifdDataHash.contains(33723))
+        ifdIPTCOffset = ifd->ifdDataHash.value(33723).tagValue;
+
+    // IFD0: XMP offset
+    quint32 ifdXMPOffset = 0;
+    if (ifd->ifdDataHash.contains(700)) {
+        m.isXmp = true;
+        ifdXMPOffset = ifd->ifdDataHash.value(700).tagValue;
+        m.xmpSegmentOffset = ifdXMPOffset;
+        m.xmpSegmentLength = static_cast<quint32>(ifd->ifdDataHash.value(700).tagCount);
+    }
 
     // IFD0: Model
     (ifd->ifdDataHash.contains(272))
@@ -77,32 +108,6 @@ bool DNG::parse(MetadataParameters &p,
 
     p.offset = 0;
     if (!m.width || !m.height) jpeg->getDimensions(p, m);
-
-    // IFD0: EXIF offset
-    quint32 ifdEXIFOffset = 0;
-    if (ifd->ifdDataHash.contains(34665))
-        ifdEXIFOffset = ifd->ifdDataHash.value(34665).tagValue;
-
-    // IFD0: Photoshop offset
-    quint32 ifdPhotoshopOffset = 0;
-    if (ifd->ifdDataHash.contains(34377))
-        ifdPhotoshopOffset = ifd->ifdDataHash.value(34377).tagValue;
-
-    // IFD0: IPTC offset
-    quint32 ifdIPTCOffset = 0;
-    if (ifd->ifdDataHash.contains(33723))
-        ifdIPTCOffset = ifd->ifdDataHash.value(33723).tagValue;
-
-    // IFD0: XMP offset
-    quint32 ifdXMPOffset = 0;
-    if (ifd->ifdDataHash.contains(700)) {
-        m.isXmp = true;
-        ifdXMPOffset = ifd->ifdDataHash.value(700).tagValue;
-        m.xmpSegmentOffset = ifdXMPOffset;
-//        int xmpSegmentLength = static_cast<int>(ifd->ifdDataHash.value(700).tagCount);
-//        m.xmpSegmentLength = m.xmpSegmentOffset + static_cast<uint>(xmpSegmentLength);
-        m.xmpSegmentLength = static_cast<quint32>(ifd->ifdDataHash.value(700).tagCount);
-    }
 
     // SubIFDs: ****************************************************************
     /* The DNG subIFDs each contain info for the embedded previews.  We record each
@@ -296,7 +301,22 @@ bool DNG::parse(MetadataParameters &p,
         jpeg.parse(p, m, ifd, &iptc, exif, &gps);
     }
 
-    // read XMP - no XMP in fuji raw files
+    // read GPSIFD
+    if (offsetGPS) {
+        p.file.seek(offsetGPS);
+        p.hdr = "IFD GPS";
+        p.hash = &gps->hash;
+        p.offset = offsetGPS;
+        ifd->readIFD(p);
+
+        if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
+            // process GPS info
+            QString gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd);
+            m.gpsCoord = gpsCoord;
+        }
+    }
+
+    // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp && !G::stop) {
         Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);

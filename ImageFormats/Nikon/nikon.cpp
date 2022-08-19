@@ -1241,7 +1241,8 @@ bool Nikon::parse(MetadataParameters &p,
                   ImageMetadata &m,
                   IFD *ifd,
                   Exif *exif,
-                  Jpeg *jpeg)
+                  Jpeg *jpeg,
+                  GPS *gps)
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
     // moved file.open to readMetadata
@@ -1267,22 +1268,24 @@ bool Nikon::parse(MetadataParameters &p,
     p.hash = &exif->hash;
     ifd->readIFD(p, isBigEnd);
 
+    // IFD0 Offsets
+    quint32 offsetEXIF = 0;
+    offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
+
+    quint32 offsetGPS = 0;
+    if (ifd->ifdDataHash.contains(34853))
+        offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
+
+    m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
+    m.xmpSegmentLength = ifd->ifdDataHash.value(700).tagCount /*+ m.xmpSegmentOffset*/;
+    if (m.xmpSegmentOffset) m.isXmp = true;
+    else m.isXmp = false;
 
     // pull data reqd from IFD0
     m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue, ifd->ifdDataHash.value(271).tagCount);
     m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount);
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
-
-    // xmp offset
-    m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
-    // xmpNextSegmentOffset used to later calc available room in xmp
-    m.xmpSegmentLength = ifd->ifdDataHash.value(700).tagCount /*+ m.xmpSegmentOffset*/;
-    if (m.xmpSegmentOffset) m.isXmp = true;
-    else m.isXmp = false;
-
-    quint32 offsetEXIF = 0;
-    offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
 
 //    reportMetadata();
 
@@ -1518,6 +1521,21 @@ bool Nikon::parse(MetadataParameters &p,
         IPTC iptc;
         GPS gps;
         jpeg.parse(p, m, ifd, &iptc, exif, &gps);
+    }
+
+    // read GPSIFD
+    if (offsetGPS) {
+        p.file.seek(offsetGPS);
+        p.hdr = "IFD GPS";
+        p.hash = &gps->hash;
+        p.offset = offsetGPS;
+        ifd->readIFD(p, isBigEnd);
+
+        if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
+            // process GPS info
+            QString gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd);
+            m.gpsCoord = gpsCoord;
+        }
     }
 
     // read XMP
