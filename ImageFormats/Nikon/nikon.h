@@ -8,6 +8,7 @@
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
 #include "Metadata/xmp.h"
+#include "Metadata/gps.h"
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "Metadata/metareport.h"
 // req'd to report embedded jpeg
@@ -25,7 +26,8 @@ public:
                ImageMetadata &m,
                IFD *ifd,
                Exif *exif,
-               Jpeg *jpeg);
+               Jpeg *jpeg,
+               GPS *gps);
 private:
     QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
     QHash<quint32, QString> nikonMakerHash;

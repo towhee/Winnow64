@@ -325,12 +325,12 @@ If any of the editable fields change then MW::metadataChanged is triggered.
     ok->setData(ok->index(ISORow, 0, imageInfoIdx), "ISO");
     ok->setData(ok->index(ExposureCompensationRow, 0, imageInfoIdx), "EC");
     ok->setData(ok->index(FocalLengthRow, 0, imageInfoIdx), "Focal length");
-    ok->setData(ok->index(GPSCoordRow, 0, imageInfoIdx), "GPS");
     ok->setData(ok->index(TitleRow, 0, tagInfoIdx), "Title");
     ok->setData(ok->index(CreatorRow, 0, tagInfoIdx), "Creator");
     ok->setData(ok->index(CopyrightRow, 0, tagInfoIdx), "Copyright");
     ok->setData(ok->index(EmailRow, 0, tagInfoIdx), "Email");
     ok->setData(ok->index(UrlRow, 0, tagInfoIdx), "Url");
+    ok->setData(ok->index(GPSCoordRow, 0, tagInfoIdx), "GPS");
     ok->setData(ok->index(PositionRow, 0, statusInfoIdx), "Position");
     ok->setData(ok->index(ZoomRow, 0, statusInfoIdx), "Zoom");
     ok->setData(ok->index(SelectedRow, 0, statusInfoIdx), "Selected");
@@ -473,8 +473,6 @@ void InfoView::updateInfo(const int &row)
     ok->setData(ok->index(ExposureCompensationRow, 1, imageInfoIdx), s);
     s = dm->sf->index(row, G::FocalLengthColumn).data().toString() + "mm";
     ok->setData(ok->index(FocalLengthRow, 1, imageInfoIdx), s);
-    s = dm->sf->index(row, G::GPSCoordColumn).data().toString();
-    ok->setData(ok->index(GPSCoordRow, 1, imageInfoIdx), s);
 
     s = dm->sf->index(row, G::TitleColumn).data().toString();
     ok->setData(ok->index(TitleRow, 1, tagInfoIdx), s);
@@ -486,6 +484,8 @@ void InfoView::updateInfo(const int &row)
     ok->setData(ok->index(EmailRow, 1, tagInfoIdx), s);
     s = dm->sf->index(row, G::UrlColumn).data().toString();
     ok->setData(ok->index(UrlRow, 1, tagInfoIdx), s);
+    s = dm->sf->index(row, G::GPSCoordColumn).data().toString();
+    ok->setData(ok->index(GPSCoordRow, 1, tagInfoIdx), s);
 
     this->fPath = fPath;        // not used, convenience value for future use
 

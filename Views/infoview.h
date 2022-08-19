@@ -60,7 +60,6 @@ public:
         ISORow,
         ExposureCompensationRow,
         FocalLengthRow,
-        GPSCoordRow,
         imageInfoRowsEnd    // insert additional items before this
     };
 
@@ -70,6 +69,7 @@ public:
         CopyrightRow,
         EmailRow,
         UrlRow,
+        GPSCoordRow,
         tagInfoRowsEnd
     };
 

@@ -157,6 +157,40 @@ bool Tiff::parse(MetadataParameters &p,
 
     // IFD0: *******************************************************************
 
+    // IFD0 Offsets
+    quint32 ifdEXIFOffset = 0;
+    if (ifd->ifdDataHash.contains(34665))
+        ifdEXIFOffset = ifd->ifdDataHash.value(34665).tagValue;
+
+    quint32 offsetGPS = 0;
+    if (ifd->ifdDataHash.contains(34853))
+        offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
+
+    quint32 ifdPhotoshopOffset = 0;
+    if (ifd->ifdDataHash.contains(34377))
+        ifdPhotoshopOffset = ifd->ifdDataHash.value(34377).tagValue;
+
+    quint32 ifdsubIFDOffset = 0;
+    if (ifd->ifdDataHash.contains(330))
+        ifdsubIFDOffset = ifd->ifdDataHash.value(330).tagValue;
+
+    quint32 ifdIPTCOffset = 0;
+    if (ifd->ifdDataHash.contains(33723))
+        ifdIPTCOffset = ifd->ifdDataHash.value(33723).tagValue;
+
+    if (ifd->ifdDataHash.contains(34675)) {
+        m.iccSegmentOffset = ifd->ifdDataHash.value(34675).tagValue;
+        m.iccSegmentLength = ifd->ifdDataHash.value(34675).tagCount;
+    }
+
+    quint32 ifdXMPOffset = 0;
+    if (ifd->ifdDataHash.contains(700)) {
+        m.isXmp = true;
+        ifdXMPOffset = ifd->ifdDataHash.value(700).tagValue;
+        m.xmpSegmentOffset = static_cast<uint>(ifdXMPOffset);
+        m.xmpSegmentLength = static_cast<quint32>(ifd->ifdDataHash.value(700).tagCount);
+    }
+
     // IFD0: Model
     (ifd->ifdDataHash.contains(272))
         ? m.model = u.getString(p.file, ifd->ifdDataHash.value(272).tagValue, ifd->ifdDataHash.value(272).tagCount)
@@ -197,6 +231,7 @@ bool Tiff::parse(MetadataParameters &p,
         : m.height = 0;
     m.widthPreview = m.width;
     m.heightPreview = m.height;
+
     // start thumbnail dimensions
     int thumbLongside;
     m.widthPreview > m.heightPreview ? thumbLongside = m.widthPreview : thumbLongside = m.heightPreview;
@@ -215,42 +250,8 @@ bool Tiff::parse(MetadataParameters &p,
         ? m.samplesPerPixel = static_cast<int>(ifd->ifdDataHash.value(277).tagValue)
         : m.samplesPerPixel = 0;
 
-    // IFD0: EXIF offset
-    quint32 ifdEXIFOffset = 0;
-    if (ifd->ifdDataHash.contains(34665))
-        ifdEXIFOffset = ifd->ifdDataHash.value(34665).tagValue;
 
-    // IFD0: Photoshop offset
-    quint32 ifdPhotoshopOffset = 0;
-    if (ifd->ifdDataHash.contains(34377))
-        ifdPhotoshopOffset = ifd->ifdDataHash.value(34377).tagValue;
-
-    // IFD0: subIFD offset
-    quint32 ifdsubIFDOffset = 0;
-    if (ifd->ifdDataHash.contains(330))
-        ifdsubIFDOffset = ifd->ifdDataHash.value(330).tagValue;
-
-    // IFD0: IPTC offset
-    quint32 ifdIPTCOffset = 0;
-    if (ifd->ifdDataHash.contains(33723))
-        ifdIPTCOffset = ifd->ifdDataHash.value(33723).tagValue;
-
-    // IFD0: ICC offset
-    if (ifd->ifdDataHash.contains(34675)) {
-        m.iccSegmentOffset = ifd->ifdDataHash.value(34675).tagValue;
-        m.iccSegmentLength = ifd->ifdDataHash.value(34675).tagCount;
-    }
-
-    // IFD0: XMP offset
-    quint32 ifdXMPOffset = 0;
-    if (ifd->ifdDataHash.contains(700)) {
-        m.isXmp = true;
-        ifdXMPOffset = ifd->ifdDataHash.value(700).tagValue;
-        m.xmpSegmentOffset = static_cast<uint>(ifdXMPOffset);
-//        int xmpSegmentLength = static_cast<int>(ifd->ifdDataHash.value(700).tagCount);
-//        m.xmpSegmentLength = m.xmpSegmentOffset + static_cast<uint>(xmpSegmentLength);
-        m.xmpSegmentLength = static_cast<quint32>(ifd->ifdDataHash.value(700).tagCount);
-    }
+//    }
 
     p.offset = m.ifd0Offset;
     if (p.report) parseForDecoding(p, ifd);
@@ -479,6 +480,21 @@ bool Tiff::parse(MetadataParameters &p,
         if (m.iccSpace != "sRGB") {
             p.file.seek(m.iccSegmentOffset);
             m.iccBuf = p.file.read(m.iccSegmentLength);
+        }
+    }
+
+    // GPSIFD: *******************************************************************
+    if (offsetGPS) {
+        p.file.seek(offsetGPS);
+        p.hdr = "IFD GPS";
+        p.hash = &gps->hash;
+        p.offset = offsetGPS;
+        ifd->readIFD(p);
+
+        if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
+            // process GPS info
+            QString gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd);
+            m.gpsCoord = gpsCoord;
         }
     }
 
