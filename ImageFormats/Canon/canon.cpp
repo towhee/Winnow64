@@ -96,6 +96,21 @@ bool Canon::parse(MetadataParameters &p,
     p.hash = &exif->hash;
     quint32 nextIFDOffset = ifd->readIFD(p) + startOffset;
 
+    // IFD0 Offsets
+
+    quint32 offsetGPS = 0;
+    if (ifd->ifdDataHash.contains(34853))
+        offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
+
+    quint32 offsetEXIF = 0;
+    offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
+
+    m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
+    // xmpNextSegmentOffset used to later calc available room in xmp
+    m.xmpSegmentLength = ifd->ifdDataHash.value(700).tagCount/* + m.xmpSegmentOffset*/;
+    if (m.xmpSegmentOffset) m.isXmp = true;
+    else m.isXmp = false;
+
     // pull data reqd from IFD0
     m.offsetFull = ifd->ifdDataHash.value(273).tagValue;
     m.lengthFull = ifd->ifdDataHash.value(279).tagValue;
@@ -108,22 +123,6 @@ bool Canon::parse(MetadataParameters &p,
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.creator = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue, ifd->ifdDataHash.value(315).tagCount);
     m.copyright = u.getString(p.file, ifd->ifdDataHash.value(33432).tagValue, ifd->ifdDataHash.value(33432).tagCount);
-
-    // get the offset for GPSIFD
-    quint32 offsetGPS = 0;
-    if (ifd->ifdDataHash.contains(34853))
-        offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
-
-    // xmp offset
-    m.xmpSegmentOffset = ifd->ifdDataHash.value(700).tagValue;
-    // xmpNextSegmentOffset used to later calc available room in xmp
-    m.xmpSegmentLength = ifd->ifdDataHash.value(700).tagCount/* + m.xmpSegmentOffset*/;
-    if (m.xmpSegmentOffset) m.isXmp = true;
-    else m.isXmp = false;
-
-    // EXIF IFD offset (to be used in a little)
-    quint32 offsetEXIF = 0;
-    offsetEXIF = ifd->ifdDataHash.value(34665).tagValue;
 
     if (nextIFDOffset) {
         p.hdr = "IFD1";
@@ -159,6 +158,11 @@ bool Canon::parse(MetadataParameters &p,
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
     ifd->readIFD(p);
+
+    // ExifIFD Offsets
+    quint32 makerOffset = 0;
+    if (ifd->ifdDataHash.contains(37500))
+        makerOffset = ifd->ifdDataHash.value(37500).tagValue;
 
     // EXIF: created datetime
     QString createdExif;
@@ -251,7 +255,7 @@ bool Canon::parse(MetadataParameters &p,
 
     // Exif: read makernoteIFD
 
-    if (ifd->ifdDataHash.contains(37500)) {
+    if (makerOffset) {
         quint32 makerOffset = ifd->ifdDataHash.value(37500).tagValue;
         p.hdr = "IFD Canon Maker Note";
         p.offset = makerOffset;

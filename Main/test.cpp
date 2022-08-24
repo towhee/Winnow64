@@ -60,6 +60,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+
     QString s = QChar(78);
     qDebug() << s;
     return;
