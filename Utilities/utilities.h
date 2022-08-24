@@ -29,6 +29,9 @@ public:
     static QString enquote(QString &s);
     static QString centeredRptHdr(QChar padChar, QString title);
 
+    // Convert
+    static QString stringListToString(QStringList list);
+
     // File variable byte operations
     static void saveByteArrayAsFile(QString fPath, QByteArray &ba);
     static int get4_1st(QByteArray c);

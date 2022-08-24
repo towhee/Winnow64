@@ -217,6 +217,18 @@ This is useful to save a bytearray and then examine using HxD hex editor or Qt C
     f.close();
 }
 
+// Convert
+QString Utilities::stringListToString(QStringList list)
+{
+    QString s;
+    int n = list.size();
+    for (int i = 0; i < n; i++) {
+        if (i && i < n) s += ", ";
+        s += list.at(i);
+    }
+    return s;
+}
+
 // numbers: big endian = "MM" = 0x4D4D   little endian = "II" = 0x4949
 
 int Utilities::get4_1st(QByteArray c)

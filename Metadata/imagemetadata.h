@@ -76,6 +76,7 @@ public:
     int shutterCount = 0;
     QString gpsCoord;
     QString shootingInfo = "";
+    QStringList keywords;
 
     QString title = "";
     QString creator = "";

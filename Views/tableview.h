@@ -5,6 +5,7 @@
 #include "Main/global.h"
 #include "Datamodel/datamodel.h"
 #include "Views/iconview.h"
+#include "Utilities/utilities.h"
 
 class TableView : public QTableView
 {
@@ -140,6 +141,13 @@ class ExposureCompensationItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
     explicit ExposureCompensationItemDelegate(QObject* parent = nullptr);
+    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
+};
+
+class KeywordsItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+public:
+    explicit KeywordsItemDelegate(QObject* parent = nullptr);
     virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
 };
 

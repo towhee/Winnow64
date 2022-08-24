@@ -63,6 +63,9 @@ TableView::TableView(DataModel *dm)
     ExposureCompensationItemDelegate *exposureCompensationItemDelegate = new ExposureCompensationItemDelegate;
     setItemDelegateForColumn(G::ExposureCompensationColumn, exposureCompensationItemDelegate);
 
+    KeywordsItemDelegate *keywordsItemDelegate = new KeywordsItemDelegate;
+    setItemDelegateForColumn(G::KeywordsColumn, keywordsItemDelegate);
+
     FocalLengthItemDelegate *focalLengthItemDelegate = new FocalLengthItemDelegate;
     setItemDelegateForColumn(G::FocalLengthColumn, focalLengthItemDelegate);
 
@@ -150,6 +153,7 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::_CopyrightColumn) return fm.boundingRect("=Copyright=====").width();
     if (column == G::_EmailColumn) return fm.boundingRect("=Email================").width();
     if (column == G::_UrlColumn) return fm.boundingRect("=Url=======================").width();
+    if (column == G::KeywordsColumn) return fm.boundingRect("=keyword, keyword, keyword, keyword=").width();
     if (column == G::MetadataLoadedColumn) return fm.boundingRect("=Metadata Loaded=").width();
     if (column == G::OffsetFullColumn) return fm.boundingRect("=OffsetFullColumn=").width();
     if (column == G::LengthFullColumn) return fm.boundingRect("=LengthFullColumn=").width();
@@ -457,6 +461,18 @@ QString ExposureCompensationItemDelegate::displayText(const QVariant& value, con
         return QString();
 
     return "   " + QString::number(value.toDouble(), 'f', 1) + " EV   ";
+}
+
+KeywordsItemDelegate::KeywordsItemDelegate(QObject* parent): QStyledItemDelegate(parent)
+{
+}
+
+QString KeywordsItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+{
+    if (value.toStringList().count() == 0)
+        return QString();
+
+    return Utilities::stringListToString(value.toStringList());
 }
 
 FileSizeItemDelegate::FileSizeItemDelegate(QObject* parent): QStyledItemDelegate(parent)

@@ -1,9 +1,10 @@
 BUGS / TO DO
 - Filter one item count not working
 - Add keywords
+- Delete first 2 of 3 images, first video, crashed
 - Review Olympus metadata ie serial number
 - Save preview as PNG include color manage corrections
-
+- Copy files between folders using drag'n'drop
 
 - Open with permissions issue
 - Painter not active, state will be reset by begin
