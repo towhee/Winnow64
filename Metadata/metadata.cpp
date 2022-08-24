@@ -352,6 +352,7 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("lens", n) << G::s(m.lens) << "\n";
     p.rpt << G::sj("shootingInfo", n) << G::s(m.shootingInfo) << "\n";
     p.rpt << G::sj("gpsCoord", n) << G::s(m.gpsCoord) << "\n";
+    p.rpt << G::sj("keywords", n) << G::s(Utilities::stringListToString(m.keywords)) << "\n";
     p.rpt << G::sj("duration", n) << G::s(m.duration) << "\n";
     p.rpt << G::sj("cameraSN", n) << G::s(m.cameraSN) << "\n";
     p.rpt << G::sj("lensSN", n) << G::s(m.lensSN) << "\n";
@@ -915,6 +916,7 @@ void Metadata::clearMetadata()
     m.focalLength = "";
     m.focalLengthNum = 0;
     m.gpsCoord = "";
+    m.gpsCoord.clear();
     m.title = "";
     m.lens = "";
     m.creator = "";

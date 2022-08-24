@@ -393,7 +393,22 @@ bool Jpeg::parse(MetadataParameters &p,
             m.copyright = xmp.getItem("rights");
             m.email = xmp.getItem("email");
             m.url = xmp.getItem("url");
-//            QList keywords =
+            m.keywords  = xmp.getItemList("subject");
+
+            QString kWords = Utilities::stringListToString(m.keywords);
+            qDebug() << CLASSFUNCTION << kWords;
+//            m.title = xmp.getItem("title");       // case is important "title"
+//            if (m.creator.isEmpty()) m.creator = xmp.getItem("creator");
+//            m.copyright = xmp.getItem("rights");
+//            QStringList keywords = xmp.getItemList("subject");
+//            qDebug() << CLASSFUNCTION << keywords;
+//            QString keywordsString;
+//            int n = keywords.size();
+//            for (int i = 0; i < n; i++) {
+//                if (i && i < n) keywordsString += ", ";
+//                keywordsString += keywords.at(i);
+//            }
+//            qDebug() << CLASSFUNCTION << keywordsString;
         }
 
         // save original values so can determine if edited when writing changes

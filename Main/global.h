@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <QMutex>
 #include "popup.h"
+#include "Utilities/utilities.h"
 
 #define ICON_MIN	40
 #define ICON_MAX	480  // 256 is default
@@ -80,6 +81,7 @@ namespace G
         TitleColumn,
         EmailColumn,
         UrlColumn,
+        KeywordsColumn,
         MetadataLoadedColumn,
         // original values
         _RatingColumn,

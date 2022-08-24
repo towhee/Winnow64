@@ -130,6 +130,9 @@ namespace G
     QString s(QVariant x)
     // helper function to convert variable values to a string for reporting
     {
+//        qDebug() << "Global::s" << x.typeName() << x.typeId();
+        if (x.typeId() == QMetaType::QStringList)
+            return Utilities::stringListToString(x.toStringList());
         return QVariant(x).toString();
     }
 

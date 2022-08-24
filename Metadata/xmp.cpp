@@ -649,6 +649,11 @@ bool Xmp::writeSidecar(QFile &sidecarFile)
     return true;
 }
 
+//QString Xmp::getItem(QByteArray item)
+//{
+//    return getItem1(item).toString();
+//}
+
 QString Xmp::getItem(QByteArray item)
 {
 /*
@@ -659,32 +664,59 @@ QString Xmp::getItem(QByteArray item)
     if (G::isLogger) G::log(CLASSFUNCTION);
 
     item = item.toLower();
-    /*
-    qDebug() << CLASSFUNCTION << item << definedElements[item].nodeName << definedElements.contains(item);
+//    /*
+    qDebug() << "\n" << CLASSFUNCTION << item << definedElements[item].name << definedElements.contains(item);
     //*/
     if (!definedElements.contains(item)) {
         qWarning() << CLASSFUNCTION << item << "not found in xmpObjs";
         return "";
     }
-    XmpElement element;
-    xmlDocElement(definedElements[item], xmlDoc.first_node());
-//    XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
-    if (!element.exists()) return "";
+    XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
+    qDebug() << CLASSFUNCTION
+                ;
+     if (!element.exists()) return "";
     // found a simple node or an attribute that has a value
     if (!element.value.isEmpty()) return element.value;
-    // check if child node is a property element
     QStringList propertyElements;
+    // check if child node is a property element
     propertyElements << "rdf:Seq" << "rdf:Bag" << "rdf:Alt";
     // try drilling into node found
     rapidxml::xml_node<> *node = element.node->first_node();
     if (node == 0) return "";
     QString nodeName = xmlNodeName(node);
+    qDebug() << CLASSFUNCTION << "child node name  =" << nodeName;
+
+//    rapidxml::xml_node<> *n;
+//    QString val;
+//    QStringList valList;
+//    if (propertyElements.contains(nodeName)) {
+//        for (n = node->first_node(); n; n = n->next_sibling()) {
+////        rapidxml::xml_node<> *list = node->first_node();
+//            if (n == 0) return valList;
+//            nodeName = xmlNodeName(n);
+//            if (nodeName == "rdf:li") {
+//                val = xmlNodeValue(n);
+//                valList << val;
+//                qDebug() << CLASSFUNCTION << "node val         =" << val;
+//                if (val != "") continue;
+//                rapidxml::xml_attribute<>* a = n->first_attribute();
+//                if (a == 0) continue;
+//                qDebug() << CLASSFUNCTION << "xmlAttributeName =" << xmlAttributeName(a);
+//                val = xmlAttributeName(a);
+//                valList << val;
+//            }
+//        }
+//    }
+//    qDebug() << CLASSFUNCTION << valList;
+//    return QVariant(valList);
+
     if (propertyElements.contains(nodeName)) {
         rapidxml::xml_node<> *list = node->first_node();
         if (list == 0) return "";
         nodeName = xmlNodeName(list);
         if (nodeName == "rdf:li") {
             QString val = xmlNodeValue(list);
+            qDebug() << CLASSFUNCTION << "nodeName =" << nodeName << "val =" << val;
             if (val != "") return val;
             rapidxml::xml_attribute<>* a = list->first_attribute();
             if (a == 0) return "";
@@ -692,80 +724,59 @@ QString Xmp::getItem(QByteArray item)
         }
     }
     return "";
-    /*
+}
+
+QStringList Xmp::getItemList(QByteArray item)
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+
+    item = item.toLower();
+    QStringList valList;
+//    /*
+    qDebug() << "\n" << CLASSFUNCTION << item << definedElements[item].name << definedElements.contains(item);
+    //*/
     if (!definedElements.contains(item)) {
-        qDebug() << CLASSFUNCTION << item << "not found in xmpObjs";
-        return "";
+        qWarning() << CLASSFUNCTION << item << "not found in xmpObjs";
+        return valList;
     }
-    XmpElement element = xmlDocObj(definedElements[item].elementName, xmlDoc.first_node());
-    if (!element.exists()) return "";
+    XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
+    qDebug() << CLASSFUNCTION
+                ;
+     if (!element.exists()) return valList;
     // found a simple node or an attribute that has a value
-    if (!element.value.isEmpty()) return element.value;
+    if (!element.value.isEmpty()) return valList;
+//    if (!element.value.isEmpty()) return element.value;
     QStringList propertyElements;
     // check if child node is a property element
     propertyElements << "rdf:Seq" << "rdf:Bag" << "rdf:Alt";
     // try drilling into node found
     rapidxml::xml_node<> *node = element.node->first_node();
-    if (node == 0) return "";
-    QString nodeName = QString(node->name()).left(node->name_size());
+    if (node == 0) return valList;
+    QString nodeName = xmlNodeName(node);
+    qDebug() << CLASSFUNCTION << "child node name  =" << nodeName;
+
+    rapidxml::xml_node<> *n;
+    QString val;
     if (propertyElements.contains(nodeName)) {
-        rapidxml::xml_node<> *list = node->first_node();
-        if (list == 0) return "";
-        nodeName = QString(list->name()).left(list->name_size());
-        if (nodeName == "rdf:li") {
-            QString val = QString(list->value()).left(list->value_size());
-            if (val != "") return val;
-            rapidxml::xml_attribute<>* a = list->first_attribute();
-            if (a == 0) return "";
-            return QString(a->name()).left(a->name_size());
+        for (n = node->first_node(); n; n = n->next_sibling()) {
+//        rapidxml::xml_node<> *list = node->first_node();
+            if (n == 0) return valList;
+            nodeName = xmlNodeName(n);
+            if (nodeName == "rdf:li") {
+                val = xmlNodeValue(n);
+                valList << val;
+                qDebug() << CLASSFUNCTION << "node val         =" << val;
+                if (val != "") continue;
+                rapidxml::xml_attribute<>* a = n->first_attribute();
+                if (a == 0) continue;
+                qDebug() << CLASSFUNCTION << "xmlAttributeName =" << xmlAttributeName(a);
+                val = xmlAttributeName(a);
+                valList << val;
+            }
         }
     }
-    return "";
-    */
-}
-
-QStringList Xmp::getItemList(QByteArray item)
-{
-    /*
-    Returns the value for the item.  ie getItem("creator") = "Rory"
-    items: Rating, Label, title ...
-    item case does not matter
-*/
-    if (G::isLogger) G::log(CLASSFUNCTION);
-
-    item = item.toLower();
-    QStringList valueList;
-//    /*
-//    qDebug() << CLASSFUNCTION << item << definedElements[item].nodeName << definedElements.contains(item);
-//    //*/
-//    if (!definedElements.contains(item)) {
-//        qWarning() << CLASSFUNCTION << item << "not found in xmpObjs";
-//        return valueList;
-//    }
-//    XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
-//    if (!element.exists()) return valueList;
-//    // found a simple node or an attribute that has a value
-//    if (!element.value.isEmpty()) return element.valueList;
-//    QStringList propertyElements;
-//    // check if child node is a property element
-//    propertyElements << "rdf:Seq" << "rdf:Bag" << "rdf:Alt";
-//    // try drilling into node found
-//    rapidxml::xml_node<> *node = element.node->first_node();
-//    if (node == 0) return valueList;
-//    QString nodeName = xmlNodeName(node);
-//    if (propertyElements.contains(nodeName)) {
-//        rapidxml::xml_node<> *list = node->first_node();
-//        if (list == 0) return valueList;
-//        nodeName = xmlNodeName(list);
-//        if (nodeName == "rdf:li") {
-//            QString val = xmlNodeValue(list);
-//            if (val != "") return val;
-//            rapidxml::xml_attribute<>* a = list->first_attribute();
-//            if (a == 0) return "";
-//            return xmlAttributeName(a);
-//        }
-//    }
-    return valueList;
+    qDebug() << CLASSFUNCTION << valList;
+    return valList;
 }
 
 bool Xmp::setItem(QByteArray item, QByteArray value)
@@ -872,6 +883,16 @@ void Xmp::xmlDocElement(XmpElement &element,
 
         "node" is the node to start search under ie choose "x:xmpmeta" (root node) to search
         entire document.
+
+"Xmp::xmlDocElement" Node name = "dc:title" Node parent name = "rdf:Description" Node value = "" element.name = "dc:title"
+"Xmp::xmlDocElement" Node name = "rdf:Alt" Node parent name = "dc:title" Node value = "" element.name = "dc:title"
+"Xmp::xmlDocElement" Node name = "rdf:li" Node parent name = "rdf:Alt" Node value = "Moonrise, Malheur NWR" element.name = "dc:title"
+"Xmp::xmlDocElement" Attribute name = "xml:lang" element.name = "dc:title"
+"Xmp::xmlDocElement" Node name = "" Node parent name = "rdf:li" Node value = "Moonrise, Malheur NWR" element.name = "dc:title"
+"Xmp::xmlDocElement" Node name = "rdf:Alt" Node parent name = "dc:title" Node value = "" element.name = "dc:title"
+"Xmp::xmlDocElement" Node name = "rdf:li" Node parent name = "rdf:Alt" Node value = "Moonrise, Malheur NWR" element.name = "dc:title"
+"Xmp::xmlDocElement" Attribute name = "xml:lang" element.name = "dc:title"
+"Xmp::xmlDocElement" Node name = "" Node parent name = "rdf:li" Node value = "Moonrise, Malheur NWR" element.name = "dc:title"
 */
     QString nodeName = xmlNodeName(node);
     QString parName = "";
@@ -879,10 +900,10 @@ void Xmp::xmlDocElement(XmpElement &element,
         parName = xmlNodeName(parNode);
     }
     qDebug() << CLASSFUNCTION
-             << "Node name =" << nodeName
+             << "Node name =     " << nodeName
              << "Node parent name =" << parName
              << "Node value =" << xmlNodeValue(node)
-             << "element.name =" << element.name
+//             << "element.name =" << element.name
                 ;
 
     if (nodeName == element.name) {
@@ -890,10 +911,12 @@ void Xmp::xmlDocElement(XmpElement &element,
         element.parent = parNode;
         element.attr = nullptr;
 //        element.type = ElementType::Node;
-        if (element.type == ElementType::Node) {
-            element.value = xmlNodeValue(node);
-            return;
-        }
+        element.value = xmlNodeValue(node);
+        return;
+//        if (element.type == ElementType::Node) {
+//            element.value = xmlNodeValue(node);
+//            return;
+//        }
         // must be a list
         // end of list
         if (iterateList && !skipNodes.contains(parName)) return;
@@ -970,6 +993,15 @@ Xmp::XmpElement Xmp::xmlDocElement(QString name,
     if (parNode) {
         parName = xmlNodeName(parNode);
     }
+    /*
+    qDebug() << CLASSFUNCTION
+             << "Node name =     " << nodeName
+             << "Node parent name =" << parName
+             << "Node value =" << xmlNodeValue(node)
+//             << "element.name =" << element.name
+                ;
+    //*/
+
     if (nodeName == name) {
         element.node = node;
         element.parent = parNode;
@@ -983,6 +1015,12 @@ Xmp::XmpElement Xmp::xmlDocElement(QString name,
     rapidxml::xml_attribute<>* a;
     for (a = node->first_attribute(); a; a = a->next_attribute()) {
         QString attrName = xmlAttributeName(a);
+        /*
+        qDebug() << CLASSFUNCTION
+                 << "Attribute name =" << attrName
+                 << "element.name =" << element.name
+                    ;
+                    //*/
         if (attrName == name) {
             element.node = node;
             element.parent = parNode;
