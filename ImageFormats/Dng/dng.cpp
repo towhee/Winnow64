@@ -38,27 +38,22 @@ bool DNG::parse(MetadataParameters &p,
     // IFD0: *******************************************************************
 
     // IFD0 Offsets
-    // IFD0: offset for GPSIFD
     quint32 offsetGPS = 0;
     if (ifd->ifdDataHash.contains(34853))
         offsetGPS = ifd->ifdDataHash.value(34853).tagValue;
 
-    // IFD0: EXIF offset
     quint32 ifdEXIFOffset = 0;
     if (ifd->ifdDataHash.contains(34665))
         ifdEXIFOffset = ifd->ifdDataHash.value(34665).tagValue;
 
-    // IFD0: Photoshop offset
     quint32 ifdPhotoshopOffset = 0;
     if (ifd->ifdDataHash.contains(34377))
         ifdPhotoshopOffset = ifd->ifdDataHash.value(34377).tagValue;
 
-    // IFD0: IPTC offset
     quint32 ifdIPTCOffset = 0;
     if (ifd->ifdDataHash.contains(33723))
         ifdIPTCOffset = ifd->ifdDataHash.value(33723).tagValue;
 
-    // IFD0: XMP offset
     quint32 ifdXMPOffset = 0;
     if (ifd->ifdDataHash.contains(700)) {
         m.isXmp = true;

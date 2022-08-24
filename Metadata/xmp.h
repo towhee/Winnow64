@@ -39,7 +39,8 @@ public:
 
     enum ElementType {
         Node,
-        Attribute
+        Attribute,
+        List
     };
 
     struct XmpElement {
@@ -86,6 +87,11 @@ private:
     XmpElement xmlDocElement(QString name,
                      rapidxml::xml_node<> *node,
                      rapidxml::xml_node<> *parNode = nullptr);
+
+    void xmlDocElement(XmpElement &element,
+                     rapidxml::xml_node<> *node,
+                       rapidxml::xml_node<> *parNode = nullptr,
+                       bool iterateList = false);
 
     void walk(QTextStream &rpt,
               rapidxml::xml_node<>* node,

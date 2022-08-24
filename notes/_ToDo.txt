@@ -1,5 +1,5 @@
 BUGS / TO DO
-- Add GPS
+- Filter one item count not working
 - Add keywords
 - Review Olympus metadata ie serial number
 - Save preview as PNG include color manage corrections
@@ -67,6 +67,7 @@ ENHANCEMENTS
 - Remove Windows Registry settings during uninstall
 - Read keywords
 DONE/FIXED
+- Read GPS coordinates
 - Drag and drop not selecting first image
 - Drag and drop onto VideoView and CompareView fixed
 - Change MetaRead buildMetadataPriorityQueue to algorithm

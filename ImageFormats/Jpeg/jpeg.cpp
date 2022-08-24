@@ -219,8 +219,11 @@ bool Jpeg::parse(MetadataParameters &p,
     p.hash = &exif->hash;
     quint32 nextIFDOffset = ifd->readIFD(p, isBigEnd);
     if (nextIFDOffset) nextIFDOffset += startOffset;
+
+    // IFD0 Offsets
     quint32 offsetEXIF = 0;
     offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
+
     quint32 offsetGPS = 0;
     if (ifd->ifdDataHash.contains(34853))
         offsetGPS = ifd->ifdDataHash.value(34853).tagValue + startOffset;
@@ -390,6 +393,7 @@ bool Jpeg::parse(MetadataParameters &p,
             m.copyright = xmp.getItem("rights");
             m.email = xmp.getItem("email");
             m.url = xmp.getItem("url");
+//            QList keywords =
         }
 
         // save original values so can determine if edited when writing changes

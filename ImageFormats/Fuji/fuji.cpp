@@ -166,7 +166,9 @@ bool Fuji::parse(MetadataParameters &p,
     p.hash = &exif->hash;
     quint32 nextIFDOffset = ifd->readIFD(p) + startOffset;
 
+    // IFD0 Offsets
     quint32 offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
+
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
     m.make = u.getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
                      ifd->ifdDataHash.value(271).tagCount);

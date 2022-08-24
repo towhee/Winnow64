@@ -45,7 +45,7 @@ datamodel.
     setColumnCount(5);
     setHeaderHidden(true);
     setColumnWidth(0, 250);
-    setColumnWidth(1, 0);
+//    setColumnWidth(1, 0);  // rgh
     setColumnWidth(1, 50);
     setColumnWidth(2, 50);
     setColumnWidth(3, 0);
@@ -53,6 +53,7 @@ datamodel.
     setColumnWidth(4, 50);
     // Headerlabel set in search header: {"", "Value", "Filter", "Raw+Jpg", "All"}
     header()->setDefaultAlignment(Qt::AlignCenter);
+    hideColumn(1); // rgh
 
     // Cannot hide columns until tree fully initialized - see resizeColumns
 

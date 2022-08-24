@@ -431,7 +431,7 @@ void Xmp::initialize()
     // title
     e.name = "dc:subject";
     e.parentName = "rdf:Description";
-    e.type = ElementType::Attribute;
+    e.type = ElementType::List;
     e.schema = "dc";
     definedElements["subject"] = e;
 
@@ -666,7 +666,9 @@ QString Xmp::getItem(QByteArray item)
         qWarning() << CLASSFUNCTION << item << "not found in xmpObjs";
         return "";
     }
-    XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
+    XmpElement element;
+    xmlDocElement(definedElements[item], xmlDoc.first_node());
+//    XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
     if (!element.exists()) return "";
     // found a simple node or an attribute that has a value
     if (!element.value.isEmpty()) return element.value;
@@ -843,14 +845,109 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
     return true;
 }
 
+void Xmp::xmlDocElement(XmpElement &element,
+                        rapidxml::xml_node<> *node,
+                        rapidxml::xml_node<> *parNode,
+                        bool iterateList)
+{
+/*
+    Return an XmlElement struct for the element name, starting from *node in xmlDoc
+    and recursing until found.
+
+    Note that parNode is not used for intial function call, only when recursing.
+
+    Element info includes:
+    - *node
+    - *parent
+    - *attribute
+    - name
+    - parentName
+    - type (node vs attribute)
+    - value
+    - valueList (if contains list ie subject = list of key words)
+
+    Input:
+
+        "name" is the xmp element name ie "dc:title".
+
+        "node" is the node to start search under ie choose "x:xmpmeta" (root node) to search
+        entire document.
+*/
+    QString nodeName = xmlNodeName(node);
+    QString parName = "";
+    if (parNode) {
+        parName = xmlNodeName(parNode);
+    }
+    qDebug() << CLASSFUNCTION
+             << "Node name =" << nodeName
+             << "Node parent name =" << parName
+             << "Node value =" << xmlNodeValue(node)
+             << "element.name =" << element.name
+                ;
+
+    if (nodeName == element.name) {
+        element.node = node;
+        element.parent = parNode;
+        element.attr = nullptr;
+//        element.type = ElementType::Node;
+        if (element.type == ElementType::Node) {
+            element.value = xmlNodeValue(node);
+            return;
+        }
+        // must be a list
+        // end of list
+        if (iterateList && !skipNodes.contains(parName)) return;
+        // list value
+        if (parName == "rdf:li") {
+            element.valueList << xmlNodeValue(node);
+            qDebug() << CLASSFUNCTION
+                     << "element.name =" << element.name
+                     << "List value =" << xmlNodeValue(node)
+                        ;
+        }
+        rapidxml::xml_node<>* n;
+        for (n = node->first_node(); n; n = n->next_sibling() ) {
+            xmlDocElement(element, n, node, true);
+        }
+    }
+    // node attributes
+    rapidxml::xml_attribute<>* a;
+    for (a = node->first_attribute(); a; a = a->next_attribute()) {
+        QString attrName = xmlAttributeName(a);
+        qDebug() << CLASSFUNCTION
+                 << "Attribute name =" << attrName
+                 << "element.name =" << element.name
+                    ;
+        if (attrName == element.name) {
+            element.node = node;
+            element.parent = parNode;
+            element.attr = a;
+            element.parentName = nodeName;
+//            element.type = ElementType::Attribute;
+            element.value = xmlAttributeValue(a);
+            return;
+        }
+    }
+    // recurse child nodes
+    rapidxml::xml_node<>* n;
+    for (n = node->first_node(); n; n = n->next_sibling() ) {
+        xmlDocElement(element, n, node);
+//        if (!(element == nullXmpElement)) return element;
+    }
+//    return element;
+}
+
 Xmp::XmpElement Xmp::xmlDocElement(QString name,
                                    rapidxml::xml_node<> *node,
                                    rapidxml::xml_node<> *parNode)
 {
 /*
-    Return an XmlElement struct for the element name, starting from *node in xmlDoc.
+    Return an XmlElement struct for the element name, starting from *node in xmlDoc
+    and recursing until found.
 
-    Info includes:
+    Note that parNode is not used for intial function call, only when recursing.
+
+    Element info includes:
     - *node
     - *parent
     - *attribute
