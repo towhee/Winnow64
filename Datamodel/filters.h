@@ -39,6 +39,7 @@ public:
     QTreeWidgetItem *models;
     QTreeWidgetItem *titles;
     QTreeWidgetItem *lenses;
+    QTreeWidgetItem *keywords;
     QTreeWidgetItem *creators;
     QTreeWidgetItem *focalLengths;
     QTreeWidgetItem *years;

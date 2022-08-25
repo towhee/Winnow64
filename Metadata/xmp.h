@@ -88,10 +88,10 @@ private:
                      rapidxml::xml_node<> *node,
                      rapidxml::xml_node<> *parNode = nullptr);
 
-    void xmlDocElement(XmpElement &element,
-                     rapidxml::xml_node<> *node,
-                       rapidxml::xml_node<> *parNode = nullptr,
-                       bool iterateList = false);
+//    void xmlDocElement(XmpElement &element,
+//                     rapidxml::xml_node<> *node,
+//                       rapidxml::xml_node<> *parNode = nullptr,
+//                       bool iterateList = false);
 
     void walk(QTextStream &rpt,
               rapidxml::xml_node<>* node,
