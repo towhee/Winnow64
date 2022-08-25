@@ -331,6 +331,7 @@ If any of the editable fields change then MW::metadataChanged is triggered.
     ok->setData(ok->index(EmailRow, 0, tagInfoIdx), "Email");
     ok->setData(ok->index(UrlRow, 0, tagInfoIdx), "Url");
     ok->setData(ok->index(GPSCoordRow, 0, tagInfoIdx), "GPS");
+    ok->setData(ok->index(KeywordRow, 0, tagInfoIdx), "Keywords");
     ok->setData(ok->index(PositionRow, 0, statusInfoIdx), "Position");
     ok->setData(ok->index(ZoomRow, 0, statusInfoIdx), "Zoom");
     ok->setData(ok->index(SelectedRow, 0, statusInfoIdx), "Selected");
@@ -486,6 +487,8 @@ void InfoView::updateInfo(const int &row)
     ok->setData(ok->index(UrlRow, 1, tagInfoIdx), s);
     s = dm->sf->index(row, G::GPSCoordColumn).data().toString();
     ok->setData(ok->index(GPSCoordRow, 1, tagInfoIdx), s);
+    s = Utilities::stringListToString(dm->sf->index(row, G::KeywordsColumn).data().toStringList());
+    ok->setData(ok->index(KeywordRow, 1, tagInfoIdx), s);
 
     this->fPath = fPath;        // not used, convenience value for future use
 

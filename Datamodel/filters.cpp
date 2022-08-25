@@ -111,6 +111,7 @@ datamodel.
     filterCategoryToDmColumn[" Lenses"] = G::LensColumn;
     filterCategoryToDmColumn[" FocalLengths"] = G::FocalLengthColumn;
     filterCategoryToDmColumn[" Title"] = G::TitleColumn;
+    filterCategoryToDmColumn[" Keywords"] = G::KeywordsColumn;
     filterCategoryToDmColumn[" Creators"] = G::CreatorColumn;
 
     /* Sits above the filters QTreeWidget and is used to message that the filters are
@@ -294,6 +295,10 @@ by addCategoryFromData.
     titles->setText(0, " Title");
     titles->setData(0, G::ColumnRole, G::TitleColumn);
 
+    keywords = new QTreeWidgetItem(this);
+    keywords->setText(0, " Keywords");
+    keywords->setData(0, G::ColumnRole, G::KeywordsColumn);
+
     creators = new QTreeWidgetItem(this);
     creators->setText(0, " Creators");
     creators->setData(0, G::ColumnRole, G::CreatorColumn);
@@ -369,6 +374,11 @@ void Filters::setCategoryBackground(const int &a, const int &b)
     titles->setBackground(3, categoryBackground);
     titles->setBackground(4, categoryBackground);
 
+    keywords->setBackground(0, categoryBackground);
+    keywords->setBackground(2, categoryBackground);
+    keywords->setBackground(3, categoryBackground);
+    keywords->setBackground(4, categoryBackground);
+
     creators->setBackground(0, categoryBackground);
     creators->setBackground(2, categoryBackground);
     creators->setBackground(3, categoryBackground);
@@ -389,6 +399,7 @@ prevent duplication and orphans.
     lenses->takeChildren();
     focalLengths->takeChildren();
     titles->takeChildren();
+    keywords->takeChildren();
     creators->takeChildren();
 }
 

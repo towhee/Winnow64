@@ -81,10 +81,21 @@ void BuildFilters::unfilteredItemSearchCount()
     QString matchText = filters->searchTrue->text(1);
     for (int row = 0; row < dmRows; ++row) {
         bool hideRaw = dm->index(row, 0).data(G::DupHideRawRole).toBool();
-        if (dm->index(row, col).data().toString() == matchText) {
-            tot++;
-            if (combineRawJpg && !hideRaw) totRawJpgCombined++;
-        }
+//        if (cat == " Keywords") {
+//            QStringList x = dm->index(row, col).data().toStringList();
+//            for (int i = 0; i < x.size(); i++) {
+//                if (x.at(i) == matchText) {
+//                    tot++;
+//                    if (combineRawJpg && !hideRaw) totRawJpgCombined++;
+//                }
+//            }
+//        }
+//        else {
+            if (dm->index(row, col).data().toString() == matchText) {
+                tot++;
+                if (combineRawJpg && !hideRaw) totRawJpgCombined++;
+            }
+//        }
     }
     filters->searchTrue->setData(3, Qt::EditRole, QString::number(tot));
     filters->searchTrue->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
@@ -123,7 +134,15 @@ void BuildFilters::updateCountFiltered()
             // filtered counts
             dm->mutex.lock();
             for (int row = 0; row < dm->sf->rowCount(); ++row) {
-                if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
+                if (cat == " Keywords") {
+                    QStringList x = dm->sf->index(row, col).data().toStringList();
+                    for (int i = 0; i < x.size(); i++) {
+                        if (x.at(i) == searchValue) tot++;
+                    }
+                }
+                else {
+                    if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
+                }
             }
             dm->mutex.unlock();
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
@@ -131,7 +150,15 @@ void BuildFilters::updateCountFiltered()
             // unfiltered counts
             tot = 0;
             for (int row = 0; row < dm->rowCount(); ++row) {
-                if (dm->index(row, col).data().toString() == searchValue) tot++;
+                if (cat == " Keywords") {
+                    QStringList x = dm->index(row, col).data().toStringList();
+                    for (int i = 0; i < x.size(); i++) {
+                        if (x.at(i) == searchValue) tot++;
+                    }
+                }
+                else {
+                    if (dm->index(row, col).data().toString() == searchValue) tot++;
+                }
             }
             (*it)->setData(4, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
@@ -159,7 +186,15 @@ void BuildFilters::countFiltered()
             int tot = 0;
             dm->mutex.lock();
             for (int row = 0; row < dm->sf->rowCount(); ++row) {
-                if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
+                if (cat == " Keywords") {
+                    QStringList x = dm->index(row, col).data().toStringList();
+                    for (int i = 0; i < x.size(); i++) {
+                        if (x.at(i) == searchValue) tot++;
+                    }
+                }
+                else {
+                    if (dm->sf->index(row, col).data().toString() == searchValue) tot++;
+                }
             }
             dm->mutex.unlock();
             (*it)->setData(2, Qt::EditRole, QString::number(tot));
@@ -203,9 +238,20 @@ void BuildFilters::countUnfiltered()
             dm->mutex.lock();
             for (int row = 0; row < dmRows; ++row) {
                 bool hideRaw = dm->index(row, 0).data(G::DupHideRawRole).toBool();
-                if (dm->index(row, col).data().toString() == searchValue) {
-                    tot++;
-                    if (combineRawJpg && !hideRaw) totRawJpgCombined++;
+                if (cat == " Keywords") {
+                    QStringList x = dm->index(row, col).data().toStringList();
+                    for (int i = 0; i < x.size(); i++) {
+                        if (x.at(i) == searchValue) {
+                            tot++;
+                            if (combineRawJpg && !hideRaw) totRawJpgCombined++;
+                        }
+                    }
+                }
+                else {
+                    if (dm->index(row, col).data().toString() == searchValue) {
+                        tot++;
+                        if (combineRawJpg && !hideRaw) totRawJpgCombined++;
+                    }
                 }
             }
             dm->mutex.unlock();
@@ -268,6 +314,7 @@ void BuildFilters::mapUniqueInstances()
     QMap<QString, QString> modelMap;
     QMap<QString, QString> lensMap;
     QMap<QString, QString> titleMap;
+    QMap<QString, QString> keywordMap;
     QMap<QString, QString> flMap;
     QMap<QString, QString> creatorMap;
     QMap<QString, QString> yearMap;
@@ -290,6 +337,11 @@ void BuildFilters::mapUniqueInstances()
         if (!yearMap.contains(year)) yearMap[year] = year;
         QString day = dm->sf->index(row, G::DayColumn).data().toString();
         if (!dayMap.contains(day)) dayMap[day] = day;
+        QStringList keywordList = dm->sf->index(row, G::KeywordsColumn).data().toStringList();
+        for (int i = 0; i < keywordList.size(); i++) {
+            QString key = keywordList.at(i);
+            if (!keywordMap.contains(key)) keywordMap[key] = key;
+        }
     }
     // populate count map for progress
     totInstances = 0;      // total fixed instances ie search, rating, labels etc
@@ -317,6 +369,9 @@ void BuildFilters::mapUniqueInstances()
     x = dayMap.count();
     totInstances += x;
     instances[" Days"] = dayMap.count();
+    x = keywordMap.count();
+    totInstances += x;
+    instances[" Keywords"] = keywordMap.count();
 
     // build filter item maps
     filters->addCategoryFromData(typesMap, filters->types);
@@ -326,7 +381,9 @@ void BuildFilters::mapUniqueInstances()
     filters->addCategoryFromData(yearMap, filters->years);
     filters->addCategoryFromData(dayMap, filters->days);
     filters->addCategoryFromData(titleMap, filters->titles);
+    filters->addCategoryFromData(keywordMap, filters->keywords);
     filters->addCategoryFromData(creatorMap, filters->creators);
+    qDebug() << CLASSFUNCTION << dayMap << keywordMap;
 }
 
 void BuildFilters::run()

@@ -1591,16 +1591,19 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
     // cycle through the filters and identify matches
     QTreeWidgetItemIterator filter(filters);
     while (*filter) {
-        if ((*filter)->parent()) {            
-            /* There is a parent therefore not a top level item so this is one of the items to
-            match ie rating = one. If the item has been checked then compare the checked
-            filter item to the data in the dataModelColumn for the row. If it matches then set
-            isMatch = true. If it does not match then isMatch is still false but the row could
-            still be accepted if another item in the same category does match.
+        if ((*filter)->parent()) {
+            /*
+            There is a parent therefore not a top level item so this is one of the items
+            to match ie rating = one. If the item has been checked then compare the
+            checked filter item to the data in the dataModelColumn for the row. If it
+            matches then set isMatch = true. If it does not match then isMatch is still
+            false but the row could still be accepted if another item in the same
+            category does match.
             */
             if ((*filter)->checkState(0) != Qt::Unchecked) {
                 if ((*filter) == filters->searchTrue &&
-                (*filter)->text(0) == filters->enterSearchString) {
+                    (*filter)->text(0) == filters->enterSearchString)
+                {
                     isMatch = true;
                 }
                 else {
@@ -1608,14 +1611,24 @@ bool SortFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent
                     QModelIndex idx = sourceModel()->index(sourceRow, dataModelColumn, sourceParent);
                     QVariant dataValue = idx.data(Qt::EditRole);
                     QVariant filterValue = (*filter)->data(1, Qt::EditRole);
-                    /*
                     QString itemName = (*filter)->text(0);      // for debugging
-                    qDebug() << G::t.restart() << "\t" << itemCategory << itemName
+                    /*
+                    qDebug() << CLASSFUNCTION << "\t" << itemCategory << itemName
                              << "sfRow" << sourceRow
                              << "Comparing" << dataValue << filterValue
                              << (dataValue == filterValue);
+                    qDebug() << CLASSFUNCTION << dataValue << dataValue.typeId()
+                             << dataModelColumn << G::KeywordsColumn
+                             << dataValue.typeId()
+                             << QMetaType::QStringList
+                                ;
                     //*/
-                    if (dataValue == filterValue) isMatch = true;
+                    if (dataValue.typeId() == QMetaType::QStringList) {  // keywords
+                        if (dataValue.toStringList().contains(filterValue)) isMatch = true;
+                    }
+                    else {
+                        if (dataValue == filterValue) isMatch = true;
+                    }
                 }
             }
         }

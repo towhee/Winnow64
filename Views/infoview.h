@@ -7,6 +7,7 @@
 #include "Metadata/metadata.h"
 #include "Datamodel/datamodel.h"
 #include "Views/iconview.h"
+#include "Utilities/utilities.h"
 
 #include "Main/global.h"
 
@@ -70,6 +71,7 @@ public:
         EmailRow,
         UrlRow,
         GPSCoordRow,
+        KeywordRow,
         tagInfoRowsEnd
     };
 
