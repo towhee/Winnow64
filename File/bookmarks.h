@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "Main/global.h"
 #include "Metadata/metadata.h"
+#include "File/fstree.h"
 
 class BookMarks : public QTreeWidget
 {
@@ -22,6 +23,7 @@ public:
 
 public slots:
 	void removeBookmark();
+    void update();
 
 private:
     void addBookmark(QString itemPath);

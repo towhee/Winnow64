@@ -397,7 +397,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createVideoView();          // dependent on centralWidget, ThumbView
     createCompareView();        // dependent on centralWidget
     createFSTree();             // dependent on Metadata
-    createBookmarks();          // dependent on loadSettings
+    createBookmarks();          // dependent on loadSettings, FSTree
     createDocks();              // dependent on FSTree, Bookmarks, ThumbView, Metadata,
                                 //              InfoView, EmbelProperties
     createEmbel();              // dependent on EmbelView, EmbelDock
@@ -1446,7 +1446,7 @@ void MW::folderSelectionChange()
     }
 
     // update FSTree count column for folder in case it has changed
-    fsTree->refreshModel();
+//    fsTree->refreshModel();
 
     // reset sort if necessary (DataModel loads sorted by name in ascending order)
     if (sortColumn != G::NameColumn || sortReverseAction->isChecked()) {
@@ -1701,6 +1701,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 
     // update cursor position on progressBar
     cacheProgressBar->updateCursor(currSfRow, dm->sf->rowCount());
+
+    fsTree->scrollToCurrent();
 
     if (G::isLogger) G::log(CLASSFUNCTION, "Finished " + fPath);
 }
@@ -2564,6 +2566,7 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         QModelIndex idx = fsTree->fsModel->index(fPath);
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         fsTree->setCurrentIndex(filterIdx);
+        fsTree->select(fPath);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         folderSelectionChange();
     }
@@ -5435,21 +5438,14 @@ void MW::deleteFiles()
         }
     }
 
-    // refresh image count in folders and bookmarks
-    fsTree->refreshModel();
-    bookmarks->count();
+    // refresh image count in folders and bookmarks: fsTree is signalled by the OS,
+    // updates count and then signals bookmarks to recount all bookmarks
 
     // if all images in folder were deleted
     if (sldm.count() == dm->rowCount()) {
         stopAndClearAll("deleteFiles");
         folderSelectionChange();
         return;
-    }
-
-    // remove row from MetaRead::iconsLoaded
-    for (int i = 0; i < sldm.count(); ++i) {
-        QString fPath = sldm.at(i);
-        metaRead->dmRowRemoved(dm->rowFromPath(fPath));
     }
 
     // remove fPath from datamodel dm if successfully deleted
@@ -5460,6 +5456,9 @@ void MW::deleteFiles()
 
     // refresh datamodel fPathRow hash
     dm->refreshRowFromPath();
+
+    // cleanup G::rowsWithIcon
+    metaRead->cleanupIcons();
 
     // remove selected from imageCache
     imageCacheThread->removeFromCache(sldm);

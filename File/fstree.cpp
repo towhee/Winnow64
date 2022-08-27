@@ -140,6 +140,19 @@ QVariant FSModel::headerData(int section, Qt::Orientation orientation, int role)
         return QFileSystemModel::headerData(section, orientation, role);
 }
 
+void FSModel::refresh(const QModelIndex &index)
+{
+    beginResetModel();
+    endResetModel();
+    return;
+
+    QList<int> roles;
+    roles << Qt::DisplayRole;
+    emit dataChanged(index, index, roles);
+//    emit dataChanged(testIdx, testIdx);
+    qDebug() << CLASSFUNCTION << index << testIdx;
+}
+
 QVariant FSModel::data(const QModelIndex &index, int role) const
 {
 /*
@@ -150,8 +163,19 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
     if (index.column() == imageCountColumn) {
         if (role == Qt::DisplayRole && showImageCount) {
             QString dPath = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
-//            qDebug() << "FSModel::data" << combineCount.value(dPath) << dPath;
 
+            static quint64 counter = 0;
+            qDebug() << "FSModel::data" << ++counter << dPath;
+
+            /*
+            How to save/cast a const variable:
+            const QModelIndex *tIdx = &index;
+            if (dPath == "/Users/roryhill/Pictures/_test") {
+                QModelIndex ttIdx;
+                ttIdx = *const_cast<QModelIndex*>(tIdx);
+                testIdx = ttIdx;    // in hdr: mutable QModelIndex testIdx;
+            }
+            //*/
             dir->setPath(dPath);
             int n = 0;
             QString nStr = "0";
@@ -160,6 +184,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
                     if (combineCount.contains(dPath))
                         return combineCount.value(dPath);
                 }
+                // iterate through files in folder
                 QListIterator<QFileInfo> i(dir->entryInfoList());
                 while (i.hasNext()) {
                     QFileInfo info = i.next();
@@ -173,17 +198,46 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
                     n++;
                 }
                 nStr = QString::number(n, 'f', 0);
-                combineCount.insert(dPath, nStr);
+                if (combineCount.contains(dPath)) {
+                    // has the count changed?
+                    if (combineCount.value(dPath) != nStr) {
+                        // update hash value (insert adds or replaces in QHash)
+                        combineCount.insert(dPath, nStr);
+                        // signal changed value to bookmarks
+                        emit update();
+                    }
+                }
+                else {
+                    // add hash value
+                    combineCount.insert(dPath, nStr);
+                }
             }
+            // not combineRawJpg
             else {
+                // dir is filtered to only include eligible image files
                 n = dir->entryInfoList().size();
                 nStr = QString::number(n, 'f', 0);
-                count.insert(dPath, nStr);
+                if (count.contains(dPath)) {
+                    // has the count changed?
+                    if (count.value(dPath) != nStr) {
+                        // update hash value (insert adds or replaces in QHash)
+                        count.insert(dPath, nStr);
+                        // signal changed value to bookmarks
+                        emit update();
+                    }
+                }
+                else {
+                    // add hash value
+                    count.insert(dPath, nStr);
+                }
             }
+            /*
+            qDebug() << "FSModel::data image count processed" << combineCount.value(dPath)
+                     << dPath << index << "count =" << nStr;
+                     //*/
             return nStr;
         }
         if (role == Qt::TextAlignmentRole) {
-//            return static_cast<QVariant>(Qt::AlignRight | Qt::AlignVCenter);
             return QVariant::fromValue(Qt::AlignRight | Qt::AlignVCenter);
         }
         else {
@@ -258,7 +312,6 @@ void FSTree::createModel()
     fsModel = new FSModel(this, *metadata, /*count, combineCount,*/ combineRawJpg);
     fsModel->setFilter(QDir::AllDirs | QDir::NoDotAndDotDot | QDir::Hidden);
     fsModel->setRootPath(fsModel->myComputer().toString());
-//    fsModel->metadata = metadata;
 
     // get mounted drives only
     foreach (const QStorageInfo &storage, QStorageInfo::mountedVolumes()) {
@@ -290,9 +343,24 @@ void FSTree::refreshModel()
     media card.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
+    /*
 //    delete fsModel;
 //    createModel();
+//    fsFilter->refresh();
+//    QModelIndex idx = getCurrentIndex();
+
+////    QModelIndex idxCount = fsModel->index(idx.row(), fsModel->imageCountColumn, idx.parent());
+//    QModelIndex idxCount = fsModel->index(28, 4, idx.parent());
+//    QList<int> roles;
+//    roles << Qt::DisplayRole << Qt::EditRole;
+//    qDebug() << CLASSFUNCTION << "row =" << idx.row() << roles << idxCount << idx;
+//    emit fsModel->dataChanged(idx, idx, roles);
+    //*/
+    // this does not trigger an updata of the model anymore ??
     fsModel->setRootPath(fsModel->myComputer().toString());
+//    fsModel->refresh(QModelIndex());
+//    setModel(nullptr);
+//    setModel(fsFilter);
 }
 
 bool FSTree::isShowImageCount()
@@ -457,21 +525,36 @@ void FSTree::dragEnterEvent(QDragEnterEvent *event)
 
 void FSTree::dragMoveEvent(QDragMoveEvent *event)
 {
-	setCurrentIndex(indexAt(event->pos()));
+    setCurrentIndex(indexAt(event->pos()));
 }
 
 void FSTree::dropEvent(QDropEvent *event)
 {
 /*
-    - get drop folder and select
+    - get drop folder and show selected
+    - copy all files in mimeData
+    - todo: also copy sidecars
+    - todo: move
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-	if (event->source())
+    QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
+    if (event->source())
 	{
+        for (int i = 0; i < event->mimeData()->urls().count(); i++) {
+            QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
+            QFileInfo info(srcPath);
+            QString destPath = dropDir + "/" + info.fileName();
+            bool copied = QFile::copy(srcPath, destPath);
+            qDebug() << CLASSFUNCTION
+                     << "Copy" << srcPath << "to" << destPath << "Copied:" << copied;
+        }
+        setCurrentIndex(dndOrigSelection);
+        /*
         QString fstreeStr = "FSTree";
 		bool dirOp = (event->source()->metaObject()->className() == fstreeStr);
 		emit dropOp(event->keyboardModifiers(), dirOp, event->mimeData()->urls().at(0).toLocalFile());
 		setCurrentIndex(dndOrigSelection);
+        */
 	}
 }
 

@@ -916,7 +916,7 @@ void Metadata::clearMetadata()
     m.focalLength = "";
     m.focalLengthNum = 0;
     m.gpsCoord = "";
-    m.gpsCoord.clear();
+    m.keywords.clear();
     m.title = "";
     m.lens = "";
     m.creator = "";

@@ -1,7 +1,4 @@
 BUGS / TO DO
-- Filter one item count not working
-- Add keywords
-- Delete first 2 of 3 images, first video, crashed
 - Review Olympus metadata ie serial number
 - Save preview as PNG include color manage corrections
 - Copy files between folders using drag'n'drop
@@ -63,11 +60,13 @@ ENHANCEMENTS
 - Add fade and alias to stroke
 - Add glow (inner/outer)
 - Add guassian blur (inner/outer)
-- Copy files between folders using drag'n'drop
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
-- Read keywords
 DONE/FIXED
+- Copy files between folders using drag'n'drop
+- Delete first image causes crash
+- Filter by keywords
+- Read keywords
 - Read GPS coordinates
 - Drag and drop not selecting first image
 - Drag and drop onto VideoView and CompareView fixed

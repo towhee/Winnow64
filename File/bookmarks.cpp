@@ -88,6 +88,26 @@ void BookMarks::addBookmark(QString itemPath)
     item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
 }
 
+void BookMarks::update()
+{
+    count();
+    /* update only changed folder (to do if required)
+    // pass dPath and make FSModel::count and FSModel::combineCount public
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        QString path = (*it)->toolTip(0);
+        qDebug() << CLASSFUNCTION << path << dPath;
+        QString countStr;
+        if (combineRawJpg)
+            countStr = QString::number(fsTree->fsModel->combineCount[dPath]);
+        else
+            countStr = QString::number(fsTree->fsModel->count[dPath]);
+        (*it)->setText(1, countStr);
+        ++it;
+    }
+    //*/
+}
+
 void BookMarks::count()
 {
      QTreeWidgetItemIterator it(this);

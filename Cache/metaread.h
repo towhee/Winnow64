@@ -18,9 +18,9 @@ public:
     MetaRead(QObject *parent, DataModel *dm, Metadata *metadata);
     ~MetaRead() override;
 
-    void dmRowRemoved(int dmRow);
     QString diagnostics();
     QString reportMetaCache();
+    void cleanupIcons();
 
     bool isRunning = false;
 
@@ -48,7 +48,6 @@ private:
     void readMetadata(QModelIndex sfIdx, QString fPath);
     void readIcon(QModelIndex sfIdx, QString fPath);
     void iconMax(QPixmap &thumb);
-    void cleanupIcons();
     bool isNotLoaded(int sfRow);
     bool inIconRange(int sfRow);
 
