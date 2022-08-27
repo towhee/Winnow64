@@ -751,6 +751,8 @@ void MW::createBookmarks()
 
     connect(bookmarks, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
             this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
+
+    connect(fsTree->fsModel, &FSModel::update, bookmarks, &BookMarks::update);
 }
 
 void MW::createAppStyle()

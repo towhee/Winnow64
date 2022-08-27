@@ -253,7 +253,7 @@ namespace G
     extern bool isTimer;
     extern bool isTest;
 
-    extern QList<int>rowsWithIcon;
+//    extern QList<int>rowsWithIcon;
 
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
     extern QStringList doNotLog;

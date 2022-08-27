@@ -125,7 +125,7 @@ namespace G
     bool isTimer;
     bool isTest;
 
-    QList<int>rowsWithIcon;
+//    QList<int>rowsWithIcon;         // used by MetaRead and MW::deleteFiles
 
     QString s(QVariant x)
     // helper function to convert variable values to a string for reporting

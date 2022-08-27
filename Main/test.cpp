@@ -60,17 +60,16 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-
-    QString s = QChar(78);
-    qDebug() << s;
+//    fsTree->select(currentViewDirPath);
+    fsTree->refreshModel();
+//    fsTree->scrollToCurrent();
+//    fsTree->count();
+//    delete fsTree->fsModel;
+//    fsTree->createModel();
+//    fsTree->refreshModel();
+//    fsTree->fsModel->setRootPath(fsTree->fsModel->myComputer().toString());
+//    fsTree->fsFilter->refresh();
     return;
-    QString fPath = dm->currentFilePath;
-    ImageMetadata m = dm->imMetadata(fPath);
-    QFile f(fPath);
-    f.open(QIODevice::ReadWrite);
-    Xmp xmp(f, m.xmpSegmentOffset, m.xmpSegmentLength);
-    QString v = xmp.getItem("title");
-    qDebug() << v;
 
     // cause a crash
 //    QList<int> list;

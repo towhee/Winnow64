@@ -154,22 +154,14 @@ bool MetaRead::inIconRange(int row) {
     else return false;
 }
 
-void MetaRead::dmRowRemoved(int dmRow)
-{
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    int idx = rowsWithIcon.indexOf(dmRow);
-    rowsWithIcon.removeAt(idx);
-}
-
 void MetaRead::cleanupIcons()
 {
 /*
-    Remove icons not in priority queue after iconChunkSize
+    Remove icons not in priority queue after iconChunkSize or MW::deleteFiles
 */
     if (G::isLogger) G::log("MetaRead::cleanupIcons");
 
     // check if datamodel size is less than assigned icon cache chunk size
-//    if (G::loadOnlyVisibleIcons && visibleIconCount >= sfRowCount) return;
     if (iconChunkSize >= sfRowCount) return;
 
     int i = 0;

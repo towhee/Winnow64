@@ -76,6 +76,5 @@ QString GPS::decode(QFile &file,
     QString gpsLongRef = QChar(ifdDataHash.value(3).tagValue);
     gpsCoord += " " + gpsLongRef;
 
-    qDebug() << "GPS::decode" << gpsCoord;
     return gpsCoord;
 }

@@ -827,19 +827,12 @@ void ImageView::wheelEvent(QWheelEvent *event)
         deltaSum = delta;
     }
     deltaSum += delta;
+    /*
     qDebug() << CLASSFUNCTION
              << "delta =" << delta
              << "prevDelta =" << prevDelta
              << "deltaSum =" << deltaSum
              << "G::wheelSensitivity =" << G::wheelSensitivity
-                ;
-
-    /*
-    qDebug() << "ImageView::wheelEvent"
-             << "event->angleDelta() =" << event->angleDelta()
-             << "event->angleDelta().y() =" << event->angleDelta().y()
-             << "deltaSum =" << deltaSum
-//             << "event->pixelDelta().y() =" << event->pixelDelta().y()
                 ;
                 //*/
 

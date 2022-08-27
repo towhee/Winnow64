@@ -944,7 +944,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::FocalLengthColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::GPSCoordColumn), m.gpsCoord);
     setData(index(row, G::GPSCoordColumn), m.gpsCoord, Qt::ToolTipRole);
-    qDebug() << CLASSFUNCTION << "keywords" << m.keywords;
     setData(index(row, G::KeywordsColumn), QVariant(m.keywords));
     setData(index(row, G::KeywordsColumn), Utilities::stringListToString(m.keywords), Qt::ToolTipRole);
     setData(index(row, G::ShootingInfoColumn), m.shootingInfo);

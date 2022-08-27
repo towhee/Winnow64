@@ -23,24 +23,30 @@ protected:
 
 class FSModel : public QFileSystemModel
 {
+    Q_OBJECT
 public:
     FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg);
 	bool hasChildren(const QModelIndex &parent) const;
     int columnCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QVariant data(const QModelIndex &index, int role) const;
+    void refresh(const QModelIndex &index);
     bool showImageCount;
     bool &combineRawJpg;
-    bool forceRefresh = false;
+    bool forceRefresh = true;
     Metadata &metadata;
+    int imageCountColumn = 4;
+
+signals:
+    void update() const;
 
 private:
     QDir *dir;
-    int imageCountColumn = 4;
     void insertCount(QString dPath, QString value);
     void insertCombineCount(QString dPath, QString value);
     mutable QHash <QString, QString> count;
     mutable QHash <QString, QString> combineCount;
+    mutable QModelIndex testIdx;
 };
 
 class FSTree : public QTreeView

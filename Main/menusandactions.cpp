@@ -269,15 +269,6 @@ void MW::createActions()
     addAction(combineRawJpgAction);
     connect(combineRawJpgAction, &QAction::triggered, this, &MW::setCombineRawJpg);
 
-    combineRawJpgAction = new QAction(tr("Combine Raw+Jpg"), this);
-    combineRawJpgAction->setObjectName("combineRawJpg");
-    combineRawJpgAction->setShortcutVisibleInContextMenu(true);
-    combineRawJpgAction->setCheckable(true);
-    if (isSettings && setting->contains("combineRawJpg")) combineRawJpgAction->setChecked(setting->value("combineRawJpg").toBool());
-    else combineRawJpgAction->setChecked(true);
-    addAction(combineRawJpgAction);
-    connect(combineRawJpgAction, &QAction::triggered, this, &MW::setCombineRawJpg);
-
     // Place keeper for now
     renameAction = new QAction(tr("Rename selected images"), this);
     renameAction->setObjectName("renameImages");
