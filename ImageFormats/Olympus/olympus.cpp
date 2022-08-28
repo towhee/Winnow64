@@ -110,7 +110,7 @@ Olympus::Olympus()
     olympusMakerHash[4157] = "LightValueCenter";
     olympusMakerHash[4158] = "LightValuePeriphery";
     olympusMakerHash[4159] = "FieldCount?";
-    olympusMakerHash[8208] = "Equipment";
+    olympusMakerHash[8208] = "Equipment IFDOffset";
     olympusMakerHash[8224] = "CameraSettings";
     olympusMakerHash[8240] = "RawDevelopment";
     olympusMakerHash[8241] = "RawDev2";
@@ -196,6 +196,32 @@ Olympus::Olympus()
     olympusCameraSettingsHash[2307] = "RollAngle";
     olympusCameraSettingsHash[2308] = "PitchAngle";
     olympusCameraSettingsHash[2312] = "DateTimeUTC";
+
+    olympusEquipmentHash[0] = "EquipmentVersion";
+    olympusEquipmentHash[256] = "CameraType";
+    olympusEquipmentHash[257] = "SerialNumber";
+    olympusEquipmentHash[258] = "InternalSerialNumber";
+    olympusEquipmentHash[259] = "FocalPlaneDiagonal";
+    olympusEquipmentHash[260] = "BodyFirmwareVersion";
+    olympusEquipmentHash[513] = "LensType";
+    olympusEquipmentHash[514] = "LensSerialNumber";
+    olympusEquipmentHash[515] = "LensModel";
+    olympusEquipmentHash[516] = "LensFirmwareVersion";
+    olympusEquipmentHash[517] = "MaxApertureAtMinFocal";
+    olympusEquipmentHash[518] = "MaxApertureAtMaxFocal";
+    olympusEquipmentHash[519] = "MinFocalLength";
+    olympusEquipmentHash[520] = "MaxFocalLength";
+    olympusEquipmentHash[522] = "MaxApertureAtCurrentFocal";
+    olympusEquipmentHash[523] = "LensProperties";
+    olympusEquipmentHash[769] = "Extender";
+    olympusEquipmentHash[770] = "ExtenderSerialNumber";
+    olympusEquipmentHash[771] = "ExtenderModel";
+    olympusEquipmentHash[772] = "ExtenderFirmwareVersion";
+    olympusEquipmentHash[1027] = "ConversionLens";
+    olympusEquipmentHash[4096] = "FlashType";
+    olympusEquipmentHash[4097] = "FlashModel";
+    olympusEquipmentHash[4098] = "FlashFirmwareVersion";
+    olympusEquipmentHash[4099] = "FlashSerialNumber";
 }
 
 bool Olympus::parse(MetadataParameters &p,
@@ -361,23 +387,41 @@ bool Olympus::parse(MetadataParameters &p,
             p.offset = offset;
             p.hash = &olympusMakerHash;
             ifd->readIFD(p);
+
+            // IFD Offsets
+            quint32 cameraSettingsIFDOffset = 0;
+            if (ifd->ifdDataHash.contains(8224))
+                cameraSettingsIFDOffset = ifd->ifdDataHash.value(8224).tagValue + makerOffset;
+
+            quint32 equipmentIFDOffset = 0;
+            if (ifd->ifdDataHash.contains(8208))
+                    equipmentIFDOffset = ifd->ifdDataHash.value(8208).tagValue + makerOffset;
+
             m.offsetThumb = ifd->ifdDataHash.value(256).tagValue + makerOffset;
             m.lengthThumb = ifd->ifdDataHash.value(256).tagCount;
     //        if (lengthThumbJPG) verifyEmbeddedJpg(offsetThumbJPG, lengthThumbJPG);
 
             // read CameraSettingsIFD
-            if (ifd->ifdDataHash.contains(8224)) {
-    //            readIFD("IFD Olympus Maker Note: CameraSettingsIFD",
-    //                    ifd->ifdDataHash.value(8224).tagValue + makerOffset);
-                offset = ifd->ifdDataHash.value(8224).tagValue + makerOffset;
+//            if (ifd->ifdDataHash.contains(8224)) {
+//                offset = ifd->ifdDataHash.value(8224).tagValue + makerOffset;
+            if (cameraSettingsIFDOffset) {
                 p.hdr = "IFD Olympus Maker Note: CameraSettingsIFD";
-                p.offset = offset;
+                p.offset = cameraSettingsIFDOffset;
+                p.hash = &olympusCameraSettingsHash;
                 ifd->readIFD(p);
                 m.offsetFull = ifd->ifdDataHash.value(257).tagValue + makerOffset;
                 m.lengthFull = ifd->ifdDataHash.value(258).tagValue;
                 p.offset = m.offsetFull;
                 jpeg->getWidthHeight(p, m.widthPreview, m.heightPreview);
-//                jpeg->getDimensions(p, m);
+            }
+
+            if (equipmentIFDOffset) {
+                p.hdr = "IFD Olympus Maker Note: EquipmentSettingsIFD";
+                p.offset = equipmentIFDOffset;
+                p.hash = &olympusEquipmentHash;
+                ifd->readIFD(p);
+                m.cameraSN = u.getString(p.file, ifd->ifdDataHash.value(257).tagValue + makerOffset, ifd->ifdDataHash.value(257).tagCount).trimmed();
+                m.lensSN = u.getString(p.file, ifd->ifdDataHash.value(514).tagValue + makerOffset, ifd->ifdDataHash.value(514).tagCount).trimmed();
             }
         }
     }

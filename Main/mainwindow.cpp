@@ -3053,7 +3053,7 @@ void MW::runExternalApp()
             break;
         }
     }
-    if(appPath == "") return;       // add err handling
+    if (appPath == "") return;      // add err handling
 //    QFileInfo appInfo = appPath;  // qt6.2
     QFileInfo appInfo;              // qt6.2
     appInfo.setFile(appPath);       // qt6.2
