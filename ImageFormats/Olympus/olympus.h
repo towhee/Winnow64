@@ -25,7 +25,9 @@ public:
                Jpeg *jpeg,
                GPS *gps);
 private:
-    QHash<quint32, QString> olympusMakerHash, olympusCameraSettingsHash;
+    QHash<quint32, QString> olympusMakerHash,
+                            olympusCameraSettingsHash,
+                            olympusEquipmentHash;
     Utilities u;
 };
 

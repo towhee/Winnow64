@@ -60,46 +60,10 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    fsTree->select(currentViewDirPath);
-    fsTree->refreshModel();
-//    fsTree->scrollToCurrent();
-//    fsTree->count();
-//    delete fsTree->fsModel;
-//    fsTree->createModel();
-//    fsTree->refreshModel();
-//    fsTree->fsModel->setRootPath(fsTree->fsModel->myComputer().toString());
-//    fsTree->fsFilter->refresh();
-    return;
-
-    // cause a crash
-//    QList<int> list;
-//    int a = list.at(17);
-//    qDebug() << "a =" << a;
-//    return;
-
-//#ifdef Q_OS_WIN
-//    QString p1 = "D:/Pictures/Coaster";
-//    QString p2 = "D:/Pictures/Zenfolio/pbase2048";
-//#endif
-
-//#ifdef Q_OS_MAC
-////QString p1 = "/Users/roryhill/Pictures/3840x2160";
-//QString p1 = "/Users/roryhill/Pictures/TheFrame";
-//QString p2 = "/Users/roryhill/Pictures/Test";
-//#endif
-
-//    QString fPath;
-//    static bool b = true;
-//    if (b) fPath = p1;
-//    else fPath = p2;
-//    QModelIndex idx = fsTree->fsModel->index(fPath);
-//    QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
-//    fsTree->setCurrentIndex(filterIdx);
-//    fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
-
-//    qDebug();
-//    G::t.restart();
-//    G::track(CLASSFUNCTION, "New folder: " + fPath);
-//    folderSelectionChange();
-//    b = !b;
+    QProcess *process = new QProcess();
+    process->setProgram("/Users/roryhill/Projects/ExifTool/exiftool");
+    process->setArguments({"-a", "-v3", "u", "g1", "-w", "txt", "/Volumes/OM SYSTEM/DCIM/100OMSYS/_8270001.ORF"});
+//    process->setArguments({"-w", "txt", "/Volumes/OM SYSTEM/DCIM/100OMSYS/_8270002.JPG"});
+    process->setWorkingDirectory("/Volumes/OM SYSTEM/DCIM/100OMSYS");
+    process->start();
 }
