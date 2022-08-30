@@ -165,7 +165,7 @@ QVariant FSModel::data(const QModelIndex &index, int role) const
             QString dPath = QFileSystemModel::data(index, QFileSystemModel::FilePathRole).toString();
 
             static quint64 counter = 0;
-            qDebug() << "FSModel::data" << ++counter << dPath;
+//            qDebug() << "FSModel::data" << ++counter << dPath;
 
             /*
             How to save/cast a const variable:

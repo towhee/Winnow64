@@ -32,7 +32,7 @@ signals:
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
-    void startImageCache();
+    void triggerImageCache();
 
     void updateIconBestFit();  // req'd?
     void done();               // not being used - req'd?

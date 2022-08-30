@@ -2979,11 +2979,11 @@ void MW::about()
 void MW::externalAppManager()
 {
 /*
-   This function opens a dialog that allows the user to add and delete external executables
-   that can be passed image files. externalApps is a QList that holds string pairs: the
-   program name and the path to the external program executable. This list is passed as a
-   reference to the appdlg, which modifies it and then after the dialog is closed the
-   appActions are rebuilt.
+   This function opens a dialog that allows the user to add and delete external
+   executables that can be passed image files. externalApps is a QList that holds string
+   pairs: the program name and the path to the external program executable. This list is
+   passed as a reference to the appdlg, which modifies it and then after the dialog is
+   closed the appActions are rebuilt.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     Appdlg *appdlg = new Appdlg(externalApps, this);
@@ -3001,6 +3001,9 @@ void MW::externalAppManager()
                 appActions.at(i)->setShortcut(QKeySequence(shortcut));
                 appActions.at(i)->setText(externalApps.at(i).name);
                 appActions.at(i)->setVisible(true);
+                qDebug() << CLASSFUNCTION << i
+                         << externalApps.at(i).name
+                         << externalApps.at(i).path;
                 // save to settings
                 QString sortPrefix = xAppShortcut[i];
                 if (sortPrefix == "0") sortPrefix = "X";
@@ -3009,6 +3012,21 @@ void MW::externalAppManager()
             else {
                 appActions.at(i)->setVisible(false);
                 appActions.at(i)->setText("");
+            }
+        }
+        setting->endGroup();
+
+        setting->beginGroup("ExternalAppArgs");
+        setting->remove("");
+        for (int i = 0; i < 10; ++i) {
+            if (i < externalApps.length()) {
+                // save to settings
+                QString sortPrefix = xAppShortcut[i];
+                if (sortPrefix == "0") sortPrefix = "X";
+//                qDebug() << CLASSFUNCTION << i
+//                         << externalApps.at(i).name
+//                         << externalApps.at(i).args;
+                setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).args);
             }
         }
         setting->endGroup();
@@ -3047,9 +3065,11 @@ void MW::runExternalApp()
 
     QString appPath = "";
     QString appName = (static_cast<QAction*>(sender()))->text();
+    QStringList arguments;
     for(int i = 0; i < externalApps.length(); ++i) {
         if(externalApps.at(i).name == appName) {
             appPath = externalApps.at(i).path;
+            arguments << externalApps.at(i).args.split(" ");
             break;
         }
     }
@@ -3095,7 +3115,6 @@ void MW::runExternalApp()
         if (ret == QMessageBox::Cancel) return;
     }
 
-    QStringList arguments;
     if (!getSelection(arguments)) return;
     QString folderPath;
 //    QFileInfo fInfo = arguments.at(0);    // qt6.2

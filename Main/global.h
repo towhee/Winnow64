@@ -130,9 +130,10 @@ namespace G
     };
 
     // used to pass externalApps from MW to AppDlg
-    struct Pair {
+    struct App {
         QString name;
         QString path;
+        QString args;
     };
 
     struct ImPair {

@@ -51,8 +51,6 @@ void MW::stressTest(int ms)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-//    metaRead->restart();
-    return;
 
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
     metadata->testNewFileFormat(fPath);
@@ -60,6 +58,18 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    imageCacheThread->debugCaching = true;
+    return;
+
+    QString s = "-a -v3 -u -g1 -w txt";
+    QStringList sl = s.split(" ");
+    qDebug() << sl;
+    return;
+    setting->beginGroup("ExternalAppArgs");
+    QStringList args = setting->childKeys();
+    qDebug() << args;
+    setting->endGroup();
+    return;
     QProcess *process = new QProcess();
     process->setProgram("/Users/roryhill/Projects/ExifTool/exiftool");
     process->setArguments({"-a", "-v3", "u", "g1", "-w", "txt", "/Volumes/OM SYSTEM/DCIM/100OMSYS/_8270001.ORF"});

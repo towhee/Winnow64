@@ -1318,6 +1318,8 @@ bool Nikon::parse(MetadataParameters &p,
             // D2H and older
                 m.width = ifd->ifdDataHash.value(256).tagValue;
                 m.height = ifd->ifdDataHash.value(257).tagValue;
+                m.widthPreview = m.width;
+                m.heightPreview = m.height;
             }
         }
 

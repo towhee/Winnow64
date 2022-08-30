@@ -144,8 +144,8 @@ public:
     QStringList *ingestHistoryFolders;
     QStringList ingestDescriptionCompleter;
 
-    G::Pair externalApp;                  // external application name / executable path
-    QList<G::Pair> externalApps;          // list of external apps
+    G::App externalApp;                  // external application name / executable path
+    QList<G::App> externalApps;          // list of external apps
     QVector<QString> xAppShortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
 
     struct workspaceData {

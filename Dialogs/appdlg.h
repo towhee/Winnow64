@@ -15,11 +15,12 @@ class Appdlg : public QDialog
     Q_OBJECT
 
 public:
-    Appdlg(QList<G::Pair> &externalApps, QWidget *parent = nullptr);
+    Appdlg(QList<G::App> &externalApps, QWidget *parent = nullptr);
     ~Appdlg() override;
 
 protected:
     void paintEvent(QPaintEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 private slots:
     void on_addBtn_clicked();
@@ -35,8 +36,8 @@ private slots:
 private:
     Ui::Appdlg *ui;
 
-    G::Pair app;
-    QList<G::Pair> &xApps;
+    G::App app;
+    QList<G::App> &xApps;
     QString modifier;
     QVector<QString> shortcut = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"};
 

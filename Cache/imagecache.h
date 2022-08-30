@@ -58,6 +58,7 @@ public:
 
     int decoderCount = 1;
 
+    bool debugCaching = false;
     QString source;                 // temp for debugging
 
 //    ImageCacheData::Cache icd->cache;
@@ -92,12 +93,12 @@ private:
     bool restart;
     bool abort;
     bool pause;
-    bool cacheSizeHasChanged;
-    bool filterOrSortHasChanged;
+    bool cacheSizeHasChanged = false;
+    bool filterOrSortHasChanged = false;
     bool refreshCache;
     QString currentPath;
     int maxAttemptsToCacheImage = 100;
-    bool checkForOrphans;           // prevent multiple orphan checks as each decoder finishes
+    bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
     bool isCacheUpToDate = false;
     bool sendStatusUpdates = false; // if true, slows scrolling while image cache loading
 
@@ -131,7 +132,6 @@ private:
 //    QSize scalePreview(int w, int h);
 
     QElapsedTimer t;
-    bool debugCaching = false;
 };
 
 #endif // IMAGECACHE_H
