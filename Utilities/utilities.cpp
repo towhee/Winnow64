@@ -224,7 +224,7 @@ QString Utilities::stringListToString(QStringList list)
     int n = list.size();
     for (int i = 0; i < n; i++) {
         if (i && i < n) s += ", ";
-        s += list.at(i);
+        s += list.at(i).trimmed();
     }
     return s;
 }

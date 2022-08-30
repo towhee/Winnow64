@@ -77,6 +77,19 @@ void MW::createActions()
         }
         addActions(appActions);
         setting->endGroup();
+
+        // app arguments (optional) are in a sister group
+        setting->beginGroup("ExternalAppArgs");
+        QStringList args = setting->childKeys();
+        n = args.size();
+        for (int i = 0; i < 10; ++i) {
+            if (i < n) {
+                QString arg = args.at(i);
+                externalApps[i].args = arg.remove(0, 1);
+                externalApps[i].args = setting->value(args.at(i)).toString();
+            }
+        }
+        setting->endGroup();
     }
     else {
         for (int i = 0; i < 10; ++i) {

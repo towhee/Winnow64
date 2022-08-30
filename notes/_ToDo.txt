@@ -1,7 +1,5 @@
 BUGS / TO DO
-- Review Olympus metadata ie serial number
 - Save preview as PNG include color manage corrections
-- Copy files between folders using drag'n'drop
 
 - Open with permissions issue
 - Painter not active, state will be reset by begin
@@ -63,6 +61,10 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- ImageCache not using preview size to calc image size MB
+- ImageCache not updating sometimes on SD card
+- Added arguments to running external apps
+- Olympus serial number
 - Copy files between folders using drag'n'drop
 - Delete first image causes crash
 - Filter by keywords

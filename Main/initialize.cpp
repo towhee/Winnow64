@@ -247,7 +247,7 @@ void MW::createMDCache()
     // message metadata reading completed
     connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
-    connect(metaRead, &MetaRead::startImageCache, this, &MW::loadConcurrentStartImageCache);
+    connect(metaRead, &MetaRead::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
     // check icons visible is correct
     connect(metaRead, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit/*,
             Qt::BlockingQueuedConnection*/);

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>948</width>
+    <width>1071</width>
     <height>374</height>
    </rect>
   </property>
@@ -51,7 +51,7 @@
         <bool>false</bool>
        </property>
        <property name="columnCount">
-        <number>3</number>
+        <number>4</number>
        </property>
        <attribute name="horizontalHeaderDefaultSectionSize">
         <number>300</number>
@@ -65,6 +65,7 @@
        <attribute name="verticalHeaderDefaultSectionSize">
         <number>26</number>
        </attribute>
+       <column/>
        <column/>
        <column/>
        <column/>
@@ -96,7 +97,7 @@
         <string>Select a row and then click this button to move the row down</string>
        </property>
        <property name="text">
-        <string>Move Down</string>
+        <string>Move App Down</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>
@@ -109,7 +110,7 @@
         <string>Select a row and then click this button to move the row up</string>
        </property>
        <property name="text">
-        <string>Move Up</string>
+        <string>Move App Up</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>
@@ -161,7 +162,7 @@
         <string>Save the changes and exit.  To exit without saving changes press &quot;ESC&quot; or the close button &quot;X&quot;.</string>
        </property>
        <property name="text">
-        <string>Ok</string>
+        <string>Save and close</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>
