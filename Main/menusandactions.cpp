@@ -1383,11 +1383,18 @@ void MW::createActions()
     connect(diagnosticsEmbellishAction, &QAction::triggered, this, &MW::diagnosticsEmbellish);
 
     // Tests
-    stressTestAction = new QAction(tr("Stress test"), this);
-    stressTestAction->setObjectName("stressTest");
+    stressTestAction = new QAction(tr("Traverse folders stress test"), this);
+    stressTestAction->setObjectName("traversFoldersStressTest");
     stressTestAction->setShortcutVisibleInContextMenu(true);
     addAction(stressTestAction);
-    connect(stressTestAction, &QAction::triggered, this, &MW::stressTest);
+    connect(stressTestAction, &QAction::triggered, this, &MW::traverseFolderStressTestFromMenu);
+
+    // Tests
+    bounceFoldersStressTestAction = new QAction(tr("Bounce bookmarks stress test"), this);
+    bounceFoldersStressTestAction->setObjectName("bounceBookmarksStressTest");
+    bounceFoldersStressTestAction->setShortcutVisibleInContextMenu(true);
+    addAction(bounceFoldersStressTestAction);
+    connect(bounceFoldersStressTestAction, &QAction::triggered, this, &MW::bounceFoldersStressTestFromMenu);
 
     // Non- Menu actions
     thriftyCacheAction = new QAction(tr("Thrifty Cache"), this);
@@ -1722,6 +1729,7 @@ void MW::createMenus()
     helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsEmbellishAction);
     testMenu->addAction(stressTestAction);
+    testMenu->addAction(bounceFoldersStressTestAction);
 
     // Separator Action
     QAction *separatorAction = new QAction(this);

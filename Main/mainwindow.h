@@ -905,6 +905,7 @@ private:
 
     // Testing Menu (under Help Diagnostics Menu)
     QAction *stressTestAction;
+    QAction *bounceFoldersStressTestAction;
 
     // Context menus
     QList<QAction *> *fsTreeActions;
@@ -1208,7 +1209,10 @@ private:
     void mediaReadSpeed();
     void reportHueCount();
     void generateMeanStack();
-    void stressTest(int ms = 50);
+    void traverseFolderStressTestFromMenu();
+    void traverseFolderStressTest(int ms = 0, int duration = 0);
+    void bounceFoldersStressTestFromMenu();
+    void bounceFoldersStressTest(int ms = 0, int duration = 0);
     void test();                    // for debugging
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging
