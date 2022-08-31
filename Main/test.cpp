@@ -1,11 +1,23 @@
 #include "Main/mainwindow.h"
 
-void MW::stressTest(int ms)
+void MW::traverseFolderStressTestFromMenu()
+{
+    qDebug() << CLASSFUNCTION;
+    traverseFolderStressTest();
+}
+
+void MW::traverseFolderStressTest(int ms, int duration)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     qDebug() << CLASSFUNCTION << ms;
-    ms = QInputDialog::getInt(this, "Enter ms delay between images", "Delay (1-1000 ms) ",
-                              50, 1, 1000);
+    G::popUp->hide();
+
+    if (!ms) {
+        ms = QInputDialog::getInt(this,
+                                  "Enter ms delay between images",
+                                  "Delay (1-1000 ms) ",
+                                  50, 1, 1000);
+    }
 
 //    G::wait(1000);        // time to release modifier keys for shortcut (otherwise select many)
     isStressTest = true;
@@ -13,8 +25,8 @@ void MW::stressTest(int ms)
     slideCount = 0;
     QElapsedTimer t;
     t.start();
-    qDebug() << CLASSFUNCTION << "-1";
     while (isStressTest) {
+        if (duration && t.elapsed() > duration) return;
         G::wait(ms);
         ++slideCount;
         if (isForward && currSfRow == dm->sf->rowCount() - 1) isForward = false;
@@ -22,6 +34,7 @@ void MW::stressTest(int ms)
         if (isForward) keyRight();
         else keyLeft();
         qApp->processEvents();
+        if (dm->sf->rowCount() < 2) return;
     }
     qint64 msElapsed = t.elapsed();
     double seconds = msElapsed * 0.001;
@@ -49,9 +62,52 @@ void MW::stressTest(int ms)
     fPath = subfolders->at(r % (subfolders->count()));
 }
 
+void MW::bounceFoldersStressTestFromMenu()
+{
+    qDebug() << CLASSFUNCTION;
+    bounceFoldersStressTest(0, 0);
+}
+
+void MW::bounceFoldersStressTest(int ms, int duration)
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION << "ms =" << ms << "duration =" << duration;
+    G::popUp->hide();
+
+    if (!ms) {
+        ms = QInputDialog::getInt(this,
+                                  "Enter ms delay between images",
+                                  "Delay (1-1000 ms) ",
+                                  50, 1, 1000);
+    }
+
+    if (!duration) {
+        duration = QInputDialog::getInt(this,
+              "Enter length of test in seconds",
+              "Duration (0 - 86,400 sec). 0 = end when press Esc",
+              5, 0, 86400);
+    duration *= 1000;
+    }
+
+    isStressTest = true;
+    QList<QString>bookMarkPaths = bookmarks->bookmarkPaths.values();
+    int n = bookMarkPaths.count();
+    while (isStressTest) {
+        uint randomIdx = QRandomGenerator::global()->generate() % static_cast<uint>(n);
+        QString path = bookMarkPaths.at(randomIdx);
+        qDebug() << CLASSFUNCTION << randomIdx << path;
+        bookmarks->select(path);
+        fsTree->select(path);
+        folderSelectionChange();
+        traverseFolderStressTest(ms, duration);
+    }
+}
+
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
-
+    qDebug() << CLASSFUNCTION;
+    bounceFoldersStressTest(50, 10000);
+    return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889
     metadata->testNewFileFormat(fPath);
 }
