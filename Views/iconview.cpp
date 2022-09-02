@@ -1828,6 +1828,7 @@ void IconView::startDrag(Qt::DropActions)
     Drag and drop thumbs to another program.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
 
     QModelIndexList selection = selectionModel()->selectedRows();
     if (selection.isEmpty()) {
@@ -1846,6 +1847,8 @@ void IconView::startDrag(Qt::DropActions)
 
     mimeData->setUrls(urls);
     drag->setMimeData(mimeData);
+
+    /*
     QPixmap pix;
     if (selection.count() > 1) {
         pix = QPixmap(128, 112);
@@ -1874,6 +1877,15 @@ void IconView::startDrag(Qt::DropActions)
         pix = dm->item(selection.at(0).row())->icon().pixmap(128);
         drag->setPixmap(pix);
     }
-    drag->setHotSpot(QPoint(pix.width() / 2, pix.height() / 2));
-    drag->exec(Qt::CopyAction | Qt::LinkAction, Qt::IgnoreAction);
+//    drag->setHotSpot(QPoint(pix.width() / 2, pix.height() / 2));
+    //*/
+
+    Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
+    if (key == Qt::AltModifier) {
+        drag->exec(Qt::CopyAction);
+    }
+    if (key == Qt::NoModifier) {
+        drag->exec(Qt::MoveAction);
+    }
+//    drag->exec(Qt::CopyAction | Qt::LinkAction, Qt::IgnoreAction);
 }

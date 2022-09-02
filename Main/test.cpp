@@ -74,19 +74,20 @@ void MW::bounceFoldersStressTest(int ms, int duration)
     qDebug() << CLASSFUNCTION << "ms =" << ms << "duration =" << duration;
     G::popUp->hide();
 
-    if (!ms) {
-        ms = QInputDialog::getInt(this,
-                                  "Enter ms delay between images",
-                                  "Delay (1-1000 ms) ",
-                                  50, 1, 1000);
-    }
 
     if (!duration) {
         duration = QInputDialog::getInt(this,
-              "Enter length of test in seconds",
-              "Duration (0 - 86,400 sec). 0 = end when press Esc",
+              "Enter time per folder tested",
+              "Duration (0 - 1000 sec)",
               5, 0, 86400);
-    duration *= 1000;
+        duration *= 1000;
+    }
+
+    if (!ms) {
+        ms = QInputDialog::getInt(this,
+              "Enter ms delay between images",
+              "Delay (1-1000 ms) ",
+              50, 1, 1000);
     }
 
     isStressTest = true;
@@ -114,6 +115,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    fsTree->refreshModel();
+    return;
+
     imageCacheThread->debugCaching = true;
     return;
 

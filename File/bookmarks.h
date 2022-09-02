@@ -52,6 +52,8 @@ protected:
 
 signals:
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
+    void deleteFiles(QStringList srcPaths);
+    void refreshFSTree();
 };
 
 #endif // BOOKMARKS_H

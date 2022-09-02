@@ -687,4 +687,5 @@ void CompareView::dragEnterEvent(QDragEnterEvent *event)
     Empty function required to propagate drop event (not sure why)
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
 }

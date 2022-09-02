@@ -470,7 +470,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
                 int ret = QMessageBox::warning(this, "Recover Prior State", msg,
                                                QMessageBox::Yes | QMessageBox::No);
                 if (ret == QMessageBox::Yes) {
-                    folderAndFileSelectionChange(lastFileIfCrash);
+                    folderAndFileSelectionChange(lastFileIfCrash, "lastFileIfCrash");
                     recoverPickLog();
                     recoverRatingLog();
                     recoverColorClassLog();
@@ -755,6 +755,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 
 bool MW::eventFilter(QObject *obj, QEvent *event)
 {
+    // uncomment below:
     /* use to show all events being filtered - handy to figure out which to intercept
     if (event->type()
                              != QEvent::Paint
@@ -1135,19 +1136,22 @@ void MW::handleStartupArgs(const QString &args)
        directory to open in Winnow.
 
     Winnets are small executables that act like photoshop droplets. They reside in
-    QStandardPaths::AppDataLocation (Windows: user/AppData/Roaming/Winnow/Winnets). They send
-    a list of files and a template name to Winnow to be embellished. For example, in order for
-    Winnow to embellish a series of files that have been exported from lightroom, Winnow needs
-    to know which embellish template to use. Instead of sending the files directly to Winnow,
-    thay are sent to an intermediary program (a Winnet) that is named after the template. The
-    Winnet (ie Zen2048) receives the list of files, inserts the strings "Embellish" and the
-    template name "Zen2048" and then resends to Winnow.
+    QStandardPaths::AppDataLocation (Windows: user/AppData/Roaming/Winnow/Winnets). They
+    send a list of files and a template name to Winnow to be embellished. For example, in
+    order for Winnow to embellish a series of files that have been exported from
+    lightroom, Winnow needs to know which embellish template to use. Instead of sending
+    the files directly to Winnow, thay are sent to an intermediary program (a Winnet)
+    that is named after the template. The Winnet (ie Zen2048) receives the list of files,
+    inserts the strings "Embellish" and the template name "Zen2048" and then resends to
+    Winnow.
 */
     if (G::isLogger) G::log(CLASSFUNCTION, args);
 
     if (args.length() < 2) return;
     QString delimiter = "\n";
     QStringList argList = args.split(delimiter);
+
+    qDebug() << CLASSFUNCTION << argList;
     /*
     QString a = "";
     for (QString s : argList) a += s + "\n";
@@ -1284,8 +1288,9 @@ void MW::handleStartupArgs(const QString &args)
         fsTree->select(fDir);
         // refresh FSTree counts
         fsTree->refreshModel();
-        folderAndFileSelectionChange(fPath);
+        folderAndFileSelectionChange(fPath, "handleStartupArgs");
     }
+    // startup not triggered by embellish winnet
     else {
         QFileInfo f(argList.at(1));
         f.dir().path();
@@ -1707,7 +1712,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (G::isLogger) G::log(CLASSFUNCTION, "Finished " + fPath);
 }
 
-void MW::folderAndFileSelectionChange(QString fPath)
+void MW::folderAndFileSelectionChange(QString fPath, QString src)
 {
 /*
     Loads the folder containing the image and then selects the image.  Used by
@@ -1721,15 +1726,18 @@ void MW::folderAndFileSelectionChange(QString fPath)
     QFileInfo info(fPath);
     QString folder = info.dir().absolutePath();
 
-    if (folder == currentViewDirPath) {
-        if (dm->proxyIndexFromPath(fPath).isValid()) {
-            thumbView->selectThumb(fPath);
-            gridView->selectThumb(fPath);
-            currSfIdx = dm->proxyIndexFromPath(fPath);
-            fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
+    if (src == "handleDropOnCentralView") {
+        if (folder == currentViewDirPath) {
+            if (dm->proxyIndexFromPath(fPath).isValid()) {
+                thumbView->selectThumb(fPath);
+                gridView->selectThumb(fPath);
+                currSfIdx = dm->proxyIndexFromPath(fPath);
+                fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
+            }
+            return;
         }
-        return;
     }
+
     /*
     qDebug() << CLASSFUNCTION
              << "isStartupArgs =" << isStartupArgs
@@ -1751,6 +1759,13 @@ void MW::folderAndFileSelectionChange(QString fPath)
     // path to image, used in loadImageCacheForNewFolder to select image
     folderAndFileChangePath = fPath;
     folderSelectionChange();
+
+//    if (dm->proxyIndexFromPath(fPath).isValid()) {
+//        thumbView->selectThumb(fPath);
+//        gridView->selectThumb(fPath);
+//        currSfIdx = dm->proxyIndexFromPath(fPath);
+//        fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
+//    }
 
     return;
 }
@@ -2209,7 +2224,7 @@ void MW::loadImageCacheForNewFolder()
 
 void MW::scrollChange(int sfRow, QString src)
 {
-    emit startMetaRead(sfRow, CLASSFUNCTION);
+//    emit startMetaRead(sfRow, CLASSFUNCTION);
 //    if (metaRead->isRunning) {
 //        metaRead->stop();
 //        G::wait(0);
@@ -2313,7 +2328,6 @@ void MW::gridHasScrolled()
         thumbView->scrollToRow(gridView->midVisibleCell, CLASSFUNCTION);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection && gridView->isVisible()) {
-            qDebug() << CLASSFUNCTION << "1";
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
             else scrollChange(gridView->midVisibleCell, CLASSFUNCTION);
         }
@@ -5388,11 +5402,10 @@ void MW::copy()
     thumbView->copyThumbs();
 }
 
-void MW::deleteFiles()
+void MW::deleteSelectedFiles()
 {
 /*
-    Build a QStringList of the selected files, delete from disk, remove from datamodel,
-    remove from ImageCache and update the image cache status bar.
+    Build a QStringList of the selected files and call MW::deleteFiles.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     // make sure datamodel is loaded
@@ -5423,31 +5436,40 @@ void MW::deleteFiles()
     QModelIndexList selection = thumbView->selectionModel()->selectedRows();
     if (selection.isEmpty()) return;
 
+    // convert selection to stringlist
+    QStringList paths;
+    for (int i = 0; i < selection.count(); ++i) {
+        QString fPath = selection.at(i).data(G::PathRole).toString();
+        paths.append(fPath);
+    }
+
+    deleteFiles(paths);
+}
+
+void MW::deleteFiles(QStringList paths)
+{
+    /*
+        Delete from disk, remove from datamodel, remove from ImageCache and update the
+        image cache status bar.
+    */
+    if (G::isLogger) G::log(CLASSFUNCTION);
+
     /* save the index to the first row in selection (order depends on how selection was
        made) to insure the correct index is selected after deletion.  */
     int lowRow = 999999;
-    for (int i = 0; i < selection.count(); ++i) {
-        if (selection.at(i).row() < lowRow) {
-            selectionModel->setCurrentIndex(selection.at(i), QItemSelectionModel::Current);
-            lowRow = selection.at(i).row();
+    for (int i = 0; i < paths.count(); ++i) {
+        int row = dm->rowFromPath(paths.at(i));
+        if (row < lowRow) {
+            lowRow = row;
         }
     }
 
-    // convert selection to stringlist
-    QStringList sl, sldm, slDir;
-    for (int i = 0; i < selection.count(); ++i) {
-        QString fPath = selection.at(i).data(G::PathRole).toString();
-        sl.append(fPath);
-        QFileInfo info(fPath);
-        QString dirPath = info.dir().path();
-        if (!slDir.contains(dirPath)) slDir.append(dirPath);
-    }
-//    thumbView->selectionModel()->clearSelection();
-
     G::ignoreScrollSignal = true;
+
     // delete file(s) in folder on disk, including any xmp sidecars
-    for (int i = 0; i < sl.count(); ++i) {
-        QString fPath = sl.at(i);
+    QStringList sldm;   // paths of successfully deleted files to remove in datamodel
+    for (int i = 0; i < paths.count(); ++i) {
+        QString fPath = paths.at(i);
         QString sidecarPath = metadata->sidecarPath(fPath);
         if (QFile::remove(fPath)) {
             sldm.append(fPath);
@@ -5459,6 +5481,7 @@ void MW::deleteFiles()
 
     // refresh image count in folders and bookmarks: fsTree is signalled by the OS,
     // updates count and then signals bookmarks to recount all bookmarks
+    bookmarks->count();
 
     // if all images in folder were deleted
     if (sldm.count() == dm->rowCount()) {
@@ -5479,7 +5502,7 @@ void MW::deleteFiles()
     // cleanup G::rowsWithIcon
     metaRead->cleanupIcons();
 
-    // remove selected from imageCache
+    // remove deleted files from imageCache
     imageCacheThread->removeFromCache(sldm);
 
     G::ignoreScrollSignal = false;
@@ -5489,12 +5512,6 @@ void MW::deleteFiles()
     QModelIndex sfIdx = dm->sf->index(lowRow, 0);
     thumbView->setCurrentIndex(sfIdx);
     fileSelectionChange(sfIdx, sfIdx, CLASSFUNCTION);
-
-    // make sure all thumbs/icons are updated
-//    if (!G::isNewSelection) {
-//        if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-//        else loadConcurrent(MetaRead::Scroll, thumbView->midVisibleCell, CLASSFUNCTION);
-//    }
 }
 
 void MW::deleteFolder()

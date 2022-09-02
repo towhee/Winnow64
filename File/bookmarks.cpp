@@ -192,7 +192,6 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 {
     // rapid mouse press ignore if still running MW::stopAndClearAll
     if (G::stop) {
-        qDebug() << CLASSFUNCTION << "G::stop =" << G::stop;
         qApp->beep();
         G::popUp->showPopup("Busy, try new bookmark in a sec.", 1000);
         return;
@@ -243,7 +242,8 @@ void BookMarks::contextMenuEvent(QContextMenuEvent *event)
 void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-	QModelIndexList selectedDirs = selectionModel()->selectedRows();
+    qDebug() << CLASSFUNCTION;
+    QModelIndexList selectedDirs = selectionModel()->selectedRows();
 
 	if (selectedDirs.size() > 0) {
 		dndOrigSelection = selectedDirs[0];
@@ -276,8 +276,53 @@ void BookMarks::dropEvent(QDropEvent *event)
     qDebug() << "BookMarks::dropEvent"
              << event
              << mimeData->hasUrls() << mimeData->urls();
-    if (mimeData->hasUrls())
-    {
+
+    if (mimeData->hasUrls()) {
+        QString dPath;      // path to folder
+        QFileInfo fInfo = QFileInfo(mimeData->urls().at(0).toLocalFile());
+
+        // if drag is a folder then add to bookmarks
+        if (fInfo.isDir()) {
+            dPath = fInfo.absoluteFilePath();
+            if (dPath.length() == 0) return;
+            // trim ending "/"
+            int endPos = dPath.length() - 1;
+            if (dPath[endPos] == '/') dPath.chop(1);
+            if (!bookmarkPaths.contains(dPath)) {
+                bookmarkPaths.insert(dPath);
+                reloadBookmarks();
+            }
+        }
+        // drag is files: move or copy to bookmark folder
+        QString dropDir = indexAt(event->pos()).data(Qt::ToolTipRole).toString();
+        qDebug() << "BookMarks::dropEvent  dropDir =" << dropDir;
+        QStringList srcPaths;
+        if (event->source()) {
+            for (int i = 0; i < event->mimeData()->urls().count(); i++) {
+                QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
+                QFileInfo info(srcPath);
+                QString destPath = dropDir + "/" + info.fileName();
+                bool copied = QFile::copy(srcPath, destPath);
+                qDebug() << CLASSFUNCTION
+                         << "Copy" << srcPath
+                         << "to" << destPath << "Copied:" << copied
+                         << event->dropAction();
+                if (copied && event->dropAction() == Qt::MoveAction) {
+                    srcPaths << srcPath;
+                }
+            }
+            setCurrentIndex(dndOrigSelection);
+            if (srcPaths.count()) {
+                emit deleteFiles(srcPaths);
+            }
+        }
+        count();
+        emit refreshFSTree();
+        setFocus();
+    }
+
+    /*prev code
+    if (mimeData->hasUrls()) {
         QString dPath;      // path to folder
         QFileInfo fInfo = QFileInfo(mimeData->urls().at(0).toLocalFile());
         if (fInfo.isDir()) dPath = fInfo.absoluteFilePath();
@@ -292,4 +337,5 @@ void BookMarks::dropEvent(QDropEvent *event)
         }
         // no popup as focus will be on drag app
     }
+    //*/
 }
