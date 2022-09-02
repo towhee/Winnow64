@@ -383,7 +383,6 @@ void BuildFilters::mapUniqueInstances()
     filters->addCategoryFromData(titleMap, filters->titles);
     filters->addCategoryFromData(keywordMap, filters->keywords);
     filters->addCategoryFromData(creatorMap, filters->creators);
-    qDebug() << CLASSFUNCTION << dayMap << keywordMap;
 }
 
 void BuildFilters::run()

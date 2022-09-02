@@ -358,7 +358,7 @@ public slots:
     void watchCurrentFolder();
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex, QString src);
-    void folderAndFileSelectionChange(QString fPath);
+    void folderAndFileSelectionChange(QString fPath, QString src = "");
     void nullFiltration();
     void handleDrop(QString fPath);
 //    void handleDrop(QDropEvent *event);
@@ -1157,7 +1157,8 @@ private:
     void wheelEvent(QWheelEvent *event) override;
 //    bool event(QEvent *event);
     void copy();
-    void deleteFiles();
+    void deleteSelectedFiles();
+    void deleteFiles(QStringList paths);
     void deleteFolder();
     void showNewImageWarning(QWidget *parent);
     bool removeDirOp(QString dirToDelete);

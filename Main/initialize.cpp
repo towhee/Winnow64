@@ -703,6 +703,8 @@ void MW::createFSTree()
     // this works for touchpad tap
     connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChange);
 
+    // if move drag and drop then delete files from source folder(s)
+    connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);
 
     // watch for drive removal (not working)
 //    connect(fsTree->watch, &QFileSystemWatcher::directoryChanged, this, &MW::checkDirState);
@@ -753,6 +755,12 @@ void MW::createBookmarks()
             this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
 
     connect(fsTree->fsModel, &FSModel::update, bookmarks, &BookMarks::update);
+
+    // if move drag and drop then delete files from source folder(s)
+    connect(bookmarks, &BookMarks::deleteFiles, this, &MW::deleteFiles);
+
+    // refresh FSTree count after drag and drop to BookMarks
+    connect(bookmarks, &BookMarks::refreshFSTree, fsTree, &FSTree::refreshModel);
 }
 
 void MW::createAppStyle()

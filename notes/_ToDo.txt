@@ -1,4 +1,5 @@
 BUGS / TO DO
+- IconView selection changed if abort drag
 - Save preview as PNG include color manage corrections
 
 - Open with permissions issue
@@ -53,6 +54,7 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
+- Export to Winnow from LR does not work if Winnow is open
 - Add "How this works" throughout app?
 - https://github.com/wang-bin/qdevicewatcher
 - Add fade and alias to stroke

@@ -397,14 +397,14 @@ void MW::createActions()
     deleteAction->setShortcutVisibleInContextMenu(true);
     deleteAction->setShortcut(QKeySequence("Delete"));
     addAction(deleteAction);
-    connect(deleteAction, &QAction::triggered, this, &MW::deleteFiles);
+    connect(deleteAction, &QAction::triggered, this, &MW::deleteSelectedFiles);
 
     deleteAction1 = new QAction(tr("Delete image(s)"), this);
     deleteAction1->setObjectName("backspaceDeleteFiles");
     deleteAction1->setShortcutVisibleInContextMenu(true);
     deleteAction1->setShortcut(QKeySequence("Backspace"));
     addAction(deleteAction1);
-    connect(deleteAction1, &QAction::triggered, this, &MW::deleteFiles);
+    connect(deleteAction1, &QAction::triggered, this, &MW::deleteSelectedFiles);
 
     deleteActiveFolderAction = new QAction(tr("Delete folder"), this);
     deleteActiveFolderAction->setObjectName("deleteActiveFolder");

@@ -1,3 +1,16 @@
+"MW::eventFilter" event: QEvent(SockAct, 0x16dcf8a70) 	 event->type: QEvent::SockAct 	 obj: QSocketNotifier(0x600000d1e940) 	 obj->objectName: "" object->metaObject()->className: QSocketNotifier
+"MW::eventFilter" event: QChildEvent(ChildAdded, QObject(0x600000d0dc50)) 	 event->type: QEvent::ChildAdded 	 obj: QLocalServer(0x600000d1ecd0) 	 obj->objectName: "" object->metaObject()->className: QLocalServer
+"MW::eventFilter" event: QChildEvent(ChildAdded, QTcpSocket(0x124b05b48)) 	 event->type: QEvent::ChildAdded 	 obj: QLocalSocket(0x600000d0dc50) 	 obj->objectName: "" object->metaObject()->className: QLocalSocket
+"MW::eventFilter" event: QChildEvent(ChildAdded, QObject(0x600000d0d6a0)) 	 event->type: QEvent::ChildAdded 	 obj: QTcpSocket(0x124b05b48) 	 obj->objectName: "" object->metaObject()->className: QTcpSocket
+"MW::eventFilter" event: QChildEvent(ChildAdded, QObject(0x60000097c300)) 	 event->type: QEvent::ChildAdded 	 obj: QNativeSocketEngine(0x600000d0d6a0) 	 obj->objectName: "" object->metaObject()->className: QNativeSocketEngine
+"MW::eventFilter" event: QChildEvent(ChildAdded, QObject(0x60000097c580)) 	 event->type: QEvent::ChildAdded 	 obj: QNativeSocketEngine(0x600000d0d6a0) 	 obj->objectName: "" object->metaObject()->className: QNativeSocketEngine
+"MW::eventFilter" event: QChildEvent(ChildRemoved, QObject(0x60000097c300)) 	 event->type: QEvent::ChildRemoved 	 obj: QNativeSocketEngine(0x600000d0d6a0) 	 obj->objectName: "" object->metaObject()->className: QNativeSocketEngine
+"MW::eventFilter" event: QChildEvent(ChildRemoved, QObject(0x60000097c580)) 	 event->type: QEvent::ChildRemoved 	 obj: QNativeSocketEngine(0x600000d0d6a0) 	 obj->objectName: "" object->metaObject()->className: QNativeSocketEngine
+"MW::eventFilter" event: QChildEvent(ChildRemoved, QObject(0x600000d0d6a0)) 	 event->type: QEvent::ChildRemoved 	 obj: QTcpSocket(0x124b05b48) 	 obj->objectName: "" object->metaObject()->className: QTcpSocket
+"MW::eventFilter" event: QChildEvent(ChildRemoved, QTcpSocket(0x124b05b48)) 	 event->type: QEvent::ChildRemoved 	 obj: QLocalSocket(0x600000d0dc50) 	 obj->objectName: "" object->metaObject()->className: QLocalSocket
+"MW::eventFilter" event: QChildEvent(ChildRemoved, QObject(0x600000d0dc50)) 	 event->type: QEvent::ChildRemoved 	 obj: QLocalServer(0x600000d1ecd0) 	 obj->objectName: "" object->metaObject()->className: QLocalServer
+
+
 =======================================  Metadata Diagnostics for Current Image  =======================================
 
 File name = /Volumes/OM SYSTEM/DCIM/100OMSYS/_8270001.ORF

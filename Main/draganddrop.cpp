@@ -5,6 +5,7 @@
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
     event->acceptProposedAction();
 }
 
@@ -29,7 +30,7 @@ void MW::handleDrop(QString fPath)
         }
     }
     else {
-        folderAndFileSelectionChange(fPath);
+        folderAndFileSelectionChange(fPath, "handleDropOnCentralView");
     }
 
 }

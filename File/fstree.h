@@ -56,7 +56,6 @@ class FSTree : public QTreeView
 public:
     FSTree(QWidget *parent, Metadata *metadata);
     void createModel();
-    void refreshModel();
     void setShowImageCount(bool showImageCount);
     bool isShowImageCount();
 
@@ -73,6 +72,7 @@ public:
 public slots:
     void resizeColumns();
     void expand(const QModelIndex &);
+    void refreshModel();
 
 private slots:
 
@@ -90,6 +90,7 @@ signals:
 	void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void selectionChange();
     void abortLoadDataModel();
+    void deleteFiles(QStringList srcPaths);
 
 private:
 	QModelIndex dndOrigSelection;
