@@ -552,24 +552,37 @@ void FSTree::dropEvent(QDropEvent *event)
     QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
     QStringList srcPaths;
 //    if (event->source()) {
-        for (int i = 0; i < event->mimeData()->urls().count(); i++) {
-            QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
-            QFileInfo info(srcPath);
-            QString destPath = dropDir + "/" + info.fileName();
-            bool copied = QFile::copy(srcPath, destPath);
-            qDebug() << CLASSFUNCTION
-                     << "Copy" << srcPath
-                     << "to" << destPath << "Copied:" << copied
-                     << event->dropAction();
-            if (copied && event->dropAction() == Qt::MoveAction) {
-                srcPaths << srcPath;
-            }
+    for (int i = 0; i < event->mimeData()->urls().count(); i++) {
+        QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
+        QFileInfo info(srcPath);
+        QString destPath = dropDir + "/" + info.fileName();
+        bool copied = QFile::copy(srcPath, destPath);
+        qDebug() << CLASSFUNCTION
+                 << "Copy" << srcPath
+                 << "to" << destPath << "Copied:" << copied
+                 << event->dropAction();
+        if (copied && event->dropAction() == Qt::MoveAction) {
+            srcPaths << srcPath;
         }
+    }
+    if (event->source()) {
         setCurrentIndex(dndOrigSelection);
         if (srcPaths.count()) {
             emit deleteFiles(srcPaths);
         }
-        setFocus();
+    }
+    setFocus();
+
+    // if the drag is into the current FSTree folder then need to reload
+    QString currDir = currentIndex().data(Qt::ToolTipRole).toString();
+    qDebug() << CLASSFUNCTION
+             << "G::currRootFolder =" << G::currRootFolder
+             << "dropDir =" << dropDir
+                ;
+    if (G::currRootFolder == dropDir) {
+        QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
+        emit folderSelection();
+    }
         /*
         QString fstreeStr = "FSTree";
 		bool dirOp = (event->source()->metaObject()->className() == fstreeStr);

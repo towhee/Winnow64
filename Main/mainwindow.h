@@ -290,7 +290,6 @@ public:
 
     QString currentViewDirPath;
     QDir currentViewDir;
-    bool ignoreFolderSelectionChange = false;
 
     enum centralWidgetTabs {
         LoupeTab,       // 0

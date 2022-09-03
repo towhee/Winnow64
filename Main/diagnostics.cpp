@@ -15,7 +15,6 @@ void MW::reportState(QString title)
         << "\nG::allIconsLoaded                      " << G::allIconsLoaded
         << "\nG::isNewFolderLoadedAndInfoViewUpToDate" << G::isNewFolderLoadedAndInfoViewUpToDate
         << "\nG::isNewSelection                      " << G::isNewSelection
-        << "\nignoreFolderSelectionChange            " << ignoreFolderSelectionChange
         << "\nG::stop                                " << G::stop
         << "\ndm->forceBuildFilters                  " << dm->forceBuildFilters
         << "\nisCurrentFolderOkay                    " << isCurrentFolderOkay
