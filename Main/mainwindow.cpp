@@ -1322,8 +1322,6 @@ void MW::folderSelectionChange()
    This is invoked when there is a folder selection change in the folder or bookmark views.
    See PROGRAM FLOW at top of file for more information.
 */
-//    stopAndClearAll("folderSelectionChange");
-//    reportState("folderSelectionChange");
     if (G::isLogger || G::isFlowLogger) {
         G::log("skipline");
         G::log(CLASSFUNCTION);
@@ -1333,28 +1331,14 @@ void MW::folderSelectionChange()
     if (G::stop) {
         return;
     }
+
     // also checked in FSTree and Bookmarks mousePressEvent
     if (dm->loadingModel) {
         return;
     }
 
-    // ignore if selection change triggered by deletion of prior selected folder
-//    if (ignoreFolderSelectionChange) {
-//        ignoreFolderSelectionChange = false;
-//        fsTree->selectionModel()->clear();
-//        return;
-//    }
-
     // Reset
-//    G::stop = true;
     stopAndClearAll("folderSelectionChange");
-//    G::wait(0);
-//    while (G::stop && G::wait(1) < 2000);
-//    if (G::stop) {
-//        qWarning() << "stopAndClearAll exceeded 2000 ms, cancelled folderSelectionChange";
-//        return;
-//    }
-//    G::log(CLASSFUNCTION, "After stopAndClearAll");
 
     dm->abortLoadingModel = false;
     G::currRootFolder = getSelectedPath();
@@ -1677,7 +1661,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         //*/
         if (G::isNewFolderLoaded
             && !(G::isSlideShow && isSlideShowRandom)
-            && (key == Qt::NoModifier || key == Qt::KeypadModifier || workspaceChanged)
+//            && (key == Qt::NoModifier || key == Qt::KeypadModifier)
+            && (!workspaceChanged)
             && (G::mode != "Compare")
             && useImageCache
            )
@@ -2072,7 +2057,6 @@ void MW::loadConcurrentStartImageCache()
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
     G::isNewFolderLoaded = true;
-//    dm->loadingModel = false;
 
     /* Trigger MW::fileSelectionChange.  This must be done to initialize many things
     including current index and file path req'd by mdCache and EmbelProperties...  If
@@ -5551,7 +5535,6 @@ void MW::deleteFolder()
     }
 
     if (currentViewDirPath == dirToDelete) {
-        ignoreFolderSelectionChange = true;
         stopAndClearAll("deleteFolder");
     }
 

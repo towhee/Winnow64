@@ -115,6 +115,13 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    QModelIndex idx = fsTree->getCurrentIndex();
+    qDebug() << fsTree->currentIndex()
+             << fsTree->getCurrentIndex()
+             << idx.data(Qt::ToolTipRole)
+//             << fsTree->fsModel->filePath(fsTree->getCurrentIndex())
+                ;
+    return;
     fsTree->refreshModel();
     return;
 

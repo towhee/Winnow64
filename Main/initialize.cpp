@@ -702,6 +702,7 @@ void MW::createFSTree()
 
     // this works for touchpad tap
     connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChange);
+    connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
 
     // if move drag and drop then delete files from source folder(s)
     connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);
