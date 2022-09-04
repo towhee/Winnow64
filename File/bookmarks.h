@@ -54,6 +54,7 @@ signals:
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
     void deleteFiles(QStringList srcPaths);
     void refreshFSTree();
+    void folderSelection();
 };
 
 #endif // BOOKMARKS_H

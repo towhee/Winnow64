@@ -862,8 +862,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
         else {
-            enableEjectUsbMenu(currentViewDirPath);
-            if(currentViewDirPath == "") {
+            enableEjectUsbMenu(G::currRootFolder);
+            if(G::currRootFolder == "") {
                 addBookmarkAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
                 copyPathActionFromContext->setEnabled(false);
@@ -1310,8 +1310,8 @@ void MW::watchCurrentFolder()
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
 //    qDebug() << CLASSFUNCTION << currentViewDirPath;
-    if (currentViewDirPath == "") return;
-    QFileInfo info(currentViewDirPath);
+    if (G::currRootFolder == "") return;
+    QFileInfo info(G::currRootFolder);
     if (info.exists()) return;
     folderSelectionChange();
 }
@@ -1342,11 +1342,9 @@ void MW::folderSelectionChange()
 
     dm->abortLoadingModel = false;
     G::currRootFolder = getSelectedPath();
+    setting->setValue("lastDir", G::currRootFolder);
 
-    currentViewDirPath = getSelectedPath();
-    setting->setValue("lastDir", currentViewDirPath);
-
-    setCentralMessage("Loading information for folder " + currentViewDirPath);
+    setCentralMessage("Loading information for folder " + G::currRootFolder);
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
@@ -1385,24 +1383,24 @@ void MW::folderSelectionChange()
     }
 
     // confirm folder exists and is readable, report if not and do not process
-    if (!isFolderValid(currentViewDirPath, true /*report*/, false /*isRemembered*/)) {
+    if (!isFolderValid(G::currRootFolder, true /*report*/, false /*isRemembered*/)) {
         stopAndClearAll("Invalid folder");
         setWindowTitle(winnowWithVersion);
-        if (G::isLogger) Utilities::log(CLASSFUNCTION, "Invalid folder " + currentViewDirPath);
+        if (G::isLogger) Utilities::log(CLASSFUNCTION, "Invalid folder " + G::currRootFolder);
         return;
     }
 
     // sync the bookmarks with the folders view fsTree
-    bookmarks->select(currentViewDirPath);
+    bookmarks->select(G::currRootFolder);
 
     // add to recent folders
-    addRecentFolder(currentViewDirPath);
+    addRecentFolder(G::currRootFolder);
 
     // sync the folders tree with the current folder
     fsTree->scrollToCurrent();
 
     // update menu
-    enableEjectUsbMenu(currentViewDirPath);
+    enableEjectUsbMenu(G::currRootFolder);
 
     // clear filters
     uncheckAllFilters();
@@ -1411,9 +1409,9 @@ void MW::folderSelectionChange()
     updateMetadataThreadRunStatus(true, true, "MW::folderSelectionChange");
 
     // load datamodel
-    if (!dm->load(currentViewDirPath, subFoldersAction->isChecked())) {
+    if (!dm->load(G::currRootFolder, subFoldersAction->isChecked())) {
         updateMetadataThreadRunStatus(false, true, "MW::folderSelectionChange");
-        qWarning() << "Datamodel Failed To Load for" << currentViewDirPath;
+        qWarning() << "Datamodel Failed To Load for" << G::currRootFolder;
         stopAndClearAll("Load datamodel failed");
         enableSelectionDependentMenus();
         if (dm->abortLoadingModel) {
@@ -1422,14 +1420,14 @@ void MW::folderSelectionChange()
 //            QApplication::processEvents();  // MetaRead new folder crash?
             return;
         }
-        QDir dir(currentViewDirPath);
+        QDir dir(G::currRootFolder);
         if (dir.isRoot()) {
             updateStatus(false, "No supported images in this drive", CLASSFUNCTION);
-            setCentralMessage("The root folder \"" + currentViewDirPath + "\" does not have any eligible images");
+            setCentralMessage("The root folder \"" + G::currRootFolder + "\" does not have any eligible images");
         }
         else {
             updateStatus(false, "No supported images in this folder", CLASSFUNCTION);
-            setCentralMessage("The folder \"" + currentViewDirPath + "\" does not have any eligible images");
+            setCentralMessage("The folder \"" + G::currRootFolder + "\" does not have any eligible images");
         }
         return;
     }
@@ -1542,7 +1540,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
             || !G::isNewFolderLoaded)
         return;
 
-    if (!currentViewDir.exists()) {
+    if (!currRootDir.exists()) {
         refreshFolders();
         folderSelectionChange();
         return;
@@ -1712,7 +1710,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     QString folder = info.dir().absolutePath();
 
     if (src == "handleDropOnCentralView") {
-        if (folder == currentViewDirPath) {
+        if (folder == G::currRootFolder) {
             if (dm->proxyIndexFromPath(fPath).isValid()) {
                 thumbView->selectThumb(fPath);
                 gridView->selectThumb(fPath);
@@ -2586,8 +2584,8 @@ void MW::checkDirState(const QString &dirPath)
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (G::isInitializing) return;
 
-    if (!QDir().exists(currentViewDirPath)) {
-        currentViewDirPath = "";
+    if (!QDir().exists(G::currRootFolder)) {
+        G::currRootFolder = "";
     }
 }
 
@@ -2603,7 +2601,7 @@ QString MW::getSelectedPath()
 
     QString path = idx.data(QFileSystemModel::FilePathRole).toString();
     QFileInfo dirInfo = QFileInfo(path);
-    currentViewDir = dirInfo.dir();
+    currRootDir = dirInfo.dir();
     return dirInfo.absoluteFilePath();
 }
 
@@ -3957,7 +3955,7 @@ void MW::writeSettings()
     setting->setValue("colorManage", G::colorManage);
     setting->setValue("rememberLastDir", rememberLastDir);
     setting->setValue("checkIfUpdate", checkIfUpdate);
-    setting->setValue("lastDir", currentViewDirPath);
+    setting->setValue("lastDir", G::currRootFolder);
     setting->setValue("includeSubfolders", subFoldersAction->isChecked());
     setting->setValue("combineRawJpg", combineRawJpg);
 
@@ -4926,10 +4924,10 @@ void MW::ingest()
     static QString baseFolderDescription = "";
     qDebug() << CLASSFUNCTION
              << "prevSourceFolder" << prevSourceFolder
-             << "currentViewDirPath" << currentViewDirPath
+             << "currentViewDirPath" << G::currRootFolder
              << "baseFolderDescription" << baseFolderDescription
                 ;
-    if (prevSourceFolder != currentViewDirPath) baseFolderDescription = "";
+    if (prevSourceFolder != G::currRootFolder) baseFolderDescription = "";
 
     QString folderPath;        // req'd by backgroundIngest
     QString folderPath2;       // req'd by backgroundIngest
@@ -5033,7 +5031,7 @@ void MW::ingest()
             G::isRunningBackgroundIngest = true;
         }
 
-        prevSourceFolder = currentViewDirPath;
+        prevSourceFolder = G::currRootFolder;
         qDebug() << CLASSFUNCTION
                  << "gotoIngestFolder =" << gotoIngestFolder
                  << "isBackgroundIngest =" << isBackgroundIngest
@@ -5075,7 +5073,7 @@ void MW::ejectUsb(QString path)
 
     // if current folder is on USB drive to be ejected then stop caching
     QStorageInfo ejectDrive(path);
-    QStorageInfo currentDrive(currentViewDirPath);
+    QStorageInfo currentDrive(G::currRootFolder);
     /*
     qDebug() << CLASSFUNCTION
              << "currentViewDir =" << currentViewDir
@@ -5121,7 +5119,7 @@ void MW::ejectUsb(QString path)
             G::popUp->showPopup("Failed to eject drive " + driveName, 2000);
     }
     else {
-        QString d = currentViewDirPath.at(0);
+        QString d = G::currRootFolder.at(0);
         G::popUp->showPopup("Drive " + d
               + " is not removable and cannot be ejected", 2000);
     }
@@ -5130,7 +5128,7 @@ void MW::ejectUsb(QString path)
 void MW::ejectUsbFromMainMenu()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    ejectUsb(currentViewDirPath);
+    ejectUsb(G::currRootFolder);
 }
 
 void MW::ejectUsbFromContextMenu()
@@ -5229,7 +5227,7 @@ void MW::getSubfolders(QString fPath)
 void MW::selectCurrentViewDir()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    QModelIndex idx = fsTree->fsModel->index(currentViewDirPath);
+    QModelIndex idx = fsTree->fsModel->index(G::currRootFolder);
     if (idx.isValid()){
         fsTree->expand(idx);
         fsTree->setCurrentIndex(idx);
@@ -5269,7 +5267,7 @@ void MW::showNewImageWarning(QWidget *parent)
 void MW::addNewBookmarkFromMenu()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    addBookmark(currentViewDirPath);
+    addBookmark(G::currRootFolder);
 }
 
 void MW::addNewBookmarkFromContextMenu()
@@ -5454,12 +5452,18 @@ void MW::deleteFiles(QStringList paths)
     QStringList sldm;   // paths of successfully deleted files to remove in datamodel
     for (int i = 0; i < paths.count(); ++i) {
         QString fPath = paths.at(i);
-        QString sidecarPath = metadata->sidecarPath(fPath);
+//        QString sidecarPath = metadata->sidecarPath(fPath);
         if (QFile::remove(fPath)) {
             sldm.append(fPath);
         }
-        if (QFile(sidecarPath).exists()) {
-            QFile::remove(sidecarPath);
+//        if (QFile(sidecarPath).exists()) {
+//            QFile::remove(sidecarPath);
+//        }
+        QStringList srcSidecarPaths = Utilities::getPossibleSidecars(fPath);
+        foreach (QString sidecarPath, srcSidecarPaths) {
+            if (QFile(sidecarPath).exists()) {
+                QFile::remove(sidecarPath);
+            }
         }
     }
 
@@ -5503,7 +5507,7 @@ void MW::deleteFolder()
     QString dirToDelete;
     QString senderObject = (static_cast<QAction*>(sender()))->objectName();
     if (senderObject == "deleteActiveFolder") {
-        dirToDelete = currentViewDirPath;
+        dirToDelete = G::currRootFolder;
     }
     else if (senderObject == "deleteBookmarkFolder") {
         dirToDelete = bookmarks->rightMouseClickPath;
@@ -5534,7 +5538,7 @@ void MW::deleteFolder()
         if (ret == QMessageBox::Cancel) return;
     }
 
-    if (currentViewDirPath == dirToDelete) {
+    if (G::currRootFolder == dirToDelete) {
         stopAndClearAll("deleteFolder");
     }
 

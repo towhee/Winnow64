@@ -4,6 +4,7 @@
 #include <QHash>
 #include "Main/global.h"
 #include "Metadata/metadata.h"
+#include "Utilities/utilities.h"
 
 #ifndef FSTREE_H
 #define FSTREE_H

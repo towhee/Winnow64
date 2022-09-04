@@ -360,6 +360,7 @@ void FSTree::refreshModel()
 //    fsModel->setRootPath(fsModel->myComputer().toString());
 
     setFocus();
+    select(G::currRootFolder);
 //    verticalScrollBar()->triggerAction(QAbstractSlider::SliderMove);
 
 //    fsModel->refresh(QModelIndex());
@@ -537,58 +538,74 @@ void FSTree::dragMoveEvent(QDragMoveEvent *event)
 void FSTree::dropEvent(QDropEvent *event)
 {
 /*
-    - get drop folder and show selected
-    - copy all files in mimeData
-    - todo: also copy sidecars
-    - todo: move
+    Copy files to FSTree folder.  If Qt::MoveAction then delete the source files after
+    the copy operation.  If DnD is internal then also copy/move any sidecar files.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     const QMimeData *mimeData = event->mimeData();
-    qDebug() << "FSTree::dropEvent"
+    qDebug() << CLASSFUNCTION
              << "event->source() =" << event->source()
              << event
              << mimeData->hasUrls() << mimeData->urls();
 
+    /*  This code section is mirrored in BookMarks::dropEvent.  Make sure to sync any
+        changes. */
     QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
     QStringList srcPaths;
-//    if (event->source()) {
     for (int i = 0; i < event->mimeData()->urls().count(); i++) {
         QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
-        QFileInfo info(srcPath);
-        QString destPath = dropDir + "/" + info.fileName();
+        QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
         bool copied = QFile::copy(srcPath, destPath);
+        /*
         qDebug() << CLASSFUNCTION
                  << "Copy" << srcPath
                  << "to" << destPath << "Copied:" << copied
-                 << event->dropAction();
-        if (copied && event->dropAction() == Qt::MoveAction) {
+                 << event->dropAction();  //*/
+        if (copied) {
+            // make list of src files to delete if Qt::MoveAction
             srcPaths << srcPath;
+            // copy any sidecars if internal drag operation
+            if (event->source()) {
+                QStringList srcSidecarPaths = Utilities::getPossibleSidecars(srcPath);
+                foreach (QString srcSidecarPath, srcSidecarPaths) {
+                    if (QFile(srcSidecarPath).exists()) {
+                        QString destSidecarPath = dropDir + "/" + Utilities::getFileName(srcSidecarPath);
+                        QFile::copy(srcSidecarPath, destSidecarPath);
+                    }
+                }
+            }
         }
     }
-    if (event->source()) {
+
+    // if Winnow source and QMoveAction
+    if (event->source() && event->dropAction() == Qt::MoveAction) {
         setCurrentIndex(dndOrigSelection);
         if (srcPaths.count()) {
+            // deleteFiles also deletes sidecars
             emit deleteFiles(srcPaths);
         }
     }
-    setFocus();
 
-    // if the drag is into the current FSTree folder then need to reload
-    QString currDir = currentIndex().data(Qt::ToolTipRole).toString();
-    qDebug() << CLASSFUNCTION
-             << "G::currRootFolder =" << G::currRootFolder
-             << "dropDir =" << dropDir
-                ;
-    if (G::currRootFolder == dropDir) {
-        QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
-        emit folderSelection();
+    // if external source
+    if (!event->source()) {
+        refreshModel();
+
+        // if the drag is into the current FSTree folder then need to reload
+//        QString currDir = currentIndex().data(Qt::ToolTipRole).toString();
+        if (G::currRootFolder == dropDir) {
+//            QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
+            emit folderSelection();
+        }
     }
-        /*
-        QString fstreeStr = "FSTree";
-		bool dirOp = (event->source()->metaObject()->className() == fstreeStr);
-		emit dropOp(event->keyboardModifiers(), dirOp, event->mimeData()->urls().at(0).toLocalFile());
-		setCurrentIndex(dndOrigSelection);
-        */
-//	}
+    else {
+        select(G::currRootFolder);
+    }
+
+    /*
+    QString fstreeStr = "FSTree";
+    bool dirOp = (event->source()->metaObject()->className() == fstreeStr);
+    emit dropOp(event->keyboardModifiers(), dirOp, event->mimeData()->urls().at(0).toLocalFile());
+    setCurrentIndex(dndOrigSelection);
+    */
 }
 

@@ -702,6 +702,8 @@ void MW::createFSTree()
 
     // this works for touchpad tap
     connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChange);
+
+    // reselect folder after external program drop onto FSTree
     connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
 
     // if move drag and drop then delete files from source folder(s)
@@ -762,6 +764,9 @@ void MW::createBookmarks()
 
     // refresh FSTree count after drag and drop to BookMarks
     connect(bookmarks, &BookMarks::refreshFSTree, fsTree, &FSTree::refreshModel);
+
+    // reselect folder after external program drop onto BookMarks
+    connect(bookmarks, &BookMarks::folderSelection, this, &MW::folderSelectionChange);
 }
 
 void MW::createAppStyle()

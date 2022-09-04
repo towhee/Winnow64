@@ -52,6 +52,45 @@ QString Utilities::getDrive(QString path)
     return drivePath;
 }
 
+QString Utilities::getFileName(QString srcPath)
+{
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    QFileInfo fileInfo(srcPath);
+    return fileInfo.fileName();
+}
+
+QString Utilities::replaceFileName(QString srcPath, QString newName)
+{
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    QFileInfo fileInfo(srcPath);
+    QString sourceFolderPath = fileInfo.absoluteDir().absolutePath();
+    QString sourceBaseName = fileInfo.baseName();
+    QString sourceSuffix = fileInfo.suffix();
+    return sourceFolderPath + "/" + newName + "." + sourceSuffix;
+}
+
+QString Utilities::replaceSuffix(QString srcPath, QString newSuffix)
+{
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    QFileInfo fileInfo(srcPath);
+    QString sourceFolderPath = fileInfo.absoluteDir().absolutePath();
+    QString sourceBaseName = fileInfo.baseName();
+    QString sourceExtension = fileInfo.suffix();
+    return sourceFolderPath + "/" + sourceBaseName + "." + newSuffix;
+}
+
+QStringList Utilities::getPossibleSidecars(QString srcPath)
+{
+    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    QStringList sidecarPaths;
+    QFileInfo fileInfo(srcPath);
+    QString sourceFolderPath = fileInfo.absoluteDir().absolutePath();
+    QString sourceBaseName = fileInfo.baseName();
+    sidecarPaths << sourceFolderPath + "/" + sourceBaseName + ".xmp";
+    sidecarPaths << sourceFolderPath + "/" + sourceBaseName + ".txt";
+    return sidecarPaths;
+}
+
 void Utilities::uniqueInList(QString &name, const QStringList &list, QString delimiter)
 {
 /*
