@@ -13,6 +13,10 @@ public:
 
     // File/folder path operations
     static QString getDrive(QString path);
+    static QString getFileName(QString srcPath);
+    static QString replaceFileName(QString srcPath, QString newName);
+    static QString replaceSuffix(QString srcPath, QString newSuffix);
+    static QStringList getPossibleSidecars(QString srcPath);
 
     // Get unique
     static void uniqueFolderPath(QString &path, QString delimiter = "_");
@@ -66,6 +70,7 @@ public:
 
     // Formatted strings from binary data
     static void hexFromByteArray(QByteArray &ba, int cols = 0, int start = 0, int end = 0);
+
 public slots:
     static void hideCursor();
 };

@@ -1536,9 +1536,10 @@ void IconView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    // Alt + Shift + Left button
+    // Alt + Shift + Left button (toggle pick status)
     if (event->button() == Qt::LeftButton
-    && event->modifiers() == (Qt::ShiftModifier | Qt::AltModifier)) {
+        && event->modifiers() == (Qt::ShiftModifier | Qt::AltModifier))
+    {
         QModelIndex idx = indexAt(event->pos());
         if (idx.isValid()) {
              m2->togglePickMouseOverItem(idx);
@@ -1576,6 +1577,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
 void IconView::mouseMoveEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }
@@ -1843,7 +1845,6 @@ void IconView::startDrag(Qt::DropActions)
         QString fPath = selection.at(i).data(G::PathRole).toString();
         urls << QUrl::fromLocalFile(fPath);
     }
-//    qDebug() << G::t.restart() << "\t" << urls;
 
     mimeData->setUrls(urls);
     drag->setMimeData(mimeData);

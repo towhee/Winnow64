@@ -8,7 +8,7 @@ void MW::setCentralView()
     if (asGridAction->isChecked()) gridDisplay();
     if (asTableAction->isChecked()) tableDisplay();
     if (asCompareAction->isChecked()) compareDisplay();
-    if (currentViewDirPath == "") {
+    if (G::currRootFolder == "") {
         QString msg = "Select a folder or bookmark to get started.";
         setCentralMessage(msg);
         prevMode = "Loupe";

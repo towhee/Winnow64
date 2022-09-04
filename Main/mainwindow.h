@@ -288,8 +288,7 @@ public:
     // tooltip for tabs in docked and tabified panels
 //    int prevTabIndex= -1;
 
-    QString currentViewDirPath;
-    QDir currentViewDir;
+    QDir currRootDir;
 
     enum centralWidgetTabs {
         LoupeTab,       // 0

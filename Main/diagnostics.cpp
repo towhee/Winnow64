@@ -35,7 +35,7 @@ void MW::reportState(QString title)
         << "\nG::mode                                " << G::mode
         << "\ncentralLayout->currentIndex()          " << centralLayout->currentIndex()
         << "\nG::currRootFolder                      " << G::currRootFolder
-        << "\ncurrentViewDirPath                     " << currentViewDirPath
+        << "\ncurrentViewDirPath                     " << G::currRootFolder
         << "\ncurrentRow                             " << currSfRow
         << "\ncurrentSfIdx                           " << currSfIdx
         << "\ncurrentSfIdx                           " << currSfIdx
@@ -202,7 +202,7 @@ QString MW::diagnostics()
     rpt << "\n" << "fullScreenDocks.isThumbs = " << G::s(fullScreenDocks.isThumbs);
     rpt << "\n" << "fullScreenDocks.isStatusBar = " << G::s(fullScreenDocks.isStatusBar);
     rpt << "\n" << "isNormalScreen = " << G::s(isNormalScreen);
-    rpt << "\n" << "currentViewDir = " << G::s(currentViewDirPath);
+    rpt << "\n" << "currentViewDir = " << G::s(G::currRootFolder);
     rpt << "\n" << "prevMode = " << G::s(prevMode);
     rpt << "\n" << "currentRow = " << G::s(currSfRow);
     rpt << "\n" << "scrollRow = " << G::s(scrollRow);

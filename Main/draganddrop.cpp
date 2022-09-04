@@ -14,6 +14,8 @@ void MW::dropEvent(QDropEvent *event)
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (event->mimeData()->hasUrls()) {
         QString fPath = event->mimeData()->urls().at(0).toLocalFile();
+        // prevent drop onto folder already active in Winnow
+        if (QFileInfo(fPath).dir() == G::currRootFolder) return;
         handleDrop(fPath);
     }
 }
@@ -23,7 +25,7 @@ void MW::handleDrop(QString fPath)
     if (G::isLogger) G::log(CLASSFUNCTION);
     QFileInfo info(fPath);
     QDir incoming = info.dir();
-    if (incoming == currentViewDir) {
+    if (incoming == currRootDir) {
         QString fileType = info.suffix().toLower();
         if (metadata->supportedFormats.contains(fileType)) {
             thumbView->selectThumb(dragDropFilePath);
@@ -67,7 +69,7 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
         return;
     }
 
-    if (destDir == 	currentViewDirPath) {
+    if (destDir == G::currRootFolder) {
         msgBox.critical(this, tr("Error"), tr("Destination folder is same as source."));
         return;
     }

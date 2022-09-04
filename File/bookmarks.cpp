@@ -263,20 +263,13 @@ void BookMarks::dropEvent(QDropEvent *event)
     - add folder as a bookmark
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    /*
-    if (event->source()) {
-        qDebug() << CLASSFUNCTION << "event->source()";
-        QString fstreeStr("FSTree");
-        bool dirOp = (event->source()->metaObject()->className() == fstreeStr);
-        emit dropOp(event->keyboardModifiers(), dirOp,
-                    event->mimeData()->urls().at(0).toLocalFile());
-    }
-    //*/
+
     const QMimeData *mimeData = event->mimeData();
-    qDebug() << "BookMarks::dropEvent"
+    qDebug() << CLASSFUNCTION
              << event
              << mimeData->hasUrls() << mimeData->urls();
 
+    QString dropDir = indexAt(event->pos()).data(Qt::ToolTipRole).toString();
     if (mimeData->hasUrls()) {
         QString dPath;      // path to folder
         QFileInfo fInfo = QFileInfo(mimeData->urls().at(0).toLocalFile());
@@ -291,36 +284,56 @@ void BookMarks::dropEvent(QDropEvent *event)
             if (!bookmarkPaths.contains(dPath)) {
                 bookmarkPaths.insert(dPath);
                 reloadBookmarks();
+                return;
             }
         }
+
+        /*  This code section is mirrored in FSTREE::dropEvent.  Make sure to sync any
+            changes. */
         // drag is files: move or copy to bookmark folder
-        QString dropDir = indexAt(event->pos()).data(Qt::ToolTipRole).toString();
         qDebug() << "BookMarks::dropEvent  dropDir =" << dropDir;
         QStringList srcPaths;
-        if (event->source()) {
-            for (int i = 0; i < event->mimeData()->urls().count(); i++) {
-                QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
-                QFileInfo info(srcPath);
-                QString destPath = dropDir + "/" + info.fileName();
-                bool copied = QFile::copy(srcPath, destPath);
-                qDebug() << CLASSFUNCTION
-                         << "Copy" << srcPath
-                         << "to" << destPath << "Copied:" << copied
-                         << event->dropAction();
-                if (copied && event->dropAction() == Qt::MoveAction) {
-                    srcPaths << srcPath;
+        for (int i = 0; i < event->mimeData()->urls().count(); i++) {
+            QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
+            QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
+            bool copied = QFile::copy(srcPath, destPath);
+            /*
+            qDebug() << CLASSFUNCTION
+                     << "Copy" << srcPath
+                     << "to" << destPath << "Copied:" << copied
+                     << event->dropAction();  //*/
+            if (copied) {
+                // make list of src files to delete if Qt::MoveAction
+                srcPaths << srcPath;
+                // copy any sidecars if internal drag operation
+                if (event->source()) {
+                    QStringList srcSidecarPaths = Utilities::getPossibleSidecars(srcPath);
+                    foreach (QString srcSidecarPath, srcSidecarPaths) {
+                        if (QFile(srcSidecarPath).exists()) {
+                            QString destSidecarPath = dropDir + "/" + Utilities::getFileName(srcSidecarPath);
+                            QFile::copy(srcSidecarPath, destSidecarPath);
+                        }
+                    }
                 }
             }
+        }
+        // if Winnow source and QMoveAction
+        if (event->source() && event->dropAction() == Qt::MoveAction) {
             setCurrentIndex(dndOrigSelection);
             if (srcPaths.count()) {
+                // deleteFiles also deletes sidecars
                 emit deleteFiles(srcPaths);
             }
         }
         count();
         emit refreshFSTree();
-        setFocus();
+        setCurrentIndex(dndOrigSelection);
     }
 
+    if (G::currRootFolder == dropDir) {
+        QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
+        emit folderSelection();
+    }
     /*prev code
     if (mimeData->hasUrls()) {
         QString dPath;      // path to folder
