@@ -564,9 +564,9 @@ bool DataModel::addFileData()
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-//    qDebug() << CLASSFUNCTION << row;
     // append hash index of datamodel row for fPath for fast lookups
     QString fPath = fileInfo.filePath();
+    qDebug() << CLASSFUNCTION << row << fPath;
     QString ext = fileInfo.suffix().toLower();
     // build hash to quickly get row from fPath (ie pixmap.cpp, imageCache...)
     fPathRow[fPath] = row;

@@ -242,7 +242,6 @@ void BookMarks::contextMenuEvent(QContextMenuEvent *event)
 void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
     QModelIndexList selectedDirs = selectionModel()->selectedRows();
 
 	if (selectedDirs.size() > 0) {
@@ -265,9 +264,11 @@ void BookMarks::dropEvent(QDropEvent *event)
     if (G::isLogger) G::log(CLASSFUNCTION);
 
     const QMimeData *mimeData = event->mimeData();
+    /*
     qDebug() << CLASSFUNCTION
              << event
              << mimeData->hasUrls() << mimeData->urls();
+    //*/
 
     QString dropDir = indexAt(event->pos()).data(Qt::ToolTipRole).toString();
     if (mimeData->hasUrls()) {

@@ -18,25 +18,29 @@ Procedure every time a new thumbnail is selected:
     1. Assign a priority to cache for each image based on the direction of travel and the
     target weighting strategy.
 
-    2. Define the target weighting caching strategy ahead and behind. In the illustration we
-    are caching 2 ahead for every 1 behind.
+    2. Define the target weighting caching strategy ahead and behind. In the illustration
+    we are caching 2 ahead for every 1 behind.
 
-    3. Based on the priority and the cache maximum size, assign images to target for caching.
+    3. Based on the priority and the cache maximum size, assign images to target for
+    caching.
 
-    4. Add images that are targeted and not already cached. If the cache is full before all
-    targets have been cached then remove any cached images outside the target range that may
-    have been left over from a previous thumbnail selection. The targeted images are read by
-    multiple decoders, which signal fillCache with a QImage.
+    4. Add images that are targeted and not already cached. If the cache is full before
+    all targets have been cached then remove any cached images outside the target range
+    that may have been left over from a previous thumbnail selection. The targeted images
+    are read by multiple decoders, which signal fillCache with a QImage.
 
 Data structures:
 
-    The main data structures are in a separate class ImageCacheData to facilitate concurrent
-    data access. The image cache QImages reside in the concurrent hash table imCache. This
-    table is written to by fillCache and read by ImageView. A mutex protects fillCache so that
-    only one decoder at a time can add images to imCache.
+    The main data structures are in a separate class ImageCacheData to facilitate
+    concurrent data access. The image cache for QImages reside in the concurrent hash
+    table imCache. This table is written to by fillCache and read by ImageView.
 
-    The caching process is managed by the cacheItemList of cacheItem.  Each CacheItem
-    corresponds to a row in the filtered DataModel dm->sf, or each image in the view.  The
+    ImageDecoders, each in their own thread, signal ImageCache::fillCache for each QImage.
+    They form queued connections so that only one decoder at a time can add images to
+`   imCache.
+
+    The caching process is managed by the cacheItemList of cacheItem. Each CacheItem
+    corresponds to a row in the filtered DataModel dm->sf, or each image in the view. The
     cache status, target, priority and metadata required for decoding are in CacheItem.
 */
 
@@ -65,7 +69,7 @@ ImageCache::ImageCache(QObject *parent,
     }
     restart = false;
     abort = false;
-    debugCaching = false;
+    debugCaching = true;
 }
 
 ImageCache::~ImageCache()
@@ -291,7 +295,6 @@ void ImageCache::setTargetRange()
         sumMB += icd->cacheItemList.at(i).sizeMB;
         if (sumMB < icd->cache.maxMB) {
             icd->cacheItemList[i].isTarget = true;
-            int tKey = icd->cacheItemList.at(i).key;
             priorityList.append(icd->cacheItemList.at(i).key);
         }
         else {
@@ -382,7 +385,6 @@ bool ImageCache::nextToCache(int id)
     // find next priority item
     for (int i = icd->cache.targetFirst; i <= icd->cache.targetLast; ++i) {
         if (i >= icd->cacheItemList.length()) break;
-        if (!icd->cacheItemList.at(i).isMetadata) continue;
         int priority = icd->cacheItemList.at(i).priority;
         if (priority >= lastPriority) continue;
         bool isCaching = icd->cacheItemList.at(i).isCaching;
@@ -829,7 +831,7 @@ QString ImageCache::reportCache(QString title)
                 << "imCache"
                 << "dmCached"
                 << "SizeMB"
-                << "Loaded"
+                << "Estimate"
                 << "Offset"
                 << "Length"
                    ;
@@ -854,7 +856,8 @@ QString ImageCache::reportCache(QString title)
             << icd->imCache.contains(icd->cacheItemList.at(i).fPath)
             << dm->sf->index(icd->cacheItemList.at(i).key,0).data(G::UserRoles::CachedRole).toBool()
             << icd->cacheItemList.at(i).sizeMB
-            << icd->cacheItemList.at(i).metadataLoaded
+            << icd->cacheItemList.at(i).estSizeMB
+//            << icd->cacheItemList.at(i).metadataLoaded
             << icd->cacheItemList.at(i).offsetFull
             << icd->cacheItemList.at(i).lengthFull
                ;
@@ -1057,7 +1060,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     if (m.video) {
         return;
     }
-
+    qDebug() << "ImageCache::addCacheItemImageMetadata" << m.fPath;
     if (!cacheKeyHash.contains(m.fPath)) {
         return;
     }
@@ -1069,18 +1072,25 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
         qWarning() << "ImageCache::addCacheItemImageMetadata" << "row not in icd->cacheItemList";
         return;
     }
-    /* cacheItemList is a list of cacheItem used to track the current
-       cache status and make future caching decisions for each image
-       8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
+
+    /* cacheItemList is a list of cacheItem used to track the current cache status and
+    make future caching decisions for each image.
     */
+
     int w, h;
     m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
     m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
     mutex.lock();
-    icd->cacheItemList[row].sizeMB = static_cast<int>(w * h * 1.0 / 262144);
-//    icd->cacheItemList[row].sizeMB = static_cast<int>(m.width * m.height * 1.0 / 262144);
-//    icd->cacheItemList[row].isMetadata = m.width > 0;
-    icd->cacheItemList[row].isMetadata = m.metadataLoaded;
+    int sizeMB = static_cast<int>(w * h * 1.0 / 262144);
+    if (sizeMB) {
+        // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
+        icd->cacheItemList[row].sizeMB = sizeMB;
+        icd->cacheItemList[row].estSizeMB = false;
+    }
+    else {
+        icd->cacheItemList[row].sizeMB = m.size * 1.0 / 1000000;
+        icd->cacheItemList[row].estSizeMB = true;
+    }
     // decoder parameters
     icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
     icd->cacheItemList[row].orientation = m.orientation;
@@ -1093,7 +1103,6 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 
     icd->cache.folderMB += icd->cacheItem.sizeMB; // req'd?
     mutex.unlock();
-//    setTargetRange();
 }
 
 void ImageCache::buildImageCacheList()
@@ -1146,10 +1155,19 @@ void ImageCache::buildImageCacheList()
             int w, h;
             m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
             m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
-            icd->cacheItem.sizeMB = static_cast<int>(w * h * 1.0 / 262144);
-//            icd->cacheItem.sizeMB = static_cast<int>(m.width * m.height * 1.0 / 262144);
-            icd->cacheItem.isMetadata = w > 0;
-//            icd->cacheItem.isMetadata = true;
+//            // if no dimensions, set default for now
+//            if (!w) w = 1000;
+//            if (!h) h = 1000;
+            int sizeMB = static_cast<int>(w * h * 1.0 / 262144);
+            if (sizeMB) {
+                // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
+                icd->cacheItem.sizeMB = sizeMB;
+                icd->cacheItem.estSizeMB = false;
+            }
+            else {
+                icd->cacheItem.sizeMB = m.size * 1.0 / 1000000;
+                icd->cacheItem.estSizeMB = true;
+            }
             // decoder parameters
             icd->cacheItem.metadataLoaded = m.metadataLoaded;
             icd->cacheItem.orientation = m.orientation;
@@ -1165,19 +1183,15 @@ void ImageCache::buildImageCacheList()
                 if (i % 1000 == 0) {
                     QString msg = "Building Image Cache: ";
                     msg += QString::number(i) + " of " + QString::number(dm->sf->rowCount());
-    //                G::log(CLASSFUNCTION, msg);
                     emit centralMsg(msg);
                 }
             }
-//            QApplication::processEvents();
         }
         else {
-//            icd->cacheItem.metadataLoaded = false;
             icd->cacheItemList.append(icd->cacheItem);
         }
     }
     if (G::useLinearLoading) icd->cache.folderMB = folderMB;
-//    G::log("ImageCache::buildImageCacheList completed");
 }
 
 void ImageCache::initImageCache(int &cacheMaxMB,
