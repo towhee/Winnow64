@@ -343,29 +343,8 @@ void FSTree::refreshModel()
     media card.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    /*
-//    delete fsModel;
-//    createModel();
-//    fsFilter->refresh();
-//    QModelIndex idx = getCurrentIndex();
-
-////    QModelIndex idxCount = fsModel->index(idx.row(), fsModel->imageCountColumn, idx.parent());
-//    QModelIndex idxCount = fsModel->index(28, 4, idx.parent());
-//    QList<int> roles;
-//    roles << Qt::DisplayRole << Qt::EditRole;
-//    qDebug() << CLASSFUNCTION << "row =" << idx.row() << roles << idxCount << idx;
-//    emit fsModel->dataChanged(idx, idx, roles);
-    //*/
-    // this does not trigger an updata of the model anymore ??
-//    fsModel->setRootPath(fsModel->myComputer().toString());
-
     setFocus();
     select(G::currRootFolder);
-//    verticalScrollBar()->triggerAction(QAbstractSlider::SliderMove);
-
-//    fsModel->refresh(QModelIndex());
-//    setModel(nullptr);
-//    setModel(fsFilter);
 }
 
 bool FSTree::isShowImageCount()
@@ -392,6 +371,8 @@ void FSTree::scrollToCurrent()
 bool FSTree::select(QString dirPath)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+
+    if (dirPath == "") return false;
 
     QDir test(dirPath);
     if (test.exists()) {
@@ -521,7 +502,7 @@ void FSTree::mouseMoveEvent(QMouseEvent *event)
 void FSTree::dragEnterEvent(QDragEnterEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION << event-> dropAction() << event->modifiers();
+//    qDebug() << CLASSFUNCTION << event-> dropAction() << event->modifiers();
 
     QModelIndexList selectedDirs = selectionModel()->selectedRows();
 	if (selectedDirs.size() > 0) {
@@ -543,10 +524,12 @@ void FSTree::dropEvent(QDropEvent *event)
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     const QMimeData *mimeData = event->mimeData();
+    /*
     qDebug() << CLASSFUNCTION
              << "event->source() =" << event->source()
              << event
              << mimeData->hasUrls() << mimeData->urls();
+    //*/
 
     /*  This code section is mirrored in BookMarks::dropEvent.  Make sure to sync any
         changes. */
@@ -596,6 +579,7 @@ void FSTree::dropEvent(QDropEvent *event)
 //            QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
             emit folderSelection();
         }
+        event->acceptProposedAction();
     }
     else {
         select(G::currRootFolder);

@@ -78,7 +78,7 @@ bool ImageDecoder::load()
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
     if (G::isLogger) G::log("ImageDecoder::load", fPath);
-    /*
+//    /*
     qDebug() << "ImageDecoder::load" << "fPath =" << fPath;
     //*/
 
@@ -210,7 +210,7 @@ bool ImageDecoder::load()
     else {
         // try to decode
         ImageMetadata m;
-        /*
+//        /*
         qDebug() << "ImageDecoder::load"
                  << "USEQT: "
                  << "Id =" << threadId

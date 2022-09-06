@@ -42,14 +42,15 @@ public:
         int key;                    // same as row in dm->sf (sorted and filtered datamodel)
         int origKey;                // the key of a previous filter or sort
         QString fPath;              // image full path
-        bool isMetadata;            // has metadata for embedded jpg offset and length been loaded
+//        bool isMetadata;            // has metadata for embedded jpg offset and length been loaded
         bool isCaching;             // decoder is working on image
         int attempts;               // number of tries to cache item
         int threadId;               // decoder thread working on image
         bool isCached;              // has image been cached
         bool isTarget;              // is this image targeted to be cached
         int priority;               // priority to cache image
-        int sizeMB;                 // memory req'd to cache image
+        float sizeMB;               // memory req'd to cache image
+        bool estSizeMB;             // no meta for width/height, so sizeMB default used initially
         // below reqd for decoding to avoid using DataModel in another thread
         bool metadataLoaded;
         int orientation;

@@ -1074,6 +1074,10 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     QString ext = fileInfo.suffix().toLower();
     if (!hasMetadataFormats.contains(ext)) {
         clearMetadata();
+        m.fPath = fPath;
+        m.currRootFolder = fileInfo.absoluteDir().absolutePath();
+        m.size = fileInfo.size();
+
         return false;
     }
 
@@ -1109,23 +1113,5 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
     return m.metadataLoaded;
 }
-
-// duplicate function - do we need this??
-//bool Metadata::writeXMP(QStringList &paths, const QString tag, const QString tagValue)
-//{
-//    if (G::isLogger) G::log(CLASSFUNCTION, tag);
-//    QString tagName;
-//    if (tag == "Title") tagName = "XMP-dc:Title";
-//    if (tag == "Creator") tagName = "XMP-dc:creator";
-//    if (tag == "Copyright") tagName = "";
-//    if (tag == "Email") tagName = "";
-//    if (tag == "Url") tagName = "";
-//    ExifTool et;
-//    et.setOverWrite(true);
-//    for (int i = 0; i < paths.length(); ++i) {
-
-//    }
-//    return true;
-//}
 
 // End Metadata

@@ -1,5 +1,9 @@
 BUGS / TO DO
-- IconView selection changed if abort drag
+- Update target list and cache size for estSizeMB in ImageCache
+- Olympus subfolders not showing for USB drive in FSTree
+- Video stopped when advance using slider (change back)
+- PNG previews not showing in ImageView
+- Cursor tall rectangle over thumbnails for PNG files
 - Save preview as PNG include color manage corrections
 
 - Open with permissions issue
@@ -63,6 +67,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- IconView selection changed if abort drag
 - ImageCache not using preview size to calc image size MB
 - ImageCache not updating sometimes on SD card
 - Added arguments to running external apps

@@ -1528,7 +1528,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
 
     // forward and back buttons
     if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) {
-        qDebug() << CLASSFUNCTION << event->pos();
+//        qDebug() << CLASSFUNCTION << event->pos();
         QModelIndex idx = indexAt(event->pos());
         if (idx.isValid()) {
              m2->togglePickMouseOverItem(idx);
@@ -1577,7 +1577,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
 void IconView::mouseMoveEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
+//    qDebug() << CLASSFUNCTION;
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }
@@ -1830,7 +1830,7 @@ void IconView::startDrag(Qt::DropActions)
     Drag and drop thumbs to another program.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
+//    qDebug() << CLASSFUNCTION;
 
     QModelIndexList selection = selectionModel()->selectedRows();
     if (selection.isEmpty()) {

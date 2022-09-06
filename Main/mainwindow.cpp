@@ -496,7 +496,7 @@ bool MW::isDevelopment()
 
 void MW::showEvent(QShowEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     QMainWindow::showEvent(event);
 
     getDisplayProfile();

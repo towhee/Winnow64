@@ -209,12 +209,14 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     int dmRow = dm->sf->mapToSource(sfIdx).row();
     if (debugCaching) qDebug().noquote() << "MetaRead::readMetadata" << "start  row =" << sfIdx.row();
     QFileInfo fileInfo(fPath);
+    hasMetadata = false;
     if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
+        hasMetadata = true;
         metadata->m.row = dmRow;
         metadata->m.dmInstance = dmInstance;
         emit addToDatamodel(metadata->m);
-        emit addToImageCache(metadata->m);
     }
+    emit addToImageCache(metadata->m);
     if (debugCaching) qDebug().noquote() << "MetaRead::readMetadata" << "done row =" << sfIdx.row();
 }
 
@@ -247,6 +249,10 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
         dm->setIcon(dmIdx, pm, dmInstance);
         rowsWithIcon.append(dmRow);
         iconMax(pm);
+//        if (!hasMetadata) {
+//            metadata->m.fPath = fPath;
+//            emit addToImageCache(metadata->m);
+//        }
 //        qDebug() << "MetaRead::readIcon   dmRow =" << dmRow << rowsWithIcon.size();
     }
     if (debugCaching) {

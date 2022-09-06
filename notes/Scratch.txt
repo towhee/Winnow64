@@ -1,317 +1,51 @@
-"MW::eventFilter" event: QEvent(SockAct, 0x16dcf8a70) 	 event->type: QEvent::SockAct 	 obj: QSocketNotifier(0x600000d1e940) 	 obj->objectName: "" object->metaObject()->className: QSocketNotifier
-"MW::eventFilter" event: QChildEvent(ChildAdded, QObject(0x600000d0dc50)) 	 event->type: QEvent::ChildAdded 	 obj: QLocalServer(0x600000d1ecd0) 	 obj->objectName: "" object->metaObject()->className: QLocalServer
-"MW::eventFilter" event: QChildEvent(ChildAdded, QTcpSocket(0x124b05b48)) 	 event->type: QEvent::ChildAdded 	 obj: QLocalSocket(0x600000d0dc50) 	 obj->objectName: "" object->metaObject()->className: QLocalSocket
-"MW::eventFilter" event: QChildEvent(ChildAdded, QObject(0x600000d0d6a0)) 	 event->type: QEvent::ChildAdded 	 obj: QTcpSocket(0x124b05b48) 	 obj->objectName: "" object->metaObject()->className: QTcpSocket
-"MW::eventFilter" event: QChildEvent(ChildAdded, QObject(0x60000097c300)) 	 event->type: QEvent::ChildAdded 	 obj: QNativeSocketEngine(0x600000d0d6a0) 	 obj->objectName: "" object->metaObject()->className: QNativeSocketEngine
-"MW::eventFilter" event: QChildEvent(ChildAdded, QObject(0x60000097c580)) 	 event->type: QEvent::ChildAdded 	 obj: QNativeSocketEngine(0x600000d0d6a0) 	 obj->objectName: "" object->metaObject()->className: QNativeSocketEngine
-"MW::eventFilter" event: QChildEvent(ChildRemoved, QObject(0x60000097c300)) 	 event->type: QEvent::ChildRemoved 	 obj: QNativeSocketEngine(0x600000d0d6a0) 	 obj->objectName: "" object->metaObject()->className: QNativeSocketEngine
-"MW::eventFilter" event: QChildEvent(ChildRemoved, QObject(0x60000097c580)) 	 event->type: QEvent::ChildRemoved 	 obj: QNativeSocketEngine(0x600000d0d6a0) 	 obj->objectName: "" object->metaObject()->className: QNativeSocketEngine
-"MW::eventFilter" event: QChildEvent(ChildRemoved, QObject(0x600000d0d6a0)) 	 event->type: QEvent::ChildRemoved 	 obj: QTcpSocket(0x124b05b48) 	 obj->objectName: "" object->metaObject()->className: QTcpSocket
-"MW::eventFilter" event: QChildEvent(ChildRemoved, QTcpSocket(0x124b05b48)) 	 event->type: QEvent::ChildRemoved 	 obj: QLocalSocket(0x600000d0dc50) 	 obj->objectName: "" object->metaObject()->className: QLocalSocket
-"MW::eventFilter" event: QChildEvent(ChildRemoved, QObject(0x600000d0dc50)) 	 event->type: QEvent::ChildRemoved 	 obj: QLocalServer(0x600000d1ecd0) 	 obj->objectName: "" object->metaObject()->className: QLocalServer
+173 MW::loupeDisplay
+3,602 IconView::selectThumb                              -1
+1,434 ImageView::loadImage                                Src:DevicePixelRatioChange
+ 72 MW::loupeDisplay
+829 IconView::selectThumb                              -1
+ 58 MW::loupeDisplay
+ 14 IconView::selectThumb                              -1
+ 51 MW::loupeDisplay
+8,985 IconView::selectThumb                              -1
+ 82 MW::loupeDisplay
+265 IconView::selectThumb                              -1
 
-
-=======================================  Metadata Diagnostics for Current Image  =======================================
-
-File name = /Volumes/OM SYSTEM/DCIM/100OMSYS/_8270001.ORF
-
---------------------------------------------------------  IFD0  --------------------------------------------------------
-IFDOffset  Hex: 8   Dec: 8   Tag count: 25
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0        10         A    256   100        4         1        5220   ImageWidth
-  1        22        16    257   101        4         1        3912   ImageHeight
-  2        34        22    258   102        3         1          16   BitsPerSample
-  3        46        2E    259   103        3         1           1   Compression
-  4        58        3A    262   106        3         1           1   PhotometricInterpretation
-  5        70        46    270   10E        2        32        2484   ImageDescription
-  6        82        52    271   10F        2        24        2516   Make
-  7        94        5E    272   110        2        17        2540   Model
-  8       106        6A    273   111        4         1     1817600   StripOffsets
-  9       118        76    274   112        3         1           1   Orientation
- 10       130        82    277   115        3         1           1   SamplesPerPixel
- 11       142        8E    278   116        4         1        3912   RowsPerStrip
- 12       154        9A    279   117        4         1    18757174   StripByteCounts
- 13       166        A6    282   11A        5         1        1064   XResolution
- 14       178        B2    283   11B        5         1        1072   YResolution
- 15       190        BE    284   11C        3         1           1   PlanarConfiguration
- 16       202        CA    296   128        3         1           2   ResolutionUnit
- 17       214        D6    305   131        2        32        2558   Software
- 18       226        E2    306   132        2        20        2400   ModifyDate
- 19       238        EE    315   13B        2        64        2420   Artist
- 20       250        FA    700   2BC        1      2301        2590   ApplicationNotes / XMP
- 21       262       106  18246  4746        3         1           0   Rating
- 22       274       112  33432  8298        2        64        4894   Copyright
- 23       286       11E  34665  8769        4         1         314   ExifIFDOffset
- 24       298       12A  34853  8825        4         1         806   GPSIFDOffset
-          310       136    nextIFDOffset = 0 / 0 (+ start offset if JPG)
-
-------------------------------------------------------  IFD Exif  ------------------------------------------------------
-IFDOffset  Hex: 13A   Dec: 314   Tag count: 39
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0       316       13C  33434  829A        5         1        5188   ExposureTime
-  1       328       148  33437  829D        5         1        5228   FNumber
-  2       340       154  34850  8822        3         1           1   ExposureProgram
-  3       352       160  34855  8827        3         1         200   ISO
-  4       364       16C  34864  8830        3         1           1   SensitivityType
-  5       376       178  34865  8831        4         1         200   StandardOutputSensitivity
-  6       388       184  36864  9000        7         4   825438768   ExifVersion
-  7       400       190  36867  9003        2        20        5125   DateTimeOriginal
-  8       412       19C  36868  9004        2        20        5145   CreateDate
-  9       424       1A8  36880  9010        2         7        5165   OffsetTime
- 10       436       1B4  36881  9011        2         7        5172   OffsetTimeOriginal
- 11       448       1C0  36882  9012        2         7        5179   OffsetTimeDigitized
- 12       460       1CC  37380  9204       10         1        5196   ExposureCompensation
- 13       472       1D8  37381  9205        5         1        5204   MaxApertureValue
- 14       484       1E4  37383  9207        3         1           5   MeteringMode
- 15       496       1F0  37384  9208        3         1           0   LightSource
- 16       508       1FC  37385  9209        3         1          16   Flash
- 17       520       208  37386  920A        5         1        5220   FocalLength
- 18       532       214  37500  927C        7   1812088        5512   MakerNotes
- 19       544       220  37510  9286        7       125        5000   UserComment
- 20       556       22C  37888  9400       10         1        5284   AmbientTemperature
- 21       568       238  37890  9402        5         1        5292   Pressure
- 22       580       244  37891  9403       10         1        5300   WaterDepth
- 23       592       250  37892  9404        5         1        5308   Acceleration
- 24       604       25C  40960  A000        7         4   808464688   FlashpixVersion
- 25       616       268  40961  A001        3         1       65535   ColorSpace
- 26       628       274  41728  A300        7         1           3   FileSource
- 27       640       280  41730  A302        7         8        5249   CFAPattern
- 28       652       28C  41985  A401        3         1           0   CustomRendered
- 29       664       298  41986  A402        3         1           1   ExposureMode
- 30       676       2A4  41987  A403        3         1           0   WhiteBalance
- 31       688       2B0  41988  A404        5         1        5264   DigitalZoomRatio
- 32       700       2BC  41990  A406        3         1           0   SceneCaptureType
- 33       712       2C8  41991  A407        3         1           0   GainControl
- 34       724       2D4  41992  A408        3         1           0   Contrast
- 35       736       2E0  41993  A409        3         1           0   Saturation
- 36       748       2EC  41994  A40A        3         1           0   Sharpness
- 37       760       2F8  42034  A432        5         4        5316   LensInfo
- 38       772       304  42036  A434        2        32        5348   LensModel
-          784       310    nextIFDOffset = 0 / 0 (+ start offset if JPG)
-
-------------------------------------------------------  IFD GPS  ------------------------------------------------------
-IFDOffset  Hex: 326   Dec: 806   Tag count: 1
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0       808       328      0     0        1         4         770   GPSVersionID
-          820       334    nextIFDOffset = 0 / 0 (+ start offset if JPG)
-
------------------------------------------------  IFD Olympus Maker Note  -----------------------------------------------
-IFDOffset  Hex: 1598   Dec: 5528   Tag count: 8
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0      5530      159A    256   100        7      6662       38680   ThumbnailImage
-  1      5542      15A6    512   200        4         3        5472   SpecialMode
-  2      5554      15B2    521   209        7        32        5484   CameraID
-  3      5566      15BE   8208  2010       13         1         118   Equipment IFDOffset
-  4      5578      15CA   8224  2020       13         1         436   CameraSettings
-  5      5590      15D6   8240  2030       13         1        1582   RawDevelopment
-  6      5602      15E2   8256  2040       13         1        1756   ImageProcessing
-  7      5614      15EE   8272  2050       13         1        4174   FocusInfo
-         5626      15FA    nextIFDOffset = 0 / 0 (+ start offset if JPG)
-
--------------------------------------  IFD Olympus Maker Note: CameraSettingsIFD  -------------------------------------
-IFDOffset  Hex: 173C   Dec: 5948   Tag count: 95
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0      5950      173E      0     0        7         4   808464688   CameraSettingsVersion
-  1      5962      174A    256   100        4         1           1   PreviewImageValid
-  2      5974      1756    257   101        4         1       46712   PreviewImageStart
-  3      5986      1762    258   102        4         1     1005743   PreviewImageLength
-  4      5998      176E    512   200        3         1           1   ExposureMode
-  5      6010      177A    513   201        3         1           0   AELock
-  6      6022      1786    514   202        3         1           5   MeteringMode
-  7      6034      1792    515   203       10         1        5876   ExposureShift
-  8      6046      179E    517   205       10         5        5888   Undefined tag
-  9      6058      17AA    768   300        3         1           0   MacroMode
- 10      6070      17B6    769   301        3         2      262146   FocusMode
- 11      6082      17C2    770   302        3         2           0   FocusProcess
- 12      6094      17CE    771   303        3         1           0   AFSearch
- 13      6106      17DA    772   304        4        64        5940   AFAreas
- 14      6118      17E6    773   305       10         5        6196   AFPointSelected
- 15      6130      17F2    774   306        1         1           0   AFFineTune
- 16      6142      17FE    775   307        8         3        6238   AFFineTuneAdj
- 17      6154      180A    776   308        1         1           0   Undefined tag
- 18      6166      1816    777   309        3         1           0   Undefined tag
- 19      6178      1822    778   30A        3        10        6248   Undefined tag
- 20      6190      182E    779   30B        3        11        6268   Undefined tag
- 21      6202      183A    780   30C        4         1           0   Undefined tag
- 22      6214      1846    781   30D        3         4        6296   Undefined tag
- 23      6226      1852   1024   400        3         1           2   FlashMode
- 24      6238      185E   1025   401       10         1        6308   FlashExposureComp
- 25      6250      186A   1026   402        3         1           0   Undefined tag
- 26      6262      1876   1027   403        3         1           0   FlashRemoteControl
- 27      6274      1882   1028   404        3         4        6320   FlashControlMode
- 28      6286      188E   1029   405       10         4        6328   FlashIntensity
- 29      6298      189A   1030   406       10         4        6360   ManualFlashStrength
- 30      6310      18A6   1280   500        3         1           1   WhiteBalance2
- 31      6322      18B2   1281   501        3         1           0   WhiteBalanceTemperature
- 32      6334      18BE   1282   502        8         2           0   WhiteBalanceBracket
- 33      6346      18CA   1283   503        8         3        6400   CustomSaturation
- 34      6358      18D6   1284   504        3         1           0   ModifiedSaturation
- 35      6370      18E2   1285   505        8         3        6408   ContrastSetting
- 36      6382      18EE   1286   506        8         3        6414   SharpnessSetting
- 37      6394      18FA   1287   507        3         1           1   ColorSpace
- 38      6406      1906   1288   508        3         1           0   Undefined tag
- 39      6418      1912   1289   509        3         1           0   SceneMode
- 40      6430      191E   1290   50A        3         1           0   NoiseReduction
- 41      6442      192A   1291   50B        3         1           0   DistortionCorrection
- 42      6454      1936   1292   50C        3         1           0   ShadingCompensation
- 43      6466      1942   1295   50F        8         4        6440   Gradation
- 44      6478      194E   1312   520        3         2      131074   PictureMode
- 45      6490      195A   1313   521        8         3        6552   PictureModeSaturation
- 46      6502      1966   1314   522        3         1           0   PictureModeHue?
- 47      6514      1972   1315   523        8         3        6560   PictureModeContrast
- 48      6526      197E   1316   524        8         3        6566   PictureModeSharpness
- 49      6538      198A   1317   525        8         1           0   PictureModeBWFilter
- 50      6550      1996   1318   526        8         1           0   PictureModeTone
- 51      6562      19A2   1319   527        8         3        6448   NoiseFilter
- 52      6574      19AE   1320   528        3         1           0   Undefined tag
- 53      6586      19BA   1321   529        3         4        6456   ArtFilter
- 54      6598      19C6   1322   52A        4         2        6464   Undefined tag
- 55      6610      19D2   1323   52B        3        30        6472   Undefined tag
- 56      6622      19DE   1325   52D        8         3        6540   PictureModeEffect
- 57      6634      19EA   1326   52E        8        28        6576   ToneLevel
- 58      6646      19F6   1327   52F        3        20        6632   ArtFilterEffect
- 59      6658      1A02   1328   530        3       152        6672   Undefined tag
- 60      6670      1A0E   1330   532        8         6        6986   ColorCreatorEffect
- 61      6682      1A1A   1331   533        4         2        7000   Undefined tag
- 62      6694      1A26   1332   534        4         1           0   Undefined tag
- 63      6706      1A32   1333   535       10         1        7012   Undefined tag
- 64      6718      1A3E   1334   536        5         1        7020   Undefined tag
- 65      6730      1A4A   1335   537        8         6        7028   MonochromeProfileSettings
- 66      6742      1A56   1336   538        3         1           0   FilmGrainEffect
- 67      6754      1A62   1337   539        8        14        7042   ColorProfileSettings
- 68      6766      1A6E   1338   53A        8         1           0   MonochromeVignetting
- 69      6778      1A7A   1339   53B        8         1           0   MonochromeColor
- 70      6790      1A86   1536   600        3         6        7074   DriveMode
- 71      6802      1A92   1537   601        3         2           0   PanoramaMode
- 72      6814      1A9E   1540   604        4         1           4   ImageStabilization
- 73      6826      1AAA   1541   605        4         2        7096   Undefined tag
- 74      6838      1AB6   2048   800        3         1           1   Undefined tag
- 75      6850      1AC2   2050   802        3         1           0   Undefined tag
- 76      6862      1ACE   2051   803        3         1           0   Undefined tag
- 77      6874      1ADA   2052   804        4         2        7112   StackedImage
- 78      6886      1AE6   2064   810        3         1           0   Undefined tag
- 79      6898      1AF2   2065   811        3         1           0   Undefined tag
- 80      6910      1AFE   2081   821        3         2           0   Undefined tag
- 81      6922      1B0A   2304   900        3         1           0   ManometerPressure
- 82      6934      1B16   2305   901        9         2        7132   ManometerReading
- 83      6946      1B22   2306   902        3         1           0   ExtendedWBDetect
- 84      6958      1B2E   2307   903        8         2       65558   RollAngle
- 85      6970      1B3A   2308   904        8         2      130960   PitchAngle
- 86      6982      1B46   2312   908        2        20        7150   DateTimeUTC
- 87      6994      1B52   2313   909        3         1           0   Undefined tag
- 88      7006      1B5E   2314   90A       10         1        7172   Undefined tag
- 89      7018      1B6A   2315   90B       10         3        7180   Undefined tag
- 90      7030      1B76   2316   90C        5         1        7204   Undefined tag
- 91      7042      1B82   2317   90D        4         1           0   Undefined tag
- 92      7054      1B8E   2318   90E        5         1        7216   Undefined tag
- 93      7066      1B9A   2560   A00        5         1        7224   Undefined tag
- 94      7078      1BA6   2561   A01        5         1        7232   Undefined tag
-         7090      1BB2    nextIFDOffset = 0 / 0 (+ start offset if JPG)
-
-------------------------------------  IFD Olympus Maker Note: EquipmentSettingsIFD  ------------------------------------
-IFDOffset  Hex: 15FE   Dec: 5630   Tag count: 26
-Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
-  0      5632      1600      0     0        7         4   808464688   EquipmentVersion
-  1      5644      160C    256   100        2         6        5520   CameraType
-  2      5656      1618    257   101        2        32        5526   SerialNumber BJMA24546
-  3      5668      1624    258   102        2        32        5558   InternalSerialNumber
-  4      5680      1630    259   103        5         1        5592   FocalPlaneDiagonal
-  5      5692      163C    260   104        4         1        4608   BodyFirmwareVersion
-  6      5704      1648    513   201        1         6        5610   LensType
-  7      5716      1654    514   202        2        32        5616   LensSerialNumber
-  8      5728      1660    515   203        2        32        5648   LensModel
-  9      5740      166C    516   204        4         1        4608   LensFirmwareVersion
- 10      5752      1678    517   205        3         1         761   MaxApertureAtMinFocal
- 11      5764      1684    518   206        3         1         761   MaxApertureAtMaxFocal
- 12      5776      1690    519   207        3         1          60   MinFocalLength
- 13      5788      169C    520   208        3         1          60   MaxFocalLength
- 14      5800      16A8    522   20A        3         1         782   MaxApertureAtCurrentFocal
- 15      5812      16B4    523   20B        3         1       16640   LensProperties
- 16      5824      16C0    528   210        1         1           0   Undefined tag
- 17      5836      16CC    769   301        1         6        5705   Extender
- 18      5848      16D8    770   302        2        32        5711   ExtenderSerialNumber
- 19      5860      16E4    771   303        2        32        5743   ExtenderModel
- 20      5872      16F0    772   304        4         1           0   ExtenderFirmwareVersion
- 21      5884      16FC   1027   403        2        32        5780   ConversionLens
- 22      5896      1708   4096  1000        3         1           0   FlashType
- 23      5908      1714   4097  1001        3         1           0   FlashModel
- 24      5920      1720   4098  1002        4         1           0   FlashFirmwareVersion
- 25      5932      172C   4099  1003        2        32        5820   FlashSerialNumber
-         5944      1738    nextIFDOffset = 0 / 0 (+ start offset if JPG)
-
---------------------------------------------------  Winnow datamodel  --------------------------------------------------
-fPath ................... /Volumes/OM SYSTEM/DCIM/100OMSYS/_8270001.ORF
-fName ................... _8270001.ORF
-type .................... ORF
-video ................... false
-size .................... 20574774
-createdDate ............. 2022-08-27T09:43:36.000
-modifiedDate ............ 2022-08-27T09:43:36.000
-year .................... 2022
-day ..................... 2022-08-27
-
-refine .................. false
-pick .................... false
-ingested ................ false
-metadataLoaded .......... true
-isSearch ................ false
-
-width ................... 5220
-height .................. 3912
-widthPreview ............ 3200
-heightPreview ........... 2400
-dimensions .............. 5220x3912
-megapixels .............. 20.420000076293945
-loadMsecPerMp ........... 0
-aspectRatio ............. 1.3300000429153442
-orientation ............. 1
-orientationOffset ....... 0
-rotationDegrees ......... 0
-
-make .................... OM Digital Solutions    
-model ................... OM-1             
-exposureTime ............ 1/3 sec
-aperture ................ f/8.0
-ISO ..................... 200
-exposureCompensation .... 0.0 EV
-focalLength ............. 60mm
-lens .................... OLYMPUS M.60mm F2.8 Macro       
-shootingInfo ............ OM-1               60mm  1/3 sec at f/8.0, ISO 200
-gpsCoord ................
-keywords ................
-duration ................
-cameraSN ................
-lensSN ..................
-shutterCount ............ 0
-nikonLensCode ...........
-
-title ...................
-_title ..................
-creator ................. Rory Hill                                                       
-_creator ................
-copyright ............... 2022 Rory Hill                                                  
-_copyright ..............
-email ...................
-_email ..................
-url .....................
-_url ....................
-label ...................
-_label ..................
-rating ..................
-_rating .................
-
-offsetFull .............. 52224
-lengthFull .............. 1005743
-offsetThumb ............. 44192
-lengthThumb ............. 6662
-samplesPerPixel ......... 0
-isBigEndian ............. false
-ifd0Offset .............. 0
-isXmp ................... false
-xmpSegmentOffset ........ 0
-xmpSegmentLength ........ 0
-iccSegmentOffset ........ 0
-iccSegmentLength ........ 0
-iccSpace ................ 0
-
-searchStr ............... /volumes/om system/dcim/100omsys/_8270001.orf2022-08-27 09:43:362022-08-27om digital solutions    om-1             olympus m.60mm f2.8 macro       om-1               60mm  1/3 sec at f/8.0, iso 200rory hill                                                       2022 rory hill                                                  2022-08-27om digital solutions    om-1             olympus m.60mm f2.8 macro       om-1               60mm  1/3 sec at f/8.0, iso 200rory hill                                                       2022 rory hill                                                  
+  0 MW::folderSelectionChange
+  0 MW::stopAndClearAll
+532 MetaRead::stop
+24,930 DataModel::clearDataModel
+  1 Filters::removeChildrenDynamicFilters
+1,953 Filters::clearAll
+930 DataModel::load                                    clearDataModel
+340 DataModel::load                                    continue loading
+  0 DataModel::addFileData                             8 images
+  1 MW::loadConcurrentNewFolder
+ 20 IconView::calcViewportRange
+ 82 ImageCache::initImageCache
+ 91 ImageCache::buildImageCacheList
+475 MetaRead::initialize
+96,437 MetaRead::read
+1,581 MW::loadConcurrentStartImageCache
+ 28 IconView::selectThumb                              0
+534 MW::fileSelectionChange                            IconView::selectionChanged /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+ 34 ImageView::loadImage                               /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg Src:MW::fileSelectionChange
+  3 IconView::calcViewportRange
+431 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+ 51 IconView::selectThumb                              0
+  4 MW::gridHasScrolled
+ 20 MW::fileSelectionChange                            MW::loadConcurrentStartImageCache /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+ 10 ImageView::loadImage                               /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg Src:MW::fileSelectionChange
+  1 IconView::calcViewportRange
+354 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+ 28 MW::updateIconBestFit
+1,404 MW::loadConcurrentStartImageCache
+ 29 IconView::selectThumb                              0
+ 48 IconView::selectThumb                              0
+ 11 MW::gridHasScrolled
+ 23 MW::fileSelectionChange                            MW::loadConcurrentStartImageCache /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+ 16 ImageView::loadImage                               /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg Src:MW::fileSelectionChange
+  2 IconView::calcViewportRange
+102 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+  0 MW::loadConcurrentMetaDone
+6,122 MW::updateIconBestFit
+5,264,830 ImageCache::fillCache
