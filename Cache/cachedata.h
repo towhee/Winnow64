@@ -27,7 +27,7 @@ public:
         int directionChangeThreshold;//number of steps before change direction of cache
         int wtAhead;                // ratio cache ahead vs behind * 10 (ie 7 = ratio 7/10)
         int totFiles;               // number of images available
-        int currMB;                 // the current MB consumed by the cache
+        float currMB;               // the current MB consumed by the cache
         int maxMB;                  // maximum MB available to cache
         int minMB;                  // minimum MB available to cache
         int folderMB;               // MB required for all files in folder // rgh req'd?

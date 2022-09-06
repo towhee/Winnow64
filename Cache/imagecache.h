@@ -111,7 +111,7 @@ private:
 
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache
     void decodeNextImage(int id);   // launch decoder for the next image in cacheItemList
-    int getImCacheSize();           // add up total MB cached
+    float getImCacheSize();         // add up total MB cached
     void setKeyToCurrent();         // cache key from currentFilePath
     void setDirection();            // caching direction
     void setPriorities(int key);    // based on proximity to current position and wtAhead
@@ -119,6 +119,7 @@ private:
     bool nextToCache(int id);       // find highest priority not cached
     bool nextToDecache(int id);     // find lowest priority cached - return -1 if none cached
     void fixOrphans();              // outside target range with isCached == true
+    void setSizeMB(int id, int cacheKey); // Update sizeMB if initially estimated ie PNG file
     void makeRoom(int id, int cacheKey); // remove images from cache until there is roomRqd
     void memChk();                  // still room in system memory for cache?
     int keyFromPath(QString path);

@@ -37,11 +37,21 @@ Data structures:
 
     ImageDecoders, each in their own thread, signal ImageCache::fillCache for each QImage.
     They form queued connections so that only one decoder at a time can add images to
-`   imCache.
+    imCache.
 
     The caching process is managed by the cacheItemList of cacheItem. Each CacheItem
     corresponds to a row in the filtered DataModel dm->sf, or each image in the view. The
     cache status, target, priority and metadata required for decoding are in CacheItem.
+
+Image size in cache:
+
+    The memory required to cache an image is determined while the metadata is being read
+    in DataModel and emitted to ImageCache so that the initial target range can be built.
+    This is done using the preview image width and height.  However, for images where
+    the width and height cannot be predeterined (ie PNG), the initial file size is used
+    as an estimate, and the actual QImage size is calculated just prior to adding the
+    image to the image cache; setting the width, height and sizeMB; and updating the
+    target range and currMB cached.
 */
 
 
@@ -69,7 +79,7 @@ ImageCache::ImageCache(QObject *parent,
     }
     restart = false;
     abort = false;
-    debugCaching = true;
+    debugCaching = false;
 }
 
 ImageCache::~ImageCache()
@@ -139,11 +149,11 @@ void ImageCache::stop()
     clearImageCache(true);
 }
 
-int ImageCache::getImCacheSize()
+float ImageCache::getImCacheSize()
 {
     // return the current size of the cache
     if (G::isLogger) G::log("ImageCache::getImCacheSize");
-    int cacheMB = 0;
+    float cacheMB = 0;
     for (int i = 0; i < icd->cacheItemList.size(); ++i) {
         if (icd->cacheItemList.at(i).isCached) {
             cacheMB += icd->cacheItemList.at(i).sizeMB;
@@ -271,9 +281,9 @@ void ImageCache::setDirection()
 
 void ImageCache::setTargetRange()
 /*
-    The target range is the list of images being targeted to cache, based on the current image,
-    the direction of travel, the caching strategy and the maximum memory allotted to the image
-    cache.
+    The target range is the list of images being targeted to cache, based on the current
+    image, the direction of travel, the caching strategy and the maximum memory allotted
+    to the image cache.
 
     The start and end of the target range are determined (cache.targetFirst and
     cache.targetLast) and the boolean isTarget is assigned for each item in in the
@@ -652,8 +662,28 @@ void ImageCache::makeRoom(int id, int cacheKey)
 */
     if (G::isLogger) G::log("ImageCache::makeRoom");
     if (cacheKey >= icd->cacheItemList.length()) return;
-    int room = icd->cache.maxMB - icd->cache.currMB;
-    int roomRqd = icd->cacheItemList.at(cacheKey).sizeMB;
+    float room = icd->cache.maxMB - icd->cache.currMB;
+    float roomRqd = icd->cacheItemList.at(cacheKey).sizeMB;
+    if (debugCaching) {
+        QString fPath = icd->cacheItemList.at(cacheKey).fPath;
+        // sum actual summedCurrMB vs currMB
+        float summedCurrMB = 0;
+        for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+            if (icd->cacheItemList[i].isCached = true)
+                summedCurrMB += icd->cacheItemList.at(i).sizeMB;
+        }
+        QString k = QString::number(icd->cache.toDecacheKey).leftJustified((4));
+        qDebug().noquote() << "ImageCache::makeRoom"
+                 << "       decoder" << id << "key =" << k
+                 << "Before:"
+                 << "currMB =" << icd->cache.currMB
+                 << "summedCurrMB =" << summedCurrMB
+                 << "maxMB =" << icd->cache.maxMB
+                 << "room =" << room
+                 << "roomRqd =" << roomRqd
+                 << "Removed image" << fPath
+                    ;
+    }
     while (room < roomRqd) {
         // make some room by removing lowest priority cached image (fPath)
         if (nextToDecache(id)) {
@@ -664,9 +694,19 @@ void ImageCache::makeRoom(int id, int cacheKey)
             icd->cache.currMB -= icd->cacheItemList[icd->cache.toDecacheKey].sizeMB;
             room = icd->cache.maxMB - icd->cache.currMB;
             if (debugCaching) {
+                // sum actual summedCurrMB vs currMB
+                float summedCurrMB = 0;
+                for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+                    if (icd->cacheItemList[i].isCached = true)
+                        summedCurrMB += icd->cacheItemList.at(i).sizeMB;
+                }
                 QString k = QString::number(icd->cache.toDecacheKey).leftJustified((4));
                 qDebug().noquote() << "ImageCache::makeRoom"
                          << "       decoder" << id << "key =" << k
+                         << "Making Room:"
+                         << "currMB =" << icd->cache.currMB
+                         << "summedCurrMB =" << summedCurrMB
+                         << "maxMB =" << icd->cache.maxMB
                          << "room =" << room
                          << "roomRqd =" << roomRqd
                          << "Removed image" << fPath
@@ -682,6 +722,33 @@ void ImageCache::makeRoom(int id, int cacheKey)
             break;
         }
     }
+}
+
+void ImageCache::setSizeMB(int id, int cacheKey)
+{
+/*
+    For images that Winnow does not have the metadata describing the size (width and
+    height), ie PNG files, an initial sizeMB is estimated to be used in the target range.
+    After a decoder has converted the file into a QImage the sizeMB, dimensions (w,h) and
+    target range are updated here.
+
+    If this is not done the ImageCache::makeRoom algorithm will not be updated correctly.
+*/
+    if (G::isLogger) G::log("ImageCache::setSizeMB");
+    QImage *image = &decoder[id]->image;
+    int w = image->width();
+    int h = image->height();
+    // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
+    icd->cacheItemList[cacheKey].sizeMB = static_cast<int>(w * h * 1.0 / 262144);
+    icd->cacheItemList[cacheKey].estSizeMB = false;
+    // recalc currMB
+//    float summedCurrMB = 0;
+//    for (int i = 0; i < icd->cacheItemList.length(); ++i) {
+//        if (icd->cacheItemList[i].isCached = true)
+//            summedCurrMB += icd->cacheItemList.at(i).sizeMB;
+//    }
+//    icd->cache.currMB = summedCurrMB;
+    icd->cache.currMB = getImCacheSize();
 }
 
 void ImageCache::memChk()
@@ -781,6 +848,7 @@ QString ImageCache::reportCacheParameters()
     rpt << "wtAhead = " << icd->cache.wtAhead << "\n";
     rpt << "totFiles = " << icd->cache.wtAhead << "\n";
     rpt << "currMB = " << icd->cache.currMB << "\n";
+    rpt << "currMB Check = " << getImCacheSize() << "\n";
     rpt << "maxMB = " << icd->cache.maxMB << "\n";
     rpt << "minMB = " << icd->cache.minMB << "\n";
     rpt << "folderMB = " << icd->cache.folderMB << "\n";
@@ -1407,24 +1475,22 @@ void ImageCache::cacheImage(int id, int cacheKey)
                            << "image size =" << decoder[id]->image.size()
                            << decoder[id]->fPath;
     }
+    // Check if initial sizeMB was estimated (image without preview metadata ie PNG)
+    if (icd->cacheItemList[cacheKey].estSizeMB) setSizeMB(id, cacheKey);
     makeRoom(id, cacheKey);
     icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
     icd->cacheItemList[cacheKey].isCaching = false;
     icd->cacheItemList[cacheKey].isCached = true;
     icd->cache.currMB = getImCacheSize();
-//    if (sendStatusUpdates) {
-//        // rgh if true, slows scrolling while image cache loading (chk if get rid of this)
-//        emit updateCacheOnThumbs(decoder[id]->fPath, true, "ImageCache::cacheImage");
-//    }
-//    else {
-        // set datamodel isCached = true
-        emit setValuePath(decoder[id]->fPath, 0, true, G::CachedRole);
-        // if current image signal ImageView::loadImage
-        if (decoder[id]->fPath == dm->currentFilePath) {
-            emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
-            emit imageCachePrevCentralView();
-        }
-//    }
+    // set datamodel isCached = true
+    emit setValuePath(decoder[id]->fPath, 0, true, G::CachedRole);
+    // if current image signal ImageView::loadImage
+    if (decoder[id]->fPath == dm->currentFilePath) {
+        // load in ImageView
+        emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
+        // revert central view
+        emit imageCachePrevCentralView();
+    }
     updateStatus("Update all rows", "ImageCache::cacheImage");
 }
 
