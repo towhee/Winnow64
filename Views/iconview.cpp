@@ -717,6 +717,26 @@ int IconView::getNearestPick()
     return 0;
 }
 
+QModelIndex IconView::getNearestSelection()
+{
+    /* Returns the model index of the closest selected item */
+    if (G::isLogger) G::log(CLASSFUNCTION);
+
+    int frwd = currentIndex().row();
+    int back = frwd;
+    int rowCount = dm->sf->rowCount();
+    QModelIndex idx;
+    while (back >= 0 || frwd < rowCount) {
+        if (back >= 0) idx = dm->sf->index(back, 0);
+        if (selectedIndexes().contains(idx)) return idx;
+        if (frwd < rowCount) idx = dm->sf->index(frwd, 0);
+        if (selectedIndexes().contains(idx)) return idx;
+        --back;
+        ++frwd;
+    }
+    return idx;
+}
+
 void IconView::sortThumbs(int sortColumn, bool isReverse)
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
@@ -733,19 +753,49 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
     updated after the MD::fileSelectionChange occurs, hence update the status bar from
     here.
 */
+    if (!G::isInitializing) {
+        QListView::selectionChanged(selected, deselected);
+        QModelIndexList selList = selectionModel()->selectedRows();
+        foreach (QModelIndex idx, selList) {
+            qDebug() << CLASSFUNCTION << idx.row();
+        }
+        qDebug() << CLASSFUNCTION << "selList.count() =" << selList.count() << "\n";
+        if (selList.count() == 1) {
+            emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION);
+        }
+        return;
+    }
+
     QString s = "";
-    if (selected.isEmpty() || !selected.at(0).isValid() || G::isInitializing)
-        s = "Ignore invalid selection change";
+//    qDebug() << CLASSFUNCTION << "\nSelected:  " << selected << "\nDeselected:" << deselected;
+//    if (/*selected.isEmpty() || !selected.at(0).isValid() ||*/ G::isInitializing)
+//        s = "Ignore invalid selection change";
     if (G::isLogger) G::log(CLASSFUNCTION, s);
-    if (G::stop || selected.isEmpty() || !selected.at(0).isValid()) {
+    if (G::stop /*|| selected.isEmpty() || !selected.at(0).isValid()*/) {
         return;
     }
     if (!G::isInitializing) {
-        QListView::selectionChanged(selected, deselected);
-        emit fileSelectionChange(selected.at(0).indexes().at(0), QModelIndex(), CLASSFUNCTION);
+        // Check if deselecting current item
+        if (deselected.count() && deselected.at(0).indexes().count()) {
+            QModelIndex deSel = deselected.at(0).indexes().at(0);
+            QModelIndex idx = getNearestSelection();
+            qDebug() << CLASSFUNCTION << "Nearest row:  " << idx.row();
+            QListView::selectionChanged(selected, deselected);
+            emit fileSelectionChange(idx, deSel, "IconView::selectionChanged Deselect");
+//            setCurrentIndex(idx);
+//            selectThumb(idx.row());
+//            QModelIndex deSelected = deselected.at(0).indexes().at(0);
+//            qDebug() << CLASSFUNCTION << "deSelected row:  " << deSelected.row() << "m2->currentIdx.row():" << m2->currentIdx.row();
+//            G::wait(500);
+        }
+        else {
+            QListView::selectionChanged(selected, deselected);
+            emit fileSelectionChange(selected.at(0).indexes().at(0), QModelIndex(), CLASSFUNCTION);
+        }
         QString s = "";
         if (m2->isStressTest) s = "   Stress count: " + QString::number(m2->slideCount);
-        emit updateStatus(true, s, CLASSFUNCTION);    }
+        emit updateStatus(true, s, CLASSFUNCTION);
+    }
 }
 
 int IconView::getSelectedCount()
@@ -761,8 +811,8 @@ images selected.
 
 QStringList IconView::getSelectedThumbsList()
 {
-/* This was used by the eliminated tags class and is not used but looks
-useful.
+/*
+   This was used by the eliminated tags class and is not used but looks useful.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     QModelIndexList indexesList = selectionModel()->selectedIndexes();
