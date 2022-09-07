@@ -115,8 +115,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    float x = 131 * 1.0/1000;
-    qDebug() << x;
+    thumbView->repaint();
     return;
 
     QModelIndex idx = fsTree->getCurrentIndex();

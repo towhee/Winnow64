@@ -184,6 +184,7 @@ private:
     int getLastRow();                           //not used? Seems handy
     uint getRandomRow();                         //not used? Seems handy
 
+    QModelIndex getNearestSelection();
     int getNearestPick();
     int getNextPick();
     int getPrevPick();

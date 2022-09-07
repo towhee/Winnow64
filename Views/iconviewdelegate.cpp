@@ -113,7 +113,8 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     int l20 = G::backgroundShade + 20;
     defaultBorderColor = QColor(l20,l20,l20);
     currentItemColor = QColor(Qt::yellow);
-    selectedColor = QColor(Qt::white);
+    selectedColor = QColorConstants::Svg::magenta;
+//    selectedColor = QColor(Qt::white);
     pickColor = QColor(Qt::green);
     rejectColor = QColor(Qt::red);
     ingestedColor = QColor(Qt::blue);
@@ -355,6 +356,11 @@ void IconViewDelegate::paint(QPainter *painter,
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
     bool isVideo = index.model()->index(row, G::VideoColumn).data().toBool();
 
+//    qDebug() << CLASSFUNCTION
+//             << "Row =" << row
+//             << "currentRow =" << currentRow
+//             << "isSelected =" << isSelected
+//                ;
     // icon size
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
     QSize iconSize = icon.actualSize(thumbSize);
@@ -440,7 +446,7 @@ void IconViewDelegate::paint(QPainter *painter,
 //             */
 
     // current index item
-    if (row == currentRow && isSelected) {
+    if (row == currentRow) {
         QRect currRect(cellRect.topLeft() + currOffset, cellRect.bottomRight() - currOffset);
         painter->setPen(currentPen);
         painter->drawRoundedRect(currRect, 8, 8);
