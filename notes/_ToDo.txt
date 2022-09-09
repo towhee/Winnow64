@@ -1,9 +1,7 @@
 BUGS / TO DO
-- Fix selection issue when deselect current image
 - Drag to central view folder opening but not going to image in folder
 - Olympus subfolders not showing for USB drive in FSTree
 - Video stopped when advance using slider (change back)
-- PNG previews not showing in ImageView
 - Cursor tall rectangle over thumbnails for PNG files
 - Save preview as PNG include color manage corrections
 
@@ -68,7 +66,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Fix selection issue when deselect current image
 - Update target list and cache size for estSizeMB in ImageCache
+- PNG previews not showing in ImageView
 - IconView selection changed if abort drag
 - ImageCache not using preview size to calc image size MB
 - ImageCache not updating sometimes on SD card

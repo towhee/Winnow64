@@ -717,12 +717,12 @@ int IconView::getNearestPick()
     return 0;
 }
 
-QModelIndex IconView::getNearestSelection()
+QModelIndex IconView::getNearestSelection(int row)
 {
     /* Returns the model index of the closest selected item */
     if (G::isLogger) G::log(CLASSFUNCTION);
 
-    int frwd = currentIndex().row();
+    int frwd = row;
     int back = frwd;
     int rowCount = dm->sf->rowCount();
     QModelIndex idx;
@@ -749,49 +749,110 @@ void IconView::sortThumbs(int sortColumn, bool isReverse)
 void IconView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
 /*
+    The selection change has already occurred when selectionChanged is signalled, and
+    the current index has been changed to the most recent selected or deselected item.
+
+    However, we do not want to change the current index for a deselect in a
+    muli-selection, and the current index is reset to its prior item. Since
+    MW::fileSelectionChange has not been called MW::currSfRow and MW::currSfIdx contain
+    the prior current row and index. The current index is reset using the
+    QItemSelectionModel::NoUpdate flag to prevent another selectionChange being
+    triggered.
+
+    If the only item selected is deselected then the item is reselected as the current
+    index must always be selected.
+
+    If there is a new selection without cmd/ctrl then it is the new current index and
+    MW::fileSelectionChange is signalled.
+
     For some reason the selectionModel rowCount is not up-to-date and the selection is
     updated after the MD::fileSelectionChange occurs, hence update the status bar from
     here.
 */
+
     if (!G::isInitializing) {
-        QListView::selectionChanged(selected, deselected);
-        QModelIndexList selList = selectionModel()->selectedRows();
-        foreach (QModelIndex idx, selList) {
-            qDebug() << CLASSFUNCTION << idx.row();
+        // selection behavior
+        bool anchorCurrent = true;
+        // select or deselect change
+        bool isSelected = !selected.isEmpty();
+        bool isDeselected = !deselected.isEmpty();
+        // changed row
+//        int changedRow = -1;
+        int deselectedRow = -1;
+        int selectedRow = -1;
+        if (isDeselected) deselectedRow = deselected.at(0).indexes().at(0).row();
+        if (isSelected) selectedRow = selected.at(0).indexes().at(0).row();
+        // current index
+        int currentIdxRow = currentIndex().row();
+        // prior current: current in datamodel before MW::fileSelectionChange called
+        QModelIndex currentSfIdx = m2->currSfIdx;
+        int currentSfRow = currentSfIdx.row();
+        int selectedRowsCount = selectionModel()->selectedRows().count();
+        // is change row also prior current row
+        bool isCurrent = false;
+        if (deselectedRow == currentSfRow) isCurrent = true;
+        if (selectedRow == currentSfRow) isCurrent = true;
+
+        QString type = "";
+        if (!selectedRowsCount && isDeselected)
+            type = "UniSelection, Deselect current";
+        else if (isDeselected && isCurrent && selectedRowsCount)
+            type = "MultiSelection, Deselect current";
+        else if (isDeselected && !isCurrent && selectedRowsCount)
+            type = "MultiSelection, Deselect non-current";
+        else if (anchorCurrent && isSelected && selectedRowsCount > 1)
+            type = "MultiSelect, Change, AnchorCurrent";
+        else
+            type = "Other";
+
+        QString title;
+
+        title = "SelectionCIconView::selectionChanged: " + type;
+        qDebug() << "\n" << title
+                 << "\n  anchorCurrent =" << anchorCurrent
+                 << "\n  isSelected           =" << isSelected
+                 << "\n  isDeselected         =" << isDeselected
+                 << "\n  isCurrent            =" << isCurrent
+                 << "\n  selectedRow          =" << selectedRow
+                 << "\n  deselectedRow        =" << deselectedRow
+//                 << "\n  changeRow            =" << changedRow
+                 << "\n  currentRow           =" << currentIdxRow
+                 << "\n  currentSfRow         =" << currentSfRow
+                 << "\n  nearest selected row =" << getNearestSelection(deselectedRow).row()
+                 << "\n  selectedRowsCount    =" << selectedRowsCount
+                    ;
+
+        // UniSelection, Deselect current: reselect deselection if no selection remaining
+        if (!selectedRowsCount && isDeselected) {
+            selectionModel()->select(currentIndex(), QItemSelectionModel::Select);
         }
-        qDebug() << CLASSFUNCTION << "selList.count() =" << selList.count() << "\n";
-        if (selList.count() == 1) {
+
+        // MultiSelection, Deselect current: reset current to nearest next selected row
+        else if (isDeselected && isCurrent && selectedRowsCount) {
+            QModelIndex idx = getNearestSelection(deselectedRow);
+            selectionModel()->setCurrentIndex(idx, QItemSelectionModel::NoUpdate);
+            emit fileSelectionChange(idx, QModelIndex(), CLASSFUNCTION);
+        }
+
+        // MultiSelection, Deselect non-current: reset current index to before
+        else if (isDeselected && !isCurrent && selectedRowsCount) {
+            selectionModel()->setCurrentIndex(currentSfIdx, QItemSelectionModel::NoUpdate);
+        }
+
+        // MultiSelect, Change, AnchorCurrent: reset current to before
+        else if (anchorCurrent && isSelected && selectedRowsCount > 1) {
+            QListView::selectionChanged(selected, deselected);
+            selectionModel()->setCurrentIndex(currentSfIdx, QItemSelectionModel::NoUpdate);
             emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION);
         }
-        return;
-    }
 
-    QString s = "";
-//    qDebug() << CLASSFUNCTION << "\nSelected:  " << selected << "\nDeselected:" << deselected;
-//    if (/*selected.isEmpty() || !selected.at(0).isValid() ||*/ G::isInitializing)
-//        s = "Ignore invalid selection change";
-    if (G::isLogger) G::log(CLASSFUNCTION, s);
-    if (G::stop /*|| selected.isEmpty() || !selected.at(0).isValid()*/) {
-        return;
-    }
-    if (!G::isInitializing) {
-        // Check if deselecting current item
-        if (deselected.count() && deselected.at(0).indexes().count()) {
-            QModelIndex deSel = deselected.at(0).indexes().at(0);
-            QModelIndex idx = getNearestSelection();
-            qDebug() << CLASSFUNCTION << "Nearest row:  " << idx.row();
-            QListView::selectionChanged(selected, deselected);
-            emit fileSelectionChange(idx, deSel, "IconView::selectionChanged Deselect");
-//            setCurrentIndex(idx);
-//            selectThumb(idx.row());
-//            QModelIndex deSelected = deselected.at(0).indexes().at(0);
-//            qDebug() << CLASSFUNCTION << "deSelected row:  " << deSelected.row() << "m2->currentIdx.row():" << m2->currentIdx.row();
-//            G::wait(500);
-        }
         else {
+            // update the View
             QListView::selectionChanged(selected, deselected);
-            emit fileSelectionChange(selected.at(0).indexes().at(0), QModelIndex(), CLASSFUNCTION);
+            emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION);
         }
+
+        // update status bar
         QString s = "";
         if (m2->isStressTest) s = "   Stress count: " + QString::number(m2->slideCount);
         emit updateStatus(true, s, CLASSFUNCTION);
@@ -801,12 +862,13 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
 int IconView::getSelectedCount()
 {
 /*
-For some reason the selectionModel->selectedRows().count() is not up-to-date but
-selectedIndexes().count() works. This is called from MW::updateStatus to report the number of
-images selected.
+    For some reason the selectionModel->selectedRows().count() is not up-to-date but
+    selectedIndexes().count() works. This is called from MW::updateStatus to report the
+    number of images selected.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    return selectedIndexes().count();
+    return selectionModel()->selectedRows().count();
+//    return selectedIndexes().count();
 }
 
 QStringList IconView::getSelectedThumbsList()
@@ -838,6 +900,7 @@ void IconView::selectThumb(QModelIndex idx)
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, QString::number(idx.row()));
     if (idx.isValid()) {
         G::isNewSelection = true;
+        selectionModel()->clearSelection();
         setCurrentIndex(idx);
         scrollTo(idx, ScrollHint::PositionAtCenter);
     }
@@ -1599,6 +1662,11 @@ void IconView::mousePressEvent(QMouseEvent *event)
 
     // must finish event to update current index in iconView if mouse press on an icon
     if (indexAt(event->pos()).isValid()) QListView::mousePressEvent(event);
+
+    // clear selection if unmodified mouse click
+    if (event->modifiers() == Qt::NoModifier) {
+        selectionModel()->clearSelection();
+    }
 
     // capture mouse click position for imageView zoom/pan
     if (event->modifiers() == Qt::NoModifier) {

@@ -115,7 +115,9 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    thumbView->repaint();
+    QModelIndex idx1 = dm->sf->index(1, 0);
+    thumbView->selectionModel()->setCurrentIndex(idx1, QItemSelectionModel::NoUpdate);
+//    qDebug() << thumbView->selectionModel()->selectedRows().count();
     return;
 
     QModelIndex idx = fsTree->getCurrentIndex();

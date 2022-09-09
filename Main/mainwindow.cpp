@@ -1601,10 +1601,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         if (thumbView->isVisible())  thumbView->scrollToRow(currSfRow, __FUNCTION__);
         if (tableView->isVisible()) tableView->scrollToRow(currSfRow, __FUNCTION__);
     }
-    if (previous.isValid()) {
+//    if (previous.isValid()) {
         thumbView->repaint();
         gridView->repaint();
-    }
+//    }
 
     // reset table, grid or thumb item clicked
     G::fileSelectionChangeSource = "";
