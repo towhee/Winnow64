@@ -1,7 +1,7 @@
 BUGS / TO DO
+- Review all hotkeys ie + - not working on Mac
 - Drag to central view folder opening but not going to image in folder
 - Olympus subfolders not showing for USB drive in FSTree
-- Video stopped when advance using slider (change back)
 - Cursor tall rectangle over thumbnails for PNG files
 - Save preview as PNG include color manage corrections
 
@@ -66,6 +66,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Pressing or dragging video scrub control should not change playback state
 - Fix selection issue when deselect current image
 - Update target list and cache size for estSizeMB in ImageCache
 - PNG previews not showing in ImageView

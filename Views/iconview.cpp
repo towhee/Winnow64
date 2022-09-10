@@ -777,7 +777,6 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
         bool isSelected = !selected.isEmpty();
         bool isDeselected = !deselected.isEmpty();
         // changed row
-//        int changedRow = -1;
         int deselectedRow = -1;
         int selectedRow = -1;
         if (isDeselected) deselectedRow = deselected.at(0).indexes().at(0).row();
@@ -793,6 +792,7 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
         if (deselectedRow == currentSfRow) isCurrent = true;
         if (selectedRow == currentSfRow) isCurrent = true;
 
+        /*  Debugging
         QString type = "";
         if (!selectedRowsCount && isDeselected)
             type = "UniSelection, Deselect current";
@@ -805,22 +805,21 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
         else
             type = "Other";
 
-        QString title;
-
-        title = "SelectionCIconView::selectionChanged: " + type;
-        qDebug() << "\n" << title
-                 << "\n  anchorCurrent =" << anchorCurrent
+        qDebug() << "\n"
+                 << "IconView::selectionChanged: "
+                 << "\n  type                 =" << type
+                 << "\n  anchorCurrent        =" << anchorCurrent
                  << "\n  isSelected           =" << isSelected
                  << "\n  isDeselected         =" << isDeselected
                  << "\n  isCurrent            =" << isCurrent
                  << "\n  selectedRow          =" << selectedRow
                  << "\n  deselectedRow        =" << deselectedRow
-//                 << "\n  changeRow            =" << changedRow
                  << "\n  currentRow           =" << currentIdxRow
                  << "\n  currentSfRow         =" << currentSfRow
                  << "\n  nearest selected row =" << getNearestSelection(deselectedRow).row()
                  << "\n  selectedRowsCount    =" << selectedRowsCount
                     ;
+        //*/
 
         // UniSelection, Deselect current: reselect deselection if no selection remaining
         if (!selectedRowsCount && isDeselected) {

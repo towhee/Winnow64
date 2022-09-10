@@ -20,6 +20,7 @@ VideoView::VideoView(QWidget *parent, IconView *thumbView) : QWidget{parent}
 
     playPauseBtn = new QToolButton;
     playPauseBtn->setIcon(QIcon(":/images/icon16/media_play.png"));
+    playPauseBtn->setToolTip("Play/Pause.  Keyboard shortcut: Space Key");
     connect(playPauseBtn, &QToolButton::pressed, this, &VideoView::playOrPause);
 
     scrub = new QSlider(Qt::Horizontal, this);
@@ -80,17 +81,19 @@ void VideoView::stop()
 void VideoView::scrubMoved(int ms)
 {
     if (G::isLogger) G::log("VideoView::scrubMoved");
-    video->setPosition(ms * 1000);
-    video->pause();
-    playPauseBtn->setIcon(QIcon(":/images/icon16/media_play.png"));
+    int currentState = video->playOrPause();  // 0 = playing  1 = paused
+    video->setPosition(ms * 1000);            // auto calls play after position change
+    if (currentState == VideoWidget::PlayState::Paused)
+        video->pause();
 }
 
 void VideoView::scrubPressed()
 {
     if (G::isLogger) G::log("VideoView::scrubPressed");
-    video->setPosition(scrub->value() * 1000);
-    video->pause();
-    playPauseBtn->setIcon(QIcon(":/images/icon16/media_play.png"));
+    int currentState = video->playOrPause();  // 0 = playing  1 = paused
+    video->setPosition(scrub->value() * 1000);// auto calls play after position change
+    if (currentState == VideoWidget::PlayState::Paused)
+        video->pause();
 }
 
 void VideoView::durationChanged(qint64 duration_ms)
@@ -137,10 +140,10 @@ void VideoView::playOrPause()
     if (G::isLogger) G::log("VideoView::playOrPause");
     qDebug() << "";
     switch (video->playOrPause()) {
-    case VideoWidget::PlayState::Playing:
+    case VideoWidget::PlayState::Playing:  // 1
         pause();
         break;
-    case VideoWidget::PlayState::Paused:
+    case VideoWidget::PlayState::Paused:   // 2
         play();
         break;
     case VideoWidget::PlayState::Unavailable:
