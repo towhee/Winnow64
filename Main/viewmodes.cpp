@@ -40,9 +40,9 @@ void MW::loupeDisplay()
     /* show imageView or videoView in the central widget. This makes thumbView visible,
     and it updates the index to its previous state. The index update triggers
     fileSelectionChange */
-    bool isVideo = dm->sf->index(currSfRow,
-    G::VideoColumn).data().toBool(); if (isVideo) {
-    centralLayout->setCurrentIndex(VideoTab);
+    bool isVideo = dm->sf->index(currSfRow, G::VideoColumn).data().toBool();
+    if (isVideo) {
+        centralLayout->setCurrentIndex(VideoTab);
     }
     else {
         centralLayout->setCurrentIndex(LoupeTab);

@@ -695,6 +695,13 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         else if (fullScreenAction->isChecked()) escapeFullScreen();
     }
 
+    bool isVideoMode = centralLayout->currentIndex() == VideoTab;
+    if (isVideoMode) {
+        if (event->key() == Qt::Key_Space) {
+            videoView->playOrPause();
+        }
+    }
+
     if (G::isSlideShow) {
         int n = event->key() - 48;
         QVector<int> delay {0,1,2,3,5,10,30,60,180,600};
