@@ -1711,8 +1711,9 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 {
 /*
     Loads the folder containing the image and then selects the image.  Used by
-    MW::handleStartupArgs and MW::handleDrop.  After the folder change a delay is req'd
-    before the initial metadata has been cached and the image can be selected.
+    MW::handleStartupArgs and MW::handleDrop.  After the folder change a delay
+    is req'd before the initial metadata has been cached and the image can be
+    selected.
 */
     if (G::isLogger) G::log(CLASSFUNCTION, fPath);
     setCentralMessage("Loading " + fPath + " ...");
@@ -2054,7 +2055,7 @@ void MW::loadConcurrentMetaDone()
     tableView->setColumnWidth(G::PathColumn, 24+8);
 }
 
-void MW::loadConcurrentStartImageCache()
+void MW::loadConcurrentStartImageCache(QString src)
 {
 //    G::track(CLASSFUNCTION);
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
@@ -2073,23 +2074,31 @@ void MW::loadConcurrentStartImageCache()
     folderAndFileSelectionChange has been executed then folderAndFileChangePath will be
     the file to select in the new folder; otherwise the first file in dm->sf will be
     selected. */
-    QString fPath = folderAndFileChangePath;
-    folderAndFileChangePath = "";
-    if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
-        qDebug() << CLASSFUNCTION << "valid folderAndFileChangePath";
-        if (thumbView->isVisible()) thumbView->selectThumb(fPath);
-        if (gridView->isVisible()) gridView->selectThumb(fPath);
+    QString fPath = "";
+    if (src == "Initial") {
+        fPath = folderAndFileChangePath;
+        folderAndFileChangePath = "";
+    //    }
+        if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
+            qDebug() << CLASSFUNCTION << "valid folderAndFileChangePath";
+            if (thumbView->isVisible()) thumbView->selectThumb(fPath);
+            if (gridView->isVisible()) gridView->selectThumb(fPath);
 
-        gridView->selectThumb(fPath);
-        currSfIdx = dm->proxyIndexFromPath(fPath);
-    }
-    else {
-        thumbView->selectFirst();
-        gridView->selectFirst();
-        currSfIdx = dm->sf->index(0,0);
+            gridView->selectThumb(fPath);
+            currSfIdx = dm->proxyIndexFromPath(fPath);
+        }
+        else {
+            thumbView->selectFirst();
+            gridView->selectFirst();
+            currSfIdx = dm->sf->index(0,0);
+        }
+
+        fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
     }
 
-    fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
+    if (src == "Final") {
+        emit setImageCachePosition(dm->currentFilePath, CLASSFUNCTION);
+    }
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
        InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
@@ -3672,33 +3681,34 @@ void MW::selectAllThumbs()
 void MW::toggleZoomDlg()
 {
 /*
-    This function provides a dialog to change scale and to set the toggleZoom value, which is
-    the amount of zoom to toggle with zoomToFit scale. The user can zoom to 100% (for example)
-    with a click of the mouse, and with another click, return to the zoomToFit scale. Here the
-    user can set the amount of zoom when toggled.
+    This function provides a dialog to change scale and to set the toggleZoom value,
+    which is the amount of zoom to toggle with zoomToFit scale. The user can zoom to 100%
+    (for example) with a click of the mouse, and with another click, return to the
+    zoomToFit scale. Here the user can set the amount of zoom when toggled.
 
-    The dialog is non-modal and floats at the bottom of the central widget. Adjustments are
-    made when the main window resizes or is moved or when a different workspace is invoked.
-    This only applies when a mode that can be zoomed is visible, so table and grid are not
-    applicable.
+    The dialog is non-modal and floats at the bottom of the central widget. Adjustments
+    are made when the main window resizes or is moved or when a different workspace is
+    invoked. This only applies when a mode that can be zoomed is visible, so table and
+    grid are not applicable.
 
-    When the zoom dialog is created, zoomDlg->show makes the dialog visible and also gives it
-    the focus, but the design is for the zoomDlg to only have focus when a mouseover occurs.
-    The focus is set to MW when the zoomDlg leaveEvent fires and after zoomDlg->show.
+    When the zoom dialog is created, zoomDlg->show makes the dialog visible and also
+    gives it the focus, but the design is for the zoomDlg to only have focus when a
+    mouseover occurs. The focus is set to MW when the zoomDlg leaveEvent fires and after
+    zoomDlg->show.
 
-    NOTE: the dialog window flag is Qt::WindowStaysOnTopHint. When The app focus changes to
-    another app, the zoom dialog is hidden so it does not float on top of other apps (this is
-    triggered in the slot MW::appStateChange). The windows flag Qt::WindowStaysOnTopHint is
-    not changed as this automatically hides the window - it is easier to just hide it. The
-    prior state of ZoomDlg is held in isZoomDlgVisible.
+    NOTE: the dialog window flag is Qt::WindowStaysOnTopHint. When The app focus changes
+    to another app, the zoom dialog is hidden so it does not float on top of other apps
+    (this is triggered in the slot MW::appStateChange). The windows flag
+    Qt::WindowStaysOnTopHint is not changed as this automatically hides the window - it
+    is easier to just hide it. The prior state of ZoomDlg is held in isZoomDlgVisible.
 
-    When the zoom is changed this is signalled to ImageView and CompareImages, which in turn
-    make the scale changes to the image. Conversely, changes in scale originating from
-    toggleZoom mouse clicking in ImageView or CompareView, or scale changes originating from
-    the zoomInAction and zoomOutAction are signaled and updated here. This can cause a
-    circular message, which is prevented by variance checking. If the zoom factor has not
-    changed more than can be accounted for in int/qreal conversions then the signal is not
-    propagated.
+    When the zoom is changed this is signalled to ImageView and CompareImages, which in
+    turn make the scale changes to the image. Conversely, changes in scale originating
+    from toggleZoom mouse clicking in ImageView or CompareView, or scale changes
+    originating from the zoomInAction and zoomOutAction are signaled and updated here.
+    This can cause a circular message, which is prevented by variance checking. If the
+    zoom factor has not changed more than can be accounted for in int/qreal conversions
+    then the signal is not propagated.
 
 */
     if (G::isLogger) G::log(CLASSFUNCTION);

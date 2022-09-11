@@ -88,7 +88,6 @@
        </property>
        <property name="font">
         <font>
-         <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
@@ -266,7 +265,6 @@
        </property>
        <property name="font">
         <font>
-         <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
@@ -460,7 +458,6 @@
        </property>
        <property name="font">
         <font>
-         <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
@@ -650,7 +647,6 @@
        </property>
        <property name="font">
         <font>
-         <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
@@ -763,7 +759,6 @@
        </property>
        <property name="font">
         <font>
-         <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
@@ -833,7 +828,6 @@
        </property>
        <property name="font">
         <font>
-         <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
@@ -927,7 +921,6 @@
        </property>
        <property name="font">
         <font>
-         <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
@@ -966,11 +959,26 @@
       </item>
       <item>
        <property name="text">
+        <string>Video</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>Play / Pause</string>
+        </property>
+        <property name="text">
+         <string>Spacebar</string>
+        </property>
+        <property name="text">
+         <string>Also mouse click on video</string>
+        </property>
+       </item>
+      </item>
+      <item>
+       <property name="text">
         <string>Slideshow</string>
        </property>
        <property name="font">
         <font>
-         <weight>75</weight>
          <bold>true</bold>
         </font>
        </property>
@@ -1039,7 +1047,7 @@
        </item>
        <item>
         <property name="text">
-         <string>Pause / continue</string>
+         <string>Pause / Continue</string>
         </property>
         <property name="text">
          <string>Spacebar</string>
