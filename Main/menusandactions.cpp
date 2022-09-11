@@ -1955,8 +1955,9 @@ void MW::enableSelectionDependentMenus()
     rgh check if still working
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
+    return;
 
-    if(selectionModel->selectedRows().count() > 0) {
+    if (selectionModel->selectedRows().count() > 0) {
         openWithMenu->setEnabled(true);
         ingestAction->setEnabled(true);
         revealFileAction->setEnabled(true);

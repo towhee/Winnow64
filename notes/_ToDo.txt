@@ -1,10 +1,10 @@
 BUGS / TO DO
-- Review all hotkeys ie + - not working on Mac
-- Drag to central view folder opening but not going to image in folder
 - Olympus subfolders not showing for USB drive in FSTree
 - Cursor tall rectangle over thumbnails for PNG files
 - Save preview as PNG include color manage corrections
+- MW::enableSelectionDependentMenus needs updating for all situations
 
+- Menu stop slideshow S is wrong
 - Open with permissions issue
 - Painter not active, state will be reset by begin
 - Embellish not resetting properly
@@ -12,7 +12,6 @@ BUGS / TO DO
 - InfoView context remove "set fixed size" and add "copy field"
 - On Mac: qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family ".AppleSystemFallback" with one that exists to avoid this cost.
 - Image metadata report does not show sidecar for PNG file
-- MW::enableSelectionDependentMenus needs updating for all situations
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
 - Unicode path heics not rendering
 - Figure out G::error and G::errlog
@@ -25,7 +24,7 @@ BUGS / TO DO
 - Tiff with compression = 7, 8
 - TIFF PhotometricInterpretation <> 2 https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html
 - Not remembering grid mode at opening
-- Does copy / paste files work inside Winnow
+- Copy / paste files inside Winnow
 - Maintain count when switch folders during the same ingest
 - Cannot delete heic files on PC
 - Add hif file format
@@ -45,9 +44,6 @@ MAC
 - Add HEIC files to Mac https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/ImageIOGuide/imageio_source/ikpg_source.html#//apple_ref/doc/uid/TP40005462-CH218-SW3
 - DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
 - Mac check for updates not done yet
-- Open with ... (doesn't work on macOS)
-QT 6
-- Replace QTextCodec::codecForMib(106)->toUnicode(xmpBa)
 PERFORMANCE
 - HEIF files are slow
 CODE IMPROVEMENTS
@@ -57,7 +53,6 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
-- Export to Winnow from LR does not work if Winnow is open
 - Add "How this works" throughout app?
 - https://github.com/wang-bin/qdevicewatcher
 - Add fade and alias to stroke
@@ -66,6 +61,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Drag to central view folder opening but not going to image in folder
+- Export to Winnow from LR does not work if Winnow is open
+- ImageView zoom in and out fixed
 - Pressing or dragging video scrub control should not change playback state
 - Fix selection issue when deselect current image
 - Update target list and cache size for estSizeMB in ImageCache

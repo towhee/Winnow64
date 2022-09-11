@@ -32,7 +32,7 @@ signals:
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
-    void triggerImageCache();
+    void triggerImageCache(QString src);
 
     void updateIconBestFit();  // req'd?
     void done();               // not being used - req'd?
@@ -62,6 +62,7 @@ private:
     int visibleIconCount;
     int sfRowCount;
     int iconLimit;                  // iconChunkSize * expansionFactor
+    int imageCacheTriggerCount = 50;
 
     int newStartRow = -1;
 

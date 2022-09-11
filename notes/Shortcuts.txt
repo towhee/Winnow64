@@ -53,6 +53,7 @@ Manage workspace             W    ⌘
 Default workspace            W    ⌘  ⇧
 Zoom fit <-> 100%            Z
 Recover prev picks           Z    ⌘      ⌥
+Play/Pause video             Space
 Exit full screen             Esc
 Edit search text             F2
 Folder dock                  F3          ⌥

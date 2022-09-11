@@ -365,9 +365,9 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
         // do something with row
         readRow(row);
         if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
-            if (i == sfRowCount || i == 50) {
+            if (i == sfRowCount - 1 || i == imageCacheTriggerCount) {
                 // start image caching thread after head start
-                emit triggerImageCache();
+                emit triggerImageCache("Initial");
                 imageCachingStarted = true;
             }
         }
@@ -398,12 +398,13 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
     }
     G::allMetadataLoaded = true;
 
-
     cleanupIcons();
 
     emit updateIconBestFit();
     // refresh image cache in case not up-to-date (usually issue is target range)
-    emit triggerImageCache();
+    if (sfRowCount > imageCacheTriggerCount) {
+        emit triggerImageCache("Final");
+    }
     emit done();
     isRunning = false;
 }

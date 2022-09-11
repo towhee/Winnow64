@@ -294,10 +294,12 @@ void ImageView::scale()
     If isSlideshow then hide mouse cursor unless is moves.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    /* qDebug() << CLASSFUNCTION
+    /*
+    qDebug() << CLASSFUNCTION
              << "isScrollable =" << isScrollable
              << "isFit =" << isFit
              << "zoom =" << zoom
+             << "highDpiZoom =" << zoom / G::actDevicePixelRatio
              << "zoomFit =" << zoomFit
              << "rect().width() =" << rect().width()
              << "sceneRect().width() =" << sceneRect().width();
@@ -403,8 +405,8 @@ void ImageView::getScrollBarStatus()
 QPointF ImageView::getScrollPct()
 {
 /*
-   The view center is defined by the scrollbar values. The value is converted to a percentage
-   to be used to match position in the next image if zoomed.
+   The view center is defined by the scrollbar values. The value is converted to a
+   percentage to be used to match position in the next image if zoomed.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     getScrollBarStatus();
@@ -538,7 +540,6 @@ void ImageView::updateToggleZoom(qreal toggleZoomValue)
 void ImageView::refresh()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
     setFitZoom();
     scale();
 }
@@ -546,17 +547,64 @@ void ImageView::refresh()
 void ImageView::zoomIn()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    /*
+    double highDpiZoom = zoom / G::actDevicePixelRatio;
+    QPoint pTL = mapFromScene(0, 0);
+    QPoint pBR = mapFromScene(scene->width(), scene->height());
+    QPointF vCtr = mapToScene(rect().center());
+    int sceneViewWidth = pBR.x() - pTL.x();
+    int sceneViewHeight = pBR.y() - pTL.y();
+    scrl.hMin = horizontalScrollBar()->minimum();
+    scrl.hMax = horizontalScrollBar()->maximum();
+    scrl.hVal = horizontalScrollBar()->value();
+    scrl.hPct = qreal(scrl.hVal - scrl.hMin) / (scrl.hMax - scrl.hMin);
+    scrl.vMin = verticalScrollBar()->minimum();
+    scrl.vMax = verticalScrollBar()->maximum();
+    scrl.vVal = verticalScrollBar()->value();
+    scrl.vPct = qreal(scrl.vVal - scrl.vMin) / (scrl.vMax - scrl.vMin);
+    qDebug() << CLASSFUNCTION
+             << "\n  zoom           =" << zoom
+             << "\n  highDpiZoom    =" << highDpiZoom
+             << "\n  zoomFit        =" << zoomFit
+             << "\n  pTL            =" << pTL
+             << "\n  pBR            =" << pBR
+             << "\n  rect()         =" << rect()
+             << "\n  vCtr           =" << vCtr
+             << "\n  sceneRect()    =" << sceneRect()
+             << "\n  sceneViewW     =" << sceneViewWidth
+             << "\n  sceneViewH     =" << sceneViewHeight
+             << "\n  scrl.hMin      =" << scrl.hMin
+             << "\n  scrl.hMax      =" << scrl.hMax
+             << "\n  scrl.hVal      =" << scrl.hVal
+             << "\n  scrl.vMin      =" << scrl.vMin
+             << "\n  scrl.vMax      =" << scrl.vMax
+             << "\n  scrl.vVal      =" << scrl.vVal
+             << "\n  scrl.hPct      =" << scrl.hPct
+             << "\n  scrl.vPct      =" << scrl.vPct
+                ;
+                //*/
+
+    QPointF vCtr = mapToScene(rect().center());
     zoom *= (1.0 + zoomInc);
     zoom = zoom > zoomMax ? zoomMax: zoom;
+    isFit = false;
     scale();
+    if (zoom > zoomFit) {
+        centerOn(vCtr);
+    }
 }
 
 void ImageView::zoomOut()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    QPointF vCtr = mapToScene(rect().center());
     zoom *= (1.0 - zoomInc);
     zoom = zoom < zoomMin ? zoomMin : zoom;
+    isFit = false;
     scale();
+    if (zoom > zoomFit) {
+        centerOn(vCtr);
+    }
 }
 
 void ImageView::zoomToFit()
