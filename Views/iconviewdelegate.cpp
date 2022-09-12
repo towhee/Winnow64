@@ -280,7 +280,6 @@ void IconViewDelegate::setCurrentIndex(QModelIndex current)
 
 void IconViewDelegate::setCurrentRow(int row)
 {
-    qDebug() << CLASSFUNCTION << row ;
     currentRow = row;
 }
 
@@ -417,6 +416,7 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->drawText(textRect, Qt::AlignHCenter, labelText);
     }
 
+    qDebug() << CLASSFUNCTION << thumbRect << iconRect;
     painter->setClipping(true);
     painter->setClipPath(iconPath);
     painter->drawPixmap(iconRect, icon.pixmap(iconSize.width(),iconSize.height()));

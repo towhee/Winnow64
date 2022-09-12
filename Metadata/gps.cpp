@@ -58,6 +58,10 @@ QString GPS::decode(QFile &file,
     double gpsLatSec = u.getReal(file, gpsLatOffset, isBigEnd);
     if (gpsLatSec == 0) gpsLatSec = (gpsLatMin - static_cast<int>(gpsLatMin)) * 60;
     gpsCoord += (QString::number(gpsLatSec, 'f', 3) + secondSymbol);
+    quint32 v = ifdDataHash.value(1).tagValue;
+    if (v >= 65536) return "Error";
+//    QChar c = QChar(v);
+//    bool test = c.isNonCharacter();
     QString gpsLatRef = QChar(ifdDataHash.value(1).tagValue);
     gpsCoord += " " + gpsLatRef + " ";
 
