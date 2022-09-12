@@ -1,4 +1,6 @@
 BUGS / TO DO
+- Thumbnails not expanding correctly
+- Cursor not changing in thumbnail when zoom > 1
 - Olympus subfolders not showing for USB drive in FSTree
 - Cursor tall rectangle over thumbnails for PNG files
 - Save preview as PNG include color manage corrections
