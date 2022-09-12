@@ -1748,6 +1748,7 @@ void IconView::zoomCursor(const QModelIndex &idx, bool forceUpdate, QPoint mouse
     centralWidget geometry.
 */
 //    if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
     if (G::isEmbellish) return;
     bool isVideo = dm->index(m2->currSfRow, G::VideoColumn).data().toBool();
     if (isVideo) return;
@@ -1830,7 +1831,7 @@ void IconView::zoomCursor(const QModelIndex &idx, bool forceUpdate, QPoint mouse
         if (hScale < vScale) {
             w = static_cast<int>(iconW * scale);
             h = static_cast<int>(w / ivA);
-            }
+        }
         else {
             h = static_cast<int>(iconH * scale);
             w = static_cast<int>(h * ivA);
@@ -1882,7 +1883,8 @@ void IconView::zoomCursor(const QModelIndex &idx, bool forceUpdate, QPoint mouse
     // check if mac Accessibility has scaled pointer size
     float scale = 1.0;
     #ifdef Q_OS_MAC
-    scale = Mac::getMouseCursorMagnification();
+        scale = Mac::getMouseCursorMagnification();
+        if (scale == 0) scale = 1;
     #endif
     w /= scale;
     h /= scale;
