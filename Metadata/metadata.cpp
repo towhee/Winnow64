@@ -1077,7 +1077,8 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
         m.fPath = fPath;
         m.currRootFolder = fileInfo.absoluteDir().absolutePath();
         m.size = fileInfo.size();
-
+        qWarning() << CLASSFUNCTION << "NOT IN hasMetadataFormats. SOURCE ="
+                   << source;
         return false;
     }
 

@@ -1528,7 +1528,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     G::isNewSelection = false;
 
 
-   /*
+//   /*
     qDebug() << "\n" << CLASSFUNCTION
              << "src =" << src
              << "G::isInitializing =" << G::isInitializing
@@ -1660,7 +1660,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         is pressed. (turn off image caching for testing with useImageCache = false. set in
         MW::MW) */
 
-        /*
+//        /*
         qDebug() << CLASSFUNCTION << "IMAGECACHE"
                  << "isNoModifier =" << (key == Qt::NoModifier)
                  << "isShiftModifier =" << (key == Qt::ShiftModifier)
@@ -1959,6 +1959,7 @@ void MW::updateIconRange(int row)
 void MW::loadConcurrentNewFolder()
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
 //    G::isNewFolderLoaded = true;
     G::allMetadataLoaded = false;
 //    dm->loadingModel = true;
@@ -2059,6 +2060,7 @@ void MW::loadConcurrentStartImageCache(QString src)
 {
 //    G::track(CLASSFUNCTION);
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION << src ;
     if (isShowCacheProgressBar) {
         cacheProgressBar->clearProgress();
     }
@@ -2078,7 +2080,6 @@ void MW::loadConcurrentStartImageCache(QString src)
     if (src == "Initial") {
         fPath = folderAndFileChangePath;
         folderAndFileChangePath = "";
-    //    }
         if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
             qDebug() << CLASSFUNCTION << "valid folderAndFileChangePath";
             if (thumbView->isVisible()) thumbView->selectThumb(fPath);
