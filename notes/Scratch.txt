@@ -1,51 +1,5 @@
-173 MW::loupeDisplay
-3,602 IconView::selectThumb                              -1
-1,434 ImageView::loadImage                                Src:DevicePixelRatioChange
- 72 MW::loupeDisplay
-829 IconView::selectThumb                              -1
- 58 MW::loupeDisplay
- 14 IconView::selectThumb                              -1
- 51 MW::loupeDisplay
-8,985 IconView::selectThumb                              -1
- 82 MW::loupeDisplay
-265 IconView::selectThumb                              -1
-
-  0 MW::folderSelectionChange
-  0 MW::stopAndClearAll
-532 MetaRead::stop
-24,930 DataModel::clearDataModel
-  1 Filters::removeChildrenDynamicFilters
-1,953 Filters::clearAll
-930 DataModel::load                                    clearDataModel
-340 DataModel::load                                    continue loading
-  0 DataModel::addFileData                             8 images
-  1 MW::loadConcurrentNewFolder
- 20 IconView::calcViewportRange
- 82 ImageCache::initImageCache
- 91 ImageCache::buildImageCacheList
-475 MetaRead::initialize
-96,437 MetaRead::read
-1,581 MW::loadConcurrentStartImageCache
- 28 IconView::selectThumb                              0
-534 MW::fileSelectionChange                            IconView::selectionChanged /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
- 34 ImageView::loadImage                               /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg Src:MW::fileSelectionChange
-  3 IconView::calcViewportRange
-431 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
- 51 IconView::selectThumb                              0
-  4 MW::gridHasScrolled
- 20 MW::fileSelectionChange                            MW::loadConcurrentStartImageCache /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
- 10 ImageView::loadImage                               /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg Src:MW::fileSelectionChange
-  1 IconView::calcViewportRange
-354 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
- 28 MW::updateIconBestFit
-1,404 MW::loadConcurrentStartImageCache
- 29 IconView::selectThumb                              0
- 48 IconView::selectThumb                              0
- 11 MW::gridHasScrolled
- 23 MW::fileSelectionChange                            MW::loadConcurrentStartImageCache /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
- 16 ImageView::loadImage                               /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg Src:MW::fileSelectionChange
-  2 IconView::calcViewportRange
-102 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
-  0 MW::loadConcurrentMetaDone
-6,122 MW::updateIconBestFit
-5,264,830 ImageCache::fillCache
+2 MW::thumbsEnlarge
+2 IconView::thumbsEnlarge
+2 IconView::setThumbParameters
+10 MW::setThumbDockHeight
+219 MW::setThumbDockFeatures

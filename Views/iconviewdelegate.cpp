@@ -79,19 +79,6 @@ IconView thumbDock Anatomy
 |   |
 +-------------------------------------------------------------------------------->
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 */
 
 IconViewDelegate::IconViewDelegate(QObject *parent,

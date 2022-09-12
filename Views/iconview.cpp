@@ -245,9 +245,9 @@ void IconView::setThumbParameters()
     There are two instances of ThumbView: thumbView and gridView. They are
     distinguished by their assigned object names: "Thumbnails" and "Grid".
 
-    Both instances update the delegate. If it is the "Thumbnails" thumbView instance then
-    MW::setThumbDockHeight is called (friend class) so it can be resized to fit the possibly
-    altered thumbnail dimensions.
+    Both instances update the delegate. If it is the "Thumbnails" IconView instance then
+    MW::setThumbDockHeight is called (friend class) so it can be resized to fit the
+    possibly altered thumbnail dimensions.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     /* MUST set thumbdock height to fit thumbs BEFORE updating the delegate.  If not, and the
