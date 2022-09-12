@@ -349,9 +349,9 @@ void IconViewDelegate::paint(QPainter *painter,
 //                ;
     // icon size
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
-    QSize iconSize = icon.actualSize(thumbSize);
-    /*
-//    double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
+//    QSize iconSize = icon.actualSize(thumbSize);
+//    /*
+    double aspectRatio = index.model()->index(row, G::AspectRatioColumn).data().toDouble();
     QSize iconSize = thumbSize;
     if (aspectRatio > 1) {
         iconSize.setHeight(thumbSize.width() * 1.0 / aspectRatio);
@@ -419,6 +419,7 @@ void IconViewDelegate::paint(QPainter *painter,
     qDebug() << CLASSFUNCTION << thumbRect << iconRect;
     painter->setClipping(true);
     painter->setClipPath(iconPath);
+//    painter->drawPixmap(thumbRect, icon.pixmap(iconSize.width(),iconSize.height()));
     painter->drawPixmap(iconRect, icon.pixmap(iconSize.width(),iconSize.height()));
     painter->setClipping(false);
 
