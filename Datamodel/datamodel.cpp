@@ -917,7 +917,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::MegaPixelsColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::LoadMsecPerMpColumn), m.loadMsecPerMp);
     setData(index(row, G::LoadMsecPerMpColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-    setData(index(row, G::AspectRatioColumn), QString::number((m.width * 1.0 / m.height), 'f', 2));
+    setData(index(row, G::AspectRatioColumn), QString::number((aspectRatio(m.width, m.height, m.orientation)), 'f', 2));
+//    setData(index(row, G::AspectRatioColumn), QString::number((m.width * 1.0 / m.height), 'f', 2));
     setData(index(row, G::AspectRatioColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::OrientationColumn), QString::number(m.orientation));
     setData(index(row, G::RotationColumn), QString::number(m.rotationDegrees));
@@ -1017,6 +1018,16 @@ bool DataModel::metadataLoaded(int dmRow)
     return index(dmRow, G::MetadataLoadedColumn).data().toBool();
 }
 
+double DataModel::aspectRatio(int w, int h, int orientation)
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (w == 0 || h == 0) return 1.0;
+    // portrait
+    if (orientation == 8) return h * 1.0 / w;
+    // landscape
+    else return w * 1.0 / h;
+}
+
 void DataModel::setValue(QModelIndex dmIdx, QVariant value, int role)
 {
     mutex.lock();
@@ -1066,6 +1077,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
                  << instance << fromInstance;
         return;
     }
+    int row = dmIdx.row();
     QString modelDuration = index(dmIdx.row(), G::DurationColumn).data().toString();
     mutex.lock();
     if (modelDuration == "") {
@@ -1074,11 +1086,18 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
             duration % 60, (duration * 1000) % 1000);
         QString format = "mm:ss";
         if (duration > 3600) format = "hh:mm:ss";
-        setData(index(dmIdx.row(), G::DurationColumn), durationTime.toString(format));
+        setData(index(row, G::DurationColumn), durationTime.toString(format));
     }
     QStandardItem *item = itemFromIndex(dmIdx);
     if (itemFromIndex(dmIdx)->icon().isNull()) {
-        if (item != nullptr) item->setIcon(pm);
+        if (item != nullptr) {
+            item->setIcon(pm);
+            // set aspect ratio for video
+            if (pm.height() > 0) {
+                QString aspectRatio = QString::number(pm.width() * 1.0 / pm.height(), 'f', 2);
+                setData(index(row, G::AspectRatioColumn), aspectRatio);
+            }
+        }
     }
     mutex.unlock();
     delete frameDecoder;

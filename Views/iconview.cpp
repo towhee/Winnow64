@@ -1568,6 +1568,8 @@ int IconView::getVerticalScrollBarMax()
 void IconView::leaveEvent(QEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+//    qDebug() << CLASSFUNCTION << event << QWidget::mapFromGlobal(QCursor::pos());
+
     setCursor(Qt::ArrowCursor);
     prevIdx = model()->index(-1, -1);
     QListView::leaveEvent(event);
@@ -1579,11 +1581,12 @@ void IconView::wheelEvent(QWheelEvent *event)
     QListView::wheelEvent(event);
 }
 
-bool IconView::event(QEvent *event) {   
+bool IconView::event(QEvent *event) {
 /*
     Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
+//    qDebug() << CLASSFUNCTION << event;
     if (event->type() == QEvent::NativeGesture) {
         qDebug() << "IconView::event" << event;
         QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);
@@ -1624,6 +1627,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
 //    qDebug() << "IconView::mousePressEvent" << event->pos() << hasMouseTracking();
 
     if (G::isLogger) G::log(CLASSFUNCTION);
+//    qDebug() << CLASSFUNCTION << event << event->pos();
     if (event->button() == Qt::RightButton) {
         // save mouse over index for toggle pick
         mouseOverIndex = indexAt(event->pos());
@@ -1694,7 +1698,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
 void IconView::mouseMoveEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-//    qDebug() << CLASSFUNCTION;
+//    qDebug() << CLASSFUNCTION << event;
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }
@@ -1702,9 +1706,12 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
 void IconView::mouseReleaseEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+//    qDebug() << CLASSFUNCTION << event;
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
     QListView::mouseReleaseEvent(event);
+    // if icons scroll after mouse click, redraw cursor for new icon
+    zoomCursor(indexAt(event->pos()), /*forceUpdate=*/true, event->pos());
 }
 
 //QModelIndex IconView::moveCursor(QAbstractItemView::CursorAction cursorAction,
@@ -1748,7 +1755,6 @@ void IconView::zoomCursor(const QModelIndex &idx, bool forceUpdate, QPoint mouse
     centralWidget geometry.
 */
 //    if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
     if (G::isEmbellish) return;
     bool isVideo = dm->index(m2->currSfRow, G::VideoColumn).data().toBool();
     if (isVideo) return;

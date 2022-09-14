@@ -291,9 +291,7 @@ void MetaRead::readRow(int sfRow)
     /*
     qDebug() << CLASSFUNCTION
              << "sfRow =" << sfRow
-             << "iconsLoaded.size() =" << iconsLoaded.size()
              << "iconChunkSize =" << iconChunkSize
-             << "adjIconChunkSize =" << adjIconChunkSize
              ;
     //*/
 
@@ -364,7 +362,6 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
         if (abort) break;
         // do something with row
         readRow(row);
-        qDebug() << CLASSFUNCTION << row << i << sfRowCount;
         if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
             if (i == sfRowCount - 1 || i == imageCacheTriggerCount) {
                 // start image caching thread after head start

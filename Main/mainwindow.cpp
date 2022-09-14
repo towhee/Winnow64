@@ -1528,7 +1528,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     G::isNewSelection = false;
 
 
-//   /*
+   /*
     qDebug() << "\n" << CLASSFUNCTION
              << "src =" << src
              << "G::isInitializing =" << G::isInitializing
@@ -1559,6 +1559,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         thumbView->selectThumb(0);
         return;
     }
+
+    // update icons if req'd
+    loadConcurrent(current.row());
 
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
@@ -1660,7 +1663,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         is pressed. (turn off image caching for testing with useImageCache = false. set in
         MW::MW) */
 
-//        /*
+        /*
         qDebug() << CLASSFUNCTION << "IMAGECACHE"
                  << "isNoModifier =" << (key == Qt::NoModifier)
                  << "isShiftModifier =" << (key == Qt::ShiftModifier)
@@ -1959,10 +1962,6 @@ void MW::updateIconRange(int row)
 void MW::loadConcurrentNewFolder()
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
-//    G::isNewFolderLoaded = true;
-    G::allMetadataLoaded = false;
-//    dm->loadingModel = true;
     // reset for bestAspect calc
     G::iconWMax = G::minIconSize;
     G::iconHMax = G::minIconSize;
@@ -1990,25 +1989,17 @@ void MW::loadConcurrentNewFolder()
     // read metadata using MetaRead
     metaRead->initialize();     // only when change folders
     emit startMetaRead(currSfRow, CLASSFUNCTION);
-    // read metadata using concurrent in metadataCacheThread
-//    metadataCacheThread->initialize();     // only when change folders
-//    metadataCacheThread->mr_read(currSfRow);
-}
-
-void MW::loadConcurrentWhenOkay(int newRow, QString src)
-{
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Row =" + QString::number(newRow));
-    if (!G::allMetadataLoaded || !G::allIconsLoaded) {
-        if (!dm->abortLoadingModel) {
-            emit startMetaRead(newRow, CLASSFUNCTION);
-        }
-    }
 }
 
 void MW::loadConcurrent(int sfRow)
 {
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Row =" + QString::number(sfRow));
     updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
-    emit startMetaRead(sfRow, CLASSFUNCTION);
+    if (!G::allMetadataLoaded || !G::allIconsLoaded) {
+        if (!dm->abortLoadingModel) {
+            emit startMetaRead(sfRow, CLASSFUNCTION);
+        }
+    }
 }
 
 void MW::loadConcurrentMetaDone()
@@ -2040,7 +2031,7 @@ void MW::loadConcurrentMetaDone()
        would prematurely trigger Metadata::writeXMP */
     G::isNewFolderLoadedAndInfoViewUpToDate = true;
 //    G::isNewFolderLoaded = true;
-    dm->setAllMetadataLoaded(true);    //G::allMetadataLoaded = true;
+    dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
     filters->setEnabled(true);
     filterMenu->setEnabled(true);
@@ -2060,7 +2051,7 @@ void MW::loadConcurrentStartImageCache(QString src)
 {
 //    G::track(CLASSFUNCTION);
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION << src ;
+//    qDebug() << CLASSFUNCTION << src ;
     if (isShowCacheProgressBar) {
         cacheProgressBar->clearProgress();
     }
@@ -2283,7 +2274,8 @@ void MW::thumbHasScrolled()
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else scrollChange(thumbView->midVisibleCell, "MW::thumbHasScrolled");
+            else loadConcurrent(thumbView->midVisibleCell);
+//            else scrollChange(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         }
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
@@ -2333,7 +2325,8 @@ void MW::gridHasScrolled()
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection && gridView->isVisible()) {
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else scrollChange(gridView->midVisibleCell, CLASSFUNCTION);
+            else loadConcurrent(gridView->midVisibleCell);
+//            else scrollChange(gridView->midVisibleCell, CLASSFUNCTION);
         }
     }
     G::ignoreScrollSignal = false;
@@ -2379,7 +2372,8 @@ void MW::tableHasScrolled()
         if (!G::isNewSelection) {
             qDebug() << CLASSFUNCTION;
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
-            else scrollChange(tableView->midVisibleRow, CLASSFUNCTION);
+            else loadConcurrent(tableView->midVisibleRow);
+//            else scrollChange(tableView->midVisibleRow, CLASSFUNCTION);
         }
     }
     G::ignoreScrollSignal = false;
