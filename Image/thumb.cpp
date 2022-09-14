@@ -177,8 +177,6 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     This thumbnail is used by the grid and filmstrip views.
 */
     if (G::isLogger) G::log("Thumb::loadThumb", fPath);
-//    /*
-//    */
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.suffix().toLower();
     int dmRow = dm->fPathRow[fPath];

@@ -489,7 +489,6 @@ private slots:
                                 ImageCacheData::Cache cache,
                                 QString source);
     // caching
-    void loadConcurrentWhenOkay(int newRow = 0, QString src = "");
     void loadConcurrent(int sfRow = 0);
     void loadConcurrentNewFolder();
     void loadConcurrentMetaDone();

@@ -143,6 +143,7 @@ private:
     bool addFileData();
     void addFileDataForRow(int row, QFileInfo fileInfo);
     void rawPlusJpg();
+    double aspectRatio(int w, int h, int orientation);
 
     int imageCount;
     int countInterval = 0;
