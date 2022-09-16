@@ -1,5 +1,5 @@
 BUGS / TO DO
-- AWR aspect ratio wrong for portrait
+- Cannot delete 1 image
 - Folders with many videos stalling out
 - Updatevideo scrub pos more frequently
 - Olympus subfolders not showing for USB drive in FSTree
@@ -56,6 +56,7 @@ CODE IMPROVEMENTS
 - Tweak panning in compareView (eliminate incremental scrolling)
 - Cleanup imageview rubberband (not being used)
 ENHANCEMENTS
+- Portrait aspect ratios wrong
 - Add "How this works" throughout app?
 - https://github.com/wang-bin/qdevicewatcher
 - Add fade and alias to stroke

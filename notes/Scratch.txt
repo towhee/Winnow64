@@ -1,5 +1,884 @@
-2 MW::thumbsEnlarge
-2 IconView::thumbsEnlarge
-2 IconView::setThumbParameters
-10 MW::setThumbDockHeight
-219 MW::setThumbDockFeatures
+
+6,592,860 IconView::event
+       80 IconView::event
+        1 MW::focusChange                                     Current = bookmarks
+   14,431 MW::enableGoKeyActions
+    7,104 IconView::event
+    1,585 IconView::event
+        1 MW::bookmarkClicked
+       60 MW::isFolderValid                                  /Users/roryhill/Pictures/_test
+        9 FSTree::select
+        0 FSTree::scrollToCurrent
+
+        0 MW::folderSelectionChange
+        1 MW::stopAndClearAll
+        0 DataModel::abortLoad
+        0 MetaRead::stop
+        0 MetadataCache::stop
+        5 ImageCache::stop
+      132 MW::updateImageCachingThreadRunStatus
+       29 ImageCache::clearImageCache
+        7 MW::updateImageCacheStatus                         Instruction: Clear  Source: ImageCache::clearImageCache
+        1 MW::metadataChanged
+      244 InfoView::showOrHide
+       13 ImageView::clear
+        1 ImageView::clear
+        5 InfoView::clearInfo
+        0 MW::metadataChanged
+        4 InfoView::showOrHide
+        0 MW::metadataChanged
+        3 InfoView::showOrHide
+        0 MW::metadataChanged
+        3 InfoView::showOrHide
+        0 MW::metadataChanged
+        3 InfoView::showOrHide
+        0 MW::metadataChanged
+        3 InfoView::showOrHide
+        0 MW::metadataChanged
+        3 InfoView::showOrHide
+        3 MW::updateDisplayResolution
+        0 MW::metadataChanged
+        3 InfoView::showOrHide
+        7 MW::updateStatus
+      136 MW::updateStatusBar
+       22 Filters::isAnyFilter
+       20 MW::updateClassification
+   27,360 DataModel::clearDataModel
+        1 Filters::removeChildrenDynamicFilters
+       15 Filters::clearAll
+       35 Filters::setSearchNewFolder
+      130 MW::setThreadRunStatusInactive
+       30 MW::getSelectedPath
+        8 MW::setCentralMessage
+        2 EmbelProperties::doNotEmbellish
+        6 ComboBoxEditor::setValue
+       48 MW::isFolderValid                                  /Users/roryhill/Pictures/_test
+       18 BookMarks::select
+        1 MW::addRecentFolder
+        0 FSTree::scrollToCurrent
+       18 FSTree::getCurrentIndex
+        0 MW::enableEjectUsbMenu
+        0 MW::uncheckAllFilters
+        4 Filters::uncheckAllFilters
+        2 Filters::setSearchNewFolder
+      241 MW::updateMetadataThreadRunStatus
+        0 DataModel::load                                    clearDataModel
+       19 Filters::loadedDataModel
+        0 Filters::resizeEvent
+      295 Filters::resizeColumns
+        0 Filters::resizeEvent
+      188 Filters::resizeColumns
+        1 MW::setCentralMessage
+      248 DataModel::load                                    continue loading
+       36 DataModel::addFileData                             2 images
+       47 DataModel::addFileDataForRow
+        1 MW::setCentralMessage
+       24 DataModel::addFileDataForRow
+        0 DataModel::endLoad
+        0 DataModel::endLoad
+        1 MW::setCentralMessage
+        0 MW::updateStatus
+        0 IconView::getCurrentFilePath
+        0 MW::loadConcurrentNewFolder
+        1 MW::updateIconRange                                0
+        1 IconView::calcViewportRange
+        2 ImageCache::initImageCache
+        3 MW::updateImageCacheStatus                         Instruction: Clear  Source: ImageCache::initImageCache
+        1 MW::metadataChanged
+       31 InfoView::showOrHide
+       93 ImageCache::buildImageCacheList
+        5 MetaRead::initialize
+        1 MW::memoryReqdForPicks
+        0 MW::updateStatus
+MetaRead::start 0 false
+        0 MetaRead::start
+        1 IconView::getCurrentFilePath
+        2 MW::getZoom
+        1 MW::getZoom
+MetaRead::read src =  startRow = 0 sfRowCount = 2
+MetaRead::read  readRow = 0
+        1 MetaRead::read
+       12 IconView::getSelectedCount
+MetaRead::readRow start  row = 0 dm->sf->rowCount()= 2
+        1 MetaRead::readRow
+        3 MW::getPicked
+MetaRead::readMetadata start  row = 0
+        4 MetaRead::readMetadata
+        4 MW::getPosition
+        0 Metadata::loadImageMetadata                        /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg  Source: MetaRead::readMetadata
+        1 MW::getZoom
+        1 MW::metadataChanged
+        0 Metadata::readMetadata                             Source: MetaRead::readMetadata
+        5 InfoView::showOrHide
+        3 Metadata::clearMetadata
+        0 MW::getSelectedFileSize
+        1 MW::memoryReqdForSelection
+        2 Metadata::parseJPG
+        0 MW::metadataChanged
+        4 InfoView::showOrHide
+        2 MW::getPicked
+        0 MW::metadataChanged
+       19 InfoView::showOrHide
+       39 Xmp::Xmp
+       28 Xmp::initialize
+        3 Xmp::getItem
+       22 Xmp::getItem
+       36 Xmp::getItem
+        4 Xmp::getItem
+       23 Xmp::getItem
+       12 Xmp::getItem
+       22 Xmp::getItem
+       15 Xmp::getItem
+       34 Xmp::getItemList
+MetaRead::readMetadata done row = 0
+       61 Metadata::parseSidecar
+      105 DataModel::iconLoaded
+        1 MW::updateMetadataThreadRunStatus
+MetaRead::readIcon start  row = 0
+        1 MetaRead::readIcon
+        1 DataModel::isIconCaching
+        4 Thumb::loadThumb                                   /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        1 DataModel::readMetadataForItem                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        0 Metadata::loadImageMetadata                        /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg  Source: DataModel::readMetadataForItem
+        5 Metadata::readMetadata                             Source: DataModel::readMetadataForItem
+       32 Metadata::clearMetadata
+      205 Metadata::parseJPG
+       54 Xmp::Xmp
+       23 Xmp::initialize
+        2 Xmp::getItem
+       22 Xmp::getItem
+       10 Xmp::getItem
+        3 Xmp::getItem
+       21 Xmp::getItem
+       11 Xmp::getItem
+       20 Xmp::getItem
+       15 Xmp::getItem
+       18 Xmp::getItemList
+        6 Metadata::parseSidecar
+       51 DataModel::addMetadataForItem
+      124 DataModel::aspectRatio
+       31 Thumb::loadFromJpgData                             /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+      261 IconView::event
+        3 Thumb::checkOrientation                            /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        6 DataModel::setIcon
+MetaRead::readIcon done   row = 0
+MetaRead::readRow done   row = 0
+MetaRead::read  readRow = 1
+        4 MetaRead::iconMax
+MetaRead::readRow start  row = 1 dm->sf->rowCount()= 2
+        3 MetaRead::readRow
+MetaRead::readMetadata start  row = 1
+        2 MetaRead::readMetadata
+        0 Metadata::loadImageMetadata                        /Users/roryhill/Pictures/_test/2022-04-11_0005.arw  Source: MetaRead::readMetadata
+        2 Metadata::readMetadata                             Source: MetaRead::readMetadata
+       14 Metadata::clearMetadata
+      140 Metadata::parseSony
+MetaRead::readMetadata done row = 1
+       55 Metadata::parseSidecar
+        1 DataModel::iconLoaded
+MetaRead::readIcon start  row = 1
+        2 MetaRead::readIcon
+        2 DataModel::isIconCaching
+        3 Thumb::loadThumb                                   /Users/roryhill/Pictures/_test/2022-04-11_0005.arw
+        2 DataModel::readMetadataForItem                     /Users/roryhill/Pictures/_test/2022-04-11_0005.arw
+        0 Metadata::loadImageMetadata                        /Users/roryhill/Pictures/_test/2022-04-11_0005.arw  Source: DataModel::readMetadataForItem
+       10 Metadata::readMetadata                             Source: DataModel::readMetadataForItem
+       34 Metadata::clearMetadata
+      177 Metadata::parseSony
+        9 Metadata::parseSidecar
+       49 DataModel::addMetadataForItem
+      120 DataModel::aspectRatio
+       43 Thumb::loadFromJpgData                             /Users/roryhill/Pictures/_test/2022-04-11_0005.arw
+        8 IconView::event
+       36 IconView::event
+       86 DataModel::addMetadataForItem
+        7 Thumb::checkOrientation                            /Users/roryhill/Pictures/_test/2022-04-11_0005.arw
+        2 DataModel::aspectRatio
+       23 DataModel::setIcon
+        7 MW::updateClassification
+       18 ImageCache::addCacheItemImageMetadata
+MetaRead::readIcon done   row = 1
+MetaRead::readRow done   row = 1
+MetaRead::read  readRow = -1
+        9 MetaRead::iconMax
+MetaRead::readRow start  row = -1 dm->sf->rowCount()= 2
+MetaRead::readRow   invalid sfidx = QModelIndex(-1,-1,0x0,QObject(0x0))
+MetaRead::read  readRow = 2
+        5 MetaRead::readRow
+MetaRead::readRow start  row = 2 dm->sf->rowCount()= 2
+        9 MetaRead::readRow
+        2 MW::updateClassification
+        0 MetaRead::cleanupIcons
+        8 DataModel::addMetadataForItem
+       11 DataModel::aspectRatio
+    1,312 ImageCache::addCacheItemImageMetadata
+    1,571 IconView::event
+    1,397 MW::loadConcurrentStartImageCache
+        0 IconView::selectFirst
+        4 IconView::selectThumb
+       61 IconView::event
+        9 IconView::event
+       84 IconView::event
+        0 MW::focusChange                                    Previous = bookmarks Current = Thumbnails
+        3 MW::enableGoKeyActions
+       19 IconView::selectThumb                              0
+       15 MW::fileSelectionChange                            IconView::selectionChanged /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        0 MW::loadConcurrent                                 Row =0
+       60 MW::updateMetadataThreadRunStatus
+       76 MW::enableSelectionDependentMenus
+MetaRead::start 0 false
+        2 MetaRead::start
+MetaRead::read src =  startRow = 0 sfRowCount = 2
+MetaRead::read  readRow = 0
+        6 MetaRead::read
+MetaRead::readRow start  row = 0 dm->sf->rowCount()= 2
+        2 MetaRead::readRow
+MetaRead::readRow done   row = 0
+MetaRead::read  readRow = 1
+        3 DataModel::iconLoaded
+MetaRead::readRow start  row = 1 dm->sf->rowCount()= 2
+        1 MetaRead::readRow
+MetaRead::readRow done   row = 1
+MetaRead::read  readRow = -1
+       15 DataModel::iconLoaded
+        2 IconView::scrollToRow
+MetaRead::readRow start  row = -1 dm->sf->rowCount()= 2
+MetaRead::readRow   invalid sfidx = QModelIndex(-1,-1,0x0,QObject(0x0))
+MetaRead::read  readRow = 2
+        6 MetaRead::readRow
+MetaRead::readRow start  row = 2 dm->sf->rowCount()= 2
+        3 MetaRead::readRow
+    3,165 MetaRead::cleanupIcons
+      520 IconView::event
+        1 VideoView::stop
+        2 VideoWidget::stop
+        7 ImageView::loadImage                               /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg Src:MW::fileSelectionChange
+        1 DataModel::rowFromPath
+       14 DataModel::proxyRowFromModelRow
+        0 FSTree::scrollToCurrent
+       19 FSTree::getCurrentIndex
+        0 MW::updateIconRange                                0
+        3 IconView::calcViewportRange
+       69 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+       26 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        0 InfoView::updateInfo
+        6 ImageCache::makeRoom
+        0 MW::metadataChanged
+        1 static void Mac::availableMemory()
+        8 InfoView::showOrHide
+        7 ImageCache::setKeyToCurren
+        0 MW::metadataChanged
+        0 ImageCache::setDirection
+        5 InfoView::showOrHide
+        0 MW::metadataChanged
+        0 ImageCache::getImCacheSize
+        0 InfoView::showOrHide
+        0 ImageCache::setPriorities                          key = 0
+       13 ImageCache::setTargetRange
+        4 MW::metadataChanged
+        0 ImageCache::nextToCache
+       16 InfoView::showOrHide
+       10 MW::metadataChanged
+       36 ImageCache::nextToCache
+        0 ImageCache::nextToCache
+       40 InfoView::showOrHide
+       14 ImageDecoder::run                                  Thread 1
+        3 ImageCache::nextToCache
+        0 MW::metadataChanged
+        0 ImageDecoder::load                                 /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        0 ImageDecoder::setRead                              Thread 2
+        0 InfoView::showOrHide
+        4 ImageDecoder::load                                 /Users/roryhill/Pictures/_test/2022-04-11_0005.arw
+        8 MW::metadataChanged
+        0 ImageCache::nextToCache
+        0 InfoView::showOrHide
+        4 ImageDecoder::setRead                              Thread 3
+        0 MW::metadataChanged
+        5 InfoView::showOrHide
+        3 ImageCache::nextToCache
+        0 MW::metadataChanged
+        0 InfoView::showOrHide
+        3 ImageDecoder::setRead                              Thread 4
+        0 MW::metadataChanged
+       13 InfoView::showOrHide
+        4 MW::metadataChanged
+        1 ImageCache::nextToCache
+        0 InfoView::showOrHide
+        6 ImageDecoder::setRead                              Thread 5
+        0 MW::metadataChanged
+        5 InfoView::showOrHide
+        4 ImageCache::nextToCache
+        0 MW::metadataChanged
+        0 MW::metadataChanged
+        1 InfoView::showOrHide
+        3 InfoView::showOrHide
+        0 MW::metadataChanged
+        0 InfoView::showOrHide
+        4 ImageDecoder::setRead                              Thread 7
+        0 MW::metadataChanged
+        4 InfoView::showOrHide
+        3 ImageCache::nextToCache
+        0 MW::metadataChanged
+        0 MW::metadataChanged
+       16 InfoView::showOrHide
+        3 InfoView::showOrHide
+        0 ImageCache::nextToCache
+        1 ImageDecoder::setRead                              Thread 9
+        3 MW::metadataChanged
+        0 ImageCache::nextToCache
+        8 InfoView::showOrHide
+        0 Embel::refreshTexts
+        1 ImageDecoder::setRead                              Thread 10
+        3 MW::metadataChanged
+        0 ImageCache::nextToCache
+        0 InfoView::showOrHide
+        6 ImageDecoder::setRead                              Thread 11
+        3 Embel::refreshTexts
+        1 ImageCache::nextToCache
+        0 MW::metadataChanged
+        0 InfoView::showOrHide
+       16 ImageDecoder::setRead                              Thread 12
+        2 Embel::refreshTexts
+        1 ImageCache::nextToCache
+        0 MW::metadataChanged
+        0 ImageDecoder::setRead                              Thread 13
+        2 InfoView::showOrHide
+        5 InfoView::showOrHide
+        0 MW::metadataChanged
+        0 InfoView::showOrHide
+        4 ImageDecoder::setRead                              Thread 14
+        2 MW::metadataChanged
+        0 ImageCache::nextToCache
+        0 InfoView::showOrHide
+        3 ImageDecoder::setRead                              Thread 15
+        3 MW::metadataChanged
+        0 ImageCache::nextToCache
+        0 InfoView::showOrHide
+        3 ImageDecoder::setRead                              Thread 16
+        2 MW::metadataChanged
+        0 ImageCache::nextToCache
+        2 InfoView::showOrHide
+        0 MW::metadataChanged
+        0 ImageDecoder::setRead                              Thread 17
+        2 InfoView::showOrHide
+        3 ImageCache::nextToCache
+        0 MW::metadataChanged
+        0 ImageDecoder::setRead                              Thread 18
+        2 InfoView::showOrHide
+        2 ImageCache::nextToCache
+        0 MW::metadataChanged
+        0 ImageDecoder::setRead                              Thread 19
+        3 InfoView::showOrHide
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        0 MW::metadataChanged
+        7 InfoView::showOrHide
+        1 Embel::refreshTexts
+        0 MW::metadataChanged
+        6 InfoView::showOrHide
+        0 Embel::refreshTexts
+        0 MW::metadataChanged
+        5 InfoView::showOrHide
+        0 Embel::refreshTexts
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        0 MW::metadataChanged
+        3 InfoView::showOrHide
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+       47 InfoView::setColumn0Width
+       69 InfoView::showOrHide
+        0 FSTree::scrollToCurrent
+       18 FSTree::getCurrentIndex
+        2 MW::fileSelectionChange                            Finished /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        0 MW::updateStatus
+        2 IconView::getCurrentFilePath
+        1 MW::getZoom
+        1 MW::getPosition
+        4 IconView::getSelectedCount
+        5 MW::getPicked
+        1 MW::getPosition
+        0 MW::metadataChanged
+        3 InfoView::showOrHide
+        1 MW::getZoom
+        3 MW::getSelectedFileSize
+        5 MW::memoryReqdForSelection
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        2 MW::getPicked
+       11 TableView::selectionChanged
+        0 IconView::selectFirst
+       44 IconView::selectThumb
+        2 IconView::event
+       15 IconView::event
+        9 IconView::selectThumb                              0
+       13 MW::fileSelectionChange                            IconView::selectionChanged /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        0 MW::loadConcurrent                                 Row =0
+       68 MW::updateMetadataThreadRunStatus
+        8 MW::enableSelectionDependentMenus
+      113 IconView::scrollToRow
+MetaRead::start 0 false
+        2 MetaRead::start
+MetaRead::read src =  startRow = 0 sfRowCount = 2
+MetaRead::read  readRow = 0
+        6 MetaRead::read
+MetaRead::readRow start  row = 0 dm->sf->rowCount()= 2
+        2 MetaRead::readRow
+MetaRead::readRow done   row = 0
+MetaRead::read  readRow = 1
+        3 DataModel::iconLoaded
+MetaRead::readRow start  row = 1 dm->sf->rowCount()= 2
+        2 MetaRead::readRow
+MetaRead::readRow done   row = 1
+MetaRead::read  readRow = -1
+        3 DataModel::iconLoaded
+MetaRead::readRow start  row = -1 dm->sf->rowCount()= 2
+MetaRead::readRow   invalid sfidx = QModelIndex(-1,-1,0x0,QObject(0x0))
+MetaRead::read  readRow = 2
+        5 MetaRead::readRow
+MetaRead::readRow start  row = 2 dm->sf->rowCount()= 2
+        7 MetaRead::readRow
+      523 MetaRead::cleanupIcons
+      428 IconView::event
+        0 VideoView::stop
+        2 VideoWidget::stop
+        1 ImageView::loadImage                               /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg Src:MW::fileSelectionChange
+        0 DataModel::rowFromPath
+        2 DataModel::proxyRowFromModelRow
+        0 FSTree::scrollToCurrent
+       14 FSTree::getCurrentIndex
+        0 MW::updateIconRange                                0
+        2 IconView::calcViewportRange
+       35 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+       67 InfoView::updateInfo
+        2 ImageCache::fillCache
+        0 MW::metadataChanged
+        0 ImageCache::makeRoom
+        0 InfoView::showOrHide
+        4 static void Mac::availableMemory()
+        8 MW::metadataChanged
+        0 ImageCache::setKeyToCurren
+        0 InfoView::showOrHide
+        3 InfoView::showOrHide
+        0 InfoView::setColumn0Width
+       22 ImageCache::getImCacheSize
+        0 InfoView::showOrHide
+       30 ImageCache::setPriorities                          key = 0
+        0 FSTree::scrollToCurrent
+        0 ImageCache::setTargetRange
+        8 FSTree::getCurrentIndex
+        1 MW::fileSelectionChange                            Finished /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        0 MW::updateStatus
+        1 IconView::getCurrentFilePath
+        0 MW::getZoom
+        1 MW::getPosition
+        2 IconView::getSelectedCount
+        3 MW::getPicked
+        0 MW::getPosition
+        0 MW::getZoom
+        1 MW::getSelectedFileSize
+        1 MW::memoryReqdForSelection
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        2 MW::getPicked
+        3 TableView::selectionChanged
+        0 MW::updateStatus
+        0 IconView::getCurrentFilePath
+        0 MW::getZoom
+        0 MW::getPosition
+        1 IconView::getSelectedCount
+        1 MW::getPicked
+        0 MW::getPosition
+        0 MW::getZoom
+        1 MW::getSelectedFileSize
+        1 MW::memoryReqdForSelection
+        1 MW::getPicked
+       20 TableView::selectionChanged
+        3 MW::fileSelectionChange                            IconView::selectionChanged /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        0 MW::loadConcurrent                                 Row =0
+       51 MW::updateMetadataThreadRunStatus
+       60 MW::enableSelectionDependentMenus
+MetaRead::start 0 false
+        7 MetaRead::start
+        1 IconView::scrollToRow
+MetaRead::read src =  startRow = 0 sfRowCount = 2
+MetaRead::read  readRow = 0
+        6 MetaRead::read
+MetaRead::readRow start  row = 0 dm->sf->rowCount()= 2
+        2 MetaRead::readRow
+MetaRead::readRow done   row = 0
+MetaRead::read  readRow = 1
+        3 DataModel::iconLoaded
+MetaRead::readRow start  row = 1 dm->sf->rowCount()= 2
+        2 MetaRead::readRow
+MetaRead::readRow done   row = 1
+MetaRead::read  readRow = -1
+        3 DataModel::iconLoaded
+MetaRead::readRow start  row = -1 dm->sf->rowCount()= 2
+MetaRead::readRow   invalid sfidx = QModelIndex(-1,-1,0x0,QObject(0x0))
+MetaRead::read  readRow = 2
+        8 MetaRead::readRow
+MetaRead::readRow start  row = 2 dm->sf->rowCount()= 2
+        3 MetaRead::readRow
+      451 MetaRead::cleanupIcons
+      288 IconView::event
+        0 VideoView::stop
+        1 VideoWidget::stop
+        1 ImageView::loadImage                               /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg Src:MW::fileSelectionChange
+        0 DataModel::rowFromPath
+        2 DataModel::proxyRowFromModelRow
+        0 FSTree::scrollToCurrent
+       14 FSTree::getCurrentIndex
+        0 MW::updateIconRange                                0
+        1 IconView::calcViewportRange
+       28 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+       53 InfoView::updateInfo
+        0 ImageCache::fillCache
+        5 ImageCache::makeRoom
+        0 MW::metadataChanged
+        0 InfoView::showOrHide
+        1 static void Mac::availableMemory()
+        6 InfoView::setColumn0Width
+        0 ImageCache::setKeyToCurren
+        0 ImageCache::setDirection
+       32 ImageCache::getImCacheSize
+        0 InfoView::showOrHide
+        0 ImageCache::setPriorities                          key = 0
+       42 ImageCache::setTargetRange
+        0 FSTree::scrollToCurrent
+        8 FSTree::getCurrentIndex
+        1 MW::fileSelectionChange                            Finished /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        0 MW::updateStatus
+        1 IconView::getCurrentFilePath
+        1 MW::getZoom
+        1 MW::getPosition
+        5 IconView::getSelectedCount
+        3 MW::getPicked
+        1 MW::getPosition
+        0 MW::getZoom
+        3 MW::getSelectedFileSize
+        5 MW::memoryReqdForSelection
+        0 MW::metadataChanged
+        2 InfoView::showOrHide
+        2 MW::getPicked
+       36 TableView::selectionChanged
+        4 MW::fileSelectionChange                            MW::loadConcurrentStartImageCache /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        0 MW::loadConcurrent                                 Row =0
+       55 MW::updateMetadataThreadRunStatus
+       68 MW::enableSelectionDependentMenus
+MetaRead::start 0 false
+        1 MetaRead::start
+        1 IconView::scrollToRow
+MetaRead::read src =  startRow = 0 sfRowCount = 2
+MetaRead::read  readRow = 0
+       11 MetaRead::read
+MetaRead::readRow start  row = 0 dm->sf->rowCount()= 2
+        4 MetaRead::readRow
+MetaRead::readRow done   row = 0
+MetaRead::read  readRow = 1
+        3 DataModel::iconLoaded
+MetaRead::readRow start  row = 1 dm->sf->rowCount()= 2
+        2 MetaRead::readRow
+MetaRead::readRow done   row = 1
+MetaRead::read  readRow = -1
+        3 DataModel::iconLoaded
+MetaRead::readRow start  row = -1 dm->sf->rowCount()= 2
+MetaRead::readRow   invalid sfidx = QModelIndex(-1,-1,0x0,QObject(0x0))
+MetaRead::read  readRow = 2
+        6 MetaRead::readRow
+MetaRead::readRow start  row = 2 dm->sf->rowCount()= 2
+        3 MetaRead::readRow
+      512 MetaRead::cleanupIcons
+      301 IconView::event
+        0 VideoView::stop
+        2 VideoWidget::stop
+        1 ImageView::loadImage                               /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg Src:MW::fileSelectionChange
+        0 DataModel::rowFromPath
+        2 DataModel::proxyRowFromModelRow
+        0 FSTree::scrollToCurrent
+       16 FSTree::getCurrentIndex
+        0 MW::updateIconRange                                0
+        2 IconView::calcViewportRange
+       35 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+       56 InfoView::updateInfo
+        0 ImageCache::fillCache
+        5 ImageCache::fillCache
+        0 MW::metadataChanged
+        1 static void Mac::availableMemory()
+        9 InfoView::showOrHide
+        5 ImageCache::setKeyToCurren
+        0 InfoView::setColumn0Width
+       27 ImageCache::setDirection
+        0 InfoView::showOrHide
+        0 ImageCache::getImCacheSize
+       23 ImageCache::setPriorities                          key = 0
+        0 FSTree::scrollToCurrent
+        0 ImageCache::setTargetRange
+       10 FSTree::getCurrentIndex
+        4 MW::fileSelectionChange                            Finished /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+       48 MW::updateMetadataThreadRunStatus
+        0 MW::updateIconBestFit
+        0 IconView::bestAspect
+        7 IconView::setThumbParameters
+        0 IconView::bestAspect
+        0 IconView::setThumbParameters
+        1 MW::setThumbDockHeight
+       17 MW::setThumbDockFeatures
+"MW::loadConcurrentMetaDone"
+        2 MW::loadConcurrentMetaDone
+        0 MW::updateIconBestFit
+        0 IconView::bestAspect
+        1 IconView::setThumbParameters
+        0 IconView::bestAspect
+        0 IconView::setThumbParameters
+        0 MW::setThumbDockHeight
+        6 MW::setThumbDockFeatures
+        0 MW::updateIconRange                                -1
+       16 IconView::scannedViewportRange
+      107 Filters::loadedDataModel
+    2,503 MW::updateMetadataThreadRunStatus
+       60 MW::updateMetadataThreadRunStatus
+       29 MW::updateMetadataThreadRunStatus
+        0 MW::updateIconBestFit
+        0 IconView::bestAspect
+        1 IconView::setThumbParameters
+        0 IconView::bestAspect
+        0 IconView::setThumbParameters
+        1 MW::setThumbDockHeight
+       14 MW::setThumbDockFeatures
+"MW::loadConcurrentMetaDone"
+        2 MW::loadConcurrentMetaDone
+        0 MW::updateIconBestFit
+        0 IconView::bestAspect
+        1 IconView::setThumbParameters
+        0 IconView::bestAspect
+        0 IconView::setThumbParameters
+        0 MW::setThumbDockHeight
+        6 MW::setThumbDockFeatures
+        0 MW::updateIconRange                                -1
+       15 IconView::scannedViewportRange
+        2 Filters::loadedDataModel
+    2,245 MW::updateMetadataThreadRunStatus
+      344 IconView::event
+       43 MW::updateImageCachingThreadRunStatus
+       27 MW::updateImageCachingThreadRunStatus
+       50 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       25 MW::updateImageCachingThreadRunStatus
+       39 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       24 MW::updateImageCachingThreadRunStatus
+       40 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       23 MW::updateImageCachingThreadRunStatus
+       41 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       23 MW::updateImageCachingThreadRunStatus
+       41 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       23 MW::updateImageCachingThreadRunStatus
+       40 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       24 MW::updateImageCachingThreadRunStatus
+       44 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       24 MW::updateImageCachingThreadRunStatus
+       37 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       23 MW::updateImageCachingThreadRunStatus
+       41 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       22 MW::updateImageCachingThreadRunStatus
+       39 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       22 MW::updateImageCachingThreadRunStatus
+       39 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       23 MW::updateImageCachingThreadRunStatus
+       39 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       22 MW::updateImageCachingThreadRunStatus
+       39 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       23 MW::updateImageCachingThreadRunStatus
+       37 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       23 MW::updateImageCachingThreadRunStatus
+       45 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       22 MW::updateImageCachingThreadRunStatus
+       38 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       23 MW::updateImageCachingThreadRunStatus
+       39 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       22 MW::updateImageCachingThreadRunStatus
+       39 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+       24 MW::updateMetadataThreadRunStatus
+       22 MW::updateMetadataThreadRunStatus
+        0 MW::updateIconBestFit
+        0 IconView::bestAspect
+        2 IconView::setThumbParameters
+        0 IconView::bestAspect
+        0 IconView::setThumbParameters
+        1 MW::setThumbDockHeight
+       28 MW::setThumbDockFeatures
+"MW::loadConcurrentMetaDone"
+        2 MW::loadConcurrentMetaDone
+        0 MW::updateIconBestFit
+        0 IconView::bestAspect
+        1 IconView::setThumbParameters
+        0 IconView::bestAspect
+        0 IconView::setThumbParameters
+        0 MW::setThumbDockHeight
+        7 MW::setThumbDockFeatures
+        0 MW::updateIconRange                                -1
+       16 IconView::scannedViewportRange
+        1 Filters::loadedDataModel
+    1,278 MW::updateMetadataThreadRunStatus
+       25 MW::updateMetadataThreadRunStatus
+       24 MW::updateMetadataThreadRunStatus
+        0 MW::updateIconBestFit
+        0 IconView::bestAspect
+        1 IconView::setThumbParameters
+        0 IconView::bestAspect
+        0 IconView::setThumbParameters
+        0 MW::setThumbDockHeight
+        8 MW::setThumbDockFeatures
+"MW::loadConcurrentMetaDone"
+        1 MW::loadConcurrentMetaDone
+        0 MW::updateIconBestFit
+        0 IconView::bestAspect
+        0 IconView::setThumbParameters
+        0 IconView::bestAspect
+        0 IconView::setThumbParameters
+        0 MW::setThumbDockHeight
+        6 MW::setThumbDockFeatures
+        0 MW::updateIconRange                                -1
+       12 IconView::scannedViewportRange
+        1 Filters::loadedDataModel
+    1,261 MW::updateMetadataThreadRunStatus
+       39 MW::updateMetadataThreadRunStatus
+       24 MW::updateMetadataThreadRunStatus
+        0 MW::updateIconBestFit
+        0 IconView::bestAspect
+        1 IconView::setThumbParameters
+        0 IconView::bestAspect
+        0 IconView::setThumbParameters
+        0 MW::setThumbDockHeight
+       10 MW::setThumbDockFeatures
+"MW::loadConcurrentMetaDone"
+        1 MW::loadConcurrentMetaDone
+        0 MW::updateIconBestFit
+        0 IconView::bestAspect
+        1 IconView::setThumbParameters
+        0 IconView::bestAspect
+        0 IconView::setThumbParameters
+        0 MW::setThumbDockHeight
+        6 MW::setThumbDockFeatures
+        0 MW::updateIconRange                                -1
+       13 IconView::scannedViewportRange
+        1 Filters::loadedDataModel
+    2,394 MW::updateMetadataThreadRunStatus
+        0 Filters::resizeEvent
+    1,241 Filters::resizeColumns
+    1,630 IconView::event
+        5 IconView::event
+      115 IconView::event
+   40,490 IconView::event
+        1 ImageDecoder::run                                  Image width =3840
+        0 ImageDecoder::rotate                               Thread 0
+        0 ImageDecoder::colorManage                          Thread 0
+   55,633 void ICC::transform(const QByteArray &, QImage &)
+       45 ImageDecoder::run                                  Thread 0 done
+        2 ImageCache::makeRoom
+       50 ImageCache::getImCacheSize
+        2 ImageView::loadImage                               /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg Src:ImageCache::cacheImage
+        0 DataModel::rowFromPath
+       40 DataModel::proxyRowFromModelRow
+        4 ImageView::updateShootingInfo
+       56 DataModel::imMetadata                              /Users/roryhill/Pictures/_test/2013-07-16_0123.jpg
+        0 ImageView::getFitScaleFactor
+        0 ImageView::setFitZoom
+        0 ImageView::scale
+        8 ImageView::setFitZoom
+        1 ImageView::event
+        1 ImageView::placeClassificationBadge
+      231 ImageView::setShootingInfo
+        0 MW::updateStatus
+        2 IconView::getCurrentFilePath
+        1 MW::getZoom
+        1 MW::getPosition
+        8 IconView::getSelectedCount
+        9 MW::getPicked
+        1 MW::getPosition
+        2 MW::getZoom
+        1 MW::metadataChanged
+       17 InfoView::showOrHide
+        4 MW::getSelectedFileSize
+        5 MW::memoryReqdForSelection
+       16 MW::getPicked
+      143 ImageView::event
+       14 ImageView::event
+        4 ImageView::event
+       63 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::cacheImage
+        0 ImageCache::nextToCache
+        1 ImageDecoder::setRead                              Thread 0
+       42 MW::updateImageCachingThreadRunStatus
+    1,377 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+      339 IconView::event
+      984 ImageView::event
+      870 ImageView::event
+   73,278 ImageView::event
+        1 ImageDecoder::run                                  Image width =8640
+        0 ImageDecoder::rotate                               Thread 1
+        0 ImageDecoder::colorManage                          Thread 1
+  316,974 void ICC::transform(const QByteArray &, QImage &)
+       48 ImageDecoder::run                                  Thread 1 done
+        2 ImageCache::makeRoom
+       44 ImageCache::getImCacheSize
+        5 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::cacheImage
+        1 MW::metadataChanged
+      358 InfoView::showOrHide
+        0 ImageCache::nextToCache
+        1 ImageDecoder::setRead                              Thread 1
+       85 MW::updateImageCachingThreadRunStatus
+    1,048 MW::updateImageCacheStatus                         Instruction: Update all rows  Source: ImageCache::run after check for orphans
+7,176,810 IconView::event
+        4 MW::closeEvent
+      127 MW::setCentralMessage
+       77 ImageView::event
+    2,371 ImageView::event
+       11 ImageCache::stop
+      283 MW::updateImageCachingThreadRunStatus
+   10,622 ImageCache::clearImageCache
+       20 MW::updateImageCacheStatus                         Instruction: Clear  Source: ImageCache::clearImageCache
+        3 MW::metadataChanged
+      102 InfoView::showOrHide
+      119 MetadataCache::stop
+       56 DockWidget::moveEvent
+        1 FSTree::resizeEvent
+       91 FSTree::resizeColumns
+        8 DockWidget::resizeEvent
+        1 MW::folderDockVisibilityChange
+        0 FSTree::scrollToCurrent
+    1,365 FSTree::getCurrentIndex
+       26 DockWidget::moveEvent
+      216 MW::embelDockActivated
+   26,689 MW::writeSettings
+      412 MW::saveWorkspaces
+        0 MW::closeLog
+        1 MW::closeErrLog
+      159 MW::clearPickLog
+      148 MW::clearRatingLog
+      292 MW::clearColorClassLog
+       44 IconView::event
+       23 IconView::event
+        3 IconView::event
+    1,784 MW::focusChange                                    Previous = Thumbnails
+        8 MW::filterDockVisibilityChange
+       21 IconView::event
+      310 MW::folderDockVisibilityChange
+    2,753 Embel::clear
+      843 ImageCache::~ImageCache
+        0 PropertyEditor::~PropertyEditor
+08:40:25: /Users/roryhill/Projects/build-winnow64-Qt_6_3_1_for_macOS-Release/Winnow.app/Contents/MacOS/Winnow exited with code 0

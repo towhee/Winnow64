@@ -918,7 +918,6 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
     setData(index(row, G::LoadMsecPerMpColumn), m.loadMsecPerMp);
     setData(index(row, G::LoadMsecPerMpColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::AspectRatioColumn), QString::number((aspectRatio(m.width, m.height, m.orientation)), 'f', 2));
-//    setData(index(row, G::AspectRatioColumn), QString::number((m.width * 1.0 / m.height), 'f', 2));
     setData(index(row, G::AspectRatioColumn), int(Qt::AlignRight | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::OrientationColumn), QString::number(m.orientation));
     setData(index(row, G::RotationColumn), QString::number(m.rotationDegrees));

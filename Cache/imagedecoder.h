@@ -40,6 +40,7 @@ public:
         Ready,
         Busy,
         Failed,
+        Video,
         Done
     } status;
 
