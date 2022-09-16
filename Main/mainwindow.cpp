@@ -1561,7 +1561,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     }
 
     // update icons if req'd
-    loadConcurrent(current.row());
+//    loadConcurrent(current.row());   // rgh 2022-09-16
 
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
@@ -2005,7 +2005,7 @@ void MW::loadConcurrent(int sfRow)
 void MW::loadConcurrentMetaDone()
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-
+    qDebug() << CLASSFUNCTION;
     if (G::stop) {
 //        return;
     }

@@ -90,6 +90,7 @@ bool ImageDecoder::load()
 
     if (metadata->videoFormats.contains(ext)) {
         G::error("ImageDecoder::load", fPath, "Ignore video formats.");
+        status = Status::Video;
         return false;
     }
 
@@ -288,9 +289,14 @@ void ImageDecoder::run()
         status = Status::Done;
     }
     else {
-        G::error("ImageDecoder::run", fPath, "Could not load " + fPath);
-        status = Status::Failed;
-        fPath = "";
+        if (status == Status::Video) {
+
+        }
+        else {
+            G::error("ImageDecoder::run", fPath, "Could not load " + fPath);
+            status = Status::Failed;
+            fPath = "";
+        }
     }
 
     if (G::isLogger) G::log("ImageDecoder::run", "Thread " + QString::number(threadId) + " done");

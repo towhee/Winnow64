@@ -26,7 +26,8 @@ protected:
 
 public slots:
     void durationChanged(qint64 duration_ms);
-    void positionChanged(qint64 progress_ms);
+    void positionChanged();
+//    void positionChanged(qint64 progress_ms);
     void scrubMoved(int ms);
     void scrubPressed();
     void playOrPause();
@@ -40,6 +41,7 @@ private:
     QLabel *positionLabel;
     qint64 duration = 0;
     qint64 position = 0;
+    QTimer *t;
 };
 
 #endif // VIDEOVIEW_H

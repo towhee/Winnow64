@@ -45,7 +45,10 @@ MetaRead::~MetaRead()
 
 void MetaRead::start(int row, QString src)
 {
-//    qDebug() << "MetaRead::start" << row << isRunning;
+    if (G::isLogger || G::isFlowLogger) G::log("MetaRead::start");
+    if (debugCaching) {
+        qDebug() << "MetaRead::start" << row << isRunning;
+    }
     if (isRunning) {
         mutex.lock();
         abort = true;
@@ -264,17 +267,25 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 
 void MetaRead::readRow(int sfRow)
 {
-    if (G::isLogger) G::log("MetaRead::readRow");
+    if (G::isLogger || G::isFlowLogger) G::log("MetaRead::readRow");
     if (debugCaching) {
         qDebug().noquote() << "MetaRead::readRow"
                            << "start  row =" << sfRow
+                           << "dm->sf->rowCount()=" << dm->sf->rowCount()
                               ;
     }
     // range check
     if (sfRow >= dm->sf->rowCount()) return;
     // index valid?
     QModelIndex sfIdx = dm->sf->index(sfRow, 0);
-    if (!sfIdx.isValid()) return;
+    if (!sfIdx.isValid()) {
+        if (debugCaching) {
+            qDebug().noquote() << "MetaRead::readRow  "
+                               << "invalid sfidx =" << sfIdx
+                                  ;
+        }
+        return;
+    }
 
     // load metadata
     QString fPath = sfIdx.data(G::PathRole).toString();
@@ -342,8 +353,8 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
     firstIconRow = startRow - iconChunkSize / 2;
     if (firstIconRow < 0) firstIconRow = 0;
     lastIconRow = firstIconRow + iconChunkSize;
-//    qDebug() << "MetaRead::read" << sfRow << firstIconRow << lastIconRow
-//             << rowsWithIcon.size();
+    qDebug() << "MetaRead::read" << firstIconRow << lastIconRow
+             << rowsWithIcon.size();
 
     if (rowsWithIcon.size() > iconChunkSize) {
 //        cleanupIcons();
@@ -360,8 +371,12 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
 
     while (i++ <= sfRowCount) {
         if (abort) break;
+
         // do something with row
+//        qDebug() << "MetaRead::read  readRow =" << row;
         readRow(row);
+
+        // delayed start ImageCache
         if (!G::allMetadataLoaded && !imageCachingStarted && !abort) {
             if (i == sfRowCount - 1 || i == imageCacheTriggerCount) {
                 // start image caching thread after head start
@@ -369,6 +384,7 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
                 imageCachingStarted = true;
             }
         }
+
         // next row to process
         if (ahead) {
             if (moreBehind) ahead = false;

@@ -13,8 +13,13 @@ VideoView::VideoView(QWidget *parent, IconView *thumbView) : QWidget{parent}
 
     setStyleSheet("QSlider{min-height: 24;}");
 
+    t = new QTimer(this);
+    t->setInterval(100);
+    t->setSingleShot(false);
+
+    connect(t, &QTimer::timeout, this, &VideoView::positionChanged);
     connect(video->mediaPlayer, &QMediaPlayer::durationChanged, this, &VideoView::durationChanged);
-    connect(video->mediaPlayer, &QMediaPlayer::positionChanged, this, &VideoView::positionChanged);
+//    connect(video->mediaPlayer, &QMediaPlayer::positionChanged, this, &VideoView::positionChanged);
     connect(video, &VideoWidget::togglePlayOrPause, this, &VideoView::playOrPause);
     connect(video, &VideoWidget::handleDrop, this, &VideoView::handleDrop);
 
@@ -62,6 +67,7 @@ void VideoView::play()
     if (G::isLogger) G::log("VideoView::play");
     if (position >= duration) video->setPosition(0);
     video->play();
+    t->start();
     playPauseBtn->setIcon(QIcon(":/images/icon16/media_pause.png"));
 }
 
@@ -69,6 +75,7 @@ void VideoView::pause()
 {
     if (G::isLogger) G::log("VideoView::pause");
     video->pause();
+    t->stop();
     playPauseBtn->setIcon(QIcon(":/images/icon16/media_play.png"));
 }
 
@@ -99,24 +106,46 @@ void VideoView::scrubPressed()
 void VideoView::durationChanged(qint64 duration_ms)
 {
     if (G::isLogger) G::log("VideoView::durationChanged");
+//    duration = video->duration();
+//    qDebug() << "duration =" << duration;
     duration = duration_ms / 1000;
     scrub->setMaximum(duration);
     updatePositionLabel();
 }
 
-void VideoView::positionChanged(qint64 progress_ms)
+void VideoView::positionChanged()
 {
     if (G::isLogger) G::log("VideoView::positionChanged");
-    position = progress_ms / 1000;
-    if (!duration) return;
-    if (duration > 0 && !scrub->isSliderDown()) {
+    position = video->mediaPlayer->position();
+        qDebug()
+                << "position =" << position
+                << "duration =" << duration
+                   ;
+//    position = progress_ms / 1000;
+        quint64 durMs = duration * 1000;
+    if (!durMs) return;
+    if (durMs > 0 && !scrub->isSliderDown()) {
         scrub->setValue(position);
     }
     updatePositionLabel();
-    if (position >= duration) {
+    if (position >= durMs) {
         pause();
     }
 }
+
+//void VideoView::positionChanged(qint64 progress_ms)
+//{
+//    if (G::isLogger) G::log("VideoView::positionChanged");
+//    position = progress_ms / 1000;
+//    if (!duration) return;
+//    if (duration > 0 && !scrub->isSliderDown()) {
+//        scrub->setValue(position);
+//    }
+//    updatePositionLabel();
+//    if (position >= duration) {
+//        pause();
+//    }
+//}
 
 void VideoView::updatePositionLabel()
 {

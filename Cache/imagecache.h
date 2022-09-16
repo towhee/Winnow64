@@ -82,7 +82,7 @@ protected:
 
 public slots:
     void addCacheItemImageMetadata(ImageMetadata m);
-    bool fillCache(int id, bool positionChange = false);
+    void fillCache(int id);
     void setCurrentPosition(QString path, QString src);
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();
