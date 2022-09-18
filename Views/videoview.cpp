@@ -114,9 +114,7 @@ void VideoView::positionChanged()
 {
     if (G::isLogger) G::log("VideoView::positionChanged");
     position = video->mediaPlayer->position() / 1000;
-    quint64 durMs = duration * 1000;
-//    if (!durMs) return;
-    if (/*durMs > 0 && */!scrub->isSliderDown()) {
+    if (!scrub->isSliderDown()) {
         scrub->setValue(video->mediaPlayer->position());
     }
     updatePositionLabel();

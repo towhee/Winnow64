@@ -79,7 +79,7 @@ ImageCache::ImageCache(QObject *parent,
     }
     restart = false;
     abort = false;
-    debugCaching = false;
+    debugCaching = true;
 }
 
 ImageCache::~ImageCache()
@@ -311,7 +311,7 @@ void ImageCache::setTargetRange()
             icd->cacheItemList[i].isTarget = false;
         }
     }
-    qDebug() << "ImageCache::setTargetRange" << sumMB << icd->cache.maxMB;
+//    qDebug() << "ImageCache::setTargetRange" << sumMB << icd->cache.maxMB;
 
     // return order to key - same as dm->sf (sorted or filtered datamodel)
     std::sort(icd->cacheItemList.begin(), icd->cacheItemList.end(), &ImageCache::keySort);
@@ -670,19 +670,19 @@ void ImageCache::makeRoom(int id, int cacheKey)
         // sum actual summedCurrMB vs currMB
         float summedCurrMB = 0;
         for (int i = 0; i < icd->cacheItemList.length(); ++i) {
-            if (icd->cacheItemList[i].isCached = true)
+            if (icd->cacheItemList[i].isCached == true)
                 summedCurrMB += icd->cacheItemList.at(i).sizeMB;
         }
         QString k = QString::number(icd->cache.toDecacheKey).leftJustified((4));
         qDebug().noquote() << "ImageCache::makeRoom"
                  << "       decoder" << id << "key =" << k
-                 << "Before:"
+                 << "Is Room Req'd:"
                  << "currMB =" << icd->cache.currMB
                  << "summedCurrMB =" << summedCurrMB
                  << "maxMB =" << icd->cache.maxMB
                  << "room =" << room
                  << "roomRqd =" << roomRqd
-                 << "Removed image" << fPath
+                 << "Image to add" << fPath
                     ;
     }
     while (room < roomRqd) {
@@ -1162,8 +1162,6 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     icd->cacheItemList[row].lengthFull = m.lengthFull;
     icd->cacheItemList[row].samplesPerPixel = m.samplesPerPixel;
     icd->cacheItemList[row].iccBuf = m.iccBuf;
-
-
     icd->cache.folderMB += icd->cacheItemList[row].sizeMB; // req'd?  Only used for diagnostics
     mutex.unlock();
 }
@@ -1204,55 +1202,52 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.isCached = false;
         icd->cacheItem.isTarget = false;
         icd->cacheItem.priority = i;
-        if (G::useLinearLoading || G::allMetadataLoaded) {
+        if ((G::useLinearLoading || G::allMetadataLoaded) /*&& !m.video*/) {
             ImageMetadata m = dm->imMetadata(fPath);
-            /*
-            qDebug() << CLASSFUNCTION << fPath
-                     << "m.row =" << m.row
-                     << "m.width =" << m.width
-                     << "m.height =" << m.height
-                     << "m.lengthFull =" << m.lengthFull
-                        ;
-                        //*/
-            // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
-            int w, h;
-            m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
-            m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
-//            // if no dimensions, set default for now
-//            if (!w) w = 1000;
-//            if (!h) h = 1000;
-            int sizeMB = static_cast<int>(w * h * 1.0 / 262144);
-            if (sizeMB) {
+            if (!m.video) {
+                /*
+                qDebug() << CLASSFUNCTION << fPath
+                         << "m.row =" << m.row
+                         << "m.width =" << m.width
+                         << "m.height =" << m.height
+                         << "m.lengthFull =" << m.lengthFull
+                            ;
+                            //*/
                 // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
-                icd->cacheItem.sizeMB = sizeMB;
-                icd->cacheItem.estSizeMB = false;
+                int w, h;
+                m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
+                m.heightPreview > 0 ? h = m.heightPreview : h = m.height;
+                int sizeMB = static_cast<int>(w * h * 1.0 / 262144);
+                if (sizeMB) {
+                    // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
+                    icd->cacheItem.sizeMB = sizeMB;
+                    icd->cacheItem.estSizeMB = false;
+                }
+                else {
+                    icd->cacheItem.sizeMB = m.size * 1.0 / 1000000;
+                    icd->cacheItem.estSizeMB = true;
+                }
+                // decoder parameters
+                icd->cacheItem.metadataLoaded = m.metadataLoaded;
+                icd->cacheItem.orientation = m.orientation;
+                icd->cacheItem.rotationDegrees = m.rotationDegrees;
+                icd->cacheItem.offsetFull = m.offsetFull;
+                icd->cacheItem.lengthFull = m.lengthFull;
+                icd->cacheItem.samplesPerPixel = m.samplesPerPixel;
+                icd->cacheItem.iccBuf = m.iccBuf;
+                folderMB += icd->cacheItem.sizeMB;
             }
-            else {
-                icd->cacheItem.sizeMB = m.size * 1.0 / 1000000;
-                icd->cacheItem.estSizeMB = true;
+            /*
+            if (G::isLogger || G::isFlowLogger) {
+                if (i % 1000 == 0) {
+                    QString msg = "Building Image Cache: ";
+                    msg += QString::number(i) + " of " + QString::number(dm->sf->rowCount());
+                    emit centralMsg(msg);
+                }
             }
-            // decoder parameters
-            icd->cacheItem.metadataLoaded = m.metadataLoaded;
-            icd->cacheItem.orientation = m.orientation;
-            icd->cacheItem.rotationDegrees = m.rotationDegrees;
-            icd->cacheItem.offsetFull = m.offsetFull;
-            icd->cacheItem.lengthFull = m.lengthFull;
-            icd->cacheItem.samplesPerPixel = m.samplesPerPixel;
-            icd->cacheItem.iccBuf = m.iccBuf;
-
-            icd->cacheItemList.append(icd->cacheItem);
-            folderMB += icd->cacheItem.sizeMB;
-//            if (G::isLogger || G::isFlowLogger) {
-//                if (i % 1000 == 0) {
-//                    QString msg = "Building Image Cache: ";
-//                    msg += QString::number(i) + " of " + QString::number(dm->sf->rowCount());
-//                    emit centralMsg(msg);
-//                }
-//            }
+            */
         }
-        else {
-            icd->cacheItemList.append(icd->cacheItem);
-        }
+        icd->cacheItemList.append(icd->cacheItem);
     }
     if (G::useLinearLoading) icd->cache.folderMB = folderMB;
 }
@@ -1445,7 +1440,7 @@ void ImageCache::decodeNextImage(int id)
     icd->cacheItemList[row].isCaching = true;
     icd->cacheItemList[row].threadId = id;
     icd->cacheItemList[row].attempts += 1;
-//    if (debugCaching) {
+    if (debugCaching) {
         QString k = QString::number(row).leftJustified((4));
         qDebug().noquote()
             << "ImageCache::decodeNextImage"
@@ -1457,7 +1452,7 @@ void ImageCache::decodeNextImage(int id)
             << "attempts =" << icd->cacheItemList.at(row).attempts
             << icd->cacheItemList.at(row).fPath
               ;
-//    }
+    }
     decoder[id]->decode(icd->cacheItemList.at(row), icd->cache.dmInstance);
 }
 
@@ -1465,19 +1460,13 @@ void ImageCache::cacheImage(int id, int cacheKey)
 {
 /*
     Called from fillCache to insert a QImage that has been decoded into icd->imCache.
+    Do not cache video files, but do show them as cached for the cache status display.
 */
     if (debugCaching) {
         QString k = QString::number(cacheKey).leftJustified((4));
         qDebug().noquote() << "ImageCache::cacheImage" << "     decoder" << id;
     }
-    if (decoder[id]->status == ImageDecoder::Status::Video) {
-        qDebug().noquote() << "ImageCache::cacheImage VIDEO"
-                           << "     decoder" << id
-                           << "decoder[id]->status =" << decoder[id]->status
-                              ;
-//        icd->cache.currMB = 0;
-    }
-    else {
+    if (decoder[id]->status != ImageDecoder::Status::Video) {
         // Check if initial sizeMB was estimated (image without preview metadata ie PNG)
         if (icd->cacheItemList[cacheKey].estSizeMB) setSizeMB(id, cacheKey);
         makeRoom(id, cacheKey);
@@ -1488,12 +1477,14 @@ void ImageCache::cacheImage(int id, int cacheKey)
     icd->cacheItemList[cacheKey].isCached = true;
     // set datamodel isCached = true
     emit setValuePath(decoder[id]->fPath, 0, true, G::CachedRole);
-    // if current image signal ImageView::loadImage
-    if (decoder[id]->fPath == dm->currentFilePath) {
-        // load in ImageView
-        emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
-        // revert central view
-        emit imageCachePrevCentralView();
+    if (decoder[id]->status != ImageDecoder::Status::Video) {
+        // if current image signal ImageView::loadImage
+        if (decoder[id]->fPath == dm->currentFilePath) {
+            // load in ImageView
+            emit loadImage(decoder[id]->fPath, "ImageCache::cacheImage");
+            // revert central view
+            emit imageCachePrevCentralView();
+        }
     }
     updateStatus("Update all rows", "ImageCache::cacheImage");
 }
@@ -1549,7 +1540,7 @@ void ImageCache::fillCache(int id)
         // DM instance check
         if (decoder[id]->dmInstance != dm->instance) {
             cacheKey = -1;
-            {
+            if (debugCaching) {
                 qWarning() << "ImageCache::fillCache DataModel instance clash:"
                            << "Decoder DM instance" << decoder[id]->dmInstance
                            << "DM instance" << dm->instance
@@ -1562,7 +1553,7 @@ void ImageCache::fillCache(int id)
         // unassigned decoder check
         if (cacheKey != -1 && decoder[id]->fPath == "") {
             cacheKey = -1;
-            {
+            if (debugCaching) {
                 qWarning() << "ImageCache::fillCache Unassigned decoder:"
                            << "Decoder id =" << id
                            << "Decoder path =" << decoder[id]->fPath
@@ -1592,12 +1583,12 @@ void ImageCache::fillCache(int id)
             if (cacheKey != -1 && decoder[id]->image.width() == 0) {
                 cacheKey = -1;
                 {
-        //            qWarning() << "ImageCache::fillCache  Null image:"
-        //                       << "Decoder" << id
-        //                       << "Image width = 0"
-        //                       << "Decoder id =" << id
-        //                       << "Decoder path =" << decoder[id]->fPath
-        //                          ;
+                    qWarning() << "ImageCache::fillCache  Null image:"
+                               << "Decoder" << id
+                               << "Image width = 0"
+                               << "Decoder id =" << id
+                               << "Decoder path =" << decoder[id]->fPath
+                                  ;
                 }
             }
         }

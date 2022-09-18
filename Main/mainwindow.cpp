@@ -1633,7 +1633,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         bool isVideo = dm->sf->index(currSfRow, G::VideoColumn).data().toBool();
         if (isVideo) {
             videoView->load(fPath);
-//            videoView->pause();
             if (G::mode == "Loupe") centralLayout->setCurrentIndex(VideoTab);
         }
         else {
@@ -2005,30 +2004,15 @@ void MW::loadConcurrent(int sfRow)
 void MW::loadConcurrentMetaDone()
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
-    if (G::stop) {
-//        return;
-    }
 
     // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
     updateIconRange(-1);
-//    if (dm->startIconRange < metaRead->firstIconRow ||
-//        dm->endIconRange > metaRead->lastIconRow)
-//    {
-//        metaRead->read(MetaRead::SizeChange);
-//        return;
-//    }
-//    if (dm->startIconRange < metaRead->firstIconRow ||
-//            dm->endIconRange > metaRead->lastIconRow)
-//    {
-//        metadataCacheThread->scrollChange(CLASSFUNCTION);
-//        return;
-//    }
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
-       InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
-       would prematurely trigger Metadata::writeXMP */
+    InfoView by fileSelectionChange have been completed. Otherwise, InfoView::dataChanged
+    would prematurely trigger Metadata::writeXMP */
+
     G::isNewFolderLoadedAndInfoViewUpToDate = true;
 //    G::isNewFolderLoaded = true;
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
@@ -2036,7 +2020,6 @@ void MW::loadConcurrentMetaDone()
     filters->setEnabled(true);
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
-//    dm->loadingModel = false;
     if (!filterDock->visibleRegion().isNull()) {
         launchBuildFilters();
     }
@@ -2049,7 +2032,6 @@ void MW::loadConcurrentMetaDone()
 
 void MW::loadConcurrentStartImageCache(QString src)
 {
-//    G::track(CLASSFUNCTION);
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
 //    qDebug() << CLASSFUNCTION << src ;
     if (isShowCacheProgressBar) {
@@ -2091,11 +2073,6 @@ void MW::loadConcurrentStartImageCache(QString src)
     if (src == "Final") {
         emit setImageCachePosition(dm->currentFilePath, CLASSFUNCTION);
     }
-
-    /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
-       InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
-       would prematurally trigger Metadata::writeXMP */
-//    G::isNewFolderLoadedAndInfoViewUpToDate = true;
 }
 
 void MW::loadLinearNewFolder()
