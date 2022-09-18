@@ -353,8 +353,8 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
     firstIconRow = startRow - iconChunkSize / 2;
     if (firstIconRow < 0) firstIconRow = 0;
     lastIconRow = firstIconRow + iconChunkSize;
-    qDebug() << "MetaRead::read" << firstIconRow << lastIconRow
-             << rowsWithIcon.size();
+//    qDebug() << "MetaRead::read" << firstIconRow << lastIconRow
+//             << rowsWithIcon.size();
 
     if (rowsWithIcon.size() > iconChunkSize) {
 //        cleanupIcons();

@@ -1,7 +1,6 @@
 BUGS / TO DO
 - Cannot delete 1 image
 - Folders with many videos stalling out
-- Updatevideo scrub pos more frequently
 - Olympus subfolders not showing for USB drive in FSTree
 - Cursor tall rectangle over thumbnails for PNG files
 - Save preview as PNG include color manage corrections
@@ -65,6 +64,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Update video scrub pos more frequently
 - Whie ImageView zoomed, using zoom cursor, sel thumbnail, when scrolls to center, scroll cursor loses size
 - Cursor not changing in thumbnail when zoom > 1
 - Drag to central view folder opening but not going to image in folder
