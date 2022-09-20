@@ -1,5 +1,5 @@
 BUGS / TO DO
-- Cannot delete 1 image
+- Drag scrub while playing has issues
 - Folders with many videos stalling out
 - Olympus subfolders not showing for USB drive in FSTree
 - Cursor tall rectangle over thumbnails for PNG files

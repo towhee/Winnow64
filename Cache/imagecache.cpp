@@ -79,7 +79,7 @@ ImageCache::ImageCache(QObject *parent,
     }
     restart = false;
     abort = false;
-    debugCaching = true;
+    debugCaching = false;
 }
 
 ImageCache::~ImageCache()

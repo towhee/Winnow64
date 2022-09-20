@@ -5424,10 +5424,10 @@ void MW::deleteSelectedFiles()
 
 void MW::deleteFiles(QStringList paths)
 {
-    /*
-        Delete from disk, remove from datamodel, remove from ImageCache and update the
-        image cache status bar.
-    */
+/*
+    Delete from disk, remove from datamodel, remove from ImageCache and update the
+    image cache status bar.
+*/
     if (G::isLogger) G::log(CLASSFUNCTION);
 
     /* save the index to the first row in selection (order depends on how selection was

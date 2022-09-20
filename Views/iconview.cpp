@@ -1624,6 +1624,9 @@ void IconView::mousePressEvent(QMouseEvent *event)
     when the user wants to view a specific part of another image that is in a
     different position than the current image.
 */
+//    if (indexAt(event->pos()).isValid()) QListView::mousePressEvent(event);
+//    return;
+
 //    qDebug() << "IconView::mousePressEvent" << event->pos() << hasMouseTracking();
 
     if (G::isLogger) G::log(CLASSFUNCTION);
@@ -1664,15 +1667,22 @@ void IconView::mousePressEvent(QMouseEvent *event)
     }
 
     // must finish event to update current index in iconView if mouse press on an icon
-    if (indexAt(event->pos()).isValid()) QListView::mousePressEvent(event);
+    QModelIndex currIdx = indexAt(event->pos());
 
     // clear selection if unmodified mouse click
     if (event->modifiers() == Qt::NoModifier) {
-        selectionModel()->clearSelection();
+//        selectionModel()->clearSelection();
     }
 
-    // capture mouse click position for imageView zoom/pan
+    // unmodified click or tap
     if (event->modifiers() == Qt::NoModifier) {
+        // update selection
+        if (currIdx.isValid()) {
+            setCurrentIndex(currIdx);
+            selectionModel()->clearSelection();
+            selectionModel()->select(currIdx, QItemSelectionModel::Rows);
+        }
+
         // reqd for thumb resizing
         if (event->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
 
@@ -1686,13 +1696,14 @@ void IconView::mousePressEvent(QMouseEvent *event)
         float yPct = static_cast<float>(iconPt.y()) / iconRect.height();
         /*
         qDebug() << CLASSFUNCTION << idx << iconRect << mousePt << iconPt << xPct << yPct;
-//        */
+        //*/
         if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
             //signal sent to ImageView
             emit thumbClick(xPct, yPct);
         }
     }
 
+    if (currIdx.isValid()) QListView::mousePressEvent(event);
 }
 
 void IconView::mouseMoveEvent(QMouseEvent *event)
@@ -1707,9 +1718,20 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
 //    qDebug() << CLASSFUNCTION << event;
+    QListView::mouseReleaseEvent(event);
+//    // clear selection except current row if unmodified mouse click
+//    QModelIndex currIdx = indexAt(event->pos());
+//    if (currIdx.isValid()) {
+//        setCurrentIndex(currIdx);
+//    }
+//    if (event->modifiers() == Qt::NoModifier) {
+//        foreach (QModelIndex idx, selectionModel()->selectedRows()) {
+//            if (idx == currentIndex()) continue;
+//            selectionModel()->select(idx, QItemSelectionModel::Rows | QItemSelectionModel::Deselect);
+//        }
+//    }
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
-    QListView::mouseReleaseEvent(event);
     // if icons scroll after mouse click, redraw cursor for new icon
     zoomCursor(indexAt(event->pos()), /*forceUpdate=*/true, event->pos());
 }
@@ -1955,10 +1977,11 @@ void IconView::startDrag(Qt::DropActions)
     Drag and drop thumbs to another program.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-//    qDebug() << CLASSFUNCTION;
+    qDebug() << CLASSFUNCTION;
 
     QModelIndexList selection = selectionModel()->selectedRows();
     if (selection.isEmpty()) {
+        qDebug() << CLASSFUNCTION << "Empty selection";
         return;
     }
 
@@ -2006,12 +2029,14 @@ void IconView::startDrag(Qt::DropActions)
 //    drag->setHotSpot(QPoint(pix.width() / 2, pix.height() / 2));
     //*/
 
+//    /*
     Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
     if (key == Qt::AltModifier) {
         drag->exec(Qt::CopyAction);
     }
     if (key == Qt::NoModifier) {
-        drag->exec(Qt::MoveAction);
+        drag->exec(Qt::MoveAction,  Qt::IgnoreAction);
     }
+    //*/
 //    drag->exec(Qt::CopyAction | Qt::LinkAction, Qt::IgnoreAction);
 }
