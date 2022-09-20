@@ -169,6 +169,15 @@ bool ImageDecoder::load()
         qDebug() << "ImageDecoder::load" << "HEIC image" << image.width() << image.height();
         //*/
         #endif
+
+        #ifdef Q_OS_MAC
+        if (!image.load(fPath)) {
+            imFile.close();
+            G::error("ImageDecoder::load", fPath, "Could not decode using Qt.");
+            return false;
+        }
+        imFile.close();
+        #endif
     }
 
     // TIFF format

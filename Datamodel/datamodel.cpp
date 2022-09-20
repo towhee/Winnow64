@@ -1031,6 +1031,7 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int role)
 {
     mutex.lock();
     setData(dmIdx, value, role);
+    qDebug() << "DataModel::setValue" << dmIdx << value << role;
     mutex.unlock();
 }
 

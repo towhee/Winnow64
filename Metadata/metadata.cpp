@@ -75,7 +75,7 @@ void Metadata::initSupportedFiles()
                         << "cr2"
                         << "cr3"
                         << "dng"
-                        << "heic"
+//                        << "heic"
                         << "hif"
                         << "nef"
                         << "orf"
@@ -1093,6 +1093,14 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     if (!m.metadataLoaded) {
 //        G::error(CLASSFUNCTION, fPath, "Failed to read metadata.");
         qWarning() << "Metadata not loaded for" << fPath;
+//        #ifdef Q_OS_MAC
+//        if (ext == "heic") {
+//            clearMetadata();
+//            m.fPath = fPath;
+//            m.currRootFolder = fileInfo.absoluteDir().absolutePath();
+//            m.size = fileInfo.size();
+//        }
+//        #endif
         return false;
     }
 
