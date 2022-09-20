@@ -852,9 +852,9 @@ QString ImageCache::reportCacheParameters()
     rpt << "decoderCount = " << icd->cache.decoderCount << "\n";
     rpt << "\n";
     rpt << "currentPath = " << currentPath << "\n";
-    rpt << "cacheSizeHasChanged = " << cacheSizeHasChanged << "\n";
-    rpt << "filterOrSortHasChanged = " << filterOrSortHasChanged << "\n";
-    rpt << "sendStatusUpdates = " << sendStatusUpdates << "\n";
+    rpt << "cacheSizeHasChanged = " << (cacheSizeHasChanged ? "true" : "false") << "\n";
+    rpt << "filterOrSortHasChanged = " << (filterOrSortHasChanged ? "true" : "false") << "\n";
+    rpt << "sendStatusUpdates = " << (sendStatusUpdates ? "true" : "false") << "\n";
     rpt << "isCacheUpToDate = " << (isCacheUpToDate ? "true" : "false") << "\n";
     return reportString;
 }
@@ -1178,7 +1178,7 @@ void ImageCache::buildImageCacheList()
       2        2        1        2        0        7        1      119   D:/Pictures/Calendar_Beach/2014-04-11_0060.jpg
       3        3        1        2        0        5        1      119   D:/Pictures/Calendar_Beach/2012-08-16_0015.jpg
 
-    It is built from dm->sf (sorted and/or filtered datamodel).
+    It is built from dm->sf (sorted / filtered datamodel).
 */
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::buildImageCacheList");
     icd->cacheItemList.clear();
@@ -1205,14 +1205,6 @@ void ImageCache::buildImageCacheList()
         if ((G::useLinearLoading || G::allMetadataLoaded) /*&& !m.video*/) {
             ImageMetadata m = dm->imMetadata(fPath);
             if (!m.video) {
-                /*
-                qDebug() << CLASSFUNCTION << fPath
-                         << "m.row =" << m.row
-                         << "m.width =" << m.width
-                         << "m.height =" << m.height
-                         << "m.lengthFull =" << m.lengthFull
-                            ;
-                            //*/
                 // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
                 int w, h;
                 m.widthPreview > 0 ? w = m.widthPreview : w = m.width;
@@ -1248,7 +1240,8 @@ void ImageCache::buildImageCacheList()
             */
         }
         icd->cacheItemList.append(icd->cacheItem);
-    }
+    } // next row
+
     if (G::useLinearLoading) icd->cache.folderMB = folderMB;
 }
 

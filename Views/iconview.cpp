@@ -1717,19 +1717,7 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
 void IconView::mouseReleaseEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-//    qDebug() << CLASSFUNCTION << event;
     QListView::mouseReleaseEvent(event);
-//    // clear selection except current row if unmodified mouse click
-//    QModelIndex currIdx = indexAt(event->pos());
-//    if (currIdx.isValid()) {
-//        setCurrentIndex(currIdx);
-//    }
-//    if (event->modifiers() == Qt::NoModifier) {
-//        foreach (QModelIndex idx, selectionModel()->selectedRows()) {
-//            if (idx == currentIndex()) continue;
-//            selectionModel()->select(idx, QItemSelectionModel::Rows | QItemSelectionModel::Deselect);
-//        }
-//    }
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
     // if icons scroll after mouse click, redraw cursor for new icon
@@ -1750,8 +1738,8 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
 void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 {
 /*
-Show the image in loupe view.  Scroll the thumbView or gridView to position at
-center.
+    Show the image in loupe view.  Scroll the thumbView or gridView to position at
+    center.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     QListView::mouseDoubleClickEvent(event);

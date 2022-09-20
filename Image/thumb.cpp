@@ -70,16 +70,20 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     // let thumbReader do its thing
     thumbReader.setFileName(fPath);
     QSize size = thumbReader.size();
-
+    if (size == QSize(-1,-1)) {
+        image.load(fPath);
+        size = image.size();
+    }
+    qDebug() << "Thumb::loadFromEntireFile" << row << size << fPath;
     emit setValue(dm->index(row, G::WidthColumn), size.width(), Qt::EditRole);
     emit setValue(dm->index(row, G::WidthPreviewColumn), size.width(), Qt::EditRole);
     emit setValue(dm->index(row, G::HeightColumn), size.height(), Qt::EditRole);
     emit setValue(dm->index(row, G::HeightPreviewColumn), size.height(), Qt::EditRole);
-    // needed when loading concurrently
-//    if (!G::useLinearLoading) {
+    //  needed when loading concurrently
+    if (!G::useLinearLoading) {
         metadata->m.width = size.width();
         metadata->m.height = size.height();
-//    }
+    }
 
     size.scale(thumbMax, Qt::KeepAspectRatio);
     thumbReader.setScaledSize(size);
@@ -191,6 +195,13 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     if (!metadata->hasMetadataFormats.contains(ext)) {
         return loadFromEntireFile(fPath, image, dmRow);
     }
+
+    // Heic natively supported on Mac
+    #ifdef Q_OS_MAC
+    if (ext == "heic") {
+        return loadFromEntireFile(fPath, image, dmRow);
+    }
+    #endif
 
     // Check if metadata has been loaded for this image
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
