@@ -373,7 +373,6 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
         if (abort) break;
 
         // do something with row
-//        qDebug() << "MetaRead::read  readRow =" << row;
         readRow(row);
 
         // delayed start ImageCache

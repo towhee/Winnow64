@@ -86,7 +86,8 @@ public:
     };
 
 signals:
-    void setValueSf(QModelIndex sfIdx, QVariant value, int role);
+    void setValueSf(QModelIndex sfIdx, QVariant value,
+                    int role = Qt::EditRole, int align = Qt::AlignLeft);
     void dataEdited();
 
 public slots:

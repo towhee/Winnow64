@@ -1027,18 +1027,19 @@ double DataModel::aspectRatio(int w, int h, int orientation)
     else return w * 1.0 / h;
 }
 
-void DataModel::setValue(QModelIndex dmIdx, QVariant value, int role)
+void DataModel::setValue(QModelIndex dmIdx, QVariant value, int role, int align)
 {
     mutex.lock();
     setData(dmIdx, value, role);
-    qDebug() << "DataModel::setValue" << dmIdx << value << role;
+    setData(dmIdx, align, Qt::TextAlignmentRole);
     mutex.unlock();
 }
 
-void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int role)
+void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int role, int align)
 {
     mutex.lock();
     sf->setData(sfIdx, value, role);
+    setData(sfIdx, align, Qt::TextAlignmentRole);
     mutex.unlock();
 }
 

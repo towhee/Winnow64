@@ -59,14 +59,6 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     QFile imFile(fPath);
     if (imFile.isOpen()) imFile.close();
     QImageReader thumbReader;
-    /*
-    if (!imFile.open(QIODevice::ReadOnly)) {
-        dm->error(row, "Unable to open file.", CLASSFUNCTION);
-        return false;
-    }
-    // close file to allow qt thumbReader to work
-    imFile.close();
-    //*/
     // let thumbReader do its thing
     thumbReader.setFileName(fPath);
     QSize size = thumbReader.size();
@@ -74,17 +66,14 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
         image.load(fPath);
         size = image.size();
     }
-    qDebug() << "Thumb::loadFromEntireFile" << row << size << fPath;
-    emit setValue(dm->index(row, G::WidthColumn), size.width(), Qt::EditRole);
-    emit setValue(dm->index(row, G::WidthPreviewColumn), size.width(), Qt::EditRole);
-    emit setValue(dm->index(row, G::HeightColumn), size.height(), Qt::EditRole);
-    emit setValue(dm->index(row, G::HeightPreviewColumn), size.height(), Qt::EditRole);
-    //  needed when loading concurrently
-    if (!G::useLinearLoading) {
-        metadata->m.width = size.width();
-        metadata->m.height = size.height();
-    }
+    int w = size.width();
+    int h = size.height();
+    emit setValue(dm->index(row, G::WidthColumn), w);
+    emit setValue(dm->index(row, G::WidthPreviewColumn), w);
+    emit setValue(dm->index(row, G::HeightColumn), h);
+    emit setValue(dm->index(row, G::HeightPreviewColumn), h);
 
+    // read image
     size.scale(thumbMax, Qt::KeepAspectRatio);
     thumbReader.setScaledSize(size);
     image = thumbReader.read();

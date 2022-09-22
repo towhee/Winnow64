@@ -1,6 +1,5 @@
 BUGS / TO DO
 - Drag scrub while playing has issues
-- Thumb::loadFromEntireFile image dimensions not being set in DataModel
 - Read HEIC metadata (MAC issue only?)
 - After switch Concurrent/Nonconcurrent not loading ImageCache
 - Folders with many videos stalling out
@@ -67,6 +66,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- thumbView no scrollbar if all thumbs fit and then resize smaller
+- Thumb::loadFromEntireFile image dimensions not being set in DataModel
 - Update video scrub pos more frequently
 - Whie ImageView zoomed, using zoom cursor, sel thumbnail, when scrolls to center, scroll cursor loses size
 - Cursor not changing in thumbnail when zoom > 1

@@ -25,7 +25,8 @@ public:
     bool load(QString &fPath, QImage &image, QString src = "");
 
 signals:
-    void setValue(QModelIndex dmIdx, QVariant value, int role);
+    void setValue(QModelIndex dmIdx, QVariant value,
+                  int role = Qt::EditRole, int align = Qt::AlignLeft);
 
 private:
     DataModel *dm;

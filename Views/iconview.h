@@ -1,36 +1,6 @@
 #ifndef THUMBVIEW_H
 #define THUMBVIEW_H
 
-//#include <QAbstractSlider>
-
-//class AbstractSlider : public QAbstractSlider
-//{
-//    Q_OBJECT
-//public:
-//    explicit AbstractSlider(QWidget *parent = nullptr);
-//};
-
-//#include <QScrollBar>
-
-//// this ScrollBar experiment did not help
-//class ScrollBar : public QScrollBar
-//{
-//    Q_OBJECT
-//public:
-//    explicit ScrollBar(QWidget *parent = nullptr);
-//    void setValue(int value);
-
-//protected:
-//    bool event (QEvent *event);
-//    void sliderChange(QAbstractSlider::SliderChange change);
-
-//signals:
-
-//public slots:
-
-//};
-
-
 #include <QtWidgets>
 #include "Main/global.h"
 #include "File/fstree.h"
@@ -206,7 +176,8 @@ private:
     bool skipResize;
 
 signals:
-    void setValueSf(QModelIndex sfIdx, QVariant value, int role);
+    void setValueSf(QModelIndex sfIdx, QVariant value,
+                    int role = Qt::EditRole, int align = Qt::AlignLeft);
     void fileSelectionChange(QModelIndex current, QModelIndex previous, QString src);
     void togglePick();
     void thumbClick(float xPct, float yPct);        // used in ThumbView::mousePressEvent
