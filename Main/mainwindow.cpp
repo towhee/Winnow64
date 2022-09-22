@@ -1993,9 +1993,9 @@ void MW::loadConcurrentNewFolder()
 void MW::loadConcurrent(int sfRow)
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Row =" + QString::number(sfRow));
-    updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
+            updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
             emit startMetaRead(sfRow, CLASSFUNCTION);
         }
     }
@@ -2084,7 +2084,7 @@ void MW::loadLinearNewFolder()
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     MetadataCache *mct = metadataCacheThread;
-    G::allMetadataLoaded = false;
+//    G::allMetadataLoaded = false;
     mct->isRefreshFolder = isRefreshingDM;
     mct->iconsCached.clear();
     mct->foundItemsToLoad = true;
@@ -2105,7 +2105,7 @@ void MW::loadLinearNewFolder()
 
 //    dm->loadingModel = true;
 
-    // no sorting or filtering until all metadta loaded
+    // no sorting or filtering until all metadata loaded
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
 
@@ -5182,7 +5182,7 @@ void MW::metadataChanged(QStandardItem* item)
         paths << dm->sf->index(row, G::PathColumn).data().toString();
         // update data model
         QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, col[tagName]));
-        emit setValue(dmIdx, tagValue, Qt::EditRole);
+        emit setValue(dmIdx, tagValue, Qt::EditRole, Qt::AlignLeft);
 //        QModelIndex idx = dm->sf->index(row, col[tagName]);
 //        dm->sf->setData(idx, tagValue, Qt::EditRole);
         // check if combined raw+jpg and also set the tag item for the hidden raw file
@@ -5193,7 +5193,7 @@ void MW::metadataChanged(QStandardItem* item)
                 // set tag item for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(dmIdx.data(G::DupOtherIdxRole));
                 QModelIndex idx = dm->index(rawIdx.row(), col[tagName]);
-                emit setValue(idx, tagValue, Qt::EditRole);
+                emit setValue(idx, tagValue, Qt::EditRole, Qt::AlignCenter);
 //                dm->setData(idx, tagValue, Qt::EditRole);
             }
         }

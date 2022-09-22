@@ -301,7 +301,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 //    qint64 msec = tDecode;
     qint64 msec = t.elapsed();
     int msecPerMp = static_cast<int>(msec / mp);
-    emit setValue(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, Qt::EditRole);
+    emit setValue(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, Qt::EditRole, Qt::AlignLeft);
 //    dm->setData(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, Qt::EditRole);
     /*
     qDebug() << CLASSFUNCTION

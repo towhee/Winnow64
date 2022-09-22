@@ -115,37 +115,5 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    QModelIndex idx1 = dm->sf->index(1, 0);
-    thumbView->selectionModel()->setCurrentIndex(idx1, QItemSelectionModel::NoUpdate);
-//    qDebug() << thumbView->selectionModel()->selectedRows().count();
-    return;
-
-    QModelIndex idx = fsTree->getCurrentIndex();
-    qDebug() << fsTree->currentIndex()
-             << fsTree->getCurrentIndex()
-             << idx.data(Qt::ToolTipRole)
-//             << fsTree->fsModel->filePath(fsTree->getCurrentIndex())
-                ;
-    return;
-    fsTree->refreshModel();
-    return;
-
-    imageCacheThread->debugCaching = true;
-    return;
-
-    QString s = "-a -v3 -u -g1 -w txt";
-    QStringList sl = s.split(" ");
-    qDebug() << sl;
-    return;
-    setting->beginGroup("ExternalAppArgs");
-    QStringList args = setting->childKeys();
-    qDebug() << args;
-    setting->endGroup();
-    return;
-    QProcess *process = new QProcess();
-    process->setProgram("/Users/roryhill/Projects/ExifTool/exiftool");
-    process->setArguments({"-a", "-v3", "u", "g1", "-w", "txt", "/Volumes/OM SYSTEM/DCIM/100OMSYS/_8270001.ORF"});
-//    process->setArguments({"-w", "txt", "/Volumes/OM SYSTEM/DCIM/100OMSYS/_8270002.JPG"});
-    process->setWorkingDirectory("/Volumes/OM SYSTEM/DCIM/100OMSYS");
-    process->start();
+    qDebug() << CLASSFUNCTION << thumbView->currentIndex().row();
 }

@@ -1073,12 +1073,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
     if (!hasMetadataFormats.contains(ext)) {
-        clearMetadata();
         m.fPath = fPath;
         m.currRootFolder = fileInfo.absoluteDir().absolutePath();
         m.size = fileInfo.size();
-//        qWarning() << CLASSFUNCTION << "NOT IN hasMetadataFormats. SOURCE ="
-//                   << source;
         return false;
     }
 

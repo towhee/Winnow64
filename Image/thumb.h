@@ -22,7 +22,8 @@ public:
     bool abort = false;
 
 signals:
-    void setValue(QModelIndex dmIdx, QVariant value, int role);
+    void setValue(QModelIndex dmIdx, QVariant value,
+                  int role = Qt::EditRole, int align = Qt::AlignCenter);
     void getFrame(QString fPath);
 
 private:

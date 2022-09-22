@@ -482,8 +482,8 @@ void MW::setCombineRawJpg()
         if (idx.data(G::DupIsJpgRole).toBool()) {
             QString rawType = idx.data(G::DupRawTypeRole).toString();
             QModelIndex typeIdx = dm->index(row, G::TypeColumn);
-            if (combineRawJpg) emit setValue(typeIdx, "JPG+" + rawType, Qt::EditRole);
-            else emit setValue(typeIdx, "JPG", Qt::EditRole);
+            if (combineRawJpg) emit setValue(typeIdx, "JPG+" + rawType, Qt::EditRole, Qt::AlignCenter);
+            else emit setValue(typeIdx, "JPG", Qt::EditRole, Qt::AlignCenter);
 //            if (combineRawJpg) dm->setData(typeIdx, "JPG+" + rawType);
 //            else dm->setData(typeIdx, "JPG");
         }

@@ -127,9 +127,10 @@ IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString 
     setTabKeyNavigation(true);  // not working
     setResizeMode(QListView::Adjust);
 //    setLayoutMode(QListView::Batched);    // causes delay that makes scrollTo a headache
+
     setVerticalScrollMode(QAbstractItemView::ScrollPerItem);
-    verticalScrollBar()->setObjectName("VerticalScrollBar");
-    horizontalScrollBar()->setObjectName("HorizontalScrollBar");
+    horizontalScrollBar()->setObjectName("IconViewHorizontalScrollBar");
+    verticalScrollBar()->setObjectName("IconViewVerticalScrollBar");
     setWordWrap(true);
     setDragEnabled(true);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -144,8 +145,6 @@ IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString 
 
     bestAspectRatio = 1;
 
-    horizontalScrollBar()->setObjectName("IconViewHorizontalScrollBar");
-    verticalScrollBar()->setObjectName("IconViewVerticalScrollBar");
 
     setModel(this->dm->sf);
 
@@ -1159,23 +1158,21 @@ void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
     thumbViewDelegate triggers this to provide rect data to calc thumb mouse
     click position that is then sent to imageView to zoom to the same spot.
 */
-//    if (G::isLogger) G::log(CLASSFUNCTION);
 //    qDebug() << CLASSFUNCTION << index;
     emit setValueSf(index, iconRect, G::IconRectRole);
-//    dm->sf->setData(index, iconRect, G::IconRectRole);
 }
 
 void IconView::resizeEvent(QResizeEvent *event)
 {
 /*
-The resizeEvent can be triggered by a change in the gridView cell size (thumbWidth) that
-requires justification or by a change in the thumbDock splitter. That is filtered by checking
-if the ThumbView width has changed or skipResize has been set.
+    The resizeEvent can be triggered by a change in the gridView cell size (thumbWidth)
+    that requires justification or by a change in the thumbDock splitter. That is
+    filtered by checking if the ThumbView width has changed or skipResize has been set.
 
-This event is not forwarded to QListView::resize.  This would cause multiple scroll events
-which isn't pretty at all.
+    This event is not forwarded to QListView::resize. This would cause multiple scroll
+    events which isn't pretty at all.
 */
-    event->ignore();    // suppress compiler warning
+//    event->ignore();    // suppress compiler warning
     if (G::isLogger) G::log(CLASSFUNCTION);
 //    if (m2->thumbDock != nullptr) {
 //        qDebug() << CLASSFUNCTION
@@ -1188,6 +1185,8 @@ which isn't pretty at all.
     static int prevWidth = 0;
     /*
     qDebug() << CLASSFUNCTION
+             << "Object =" << objectName()
+             << "hScroll Policy =" << horizontalScrollBarPolicy()
              << "isFitTopOrBottom =" << isFitTopOrBottom
              << "isWrapping =" << isWrapping()
              << "G::isInitializing =" << G::isInitializing
@@ -1202,9 +1201,16 @@ which isn't pretty at all.
         return;
     }
 
+    bool widthChange = width() != prevWidth;
+
     // only rejustify when user resizes
-    if (isWrapping() && width() != prevWidth) {
-        QTimer::singleShot(500, this, SLOT(rejustify()));   // calls calcViewportParameters
+    if (widthChange) {
+        if (isWrapping()) {
+            QTimer::singleShot(500, this, SLOT(rejustify()));   // calls calcViewportParameters
+        }
+        else {
+            setThumbParameters();   // req'd to show/hide scrollbar in thumb dock
+        }
     }
     prevWidth = width();
 
@@ -1212,6 +1218,8 @@ which isn't pretty at all.
     if (m2->gridDisplayFirstOpen) return;
 
     if (isFitTopOrBottom) {
+        qDebug() << CLASSFUNCTION
+                 << "isFitTopOrBottom =" << isFitTopOrBottom;
         // thumbDock isWrapping = false situation
         G::ignoreScrollSignal = true;
         scrollToRow(mid, CLASSFUNCTION);
@@ -1225,12 +1233,14 @@ which isn't pretty at all.
 
 void IconView::bestAspect()
 {
-/* This function scans icons in the datamodel to find the greatest height and width of the
-icons. The resulting max width and height are sent to IconViewDelegate to define the thumbRect
-that holds each icon.  This is also the most compact container available.
+/*
+    This function scans icons in the datamodel to find the greatest height and width of
+    the icons. The resulting max width and height are sent to IconViewDelegate to define
+    the thumbRect that holds each icon. This is also the most compact container
+    available.
 
-The function is called after a new folder is selected and the datamodel icon data has been
-loaded.  Both thumbView and gridView have to be called.
+    The function is called after a new folder is selected and the datamodel icon data has
+    been loaded. Both thumbView and gridView have to be called.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (iconWidth > G::maxIconSize) iconWidth = G::maxIconSize;
@@ -1261,17 +1271,17 @@ void IconView::thumbsFitTopOrBottom()
 {
 /*
     Called by MW::eventFilter when a thumbDock resize event occurs triggered by the user
-    resizing the thumbDock. The thumb size is adjusted to fit the new thumbDock height and
-    scrolled to keep the midVisibleThumb in the middle. Other objects visible (docks and
-    central widget) are resized.
+    resizing the thumbDock. The thumb size is adjusted to fit the new thumbDock height
+    and scrolled to keep the midVisibleThumb in the middle. Other objects visible (docks
+    and central widget) are resized.
 
     For icon cell anatomy (see diagram at top of IconViewDelegate)
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    /* isFitTopOrBottom is set here, cleared in resize. Used to flag when to just scroll the
-    thumbView when the thumbdock splitter triggers this function and when the resize event is
-    from another event.
-    */
+
+    /* isFitTopOrBottom is set here, cleared in resize. Used to flag when to just scroll
+    the thumbView when the thumbdock splitter triggers this function and when the resize
+    event is from another event.  */
     isFitTopOrBottom = true;
 
     // viewport available height
@@ -1624,13 +1634,9 @@ void IconView::mousePressEvent(QMouseEvent *event)
     when the user wants to view a specific part of another image that is in a
     different position than the current image.
 */
-//    if (indexAt(event->pos()).isValid()) QListView::mousePressEvent(event);
-//    return;
-
-//    qDebug() << "IconView::mousePressEvent" << event->pos() << hasMouseTracking();
-
     if (G::isLogger) G::log(CLASSFUNCTION);
 //    qDebug() << CLASSFUNCTION << event << event->pos();
+
     if (event->button() == Qt::RightButton) {
         // save mouse over index for toggle pick
         mouseOverIndex = indexAt(event->pos());
@@ -1656,46 +1662,39 @@ void IconView::mousePressEvent(QMouseEvent *event)
     }
 
     // Alt + Shift + Left button (toggle pick status)
-    if (event->button() == Qt::LeftButton
-        && event->modifiers() == (Qt::ShiftModifier | Qt::AltModifier))
-    {
-        QModelIndex idx = indexAt(event->pos());
-        if (idx.isValid()) {
-             m2->togglePickMouseOverItem(idx);
-        }
-        return;
-    }
+//    if (event->button() == Qt::LeftButton
+//        && event->modifiers() == (Qt::ShiftModifier | Qt::AltModifier))
+//    {
+//        QModelIndex idx = indexAt(event->pos());
+//        if (idx.isValid()) {
+//             m2->togglePickMouseOverItem(idx);
+//        }
+//        return;
+//    }
 
     // must finish event to update current index in iconView if mouse press on an icon
     QModelIndex currIdx = indexAt(event->pos());
 
-    // clear selection if unmodified mouse click
-    if (event->modifiers() == Qt::NoModifier) {
-//        selectionModel()->clearSelection();
-    }
-
     // unmodified click or tap
     if (event->modifiers() == Qt::NoModifier) {
-        // update selection
-        if (currIdx.isValid()) {
-            setCurrentIndex(currIdx);
-            selectionModel()->clearSelection();
-            selectionModel()->select(currIdx, QItemSelectionModel::Rows);
-        }
-
         // reqd for thumb resizing
         if (event->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
 
         /* Capture the percent coordinates of the mouse click within the thumbnail
            so that the full scale image can be zoomed to the same point.  */
-        QModelIndex idx = currentIndex();
-        QRect iconRect = idx.data(G::IconRectRole).toRect();
+        QRect iconRect = currIdx.data(G::IconRectRole).toRect();
         QPoint mousePt = event->pos();
         QPoint iconPt = mousePt - iconRect.topLeft();
-        float xPct = static_cast<float>(iconPt.x()) / iconRect.width();
-        float yPct = static_cast<float>(iconPt.y()) / iconRect.height();
+        float xPct = static_cast<float>(iconPt.x()) * 1.0 / iconRect.width();
+        float yPct = static_cast<float>(iconPt.y()) * 1.0 / iconRect.height();
         /*
-        qDebug() << CLASSFUNCTION << idx << iconRect << mousePt << iconPt << xPct << yPct;
+        qDebug() << CLASSFUNCTION
+                 << currIdx
+                 << "\n iconRect =" << iconRect
+                 << "\n mousePt  =" << mousePt
+                 << "\n iconPt   =" << iconPt
+                 << "\n xPct     =" << xPct
+                 << "yPct =" << yPct;
         //*/
         if (xPct >= 0 && xPct <= 1 && yPct >= 0 && yPct <=1) {
             //signal sent to ImageView
@@ -1709,7 +1708,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
 void IconView::mouseMoveEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-//    qDebug() << CLASSFUNCTION << event;
+//    qDebug() << CLASSFUNCTION << currentIndex().row();
     if (isLeftMouseBtnPressed) isMouseDrag = true;
     QListView::mouseMoveEvent(event);
 }
@@ -1717,6 +1716,24 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
 void IconView::mouseReleaseEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    QModelIndex currIdx = indexAt(event->pos());
+    if (event->button() == Qt::LeftButton) {
+        if (event->modifiers() == (Qt::ShiftModifier | Qt::AltModifier))
+        {
+            QModelIndex idx = indexAt(event->pos());
+            if (idx.isValid()) {
+                 m2->togglePickMouseOverItem(idx);
+            }
+//            return;
+        }
+        if (event->modifiers() == Qt::NoModifier) {
+            if (currIdx.isValid()) {
+                setCurrentIndex(currIdx);
+                selectionModel()->clearSelection();
+                selectionModel()->select(currIdx, QItemSelectionModel::Rows);
+            }
+        }
+    }
     QListView::mouseReleaseEvent(event);
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
@@ -1724,16 +1741,18 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
     zoomCursor(indexAt(event->pos()), /*forceUpdate=*/true, event->pos());
 }
 
-//QModelIndex IconView::moveCursor(QAbstractItemView::CursorAction cursorAction,
-//                                Qt::KeyboardModifiers modifiers)
-//{
-//    QModelIndex idx = QListView::moveCursor(cursorAction, modifiers);
-//    qDebug() << CLASSFUNCTION << cursorAction << modifiers << idx;
-////    QModelIndex idx = QAbstractItemView::moveCursor(cursorAction, modifiers);
-////    setCurrentIndex(idx);
-//    return idx;
+/*
+QModelIndex IconView::moveCursor(QAbstractItemView::CursorAction cursorAction,
+                                Qt::KeyboardModifiers modifiers)
+{
+    QModelIndex idx = QListView::moveCursor(cursorAction, modifiers);
+    qDebug() << CLASSFUNCTION << cursorAction << modifiers << idx;
+//    QModelIndex idx = QAbstractItemView::moveCursor(cursorAction, modifiers);
+//    setCurrentIndex(idx);
+    return idx;
 
-//}
+}
+*/
 
 void IconView::mouseDoubleClickEvent(QMouseEvent *event)
 {
@@ -1774,6 +1793,7 @@ void IconView::zoomCursor(const QModelIndex &idx, bool forceUpdate, QPoint mouse
         prevIdx = model()->index(-1, -1);
         return;
     }
+
     if (idx == prevIdx && !forceUpdate) return;
     if (!showZoomFrame) return;
     if (!idx.isValid()) return;
@@ -1829,10 +1849,11 @@ void IconView::zoomCursor(const QModelIndex &idx, bool forceUpdate, QPoint mouse
                                  << "hScale =" << hScale << "vScale =" << vScale;
 //        */
 
-        /* some brands create thumbnails with black borders, which are not part of the image,
-        and should be excluded. The long side (ie width if landscape, height if portrait, will
-        not have a black border.  Using that side and the aspect of the original image can give
-        the correct length for the other side of the thumbnail.  */
+        /* some brands create thumbnails with black borders, which are not part of the
+        image, and should be excluded. The long side (ie width if landscape, height if
+        portrait, will not have a black border. Using that side and the aspect of the
+        original image can give the correct length for the other side of the thumbnail.
+        */
         int iconW, iconH;
         if (imA > 1) {
             iconW = iconRect.width();
@@ -1985,7 +2006,7 @@ void IconView::startDrag(Qt::DropActions)
     mimeData->setUrls(urls);
     drag->setMimeData(mimeData);
 
-    /*
+    /*  Fancy drag cursor
     QPixmap pix;
     if (selection.count() > 1) {
         pix = QPixmap(128, 112);
@@ -2023,7 +2044,7 @@ void IconView::startDrag(Qt::DropActions)
         drag->exec(Qt::CopyAction);
     }
     if (key == Qt::NoModifier) {
-        drag->exec(Qt::MoveAction,  Qt::IgnoreAction);
+        drag->exec(Qt::MoveAction);
     }
     //*/
 //    drag->exec(Qt::CopyAction | Qt::LinkAction, Qt::IgnoreAction);

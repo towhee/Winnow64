@@ -337,12 +337,12 @@ void MW::refine()
             QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
             pushPick(fPath, "true");
             // clear picks
-            emit setValue(dm->index(row, G::RefineColumn), true, Qt::EditRole);
-            emit setValue(dm->index(row, G::PickColumn), "false", Qt::EditRole);
+            emit setValue(dm->index(row, G::RefineColumn), true, Qt::EditRole, Qt::AlignCenter);
+            emit setValue(dm->index(row, G::PickColumn), "false", Qt::EditRole, Qt::AlignCenter);
 //            dm->setData(dm->index(row, G::RefineColumn), true);
 //            dm->setData(dm->index(row, G::PickColumn), "false");
         }
-        emit setValue(dm->index(row, G::RefineColumn), false, Qt::EditRole);
+        emit setValue(dm->index(row, G::RefineColumn), false, Qt::EditRole, Qt::AlignCenter);
 //        else dm->setData(dm->index(row, G::RefineColumn), false);
     }
     pushPick("End multiple select");
@@ -788,7 +788,7 @@ void MW::setColorClass()
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 row = rawIdx.row();
                 labelIdx = dm->index(row, G::LabelColumn);
-                emit setValue(labelIdx, colorClass, Qt::EditRole);
+                emit setValue(labelIdx, colorClass, Qt::EditRole, Qt::AlignCenter);
 //                dm->setData(labelIdx, colorClass, Qt::EditRole);
                 // update color class crash log
                 QString jpgPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();

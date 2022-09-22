@@ -64,8 +64,10 @@ public:
 //    ImageCacheData::Cache icd->cache;
 
 signals:
-    void setValue(QModelIndex dmIdx, QVariant value, int role);
-    void setValueSf(QModelIndex sfIdx, QVariant value, int role);
+    void setValue(QModelIndex dmIdx, QVariant value,
+                  int role = Qt::EditRole, int align = Qt::AlignLeft);
+    void setValueSf(QModelIndex sfIdx, QVariant value,
+                    int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int role);
     void loadImage(QString fPath, QString src);
     void imageCachePrevCentralView();
