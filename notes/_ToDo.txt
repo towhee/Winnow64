@@ -1,4 +1,5 @@
 BUGS / TO DO
+- IconView label = show title sometimes = xml:lang
 - Add G::showWarnings
 - IconView click not always selecting same icon
 - Make ImageDecoder warnings context specific is hasMetadata

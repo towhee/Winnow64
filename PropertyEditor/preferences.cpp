@@ -60,7 +60,7 @@ itemChange, which is subclassed here.
         mw->gridView->setThumbParameters();
     }
 
-    if (source == "gridViewLabelChoice") {
+    if (source == "labelChoice") {
         mw->gridView->labelChoice = v.toString();
         mw->gridView->iconViewDelegate->setThumbDimensions(
                     mw->gridView->iconWidth,
@@ -71,6 +71,16 @@ itemChange, which is subclassed here.
                     mw->gridView->badgeSize
                     );
         mw->gridView->repaint();
+        mw->thumbView->labelChoice = v.toString();
+        mw->thumbView->iconViewDelegate->setThumbDimensions(
+                    mw->thumbView->iconWidth,
+                    mw->thumbView->iconHeight,
+                    mw->thumbView->labelFontSize,
+                    mw->thumbView->showIconLabels,
+                    mw->thumbView->labelChoice,
+                    mw->thumbView->badgeSize
+                    );
+        mw->thumbView->repaint();
     }
 
     if (source == "gridViewLabelSize") {
@@ -647,7 +657,7 @@ void Preferences::addItems()
     // General category::Badge size subcategory
     i.name = "BadgeSizeHeader";
     i.parentName = "UserInterfaceHeader";
-    i.captionText = "Classification badge size";
+    i.captionText = "Classification badge / Icon number size";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
@@ -659,7 +669,7 @@ void Preferences::addItems()
     i.tooltip = "The image badge is a circle showing the colour classification, rating and pick\n"
                 "status.  It is located in the lower right corner of the image.  This property \n"
                 "allows you to adjust its size.";
-    i.captionText = "Loupe";
+    i.captionText = "Loupe (badge only)";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 36;
@@ -677,8 +687,9 @@ void Preferences::addItems()
     i.parentName = "BadgeSizeHeader";
     i.tooltip = "The image badge is a circle showing the colour classification, rating and pick\n"
                 "status.  It is located in the top right corner of the thumbnail in the thumb \n"
-                "and grid views.  This property allows you to adjust its size.";
-    i.captionText = "Thumbnail";
+                "and grid views.  The image number is located in the top left corner.  This property\n"
+                "adjusts the size of both the badge and number.";
+    i.captionText = "Thumbnail (badge & number)";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 19;
@@ -691,32 +702,36 @@ void Preferences::addItems()
     i.fixedWidth = 50;
     addItem(i);
 
-    // Filmstrip Header
-    i.name = "FilmstripHeader";
+
+
+    // Label Header
+    i.name = "LabelHeader";
     i.parentName = "UserInterfaceHeader";
-    i.captionText = "Film strip";
+    i.captionText = "Thumbnail labels (file name / title)";
     i.tooltip = "";
     i.hasValue = false;
     i.captionIsEditable = false;
     addItem(i);
 
-    // Thumbnail badge size
-    i.name = "thumbViewIconSize";
-    i.parentName = "FilmstripHeader";
-    i.tooltip = "Change the display size of the thumbnails in the film strip.";
-    i.captionText = "Size";
+    // Label what to show
+    i.name = "labelChoice";
+    i.parentName = "LabelHeader";
+    i.captionText = "What to show";
+    i.tooltip = "Select what to show: file name or title.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = 0; // n/a
-    i.key = "thumbViewIconSize";
-    i.delegateType = DT_PlusMinus;
-    i.type = "int";
+    i.value = mw->gridView->labelChoice;
+    i.key = "labelChoice";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList << "File name"
+               << "Title";
     addItem(i);
 
-    // Thumbnail label font size
+    // Filmstrip label font size
     i.name = "thumbViewLabelSize";
-    i.parentName = "FilmstripHeader";
-    i.captionText = "Label size";
+    i.parentName = "LabelHeader";
+    i.captionText = "Filmstrip label size";
     i.tooltip = "Change the display size of the file name shown at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -732,9 +747,9 @@ void Preferences::addItems()
 
     // Show thumbnail label
     i.name = "thumbViewShowLabel";
-    i.parentName = "FilmstripHeader";
-    i.captionText = "Show Label";
-    i.tooltip = "Show or hide the label with the file name at the bottom of each thumbnail.";
+    i.parentName = "LabelHeader";
+    i.captionText = "Show film strip labels";
+    i.tooltip = "Show or hide the label with the file name / title at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 8;
@@ -744,33 +759,11 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
-    // Grid Header
-    i.name = "GridHeader";
-    i.parentName = "UserInterfaceHeader";
-    i.captionText = "Grid";
-    i.tooltip = "";
-    i.hasValue = false;
-    i.captionIsEditable = false;
-    addItem(i);
-
-    // Grid size
-    i.name = "gridIconSize";
-    i.parentName = "GridHeader";
-    i.tooltip = "Change the display size of the thumbnails in the grid view.";
-    i.captionText = "Size";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = 0; // n/a
-    i.key = "gridViewIconSize";
-    i.delegateType = DT_PlusMinus;
-    i.type = "int";
-    addItem(i);
-
-    // Thumbnail label font size
+    // Grid label font size
     i.name = "gridViewLabelSize";
-    i.parentName = "GridHeader";
-    i.captionText = "Label size";
-    i.tooltip = "Change the display size of the file name shown at the bottom of each thumbnail.";
+    i.parentName = "LabelHeader";
+    i.captionText = "Grid view label size";
+    i.tooltip = "Change the display size of the file name / title shown at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->gridView->labelFontSize;
@@ -784,9 +777,9 @@ void Preferences::addItems()
 
     // Show grid thumbnail label
     i.name = "gridViewShowLabel";
-    i.parentName = "GridHeader";
-    i.captionText = "Show Label";
-    i.tooltip = "Show or hide the label with the file name at the bottom of each thumbnail.";
+    i.parentName = "LabelHeader";
+    i.captionText = "Show grid view labels";
+    i.tooltip = "Show or hide the label with the file name / title at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->gridView->showIconLabels;
@@ -795,20 +788,129 @@ void Preferences::addItems()
     i.type = "bool";
     addItem(i);
 
-    // Show grid thumbnail label
-    i.name = "gridViewLabelChoice";
-    i.parentName = "GridHeader";
-    i.captionText = "What to show";
-    i.tooltip = "Select what to show: file name or title.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = mw->gridView->labelChoice;
-    i.key = "gridViewLabelChoice";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList << "File name"
-               << "Title";
-    addItem(i);
+
+
+
+
+
+//    // Filmstrip Header
+//    i.name = "FilmstripHeader";
+//    i.parentName = "UserInterfaceHeader";
+//    i.captionText = "Film strip";
+//    i.tooltip = "";
+//    i.hasValue = false;
+//    i.captionIsEditable = false;
+//    addItem(i);
+
+//    // Filmstrip badge size
+//    i.name = "thumbViewIconSize";
+//    i.parentName = "FilmstripHeader";
+//    i.tooltip = "Change the display size of the thumbnails in the film strip.";
+//    i.captionText = "Size";
+//    i.hasValue = true;
+//    i.captionIsEditable = false;
+//    i.value = 0; // n/a
+//    i.key = "thumbViewIconSize";
+//    i.delegateType = DT_PlusMinus;
+//    i.type = "int";
+//    addItem(i);
+
+//    // Filmstrip label font size
+//    i.name = "thumbViewLabelSize";
+//    i.parentName = "FilmstripHeader";
+//    i.captionText = "Label size";
+//    i.tooltip = "Change the display size of the file name shown at the bottom of each thumbnail.";
+//    i.hasValue = true;
+//    i.captionIsEditable = false;
+//    i.defaultValue = 8;
+//    i.value = mw->thumbView->labelFontSize;
+//    i.key = "thumbViewLabelSize";
+//    i.delegateType = DT_Slider;
+//    i.type = "int";
+//    i.min = 6;
+//    i.max = 16;
+//    i.fixedWidth = 50;
+//    addItem(i);
+
+//    // Show Filmstrip label
+//    i.name = "thumbViewShowLabel";
+//    i.parentName = "FilmstripHeader";
+//    i.captionText = "Show Label";
+//    i.tooltip = "Show or hide the label with the file name at the bottom of each thumbnail.";
+//    i.hasValue = true;
+//    i.captionIsEditable = false;
+//    i.defaultValue = 8;
+//    i.value = mw->thumbView->showIconLabels;
+//    i.key = "thumbViewShowLabel";
+//    i.delegateType = DT_Checkbox;
+//    i.type = "bool";
+//    addItem(i);
+
+//    // Grid Header
+//    i.name = "GridHeader";
+//    i.parentName = "UserInterfaceHeader";
+//    i.captionText = "Grid";
+//    i.tooltip = "";
+//    i.hasValue = false;
+//    i.captionIsEditable = false;
+//    addItem(i);
+
+//    // Grid label size
+//    i.name = "gridIconSize";
+//    i.parentName = "GridHeader";
+//    i.tooltip = "Change the display size of the thumbnails in the grid view.";
+//    i.captionText = "Size";
+//    i.hasValue = true;
+//    i.captionIsEditable = false;
+//    i.value = 0; // n/a
+//    i.key = "gridViewIconSize";
+//    i.delegateType = DT_PlusMinus;
+//    i.type = "int";
+//    addItem(i);
+
+//    // Grid label font size
+//    i.name = "gridViewLabelSize";
+//    i.parentName = "GridHeader";
+//    i.captionText = "Label size";
+//    i.tooltip = "Change the display size of the file name shown at the bottom of each thumbnail.";
+//    i.hasValue = true;
+//    i.captionIsEditable = false;
+//    i.value = mw->gridView->labelFontSize;
+//    i.key = "gridViewLabelSize";
+//    i.delegateType = DT_Slider;
+//    i.type = "int";
+//    i.min = 6;
+//    i.max = 16;
+//    i.fixedWidth = 50;
+//    addItem(i);
+
+//    // Show grid thumbnail label
+//    i.name = "gridViewShowLabel";
+//    i.parentName = "GridHeader";
+//    i.captionText = "Show Label";
+//    i.tooltip = "Show or hide the label with the file name at the bottom of each thumbnail.";
+//    i.hasValue = true;
+//    i.captionIsEditable = false;
+//    i.value = mw->gridView->showIconLabels;
+//    i.key = "gridViewShowLabel";
+//    i.delegateType = DT_Checkbox;
+//    i.type = "bool";
+//    addItem(i);
+
+//    // Label what to show
+//    i.name = "labelChoice";
+//    i.parentName = "GridHeader";
+//    i.captionText = "What to show";
+//    i.tooltip = "Select what to show: file name or title.";
+//    i.hasValue = true;
+//    i.captionIsEditable = false;
+//    i.value = mw->gridView->labelChoice;
+//    i.key = "labelChoice";
+//    i.delegateType = DT_Combo;
+//    i.type = "QString";
+//    i.dropList << "File name"
+//               << "Title";
+//    addItem(i);
 
     }
 

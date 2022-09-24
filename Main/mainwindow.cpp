@@ -3973,7 +3973,7 @@ void MW::writeSettings()
     setting->setValue("thumbHeightGrid", gridView->iconHeight);
     setting->setValue("labelFontSizeGrid", gridView->labelFontSize);
     setting->setValue("showThumbLabelsGrid", gridView->showIconLabels);
-    setting->setValue("gridViewLabelChoice", gridView->labelChoice);
+    setting->setValue("labelChoice", gridView->labelChoice);
 
     setting->setValue("thumbsPerPage", metadataCacheThread->visibleIcons);
 

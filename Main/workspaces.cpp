@@ -426,7 +426,7 @@ void MW::loadWorkspaces()
         ws.thumbHeightGrid = setting->value("thumbHeightGrid").toInt();
         ws.labelFontSizeGrid = setting->value("labelFontSizeGrid").toInt();
         ws.showThumbLabelsGrid = setting->value("showThumbLabelsGrid").toBool();
-        ws.labelChoice = setting->value("gridViewLabelChoice").toString();
+        ws.labelChoice = setting->value("labelChoice").toString();
         ws.isImageInfoVisible = setting->value("isImageInfoVisible").toBool();
         ws.isLoupeDisplay = setting->value("isLoupeDisplay").toBool();
         ws.isGridDisplay = setting->value("isGridDisplay").toBool();
@@ -473,7 +473,7 @@ void MW::saveWorkspaces()
         setting->setValue("thumbHeightGrid", ws.thumbHeightGrid);
         setting->setValue("labelFontSizeGrid", ws.labelFontSizeGrid);
         setting->setValue("showThumbLabelsGrid", ws.showThumbLabelsGrid);
-        setting->setValue("gridViewLabelChoice", ws.labelChoice);
+        setting->setValue("labelChoice", ws.labelChoice);
         setting->setValue("isImageInfoVisible", ws.isImageInfoVisible);
         setting->setValue("isLoupeDisplay", ws.isLoupeDisplay);
         setting->setValue("isGridDisplay", ws.isGridDisplay);

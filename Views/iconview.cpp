@@ -191,7 +191,7 @@ QString IconView::diagnostics()
     rpt << "\n" << "iconHeight = " << G::s(iconHeight);
     rpt << "\n" << "labelFontSize = " << G::s(labelFontSize);
     rpt << "\n" << "showIconLabels = " << G::s(showIconLabels);
-    rpt << "\n" << "gridViewLabelChoice = " << G::s(labelChoice);
+    rpt << "\n" << "labelChoice = " << G::s(labelChoice);
     rpt << "\n" << "badgeSize = " << G::s(badgeSize);
     rpt << "\n" << "scrollWhenReady = " << G::s(scrollWhenReady);
     rpt << "\n" << "assignedIconWidth = " << G::s(assignedIconWidth);

@@ -381,13 +381,6 @@ void IconViewDelegate::paint(QPainter *painter,
                 ;
 //             */
 
-    // icon number (row) located top-left
-//    QPoint numberTopLeft(option.rect.left() + 10, option.rect.top() - 1);
-//    QPoint numberBottomRight(option.rect.right(), option.rect.top() + badgeSize - 1);
-//    QRect numberRect(numberTopLeft, numberBottomRight);
-    QPoint numberPt(option.rect.left() + 10, option.rect.top() + badgeSize - 5);
-
-
     // label/rating rect located top-right as containment for circle
     QPoint ratingTopLeft(option.rect.right() - badgeSize, option.rect.top());
     QPoint ratingBottomRight(option.rect.right(), option.rect.top() + badgeSize);
@@ -528,19 +521,9 @@ void IconViewDelegate::paint(QPainter *painter,
     QPoint numberBottomRight(option.rect.left() + 10 + numberWidth, option.rect.top() + badgeSize - 1);
     QRect numberRect(numberTopLeft, numberBottomRight);
     painter->setPen(G::backgroundColor);
-//    painter->setPen(defaultBorderColor);
     painter->drawRoundedRect(numberRect, badgeSize/2, badgeSize/2);
     painter->setPen(numberPen);
     painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
-
-//    painter->drawText(numberPt, labelNumber);
-
-//    QRectF nRect;
-//    painter->drawText(numberRect, Qt::AlignLeft| Qt::AlignTop, labelNumber, &nRect);
-
-//    painter->drawRoundedRect(nRect, 6, 6);
-//    painter->drawText(nRect, Qt::AlignCenter, labelNumber);
-
 
     /* provide rect data to calc thumb mouse click position that is then sent to imageView to
     zoom to the same spot */
