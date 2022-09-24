@@ -1635,6 +1635,7 @@ void IconView::mousePressEvent(QMouseEvent *event)
     different position than the current image.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION << "Row =" << indexAt(event->pos()).row();
 //    qDebug() << CLASSFUNCTION << event << event->pos();
 
     if (event->button() == Qt::RightButton) {
@@ -1653,24 +1654,12 @@ void IconView::mousePressEvent(QMouseEvent *event)
 
     // forward and back buttons
     if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) {
-//        qDebug() << CLASSFUNCTION << event->pos();
         QModelIndex idx = indexAt(event->pos());
         if (idx.isValid()) {
              m2->togglePickMouseOverItem(idx);
         }
         return;
     }
-
-    // Alt + Shift + Left button (toggle pick status)
-//    if (event->button() == Qt::LeftButton
-//        && event->modifiers() == (Qt::ShiftModifier | Qt::AltModifier))
-//    {
-//        QModelIndex idx = indexAt(event->pos());
-//        if (idx.isValid()) {
-//             m2->togglePickMouseOverItem(idx);
-//        }
-//        return;
-//    }
 
     // must finish event to update current index in iconView if mouse press on an icon
     QModelIndex currIdx = indexAt(event->pos());
@@ -1716,6 +1705,8 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
 void IconView::mouseReleaseEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION << "Row =" << indexAt(event->pos()).row();
+    QListView::mouseReleaseEvent(event);
     QModelIndex currIdx = indexAt(event->pos());
     if (event->button() == Qt::LeftButton) {
         if (event->modifiers() == (Qt::ShiftModifier | Qt::AltModifier))
@@ -1728,13 +1719,11 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
         }
         if (event->modifiers() == Qt::NoModifier) {
             if (currIdx.isValid()) {
-                setCurrentIndex(currIdx);
-                selectionModel()->clearSelection();
-                selectionModel()->select(currIdx, QItemSelectionModel::Rows);
+                selectThumb(currIdx);
             }
         }
     }
-    QListView::mouseReleaseEvent(event);
+//    QListView::mouseReleaseEvent(event);
     isLeftMouseBtnPressed = false;
     isMouseDrag = false;
     // if icons scroll after mouse click, redraw cursor for new icon
@@ -2006,39 +1995,44 @@ void IconView::startDrag(Qt::DropActions)
     mimeData->setUrls(urls);
     drag->setMimeData(mimeData);
 
-    /*  Fancy drag cursor
+//    /*  Fancy drag cursor
+    int w = 96;
+    int h = 80;
+
+    int w2 = w/2;
+    int h2 = h/2;
+    int pw = 2;
     QPixmap pix;
     if (selection.count() > 1) {
-        pix = QPixmap(128, 112);
+        pix = QPixmap(w, h);
         pix.fill(Qt::transparent);
         QPainter painter(&pix);
         painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(Qt::white, 2));
+        if (pw) painter.setPen(QPen(QColor(255,255,255,128), pw));
         int x = 0, y = 0, xMax = 0, yMax = 0;
         for (int i = 0; i < qMin(5, selection.count()); ++i) {
-            QPixmap pix = dm->item(selection.at(i).row())->icon().pixmap(72);
+            QPixmap pix = dm->item(selection.at(i).row())->icon().pixmap(w2);
+            pix.scaled(w2, h2);
             if (i == 4) {
                 x = (xMax - pix.width()) / 2;
                 y = (yMax - pix.height()) / 2;
             }
             painter.drawPixmap(x, y, pix);
-            xMax = qMax(xMax, qMin(128, x + pix.width()));
-            yMax = qMax(yMax, qMin(112, y + pix.height()));
-            painter.drawRect(x + 1, y + 1, qMin(126, pix.width() - 2), qMin(110, pix.height() - 2));
-            x = !(x == y) * 56;
-            y = !y * 40;
+            xMax = qMax(xMax, qMin(w, x + pix.width()));
+            yMax = qMax(yMax, qMin(h, y + pix.height()));
+            if (pw) painter.drawRect(x + 1, y + 1, qMin(w-pw, pix.width() - pw), qMin(h-pw, pix.height() - pw));
+            x = !(x == y) * w * 0.44;
+            y = !y * h * 0.36;
         }
         painter.end();
         pix = pix.copy(0, 0, xMax, yMax);
         drag->setPixmap(pix);
     } else {
-        pix = dm->item(selection.at(0).row())->icon().pixmap(128);
+        pix = dm->item(selection.at(0).row())->icon().pixmap(w);
         drag->setPixmap(pix);
     }
-//    drag->setHotSpot(QPoint(pix.width() / 2, pix.height() / 2));
     //*/
 
-//    /*
     Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
     if (key == Qt::AltModifier) {
         drag->exec(Qt::CopyAction);
@@ -2046,6 +2040,4 @@ void IconView::startDrag(Qt::DropActions)
     if (key == Qt::NoModifier) {
         drag->exec(Qt::MoveAction);
     }
-    //*/
-//    drag->exec(Qt::CopyAction | Qt::LinkAction, Qt::IgnoreAction);
 }

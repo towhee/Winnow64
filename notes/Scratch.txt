@@ -89,3 +89,30 @@ imCache hash: 4 items
 4 images in image cache.
 150 MB consumed
 
+Linear success:
+---------------
+2 MW::folderSelectionChange
+2 MW::stopAndClearAll
+1,261 MetaRead::stop
+34,094 DataModel::clearDataModel
+2 Filters::removeChildrenDynamicFilters
+546 Filters::clearAll
+1,078 DataModel::load                                    clearDataModel
+1,024 DataModel::load                                    continue loading
+
+167 MW::loadLinearNewFolder
+25,980 DataModel::addAllMetadata
+73 MW::updateIconBestFit
+4 IconView::calcViewportRange
+
+18 MW::loadImageCacheForNewFolder
+27 ImageCache::initImageCache
+974 ImageCache::buildImageCacheList
+20 IconView::selectThumb                              0
+6,498 MW::fileSelectionChange                            IconView::selectionChanged /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0001.NEF
+31 ImageView::loadImage                               /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0001.NEF Src:MW::fileSelectionChange
+2 IconView::calcViewportRange
+
+42 ImageCache::setCurrentPosition                     /Users/roryhill/Pictures/2018-01-14_Lillian/2018-01-14_0001.NEF
+35 MetadataCache::run                                 NewFileSelected
+1,770,934 ImageCache::fillCache

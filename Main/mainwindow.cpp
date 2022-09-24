@@ -2082,6 +2082,7 @@ void MW::loadLinearNewFolder()
     still used (as a separate thread) for updating icons when scroll, resize or change icon
     selection.
 */
+    if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     MetadataCache *mct = metadataCacheThread;
 //    G::allMetadataLoaded = false;
@@ -2114,6 +2115,10 @@ void MW::loadLinearNewFolder()
 
     updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
     dm->addAllMetadata();
+    if (!dm->isAllMetadataLoaded()) {
+        qWarning() << CLASSFUNCTION << "Not all metadata loaded";
+//        return;
+    }
 
     if (dm->abortLoadingModel || !G::allMetadataLoaded) {
         updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
@@ -2129,7 +2134,6 @@ void MW::loadLinearNewFolder()
     // read icons
     updateIconBestFit();
     updateIconRange(currSfRow);
-
 
     setCentralMessage("Reading icons.");
 //    QApplication::processEvents();
@@ -2149,10 +2153,11 @@ void MW::loadLinearNewFolder()
 void MW::loadImageCacheForNewFolder()
 {
 /*
-    This function is called from MW::loadLinearNewFolder after the metadata chunk has been
-    loaded for a new folder selection. The imageCache loads images until the assigned amount
-    of memory has been consumed or all the images are cached.
+    This function is called from MW::loadLinearNewFolder after the metadata chunk has
+    been loaded for a new folder selection. The imageCache loads images until the
+    assigned amount of memory has been consumed or all the images are cached.
 */
+    if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
 
     // clear the cache progress bar
@@ -2178,15 +2183,15 @@ void MW::loadImageCacheForNewFolder()
     folderAndFileChangePath = "";
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
         thumbView->selectThumb(fPath);
-        gridView->selectThumb(fPath);
+//        gridView->selectThumb(fPath);
         currSfIdx = dm->proxyIndexFromPath(fPath);
     }
     else {
         thumbView->selectFirst();
-        gridView->selectFirst();
+//        gridView->selectFirst();
         currSfIdx = dm->sf->index(0,0);
     }
-//    fileSelectionChange(currentSfIdx, currentSfIdx, CLASSFUNCTION);
+//    fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
 
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
        InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
