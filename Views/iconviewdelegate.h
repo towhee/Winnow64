@@ -72,6 +72,7 @@ private:
     QColor cacheColor;
     QColor cacheBorderColor;
     QColor videoTextcolor;
+    QColor numberTextColor;
 
     QPen pickPen;
     QPen rejectPen;

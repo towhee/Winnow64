@@ -13,7 +13,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     testTime.restart();
     */
 
-//    qDebug() << CLASSFUNCTION << s << source;
+    qDebug() << CLASSFUNCTION << s << source;
     // check if null filter
     if (dm->sf->rowCount() == 0) {
         statusLabel->setText("");

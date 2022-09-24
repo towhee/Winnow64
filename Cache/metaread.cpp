@@ -267,7 +267,7 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 
 void MetaRead::readRow(int sfRow)
 {
-    if (G::isLogger || G::isFlowLogger) G::log("MetaRead::readRow");
+    if (G::isLogger) G::log("MetaRead::readRow");
     if (debugCaching) {
         qDebug().noquote() << "MetaRead::readRow"
                            << "start  row =" << sfRow

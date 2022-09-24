@@ -365,6 +365,9 @@ bool ImageCache::nextToCache(int id)
         bool isCaching = icd->cacheItemList.at(i).isCaching;
         bool isCached = icd->cacheItemList.at(i).isCached;
         int attempts = icd->cacheItemList.at(i).attempts;
+        if (attempts == maxAttemptsToCacheImage)
+            qWarning() << "Exceeded maxAttemptsToCacheImage" << "Row" << i
+                       <<  icd->cacheItemList.at(i).fPath;
         int threadId = icd->cacheItemList.at(i).threadId;
         if (!isCached && attempts < maxAttemptsToCacheImage) {
             if (!isCaching || (isCaching && id == threadId)) {
@@ -1405,6 +1408,8 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     Called from MW::fileSelectionChange to reset the position in the image cache. The image
     cache direction, priorities and target are reset and the cache is updated in fillCache.
     */
+
+    if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::setCurrentPosition", path);
 //    qDebug() << CLASSFUNCTION
 //             << dm->rowFromPath(path)
@@ -1599,11 +1604,6 @@ void ImageCache::fillCache(int id)
 
     // add decoded QImage to imCache.
     if (cacheKey != -1) {
-//        if (decoder[id]->status == ImageDecoder::Status::Video) {
-//            icd->cacheItemList[cacheKey].isCaching = false;
-//            icd->cacheItemList[cacheKey].isCached = true;
-//        }
-//        else cacheImage(id, cacheKey);
         cacheImage(id, cacheKey);
     }
 

@@ -791,6 +791,7 @@ void DataModel::addAllMetadata()
         }
         if (abortLoadingModel) {
             endLoad(false);
+            setAllMetadataLoaded(false);
             return;
         }
         // is metadata already cached
@@ -800,11 +801,12 @@ void DataModel::addAllMetadata()
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
             metadata->m.row = row;
+            metadata->m.dmInstance = instance;
             addMetadataForItem(metadata->m);
             count++;
         }
         else {
-//            qWarning() << CLASSFUNCTION << "Failed to load metadata." << fPath;
+            qWarning() << CLASSFUNCTION << "Failed to load metadata." << fPath;
         }
     }
     setAllMetadataLoaded(true);
