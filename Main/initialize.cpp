@@ -333,6 +333,7 @@ void MW::createThumbView()
         if (setting->contains("thumbHeight")) thumbView->iconHeight = setting->value("thumbHeight").toInt();
         if (setting->contains("labelFontSize")) thumbView->labelFontSize = setting->value("labelFontSize").toInt();
         if (setting->contains("showThumbLabels")) thumbView->showIconLabels = setting->value("showThumbLabels").toBool();
+        if (setting->contains("labelChoice")) thumbView->labelChoice = setting->value("labelChoice").toString();
         if (setting->contains("showZoomFrame")) thumbView->showZoomFrame = setting->value("showZoomFrame").toBool();
         if (setting->contains("classificationBadgeInThumbDiameter")) thumbView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
         if (setting->contains("thumbsPerPage")) thumbView->visibleCells = setting->value("thumbsPerPage").toInt();
@@ -382,7 +383,7 @@ void MW::createGridView()
         if (setting->contains("thumbHeightGrid")) gridView->iconHeight = setting->value("thumbHeightGrid").toInt();
         if (setting->contains("labelFontSizeGrid")) gridView->labelFontSize = setting->value("labelFontSizeGrid").toInt();
         if (setting->contains("showThumbLabelsGrid")) gridView->showIconLabels = setting->value("showThumbLabelsGrid").toBool();
-        if (setting->contains("gridViewLabelChoice")) gridView->labelChoice = setting->value("gridViewLabelChoice").toString();
+        if (setting->contains("labelChoice")) gridView->labelChoice = setting->value("labelChoice").toString();
         if (setting->contains("classificationBadgeInThumbDiameter")) gridView->badgeSize = setting->value("classificationBadgeInThumbDiameter").toInt();
         if (setting->contains("thumbsPerPage")) gridView->visibleCells = setting->value("thumbsPerPage").toInt();
     }
