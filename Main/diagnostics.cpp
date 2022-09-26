@@ -162,6 +162,7 @@ QString MW::diagnostics()
     rpt << "\n" << "displayPhysicalVerticalPixels = " << G::s(G::displayPhysicalVerticalPixels);
     rpt << "\n" << "checkIfUpdate = " << G::s(checkIfUpdate);
     rpt << "\n" << "isRatingBadgeVisible = " << G::s(isRatingBadgeVisible);
+    rpt << "\n" << "isIconNumberVisible = " << G::s(isIconNumberVisible);
     rpt << "\n" << "classificationBadgeInImageDiameter = " << G::s(classificationBadgeInImageDiameter);
     rpt << "\n" << "classificationBadgeInThumbDiameter = " << G::s(classificationBadgeInThumbDiameter);
     rpt << "\n" << "rememberLastDir = " << G::s(rememberLastDir);

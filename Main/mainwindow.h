@@ -217,6 +217,7 @@ public:
     // appearance
     bool isImageInfoVisible;
     bool isRatingBadgeVisible;
+    bool isIconNumberVisible;
     int infoOverlayFontSize = 20;
     int classificationBadgeInImageDiameter;
     int classificationBadgeInThumbDiameter;
@@ -520,6 +521,7 @@ private slots:
     void checkDirState(const QString &dirPath);
     void bookmarkClicked(QTreeWidgetItem *item, int col);
     void setRatingBadgeVisibility();
+    void setIconNumberVisibility();
     void setShootingInfoVisibility();
 //    void selectTokenString();
     void tokenEditor();
@@ -833,6 +835,7 @@ private:
     QAction *fullScreenAction;
     QAction *escapeFullScreenAction;
     QAction *ratingBadgeVisibleAction;
+    QAction *iconNumberVisibleAction;
     QAction *infoVisibleAction;
     QAction *infoSelectAction;
     QActionGroup *iconGroupAction;

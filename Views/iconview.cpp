@@ -148,7 +148,10 @@ IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString 
 
     setModel(this->dm->sf);
 
-    iconViewDelegate = new IconViewDelegate(this, m2->isRatingBadgeVisible, icd);
+    iconViewDelegate = new IconViewDelegate(this,
+                                            m2->isRatingBadgeVisible,
+                                            m2->isIconNumberVisible,
+                                            icd);
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
         labelFontSize, showIconLabels, labelChoice, badgeSize);
     setItemDelegate(iconViewDelegate);
@@ -1635,8 +1638,6 @@ void IconView::mousePressEvent(QMouseEvent *event)
     different position than the current image.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION << "Row =" << indexAt(event->pos()).row();
-//    qDebug() << CLASSFUNCTION << event << event->pos();
 
     if (event->button() == Qt::RightButton) {
         // save mouse over index for toggle pick
@@ -1705,7 +1706,7 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
 void IconView::mouseReleaseEvent(QMouseEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION << "Row =" << indexAt(event->pos()).row();
+//    qDebug() << CLASSFUNCTION << "Row =" << indexAt(event->pos()).row();
     QListView::mouseReleaseEvent(event);
     QModelIndex currIdx = indexAt(event->pos());
     if (event->button() == Qt::LeftButton) {

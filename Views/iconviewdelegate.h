@@ -13,7 +13,10 @@ class IconViewDelegate : public QStyledItemDelegate
     Q_OBJECT
 
 public:
-    IconViewDelegate(QObject *parent, bool &isRatingBadgeVisible, ImageCacheData *icd);
+    IconViewDelegate(QObject *parent,
+                     bool &isRatingBadgeVisible,
+                     bool &isIconNumberVisible,
+                     ImageCacheData *icd);
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
                const QModelIndex &index) const override;
@@ -58,6 +61,7 @@ private:
     QObject parent;
     ImageCacheData *icd;
     bool &isRatingBadgeVisible;
+    bool &isIconNumberVisible;
     bool delegateShowThumbLabels;
     QString labelChoice;
     QFont font;

@@ -77,7 +77,7 @@ bool ImageDecoder::load()
 
     NOTE: calls to metadata and dm to not appear to impact performance.
 */
-    if (G::isLogger) G::log("ImageDecoder::load", fPath);
+//    if (G::isLogger) {mutex.lock(); G::log("ImageDecoder::load", fPath); mutex.unlock();}
     /*
     qDebug() << "ImageDecoder::load" << "fPath =" << fPath;
     //*/
@@ -249,13 +249,21 @@ bool ImageDecoder::load()
 
 void ImageDecoder::setReady()
 {
-    if (G::isLogger) G::log("ImageDecoder::setRead", "Thread " + QString::number(threadId));
+    if (G::isLogger) {
+//        mutex.lock();
+//        G::log("ImageDecoder::setRead", "Thread " + QString::number(threadId));
+//        mutex.unlock();
+    }
     status = Status::Ready;
 }
 
 void ImageDecoder::rotate()
 {
-    if (G::isLogger) G::log("ImageDecoder::rotate", "Thread " + QString::number(threadId));
+    if (G::isLogger) {
+//        mutex.lock();
+//        G::log("ImageDecoder::rotate", "Thread " + QString::number(threadId));
+//        mutex.unlock();
+    }
     QTransform trans;
     int degrees;
     if (n.orientation > 0) {
@@ -288,7 +296,11 @@ void ImageDecoder::rotate()
 
 void ImageDecoder::colorManage()
 {
-    if (G::isLogger) G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
+    if (G::isLogger) {
+//        mutex.lock();
+//        G::log("ImageDecoder::colorManage", "Thread " + QString::number(threadId));
+//        mutex.unlock();
+    }
     if (metadata->iccFormats.contains(ext)) {
         ICC::transform(n.iccBuf, image);
     }
@@ -296,7 +308,11 @@ void ImageDecoder::colorManage()
 
 void ImageDecoder::run()
 {
-    if (G::isLogger) G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
+    if (G::isLogger) {
+//        mutex.lock();
+//        G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
+//        mutex.unlock();
+    }
     if (load()) {
         if (G::isLogger) G::log("ImageDecoder::run", "Image width =" + QString::number(image.width()));
         if (metadata->rotateFormats.contains(ext) && !abort) rotate();

@@ -83,9 +83,11 @@ IconView thumbDock Anatomy
 
 IconViewDelegate::IconViewDelegate(QObject *parent,
                                    bool &isRatingBadgeVisible,
+                                   bool &isIconNumberVisible,
                                    ImageCacheData *icd
                                    )
-        : isRatingBadgeVisible(isRatingBadgeVisible)
+        : isRatingBadgeVisible(isRatingBadgeVisible),
+          isIconNumberVisible(isIconNumberVisible)
 {
     parent->isWidgetType();         // suppress compiler warning
     this->icd = icd;
@@ -98,18 +100,17 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
 
     // define colors
     int l20 = G::backgroundShade + 20;
+    int l40 = G::backgroundShade + 40;
     defaultBorderColor = QColor(l20,l20,l20);
     currentItemColor = QColor(Qt::yellow);
     selectedColor = QColorConstants::Svg::white;
-//    selectedColor = QColor(Qt::white);
     pickColor = QColor(Qt::green);
     rejectColor = QColor(Qt::red);
     ingestedColor = QColor(Qt::blue);
     cacheColor = QColor(Qt::red);
     cacheBorderColor = QColor(Qt::lightGray);
     videoTextcolor = G::textColor;
-    numberTextColor = QColor(l20,l20,l20);
-//    numberTextColor = G::textColor;
+    numberTextColor = QColor(l40,l40,l40);
 
     // define pens
     currentPen.setColor(currentItemColor);
@@ -381,15 +382,6 @@ void IconViewDelegate::paint(QPainter *painter,
                 ;
 //             */
 
-    // label/rating rect located top-right as containment for circle
-    QPoint ratingTopLeft(option.rect.right() - badgeSize, option.rect.top());
-    QPoint ratingBottomRight(option.rect.right(), option.rect.top() + badgeSize);
-    QRect ratingRect(ratingTopLeft, ratingBottomRight);
-
-    QPoint ratingTextTopLeft(ratingRect.left(), ratingRect.top() - 1);
-    QPoint ratingTextBottomRight(ratingRect.right(), ratingRect.bottom() - 1);
-    QRect ratingTextRect(ratingTextTopLeft, ratingTextBottomRight);
-
     // cached rect located bottom right as containment for circle
     int cacheDiam = 6;
     int cacheOffset = 3;
@@ -437,7 +429,6 @@ void IconViewDelegate::paint(QPainter *painter,
     }
 
     // selected item
-//    if (option.state.testFlag(QStyle::State_Selected)) {
     if (isSelected) {
         painter->setPen(selectedPen);
         painter->drawRoundedRect(frameRect, 8, 8);
@@ -456,8 +447,38 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->drawPath(iconPath);
     }
 
+    // draw icon number
+    if (isIconNumberVisible) {
+        QPen numberPen(numberTextColor);
+        numberPen.setWidth(2);
+        painter->setBrush(G::backgroundColor);
+        QFont numberFont = painter->font();
+        numberFont.setPixelSize(badgeSize);
+        numberFont.setBold(true);
+        painter->setFont(numberFont);
+        QFontMetrics fm(numberFont);
+        QString labelNumber = QString::number(row + 1);
+        int numberWidth = fm.boundingRect(labelNumber).width() + badgeSize * 0.5;
+        QPoint numberTopLeft(option.rect.left() + 10, option.rect.top());
+        QPoint numberBottomRight(option.rect.left() + 10 + numberWidth, option.rect.top() + badgeSize - 1);
+        QRect numberRect(numberTopLeft, numberBottomRight);
+        painter->setPen(G::backgroundColor);
+        painter->drawRoundedRect(numberRect, badgeSize/2, badgeSize/2);
+        painter->setPen(numberPen);
+        painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
+    }
+
     // rating badge (color filled circle with rating number in center)
     if (isRatingBadgeVisible) {
+        // label/rating rect located top-right as containment for circle
+        QPoint ratingTopLeft(option.rect.right() - badgeSize, option.rect.top());
+        QPoint ratingBottomRight(option.rect.right(), option.rect.top() + badgeSize);
+        QRect ratingRect(ratingTopLeft, ratingBottomRight);
+
+        QPoint ratingTextTopLeft(ratingRect.left(), ratingRect.top() - 1);
+        QPoint ratingTextBottomRight(ratingRect.right(), ratingRect.bottom() - 1);
+        QRect ratingTextRect(ratingTextTopLeft, ratingTextBottomRight);
+
         QColor labelColorToUse;
         QColor textColor(Qt::white);
         if (G::labelColors.contains(colorClass) || G::ratings.contains(rating)) {
@@ -496,7 +517,6 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->drawRect(bRect);
         painter->setPen(videoTextcolor);
         painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
-//        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
     }
 
     // draw the cache circle
@@ -505,25 +525,6 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->setBrush(cacheColor);
         painter->drawEllipse(cacheRect);
     }
-
-    // draw icon number
-    QPen numberPen(numberTextColor);
-    numberPen.setWidth(2);
-    painter->setBrush(G::backgroundColor);
-    QFont numberFont = painter->font();
-    numberFont.setPixelSize(badgeSize);
-    numberFont.setBold(true);
-    painter->setFont(numberFont);
-    QFontMetrics fm(numberFont);
-    QString labelNumber = QString::number(row);
-    int numberWidth = fm.boundingRect(labelNumber).width() + badgeSize * 0.4;
-    QPoint numberTopLeft(option.rect.left() + 10, option.rect.top());
-    QPoint numberBottomRight(option.rect.left() + 10 + numberWidth, option.rect.top() + badgeSize - 1);
-    QRect numberRect(numberTopLeft, numberBottomRight);
-    painter->setPen(G::backgroundColor);
-    painter->drawRoundedRect(numberRect, badgeSize/2, badgeSize/2);
-    painter->setPen(numberPen);
-    painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
 
     /* provide rect data to calc thumb mouse click position that is then sent to imageView to
     zoom to the same spot */

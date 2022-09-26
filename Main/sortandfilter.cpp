@@ -51,11 +51,11 @@ void MW::launchBuildFilters()
 void MW::filterChange(QString source)
 {
 /*
-    All filter changes should be routed to here as a central clearing house. The datamodel
-    filter is refreshed, the filter panel counts are updated, the current index is updated,
-    the image cache is rebuilt to match the current filter, any prior selection that is still
-    available is set, the thumb and grid first/last/thumbsPerPage parameters are recalculated
-    and icons are loaded if necessary.
+    All filter changes should be routed to here as a central clearing house. The
+    datamodel filter is refreshed, the filter panel counts are updated, the current index
+    is updated, the image cache is rebuilt to match the current filter, any prior
+    selection that is still available is set, the thumb and grid first/last/thumbsPerPage
+    parameters are recalculated and icons are loaded if necessary.
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Src: " + source);
     qDebug() << CLASSFUNCTION << "called from:" << source;

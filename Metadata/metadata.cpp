@@ -804,13 +804,15 @@ bool Metadata::parseJPG(quint32 startOffset)
 bool Metadata::parseHEIF()
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
-#ifdef Q_OS_WIN
-    // rgh remove heic
-    if (heic == nullptr) heic = new Heic;
-    bool ok = heic->parseLibHeif(p, m, ifd, exif, gps);
-    if (ok && p.report) reportMetadata();
-    return ok;
-#endif
+    qDebug() << CLASSFUNCTION;
+//#ifdef Q_OS_WIN
+//    // rgh remove heic
+//    if (heic == nullptr) heic = new Heic;
+//    bool ok = heic->parseLibHeif(p, m, ifd, exif, gps);
+//    if (ok && p.report) reportMetadata();
+//    return ok;
+//#endif
+    return false;
 }
 
 bool Metadata::parseSidecar()
@@ -821,7 +823,12 @@ bool Metadata::parseSidecar()
     QFileInfo info(p.file);
     QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
     QFile sidecarFile(sidecarPath);
-
+    /*
+    qDebug() << CLASSFUNCTION
+             << "sidecarPath" << sidecarPath
+             << "sidecarFile.exists()" << sidecarFile.exists()
+                ;
+                //*/
     // no sidecar file
     if (!sidecarFile.exists()) {
         return false;
@@ -1006,7 +1013,10 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ext == "tif")  parsed = parseTIF();
         p.file.close();
         if (p.file.isOpen()) {
-            qDebug() << CLASSFUNCTION << "Could not close" << path << "after format was read";
+            qWarning() << CLASSFUNCTION << "Could not close" << path << "after format was read";
+        }
+        if (G::useSidecar) {
+            parseSidecar();
         }
         if (!parsed) {
             p.file.close();
@@ -1014,9 +1024,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
             m.err += msg;
             qWarning() << CLASSFUNCTION << msg;
             return false;
-        }
-        if (G::useSidecar) {
-            parseSidecar();
         }
     }
     else {
@@ -1073,10 +1080,20 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
     if (!hasMetadataFormats.contains(ext)) {
+        bool parsedSidcar = false;
         m.fPath = fPath;
         m.currRootFolder = fileInfo.absoluteDir().absolutePath();
         m.size = fileInfo.size();
-        return false;
+        if (G::useSidecar) {
+            p.file.setFileName(fPath);
+            if (p.file.open(QIODevice::ReadWrite)) {
+                if (parseSidecar()) {
+                    parsedSidcar = true;
+                }
+            }
+            p.file.close();
+        }
+        return parsedSidcar;
     }
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load
