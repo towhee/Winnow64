@@ -96,6 +96,17 @@ void MW::setupCentralWidget()
     setCentralWidget(centralWidget);
 }
 
+void MW::createFilterView()
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    filters = new Filters(this);
+    filters->setMaximumWidth(folderMaxWidth);
+
+    /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
+       for every item in Filters */
+    connect(filters, &Filters::filterChange, this, &MW::filterChange);
+}
+
 void MW::createDataModel()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
@@ -105,22 +116,26 @@ void MW::createDataModel()
     cacheProgressBar = new ProgressBar(this);
 
     // loadSettings not run yet
-    if (isSettings && setting->contains("combineRawJpg")) combineRawJpg = setting->value("combineRawJpg").toBool();
-    else combineRawJpg = true;
+    if (isSettings && setting->contains("combineRawJpg"))
+        combineRawJpg = setting->value("combineRawJpg").toBool();
+    else combineRawJpg = false;
+    qDebug() << CLASSFUNCTION << "combineRawJpg =" << combineRawJpg;
+
     dm = new DataModel(this, metadata, filters, combineRawJpg);
     thumb = new Thumb(dm, metadata);
 
     dm->iconChunkSize = 3000;
 
     // show appropriate count column in filters
-    if (combineRawJpg) {
-        filters->hideColumn(3);
-        filters->showColumn(4);
-    }
-    else {
-        filters->hideColumn(4);
-        filters->showColumn(3);
-    }
+//    if (combineRawJpg) {
+//        filters->hideColumn(3);
+//        filters->showColumn(4);
+//    }
+//    else {
+//        filters->hideColumn(4);
+//        filters->showColumn(3);
+//    }
+    filters->totalColumnToUse(combineRawJpg);
 
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
@@ -718,17 +733,6 @@ void MW::createFSTree()
 
 //    connect(fsTree, SIGNAL(dropOp(Qt::KeyboardModifiers, bool, QString)),
 //            this, SLOT(dropOp(Qt::KeyboardModifiers, bool, QString)));
-}
-
-void MW::createFilterView()
-{
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    filters = new Filters(this);
-    filters->setMaximumWidth(folderMaxWidth);
-
-    /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
-       for every item in Filters */
-    connect(filters, &Filters::filterChange, this, &MW::filterChange);
 }
 
 void MW::createBookmarks()

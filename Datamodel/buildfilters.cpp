@@ -32,14 +32,14 @@ void BuildFilters::stop()
         filters->disableZeroCountItems(true);
         filters->setEnabled(true);
         filters->collapseAll();
-        qDebug() << CLASSFUNCTION << "filtersBuilt = " << filters->filtersBuilt;
+//        qDebug() << CLASSFUNCTION << "filtersBuilt = " << filters->filtersBuilt;
 //        emit updateIsRunning(false);
     }
 }
 
 void BuildFilters::build()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -57,7 +57,7 @@ void BuildFilters::build()
 
 void BuildFilters::done()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     if (!abort) emit finishedBuildFilters();
 //    qint64 msec = buildFiltersTimer.elapsed();
 //    qDebug() << CLASSFUNCTION << QString("%L1").arg(msec) << "msec";
@@ -68,11 +68,11 @@ void BuildFilters::unfilteredItemSearchCount()
 /*
     This function counts the number of occurences of each unique item in the datamodel, and
     also if raw+jpg have been combined. The results as saved in the filters QTreeWidget in
-    columns 3 (all) and 4 (raw+jpg).
+    columns 3 (raw+jpg) and 4 (all).
 
     This function is run everytime the search string changes.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     int col = G::SearchColumn;
 
     // get total matches for searchTrue
@@ -81,26 +81,15 @@ void BuildFilters::unfilteredItemSearchCount()
     QString matchText = filters->searchTrue->text(1);
     for (int row = 0; row < dmRows; ++row) {
         bool hideRaw = dm->index(row, 0).data(G::DupHideRawRole).toBool();
-//        if (cat == " Keywords") {
-//            QStringList x = dm->index(row, col).data().toStringList();
-//            for (int i = 0; i < x.size(); i++) {
-//                if (x.at(i) == matchText) {
-//                    tot++;
-//                    if (combineRawJpg && !hideRaw) totRawJpgCombined++;
-//                }
-//            }
-//        }
-//        else {
             if (dm->index(row, col).data().toString() == matchText) {
                 tot++;
                 if (combineRawJpg && !hideRaw) totRawJpgCombined++;
             }
-//        }
     }
     filters->searchTrue->setData(3, Qt::EditRole, QString::number(tot));
     filters->searchTrue->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
 
-    // get total matches for searchTrue
+    // get total matches for searchFalse
     tot = 0;
     totRawJpgCombined = 0;
     matchText = filters->searchFalse->text(1);
@@ -113,13 +102,13 @@ void BuildFilters::unfilteredItemSearchCount()
         }
     }
     dm->mutex.unlock();
-    filters->searchFalse->setData(3, Qt::EditRole, QString::number(tot));
-    filters->searchFalse->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
+    filters->searchFalse->setData(3, Qt::EditRole, QString::number(totRawJpgCombined));
+    filters->searchFalse->setData(4, Qt::EditRole, QString::number(tot));
 }
 
 void BuildFilters::updateCountFiltered()
 {
-    if (G::isLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
     filters->filtersBuilt = false;
     filters->buildingFilters = true;
     QTreeWidgetItemIterator it(filters);
@@ -173,7 +162,7 @@ void BuildFilters::updateCountFiltered()
 
 void BuildFilters::countFiltered()
 {
-    if (G::isLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
     // count filtered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
@@ -223,7 +212,7 @@ void BuildFilters::countFiltered()
 
 void BuildFilters::countUnfiltered()
 {
-    if (G::isLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
     // count unfiltered
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
@@ -255,10 +244,10 @@ void BuildFilters::countUnfiltered()
                 }
             }
             dm->mutex.unlock();
-            (*it)->setData(3, Qt::EditRole, QString::number(tot));
-            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
-            (*it)->setData(4, Qt::EditRole, QString::number(totRawJpgCombined));
+            (*it)->setData(3, Qt::EditRole, QString::number(totRawJpgCombined));
             (*it)->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
+            (*it)->setData(4, Qt::EditRole, QString::number(tot));
+            (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
         }
         if (!(*it)->parent()) {
             if (instances.contains(cat)) {
@@ -282,7 +271,7 @@ void BuildFilters::countUnfiltered()
 
 void BuildFilters::loadAllMetadata()
 {
-    if (G::isLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
     if (!G::allMetadataLoaded) {
         for (int row = 0; row < dmRows; ++row) {
             if (abort) return;
@@ -308,7 +297,7 @@ void BuildFilters::loadAllMetadata()
 
 void BuildFilters::mapUniqueInstances()
 {
-    if (G::isLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
     // collect all unique instances for filtration (use QMap to maintain order)
     QMap<QString, QString> typesMap;
     QMap<QString, QString> modelMap;
@@ -387,7 +376,7 @@ void BuildFilters::mapUniqueInstances()
 
 void BuildFilters::run()
 {
-    if (G::isLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
     if (filters->filtersBuilt) return;
     if (!abort) loadAllMetadata();
     if (!abort) mapUniqueInstances();

@@ -752,6 +752,17 @@
          <string>Toggles</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>Show Icon Numbers</string>
+        </property>
+        <property name="text">
+         <string>Shift + Cmd/Ctrl + I</string>
+        </property>
+        <property name="text">
+         <string>Toggles</string>
+        </property>
+       </item>
       </item>
       <item>
        <property name="text">

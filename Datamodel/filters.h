@@ -60,7 +60,9 @@ public:
     void disableAllItems(bool disable);
     void setProgressBarStyle();
     bool isOnlyMostRecentDayChecked();
+    void totalColumnToUse(bool combineRawJpg);
 
+    bool combineRawJpg;
     bool buildingFilters = false;
     bool filtersBuilt = false;
     bool isSolo = true;

@@ -1040,10 +1040,18 @@ void MW::createActions()
     ratingBadgeVisibleAction->setChecked(false);
     // isRatingBadgeVisible = false by default, loadSettings updates value before createActions
     ratingBadgeVisibleAction->setChecked(isRatingBadgeVisible);
-//    if (isRatingBadgeVisible) ratingBadgeVisibleAction->setChecked(true);
-//    else ratingBadgeVisibleAction->setChecked(false);
     addAction(ratingBadgeVisibleAction);
     connect(ratingBadgeVisibleAction, &QAction::triggered, this, &MW::setRatingBadgeVisibility);
+
+    iconNumberVisibleAction = new QAction(tr("Show Icon Number"), this);
+    iconNumberVisibleAction->setObjectName("toggleIconNumber");
+    iconNumberVisibleAction->setShortcutVisibleInContextMenu(true);
+    iconNumberVisibleAction->setCheckable(true);
+    iconNumberVisibleAction->setChecked(false);
+    // isIconNumberVisible = false by default, loadSettings updates value before createActions
+    iconNumberVisibleAction->setChecked(isIconNumberVisible);
+    addAction(iconNumberVisibleAction);
+    connect(iconNumberVisibleAction, &QAction::triggered, this, &MW::setIconNumberVisibility);
 
     infoVisibleAction = new QAction(tr("Show Shooting Info"), this);
     infoVisibleAction->setObjectName("toggleInfo");
@@ -1656,6 +1664,7 @@ void MW::createMenus()
     viewMenu->addAction(escapeFullScreenAction);
     viewMenu->addSeparator();
     viewMenu->addAction(ratingBadgeVisibleAction);
+    viewMenu->addAction(iconNumberVisibleAction);
     viewMenu->addAction(infoVisibleAction);
     viewMenu->addAction(infoSelectAction);
     viewMenu->addSeparator();

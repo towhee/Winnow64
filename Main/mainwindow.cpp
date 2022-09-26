@@ -384,7 +384,17 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel (dm)
+    qDebug() << CLASSFUNCTION << "0"
+             << "combineRawJpg" << combineRawJpg
+             << "filters->isColumnHidden(4)" << filters->isColumnHidden(4)
+             << "filters->columnWidth(4)" << filters->columnWidth(4)
+                ;
     createDataModel();          // dependent on FilterView, creates Metadata, Thumb
+    qDebug() << CLASSFUNCTION << "0"
+             << "combineRawJpg" << combineRawJpg
+             << "filters->isColumnHidden(4)" << filters->isColumnHidden(4)
+             << "filters->columnWidth(4)" << filters->columnWidth(4)
+                ;
     createThumbView();          // dependent on QSetting, filterView
     createGridView();           // dependent on QSetting, filterView
     createTableView();          // dependent on centralWidget
@@ -4012,6 +4022,7 @@ void MW::writeSettings()
     setting->setValue("isFullScreen", isFullScreen());
 
     setting->setValue("isRatingBadgeVisible", ratingBadgeVisibleAction->isChecked());
+    setting->setValue("isIconNumberVisible", iconNumberVisibleAction->isChecked());
     setting->setValue("isImageInfoVisible", infoVisibleAction->isChecked());
     setting->setValue("isLoupeDisplay", asLoupeAction->isChecked());
     setting->setValue("isGridDisplay", asGridAction->isChecked());
@@ -4229,6 +4240,7 @@ bool MW::loadSettings()
         classificationBadgeInImageDiameter = 32;
         classificationBadgeInThumbDiameter = 16;
         isRatingBadgeVisible = false;
+        isIconNumberVisible = false;
 
         // datamodel
         G::maxIconSize = 256;
@@ -4346,6 +4358,7 @@ bool MW::loadSettings()
     if (setting->contains("classificationBadgeInImageDiameter")) classificationBadgeInImageDiameter = setting->value("classificationBadgeInImageDiameter").toInt();
     if (setting->contains("classificationBadgeInThumbDiameter")) classificationBadgeInThumbDiameter = setting->value("classificationBadgeInThumbDiameter").toInt();
     if (setting->contains("isRatingBadgeVisible")) isRatingBadgeVisible = setting->value("isRatingBadgeVisible").toBool();
+    if (setting->contains("isIconNumberVisible")) isIconNumberVisible = setting->value("isIconNumberVisible").toBool();
 
     // datamodel
     if (setting->contains("maxIconSize")) G::maxIconSize = setting->value("maxIconSize").toInt();
@@ -4516,6 +4529,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
 //    actionKeys[moveToAction->objectName()] = moveToAction;
 //    actionKeys[keepTransformAct->objectName()] = keepTransformAct;
     actionKeys[ratingBadgeVisibleAction->objectName()] = ratingBadgeVisibleAction;
+    actionKeys[iconNumberVisibleAction->objectName()] = iconNumberVisibleAction;
     actionKeys[infoVisibleAction->objectName()] = infoVisibleAction;
 //    actionKeys[toggleAllDocksAct->objectName()] = toggleAllDocksAct;
     actionKeys[folderDockVisibleAction->objectName()] = folderDockVisibleAction;
@@ -4673,6 +4687,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
 //        escapeFullScreenAction->setShortcut(QKeySequence("Esc")); // see MW::eventFilter
 
         ratingBadgeVisibleAction->setShortcut(QKeySequence("Ctrl+I"));
+        iconNumberVisibleAction->setShortcut(QKeySequence("Ctrl+Shift+I"));
         infoVisibleAction->setShortcut(QKeySequence("I"));
 
         zoomToAction->setShortcut(QKeySequence("Z"));

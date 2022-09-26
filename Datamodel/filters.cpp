@@ -44,16 +44,15 @@ datamodel.
     setSelectionMode(QAbstractItemView::NoSelection);
     setColumnCount(5);
     setHeaderHidden(true);
-    setColumnWidth(0, 250);
-//    setColumnWidth(1, 0);  // rgh
-    setColumnWidth(1, 50);
-    setColumnWidth(2, 50);
-    setColumnWidth(3, 0);
-    setColumnWidth(3, 50);
-    setColumnWidth(4, 50);
+    setColumnWidth(0, 250); // chkBox + description
+    setColumnWidth(1, 50);  // value to filter (hidden)
+    setColumnWidth(2, 50);  // number of proxy rows containing the value (filtered)
+    setColumnWidth(3, 50);  // number of datamodel rows containing the value combining Raw+Jpg
+    setColumnWidth(4, 50);  // number of datamodel rows containing the value
+
     // Headerlabel set in search header: {"", "Value", "Filter", "Raw+Jpg", "All"}
     header()->setDefaultAlignment(Qt::AlignCenter);
-    hideColumn(1); // rgh
+//    hideColumn(1); // rgh
 
     // Cannot hide columns until tree fully initialized - see resizeColumns
 
@@ -387,9 +386,10 @@ void Filters::setCategoryBackground(const int &a, const int &b)
 
 void Filters::removeChildrenDynamicFilters()
 {
-/* The dynamic filters (see createDynamicFilters) are rebuilt when a new
-folder is selected.  This function removes any pre-existing children to
-prevent duplication and orphans.
+/*
+    The dynamic filters (see createDynamicFilters) are rebuilt when a new
+    folder is selected.  This function removes any pre-existing children to
+    prevent duplication and orphans.
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     types->takeChildren();
@@ -570,7 +570,7 @@ void Filters::loadedDataModel(bool isLoaded)
 
 void Filters::startBuildFilters()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     removeChildrenDynamicFilters();
     filtersBuilt = false;
     buildingFilters = true;
@@ -711,14 +711,14 @@ void Filters::toggleExpansion()
 void Filters::addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetItem *category)
 {
 /*
-    All the values for a category are collected into a QMap object in DataModel as the model
-    data is added from the images in the folder. The list is passed here, where unique values
-    are extracted and added to the category. For example, there could be multiple file types
-    in the folder like JPG and NEF. A QMap object is used so the items can be sorted by key in
-    the same order as the tableView. This function should only be used for dynamic categories
-    - see createDynamicFilters;
+    All the values for a category are collected into a QMap object in DataModel as the
+    model data is added from the images in the folder. The list is passed here, where
+    unique values are extracted and added to the category. For example, there could be
+    multiple file types in the folder like JPG and NEF. A QMap object is used so the
+    items can be sorted by key in the same order as the tableView. This function should
+    only be used for dynamic categories - see createDynamicFilters;
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, category->text(0));
     static QTreeWidgetItem *item;
     // qt 6.2
     QMap<QString, QString> uniqueItems;
@@ -726,7 +726,6 @@ void Filters::addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetIte
       if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
     }
     for (auto key : uniqueItems.keys()) {
-//        if (quitBuildingFilters) return;
         item = new QTreeWidgetItem(category);
         item->setText(0, uniqueItems.value(key));
         item->setCheckState(0, Qt::Unchecked);
@@ -868,20 +867,37 @@ void Filters::setSoloMode(bool isSolo)
     this->isSolo = isSolo;
 }
 
+void Filters::totalColumnToUse(bool combineRawJpg)
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    this->combineRawJpg = combineRawJpg;
+}
+
 void Filters::resizeColumns()
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
     hideColumn(1);
-    hideColumn(3);
+//    hideColumn(3);
+    int totCol;
+    if (combineRawJpg) {
+        hideColumn(4);
+        showColumn(3);
+        totCol = 3;
+    }
+    else {
+        hideColumn(3);
+        showColumn(4);
+        totCol = 4;
+    }
     QFont font = this->font();
 //    font.setPointSize(G::fontSize.toInt());
     QFontMetrics fm(font);
 //    int decorationWidth = 25;       // the expand/collapse arrows
-    int countColumnWidth = fm.boundingRect("999999").width();
+    int countColumnWidth = fm.boundingRect("_JPG+RAW_").width();
     int countFilteredColumnWidth = fm.boundingRect("999999").width();
     int col0Width = viewport()->width() - countColumnWidth -
                     countFilteredColumnWidth - 5 /*- decorationWidth*/;
-    setColumnWidth(4, countColumnWidth);
+    setColumnWidth(totCol, countColumnWidth);
     setColumnWidth(2, countFilteredColumnWidth);
     setColumnWidth(0, col0Width);
 }

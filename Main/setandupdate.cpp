@@ -127,6 +127,13 @@ void MW::setRatingBadgeVisibility() {
     updateClassification();
 }
 
+void MW::setIconNumberVisibility() {
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    isIconNumberVisible = iconNumberVisibleAction->isChecked();
+    thumbView->refreshThumbs();
+    gridView->refreshThumbs();
+}
+
 void MW::setShootingInfoVisibility() {
     if (G::isLogger) G::log(CLASSFUNCTION);
     imageView->infoOverlay->setVisible(infoVisibleAction->isChecked());
@@ -467,14 +474,15 @@ void MW::setCombineRawJpg()
     refreshBookmarks();
 
     // show appropriate count column in filters
-    if (combineRawJpg) {
-        filters->hideColumn(3);
-        filters->showColumn(4);
-    }
-    else {
-        filters->hideColumn(4);
-        filters->showColumn(3);
-    }
+//    if (combineRawJpg) {
+//        filters->hideColumn(3);
+//        filters->showColumn(4);
+//    }
+//    else {
+//        filters->hideColumn(4);
+//        filters->showColumn(3);
+//    }
+    filters->totalColumnToUse(combineRawJpg);
 
     // update the datamodel type column
     for (int row = 0; row < dm->rowCount(); ++row) {
