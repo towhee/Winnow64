@@ -119,7 +119,6 @@ void MW::createDataModel()
     if (isSettings && setting->contains("combineRawJpg"))
         combineRawJpg = setting->value("combineRawJpg").toBool();
     else combineRawJpg = false;
-    qDebug() << CLASSFUNCTION << "combineRawJpg =" << combineRawJpg;
 
     dm = new DataModel(this, metadata, filters, combineRawJpg);
     thumb = new Thumb(dm, metadata);
@@ -169,15 +168,25 @@ void MW::createSelectionModel()
 //            this, &MW::fileSelectionChange);
 }
 
+void MW::createVideoFrameDecoders()
+{
+/*
+    Manage a number of FrameDecoder threads that send thumbnails to the DataModel.
+*/
+    if (G::isLogger) G::log(CLASSFUNCTION);
+
+}
+
 void MW::createMDCache()
 {
-    /* When a new folder is selected the metadataCacheThread is started to load all the
-    metadata and thumbs for each image. If the user scrolls during the cache process then the
-    metadataCacheThread is restarted at the first visible thumb to speed up the display of the
-    thumbs for the user. However, if every scroll event triggered a restart it would be
-    inefficient, so this timer is used to wait for a pause in the scrolling before triggering
-    a restart at the new place.
-    */
+/*
+    When a new folder is selected the metadataCacheThread is started to load all the
+    metadata and thumbs for each image. If the user scrolls during the cache process then
+    the metadataCacheThread is restarted at the first visible thumb to speed up the
+    display of the thumbs for the user. However, if every scroll event triggered a
+    restart it would be inefficient, so this timer is used to wait for a pause in the
+    scrolling before triggering a restart at the new place.
+*/
     if (G::isLogger) G::log(CLASSFUNCTION);
     metadataCacheThread = new MetadataCache(this, dm, metadata);
 
@@ -214,21 +223,6 @@ void MW::createMDCache()
 
     connect(metadataCacheThread, &MetadataCache::selectFirst,
             thumbView, &IconView::selectFirst);
-
-    // MetaRead connections added to metadataCacheThread
-    // add metadata to datamodel
-//    connect(metadataCacheThread, &MetadataCache::addToDatamodel, dm, &DataModel::addMetadataForItem);
-//    // update icon in datamodel (duplicate)
-////    connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon);
-//    // message metadata reading completed
-//    connect(metadataCacheThread, &MetadataCache::done, this, &MW::loadConcurrentMetaDone);
-//    // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
-//    connect(metadataCacheThread, &MetadataCache::delayedStartImageCache, this, &MW::loadConcurrentStartImageCache);
-//    // check icons visible is correct
-//    connect(metadataCacheThread, &MetadataCache::updateIconBestFit, this, &MW::updateIconBestFit/*,
-//            Qt::BlockingQueuedConnection*/);
-//    connect(metadataCacheThread, &MetadataCache::runStatus, this, &MW::updateMetadataThreadRunStatus);
-
 
 
     // MetaRead

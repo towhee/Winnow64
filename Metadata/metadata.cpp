@@ -1093,7 +1093,8 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
             }
             p.file.close();
         }
-        return parsedSidcar;
+//        return parsedSidcar;
+        return true;
     }
 
     // For JPG, readNonEssentialMetadata adds 10-15% time to load

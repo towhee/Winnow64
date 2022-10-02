@@ -299,79 +299,78 @@ void BuildFilters::mapUniqueInstances()
 {
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
     // collect all unique instances for filtration (use QMap to maintain order)
-    QMap<QString, QString> typesMap;
-    QMap<QString, QString> modelMap;
-    QMap<QString, QString> lensMap;
-    QMap<QString, QString> titleMap;
-    QMap<QString, QString> keywordMap;
-    QMap<QString, QString> flMap;
-    QMap<QString, QString> creatorMap;
-    QMap<QString, QString> yearMap;
-    QMap<QString, QString> dayMap;
+    QStringList typeList;
+    QStringList modelList;
+    QStringList lensList;
+    QStringList titleList;
+    QStringList keywordList;
+    QStringList flList;
+    QStringList creatorList;
+    QStringList yearList;
+    QStringList dayList;
     for (int row = 0; row < dm->sf->rowCount(); row++) {
         if (abort) return;
         QString type = dm->sf->index(row, G::TypeColumn).data().toString();
-        if (!typesMap.contains(type)) typesMap[type] = type;
+        if (!typeList.contains(type)) typeList.append(type);
         QString model = dm->sf->index(row, G::CameraModelColumn).data().toString();
-        if (!modelMap.contains(model)) modelMap[model] = model;
+        if (!modelList.contains(model)) modelList.append(model);
         QString lens = dm->sf->index(row, G::LensColumn).data().toString();
-        if (!lensMap.contains(lens)) lensMap[lens] = lens;
+        if (!lensList.contains(lens)) lensList.append(lens);
         QString title = dm->sf->index(row, G::TitleColumn).data().toString();
-        if (!titleMap.contains(title)) titleMap[title] = title;
+        if (!titleList.contains(title)) titleList.append(title);
         QString flNum = dm->sf->index(row, G::FocalLengthColumn).data().toString();
-        if (!flMap.contains(flNum)) flMap[flNum] = flNum;
+        if (!flList.contains(flNum)) flList.append(flNum);
         QString creator = dm->sf->index(row, G::CreatorColumn).data().toString();
-        if (!creatorMap.contains(creator)) creatorMap[creator] = creator;
+        if (!creatorList.contains(creator)) creatorList.append(creator);
         QString year = dm->sf->index(row, G::YearColumn).data().toString();
-        if (!yearMap.contains(year)) yearMap[year] = year;
+        if (!yearList.contains(year)) yearList.append(year);
         QString day = dm->sf->index(row, G::DayColumn).data().toString();
-        if (!dayMap.contains(day)) dayMap[day] = day;
-        QStringList keywordList = dm->sf->index(row, G::KeywordsColumn).data().toStringList();
-        for (int i = 0; i < keywordList.size(); i++) {
-            QString key = keywordList.at(i);
-            if (!keywordMap.contains(key)) keywordMap[key] = key;
+        if (!dayList.contains(day)) dayList.append(day);
+        QStringList itemKeywordList = dm->sf->index(row, G::KeywordsColumn).data().toStringList();
+        for (int i = 0; i < itemKeywordList.size(); i++) {
+            QString keyWord = itemKeywordList.at(i);
+            if (!keywordList.contains(keyWord)) keywordList.append(keyWord);
         }
     }
     // populate count map for progress
     totInstances = 0;      // total fixed instances ie search, rating, labels etc
-    int x = typesMap.count();
+    int x = typeList.count();
     totInstances += x;
     instances[" File type"] = x;
-    x = modelMap.count();
+    x = modelList.count();
     totInstances += x;
     instances[" Camera model"] = x;
-    x = lensMap.count();
+    x = lensList.count();
     totInstances += x;
-    instances[" Lenses"] = lensMap.count();
-    x = titleMap.count();
+    instances[" Lenses"] = x;
+    x = titleList.count();
     totInstances += x;
-    instances[" Title"] = titleMap.count();
-    x = flMap.count();
+    instances[" Title"] = x;
+    x = flList.count();
     totInstances += x;
-    instances[" FocalLengths"] = flMap.count();
-    x = creatorMap.count();
+    instances[" FocalLengths"] = x;
+    x = creatorList.count();
     totInstances += x;
-    instances[" Creators"] = creatorMap.count();
-    x = yearMap.count();
+    instances[" Creators"] = x;
+    x = yearList.count();
     totInstances += x;
-    instances[" Years"] = yearMap.count();
-    x = dayMap.count();
+    instances[" Years"] = x;
     totInstances += x;
-    instances[" Days"] = dayMap.count();
-    x = keywordMap.count();
+    instances[" Days"] = x;
+    x = keywordList.count();
     totInstances += x;
-    instances[" Keywords"] = keywordMap.count();
+    instances[" Keywords"] = x;
 
     // build filter item maps
-    filters->addCategoryFromData(typesMap, filters->types);
-    filters->addCategoryFromData(modelMap, filters->models);
-    filters->addCategoryFromData(lensMap, filters->lenses);
-    filters->addCategoryFromData(flMap, filters->focalLengths);
-    filters->addCategoryFromData(yearMap, filters->years);
-    filters->addCategoryFromData(dayMap, filters->days);
-    filters->addCategoryFromData(titleMap, filters->titles);
-    filters->addCategoryFromData(keywordMap, filters->keywords);
-    filters->addCategoryFromData(creatorMap, filters->creators);
+    filters->addCategoryFromData(typeList, filters->types);
+    filters->addCategoryFromData(modelList, filters->models);
+    filters->addCategoryFromData(lensList, filters->lenses);
+    filters->addCategoryFromData(flList, filters->focalLengths);
+    filters->addCategoryFromData(yearList, filters->years);
+    filters->addCategoryFromData(dayList, filters->days);
+    filters->addCategoryFromData(titleList, filters->titles);
+    filters->addCategoryFromData(keywordList, filters->keywords);
+    filters->addCategoryFromData(creatorList, filters->creators);
 }
 
 void BuildFilters::run()

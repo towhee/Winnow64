@@ -9,7 +9,7 @@ namespace G
     // system messaging
     bool isLogger = false;              // Writes log messages to file or console
     bool isErrorLogger = false;         // Writes error log messages to file or console
-    bool isFlowLogger = true;          // Writes key program flow points to file or console
+    bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool isTestLogger = false;          // Writes test points to file or console
     bool sendLogToConsole = true;       // true: console, false: WinnowLog.txt
     QFile logFile;                      // MW::openLog(), MW::closeLog()
@@ -31,6 +31,7 @@ namespace G
 
     // application parameters
     QPoint mousePos;                    // local mouse position used to locate mouse press custom button in qtreeview
+    bool isModifier;                    // is shift, ctrl/command or alt/option pressed
     QString fontSize;                   // app font point size
     qreal dpi;                          // current logical screen dots per inch
     qreal ptToPx;                       // font points to pixels conversion factor
@@ -95,6 +96,8 @@ namespace G
     bool useSidecar;
     bool embedTifThumb;
     bool useLinearLoading;
+
+    bool isGettingVideoFrame;           // test sequential video thumb loading
 
     // ingest
     bool isRunningBackgroundIngest;

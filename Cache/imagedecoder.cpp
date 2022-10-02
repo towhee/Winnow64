@@ -89,7 +89,7 @@ bool ImageDecoder::load()
     ext = fileInfo.completeSuffix().toLower();
 
     if (metadata->videoFormats.contains(ext)) {
-        qWarning() << "ImageDecoder::load  Ignore video formats" << fPath;
+//        qWarning() << "ImageDecoder::load  Ignore video formats" << fPath;
 //        G::error("ImageDecoder::load", fPath, "Ignore video formats.");
         status = Status::Video;
         return false;

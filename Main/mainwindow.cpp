@@ -384,23 +384,14 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     createCentralWidget();      // req'd by ImageView, CompareView
     createFilterView();         // req'd by DataModel (dm)
-    qDebug() << CLASSFUNCTION << "0"
-             << "combineRawJpg" << combineRawJpg
-             << "filters->isColumnHidden(4)" << filters->isColumnHidden(4)
-             << "filters->columnWidth(4)" << filters->columnWidth(4)
-                ;
     createDataModel();          // dependent on FilterView, creates Metadata, Thumb
-    qDebug() << CLASSFUNCTION << "0"
-             << "combineRawJpg" << combineRawJpg
-             << "filters->isColumnHidden(4)" << filters->isColumnHidden(4)
-             << "filters->columnWidth(4)" << filters->columnWidth(4)
-                ;
     createThumbView();          // dependent on QSetting, filterView
     createGridView();           // dependent on QSetting, filterView
     createTableView();          // dependent on centralWidget
     createSelectionModel();     // dependent on ThumbView, ImageView
     createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
+    createVideoFrameDecoders(); // dependent on DataModel
     createMDCache();            // dependent on DataModel, Metadata, ThumbView, VideoView
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget, ThumbView, ImageCache
@@ -854,7 +845,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         addBookmarkAction->setEnabled(true);
         revealFileActionFromContext->setEnabled(true);
         copyPathActionFromContext->setEnabled(true);
-        if(obj == fsTree->viewport()) {
+        if (obj == fsTree->viewport()) {
             QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
             QModelIndex idx = fsTree->indexAt(e->pos());
             mouseOverFolder = idx.data(QFileSystemModel::FilePathRole).toString();
@@ -866,13 +857,13 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 copyPathActionFromContext->setEnabled(false);
             }
         }
-        else if(obj == bookmarks->viewport()) {
+        else if (obj == bookmarks->viewport()) {
             QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
             QModelIndex idx = bookmarks->indexAt(e->pos());
             mouseOverFolder = idx.data(Qt::ToolTipRole).toString();
             enableEjectUsbMenu(mouseOverFolder);
             // in folders or bookmarks but not on folder item
-            if(mouseOverFolder == "") {
+            if (mouseOverFolder == "") {
                 addBookmarkAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
                 copyPathActionFromContext->setEnabled(false);
@@ -880,7 +871,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
         else {
             enableEjectUsbMenu(G::currRootFolder);
-            if(G::currRootFolder == "") {
+            if (G::currRootFolder == "") {
                 addBookmarkAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
                 copyPathActionFromContext->setEnabled(false);
@@ -888,17 +879,63 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
-    /* THUMBVIEW ZOOMCURSOR **************************************************************
-    Turn the cursor into a frame showing the ImageView zoom amount in the thumbnail.
+    /* MODIFIER PRESSED ******************************************************************
+    is shift, ctrl/command or alt/option pressed.
     */
 
-    if (obj == thumbView->viewport() && event->type() == QEvent::MouseMove) {
-        QMouseEvent *e = static_cast<QMouseEvent *>(event);
-        const QModelIndex idx = thumbView->indexAt(e->pos());
-        if (idx.isValid()) {
-            thumbView->zoomCursor(idx, /*forceUpdate=*/false, e->pos());
+    QString eventName;
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent *e = static_cast<QKeyEvent *>(event);
+        eventName = "KeyPress";
+//        qDebug() << CLASSFUNCTION << event;
+        G::isModifier = e->modifiers() != 0;
+    }
+
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *e = static_cast<QKeyEvent *>(event);
+        G::isModifier = e->modifiers() != 0;
+//        qDebug() << CLASSFUNCTION << event;
+        eventName = "KeyRelease";
+    }
+
+    /* THUMBVIEW ZOOMCURSOR **************************************************************
+    Turn the cursor into a frame showing the ImageView zoom amount in the thumbnail.  The
+    ImageView must be zoomed and no modifier keys pressed to show zoom cursor.
+    */
+
+    if (thumbView->mouseOverThumbView) {
+        if (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease) {
+            if (G::isModifier) {
+                thumbView->setCursor(Qt::ArrowCursor);
+//                qDebug() << CLASSFUNCTION << "Modifier pressed" << event;
+            }
+            else {
+                QPoint pos = thumbView->mapFromGlobal(QCursor::pos());
+                QModelIndex idx = thumbView->indexAt(pos);
+//                qDebug() << CLASSFUNCTION << "Modifier not pressed" << event << pos << idx;
+                if (idx.isValid()) {
+                    QString src = CLASSFUNCTION + ": " + eventName;
+                    thumbView->zoomCursor(idx, src, /*forceUpdate=*/true, pos);
+                }
+            }
         }
     }
+
+    if (obj == thumbView->viewport()) {
+        if (event->type() == QEvent::MouseMove) {
+            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+            bool noModifiers = e->modifiers() == 0;
+            const QModelIndex idx = thumbView->indexAt(e->pos());
+            if (idx.isValid() && noModifiers) {
+                QString src = CLASSFUNCTION + ": " + eventName;
+                thumbView->zoomCursor(idx, src, /*forceUpdate=*/false, e->pos());
+            }
+            else {
+                thumbView->setCursor(Qt::ArrowCursor);
+            }
+        }
+    }
+
 
     /* DOCK TAB TOOLTIPS *****************************************************************
     Show a tooltip for docked widget tabs.
@@ -1537,10 +1574,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (G::stop) return;
     G::isNewSelection = false;
 
+    // check if current selection = current index.  If so, nothng to do
+//    if (current == currSfIdx) return;
 
    /*
     qDebug() << "\n" << CLASSFUNCTION
              << "src =" << src
+             << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
@@ -1797,9 +1837,9 @@ void MW::stopAndClearAll(QString src)
     }
 
     // metaRead signals to stopAndClearAllAfterMetaReadStopped when stopped.
-    metaRead->stop();
-    G::wait(0);         // reset wait duration timer
-    while (metaRead->isRunning && G::wait(1) < 1000);
+    metaRead->stop(1000);
+//    G::wait(0);         // reset wait duration timer
+//    while (metaRead->isRunning && G::wait(1) < 1000);
     metadataCacheThread->stop();
     imageCacheThread->stop();
     buildFilters->stop();
@@ -1809,6 +1849,8 @@ void MW::stopAndClearAll(QString src)
     G::isNewFolderLoaded = false;
     G::isNewSelection = false;
     G::isNewFolderLoadedAndInfoViewUpToDate = false;
+
+    G::isGettingVideoFrame = false;
 
     imageView->clear();
     setWindowTitle(winnowWithVersion);
@@ -2030,7 +2072,7 @@ void MW::loadConcurrentMetaDone()
     filters->setEnabled(true);
     filterMenu->setEnabled(true);
     sortMenu->setEnabled(true);
-    if (!filterDock->visibleRegion().isNull()) {
+    if (!filterDock->visibleRegion().isNull() && !filters->filtersBuilt) {
         launchBuildFilters();
     }
 
@@ -2267,12 +2309,11 @@ void MW::thumbHasScrolled()
         if (!G::isNewSelection) {
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
             else loadConcurrent(thumbView->midVisibleCell);
-//            else scrollChange(thumbView->midVisibleCell, "MW::thumbHasScrolled");
         }
         // update thumbnail zoom frame cursor
         QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
         if (idx.isValid()) {
-            thumbView->zoomCursor(idx);
+            thumbView->zoomCursor(idx, CLASSFUNCTION);
         }
     }
     G::ignoreScrollSignal = false;
@@ -2886,7 +2927,7 @@ void MW::thumbsEnlarge()
     // if thumbView visible and zoomed in imageView then may need to redo the zoomFrame
     QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
     if (idx.isValid()) {
-        thumbView->zoomCursor(idx, /*forceUpdate=*/true);
+        thumbView->zoomCursor(idx, CLASSFUNCTION, /*forceUpdate=*/true);
     }
 }
 
@@ -2905,7 +2946,7 @@ void MW::thumbsShrink()
     // if thumbView visible and zoomed in imageView then may need to redo the zoomFrame
     QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
     if (idx.isValid()) {
-        thumbView->zoomCursor(idx, /*forceUpdate=*/true);
+        thumbView->zoomCursor(idx, CLASSFUNCTION, /*forceUpdate=*/true);
     }
 }
 
@@ -3763,7 +3804,7 @@ void MW::zoomIn()
     // if thumbView visible and zoom change in imageView then may need to redo the zoomFrame
     QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
     if (idx.isValid()) {
-        thumbView->zoomCursor(idx, /*forceUpdate=*/true);
+        thumbView->zoomCursor(idx, CLASSFUNCTION, /*forceUpdate=*/true);
     }
 }
 
@@ -3775,7 +3816,7 @@ void MW::zoomOut()
     // if thumbView visible and zoom change in imageView then may need to redo the zoomFrame
     QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
     if (idx.isValid()) {
-        thumbView->zoomCursor(idx, /*forceUpdate=*/true);
+        thumbView->zoomCursor(idx, CLASSFUNCTION, /*forceUpdate=*/true);
     }
 }
 

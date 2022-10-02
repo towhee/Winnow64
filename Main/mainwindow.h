@@ -1114,6 +1114,7 @@ private:
     void addMenuSeparator(QWidget *widget);
     void createActions();
     void createBookmarks();
+    void createVideoFrameDecoders();
     void createMDCache();
     void createImageCache();
     void createCentralWidget();

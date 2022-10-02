@@ -40,14 +40,37 @@ void Thumb::checkOrientation(QString &fPath, QImage &image)
 
 void Thumb::loadFromVideo(QString &fPath, int dmRow)
 {
+/*
+    see top of FrameDecoder.cpp for documentation
+*/
     if (G::isLogger) G::log("Thumb::loadFromVideo", fPath);
-    // see top of FrameDecoder.cpp for documentation
+
+    QTime t = QTime::currentTime().addMSecs(1000);
+    while (G::isGettingVideoFrame) {
+        qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
+        if (QTime::currentTime() > t) {
+            qWarning() << "Thumb::loadFromVideo"
+                       << "row =" << dmRow
+                       << "Timeout waiting for getting video frame"
+                       << fPath;
+            return;
+        }
+    }
+
     QModelIndex dmIdx = dm->index(dmRow, 0);
 
     FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance);
 //    connect(frameDecoder->videoSink, &QVideoSink::videoFrameChanged, frameDecoder, &FrameDecoder::frameChanged);
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+
+//    This doesn't work
+//    QThread *thread = new QThread;
+//    frameDecoder->moveToThread(thread);
+
 //    frameDecoder->moveToThread(&frameDecoderthread);
+//    qDebug() << "Thumb::loadFromVideo, call frameDecoder->getFrame(fPath)  row =" << dmRow;
+
+    G::isGettingVideoFrame = true;
+    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
     frameDecoder->getFrame(fPath);
 }
 
@@ -176,6 +199,8 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
 
     // If video file then just show video icon
     if (metadata->videoFormats.contains(ext)) {
+//        QString path = ":/images/video.png";
+//        loadFromEntireFile(path, image, dmRow);
         loadFromVideo(fPath, dmRow);
         return true;
     }
