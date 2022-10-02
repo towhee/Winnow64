@@ -39,7 +39,7 @@ signals:
 
 public slots:
     void initialize();
-    void stop();
+    bool stop(int ms = 1000);
     void start(int row = 0, QString src = "");
 
 private:

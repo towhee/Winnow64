@@ -99,6 +99,7 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     int pickWidth = 2;
 
     // define colors
+    int b = G::backgroundShade;
     int l20 = G::backgroundShade + 20;
     int l40 = G::backgroundShade + 40;
     defaultBorderColor = QColor(l20,l20,l20);
@@ -458,12 +459,12 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->setFont(numberFont);
         QFontMetrics fm(numberFont);
         QString labelNumber = QString::number(row + 1);
-        int numberWidth = fm.boundingRect(labelNumber).width() + badgeSize * 0.5;
-        QPoint numberTopLeft(option.rect.left() + 10, option.rect.top());
-        QPoint numberBottomRight(option.rect.left() + 10 + numberWidth, option.rect.top() + badgeSize - 1);
+        int numberWidth = fm.boundingRect(labelNumber).width() + 4;
+        QPoint numberTopLeft(option.rect.left(), option.rect.top());
+        QPoint numberBottomRight(option.rect.left() + numberWidth, option.rect.top() + badgeSize - 1);
         QRect numberRect(numberTopLeft, numberBottomRight);
         painter->setPen(G::backgroundColor);
-        painter->drawRoundedRect(numberRect, badgeSize/2, badgeSize/2);
+        painter->drawRoundedRect(numberRect, 2, 2);
         painter->setPen(numberPen);
         painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
     }

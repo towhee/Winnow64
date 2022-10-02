@@ -708,7 +708,7 @@ void Filters::toggleExpansion()
     qDebug() << CLASSFUNCTION << "isExpanded =" << isExpanded;
 }
 
-void Filters::addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetItem *category)
+void Filters::addCategoryFromData(QStringList itemList, QTreeWidgetItem *category)
 {
 /*
     All the values for a category are collected into a QMap object in DataModel as the
@@ -720,18 +720,45 @@ void Filters::addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetIte
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, category->text(0));
     static QTreeWidgetItem *item;
-    // qt 6.2
-    QMap<QString, QString> uniqueItems;
-    for (auto key : itemMap.keys()) {
-      if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
-    }
-    for (auto key : uniqueItems.keys()) {
+//    // qt 6.2
+//    QMap<QString, QString> uniqueItems;
+//    for (auto key : itemMap.keys()) {
+//      if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
+//    }
+    itemList.sort();
+    for (int i = 0; i < itemList.count(); i++) {
+        QString s = itemList.at(i);
         item = new QTreeWidgetItem(category);
-        item->setText(0, uniqueItems.value(key));
+        item->setText(0, s);
         item->setCheckState(0, Qt::Unchecked);
-        item->setData(1, Qt::EditRole, key);
+        item->setData(1, Qt::EditRole, s);
     }
 }
+
+//void Filters::addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetItem *category)
+//{
+//    /*
+//    All the values for a category are collected into a QMap object in DataModel as the
+//    model data is added from the images in the folder. The list is passed here, where
+//    unique values are extracted and added to the category. For example, there could be
+//    multiple file types in the folder like JPG and NEF. A QMap object is used so the
+//    items can be sorted by key in the same order as the tableView. This function should
+//    only be used for dynamic categories - see createDynamicFilters;
+//*/
+//    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, category->text(0));
+//    static QTreeWidgetItem *item;
+//    // qt 6.2
+//    QMap<QString, QString> uniqueItems;
+//    for (auto key : itemMap.keys()) {
+//        if (!uniqueItems.contains(key)) uniqueItems[key] = itemMap.value(key);
+//    }
+//    for (auto key : uniqueItems.keys()) {
+//        item = new QTreeWidgetItem(category);
+//        item->setText(0, uniqueItems.value(key));
+//        item->setCheckState(0, Qt::Unchecked);
+//        item->setData(1, Qt::EditRole, key);
+//    }
+//}
 
 
 void Filters::dataChanged(const QModelIndex &topLeft,

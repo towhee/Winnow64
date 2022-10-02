@@ -49,6 +49,13 @@ void MetaRead::start(int row, QString src)
     if (debugCaching) {
         qDebug() << "MetaRead::start" << row << isRunning;
     }
+
+    if (stop(5000)) {
+        newStartRow = row;
+        read(row);
+    }
+
+    /*
     if (isRunning) {
         mutex.lock();
         abort = true;
@@ -58,16 +65,30 @@ void MetaRead::start(int row, QString src)
     else {
         read(row);
     }
+    */
 }
 
-void MetaRead::stop()
+bool MetaRead::stop(int ms)
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::stop");
+    if (!isRunning) return true;
     mutex.lock();
-    if (isRunning) {
-        abort = true;
-    }
+    abort = true;
     mutex.unlock();
+    QTime t = QTime::currentTime().addMSecs(ms);
+    while (isRunning && QTime::currentTime() < t) {
+        qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
+    }
+    if (isRunning) {
+        qWarning() << "MetaRead::stop failed.";
+        return false;
+    }
+    else {
+        mutex.lock();
+        abort = false;
+        mutex.unlock();
+        return true;
+    }
 }
 
 void MetaRead::initialize()

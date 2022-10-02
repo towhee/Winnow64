@@ -32,11 +32,15 @@ public:
     int lastVisibleCell;
     int visibleCells;
 
-    QModelIndex mouseOverIndex; // for toggle pick
-    QModelIndex prevIdx;        // for zoomCursor
+    bool mouseOverThumbView = false;    // for zoomCursor in MW::eventFilter
+    bool isMouseModifier = false;       // for zoomCursor in MW::eventFilter
+
+    QModelIndex mouseOverIndex;         // for toggle pick
+    QModelIndex prevIdx;                // for zoomCursor
 
     bool calcViewportRange(int row);
     void zoomCursor(const QModelIndex &idx,
+                    QString src,
                     bool forceUpdate = false,
                     QPoint mousePos = QPoint(-1, -1));
 
@@ -149,6 +153,9 @@ private:
     bool addFolderImageDataToModel();
     bool isSelectedItem();          // call before getting row or index
 
+    bool isLast();
+    bool isFirst();
+
     int getNextRow();
     int getPrevRow();
     int getLastRow();                           //not used? Seems handy
@@ -161,6 +168,10 @@ private:
 
     DataModel *dm;
     ImageCacheData *icd;
+
+    Qt::KeyboardModifiers modifiers;
+    float xPct;
+    float yPct;
 
     bool isLeftMouseBtnPressed;
     bool isMouseDrag;

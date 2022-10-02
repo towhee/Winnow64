@@ -28,7 +28,7 @@
 
 FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
 {
-    if (G::isLogger) G::log("FrameDecoder::FrameDecoder");
+//    if (G::isLogger) G::log("FrameDecoder::FrameDecoder");
     thisFrameDecoder = this;
     this->dmIdx = dmIdx;
     this->dmInstance = dmInstance;
@@ -36,20 +36,26 @@ FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
     videoSink = new QVideoSink;
     mediaPlayer->setVideoOutput(videoSink);
     connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChanged);
+    connect(mediaPlayer, &QMediaPlayer::errorOccurred, this, &FrameDecoder::errorOccurred);
 }
 
-void FrameDecoder::getFrame(QString path)
+void FrameDecoder::getFrame(QString path, QModelIndex dmIdx, int dmInstance)
 {
-    if (G::isLogger) G::log("FrameDecoder::getFrame");
-    fPath = path;
-    QFile f(fPath);
-    mediaPlayer->setSource(fPath);
+//    if (G::isLogger) G::log("FrameDecoder::getFrame");
+//    fPath = path;
+//    QFile f(fPath);
+//    qDebug() << "FrameDecoder::getFrame  row =" << dmIdx.row() << "already open =" << f.isOpen();
+    this->dmIdx = dmIdx;
+    this->dmInstance = dmInstance;
+    mediaPlayer->setSource(path);
     mediaPlayer->play();
+//    qDebug() << "FrameDecoder::getFrame    row =" << dmIdx.row();
 }
 
 void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
-    if (G::isLogger) G::log("FrameDecoder::frameChanged");
+//    if (G::isLogger) G::log("FrameDecoder::frameChanged");
+//    qDebug() << "FrameDecoder::frameChanged  row =" << dmIdx.row();
     if (thumbnailAcquired) return;
     QImage im = frame.toImage();
     if (im.isNull()) return;
@@ -58,4 +64,9 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     qint64 duration = mediaPlayer->duration();
     QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
     emit setFrameIcon(dmIdx, pm, dmInstance, duration, thisFrameDecoder);
+}
+
+void FrameDecoder::errorOccurred(QMediaPlayer::Error error, const QString &errorString)
+{
+    qDebug() << "FrameDecoder::errorOccurred" << "row =" << dmIdx.row() << errorString;
 }

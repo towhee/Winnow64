@@ -360,23 +360,23 @@ bool DataModel::endLoad(bool success)
 bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
 {
 /*
-When a new folder is selected load it into the data model.  This clears the
-model and populates the data model with all the cached thumbnail pixmaps from
-metadataCache.  If include subfolders has been chosen then the entire subfolder
-heirarchy is loaded.
+    When a new folder is selected load it into the data model.  This clears the
+    model and populates the data model with all the cached thumbnail pixmaps from
+    metadataCache.  If include subfolders has been chosen then the entire subfolder
+    heirarchy is loaded.
 
-Steps:
-- filter to only show supported image formats, iterating subfolders if include
-  subfolders is set
-- add each image file to the datamodel with QFileInfo related data such as file
-  name, path, file size, creation date
-- also determine if there are duplicate raw+jpg files, and if so, populate all
-  the Dup...Role values to manage the raw+jpg files
-- after the metadataCacheThread has read all the metadata and thumbnails add
-  the rest of the metadata to the datamodel.
+    Steps:
+    - filter to only show supported image formats, iterating subfolders if include
+      subfolders is set
+    - add each image file to the datamodel with QFileInfo related data such as file
+      name, path, file size, creation date
+    - also determine if there are duplicate raw+jpg files, and if so, populate all
+      the Dup...Role values to manage the raw+jpg files
+    - after the metadataCacheThread has read all the metadata and thumbnails add
+      the rest of the metadata to the datamodel.
 
-- Note: build QMaps of unique field values for the filters is not done here, but on
-  demand when the user selects the filter panel or a menu filter command.
+    - Note: build QMaps of unique field values for the filters is not done here, but
+      on demand when the user selects the filter panel or a menu filter command.
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "clearDataModel");
     instance++;
@@ -799,6 +799,7 @@ void DataModel::addAllMetadata()
 
         QString fPath = index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
+        QString ext = fileInfo.suffix().toLower();
         if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
             metadata->m.row = row;
             metadata->m.dmInstance = instance;
@@ -806,7 +807,9 @@ void DataModel::addAllMetadata()
             count++;
         }
         else {
-            qWarning() << CLASSFUNCTION << "Failed to load metadata." << fPath;
+            if (metadata->hasMetadataFormats.contains(ext)) {
+                qWarning() << CLASSFUNCTION << "Failed to load metadata." << fPath;
+            }
         }
     }
     setAllMetadataLoaded(true);
@@ -1081,6 +1084,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
         return;
     }
     int row = dmIdx.row();
+    qDebug() << "DataModel::setIconFromVideoFrame  row =" << row;
     QString modelDuration = index(dmIdx.row(), G::DurationColumn).data().toString();
     mutex.lock();
     if (modelDuration == "") {
@@ -1104,6 +1108,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
     }
     mutex.unlock();
     delete frameDecoder;
+    G::isGettingVideoFrame = false;
 }
 
 void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src)
@@ -1346,21 +1351,42 @@ void DataModel::searchStringChange(QString searchString)
 void DataModel::rebuildTypeFilter()
 {
 /*
-When Raw+Jpg is toggled in the main program MW the file type filter must be rebuilt.
+    When Raw+Jpg is toggled in the main program MW the file type filter must
+    be rebuilt.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     filters->types->takeChildren();
-    QMap<QString, QString> typesMap;
+    QStringList typeList;
     int rows = sf->rowCount();
     for(int row = 0; row < rows; row++) {
         QString type = sf->index(row, G::TypeColumn).data().toString();
-        if (!typesMap.contains(type)) {
-            typesMap[type] = type;
+        if (!typeList.contains(type)) {
+            typeList.append(type);
         }
     }
-    filters->addCategoryFromData(typesMap, filters->types);
+    filters->addCategoryFromData(typeList, filters->types);
 //    qApp->processEvents();
 }
+
+//void DataModel::rebuildTypeFilter()
+//{
+//    /*
+//    When Raw+Jpg is toggled in the main program MW the file type filter must
+//    be rebuilt.
+//*/
+//    if (G::isLogger) G::log(CLASSFUNCTION);
+//    filters->types->takeChildren();
+//    QMap<QString, QString> typesMap;
+//    int rows = sf->rowCount();
+//    for(int row = 0; row < rows; row++) {
+//        QString type = sf->index(row, G::TypeColumn).data().toString();
+//        if (!typesMap.contains(type)) {
+//            typesMap[type] = type;
+//        }
+//    }
+//    filters->addCategoryFromData(typesMap, filters->types);
+//    //    qApp->processEvents();
+//}
 
 QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 {
