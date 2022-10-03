@@ -1,10 +1,10 @@
 #ifndef FRAMEDECODER_H
 #define FRAMEDECODER_H
 
-//#include <QtWidgets>
+#include <QtWidgets>
 #include <QObject>
 #include <QMutex>
-//#include <QThread>
+#include <QThread>
 //#include <QWaitCondition>
 #include "Main/global.h"
 #include <QMediaPlayer>
@@ -13,17 +13,22 @@
 #include "Main/global.h"
 
 class FrameDecoder : public QObject
+//class FrameDecoder : public QThread
 {
     Q_OBJECT
 
 public:
-    FrameDecoder(QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
+    FrameDecoder(QObject *parent, int id);
     void getFrame(QString fPath, QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
     void setStatus(QString status);
     QVideoSink *videoSink;
+    int id;
     QString status;
     QString fPath;
     QModelIndex dmIdx;
+
+//protected:
+//    void run() Q_DECL_OVERRIDE;
 
 signals:
     void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration,

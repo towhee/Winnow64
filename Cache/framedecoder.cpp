@@ -26,13 +26,14 @@
         - dm->setIconFromFrame deletes frameDecoder
 */
 
-FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
+FrameDecoder::FrameDecoder(QObject *parent, int id)
+//FrameDecoder::FrameDecoder(QObject *parent, int id)  : QThread(parent)
+
 {
 //    if (G::isLogger) G::log("FrameDecoder::FrameDecoder");
+    this->id = id;
     status = "idle";
-    thisFrameDecoder = this;
-    this->dmIdx = dmIdx;
-    this->dmInstance = dmInstance;
+//    thisFrameDecoder = this;
     mediaPlayer = new QMediaPlayer();
     videoSink = new QVideoSink;
     mediaPlayer->setVideoOutput(videoSink);
@@ -47,22 +48,25 @@ void FrameDecoder::getFrame(QString path, QModelIndex dmIdx, int dmInstance)
 //    if (G::isLogger) G::log("FrameDecoder::getFrame");
 //    fPath = path;
 //    QFile f(fPath);
-    if (isDebugging) qDebug() << "FrameDecoder::getFrame"
-                              << "row =" << dmIdx.row()
-                              ;
     status = "busy";
     this->fPath = path;
     this->dmIdx = dmIdx;
     this->dmInstance = dmInstance;
-    mediaPlayer->setSource(path);
-//    mediaPlayer->play();
-//    qDebug() << "FrameDecoder::getFrame    row =" << dmIdx.row();
+    if (isDebugging) qDebug() << "FrameDecoder::getFrame                "
+                              << "row =" << dmIdx.row()
+                              << "  id =" << id
+                              << "  Decoder status =" << status
+                              << "  " << fPath
+                              ;
+//    start();
+    mediaPlayer->setSource(fPath);
+    mediaPlayer->play();
 }
 
 void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
 //    if (G::isLogger) G::log("FrameDecoder::frameChanged");
-    if (isDebugging) qDebug() << "FrameDecoder::frameChanged"
+    if (isDebugging) qDebug() << "FrameDecoder::frameChanged            "
                               << "row =" << dmIdx.row()
                               ;
     if (thumbnailAcquired) return;
@@ -73,6 +77,7 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     qint64 duration = mediaPlayer->duration();
     QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
     emit setFrameIcon(dmIdx, pm, dmInstance, duration, thisFrameDecoder);
+    status = "idle";
 }
 
 void FrameDecoder::setStatus(QString status)
@@ -86,3 +91,12 @@ void FrameDecoder::errorOccurred(QMediaPlayer::Error error, const QString &error
 {
     qDebug() << "FrameDecoder::errorOccurred" << "row =" << dmIdx.row() << errorString;
 }
+
+//void FrameDecoder::run()
+//{
+//    mediaPlayer->setSource(fPath);
+//    mediaPlayer->play();
+//    qDebug() << "FrameDecoder::run                     "
+//             <<      "row =" << dmIdx.row();
+
+//}

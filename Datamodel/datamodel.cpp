@@ -1084,7 +1084,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
         return;
     }
     int row = dmIdx.row();
-    qDebug() << "DataModel::setIconFromVideoFrame  row =" << row;
+    qDebug() << "DataModel::setIconFromVideoFrame       row =" << row;
     QString modelDuration = index(dmIdx.row(), G::DurationColumn).data().toString();
     mutex.lock();
     if (modelDuration == "") {
