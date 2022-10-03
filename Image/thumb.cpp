@@ -59,7 +59,7 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 //        }
 //    }
 
-    qDebug() << "Thumb::loadFromVideo  row =" << dmRow;
+    qDebug() << "\nThumb::loadFromVideo                  " << "row =" << dmRow;
     QModelIndex dmIdx = dm->index(dmRow, 0);
     videoFrameDispatcher->getVideoFrame(fPath, dmIdx, dm->instance);
 

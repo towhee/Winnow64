@@ -1001,6 +1001,7 @@ private:
     MetaRead *metaRead = nullptr;
     MetadataCache *metadataCacheThread;
     ImageCache *imageCacheThread;
+    QThread videoFrameDispatcherThread;
     VideoFrameDispatcher *videoFrameDispatcher;
 
     Thumb *thumb;

@@ -1,6 +1,7 @@
 #ifndef VIDEOFRAMEDISPATCHER_H
 #define VIDEOFRAMEDISPATCHER_H
 
+#include <QtWidgets>
 #include <QObject>
 #include <QMutex>
 #include "Datamodel/datamodel.h"
@@ -12,6 +13,7 @@ class VideoFrameDispatcher : public QObject
 public:
     explicit VideoFrameDispatcher(QObject *parent, DataModel *dm);
     void getVideoFrame(QString fPath, QModelIndex dmIdx, int dmInstance);
+    void clear();
 
 signals:
 
@@ -19,7 +21,7 @@ private:
     QMutex mutex;
 
     DataModel *dm;
-    QVector<QThread*> decoderThread;       // all the frame decoder threads
+//    QVector<QThread*> decoderThread;       // all the frame decoder threads
     QVector<FrameDecoder*> decoder;
     int decoderThreadCount;                 // number of decoder threads
 
@@ -30,7 +32,8 @@ private:
         int dmInstance;
         QString status;
     };
-    QMap<QString, Frame> queue;                // frames to do list
+    QList<Frame> queue;                // frames to do list
+//    QMap<QString, Frame> queue;                // frames to do list
 
     bool isDebugging;
 

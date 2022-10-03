@@ -175,6 +175,8 @@ void MW::createVideoFrameDispatcher()
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     videoFrameDispatcher = new VideoFrameDispatcher(this, dm);
+    videoFrameDispatcher->moveToThread(&videoFrameDispatcherThread);
+    videoFrameDispatcherThread.start();
 }
 
 void MW::createMDCache()

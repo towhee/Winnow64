@@ -1840,6 +1840,7 @@ void MW::stopAndClearAll(QString src)
     metaRead->stop(1000);
 //    G::wait(0);         // reset wait duration timer
 //    while (metaRead->isRunning && G::wait(1) < 1000);
+    videoFrameDispatcher->clear();
     metadataCacheThread->stop();
     imageCacheThread->stop();
     buildFilters->stop();

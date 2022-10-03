@@ -23,7 +23,7 @@
 */
 
 VideoFrameDispatcher::VideoFrameDispatcher(QObject *parent, DataModel *dm)
-    : QObject{parent}
+//    : QObject{parent}
 {
     this->dm = dm;
 
@@ -31,20 +31,26 @@ VideoFrameDispatcher::VideoFrameDispatcher(QObject *parent, DataModel *dm)
     decoderThreadCount = QThread::idealThreadCount();
     for (int i = 0; i < decoderThreadCount; ++i) {
         QThread *thread = new QThread;
-        decoderThread.append(thread);
-        FrameDecoder *frameDecoder = new FrameDecoder;
+//        decoderThread.append(thread);
+        FrameDecoder *frameDecoder = new FrameDecoder(this, i);
         decoder.append(frameDecoder);
         decoder[i]->moveToThread(thread);
         connect(decoder[i], &FrameDecoder::dispatch,
                 this, &VideoFrameDispatcher::dispatch);
         connect(decoder[i], &FrameDecoder::setFrameIcon,
                 dm, &DataModel::setIconFromVideoFrame);
+        thread->start();
     }
 
     isDebugging = true;
     if (isDebugging) qDebug() << "VideoFrameDispatcher::VideoFrameDispatcher"
                               << "decoderThreadCount =" << decoderThreadCount
                                  ;
+}
+
+void VideoFrameDispatcher::clear()
+{
+    queue.clear();
 }
 
 void VideoFrameDispatcher::getVideoFrame(QString fPath, QModelIndex dmIdx, int dmInstance)
@@ -56,7 +62,7 @@ void VideoFrameDispatcher::getVideoFrame(QString fPath, QModelIndex dmIdx, int d
     frame.dmInstance = dmInstance;
     frame.status = "decode";
     mutex.lock();
-    queue.insert(fPath, frame);
+    queue.append(frame);
     mutex.unlock();
 
     /* Dispatch the first idle decoder.  It will decode the first frame with status "decode"
@@ -65,15 +71,18 @@ void VideoFrameDispatcher::getVideoFrame(QString fPath, QModelIndex dmIdx, int d
        */
     for (int id = 0; id < decoderThreadCount; id++) {
         if (decoder[id]->status == "idle") {
-            if (isDebugging) qDebug() << "VideoFrameDispatcher::getVideoFrame"
+            if (isDebugging) qDebug() << "VideoFrameDispatcher::getVideoFrame   "
                                       << "row =" << dmIdx.row()
-                                      << "decoderId =" << id
+                                      << "  id =" << id
+                                      << "  Decoder status =" << decoder[id]->status
+                                      << "  Queue status =" << frame.status
                                          ;
             dispatch(id);     // status: idle, busy
             return;
         }
     }
-    if (isDebugging) qDebug() << "VideoFrameDispatcher::getVideoFrame  All decoders busy, added to queue"
+    if (isDebugging) qDebug() << "VideoFrameDispatcher::getVideoFrame   "
+                              << "All decoders busy, added to queue"
                                  ;
 }
 
@@ -82,30 +91,41 @@ void VideoFrameDispatcher::dispatch(int id)
 /*
 
 */
-    if (isDebugging) qDebug() << "VideoFrameDispatcher::dispatch"
-                              << "row =" << decoder[id]->dmIdx.row()
-                              << "decoderId =" << id
+    if (isDebugging) qDebug() << "VideoFrameDispatcher::dispatch        "
+                              << "          id =" << id
+                              << "  Decoder status =" << decoder[id]->status
+//                              << "  Queue status =" << frame.status
                                  ;
-    queue.remove(decoder[id]->fPath);
+    // remove prior frame from the queue
+    if (id != -1) {
+        for (int i = 0; i < queue.size(); i++) {
+            if (queue.at(i).dmIdx == decoder[id]->dmIdx) {
+                queue.remove(i);
+                break;
+            }
+        }
+    }
     decodeNextFrame(id);
 }
 
 void VideoFrameDispatcher::decodeNextFrame(int id)
 {
     bool dispatched = false;
-    for (Frame frame : queue) {
-        if (frame.status == "decode") {
+    for (int i = 0; i < queue.size(); i++) {
+        if (queue.at(i).status == "decode") {
             // frame found to decode
-            if (isDebugging) qDebug() << "VideoFrameDispatcher::decodeNextFrame"
-                                      << "row =" << frame.dmIdx.row()
-                                      << "decoderId =" << id
+            queue[i].status = "decoding";
+            if (isDebugging) qDebug() << "VideoFrameDispatcher::decodeNextFrame "
+                                      << "row =" << queue.at(i).dmIdx.row()
+                                      << "  id =" << id
+                                      << "  Decoder status =" << decoder[id]->status
+                                      << "  Queue status =" << queue.at(i).status
                                          ;
-            frame.status = "decoding";
-            dispatched = true;
-            decoder[id]->getFrame(frame.fPath, frame.dmIdx, frame.dmInstance);
+//            dispatched = true;
+            decoder[id]->getFrame(queue.at(i).fPath, queue.at(i).dmIdx, queue.at(i).dmInstance);
         }
     }
-    if (!dispatched) decoder[id]->setStatus("idle");
+//    if (!dispatched) decoder[id]->setStatus("idle");
 }
 
 
