@@ -77,13 +77,18 @@ When the user selects a thumbnail or a filter or sort has been invoked.
 
 */
 
-MetadataCache::MetadataCache(QObject *parent, DataModel *dm,
-                  Metadata *metadata) : QThread(parent)
+MetadataCache::MetadataCache(QObject *parent,
+                             DataModel *dm,
+                             Metadata *metadata,
+                             VideoFrameDispatcher *videoFrameDispatcher
+                             )
+    : QThread(parent)
 {
     if (G::isLogger) G::log("MetadataCache::MetadataCache");
     this->dm = dm;
     this->metadata = metadata;
-    thumb = new Thumb(dm, metadata);
+    this->videoFrameDispatcher = videoFrameDispatcher;
+    thumb = new Thumb(dm, metadata, videoFrameDispatcher);
 
     abort = false;
 

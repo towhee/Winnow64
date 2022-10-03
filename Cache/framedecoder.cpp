@@ -29,6 +29,7 @@
 FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
 {
 //    if (G::isLogger) G::log("FrameDecoder::FrameDecoder");
+    status = "idle";
     thisFrameDecoder = this;
     this->dmIdx = dmIdx;
     this->dmInstance = dmInstance;
@@ -37,6 +38,8 @@ FrameDecoder::FrameDecoder(QModelIndex dmIdx, int dmInstance)
     mediaPlayer->setVideoOutput(videoSink);
     connect(videoSink, &QVideoSink::videoFrameChanged, this, &FrameDecoder::frameChanged);
     connect(mediaPlayer, &QMediaPlayer::errorOccurred, this, &FrameDecoder::errorOccurred);
+
+    isDebugging = true;
 }
 
 void FrameDecoder::getFrame(QString path, QModelIndex dmIdx, int dmInstance)
@@ -44,18 +47,24 @@ void FrameDecoder::getFrame(QString path, QModelIndex dmIdx, int dmInstance)
 //    if (G::isLogger) G::log("FrameDecoder::getFrame");
 //    fPath = path;
 //    QFile f(fPath);
-//    qDebug() << "FrameDecoder::getFrame  row =" << dmIdx.row() << "already open =" << f.isOpen();
+    if (isDebugging) qDebug() << "FrameDecoder::getFrame"
+                              << "row =" << dmIdx.row()
+                              ;
+    status = "busy";
+    this->fPath = path;
     this->dmIdx = dmIdx;
     this->dmInstance = dmInstance;
     mediaPlayer->setSource(path);
-    mediaPlayer->play();
+//    mediaPlayer->play();
 //    qDebug() << "FrameDecoder::getFrame    row =" << dmIdx.row();
 }
 
 void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
 //    if (G::isLogger) G::log("FrameDecoder::frameChanged");
-//    qDebug() << "FrameDecoder::frameChanged  row =" << dmIdx.row();
+    if (isDebugging) qDebug() << "FrameDecoder::frameChanged"
+                              << "row =" << dmIdx.row()
+                              ;
     if (thumbnailAcquired) return;
     QImage im = frame.toImage();
     if (im.isNull()) return;
@@ -64,6 +73,13 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
     qint64 duration = mediaPlayer->duration();
     QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
     emit setFrameIcon(dmIdx, pm, dmInstance, duration, thisFrameDecoder);
+}
+
+void FrameDecoder::setStatus(QString status)
+{
+    mutex.lock();
+    this->status = status;
+    mutex.unlock();
 }
 
 void FrameDecoder::errorOccurred(QMediaPlayer::Error error, const QString &errorString)

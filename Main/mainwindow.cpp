@@ -391,7 +391,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createSelectionModel();     // dependent on ThumbView, ImageView
     createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
-    createVideoFrameDecoders(); // dependent on DataModel
+    createVideoFrameDispatcher(); // dependent on DataModel
     createMDCache();            // dependent on DataModel, Metadata, ThumbView, VideoView
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget, ThumbView, ImageCache
