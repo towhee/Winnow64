@@ -15,7 +15,10 @@ class MetaRead : public QObject
     Q_OBJECT
 
 public:
-    MetaRead(QObject *parent, DataModel *dm, Metadata *metadata);
+    MetaRead(QObject *parent,
+             DataModel *dm,
+             Metadata *metadata,
+             VideoFrameDispatcher *videoFrameDispatcher);
     ~MetaRead() override;
 
     QString diagnostics();
@@ -57,6 +60,7 @@ private:
 
     DataModel *dm;
     Metadata *metadata;
+    VideoFrameDispatcher *videoFrameDispatcher;
     Thumb *thumb;
     int dmInstance;
     int visibleIconCount;

@@ -27,13 +27,16 @@
         iconChunkSize
 */
 
-MetaRead::MetaRead(QObject *parent, DataModel *dm, Metadata *metadata)
+MetaRead::MetaRead(QObject *parent,
+                   DataModel *dm,
+                   Metadata *metadata,
+                   VideoFrameDispatcher *videoFrameDispatcher)
 {
     if (G::isLogger) G::log("MetaRead::MetaRead");
     this->dm = dm;
     this->metadata = metadata;
-//    this->metadata = new Metadata;
-    thumb = new Thumb(dm, metadata);
+    this->videoFrameDispatcher = videoFrameDispatcher;
+    thumb = new Thumb(dm, metadata, videoFrameDispatcher);
     abort = false;
     debugCaching = false;
 }

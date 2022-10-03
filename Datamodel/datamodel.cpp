@@ -1107,7 +1107,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
         }
     }
     mutex.unlock();
-    delete frameDecoder;
+//    delete frameDecoder;
     G::isGettingVideoFrame = false;
 }
 

@@ -3,7 +3,7 @@
 
 //#include <QtWidgets>
 #include <QObject>
-//#include <QMutex>
+#include <QMutex>
 //#include <QThread>
 //#include <QWaitCondition>
 #include "Main/global.h"
@@ -19,12 +19,16 @@ class FrameDecoder : public QObject
 public:
     FrameDecoder(QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
     void getFrame(QString fPath, QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
+    void setStatus(QString status);
     QVideoSink *videoSink;
     QString status;
+    QString fPath;
+    QModelIndex dmIdx;
 
 signals:
     void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration,
                       FrameDecoder *thisFrameDecoder);
+    void dispatch(int id);
 
 public slots:
     void frameChanged(const QVideoFrame frame);
@@ -32,14 +36,14 @@ public slots:
 
 private:
     FrameDecoder *thisFrameDecoder;
-//    QMutex mutex;
+    QMutex mutex;
 //    QWaitCondition condition;
     QMediaPlayer *mediaPlayer;
-//    QString fPath;
     int dmInstance;
-    QModelIndex dmIdx;
     bool thumbnailAcquired = false;
     bool abort = false;
+
+    bool isDebugging;
 };
 
 

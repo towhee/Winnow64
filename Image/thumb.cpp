@@ -1,15 +1,17 @@
 #include "Image/thumb.h"
 
 /*
-   Loads a thumbnail preview from a file based on metadata already extracted by mdCache.  If
-   the file contains a thumbnail jpg it is extracted.  If not, then then entire image is read
-   and scaled to thumbMax.
+   Loads a thumbnail preview from a file based on metadata already extracted by
+   mdCache. If the file contains a thumbnail jpg it is extracted. If not, then
+   then entire image is read and scaled to thumbMax.
 */
 
-Thumb::Thumb(DataModel *dm, Metadata *metadata)
+Thumb::Thumb(DataModel *dm, Metadata *metadata,
+             VideoFrameDispatcher *videoFrameDispatcher)
 {
     this->dm = dm;
     this->metadata = metadata;
+    this->videoFrameDispatcher = videoFrameDispatcher;
     connect(this, &Thumb::setValue, dm, &DataModel::setValue);
 }
 
@@ -45,21 +47,24 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 */
     if (G::isLogger) G::log("Thumb::loadFromVideo", fPath);
 
-    QTime t = QTime::currentTime().addMSecs(1000);
-    while (G::isGettingVideoFrame) {
-        qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
-        if (QTime::currentTime() > t) {
-            qWarning() << "Thumb::loadFromVideo"
-                       << "row =" << dmRow
-                       << "Timeout waiting for getting video frame"
-                       << fPath;
-            return;
-        }
-    }
+//    QTime t = QTime::currentTime().addMSecs(1000);
+//    while (G::isGettingVideoFrame) {
+//        qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
+//        if (QTime::currentTime() > t) {
+//            qWarning() << "Thumb::loadFromVideo"
+//                       << "row =" << dmRow
+//                       << "Timeout waiting for getting video frame"
+//                       << fPath;
+//            return;
+//        }
+//    }
 
+    qDebug() << "Thumb::loadFromVideo  row =" << dmRow;
     QModelIndex dmIdx = dm->index(dmRow, 0);
+    videoFrameDispatcher->getVideoFrame(fPath, dmIdx, dm->instance);
 
-    FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance);
+//    FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance);
+
 //    connect(frameDecoder->videoSink, &QVideoSink::videoFrameChanged, frameDecoder, &FrameDecoder::frameChanged);
 
 //    This doesn't work
@@ -69,9 +74,9 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 //    frameDecoder->moveToThread(&frameDecoderthread);
 //    qDebug() << "Thumb::loadFromVideo, call frameDecoder->getFrame(fPath)  row =" << dmRow;
 
-    G::isGettingVideoFrame = true;
-    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
-    frameDecoder->getFrame(fPath);
+//    G::isGettingVideoFrame = true;
+//    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+//    frameDecoder->getFrame(fPath);
 }
 
 bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)

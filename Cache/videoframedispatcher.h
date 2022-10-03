@@ -1,16 +1,16 @@
-#ifndef VIDEOFRAMEDECODERS_H
-#define VIDEOFRAMEDECODERS_H
+#ifndef VIDEOFRAMEDISPATCHER_H
+#define VIDEOFRAMEDISPATCHER_H
 
 #include <QObject>
 #include <QMutex>
 #include "Datamodel/datamodel.h"
 #include "Cache/framedecoder.h"
 
-class VideoFrameDecoders : public QObject
+class VideoFrameDispatcher : public QObject
 {
     Q_OBJECT
 public:
-    explicit VideoFrameDecoders(QObject *parent, DataModel *dm);
+    explicit VideoFrameDispatcher(QObject *parent, DataModel *dm);
     void getVideoFrame(QString fPath, QModelIndex dmIdx, int dmInstance);
 
 signals:
@@ -24,16 +24,18 @@ private:
     int decoderThreadCount;                 // number of decoder threads
 
     struct Frame {
-        int decoderId;
+//        int decoderId;
         QString fPath;
         QModelIndex dmIdx;
         int dmInstance;
         QString status;
     };
-    QMap<QString, Frame> ftd;                // frames to do list
+    QMap<QString, Frame> queue;                // frames to do list
 
-    void dispatch(int decoderId, QString fPath, QModelIndex dmIdx, int dmInstance);
+    bool isDebugging;
+
+    void dispatch(int id);
     void decodeNextFrame(int id);
 };
 
-#endif // VIDEOFRAMEDECODERS_H
+#endif // VIDEOFRAMEDISPATCHER_H
