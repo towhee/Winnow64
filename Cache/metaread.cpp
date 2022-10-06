@@ -30,13 +30,13 @@
 MetaRead::MetaRead(QObject *parent,
                    DataModel *dm,
                    Metadata *metadata,
-                   VideoFrameDispatcher *videoFrameDispatcher)
+                   FrameDecoder *frameDecoder)
 {
     if (G::isLogger) G::log("MetaRead::MetaRead");
     this->dm = dm;
     this->metadata = metadata;
-    this->videoFrameDispatcher = videoFrameDispatcher;
-    thumb = new Thumb(dm, metadata, videoFrameDispatcher);
+    this->frameDecoder = frameDecoder;
+    thumb = new Thumb(dm, metadata, frameDecoder);
     abort = false;
     debugCaching = false;
 }
@@ -154,6 +154,7 @@ QString MetaRead::reportMetaCache()
     return reportString;
 }
 
+// move to DataModel??
 void MetaRead::iconMax(QPixmap &thumb)
 {
     if (G::isLogger) G::log("MetaRead::iconMax");
@@ -275,7 +276,8 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 //        emit setIcon(dmIdx, pm, dmInstance, "MetaRead::readIcon");  // also works
         dm->setIcon(dmIdx, pm, dmInstance);
         rowsWithIcon.append(dmRow);
-        iconMax(pm);
+//        iconMax(pm);  // done when icon set in datamodel
+
 //        if (!hasMetadata) {
 //            metadata->m.fPath = fPath;
 //            emit addToImageCache(metadata->m);
@@ -298,6 +300,10 @@ void MetaRead::readRow(int sfRow)
                            << "dm->sf->rowCount()=" << dm->sf->rowCount()
                               ;
     }
+
+    // ignore video (QMediaPlayer must run in GUI thread)
+//    if (dm->sf->index(sfRow, G::VideoColumn).data().toBool()) return;
+
     // range check
     if (sfRow >= dm->sf->rowCount()) return;
     // index valid?
@@ -329,8 +335,6 @@ void MetaRead::readRow(int sfRow)
              << "iconChunkSize =" << iconChunkSize
              ;
     //*/
-
-//    G::log("MetaRead::readRow  Icon for row", QString::number(sfRow));
 
     if (inIconRange(sfRow)) {
         if (!dm->iconLoaded(sfRow)) {

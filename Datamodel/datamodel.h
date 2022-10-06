@@ -146,6 +146,7 @@ private:
     void addFileDataForRow(int row, QFileInfo fileInfo);
     void rawPlusJpg();
     double aspectRatio(int w, int h, int orientation);
+    void setIconMax(const QPixmap &pm);
 
     int imageCount;
     int countInterval = 0;

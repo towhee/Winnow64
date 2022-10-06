@@ -4,7 +4,7 @@
 #include <QtWidgets>
 #include <QObject>
 #include <QMutex>
-#include <QThread>
+//#include <QThread>
 //#include <QWaitCondition>
 #include "Main/global.h"
 #include <QMediaPlayer>
@@ -18,10 +18,7 @@ class FrameDecoder : public QObject
     Q_OBJECT
 
 public:
-    FrameDecoder(QObject *parent, int id);
-    void getFrame(QString fPath, QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
-    void setStatus(QString status);
-    QVideoSink *videoSink;
+    FrameDecoder(QObject *parent = nullptr);
     int id;
     QString status;
     QString fPath;
@@ -33,21 +30,34 @@ public:
 signals:
     void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration,
                       FrameDecoder *thisFrameDecoder);
-    void dispatch(int id);
 
 public slots:
+    void addToQueue(QString fPath, QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
+    void clear();
+    void stop();
     void frameChanged(const QVideoFrame frame);
     void errorOccurred(QMediaPlayer::Error error, const QString &errorString);
 
 private:
-    FrameDecoder *thisFrameDecoder;
-    QMutex mutex;
-//    QWaitCondition condition;
-    QMediaPlayer *mediaPlayer;
-    int dmInstance;
-    bool thumbnailAcquired = false;
-    bool abort = false;
+    void getNextThumbNail(QString src = "");
+    int queueIndex(QModelIndex dmIdx);
 
+    struct Item {
+        QString fPath;
+        QModelIndex dmIdx;
+        int dmInstance;
+    };
+    QList<Item> queue;
+
+    FrameDecoder *thisFrameDecoder;
+    QMediaPlayer *mediaPlayer;
+    QVideoSink *videoSink;
+    int dmInstance;
+
+    QMutex mutex;
+
+    bool abort = false;
+    bool reset =   false;
     bool isDebugging;
 };
 

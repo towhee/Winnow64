@@ -1080,14 +1080,16 @@ right margin amount.  It is used in MW::gridDisplay to determine if a rejustify 
 
 void IconView::rejustify()
 {
-/* This function controls the resizing behavior of the thumbnails in gridview and thumbview
-when wrapping = true and the window is resized or the gridview preferences are edited. The
-grid cells sizes are maintained while keeping the right side "justified". The cells can be
-direcly adjusted using the "[" and "]" keys, but this is handled by the justify() function.
+/*
+    This function controls the resizing behavior of the thumbnails in gridview
+    and thumbview when wrapping = true and the window is resized or the
+    gridview preferences are edited. The grid cells sizes are maintained while
+    keeping the right side "justified". The cells can be direcly adjusted using
+    the "[" and "]" keys, but this is handled by the justify() function.
 
-The key to making this work is the variable assignedThumbWidth, which is increased or
-decreased in the justify() function, and used to maintain the cell size during the
-resize and preference adjustment operations.
+    The key to making this work is the variable assignedThumbWidth, which is
+    increased or decreased in the justify() function, and used to maintain the
+    cell size during the resize and preference adjustment operations.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
 //    qDebug() << objectName() << "::rejustify   "
@@ -1286,6 +1288,7 @@ void IconView::bestAspect()
     if (G::iconHMax > G::iconWMax)
         iconWidth = static_cast<int>(iconHeight * (static_cast<double>(G::iconWMax) / G::iconHMax));
 
+    qDebug() << CLASSFUNCTION << objectName() << G::iconWMax << G::iconHMax << iconWidth << iconHeight;
     setThumbParameters();
 
     bestAspectRatio = static_cast<double>(iconHeight) / iconWidth;

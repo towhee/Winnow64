@@ -7,8 +7,7 @@
 #include "Metadata/metadata.h"
 #include "Metadata/imagemetadata.h"
 #include "Datamodel/datamodel.h"
-#include "Cache/videoframedispatcher.h"
-//#include "Cache/framedecoder.h"
+#include "Cache/framedecoder.h"
 #include "ImageFormats/TIFF/tiff.h"
 
 class Thumb : public QObject
@@ -17,13 +16,14 @@ class Thumb : public QObject
     QThread frameDecoderthread;
 public:
     explicit Thumb(DataModel *dm, Metadata *metadata,
-                   VideoFrameDispatcher *videoFrameDispatcher);
+                   FrameDecoder *frameDecoder);
     bool loadThumb(QString &fPath, QImage &image, QString src);
     void insertThumbnails(QModelIndexList &selection);
     bool insertingThumbnails = false;
     bool abort = false;
 
 signals:
+    void videoFrameDecode(QString fPath, QModelIndex dmIdx, int dmInstance);
     void setValue(QModelIndex dmIdx, QVariant value,
                   int role = Qt::EditRole, int align = Qt::AlignCenter);
     void getFrame(QString fPath);
@@ -31,7 +31,7 @@ signals:
 private:
     DataModel *dm;
     Metadata *metadata;
-    VideoFrameDispatcher *videoFrameDispatcher;
+    FrameDecoder *frameDecoder;
     QString err;
     QSize thumbMax;
 

@@ -1084,7 +1084,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
         return;
     }
     int row = dmIdx.row();
-    qDebug() << "DataModel::setIconFromVideoFrame       row =" << row;
+//    qDebug() << "DataModel::setIconFromVideoFrame       row =" << row;
     QString modelDuration = index(dmIdx.row(), G::DurationColumn).data().toString();
     mutex.lock();
     if (modelDuration == "") {
@@ -1104,6 +1104,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
                 QString aspectRatio = QString::number(pm.width() * 1.0 / pm.height(), 'f', 2);
                 setData(index(row, G::AspectRatioColumn), aspectRatio);
             }
+            setIconMax(pm);
         }
     }
     mutex.unlock();
@@ -1159,7 +1160,20 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     const QIcon icon(pm);
     item->setIcon(icon);
     setData(dmIdx, false, G::CachingIconRole);
+    setIconMax(pm);
     mutex.unlock();
+}
+
+void DataModel::setIconMax(const QPixmap &pm)
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
+
+    // for best aspect calc
+    int w = pm.width();
+    int h = pm.height();
+    if (w > G::iconWMax) G::iconWMax = w;
+    if (h > G::iconHMax) G::iconHMax = h;
 }
 
 bool DataModel::isIconCaching(int sfRow)

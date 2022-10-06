@@ -391,7 +391,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     createSelectionModel();     // dependent on ThumbView, ImageView
     createInfoString();         // dependent on QSetting, DataModel, EmbelProperties
     createInfoView();           // dependent on DataModel, Metadata, ThumbView
-    createVideoFrameDispatcher(); // dependent on DataModel
+    createFrameDecoder();       // dependent on DataModel
     createMDCache();            // dependent on DataModel, Metadata, ThumbView, VideoView
     createImageCache();         // dependent on DataModel, Metadata, ThumbView
     createImageView();          // dependent on centralWidget, ThumbView, ImageCache
@@ -1840,7 +1840,7 @@ void MW::stopAndClearAll(QString src)
     metaRead->stop(1000);
 //    G::wait(0);         // reset wait duration timer
 //    while (metaRead->isRunning && G::wait(1) < 1000);
-    videoFrameDispatcher->clear();
+    frameDecoder->stop();
     metadataCacheThread->stop();
     imageCacheThread->stop();
     buildFilters->stop();
@@ -1874,6 +1874,7 @@ void MW::stopAndClearAll(QString src)
     tableView->setSortingEnabled(false);
 
     dm->clearDataModel();
+    frameDecoder->clear();
 
     thumbView->setUpdatesEnabled(true);
     gridView->setUpdatesEnabled(true);
@@ -2048,6 +2049,7 @@ void MW::loadConcurrent(int sfRow)
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "Row =" + QString::number(sfRow));
     if (!G::allMetadataLoaded || !G::allIconsLoaded) {
         if (!dm->abortLoadingModel) {
+            frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
             emit startMetaRead(sfRow, CLASSFUNCTION);
         }

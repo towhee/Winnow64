@@ -46,8 +46,7 @@ QT += multimediawidgets
 QT += concurrent
 QT += network
 
-HEADERS += Cache/cachedata.h \
-    Cache/videoframedispatcher.h
+HEADERS += Cache/cachedata.h
 HEADERS += Cache/framedecoder.h
 HEADERS +=
 HEADERS += Cache/mdcache.h
@@ -165,8 +164,7 @@ HEADERS += Views/tableview.h
 HEADERS += Views/videoview.h
 HEADERS += Views/videowidget.h
 
-SOURCES += Cache/cachedata.cpp \
-    Cache/videoframedispatcher.cpp
+SOURCES += Cache/cachedata.cpp
 SOURCES += Cache/framedecoder.cpp
 SOURCES +=
 SOURCES += Cache/imagecache.cpp

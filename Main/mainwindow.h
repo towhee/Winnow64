@@ -48,7 +48,7 @@
 #include "Cache/metaread.h"
 #include "Cache/mdcache.h"
 #include "Cache/imagecache.h"
-#include "Cache/videoframedispatcher.h"
+#include "Cache/framedecoder.h"
 
 //#ifdef Q_OS_WIN
 #include "Utilities/icc.h"
@@ -1001,8 +1001,7 @@ private:
     MetaRead *metaRead = nullptr;
     MetadataCache *metadataCacheThread;
     ImageCache *imageCacheThread;
-    QThread videoFrameDispatcherThread;
-    VideoFrameDispatcher *videoFrameDispatcher;
+    FrameDecoder *frameDecoder;
 
     Thumb *thumb;
     InfoView *infoView;
@@ -1117,7 +1116,7 @@ private:
     void addMenuSeparator(QWidget *widget);
     void createActions();
     void createBookmarks();
-    void createVideoFrameDispatcher();
+    void createFrameDecoder();
     void createMDCache();
     void createImageCache();
     void createCentralWidget();

@@ -1205,7 +1205,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.isCached = false;
         icd->cacheItem.isTarget = false;
         icd->cacheItem.priority = i;
-        if ((G::useLinearLoading || G::allMetadataLoaded) /*&& !m.video*/) {
+        if ((G::useLinearLoading || G::allMetadataLoaded)) {
             ImageMetadata m = dm->imMetadata(fPath);
             if (!m.video) {
                 // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
