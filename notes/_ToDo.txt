@@ -1,7 +1,6 @@
 BUGS / TO DO
 - Record mac display space for close/open app location
 - Folders with many videos stalling out ie /Users/roryhill/Downloads/Videos of Eva
-- Rotate not happening for some images ie file:///Users/roryhill/Downloads/iPhone/IMG_2998.HEIC
 - Add G::showWarnings
 - Rethink load Metadata flags and logic
 - Make ImageDecoder warnings context specific is hasMetadata
@@ -70,6 +69,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Fix orientation/aspect ratio for files where image metadata unavailable
 - IconView zoom cursor sometimes wrong loc after multiselect and ImageView zoomed
 - Filters not showing all years when filter on one dynamic category and not all icons loaded
 - Not reading xmp when loading heic

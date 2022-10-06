@@ -175,12 +175,15 @@ bool ImageDecoder::load()
         #endif
 
         #ifdef Q_OS_MAC
-        if (!image.load(fPath)) {
-            imFile.close();
-            qWarning() << "ImageDecoder::load  Could not decode using Qt" << fPath;
-//            G::error("ImageDecoder::load", fPath, "Could not decode using Qt.");
-            return false;
-        }
+        QImageReader imageReader(fPath);
+        imageReader.setAutoTransform(true);
+        image = imageReader.read();
+//        if (!image.load(fPath)) {
+//            imFile.close();
+//            qWarning() << "ImageDecoder::load  Could not decode using Qt" << fPath;
+////            G::error("ImageDecoder::load", fPath, "Could not decode using Qt.");
+//            return false;
+//        }
         imFile.close();
         #endif
     }

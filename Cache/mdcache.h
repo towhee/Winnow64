@@ -7,7 +7,6 @@
 #include <QWaitCondition>
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
-#include "Cache/videoframedispatcher.h"
 //#include "Cache/imagecache.h"
 #include "Image/thumb.h"
 #include "Main/global.h"
@@ -21,7 +20,7 @@ public:
     MetadataCache(QObject *parent,
                   DataModel *dm,
                   Metadata *metadata,
-                  VideoFrameDispatcher *videoFrameDispatcher);
+                  FrameDecoder *frameDecoder);
     ~MetadataCache() override;
 
     enum Action {
@@ -71,7 +70,7 @@ public:
     bool abort;
     DataModel *dm;
     Metadata *metadata;
-    VideoFrameDispatcher *videoFrameDispatcher;
+    FrameDecoder *frameDecoder;
     Thumb *thumb;
 
     int startRow;

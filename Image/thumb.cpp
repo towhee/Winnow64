@@ -7,12 +7,13 @@
 */
 
 Thumb::Thumb(DataModel *dm, Metadata *metadata,
-             VideoFrameDispatcher *videoFrameDispatcher)
+             FrameDecoder *frameDecoder)
 {
     this->dm = dm;
     this->metadata = metadata;
-    this->videoFrameDispatcher = videoFrameDispatcher;
+    this->frameDecoder = frameDecoder;
     connect(this, &Thumb::setValue, dm, &DataModel::setValue);
+    connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 }
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
@@ -47,36 +48,11 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 */
     if (G::isLogger) G::log("Thumb::loadFromVideo", fPath);
 
-//    QTime t = QTime::currentTime().addMSecs(1000);
-//    while (G::isGettingVideoFrame) {
-//        qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
-//        if (QTime::currentTime() > t) {
-//            qWarning() << "Thumb::loadFromVideo"
-//                       << "row =" << dmRow
-//                       << "Timeout waiting for getting video frame"
-//                       << fPath;
-//            return;
-//        }
-//    }
-
-    qDebug() << "\nThumb::loadFromVideo                  " << "row =" << dmRow;
+//    qDebug() << "Thumb::loadFromVideo                  "
+//             << "row =" << dmRow
+//                ;
     QModelIndex dmIdx = dm->index(dmRow, 0);
-    videoFrameDispatcher->getVideoFrame(fPath, dmIdx, dm->instance);
-
-//    FrameDecoder *frameDecoder = new FrameDecoder(dmIdx, dm->instance);
-
-//    connect(frameDecoder->videoSink, &QVideoSink::videoFrameChanged, frameDecoder, &FrameDecoder::frameChanged);
-
-//    This doesn't work
-//    QThread *thread = new QThread;
-//    frameDecoder->moveToThread(thread);
-
-//    frameDecoder->moveToThread(&frameDecoderthread);
-//    qDebug() << "Thumb::loadFromVideo, call frameDecoder->getFrame(fPath)  row =" << dmRow;
-
-//    G::isGettingVideoFrame = true;
-//    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
-//    frameDecoder->getFrame(fPath);
+    emit videoFrameDecode(fPath, dmIdx, dm->instance);
 }
 
 bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
@@ -84,27 +60,22 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     if (G::isLogger) G::log("Thumb::loadFromEntireFile", fPath);
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
-    QFile imFile(fPath);
-    if (imFile.isOpen()) imFile.close();
-    QImageReader thumbReader;
-    // let thumbReader do its thing
-    thumbReader.setFileName(fPath);
-    QSize size = thumbReader.size();
-    if (size == QSize(-1,-1)) {
-        image.load(fPath);
-        size = image.size();
-    }
-    int w = size.width();
-    int h = size.height();
+//    QFile imFile(fPath);
+//    if (imFile.isOpen()) imFile.close();
+
+    QImageReader thumbReader(fPath);
+    thumbReader.setAutoTransform(true);
+    image = thumbReader.read();
+    int w = image.width();
+    int h = image.height();
+    double a = w / h;
     emit setValue(dm->index(row, G::WidthColumn), w);
     emit setValue(dm->index(row, G::WidthPreviewColumn), w);
     emit setValue(dm->index(row, G::HeightColumn), h);
     emit setValue(dm->index(row, G::HeightPreviewColumn), h);
+    emit setValue(dm->index(row, G::AspectRatioColumn), a);
 
-    // read image
-    size.scale(thumbMax, Qt::KeepAspectRatio);
-    thumbReader.setScaledSize(size);
-    image = thumbReader.read();
+    image = image.scaled(thumbMax, Qt::KeepAspectRatio);
     if (image.isNull()) {
         G::error("loadFromEntireFile", fPath, "Could not read thumb using thumbReader.");
         qWarning() << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
@@ -204,8 +175,6 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
 
     // If video file then just show video icon
     if (metadata->videoFormats.contains(ext)) {
-//        QString path = ":/images/video.png";
-//        loadFromEntireFile(path, image, dmRow);
         loadFromVideo(fPath, dmRow);
         return true;
     }

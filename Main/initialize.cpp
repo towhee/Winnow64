@@ -121,7 +121,7 @@ void MW::createDataModel()
     else combineRawJpg = false;
 
     dm = new DataModel(this, metadata, filters, combineRawJpg);
-    thumb = new Thumb(dm, metadata, videoFrameDispatcher);
+//    thumb = new Thumb(dm, metadata, frameDecoder);
 
     dm->iconChunkSize = 3000;
 
@@ -168,15 +168,15 @@ void MW::createSelectionModel()
 //            this, &MW::fileSelectionChange);
 }
 
-void MW::createVideoFrameDispatcher()
+void MW::createFrameDecoder()
 {
 /*
     Manage a number of FrameDecoder threads that send thumbnails to the DataModel.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    videoFrameDispatcher = new VideoFrameDispatcher(this, dm);
-    videoFrameDispatcher->moveToThread(&videoFrameDispatcherThread);
-    videoFrameDispatcherThread.start();
+    frameDecoder = new FrameDecoder(this);
+    connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
+    thumb = new Thumb(dm, metadata, frameDecoder);
 }
 
 void MW::createMDCache()
@@ -190,7 +190,7 @@ void MW::createMDCache()
     scrolling before triggering a restart at the new place.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    metadataCacheThread = new MetadataCache(this, dm, metadata, videoFrameDispatcher);
+    metadataCacheThread = new MetadataCache(this, dm, metadata, frameDecoder);
 
     if (isSettings) {
         if (setting->contains("cacheAllMetadata")) metadataCacheThread->cacheAllMetadata = setting->value("cacheAllMetadata").toBool();
@@ -228,7 +228,7 @@ void MW::createMDCache()
 
 
     // MetaRead
-    metaRead = new MetaRead(this, dm, metadata, videoFrameDispatcher);
+    metaRead = new MetaRead(this, dm, metadata, frameDecoder);
     metaRead->moveToThread(&metaReadThread);
 
 //    metaRead->iconChunkSize = 200;
