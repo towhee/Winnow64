@@ -1084,6 +1084,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
         m.fPath = fPath;
         m.currRootFolder = fileInfo.absoluteDir().absolutePath();
         m.size = fileInfo.size();
+        m.video = videoFormats.contains(ext);
         if (G::useSidecar) {
             p.file.setFileName(fPath);
             if (p.file.open(QIODevice::ReadWrite)) {

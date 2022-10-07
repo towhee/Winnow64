@@ -1117,18 +1117,22 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 //    if (m.currRootFolder != G::currRootFolder) return;
 
     if (G::isLogger /*|| G::isFlowLogger*/) G::log("ImageCache::addCacheItemImageMetadata");
-
-    // ignore videos
-    if (m.video) {
-//        return;
-    }
-
+    qDebug() << "ImageCache::addCacheItemImageMetadata"
+             << m.row
+             << m.video
+             << m.fPath;
     if (!cacheKeyHash.contains(m.fPath)) {
         return;
     }
 
     int row;
     row = cacheKeyHash[m.fPath];
+    icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
+
+    if (m.video) {
+        icd->cacheItemList[row].isVideo = m.video;
+//        return;
+    }
 
     if (row >= icd->cacheItemList.length()) {
         qWarning() << "ImageCache::addCacheItemImageMetadata" << "row not in icd->cacheItemList";
@@ -1154,8 +1158,8 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
         icd->cacheItemList[row].estSizeMB = true;
     }
     // decoder parameters
-    icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
-    icd->cacheItem.isVideo = m.video;
+//    icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
+//    icd->cacheItemList[row].isVideo = m.video;
     icd->cacheItemList[row].orientation = m.orientation;
     icd->cacheItemList[row].rotationDegrees = m.rotationDegrees;
     icd->cacheItemList[row].offsetFull = m.offsetFull;
