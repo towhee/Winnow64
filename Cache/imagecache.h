@@ -64,6 +64,7 @@ public:
 //    ImageCacheData::Cache icd->cache;
 
 signals:
+    void stopped(QString src);
     void setValue(QModelIndex dmIdx, QVariant value,
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValueSf(QModelIndex sfIdx, QVariant value,

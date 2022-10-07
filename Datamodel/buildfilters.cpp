@@ -35,6 +35,7 @@ void BuildFilters::stop()
 //        qDebug() << CLASSFUNCTION << "filtersBuilt = " << filters->filtersBuilt;
 //        emit updateIsRunning(false);
     }
+    if (G::stop) emit stopped("BuildFilters");
 }
 
 void BuildFilters::build()

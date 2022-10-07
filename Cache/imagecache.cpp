@@ -115,18 +115,10 @@ void ImageCache::stop()
     if (G::isLogger) G::log("ImageCache::stop");
     abort = true;
 
-    // stop decoders
+    // stop decoder threads
     for (int id = 0; id < decoderCount; ++id) {
         decoder[id]->stop();
     }
-//    for (int id = 0; id < decoderCount; ++id) {
-//        qDebug() << CLASSFUNCTION << "decoder[id]->isRunning()" << id << decoder[id]->isRunning();
-//    }
-
-//    QString isRun;
-//    if (isRunning()) isRun = "true";
-//    else isRun = "false";
-//    G::track(CLASSFUNCTION, "Start: isRunning = " + isRun);
 
     // stop imagecache thread
     if (isRunning()) {
@@ -137,6 +129,8 @@ void ImageCache::stop()
         wait();
         abort = false;
     }
+    // signal MW all stopped if a folder change
+    if (G::stop) emit stopped("ImageCache");
 
 //    if (isRunning()) isRun = "true";
 //    else isRun = "false";
@@ -877,7 +871,7 @@ QString ImageCache::reportCache(QString title)
          << "  cacheMB:" << icd->cache.currMB
          << "  Wt ahead:" << icd->cache.wtAhead
          << "  Direction ahead:" << icd->cache.isForward
-         << "  Total files:" << icd->cache.totFiles << "\n";
+         << "  Total files:" << icd->cache.totFiles << "\n\n";
     int cachedCount = 0;
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
         int row = dm->fPathRow[icd->cacheItemList.at(i).fPath];
@@ -896,6 +890,7 @@ QString ImageCache::reportCache(QString title)
                 << "Cached"
                 << "imCache"
                 << "dmCached"
+                << "Video"
                 << "SizeMB"
                 << "Estimate"
                 << "Offset"
@@ -921,6 +916,7 @@ QString ImageCache::reportCache(QString title)
             << (icd->cacheItemList.at(i).isCached ? "true" : "false")
             << (icd->imCache.contains(icd->cacheItemList.at(i).fPath) ? "true" : "false")
             << (dm->sf->index(icd->cacheItemList.at(i).key,0).data(G::UserRoles::CachedRole).toBool() ? "true" : "false")
+            << (icd->cacheItemList.at(i).isVideo ? "true" : "false")
             << icd->cacheItemList.at(i).sizeMB
             << icd->cacheItemList.at(i).estSizeMB
 //            << icd->cacheItemList.at(i).metadataLoaded
@@ -1124,7 +1120,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 
     // ignore videos
     if (m.video) {
-        return;
+//        return;
     }
 
     if (!cacheKeyHash.contains(m.fPath)) {
@@ -1159,6 +1155,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     }
     // decoder parameters
     icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
+    icd->cacheItem.isVideo = m.video;
     icd->cacheItemList[row].orientation = m.orientation;
     icd->cacheItemList[row].rotationDegrees = m.rotationDegrees;
     icd->cacheItemList[row].offsetFull = m.offsetFull;
@@ -1224,6 +1221,7 @@ void ImageCache::buildImageCacheList()
                 }
                 // decoder parameters
                 icd->cacheItem.metadataLoaded = m.metadataLoaded;
+                icd->cacheItem.isVideo = m.video;
                 icd->cacheItem.orientation = m.orientation;
                 icd->cacheItem.rotationDegrees = m.rotationDegrees;
                 icd->cacheItem.offsetFull = m.offsetFull;

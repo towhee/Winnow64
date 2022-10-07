@@ -28,6 +28,7 @@ public:
 //    void run() Q_DECL_OVERRIDE;
 
 signals:
+    void stopped(QString src);
     void setFrameIcon(QModelIndex dmIdx, QPixmap &pm, int instance, qint64 duration,
                       FrameDecoder *thisFrameDecoder);
 
