@@ -125,6 +125,7 @@ void MetadataCache::stop()
         abort = false;
         emit updateIsRunning(false, false, "MetadataCache::stop");
     }
+    if (G::stop) emit stopped("MDCache");
 }
 
 void MetadataCache::scrollChange(QString source)

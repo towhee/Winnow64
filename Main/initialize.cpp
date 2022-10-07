@@ -13,6 +13,11 @@ void MW::initialize()
     G::ptToPx = G::dpi / 72;
     isNormalScreen = true;
     G::isSlideShow = false;
+    stopped["MetaRead"] = true;
+    stopped["MDCache"] = true;
+    stopped["FrameDecoder"] = true;
+    stopped["ImageCache"] = true;
+    stopped["BuildFilters"] = true;
     workspaces = new QList<workspaceData>;
     recentFolders = new QStringList;
     ingestHistoryFolders = new QStringList;
@@ -145,6 +150,8 @@ void MW::createDataModel()
 
     buildFilters = new BuildFilters(this, dm, metadata, filters, combineRawJpg);
 
+    connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::stop);
+    connect(buildFilters, &BuildFilters::stopped, this, &MW::reset);
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
 }
@@ -175,6 +182,8 @@ void MW::createFrameDecoder()
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     frameDecoder = new FrameDecoder(this);
+    connect(this, &MW::abortFrameDecoder, frameDecoder, &FrameDecoder::stop);
+    connect(frameDecoder, &FrameDecoder::stopped, this, &MW::reset);
     connect(frameDecoder, &FrameDecoder::setFrameIcon, dm, &DataModel::setIconFromVideoFrame);
     thumb = new Thumb(dm, metadata, frameDecoder);
 }
@@ -214,6 +223,10 @@ void MW::createMDCache()
     // next connect to update
     connect(metadataCacheScrollTimer, &QTimer::timeout, this, &MW::loadMetadataChunk);
 
+    // signal to stop MetaCache
+    connect(this, &MW::abortImageCache, metadataCacheThread, &MetadataCache::stop);
+    // signal stopped when abort completed
+    connect(metadataCacheThread, &MetadataCache::stopped, this, &MW::reset);
     // update icon in datamodel
     connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon);
 
@@ -242,6 +255,10 @@ void MW::createMDCache()
 
     // delete thread when finished
     connect(&metaReadThread, &QThread::finished, metaRead, &QObject::deleteLater);
+    // signal to stop MetaRead
+    connect(this, &MW::abortImageCache, metaRead, &MetaRead::stop);
+    // signal stopped when abort completed
+    connect(metaRead, &MetaRead::stopped, this, &MW::reset);
     // read metadata
     connect(this, &MW::startMetaRead, metaRead, &MetaRead::start);
     // message metadata reading completed
@@ -293,6 +310,12 @@ void MW::createImageCache()
 
     connect(imageCacheThread, SIGNAL(updateIsRunning(bool,bool)),
             this, SLOT(updateImageCachingThreadRunStatus(bool,bool)));
+
+    // signal to stop the ImageCache
+    connect(this, &MW::abortImageCache, imageCacheThread, &ImageCache::stop);
+
+    // signal stopped when abort completed
+    connect(imageCacheThread, &ImageCache::stopped, this, &MW::reset);
 
     // Update the cache status progress bar when changed in ImageCache
     connect(imageCacheThread, &ImageCache::showCacheStatus,
@@ -713,10 +736,10 @@ void MW::createFSTree()
     connect(fsTree, &FSTree::selectionChange, this, &MW::watchCurrentFolder);
 
     // this works for touchpad tap
-    connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChange);
+    connect(fsTree, &FSTree::pressed, this, &MW::selectionChange);
 
     // reselect folder after external program drop onto FSTree
-    connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
+    connect(fsTree, &FSTree::folderSelection, this, &MW::selectionChange);
 
     // if move drag and drop then delete files from source folder(s)
     connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);
@@ -767,7 +790,7 @@ void MW::createBookmarks()
     connect(bookmarks, &BookMarks::refreshFSTree, fsTree, &FSTree::refreshModel);
 
     // reselect folder after external program drop onto BookMarks
-    connect(bookmarks, &BookMarks::folderSelection, this, &MW::folderSelectionChange);
+    connect(bookmarks, &BookMarks::folderSelection, this, &MW::selectionChange);
 }
 
 void MW::createAppStyle()

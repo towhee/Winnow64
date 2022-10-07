@@ -103,7 +103,7 @@ A new image is selected which triggers fileSelectionChange
 
     • Update the thumbView and gridView delegates.
 
-    • Synchronize the thumb, grid and table views.   If in loupe mode load the current
+    • Synchronize the thumb, grid and table views.   If in loupe mode, load the current
       image.
 
     • Update window title, statusbar, info panel and classification badges.
@@ -675,7 +675,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         */
         G::popUp->hide();
         // stop loading a new folder
-        if (!G::isNewFolderLoaded /*&& G::useLinearLoading*/) stopAndClearAll("Escape key");
+        if (!G::isNewFolderLoaded /*&& G::useLinearLoading*/) stop("Escape key");
         // end stress test
         else if (isStressTest) isStressTest = false;
         // cancel slideshow
@@ -1349,7 +1349,8 @@ void MW::handleStartupArgs(const QString &args)
         QFileInfo f(argList.at(1));
         f.dir().path();
         fsTree->select(f.dir().path());
-        folderSelectionChange();
+        selectionChange();
+//        folderSelectionChange();
     }
     return;
 }
@@ -1367,7 +1368,41 @@ void MW::watchCurrentFolder()
     if (G::currRootFolder == "") return;
     QFileInfo info(G::currRootFolder);
     if (info.exists()) return;
-    folderSelectionChange();
+    selectionChange();
+//    folderSelectionChange();
+}
+
+void MW::selectionChange()
+{
+/*
+   This is invoked when there is a folder selection change in the folder or bookmark views.
+
+   - folder change triggers MW::selectionChange
+   - return if another folder selection change happens quickly
+   - call MW::stop
+   - all worker threads are signalled to stop
+   - all worker threads signal MW::reset when stopped
+   - MW::reset confirms all worker threads stopped and then resets all necessary info
+   - Finally, MW::folderSelectionChange is called
+*/
+    if (G::isLogger || G::isFlowLogger) {
+        G::log("skipline");
+        G::log(CLASSFUNCTION);
+    }
+    qDebug() << CLASSFUNCTION;
+    // ignore if very rapid selection and current folder is still at stopAndClearAll
+    if (G::stop) {
+        return;
+    }
+
+    // also checked in FSTree and Bookmarks mousePressEvent
+    if (dm->loadingModel) {
+        return;
+    }
+
+    // Reset
+    stop("folderSelectionChange");
+
 }
 
 void MW::folderSelectionChange()
@@ -1380,19 +1415,7 @@ void MW::folderSelectionChange()
         G::log("skipline");
         G::log(CLASSFUNCTION);
     }
-
-    // ignore if very rapid selection and current folder is still at stopAndClearAll
-    if (G::stop) {
-        return;
-    }
-
-    // also checked in FSTree and Bookmarks mousePressEvent
-    if (dm->loadingModel) {
-        return;
-    }
-
-    // Reset
-    stopAndClearAll("folderSelectionChange");
+    qDebug() << CLASSFUNCTION;
 
     dm->abortLoadingModel = false;
     G::currRootFolder = getSelectedPath();
@@ -1438,7 +1461,7 @@ void MW::folderSelectionChange()
 
     // confirm folder exists and is readable, report if not and do not process
     if (!isFolderValid(G::currRootFolder, true /*report*/, false /*isRemembered*/)) {
-        stopAndClearAll("Invalid folder");
+        stop("Invalid folder");
         setWindowTitle(winnowWithVersion);
         if (G::isLogger) Utilities::log(CLASSFUNCTION, "Invalid folder " + G::currRootFolder);
         return;
@@ -1466,7 +1489,7 @@ void MW::folderSelectionChange()
     if (!dm->load(G::currRootFolder, subFoldersAction->isChecked())) {
         updateMetadataThreadRunStatus(false, true, "MW::folderSelectionChange");
         qWarning() << "Datamodel Failed To Load for" << G::currRootFolder;
-        stopAndClearAll("Load datamodel failed");
+        stop("Load datamodel failed");
         enableSelectionDependentMenus();
         if (dm->abortLoadingModel) {
             updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
@@ -1600,7 +1623,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 
     if (!currRootDir.exists()) {
         refreshFolders();
-        folderSelectionChange();
+        selectionChange();
+//        folderSelectionChange();
         return;
     }
 
@@ -1818,18 +1842,27 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     return;
 }
 
-void MW::stopAndClearAll(QString src)
+void MW::stop(QString src)
 {
 /*
     Called when folderSelectionChange and invalid folder (no folder, no eligible images).
     Can be triggered when the user picks a folder in the folder panel or open menu, picks
     a bookmark or ejects a drive and the resulting folder does not have any eligible images.
-*/
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-//    qDebug() << CLASSFUNCTION << src;
-    G::stop = true;
 
-    dm->abortLoad();   
+
+*/
+    if (G::isInitializing) return;
+
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION << src;
+    G::stop = true;
+    dm->abortLoad();
+
+    stopped["MetaRead"] = false;
+    stopped["MDCache"] = false;
+    stopped["FrameDecoder"] = false;
+    stopped["ImageCache"] = false;
+    stopped["BuildFilters"] = false;
 
     if (src == "Escape key") {
         fsTree->selectionModel()->clearSelection();
@@ -1837,13 +1870,42 @@ void MW::stopAndClearAll(QString src)
     }
 
     // metaRead signals to stopAndClearAllAfterMetaReadStopped when stopped.
-    metaRead->stop(1000);
-//    G::wait(0);         // reset wait duration timer
-//    while (metaRead->isRunning && G::wait(1) < 1000);
-    frameDecoder->stop();
-    metadataCacheThread->stop();
-    imageCacheThread->stop();
-    buildFilters->stop();
+    emit abortMetaRead();
+    emit abortMDCache();
+    emit abortImageCache();
+    emit abortBuildFilters();
+    emit abortFrameDecoder();
+
+//    metaRead->stop(1000);
+//    metadataCacheThread->stop();
+//    imageCacheThread->stop();
+//    buildFilters->stop();
+}
+
+void MW::reset(QString src) {
+/*
+    Called when folderSelectionChange and invalid folder (no folder, no eligible images).
+    Can be triggered when the user picks a folder in the folder panel or open menu, picks
+    a bookmark or ejects a drive and the resulting folder does not have any eligible images.
+*/
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+
+    stopped[src] = true;
+
+    qDebug() << CLASSFUNCTION << "src =" << src
+             << "\n  MetaRead     stopped" << stopped["MetaRead"]
+             << "\n  MDCache      stopped" << stopped["MDCache"]
+             << "\n  ImageCache   stopped" << stopped["ImageCache"]
+             << "\n  BuildFilters stopped" << stopped["BuildFilters"]
+             << "\n  FrameDecoder stopped" << stopped["FrameDecoder"]
+             << "\n" ;
+
+    // if any thread processes still running then do not complete reset yet
+    for (bool isStopped : stopped) {
+        if (!isStopped) return;
+    }
+
+    qDebug() << CLASSFUNCTION << "completing reset";
 
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
@@ -1886,6 +1948,8 @@ void MW::stopAndClearAll(QString src)
     setThreadRunStatusInactive();
 
     G::stop = false;
+    qDebug() << CLASSFUNCTION << "done";
+    folderSelectionChange();
 }
 
 void MW::nullFiltration()
@@ -2616,10 +2680,11 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         fsTree->setCurrentIndex(filterIdx);
         fsTree->select(fPath);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
-        folderSelectionChange();
+        selectionChange();
+//        folderSelectionChange();
     }
     else {
-        stopAndClearAll("Bookmark clicked");
+        stop("Bookmark clicked");
         setWindowTitle(winnowWithVersion);
         enableSelectionDependentMenus();
     }
@@ -3003,7 +3068,7 @@ void MW::invokeRecentFolder(QAction *recentFolderActions)
     if (G::isLogger) G::log(CLASSFUNCTION);
     QString dirPath = recentFolderActions->text();
     fsTree->select(dirPath);
-    folderSelectionChange();
+    selectionChange();
 }
 
 void MW::invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions)
@@ -3011,7 +3076,7 @@ void MW::invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions)
     if (G::isLogger) G::log(CLASSFUNCTION);
     QString dirPath = ingestHistoryFolderActions->text();
     fsTree->select(dirPath);
-    folderSelectionChange();
+    selectionChange();
 //    revealInFileBrowser(dirPath);
 }
 
@@ -5099,7 +5164,7 @@ void MW::ingest()
         // if background ingesting do not jump to the ingest destination folder
         if (gotoIngestFolder && !isBackgroundIngest) {
             fsTree->select(lastIngestLocation);
-            folderSelectionChange();
+            selectionChange();
             return;
         }
 
@@ -5149,7 +5214,7 @@ void MW::ejectUsb(QString path)
                  << "ejectDrive.rootPath() =" << ejectDrive.rootPath()
                     ;
                     //*/
-        stopAndClearAll("ejectUSB");
+        stop("ejectUSB");
     }
 
     QString driveName = ejectDrive.name();      // ie WIN "D:\" or MAC "Untitled"
@@ -5171,7 +5236,7 @@ void MW::ejectUsb(QString path)
         int result = Usb::eject(driveName);
         if (result < 2) {
             G::popUp->showPopup("Ejecting drive " + driveName, 2000);
-            folderSelectionChange();
+            selectionChange();
         }
         else
             G::popUp->showPopup("Failed to eject drive " + driveName, 2000);
@@ -5348,7 +5413,7 @@ void MW::openFolder()
          "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (dirPath == "") return;
     fsTree->select(dirPath);
-    folderSelectionChange();
+    selectionChange();
 }
 
 void MW::refreshCurrentFolder()
@@ -5398,7 +5463,7 @@ void MW::refreshCurrentFolder()
 //        metadataCacheThread->loadNewFolder(true);
         refreshCurrentAfterReload();
     }
-    else folderSelectionChange();
+    else selectionChange();
 }
 
 void MW::refreshCurrentAfterReload()
@@ -5531,8 +5596,8 @@ void MW::deleteFiles(QStringList paths)
 
     // if all images in folder were deleted
     if (sldm.count() == dm->rowCount()) {
-        stopAndClearAll("deleteFiles");
-        folderSelectionChange();
+        stop("deleteFiles");
+        selectionChange();
         return;
     }
 
@@ -5597,7 +5662,7 @@ void MW::deleteFolder()
     }
 
     if (G::currRootFolder == dirToDelete) {
-        stopAndClearAll("deleteFolder");
+        stop("deleteFolder");
     }
 
     QDir dir(dirToDelete);
@@ -5671,7 +5736,7 @@ void MW::openUsbFolder()
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
-        folderSelectionChange();
+        selectionChange();
         thumbView->selectThumb(0);
         if (!wasSubFoldersChecked) subFoldersAction->setChecked(true);
         updateStatusBar();

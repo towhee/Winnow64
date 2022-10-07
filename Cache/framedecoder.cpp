@@ -46,6 +46,10 @@ FrameDecoder::FrameDecoder(QObject *parent)
 
 void FrameDecoder::stop()
 {
+    if (status == "idle") {
+        emit stopped("FrameDecoder");
+        return;
+    }
     abort = true;
 }
 
@@ -66,7 +70,8 @@ void FrameDecoder::clear()
 
 void FrameDecoder::addToQueue(QString path, QModelIndex dmIdx, int dmInstance)
 {
-    abort = false;
+//    abort = false;
+    if (abort) return;
     Item item;
     item.fPath = path;
     item.dmIdx = dmIdx;
@@ -94,6 +99,10 @@ int FrameDecoder::queueIndex(QModelIndex dmIdx)
 void FrameDecoder::getNextThumbNail(QString src)
 {
 //    if (G::isLogger) G::log("FrameDecoder::getFrame");
+    if (abort) {
+        abort = false;
+        emit stopped("FrameDecoder");
+    }
 
     if (queue.isEmpty() || abort) {
         if (isDebugging) qDebug() << "FrameDecoder::getNextThumbNail quiting"

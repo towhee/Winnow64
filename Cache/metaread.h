@@ -32,6 +32,7 @@ public:
     int lastIconRow;
 
 signals:
+    void stopped(QString src);
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
@@ -42,7 +43,7 @@ signals:
 
 public slots:
     void initialize();
-    bool stop(int ms = 1000);
+    bool stop();
     void start(int row = 0, QString src = "");
 
 private:

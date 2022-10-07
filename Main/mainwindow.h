@@ -356,9 +356,11 @@ public slots:
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
     void watchCurrentFolder();
+    void selectionChange();
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex, QString src);
     void folderAndFileSelectionChange(QString fPath, QString src = "");
+    void reset(QString src);
     void nullFiltration();
     void handleDrop(QString fPath);
 //    void handleDrop(QDropEvent *event);
@@ -393,6 +395,11 @@ signals:
     void closeZoomDlg();
     void aSyncGo(int);  // rgh req'd?
     void needToShow();
+    void abortMetaRead();
+    void abortMDCache();
+    void abortImageCache();
+    void abortBuildFilters();
+    void abortFrameDecoder();
     void abortEmbelExport();
     void abortHueReport();
     void abortStackOperation();
@@ -1029,6 +1036,8 @@ private:
     QModelIndex currentIdx;
     QStandardItemModel *imageModel;
 
+    QHash<QString, bool> stopped;
+
     // pick history
     struct Pick {
         QString path;
@@ -1109,7 +1118,7 @@ private:
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
     void updateState();
-    void stopAndClearAll(QString src = "");
+    void stop(QString src = "");
 //    void stopAndClearAllAfterMetaReadStopped();
     void deleteViewerImage();
     void selectCurrentViewDir();
