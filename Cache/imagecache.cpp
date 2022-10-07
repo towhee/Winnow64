@@ -297,7 +297,7 @@ void ImageCache::setTargetRange()
 //            continue;
 //        }
         sumMB += icd->cacheItemList.at(i).sizeMB;
-        if (sumMB < icd->cache.maxMB) {
+        if (sumMB < icd->cache.maxMB && !icd->cacheItemList[i].isVideo) {
             icd->cacheItemList[i].isTarget = true;
             priorityList.append(icd->cacheItemList.at(i).key);
         }
@@ -524,16 +524,23 @@ void ImageCache::setPriorities(int key)
         aheadPos = key + 1;
         behindPos = key - 1;
         while (i < icd->cacheItemList.length()) {
+//            if (icd->cacheItemList[i].isVideo) {
+//                i++;
+//                if (i >= icd->cacheItemList.length()) break;
+//                continue;
+//            }
             for (int b = behindPos; b > behindPos - behindAmount; --b) {
                 for (int a = aheadPos; a < aheadPos + aheadAmount; ++a) {
                     if (a >= icd->cacheItemList.length()) break;
-                    icd->cacheItemList[a].priority = i++;
+                    if (icd->cacheItemList[i].isVideo) icd->cacheItemList[a].priority = i;
+                    i++;
                     if (i >= icd->cacheItemList.length()) break;
                     if (a == aheadPos + aheadAmount - 1 && b < 0) aheadPos += aheadAmount;
                 }
                 aheadPos += aheadAmount;
                 if (b < 0) break;
-                icd->cacheItemList[b].priority = i++;
+                if (icd->cacheItemList[i].isVideo) icd->cacheItemList[b].priority = i;
+                i++;
                 if (i > icd->cacheItemList.length()) break;
             }
             behindPos -= behindAmount;
