@@ -21,7 +21,6 @@ public:
         int toCacheKey;             // next file to cache
         int toDecacheKey;           // next file to remove from cache
         bool isForward;             // direction of travel for caching algorithm
-        bool maybeDirectionChange;  // direction change but maybe below change threshold
         int step;                   // difference between key and prevKey
         int sumStep;                // sum of step until threshold
         int directionChangeThreshold;//number of steps before change direction of cache

@@ -89,6 +89,7 @@ public slots:
     void setCurrentPosition(QString path, QString src);
     void cacheSizeChange();         // flag when cache size is changed in preferences
     void colorManageChange();
+    void refreshImageCache();
 
 private:
     QMutex mutex;
@@ -119,10 +120,9 @@ private:
     void setPriorities(int key);    // based on proximity to current position and wtAhead
     void setTargetRange();          // define start and end key in the target range to cache
     bool nextToCache(int id);       // find highest priority not cached
-    bool nextToDecache(int id);     // find lowest priority cached - return -1 if none cached
+//    bool nextToDecache(int id);     // find lowest priority cached - return -1 if none cached
     void fixOrphans();              // outside target range with isCached == true
     void setSizeMB(int id, int cacheKey); // Update sizeMB if initially estimated ie PNG file
-    void makeRoom(int id, int cacheKey); // remove images from cache until there is roomRqd
     void memChk();                  // still room in system memory for cache?
     int keyFromPath(QString path);
     static bool prioritySort(const ImageCacheData::CacheItem &p1,
@@ -131,7 +131,7 @@ private:
                         const ImageCacheData::CacheItem &k2);
     void buildImageCacheList();     //
 //    void updateImageCacheList();    //
-    void refreshImageCache();
+//    void refreshImageCache();
 //    QSize scalePreview(int w, int h);
 
     QElapsedTimer t;

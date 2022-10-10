@@ -266,12 +266,12 @@ void ImageCache::setTargetRange()
         }
         sumMB += icd->cacheItemList.at(i).sizeMB;
         if (sumMB < icd->cache.maxMB && !icd->cacheItemList[i].isVideo) {
-            qDebug() << "ImageCache::setTargetRange"
-                     << i
-                     << icd->cacheItemList.at(i).sizeMB
-                     << sumMB
-                     << icd->cache.maxMB
-                        ;
+//            qDebug() << "ImageCache::setTargetRange"
+//                     << i
+//                     << icd->cacheItemList.at(i).sizeMB
+//                     << sumMB
+//                     << icd->cache.maxMB
+//                        ;
             icd->cacheItemList[i].isTarget = true;
             priorityList.append(icd->cacheItemList.at(i).key);
         }
@@ -415,41 +415,41 @@ bool ImageCache::nextToCache(int id)
     return false;
 }
 
-bool ImageCache::nextToDecache(int id)
-{
-/*
-    The next image to decache is determined by traversing the cacheItemList in descending
-    order to find the first image currently cached.
-*/
-    if (G::isLogger) G::log("ImageCache::nextToDecache");
+//bool ImageCache::nextToDecache(int id)
+//{
+///*
+//    The next image to decache is determined by traversing the cacheItemList in descending
+//    order to find the first image currently cached.
+//*/
+//    if (G::isLogger) G::log("ImageCache::nextToDecache");
 
-    int lastPriority = 0;
-    int key = -1;
-    // find next priority item
-    for (int i = icd->cacheItemList.length() - 1; i > -1; --i) {
-        int priority = icd->cacheItemList.at(i).priority;
-        bool isCached = icd->cacheItemList.at(i).isCached;
-        if (isCached) {
-            // higher priorities are lower numbers
-            if (priority > lastPriority) {
-                lastPriority = priority;
-                key = i;
-            }
-        }
-    }
-    if (key > -1) {
-        icd->cache.toDecacheKey = key;
-        if (debugCaching) {
-            QString k = QString::number(key).leftJustified((4));
-            qDebug().noquote() << "ImageCache::nextToDecache" << "  decoder" << id << "key =" << k;
-        }
-        return true;
-    }
-    // Nothing found
-    QString k = QString::number(key).leftJustified((4));
-    qWarning().noquote() << "ImageCache::nextToDecache" << "  decoder" << id << "key =" << k << "FAILED";
-    return false;
-}
+//    int lastPriority = 0;
+//    int key = -1;
+//    // find next priority item
+//    for (int i = icd->cacheItemList.length() - 1; i > -1; --i) {
+//        int priority = icd->cacheItemList.at(i).priority;
+//        bool isCached = icd->cacheItemList.at(i).isCached;
+//        if (isCached) {
+//            // higher priorities are lower numbers
+//            if (priority > lastPriority) {
+//                lastPriority = priority;
+//                key = i;
+//            }
+//        }
+//    }
+//    if (key > -1) {
+////        icd->cache.toDecacheKey = key;
+//        if (debugCaching) {
+//            QString k = QString::number(key).leftJustified((4));
+//            qDebug().noquote() << "ImageCache::nextToDecache" << "  decoder" << id << "key =" << k;
+//        }
+//        return true;
+//    }
+//    // Nothing found
+//    QString k = QString::number(key).leftJustified((4));
+//    qWarning().noquote() << "ImageCache::nextToDecache" << "  decoder" << id << "key =" << k << "FAILED";
+//    return false;
+//}
 
 void ImageCache::setPriorities(int key)
 {
@@ -619,78 +619,6 @@ bool ImageCache::cacheUpToDate()
                     ;
     }
     return true;
-}
-
-void ImageCache::makeRoom(int id, int cacheKey)
-{
-/*
-    Called from the running thread when a new image from the nextToCache QList is
-    iterated. Remove images from the QHash imCache, based on the order of the QList
-    toDecache, until there is enough room to add the new image. Update cacheItemList,
-    thumb status indicators, and the current available room in the cache.
-*/
-    if (G::isLogger) G::log("ImageCache::makeRoom");
-    if (cacheKey >= icd->cacheItemList.length()) return;
-    float room = icd->cache.maxMB - icd->cache.currMB;
-    float roomRqd = icd->cacheItemList.at(cacheKey).sizeMB;
-    if (debugCaching) {
-        QString fPath = icd->cacheItemList.at(cacheKey).fPath;
-        // sum actual summedCurrMB vs currMB
-        float summedCurrMB = 0;
-        for (int i = 0; i < icd->cacheItemList.length(); ++i) {
-            if (icd->cacheItemList[i].isCached == true)
-                summedCurrMB += icd->cacheItemList.at(i).sizeMB;
-        }
-        QString k = QString::number(icd->cache.toDecacheKey).leftJustified((4));
-        qDebug().noquote() << "ImageCache::makeRoom"
-                 << "       decoder" << id << "key =" << k
-                 << "Is Room Req'd:"
-                 << "currMB =" << icd->cache.currMB
-                 << "summedCurrMB =" << summedCurrMB
-                 << "maxMB =" << icd->cache.maxMB
-                 << "room =" << room
-                 << "roomRqd =" << roomRqd
-                 << "Image to add" << fPath
-                    ;
-    }
-    while (room < roomRqd) {
-        // make some room by removing lowest priority cached image (fPath)
-        if (nextToDecache(id)) {
-            QString fPath = icd->cacheItemList[icd->cache.toDecacheKey].fPath;
-            icd->imCache.remove(fPath);
-            icd->cacheItemList[icd->cache.toDecacheKey].isCached = false;
-            icd->cacheItemList[icd->cache.toDecacheKey].isCaching = false;
-            icd->cache.currMB -= icd->cacheItemList[icd->cache.toDecacheKey].sizeMB;
-            room = icd->cache.maxMB - icd->cache.currMB;
-            if (debugCaching) {
-                // sum actual summedCurrMB vs currMB
-                float summedCurrMB = 0;
-                for (int i = 0; i < icd->cacheItemList.length(); ++i) {
-                    if (icd->cacheItemList[i].isCached = true)
-                        summedCurrMB += icd->cacheItemList.at(i).sizeMB;
-                }
-                QString k = QString::number(icd->cache.toDecacheKey).leftJustified((4));
-                qDebug().noquote() << "ImageCache::makeRoom"
-                         << "       decoder" << id << "key =" << k
-                         << "Making Room:"
-                         << "currMB =" << icd->cache.currMB
-                         << "summedCurrMB =" << summedCurrMB
-                         << "maxMB =" << icd->cache.maxMB
-                         << "room =" << room
-                         << "roomRqd =" << roomRqd
-                         << "Removed image" << fPath
-                            ;
-            }
-        }
-        else {
-            qWarning().noquote() << "ImageCache::makeRoom"
-                     << "FAILED"
-                     << "room =" << room
-                     << "roomRqd =" << roomRqd
-                        ;
-            break;
-        }
-    }
 }
 
 void ImageCache::setSizeMB(int id, int cacheKey)
@@ -1131,7 +1059,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     icd->cacheItemList[row].lengthFull = m.lengthFull;
     icd->cacheItemList[row].samplesPerPixel = m.samplesPerPixel;
     icd->cacheItemList[row].iccBuf = m.iccBuf;
-    icd->cache.folderMB += icd->cacheItemList[row].sizeMB; // req'd?  Only used for diagnostics
+//    icd->cache.folderMB += icd->cacheItemList[row].sizeMB; // req'd?  Only used for diagnostics
     mutex.unlock();
 }
 

@@ -347,6 +347,8 @@ void MW::createImageCache()
     // signal to ImageCache new image selection req'd?
     connect(metaRead, &MetaRead::addToImageCache,
             imageCacheThread, &ImageCache::addCacheItemImageMetadata);
+    // signal ImageCache refresh
+    connect(this, &MW::refreshImageCache, imageCacheThread, &ImageCache::refreshImageCache);
 //    connect(metaRead, &MetaRead::setImageCachePosition,
 //            imageCacheThread, &ImageCache::setCurrentPosition);
 
