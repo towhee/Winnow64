@@ -29,6 +29,7 @@ public:
     void setProgress(int progress);
     QLabel label;
     QProgressBar progressBar;
+    bool openAndNoTimeout = false;
 
 protected:
     void paintEvent(QPaintEvent *event) override;    // The background will be drawn through the redraw method
@@ -43,14 +44,14 @@ public slots:
               float opacity = 0.75,
               Qt::Alignment alignment = Qt::AlignHCenter);
     void hide();
+    void end();
 
 private slots:
-    void hideAnimation();                   // Slot start the animation hide
 
 private:
     QWidget *centralWidget;
     QGridLayout layout;
-    QPropertyAnimation animation;
+    bool okayToHide = true;
     float popupOpacity;
     Qt::Alignment popupAlignment;
     QTimer *timer;
@@ -58,6 +59,6 @@ private:
     bool isProgressBar = false;
     QString popupText;
     QWidget *source;
-};
+    };
 
 #endif // POPUP_H

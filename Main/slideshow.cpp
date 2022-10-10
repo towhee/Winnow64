@@ -5,7 +5,7 @@ void MW::slideShow()
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (G::isSlideShow) {
         // stop slideshow
-        G::popUp->showPopup("Slideshow has been terminated.");
+        G::popUp->showPopup("Slideshow has been terminated.", 2000);
         G::isSlideShow = false;
         useImageCache = true;
         imageView->setCursor(Qt::ArrowCursor);
@@ -27,7 +27,7 @@ void MW::slideShow()
         // start slideshow
         imageView->setCursor(Qt::BlankCursor);
         G::isSlideShow = true;
-        isSlideshowPaused = false;
+//        isSlideshowPaused = false;
         updateStatusBar();
         QString msg = "<h2>Press <font color=\"red\"><b>Esc</b></font> to exit slideshow</h2><p>";
         msg += "Press <font color=\"red\"><b>H</b></font> during slideshow for tips"
@@ -38,8 +38,9 @@ void MW::slideShow()
         else msg += "<br>Sequential selection";
         if (isSlideShowWrap) msg += "<br>Wrap at end of slides";
         else msg += "<br>Stop at end of slides";
+        msg += "<p>Press <font color=\"red\"><b>SpaceBar</b></font> to start slideshow.";
 
-        G::popUp->showPopup(msg, 4000, true, 0.75, Qt::AlignLeft);
+        G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
 
         // No image caching if random slide show
         if (isSlideShowRandom) useImageCache = false;
@@ -55,15 +56,14 @@ void MW::slideShow()
         slideShowTimer = new QTimer(this);
         connect(slideShowTimer, SIGNAL(timeout()), this, SLOT(nextSlide()));
         slideCount = 0;
-        nextSlide();
-        slideShowTimer->start(slideShowDelay * 1000);
+//        nextSlide();
+//        slideShowTimer->start(slideShowDelay * 1000);
     }
 }
 
 void MW::nextSlide()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    if (isSlideshowPaused) return;
     slideCount++;
     if (isSlideShowRandom) {
         // push previous image path onto the slideshow history stack
@@ -92,7 +92,7 @@ void MW::prevRandomSlide()
         G::popUp->showPopup("End of random slide history");
         return;
     }
-    isSlideshowPaused = true;
+//    isSlideshowPaused = true;
     QString prevPath = slideshowRandomHistoryStack->pop();
     thumbView->selectThumb(prevPath);
     updateStatus(false,

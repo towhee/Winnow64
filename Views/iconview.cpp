@@ -844,7 +844,7 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
 
         // Change current
         if (type == "Change current") {
-            emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION);
+            emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION + " " + objectName() + " " + type);
         }
 
         // UniSelection, Deselect current: reselect deselection if no selection remaining
@@ -856,7 +856,7 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
         else if (isDeselected && isCurrent && selectedRowsCount) {
             QModelIndex idx = getNearestSelection(deselectedRow);
             selectionModel()->setCurrentIndex(idx, QItemSelectionModel::NoUpdate);
-            emit fileSelectionChange(idx, QModelIndex(), CLASSFUNCTION);
+            emit fileSelectionChange(idx, QModelIndex(), CLASSFUNCTION + " " + objectName() + " " + type);
         }
 
         // MultiSelection, Deselect non-current: reset current index to before
@@ -868,7 +868,7 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
         else if (anchorCurrent && isSelected && selectedRowsCount > 1) {
             QListView::selectionChanged(selected, deselected);
             selectionModel()->setCurrentIndex(currentSfIdx, QItemSelectionModel::NoUpdate);
-            emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION);
+            emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION + " " + objectName() + " " + type);
         }
 
         else {
@@ -967,7 +967,6 @@ void IconView::selectPrev()
 void IconView::selectUp()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
     if (G::mode == "Table" || !isWrapping()) selectPrev();
     else setCurrentIndex(moveCursor(QAbstractItemView::MoveUp, Qt::NoModifier));
 }
@@ -975,7 +974,6 @@ void IconView::selectUp()
 void IconView::selectDown()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
 //    if (G::mode == "Table" || !isWrapping()) selectNext();
     /*else */setCurrentIndex(moveCursor(QAbstractItemView::MoveDown, Qt::NoModifier));
 }
@@ -983,7 +981,6 @@ void IconView::selectDown()
 void IconView::selectPageUp()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
 //    if (G::mode == "Table" || !isWrapping()) selectPrev();
     /*else */setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
 }
@@ -991,7 +988,6 @@ void IconView::selectPageUp()
 void IconView::selectPageDown()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
     if (G::mode == "Table" || !isWrapping()) selectNext();
     else setCurrentIndex(moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier));
 }
@@ -1005,7 +1001,6 @@ void IconView::selectFirst()
 void IconView::selectLast()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
     selectThumb(getLastRow());
 }
 
@@ -1288,7 +1283,7 @@ void IconView::bestAspect()
     if (G::iconHMax > G::iconWMax)
         iconWidth = static_cast<int>(iconHeight * (static_cast<double>(G::iconWMax) / G::iconHMax));
 
-    qDebug() << CLASSFUNCTION << objectName() << G::iconWMax << G::iconHMax << iconWidth << iconHeight;
+//    qDebug() << CLASSFUNCTION << objectName() << G::iconWMax << G::iconHMax << iconWidth << iconHeight;
     setThumbParameters();
 
     bestAspectRatio = static_cast<double>(iconHeight) / iconWidth;

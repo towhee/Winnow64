@@ -244,7 +244,6 @@ void DataModel::setModelProperties()
 void DataModel::clearDataModel()
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
     // clear the model
     clear();
     setModelProperties();

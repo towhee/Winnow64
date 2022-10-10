@@ -29,12 +29,6 @@ PopUp::PopUp(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget
     setAttribute(Qt::WA_TranslucentBackground);     // Indicates that the background will be transparent
     setAttribute(Qt::WA_ShowWithoutActivating);     // At the show, the widget does not get the focus automatically
 
-    animation.setTargetObject(this);                // Set the target animation
-    animation.setPropertyName("popupOpacity");      //
-    connect(&animation, &QAbstractAnimation::finished, this, &PopUp::hide);
-
-//    label.setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-//    label.setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
     label.setTextFormat(Qt::RichText);
     label.setStyleSheet(
         "QLabel "
@@ -54,7 +48,7 @@ PopUp::PopUp(QWidget *source, QWidget *centralWidget, QWidget *parent) : QWidget
     setLayout(&layout);
 
     timer = new QTimer();
-    connect(timer, &QTimer::timeout, this, &PopUp::hide);
+    connect(timer, &QTimer::timeout, this, &PopUp::end);
 }
 
 void PopUp::paintEvent(QPaintEvent *event)
@@ -93,6 +87,13 @@ void PopUp::showPopup(const QString &text,
                  Qt::Alignment alignment)
 {
     timer->stop();
+    okayToHide = true;
+    hide();
+    if (msDuration > 0) okayToHide = false;
+    if (msDuration == 0) {
+        openAndNoTimeout = true;
+        okayToHide = false;
+    }
 
     popupDuration = msDuration;
     popupOpacity = opacity;
@@ -101,22 +102,7 @@ void PopUp::showPopup(const QString &text,
     label.setAlignment(alignment/* | Qt::AlignVCenter*/);
     label.setText(popupText);
     if (isAutoSize) adjustSize();               // With the recalculation notice sizes
-    /*
-    if (popupDuration > 0) {
-        setWindowOpacity(0.0);                  // Set the transparency to zero
-        animation.setDuration(150);             // Configuring the duration of the animation
-        animation.setStartValue(0.0);           // The start value is 0 (fully transparent widget)
-        animation.setEndValue(popupOpacity);    // End - completely opaque widget
-    }
-    else setWindowOpacity(popupOpacity);
-//    */
     setWindowOpacity(static_cast<double>(popupOpacity));
-    /*
-    qDebug() << __PRETTY_FUNCTION__
-             << "source->geometry()  =" << source->geometry()
-             << "centralWidget->geometry() =" << centralWidget->geometry()
-                ;
-                //*/
 
     // popup geometry
     QRect cwRect = centralWidget->geometry();
@@ -128,28 +114,24 @@ void PopUp::showPopup(const QString &text,
 
     QWidget::show();
 
-//    if (popupDuration > 0) animation.start();
-
 //    // set popupDuration = 0 to keep open and manually close like a msgbox
     if (popupDuration > 0) timer->start(popupDuration);
 
 //    qApp->processEvents();
 }
 
-void PopUp::hideAnimation()
+void PopUp::end()
 {
-    timer->stop();
-//    animation.setDuration(500);
-//    animation.setStartValue(popupOpacity);
-//    animation.setEndValue(0.0);
-//    animation.start();
-    popupOpacity = 0.0;
+    okayToHide = true;
+    openAndNoTimeout = false;
     hide();
 }
 
 void PopUp::hide()
 {
-    QWidget::hide();
+    if (okayToHide) {
+        QWidget::hide();
+    }
 }
 
 void PopUp::setProgressVisible(bool isVisible)

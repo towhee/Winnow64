@@ -115,6 +115,5 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    qDebug() << G::iconWMax << G::iconHMax;
-    updateIconBestFit();
+    G::popUp->showPopup("Test", 0);
 }

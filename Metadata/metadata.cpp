@@ -1079,12 +1079,14 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
+    m.video = videoFormats.contains(ext);
+
     if (!hasMetadataFormats.contains(ext)) {
         bool parsedSidcar = false;
         m.fPath = fPath;
         m.currRootFolder = fileInfo.absoluteDir().absolutePath();
         m.size = fileInfo.size();
-        m.video = videoFormats.contains(ext);
+//        m.video = videoFormats.contains(ext);
         if (G::useSidecar) {
             p.file.setFileName(fPath);
             if (p.file.open(QIODevice::ReadWrite)) {

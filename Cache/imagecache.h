@@ -103,13 +103,12 @@ private:
     int maxAttemptsToCacheImage = 100;
     bool orphansFound;           // prevent multiple orphan checks as each decoder finishes
     bool isCacheUpToDate = false;
-    bool sendStatusUpdates = false; // if true, slows scrolling while image cache loading
 
     ImageCacheData *icd;                // ptr to all cache data (reentrant)
     DataModel *dm;
     Metadata *metadata;
     QVector<ImageDecoder*> decoder;     // all the decoders
-    QHash<QString,int> cacheKeyHash;    // cache key for any path
+    QHash<QString,int> cacheKeyHash;    // cache key for assigned path
     QList<int> priorityList;
 
     void cacheImage(int id, int cacheKey);  // make room and add image to imageCache

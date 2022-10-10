@@ -211,66 +211,33 @@ void ImageCache::setDirection()
 */
     if (G::isLogger) G::log("ImageCache::setDirection");
     if (debugCaching) {
-        qDebug().noquote() << "ImageCache::setDirection" << "   decoder -1";
+        qDebug().noquote() << "ImageCache::setDirection";
     }
 
     int prevKey = icd->cache.prevKey;
     icd->cache.prevKey = icd->cache.key;
-
-    bool startOrEnd = false;
-    // start of list
-    if (icd->cache.key == 0) {
-        icd->cache.isForward = true;
-        startOrEnd = true;
-    }
-    // reverse if at end of list
-    if (icd->cache.key == icd->cacheItemList.count() - 1) {
-        icd->cache.isForward = false;
-        startOrEnd = true;
-    }
-    if (startOrEnd) {
-        icd->cache.sumStep = 0;
-        icd->cache.maybeDirectionChange = false;
-        return;
-    }
-
-//    icd->cache.directionChangeThreshold = 3;
     int thisStep = icd->cache.key - prevKey;
-    bool maybeIsForward = thisStep > 0;
-    icd->cache.maybeDirectionChange = icd->cache.isForward != maybeIsForward;
 
-    /*
-    qDebug() << CLASSFUNCTION
-             << "maybeDirectionChange =" << icd->cache.maybeDirectionChange
-             << "isForward =" << icd->cache.isForward
-             << "maybeIsForward =" << maybeIsForward
-             << "thisStep =" << thisStep
-             << "sumStep =" << icd->cache.sumStep
-             << "directionChangeThreshold =" << icd->cache.directionChangeThreshold
-             << "key =" << icd->cache.key
-             << "prevKey =" << prevKey
-                ;
-                // */
-
-    // if direction has not maybe changed
-    if (!icd->cache.maybeDirectionChange) {
-        icd->cache.sumStep = 0;
-        return;
+    // cache direction just changed, increment counter
+    if (icd->cache.sumStep == 0) {
+        icd->cache.sumStep += thisStep;
+    }
+    // cache direction not changed
+    else {
+        // immediate direction changed, reset counter
+        if (icd->cache.sumStep > 0 != thisStep > 0) icd->cache.sumStep = thisStep;
+        // increment counter
+        else icd->cache.sumStep += thisStep;
     }
 
-    // direction maybe changed, increment counter
-    icd->cache.sumStep += thisStep;
-
-    // maybe direction change gets to threshold then change cache direction
-    if (qFabs(icd->cache.sumStep) >= icd->cache.directionChangeThreshold) {
-        icd->cache.isForward = icd->cache.sumStep > 0;
-        icd->cache.sumStep = 0;
-        icd->cache.maybeDirectionChange = false;
+    // immediate direction change exceeds threshold
+    if (qAbs(icd->cache.sumStep) > icd->cache.directionChangeThreshold) {
+        // immediate direction opposite to cache direction
+        if (icd->cache.isForward != icd->cache.sumStep > 0) {
+            icd->cache.isForward = icd->cache.sumStep > 0;
+            icd->cache.sumStep = 0;
+        }
     }
-
-    /*
-    qDebug() << CLASSFUNCTION << thisStep << cache.sumStep << cache.isForward;
-    //*/
 }
 
 void ImageCache::setTargetRange()
@@ -293,11 +260,18 @@ void ImageCache::setTargetRange()
     float sumMB = 0;
     priorityList.clear();
     for (int i = 0; i < icd->cacheItemList.length(); ++i) {
-//        if (icd->cacheItemList.at(i).sizeMB == 0) {
-//            continue;
-//        }
+        if (icd->cacheItemList.at(i).sizeMB == 0) {
+            icd->cacheItemList[i].isTarget = false;
+            continue;
+        }
         sumMB += icd->cacheItemList.at(i).sizeMB;
         if (sumMB < icd->cache.maxMB && !icd->cacheItemList[i].isVideo) {
+            qDebug() << "ImageCache::setTargetRange"
+                     << i
+                     << icd->cacheItemList.at(i).sizeMB
+                     << sumMB
+                     << icd->cache.maxMB
+                        ;
             icd->cacheItemList[i].isTarget = true;
             priorityList.append(icd->cacheItemList.at(i).key);
         }
@@ -524,23 +498,16 @@ void ImageCache::setPriorities(int key)
         aheadPos = key + 1;
         behindPos = key - 1;
         while (i < icd->cacheItemList.length()) {
-//            if (icd->cacheItemList[i].isVideo) {
-//                i++;
-//                if (i >= icd->cacheItemList.length()) break;
-//                continue;
-//            }
             for (int b = behindPos; b > behindPos - behindAmount; --b) {
                 for (int a = aheadPos; a < aheadPos + aheadAmount; ++a) {
                     if (a >= icd->cacheItemList.length()) break;
-                    if (icd->cacheItemList[i].isVideo) icd->cacheItemList[a].priority = i;
-                    i++;
+                    icd->cacheItemList[a].priority = i++;
                     if (i >= icd->cacheItemList.length()) break;
                     if (a == aheadPos + aheadAmount - 1 && b < 0) aheadPos += aheadAmount;
                 }
                 aheadPos += aheadAmount;
                 if (b < 0) break;
-                if (icd->cacheItemList[i].isVideo) icd->cacheItemList[b].priority = i;
-                i++;
+                icd->cacheItemList[b].priority = i++;
                 if (i > icd->cacheItemList.length()) break;
             }
             behindPos -= behindAmount;
@@ -608,10 +575,7 @@ void ImageCache::fixOrphans()
             if (isCached) icd->cacheItemList[i].isCached = false;
             if (isCaching) icd->cacheItemList[i].isCaching = false;
             if (inImageCache) icd->imCache.remove(fPath);
-            if (sendStatusUpdates) {
-                emit updateCacheOnThumbs(fPath, false, "ImageCache::fixOrphans");
-            }
-//            if (isCached) emit updateCacheOnThumbs(fPath, false, icd->cache.targetFirst,icd->cache.targetLast);
+            emit updateCacheOnThumbs(fPath, false, "ImageCache::fixOrphans");
         }
     }
 
@@ -858,7 +822,6 @@ QString ImageCache::reportCacheParameters()
     rpt << "currentPath = " << currentPath << "\n";
     rpt << "cacheSizeHasChanged = " << (cacheSizeHasChanged ? "true" : "false") << "\n";
     rpt << "filterOrSortHasChanged = " << (filterOrSortHasChanged ? "true" : "false") << "\n";
-    rpt << "sendStatusUpdates = " << (sendStatusUpdates ? "true" : "false") << "\n";
     rpt << "isCacheUpToDate = " << (isCacheUpToDate ? "true" : "false") << "\n";
     return reportString;
 }
@@ -1124,10 +1087,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 //    if (m.currRootFolder != G::currRootFolder) return;
 
     if (G::isLogger /*|| G::isFlowLogger*/) G::log("ImageCache::addCacheItemImageMetadata");
-    qDebug() << "ImageCache::addCacheItemImageMetadata"
-             << m.row
-             << m.video
-             << m.fPath;
+
     if (!cacheKeyHash.contains(m.fPath)) {
         return;
     }
@@ -1138,7 +1098,7 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
 
     if (m.video) {
         icd->cacheItemList[row].isVideo = m.video;
-//        return;
+        return;
     }
 
     if (row >= icd->cacheItemList.length()) {
@@ -1165,8 +1125,6 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
         icd->cacheItemList[row].estSizeMB = true;
     }
     // decoder parameters
-//    icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
-//    icd->cacheItemList[row].isVideo = m.video;
     icd->cacheItemList[row].orientation = m.orientation;
     icd->cacheItemList[row].rotationDegrees = m.rotationDegrees;
     icd->cacheItemList[row].offsetFull = m.offsetFull;
@@ -1215,6 +1173,8 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.priority = i;
         if ((G::useLinearLoading || G::allMetadataLoaded)) {
             ImageMetadata m = dm->imMetadata(fPath);
+            icd->cacheItem.metadataLoaded = m.metadataLoaded;
+            icd->cacheItem.isVideo = m.video;
             if (!m.video) {
                 // 8 bits X 3 channels + 8 bit depth = (32*w*h)/8/1024/1024 = w*h/262144
                 int w, h;
@@ -1231,8 +1191,6 @@ void ImageCache::buildImageCacheList()
                     icd->cacheItem.estSizeMB = true;
                 }
                 // decoder parameters
-                icd->cacheItem.metadataLoaded = m.metadataLoaded;
-                icd->cacheItem.isVideo = m.video;
                 icd->cacheItem.orientation = m.orientation;
                 icd->cacheItem.rotationDegrees = m.rotationDegrees;
                 icd->cacheItem.offsetFull = m.offsetFull;
@@ -1422,13 +1380,18 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::setCurrentPosition", path);
 //    qDebug() << CLASSFUNCTION
 //             << dm->rowFromPath(path)
+//             << src
 //             << path;
     if (debugCaching) {
         qDebug();
         qDebug().noquote() << "ImageCache::setCurrentPosition" << path << "src =" << src;
     }
+
+//    if (currentPath == path) return;
+
     mutex.lock();
     currentPath = path;
+    setKeyToCurrent();
     mutex.unlock();
 
     if (!isRunning()) {
@@ -1471,12 +1434,12 @@ void ImageCache::cacheImage(int id, int cacheKey)
 */
     if (debugCaching) {
         QString k = QString::number(cacheKey).leftJustified((4));
-        qDebug().noquote() << "ImageCache::cacheImage" << "     decoder" << id;
+        qDebug().noquote() << "ImageCache::cacheImage" << "     decoder" << id << k;
     }
     if (decoder[id]->status != ImageDecoder::Status::Video) {
         // Check if initial sizeMB was estimated (image without preview metadata ie PNG)
         if (icd->cacheItemList[cacheKey].estSizeMB) setSizeMB(id, cacheKey);
-        makeRoom(id, cacheKey);
+//        makeRoom(id, cacheKey);
         icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
     }
     icd->cache.currMB = getImCacheSize();
@@ -1541,8 +1504,8 @@ void ImageCache::fillCache(int id)
 
     // get the row in
     int cacheKey = cacheKeyHash[decoder[id]->fPath];  // if not contains return -1
-
-    {   // Error checking
+    // Error checking
+    {
 
         // DM instance check
         if (decoder[id]->dmInstance != dm->instance) {
@@ -1660,7 +1623,8 @@ void ImageCache::run()
     icd->cache.currMB = getImCacheSize();
     setPriorities(icd->cache.key);
     setTargetRange();
-    if (cacheSizeHasChanged) makeRoom(0, 0);
+    fixOrphans();
+//    if (cacheSizeHasChanged) makeRoom(0, 0);
 
     // if cache is up-to-date our work is done
     if (cacheUpToDate()) return;
