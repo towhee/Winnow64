@@ -1069,7 +1069,8 @@ private:
     bool isSettings = false;
     bool isStressTest;
     bool hasGridBeenActivated;
-    bool isSlideshowPaused;
+//    bool isSlideshowPaused;
+    bool isSlideShowHelpVisible;
 
     bool isLeftMouseBtnPressed = false;
     bool isMouseDrag = false;

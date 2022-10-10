@@ -560,6 +560,7 @@ void MW::showEvent(QShowEvent *event)
 
     G::isInitializing = false;
 //    thumbView->selectFirst();
+
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -668,12 +669,15 @@ void MW::keyPressEvent(QKeyEvent *event)
 void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+
+//    qDebug() << CLASSFUNCTION << event;
+
     if (event->key() == Qt::Key_Escape) {
         /* Cancel the current operation without exiting from full screen mode.  If no current
            operation, then okay to exit full screen.  escapeFullScreen must be the last option
            tested.
         */
-        G::popUp->hide();
+        G::popUp->end();
         // stop loading a new folder
         if (!G::isNewFolderLoaded /*&& G::useLinearLoading*/) stop("Escape key");
         // end stress test
@@ -696,61 +700,66 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         else if (fullScreenAction->isChecked()) escapeFullScreen();
     }
 
+    if (G::isSlideShow) {
+        int n = event->key() - 48;
+        QVector<int> delay {0,1,2,3,5,10,30,60,180,600};
+
+        if (slideShowTimer->isActive()) {
+            if (event->key() == Qt::Key_X) {
+                nextSlide();
+            }
+            else if (event->key() == Qt::Key_Backspace) {
+                prevRandomSlide();
+            }
+            else if (event->key() == Qt::Key_W) {
+                slideShowTimer->stop();
+                isSlideShowWrap = !isSlideShowWrap;
+                isSlideShowHelpVisible = true;
+                QString msg;
+                if (isSlideShowWrap) msg = "Slide wrapping is on.";
+                else msg = "Slide wrapping is off.";
+                G::popUp->showPopup(msg);
+            }
+            else if (event->key() == Qt::Key_H) {
+                slideShowTimer->stop();
+                slideshowHelpMsg();
+            }
+            else if (event->key() == Qt::Key_Space) {
+                slideShowTimer->stop();
+                G::popUp->showPopup("Slideshow is paused");
+            }
+            else if (event->key() == Qt::Key_R) {
+                isSlideShowRandom = !isSlideShowRandom;
+                slideShowResetSequence();
+                QString msg;
+                if (isSlideShowRandom) msg = "Random selection enabled.";
+                else msg = "Sequential selection enabled.";
+                G::popUp->showPopup(msg);
+            }
+            // quick change slideshow delay 1 - 9 seconds
+            else if (n > 0 && n <= 9) {
+                slideShowDelay = delay[n];
+                slideShowResetDelay();
+                QString msg = "Slideshow interval set to " + QString::number(slideShowDelay) + " seconds.";
+                G::popUp->showPopup(msg);
+            }
+        }
+        else {  // slideshow is inactive
+            if (isSlideShowHelpVisible) {
+                G::popUp->end();
+                isSlideShowHelpVisible = false;
+            }
+            G::popUp->showPopup("Slideshow is restarted");
+            nextSlide();
+            slideShowTimer->start(slideShowDelay * 1000);
+        }
+    }
+
     bool isVideoMode = centralLayout->currentIndex() == VideoTab;
     if (isVideoMode) {
         if (event->key() == Qt::Key_Space) {
             videoView->playOrPause();
         }
-    }
-
-    if (G::isSlideShow) {
-        int n = event->key() - 48;
-        QVector<int> delay {0,1,2,3,5,10,30,60,180,600};
-
-        if (event->key() == Qt::Key_Backspace) {
-            isSlideshowPaused = false;
-            prevRandomSlide();
-        }
-        else if (event->key() == Qt::Key_W) {
-            isSlideShowWrap = !isSlideShowWrap;
-            isSlideshowPaused = false;
-            QString msg;
-            if (isSlideShowWrap) msg = "Slide wrapping is on.";
-            else msg = "Slide wrapping is off.";
-            G::popUp->showPopup(msg);
-        }
-        else if (event->key() == Qt::Key_H) {
-            isSlideshowPaused = true;
-            slideshowHelpMsg();
-        }
-        else if (event->key() == Qt::Key_Space) {
-            isSlideshowPaused = !isSlideshowPaused;
-            QString msg;
-            if (isSlideshowPaused) msg = "Slideshow is paused";
-            else msg = "Slideshow is restarted";
-            G::popUp->showPopup(msg);
-        }
-        else if (event->key() == Qt::Key_R) {
-            isSlideShowRandom = !isSlideShowRandom;
-            isSlideshowPaused = false;
-            slideShowResetSequence();
-            QString msg;
-            if (isSlideShowRandom) msg = "Random selection enabled.";
-            else msg = "Sequential selection enabled.";
-            G::popUp->showPopup(msg);
-        }
-        // quick change slideshow delay 1 - 9 seconds
-        else if (n > 0 && n <= 9) {
-            isSlideshowPaused = false;
-            slideShowDelay = delay[n];
-            slideShowResetDelay();
-            QString msg = "Slideshow interval set to " + QString::number(slideShowDelay) + " seconds.";
-            G::popUp->showPopup(msg);
-        }
-//        else {
-//            isSlideshowPaused = true;
-//            slideshowHelpMsg();
-//        }
     }
 
     QMainWindow::keyReleaseEvent(event);
@@ -1389,7 +1398,6 @@ void MW::selectionChange()
         G::log("skipline");
         G::log(CLASSFUNCTION);
     }
-    qDebug() << CLASSFUNCTION;
     // ignore if very rapid selection and current folder is still at stopAndClearAll
     if (G::stop) {
         return;
@@ -1494,7 +1502,6 @@ void MW::folderSelectionChange()
         if (dm->abortLoadingModel) {
             updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
             setCentralMessage("Image loading has been cancelled");
-//            QApplication::processEvents();  // MetaRead new folder crash?
             return;
         }
         QDir dir(G::currRootFolder);
@@ -1597,23 +1604,23 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (G::stop) return;
     G::isNewSelection = false;
 
-    // check if current selection = current index.  If so, nothng to do
-//    if (current == currSfIdx) return;
-
    /*
     qDebug() << "\n" << CLASSFUNCTION
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
+             << "row =" << current.row()
              << "G::isInitializing =" << G::isInitializing
              << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
              << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
              << "isFilterChange =" << isFilterChange
              << "isCurrentFolderOkay =" << isCurrentFolderOkay
-             << "row =" << current.row()
              << "icon row =" << thumbView->currentIndex().row()
              << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
                 ;
                 //*/
+
+    // check if current selection = current index.  If so, nothng to do
+    if (current == currSfIdx) return;
 
     if (!isCurrentFolderOkay
             || G::isInitializing
@@ -1634,6 +1641,14 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         return;
     }
 
+    //   /*
+        qDebug() << "\n" << CLASSFUNCTION
+                 << "src =" << src
+                 << "row =" << current.row()
+                 << "icon row =" << thumbView->currentIndex().row()
+                 << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
+                    ;
+                    //*/
     // update icons if req'd
 //    loadConcurrent(current.row());   // rgh 2022-09-16
 
@@ -1854,7 +1869,6 @@ void MW::stop(QString src)
     if (G::isInitializing) return;
 
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION << src;
     G::stop = true;
     dm->abortLoad();
 
@@ -1892,6 +1906,7 @@ void MW::reset(QString src) {
 
     stopped[src] = true;
 
+    /*
     qDebug() << CLASSFUNCTION << "src =" << src
              << "\n  MetaRead     stopped" << stopped["MetaRead"]
              << "\n  MDCache      stopped" << stopped["MDCache"]
@@ -1899,13 +1914,12 @@ void MW::reset(QString src) {
              << "\n  BuildFilters stopped" << stopped["BuildFilters"]
              << "\n  FrameDecoder stopped" << stopped["FrameDecoder"]
              << "\n" ;
+             */
 
     // if any thread processes still running then do not complete reset yet
     for (bool isStopped : stopped) {
         if (!isStopped) return;
     }
-
-    qDebug() << CLASSFUNCTION << "completing reset";
 
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
@@ -1948,7 +1962,6 @@ void MW::reset(QString src) {
     setThreadRunStatusInactive();
 
     G::stop = false;
-    qDebug() << CLASSFUNCTION << "done";
     folderSelectionChange();
 }
 
@@ -2189,6 +2202,7 @@ void MW::loadConcurrentStartImageCache(QString src)
         fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
     }
 
+    // update image cache after all metadata has been read and cache item list is complete
     if (src == "Final") {
         emit setImageCachePosition(dm->currentFilePath, CLASSFUNCTION);
     }
