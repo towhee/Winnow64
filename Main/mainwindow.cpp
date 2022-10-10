@@ -2160,6 +2160,9 @@ void MW::loadConcurrentMetaDone()
     // resize table columns with all data loaded
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
+
+    // clean up possible stragglers in ImageCache::addCacheItemImageMetadata
+    emit refreshImageCache();
 }
 
 void MW::loadConcurrentStartImageCache(QString src)

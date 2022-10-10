@@ -391,6 +391,7 @@ signals:
     void startIconCache(int sfRow, QString src);
     void setImageCachePosition(QString, QString);
     void setImageCachePosition2(QString);
+    void refreshImageCache();
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     void closeZoomDlg();
     void aSyncGo(int);  // rgh req'd?

@@ -115,5 +115,5 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    G::popUp->showPopup("Test", 0);
+    imageCacheThread->refreshImageCache();
 }
