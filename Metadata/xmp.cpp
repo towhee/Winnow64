@@ -2,9 +2,9 @@
 
 /*
 
-Xmp reads xmp tags from from the source file buffer (xmpBa), which could be an image file
-or an xmp sidecar file. If there are no offsets to the buffer then a sidecar file will be
-used.
+Xmp reads xmp tags from from the source file buffer (xmpBa), which could be from an image
+file or an xmp sidecar file. If there are no offsets to the buffer then a sidecar file
+will be used.
 
 Read/Write to a sidecar:   Xmp xmp(file);
 Read/Write to image file:  Xmp xmp(file, offset, nextOffset);  // no writing yet
@@ -428,7 +428,7 @@ void Xmp::initialize()
     e.schema = "xmp";
     definedElements["modifydate"] = e;
 
-    // title
+    // subject
     e.name = "dc:subject";
     e.parentName = "rdf:Description";
     e.type = ElementType::List;
@@ -689,9 +689,14 @@ QString Xmp::getItem(QByteArray item)
         nodeName = xmlNodeName(list);
         if (nodeName == "rdf:li") {
             QString val = xmlNodeValue(list);
+//            qDebug() << "Xmp::getItem" << item << val << list->first_attribute() << list->last_attribute();
             if (val != "") return val;
             rapidxml::xml_attribute<>* a = list->first_attribute();
             if (a == 0) return "";
+            // added 2022-10-11
+            rapidxml::xml_attribute<>* b = list->last_attribute();
+            if (a == b) return "";
+            // end added
             return xmlAttributeName(a);
         }
     }

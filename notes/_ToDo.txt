@@ -10,6 +10,13 @@ BUGS / TO DO
 - Save preview as PNG include color manage corrections
 - MW::enableSelectionDependentMenus needs updating for all situations
 
+Key Priority   Target Attempts  Caching   Thread   Cached  imCache dmCached    Video   SizeMB Estimate   Offset   Length   File Name
+  0        0    false        0    false       -1    false    false    false     true-1.99913e-15       1925855286762739184915   /Users/roryhill/Pictures/_test/1.MOV
+  1        1    false        0    false       -1    false    false    false     true       12        0        0  1592231   /Users/roryhill/Pictures/_test/2021-09-25_0033.jpg
+  2        2    false        0    false       -1    false    false    false     true       31        0        0  4336789   /Users/roryhill/Pictures/_test/_meta.jpg
+  3        3    false        0    false       -1    false    false    false     true-1.99913e-15       1925855286762739184915   /Users/roryhill/Pictures/_test/IMG_2361.MOV
+  4        4    false        0    false       -1    false    false    false     true       76        0        0  7293133   /Users/roryhill/Pictures/_test/P4290001.JPG
+
 - Menu stop slideshow S is wrong
 - Open with permissions issue
 - Painter not active, state will be reset by begin
@@ -17,6 +24,7 @@ BUGS / TO DO
 - No image cached for D:/Pictures/_ThumbTest/2020-01-05_0005-denoise.dng
 - InfoView context remove "set fixed size" and add "copy field"
 - On Mac: qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family ".AppleSystemFallback" with one that exists to avoid this cost.
+- On Mac: qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family "Courier" with one that exists to avoid this cost.
 - Image metadata report does not show sidecar for PNG file
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
 - Unicode path heics not rendering
@@ -68,6 +76,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Not reading blank title in xmp file correctly
 - Folders with many videos stalling out ie /Users/roryhill/Downloads/Videos of Eva
 - Fix orientation/aspect ratio for files where image metadata unavailable
 - IconView zoom cursor sometimes wrong loc after multiselect and ImageView zoomed

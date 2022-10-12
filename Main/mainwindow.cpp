@@ -1423,7 +1423,7 @@ void MW::folderSelectionChange()
         G::log("skipline");
         G::log(CLASSFUNCTION);
     }
-    qDebug() << CLASSFUNCTION;
+//    qDebug() << CLASSFUNCTION;
 
     dm->abortLoadingModel = false;
     G::currRootFolder = getSelectedPath();
@@ -1641,7 +1641,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         return;
     }
 
-    //   /*
+       /*
         qDebug() << "\n" << CLASSFUNCTION
                  << "src =" << src
                  << "row =" << current.row()
@@ -2168,7 +2168,6 @@ void MW::loadConcurrentMetaDone()
 void MW::loadConcurrentStartImageCache(QString src)
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-//    qDebug() << CLASSFUNCTION << src ;
     if (isShowCacheProgressBar) {
         cacheProgressBar->clearProgress();
     }

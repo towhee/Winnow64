@@ -735,22 +735,26 @@ QString ImageCache::reportCacheParameters()
     rpt.setString(&reportString);
 
     rpt << "\n";
-    rpt << "directionChangeThreshold = " << icd->cache.directionChangeThreshold << "\n";
-    rpt << "wtAhead = " << icd->cache.wtAhead << "\n";
-    rpt << "totFiles = " << icd->cache.totFiles << "\n";
-    rpt << "currMB = " << icd->cache.currMB << "\n";
-    rpt << "currMB Check = " << getImCacheSize() << "\n";
-    rpt << "maxMB = " << icd->cache.maxMB << "\n";
-    rpt << "minMB = " << icd->cache.minMB << "\n";
-    rpt << "folderMB = " << icd->cache.folderMB << "\n";
-    rpt << "targetFirst = " << icd->cache.targetFirst << "\n";
-    rpt << "targetLast = " << icd->cache.targetLast << "\n";
-    rpt << "decoderCount = " << icd->cache.decoderCount << "\n";
+    rpt << "isRunning                = " << (isRunning() ? "true" : "false") << "\n";
+
     rpt << "\n";
-    rpt << "currentPath = " << currentPath << "\n";
-    rpt << "cacheSizeHasChanged = " << (cacheSizeHasChanged ? "true" : "false") << "\n";
-    rpt << "filterOrSortHasChanged = " << (filterOrSortHasChanged ? "true" : "false") << "\n";
-    rpt << "isCacheUpToDate = " << (isCacheUpToDate ? "true" : "false") << "\n";
+    rpt << "directionChangeThreshold = " << icd->cache.directionChangeThreshold << "\n";
+    rpt << "wtAhead                  = " << icd->cache.wtAhead << "\n";
+    rpt << "isForward                = " << (icd->cache.isForward ? "true" : "false") << "\n";
+    rpt << "totFiles                 = " << icd->cache.totFiles << "\n";
+    rpt << "currMB                   = " << icd->cache.currMB << "\n";
+    rpt << "currMB Check             = " << getImCacheSize() << "\n";
+    rpt << "maxMB                    = " << icd->cache.maxMB << "\n";
+    rpt << "minMB                    = " << icd->cache.minMB << "\n";
+    rpt << "folderMB                 = " << icd->cache.folderMB << "\n";
+    rpt << "targetFirst              = " << icd->cache.targetFirst << "\n";
+    rpt << "targetLast               = " << icd->cache.targetLast << "\n";
+    rpt << "decoderCount             = " << icd->cache.decoderCount << "\n";
+    rpt << "\n";
+    rpt << "currentPath              = " << currentPath << "\n";
+    rpt << "cacheSizeHasChanged      = " << (cacheSizeHasChanged ? "true" : "false") << "\n";
+    rpt << "filterOrSortHasChanged   = " << (filterOrSortHasChanged ? "true" : "false") << "\n";
+    rpt << "isCacheUpToDate          = " << (isCacheUpToDate ? "true" : "false") << "\n";
     return reportString;
 }
 
@@ -1023,9 +1027,13 @@ void ImageCache::addCacheItemImageMetadata(ImageMetadata m)
     int row;
     row = cacheKeyHash[m.fPath];
     icd->cacheItemList[row].metadataLoaded = m.metadataLoaded;
+    icd->cacheItemList[row].isVideo = m.video;
 
     if (m.video) {
-        icd->cacheItemList[row].isVideo = m.video;
+        icd->cacheItemList[row].sizeMB = 0;
+        icd->cacheItemList[row].estSizeMB = false;
+        icd->cacheItemList[row].offsetFull = 0;
+        icd->cacheItemList[row].lengthFull = 0;
         return;
     }
 
@@ -1325,6 +1333,9 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     if (!isRunning()) {
         start();
     }
+    else {
+        qWarning() << "ImageCache::setCurrentPosition:  ImageCache IS RUNNING";
+    }
 }
 
 void ImageCache::decodeNextImage(int id)
@@ -1536,10 +1547,10 @@ void ImageCache::run()
     added to imCache. More details are available in the fillCache comments and at the top of
     this class.
 */
-    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::fillCache");
+    if (G::isLogger || G::isFlowLogger) G::log("ImageCache::run");
     if (icd->cacheItemList.length() == 0) return;
     if (debugCaching) {
-        qDebug().noquote() << "ImageCache::fillCache";
+        qDebug().noquote() << "ImageCache::run";
     }
 
     // check available memory (another app may have used or released some memory)

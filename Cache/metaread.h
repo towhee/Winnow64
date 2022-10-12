@@ -72,7 +72,6 @@ private:
     int newStartRow = -1;
 
     bool imageCachingStarted = false;
-    bool hasMetadata;
 
     QList<int> rowsWithIcon;
 

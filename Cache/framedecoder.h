@@ -4,8 +4,6 @@
 #include <QtWidgets>
 #include <QObject>
 #include <QMutex>
-//#include <QThread>
-//#include <QWaitCondition>
 #include "Main/global.h"
 #include <QMediaPlayer>
 #include <QVideoSink>
@@ -13,19 +11,14 @@
 #include "Main/global.h"
 
 class FrameDecoder : public QObject
-//class FrameDecoder : public QThread
 {
     Q_OBJECT
 
 public:
     FrameDecoder(QObject *parent = nullptr);
     int id;
-    QString status;
     QString fPath;
     QModelIndex dmIdx;
-
-//protected:
-//    void run() Q_DECL_OVERRIDE;
 
 signals:
     void stopped(QString src);
@@ -42,7 +35,7 @@ public slots:
 private:
     void getNextThumbNail(QString src = "");
     int queueIndex(QModelIndex dmIdx);
-
+    enum Status {Idle, Busy} status;
     struct Item {
         QString fPath;
         QModelIndex dmIdx;

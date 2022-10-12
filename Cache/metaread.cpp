@@ -241,13 +241,10 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     int dmRow = dm->sf->mapToSource(sfIdx).row();
     if (debugCaching) qDebug().noquote() << "MetaRead::readMetadata" << "start  row =" << sfIdx.row();
     QFileInfo fileInfo(fPath);
-    hasMetadata = false;
-    if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
-        hasMetadata = true;
-        metadata->m.row = dmRow;
-        metadata->m.dmInstance = dmInstance;
-        emit addToDatamodel(metadata->m);
-    }
+    metadata->loadImageMetadata(fileInfo, true, true, false, true, "MetaRead::readMetadata");
+    metadata->m.row = dmRow;
+    metadata->m.dmInstance = dmInstance;
+    emit addToDatamodel(metadata->m);
     emit addToImageCache(metadata->m);
     if (debugCaching) qDebug().noquote() << "MetaRead::readMetadata" << "done row =" << sfIdx.row();
 }
