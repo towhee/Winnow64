@@ -32,7 +32,7 @@ FrameDecoder::FrameDecoder(QObject *parent)
 {
 //    if (G::isLogger) G::log("FrameDecoder::FrameDecoder");
     this->id = id;
-    status = "idle";
+    status = Status::Idle;
 //    thisFrameDecoder = this;
     mediaPlayer = new QMediaPlayer();
     videoSink = new QVideoSink;
@@ -46,7 +46,7 @@ FrameDecoder::FrameDecoder(QObject *parent)
 
 void FrameDecoder::stop()
 {
-    if (status == "idle") {
+    if (status == Status::Idle) {
         emit stopped("FrameDecoder");
         return;
     }
@@ -58,7 +58,7 @@ void FrameDecoder::clear()
     queue.clear(); return;
 
     qDebug() << CLASSFUNCTION << "status =" << status;
-    if (status == "idle") {
+    if (status == Status::Idle) {
         qDebug() << CLASSFUNCTION << "clearing queue" << queue.size();
         queue.clear();
         qDebug() << CLASSFUNCTION << "cleared queue" << queue.size();
@@ -77,13 +77,13 @@ void FrameDecoder::addToQueue(QString path, QModelIndex dmIdx, int dmInstance)
     item.dmIdx = dmIdx;
     item.dmInstance = dmInstance;
     queue.append(item);
-    /*if (isDebugging)*/ qDebug() << "FrameDecoder::addToQueue              "
+    if (isDebugging) qDebug() << "FrameDecoder::addToQueue              "
                               << "row =" << dmIdx.row()
                               << "queue size =" << queue.size()
                               << "status =" << status
                               << "  " << item.fPath
                               ;
-    if (status == "idle") getNextThumbNail("addToQueue");
+    if (status == Status::Idle) getNextThumbNail("addToQueue");
 }
 
 int FrameDecoder::queueIndex(QModelIndex dmIdx)
@@ -109,20 +109,18 @@ void FrameDecoder::getNextThumbNail(QString src)
                                   << "queue.isEmpty() =" << queue.isEmpty()
                                   << "  abort =" << abort
                                      ;
-        status = "idle";
+        status = Status::Idle;
         return;
     }
 
     // clear the queue request received while decoding a frame
     if (reset) {
-//        qDebug() << CLASSFUNCTION << "reset: clearing queue" << queue.size();
         queue.clear();
-//        qDebug() << CLASSFUNCTION << "reset: clearing queue" << queue.size();
         reset = false;
         return;
     }
 
-    status = "busy";
+    status = Status::Busy;
 
     Item item = queue.first();
     fPath = item.fPath;
@@ -142,28 +140,32 @@ void FrameDecoder::getNextThumbNail(QString src)
 
 void FrameDecoder::frameChanged(const QVideoFrame frame)
 {
-//    if (G::isLogger) G::log("FrameDecoder::frameChanged");
-//    if (isDebugging) qDebug() << "FrameDecoder::frameChanged            "
-//                              << "row =" << dmIdx.row()
-//                              ;
+    if (G::isLogger) G::log("FrameDecoder::frameChanged");
+    /*
+    if (isDebugging) qDebug() << "FrameDecoder::frameChanged            "
+                              << "row =" << dmIdx.row()
+                              ;
+    //*/
     mediaPlayer->stop();
     QImage im = frame.toImage();
     if (!im.isNull()) {
         QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
         qint64 duration = mediaPlayer->duration();
         emit setFrameIcon(dmIdx, pm, dmInstance, duration, thisFrameDecoder);
-        mutex.lock();
+//        mutex.lock();
         int i = queueIndex(dmIdx);
         if (i != -1) queue.remove(i);
-        mutex.unlock();
-//        qDebug() << "FrameDecoder::frameChanged            "
-//                 << "row =" << dmIdx.row()
-//                 ;
+//        mutex.unlock();
+        /*
+        qDebug() << "FrameDecoder::frameChanged            "
+                 << "row =" << dmIdx.row()
+                 ;
+                 */
     }
     getNextThumbNail("frameChanged");
 }
 
 void FrameDecoder::errorOccurred(QMediaPlayer::Error error, const QString &errorString)
 {
-    qDebug() << "FrameDecoder::errorOccurred" << "row =" << dmIdx.row() << errorString;
+    qWarning() << "FrameDecoder::errorOccurred" << "row =" << dmIdx.row() << errorString;
 }

@@ -936,6 +936,13 @@ void Metadata::clearMetadata()
     m.lensSN = "";
     m.rating = "";
     m.label = "";
+    m._title = "";                    // original value
+    m._creator = "";                  // original value
+    m._copyright = "";                // original value
+    m._email = "";                    // original value
+    m._url = "";                      // original value
+    m._rating = "";                   // original value
+    m._label = "";                    // original value
     m.loadMsecPerMp = 0;
     nikonLensCode = "";
 }
@@ -977,7 +984,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         p.rpt << Utilities::centeredRptHdr('=', "Metadata Diagnostics for Current Image");
         p.rpt << "\n";
     }
-    clearMetadata();
+    clearMetadata();  // moved to loadMetadata
     m.fPath = path;
     p.fPath = path;
 
@@ -1077,8 +1084,11 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
         return false;
     }
 
+    clearMetadata();
+
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
+
     m.video = videoFormats.contains(ext);
 
     if (!hasMetadataFormats.contains(ext)) {

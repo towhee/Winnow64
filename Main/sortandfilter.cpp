@@ -653,7 +653,7 @@ void MW::setRating()
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
-        G::popUp->hide();
+        G::popUp->end();
     }
 }
 
@@ -819,7 +819,7 @@ void MW::setColorClass()
 
     if (G::useSidecar) {
         G::popUp->setProgressVisible(false);
-        G::popUp->hide();
+        G::popUp->end();
     }
 }
 
