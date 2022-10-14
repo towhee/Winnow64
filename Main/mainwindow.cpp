@@ -711,6 +711,10 @@ void MW::keyReleaseEvent(QKeyEvent *event)
             else if (event->key() == Qt::Key_Backspace) {
                 prevRandomSlide();
             }
+            else if (event->key() == Qt::Key_S) {
+                qDebug() << "MW::keyReleaseEvent" << "slideCount =" << slideCount << event;
+                if (slideCount > 1) slideShow();
+            }
             else if (event->key() == Qt::Key_W) {
                 slideShowTimer->stop();
                 isSlideShowWrap = !isSlideShowWrap;
@@ -749,9 +753,11 @@ void MW::keyReleaseEvent(QKeyEvent *event)
                 G::popUp->end();
                 isSlideShowHelpVisible = false;
             }
-            G::popUp->showPopup("Slideshow is restarted");
-            nextSlide();
-            slideShowTimer->start(slideShowDelay * 1000);
+            if (event->key() == Qt::Key_Space) {
+                G::popUp->showPopup("Slideshow is active");
+                nextSlide();
+                slideShowTimer->start(slideShowDelay * 1000);
+            }
         }
     }
 
@@ -2045,12 +2051,13 @@ void MW::updateIconRange(int row)
     metadataCacheThread->lastIconVisible = lastVisible;
     metadataCacheThread->visibleIcons = visibleIcons;
 
-    dm->firstVisibleRow = firstVisible;
-    dm->lastVisibleRow = lastVisible;
+//    dm->firstVisibleRow = firstVisible;
+//    dm->lastVisibleRow = lastVisible;
 
     if (G::loadOnlyVisibleIcons) {
-        dm->startIconRange = firstVisible;
-        dm->endIconRange = lastVisible;
+//        dm->startIconRange = firstVisible;
+//        dm->endIconRange = lastVisible;
+        dm->setIconRange(firstVisible, lastVisible);
     }
     else {
         // icons to range based on iconChunkSize
@@ -2058,8 +2065,9 @@ void MW::updateIconRange(int row)
         if (firstIconRow < 0) firstIconRow = 0;
         int lastIconRow = firstIconRow + dm->iconChunkSize;
         if (lastIconRow >= dm->sf->rowCount()) lastIconRow = dm->sf->rowCount() - 1;
-        dm->startIconRange = firstIconRow;
-        dm->endIconRange = lastIconRow;
+//        dm->startIconRange = firstIconRow;
+//        dm->endIconRange = lastIconRow;
+        dm->setIconRange(firstIconRow, lastIconRow);
     }
 
     /*
@@ -2128,6 +2136,7 @@ void MW::loadConcurrent(int sfRow)
         if (!dm->abortLoadingModel) {
             frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
+            qDebug() << CLASSFUNCTION << "row =" << sfRow;
             emit startMetaRead(sfRow, CLASSFUNCTION);
         }
     }
@@ -2136,6 +2145,18 @@ void MW::loadConcurrent(int sfRow)
 void MW::loadConcurrentMetaDone()
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+
+//    // hide the thumbDock in grid mode as we don't need to see thumbs twice
+//    if (G::mode == "Grid") {
+//        thumbDock->setVisible(false);
+//        thumbDockVisibleAction->setChecked(false);
+//    }
+
+//    // show thumbDock in loupe mode
+//    if (G::mode == "Loupe" && wasThumbDockVisible) {
+//        thumbDock->setVisible(true);
+//        thumbDockVisibleAction->setChecked(true);
+//    }
 
     // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
@@ -2431,13 +2452,13 @@ void MW::gridHasScrolled()
     metadataCacheThread thread and starts over. It is simpler and faster.
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-//    qDebug() << CLASSFUNCTION << "0";
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-
+return;
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconRange(-1);
-        thumbView->scrollToRow(gridView->midVisibleCell, CLASSFUNCTION);
+        if (thumbView->isVisible())
+            thumbView->scrollToRow(gridView->midVisibleCell, CLASSFUNCTION);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection && gridView->isVisible()) {
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
@@ -2486,7 +2507,6 @@ void MW::tableHasScrolled()
             thumbView->scrollToRow(tableView->midVisibleRow, CLASSFUNCTION);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
-            qDebug() << CLASSFUNCTION;
             if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
             else loadConcurrent(tableView->midVisibleRow);
 //            else scrollChange(tableView->midVisibleRow, CLASSFUNCTION);

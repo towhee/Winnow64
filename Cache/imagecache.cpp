@@ -1333,9 +1333,6 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     if (!isRunning()) {
         start();
     }
-    else {
-        qWarning() << "ImageCache::setCurrentPosition:  ImageCache IS RUNNING";
-    }
 }
 
 void ImageCache::decodeNextImage(int id)

@@ -7,6 +7,7 @@ void MW::slideShow()
         // stop slideshow
         G::popUp->showPopup("Slideshow has been terminated.", 2000);
         G::isSlideShow = false;
+        slideCount = 0;
         useImageCache = true;
         imageView->setCursor(Qt::ArrowCursor);
         slideShowStatusLabel->setText("");
@@ -25,6 +26,7 @@ void MW::slideShow()
     }
     else {
         // start slideshow
+        slideCount = 0;
         imageView->setCursor(Qt::BlankCursor);
         G::isSlideShow = true;
 //        isSlideshowPaused = false;
@@ -40,7 +42,7 @@ void MW::slideShow()
         else msg += "<br>Stop at end of slides";
         msg += "<p>Press <font color=\"red\"><b>SpaceBar</b></font> to start slideshow.";
 
-        G::popUp->showPopup(msg, 0, true, 0.75, Qt::AlignLeft);
+        G::popUp->showPopup(msg, 3000, true, 0.75, Qt::AlignLeft);
 
         // No image caching if random slide show
         if (isSlideShowRandom) useImageCache = false;
@@ -55,9 +57,8 @@ void MW::slideShow()
         slideShowAction->setText(tr("Stop Slide Show"));
         slideShowTimer = new QTimer(this);
         connect(slideShowTimer, SIGNAL(timeout()), this, SLOT(nextSlide()));
-        slideCount = 0;
-//        nextSlide();
-//        slideShowTimer->start(slideShowDelay * 1000);
+        nextSlide();
+        slideShowTimer->start(slideShowDelay * 1000);
     }
 }
 
@@ -80,7 +81,8 @@ void MW::nextSlide()
         else thumbView->selectNext();
     }
 
-    QString msg = "  Slide # "+ QString::number(slideCount) + "  (press H for slideshow shortcuts)";
+    QString msg = "  Slide # "+ QString::number(slideCount) +
+            "  (<font color=\"red\">press H for slideshow shortcuts</font>)";
     updateStatus(true, msg, CLASSFUNCTION);
 
 }
@@ -142,8 +144,9 @@ void MW::slideshowHelpMsg()
         "<p><b>Slideshow Shortcuts:</b><br/></p>"
         "<table border=\"0\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\">"
         "<tr><td width=\"120\"><font color=\"red\"><b>Esc</b></font></td><td>Exit slideshow</td></tr>"
-        "<tr><td><font color=\"red\"><b>  W       </b></font></td><td>Toggle wrapping on and off.</td></tr>"
-        "<tr><td><font color=\"red\"><b>  R       </b></font></td><td>Toggle random vs sequential slide selection.</td></tr>"
+        "<tr><td><font color=\"red\"><b>  S       </b></font></td><td>Exit slideshow</td></tr>"
+        "<tr><td><font color=\"red\"><b>  W       </b></font></td><td>Toggle wrapping on and off</td></tr>"
+        "<tr><td><font color=\"red\"><b>  R       </b></font></td><td>Toggle random vs sequential slide selection</td></tr>"
         "<tr><td><font color=\"red\"><b>Backspace </b></font></td><td>Go back to a previous random slide</td></tr>"
         "<tr><td><font color=\"red\"><b>Spacebar  </b></font></td><td>Pause/Continue slideshow</td></tr>"
         "<tr><td><font color=\"red\"><b>  H       </b></font></td><td>Show this popup message</td></tr>"

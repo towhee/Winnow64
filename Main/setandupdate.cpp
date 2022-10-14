@@ -312,8 +312,8 @@ void MW::toggleThumbDockVisibity()
         thumbDock->setVisible(true);
         thumbDock->raise();
         thumbDockVisibleAction->setChecked(true);
-        qDebug() << CLASSFUNCTION << currSfIdx.data() << "Calling fileSelectionChange(currentSfIdx, currentSfIdx)";
-        fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
+//        qDebug() << CLASSFUNCTION << currSfIdx.data() << "Calling fileSelectionChange(currentSfIdx, currentSfIdx)";
+//        fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
     }
 
     if (G::mode != "Grid" && isNormalScreen) {

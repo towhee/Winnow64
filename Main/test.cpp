@@ -106,6 +106,10 @@ void MW::bounceFoldersStressTest(int ms, int duration)
 
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
+    centralLayout->setCurrentIndex(GridTab);
+//    gridView->setVisible(!gridView->isVisible());
+    return;
+
     qDebug() << CLASSFUNCTION;
     bounceFoldersStressTest(50, 10000);
     return;
@@ -115,5 +119,15 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    imageCacheThread->refreshImageCache();
+//    if (thumbView->isVisible() thumbView->selectThumb(5);
+//    else if (gridView->isVisible() gridView->selectThumb(6);
+//    else if (tableView-.isVisible))
+//    selectionModel->clear();
+    selectionModel->setCurrentIndex(dm->sf->index(5,0),
+            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+//    thumbView->selectThumb(5);
+//    qDebug() << thumbView->isVisible();
+//    thumbDock->setVisible(!thumbDock->isVisible());
+//    thumbView->setVisible(!thumbView->isVisible());
+//    centralLayout->setCurrentIndex(LoupeTab);
 }

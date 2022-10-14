@@ -895,7 +895,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m)
         m._label = "";
     }
 
-    if (!index(row, 0).isValid()) return false;
+    if (!index(row, 0).isValid()) {
+        mutex.unlock();
+        return false;
+    }
 
     QString search = index(row, G::SearchTextColumn).data().toString();
 
@@ -1226,6 +1229,14 @@ void DataModel::clearAllIcons()
             item->setIcon(QIcon());
         }
     }
+    mutex.unlock();
+}
+
+void DataModel::setIconRange(int first, int last)
+{
+    mutex.lock();
+    startIconRange = first;
+    endIconRange = last;
     mutex.unlock();
 }
 
