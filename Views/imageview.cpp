@@ -899,7 +899,8 @@ bool ImageView::event(QEvent *event) {
     /*
         Trap back/forward buttons on Logitech mouse to toggle pick status on thumbnail
     */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+//    if (G::isLogger) G::log(CLASSFUNCTION);
+//    qDebug() << CLASSFUNCTION << event;
     if (event->type() == QEvent::NativeGesture) {
         emit togglePick();
         /*

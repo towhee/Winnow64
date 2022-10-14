@@ -208,7 +208,7 @@ void MetaRead::cleanupIcons()
             continue;
         }
         // remove icon
-        qDebug() << "MetaRead::cleanupIcons   REMOVING" << dmRow;
+//        qDebug() << "MetaRead::cleanupIcons   REMOVING" << dmRow;
         QStandardItem *item = dm->itemFromIndex(dmIdx);
         if (item->icon().isNull()) {
             i++;

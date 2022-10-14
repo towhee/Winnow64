@@ -65,6 +65,7 @@ public:
     bool isAllMetadataLoaded();
     int iconCount();
     void clearAllIcons();
+    void setIconRange(int first, int last);
     void clearOutOfRangeIcons(int startRow);
     bool allIconsLoaded();
     bool iconLoaded(int sfRow);
@@ -83,8 +84,8 @@ public:
     QString currentFolderPath;
     QString currentFilePath;            // used in caching to update image cache
     int currentRow;                     // used in caching to check if new image selected
-    int firstVisibleRow;                // used to determine MetaRead priority queue
-    int lastVisibleRow;                 // used to determine MetaRead priority queue
+//    int firstVisibleRow;                // used to determine MetaRead priority queue
+//    int lastVisibleRow;                 // used to determine MetaRead priority queue
     int startIconRange;                 // used to determine MetaRead priority queue
     int endIconRange;                   // used to determine MetaRead priority queue
     int iconChunkSize;                  // max suggested number of icons to cache

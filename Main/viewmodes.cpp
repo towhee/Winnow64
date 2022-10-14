@@ -29,6 +29,15 @@ void MW::loupeDisplay()
     painting itself.
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+
+    if (!G::isInitializing && !G::allMetadataLoaded) {
+        G::mode = "Loupe";
+        asLoupeAction->setChecked(true);
+        centralLayout->setCurrentIndex(LoupeTab);
+        prevCentralView = LoupeTab;
+        return;
+    }
+
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
     updateStatus(true, "", CLASSFUNCTION);
@@ -112,11 +121,18 @@ void MW::gridDisplay()
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
 
     if (embelProperties->templateId > 0) {
-        G::popUp->showPopup(
-            "Only loupe mode is available while the Embellish Editor "
-            "is active.", 2000);
+        QString msg = "Only loupe mode is available while the Embellish Editor is active.";
+        G::popUp->showPopup(msg, 2000);
         return;
     }
+
+//    if (!G::allMetadataLoaded) {
+//        G::mode = "Grid";
+//        asGridAction->setChecked(true);
+//        centralLayout->setCurrentIndex(GridTab);
+//        prevCentralView = GridTab;
+//        return;
+//    }
 
     G::mode = "Grid";
     asGridAction->setChecked(true);
@@ -139,7 +155,7 @@ void MW::gridDisplay()
     thumbView->setCurrentIndex(idx);
 
     // req'd to show thumbs first time
-    gridView->setThumbParameters();
+//    gridView->setThumbParameters();
 
     // req'd after compare mode to re-enable extended selection
     gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -148,7 +164,7 @@ void MW::gridDisplay()
     recoverSelection();
 
     // req'd to show thumbs first time
-    gridView->setThumbParameters();
+//    gridView->setThumbParameters();
 
     // sync scrolling between modes (loupe, grid and table)
     if (prevMode == "Table") {
@@ -162,6 +178,7 @@ void MW::gridDisplay()
 
     // when okToScroll scroll gridView to current row
     G::ignoreScrollSignal = false;
+    G::wait(100);
 //    gridView->waitUntilOkToScroll();
      gridView->scrollToRow(scrollRow, CLASSFUNCTION);
     updateIconRange(-1);
@@ -250,7 +267,8 @@ void MW::tableDisplay()
         else scrollRow = thumbView->midVisibleCell;
     }
     G::ignoreScrollSignal = false;
-//    G::wait(100);
+    G::wait(100);
+//    qDebug() << CLASSFUNCTION << "scrollRow =" << scrollRow;
     tableView->scrollToRow(scrollRow, CLASSFUNCTION);
     if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, CLASSFUNCTION);
     updateIconRange(-1);

@@ -40,8 +40,8 @@ void MW::reportState(QString title)
         << "\ncurrentSfIdx                           " << currSfIdx
         << "\ncurrentSfIdx                           " << currSfIdx
         << "\ndm->currentRow                         " << dm->currentRow
-        << "\ndm->firstVisibleRow                    " << dm->firstVisibleRow
-        << "\ndm->lastVisibleRow                     " << dm->lastVisibleRow
+//        << "\ndm->firstVisibleRow                    " << dm->firstVisibleRow
+//        << "\ndm->lastVisibleRow                     " << dm->lastVisibleRow
         << "\nG::availableMemoryMB                   " << G::availableMemoryMB
         << "\nG::winnowMemoryBeforeCacheMB           " << G::winnowMemoryBeforeCacheMB
         << "\nG::metaCacheMB                         " << G::metaCacheMB

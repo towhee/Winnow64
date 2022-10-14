@@ -47,6 +47,7 @@ void MW::initialize()
                                   "Shortcut to toggle: Opt/Alt + J");
     slideShowStatusLabel = new QLabel;
     slideShowStatusLabel->setToolTip("Slideshow is active");
+    slideCount = 0;
     prevCentralView = 0;
     G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
     G::ratings << "1" << "2" << "3" << "4" << "5";
