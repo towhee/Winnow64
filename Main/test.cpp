@@ -10,7 +10,7 @@ void MW::traverseFolderStressTest(int ms, int duration)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     qDebug() << CLASSFUNCTION << ms;
-    G::popUp->hide();
+    G::popUp->end();
 
     if (!ms) {
         ms = QInputDialog::getInt(this,
@@ -29,8 +29,8 @@ void MW::traverseFolderStressTest(int ms, int duration)
         if (duration && t.elapsed() > duration) return;
         G::wait(ms);
         ++slideCount;
-        if (isForward && currSfRow == dm->sf->rowCount() - 1) isForward = false;
-        if (!isForward && currSfRow == 0) isForward = true;
+        if (isForward && dm->currentRow == dm->sf->rowCount() - 1) isForward = false;
+        if (!isForward && dm->currentRow == 0) isForward = true;
         if (isForward) keyRight();
         else keyLeft();
         qApp->processEvents();
@@ -72,7 +72,7 @@ void MW::bounceFoldersStressTest(int ms, int duration)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     qDebug() << CLASSFUNCTION << "ms =" << ms << "duration =" << duration;
-    G::popUp->hide();
+    G::popUp->end();
 
 
     if (!duration) {
@@ -123,11 +123,11 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    else if (gridView->isVisible() gridView->selectThumb(6);
 //    else if (tableView-.isVisible))
 //    selectionModel->clear();
-    dm->selectionModel->setCurrentIndex(dm->sf->index(5,0),
-            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+//    dm->selectionModel->setCurrentIndex(dm->sf->index(5,0),
+//            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 //    thumbView->selectThumb(5);
 //    qDebug() << thumbView->isVisible();
-//    thumbDock->setVisible(!thumbDock->isVisible());
+    thumbDock->setVisible(!thumbDock->isVisible());
 //    thumbView->setVisible(!thumbView->isVisible());
 //    centralLayout->setCurrentIndex(LoupeTab);
 }

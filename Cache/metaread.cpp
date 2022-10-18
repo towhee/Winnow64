@@ -16,12 +16,12 @@
 
         • Build the priority queue.  The queue lists the dm->sf rows, starting with the
           current row and alternating one ahead and one behind.
-        • Cleanup (remove) icons exceeding preferences.  If loadOnlyVisibleIcons then
-          remove all icons except those visible in either thumbView or gridView.  Other-
+
+        • Cleanup (remove) icons exceeding amount set in preferences.  If loadOnlyVisibleIcons
+          then remove all icons except those visible in either thumbView or gridView.  Other-
           wise, remove icons exceeding iconChunkSize based on the priorityQueue.
+
         • Iterate through the priorityQueue, loading the metadata and icons.
-
-
 
     to do:
         iconChunkSize
@@ -50,7 +50,7 @@ void MetaRead::start(int row, QString src)
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::start");
     if (debugCaching) {
-        qDebug() << "MetaRead::start" << row << isRunning;
+        qDebug() << "MetaRead::start" << row << reading;
     }
 
     if (stop()) {
@@ -74,7 +74,7 @@ void MetaRead::start(int row, QString src)
 bool MetaRead::stop()
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::stop");
-    if (!isRunning) {
+    if (!reading) {
         if (G::stop) emit stopped("MetaRead");
         return true;
     }
@@ -82,10 +82,10 @@ bool MetaRead::stop()
     abort = true;
     mutex.unlock();
     QTime t = QTime::currentTime().addMSecs(2000);
-    while (isRunning && QTime::currentTime() < t) {
+    while (reading && QTime::currentTime() < t) {
         qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
     }
-    if (isRunning) {
+    if (reading) {
         qWarning() << "MetaRead::stop failed.";
         return false;
     }
@@ -104,11 +104,17 @@ void MetaRead::pause(bool flag)
     mutex.lock();
     paused = flag;
     mutex.unlock();
+    if (reading) while (reading) {}
 }
 
 bool MetaRead::isPaused()
 {
     return paused;
+}
+
+bool MetaRead::isReading()
+{
+    return reading;
 }
 
 void MetaRead::initialize()
@@ -139,7 +145,7 @@ QString MetaRead::diagnostics()
     rpt << "\n" << "dm->iconCount:      " << dm->iconCount();
     rpt << "\n" ;
     rpt << "\n" << "abort:              " << (abort ? "true" : "false");
-    rpt << "\n" << "isRunning:          " << (isRunning ? "true" : "false");
+    rpt << "\n" << "isRunning:          " << (reading ? "true" : "false");
     rpt << "\n" ;
     rpt << "rowsWithIcon:";
     rpt.setFieldAlignment(QTextStream::AlignRight);
@@ -375,7 +381,7 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::read", src);
 
     abort = false;
-    isRunning = true;
+    reading = true;
     iconLimit = iconChunkSize * 1.2;
     newStartRow = -1;
     sfRowCount = dm->sf->rowCount();
@@ -414,10 +420,14 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
     while (i++ <= sfRowCount) {
         if (abort) break;
 
+        /*
         // wait for pause
+        if (paused) reading = false;
         while (paused) {
 
         }
+        reading = true;
+        //*/
 
         // do something with row
         readRow(row);
@@ -453,7 +463,7 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
     emit runStatus(false, true, "MetaRead::read");
     if (abort) {
         abort = false;
-        isRunning = false;
+        reading = false;
         return;
     }
     G::allMetadataLoaded = true;
@@ -466,5 +476,5 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
         emit triggerImageCache("Final");
     }
     emit done();
-    isRunning = false;
+    reading = false;
 }

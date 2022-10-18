@@ -371,9 +371,9 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     sortMenuUpdateToMatchTable = false;
 
     // get the current selected item
-    currSfRow = dm->sf->mapFromSource(currDmIdx).row();
-    thumbView->iconViewDelegate->currentRow = currSfRow;
-    gridView->iconViewDelegate->currentRow = currSfRow;
+    dm->currentRow = dm->sf->mapFromSource(currDmIdx).row();
+    thumbView->iconViewDelegate->currentRow = dm->currentRow;
+    gridView->iconViewDelegate->currentRow = dm->currentRow;
 
     scrollToCurrentRow();
 

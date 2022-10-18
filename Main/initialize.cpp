@@ -278,6 +278,8 @@ void MW::createMDCache()
     connect(metaRead, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit/*,
             Qt::BlockingQueuedConnection*/);
     connect(metaRead, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
+    // pause waits until isRunning == false
+    connect(this, &MW::pauseMetaRead, metaRead, &MetaRead::pause, Qt::BlockingQueuedConnection);
 
     metaReadThread.start();
 }

@@ -110,15 +110,15 @@ void MW::filterChange(QString source)
     }
 
     // get the current selected item
-    currSfRow = dm->sf->mapFromSource(currDmIdx).row();
+    dm->currentRow = dm->sf->mapFromSource(currDmIdx).row();
     // check if still in filtered set, if not select first item in filtered set
-    if (currSfRow == -1) currSfRow = 0;
-    thumbView->iconViewDelegate->currentRow = currSfRow;
-    gridView->iconViewDelegate->currentRow = currSfRow;
-    dm->select(currSfRow);
-    QModelIndex idx = dm->sf->index(currSfRow, 0);
+    if (dm->currentRow == -1) dm->currentRow = 0;
+    thumbView->iconViewDelegate->currentRow = dm->currentRow;
+    gridView->iconViewDelegate->currentRow = dm->currentRow;
+    dm->select(dm->currentRow);
+    QModelIndex idx = dm->sf->index(dm->currentRow, 0);
     // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(currSfRow, 0).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(dm->currentRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
 
@@ -264,7 +264,7 @@ void MW::filterLastDay()
         launchBuildFilters();
         G::popUp->showPopup("Building filters.", 0);
         buildFilters->wait();
-        G::popUp->hide();
+        G::popUp->end();
     if (!filters->days->childCount()) launchBuildFilters();
     }
 
@@ -471,15 +471,15 @@ void MW::sortChange(QString source)
 //    if (!G::allMetadataLoaded) return;
 
     // get the current selected item
-    if (G::isNewFolderLoaded) currSfRow = dm->sf->mapFromSource(currDmIdx).row();
-    else currSfRow = 0;
+    if (G::isNewFolderLoaded) dm->currentRow = dm->sf->mapFromSource(currDmIdx).row();
+    else dm->currentRow = 0;
 
-    thumbView->iconViewDelegate->currentRow = currSfRow;
-    gridView->iconViewDelegate->currentRow = currSfRow;
-    QModelIndex idx = dm->sf->index(currSfRow, 0);
+    thumbView->iconViewDelegate->currentRow = dm->currentRow;
+    gridView->iconViewDelegate->currentRow = dm->currentRow;
+    QModelIndex idx = dm->sf->index(dm->currentRow, 0);
     dm->selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
     // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(currSfRow, 0).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(dm->currentRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache and EmbelProperties
     dm->currentFilePath = fPath;
 
@@ -501,7 +501,7 @@ void MW::sortChange(QString source)
     fileSelectionChange(idx, idx, CLASSFUNCTION);
 
     scrollToCurrentRow();
-    G::popUp->hide();
+    G::popUp->end();
 
 }
 

@@ -20,7 +20,7 @@ void Stack::stop()
     abort = true;
     G::isRunningStackOperation = false;
     G::popUp->setProgressVisible(false);
-    G::popUp->hide();
+    G::popUp->end();
     G::popUp->showPopup("Stack operation has been aborted.");
     qDebug() << CLASSFUNCTION << abort;
     qApp->processEvents();
@@ -170,7 +170,7 @@ QString Stack::mean()
         qDebug() << CLASSFUNCTION << "et exit code =" << ret;
 
         G::popUp->setProgressVisible(false);
-        G::popUp->hide();
+        G::popUp->end();
     }
 
     delete pix;

@@ -24,8 +24,10 @@ public:
     QString diagnostics();
     QString reportMetaCache();
     void cleanupIcons();
+    bool isPaused();
+    bool isReading();
 
-    bool isRunning = false;
+    bool reading = false;
 
     int iconChunkSize;
     int firstIconRow;
@@ -37,7 +39,6 @@ signals:
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
     void triggerImageCache(QString src);
-    bool isPaused();
 
     void updateIconBestFit();  // req'd?
     void done();               // not being used - req'd?

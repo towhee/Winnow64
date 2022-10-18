@@ -763,25 +763,26 @@ void IconView::sortThumbs(int sortColumn, bool isReverse)
 void IconView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
 /*
-    The selection change has already occurred when selectionChanged is signalled, and
-    the current index has been changed to the most recent selected or deselected item.
+    The selection change has already occurred when selectionChanged is
+    signalled, and the current index has been changed to the most recent
+    selected or deselected item.
 
     However, we do not want to change the current index for a deselect in a
     muli-selection, and the current index is reset to its prior item. Since
-    MW::fileSelectionChange has not been called MW::currSfRow and MW::currSfIdx contain
-    the prior current row and index. The current index is reset using the
-    QItemSelectionModel::NoUpdate flag to prevent another selectionChange being
-    triggered.
+    MW::fileSelectionChange has not been called dm->currentRow and
+    dm->currentSfIdx contain the prior current row and index. The current index
+    is reset using the QItemSelectionModel::NoUpdate flag to prevent another
+    selectionChange being triggered.
 
-    If the only item selected is deselected then the item is reselected as the current
-    index must always be selected.
+    If the only item selected is deselected then the item is reselected as the
+    current index must always be selected.
 
-    If there is a new selection without cmd/ctrl then it is the new current index and
-    MW::fileSelectionChange is signalled.
+    If there is a new selection without cmd/ctrl then it is the new current
+    index and MW::fileSelectionChange is signalled.
 
-    For some reason the selectionModel rowCount is not up-to-date and the selection is
-    updated after the MD::fileSelectionChange occurs, hence update the status bar from
-    here.
+    For some reason the selectionModel rowCount is not up-to-date and the
+    selection is updated after the MD::fileSelectionChange occurs, hence update
+    the status bar from here.
 */
     if (!G::isInitializing) {
 //        emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION);
@@ -1827,7 +1828,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
              << mousePos;
              //*/
     if (G::isEmbellish) return;
-    bool isVideo = dm->index(m2->currSfRow, G::VideoColumn).data().toBool();
+    bool isVideo = dm->index(dm->currentRow, G::VideoColumn).data().toBool();
     if (isVideo) return;
 
     if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {
