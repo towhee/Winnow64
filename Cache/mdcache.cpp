@@ -403,10 +403,12 @@ void MetadataCache::readAllMetadata()
             count++;
         }
 
-        if (row % countInterval == 0) {
-            QString msg = "Reading metadata: ";
-            msg += QString::number(row) + " of " + QString::number(rows);
-            emit showCacheStatus(msg);
+        if (G::useLinearLoading) {
+            if (row % countInterval == 0) {
+                QString msg = "Reading metadata: ";
+                msg += QString::number(row) + " of " + QString::number(rows);
+                emit showCacheStatus(msg);
+            }
         }
     }
     G::allMetadataLoaded = true;
@@ -550,10 +552,12 @@ void MetadataCache::readMetadataChunk()
                 G::log("MetadataCache::readMetadataChunk", msg);
             }
             //*/
-            if (row % countInterval == 0) {
-                QString msg = "Reading metadata: ";
-                msg += QString::number(row) + " of " + QString::number(end)/* + " " + fPath*/;
-                emit showCacheStatus(msg);
+            if (G::useLinearLoading) {
+                if (row % countInterval == 0) {
+                    QString msg = "Reading metadata: ";
+                    msg += QString::number(row) + " of " + QString::number(end)/* + " " + fPath*/;
+                    emit showCacheStatus(msg);
+                }
             }
 
             // keep event processing up-to-date to improve signal/slot performance emit loadMetadataCache2ndPass()

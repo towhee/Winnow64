@@ -813,7 +813,7 @@ bool Tiff::decode(/*ImageMetadata &m,*/ MetadataParameters &p, QImage &image, in
 
     if (compression == 1) decodeBase(/*m, */p, image);
     if (compression == 5) decodeLZW(p, image);
-
+//    qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
     p.file.close();
 
     if (bitsPerSample == 16) {

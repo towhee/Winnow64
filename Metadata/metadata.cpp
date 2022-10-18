@@ -585,7 +585,11 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     // data edited, open image file
     p.file.setFileName(fPath);
     // rgh error trap file operation
-    if (p.file.isOpen()) p.file.close();
+    if (p.file.isOpen()) {
+        p.file.close();
+//        qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
+    }
+//    qDebug() << CLASSFUNCTION << "Open " << p.file.fileName();
     p.file.open(QIODevice::ReadWrite);
 
     // if current xmp is invalid then fix
@@ -647,6 +651,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     xmp.writeSidecar(p.file);
 
     p.file.close();
+//    qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
     return true;
 }
 
@@ -959,18 +964,24 @@ void Metadata::testNewFileFormat(const QString &path)
     }
     clearMetadata();
     p.file.setFileName(path);
-    if (p.file.isOpen()) p.file.close();
+    if (p.file.isOpen()) {
+        p.file.close();
+//        qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
+    }
+//    qDebug() << CLASSFUNCTION << "Open " << p.file.fileName();
     p.file.open(QIODevice::ReadOnly);
 
     // edit test format to use:
     parseDNG();
     p.file.close();
+//    qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
 //    reportMetadata();
 }
 
 bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
     if (G::isLogger) G::log(CLASSFUNCTION, "Source: " + source);
+//    qDebug() << CLASSFUNCTION << source;
 
     // make sure file is available ie usb drive might have been ejected
     QFileInfo fileInfo(path);
@@ -1001,6 +1012,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     bool parsed = false;
     // rgh next triggers crash sometimes when skip to end of thumbnails
     if (p.file.open(QIODevice::ReadWrite)) {
+//        qDebug() << CLASSFUNCTION << "Open " << p.file.fileName() << "path =" << path;
         if (jpeg == nullptr) jpeg = new Jpeg;
         if (ifd == nullptr) ifd = new IFD;
         if (exif == nullptr) exif = new Exif;
@@ -1019,6 +1031,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ext == "rw2")  parsed = parsePanasonic();
         if (ext == "tif")  parsed = parseTIF();
         p.file.close();
+//        qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
         if (p.file.isOpen()) {
             qWarning() << CLASSFUNCTION << "Could not close" << path << "after format was read";
         }
@@ -1027,6 +1040,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         }
         if (!parsed) {
             p.file.close();
+//            qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
             QString msg =  "Unable to parse metadata for " + path + ". ";
             m.err += msg;
             qWarning() << CLASSFUNCTION << msg;
@@ -1096,15 +1110,17 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
         m.fPath = fPath;
         m.currRootFolder = fileInfo.absoluteDir().absolutePath();
         m.size = fileInfo.size();
+        m.metadataLoaded = true;
 //        m.video = videoFormats.contains(ext);
         if (G::useSidecar) {
             p.file.setFileName(fPath);
+//            qDebug() << CLASSFUNCTION << "Open " << p.file.fileName();
             if (p.file.open(QIODevice::ReadWrite)) {
                 if (parseSidecar()) {
                     parsedSidcar = true;
                 }
+                p.file.close();
             }
-            p.file.close();
         }
 //        return parsedSidcar;
         return true;

@@ -96,7 +96,7 @@ void MW::prevRandomSlide()
     }
 //    isSlideshowPaused = true;
     QString prevPath = slideshowRandomHistoryStack->pop();
-    thumbView->selectThumb(prevPath);
+    dm->select(prevPath);
     updateStatus(false,
                  "Slideshow random history."
                  "  Press <font color=\"white\"><b>Spacebar</b></font> to continue slideshow, "

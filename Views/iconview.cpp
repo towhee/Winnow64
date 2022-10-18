@@ -783,9 +783,7 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
     updated after the MD::fileSelectionChange occurs, hence update the status bar from
     here.
 */
-
     if (!G::isInitializing) {
-
 //        emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION);
 //        return;
 
@@ -877,6 +875,12 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
             emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION);
         }
 
+        // refresh
+        refreshThumbs();
+
+        // scroll if requuired
+        scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
+
         // update status bar
         QString s = "";
         if (m2->isStressTest) s = "   Stress count: " + QString::number(m2->slideCount);
@@ -917,7 +921,7 @@ bool IconView::isThumb(int row)
     return dm->sf->index(row, 0).data(Qt::DecorationRole).isNull();
 }
 
-void IconView::selectThumb(QModelIndex idx)
+void IconView::select(QModelIndex idx)
 {
 /*
     Used for thumbnail navigation (left, right, up, down etc)
@@ -931,29 +935,29 @@ void IconView::selectThumb(QModelIndex idx)
     }
 }
 
-void IconView::selectThumb(int row)
-{
-    if (G::isLogger) G::log(CLASSFUNCTION);
-//    qDebug() << CLASSFUNCTION << "row =" << row;
-    // some operations assign row = -1 if not found
-    if (row < 0) return;
-    setFocus();
-    QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
-    selectThumb(idx);
-}
+//void IconView::selectThumb(int row)
+//{
+//    if (G::isLogger) G::log(CLASSFUNCTION);
+////    qDebug() << CLASSFUNCTION << "row =" << row;
+//    // some operations assign row = -1 if not found
+//    if (row < 0) return;
+//    setFocus();
+//    QModelIndex idx = dm->sf->index(row, 0, QModelIndex());
+//    selectThumb(idx);
+//}
 
-void IconView::selectThumb(QString &fPath)
-{
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    selectThumb(dm->proxyIndexFromPath(fPath));
-}
+//void IconView::selectThumb(QString &fPath)
+//{
+//    if (G::isLogger) G::log(CLASSFUNCTION);
+//    dm->select(dm->proxyIndexFromPath(fPath));
+//}
 
 void IconView::selectNext()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (G::mode == "Compare") return;
     if (isLast()) return;
-    selectThumb(getNextRow());
+    dm->select(getNextRow());
 }
 
 void IconView::selectPrev()
@@ -961,7 +965,7 @@ void IconView::selectPrev()
     if (G::isLogger) G::log(CLASSFUNCTION);
     if(G::mode == "Compare") return;
     if (isFirst()) return;
-    selectThumb(getPrevRow());
+    dm->select(getPrevRow());
 }
 
 void IconView::selectUp()
@@ -995,32 +999,32 @@ void IconView::selectPageDown()
 void IconView::selectFirst()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    selectThumb(0);
+    dm->select(0);
 }
 
 void IconView::selectLast()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    selectThumb(getLastRow());
+    dm->select(getLastRow());
 }
 
 void IconView::selectRandom()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
 //    qDebug() << "\n***************************************************************************\n" << CLASSFUNCTION;
-    selectThumb(getRandomRow());
+    dm->select(getRandomRow());
 }
 
 void IconView::selectNextPick()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    selectThumb(getNextPick());
+    dm->select(getNextPick());
 }
 
 void IconView::selectPrevPick()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    selectThumb(getPrevPick());
+    dm->select(getPrevPick());
 }
 
 void IconView::thumbsEnlarge()

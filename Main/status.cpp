@@ -218,7 +218,7 @@ QString MW::getSelectedFileSize()
 Returns a string like "12 (165 MB)"
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    QString selected = QString::number(selectionModel->selectedRows().count());
+    QString selected = QString::number(dm->selectionModel->selectedRows().count());
     QString selMemSize = Utilities::formatMemory(memoryReqdForSelection());
     return selected + " (" + selMemSize + ")";
 }

@@ -123,7 +123,7 @@ void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 //    else if (gridView->isVisible() gridView->selectThumb(6);
 //    else if (tableView-.isVisible))
 //    selectionModel->clear();
-    selectionModel->setCurrentIndex(dm->sf->index(5,0),
+    dm->selectionModel->setCurrentIndex(dm->sf->index(5,0),
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 //    thumbView->selectThumb(5);
 //    qDebug() << thumbView->isVisible();

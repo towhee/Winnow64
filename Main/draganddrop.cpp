@@ -28,7 +28,7 @@ void MW::handleDrop(QString fPath)
     if (incoming == currRootDir) {
         QString fileType = info.suffix().toLower();
         if (metadata->supportedFormats.contains(fileType)) {
-            thumbView->selectThumb(dragDropFilePath);
+            dm->select(dragDropFilePath);
         }
     }
     else {

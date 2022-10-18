@@ -37,6 +37,7 @@ signals:
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
     void triggerImageCache(QString src);
+    bool isPaused();
 
     void updateIconBestFit();  // req'd?
     void done();               // not being used - req'd?
@@ -45,6 +46,7 @@ public slots:
     void initialize();
     bool stop();
     void start(int row = 0, QString src = "");
+    void pause(bool flag);
 
 private:
     void read(int startRow = 0, QString src = "");
@@ -58,6 +60,7 @@ private:
     QMutex mutex;
 //    QWaitCondition condition;
     bool abort;
+    bool paused;
 
     DataModel *dm;
     Metadata *metadata;
