@@ -656,7 +656,7 @@ void MW::keyPressEvent(QKeyEvent *event)
 
     if (event->key() == Qt::Key_Return) {
         if (G::mode == "Loupe") {
-            if (dm->sf->index(currSfRow, G::VideoColumn).data().toBool()) {
+            if (dm->sf->index(dm->currentRow, G::VideoColumn).data().toBool()) {
                 videoView->playOrPause();
             }
         }
@@ -1533,9 +1533,9 @@ void MW::folderSelectionChange()
     }
 
     // datamodel loaded - initialize indexes
-    currSfRow = 0;
-    currSfIdx = dm->sf->index(currSfRow, 0);
-    dm->currentRow = currSfRow;
+    dm->currentRow = 0;
+    currSfIdx = dm->sf->index(dm->currentRow, 0);
+    dm->currentRow = 0;
     currSfIdx = dm->sf->mapToSource(currSfIdx);
 
     // made it this far, folder must have eligible images and is good-to-go
@@ -1669,11 +1669,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     */
 
     // record current proxy row (dm->sf) as it is used to sync everything
-    currSfRow = current.row();
-    dm->currentRow = currSfRow;
+    dm->currentRow = current.row();
     // also record in datamodel so can be accessed by MdCache
     // proxy index for col 0
-    currSfIdx = dm->sf->index(currSfRow, 0);
+    currSfIdx = dm->sf->index(dm->currentRow, 0);
     dm->currentSfIdx = currSfIdx;
     currDmIdx = dm->sf->mapToSource(currSfIdx);
     dm->currentDmIdx = currDmIdx;
@@ -1684,29 +1683,29 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     setting->setValue("lastFileSelection", fPath);
 
     // update delegates so they can highlight the current item
-    thumbView->iconViewDelegate->currentRow = currSfRow;
-    gridView->iconViewDelegate->currentRow = currSfRow;
+    thumbView->iconViewDelegate->currentRow = dm->currentRow;
+    gridView->iconViewDelegate->currentRow = dm->currentRow;
 
     // don't scroll mouse click source (screws up double clicks and disorients users)
     if (G::fileSelectionChangeSource == "TableMouseClick") {
         G::ignoreScrollSignal = true;
-        if (gridView->isVisible()) gridView->scrollToRow(currSfRow, __FUNCTION__);
-        if (thumbView->isVisible()) thumbView->scrollToRow(currSfRow, __FUNCTION__);
+        if (gridView->isVisible()) gridView->scrollToRow(dm->currentRow, __FUNCTION__);
+        if (thumbView->isVisible()) thumbView->scrollToRow(dm->currentRow, __FUNCTION__);
     }
     else if (G::fileSelectionChangeSource == "ThumbMouseClick") {
         G::ignoreScrollSignal = true;
-        if (gridView->isVisible()) gridView->scrollToRow(currSfRow, __FUNCTION__);
-        if (tableView->isVisible()) tableView->scrollToRow(currSfRow, __FUNCTION__);
+        if (gridView->isVisible()) gridView->scrollToRow(dm->currentRow, __FUNCTION__);
+        if (tableView->isVisible()) tableView->scrollToRow(dm->currentRow, __FUNCTION__);
     }
     else if (G::fileSelectionChangeSource == "GridMouseClick") {
         G::ignoreScrollSignal = true;
-        if (thumbView->isVisible()) thumbView->scrollToRow(currSfRow, __FUNCTION__);
-        if (tableView->isVisible()) tableView->scrollToRow(currSfRow, __FUNCTION__);
+        if (thumbView->isVisible()) thumbView->scrollToRow(dm->currentRow, __FUNCTION__);
+        if (tableView->isVisible()) tableView->scrollToRow(dm->currentRow, __FUNCTION__);
     }
     else {
-        if (gridView->isVisible()) gridView->scrollToRow(currSfRow, __FUNCTION__);
-        if (thumbView->isVisible())  thumbView->scrollToRow(currSfRow, __FUNCTION__);
-        if (tableView->isVisible()) tableView->scrollToRow(currSfRow, __FUNCTION__);
+        if (gridView->isVisible()) gridView->scrollToRow(dm->currentRow, __FUNCTION__);
+        if (thumbView->isVisible())  thumbView->scrollToRow(dm->currentRow, __FUNCTION__);
+        if (tableView->isVisible()) tableView->scrollToRow(dm->currentRow, __FUNCTION__);
     }
 //    if (previous.isValid()) {
         if (thumbView->isVisible()) thumbView->repaint();
@@ -1727,7 +1726,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     // update loupe view
     if (useImageView) {
         videoView->stop();
-        bool isVideo = dm->sf->index(currSfRow, G::VideoColumn).data().toBool();
+        bool isVideo = dm->sf->index(dm->currentRow, G::VideoColumn).data().toBool();
         if (isVideo) {
             videoView->load(fPath);
             if (G::mode == "Loupe") centralLayout->setCurrentIndex(VideoTab);
@@ -1742,13 +1741,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 
     // force scroll in case not up-to-date after holding nav key down
 //    if (thumbView->isVisible()) {
-//        thumbView->scrollToRow(currSfRow, CLASSFUNCTION);
+//        thumbView->scrollToRow(dm->currentRow, CLASSFUNCTION);
 //    }
 
     // update caching if folder has been loaded
     if (G::isNewFolderLoaded) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
-        updateIconRange(currSfRow);
+        updateIconRange(dm->currentRow);
         if (G::useLinearLoading) {
             metadataCacheThread->fileSelectionChange();
         }
@@ -1783,7 +1782,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     workspaceChanged = false;
 
     // update the metadata panel
-    if (useInfoView) infoView->updateInfo(currSfRow);
+    if (useInfoView) infoView->updateInfo(dm->currentRow);
 
     // initialize the thumbDock if just opened app
     if (G::isInitializing) {
@@ -1799,7 +1798,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     }
 
     // update cursor position on progressBar
-    cacheProgressBar->updateCursor(currSfRow, dm->sf->rowCount());
+    cacheProgressBar->updateCursor(dm->currentRow, dm->sf->rowCount());
 
     fsTree->scrollToCurrent();
 
@@ -1965,7 +1964,7 @@ void MW::reset(QString src) {
     gridView->setUpdatesEnabled(true);
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
-    currSfRow = 0;
+    dm->currentRow = 0;
 
     // turn thread activity buttons gray
     setThreadRunStatusInactive();
@@ -1996,7 +1995,7 @@ bool MW::isCurrentThumbVisible()
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     updateIconRange(-1);
-    return (currSfRow > metadataCacheThread->firstIconVisible &&
+    return (dm->currentRow > metadataCacheThread->firstIconVisible &&
             metadataCacheThread->lastIconVisible);
 }
 
@@ -2064,7 +2063,7 @@ void MW::updateIconRange(int row)
     }
     else {
         // icons to range based on iconChunkSize
-        int firstIconRow = currSfRow - dm->iconChunkSize / 2;
+        int firstIconRow = dm->currentRow - dm->iconChunkSize / 2;
         if (firstIconRow < 0) firstIconRow = 0;
         int lastIconRow = firstIconRow + dm->iconChunkSize;
         if (lastIconRow >= dm->sf->rowCount()) lastIconRow = dm->sf->rowCount() - 1;
@@ -2114,10 +2113,10 @@ void MW::loadConcurrentNewFolder()
     G::metaCacheMB = (maxIconsToLoad * 0.18) + (rows * 0.02);
     // target image
     if (folderAndFileChangePath != "") {
-        currSfRow = dm->rowFromPath(folderAndFileChangePath);
-        qDebug() << CLASSFUNCTION << currSfRow;
+        dm->currentRow = dm->rowFromPath(folderAndFileChangePath);
+        qDebug() << CLASSFUNCTION << dm->currentRow;
     }
-    updateIconRange(currSfRow);
+    updateIconRange(dm->currentRow);
     // set image cache parameters and build image cacheItemList
     int netCacheMBSize = cacheMaxMB - G::metaCacheMB;
     if (netCacheMBSize < cacheMinMB) netCacheMBSize = cacheMinMB;
@@ -2129,7 +2128,7 @@ void MW::loadConcurrentNewFolder()
     sortMenu->setEnabled(false);
     // read metadata using MetaRead
     metaRead->initialize();     // only when change folders
-    emit startMetaRead(currSfRow, CLASSFUNCTION);
+    emit startMetaRead(dm->currentRow, CLASSFUNCTION);
 }
 
 void MW::loadConcurrent(int sfRow)
@@ -2165,9 +2164,9 @@ void MW::loadConcurrentMetaDone()
     updateIconBestFit();
     updateIconRange(-1);
 
-    /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
-    InfoView by fileSelectionChange have been completed. Otherwise, InfoView::dataChanged
-    would prematurely trigger Metadata::writeXMP */
+    /* now okay to write to xmp sidecar, as metadata is loaded and initial
+    updates to InfoView by fileSelectionChange have been completed. Otherwise,
+    InfoView::dataChanged would prematurely trigger Metadata::writeXMP */
 
     G::isNewFolderLoadedAndInfoViewUpToDate = true;
 //    G::isNewFolderLoaded = true;
@@ -2294,7 +2293,7 @@ void MW::loadLinearNewFolder()
 
     // read icons
     updateIconBestFit();
-    updateIconRange(currSfRow);
+    updateIconRange(dm->currentRow);
 
     setCentralMessage("Reading icons.");
 //    QApplication::processEvents();
@@ -2529,7 +2528,7 @@ void MW::numberIconsVisibleChange()
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-    updateIconRange(currSfRow);
+    updateIconRange(dm->currentRow);
 //    if (G::useLinearLoading)
 //        metadataCacheThread->sizeChange(CLASSFUNCTION);
 //    else
@@ -2563,8 +2562,8 @@ void MW::loadMetadataCacheAfterDelay()
     if (G::isInitializing || !G::isNewFolderLoaded) return;
 
     // has a new image been selected.  Caching will be started from MW::fileSelectionChange
-    if (previousRow != currSfRow) {
-        previousRow = currSfRow;
+    if (previousRow != dm->currentRow) {
+        previousRow = dm->currentRow;
         return;
     }
 
@@ -2598,7 +2597,7 @@ void MW::loadEntireMetadataCache(QString source)
     if (G::isInitializing) return;
     if (dm->isAllMetadataLoaded()) return;
 
-    updateIconRange(currSfRow);
+    updateIconRange(dm->currentRow);
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
@@ -2685,7 +2684,7 @@ void MW::updateImageCacheStatus(QString instruction,
         }
 
         // cursor
-        cacheProgressBar->updateCursor(currSfRow, rows);
+        cacheProgressBar->updateCursor(dm->currentRow, rows);
         return;
     }
 
@@ -3000,18 +2999,18 @@ void MW::scrollToCurrentRow()
     visible hence need to scroll to the current row.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    currSfRow = dm->sf->mapFromSource(currDmIdx).row();
-    QModelIndex idx = dm->sf->index(currSfRow, 0);
+    dm->currentRow = dm->sf->mapFromSource(currDmIdx).row();
+    QModelIndex idx = dm->sf->index(dm->currentRow, 0);
 //    G::wait(100);
 
     G::ignoreScrollSignal = true;
-    if (thumbView->isVisible()) thumbView->scrollToRow(currSfRow, CLASSFUNCTION);
-    if (gridView->isVisible()) gridView->scrollToRow(currSfRow, CLASSFUNCTION);
+    if (thumbView->isVisible()) thumbView->scrollToRow(dm->currentRow, CLASSFUNCTION);
+    if (gridView->isVisible()) gridView->scrollToRow(dm->currentRow, CLASSFUNCTION);
     if (tableView->isVisible()) tableView->scrollTo(idx,
          QAbstractItemView::ScrollHint::PositionAtCenter);
     G::ignoreScrollSignal = false;
 
-    updateIconRange(currSfRow);
+    updateIconRange(dm->currentRow);
     metadataCacheThread->scrollChange(CLASSFUNCTION);
 }
 
@@ -3451,7 +3450,7 @@ void MW::setBackgroundShade(int shade)
     this->setStyleSheet(css);
 
     if (useInfoView) {
-        infoView->updateInfo(currSfRow);                           // triggers sizehint!
+        infoView->updateInfo(dm->currentRow);                           // triggers sizehint!
         infoView->verticalScrollBar()->setStyleSheet(css);          // triggers sizehint!
     }
     bookmarks->setStyleSheet(css);
@@ -5470,7 +5469,7 @@ void MW::refreshCurrentFolder()
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     isRefreshingDM = true;
-    refreshCurrentPath = dm->sf->index(currSfRow, 0).data(G::PathRole).toString();
+    refreshCurrentPath = dm->sf->index(dm->currentRow, 0).data(G::PathRole).toString();
     if (dm->hasFolderChanged() && dm->modifiedFiles.count()) {
         for (int i = 0; i < dm->modifiedFiles.count(); ++i) {
             QString fPath = dm->modifiedFiles.at(i).filePath();
@@ -5505,7 +5504,7 @@ void MW::refreshCurrentFolder()
                 dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
             }
         }
-         if (useInfoView) infoView->updateInfo(currSfRow);
+         if (useInfoView) infoView->updateInfo(dm->currentRow);
 //        metadataCacheThread->loadNewFolder(true);
         refreshCurrentAfterReload();
     }
@@ -5854,7 +5853,7 @@ void MW::revealWinnets()
 void MW::revealFile()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    QString fPath = dm->sf->index(currSfRow, 0).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(dm->currentRow, 0).data(G::PathRole).toString();
     revealInFileBrowser(fPath);
 }
 

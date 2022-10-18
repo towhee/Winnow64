@@ -311,7 +311,7 @@ public:
 
     // mode change
     QString prevMode;
-    int currSfRow;             // the current row in MW::fileSelection
+//    int currSfRow;             // the current row in MW::fileSelection
     int scrollRow;              // the row to scroll to when change mode
     QModelIndex currSfIdx;   // the current proxy index in MW::fileSelection
     QModelIndex currDmIdx;   // the datamodel index for the current proxy index
@@ -387,6 +387,7 @@ signals:
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int role);
     void restartMetaRead(int newRow);
+    void pauseMetaRead(bool flag);
     void startMetaRead(int sfRow, QString src);
     void startIconCache(int sfRow, QString src);
     void setImageCachePosition(QString, QString);

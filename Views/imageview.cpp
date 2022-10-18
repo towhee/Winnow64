@@ -155,7 +155,7 @@ bool ImageView::loadImage(QString fPath, QString src)
     if (!fPath.length()) return false;
 
     // could be a popup from a prior uncached image being loaded
-    G::popUp->hide();
+    G::popUp->end();
 
     // do not load image if triggered by embellish remote export
     if (G::isProcessingExportedImages) return false;

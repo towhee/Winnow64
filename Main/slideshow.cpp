@@ -74,7 +74,7 @@ void MW::nextSlide()
         thumbView->selectRandom();
     }
     else {
-        if (currSfRow == dm->sf->rowCount() - 1) {
+        if (dm->currentRow == dm->sf->rowCount() - 1) {
             if (isSlideShowWrap) thumbView->selectFirst();
             else slideShow();
         }
@@ -103,7 +103,7 @@ void MW::prevRandomSlide()
                  "press <font color=\"white\"><b>Esc</b></font> to quit slideshow."
                  , CLASSFUNCTION);
     // hide popup if showing
-    G::popUp->hide();
+    G::popUp->end();
 }
 
 void MW::slideShowResetDelay()

@@ -42,7 +42,7 @@ void ColorAnalysis::process(QStringList &fPathList)
     }
 
     G::popUp->setProgressVisible(false);
-    G::popUp->hide();
+    G::popUp->end();
     if (abort) return;
 
     QTextBrowser *tb = new QTextBrowser;

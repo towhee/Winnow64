@@ -1,5 +1,7 @@
 BUGS / TO DO
-- Crash when switch to grid mode while MetaRead loading metadata
+- Not close while reading large foldeer
+- IPhone image/video creation date
+- PNG no image or icon (-test1)
 - Record mac display space for close/open app location
 - Add G::showWarnings
 - Rethink load Metadata flags and logic
@@ -69,6 +71,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Crash when change thumbView visibility while MetaRead loading metadata
+- Sorting popup stuck
 - Menu stop slideshow S is wrong
 - Not reading blank title in xmp file correctly
 - Folders with many videos stalling out ie /Users/roryhill/Downloads/Videos of Eva

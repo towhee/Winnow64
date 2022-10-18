@@ -351,6 +351,6 @@ void Thumb::insertThumbnails(QModelIndexList &selection)
         QFile::remove(thumbList.at(i));
     }
     G::popUp->setProgressVisible(false);
-    G::popUp->hide();
+    G::popUp->end();
 }
 

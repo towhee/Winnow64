@@ -188,7 +188,7 @@ void MW::setThumbDockVisibity()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
-    dm->select(currSfRow);
+    dm->select(dm->currentRow);
 }
 
 void MW::toggleFolderDockVisibility()
@@ -292,8 +292,15 @@ void MW::toggleMetadataDockVisibility() {
 void MW::toggleThumbDockVisibity()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    if (G::isInitializing) return;
-    qDebug() << CLASSFUNCTION;
+    if (G::isInitializing) {
+        G::popUp->showPopup("Please wait until initialization is completed.", 2000);
+        return;
+    }
+     if (!metaRead->isReading()) {
+         G::popUp->showPopup("Cannot show/hide film strip while reading metadata.", 2000);
+         return;
+     }
+//    qDebug() << CLASSFUNCTION;
     QString dock = thumbDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (thumbDock->isVisible()) dockToggle = SetInvisible;
@@ -542,7 +549,7 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
     if (sfIdx.isValid()/* && metaLoaded*/) {
         emit setValueSf(sfIdx, isCached, G::CachedRole);
         if (isCached) {
-            if (sfIdx.row() == currSfRow) {
+            if (sfIdx.row() == dm->currentRow) {
                 if (G::isFlowLogger) G::log(CLASSFUNCTION, fPath);
                 imageView->loadImage(fPath, CLASSFUNCTION);
                 updateClassification();

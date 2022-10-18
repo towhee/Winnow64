@@ -259,7 +259,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     }
 
     G::popUp->setProgressVisible(false);
-    G::popUp->hide();
+    G::popUp->end();
     G::isProcessingExportedImages = false;
     delete embellish;
 

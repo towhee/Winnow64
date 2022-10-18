@@ -49,7 +49,7 @@ void MW::loupeDisplay()
     /* show imageView or videoView in the central widget. This makes thumbView visible,
     and it updates the index to its previous state. The index update triggers
     fileSelectionChange */
-    bool isVideo = dm->sf->index(currSfRow, G::VideoColumn).data().toBool();
+    bool isVideo = dm->sf->index(dm->currentRow, G::VideoColumn).data().toBool();
     if (isVideo) {
         centralLayout->setCurrentIndex(VideoTab);
     }
@@ -61,15 +61,17 @@ void MW::loupeDisplay()
     /* recover thumbdock if it was visible before as gridView and full screen can
     hide the thumbdock */
     if(isNormalScreen && wasThumbDockVisible) {
-        thumbDock->setVisible(true);
-        thumbDockVisibleAction->setChecked(wasThumbDockVisible);
-        dm->select(currSfRow);
+        if (!metaRead->isReading()) {
+            thumbDock->setVisible(true);
+            thumbDockVisibleAction->setChecked(true);
+        }
+        dm->select(dm->currentRow);
     }
 
     if (thumbView->isVisible()) thumbView->setFocus();
     else imageView->setFocus();
 
-    QModelIndex idx = dm->sf->index(currSfRow, 0);
+    QModelIndex idx = dm->sf->index(dm->currentRow, 0);
     thumbView->setCurrentIndex(idx);
 
     // do not show classification badge if no folder or nothing selected
@@ -87,16 +89,16 @@ void MW::loupeDisplay()
     // sync scrolling between modes (loupe, grid and table)
     updateIconRange(-1);
     if (prevMode == "Table") {
-        if (tableView->isRowVisible(currSfRow)) scrollRow = currSfRow;
+        if (tableView->isRowVisible(dm->currentRow)) scrollRow = dm->currentRow;
         else scrollRow = tableView->midVisibleRow;
     }
     if (prevMode == "Grid") {
-        if(gridView->isRowVisible(currSfRow)) scrollRow = currSfRow;
+        if(gridView->isRowVisible(dm->currentRow)) scrollRow = dm->currentRow;
         else scrollRow = gridView->midVisibleCell;
     }
     if (prevMode == "Compare") {
-        qDebug() << CLASSFUNCTION << currSfRow;
-        scrollRow = currSfRow;
+        qDebug() << CLASSFUNCTION << dm->currentRow;
+        scrollRow = dm->currentRow;
     }
     G::ignoreScrollSignal = false;
     thumbView->scrollToRow(scrollRow, CLASSFUNCTION);
@@ -127,49 +129,6 @@ void MW::gridDisplay()
         return;
     }
 
-    // thumbDock->setVisible(false) causes MetaRead to crash when loading a new folder.
-    if (!G::allMetadataLoaded) metaRead->pause(true);
-
-    G::mode = "Grid";
-    asGridAction->setChecked(true);
-
-    // ?
-    updateStatus(true, "", CLASSFUNCTION);
-    // save selection as gridView is hidden and not synced
-    dm->saveSelection();
-
-    centralLayout->setCurrentIndex(GridTab);
-    prevCentralView = GridTab;
-    gridView->setCurrentIndex(dm->currentSfIdx);
-
-    // ?
-    // req'd after compare mode to re-enable extended selection
-//        gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    // selection has been lost while tableView and possibly thumbView were hidden
-    dm->recoverSelection();
-
-    G::ignoreScrollSignal = false;
-//        G::wait(100);
-    gridView->scrollToRow(dm->currentRow, CLASSFUNCTION);
-//        qApp->processEvents();
-    updateIconRange(-1);
-
-    if (metaRead->isPaused()) {
-        thumbDock->setVisible(false);
-        thumbDockVisibleAction->setChecked(false);
-    }
-
-    // ?
-    if (gridView->justifyMargin() > 3) gridView->rejustify();
-//        // if the zoom dialog was open then hide it as no image visible to zoom
-    if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(false);
-//        gridView->setFocus();
-    prevMode = "Grid";
-    gridDisplayFirstOpen = false;
-
-    metaRead->pause(false);
-    return;
-
     G::mode = "Grid";
     asGridAction->setChecked(true);
     updateStatus(true, "", CLASSFUNCTION);
@@ -179,14 +138,16 @@ void MW::gridDisplay()
     dm->saveSelection();
 
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
-    thumbDock->setVisible(false);
-    thumbDockVisibleAction->setChecked(false);
+    if (!metaRead->isReading()) {
+        thumbDock->setVisible(false);
+        thumbDockVisibleAction->setChecked(false);
+    }
 
     // show gridView in central widget
     centralLayout->setCurrentIndex(GridTab);
     prevCentralView = GridTab;
 
-    QModelIndex idx = dm->sf->index(currSfRow, 0);
+    QModelIndex idx = dm->sf->index(dm->currentRow, 0);
     gridView->setCurrentIndex(idx);
     thumbView->setCurrentIndex(idx);
 
@@ -204,11 +165,11 @@ void MW::gridDisplay()
 
     // sync scrolling between modes (loupe, grid and table)
     if (prevMode == "Table") {
-        if (tableView->isRowVisible(currSfRow)) scrollRow = currSfRow;
+        if (tableView->isRowVisible(dm->currentRow)) scrollRow = dm->currentRow;
         else scrollRow = tableView->midVisibleRow;
     }
     if (prevMode == "Loupe" /*&& thumbView->isVisible() == true*/) {
-        if (thumbView->isRowVisible(currSfRow)) scrollRow = currSfRow;
+        if (thumbView->isRowVisible(dm->currentRow)) scrollRow = dm->currentRow;
         else scrollRow = thumbView->midVisibleCell;
     }
 
@@ -262,7 +223,7 @@ void MW::tableDisplay()
        turn updates currentRow to the current index.
     */
     // get the current index from currentRow
-    QModelIndex idx = dm->sf->index(currSfRow, 0);
+    QModelIndex idx = dm->sf->index(dm->currentRow, 0);
     // set the current index for all views that could be visible
     tableView->setCurrentIndex(idx);
     thumbView->setCurrentIndex(idx);
@@ -273,7 +234,7 @@ void MW::tableDisplay()
         if(wasThumbDockVisible && !thumbDock->isVisible()) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);
-            dm->select(currSfRow);
+            dm->select(dm->currentRow);
         }
         if(!wasThumbDockVisible && thumbDock->isVisible()) {
             thumbDock->setVisible(false);
@@ -295,11 +256,11 @@ void MW::tableDisplay()
     // sync scrolling between modes (loupe, grid and table)
 //    updateMetadataCacheIconviewState(false);
     if (prevMode == "Grid") {
-        if (gridView->isRowVisible(currSfRow)) scrollRow = currSfRow;
+        if (gridView->isRowVisible(dm->currentRow)) scrollRow = dm->currentRow;
         else scrollRow = gridView->midVisibleCell;
     }
     if (prevMode == "Loupe") {
-        if(thumbView->isRowVisible(currSfRow)) scrollRow = currSfRow;
+        if(thumbView->isRowVisible(dm->currentRow)) scrollRow = dm->currentRow;
         else scrollRow = thumbView->midVisibleCell;
     }
     G::ignoreScrollSignal = false;
