@@ -1,119 +1,119 @@
 #include "Main/mainwindow.h"
 
-void MW::saveSelection()
-{
-/*
-    This function saves the current selection. This is required, even though the three views
-    (thumbView, gridView and tableViews) share the same selection model, because when a view
-    is hidden it loses the current index and selection, which has to be re-established each
-    time it is made visible.
-*/
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    selectedRows = selectionModel->selectedRows();
-    currentIdx = selectionModel->currentIndex();
-}
+//void MW::saveSelection()
+//{
+///*
+//    This function saves the current selection. This is required, even though the three views
+//    (thumbView, gridView and tableViews) share the same selection model, because when a view
+//    is hidden it loses the current index and selection, which has to be re-established each
+//    time it is made visible.
+//*/
+//    if (G::isLogger) G::log(CLASSFUNCTION);
+//    selectedRows = selectionModel->selectedRows();
+//    currentIdx = selectionModel->currentIndex();
+//}
 
-void MW::recoverSelection()
-{
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    QItemSelection selection;
-    QModelIndex idx;
-    foreach (idx, selectedRows)
-        selection.select(idx, idx);
-    selectionModel->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-}
+//void MW::recoverSelection()
+//{
+//    if (G::isLogger) G::log(CLASSFUNCTION);
+//    QItemSelection selection;
+//    QModelIndex idx;
+//    foreach (idx, selectedRows)
+//        selection.select(idx, idx);
+//    selectionModel->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+//}
 
-bool MW::getSelection(QStringList &list)
-{
-/*
-    Adds each image that is selected or picked as a file path to list. If there are picks and
-    a selection then a dialog offers the user a choice to use.
-*/
-    if (G::isLogger) G::log(CLASSFUNCTION);
+//bool MW::getSelection(QStringList &list)
+//{
+///*
+//    Adds each image that is selected or picked as a file path to list. If there are picks and
+//    a selection then a dialog offers the user a choice to use.
+//*/
+//    if (G::isLogger) G::log(CLASSFUNCTION);
 
-    bool usePicks = false;
+//    bool usePicks = false;
 
-    // nothing picked or selected
-    if (thumbView->isPick() && selectionModel->selectedRows().size() == 0) {
-        QMessageBox::information(this,
-            "Oops", "There are no picks or selected images to report.    ",
-            QMessageBox::Ok);
-        return false;
-    }
+//    // nothing picked or selected
+//    if (thumbView->isPick() && selectionModel->selectedRows().size() == 0) {
+//        QMessageBox::information(this,
+//            "Oops", "There are no picks or selected images to report.    ",
+//            QMessageBox::Ok);
+//        return false;
+//    }
 
-    // picks = selection
-    bool picksEqualsSelection = true;
-    for (int row = 0; row < dm->sf->rowCount(); row++) {
-        bool isPicked = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
-        bool isSelected = selectionModel->isSelected(dm->sf->index(row, 0));
-        if (isPicked != isSelected) {
-            picksEqualsSelection = false;
-            break;
-        }
-    }
+//    // picks = selection
+//    bool picksEqualsSelection = true;
+//    for (int row = 0; row < dm->sf->rowCount(); row++) {
+//        bool isPicked = dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
+//        bool isSelected = selectionModel->isSelected(dm->sf->index(row, 0));
+//        if (isPicked != isSelected) {
+//            picksEqualsSelection = false;
+//            break;
+//        }
+//    }
 
-    if (!picksEqualsSelection) {
-        // use picks or selected
-        if (thumbView->isPick() && selectionModel->selectedRows().size() > 1) {
-            SelectionOrPicksDlg::Option option;
-            SelectionOrPicksDlg dlg(option);
-            dlg.exec();
-            if (option == SelectionOrPicksDlg::Option::Cancel) return false;
-            if (option == SelectionOrPicksDlg::Option::Picks) usePicks = true;
-        }
-        else if (thumbView->isPick()) usePicks = true;
-    }
+//    if (!picksEqualsSelection) {
+//        // use picks or selected
+//        if (thumbView->isPick() && selectionModel->selectedRows().size() > 1) {
+//            SelectionOrPicksDlg::Option option;
+//            SelectionOrPicksDlg dlg(option);
+//            dlg.exec();
+//            if (option == SelectionOrPicksDlg::Option::Cancel) return false;
+//            if (option == SelectionOrPicksDlg::Option::Picks) usePicks = true;
+//        }
+//        else if (thumbView->isPick()) usePicks = true;
+//    }
 
-    if (usePicks) {
-        for (int row = 0; row < dm->sf->rowCount(); row++) {
-            if (dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true") {
-                QModelIndex idx = dm->sf->index(row, 0);
-                list << idx.data(G::PathRole).toString();
-            }
-        }
-    }
-    else {
-        QModelIndexList idxList = selectionModel->selectedRows();
-        for (int i = 0; i < idxList.size(); ++i) {
-            int row = idxList.at(i).row();
-            QModelIndex idx = dm->sf->index(row, 0);
-            list << idx.data(G::PathRole).toString();
-        }
-    }
+//    if (usePicks) {
+//        for (int row = 0; row < dm->sf->rowCount(); row++) {
+//            if (dm->sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true") {
+//                QModelIndex idx = dm->sf->index(row, 0);
+//                list << idx.data(G::PathRole).toString();
+//            }
+//        }
+//    }
+//    else {
+//        QModelIndexList idxList = selectionModel->selectedRows();
+//        for (int i = 0; i < idxList.size(); ++i) {
+//            int row = idxList.at(i).row();
+//            QModelIndex idx = dm->sf->index(row, 0);
+//            list << idx.data(G::PathRole).toString();
+//        }
+//    }
 
-    return true;
-}
+//    return true;
+//}
 
-QStringList MW::getSelectionOrPicks()
-{
-    if (G::isLogger) G::log(CLASSFUNCTION);
+//QStringList MW::getSelectionOrPicks()
+//{
+//    if (G::isLogger) G::log(CLASSFUNCTION);
 
-    QStringList picks;
+//    QStringList picks;
 
-    // build QStringList of picks
-    if (thumbView->isPick()) {
-        for (int row = 0; row < dm->sf->rowCount(); ++row) {
-            QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
-            QModelIndex idx = dm->sf->index(row, 0);
-            // only picks
-            if (pickIdx.data(Qt::EditRole).toString() == "true") {
-                picks << idx.data(G::PathRole).toString();
-            }
-        }
-    }
+//    // build QStringList of picks
+//    if (thumbView->isPick()) {
+//        for (int row = 0; row < dm->sf->rowCount(); ++row) {
+//            QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
+//            QModelIndex idx = dm->sf->index(row, 0);
+//            // only picks
+//            if (pickIdx.data(Qt::EditRole).toString() == "true") {
+//                picks << idx.data(G::PathRole).toString();
+//            }
+//        }
+//    }
 
-    // build QStringList of selected images
-    else if (selectionModel->selectedRows().size() > 0) {
-        QModelIndexList idxList = selectionModel->selectedRows();
-        for (int i = 0; i < idxList.size(); ++i) {
-            int row = idxList.at(i).row();
-            QModelIndex idx = dm->sf->index(row, 0);
-            picks << idx.data(G::PathRole).toString();
-        }
-    }
+//    // build QStringList of selected images
+//    else if (selectionModel->selectedRows().size() > 0) {
+//        QModelIndexList idxList = selectionModel->selectedRows();
+//        for (int i = 0; i < idxList.size(); ++i) {
+//            int row = idxList.at(i).row();
+//            QModelIndex idx = dm->sf->index(row, 0);
+//            picks << idx.data(G::PathRole).toString();
+//        }
+//    }
 
-    return picks;
-}
+//    return picks;
+//}
 
 void MW::togglePickUnlessRejected()
 {
@@ -125,7 +125,7 @@ void MW::togglePickUnlessRejected()
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     QModelIndex idx;
-    QModelIndexList idxList = selectionModel->selectedRows();
+    QModelIndexList idxList = dm->selectionModel->selectedRows();
     QString pickStatus;
     QString newPickStatus;
 
@@ -216,7 +216,7 @@ void MW::togglePick()
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     QModelIndex idx;
-    QModelIndexList idxList = selectionModel->selectedRows();
+    QModelIndexList idxList = dm->selectionModel->selectedRows();
     QString pickStatus;
 
     bool foundFalse = false;
@@ -390,7 +390,7 @@ qulonglong MW::memoryReqdForSelection()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     qulonglong memTot = 0;
-    QModelIndexList selection = selectionModel->selectedRows();
+    QModelIndexList selection = dm->selectionModel->selectedRows();
     for(int row = 0; row < selection.count(); row++) {
         QModelIndex idx = dm->sf->index(row, G::SizeColumn);
         memTot += idx.data(Qt::EditRole).toULongLong();

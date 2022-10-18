@@ -155,6 +155,7 @@ DataModel::DataModel(QWidget *parent,
 
     sf = new SortFilter(this, filters, combineRawJpg);
     sf->setSourceModel(this);
+    selectionModel = new QItemSelectionModel(sf);
 
     // root folder containing images to be added to the data model
     dir = new QDir();
@@ -550,13 +551,14 @@ bool DataModel::addFileData()
         }
 
         // Load folder progress
-        if (row % 100 == 0) {
-            QString s = QString::number(row) + " of " + QString::number(rowCount()) +
-                        " system file info loaded.";
-            emit centralMsg(s);    // rghmsg
-//            QCoreApplication::processEvents();
+        if (G::useLinearLoading) {
+            if (row % 100 == 0) {
+                QString s = QString::number(row) + " of " + QString::number(rowCount()) +
+                            " system file info loaded.";
+                emit centralMsg(s);    // rghmsg
+    //            QCoreApplication::processEvents();
+            }
         }
-
     }
     return endLoad(true);
 }
@@ -833,6 +835,10 @@ bool DataModel::readMetadataForItem(int row)
     QString fPath = index(row, 0).data(G::PathRole).toString();
 
     // load metadata
+     qDebug() << CLASSFUNCTION
+              << "Metadata loaded ="
+              << index(row, G::MetadataLoadedColumn).data().toBool()
+              << fPath;
     if (!index(row, G::MetadataLoadedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
 
@@ -1452,6 +1458,196 @@ int DataModel::modelRowFromProxyRow(int sfRow)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     return sf->mapToSource(sf->index(sfRow, 0)).row();
+}
+
+//void DataModel::selectNext()
+//{
+//    if (G::isLogger) G::log(CLASSFUNCTION);
+//    if (G::mode == "Compare") return;
+//    int row = currentRow + 1;
+//    if (row >= sf->rowCount()) return;
+//    select(row);
+//}
+
+//void DataModel::selectPrev()
+//{
+//    if (G::isLogger) G::log(CLASSFUNCTION);
+//    if (G::mode == "Compare") return;
+//    int row = currentRow - 1;
+//    if (row < 0) return;
+//    select(row);
+//}
+
+void DataModel::selectAll()
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    QItemSelection selection;
+    QModelIndex first = sf->index(0, 0);
+    QModelIndex last = sf->index(sf->rowCount() - 1, 0);
+    selection.select(first, last);
+    selectionModel->select(selection,
+                           QItemSelectionModel::Clear |
+                           QItemSelectionModel::Select |
+                           QItemSelectionModel::Current |
+                           QItemSelectionModel::Rows);
+}
+
+void DataModel::selectFirst()
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    select(sf->index(0, 0));
+}
+
+void DataModel::selectLast()
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    select(sf->index(sf->rowCount() - 1, 0));
+}
+
+void DataModel::select(QString &fPath)
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    select(proxyIndexFromPath(fPath));
+}
+
+void DataModel::select(int row)
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    select(sf->index(row,0));
+}
+
+void DataModel::select(QModelIndex idx)
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (idx.isValid()) {
+        selectionModel->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    }
+}
+
+void DataModel::saveSelection()
+{
+/*
+    This function saves the current selection. This is required, even though the three views
+    (thumbView, gridView and tableViews) share the same selection model, because when a view
+    is hidden it loses the current index and selection, which has to be re-established each
+    time it is made visible.
+*/
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    selectedRows = selectionModel->selectedRows();
+    currentSfIdx = selectionModel->currentIndex();
+}
+
+void DataModel::recoverSelection()
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    QItemSelection selection;
+    QModelIndex idx;
+    foreach (idx, selectedRows)
+        selection.select(idx, idx);
+    selectionModel->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+}
+
+bool DataModel::getSelection(QStringList &list)
+{
+/*
+    Adds each image that is selected or picked as a file path to list. If there are picks and
+    a selection then a dialog offers the user a choice to use.
+*/
+    if (G::isLogger) G::log(CLASSFUNCTION);
+
+    bool usePicks = false;
+
+    // nothing picked or selected
+    if (isPick() && selectionModel->selectedRows().size() == 0) {
+//        QMessageBox::information(mw, "Oops",
+//           "There are no picks or selected images to report.    ",
+//           QMessageBox::Ok);
+        G::popUp->showPopup("Oops.  There are no picks or selected images.", 2000);
+        return false;
+    }
+
+    // picks = selection
+    bool picksEqualsSelection = true;
+    for (int row = 0; row < sf->rowCount(); row++) {
+        bool isPicked = sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true";
+        bool isSelected = selectionModel->isSelected(sf->index(row, 0));
+        if (isPicked != isSelected) {
+            picksEqualsSelection = false;
+            break;
+        }
+    }
+
+    if (!picksEqualsSelection) {
+        // use picks or selected
+        if (isPick() && selectionModel->selectedRows().size() > 1) {
+            SelectionOrPicksDlg::Option option;
+            SelectionOrPicksDlg dlg(option);
+            dlg.exec();
+            if (option == SelectionOrPicksDlg::Option::Cancel) return false;
+            if (option == SelectionOrPicksDlg::Option::Picks) usePicks = true;
+        }
+        else if (isPick()) usePicks = true;
+    }
+
+    if (usePicks) {
+        for (int row = 0; row < sf->rowCount(); row++) {
+            if (sf->index(row, G::PickColumn).data(Qt::EditRole).toString() == "true") {
+                QModelIndex idx = sf->index(row, 0);
+                list << idx.data(G::PathRole).toString();
+            }
+        }
+    }
+    else {
+        QModelIndexList idxList = selectionModel->selectedRows();
+        for (int i = 0; i < idxList.size(); ++i) {
+            int row = idxList.at(i).row();
+            QModelIndex idx = sf->index(row, 0);
+            list << idx.data(G::PathRole).toString();
+        }
+    }
+
+    return true;
+}
+
+QStringList DataModel::getSelectionOrPicks()
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+
+    QStringList picks;
+
+    // build QStringList of picks
+    if (isPick()) {
+        for (int row = 0; row < sf->rowCount(); ++row) {
+            QModelIndex pickIdx = sf->index(row, G::PickColumn);
+            QModelIndex idx = sf->index(row, 0);
+            // only picks
+            if (pickIdx.data(Qt::EditRole).toString() == "true") {
+                picks << idx.data(G::PathRole).toString();
+            }
+        }
+    }
+
+    // build QStringList of selected images
+    else if (selectionModel->selectedRows().size() > 0) {
+        QModelIndexList idxList = selectionModel->selectedRows();
+        for (int i = 0; i < idxList.size(); ++i) {
+            int row = idxList.at(i).row();
+            QModelIndex idx = sf->index(row, 0);
+            picks << idx.data(G::PathRole).toString();
+        }
+    }
+
+    return picks;
+}
+
+bool DataModel::isPick()
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    for (int row = 0; row < sf->rowCount(); ++row) {
+        QModelIndex idx = sf->index(row, G::PickColumn);
+        if (idx.data(Qt::EditRole).toString() == "true") return true;
+    }
+    return false;
 }
 
 void DataModel::clearPicks()

@@ -188,7 +188,7 @@ void MW::setThumbDockVisibity()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
-    thumbView->selectThumb(currSfRow);
+    dm->select(currSfRow);
 }
 
 void MW::toggleFolderDockVisibility()
@@ -410,7 +410,7 @@ void MW::toggleReject()
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     QModelIndex idx;
-    QModelIndexList idxList = selectionModel->selectedRows();
+    QModelIndexList idxList = dm->selectionModel->selectedRows();
     QString pickStatus;
 
     // add multiple selection flag to pick history

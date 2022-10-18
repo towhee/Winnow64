@@ -98,6 +98,19 @@ bool MetaRead::stop()
     }
 }
 
+void MetaRead::pause(bool flag)
+{
+    if (G::isLogger || G::isFlowLogger) G::log("MetaRead::pause");
+    mutex.lock();
+    paused = flag;
+    mutex.unlock();
+}
+
+bool MetaRead::isPaused()
+{
+    return paused;
+}
+
 void MetaRead::initialize()
 {
     if (G::isLogger || G::isFlowLogger) G::log("MetaRead::initialize");
@@ -244,7 +257,7 @@ void MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     metadata->loadImageMetadata(fileInfo, true, true, false, true, "MetaRead::readMetadata");
     metadata->m.row = dmRow;
     metadata->m.dmInstance = dmInstance;
-    emit addToDatamodel(metadata->m);
+    emit addToDatamodel(metadata->m);       // blocked connection until metadata added to model
     emit addToImageCache(metadata->m);
     if (debugCaching) qDebug().noquote() << "MetaRead::readMetadata" << "done row =" << sfIdx.row();
 }
@@ -400,6 +413,11 @@ void MetaRead::read(/*Action action, */int startRow, QString src)
 
     while (i++ <= sfRowCount) {
         if (abort) break;
+
+        // wait for pause
+        while (paused) {
+
+        }
 
         // do something with row
         readRow(row);

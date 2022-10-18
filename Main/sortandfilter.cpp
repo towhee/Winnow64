@@ -115,7 +115,7 @@ void MW::filterChange(QString source)
     if (currSfRow == -1) currSfRow = 0;
     thumbView->iconViewDelegate->currentRow = currSfRow;
     gridView->iconViewDelegate->currentRow = currSfRow;
-    thumbView->selectThumb(currSfRow);
+    dm->select(currSfRow);
     QModelIndex idx = dm->sf->index(currSfRow, 0);
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currSfRow, 0).data(G::PathRole).toString();
@@ -477,7 +477,7 @@ void MW::sortChange(QString source)
     thumbView->iconViewDelegate->currentRow = currSfRow;
     gridView->iconViewDelegate->currentRow = currSfRow;
     QModelIndex idx = dm->sf->index(currSfRow, 0);
-    selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
+    dm->selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
     // the file path is used as an index in ImageView
     QString fPath = dm->sf->index(currSfRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache and EmbelProperties
@@ -586,7 +586,7 @@ void MW::setRating()
     if (s == "Rate4") rating = "4";
     if (s == "Rate5") rating = "5";
 
-    QModelIndexList selection = selectionModel->selectedRows();
+    QModelIndexList selection = dm->selectionModel->selectedRows();
     // check if selection is entirely rating already - if so set no rating
     bool isAlreadyRating = true;
     for (int i = 0; i < selection.count(); ++i) {
@@ -750,7 +750,7 @@ void MW::setColorClass()
     if (s == "Label4") colorClass = "Blue";
     if (s == "Label5") colorClass = "Purple";
 
-    QModelIndexList selection = selectionModel->selectedRows();
+    QModelIndexList selection = dm->selectionModel->selectedRows();
     // check if selection is entirely label color already - if so set no label
     bool isAlreadyLabel = true;
     for (int i = 0; i < selection.count(); ++i) {

@@ -1966,7 +1966,7 @@ void MW::enableSelectionDependentMenus()
     if (G::isLogger) G::log(CLASSFUNCTION);
     return;
 
-    if (selectionModel->selectedRows().count() > 0) {
+    if (dm->selectionModel->selectedRows().count() > 0) {
         openWithMenu->setEnabled(true);
         ingestAction->setEnabled(true);
         revealFileAction->setEnabled(true);

@@ -7,8 +7,8 @@
 #include "Cache/framedecoder.h"
 #include "progressbar.h"        // rgh used??
 #include "Main/global.h"
-//#include "Datamodel/HashMap.h"
-//#include "Datamodel/HashNode.h"
+#include "selectionorpicksdlg.h"
+#include <QMessageBox>
 #include <algorithm>                // req'd for sorting fileInfoList
 
 class SortFilter : public QSortFilterProxyModel
@@ -50,6 +50,7 @@ public:
     bool hasFolderChanged();
     void find(QString text);
     ImageMetadata imMetadata(QString fPath, bool updateInMetadata = false);
+    bool isPick();
     void clearPicks();
     void remove(QString fPath);
     void insert(QString fPath);
@@ -73,22 +74,31 @@ public:
     void setIconCaching(int sfRow, bool state);
     int rowFromPath(QString fPath);
     void refreshRowFromPath();
+    void saveSelection();
+    void recoverSelection();
+    bool getSelection(QStringList &list);
+    QStringList getSelectionOrPicks();
 
     QMutex mutex;
 
     SortFilter *sf;
+    QItemSelectionModel *selectionModel;
     QHash<QString, int> fPathRow;
     QStringList imageFilePathList;
     QDir::SortFlags thumbsSortFlags;
+
+    // current status
     int instance = 0;                   // used in setIcon to confirm model folder
     QString currentFolderPath;
     QString currentFilePath;            // used in caching to update image cache
     int currentRow;                     // used in caching to check if new image selected
-//    int firstVisibleRow;                // used to determine MetaRead priority queue
-//    int lastVisibleRow;                 // used to determine MetaRead priority queue
+    QModelIndex currentSfIdx;
+    QModelIndex currentDmIdx;
+    QModelIndexList selectedRows;
     int startIconRange;                 // used to determine MetaRead priority queue
     int endIconRange;                   // used to determine MetaRead priority queue
     int iconChunkSize;                  // max suggested number of icons to cache
+
     bool hasDupRawJpg;
     bool loadingModel = false;          // do not filter while loading datamodel
     bool basicFileInfoLoaded = false;   // not used. do not navigate until basic info loaded in datamodel
@@ -125,6 +135,17 @@ public slots:
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
+    void selectAll();
+    void selectFirst();
+    void selectLast();
+    void select(QModelIndex idx);
+    void select(int sfRow);
+    void select(QString &fPath);
+//    void selectNext();
+//    void selectPrev();
+//    void selectRandom();
+//    void selectNextPick();
+//    void selectPrevPick();
 
 private:
     QWidget *mw;

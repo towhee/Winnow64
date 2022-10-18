@@ -58,7 +58,7 @@
 #include "ingestdlg.h"
 #include "saveasdlg.h"
 #include "aboutdlg.h"
-#include "selectionorpicksdlg.h"
+//#include "selectionorpicksdlg.h"
 #include "Image/thumb.h"
 #include "preferencesdlg.h"
 #include "updateapp.h"
@@ -536,7 +536,7 @@ private slots:
     void tokenEditor();
 //    void toggleThumbWrap();
     void setIngested();
-    QStringList getSelectionOrPicks();
+//    QStringList getSelectionOrPicks();
     void togglePick();
     void togglePickMouseOver();
     void togglePickMouseOverItem(QModelIndex idx);
@@ -987,7 +987,7 @@ private:
     ImageCacheData *icd;
     IconCacheData *iconCacheData;
     BuildFilters *buildFilters;
-    QItemSelectionModel *selectionModel;
+//    QItemSelectionModel *selectionModel;
     Metadata *metadata;
     IconView *thumbView;
     IconView *gridView;
@@ -1033,8 +1033,8 @@ private:
     Stack *meanStack;
 
 //    QModelIndexList selectedImages;
-    QModelIndexList selectedRows;
-    QModelIndex currentIdx;
+//    QModelIndexList selectedRows;
+//    QModelIndex currentIdx;
     QStandardItemModel *imageModel;
 
     QHash<QString, bool> stopped;
@@ -1157,9 +1157,9 @@ private:
     void writeSettings();
     bool loadSettings();
     void loadShortcuts(bool defaultShortcuts);
-    void saveSelection();
-    void recoverSelection();
-    bool getSelection(QStringList &list);
+//    void saveSelection();
+//    void recoverSelection();
+//    bool getSelection(QStringList &list);
     void openLog();
     void closeLog();
     void clearLog();

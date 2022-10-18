@@ -91,10 +91,10 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     thumbMax.setHeight(G::maxIconSize);
     bool success = false;
     QFile imFile(fPath);
-     if (imFile.isOpen()) {
-         qDebug() << "Thumb::loadFromJpgData" << fPath << "is already open - return";
-         return false;
-     }
+    if (imFile.isOpen()) {
+     qDebug() << "Thumb::loadFromJpgData" << fPath << "is already open - return";
+     return false;
+    }
     int row = dm->fPathRow[fPath];
 
     // Check if metadata has been cached for this image

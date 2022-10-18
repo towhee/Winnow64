@@ -165,15 +165,12 @@ void MW::createSelectionModel()
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     // set a common selection model for all views
-    selectionModel = new QItemSelectionModel(dm->sf);
-    thumbView->setSelectionModel(selectionModel);
-    tableView->setSelectionModel(selectionModel);
-    gridView->setSelectionModel(selectionModel);
+//    selectionModel = new QItemSelectionModel(dm->sf);
+    thumbView->setSelectionModel(dm->selectionModel);
+    tableView->setSelectionModel(dm->selectionModel);
+    gridView->setSelectionModel(dm->selectionModel);
 
-    // whenever currentIndex changes do a file selection change
-
-//    connect(selectionModel, &QItemSelectionModel::currentChanged,
-//            this, &MW::fileSelectionChange);
+    // when selection changes update views
 }
 
 void MW::createFrameDecoder()
@@ -265,7 +262,7 @@ void MW::createMDCache()
     // message metadata reading completed
 //    connect(metaRead, &MetaRead::okayToStart, this, &MW::loadConcurrent);
     // add metadata to datamodel
-    connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
+    connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     // update icon in datamodel
 //    connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
     // cleanup icons in datamodel

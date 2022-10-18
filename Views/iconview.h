@@ -49,8 +49,8 @@ public:
     bool okToScroll();
 
     IconViewDelegate *iconViewDelegate;
-    void selectThumb(int row);
-    void selectThumb(QString &fPath);
+//    void selectThumb(int row);
+//    void selectThumb(QString &fPath);
     bool isThumb(int row);
     void reportThumb();                             //debugging thumb roles
     QString diagnostics();
@@ -115,7 +115,7 @@ public slots:
     void setThumbParameters(int _thumbWidth, int _thumbHeight,
              int _labelFontSize, bool _showThumbLabels, int _badgeSize);
     void reportThumbs();
-    void selectThumb(QModelIndex idx);
+    void select(QModelIndex idx);
     void selectNext();
     void selectPrev();
     void selectUp();

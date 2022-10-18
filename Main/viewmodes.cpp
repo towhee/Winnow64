@@ -44,7 +44,7 @@ void MW::loupeDisplay()
     updateIconRange(-1);
 
     // save selection as tableView is hidden and not synced
-    saveSelection();
+    dm->saveSelection();
 
     /* show imageView or videoView in the central widget. This makes thumbView visible,
     and it updates the index to its previous state. The index update triggers
@@ -63,7 +63,7 @@ void MW::loupeDisplay()
     if(isNormalScreen && wasThumbDockVisible) {
         thumbDock->setVisible(true);
         thumbDockVisibleAction->setChecked(wasThumbDockVisible);
-        thumbView->selectThumb(currSfRow);
+        dm->select(currSfRow);
     }
 
     if (thumbView->isVisible()) thumbView->setFocus();
@@ -79,7 +79,7 @@ void MW::loupeDisplay()
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // selection has been lost while tableView and possibly thumbView were hidden
-    recoverSelection();
+    dm->recoverSelection();
 
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
@@ -119,6 +119,7 @@ void MW::gridDisplay()
     painting itself.
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION << "1";
 
     if (embelProperties->templateId > 0) {
         QString msg = "Only loupe mode is available while the Embellish Editor is active.";
@@ -126,13 +127,48 @@ void MW::gridDisplay()
         return;
     }
 
-//    if (!G::allMetadataLoaded) {
-//        G::mode = "Grid";
-//        asGridAction->setChecked(true);
-//        centralLayout->setCurrentIndex(GridTab);
-//        prevCentralView = GridTab;
-//        return;
-//    }
+    // thumbDock->setVisible(false) causes MetaRead to crash when loading a new folder.
+    if (!G::allMetadataLoaded) metaRead->pause(true);
+
+    G::mode = "Grid";
+    asGridAction->setChecked(true);
+
+    // ?
+    updateStatus(true, "", CLASSFUNCTION);
+    // save selection as gridView is hidden and not synced
+    dm->saveSelection();
+
+    centralLayout->setCurrentIndex(GridTab);
+    prevCentralView = GridTab;
+    gridView->setCurrentIndex(dm->currentSfIdx);
+
+    // ?
+    // req'd after compare mode to re-enable extended selection
+//        gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    // selection has been lost while tableView and possibly thumbView were hidden
+    dm->recoverSelection();
+
+    G::ignoreScrollSignal = false;
+//        G::wait(100);
+    gridView->scrollToRow(dm->currentRow, CLASSFUNCTION);
+//        qApp->processEvents();
+    updateIconRange(-1);
+
+    if (metaRead->isPaused()) {
+        thumbDock->setVisible(false);
+        thumbDockVisibleAction->setChecked(false);
+    }
+
+    // ?
+    if (gridView->justifyMargin() > 3) gridView->rejustify();
+//        // if the zoom dialog was open then hide it as no image visible to zoom
+    if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(false);
+//        gridView->setFocus();
+    prevMode = "Grid";
+    gridDisplayFirstOpen = false;
+
+    metaRead->pause(false);
+    return;
 
     G::mode = "Grid";
     asGridAction->setChecked(true);
@@ -140,7 +176,7 @@ void MW::gridDisplay()
     updateIconRange(-1);
 
     // save selection as gridView is hidden and not synced
-    saveSelection();
+    dm->saveSelection();
 
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
     thumbDock->setVisible(false);
@@ -161,7 +197,7 @@ void MW::gridDisplay()
     gridView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // selection has been lost while tableView and possibly thumbView were hidden
-    recoverSelection();
+    dm->recoverSelection();
 
     // req'd to show thumbs first time
 //    gridView->setThumbParameters();
@@ -210,7 +246,7 @@ void MW::tableDisplay()
     updateIconRange(-1);
 
     // save selection as tableView is hidden and not synced
-    saveSelection();
+    dm->saveSelection();
 
     // change to the table view
     centralLayout->setCurrentIndex(TableTab);
@@ -237,7 +273,7 @@ void MW::tableDisplay()
         if(wasThumbDockVisible && !thumbDock->isVisible()) {
             thumbDock->setVisible(true);
             thumbDockVisibleAction->setChecked(wasThumbDockVisible);
-            thumbView->selectThumb(currSfRow);
+            dm->select(currSfRow);
         }
         if(!wasThumbDockVisible && thumbDock->isVisible()) {
             thumbDock->setVisible(false);
@@ -251,7 +287,7 @@ void MW::tableDisplay()
     thumbView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     // selection has been lost while tableView and possibly thumbView were hidden
-    recoverSelection();
+    dm->recoverSelection();
 
     // req'd to show thumbs first time
     thumbView->setThumbParameters();
@@ -292,9 +328,9 @@ void MW::compareDisplay()
         return;
     }
 
-    int n = selectionModel->selectedRows().count();
+    int n = dm->selectionModel->selectedRows().count();
     for (int i = 0; i < n; ++i) {
-        QModelIndex idx = selectionModel->selectedRows().at(i);
+        QModelIndex idx = dm->selectionModel->selectedRows().at(i);
         if (dm->sf->index(idx.row(), G::VideoColumn).data().toBool()) {
             G::popUp->showPopup(
                 "Compare mode is not available if a video is part of "
@@ -327,11 +363,11 @@ void MW::compareDisplay()
 
     G::mode = "Compare";
     // centralLayout->setCurrentIndex clears selectionModel
-    saveSelection();
+    dm->saveSelection();
     centralLayout->setCurrentIndex(CompareTab);
-    recoverSelection();
+    dm->recoverSelection();
     prevCentralView = CompareTab;
-    compareImages->load(centralWidget->size(), isRatingBadgeVisible, selectionModel);
+    compareImages->load(centralWidget->size(), isRatingBadgeVisible, dm->selectionModel);
 
     // restore thumbdock to previous state
     thumbDock->setVisible(wasThumbDockVisible);

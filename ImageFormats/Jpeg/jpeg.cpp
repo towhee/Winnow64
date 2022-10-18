@@ -803,11 +803,14 @@ void Jpeg::decodeScan(QFile &file, QImage &image)
     MetadataParameters p;
     p.file.setFileName(file.fileName());
     if (p.file.isOpen()) p.file.close();
+//    qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
     if (p.file.open(QIODevice::ReadOnly)) {
+//        qDebug() << CLASSFUNCTION << "Open " << p.file.fileName();
         bool isBigEnd = true;
         if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
             G::error(CLASSFUNCTION, file.fileName(), "JPG does not start with 0xFFD8.");
             p.file.close();
+//            qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
             return;
         }
         p.offset = static_cast<quint32>(p.file.pos());
@@ -817,6 +820,7 @@ void Jpeg::decodeScan(QFile &file, QImage &image)
         p.file.seek(0);
         QByteArray ba = p.file.readAll();
         p.file.close();
+//        qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
         decodeScan(ba, image);
     }
 }

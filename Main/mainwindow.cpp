@@ -1548,7 +1548,7 @@ void MW::folderSelectionChange()
             QFileInfo info(dragDropFilePath);
             QString fileType = info.suffix().toLower();
             if (metadata->supportedFormats.contains(fileType)) {
-                thumbView->selectThumb(dragDropFilePath);
+                dm->select(dragDropFilePath);
                 dragFileSelected = true;
             }
         }
@@ -1556,7 +1556,7 @@ void MW::folderSelectionChange()
     }
 
 //    if (!dragFileSelected) {
-//        thumbView->selectThumb(0);
+//        dm->selectThumb(0);
 //    }
 
     // Load folder progress
@@ -1643,7 +1643,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 
     // if starting program, set first image to display
     if (current.row() == -1) {
-        thumbView->selectThumb(0);
+        dm->select(0);
         return;
     }
 
@@ -1670,11 +1670,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 
     // record current proxy row (dm->sf) as it is used to sync everything
     currSfRow = current.row();
+    dm->currentRow = currSfRow;
     // also record in datamodel so can be accessed by MdCache
     // proxy index for col 0
     currSfIdx = dm->sf->index(currSfRow, 0);
-    dm->currentRow = currSfRow;
+    dm->currentSfIdx = currSfIdx;
     currDmIdx = dm->sf->mapToSource(currSfIdx);
+    dm->currentDmIdx = currDmIdx;
     // the file path is used as an index in ImageView
     QString fPath = currSfIdx.data(G::PathRole).toString();
     // also update datamodel, used in MdCache
@@ -1707,8 +1709,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         if (tableView->isVisible()) tableView->scrollToRow(currSfRow, __FUNCTION__);
     }
 //    if (previous.isValid()) {
-        thumbView->repaint();
-        gridView->repaint();
+        if (thumbView->isVisible()) thumbView->repaint();
+        if (gridView->isVisible()) gridView->repaint();
 //    }
 
     // reset table, grid or thumb item clicked
@@ -1822,8 +1824,9 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     if (src == "handleDropOnCentralView") {
         if (folder == G::currRootFolder) {
             if (dm->proxyIndexFromPath(fPath).isValid()) {
-                thumbView->selectThumb(fPath);
-                gridView->selectThumb(fPath);
+                dm->select(fPath);
+//                thumbView->selectThumb(fPath);
+//                gridView->selectThumb(fPath);
                 currSfIdx = dm->proxyIndexFromPath(fPath);
                 fileSelectionChange(currSfIdx, currSfIdx, CLASSFUNCTION);
             }
@@ -1847,7 +1850,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     if (centralLayout->currentIndex() == CompareTab) {
         centralLayout->setCurrentIndex(LoupeTab);
     }
-    thumbView->selectionModel()->clear();
+    dm->selectionModel->clear();
 
     // path to image, used in loadImageCacheForNewFolder to select image
     folderAndFileChangePath = fPath;
@@ -1949,7 +1952,7 @@ void MW::reset(QString src) {
     progressLabel->setVisible(false);
     filterStatusLabel->setVisible(false);
     updateClassification();
-    selectionModel->clear();
+    dm->selectionModel->clear();
     thumbView->setUpdatesEnabled(false);
     gridView->setUpdatesEnabled(false);
     tableView->setUpdatesEnabled(false);
@@ -2146,17 +2149,17 @@ void MW::loadConcurrentMetaDone()
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
 
-//    // hide the thumbDock in grid mode as we don't need to see thumbs twice
-//    if (G::mode == "Grid") {
-//        thumbDock->setVisible(false);
-//        thumbDockVisibleAction->setChecked(false);
-//    }
+    // hide the thumbDock in grid mode as we don't need to see thumbs twice
+    if (G::mode == "Grid") {
+        thumbDock->setVisible(false);
+        thumbDockVisibleAction->setChecked(false);
+    }
 
-//    // show thumbDock in loupe mode
-//    if (G::mode == "Loupe" && wasThumbDockVisible) {
-//        thumbDock->setVisible(true);
-//        thumbDockVisibleAction->setChecked(true);
-//    }
+    // show thumbDock in loupe mode
+    if (G::mode == "Loupe" && wasThumbDockVisible) {
+        thumbDock->setVisible(true);
+        thumbDockVisibleAction->setChecked(true);
+    }
 
     // double check all visible icons loaded, depending on best fit
     updateIconBestFit();
@@ -2210,15 +2213,17 @@ void MW::loadConcurrentStartImageCache(QString src)
         folderAndFileChangePath = "";
         if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
             qDebug() << CLASSFUNCTION << "valid folderAndFileChangePath";
-            if (thumbView->isVisible()) thumbView->selectThumb(fPath);
-            if (gridView->isVisible()) gridView->selectThumb(fPath);
+//            if (thumbView->isVisible()) thumbView->selectThumb(fPath);
+//            if (gridView->isVisible()) gridView->selectThumb(fPath);
 
-            gridView->selectThumb(fPath);
+//            gridView->selectThumb(fPath);
+            dm->select(fPath);
             currSfIdx = dm->proxyIndexFromPath(fPath);
         }
         else {
-            thumbView->selectFirst();
-            gridView->selectFirst();
+//            thumbView->selectFirst();
+//            gridView->selectFirst();
+            dm->selectFirst();
             currSfIdx = dm->sf->index(0,0);
         }
 
@@ -2338,12 +2343,12 @@ void MW::loadImageCacheForNewFolder()
     QString fPath = folderAndFileChangePath;
     folderAndFileChangePath = "";
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
-        thumbView->selectThumb(fPath);
+        dm->select(fPath);
 //        gridView->selectThumb(fPath);
         currSfIdx = dm->proxyIndexFromPath(fPath);
     }
     else {
-        thumbView->selectFirst();
+        dm->selectFirst();
 //        gridView->selectFirst();
         currSfIdx = dm->sf->index(0,0);
     }
@@ -2972,7 +2977,8 @@ void MW::setImageCacheParameters()
     imageCacheThread->updateImageCacheParam(cacheNetMB, cacheMinMB,
              isShowCacheProgressBar, cacheWtAhead);
 
-    QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
+    QString fPath = dm->currentFilePath;
+//    QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     // set position in image cache
     if (fPath.length())
         imageCacheThread->setCurrentPosition(fPath, CLASSFUNCTION);
@@ -3019,8 +3025,8 @@ void MW::showHiddenFiles()
 void MW::thumbsEnlarge()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    if (G::mode == "Grid") gridView->justify(IconView::JustifyAction::Enlarge);
-    else {
+    if (gridView->isVisible()) gridView->justify(IconView::JustifyAction::Enlarge);
+    if (thumbView->isVisible())  {
         if (thumbView->isWrapping()) thumbView->justify(IconView::JustifyAction::Enlarge);
         else thumbView->thumbsEnlarge();
     }
@@ -3029,17 +3035,19 @@ void MW::thumbsEnlarge()
     numberIconsVisibleChange();
 
     // if thumbView visible and zoomed in imageView then may need to redo the zoomFrame
-    QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
-    if (idx.isValid()) {
-        thumbView->zoomCursor(idx, CLASSFUNCTION, /*forceUpdate=*/true);
+    if (thumbView->isVisible())  {
+        QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
+        if (idx.isValid()) {
+            thumbView->zoomCursor(idx, CLASSFUNCTION, /*forceUpdate=*/true);
+        }
     }
 }
 
 void MW::thumbsShrink()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    if (G::mode == "Grid") gridView->justify(IconView::JustifyAction::Shrink);
-    else {
+    if (gridView->isVisible()) gridView->justify(IconView::JustifyAction::Shrink);
+    if (thumbView->isVisible()) {
         if (thumbView->isWrapping()) thumbView->justify(IconView::JustifyAction::Shrink);
         else thumbView->thumbsShrink();
     }
@@ -3048,9 +3056,11 @@ void MW::thumbsShrink()
     numberIconsVisibleChange();
 
     // if thumbView visible and zoomed in imageView then may need to redo the zoomFrame
-    QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
-    if (idx.isValid()) {
-        thumbView->zoomCursor(idx, CLASSFUNCTION, /*forceUpdate=*/true);
+    if (thumbView->isVisible())  {
+        QModelIndex idx = thumbView->indexAt(thumbView->mapFromGlobal(QCursor::pos()));
+        if (idx.isValid()) {
+            thumbView->zoomCursor(idx, CLASSFUNCTION, /*forceUpdate=*/true);
+        }
     }
 }
 
@@ -3229,7 +3239,7 @@ void MW::runExternalApp()
     QString appExecutable = appInfo.fileName();
 
 //    app = externalApps[((QAction*) sender())->text()];
-    QModelIndexList selectedIdxList = selectionModel->selectedRows();
+    QModelIndexList selectedIdxList = dm->selectionModel->selectedRows();
 
     /*
     app = "/Applications/Adobe Photoshop CC 2018/Adobe Photoshop CC 2018.app/Contents/MacOS/Adobe Photoshop CC 2018";
@@ -3264,7 +3274,7 @@ void MW::runExternalApp()
         if (ret == QMessageBox::Cancel) return;
     }
 
-    if (!getSelection(arguments)) return;
+    if (!dm->getSelection(arguments)) return;
     QString folderPath;
 //    QFileInfo fInfo = arguments.at(0);    // qt6.2
     QFileInfo fInfo;                        // qt6.2
@@ -3807,7 +3817,7 @@ void MW::toggleFullScreen()
 void MW::selectAllThumbs()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    thumbView->selectAll();
+    dm->selectAll();
 }
 
 void MW::toggleZoomDlg()
@@ -3974,7 +3984,7 @@ void MW::setRotation(int degrees)
     imageView->rotateImage(degrees);
 
     // iterate selection
-    QModelIndexList selection = selectionModel->selectedRows();
+    QModelIndexList selection = dm->selectionModel->selectedRows();
     for (int i = 0; i < selection.count(); ++i) {
         // update rotation amount in the data model
         int row = selection.at(i).row();
@@ -4939,8 +4949,8 @@ void MW::tokenEditor()
     if (G::isLogger) G::log(CLASSFUNCTION);
     infoString->editTemplates();
     // display new info
-    QModelIndex idx = thumbView->currentIndex();
-    QString fPath = thumbView->getCurrentFilePath();
+    QModelIndex idx = dm->currentSfIdx;  //thumbView->currentIndex();
+    QString fPath = dm->currentFilePath;  //thumbView->getCurrentFilePath();
     QString sel = infoString->getCurrentInfoTemplate();
     QString info = infoString->parseTokenString(infoString->infoTemplates[sel],
                                         fPath, idx);
@@ -4958,7 +4968,7 @@ void MW::exportEmbelFromAction(QAction *embelExportAction)
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
 
-    QStringList picks = getSelectionOrPicks();
+    QStringList picks = dm->getSelectionOrPicks();
 
     if (picks.size() == 0)  {
         QMessageBox::information(this,
@@ -4988,7 +4998,7 @@ void MW::exportEmbel()
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
 
-    QStringList picks = getSelectionOrPicks();
+    QStringList picks = dm->getSelectionOrPicks();
 
     if (picks.size() == 0)  {
         QMessageBox::information(this,
@@ -5299,7 +5309,7 @@ void MW::ejectUsbFromContextMenu()
 void MW::insertThumbnails()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    QModelIndexList selection = selectionModel->selectedRows();
+    QModelIndexList selection = dm->selectionModel->selectedRows();
     thumb->insertThumbnails(selection);
 }
 
@@ -5326,7 +5336,7 @@ void MW::metadataChanged(QStandardItem* item)
      if (useInfoView) if (par != infoView->tagInfoIdx) return;
 
     QString tagValue = item->data(Qt::DisplayRole).toString();
-    QModelIndexList selection = selectionModel->selectedRows();
+    QModelIndexList selection = dm->selectionModel->selectedRows();
     int row = item->index().row();
     QModelIndex tagIdx = infoView->ok->index(row, 0, par);
     QString tagName = tagIdx.data().toString();
@@ -5520,14 +5530,14 @@ void MW::refreshCurrentAfterReload()
 //             */
     thumbView->iconViewDelegate->currentRow = sfRow;
     gridView->iconViewDelegate->currentRow = sfRow;
-    thumbView->selectThumb(sfRow);
+    dm->select(sfRow);
     isRefreshingDM = false;
 }
 
 void MW::saveAsFile()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    QModelIndexList selection = selectionModel->selectedRows();
+    QModelIndexList selection = dm->selectionModel->selectedRows();
     if (selection.length() == 0) {
         G::popUp->showPopup("No images selected for save as operation", 1500);
         return;
@@ -5574,7 +5584,7 @@ void MW::deleteSelectedFiles()
         if (ret == QMessageBox::Cancel) return;
     }
 
-    QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+    QModelIndexList selection = dm->selectionModel->selectedRows();
     if (selection.isEmpty()) return;
 
     // convert selection to stringlist
@@ -5773,7 +5783,7 @@ void MW::openUsbFolder()
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
         selectionChange();
-        thumbView->selectThumb(0);
+        dm->select(0);
         if (!wasSubFoldersChecked) subFoldersAction->setChecked(true);
         updateStatusBar();
     }
@@ -5966,19 +5976,20 @@ void MW::generateMeanStack()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     QStringList selection;
-    if (!getSelection(selection)) return;
+    if (!dm->getSelection(selection)) return;
     meanStack = new Stack(selection, dm, metadata, icd);
     connect(this, &MW::abortStackOperation, meanStack, &Stack::stop);
     QString fPath = meanStack->mean();
     if (fPath != "") {
         dm->insert(fPath);
         imageCacheThread->rebuildImageCacheParameters(fPath, CLASSFUNCTION);
-        if (G::mode == "Grid") {
-            gridView->selectThumb(fPath);
-        }
-        else {
-            thumbView->selectThumb(fPath);
-        }
+        dm->select(fPath);
+//        if (G::mode == "Grid") {
+//            gridView->selectThumb(fPath);
+//        }
+//        else {
+//            thumbView->selectThumb(fPath);
+//        }
     }
 }
 
@@ -5987,7 +5998,7 @@ void MW::reportHueCount()
     if (G::isLogger) G::log(CLASSFUNCTION);
 
     QStringList selection;
-    if (!getSelection(selection)) return;
+    if (!dm->getSelection(selection)) return;
     ColorAnalysis hueReport;
     connect(this, &MW::abortHueReport, &hueReport, &ColorAnalysis::abortHueReport);
     hueReport.process(selection);
