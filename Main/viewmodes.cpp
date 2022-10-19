@@ -141,17 +141,19 @@ void MW::gridDisplay()
     bool interrupted = false;
     if (metaReadThread->isRunning()) {
         interruptedRow = metaReadThread->interrupt();
+        qDebug() << CLASSFUNCTION << "interruptedRow =" << interruptedRow;
         interrupted = true;
     }
 
-    thumbDock->setVisible(false);
-    thumbDockVisibleAction->setChecked(false);
+//    thumbDock->setVisible(false);
+//    thumbDockVisibleAction->setChecked(false);
 
-//    // hide the thumbDock in grid mode as we don't need to see thumbs twice
-//    if (!metaReadThread->isRunning()) {
-//        thumbDock->setVisible(false);
-//        thumbDockVisibleAction->setChecked(false);
-//    }
+    // hide the thumbDock in grid mode as we don't need to see thumbs twice
+    if (!metaReadThread->isRunning()) {
+        qDebug() << CLASSFUNCTION << "Hide the thumbdock";
+        thumbDock->setVisible(false);
+        thumbDockVisibleAction->setChecked(false);
+    }
 
     // show gridView in central widget
     centralLayout->setCurrentIndex(GridTab);
@@ -199,7 +201,7 @@ void MW::gridDisplay()
     prevMode = "Grid";
     gridDisplayFirstOpen = false;
 
-    if (interrupted) metaReadThread->setCurrentRow(interruptedRow, "MW::gridDisplay");
+//    if (interrupted) metaReadThread->setCurrentRow(interruptedRow, "MW::gridDisplay");
 }
 
 void MW::tableDisplay()
