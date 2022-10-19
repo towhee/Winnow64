@@ -385,7 +385,7 @@ signals:
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void setValuePath(QString fPath, int col, QVariant value, int role);
     void restartMetaRead(int newRow);
-    void pauseMetaRead(bool flag);
+    void interruptMetaRead(bool flag);
     void startMetaRead(int sfRow, QString src);
     void startIconCache(int sfRow, QString src);
     void setImageCachePosition(QString, QString);
