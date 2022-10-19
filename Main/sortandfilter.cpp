@@ -110,15 +110,15 @@ void MW::filterChange(QString source)
     }
 
     // get the current selected item
-    dm->currentRow = dm->sf->mapFromSource(currDmIdx).row();
+    dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
     // check if still in filtered set, if not select first item in filtered set
-    if (dm->currentRow == -1) dm->currentRow = 0;
-    thumbView->iconViewDelegate->currentRow = dm->currentRow;
-    gridView->iconViewDelegate->currentRow = dm->currentRow;
-    dm->select(dm->currentRow);
-    QModelIndex idx = dm->sf->index(dm->currentRow, 0);
+    if (dm->currentSfRow == -1) dm->currentSfRow = 0;
+    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
+    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+    dm->select(dm->currentSfRow);
+    QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(dm->currentRow, 0).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache
     dm->currentFilePath = fPath;
 
@@ -471,15 +471,15 @@ void MW::sortChange(QString source)
 //    if (!G::allMetadataLoaded) return;
 
     // get the current selected item
-    if (G::isNewFolderLoaded) dm->currentRow = dm->sf->mapFromSource(currDmIdx).row();
-    else dm->currentRow = 0;
+    if (G::isNewFolderLoaded) dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    else dm->currentSfRow = 0;
 
-    thumbView->iconViewDelegate->currentRow = dm->currentRow;
-    gridView->iconViewDelegate->currentRow = dm->currentRow;
-    QModelIndex idx = dm->sf->index(dm->currentRow, 0);
+    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
+    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
+    QModelIndex idx = dm->sf->index(dm->currentSfRow, 0);
     dm->selectionModel->setCurrentIndex(idx, QItemSelectionModel::Current);
     // the file path is used as an index in ImageView
-    QString fPath = dm->sf->index(dm->currentRow, 0).data(G::PathRole).toString();
+    QString fPath = dm->sf->index(dm->currentSfRow, 0).data(G::PathRole).toString();
     // also update datamodel, used in MdCache and EmbelProperties
     dm->currentFilePath = fPath;
 

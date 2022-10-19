@@ -222,7 +222,7 @@ void MW::createMDCache()
     connect(metadataCacheScrollTimer, &QTimer::timeout, this, &MW::loadMetadataChunk);
 
     // signal to stop MetaCache
-    connect(this, &MW::abortImageCache, metadataCacheThread, &MetadataCache::stop);
+    connect(this, &MW::abortMDCache, metadataCacheThread, &MetadataCache::stop);
     // signal stopped when abort completed
     connect(metadataCacheThread, &MetadataCache::stopped, this, &MW::reset);
     // update icon in datamodel
@@ -239,49 +239,41 @@ void MW::createMDCache()
 
 
     // MetaRead
-    metaRead = new MetaRead(this, dm, metadata, frameDecoder);
-    metaRead->moveToThread(&metaReadThread);
+    metaReadThread = new MetaRead(this, dm, metadata, frameDecoder);
+//    metaRead = new MetaRead(this, dm, metadata, frameDecoder);
+//    metaRead->moveToThread(&metaReadThread);
 
-//    metaRead->iconChunkSize = 200;
+    metaReadThread->iconChunkSize = 2000;
     if (setting->contains("iconChunkSize")) {
         dm->iconChunkSize = setting->value("iconChunkSize").toInt();
-        metaRead->iconChunkSize = setting->value("iconChunkSize").toInt();
+        metaReadThread->iconChunkSize = setting->value("iconChunkSize").toInt();
+//        metaRead->iconChunkSize = setting->value("iconChunkSize").toInt();
     }
     else {
         dm->iconChunkSize = 3000;
     }
 
-    // delete thread when finished
-    connect(&metaReadThread, &QThread::finished, metaRead, &QObject::deleteLater);
+//    // delete thread when finished
+//    connect(metaReadThread, &QThread::finished, metaReadThread, &QObject::deleteLater);
     // signal to stop MetaRead
-    connect(this, &MW::abortImageCache, metaRead, &MetaRead::stop);
+    connect(this, &MW::abortMetaRead, metaReadThread, &MetaRead::stop);
     // signal stopped when abort completed
-    connect(metaRead, &MetaRead::stopped, this, &MW::reset);
+    connect(metaReadThread, &MetaRead::stopped, this, &MW::reset);
     // read metadata
-    connect(this, &MW::startMetaRead, metaRead, &MetaRead::start);
-    // message metadata reading completed
-//    connect(metaRead, &MetaRead::okayToStart, this, &MW::loadConcurrent);
+    connect(this, &MW::startMetaRead, metaReadThread, &MetaRead::setCurrentRow);
     // add metadata to datamodel
-    connect(metaRead, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
-    // update icon in datamodel
-//    connect(metaRead, &MetaRead::setIcon, dm, &DataModel::setIcon, Qt::QueuedConnection);
-    // cleanup icons in datamodel
-//    connect(metaRead, &MetaRead::clearOutOfRangeIcons,
-//            dm, &DataModel::clearOutOfRangeIcons, Qt::QueuedConnection);
-//    // message metadata reading stopped (for new folder)
-//    connect(metaRead, &MetaRead::stopped, this, &MW::stopAndClearAllAfterMetaReadStopped);
+    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
     // message metadata reading completed
-    connect(metaRead, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
+    connect(metaReadThread, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
-    connect(metaRead, &MetaRead::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
+    connect(metaReadThread, &MetaRead::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
     // check icons visible is correct
-    connect(metaRead, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit/*,
-            Qt::BlockingQueuedConnection*/);
-    connect(metaRead, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
-    // pause waits until isRunning == false
-    connect(this, &MW::pauseMetaRead, metaRead, &MetaRead::pause, Qt::BlockingQueuedConnection);
+    connect(metaReadThread, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
+    connect(metaReadThread, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
+//    // pause waits until isRunning == false
+//    connect(this, &MW::pauseMetaRead, metaReadThread, &MetaRead::pause, Qt::BlockingQueuedConnection);
 
-    metaReadThread.start();
+//    metaReadThread.start();
 }
 
 void MW::createImageCache()
@@ -345,7 +337,7 @@ void MW::createImageCache()
     // concurrent load
     // add to image cache list
     // signal to ImageCache new image selection req'd?
-    connect(metaRead, &MetaRead::addToImageCache,
+    connect(metaReadThread, &MetaRead::addToImageCache,
             imageCacheThread, &ImageCache::addCacheItemImageMetadata);
     // signal ImageCache refresh
     connect(this, &MW::refreshImageCache, imageCacheThread, &ImageCache::refreshImageCache);

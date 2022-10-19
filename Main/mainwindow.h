@@ -311,10 +311,8 @@ public:
 
     // mode change
     QString prevMode;
-//    int currSfRow;             // the current row in MW::fileSelection
     int scrollRow;              // the row to scroll to when change mode
-    QModelIndex currSfIdx;   // the current proxy index in MW::fileSelection
-    QModelIndex currDmIdx;   // the datamodel index for the current proxy index
+//    QModelIndex currDmIdx;   // the datamodel index for the current proxy index
     bool modeChangeJustHappened;
     bool gridDisplayFirstOpen = true;
     bool justUpdatedBestFit;
@@ -1005,9 +1003,7 @@ private:
     QHeaderView *headerView;
     CompareImages *compareImages;
 
-    QThread metaReadThread;
-    QThread iconCacheThread;
-    MetaRead *metaRead = nullptr;
+    MetaRead *metaReadThread;
     MetadataCache *metadataCacheThread;
     ImageCache *imageCacheThread;
     FrameDecoder *frameDecoder;

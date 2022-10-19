@@ -1,5 +1,7 @@
 BUGS / TO DO
-- Not close while reading large foldeer
+- Extract frame from video
+- Update use of current image for video frame
+- App not closing while reading large foldeer
 - IPhone image/video creation date
 - PNG no image or icon (-test1)
 - Record mac display space for close/open app location
