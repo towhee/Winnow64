@@ -1699,12 +1699,12 @@ QString DataModel::diagnostics()
     rpt << "\n";
     rpt << "\n" << G::sj("currentFolderPath", 27) << G::s(currentFolderPath);
     rpt << "\n" << G::sj("currentFilePath", 27) << G::s(currentFilePath);
-    rpt << "\n" << G::sj("currentRow", 27) << G::s(currentRow);
-    rpt << "\n" << G::sj("firstVisibleRow", 27) << G::s(currentRow);
-    rpt << "\n" << G::sj("lastVisibleRow", 27) << G::s(currentRow);
-    rpt << "\n" << G::sj("startIconRange", 27) << G::s(currentRow);
-    rpt << "\n" << G::sj("endIconRange", 27) << G::s(currentRow);
-    rpt << "\n" << G::sj("iconChunkSize", 27) << G::s(currentRow);
+    rpt << "\n" << G::sj("currentRow", 27) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("firstVisibleRow", 27) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("lastVisibleRow", 27) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("startIconRange", 27) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("endIconRange", 27) << G::s(currentSfRow);
+    rpt << "\n" << G::sj("iconChunkSize", 27) << G::s(currentSfRow);
     rpt << "\n" << G::sj("hasDupRawJpg", 27) << G::s(hasDupRawJpg);
     rpt << "\n" << G::sj("loadingModel", 27) << G::s(hasDupRawJpg);
     rpt << "\n" << G::sj("basicFileInfoLoaded", 27) << G::s(hasDupRawJpg);
@@ -1736,7 +1736,7 @@ QString DataModel::diagnosticsForCurrentRow()
 //    rpt << "\n" << G::sj("", 25)"timeToQuit = " << G::s(timeToQuit);
 //    rpt << "\n" << G::sj("", 25)"imageCount = " << G::s(imageCount);
 //    rpt << "\n" << G::sj("", 25)"countInterval = " << G::s(countInterval);
-    getDiagnosticsForRow(currentRow, rpt);
+    getDiagnosticsForRow(currentSfRow, rpt);
     rpt << "\n\n" ;
     return reportString;
 }

@@ -74,7 +74,7 @@ void MW::nextSlide()
         thumbView->selectRandom();
     }
     else {
-        if (dm->currentRow == dm->sf->rowCount() - 1) {
+        if (dm->currentSfRow == dm->sf->rowCount() - 1) {
             if (isSlideShowWrap) thumbView->selectFirst();
             else slideShow();
         }

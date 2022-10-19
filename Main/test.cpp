@@ -29,8 +29,8 @@ void MW::traverseFolderStressTest(int ms, int duration)
         if (duration && t.elapsed() > duration) return;
         G::wait(ms);
         ++slideCount;
-        if (isForward && dm->currentRow == dm->sf->rowCount() - 1) isForward = false;
-        if (!isForward && dm->currentRow == 0) isForward = true;
+        if (isForward && dm->currentSfRow == dm->sf->rowCount() - 1) isForward = false;
+        if (!isForward && dm->currentSfRow == 0) isForward = true;
         if (isForward) keyRight();
         else keyLeft();
         qApp->processEvents();
@@ -119,6 +119,8 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
+    emit abortMetaRead();
+    return;
 //    if (thumbView->isVisible() thumbView->selectThumb(5);
 //    else if (gridView->isVisible() gridView->selectThumb(6);
 //    else if (tableView-.isVisible))

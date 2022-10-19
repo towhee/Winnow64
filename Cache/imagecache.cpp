@@ -132,10 +132,6 @@ void ImageCache::stop()
     // signal MW all stopped if a folder change
     if (G::stop) emit stopped("ImageCache");
 
-//    if (isRunning()) isRun = "true";
-//    else isRun = "false";
-//    G::track(CLASSFUNCTION, "Done:  isRunning = " + isRun);
-
     // turn off caching activity lights on statusbar
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
 

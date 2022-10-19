@@ -801,8 +801,8 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
         // current index
         int currentIdxRow = currentIndex().row();
         // prior current: current in datamodel before MW::fileSelectionChange called
-        QModelIndex currentSfIdx = m2->currSfIdx;
-        int currentSfRow = currentSfIdx.row();
+        QModelIndex currentSfIdx = dm->currentSfIdx;
+        int currentSfRow = dm->currentSfRow;
         int selectedRowsCount = selectionModel()->selectedRows().count();
         // is change row also prior current row
         bool isCurrent = false;
@@ -1828,7 +1828,7 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
              << mousePos;
              //*/
     if (G::isEmbellish) return;
-    bool isVideo = dm->index(dm->currentRow, G::VideoColumn).data().toBool();
+    bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (isVideo) return;
 
     if (mousePos.y() > viewport()->rect().bottom() - G::scrollBarThickness) {

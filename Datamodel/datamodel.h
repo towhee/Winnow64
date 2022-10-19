@@ -91,7 +91,8 @@ public:
     int instance = 0;                   // used in setIcon to confirm model folder
     QString currentFolderPath;
     QString currentFilePath;            // used in caching to update image cache
-    int currentRow;                     // used in caching to check if new image selected
+    int currentSfRow;                     // used in caching to check if new image selected
+    int currentDmRow;                     // used in caching to check if new image selected
     QModelIndex currentSfIdx;
     QModelIndex currentDmIdx;
     QModelIndexList selectedRows;

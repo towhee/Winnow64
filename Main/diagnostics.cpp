@@ -36,10 +36,9 @@ void MW::reportState(QString title)
         << "\ncentralLayout->currentIndex()          " << centralLayout->currentIndex()
         << "\nG::currRootFolder                      " << G::currRootFolder
         << "\ncurrentViewDirPath                     " << G::currRootFolder
-        << "\ncurrentRow                             " << dm->currentRow
-        << "\ncurrentSfIdx                           " << currSfIdx
-        << "\ncurrentSfIdx                           " << currSfIdx
-        << "\ndm->currentRow                         " << dm->currentRow
+        << "\ncurrentRow                             " << dm->currentSfRow
+        << "\ncurrentSfIdx                           " << dm->currentSfIdx
+        << "\ncurrentDmIdx                           " << dm->currentDmIdx
 //        << "\ndm->firstVisibleRow                    " << dm->firstVisibleRow
 //        << "\ndm->lastVisibleRow                     " << dm->lastVisibleRow
         << "\nG::availableMemoryMB                   " << G::availableMemoryMB
@@ -205,9 +204,9 @@ QString MW::diagnostics()
     rpt << "\n" << "isNormalScreen = " << G::s(isNormalScreen);
     rpt << "\n" << "currentViewDir = " << G::s(G::currRootFolder);
     rpt << "\n" << "prevMode = " << G::s(prevMode);
-    rpt << "\n" << "currentRow = " << G::s(dm->currentRow);
+    rpt << "\n" << "currentRow = " << G::s(dm->currentSfRow);
     rpt << "\n" << "scrollRow = " << G::s(scrollRow);
-    rpt << "\n" << "currentDmIdx = row" << G::s(currDmIdx.row()) << " col " << G::s(currDmIdx.column());
+//    rpt << "\n" << "currentDmIdx = row" << G::s(currDmIdx.row()) << " col " << G::s(currDmIdx.column());
     rpt << "\n" << "modeChangeJustHappened = " << G::s(modeChangeJustHappened);
     rpt << "\n" << "justUpdatedBestFit = " << G::s(justUpdatedBestFit);
     rpt << "\n" << "sortColumn = " << G::s(sortColumn);
@@ -260,7 +259,7 @@ void MW::diagnosticsMetadata()
     diagnosticsReport(metadata->diagnostics(dm->currentFilePath));
 }
 void MW::diagnosticsXMP() {}
-void MW::diagnosticsMetadataCache() {diagnosticsReport(metaRead->diagnostics());}
+void MW::diagnosticsMetadataCache() {diagnosticsReport(metaReadThread->diagnostics());}
 void MW::diagnosticsImageCache() {diagnosticsReport(imageCacheThread->diagnostics());}
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics());}
 void MW::diagnosticsErrors() {diagnosticsReport(dm->diagnosticsErrors());}

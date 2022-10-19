@@ -305,7 +305,7 @@ void MW::resortImageCache()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (!dm->sf->rowCount()) return;
-    QString currentFilePath = currDmIdx.data(G::PathRole).toString();
+    QString currentFilePath = dm->currentDmIdx.data(G::PathRole).toString();
     imageCacheThread->rebuildImageCacheParameters(currentFilePath, CLASSFUNCTION);
     // change to ImageCache
     imageCacheThread->setCurrentPosition(dm->currentFilePath, CLASSFUNCTION);
@@ -371,9 +371,10 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     sortMenuUpdateToMatchTable = false;
 
     // get the current selected item
-    dm->currentRow = dm->sf->mapFromSource(currDmIdx).row();
-    thumbView->iconViewDelegate->currentRow = dm->currentRow;
-    gridView->iconViewDelegate->currentRow = dm->currentRow;
+    dm->currentSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
+    dm->currentSfRow = dm->currentSfIdx.row();
+    thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
+    gridView->iconViewDelegate->currentRow = dm->currentSfRow;
 
     scrollToCurrentRow();
 
