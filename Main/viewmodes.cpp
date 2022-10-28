@@ -201,7 +201,7 @@ void MW::gridDisplay()
     prevMode = "Grid";
     gridDisplayFirstOpen = false;
 
-//    if (interrupted) metaReadThread->setCurrentRow(interruptedRow, "MW::gridDisplay");
+    if (interrupted) metaReadThread->setCurrentRow(interruptedRow, "MW::gridDisplay");
 }
 
 void MW::tableDisplay()

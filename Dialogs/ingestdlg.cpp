@@ -403,7 +403,7 @@ void IngestDlg::ingest()
         //*/
         ui->progressBar->setValue(progress);
         emit updateProgress(progress);
-        qApp->processEvents();
+//        qApp->processEvents();
         QFileInfo fileInfo = pickList.at(i);
         QString sourcePath = fileInfo.absoluteFilePath();
         QString sourceFolderPath = fileInfo.absoluteDir().absolutePath();
@@ -490,7 +490,7 @@ void IngestDlg::ingest()
         if (copyOk && QFile(sourceSidecarPath).exists()) {
             sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
             if (!sidecarOk) {
-                qWarning() << CLASSFUNCTION << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
+                qWarning() << "WARNING" << CLASSFUNCTION << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
                 failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
             }
 
@@ -499,7 +499,7 @@ void IngestDlg::ingest()
         // check if copied xmp = original xmp
         if (copyOk && integrityCheck) {
             if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
-                qWarning() << CLASSFUNCTION << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
+                qWarning() << "WARNING" << CLASSFUNCTION << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
                 integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
             }
         }
@@ -508,12 +508,12 @@ void IngestDlg::ingest()
         if (isBackup && sidecarOk) {
             bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
             if (!backupSidecarCopyOk) {
-                qWarning() << CLASSFUNCTION << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
+                qWarning() << "WARNING" << CLASSFUNCTION << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
                 failedToCopy << destSidecarPath + " to " + backupSidecarPath;
             }
             if (copyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
-                    qWarning() << CLASSFUNCTION << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
+                    qWarning() << "WARNING" << CLASSFUNCTION << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
                     integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
                 }
             }

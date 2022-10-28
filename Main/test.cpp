@@ -33,7 +33,7 @@ void MW::traverseFolderStressTest(int ms, int duration)
         if (!isForward && dm->currentSfRow == 0) isForward = true;
         if (isForward) keyRight();
         else keyLeft();
-        qApp->processEvents();
+//        qApp->processEvents();
         if (dm->sf->rowCount() < 2) return;
     }
     qint64 msElapsed = t.elapsed();

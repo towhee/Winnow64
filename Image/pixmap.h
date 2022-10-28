@@ -26,11 +26,13 @@ public:
 
 signals:
     void setValue(QModelIndex dmIdx, QVariant value,
+                  int instance, QString src = "",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
 
 private:
     DataModel *dm;
     Metadata *metadata;
+    int instance;
 
     bool loadFromHeic(QString &fPath, QImage &image);
 };

@@ -262,16 +262,21 @@ void MW::createMDCache()
     // read metadata
     connect(this, &MW::startMetaRead, metaReadThread, &MetaRead::setCurrentRow);
     // add metadata to datamodel
-    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem, Qt::BlockingQueuedConnection);
+    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
+    // add icon to datamodel
+    connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
     // message metadata reading completed
     connect(metaReadThread, &MetaRead::done, this, &MW::loadConcurrentMetaDone);
     // Signal to MW::loadConcurrentStartImageCache to prep and run fileSelectionChange
     connect(metaReadThread, &MetaRead::triggerImageCache, this, &MW::loadConcurrentStartImageCache);
     // check icons visible is correct
     connect(metaReadThread, &MetaRead::updateIconBestFit, this, &MW::updateIconBestFit);
+    // update statusbar metadata active light
     connect(metaReadThread, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
-//    // pause waits until isRunning == false
-    connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead::interrupt, Qt::BlockingQueuedConnection);
+    // pause waits until isRunning == false
+    connect(this, &MW::interruptMetaRead, metaReadThread, &MetaRead::interrupt/*, Qt::BlockingQueuedConnection*/);
+
+    connect(metaReadThread, &MetaRead::finished, metaReadThread, &MetaRead::testFinished);
 
 //    metaReadThread.start();
 }
@@ -593,7 +598,7 @@ void MW::createInfoView()
 /*
     InfoView shows basic metadata in a dock widget.
 */
-    if (!useInfoView) return;
+    if (!G::useInfoView) return;
     if (G::isLogger) G::log(CLASSFUNCTION);
     infoView = new InfoView(this, dm, metadata, thumbView);
     infoView->setMaximumWidth(folderMaxWidth);
@@ -712,7 +717,7 @@ void MW::createEmbel()
     embel = new Embel(imageView->scene, imageView->pmItem, embelProperties, dm, icd);
     connect(imageView, &ImageView::embellish, embel, &Embel::build);
     connect(embel, &Embel::done, imageView, &ImageView::resetFitZoom);
-    if (useInfoView) {
+    if (G::useInfoView) {
         connect(infoView, &InfoView::dataEdited, embel, &Embel::refreshTexts);
     }
 }
@@ -1093,7 +1098,7 @@ void MW::createFilterDock()
 
 void MW::createMetadataDock()
 {
-    if (!useInfoView) return;
+    if (!G::useInfoView) return;
     if (G::isLogger) G::log(CLASSFUNCTION);
     metadataDockTabText = "  📷  ";
     metadataDock = new DockWidget(metadataDockTabText, this);    // Metadata
@@ -1277,7 +1282,7 @@ void MW::createDocks()
     createFolderDock();
     createFavDock();
     createFilterDock();
-    if (useInfoView) createMetadataDock();
+    if (G::useInfoView) createMetadataDock();
     createThumbDock();
     createEmbelDock();
 
@@ -1286,15 +1291,15 @@ void MW::createDocks()
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
-    if (useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
+    if (G::useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
     addDockWidget(Qt::LeftDockWidgetArea, thumbDock);
     if (!hideEmbellish) addDockWidget(Qt::RightDockWidgetArea, embelDock);
 
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, filterDock);
-    if (useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
-    if (!hideEmbellish) if (useInfoView) MW::tabifyDockWidget(metadataDock, embelDock);
+    if (G::useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
+    if (!hideEmbellish) if (G::useInfoView) MW::tabifyDockWidget(metadataDock, embelDock);
 }
 
 void MW::createMessageView()

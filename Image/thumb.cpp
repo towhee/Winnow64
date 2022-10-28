@@ -12,19 +12,19 @@ Thumb::Thumb(DataModel *dm, Metadata *metadata,
     this->dm = dm;
     this->metadata = metadata;
     this->frameDecoder = frameDecoder;
-    connect(this, &Thumb::setValue, dm, &DataModel::setValue);
+    connect(this, &Thumb::setValue, dm, &DataModel::setValue, Qt::QueuedConnection);
     connect(this, &Thumb::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
 }
 
 void Thumb::checkOrientation(QString &fPath, QImage &image)
 {
     if (G::isLogger) G::log("Thumb::checkOrientation", fPath);
-//    qDebug() << CLASSFUNCTION << fPath;
+//    qDebug() << "Thumb::checkOrientation" << fPath;
     // check orientation and rotate if portrait
     QTransform trans;
     int row = dm->fPathRow[fPath];
     int orientation = dm->index(row, G::OrientationColumn).data().toInt();
-//    qDebug() << CLASSFUNCTION << orientation << fPath;
+//    qDebug() << "Thumb::checkOrientation" << orientation << fPath;
     switch(orientation) {
         case 3:
             trans.rotate(180);
@@ -58,6 +58,8 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
 bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 {
     if (G::isLogger) G::log("Thumb::loadFromEntireFile", fPath);
+    if (instance != dm->instance) return false;
+
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
 //    QFile imFile(fPath);
@@ -69,16 +71,25 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     int w = image.width();
     int h = image.height();
     double a = w / h;
-    emit setValue(dm->index(row, G::WidthColumn), w);
-    emit setValue(dm->index(row, G::WidthPreviewColumn), w);
-    emit setValue(dm->index(row, G::HeightColumn), h);
-    emit setValue(dm->index(row, G::HeightPreviewColumn), h);
-    emit setValue(dm->index(row, G::AspectRatioColumn), a);
+    qDebug() << "Thumb::loadFromEntireFile" << "setting dimensions in datamodel";
+    QString src = "Thumb::loadFromEntireFile";
+
+    dm->setData(dm->index(row, G::WidthColumn), w);
+    dm->setData(dm->index(row, G::WidthPreviewColumn), w);
+    dm->setData(dm->index(row, G::HeightColumn), h);
+    dm->setData(dm->index(row, G::HeightPreviewColumn), h);
+    dm->setData(dm->index(row, G::AspectRatioColumn), a);
+
+//    emit setValue(dm->index(row, G::WidthColumn), w, instance, src);
+//    emit setValue(dm->index(row, G::WidthPreviewColumn), w, instance, src);
+//    emit setValue(dm->index(row, G::HeightColumn), h, instance, src);
+//    emit setValue(dm->index(row, G::HeightPreviewColumn), h, instance, src);
+//    emit setValue(dm->index(row, G::AspectRatioColumn), a, instance, src);
 
     image = image.scaled(thumbMax, Qt::KeepAspectRatio);
     if (image.isNull()) {
         G::error("loadFromEntireFile", fPath, "Could not read thumb using thumbReader.");
-        qWarning() << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
+        qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
         return false;
     }
     return true;
@@ -100,7 +111,7 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     // Check if metadata has been cached for this image
     QFileInfo info(imFile);  // qt6.2
     if (dm->index(row, G::OffsetThumbColumn).data().isNull()) {
-        metadata->loadImageMetadata(info, true, false, false, false, CLASSFUNCTION); // qt6.2
+        metadata->loadImageMetadata(info, instance, true, false, false, false, "Thumb::loadFromJpgData"); // qt6.2
         dm->addMetadataForItem(metadata->m);
     }
     uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
@@ -113,8 +124,8 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     s += " Offset embedded thumb = " + QString::number(offsetThumb);
     s += " Length embedded thumb = " + QString::number(lengthThumb);
     s += " " + fPath;
-    qDebug() << CLASSFUNCTION << s;
-//    G::log(CLASSFUNCTION, s);
+    qDebug() << "Thumb::loadFromJpgData" << s;
+//    G::log("Thumb::loadFromJpgData", s);
 //*/
 
     if (imFile.isOpen()) imFile.close();
@@ -123,8 +134,11 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
             QByteArray buf = imFile.read(lengthThumb);
             if (image.loadFromData(buf, "JPEG")) {
                 if (image.isNull()) {
-                    G::error(CLASSFUNCTION, fPath, "Empty thumb.");
-                    qWarning() << "Error loading thumbnail" << imFile.fileName();
+                    G::error("Thumb::loadFromJpgData", fPath, "Empty thumb.");
+                    qWarning() << "WARNING"
+                               << "Thumb::loadFromJpgData"
+                               << "Error loading thumbnail"
+                               << imFile.fileName();
                 }
                 image = image.scaled(thumbMax, Qt::KeepAspectRatio);
                 success = true;
@@ -160,7 +174,7 @@ bool Thumb::loadFromTiffData(QString &fPath, QImage &image)
     return tiff.decode(m, fPath, image, getThumb, G::maxIconSize);
 }
 
-bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
+bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
 {
 /*
     Load a thumbnail preview as a decoration icon in the datamodel dm in column 0. Raw, jpg
@@ -169,6 +183,13 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
     This thumbnail is used by the grid and filmstrip views.
 */
     if (G::isLogger) G::log("Thumb::loadThumb", fPath);
+    qDebug() << "Thumb::loadThumb" << "Instance =" << instance << src << fPath;
+    if (G::instanceClash(instance)) {
+        qWarning() << "WARNING" << "Thumb::loadThumb instance clash" << fPath;
+        return false;
+    }
+    this->instance = instance;
+
     QFileInfo fileInfo(fPath);
     QString ext = fileInfo.suffix().toLower();
     int dmRow = dm->fPathRow[fPath];
@@ -193,14 +214,14 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
 
     // Check if metadata has been loaded for this image
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
-        if (!dm->readMetadataForItem(dmRow)) {
+        if (!dm->readMetadataForItem(dmRow, instance)) {
             G::error("Thumb::loadThumb", fPath, "Could not load metadata.");
             return false;
         }
     }
     /*
     if (dm->index(dmRow, G::MetadataLoadedColumn).data().isNull()) {
-        metadata->loadImageMetadata(fPath, true, false, false, false, CLASSFUNCTION);
+        metadata->loadImageMetadata(fPath, instance, true, false, false, false, "Thumb::loadThumb");
         dm->addMetadataForItem(metadata->m);
     }  */
 
@@ -236,7 +257,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
                 }
                 qDebug() << "Thumb::loadThumb" << fPath << "Loaded thumb using Qt";
             }
-//            qDebug() << CLASSFUNCTION << fPath << "Loaded thumb by resampling tiff";
+//            qDebug() << "Thumb::loadThumb" << fPath << "Loaded thumb by resampling tiff";
         }
         // rgh remove heic
         else if (ext == "heic") {
@@ -245,7 +266,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
             Heic heic;
             // try to read heic thumbnail
             if (!heic.decodeThumbnail(fPath, image)) {
-                G::error(CLASSFUNCTION, fPath, "Unable to read heic thumbnail.");
+                G::error("Thumb::loadThumb", fPath, "Unable to read heic thumbnail.");
                 return false;
             }
             #endif
@@ -261,7 +282,7 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, QString src)
         // read the image file (supported by Qt), scaling to thumbnail size
         if (!loadFromEntireFile(fPath, image, dmRow)) {
             G::error("Thumb::loadThumb", fPath, "Could not load thumb.");
-            qWarning() << "Thumb::loadThumb" << "Could not load thumb." << fPath;
+            qWarning() << "WARNING" << "Thumb::loadThumb" << "Could not load thumb." << fPath;
             return false;
         }
         image.convertTo(QImage::Format_RGB32);
@@ -312,7 +333,6 @@ void Thumb::insertThumbnails(QModelIndexList &selection)
     QStringList thumbList;
     for (int i = 0; i < count; ++i) {
         G::popUp->setProgress(i+1);
-//        qApp->processEvents();
         if (abort) break;
 
         // check if already a thumbnail

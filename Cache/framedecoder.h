@@ -29,6 +29,7 @@ public slots:
     void addToQueue(QString fPath, QModelIndex dmIdx = QModelIndex(), int dmInstance = 0);
     void clear();
     void stop();
+    bool isBusy();
     void frameChanged(const QVideoFrame frame);
     void errorOccurred(QMediaPlayer::Error error, const QString &errorString);
 

@@ -130,6 +130,7 @@ class MetadataParameters
 public:
     QString fPath;
     QFile file;
+    int instance;
     QBuffer buf;
     quint32 offset;
     QHash<quint32, QString> *hash;

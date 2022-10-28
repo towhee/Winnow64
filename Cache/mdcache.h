@@ -43,6 +43,7 @@ public:
     void iconMax(QPixmap &thumb);
     qint32 memRequired();
 
+    int instance;
     int metadataChunkSize = 250;
     int defaultMetadataChunkSize = 250;
     bool cacheAllMetadata = false;

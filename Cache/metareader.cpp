@@ -52,7 +52,7 @@ void MetaReader::run()
     while (row < dm->rowCount()) {
         QString fPath = dm->index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
+        if (metadata->loadImageMetadata(fileInfo, 0, true, true, false, true, CLASSFUNCTION)) {
             metadata->m.row = row;
             if (abort) stop();
             dm->addMetadataForItem(metadata->m);

@@ -67,9 +67,6 @@ void MW::filterChange(QString source)
 
     if (G::stop) return;
 
-    // update filter checkbox
-//    qApp->processEvents();
-
     // if filter chnage source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();
 
@@ -328,7 +325,7 @@ void MW::refine()
     if (ret == QMessageBox::Cancel) return;
 
     clearAllFilters();
-
+    QString src = "MW::refine";
     // clear refine = pick
     pushPick("Begin multiple select");
     for (int row = 0; row < dm->rowCount(); ++row) {
@@ -337,12 +334,12 @@ void MW::refine()
             QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
             pushPick(fPath, "true");
             // clear picks
-            emit setValue(dm->index(row, G::RefineColumn), true, Qt::EditRole, Qt::AlignCenter);
-            emit setValue(dm->index(row, G::PickColumn), "false", Qt::EditRole, Qt::AlignCenter);
+            emit setValue(dm->index(row, G::RefineColumn), true, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+            emit setValue(dm->index(row, G::PickColumn), "false", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
 //            dm->setData(dm->index(row, G::RefineColumn), true);
 //            dm->setData(dm->index(row, G::PickColumn), "false");
         }
-        emit setValue(dm->index(row, G::RefineColumn), false, Qt::EditRole, Qt::AlignCenter);
+        emit setValue(dm->index(row, G::RefineColumn), false, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
 //        else dm->setData(dm->index(row, G::RefineColumn), false);
     }
     pushPick("End multiple select");
@@ -607,11 +604,11 @@ void MW::setRating()
     }
 
     // set the rating in the datamodel
+    QString src = "MW::setRating";
     for (int i = 0; i < n; ++i) {
         int row = selection.at(i).row();
         QModelIndex ratingIdx = dm->sf->index(row, G::RatingColumn);
-        emit setValueSf(ratingIdx, rating, Qt::EditRole);
-//        dm->sf->setData(ratingIdx, rating, Qt::EditRole);
+        emit setValueSf(ratingIdx, rating, dm->instance, src, Qt::EditRole);
         // update rating crash log
         QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
         updateRatingLog(fPath, rating);
@@ -624,8 +621,7 @@ void MW::setRating()
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 row = rawIdx.row();
                 ratingIdx = dm->index(row, G::RatingColumn);
-                emit setValueSf(ratingIdx, rating, Qt::EditRole);
-//                dm->setData(ratingIdx, rating, Qt::EditRole);
+                emit setValueSf(ratingIdx, rating, dm->instance, src, Qt::EditRole);
                 // update rating crash log
                 QString jpgPath  = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
                 updateRatingLog(jpgPath, rating);
@@ -671,6 +667,7 @@ void MW::recoverRatingLog()
     if (G::isLogger) G::log(CLASSFUNCTION);
     setting->beginGroup("RatingLog");
     QStringList keys = setting->allKeys();
+    QString src = "MW::recoverRatingLog";
     for (int i = 0; i < keys.length(); ++i) {
         QString fPath = keys.at(i);
         fPath.replace("🔸", "/");
@@ -678,9 +675,7 @@ void MW::recoverRatingLog()
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         if (idx.isValid()) {
             QModelIndex ratingIdx = dm->sf->index(idx.row(), G::RatingColumn);
-            emit setValueSf(ratingIdx, pickStatus, Qt::EditRole);
-//            dm->sf->setData(ratingIdx, pickStatus, Qt::EditRole);
-//            qDebug() << CLASSFUNCTION << pickStatus << fPath << "updated";
+            emit setValueSf(ratingIdx, pickStatus, dm->instance, src, Qt::EditRole);
         }
         else {
 //            qDebug() << CLASSFUNCTION << fPath << "not found";
@@ -771,11 +766,11 @@ void MW::setColorClass()
     }
 
     // update the data model
+    QString src = "MW::setColorClass";
     for (int i = 0; i < n; ++i) {
         int row = selection.at(i).row();
         QModelIndex labelIdx = dm->sf->index(row, G::LabelColumn);
-        emit setValueSf(labelIdx, colorClass, Qt::EditRole);
-//        dm->sf->setData(labelIdx, colorClass, Qt::EditRole);
+        emit setValueSf(labelIdx, colorClass, dm->instance, src, Qt::EditRole);
         // update color class crash log
         QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
         updateColorClassLog(fPath, colorClass);
@@ -788,7 +783,8 @@ void MW::setColorClass()
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(idx.data(G::DupOtherIdxRole));
                 row = rawIdx.row();
                 labelIdx = dm->index(row, G::LabelColumn);
-                emit setValue(labelIdx, colorClass, Qt::EditRole, Qt::AlignCenter);
+                QString src = "MW::setColorClass";
+                emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
 //                dm->setData(labelIdx, colorClass, Qt::EditRole);
                 // update color class crash log
                 QString jpgPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
@@ -842,11 +838,10 @@ void MW::recoverColorClassLog()
         fPath.replace("🔸", "/");
         QString colorClassStatus = setting->value(keys.at(i)).toString();
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
+        QString src = "MW::recoverColorClassLog";
         if (idx.isValid()) {
             QModelIndex colorClassIdx = dm->sf->index(idx.row(), G::LabelColumn);
-            emit setValueSf(colorClassIdx, colorClassStatus, Qt::EditRole);
-//            dm->sf->setData(colorClassIdx, colorClassStatus, Qt::EditRole);
-//            qDebug() << CLASSFUNCTION << colorClassStatus << fPath << "updated";
+            emit setValueSf(colorClassIdx, colorClassStatus, dm->instance, src, Qt::EditRole);
         }
         else {
 //            qDebug() << CLASSFUNCTION << fPath << "not found";

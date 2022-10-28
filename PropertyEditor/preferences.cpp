@@ -309,7 +309,7 @@ itemChange, which is subclassed here.
     }
 
     if (source == "infoView->ok") {
-        if (mw->useInfoView)
+        if (G::useInfoView)
             mw->infoView->ok->setData(index, v.toBool());
     }
 
@@ -1288,7 +1288,7 @@ void Preferences::addItems()
     { // Metadata InfoView items
 
     // InfoView fields to show
-    if (mw->useInfoView) {
+    if (G::useInfoView) {
     QStandardItemModel *okInfo = mw->infoView->ok;
     // iterate through infoView data, adding it to the property editor
     for(int row = 0; row < okInfo->rowCount(); row++) {
@@ -1321,7 +1321,7 @@ void Preferences::addItems()
             addItem(i);
         }
     } // end Metadata InfoView items
-    } // end if (mw->useInfoView)
+    } // end if (mw->G::useInfoView)
     }
 
     // TableView show/hide fields Header (Root)

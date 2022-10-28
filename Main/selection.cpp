@@ -152,7 +152,7 @@ void MW::togglePickUnlessRejected()
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
         if (pickStatus != "reject") {
-            emit setValueSf(pickIdx, newPickStatus, Qt::EditRole);
+            emit setValueSf(pickIdx, newPickStatus, dm->instance, "MW::togglePickUnlessRejected", Qt::EditRole);
 //            dm->sf->setData(pickIdx, newPickStatus, Qt::EditRole);
         }
     }
@@ -192,7 +192,7 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
     QString pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
     pickStatus == "false" ? pickStatus = "true" : pickStatus = "false";
-    emit setValueSf(pickIdx, pickStatus, Qt::EditRole);
+    emit setValueSf(pickIdx, pickStatus, dm->instance, "MW::togglePickMouseOverItem", Qt::EditRole);
 //    dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
 
     updateClassification();
@@ -240,7 +240,7 @@ void MW::togglePick()
         pushPick(fPath, priorPickStatus);
         // set pick status
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
-        emit setValueSf(pickIdx, pickStatus, Qt::EditRole);
+        emit setValueSf(pickIdx, pickStatus, dm->instance, "MW::togglePick", Qt::EditRole);
 //        dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
         updatePickLog(fPath, pickStatus);
     }
@@ -281,7 +281,7 @@ void MW::recoverPickLog()
         QModelIndex idx = dm->proxyIndexFromPath(fPath);
         if (idx.isValid()) {
             QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
-            emit setValueSf(pickIdx, pickStatus, Qt::EditRole);
+            emit setValueSf(pickIdx, pickStatus, dm->instance, "MW::recoverPickLog", Qt::EditRole);
 //            dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
             qDebug() << CLASSFUNCTION << pickStatus << fPath << "updated";
         }
@@ -358,7 +358,7 @@ void MW::updatePickFromHistory(QString fPath, QString status)
     if (dm->fPathRow.contains(fPath)) {
         int row = dm->fPathRow[fPath];
         QModelIndex pickIdx = dm->sf->index(row, G::PickColumn);
-        emit setValueSf(pickIdx, status, Qt::EditRole);
+        emit setValueSf(pickIdx, status, dm->instance, "MW::updatePickFromHistory", Qt::EditRole);
 //        dm->sf->setData(pickIdx, status, Qt::EditRole);
 //        dm->sf->filterChange();
         thumbView->refreshThumbs();

@@ -84,7 +84,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 
     // is metadata loaded
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
-        if (!dm->readMetadataForItem(dmRow)) {
+        if (!dm->readMetadataForItem(dmRow, dm->instance)) {
             QString err = "Could not load metadata.";
             G::error("Pixmap::load", fPath, err);
             return false;
@@ -133,7 +133,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 //        tRead = readTime.elapsed();
 //        decodeTime.start();
 
-//        qDebug() << CLASSFUNCTION << "use decodeScan";
+//        qDebug() << "Pixmap::load" << "use decodeScan";
 //        Jpeg jpg;
 //        jpg.decodeScan(buf, image);
 
@@ -152,7 +152,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     // HEIC format
     // rgh remove heic
     else if (metadata->hasHeic.contains(ext)) {
-//        qDebug() << CLASSFUNCTION << "hasHEIC" << fPath;
+//        qDebug() << "Pixmap::load" << "hasHEIC" << fPath;
         ImageMetadata m = dm->imMetadata(fPath);
         #ifdef Q_OS_WIN
         Heic heic;
@@ -161,11 +161,11 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (!heic.decodePrimaryImage(fPath, image)) {
             if (imFile.isOpen()) imFile.close();
             QString err = "Unable to decode.";
-            G::error(CLASSFUNCTION, fPath, err);
+            G::error("Pixmap::load", fPath, err);
             return false;
         }
         if (imFile.isOpen()) imFile.close();
-//        qDebug() << CLASSFUNCTION << "HEIC image" << image.width() << image.height();
+//        qDebug() << "Pixmap::load" << "HEIC image" << image.width() << image.height();
         #endif
     }
 
@@ -228,7 +228,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
             if (!image.load(fPath)) {
                 imFile.close();
                 QString err = "Could not decode.";
-                G::error(CLASSFUNCTION, fPath, err);
+                G::error("Pixmap::load", fPath, err);
                 return false;
             }
         }
@@ -244,7 +244,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         if (!image.load(fPath)) {
             imFile.close();
             QString err = "Could not decode.";
-            G::error(CLASSFUNCTION, fPath, err);
+            G::error("Pixmap::load", fPath, err);
             return false;
         }
         imFile.close();
@@ -301,7 +301,8 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 //    qint64 msec = tDecode;
     qint64 msec = t.elapsed();
     int msecPerMp = static_cast<int>(msec / mp);
-    emit setValue(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, Qt::EditRole, Qt::AlignLeft);
+    QString source = "Pixmap::load";
+    emit setValue(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, 0, source, Qt::EditRole, Qt::AlignLeft);
 //    dm->setData(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, Qt::EditRole);
     /*
     qDebug() << CLASSFUNCTION

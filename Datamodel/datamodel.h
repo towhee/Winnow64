@@ -45,7 +45,7 @@ public:
 
     void setModelProperties();
     bool load(QString &dir, bool includeSubfoldersFlag);
-    bool readMetadataForItem(int row);
+    bool readMetadataForItem(int row, int instance);
     void clearDataModel();
     bool hasFolderChanged();
     void find(QString text);
@@ -69,8 +69,8 @@ public:
     void setIconRange(int first, int last);
     void clearOutOfRangeIcons(int startRow);
     bool allIconsLoaded();
-    bool iconLoaded(int sfRow);
-    bool isIconCaching(int sfRow);
+    bool iconLoaded(int sfRow, int instance);
+    bool isIconCaching(QModelIndex sfIdx, int instance);
     void setIconCaching(int sfRow, bool state);
     int rowFromPath(QString fPath);
     void refreshRowFromPath();
@@ -88,7 +88,8 @@ public:
     QDir::SortFlags thumbsSortFlags;
 
     // current status
-    int instance = 0;                   // used in setIcon to confirm model folder
+    int instance = 0;                   // each new load of DataModel increments the instance
+    QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
     QString currentFolderPath;
     QString currentFilePath;            // used in caching to update image cache
     int currentSfRow;                     // used in caching to check if new image selected
@@ -128,11 +129,11 @@ public slots:
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
                           qint64 duration, FrameDecoder *frameDecoder);
-    void setValue(QModelIndex dmIdx, QVariant value,
+    void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void setValueSf(QModelIndex sfIdx, QVariant value,
+    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void setValuePath(QString fPath, int col, QVariant value, int role = Qt::EditRole);
+    void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
     void abortLoad();
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
@@ -170,6 +171,7 @@ private:
     void rawPlusJpg();
     double aspectRatio(int w, int h, int orientation);
     void setIconMax(const QPixmap &pm);
+    bool instanceClash(QModelIndex idx, QString src);
 
     int imageCount;
     int countInterval = 0;

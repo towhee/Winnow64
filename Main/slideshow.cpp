@@ -8,7 +8,7 @@ void MW::slideShow()
         G::popUp->showPopup("Slideshow has been terminated.", 2000);
         G::isSlideShow = false;
         slideCount = 0;
-        useImageCache = true;
+        // not finisheduseImageCache = true;
         imageView->setCursor(Qt::ArrowCursor);
         slideShowStatusLabel->setText("");
         updateStatus(true, "", CLASSFUNCTION);
@@ -18,7 +18,7 @@ void MW::slideShow()
         delete slideShowTimer;
         cacheProgressBar->setVisible(true);
         // change to ImageCache
-        if (useImageCache)
+        if (G::useImageCache)
             imageCacheThread->setCurrentPosition(dm->currentFilePath, CLASSFUNCTION);
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
@@ -45,8 +45,8 @@ void MW::slideShow()
         G::popUp->showPopup(msg, 3000, true, 0.75, Qt::AlignLeft);
 
         // No image caching if random slide show
-        if (isSlideShowRandom) useImageCache = false;
-        else useImageCache = true;
+        if (isSlideShowRandom) G::useImageCache = false;
+        else G::useImageCache = true;
 
         // disable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();

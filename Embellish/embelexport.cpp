@@ -64,7 +64,7 @@ bool EmbelExport::loadImage(QString fPath)
     int dmRow = dm->fPathRow[fPath];
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
+        if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, CLASSFUNCTION)) {
             metadata->m.row = dmRow;
             dm->addMetadataForItem(metadata->m);
         }
@@ -235,7 +235,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     et.setOverWrite(true);
     for (int i = 0; i < count; i++) {
         G::popUp->setProgress(i+1);
-        qApp->processEvents();
+//        qApp->processEvents();
         if (abort) break;
         QString src = srcList.at(i);
         // embellish src image
@@ -353,7 +353,7 @@ void EmbelExport::exportImage(const QString &fPath)
 
 void EmbelExport::abortEmbelExport()
 {
-    qApp->processEvents();
+//    qApp->processEvents();
     G::isProcessingExportedImages = false;
     G::popUp->showPopup("Export has been aborted", 1500);
     qDebug() << CLASSFUNCTION << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";

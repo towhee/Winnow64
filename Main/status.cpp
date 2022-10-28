@@ -6,7 +6,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     Reports status information on the status bar and in InfoView.  If keepBase = true
     then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message s.
 */
-    if (!useUpdateStatus) return;
+    if (!G::useUpdateStatus) return;
     if (G::isLogger) G::log(CLASSFUNCTION);
     /*
     QString ms = QString("%L1").arg(testTime.nsecsElapsed() / 1000000) + " ms";
@@ -17,7 +17,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     // check if null filter
     if (dm->sf->rowCount() == 0) {
         statusLabel->setText("");
-        if (useInfoView)  {
+        if (G::useInfoView)  {
         QStandardItemModel *k = infoView->ok;
             k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), "");
             k->setData(k->index(infoView->ZoomRow, 1, infoView->statusInfoIdx), "");
@@ -95,7 +95,7 @@ QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵�
     */
 
     // update InfoView - flag updates so itemChanged is ignored in MW::metadataChanged
-    if (useInfoView)  {
+    if (G::useInfoView)  {
         infoView->isNewImageDataChange = true;
         QStandardItemModel *k = infoView->ok;
         if (keepBase) {
@@ -230,7 +230,7 @@ void MW::updateProgressBarWidth()
         int availableSpace = availableSpaceForProgressBar();
         if (availableSpace < progressWidth) progressWidth = availableSpace;
         progressLabel->setFixedWidth(progressWidth);
-        updateImageCacheStatus("Update all rows", icd->cache, CLASSFUNCTION);
+        updateImageCacheStatus("Update all rows", icd->cache, "MW::updateProgressBarWidth");
     }
 }
 
@@ -254,7 +254,6 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QStr
     metadataThreadRunningLabel->setText("◉");
     if (isShowCacheProgressBar && !G::isSlideShow) progressLabel->setVisible(showCacheLabel);
     calledBy = "";  // suppress compiler warning
-//    qApp->processEvents();  // can cause crash
 }
 
 void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)

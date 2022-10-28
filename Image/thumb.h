@@ -17,14 +17,14 @@ class Thumb : public QObject
 public:
     explicit Thumb(DataModel *dm, Metadata *metadata,
                    FrameDecoder *frameDecoder);
-    bool loadThumb(QString &fPath, QImage &image, QString src);
+    bool loadThumb(QString &fPath, QImage &image, int instance, QString src);
     void insertThumbnails(QModelIndexList &selection);
     bool insertingThumbnails = false;
     bool abort = false;
 
 signals:
     void videoFrameDecode(QString fPath, QModelIndex dmIdx, int dmInstance);
-    void setValue(QModelIndex dmIdx, QVariant value,
+    void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src,
                   int role = Qt::EditRole, int align = Qt::AlignCenter);
     void getFrame(QString fPath);
 
@@ -34,6 +34,7 @@ private:
     FrameDecoder *frameDecoder;
     QString err;
     QSize thumbMax;
+    int instance;
 
     bool loadFromJpgData(QString &fPath, QImage &image);
     bool loadFromTiffData(QString &fPath, QImage &image);

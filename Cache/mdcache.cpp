@@ -151,11 +151,12 @@ void MetadataCache::scrollChange(QString source)
     }
     if (G::isInitializing || !G::isNewFolderLoaded) return;
     abort = false;
+    instance = dm->instance;
     action = Action::Scroll;
     setRange();
     foundItemsToLoad = anyItemsToLoad();
         /*
-        qDebug() << CLASSFUNCTION << "foundItemsToLoad =" << foundItemsToLoad
+        qDebug() << "MetadataCache::scrollChange" << "foundItemsToLoad =" << foundItemsToLoad
                  << "start =" << startRow << "end =" << endRow
                  << "firstIconVisible =" << firstIconVisible
                  << "firstIconVisible =" << firstIconVisible
@@ -181,6 +182,7 @@ void MetadataCache::sizeChange(QString source)
         wait();
     }
     abort = false;
+    instance = dm->instance;
     action = Action::Resize;
     setRange();
     foundItemsToLoad = anyItemsToLoad();
@@ -194,7 +196,7 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
     added to the datamodel. The image cache is updated.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MetadataCache::fileSelectionChange");
-//    qDebug() << CLASSFUNCTION;
+//    qDebug() << "MetadataCache::fileSelectionChange";
     if (isRunning()) {
         mutex.lock();
         abort = true;
@@ -204,6 +206,7 @@ void MetadataCache::fileSelectionChange(/*bool okayToImageCache*/) // rghcachech
     }
 //    qDebug() << "MetadataCache::fileSelectionChange";
     abort = false;
+    instance = dm->instance;
     action = Action::NewFileSelected;
     setRange();
     foundItemsToLoad = anyItemsToLoad();
@@ -215,7 +218,7 @@ bool MetadataCache::anyItemsToLoad()
     if (G::isLogger) G::log("MetadataCache::anyItemsToLoad");
     for (int i = startRow; i < endRow; ++i) {
         // icon not loaded
-        if (!dm->iconLoaded(i))
+        if (!dm->iconLoaded(i, instance))
             return true;
         // metadata not loaded
         if (!dm->sf->index(i, G::MetadataLoadedColumn).data().toBool())
@@ -255,7 +258,7 @@ void MetadataCache::setRange()
     prevLastIconVisible = lastIconVisible;
 
     /*
-    qDebug()  <<  CLASSFUNCTION
+    qDebug()  << "MetadataCache::setRange"
               << "source =" << actionList.at(action)
               << "firstIconVisible =" << firstIconVisible
               << "midIconVisible =" << midIconVisible
@@ -297,7 +300,7 @@ void MetadataCache::iconCleanup()
         if (sfRow < startRow || sfRow > endRow) {
             i.remove();
             QModelIndex dmIdx = dm->index(dmRow, 0);
-            emit setIcon(dmIdx, nullPm, dm->instance, "MetadataCache::iconCleanup");
+            emit setIcon(dmIdx, nullPm, instance, "MetadataCache::iconCleanup");
         }
     }
 }
@@ -317,7 +320,7 @@ qint32 MetadataCache::memRequired()
     int averageMetaMemReqdPerRow = 18900;   // bytes per row
     metaMem = static_cast<quint32>(dm->rowCount() * averageMetaMemReqdPerRow);
     /*
-    qDebug() << CLASSFUNCTION
+    qDebug() << "MetadataCache::memRequired"
              << "rowsWithIcons =" << rowsWithIcons
              << "iconMem =" << iconMem / 1024 / 1024
              << "metaMem =" << metaMem / 1024 / 1024
@@ -341,29 +344,30 @@ void MetadataCache::iconMax(QPixmap &thumb)
 bool MetadataCache::loadIcon(int sfRow)
 {
     if (G::isLogger) G::log("MetadataCache::loadIcon");
-    QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(sfRow, 0));
+    QModelIndex sfIdx = dm->sf->index(sfRow,0);
+    QModelIndex dmIdx = dm->sf->mapToSource(sfIdx);
     if (!dmIdx.isValid()) return false;
-    if (!dm->isIconCaching(sfRow) && !dm->iconLoaded(sfRow)) {
+    if (!dm->isIconCaching(sfIdx, instance) && !dm->iconLoaded(sfRow, instance)) {
         dm->setIconCaching(sfRow, true);
         int dmRow = dmIdx.row();
         bool isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
         QImage image;
         QString fPath = dmIdx.data(G::PathRole).toString();
         QPixmap pm;
-        bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::loadIcon");
+        bool thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetadataCache::loadIcon");
         if (isVideo) {
             iconsCached.append(dmRow);
             return true;
         }
         if (thumbLoaded) {
             pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-            emit setIcon(dmIdx, pm, dm->instance, "MetadataCache::loadIcon");
+            emit setIcon(dmIdx, pm, instance, "MetadataCache::loadIcon");
             iconMax(pm);
             iconsCached.append(dmRow);
         }
         else {
             pm = QPixmap(":/images/error_image.png");
-            qWarning() << "MetadataCache::loadIcon" << "Failed to load thumbnail." << fPath;
+            qWarning() << "WARNING" << "MetadataCache::loadIcon" << "Failed to load thumbnail." << fPath;
         }
     }
     return true;
@@ -397,7 +401,7 @@ void MetadataCache::readAllMetadata()
 
         QString fPath = dm->index(row, 0).data(G::PathRole).toString();
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, "MetadataCache::readAllMetadata")) {
+        if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetadataCache::readAllMetadata")) {
             metadata->m.row = row;
             dm->addMetadataForItem(metadata->m);
             count++;
@@ -425,20 +429,20 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
 
     if (!dm->sf->index(sfRow, G::MetadataLoadedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, true, true, false, true, "MetadataCache::readMetadataIcon")) {
+        if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetadataCache::readMetadataIcon")) {
             metadata->m.row = dmRow;
             dm->addMetadataForItem(metadata->m);
         }
     }
 
     // load icon
-    if (!dm->iconLoaded(sfRow)) {
+    if (!dm->iconLoaded(sfRow, instance)) {
         QImage image;
-        bool thumbLoaded = thumb->loadThumb(fPath, image, "MetadataCache::readMetadataIcon");
+        bool thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetadataCache::readMetadataIcon");
         if (thumbLoaded) {
             QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
             QModelIndex dmIdx = dm->index(dmRow, 0);
-            emit setIcon(dmIdx, pm, dm->instance, "MetadataCache::readMetadataIcon");
+            emit setIcon(dmIdx, pm, instance, "MetadataCache::readMetadataIcon");
             iconMax(pm);
             iconsCached.append(dmRow);
         }
@@ -461,7 +465,7 @@ void MetadataCache::readIconChunk()
     }
     int count = 0;
     /*
-    qDebug() << CLASSFUNCTION << "start =" << start << "end =" << end
+    qDebug() << "MetadataCache::readIconChunk" << "start =" << start << "end =" << end
              << "firstIconVisible =" << firstIconVisible
              << "lastIconVisible =" << lastIconVisible
              << "rowCount =" << dm->sf->rowCount()
@@ -471,7 +475,7 @@ void MetadataCache::readIconChunk()
     // process visible icons first
     for (int row = firstIconVisible; row <= lastIconVisible; ++row) {
         if (abort) {
-            emit updateIsRunning(false, true, CLASSFUNCTION);
+            emit updateIsRunning(false, true, "MetadataCache::readIconChunk");
             return;
         }
 //        qDebug() << "MetadataCache::readIconChunk 0 row =" << row;
@@ -483,7 +487,7 @@ void MetadataCache::readIconChunk()
     if (start < firstIconVisible) {
         for (int row = start; row < firstIconVisible; ++row) {
             if (abort) {
-                emit updateIsRunning(false, true, CLASSFUNCTION);
+                emit updateIsRunning(false, true, "MetadataCache::readIconChunk");
                 return;
             }
 //            qDebug() << "MetadataCache::readIconChunk 1 row =" << row;
@@ -496,7 +500,7 @@ void MetadataCache::readIconChunk()
     if (end > lastIconVisible + 1) {
         for (int row = lastIconVisible = 1; row < end; ++row) {
             if (abort) {
-                emit updateIsRunning(false, true, CLASSFUNCTION);
+                emit updateIsRunning(false, true, "MetadataCache::readIconChunk");
                 return;
             }
 //            qDebug() << "MetadataCache::readIconChunk 2 row =" << row;
@@ -526,14 +530,14 @@ void MetadataCache::readMetadataChunk()
 
         for (int row = start; row < end; ++row) {
             if (abort) {
-                emit updateIsRunning(false, true, CLASSFUNCTION);
+                emit updateIsRunning(false, true, "MetadataCache::readMetadataChunk");
                 return;
             }
             if (dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) continue;
             // file path and dm source row in case filtered or sorted
             QModelIndex idx = dm->sf->index(row, 0);
             int dmRow = dm->sf->mapToSource(idx).row();
-            if (!dm->readMetadataForItem(dmRow)) {
+            if (!dm->readMetadataForItem(dmRow, instance)) {
                 metadataLoadFailed = true;
                 /*
                 qDebug() << "MetadataCache::readMetadataChunk"
@@ -559,9 +563,6 @@ void MetadataCache::readMetadataChunk()
                     emit showCacheStatus(msg);
                 }
             }
-
-            // keep event processing up-to-date to improve signal/slot performance emit loadMetadataCache2ndPass()
-//            QApplication::processEvents();
         }
     } while (metadataLoadFailed && metadataTry > tryAgain++);
 }
@@ -577,7 +578,7 @@ void MetadataCache::run()
     if (G::isLogger || G::isFlowLogger) G::log("MetadataCache::run", actionList.at(action));
 
     if (foundItemsToLoad) {
-        emit updateIsRunning(true, true, CLASSFUNCTION);
+        emit updateIsRunning(true, true, "MetadataCache::run");
         int rowCount = dm->sf->rowCount();
 
         // read next metadata and icon chunk

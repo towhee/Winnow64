@@ -19,14 +19,14 @@ namespace ICC
 
     void err(cmsContext contextID, cmsUInt32Number errorCode, const char *text)
     {
-        qWarning() << "ICC::err" << errorCode << text << G::winOutProfilePath;
+        qWarning() << "WARNING" << "ICC::err" << errorCode << text << G::winOutProfilePath;
     }
 
     bool setOutProfile()
     {
         if (G::isLogger) G::log(__PRETTY_FUNCTION__);
         if (G::winOutProfilePath == "") {
-            qWarning() << "The outProfilePath has not been assigned";
+            qWarning() << "WARNING" << "The outProfilePath has not been assigned";
             cmsSetLogErrorHandler(err);
             return false;
         }

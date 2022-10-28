@@ -1,6 +1,7 @@
 #ifndef METAREAD_H
 #define METAREAD_H
 
+#include <QtWidgets>
 #include <QObject>
 #include <QMutex>
 #include <QThread>
@@ -21,6 +22,8 @@ public:
              FrameDecoder *frameDecoder);
     ~MetaRead() override;
 
+    void stop();
+    void test();
     QString diagnostics();
     QString reportMetaCache();
     void cleanupIcons();
@@ -34,6 +37,7 @@ signals:
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void addToDatamodel(ImageMetadata m);
     void addToImageCache(ImageMetadata m);
+    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void triggerImageCache(QString src);
 
     void updateIconBestFit();  // req'd?
@@ -41,9 +45,9 @@ signals:
 
 public slots:
     void initialize();
-    void stop();
     void setCurrentRow(int row = 0, QString src = "");
     int interrupt();
+    void testFinished();
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -51,7 +55,7 @@ protected:
 private:
     void read(int startRow = 0, QString src = "");
     void readRow(int sfRow);
-    void readMetadata(QModelIndex sfIdx, QString fPath);
+    bool readMetadata(QModelIndex sfIdx, QString fPath);
     void readIcon(QModelIndex sfIdx, QString fPath);
     void iconMax(QPixmap &thumb);
     bool isNotLoaded(int sfRow);
@@ -67,14 +71,15 @@ private:
     Metadata *metadata;
     FrameDecoder *frameDecoder;
     Thumb *thumb;
-    int dmInstance;
+    int instance;
     int visibleIconCount;
     int sfRowCount;
     int iconLimit;                  // iconChunkSize * expansionFactor
     int imageCacheTriggerCount = 50;
 
-    int startRow = -1;
+    int startRow = 0;
     QString src;
+    QString folderPath;
 
     bool imageCachingStarted = false;
 
@@ -82,7 +87,10 @@ private:
 
     bool debugCaching = false;
     QElapsedTimer t;
+    QElapsedTimer tAbort;
+    quint32 ms;
 };
+
 #endif // METAREAD_H
 
 

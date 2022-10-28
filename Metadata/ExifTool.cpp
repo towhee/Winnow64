@@ -15,7 +15,7 @@ ExifTool::ExifTool()
 #endif
     // confirm exifToolPath exists
     if (!QFile(exifToolPath).exists())
-        qWarning() << CLASSFUNCTION << exifToolPath << "is missing";
+        qWarning() << "WARNING" << "ExifTool::ExifTool" << exifToolPath << "is missing";
     QStringList startArgs;
     startArgs << "-stay_open";
     startArgs << "True";
@@ -31,7 +31,7 @@ int ExifTool::execute(QStringList &args)
 {
     /* all args that are a path to an image should be converted to a url
        ie  QUrl("D:/Pictures/Zenfolio/2021-02-12_0006.jpg").path();  */
-    Utilities::log(CLASSFUNCTION, exifToolPath);
+    Utilities::log("ExifTool::execute", exifToolPath);
     return QProcess::execute(exifToolPath, args);
 }
 
@@ -179,7 +179,7 @@ int ExifTool::copyAll(const QStringList &src, QStringList &dst)
     // stdin
     process.write(args);
     if (process.waitForFinished(30000))
-        qDebug() << CLASSFUNCTION << "ExifTool exit code =" << process.exitCode();
+        qDebug() << "ExifTool::copyAll" << "ExifTool exit code =" << process.exitCode();
     else qWarning("ExifTool::copyAll process.waitForFinished failed");
 
     return process.exitCode();

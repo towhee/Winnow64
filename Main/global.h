@@ -136,12 +136,20 @@ namespace G
         QString args;
     };
 
-    struct ImPair {
-        int row;
-        QImage image;
-    };
-
+    // stopping all threads
     extern bool stop;
+    extern int dmInstance;
+    extern int metadataInstance;
+    extern int imageCacheInstance;
+
+    // limit functionality for testing
+    extern bool useImageCache;
+    extern bool useImageView;
+    extern bool useInfoView;
+    extern bool useUpdateStatus ;
+    extern bool useFilterView;      // not finished
+    extern bool useReadIcons;
+    extern bool useReadMetadata;
 
     extern QSettings *settings;
 
@@ -269,6 +277,7 @@ namespace G
     extern int wait(int ms);
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);
+    extern bool instanceClash(int instance);
 
     extern int popUpProgressCount;
     extern int popUpLoadFolderStep;

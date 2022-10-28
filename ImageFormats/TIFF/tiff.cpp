@@ -380,7 +380,7 @@ bool Tiff::parse(MetadataParameters &p,
         encodeThumbnail(p, m, ifd);
         // write thumbnail added to xmp sidecar if writing sidecars
         if (G::useSidecar) {
-            Xmp xmp(p.file);
+            Xmp xmp(p.file, p.instance);
             if (xmp.isValid) {
                 QByteArray val = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss").toLatin1();
                 xmp.setItem("WinnowAddThumb", val);
@@ -506,7 +506,7 @@ bool Tiff::parse(MetadataParameters &p,
     // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp && !G::stop) {
-        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) {
             m.rating = xmp.getItem("Rating");
             m.label = xmp.getItem("Label");

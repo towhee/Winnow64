@@ -22,8 +22,8 @@ class Xmp : public QObject
 {
     Q_OBJECT
 public:
-    Xmp(QFile &file, uint offset, uint length, QObject *parent = nullptr);
-    Xmp(QFile &file, QObject *parent = nullptr);
+    Xmp(QFile &file, uint offset, uint length, int instance, QObject *parent = nullptr);
+    Xmp(QFile &file, int instance, QObject *parent = nullptr);
 
     enum Err {
         NoErr,
@@ -137,6 +137,7 @@ private:
     ulong xmpPacketEnd;             // offset from start of xmp segment
     int xmpmetaRoom;                // xmpPacketEnd - xmpmetaStart
 
+    int instance;
     QString filePath;
     QHash<QString,QString> xmpItems;
     QStringList skipNodes = {

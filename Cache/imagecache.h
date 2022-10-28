@@ -31,7 +31,7 @@ class ImageCache : public QThread
 {
     Q_OBJECT
 public:
-    ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm/*, Metadata *metadata*/);
+    ImageCache(QObject *parent, ImageCacheData *icd, DataModel *dm);
     ~ImageCache() override;
 
     void initImageCache(int &cacheSizeMB, int &cacheMinMB,
@@ -66,10 +66,11 @@ public:
 signals:
     void stopped(QString src);
     void setValue(QModelIndex dmIdx, QVariant value,
+                  int instance, QString scr = "ImageCache",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void setValueSf(QModelIndex sfIdx, QVariant value,
-                    int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void setValuePath(QString fPath, int col, QVariant value, int role);
+    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
+                    int role = Qt::EditRole, int align = Qt::AlignLeft); // not used
+    void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
     void loadImage(QString fPath, QString src);
     void imageCachePrevCentralView();
     void showCacheStatus(QString instruction,
@@ -94,6 +95,7 @@ public slots:
 private:
     QMutex mutex;
     QWaitCondition condition;
+    int instance;                   // incremented on every DataModel::load
     bool restart;
     bool abort;
     bool pause;

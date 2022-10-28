@@ -101,7 +101,7 @@ bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
         p.file.seek(p.offset);                  // APP1 FFE*
         marker = u.get16(p.file.read(2), isBigEnd);
         if (marker < 0xFF01) {
-            qWarning() << "Jpeg::getDimensions"
+            qWarning() << "WARNING" << "Jpeg::getDimensions"
                      << "FAIL: MARKER < 0xFFC0"
                      << "m.fPath =" << m.fPath
                         ;
@@ -133,9 +133,8 @@ bool Jpeg::parse(MetadataParameters &p,
                  Exif *exif,
                  GPS *gps)
 {
-//    qDebug() << CLASSFUNCTION << p.file.fileName();
     // init
-    m.parseSource = CLASSFUNCTION;
+    m.parseSource = "Jpeg::parse";
     initSegCodeHash();
     m.iccSegmentOffset = 0;
 
@@ -143,8 +142,8 @@ bool Jpeg::parse(MetadataParameters &p,
     bool isBigEnd = true;
 
     if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-        G::error(CLASSFUNCTION, m.fPath, "JPG does not start with 0xFFD8.");
-        qWarning() << "Jpeg::parse FAILED JPG does not start with 0xFFD8."
+        G::error("Jpeg::parse", m.fPath, "JPG does not start with 0xFFD8.");
+        qWarning() << "WARNING" << "Jpeg::parse FAILED JPG does not start with 0xFFD8."
                  << m.fPath
                     ;
         return false;
@@ -167,7 +166,7 @@ bool Jpeg::parse(MetadataParameters &p,
         return true;
     }
     else {
-        G::error(CLASSFUNCTION, m.fPath, "JPG does not contain EXIF information.");
+        G::error("Jpeg::parse", m.fPath, "JPG does not contain EXIF information.");
         qDebug() << "Jpeg::parse JPG does not contain EXIF information."
                  << m.fPath
                     ;
@@ -186,7 +185,7 @@ bool Jpeg::parse(MetadataParameters &p,
             startOffset = static_cast<quint32>(p.file.pos()) - 2;
             foundEndian = true;
             /*
-            qDebug() << CLASSFUNCTION << p.file.fileName()
+            qDebug() << "Jpeg::parse" << p.file.fileName()
                      << "isBigEnd =" << isBigEnd
                      << "startOffset =" << startOffset;
             //*/
@@ -195,7 +194,7 @@ bool Jpeg::parse(MetadataParameters &p,
         count++;
         if (count > 100) {
             // err endian order not found
-            G::error(CLASSFUNCTION, m.fPath, "Endian order not found.");
+            G::error("Jpeg::parse", m.fPath, "Endian order not found.");
             return false;
         }
     }
@@ -381,7 +380,7 @@ bool Jpeg::parse(MetadataParameters &p,
     // read XMP
     bool okToReadXmp = true;
     if (m.isXmp && okToReadXmp && !G::stop) {
-        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) {
             m.rating = xmp.getItem("Rating");     // case is important "Rating"
             m.label = xmp.getItem("Label");       // case is important "Label"
@@ -808,7 +807,7 @@ void Jpeg::decodeScan(QFile &file, QImage &image)
 //        qDebug() << CLASSFUNCTION << "Open " << p.file.fileName();
         bool isBigEnd = true;
         if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
-            G::error(CLASSFUNCTION, file.fileName(), "JPG does not start with 0xFFD8.");
+            G::error("Jpeg::decodeScan", file.fileName(), "JPG does not start with 0xFFD8.");
             p.file.close();
 //            qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
             return;
@@ -839,7 +838,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
     - Convert to RGB
 
     */
-    qDebug() << CLASSFUNCTION;
+    qDebug() << "Jpeg::decodeScan";
 
     QBuffer buffer(&ba);
     buffer.open(QIODevice::ReadOnly);
@@ -892,7 +891,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
     buffer.seek(scanDataOffset);
     quint32 offset = scanDataOffset;
 
-    G::log(CLASSFUNCTION, "Starting to decode scan data");
+    G::log("Jpeg::decodeScan", "Starting to decode scan data");
 
     // Iterate through scan data MCU blocks row by row
     int mcuCount = 0;
@@ -966,7 +965,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                         }
                     }
                     /*
-                    qDebug() << CLASSFUNCTION
+                    qDebug() << "Jpeg::decodeScan"
                              << "initial buf ="
                              << QString::number(buf, 16)
                              << QString::number(buf, 2);*/
@@ -1126,7 +1125,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                     if (!huffFound) {
                         // err
                         if (isReport) qDebug()
-                            << CLASSFUNCTION << "HUFF CODE NOT FOUND"
+                            << "Jpeg::decodeScan" << "HUFF CODE NOT FOUND"
                             << "buf =" << QString::number(buf, 2).rightJustified(32, '0')
                             << "mcuRow =" << mcuRow << "mcuCol =" << mcuCol
                             << "c =" << c << "m =" << m;
@@ -1267,7 +1266,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                 stream << x;
             int line = mcuRow * 8 + y;
 //            if (line < 40)
-            qDebug() << CLASSFUNCTION
+            qDebug() << "Jpeg::decodeScan"
                      << "mcuRow =" << mcuRow
                      << "y =" << y
                      << "line =" << line
@@ -1287,7 +1286,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
     image.operator=(im);
 
     // write image for review
-    qDebug() << CLASSFUNCTION << *image.scanLine(0);
+    qDebug() << "Jpeg::decodeScan" << *image.scanLine(0);
     image.save("D:/Pictures/_Jpg/test/test.jpg", "JPG");
 }
 
