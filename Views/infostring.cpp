@@ -329,7 +329,7 @@ QString InfoString::parseTokenString(QString &tokenString,
 //    Utilities::log(CLASSFUNCTION, fPath);
     QFileInfo info(fPath);
     Metadata metadata;
-    metadata.loadImageMetadata(info);
+    metadata.loadImageMetadata(info, dm->instance);
     QString s;
     int tokenEnd;
     int i = 0;

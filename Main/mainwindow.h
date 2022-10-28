@@ -124,11 +124,6 @@ public:
     bool ignoreSelectionChange = false;
     bool isStartupArgs = false;
     bool hideEmbellish = false;
-    bool useImageCache = true;
-    bool useInfoView = true;
-    bool useImageView = true;
-    bool useUpdateStatus = true;
-    bool useFilterView = true;
 
     int copyCutCount;   // rgh req'd?
     QTextStream rpt;
@@ -379,11 +374,11 @@ public slots:
     void imageCachePrevCentralView();
 
 signals:
-    void setValue(QModelIndex dmIdx, QVariant value,
+    void setValue(QModelIndex dmIdx, QVariant value, int instance, QString src = "MW",
                   int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void setValueSf(QModelIndex sfIdx, QVariant value,
+    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src = "MW",
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
-    void setValuePath(QString fPath, int col, QVariant value, int role);
+    void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
     void restartMetaRead(int newRow);
     void interruptMetaRead(bool flag);
     void startMetaRead(int sfRow, QString src);
@@ -1020,6 +1015,7 @@ private:
     UpdateApp *updateAppDlg;
     ZoomDlg *zoomDlg = nullptr;
     QTimer *slideShowTimer;
+    QTimer *resetTimer;
     QWidget *folderDockEmptyWidget;
     QWidget *favDockEmptyWidget;
     QWidget *filterDockEmptyWidget;

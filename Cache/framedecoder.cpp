@@ -53,15 +53,17 @@ void FrameDecoder::stop()
     abort = true;
 }
 
+bool FrameDecoder::isBusy()
+{
+    return status == Status::Busy;
+}
+
 void FrameDecoder::clear()
 {
     queue.clear(); return;
 
-    qDebug() << CLASSFUNCTION << "status =" << status;
     if (status == Status::Idle) {
-        qDebug() << CLASSFUNCTION << "clearing queue" << queue.size();
         queue.clear();
-        qDebug() << CLASSFUNCTION << "cleared queue" << queue.size();
     }
     else {
         reset = true;
@@ -167,5 +169,5 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
 
 void FrameDecoder::errorOccurred(QMediaPlayer::Error error, const QString &errorString)
 {
-    qWarning() << "FrameDecoder::errorOccurred" << "row =" << dmIdx.row() << errorString;
+    qWarning() << "WARNING" << "FrameDecoder::errorOccurred" << "row =" << dmIdx.row() << errorString;
 }

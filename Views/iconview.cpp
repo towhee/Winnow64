@@ -219,6 +219,13 @@ void IconView::move()
 void IconView::refreshThumb(QModelIndex idx, int role)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    if (!idx.isValid()) {
+        qWarning() << "WARNING" << "WARNING"
+                   << "IconView::refreshThumb"
+                   << "idx =" << idx
+                   << "is invalid";
+        return;
+    }
     QVector<int> roles;
     roles.append(role);
     dataChanged(idx, idx, roles);
@@ -843,7 +850,7 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
 
         // Change current
         if (type == "Change current") {
-            emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION + " " + objectName() + " " + type);
+            emit fileSelectionChange(currentIndex(), QModelIndex(), "IconView::selectionChanged " + objectName() + " " + type);
         }
 
         // UniSelection, Deselect current: reselect deselection if no selection remaining
@@ -855,7 +862,7 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
         else if (isDeselected && isCurrent && selectedRowsCount) {
             QModelIndex idx = getNearestSelection(deselectedRow);
             selectionModel()->setCurrentIndex(idx, QItemSelectionModel::NoUpdate);
-            emit fileSelectionChange(idx, QModelIndex(), CLASSFUNCTION + " " + objectName() + " " + type);
+            emit fileSelectionChange(idx, QModelIndex(), "IconView::selectionChanged " + objectName() + " " + type);
         }
 
         // MultiSelection, Deselect non-current: reset current index to before
@@ -867,13 +874,13 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
         else if (anchorCurrent && isSelected && selectedRowsCount > 1) {
             QListView::selectionChanged(selected, deselected);
             selectionModel()->setCurrentIndex(currentSfIdx, QItemSelectionModel::NoUpdate);
-            emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION + " " + objectName() + " " + type);
+            emit fileSelectionChange(currentIndex(), QModelIndex(), "IconView::selectionChanged " + objectName() + " " + type);
         }
 
         else {
             // update the View
             QListView::selectionChanged(selected, deselected);
-            emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION);
+            emit fileSelectionChange(currentIndex(), QModelIndex(), "IconView::selectionChanged");
         }
 
         // refresh
@@ -885,7 +892,7 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
         // update status bar
         QString s = "";
         if (m2->isStressTest) s = "   Stress count: " + QString::number(m2->slideCount);
-        emit updateStatus(true, s, CLASSFUNCTION);
+        emit updateStatus(true, s, "IconView::selectionChanged");
     }
 }
 
@@ -1190,7 +1197,8 @@ void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)
     click position that is then sent to imageView to zoom to the same spot.
 */
 //    qDebug() << CLASSFUNCTION << index;
-    emit setValueSf(index, iconRect, G::IconRectRole);
+    QString src = "IconView::updateThumbRectRole";
+    emit setValueSf(index, iconRect, dm->instance, src, G::IconRectRole);
 }
 
 void IconView::resizeEvent(QResizeEvent *event)
@@ -1249,11 +1257,11 @@ void IconView::resizeEvent(QResizeEvent *event)
     if (m2->gridDisplayFirstOpen) return;
 
     if (isFitTopOrBottom) {
-        qDebug() << CLASSFUNCTION
+        qDebug() << "IconView::resizeEvent"
                  << "isFitTopOrBottom =" << isFitTopOrBottom;
         // thumbDock isWrapping = false situation
         G::ignoreScrollSignal = true;
-        scrollToRow(mid, CLASSFUNCTION);
+        scrollToRow(mid, "IconView::resizeEvent");
         isFitTopOrBottom = false;
         calcViewportRange(mid);
     }
@@ -1432,27 +1440,28 @@ void IconView::scrollToRow(int row, QString source)
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
 }
 
-bool IconView::waitUntilOkToScroll()
-{
-/*
-Returns true when the scrollbars have been fully rendered.
-*/
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    QTime t = QTime::currentTime().addMSecs(1000);
-    while (QTime::currentTime() < t) {
-        if (okToScroll()) {
-            G::wait(50);
-            return true;
-        }
-        qApp->processEvents(QEventLoop::AllEvents, 50);
-    }
-    return false;
-}
+//bool IconView::waitUntilOkToScroll()
+//{
+///*
+//    Not being used.
+//    Returns true when the scrollbars have been fully rendered.
+//*/
+//    if (G::isLogger) G::log(CLASSFUNCTION);
+//    QTime t = QTime::currentTime().addMSecs(1000);
+//    while (QTime::currentTime() < t) {
+//        if (okToScroll()) {
+//            G::wait(50);
+//            return true;
+//        }
+//        qApp->processEvents(QEventLoop::AllEvents, 50);
+//    }
+//    return false;
+//}
 
 bool IconView::okToScroll()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
+    qDebug() << "IconView::okToScroll";
     if (objectName() == "Thumbnails") {
         /*
         qDebug() << CLASSFUNCTION << objectName()
@@ -1802,7 +1811,7 @@ void IconView::mouseDoubleClickEvent(QMouseEvent *event)
     if (G::mode != "Loupe" && event->button() == Qt::LeftButton) {
         emit displayLoupe();
     }
-    scrollToRow(currentIndex().row(), CLASSFUNCTION);
+    scrollToRow(currentIndex().row(), "IconView::mouseDoubleClickEvent");
 }
 
 void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate, QPoint mousePos)
@@ -2034,11 +2043,11 @@ void IconView::startDrag(Qt::DropActions)
     Drag and drop thumbs to another program.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
+    qDebug() << "IconView::startDrag";
 
     QModelIndexList selection = selectionModel()->selectedRows();
     if (selection.isEmpty()) {
-        qDebug() << CLASSFUNCTION << "Empty selection";
+        qDebug() << "IconView::startDrag" << "Empty selection";
         return;
     }
 

@@ -32,7 +32,6 @@ void BuildFilters::stop()
         filters->disableZeroCountItems(true);
         filters->setEnabled(true);
         filters->collapseAll();
-//        qDebug() << CLASSFUNCTION << "filtersBuilt = " << filters->filtersBuilt;
 //        emit updateIsRunning(false);
     }
     if (G::stop) emit stopped("BuildFilters");
@@ -49,6 +48,7 @@ void BuildFilters::build()
         wait();
     }
     abort = false;
+    instance = dm->instance;
     filters->startBuildFilters();
     progress = 0;
     dmRows = dm->rowCount();
@@ -61,7 +61,7 @@ void BuildFilters::done()
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     if (!abort) emit finishedBuildFilters();
 //    qint64 msec = buildFiltersTimer.elapsed();
-//    qDebug() << CLASSFUNCTION << QString("%L1").arg(msec) << "msec";
+//    qDebug() << "BuildFilters::done" << QString("%L1").arg(msec) << "msec";
 }
 
 void BuildFilters::unfilteredItemSearchCount()
@@ -194,9 +194,9 @@ void BuildFilters::countFiltered()
             if (instances.contains(cat)) {
                 int itemProgress = 40 * instances[cat] / totInstances;
                 progress += itemProgress;
-                emit updateProgress(progress); // do not qApp->processEvents() from another thread
+                emit updateProgress(progress);
                 /*
-                qDebug() << CLASSFUNCTION
+                qDebug() << "BuildFilters::countFiltered"
                          << cat
                          << "instances =" << instances[cat]
                          << "total instances =" << totInstances
@@ -254,9 +254,9 @@ void BuildFilters::countUnfiltered()
             if (instances.contains(cat)) {
                 int itemProgress = 40 * instances[cat] / totInstances;
                 progress += itemProgress;
-                emit updateProgress(progress); // do not qApp->processEvents() from another thread
+                emit updateProgress(progress);
                 /*
-                qDebug() << CLASSFUNCTION
+                qDebug() << "BuildFilters::countUnfiltered"
                          << cat
                          << "instances =" << instances[cat]
                          << "total instances =" << totInstances
@@ -272,7 +272,8 @@ void BuildFilters::countUnfiltered()
 
 void BuildFilters::loadAllMetadata()
 {
-    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
+    QString src = "BuildFilters::loadAllMetadata";
+    if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(src); mutex.unlock();}
     if (!G::allMetadataLoaded) {
         for (int row = 0; row < dmRows; ++row) {
             if (abort) return;
@@ -281,12 +282,12 @@ void BuildFilters::loadAllMetadata()
             if (dm->index(row, G::MetadataLoadedColumn).data().toBool()) continue;
             QString fPath = dm->index(row, 0).data(G::PathRole).toString();
             QFileInfo fileInfo(fPath);
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
+            if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, src)) {
                 metadata->m.row = row;
                 dm->addMetadataForItem(metadata->m);
                 if (row % 100 == 0 || row == 0) {
                     progress = static_cast<int>(static_cast<double>(20 * row) / dmRows);
-                    emit updateProgress(progress); // do not qApp->processEvents() from another thread
+                    emit updateProgress(progress);
                 }
             }
             dm->mutex.unlock();

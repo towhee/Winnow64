@@ -150,7 +150,6 @@ QString MW::diagnostics()
     rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abortLoadingModel);
     rpt << "\n" << "dm->loadingModel = " << G::s(dm->loadingModel);
     rpt << "\n" << "dm->instance = " << G::s(dm->instance);
-    rpt << "\n" << "icd->cache.dmInstance = " << G::s(icd->cache.dmInstance);
 
     rpt << "\n";
     rpt << "\n" << "isShift = " << G::s(isShift);

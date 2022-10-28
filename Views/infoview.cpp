@@ -153,6 +153,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     bool isSidecarChange = G::useSidecar && G::isNewFolderLoadedAndInfoViewUpToDate && !isNewImageDataChange;
     bool usedPopUp = false;
     static int count = 0;
+    QString src = "InfoView::dataChanged";
     if (count == 0) {
         bool isEditable = ok->itemFromIndex(idx1)->isEditable();
         if (isEditable) {
@@ -175,10 +176,8 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
                 if (field == "Title") {
                     QString s = idx1.data().toString();
-                    emit setValueSf(dm->sf->index(row, G::TitleColumn), s, Qt::EditRole);
-                    emit setValueSf(dm->sf->index(row, G::TitleColumn), s, Qt::ToolTipRole);
-//                    dm->setData(dm->sf->index(row, G::TitleColumn), s);
-//                    dm->setData(dm->sf->index(row, G::TitleColumn), s, Qt::ToolTipRole);
+                    emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::EditRole);
+                    emit setValueSf(dm->sf->index(row, G::TitleColumn), s, dm->instance, src, Qt::ToolTipRole);
                     /*
                     qDebug() << CLASSFUNCTION
                              << "dm->currentRow =" << dm->currentRow
@@ -190,31 +189,23 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 }
                 if (field == "Creator") {
                     QString s = idx1.data().toString();
-                    emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, Qt::EditRole);
-                    emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, Qt::ToolTipRole);
-//                    dm->setData(dm->sf->index(row, G::CreatorColumn), s);
-//                    dm->setData(dm->sf->index(row, G::CreatorColumn), s, Qt::ToolTipRole);
+                    emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::EditRole);
+                    emit setValueSf(dm->sf->index(row, G::CreatorColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
                 if (field == "Copyright") {
                     QString s = idx1.data().toString();
-                    emit setValueSf(dm->sf->index(row, G::CopyrightColumn), s, Qt::EditRole);
-                    emit setValueSf(dm->sf->index(row, G::CopyrightColumn), s, Qt::ToolTipRole);
-//                    dm->setData(dm->sf->index(row, G::CopyrightColumn), s);
-//                    dm->setData(dm->sf->index(row, G::CopyrightColumn), s, Qt::ToolTipRole);
+                    emit setValueSf(dm->sf->index(row, G::CopyrightColumn), s, dm->instance, src, Qt::EditRole);
+                    emit setValueSf(dm->sf->index(row, G::CopyrightColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
                 if (field == "Email") {
                     QString s = idx1.data().toString();
-                    emit setValueSf(dm->sf->index(row, G::EmailColumn), s, Qt::EditRole);
-                    emit setValueSf(dm->sf->index(row, G::EmailColumn), s, Qt::ToolTipRole);
-//                    dm->setData(dm->sf->index(row, G::EmailColumn), s);
-//                    dm->setData(dm->sf->index(row, G::EmailColumn), s, Qt::ToolTipRole);
+                    emit setValueSf(dm->sf->index(row, G::EmailColumn), s, dm->instance, src, Qt::EditRole);
+                    emit setValueSf(dm->sf->index(row, G::EmailColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
                 if (field == "Url") {
                     QString s = idx1.data().toString();
-                    emit setValueSf(dm->sf->index(row, G::UrlColumn), s, Qt::EditRole);
-                    emit setValueSf(dm->sf->index(row, G::UrlColumn), s, Qt::ToolTipRole);
-//                    dm->setData(dm->sf->index(row, G::UrlColumn), s);
-//                    dm->setData(dm->sf->index(row, G::UrlColumn), s, Qt::ToolTipRole);
+                    emit setValueSf(dm->sf->index(row, G::UrlColumn), s, dm->instance, src, Qt::EditRole);
+                    emit setValueSf(dm->sf->index(row, G::UrlColumn), s, dm->instance, src, Qt::ToolTipRole);
                 }
 
                 // write to sidecar
@@ -421,7 +412,7 @@ void InfoView::updateInfo(const int &row)
 
     // make sure there is metadata for this image
     if (!dm->sf->index(row, G::MetadataLoadedColumn).data().toBool()) {
-        metadata->loadImageMetadata(imageInfo, true, true, false, true, CLASSFUNCTION);
+        metadata->loadImageMetadata(imageInfo, dm->instance, true, true, false, true, CLASSFUNCTION);
         metadata->m.row = dm->fPathRow[fPath];
         dm->addMetadataForItem(metadata->m);
     }

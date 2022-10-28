@@ -198,6 +198,7 @@ signals:
 
 public slots:
     bool loadImageMetadata(const QFileInfo &fileInfo,
+                           int instance,
                            bool essential = true,
                            bool nonEssential = true,
                            bool isReport = false,

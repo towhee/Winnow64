@@ -1426,7 +1426,8 @@ void MW::createActions()
     testAction->setObjectName("test");
     testAction->setShortcutVisibleInContextMenu(true);
     addAction(testAction);
-    testAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+T"));
+    testAction->setShortcut(QKeySequence("*"));
+//    testAction->setShortcut(QKeySequence("Shift+Ctrl+Alt+T"));
     connect(testAction, &QAction::triggered, this, &MW::test);
 
     testAction1 = new QAction(tr("Test1"), this);
@@ -1924,7 +1925,7 @@ void MW::createMenus()
     filters->addActions(*filterActions);
     filters->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-    if (useInfoView) {
+    if (G::useInfoView) {
         infoView->addActions(*metadataActions);
         infoView->setContextMenuPolicy(Qt::ActionsContextMenu);
     }

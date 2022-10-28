@@ -293,21 +293,21 @@ void MW::defaultWorkspace()
     folderDock->setFloating(false);
     favDock->setFloating(false);
     filterDock->setFloating(false);
-    if (useInfoView) metadataDock->setFloating(false);
+    if (G::useInfoView) metadataDock->setFloating(false);
     embelDock->setFloating(false);
     thumbDock->setFloating(false);
 
     addDockWidget(Qt::LeftDockWidgetArea, folderDock);
     addDockWidget(Qt::LeftDockWidgetArea, favDock);
     addDockWidget(Qt::LeftDockWidgetArea, filterDock);
-    if (useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
+    if (G::useInfoView) addDockWidget(Qt::LeftDockWidgetArea, metadataDock);
 //    addDockWidget(Qt::RightDockWidgetArea, embelDock);
     addDockWidget(Qt::BottomDockWidgetArea, thumbDock);
 
     MW::setTabPosition(Qt::LeftDockWidgetArea, QTabWidget::North);
     MW::tabifyDockWidget(folderDock, favDock);
     MW::tabifyDockWidget(favDock, filterDock);
-    if (useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
+    if (G::useInfoView) MW::tabifyDockWidget(filterDock, metadataDock);
 
     folderDock->show();
     folderDock->raise();

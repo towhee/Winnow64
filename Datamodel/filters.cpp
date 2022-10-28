@@ -705,7 +705,7 @@ void Filters::toggleExpansion()
     }
     if (isExpanded) collapseAll();
     else expandAll();
-    qDebug() << CLASSFUNCTION << "isExpanded =" << isExpanded;
+    qDebug() << "Filters::toggleExpansion" << "isExpanded =" << isExpanded;
 }
 
 void Filters::addCategoryFromData(QStringList itemList, QTreeWidgetItem *category)

@@ -45,7 +45,7 @@ public:
                     QPoint mousePos = QPoint(-1, -1));
 
     void updateLayout();
-    bool waitUntilOkToScroll();
+//    bool waitUntilOkToScroll();
     bool okToScroll();
 
     IconViewDelegate *iconViewDelegate;
@@ -187,7 +187,7 @@ private:
     bool skipResize;
 
 signals:
-    void setValueSf(QModelIndex sfIdx, QVariant value,
+    void setValueSf(QModelIndex sfIdx, QVariant value, int instance, QString src,
                     int role = Qt::EditRole, int align = Qt::AlignLeft);
     void fileSelectionChange(QModelIndex current, QModelIndex previous, QString src);
     void togglePick();

@@ -245,7 +245,7 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
     // read XMP
 //    bool okToReadXmp = true;
 //    if (m.isXmp && okToReadXmp) {
-//        Xmp xmp(p.buf, m.xmpSegmentOffset, m.xmpNextSegmentOffset);
+//        Xmp xmp(p.buf, m.xmpSegmentOffset, m.xmpNextSegmentOffset, p.instance);
 //        m.rating = xmp.getItem("Rating");     // case is important "Rating"
 //        m.label = xmp.getItem("Label");       // case is important "Label"
 //        m.title = xmp.getItem("title");       // case is important "title"

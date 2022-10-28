@@ -2,12 +2,10 @@
 
 namespace G
 {
-    bool stop = false;                  // flag to stop everything
-
     QSettings *settings;
 
     // system messaging
-    bool isLogger = false;              // Writes log messages to file or console
+    bool isLogger = true;              // Writes log messages to file or console
     bool isErrorLogger = false;         // Writes error log messages to file or console
     bool isFlowLogger = false;          // Writes key program flow points to file or console
     bool isTestLogger = false;          // Writes test points to file or console
@@ -18,6 +16,20 @@ namespace G
 
     // Errors
     QMap<QString,QStringList> err;
+
+    bool stop = false;                  // flag to stop everything
+    int dmInstance;
+    int metadataInstance;
+    int imageCacheInstance;
+
+    // limit functionality for testing
+    bool useReadMetadata = true;
+    bool useReadIcons = true;
+    bool useImageCache = false;
+    bool useImageView = false;
+    bool useInfoView = false;
+    bool useUpdateStatus = false;
+    bool useFilterView = true;          // not finished
 
     // system display
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitoriconLoaded
@@ -158,7 +170,7 @@ namespace G
         }
         QTime t = QTime::currentTime().addMSecs(ms);
         while (QTime::currentTime() < t) {
-            qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
+//            qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
         }
         duration += ms;
         return duration;
@@ -192,6 +204,7 @@ namespace G
         //*/
         static QString prevFunctionName = "";
         static QString prevComment = "";
+        QString stop = "";
         if (zeroElapsedTime) {
             t.restart();
         }
@@ -201,13 +214,14 @@ namespace G
             QString e = microSec.rightJustified(11, ' ') + " ";
             QString f = prevFunctionName.leftJustified(50, ' ') + " ";
             QString c = prevComment;
+            if (G::stop) stop = "STOP ";
             if (sendLogToConsole) {
-                QString msg = e + f + c;
+                QString msg = stop + e + f + c;
                 if (prevFunctionName == "skipline") qDebug().noquote() << " ";
                 else qDebug().noquote() << msg;
             }
             else {
-                QString msg = d + e + f + c + "\n";
+                QString msg = stop + d + e + f + c + "\n";
                 if (logFile.isOpen()) logFile.write(msg.toUtf8());
             }
         }
@@ -241,6 +255,18 @@ namespace G
         G::err[fPath].append(errMsg);
         // add to errorLog ...
         errlog(functionName, fPath, err);
+    }
+
+    bool instanceClash(int instance)
+    {
+        bool clash = (dmInstance != instance);
+        if (clash) {
+            qWarning() << "WARNING G::instanceClash"
+                       << "instance =" << instance
+                       << "DM instance =" << dmInstance
+                          ;
+        }
+        return clash;
     }
 
     int popUpProgressCount = 0;

@@ -152,13 +152,19 @@ bool ImageView::loadImage(QString fPath, QString src)
 //    qDebug() << CLASSFUNCTION << fPath << src;
 
     // No folder selected yet
-    if (!fPath.length()) return false;
+    if (!fPath.length()) {
+        qWarning() << "WARNING" << CLASSFUNCTION << "Src =" << src << "No folder selected";
+        return false;
+    }
 
     // could be a popup from a prior uncached image being loaded
     G::popUp->end();
 
     // do not load image if triggered by embellish remote export
-    if (G::isProcessingExportedImages) return false;
+    if (G::isProcessingExportedImages) {
+        qWarning() << "WARNING" << CLASSFUNCTION << "Processing exported images";
+        return false;
+    }
 
     /* important to keep currentImagePath. It is used to check if there isn't an image (when
     currentImagePath.isEmpty() == true) - for example when no folder has been chosen or the
@@ -173,7 +179,7 @@ bool ImageView::loadImage(QString fPath, QString src)
         int dmRow = dm->fPathRow[fPath];
         if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
             QFileInfo fileInfo(fPath);
-            if (metadata->loadImageMetadata(fileInfo, true, true, false, true, CLASSFUNCTION)) {
+            if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, CLASSFUNCTION)) {
                 metadata->m.row = dmRow;
                 dm->addMetadataForItem(metadata->m);
             }
@@ -199,7 +205,9 @@ bool ImageView::loadImage(QString fPath, QString src)
     int dmRow = dm->rowFromPath(fPath);
     int sfRow = dm->proxyRowFromModelRow(dmRow);
 //    bool isCached = dm->index(dmRow, 0).data(G::CachedRole).toBool() || src == "ImageCache::cacheImage";
-    bool isCached = icd->cacheItemList.at(sfRow).isCached || src == "ImageCache::cacheImage";
+    bool isCached = false;
+    if (icd->cacheItemList.size() > 0)
+        isCached = icd->cacheItemList.at(sfRow).isCached || src == "ImageCache::cacheImage";
 //    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION,
 //                                               fPath + " isCached = " +
 //                                               (isCached ? "true" : "false"));

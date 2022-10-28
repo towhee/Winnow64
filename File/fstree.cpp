@@ -14,7 +14,7 @@ FSFilter::FSFilter(QObject *parent) : QSortFilterProxyModel(parent)
 
 void FSFilter::refresh()
 {
-    qDebug() << CLASSFUNCTION;
+    qDebug() << "FSFilter::refresh";
     this->invalidateFilter();
 }
 
@@ -150,7 +150,7 @@ void FSModel::refresh(const QModelIndex &index)
     roles << Qt::DisplayRole;
     emit dataChanged(index, index, roles);
 //    emit dataChanged(testIdx, testIdx);
-    qDebug() << CLASSFUNCTION << index << testIdx;
+    qDebug() << "FSModel::refresh" << index << testIdx;
 }
 
 QVariant FSModel::data(const QModelIndex &index, int role) const

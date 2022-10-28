@@ -10,6 +10,16 @@ Metadata::Metadata(QObject *parent) : QObject(parent)
     initSupportedFiles();
     initSupportedLabelsRatings();
     p.report = false;
+
+    canon = new Canon;
+    canonCR3 = new CanonCR3;
+    dng = new DNG;
+    fuji = new Fuji;
+    nikon = new Nikon;
+    olympus = new Olympus;
+    panasonic = new Panasonic;
+    sony = new Sony;
+    tiff = new Tiff;
 }
 
 /* METADATA NOTES
@@ -467,7 +477,7 @@ void Metadata::reportMetadata()
     if (m.isXmp) {
         // sidecar xmp
         MetaReport::header("Embedded XMP Extract", p.rpt);
-        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) p.rpt << xmp.docToQString();
         else {
             p.rpt << "ERROR: " << xmp.errMsg[xmp.err] << "\n";
@@ -478,7 +488,7 @@ void Metadata::reportMetadata()
 
 QString Metadata::diagnostics(QString fPath)
 {
-    readMetadata(true, fPath, CLASSFUNCTION);
+    readMetadata(true, fPath, "Metadata::diagnostics");
     return reportString;
 }
 
@@ -574,7 +584,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
 //        && !orientationChanged
 //        && !rotationChanged
        ) {
-        qDebug() << CLASSFUNCTION << "Unable to write xmp buffer. No metadata has been edited.";
+        qDebug() << "Metadata::writeXMP" << "Unable to write xmp buffer. No metadata has been edited.";
         return false;
     }
 
@@ -593,7 +603,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     p.file.open(QIODevice::ReadWrite);
 
     // if current xmp is invalid then fix
-    Xmp xmp(p.file);
+    Xmp xmp(p.file, p.instance);
     if (!xmp.isValid) xmp.fix();
 //    {
 //        p.file.close();
@@ -726,8 +736,10 @@ bool Metadata::parseCanon()
 bool Metadata::parseCanonCR3()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    CanonCR3 canonCR3(p, m, ifd, exif, jpeg);
-    canonCR3.parse();
+//    CanonCR3 canonCR3(p, m, ifd, exif, jpeg);
+//    canonCR3.parse();
+    if (canonCR3 == nullptr) canonCR3 = new CanonCR3;
+    canonCR3->parse(&p, &m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
     return true;
 }
@@ -793,12 +805,12 @@ bool Metadata::parseJPG(quint32 startOffset)
 //    qDebug() << CLASSFUNCTION << p.file.fileName();
     if (G::isLogger) G::log(CLASSFUNCTION); 
     if (!p.file.isOpen()) {
-        qDebug() << CLASSFUNCTION << p.file.fileName() << "is not open";
+        qWarning() << "WARNING" << "Metadata::parseJPG" << p.file.fileName() << "is not open";
         return false;
     }
     p.offset = startOffset;
     if (p.file.fileName() == "") {
-        qDebug() << CLASSFUNCTION << "Blank file name";
+        qWarning() << "WARNING" << "Metadata::parseJPG" << "Blank file name";
         return false;
     }
     bool ok = jpeg->parse(p, m, ifd, iptc, exif, gps);
@@ -809,7 +821,6 @@ bool Metadata::parseJPG(quint32 startOffset)
 bool Metadata::parseHEIF()
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
-    qDebug() << CLASSFUNCTION;
 //#ifdef Q_OS_WIN
 //    // rgh remove heic
 //    if (heic == nullptr) heic = new Heic;
@@ -839,13 +850,17 @@ bool Metadata::parseSidecar()
         return false;
     }
 
+    if (G::instanceClash(p.instance)) {
+        return false;
+    }
+
     if (!sidecarFile.open(QIODevice::ReadOnly)) {
-        qWarning() << CLASSFUNCTION << "Failed to open sidecar file" << sidecarPath;
+        qWarning() << "WARNING" << "Metadata::parseSidecar" << "Failed to open sidecar file" << sidecarPath;
         return false;
     }
 
     // parse sidecar
-    Xmp xmp(sidecarFile);
+    Xmp xmp(sidecarFile, p.instance);
 
     // report
     if (p.report) {
@@ -863,6 +878,14 @@ bool Metadata::parseSidecar()
     }
     // extract metadata from sidecar xmp
     else {
+//        /*
+        qDebug() << "Metadata::parseSidecar"
+                 << "sidecarPath" << sidecarPath
+                 << "sidecarFile.exists()" << sidecarFile.exists()
+                 << "p.instance =" << p.instance
+                 << "G::dmInstance =" << G::dmInstance
+                    ;
+                    //*/
         QString s;
         s = xmp.getItem("rating"); if (!s.isEmpty()) {m.rating = s; m._rating = s;}
         s = xmp.getItem("label"); if (!s.isEmpty()) {m.label = s; m._label = s;}
@@ -995,12 +1018,12 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         p.rpt << Utilities::centeredRptHdr('=', "Metadata Diagnostics for Current Image");
         p.rpt << "\n";
     }
-    clearMetadata();  // moved to loadMetadata
+//    clearMetadata();  // moved to loadMetadata
     m.fPath = path;
     p.fPath = path;
 
     if (p.file.isOpen()) {
-        qDebug() << CLASSFUNCTION << "File already open" << path;
+        qWarning() << "WARNING" << "Metadata::readMetadata" << "File already open" << path;
         return false;
     }
     p.file.setFileName(path);
@@ -1010,9 +1033,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     }
     QString ext = fileInfo.suffix().toLower();
     bool parsed = false;
-    // rgh next triggers crash sometimes when skip to end of thumbnails
     if (p.file.open(QIODevice::ReadWrite)) {
-//        qDebug() << CLASSFUNCTION << "Open " << p.file.fileName() << "path =" << path;
         if (jpeg == nullptr) jpeg = new Jpeg;
         if (ifd == nullptr) ifd = new IFD;
         if (exif == nullptr) exif = new Exif;
@@ -1031,9 +1052,8 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ext == "rw2")  parsed = parsePanasonic();
         if (ext == "tif")  parsed = parseTIF();
         p.file.close();
-//        qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
         if (p.file.isOpen()) {
-            qWarning() << CLASSFUNCTION << "Could not close" << path << "after format was read";
+            qWarning() << "WARNING" << "Metadata::readMetadata" << "Could not close" << path << "after format was read";
         }
         if (G::useSidecar) {
             parseSidecar();
@@ -1043,13 +1063,15 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 //            qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
             QString msg =  "Unable to parse metadata for " + path + ". ";
             m.err += msg;
-            qWarning() << CLASSFUNCTION << msg;
+            qWarning() << "WARNING" << "Metadata::readMetadata" << msg;
             return false;
         }
     }
-    else {
+    else {  // not open file
 //        if (p.file.isOpen()) p.file.close();
-        G::error(CLASSFUNCTION, path, "Could not open p.file to read metadata.");
+        QString msg =  "Unable to open file " + path + ".";
+        qWarning() << "WARNING" << "Metadata::readMetadata" << msg;
+        G::error("Metadata::readMetadata", path, "Could not open p.file to read metadata.");
         return false;
     }
 
@@ -1057,7 +1079,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 
     // not all files have thumb or small jpg embedded
     if (m.offsetFull == 0 && ext != "jpg" && parsed) {
-        G::error(CLASSFUNCTION, path, "No embedded JPG found.");
+        G::error("Metadata::readMetadata", path, "No embedded JPG found.");
     }
 
     if (m.lengthFull == 0 && m.lengthThumb > 0) {
@@ -1074,31 +1096,43 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     thumbUnavailable = imageUnavailable = false;
     if (m.lengthFull == 0) {
         imageUnavailable = true;
-        G::error(CLASSFUNCTION, path, "No embedded preview found.");
+        G::error("Metadata::readMetadata", path, "No embedded preview found.");
     }
     if (m.lengthThumb == 0) {
         thumbUnavailable = true;
-        G::error(CLASSFUNCTION, path, "No embedded thumbnail or preview found.");
+        G::error("Metadata::readMetadata", path, "No embedded thumbnail or preview found.");
     }
 
     return true;
 }
 
-bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
+bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
                                  bool essential, bool nonEssential,
                                  bool isReport, bool isLoadXmp, QString source)
 {
     if (G::isLogger) G::log(CLASSFUNCTION, fileInfo.filePath() + "  Source: " + source);
 
+    // check instance up-to-date
+    if (instance != G::dmInstance) {
+        qWarning() << "WARNING" << CLASSFUNCTION
+                   << "Instance clash"
+                   << "this =" << instance
+                   << "DM =" << G::dmInstance
+                      ;
+        return false;
+    }
+
     // check if already loaded
     QString fPath = fileInfo.filePath();
     if (fPath == "") {
-        qWarning() << CLASSFUNCTION << "NULL FILE REQUESTED FROM "
+        qWarning() << "WARNING" << "Metadata::loadImageMetadata"
+                   << "NULL FILE REQUESTED FROM "
                    << source;
         return false;
     }
 
     clearMetadata();
+    p.instance = instance;
 
     // check if format with metadata
     QString ext = fileInfo.suffix().toLower();
@@ -1133,10 +1167,11 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
     okToReadXmp = true;
 
     // read metadata
+    qDebug() << "Metadata::loadImageMetadata" << "Ok";
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
 //        G::error(CLASSFUNCTION, fPath, "Failed to read metadata.");
-        qWarning() << "Metadata not loaded for" << fPath;
+        qWarning() << "WARNING" << "Metadata not loaded for" << fPath;
 //        #ifdef Q_OS_MAC
 //        if (ext == "heic") {
 //            clearMetadata();
@@ -1147,6 +1182,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo,
 //        #endif
         return false;
     }
+    qDebug() << "Metadata::loadImageMetadata" << "Ok1";
 
 //    m.isPicked = false;
 

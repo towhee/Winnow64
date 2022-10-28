@@ -5,7 +5,6 @@ void MW::setCentralMessage(QString message)
     if (G::isLogger) G::log(CLASSFUNCTION);
     msg.msgLabel->setText(message);
     centralLayout->setCurrentIndex(MessageTab);
-//    QApplication::processEvents();
 }
 
 /**********************************************************************************************
@@ -160,7 +159,7 @@ void MW::setFilterDockVisibility()
 void MW::setMetadataDockVisibility()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    if (useInfoView) metadataDock->setVisible(metadataDockVisibleAction->isChecked());
+    if (G::useInfoView) metadataDock->setVisible(metadataDockVisibleAction->isChecked());
 }
 
 void MW::setEmbelDockVisibility()
@@ -171,7 +170,7 @@ void MW::setEmbelDockVisibility()
 
 void MW::setMetadataDockFixedSize()
 {
-    if (!useInfoView) return;
+    if (!G::useInfoView) return;
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (metadataFixedSizeAction->isChecked()) {
         qDebug() << "variable size";
@@ -265,7 +264,7 @@ void MW::toggleFilterDockVisibility() {
 }
 
 void MW::toggleMetadataDockVisibility() {
-    if (!useInfoView) return;
+    if (!G::useInfoView) return;
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (G::isInitializing) return;
     QString dock = metadataDockTabText;
@@ -401,10 +400,10 @@ void MW::setIngested()
     if (G::isLogger) G::log(CLASSFUNCTION);
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         if (dm->sf->index(row, G::PickColumn).data().toString() == "true") {
-            emit setValueSf(dm->sf->index(row, G::IngestedColumn), "true", Qt::EditRole);
-            emit setValueSf(dm->sf->index(row, G::PickColumn), "false", Qt::EditRole);
-//            dm->sf->setData(dm->sf->index(row, G::IngestedColumn), "true");
-//            dm->sf->setData(dm->sf->index(row, G::PickColumn), "false");
+            emit setValueSf(dm->sf->index(row, G::IngestedColumn), "true",
+                            dm->instance, "MW::setIngested", Qt::EditRole);
+            emit setValueSf(dm->sf->index(row, G::PickColumn), "false",
+                            dm->instance, "MW::setIngested", Qt::EditRole);
         }
     }
 }
@@ -442,8 +441,7 @@ void MW::toggleReject()
         pushPick(fPath, priorPickStatus);
         // set pick status
         QModelIndex pickIdx = dm->sf->index(idx.row(), G::PickColumn);
-        emit setValueSf(pickIdx, pickStatus, Qt::EditRole);
-//        dm->sf->setData(pickIdx, pickStatus, Qt::EditRole);
+        emit setValueSf(pickIdx, pickStatus, dm->instance, "MW::toggleReject", Qt::EditRole);
     }
     if (idxList.length() > 1) pushPick("End multiple select");
 
@@ -493,13 +491,14 @@ void MW::setCombineRawJpg()
     filters->totalColumnToUse(combineRawJpg);
 
     // update the datamodel type column
+    QString src = "setCombinedRawJpg";
     for (int row = 0; row < dm->rowCount(); ++row) {
         QModelIndex idx = dm->index(row, 0);
         if (idx.data(G::DupIsJpgRole).toBool()) {
             QString rawType = idx.data(G::DupRawTypeRole).toString();
             QModelIndex typeIdx = dm->index(row, G::TypeColumn);
-            if (combineRawJpg) emit setValue(typeIdx, "JPG+" + rawType, Qt::EditRole, Qt::AlignCenter);
-            else emit setValue(typeIdx, "JPG", Qt::EditRole, Qt::AlignCenter);
+            if (combineRawJpg) emit setValue(typeIdx, "JPG+" + rawType, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+            else emit setValue(typeIdx, "JPG", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
 //            if (combineRawJpg) dm->setData(typeIdx, "JPG+" + rawType);
 //            else dm->setData(typeIdx, "JPG");
         }
@@ -541,14 +540,14 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
     }
 
     if (dmRow == -1) {
-        qWarning() << CLASSFUNCTION << "dm->fPathrow does not contain" << fPath;
+        qWarning() << "WARNING" << CLASSFUNCTION << "dm->fPathrow does not contain" << fPath;
         return;
     }
 
     QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
 
     if (sfIdx.isValid()/* && metaLoaded*/) {
-        emit setValueSf(sfIdx, isCached, G::CachedRole);
+        emit setValueSf(sfIdx, isCached, dm->instance, "MW::updateCachedStatus", G::CachedRole);
         if (isCached) {
             if (sfIdx.row() == dm->currentSfRow) {
                 if (G::isFlowLogger) G::log(CLASSFUNCTION, fPath);
@@ -561,7 +560,7 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
         gridView->refreshThumb(sfIdx, G::CachedRole);
     }
     else {
-        qWarning() << CLASSFUNCTION << "INVALID INDEX FOR" << sfIdx;
+        qWarning() << "WARNING" << CLASSFUNCTION << "INVALID INDEX FOR" << sfIdx;
     }
     return;
 }

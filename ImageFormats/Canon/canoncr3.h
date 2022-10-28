@@ -20,13 +20,14 @@
 class CanonCR3
 {
 public:
-    CanonCR3(MetadataParameters &p,
-             ImageMetadata &m,
-             IFD *ifd,
-             Exif *exif,
-             Jpeg *jpeg);
+    CanonCR3();
 //    CanonCR3();
-    bool parse();
+    bool parse(MetadataParameters *p,
+               ImageMetadata *m,
+               IFD *ifd,
+               Exif *exif,
+               Jpeg *jpeg,
+               GPS *gps);
 
     quint32 metaOffset;
     quint32 metaLength;
@@ -92,11 +93,14 @@ private:
     void parseExif();
 
 
-    MetadataParameters &p;
-    ImageMetadata &m;
+    MetadataParameters *p;
+    ImageMetadata *m;
+//    MetadataParameters &p;
+//    ImageMetadata &m;
     IFD *ifd;
     Exif *exif;
     Jpeg *jpeg;
+    GPS *gps;
 
     qint64 eof;
     quint32 ifd0Offset;

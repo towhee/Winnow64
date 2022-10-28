@@ -1,222 +1,146 @@
-SWITCH TO GRIDVIEW
+Crashed Thread:        0  Dispatch queue: com.apple.main-thread
 
-2 MW::gridDisplay
-4 MW::updateStatus
-12 IconView::getCurrentFilePath
-17 MW::getPosition
-23 IconView::getSelectedCount
-22 MW::getPicked
-6 MW::getPosition
-13 MW::getZoom
-5 MW::metadataChanged
-40 InfoView::showOrHide
-9 MW::getSelectedFileSize
-33 MW::memoryReqdForSelection
-18 MW::getPicked
-16 MW::updateIconRange                                -1
+Exception Type:        EXC_BAD_ACCESS (SIGBUS)
+Exception Codes:       KERN_PROTECTION_FAILURE at 0x020000600004fc6b -> 0x000000600004fc6b (possible pointer authentication failure)
+Exception Codes:       0x0000000000000002, 0x020000600004fc6b
+Exception Note:        EXC_CORPSE_NOTIFY
 
-97 ImageView::event
-8 ImageView::event
-5 MW::focusChange                                    Previous =
-20 ImageView::event
-6 ImageView::event
-375 IconView::event
-3 IconView::event
-21 IconView::event
-508 IconView::resizeEvent
-86 IconView::event
-1 MW::gridHasScrolled ***
-10 MW::updateIconRange                                -1
+Termination Reason:    Namespace SIGNAL, Code 10 Bus error: 10
+Terminating Process:   exc handler [70315]
 
-9 IconView::scannedViewportRange
-3 IconView::scannedViewportRange
-14 IconView::scrollToRow
-39 MW::loadConcurrent                                 Row =0
-4 IconView::event
-56 IconView::event
-13 IconView::event
-8 MW::focusChange                                     Current = Grid
-27 MW::enableGoKeyActions
-1 IconView::scannedViewportRange
-225 IconView::scannedViewportRange
-543 MW::saveSelection
-56 IconView::event
-3 MW::recoverSelection
-38 IconView::setThumbParameters
-1 IconView::isRowVisible
-64 IconView::scrollToRow
-32 IconView::resizeEvent
-1 MW::updateIconRange                                -1
-12 IconView::scannedViewportRange
-19 IconView::justifyMargin
-9 IconView::rejustify
-13 IconView::setThumbParameters
-1,201 IconView::calcViewportRange
-32 DockWidget::moveEvent
-120 BookMarks::resizeEvent
-33 DockWidget::resizeEvent
-2 IconView::event
-9 IconView::event
-10 IconView::resizeEvent
-0 MW::numberIconsVisibleChange
-1 MW::updateIconRange                                0
-1 IconView::calcViewportRange
-1 MetadataCache::scrollChange                        called by =MW::numberIconsVisibleChange
-0 MetadataCache::setRange
-1 MetadataCache::anyItemsToLoad
-6 DataModel::iconLoaded
-240 MW::updateMetadataThreadRunStatus
-8 IconView::event
-7 IconView::event
-2 IconView::event
-222 IconView::event
-9,159 MetadataCache::run                                 Scroll
-3,552 IconView::event
-4,064 MW::updateMetadataThreadRunStatus
-1,248 IconView::event
-100,882 IconView::event
-16 IconView::event
-373,837 MW::keyReleaseEvent
-4 IconView::rejustify
-57 IconView::setThumbParameters
-101 IconView::calcViewportRange
-7,937 IconView::event
-1,179 IconView::event
-5,226,850 IconView::event
-2 MW::closeEvent
-88 MW::setCentralMessage
-22 IconView::event
-5 IconView::event
-3 MW::focusChange                                    Previous = Grid
-5 IconView::event
-350 IconView::event
-0 MW::focusChange                                     Current = message
-50 MW::enableGoKeyActions
-5 ImageCache::stop
-115 MW::updateImageCachingThreadRunStatus
-47 ImageCache::clearImageCache
-75 MW::updateImageCacheStatus                         Instruction: Clear  Source: ImageCache::clearImageCache
-35 MetadataCache::stop
-20 DockWidget::moveEvent
-0 FSTree::resizeEvent
-37 FSTree::resizeColumns
-4 DockWidget::resizeEvent
-0 MW::folderDockVisibilityChange
-0 FSTree::scrollToCurrent
-760 FSTree::getCurrentIndex
-11 DockWidget::moveEvent
-403 MW::embelDockActivated
-17,808 MW::writeSettings
-587 MW::saveWorkspaces
-1 MW::closeLog
-1 MW::closeErrLog
-302 MW::clearPickLog
-112 MW::clearRatingLog
-245 MW::clearColorClassLog
-3,716 MW::focusChange                                    Previous = message
-29 MW::filterDockVisibilityChange
-5,547 MW::folderDockVisibilityChange
-6,919 Embel::clear
-4,541 ImageCache::~ImageCache
-0 PropertyEditor::~PropertyEditor
+VM Region Info: 0x600004fc6b is in 0x1000000000-0x7000000000;  bytes after start: 343597710443  bytes before end: 68719149972
+      REGION TYPE                    START - END         [ VSIZE] PRT/MAX SHRMOD  REGION DETAIL
+      commpage (reserved)         fc0000000-1000000000   [  1.0G] ---/--- SM=NUL  ...(unallocated)
+--->  GPU Carveout (reserved)    1000000000-7000000000   [384.0G] ---/--- SM=NUL  ...(unallocated)
+      GAP OF 0x5f9000000000 BYTES
+      MALLOC_NANO              600000000000-600008000000 [128.0M] rw-/rwx SM=PRV
 
-SWITCH TO GRIDVIEW 2
+Thread 0 Crashed::  Dispatch queue: com.apple.main-thread
+0   QtGui                         	       0x103c52304 QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> >::get() const + 0 (qscopedpointer.h:147) [inlined]
+1   QtGui                         	       0x103c52304 decltype(fp.get()) qGetPtrHelper<QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> > >(QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> >&) + 0 (qglobal.h:1321) [inlined]
+2   QtGui                         	       0x103c52304 QStandardItem::d_func() + 0 (qstandarditemmodel.h:246) [inlined]
+3   QtGui                         	       0x103c52304 QStandardItemPrivate::position() const + 0 (qstandarditemmodel.cpp:95) [inlined]
+4   QtGui                         	       0x103c52304 QStandardItemModel::indexFromItem(QStandardItem const*) const + 16 (qstandarditemmodel.cpp:2355) [inlined]
+5   QtGui                         	       0x103c52304 QStandardItemModel::parent(QModelIndex const&) const + 72 (qstandarditemmodel.cpp:3003)
+6   QtGui                         	       0x103c4bfa4 QModelIndex::parent() const + 28 (qabstractitemmodel.h:517) [inlined]
+7   QtGui                         	       0x103c4bfa4 QStandardItemModelPrivate::_q_emitItemChanged(QModelIndex const&, QModelIndex const&) + 92 (qstandarditemmodel.cpp:453)
+8   QtCore                        	       0x10534abcc QObject::event(QEvent*) + 584 (qobject.cpp:1356)
+9   QtWidgets                     	       0x10425a1c8 QApplicationPrivate::notify_helper(QObject*, QEvent*) + 272 (qapplication.cpp:3350)
+10  QtWidgets                     	       0x10425b230 QApplication::notify(QObject*, QEvent*) + 512 (qapplication.cpp:3301)
+11  QtCore                        	       0x1053096a0 QCoreApplication::notifyInternal2(QObject*, QEvent*) + 208 (qcoreapplication.cpp:1067)
+12  QtCore                        	       0x10530a8e4 QCoreApplication::sendEvent(QObject*, QEvent*) + 16 (qcoreapplication.cpp:1483) [inlined]
+13  QtCore                        	       0x10530a8e4 QCoreApplicationPrivate::sendPostedEvents(QObject*, int, QThreadData*) + 808 (qcoreapplication.cpp:1845)
+14  libqcocoa.dylib               	       0x1049acc88 QCocoaEventDispatcherPrivate::processPostedEvents() + 312 (qcocoaeventdispatcher.mm:902)
+15  libqcocoa.dylib               	       0x1049ad318 QCocoaEventDispatcherPrivate::postedEventsSourceCallback(void*) + 48 (qcocoaeventdispatcher.mm:925)
+16  CoreFoundation                	       0x1864b1044 __CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__ + 28
+17  CoreFoundation                	       0x1864b0f90 __CFRunLoopDoSource0 + 208
+18  CoreFoundation                	       0x1864b0c90 __CFRunLoopDoSources0 + 268
+19  CoreFoundation                	       0x1864af610 __CFRunLoopRun + 828
+20  CoreFoundation                	       0x1864aeb34 CFRunLoopRunSpecific + 600
+21  HIToolbox                     	       0x18f0ee338 RunCurrentEventLoopInMode + 292
+22  HIToolbox                     	       0x18f0ee0b4 ReceiveNextEventCommon + 564
+23  HIToolbox                     	       0x18f0ede68 _BlockUntilNextEventMatchingListInModeWithFilter + 72
+24  AppKit                        	       0x18901651c _DPSNextEvent + 860
+25  AppKit                        	       0x189014e14 -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] + 1328
+26  AppKit                        	       0x189006fe0 -[NSApplication run] + 596
+27  libqcocoa.dylib               	       0x1049ac200 QCocoaEventDispatcher::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 1800 (qcocoaeventdispatcher.mm:430)
+28  QtCore                        	       0x105312cfc QEventLoop::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 36 (qeventloop.cpp:136) [inlined]
+29  QtCore                        	       0x105312cfc QEventLoop::exec(QFlags<QEventLoop::ProcessEventsFlag>) + 544 (qeventloop.cpp:218)
+30  QtCore                        	       0x105309d54 QCoreApplication::exec() + 128 (qcoreapplication.cpp:1388)
+31  Winnow                        	       0x10283be94 main + 672 (main.cpp:52)
+32  dyld                          	       0x1035f508c start + 520
 
-2,089 MW::gridDisplay
-2,068 MW::updateStatus
-4,745 IconView::getCurrentFilePath
-   35 MW::getPosition
-  132 IconView::getSelectedCount
-9,214 MW::getPicked
-  937 MW::getPosition
-2,169 MW::getZoom
-2,818 MW::metadataChanged
-4,052 InfoView::showOrHide
-1,034 MW::getSelectedFileSize
-7,387 MW::memoryReqdForSelection
-2,406 MW::getPicked
-  186 MW::updateIconRange                                -1
 
-31,542 ImageView::event
-2,799 ImageView::event
-   20 MW::focusChange                                    Previous =
-8,549 ImageView::event
-43,598 ImageView::event
-5,909 IconView::resizeEvent
-    1 MW::gridHasScrolled
-    4 MW::updateIconRange                                -1
-   11 IconView::scannedViewportRange
-7,003 IconView::scannedViewportRange
-   11 IconView::scrollToRow
-  170 MW::loadConcurrent                                 Row =0
-    0 MW::focusChange                                     Current = Grid
-   18 MW::enableGoKeyActions
-    1 IconView::scannedViewportRange
-   24 IconView::scannedViewportRange
-   25 MW::saveSelection
-   15 MW::recoverSelection
-5,477 IconView::setThumbParameters
-    2 IconView::isRowVisible
-  106 IconView::scrollToRow
-   34 IconView::resizeEvent
-    2 MW::updateIconRange                                -1
-    1 IconView::scannedViewportRange
-    1 IconView::scannedViewportRange
-    0 IconView::justifyMargin
-    1 IconView::rejustify
-   16 IconView::setThumbParameters
-308,875 IconView::calcViewportRange
-180,889 MW::keyReleaseEvent
-    4 IconView::rejustify
-   16 IconView::setThumbParameters
-6,903,369 IconView::calcViewportRange
-SWITCH TO TABLEVIEW
 
-1,441 MW::tableDisplay
-3,219 MW::updateStatus
-2,891 IconView::getCurrentFilePath
-  678 MW::getPosition
-2,286 IconView::getSelectedCount
-3,477 MW::getPicked
-   13 MW::getPosition
-3,649 MW::getZoom
-2,045 MW::metadataChanged
-1,665 InfoView::showOrHide
-  714 MW::getSelectedFileSize
-2,134 MW::memoryReqdForSelection
-1,740 MW::getPicked
-    4 MW::updateIconRange                                -1
 
-3,212 IconView::scannedViewportRange
-1,802 MW::saveSelection
-6,107 ImageView::event
-   29 ImageView::event
-171,880 ImageView::event
-  789 MW::recoverSelection
-2,036 IconView::setThumbParameters
-   15 MW::setThumbDockHeight
-1,798 MW::setThumbDockFeatures
-1,894 IconView::isRowVisible
-   18 IconView::event
-211,751 MW::keyReleaseEvent
-"MW::tableDisplay" scrollRow = 0
-4,256 IconView::event
-   24 TableView::scrollToRow
-    9 IconView::scrollToRow
-    2 MW::updateIconRange                                -1
-    7 IconView::scannedViewportRange
-8,693 TableView::setViewportParameters
-  232 IconView::event
-  275 IconView::event
-    0 MW::focusChange                                    Previous = Thumbnails Current =
-59,337 MW::enableGoKeyActions
-9,186 IconView::event
-3,137,162 IconView::event
-   85 IconView::event
-2,607 IconView::event
-    3 IconView::event
-    3 IconView::leaveEvent
-11,800,618 IconView::event
-3,133 IconView::event
-149,838 MW::focusChange                                    Previous =
-74,271 IconView::event
+Crashed Thread:        0  Dispatch queue: com.apple.main-thread
+
+Exception Type:        EXC_BAD_ACCESS (SIGSEGV)
+Exception Codes:       KERN_INVALID_ADDRESS at 0x00001d800100000a
+Exception Codes:       0x0000000000000001, 0x00001d800100000a
+Exception Note:        EXC_CORPSE_NOTIFY
+
+Termination Reason:    Namespace SIGNAL, Code 11 Segmentation fault: 11
+Terminating Process:   exc handler [3586]
+
+VM Region Info: 0x1d800100000a is not in any region.  Bytes after previous region: 31954573459467  Bytes before following region: 73117506469878
+      REGION TYPE                    START - END         [ VSIZE] PRT/MAX SHRMOD  REGION DETAIL
+      commpage (reserved)        1000000000-7000000000   [384.0G] ---/--- SM=NUL  ...(unallocated)
+--->  GAP OF 0x5f9000000000 BYTES
+      MALLOC_NANO              600000000000-600008000000 [128.0M] rw-/rwx SM=PRV
+
+Thread 0 Crashed::  Dispatch queue: com.apple.main-thread
+0   QtGui                         	       0x101fb2304 QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> >::get() const + 0 (qscopedpointer.h:147) [inlined]
+1   QtGui                         	       0x101fb2304 decltype(fp.get()) qGetPtrHelper<QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> > >(QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> >&) + 0 (qglobal.h:1321) [inlined]
+2   QtGui                         	       0x101fb2304 QStandardItem::d_func() + 0 (qstandarditemmodel.h:246) [inlined]
+3   QtGui                         	       0x101fb2304 QStandardItemPrivate::position() const + 0 (qstandarditemmodel.cpp:95) [inlined]
+4   QtGui                         	       0x101fb2304 QStandardItemModel::indexFromItem(QStandardItem const*) const + 16 (qstandarditemmodel.cpp:2355) [inlined]
+5   QtGui                         	       0x101fb2304 QStandardItemModel::parent(QModelIndex const&) const + 72 (qstandarditemmodel.cpp:3003)
+6   QtGui                         	       0x101fabfa4 QModelIndex::parent() const + 28 (qabstractitemmodel.h:517) [inlined]
+7   QtGui                         	       0x101fabfa4 QStandardItemModelPrivate::_q_emitItemChanged(QModelIndex const&, QModelIndex const&) + 92 (qstandarditemmodel.cpp:453)
+8   QtCore                        	       0x1036aabcc QObject::event(QEvent*) + 584 (qobject.cpp:1356)
+9   QtWidgets                     	       0x1025ba1c8 QApplicationPrivate::notify_helper(QObject*, QEvent*) + 272 (qapplication.cpp:3350)
+10  QtWidgets                     	       0x1025bb230 QApplication::notify(QObject*, QEvent*) + 512 (qapplication.cpp:3301)
+11  QtCore                        	       0x1036696a0 QCoreApplication::notifyInternal2(QObject*, QEvent*) + 208 (qcoreapplication.cpp:1067)
+12  QtCore                        	       0x10366a8e4 QCoreApplication::sendEvent(QObject*, QEvent*) + 16 (qcoreapplication.cpp:1483) [inlined]
+13  QtCore                        	       0x10366a8e4 QCoreApplicationPrivate::sendPostedEvents(QObject*, int, QThreadData*) + 808 (qcoreapplication.cpp:1845)
+14  libqcocoa.dylib               	       0x102d0cc88 QCocoaEventDispatcherPrivate::processPostedEvents() + 312 (qcocoaeventdispatcher.mm:902)
+15  libqcocoa.dylib               	       0x102d0d318 QCocoaEventDispatcherPrivate::postedEventsSourceCallback(void*) + 48 (qcocoaeventdispatcher.mm:925)
+16  CoreFoundation                	       0x1b76dd044 __CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__ + 28
+17  CoreFoundation                	       0x1b76dcf90 __CFRunLoopDoSource0 + 208
+18  CoreFoundation                	       0x1b76dcc90 __CFRunLoopDoSources0 + 268
+19  CoreFoundation                	       0x1b76db610 __CFRunLoopRun + 828
+20  CoreFoundation                	       0x1b76dab34 CFRunLoopRunSpecific + 600
+21  HIToolbox                     	       0x1c031a338 RunCurrentEventLoopInMode + 292
+22  HIToolbox                     	       0x1c031a0b4 ReceiveNextEventCommon + 564
+23  HIToolbox                     	       0x1c0319e68 _BlockUntilNextEventMatchingListInModeWithFilter + 72
+24  AppKit                        	       0x1ba24251c _DPSNextEvent + 860
+25  AppKit                        	       0x1ba240e14 -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] + 1328
+26  AppKit                        	       0x1ba232fe0 -[NSApplication run] + 596
+27  libqcocoa.dylib               	       0x102d0c200 QCocoaEventDispatcher::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 1800 (qcocoaeventdispatcher.mm:430)
+28  QtCore                        	       0x103672cfc QEventLoop::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 36 (qeventloop.cpp:136) [inlined]
+29  QtCore                        	       0x103672cfc QEventLoop::exec(QFlags<QEventLoop::ProcessEventsFlag>) + 544 (qeventloop.cpp:218)
+30  QtCore                        	       0x103669d54 QCoreApplication::exec() + 128 (qcoreapplication.cpp:1388)
+31  Winnow                        	       0x100b725cc main + 672 (main.cpp:52)
+32  dyld                          	       0x10185508c start + 520
+
+
+
+// rgh change to emit?
+
+INSTANCE = 0 index(0,0) = QModelIndex(0,0,0x6000039f8350,DataModel(0x13def1c60))
+INSTANCE = 1 index(0,0) = QModelIndex(0,0,0x6000039fd340,DataModel(0x13def1c60))
+
+INSTANCE = 0 index(0,0) = QModelIndex(0,0,0x6000039dfec0,DataModel(0x123f75520)) p = 0x16f1b5080
+INSTANCE = 1 index(0,0) = QModelIndex(0,0,0x6000039cf400,DataModel(0x123f75520)) p = 0x16f1b4e20
+
+INSTANCE = 0 index(0,0) = QModelIndex(0,0,0x6000022e5ad0,DataModel(0x14cbf2df0)) p = 0x16af81080
+INSTANCE = 0 index(0,0) = QModelIndex(0,1,0x6000022e5ad0,DataModel(0x14cbf2df0)) p = 0x16af81080
+
+INSTANCE = 1 index(0,0) = QModelIndex(0,0,0x6000022b6fa0,DataModel(0x14cbf2df0)) p = 0x16af80e20
+INSTANCE = 1 index(0,0) = QModelIndex(0,1,0x6000022b6fa0,DataModel(0x14cbf2df0)) p = 0x16af80e20
+
+DataModel::setIconRange             m
+DataModel::saveSelection
+DataModel::recoverSelection
+DataModel::select                   m
+DataModel::abortLoad                m
+DataModel::clearDataModel           m
+DataModel::load                     m
+DataModel::addFileData              m
+DataModel::addFileDataForRow        m
+DataModel::endLoad                  m
+DataModel::aspectRatio              m
+DataModel::addMetadataForItem       m
+DataModel::selectFirst              m
+
+DataModel::iconLoaded               c
+DataModel::isIconCaching            c
+DataModel::readMetadataForItem      c   except Pixmap::load, line 87
+DataModel::setIcon                  c
+DataModel::setIconMax               n/a
+DataModel::setAllMetadataLoaded
+DataModel::allIconsLoaded
+
+
+Filters::loadedDataModel

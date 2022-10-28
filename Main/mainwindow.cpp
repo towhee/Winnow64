@@ -350,13 +350,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     G::isTimer = true;                  // Global timer
     G::isTest = false;                  // test performance timer
 
-    // testing control
-    useImageCache = true;
-    useImageView = true;
-    useInfoView = true;
-    useUpdateStatus = true;
-    useFilterView = true;
-
     // Initialize some variables
     initialize();
 
@@ -1237,7 +1230,7 @@ void MW::handleStartupArgs(const QString &args)
         visible.  If there is a significant delay, when a lot of images have to be processed,
         this would be confusing for the user.  */
         show();
-        qApp->processEvents();
+//        qApp->processEvents();
         /* activate Winnow when receiving arguments - not working ...
         raise();
         setWindowFlags(Qt::WindowStaysOnTopHint);
@@ -1339,7 +1332,7 @@ void MW::handleStartupArgs(const QString &args)
         }
 
         setCentralMessage("Loading Embellished ...");
-        QApplication::processEvents();
+//        QApplication::processEvents();
 
         // create an instance of EmbelExport
         EmbelExport embelExport(metadata, dm, icd, embelProperties);
@@ -1400,19 +1393,25 @@ void MW::selectionChange()
         G::log("skipline");
         G::log(CLASSFUNCTION);
     }
+    qDebug() << " ";
     // ignore if very rapid selection and current folder is still at stopAndClearAll
     if (G::stop) {
+        qDebug() << CLASSFUNCTION << "Ignore: G::stop = true";
         return;
     }
 
     // also checked in FSTree and Bookmarks mousePressEvent
     if (dm->loadingModel) {
+        qDebug() << CLASSFUNCTION << "Ignore: dm->loadingModel = true";
         return;
     }
 
-    // Reset
-    stop("folderSelectionChange");
+    qDebug() << CLASSFUNCTION;
 
+    // Reset
+    stop("MW::selectionChange");
+
+    folderSelectionChange();
 }
 
 void MW::folderSelectionChange()
@@ -1425,13 +1424,14 @@ void MW::folderSelectionChange()
         G::log("skipline");
         G::log(CLASSFUNCTION);
     }
-//    qDebug() << CLASSFUNCTION;
 
     dm->abortLoadingModel = false;
     G::currRootFolder = getSelectedPath();
     setting->setValue("lastDir", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
+    qDebug() << " ";
+    qDebug() << CLASSFUNCTION << "New folder =" << G::currRootFolder;
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
@@ -1498,7 +1498,7 @@ void MW::folderSelectionChange()
     // load datamodel
     if (!dm->load(G::currRootFolder, subFoldersAction->isChecked())) {
         updateMetadataThreadRunStatus(false, true, "MW::folderSelectionChange");
-        qWarning() << "Datamodel Failed To Load for" << G::currRootFolder;
+        qWarning() << "WARNING" << "Datamodel Failed To Load for" << G::currRootFolder;
         stop("Load datamodel failed");
         enableSelectionDependentMenus();
         if (dm->abortLoadingModel) {
@@ -1706,7 +1706,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (!G::isSlideShow) progressLabel->setVisible(isShowCacheProgressBar);
 
     // update loupe view
-    if (useImageView) {
+    if (G::useImageView) {
         videoView->stop();
         bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
         if (isVideo) {
@@ -1719,7 +1719,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
                 if (G::mode == "Loupe") centralLayout->setCurrentIndex(LoupeTab);
             }
             else {
-                qWarning() << CLASSFUNCTION << "loadImage failed for" << fPath;
+//                qWarning() << "WARNING" << CLASSFUNCTION << "loadImage failed for" << fPath;
             }
         }
     }
@@ -1740,7 +1740,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
 
         /* Do not image cache if there is an active random slide show or a modifier key
-        is pressed. (turn off image caching for testing with useImageCache = false. set in
+        is pressed. (turn off image caching for testing with G::useImageCache = false. set in
         MW::MW) */
 
         /*
@@ -1757,7 +1757,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 //            && (key == Qt::NoModifier || key == Qt::KeypadModifier)
             && (!workspaceChanged)
             && (G::mode != "Compare")
-            && useImageCache
+            && G::useImageCache
            )
         {
             emit setImageCachePosition(dm->currentFilePath, CLASSFUNCTION);
@@ -1767,7 +1767,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     workspaceChanged = false;
 
     // update the metadata panel
-    if (useInfoView) infoView->updateInfo(dm->currentSfRow);
+    if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
 
     // initialize the thumbDock if just opened app
     if (G::isInitializing) {
@@ -1827,7 +1827,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
                 //*/
 
     if (!fsTree->select(folder)) {
-        qWarning() << CLASSFUNCTION << "fsTree failed to select" << fPath;
+        qWarning() << "WARNING" << CLASSFUNCTION << "fsTree failed to select" << fPath;
         return;
     }
 
@@ -1862,58 +1862,88 @@ void MW::stop(QString src)
     if (G::isInitializing) return;
 
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
     G::stop = true;
     dm->abortLoad();
 
-    stopped["MetaRead"] = false;
-    stopped["MDCache"] = false;
-    stopped["FrameDecoder"] = false;
-    stopped["ImageCache"] = false;
-    stopped["BuildFilters"] = false;
+    G::t.restart();
+    metaReadThread->stop();
+    qDebug() << CLASSFUNCTION << "Stop metaReadThread:      " << G::t.elapsed() << "ms";
 
-    if (src == "Escape key") {
-        fsTree->selectionModel()->clearSelection();
-        bookmarks->selectionModel()->clearSelection();
-    }
+    G::t.restart();
+    metadataCacheThread->stop();
+    qDebug() << CLASSFUNCTION << "Stop metadataCacheThread: " << G::t.elapsed() << "ms";
 
-    // metaRead signals to stopAndClearAllAfterMetaReadStopped when stopped.
-    qDebug() << CLASSFUNCTION << "emitting abortMetaRead";
-    emit abortMetaRead();
-    emit abortMDCache();
-    emit abortImageCache();
-    emit abortBuildFilters();
-    emit abortFrameDecoder();
+    G::t.restart();
+    imageCacheThread->stop();
+    qDebug() << CLASSFUNCTION << "Stop imageCacheThread:    " << G::t.elapsed() << "ms";
 
-//    metaRead->stop(1000);
-//    metadataCacheThread->stop();
-//    imageCacheThread->stop();
-//    buildFilters->stop();
-}
+    G::t.restart();
+    buildFilters->stop();
+    qDebug() << CLASSFUNCTION << "Stop buildFilters:        " << G::t.elapsed() << "ms";
 
-void MW::reset(QString src) {
-/*
-    Called when folderSelectionChange and invalid folder (no folder, no eligible images).
-    Can be triggered when the user picks a folder in the folder panel or open menu, picks
-    a bookmark or ejects a drive and the resulting folder does not have any eligible images.
-*/
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    G::t.restart();
+    frameDecoder->clear();
+    qDebug() << CLASSFUNCTION << "Stop frameDecoder:        " << G::t.elapsed() << "ms";
 
-    stopped[src] = true;
+//    dm->abortLoad();
+//    G::wait(1000);
 
-//    /*
-    qDebug() << CLASSFUNCTION << "src =" << src
-             << "\n  MetaRead     stopped" << stopped["MetaRead"]
-             << "\n  MDCache      stopped" << stopped["MDCache"]
-             << "\n  ImageCache   stopped" << stopped["ImageCache"]
-             << "\n  BuildFilters stopped" << stopped["BuildFilters"]
-             << "\n  FrameDecoder stopped" << stopped["FrameDecoder"]
-             << "\n" ;
-             //*/
+   /*
 
-    // if any thread processes still running then do not complete reset yet
-    for (bool isStopped : stopped) {
-        if (!isStopped) return;
-    }
+*///    stopped["MetaRead"] = !metaReadThread->isRunning();
+//    stopped["MDCache"] = !metadataCacheThread->isRunning();
+//    stopped["ImageCache"] = !imageCacheThread->isRunning();
+//    stopped["BuildFilters"] = !buildFilters->isRunning();
+//    stopped["FrameDecoder"] = !frameDecoder->isBusy();
+
+//    if (src == "Escape key") {
+//        fsTree->selectionModel()->clearSelection();
+//        bookmarks->selectionModel()->clearSelection();
+//    }
+
+//    // metaRead signals to stopAndClearAllAfterMetaReadStopped when stopped.
+////    qDebug() << CLASSFUNCTION << "emitting abortMetaRead";
+//    if (!stopped["MetaRead"]) emit abortMetaRead();
+//    if (!stopped["MDCache"]) emit abortMDCache();
+//    if (!stopped["ImageCache"]) emit abortImageCache();
+//    if (!stopped["BuildFilters"]) emit abortBuildFilters();
+//    if (!stopped["FrameDecoder"]) emit abortFrameDecoder();
+
+//    // check if all stopped
+//    bool allStopped = true;
+//    for (bool isStopped : stopped) {
+//        if (!isStopped) allStopped = false;
+//    }
+//    if (allStopped) reset("AllStopped");
+
+//}
+
+//void MW::reset(QString src) {
+///*
+//    Called when folderSelectionChange and invalid folder (no folder, no eligible images).
+//    Can be triggered when the user picks a folder in the folder panel or open menu, picks
+//    a bookmark or ejects a drive and the resulting folder does not have any eligible images.
+//*/
+//    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+
+//    if (src != "AllStopped") {
+//        stopped[src] = true;
+//        /*
+//        qDebug() << CLASSFUNCTION << "src =" << src
+//                 << "\n  MetaRead     stopped" << stopped["MetaRead"]
+//                 << "\n  MDCache      stopped" << stopped["MDCache"]
+//                 << "\n  ImageCache   stopped" << stopped["ImageCache"]
+//                 << "\n  BuildFilters stopped" << stopped["BuildFilters"]
+//                 << "\n  FrameDecoder stopped" << stopped["FrameDecoder"]
+//                 << "\n" ;
+//                 //*/
+
+//        // if any thread processes still running then do not complete reset yet
+//        for (bool isStopped : stopped) {
+//            if (!isStopped) return;
+//        }
+//    }
 
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
@@ -1926,7 +1956,7 @@ void MW::reset(QString src) {
     imageView->clear();
     setWindowTitle(winnowWithVersion);
     imageView->clear();
-    if (useInfoView) {
+    if (G::useInfoView) {
         infoView->clearInfo();
         updateDisplayResolution();
     }
@@ -1956,8 +1986,10 @@ void MW::reset(QString src) {
     setThreadRunStatusInactive();
 
     G::stop = false;
-    folderSelectionChange();
+//    folderSelectionChange();
 }
+
+void MW::reset(QString src) {}
 
 void MW::nullFiltration()
 {
@@ -2114,7 +2146,8 @@ void MW::loadConcurrentNewFolder()
     sortMenu->setEnabled(false);
     // read metadata using MetaRead
     metaReadThread->initialize();     // only when change folders
-    emit startMetaRead(dm->currentSfRow, CLASSFUNCTION);
+//    emit startMetaRead(dm->currentSfRow, CLASSFUNCTION);
+    metaReadThread->setCurrentRow(0, CLASSFUNCTION);
 }
 
 void MW::loadConcurrent(int sfRow)
@@ -2125,7 +2158,8 @@ void MW::loadConcurrent(int sfRow)
             frameDecoder->clear();
             updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
             qDebug() << CLASSFUNCTION << "row =" << sfRow;
-            emit startMetaRead(sfRow, CLASSFUNCTION);
+//            emit startMetaRead(sfRow, CLASSFUNCTION);
+            metaReadThread->setCurrentRow(sfRow, CLASSFUNCTION);
         }
     }
 }
@@ -2236,6 +2270,7 @@ void MW::loadLinearNewFolder()
     mct->iconsCached.clear();
     mct->foundItemsToLoad = true;
     mct->startRow = 0;
+    mct->instance = dm->instance;
     int rowCount = dm->sf->rowCount();
     // rgh fix (are we going to read all metadata all of the time?)
     if (mct->metadataChunkSize > rowCount) {
@@ -2257,19 +2292,17 @@ void MW::loadLinearNewFolder()
     sortMenu->setEnabled(false);
 
     setCentralMessage("Reading all metadata.");
-//    qApp->processEvents();
 
     updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
     dm->addAllMetadata();
     if (!dm->isAllMetadataLoaded()) {
-        qWarning() << CLASSFUNCTION << "Not all metadata loaded";
+        qWarning() << "WARNING" << CLASSFUNCTION << "Not all metadata loaded";
 //        return;
     }
 
     if (dm->abortLoadingModel || !G::allMetadataLoaded) {
         updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
         setCentralMessage("Image loading has been cancelled 2.");
-//        QApplication::processEvents();
         return;
     }
 
@@ -2282,7 +2315,6 @@ void MW::loadLinearNewFolder()
     updateIconRange(dm->currentSfRow);
 
     setCentralMessage("Reading icons.");
-//    QApplication::processEvents();
     mct->readIconChunk();
     G::allIconsLoaded = dm->allIconsLoaded();
     updateMetadataThreadRunStatus(false, true, CLASSFUNCTION);
@@ -2637,7 +2669,7 @@ void MW::updateImageCacheStatus(QString instruction,
             + QString::number(cache.decoderCount)
             + " threads)"
             ;
-    if (useInfoView) {
+    if (G::useInfoView) {
         QStandardItemModel *k = infoView->ok;
         k->setData(k->index(infoView->CacheRow, 1, infoView->statusInfoIdx), cacheAmount);
     }
@@ -3407,7 +3439,7 @@ void MW::setFontSize(int fontPixelSize)
     G::css = css;
     setStyleSheet(css);
 
-    if (useInfoView) infoView->refreshLayout();                   // triggers sizehint!
+    if (G::useInfoView) infoView->refreshLayout();                   // triggers sizehint!
 //    infoView->updateInfo(currentRow);                           // triggers sizehint!
     bookmarks->setStyleSheet(css);
     fsTree->setStyleSheet(css);
@@ -3435,7 +3467,7 @@ void MW::setBackgroundShade(int shade)
     G::css = css;
     this->setStyleSheet(css);
 
-    if (useInfoView) {
+    if (G::useInfoView) {
         infoView->updateInfo(dm->currentSfRow);                           // triggers sizehint!
         infoView->verticalScrollBar()->setStyleSheet(css);          // triggers sizehint!
     }
@@ -3446,7 +3478,7 @@ void MW::setBackgroundShade(int shade)
     filters->setStyleSheet(css);
     filters->verticalScrollBar()->setStyleSheet(css);
     filters->setCategoryBackground(a, b);
-//    if (useInfoView) infoView->setStyleSheet(css);
+//    if (G::useInfoView) infoView->setStyleSheet(css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
     thumbView->setStyleSheet(css);
     thumbView->horizontalScrollBar()->setStyleSheet(css);
@@ -3504,7 +3536,7 @@ void MW::updateDisplayResolution()
             + QString::number(G::displayPhysicalVerticalPixels)
             + " @ " + monitorScale;
     QString toolTip = dimensions + " (Monitor is scaled to " + monitorScale + ")";
-    if (!useInfoView) return;
+    if (!G::useInfoView) return;
     QStandardItemModel *k = infoView->ok;
     k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), dimensions);
     k->setData(k->index(infoView->MonitorRow, 1, infoView->statusInfoIdx), toolTip, Qt::ToolTipRole);
@@ -3596,7 +3628,7 @@ void MW::setDisplayResolution()
                 ;
 //    */
 
-    if (devicePixelRatioChanged) {
+    if (devicePixelRatioChanged && !G::isInitializing) {
         // refresh loupe / compare views to new scale
         if (G::mode == "Loupe") {
             // reload to force complete refresh
@@ -3778,7 +3810,7 @@ void MW::toggleFullScreen()
         favDock->setVisible(fullScreenDocks.isFavs);
         filterDockVisibleAction->setChecked(fullScreenDocks.isFilters);
         filterDock->setVisible(fullScreenDocks.isFilters);
-        if (useInfoView) {
+        if (G::useInfoView) {
             metadataDockVisibleAction->setChecked(fullScreenDocks.isMetadata);
             metadataDock->setVisible(fullScreenDocks.isMetadata);
         }
@@ -3991,7 +4023,8 @@ void MW::setRotation(int degrees)
         case 270: newOrientation = 8; break;
         }
 
-        emit setValueSf(orientationIdx, newOrientation, Qt::EditRole);
+        emit setValueSf(orientationIdx, newOrientation, dm->instance,
+                        "MW::setRotation", Qt::EditRole);
 //        dm->sf->setData(orientationIdx, newOrientation);
 
         // rotate thumbnail(s)
@@ -4003,9 +4036,8 @@ void MW::setRotation(int degrees)
         item = dm->itemFromIndex(dm->sf->mapToSource(thumbIdx));
         QPixmap pm = item->icon().pixmap(G::maxIconSize, G::maxIconSize);
         pm = pm.transformed(trans, Qt::SmoothTransformation);
-        item->setIcon(pm);
+        item->setIcon(pm);  // rgh change to emit?
         thumbView->refreshThumbs();
-//        QApplication::processEvents();
 
         // rotate selected cached full size images
         QImage image;
@@ -4200,7 +4232,7 @@ void MW::writeSettings()
     setting->endGroup();
 
     /* MetadataDock floating info */
-//    if (useInfoView) {
+//    if (G::useInfoView) {
         setting->beginGroup(("MetadataDock"));
         setting->setValue("screen", metadataDock->dw.screen);
         setting->setValue("pos", metadataDock->dw.pos);
@@ -4234,7 +4266,7 @@ void MW::writeSettings()
     setting->endGroup();
 
     /* InfoView okToShow fields */
-    if (useInfoView) {
+    if (G::useInfoView) {
         setting->beginGroup("InfoFields");
         setting->remove("");
         QStandardItemModel *k = infoView->ok;
@@ -5311,14 +5343,14 @@ void MW::metadataChanged(QStandardItem* item)
     in the image metadata, either internally or as a sidecar when ingesting. If raw+jpg
     are combined then the raw file rows are also updated in the data model.
 */
-     if (!useInfoView) return;
+     if (!G::useInfoView) return;
     if (G::isLogger) G::log(CLASSFUNCTION);
     // if new folder is invalid no relevent data has changed
     if(!isCurrentFolderOkay) return;
-     if (useInfoView) if (infoView->isNewImageDataChange) return;
+     if (G::useInfoView) if (infoView->isNewImageDataChange) return;
 
     QModelIndex par = item->index().parent();
-     if (useInfoView) if (par != infoView->tagInfoIdx) return;
+     if (G::useInfoView) if (par != infoView->tagInfoIdx) return;
 
     QString tagValue = item->data(Qt::DisplayRole).toString();
     QModelIndexList selection = dm->selectionModel->selectedRows();
@@ -5336,13 +5368,14 @@ void MW::metadataChanged(QStandardItem* item)
     // list of file paths to send to Metadata::writeMetadata
     QStringList paths;
 
+    QString src = "MW::metadataChanged";
     for (int i = 0; i < selection.count(); ++i) {
         int row = selection.at(i).row();
         // build list of files to send to Metadata::writeMetadata
         paths << dm->sf->index(row, G::PathColumn).data().toString();
         // update data model
         QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, col[tagName]));
-        emit setValue(dmIdx, tagValue, Qt::EditRole, Qt::AlignLeft);
+        emit setValue(dmIdx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignLeft);
 //        QModelIndex idx = dm->sf->index(row, col[tagName]);
 //        dm->sf->setData(idx, tagValue, Qt::EditRole);
         // check if combined raw+jpg and also set the tag item for the hidden raw file
@@ -5353,7 +5386,7 @@ void MW::metadataChanged(QStandardItem* item)
                 // set tag item for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(dmIdx.data(G::DupOtherIdxRole));
                 QModelIndex idx = dm->index(rawIdx.row(), col[tagName]);
-                emit setValue(idx, tagValue, Qt::EditRole, Qt::AlignCenter);
+                emit setValue(idx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
 //                dm->setData(idx, tagValue, Qt::EditRole);
             }
         }
@@ -5468,7 +5501,7 @@ void MW::refreshCurrentFolder()
             // update metadata
             QString ext = dm->modifiedFiles.at(i).suffix().toLower();
             if (metadata->hasMetadataFormats.contains(ext)) {
-                if (metadata->loadImageMetadata(dm->modifiedFiles.at(i), true, true, false, true, CLASSFUNCTION)) {
+                if (metadata->loadImageMetadata(dm->modifiedFiles.at(i), dm->instance, true, true, false, true, CLASSFUNCTION)) {
                     metadata->m.row = dmRow;
                     dm->addMetadataForItem(metadata->m);
                 }
@@ -5484,13 +5517,13 @@ void MW::refreshCurrentFolder()
 
             // update thumbnail in case image has changed
             QImage image;
-            bool thumbLoaded = thumb->loadThumb(fPath, image, "MW::refreshCurrentFolder");
+            bool thumbLoaded = thumb->loadThumb(fPath, image, dm->instance, "MW::refreshCurrentFolder");
             if (thumbLoaded) {
                 QPixmap pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-                dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);
+// rgh1027               dm->itemFromIndex(dm->index(dmRow, 0))->setIcon(pm);  // rgh change to emit?
             }
         }
-         if (useInfoView) infoView->updateInfo(dm->currentSfRow);
+         if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
 //        metadataCacheThread->loadNewFolder(true);
         refreshCurrentAfterReload();
     }

@@ -327,7 +327,7 @@ bool Panasonic::parse(MetadataParameters &p,
     // read XMP
     bool okToReadXmp = true;
     if (!G::stop && m.isXmp && okToReadXmp && m.xmpSegmentOffset > 0 && m.xmpSegmentLength > 0) {
-        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength);
+        Xmp xmp(p.file, m.xmpSegmentOffset, m.xmpSegmentLength, p.instance);
         if (xmp.isValid) {
             m.rating = xmp.getItem("Rating");
             m.label = xmp.getItem("Label");

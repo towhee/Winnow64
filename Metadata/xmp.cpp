@@ -6,8 +6,12 @@ Xmp reads xmp tags from from the source file buffer (xmpBa), which could be from
 file or an xmp sidecar file. If there are no offsets to the buffer then a sidecar file
 will be used.
 
-Read/Write to a sidecar:   Xmp xmp(file);
-Read/Write to image file:  Xmp xmp(file, offset, nextOffset);  // no writing yet
+Each time a new folder is selected and the datamodel is rebuilt the instance is
+incremented.  The instance is used to detect clashes between calls to Xmp from a thread
+that is out-of-date, working on datamodel information from a prior folder.
+
+Read/Write to a sidecar:   Xmp xmp(file, instance);
+Read/Write to image file:  Xmp xmp(file, offset, nextOffset, instance);  // no writing yet
 
 Terms:
 
@@ -253,9 +257,10 @@ Example from xmp embedded in D:/Pictures/Coaster/2005-10-11_0082.jpg
 
 */
 
-Xmp::Xmp(QFile &file, QObject *parent) :  QObject(parent)
+Xmp::Xmp(QFile &file, int instance, QObject *parent) :  QObject(parent)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    this->instance = instance;
     if (file.exists()) {
         filePath = QFileInfo(file).filePath();
         xmpBa = file.readAll();
@@ -264,9 +269,10 @@ Xmp::Xmp(QFile &file, QObject *parent) :  QObject(parent)
 //    if (err == Xmp::ParseFailed) fix();
 }
 
-Xmp::Xmp(QFile &file, uint offset, uint length, QObject *parent) :  QObject(parent)
+Xmp::Xmp(QFile &file, uint offset, uint length, int instance, QObject *parent) :  QObject(parent)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    this->instance = instance;
     xmpSegmentOffset = offset;
     if (file.exists()) {
         filePath = QFileInfo(file).filePath();
@@ -663,12 +669,16 @@ QString Xmp::getItem(QByteArray item)
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
 
+    if (G::instanceClash(instance)) {
+        return "";
+    }
+
     item = item.toLower();
     /*
     qDebug() << "\n" << CLASSFUNCTION << item << definedElements[item].name << definedElements.contains(item);
     //*/
     if (!definedElements.contains(item)) {
-        qWarning() << CLASSFUNCTION << item << "not found in xmpObjs";
+        qWarning() << "WARNING" << CLASSFUNCTION << item << "not found in xmpObjs";
         return "";
     }
     XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
@@ -713,7 +723,7 @@ QStringList Xmp::getItemList(QByteArray item)
     qDebug() << "\n" << CLASSFUNCTION << item << definedElements[item].name << definedElements.contains(item);
     //*/
     if (!definedElements.contains(item)) {
-        qWarning() << CLASSFUNCTION << item << "not found in xmpObjs";
+        qWarning() << "WARNING" << CLASSFUNCTION << item << "not found in xmpObjs";
         return valList;
     }
     XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
@@ -779,7 +789,7 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
     // check valid item.
     item = item.toLower();
     if (!definedElements.contains(item)) {
-        qWarning() << CLASSFUNCTION << "failed for" << item;
+        qWarning() << "WARNING" << CLASSFUNCTION << "failed for" << item;
         return false;
     }
 

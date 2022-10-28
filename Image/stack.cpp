@@ -23,7 +23,7 @@ void Stack::stop()
     G::popUp->end();
     G::popUp->showPopup("Stack operation has been aborted.");
     qDebug() << CLASSFUNCTION << abort;
-    qApp->processEvents();
+//    qApp->processEvents();
 }
 
 QString Stack::mean()
@@ -116,7 +116,7 @@ QString Stack::mean()
             }
         }
         G::popUp->setProgress(i+1);
-        qApp->processEvents();
+//        qApp->processEvents();
     }
 
     if (!abort) {

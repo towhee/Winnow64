@@ -1,4 +1,6 @@
 BUGS / TO DO
+- CLASSFUNCTION in Heic.cpp
+- Add clearIcon slot to DataModel and use in MetaRead::cleanupIcons
 - Extract frame from video
 - Update use of current image for video frame
 - App not closing while reading large foldeer

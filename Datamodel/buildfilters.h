@@ -45,6 +45,7 @@ private:
     Metadata *metadata;
     Filters *filters;
     bool &combineRawJpg;
+    int instance;
     int dmRows = 0;                         // rows in datamodel (get once at start)
     QMap <QString, int>instances;           // total items per category in filters
     int totInstances;                       // total items in all categories in filters

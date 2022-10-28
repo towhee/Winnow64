@@ -10,7 +10,7 @@ public:
         static int count = 0;
         count++;
         index.isValid();          // suppress compiler warning
-        int height = qRound(G::fontSize.toInt() * 1.7 * G::ptToPx);
+        int height = qRound(G::fontSize.toInt() * 1.3 * G::ptToPx);
         return QSize(option.rect.width(), height);
     }
 };
