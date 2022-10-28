@@ -285,7 +285,11 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
 {
 //    if (abort) return;
     if (G::isLogger) G::log("MetaRead::readMetadata");
-    qDebug() << "MetaRead::readMetadata" << sfIdx.row() << sfIdx << abort << fPath;
+    qDebug() << "MetaRead::readMetadata"
+             << "instance =" << instance
+             << sfIdx.row() << sfIdx
+             << "abort =" << abort
+             << fPath;
     int dmRow;
     /*if (!G::stop)*/ dmRow = dm->sf->mapToSource(sfIdx).row();
     if (debugCaching) qDebug().noquote() << "MetaRead::readMetadata" << "start  row =" << sfIdx.row();
@@ -297,17 +301,17 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
                 ;
     //*/
     metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetaRead::readMetadata");
-    if (instance != dm->instance) {
-        qWarning() << "WARNING MetaRead::readMetadata Instance Clash"
-                   << "row =" << sfIdx.row();
-        abort = true;
-        return false;
-    }
+//    if (instance != dm->instance) {
+//        qWarning() << "WARNING MetaRead::readMetadata Instance Clash"
+//                   << "row =" << sfIdx.row();
+//        abort = true;
+//        return false;
+//    }
     metadata->m.row = dmRow;
     metadata->m.dmInstance = instance;
-    emit addToDatamodel(metadata->m);       // blocked connection until metadata added to model
-//    dm->addMetadataForItem(metadata->m);
-    emit addToImageCache(metadata->m);
+//    emit addToDatamodel(metadata->m);       // blocked connection until metadata added to model
+    dm->addMetadataForItem(metadata->m);
+    if (G::useImageCache) emit addToImageCache(metadata->m);
     /*
     if (!abort) emit addToDatamodel(metadata->m);       // blocked connection until metadata added to model
     if (!abort) emit addToImageCache(metadata->m);
@@ -350,15 +354,15 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
         return;
     }
     if (thumbLoaded) {
-        if (instance != dm->instance) {
-            qWarning() << "WARNING MetaRead::readIcon Instance Clash";
-            abort = true;
-            return;
-        }
+//        if (instance != dm->instance) {
+//            qWarning() << "WARNING MetaRead::readIcon Instance Clash";
+//            abort = true;
+//            return;
+//        }
         QPixmap pm;
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-//        dm->setIcon(dmIdx, pm, instance);
-        emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");  // also works
+        dm->setIcon(dmIdx, pm, instance);
+//        emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");  // also works
         rowsWithIcon.append(dmRow);
     }
 
@@ -478,7 +482,7 @@ void MetaRead::run()
                 qDebug() << "MetaRead::run  interrupted";
                 interruptedRow = row;
             }
-            qDebug() << "MetaRead::run  Returning out of loop at item" << i;
+            qDebug() << "MetaRead::run ** ABORT ** Returning out of loop at item" << i;
             abort = false;
             return;
         }
