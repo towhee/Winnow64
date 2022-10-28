@@ -158,6 +158,7 @@ private:
     static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
 
 //    QMutex mutex;
+    bool mLock;
 
     QDir *dir;
     QStringList *fileFilters;
@@ -180,6 +181,7 @@ private:
     QString buildSteps = "3";
     int step;
 
+    bool isDebug = true;
 };
 
 #endif // DATAMODEL_H
