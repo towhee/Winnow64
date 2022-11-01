@@ -162,7 +162,7 @@ Flow Flags:
     G::isNewFolderLoadedAndInfoViewUpToDate
     dm->loadingModel
     dm->basicFileInfoLoaded  // not used
-    G::useLinearLoading
+    G::isLinearLoading
     G::ignoreScrollSignal
     isCurrentFolderOkay
     isFilterChange
@@ -342,8 +342,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     Utilities::log(CLASSFUNCTION, QString::number(argList.length()) + " arguments");
 
     /* TESTING / DEBUGGING FLAGS
-       Note ISDEBUG is in globals.h
-       Deactivate debug reporting by commenting ISDEBUG  */
+       Note G::isLogger is in globals.cpp */
     G::showAllTableColumns = false;     // show all table fields for debugging
     simulateJustInstalled = false;
     isStressTest = false;
@@ -668,7 +667,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         */
         G::popUp->end();
         // stop loading a new folder
-        if (!G::isNewFolderLoaded /*&& G::useLinearLoading*/) stop("Escape key");
+        if (!G::isNewFolderLoaded /*&& G::isLinearLoading*/) stop("Escape key");
         // end stress test
         else if (isStressTest) isStressTest = false;
         // cancel slideshow
@@ -1395,10 +1394,6 @@ void MW::selectionChange()
     }
     qDebug() << " ";
     // ignore if very rapid selection and current folder is still at stopAndClearAll
-    if (G::stop) {
-        qDebug() << CLASSFUNCTION << "Ignore: G::stop = true";
-        return;
-    }
 
     // also checked in FSTree and Bookmarks mousePressEvent
     if (dm->loadingModel) {
@@ -1406,12 +1401,12 @@ void MW::selectionChange()
         return;
     }
 
-    qDebug() << CLASSFUNCTION;
+//    qDebug() << CLASSFUNCTION << getSelectedPath();
 
-    // Reset
-    stop("MW::selectionChange");
-
-    folderSelectionChange();
+    // Reset except initial folder selection
+    if (stop("MW::selectionChange")) {
+        folderSelectionChange();
+    }
 }
 
 void MW::folderSelectionChange()
@@ -1430,8 +1425,8 @@ void MW::folderSelectionChange()
     setting->setValue("lastDir", G::currRootFolder);
 
     setCentralMessage("Loading information for folder " + G::currRootFolder);
-    qDebug() << " ";
-    qDebug() << CLASSFUNCTION << "New folder =" << G::currRootFolder;
+//    qDebug() << " ";
+//    qDebug() << CLASSFUNCTION << "New folder =" << G::currRootFolder;
 
     // do not embellish
     if (turnOffEmbellish) embelProperties->doNotEmbellish();
@@ -1518,6 +1513,8 @@ void MW::folderSelectionChange()
         return;
     }
 
+//    qDebug() << CLASSFUNCTION << "datamodel loaded.  instance =" << dm->instance;
+
     // update FSTree count column for folder in case it has changed
 //    fsTree->refreshModel();
 
@@ -1554,6 +1551,10 @@ void MW::folderSelectionChange()
 //        dm->selectThumb(0);
 //    }
 
+    // format pickMemSize as bytes, KB, MB or GB
+    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updateStatus(true, "", CLASSFUNCTION);
+
     // Load folder progress
     setCentralMessage("Gathering metadata and thumbnails for images in folder.");
     updateStatus(false, "Collecting metadata for all images in folder(s)", CLASSFUNCTION);
@@ -1568,9 +1569,11 @@ void MW::folderSelectionChange()
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
 
+//    G::stop  = false;
+
     // start loading new folder
     G::t.restart();
-    if (G::useLinearLoading) {
+    if (G::isLinearLoading) {
         // metadata and icons loaded in GUI thread
         loadLinearNewFolder();
     }
@@ -1579,11 +1582,11 @@ void MW::folderSelectionChange()
         loadConcurrentNewFolder();
     }
 
-    // format pickMemSize as bytes, KB, MB or GB
-    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "", CLASSFUNCTION);
+//    // format pickMemSize as bytes, KB, MB or GB
+//    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+//    updateStatus(true, "", CLASSFUNCTION);
 
-    G::stop = false;
+//    G::stop = false;
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString src)
@@ -1733,7 +1736,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (G::isNewFolderLoaded) {
         fsTree->scrollToCurrent();          // req'd for first folder when Winnow opens
         updateIconRange(dm->currentSfRow);
-        if (G::useLinearLoading) {
+        if (G::isLinearLoading) {
             metadataCacheThread->fileSelectionChange();
         }
 
@@ -1757,7 +1760,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 //            && (key == Qt::NoModifier || key == Qt::KeypadModifier)
             && (!workspaceChanged)
             && (G::mode != "Compare")
-            && G::useImageCache
+            && (G::useImageCache)
            )
         {
             emit setImageCachePosition(dm->currentFilePath, CLASSFUNCTION);
@@ -1850,7 +1853,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     return;
 }
 
-void MW::stop(QString src)
+bool MW::stop(QString src)
 {
 /*
     Called when folderSelectionChange and invalid folder (no folder, no eligible images).
@@ -1859,91 +1862,106 @@ void MW::stop(QString src)
 
 
 */
-    if (G::isInitializing) return;
-
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
+
+    if (G::isInitializing) {
+        qDebug() << CLASSFUNCTION << "Ignore: G::isInitializing = true";
+        return false;
+    }
+
+    if (G::stop) {
+        qDebug() << CLASSFUNCTION << "Ignore: G::stop = true";
+        return false;
+    }
+
+    dm->instance++;
+    G::dmInstance = dm->instance;
+
+//    qDebug() << CLASSFUNCTION << "STOPPING instance" << dm->instance;
+
     G::stop = true;
+
+    G::t.restart();
     dm->abortLoad();
+//    qDebug() << CLASSFUNCTION << "Stop load datamodel       " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     metaReadThread->stop();
-    qDebug() << CLASSFUNCTION << "Stop metaReadThread:      " << G::t.elapsed() << "ms";
+//    qDebug() << CLASSFUNCTION << "Stop metaReadThread:      " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     metadataCacheThread->stop();
-    qDebug() << CLASSFUNCTION << "Stop metadataCacheThread: " << G::t.elapsed() << "ms";
+//    qDebug() << CLASSFUNCTION << "Stop metadataCacheThread: " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     imageCacheThread->stop();
-    qDebug() << CLASSFUNCTION << "Stop imageCacheThread:    " << G::t.elapsed() << "ms";
+//    qDebug() << CLASSFUNCTION << "Stop imageCacheThread:    " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     buildFilters->stop();
-    qDebug() << CLASSFUNCTION << "Stop buildFilters:        " << G::t.elapsed() << "ms";
+//    qDebug() << CLASSFUNCTION << "Stop buildFilters:        " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     frameDecoder->clear();
-    qDebug() << CLASSFUNCTION << "Stop frameDecoder:        " << G::t.elapsed() << "ms";
+//    qDebug() << CLASSFUNCTION << "Stop frameDecoder:        " << G::t.nsecsElapsed() << "ns";
 
-//    dm->abortLoad();
-//    G::wait(1000);
+    /*
+    dm->abortLoad();
+    G::wait(1000);
 
-   /*
+    stopped["MetaRead"] = !metaReadThread->isRunning();
+    stopped["MDCache"] = !metadataCacheThread->isRunning();
+    stopped["ImageCache"] = !imageCacheThread->isRunning();
+    stopped["BuildFilters"] = !buildFilters->isRunning();
+    stopped["FrameDecoder"] = !frameDecoder->isBusy();
 
-*///    stopped["MetaRead"] = !metaReadThread->isRunning();
-//    stopped["MDCache"] = !metadataCacheThread->isRunning();
-//    stopped["ImageCache"] = !imageCacheThread->isRunning();
-//    stopped["BuildFilters"] = !buildFilters->isRunning();
-//    stopped["FrameDecoder"] = !frameDecoder->isBusy();
+    if (src == "Escape key") {
+        fsTree->selectionModel()->clearSelection();
+        bookmarks->selectionModel()->clearSelection();
+    }
 
-//    if (src == "Escape key") {
-//        fsTree->selectionModel()->clearSelection();
-//        bookmarks->selectionModel()->clearSelection();
-//    }
+    // metaRead signals to stopAndClearAllAfterMetaReadStopped when stopped.
+//    qDebug() << CLASSFUNCTION << "emitting abortMetaRead";
+    if (!stopped["MetaRead"]) emit abortMetaRead();
+    if (!stopped["MDCache"]) emit abortMDCache();
+    if (!stopped["ImageCache"]) emit abortImageCache();
+    if (!stopped["BuildFilters"]) emit abortBuildFilters();
+    if (!stopped["FrameDecoder"]) emit abortFrameDecoder();
 
-//    // metaRead signals to stopAndClearAllAfterMetaReadStopped when stopped.
-////    qDebug() << CLASSFUNCTION << "emitting abortMetaRead";
-//    if (!stopped["MetaRead"]) emit abortMetaRead();
-//    if (!stopped["MDCache"]) emit abortMDCache();
-//    if (!stopped["ImageCache"]) emit abortImageCache();
-//    if (!stopped["BuildFilters"]) emit abortBuildFilters();
-//    if (!stopped["FrameDecoder"]) emit abortFrameDecoder();
+    // check if all stopped
+    bool allStopped = true;
+    for (bool isStopped : stopped) {
+        if (!isStopped) allStopped = false;
+    }
+    if (allStopped) reset("AllStopped");
 
-//    // check if all stopped
-//    bool allStopped = true;
-//    for (bool isStopped : stopped) {
-//        if (!isStopped) allStopped = false;
-//    }
-//    if (allStopped) reset("AllStopped");
+}
 
-//}
+void MW::reset(QString src) {
 
-//void MW::reset(QString src) {
-///*
-//    Called when folderSelectionChange and invalid folder (no folder, no eligible images).
-//    Can be triggered when the user picks a folder in the folder panel or open menu, picks
-//    a bookmark or ejects a drive and the resulting folder does not have any eligible images.
-//*/
-//    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    Called when folderSelectionChange and invalid folder (no folder, no eligible images).
+    Can be triggered when the user picks a folder in the folder panel or open menu, picks
+    a bookmark or ejects a drive and the resulting folder does not have any eligible images.
 
-//    if (src != "AllStopped") {
-//        stopped[src] = true;
-//        /*
-//        qDebug() << CLASSFUNCTION << "src =" << src
-//                 << "\n  MetaRead     stopped" << stopped["MetaRead"]
-//                 << "\n  MDCache      stopped" << stopped["MDCache"]
-//                 << "\n  ImageCache   stopped" << stopped["ImageCache"]
-//                 << "\n  BuildFilters stopped" << stopped["BuildFilters"]
-//                 << "\n  FrameDecoder stopped" << stopped["FrameDecoder"]
-//                 << "\n" ;
-//                 //*/
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
 
-//        // if any thread processes still running then do not complete reset yet
-//        for (bool isStopped : stopped) {
-//            if (!isStopped) return;
-//        }
-//    }
+    if (src != "AllStopped") {
+        stopped[src] = true;
+        qDebug() << CLASSFUNCTION << "src =" << src
+                 << "\n  MetaRead     stopped" << stopped["MetaRead"]
+                 << "\n  MDCache      stopped" << stopped["MDCache"]
+                 << "\n  ImageCache   stopped" << stopped["ImageCache"]
+                 << "\n  BuildFilters stopped" << stopped["BuildFilters"]
+                 << "\n  FrameDecoder stopped" << stopped["FrameDecoder"]
+                 << "\n" ;
+
+        // if any thread processes still running then do not complete reset yet
+        for (bool isStopped : stopped) {
+            if (!isStopped) return;
+        }
+    }
+    G::wait(1000);
+    */
 
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
@@ -1972,10 +1990,7 @@ void MW::stop(QString src)
     gridView->setUpdatesEnabled(false);
     tableView->setUpdatesEnabled(false);
     tableView->setSortingEnabled(false);
-
-    dm->clearDataModel();
     frameDecoder->clear();
-
     thumbView->setUpdatesEnabled(true);
     gridView->setUpdatesEnabled(true);
     tableView->setUpdatesEnabled(true);
@@ -1986,7 +2001,7 @@ void MW::stop(QString src)
     setThreadRunStatusInactive();
 
     G::stop = false;
-//    folderSelectionChange();
+    return true;
 }
 
 void MW::reset(QString src) {}
@@ -2433,7 +2448,7 @@ void MW::thumbHasScrolled()
             tableView->scrollToRow(thumbView->midVisibleCell, CLASSFUNCTION);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
-            if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
+            if (G::isLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
             else loadConcurrent(thumbView->midVisibleCell);
         }
         // update thumbnail zoom frame cursor
@@ -2483,7 +2498,7 @@ return;
             thumbView->scrollToRow(gridView->midVisibleCell, CLASSFUNCTION);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection && gridView->isVisible()) {
-            if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
+            if (G::isLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
             else loadConcurrent(gridView->midVisibleCell);
 //            else scrollChange(gridView->midVisibleCell, CLASSFUNCTION);
         }
@@ -2529,7 +2544,7 @@ void MW::tableHasScrolled()
             thumbView->scrollToRow(tableView->midVisibleRow, CLASSFUNCTION);
         // only call metadataCacheThread->scrollChange if scroll without fileSelectionChange
         if (!G::isNewSelection) {
-            if (G::useLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
+            if (G::isLinearLoading) metadataCacheThread->scrollChange(CLASSFUNCTION);
             else loadConcurrent(tableView->midVisibleRow);
 //            else scrollChange(tableView->midVisibleRow, CLASSFUNCTION);
         }
@@ -2547,7 +2562,7 @@ void MW::numberIconsVisibleChange()
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (G::isInitializing || !G::isNewFolderLoaded) return;
     updateIconRange(dm->currentSfRow);
-//    if (G::useLinearLoading)
+//    if (G::isLinearLoading)
 //        metadataCacheThread->sizeChange(CLASSFUNCTION);
 //    else
 //        loadConcurrent(MetaRead::SizeChange, CLASSFUNCTION);
@@ -2997,7 +3012,7 @@ void MW::setImageCacheParameters()
     QString fPath = dm->currentFilePath;
 //    QString fPath = thumbView->currentIndex().data(G::PathRole).toString();
     // set position in image cache
-    if (fPath.length())
+    if (fPath.length() && G::useImageCache)
         imageCacheThread->setCurrentPosition(fPath, CLASSFUNCTION);
 
     // cache progress bar
@@ -4117,7 +4132,7 @@ void MW::writeSettings()
     setting->setValue("modifySourceFiles", G::modifySourceFiles);
     setting->setValue("useSidecar", G::useSidecar);
     setting->setValue("embedTifThumb", G::embedTifThumb);
-    setting->setValue("tryConcurrentLoading", !G::useLinearLoading);
+    setting->setValue("tryConcurrentLoading", !G::isLinearLoading);
     setting->setValue("isLogger", G::isLogger);
     setting->setValue("isErrorLogger", G::isErrorLogger);
     setting->setValue("wheelSensitivity", G::wheelSensitivity);
@@ -4427,7 +4442,7 @@ bool MW::loadSettings()
         G::modifySourceFiles = false;
         G::useSidecar = false;
         G::embedTifThumb = false;
-        G::useLinearLoading = true;
+        G::isLinearLoading = true;
 
         // ingest
         autoIngestFolderPath = false;
@@ -4501,10 +4516,15 @@ bool MW::loadSettings()
         G::embedTifThumb = setting->value("embedTifThumb").toBool();
     else
         G::embedTifThumb = false;
-    if (setting->contains("tryConcurrentLoading"))
-        G::useLinearLoading = !setting->value("tryConcurrentLoading").toBool();
+    // show/hide use of ConcurrentLoading for dev/release using G::tryConcurrentLoading
+    if (G::tryConcurrentLoading) {
+        if (setting->contains("tryConcurrentLoading"))
+            G::isLinearLoading = !setting->value("tryConcurrentLoading").toBool();
+        else
+            G::isLinearLoading = true;
+    }
     else
-        G::useLinearLoading = true;
+        G::isLinearLoading = true;
     if (setting->contains("wheelSensitivity"))
         G::wheelSensitivity = setting->value("wheelSensitivity").toInt();
     else
@@ -5503,7 +5523,8 @@ void MW::refreshCurrentFolder()
             if (metadata->hasMetadataFormats.contains(ext)) {
                 if (metadata->loadImageMetadata(dm->modifiedFiles.at(i), dm->instance, true, true, false, true, CLASSFUNCTION)) {
                     metadata->m.row = dmRow;
-                    dm->addMetadataForItem(metadata->m);
+                    metadata->m.instance = dm->instance;
+                    dm->addMetadataForItem(metadata->m, "MW::refreshCurrentFolder");
                 }
             }
 

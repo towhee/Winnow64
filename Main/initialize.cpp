@@ -155,6 +155,9 @@ void MW::createDataModel()
     connect(buildFilters, &BuildFilters::stopped, this, &MW::reset);
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
+
+    // test how to add to datamodel from another thread
+    connect(this, &MW::testAddToDM, dm, &DataModel::addMetadataForItem);
 }
 
 void MW::createSelectionModel()
@@ -262,7 +265,8 @@ void MW::createMDCache()
     // read metadata
     connect(this, &MW::startMetaRead, metaReadThread, &MetaRead::setCurrentRow);
     // add metadata to datamodel
-    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem);
+    connect(metaReadThread, &MetaRead::addToDatamodel, dm, &DataModel::addMetadataForItem,
+            Qt::BlockingQueuedConnection);
     // add icon to datamodel
     connect(metaReadThread, &MetaRead::setIcon, dm, &DataModel::setIcon);
     // message metadata reading completed

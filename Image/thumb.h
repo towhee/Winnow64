@@ -41,6 +41,8 @@ private:
     bool loadFromEntireFile(QString &fPath, QImage &image, int row);
     void loadFromVideo(QString &fPath, int dmRow);
     void checkOrientation(QString &fPath, QImage &image);
+
+    bool isDebug;
 };
 
 #endif // THUMB_H

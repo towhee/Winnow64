@@ -15,7 +15,7 @@ class ImageMetadata
 */
 public:
     int row = 0;                            // datamodel row
-    int dmInstance = 0;
+    int instance = 0;                       // incremented each time datamodel reloaded for new folder
     QString fPath = "";
     // roles for G::PathColumn in datamodel
     QString toolTipRole = "";

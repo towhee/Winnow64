@@ -2043,11 +2043,11 @@ void IconView::startDrag(Qt::DropActions)
     Drag and drop thumbs to another program.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << "IconView::startDrag";
+//    qDebug() << "IconView::startDrag";
 
     QModelIndexList selection = selectionModel()->selectedRows();
     if (selection.isEmpty()) {
-        qDebug() << "IconView::startDrag" << "Empty selection";
+        qWarning() << "WARNING" << "IconView::startDrag" << "Empty selection";
         return;
     }
 

@@ -150,6 +150,7 @@ namespace G
     extern bool useFilterView;      // not finished
     extern bool useReadIcons;
     extern bool useReadMetadata;
+    extern bool tryConcurrentLoading;  // show/hide option to use concurrent MetaRead
 
     extern QSettings *settings;
 
@@ -236,7 +237,7 @@ namespace G
     extern bool modifySourceFiles;
     extern bool useSidecar;
     extern bool embedTifThumb;
-    extern bool useLinearLoading;
+    extern bool isLinearLoading;
 
     extern bool isRunningBackgroundIngest;
     extern int ingestCount;
@@ -277,7 +278,7 @@ namespace G
     extern int wait(int ms);
     extern QString s(QVariant x);
     extern QString sj(QString s, int x);
-    extern bool instanceClash(int instance);
+    extern bool instanceClash(int instance, QString src);
 
     extern int popUpProgressCount;
     extern int popUpLoadFolderStep;

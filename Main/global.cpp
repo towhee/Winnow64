@@ -25,11 +25,12 @@ namespace G
     // limit functionality for testing
     bool useReadMetadata = true;
     bool useReadIcons = true;
-    bool useImageCache = false;
-    bool useImageView = false;
-    bool useInfoView = false;
-    bool useUpdateStatus = false;
+    bool useImageCache = true;
+    bool useImageView = true;
+    bool useInfoView = true;
+    bool useUpdateStatus = true;
     bool useFilterView = true;          // not finished
+    bool tryConcurrentLoading = false;     // show/hide option to use concurrent MetaRead
 
     // system display
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitoriconLoaded
@@ -107,7 +108,7 @@ namespace G
     bool modifySourceFiles;
     bool useSidecar;
     bool embedTifThumb;
-    bool useLinearLoading;
+    bool isLinearLoading;// = !tryConcurrentLoading;
 
     bool isGettingVideoFrame;           // test sequential video thumb loading
 
@@ -170,7 +171,7 @@ namespace G
         }
         QTime t = QTime::currentTime().addMSecs(ms);
         while (QTime::currentTime() < t) {
-//            qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
+            qApp->processEvents(QEventLoop::AllEvents/*, 10*/);
         }
         duration += ms;
         return duration;
@@ -257,13 +258,14 @@ namespace G
         errlog(functionName, fPath, err);
     }
 
-    bool instanceClash(int instance)
+    bool instanceClash(int instance, QString src)
     {
         bool clash = (dmInstance != instance);
         if (clash) {
             qWarning() << "WARNING G::instanceClash"
                        << "instance =" << instance
                        << "DM instance =" << dmInstance
+                       << "src =" << src
                           ;
         }
         return clash;

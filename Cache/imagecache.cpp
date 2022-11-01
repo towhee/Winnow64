@@ -321,7 +321,7 @@ bool ImageCache::nextToCache(int id)
       attempts are greater than maxAttemptsToCacheImage.
 */
     if (G::isLogger) G::log("ImageCache::nextToCache");
-    if (G::instanceClash(instance)) {
+    if (G::instanceClash(instance, "ImageCache::nextToCache")) {
         return false;
     }
     if (priorityList.size() > icd->cacheItemList.size()) {
@@ -722,7 +722,7 @@ QString ImageCache::diagnostics()
     rpt.setString(&reportString);
     rpt << Utilities::centeredRptHdr('=', objectName() + " ImageCache Diagnostics");
     rpt << "\n" ;
-    rpt << "Load algorithm: " << (G::useLinearLoading == true ? "Linear" : "Concurrent");
+    rpt << "Load algorithm: " << (G::isLinearLoading == true ? "Linear" : "Concurrent");
     rpt << "\n" ;
     rpt << reportCacheParameters();
     rpt << reportCache("");
@@ -1122,7 +1122,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItem.isCached = false;
         icd->cacheItem.isTarget = false;
         icd->cacheItem.priority = i;
-        if ((G::useLinearLoading || G::allMetadataLoaded)) {
+        if ((G::isLinearLoading || G::allMetadataLoaded)) {
             ImageMetadata m = dm->imMetadata(fPath);
             icd->cacheItem.metadataLoaded = m.metadataLoaded;
             icd->cacheItem.isVideo = m.video;
@@ -1163,7 +1163,7 @@ void ImageCache::buildImageCacheList()
         icd->cacheItemList.append(icd->cacheItem);
     } // next row
 
-    if (G::useLinearLoading) icd->cache.folderMB = folderMB;
+    if (G::isLinearLoading) icd->cache.folderMB = folderMB;
 }
 
 void ImageCache::initImageCache(int &cacheMaxMB,
@@ -1174,7 +1174,8 @@ void ImageCache::initImageCache(int &cacheMaxMB,
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::initImageCache");
     if (!G::useImageCache) return;   // rgh isolate image cache
 
-    qDebug() << "ImageCache::initImageCache  dm->instance =" << dm->instance;
+    if (debugCaching) qDebug() << "ImageCache::initImageCache  dm->instance =" << dm->instance;
+
     abort = false;
 
     // cancel if no images to cache
@@ -1185,8 +1186,7 @@ void ImageCache::initImageCache(int &cacheMaxMB,
 
     // update folder change instance
     instance = dm->instance;
-//    icd->cache.dmInstance = dm->instance;
-    G::imageCacheInstance = G::dmInstance;
+    G::imageCacheInstance = instance;
 
     // cache is a structure to hold cache management parameters
     icd->cache.key = 0;
@@ -1334,13 +1334,14 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     */
     if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::setCurrentPosition", path);
-    if (G::instanceClash(instance)) {
-        qWarning() << "WARNING"
-                   << "ImageCache::setCurrentPosition"
-                   << "Instance clash"
-                   << dm->rowFromPath(path)
-                   << src
-                   << path;
+    if (G::instanceClash(instance, "ImageCache::setCurrentPosition")) {
+//        qWarning() << "WARNING"
+//                   << "ImageCache::setCurrentPosition"
+//                   << "Instance clash"
+//                   << dm->rowFromPath(path)
+//                   << src
+//                   << path;
+        return;
     }
 
     if (debugCaching) {

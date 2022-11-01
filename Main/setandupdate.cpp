@@ -296,10 +296,10 @@ void MW::toggleThumbDockVisibity()
         return;
     }
 //    if (!metaRead->isReading()) {
-    if (!metaReadThread->isRunning()) {
-         G::popUp->showPopup("Cannot show/hide film strip while reading metadata.", 2000);
-         return;
-     }
+//    if (!metaReadThread->isRunning()) {
+//         G::popUp->showPopup("Cannot show/hide film strip while reading metadata.", 2000);
+//         return;
+//     }
 //    qDebug() << CLASSFUNCTION;
     QString dock = thumbDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;

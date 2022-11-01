@@ -66,7 +66,8 @@ bool EmbelExport::loadImage(QString fPath)
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, CLASSFUNCTION)) {
             metadata->m.row = dmRow;
-            dm->addMetadataForItem(metadata->m);
+            metadata->m.instance = dm->instance;
+            dm->addMetadataForItem(metadata->m, "EmbelExport::loadImage");
         }
         else return false;
     }
