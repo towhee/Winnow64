@@ -6171,7 +6171,7 @@ void EmbelProperties::addText(int count)
     if (setting->contains(settingRootPath + i.key)) {
         i.value = setting->value(settingRootPath + i.key);
         if (!styleList.contains(i.value.toString())) {
-            qDebug() << CLASSFUNCTION << "Style " << i.value << "no longer exists";
+            qWarning() << "WARNING" << CLASSFUNCTION << "Style " << i.value << "no longer exists";
             i.value = "No style";
         }
     }

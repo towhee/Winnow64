@@ -403,11 +403,11 @@ void MetadataCache::readAllMetadata()
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetadataCache::readAllMetadata")) {
             metadata->m.row = row;
-            dm->addMetadataForItem(metadata->m);
+            dm->addMetadataForItem(metadata->m, "MetadataCache::readAllMetadata");
             count++;
         }
 
-        if (G::useLinearLoading) {
+        if (G::isLinearLoading) {
             if (row % countInterval == 0) {
                 QString msg = "Reading metadata: ";
                 msg += QString::number(row) + " of " + QString::number(rows);
@@ -431,7 +431,7 @@ void MetadataCache::readMetadataIcon(const QModelIndex &idx)
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetadataCache::readMetadataIcon")) {
             metadata->m.row = dmRow;
-            dm->addMetadataForItem(metadata->m);
+            dm->addMetadataForItem(metadata->m, "MetadataCache::readAllMetadata");
         }
     }
 
@@ -556,7 +556,7 @@ void MetadataCache::readMetadataChunk()
                 G::log("MetadataCache::readMetadataChunk", msg);
             }
             //*/
-            if (G::useLinearLoading) {
+            if (G::isLinearLoading) {
                 if (row % countInterval == 0) {
                     QString msg = "Reading metadata: ";
                     msg += QString::number(row) + " of " + QString::number(end)/* + " " + fPath*/;

@@ -125,7 +125,7 @@ public slots:
 //    void unfilteredItemSearchCount();
     void addAllMetadata();
     void setAllMetadataLoaded(bool isLoaded);
-    bool addMetadataForItem(ImageMetadata m);
+    bool addMetadataForItem(ImageMetadata m, QString src);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
     void setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromInstance,
                           qint64 duration, FrameDecoder *frameDecoder);
@@ -182,6 +182,10 @@ private:
     int step;
 
     bool isDebug = true;
+    QString lastFunction = "";
+    ImageMetadata mCopy;
+    int line;
+    int rowCountChk;
 };
 
 #endif // DATAMODEL_H

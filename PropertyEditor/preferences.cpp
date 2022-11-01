@@ -258,7 +258,7 @@ itemChange, which is subclassed here.
     }
 
     if (source == "tryConcurrentLoading") {
-        G::useLinearLoading = !v.toBool();
+        G::isLinearLoading = !v.toBool();
     }
 
     if (source == "isLogger") {
@@ -524,11 +524,11 @@ void Preferences::addItems()
                 ;
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.value = !G::useLinearLoading;
+    i.value = !G::isLinearLoading;
     i.key = "tryConcurrentLoading";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    addItem(i);
+    if (G::tryConcurrentLoading) addItem(i);
 
     // Logger
     i.name = "isLogger";

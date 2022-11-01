@@ -399,6 +399,8 @@ signals:
     void abortHueReport();
     void abortStackOperation();
 
+    void testAddToDM(ImageMetadata m, QString src);
+
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
     void resetFocus();
@@ -1113,7 +1115,7 @@ private:
     void embelDockActivated(QDockWidget *dockWidget);
     void embelDockVisibilityChange();
     void updateState();
-    void stop(QString src = "");
+    bool stop(QString src = "");
 //    void stopAndClearAllAfterMetaReadStopped();
     void deleteViewerImage();
     void selectCurrentViewDir();
@@ -1223,6 +1225,7 @@ private:
     void traverseFolderStressTest(int ms = 0, int duration = 0);
     void bounceFoldersStressTestFromMenu();
     void bounceFoldersStressTest(int ms = 0, int duration = 0);
+    void testMultiThreadDataModel();
     void test();                    // for debugging
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging

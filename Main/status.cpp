@@ -7,13 +7,20 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     then ie "1 of 80   60% zoom   2.1 MB picked" is prepended to the status message s.
 */
     if (!G::useUpdateStatus) return;
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    /*
-    QString ms = QString("%L1").arg(testTime.nsecsElapsed() / 1000000) + " ms";
-    testTime.restart();
-    */
+    if (G::stop) return;
 
-//    qDebug() << CLASSFUNCTION << s << source;
+    if (G::isLogger) G::log(CLASSFUNCTION);
+
+    // check if instance clash (old folder signal)
+    QString fPath = thumbView->getCurrentFilePath();
+    int row = dm->rowFromPath(fPath);
+    if ((row == -1) && (dm->instance > -1) && (fPath != "")) {
+        qWarning() << "WARNING" << "MW::updateStatus"
+                   << fPath
+                   << "not found.  Probable instance clash";
+        return;
+    }
+
     // check if null filter
     if (dm->sf->rowCount() == 0) {
         statusLabel->setText("");
@@ -29,8 +36,6 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     }
 
     // check for file error first
-    QString fPath = thumbView->getCurrentFilePath();
-    int row = dm->fPathRow[fPath];
     bool imageUnavailable = dm->index(row, G::OffsetFullColumn).data() == 0;
     bool thumbUnavailable = dm->index(row, G::OffsetThumbColumn).data() == 0;
     if (imageUnavailable || thumbUnavailable) {

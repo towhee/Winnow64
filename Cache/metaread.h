@@ -23,7 +23,6 @@ public:
     ~MetaRead() override;
 
     void stop();
-    void test();
     QString diagnostics();
     QString reportMetaCache();
     void cleanupIcons();
@@ -32,10 +31,13 @@ public:
     int firstIconRow;
     int lastIconRow;
 
+    bool testMultiThread;
+    void multiThreadTest();
+
 signals:
     void stopped(QString src);
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
-    void addToDatamodel(ImageMetadata m);
+    void addToDatamodel(ImageMetadata m, QString src);
     void addToImageCache(ImageMetadata m);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void triggerImageCache(QString src);

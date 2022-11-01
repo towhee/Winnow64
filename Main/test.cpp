@@ -104,6 +104,13 @@ void MW::bounceFoldersStressTest(int ms, int duration)
     }
 }
 
+void MW::testMultiThreadDataModel()
+{
+    // must select folder before running test.
+    metaReadThread->testMultiThread = true;
+    metaReadThread->start();
+}
+
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
     centralLayout->setCurrentIndex(GridTab);
@@ -119,17 +126,40 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    emit abortMetaRead();
-    return;
-//    if (thumbView->isVisible() thumbView->selectThumb(5);
-//    else if (gridView->isVisible() gridView->selectThumb(6);
-//    else if (tableView-.isVisible))
-//    selectionModel->clear();
-//    dm->selectionModel->setCurrentIndex(dm->sf->index(5,0),
-//            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-//    thumbView->selectThumb(5);
-//    qDebug() << thumbView->isVisible();
-    thumbDock->setVisible(!thumbDock->isVisible());
-//    thumbView->setVisible(!thumbView->isVisible());
-//    centralLayout->setCurrentIndex(LoupeTab);
+    testMultiThreadDataModel();
+//    return;
+    QModelIndex sfIdx = dm->sf->index(0, 0);
+    QString fPath = sfIdx.data(G::PathRole).toString();
+    QFileInfo fileInfo(fPath);
+
+    /* dm->addMetadataForItem from GUI
+    for (int i = 1000; i < 2000; i++) {
+        qDebug() << "MW::test" << i;
+        metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "MetaRead::multiThreadTest");
+        metadata->m.row = 0;
+        metadata->m.instance = dm->instance;
+        metadata->m.label = QString::number(i);
+        dm->addMetadataForItem(metadata->m, "MetaRead::readMetadata");
+    }
+    //*/
+
+    /* dm->setValue from GUI
+    QModelIndex idx = dm->index(0, G::RatingColumn);
+    for (int i = 0; i < 200; i++) {
+        qDebug() << "MW::test" << i;
+        dm->setValue(idx, "3",0, "MW::test");
+        G::wait(2);
+    }
+    //*/
+
+    //    /* dm->setValue from GUI
+    QModelIndex idx = dm->index(0, G::RatingColumn);
+    for (int i = 0; i < 200; i++) {
+        qDebug() << "MW::test" << i;
+        dm->setData(idx, "3");
+        G::wait(2);
+    }
+    //*/
+
 }
+

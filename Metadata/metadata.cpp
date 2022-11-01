@@ -850,7 +850,7 @@ bool Metadata::parseSidecar()
         return false;
     }
 
-    if (G::instanceClash(p.instance)) {
+    if (G::instanceClash(p.instance, "Metadata::parseSidecar")) {
         return false;
     }
 
@@ -878,14 +878,14 @@ bool Metadata::parseSidecar()
     }
     // extract metadata from sidecar xmp
     else {
-//        /*
-        qDebug() << "Metadata::parseSidecar"
-                 << "sidecarPath" << sidecarPath
-                 << "sidecarFile.exists()" << sidecarFile.exists()
-                 << "p.instance =" << p.instance
-                 << "G::dmInstance =" << G::dmInstance
-                    ;
-                    //*/
+        if (p.instance != G::dmInstance)
+            qWarning() << "WARNING"
+                       << "Metadata::parseSidecar  Instance conflict"
+                       << "p.instance =" << p.instance
+                       << "G::dmInstance =" << G::dmInstance
+                       << "sidecarPath" << sidecarPath
+                       << "sidecarFile.exists()" << sidecarFile.exists()
+                          ;
         QString s;
         s = xmp.getItem("rating"); if (!s.isEmpty()) {m.rating = s; m._rating = s;}
         s = xmp.getItem("label"); if (!s.isEmpty()) {m.label = s; m._label = s;}
@@ -1167,7 +1167,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     okToReadXmp = true;
 
     // read metadata
-    qDebug() << "Metadata::loadImageMetadata" << "Ok";
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
 //        G::error(CLASSFUNCTION, fPath, "Failed to read metadata.");
@@ -1182,9 +1181,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 //        #endif
         return false;
     }
-    qDebug() << "Metadata::loadImageMetadata" << "Ok1";
-
-//    m.isPicked = false;
 
     m.currRootFolder = fileInfo.absoluteDir().absolutePath();
 
@@ -1198,7 +1194,6 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 
     m.thumbUnavailable = thumbUnavailable;
     m.imageUnavailable = imageUnavailable;
-//    mutex.unlock();
 
     return m.metadataLoaded;
 }

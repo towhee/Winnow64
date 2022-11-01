@@ -284,7 +284,8 @@ void BuildFilters::loadAllMetadata()
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, src)) {
                 metadata->m.row = row;
-                dm->addMetadataForItem(metadata->m);
+                metadata->m.instance = instance;
+                dm->addMetadataForItem(metadata->m, "BuildFilters::loadAllMetadata");
                 if (row % 100 == 0 || row == 0) {
                     progress = static_cast<int>(static_cast<double>(20 * row) / dmRows);
                     emit updateProgress(progress);
