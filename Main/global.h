@@ -93,6 +93,8 @@ namespace G
         _UrlColumn,
 //        _OrientationColumn,
 //        _RotationColumn,
+        PermissionsColumn,
+        ReadWriteColumn,
 
         // binary helpers
         OffsetFullColumn,
@@ -242,6 +244,10 @@ namespace G
     extern bool isRunningBackgroundIngest;
     extern int ingestCount;
     extern QDate ingestLastSeqDate;
+
+    // copying files
+    extern bool isCopyingFiles;
+    extern bool stopCopyingFiles;
 
     extern bool isThreadTrackingOn;
     extern bool showAllTableColumns;

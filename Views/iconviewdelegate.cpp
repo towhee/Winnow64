@@ -347,6 +347,7 @@ void IconViewDelegate::paint(QPainter *painter,
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();
     bool isVideo = index.model()->index(row, G::VideoColumn).data().toBool();
+    bool isReadWrite = index.model()->index(row, G::ReadWriteColumn).data().toBool();
 
     // icon size
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
@@ -378,7 +379,7 @@ void IconViewDelegate::paint(QPainter *painter,
 //             << "frameRect =" << frameRect
              << "thumbRect =" << thumbRect
              << "thumbSize =" << thumbSize
-             << "iconsize =" << iconsize
+             << "iconsize =" << iconSize
              << "iconRect =" << iconRect
                 ;
 //             */
@@ -518,6 +519,30 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->drawRect(bRect);
         painter->setPen(videoTextcolor);
         painter->drawText(bRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
+    }
+
+    // show lock if file does not have read/write permissions
+    if (!isReadWrite) {
+        int lockSize = thumbRect.height() / 6;
+        if (lockSize < 11) lockSize = 11;
+        if (lockSize > 20) lockSize = 20;
+        QFont lockFont = painter->font();
+        lockFont.setPixelSize(lockSize);
+        painter->setFont(lockFont);
+        QRectF bRect;
+        painter->drawText(thumbRect, Qt::AlignBottom | Qt::AlignLeft, "🔒", &bRect);
+        painter->drawText(bRect, "🔒");
+        /*
+        qDebug() << "IconViewDelegate::paint "
+                 << "font =" << painter->font().pixelSize()
+                 << "lockSize =" << lockSize
+                 << "cellRect =" << cellRect
+                 << "thumbRect =" << thumbRect
+                 << "thumbSize =" << thumbSize
+                 << "iconsize =" << iconSize
+                 << "iconRect =" << iconRect
+                    ;
+                    //*/
     }
 
     // draw the cache circle

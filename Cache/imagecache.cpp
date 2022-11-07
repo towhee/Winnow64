@@ -117,11 +117,13 @@ void ImageCache::stop()
 
     // stop decoder threads
     for (int id = 0; id < decoderCount; ++id) {
+//        qDebug() << "ImageCache::stop  Stopping decoder thread" << id;
         decoder[id]->stop();
     }
-
+    qDebug() << "ImageCache::stop  All decoder threads are stopped";
     // stop imagecache thread
     if (isRunning()) {
+//        qDebug() << "ImageCache::stop Stopping ImageCache";
         mutex.lock();
         abort = true;
         condition.wakeOne();
@@ -132,6 +134,7 @@ void ImageCache::stop()
     // signal MW all stopped if a folder change
     if (G::stop) emit stopped("ImageCache");
 
+//    qDebug() << "ImageCache::stop  ImageCache is stopped";
     // turn off caching activity lights on statusbar
     emit updateIsRunning(false, false);  // flags = isRunning, showCacheLabel
 
@@ -1335,25 +1338,31 @@ void ImageCache::setCurrentPosition(QString path, QString src)
     if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isLogger || G::isFlowLogger) G::log("ImageCache::setCurrentPosition", path);
     if (G::instanceClash(instance, "ImageCache::setCurrentPosition")) {
-//        qWarning() << "WARNING"
-//                   << "ImageCache::setCurrentPosition"
-//                   << "Instance clash"
-//                   << dm->rowFromPath(path)
-//                   << src
-//                   << path;
+        qWarning() << "WARNING"
+                   << "ImageCache::setCurrentPosition"
+                   << "Instance clash"
+                   << dm->rowFromPath(path)
+                   << src
+                   << path;
         return;
     }
-
+    if (keyFromPath(path) == -1) {
+        qWarning() << "WARNING"
+                   << "ImageCache::setCurrentPosition"
+                   << "src =" << src
+                   << "Not in cacheItemList"
+                   << path;
+        return;
+    }
     if (debugCaching) {
         qDebug();
         qDebug().noquote() << "ImageCache::setCurrentPosition" << path << "src =" << src;
     }
 
-//    if (currentPath == path) return;
+//    qDebug() << "ImageCache::setCurrentPosition" << path << "src =" << src;
 
     mutex.lock();
     currentPath = path;
-//    setKeyToCurrent();
     mutex.unlock();
 
     if (!isRunning()) {
@@ -1449,7 +1458,7 @@ void ImageCache::fillCache(int id)
     An image decoder can be running when a new folder is selected, returning an image
     from the previous folder. When an image decoder is run it is seeded with the
     datamodel instance (which is incremented every time a new folder is selected). When
-    the decoder signals back to DM::fillCache the decoder dmInstance is checked against
+    the decoder signals back to DM::fillCache the decoder instance is checked against
     the current dm->instance to confirm the decoder image is from the current datamodel
     instance.
 
@@ -1472,7 +1481,7 @@ void ImageCache::fillCache(int id)
              << "      decoder" << id
              << "row =" << k    // row = key
              << "isRunning =" << decoder[id]->isRunning()
-             << "instance =" << decoder[id]->dmInstance
+             << "instance =" << decoder[id]->instance
              << decoder[id]->fPath
                 ;
                 //*/
@@ -1480,12 +1489,12 @@ void ImageCache::fillCache(int id)
     // Error checking
     {
         // DM instance check
-        if (decoder[id]->dmInstance != dm->instance) {
+        if (decoder[id]->instance != dm->instance) {
             cacheKey = -1;
             if (debugCaching)
                 if (decoder[id]->fPath != "")
                 qWarning() << "WARNING" << "ImageCache::fillCache DataModel instance clash:"
-                           << "Decoder DM instance" << decoder[id]->dmInstance
+                           << "Decoder DM instance" << decoder[id]->instance
                            << "DM instance" << dm->instance
                            << "Decoder id =" << id
                            << decoder[id]->fPath

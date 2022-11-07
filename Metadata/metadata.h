@@ -74,8 +74,8 @@ public:
     */
     MetadataParameters p;
 
-    bool thumbUnavailable;                  // no embedded thumb
-    bool imageUnavailable;                  // no embedded preview
+//    bool thumbUnavailable;                  // no embedded thumb
+//    bool imageUnavailable;                  // no embedded preview
 
     QStringList hasJpg;
     QStringList hasHeic;

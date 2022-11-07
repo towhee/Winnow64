@@ -51,7 +51,6 @@
 #include "Cache/framedecoder.h"
 
 //#ifdef Q_OS_WIN
-#include "Utilities/icc.h"
 //#endif
 
 #include "File/ingest.h"
@@ -607,6 +606,7 @@ private slots:
     void openUsbFolder();
     void saveAsFile();
     void copyFolderPathFromContext();
+    void copyImagePathFromContext();
     void revealWinnets();
     void revealLogFile();
     void revealFile();
@@ -682,7 +682,8 @@ private:
     QAction *revealFileAction;
     QAction *saveAsFileAction;
     QAction *revealFileActionFromContext;
-    QAction *copyPathActionFromContext;
+    QAction *copyFolderPathFromContextAction;
+    QAction *copyImagePathFromContextAction;
     QAction *openWithMenuAction;
         QAction *manageAppAction;
         QList<QAction *> appActions;
@@ -1000,8 +1001,8 @@ private:
     QHeaderView *headerView;
     CompareImages *compareImages;
 
-    MetaRead *metaReadThread;
     MetadataCache *metadataCacheThread;
+    MetaRead *metaReadThread;
     ImageCache *imageCacheThread;
     FrameDecoder *frameDecoder;
 
@@ -1031,6 +1032,7 @@ private:
 //    QModelIndexList selectedRows;
 //    QModelIndex currentIdx;
     QStandardItemModel *imageModel;
+    QModelIndex mouseOverIdx;           // used for IconView context menu copy file path
 
     QHash<QString, bool> stopped;
 
@@ -1083,7 +1085,7 @@ private:
     QTimer *metadataCacheScrollTimer;
 
     int prevCentralView;
-    QString mouseOverFolder;        // current mouseover folder in folder dock used
+    QString mouseOverFolderPath;        // current mouseover folder in folder dock used
                                     // in context menu to eject usb drives
 
     QString rating = "";
@@ -1123,6 +1125,7 @@ private:
     void createActions();
     void createBookmarks();
     void createFrameDecoder();
+    void createLinearMetaRead();
     void createMDCache();
     void createImageCache();
     void createCentralWidget();

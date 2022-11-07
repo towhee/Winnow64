@@ -200,6 +200,8 @@ void DataModel::setModelProperties()
     setHorizontalHeaderItem(G::SearchColumn, new QStandardItem("🔎")); horizontalHeaderItem(G::SearchColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::TypeColumn, new QStandardItem("Type")); horizontalHeaderItem(G::TypeColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::VideoColumn, new QStandardItem("Video")); horizontalHeaderItem(G::VideoColumn)->setData(false, G::GeekRole);
+    setHorizontalHeaderItem(G::PermissionsColumn, new QStandardItem("Permissions")); horizontalHeaderItem(G::PermissionsColumn)->setData(true, G::GeekRole);
+    setHorizontalHeaderItem(G::ReadWriteColumn, new QStandardItem("R/W")); horizontalHeaderItem(G::ReadWriteColumn)->setData(true, G::GeekRole);
     setHorizontalHeaderItem(G::SizeColumn, new QStandardItem("Size")); horizontalHeaderItem(G::SizeColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::WidthColumn, new QStandardItem("Width")); horizontalHeaderItem(G::WidthColumn)->setData(false, G::GeekRole);
     setHorizontalHeaderItem(G::HeightColumn, new QStandardItem("Height")); horizontalHeaderItem(G::HeightColumn)->setData(false, G::GeekRole);
@@ -521,6 +523,8 @@ bool DataModel::addFileData()
     • PathColumn
     • NameColumn        (core sort item)
     • TypeColumn        (core sort item)
+    • PermissionsColumn (core sort item)  rgh?
+    • ReadWriteColumn   (core sort item)  rgh?
     • SizeColumn        (core sort item)
     • CreatedColumn     (core sort item)
     • ModifiedColumn    (core sort item)
@@ -655,6 +659,12 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
     QString s = fileInfo.suffix().toUpper();
     setData(index(row, G::VideoColumn), metadata->videoFormats.contains(ext));
     setData(index(row, G::VideoColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    uint p = static_cast<uint>(fileInfo.permissions());
+    setData(index(row, G::PermissionsColumn), p);
+    setData(index(row, G::PermissionsColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
+    bool isReadWrite = (p & QFileDevice::ReadUser) && (p & QFileDevice::WriteUser);
+    setData(index(row, G::ReadWriteColumn), isReadWrite);
+    setData(index(row, G::ReadWriteColumn), int(Qt::AlignCenter | Qt::AlignVCenter), Qt::TextAlignmentRole);
     setData(index(row, G::TypeColumn), s);
     setData(index(row, G::TypeColumn), int(Qt::AlignCenter), Qt::TextAlignmentRole);
     setData(index(row, G::SizeColumn), fileInfo.size());
@@ -1395,18 +1405,15 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         return;
     }
 
-//    qDebug() << "DataModel::setIcon" << "Instance =" << instance << currentFolderPath;
-//    qDebug() << "DataModel::setIcon" << dmIdx.row() << src;
-
     mutex.lock();
-//    qDebug() << "DataModel::setIcon  itemFromIndex" << dmIdx;
     QStandardItem *item = itemFromIndex(dmIdx);
-    /* const required to prevent occasional malloc deallocation error in qarraydata.h
-    static void deallocate(QArrayData *data) noexcept
-    {
-        static_assert(sizeof(QTypedArrayData) == sizeof(QArrayData));
-        QArrayData::deallocate(data, sizeof(T), alignof(AlignmentDummy)); // crashes here
-    }
+    /* const QIcon icon(pm) - required to prevent occasional malloc deallocation error
+       in qarraydata.h deallocate:
+        static void deallocate(QArrayData *data) noexcept
+        {
+            static_assert(sizeof(QTypedArrayData) == sizeof(QArrayData));
+            QArrayData::deallocate(data, sizeof(T), alignof(AlignmentDummy)); // crashes here
+        }
     */
     const QIcon icon(pm);
     item->setIcon(icon);

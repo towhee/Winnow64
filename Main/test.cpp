@@ -128,40 +128,39 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-    testMultiThreadDataModel();
+//    int a = 2;
+//    int b = 4;
+//    int c = a | b;
+//    qDebug() << "c =" << QString::number(c, 2);
 //    return;
-    QModelIndex sfIdx = dm->sf->index(0, 0);
-    QString fPath = sfIdx.data(G::PathRole).toString();
-    QFileInfo fileInfo(fPath);
 
-    /* dm->addMetadataForItem from GUI
-    for (int i = 1000; i < 2000; i++) {
-        qDebug() << "MW::test" << i;
-        metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "MetaRead::multiThreadTest");
-        metadata->m.row = 0;
-        metadata->m.instance = dm->instance;
-        metadata->m.label = QString::number(i);
-        dm->addMetadataForItem(metadata->m, "MetaRead::readMetadata");
-    }
-    //*/
+    QString f0 = "/Users/roryhill/Pictures/_test0/IMG_5853.heic";
+    QString f1 = "/Users/roryhill/Pictures/_test0/A1_02764.ARW";
+    QFileDevice::Permissions p0 = QFile::permissions(f0);
+    QFileDevice::Permissions p1 = QFile::permissions(f1);
+    qDebug() << "p0 =" << p0;
+    qDebug() << "p1 =" << p1;
+//    bool success = QFile::setPermissions(f1, p0);
+//    p1 = QFile::permissions(f1);
+//    qDebug() << "p1 =" << p1 << success << QFile(f1).isOpen();
+    return;
 
-    /* dm->setValue from GUI
-    QModelIndex idx = dm->index(0, G::RatingColumn);
-    for (int i = 0; i < 200; i++) {
-        qDebug() << "MW::test" << i;
-        dm->setValue(idx, "3",0, "MW::test");
-        G::wait(2);
-    }
-    //*/
+    bool isReadWrite;
+    bool isRead;
+    bool isWrite;
+    QString fPath = "/Users/roryhill/Pictures/_test0/A1_02764.ARW";
+    QFileDevice::Permissions pRW = QFileDevice::ReadUser | QFileDevice::WriteUser;
+    QFileDevice::Permissions pOld = QFile::permissions(fPath);
+//    int r = p & QFileDevice::ReadUser;
+//    int w = p & QFileDevice::WriteUser;
+    QFileDevice::Permissions pNew = pOld | pRW;
+    QFile(fPath).setPermissions(pNew);
+    qDebug() << fPath << pOld << pNew;
 
-    //    /* dm->setValue from GUI
-    QModelIndex idx = dm->index(0, G::RatingColumn);
-    for (int i = 0; i < 200; i++) {
-        qDebug() << "MW::test" << i;
-        dm->setData(idx, "3");
-        G::wait(2);
-    }
-    //*/
-
+    isRead = pNew & QFileDevice::ReadUser;
+    isWrite = pNew & QFileDevice::WriteUser;
+    isReadWrite = isRead & isWrite;
+//    qDebug() << fPath << QFile::permissions(fPath) << p << isRead << isWrite << isReadWrite << rw;
+    return;
 }
 

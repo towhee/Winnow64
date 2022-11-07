@@ -499,8 +499,6 @@ void MW::setCombineRawJpg()
             QModelIndex typeIdx = dm->index(row, G::TypeColumn);
             if (combineRawJpg) emit setValue(typeIdx, "JPG+" + rawType, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
             else emit setValue(typeIdx, "JPG", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-//            if (combineRawJpg) dm->setData(typeIdx, "JPG+" + rawType);
-//            else dm->setData(typeIdx, "JPG");
         }
     }
 

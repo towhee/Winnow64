@@ -30,7 +30,7 @@ namespace G
     bool useInfoView = true;
     bool useUpdateStatus = true;
     bool useFilterView = true;          // not finished
-    bool tryConcurrentLoading = false;     // show/hide option to use concurrent MetaRead
+    bool tryConcurrentLoading = true;   // show/hide option to use concurrent MetaRead
 
     // system display
     QHash<QString, WinScreen> winScreenHash;    // record icc profiles for each monitoriconLoaded
@@ -108,7 +108,7 @@ namespace G
     bool modifySourceFiles;
     bool useSidecar;
     bool embedTifThumb;
-    bool isLinearLoading;// = !tryConcurrentLoading;
+    bool isLinearLoading;               // = !tryConcurrentLoading;
 
     bool isGettingVideoFrame;           // test sequential video thumb loading
 
@@ -116,6 +116,10 @@ namespace G
     bool isRunningBackgroundIngest;
     int ingestCount = 0;
     QDate ingestLastSeqDate;
+
+    // copying files
+    bool isCopyingFiles;
+    bool stopCopyingFiles;
 
     // not persistent
     bool isThreadTrackingOn;

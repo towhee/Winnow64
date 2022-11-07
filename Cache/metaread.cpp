@@ -5,7 +5,7 @@
     metadata will be loaded, and icons will be loaded up to either the iconChunkSize or
     visibleIcons, depending on the preferences.
 
-    MetaRead::read is called when:
+    MetaRead::setCurrentRow is called when:
 
         • a new folder is selected
         • a new image is selected
@@ -21,10 +21,15 @@
           then remove all icons except those visible in either thumbView or gridView.  Other-
           wise, remove icons exceeding iconChunkSize based on the priorityQueue.
 
-        • Iterate through the priorityQueue, loading the metadata and icons.
+        • Iterate through the priorityQueue, loading the metadata and icons.  Part way through
+          the queue start the ImageCache.
 
-    to do:
-        iconChunkSize
+        • Abort and restart when a new setCurrentRow is called.
+
+    Note: All data in the DataModel must be set using a queued connection.  When subsequent
+    actions are dependent on the data being set use Qt::BlockingQueuedConnection.
+
+
 */
 
 MetaRead::MetaRead(QObject *parent,
@@ -283,7 +288,7 @@ void MetaRead::cleanupIcons()
         if (item->icon().isNull()) {
             continue;
         }
-        // emit setIcon(dmIdx, nullPm, dmInstance, "MetaRead::clearIcons"); causes
+        // emit setIcon(dmIdx, nullPm, instance, "MetaRead::clearIcons"); causes
         // deallocation crash
         item->setIcon(QIcon());
     }
@@ -314,15 +319,15 @@ bool MetaRead::readMetadata(QModelIndex sfIdx, QString fPath)
     metadata->m.row = dmRow;
     metadata->m.instance = instance;
 
-//    emit addToDatamodel(metadata->m, "MetaRead::readMetadata");
-//    if (G::useImageCache) emit addToImageCache(metadata->m);
-//    return true;
+    emit addToDatamodel(metadata->m, "MetaRead::readMetadata");
+    if (G::useImageCache) emit addToImageCache(metadata->m);
+    return true;
 
-    if (dm->addMetadataForItem(metadata->m, "MetaRead::readMetadata")) {
-        if (G::useImageCache) emit addToImageCache(metadata->m);
-        return true;
-    }
-    else return false;
+//    if (dm->addMetadataForItem(metadata->m, "MetaRead::readMetadata")) {
+//        if (G::useImageCache) emit addToImageCache(metadata->m);
+//        return true;
+//    }
+//    else return false;
 
     /*
     if (!abort) emit addToDatamodel(metadata->m);       // blocked connection until metadata added to model
@@ -358,7 +363,6 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
     // get thumbnail
     QImage image;
     bool thumbLoaded = false;
-    qDebug() << "MetaRead::readIcon  Attempt load thumb" << sfIdx.row();
     thumbLoaded = thumb->loadThumb(fPath, image, instance, "MetaRead::readIcon");
     if (isVideo) {
         rowsWithIcon.append(dmRow);
@@ -372,8 +376,8 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
 //        }
         QPixmap pm;
         pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-        dm->setIcon(dmIdx, pm, instance);
-//        emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");  // also works
+//        dm->setIcon(dmIdx, pm, instance);
+        emit setIcon(dmIdx, pm, instance, "MetaRead::readIcon");  // also works
         rowsWithIcon.append(dmRow);
     }
 
@@ -501,7 +505,7 @@ void MetaRead::run()
 //                qDebug() << "MetaRead::run  interrupted";
                 interruptedRow = row;
             }
-//            qDebug() << "MetaRead::run ** ABORT ** Returning out of loop at item" << i;
+            qDebug() << "MetaRead::run ** ABORT ** Returning out of loop at item" << i;
             abort = false;
             return;
         }
@@ -552,5 +556,5 @@ void MetaRead::run()
     }
     emit done();
 
-    qDebug() << "MetaRead::run  Return isRunning =" << isRunning();
+    qDebug() << "MetaRead::run  Done.";
 }

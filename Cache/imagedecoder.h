@@ -31,7 +31,7 @@ public:
     void stop();
 
     int threadId;
-    int dmInstance;
+    int instance;
     QImage image;
     QString fPath;
     int cacheKey;
@@ -41,6 +41,7 @@ public:
         Busy,
         Failed,
         Video,
+        InstanceClash,
         Done
     } status;
 

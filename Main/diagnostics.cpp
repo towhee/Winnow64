@@ -236,7 +236,7 @@ QString MW::diagnostics()
     rpt << "\n" << "imageCacheFilePath = " << G::s(imageCacheFilePath);
     rpt << "\n" << "newScrollSignal = " << G::s(newScrollSignal);
     rpt << "\n" << "prevCentralView = " << G::s(prevCentralView);
-    rpt << "\n" << "mouseOverFolder = " << G::s(mouseOverFolder);
+    rpt << "\n" << "mouseOverFolder = " << G::s(mouseOverFolderPath);
     rpt << "\n" << "rating = " << G::s(rating);
     rpt << "\n" << "colorClass = " << G::s(colorClass);
     rpt << "\n" << "isPick = " << G::s(isPick);

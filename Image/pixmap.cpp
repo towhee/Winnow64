@@ -303,7 +303,6 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     int msecPerMp = static_cast<int>(msec / mp);
     QString source = "Pixmap::load";
     emit setValue(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, 0, source, Qt::EditRole, Qt::AlignLeft);
-//    dm->setData(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, Qt::EditRole);
     /*
     qDebug() << CLASSFUNCTION
              << "Decode:" << tDecode << "ms"

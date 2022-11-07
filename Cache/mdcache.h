@@ -108,7 +108,9 @@ protected:
 
 signals:
     void stopped(QString src);
+    void addToDatamodel(ImageMetadata m, QString src);
     void setIcon(QModelIndex dmIdx, QPixmap &pm, int instance, QString src);
+    void setIconCaching(int sfRow, bool state);
     void loadImageCache();
     void updateIsRunning(bool/*isRunning*/, bool/*showCacheLabel*/, QString/*calledBy*/);
     void updateIconBestFit();

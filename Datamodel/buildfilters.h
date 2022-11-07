@@ -27,7 +27,7 @@ public:
     void unfilteredItemSearchCount();
 
     void multiThreadTest();
-    bool testMultiThread;
+    bool testMultiThread = false;
 
 protected:
     void run() Q_DECL_OVERRIDE;
@@ -35,6 +35,7 @@ protected:
 signals:
     void stopped(QString src);
     void updateProgress(int progress);
+    void addToDatamodel(ImageMetadata m, QString src);
     void finishedBuildFilters();
 
 public slots:
