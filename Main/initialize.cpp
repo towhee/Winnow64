@@ -152,6 +152,8 @@ void MW::createDataModel()
     buildFilters = new BuildFilters(this, dm, metadata, filters, combineRawJpg);
 
     connect(this, &MW::abortBuildFilters, buildFilters, &BuildFilters::stop);
+    connect(buildFilters, &BuildFilters::addToDatamodel, dm, &DataModel::addMetadataForItem,
+            Qt::BlockingQueuedConnection);
     connect(buildFilters, &BuildFilters::stopped, this, &MW::reset);
     connect(buildFilters, &BuildFilters::updateProgress, filters, &Filters::updateProgress);
     connect(buildFilters, &BuildFilters::finishedBuildFilters, filters, &Filters::finishedBuildFilters);
@@ -228,8 +230,12 @@ void MW::createMDCache()
     connect(this, &MW::abortMDCache, metadataCacheThread, &MetadataCache::stop);
     // signal stopped when abort completed
     connect(metadataCacheThread, &MetadataCache::stopped, this, &MW::reset);
+    // add metadata to datamodel
+    connect(metadataCacheThread, &MetadataCache::addToDatamodel, dm, &DataModel::addMetadataForItem,
+            Qt::BlockingQueuedConnection);
     // update icon in datamodel
     connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon);
+    connect(metadataCacheThread, &MetadataCache::setIconCaching, dm, &DataModel::setIconCaching);
 
     connect(metadataCacheThread, &MetadataCache::updateIsRunning,
             this, &MW::updateMetadataThreadRunStatus);
@@ -736,13 +742,13 @@ void MW::createFSTree()
     fsTree->combineRawJpg = combineRawJpg;
 
     // selection change check if triggered by ejecting USB drive
-    connect(fsTree, &FSTree::selectionChange, this, &MW::watchCurrentFolder);
+//    connect(fsTree, &FSTree::selectionChange, this, &MW::watchCurrentFolder);
 
     // this works for touchpad tap
-    connect(fsTree, &FSTree::pressed, this, &MW::selectionChange);
+    connect(fsTree, &FSTree::pressed, this, &MW::folderSelectionChange);
 
     // reselect folder after external program drop onto FSTree
-    connect(fsTree, &FSTree::folderSelection, this, &MW::selectionChange);
+    connect(fsTree, &FSTree::folderSelection, this, &MW::folderSelectionChange);
 
     // if move drag and drop then delete files from source folder(s)
     connect(fsTree, &FSTree::deleteFiles, this, &MW::deleteFiles);
@@ -793,7 +799,7 @@ void MW::createBookmarks()
     connect(bookmarks, &BookMarks::refreshFSTree, fsTree, &FSTree::refreshModel);
 
     // reselect folder after external program drop onto BookMarks
-    connect(bookmarks, &BookMarks::folderSelection, this, &MW::selectionChange);
+    connect(bookmarks, &BookMarks::folderSelection, this, &MW::folderSelectionChange);
 }
 
 void MW::createAppStyle()

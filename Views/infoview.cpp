@@ -150,7 +150,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     The signal dataEdited is emitted, which triggers Embel to update the text fields. This
     will only work if Embel::isRemote == false.
 */
-    bool isSidecarChange = G::useSidecar && G::isNewFolderLoadedAndInfoViewUpToDate && !isNewImageDataChange;
+    bool isSidecarChange = G::useSidecar /*&& G::isNewFolderLoadedAndInfoViewUpToDate*/ && !isNewImageDataChange;
     bool usedPopUp = false;
     static int count = 0;
     QString src = "InfoView::dataChanged";
@@ -168,7 +168,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 G::popUp->setProgressMax(n + 1);
                 QString txt = "Writing to XMP sidecar for " + QString::number(n) + " images." +
                               "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-                G::popUp->showPopup(txt, 0, true, 1);
+//                G::popUp->showPopup(txt, 0, true, 1);
             }
 
             for (int i = 0; i < n; i++) {

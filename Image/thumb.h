@@ -35,6 +35,7 @@ private:
     QString err;
     QSize thumbMax;
     int instance;
+    QFileDevice::Permissions oldPermissions;
 
     bool loadFromJpgData(QString &fPath, QImage &image);
     bool loadFromTiffData(QString &fPath, QImage &image);

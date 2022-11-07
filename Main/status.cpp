@@ -35,17 +35,6 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
         return;
     }
 
-    // check for file error first
-    bool imageUnavailable = dm->index(row, G::OffsetFullColumn).data() == 0;
-    bool thumbUnavailable = dm->index(row, G::OffsetThumbColumn).data() == 0;
-    if (imageUnavailable || thumbUnavailable) {
-        // rgh may want to set the error here as well as report
-//        QString err = dm->index(row, G::ErrColumn).data().toString();
-//        statusLabel->setText(err);
-//        qWarning("Image or thumb unavailable");
-//        return;
-    }
-
     QString status;
     QString fileCount = "";
     QString zoomPct = "";

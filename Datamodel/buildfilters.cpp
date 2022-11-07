@@ -16,16 +16,13 @@ BuildFilters::BuildFilters(QObject *parent,
 
 void BuildFilters::multiThreadTest()
 {
-    QString matchText = "test";
+    QString path = dm->sf->index(0, G::PathColumn).data(G::PathRole).toString();
     int tot = 0;
     int col = G::RatingColumn;
     for (int i = 0; i < 1000; i++) {
-        for (int row = 0; row < dm->rowCount(); ++row) {
-            qDebug() << "BuildFilters::multiThreadTest" << i << row;
-            if (dm->index(row, col).data().toString() == matchText) {
-                tot++;
-            }
-        }
+        qDebug() << "BuildFilters::multiThreadTest" << i;
+        dm->setIconCaching(0, true);
+        G::wait(1);
     }
 }
 
@@ -300,7 +297,7 @@ void BuildFilters::loadAllMetadata()
             if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, src)) {
                 metadata->m.row = row;
                 metadata->m.instance = instance;
-                dm->addMetadataForItem(metadata->m, "BuildFilters::loadAllMetadata");
+                emit addToDatamodel(metadata->m, "BuildFilters::loadAllMetadata");
                 if (row % 100 == 0 || row == 0) {
                     progress = static_cast<int>(static_cast<double>(20 * row) / dmRows);
                     emit updateProgress(progress);
@@ -395,10 +392,10 @@ void BuildFilters::run()
 {
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
 
-    if (testMultiThread) {
-        multiThreadTest();
-        return;
-    }
+//    if (testMultiThread) {
+//        multiThreadTest();
+//        return;
+//    }
 
     if (filters->filtersBuilt) return;
     if (!abort) loadAllMetadata();

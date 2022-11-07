@@ -533,9 +533,28 @@ void FSTree::dropEvent(QDropEvent *event)
 
     /*  This code section is mirrored in BookMarks::dropEvent.  Make sure to sync any
         changes. */
+    G::stopCopyingFiles = false;
+    G::isCopyingFiles = true;
     QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
     QStringList srcPaths;
-    for (int i = 0; i < event->mimeData()->urls().count(); i++) {
+    int count = event->mimeData()->urls().count();
+    QString operation = "Copying ";
+    if (event->source() && event->dropAction() == Qt::MoveAction) operation = "Moving ";
+
+    G::popUp->setProgressVisible(true);
+    G::popUp->setProgressMax(count);
+    QString txt = operation + QString::number(count) +
+                  " to " + dropDir +
+                  "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+    G::popUp->showPopup(txt, 0, true, 1);
+
+    for (int i = 0; i < count; i++) {
+        G::popUp->setProgress(i+1);
+        // processEvents is necessary
+        qApp->processEvents();
+        if (G::stopCopyingFiles) {
+            break;
+        }
         QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
         QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
         bool copied = QFile::copy(srcPath, destPath);
@@ -559,6 +578,17 @@ void FSTree::dropEvent(QDropEvent *event)
             }
         }
     }
+    if (G::stopCopyingFiles) {
+        G::popUp->setProgressVisible(false);
+        G::popUp->end();
+        G::popUp->showPopup("Terminated " + operation + "operation", 2000);
+    }
+    else {
+        G::popUp->setProgressVisible(false);
+        G::popUp->end();
+    }
+    G::isCopyingFiles = false;
+    G::stopCopyingFiles = false;
 
     // if Winnow source and QMoveAction
     if (event->source() && event->dropAction() == Qt::MoveAction) {

@@ -791,6 +791,7 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
     selection is updated after the MD::fileSelectionChange occurs, hence update
     the status bar from here.
 */
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (!G::isInitializing) {
 //        emit fileSelectionChange(currentIndex(), QModelIndex(), CLASSFUNCTION);
 //        return;
@@ -886,9 +887,6 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
         // refresh
         refreshThumbs();
 
-        // scroll if requuired
-        scrollTo(currentIndex(), ScrollHint::PositionAtCenter);
-
         // update status bar
         QString s = "";
         if (m2->isStressTest) s = "   Stress count: " + QString::number(m2->slideCount);
@@ -936,6 +934,7 @@ void IconView::select(QModelIndex idx)
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, QString::number(idx.row()));
     if (idx.isValid()) {
+        qDebug() << CLASSFUNCTION << "row =" << idx.row();
         G::isNewSelection = true;
         selectionModel()->clearSelection();
         setCurrentIndex(idx);
@@ -1709,6 +1708,8 @@ void IconView::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::RightButton) {
         // save mouse over index for toggle pick
         mouseOverIndex = indexAt(event->pos());
+        // make available for MW::copyImagePathFromContext
+        m2->mouseOverIdx = mouseOverIndex;
         return;
     }
 
@@ -1735,8 +1736,8 @@ void IconView::mousePressEvent(QMouseEvent *event)
             QRect iconRect = currPosIdx.data(G::IconRectRole).toRect();
             QPoint mousePt = event->pos();
             QPoint iconPt = mousePt - iconRect.topLeft();
-            /*float */xPct = static_cast<float>(iconPt.x()) * 1.0 / iconRect.width();
-            /*float */yPct = static_cast<float>(iconPt.y()) * 1.0 / iconRect.height();
+            xPct = static_cast<float>(iconPt.x()) * 1.0 / iconRect.width();
+            yPct = static_cast<float>(iconPt.y()) * 1.0 / iconRect.height();
             /*
             qDebug() << CLASSFUNCTION
                      << "\n currentIndex =" << currentIndex()
@@ -1837,6 +1838,9 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
              << mousePos;
              //*/
     if (G::isEmbellish) return;
+    if (G::isInitializing) return;
+    if (G::stop) return;
+    if (!G::isNewFolderLoaded) return;
     bool isVideo = dm->index(dm->currentSfRow, G::VideoColumn).data().toBool();
     if (isVideo) return;
 

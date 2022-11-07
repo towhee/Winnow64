@@ -40,23 +40,26 @@ front and the rest are assigned as needed.
 
 ***********************************************************************************************
 
-PROGRAM FLOW
+PROGRAM FLOW - LINEAR - NEW FOLDER SELECTED
 
-A new folder is selected which triggers folderSelectionChange:
+    • A new folder is selected which triggers MW::selectionChange:
 
     • Housekeeping:
+      - the DataModel instance is incremented.
+      - if DataModel is loading it is aborted.
       - all threads that may be running are stopped.
-      - set flags to start condition.
+      - set flags, progress and views to start condition.
       - folders and bookmarks synced.
       - filters are cleared (uncheckAllFilters).
 
     • All eligible image files (and associated QFileInfo: path, name, type, size, created
       date and last modified date) in the folder are added to the DataModel (dm).
 
-    • Sort to current sort item and forward/reverse, as the datamodel always loads in the
-      order from QFileInfo - by file name in forward order.
+    • // Currently resetting sort to file name in forward order
+      Sort to current sort item and forward/reverse, as the datamodel always loads in the
+      order from QFileInfo (file name in forward order).
 
-    • Current row indexes set to 0.
+    • Current row indexes set to -1 (invalid).
 
     • The first image thumbnail is selected in thumbView.
 
@@ -658,7 +661,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
 
-//    qDebug() << CLASSFUNCTION << event;
+    qDebug() << CLASSFUNCTION << event;
 
     if (event->key() == Qt::Key_Escape) {
         /* Cancel the current operation without exiting from full screen mode.  If no current
@@ -668,6 +671,8 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         G::popUp->end();
         // stop loading a new folder
         if (!G::isNewFolderLoaded /*&& G::isLinearLoading*/) stop("Escape key");
+        // stop file copying
+        else if (G::isCopyingFiles) G::stopCopyingFiles = true;
         // end stress test
         else if (isStressTest) isStressTest = false;
         // cancel slideshow
@@ -847,29 +852,29 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     if (event->type() == QEvent::ContextMenu) {
         addBookmarkAction->setEnabled(true);
         revealFileActionFromContext->setEnabled(true);
-        copyPathActionFromContext->setEnabled(true);
+        copyFolderPathFromContextAction->setEnabled(true);
         if (obj == fsTree->viewport()) {
             QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
             QModelIndex idx = fsTree->indexAt(e->pos());
-            mouseOverFolder = idx.data(QFileSystemModel::FilePathRole).toString();
-            enableEjectUsbMenu(mouseOverFolder);
+            mouseOverFolderPath = idx.data(QFileSystemModel::FilePathRole).toString();
+            enableEjectUsbMenu(mouseOverFolderPath);
             // in folders or bookmarks but not on folder item
-            if(mouseOverFolder == "") {
+            if(mouseOverFolderPath == "") {
                 addBookmarkAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
-                copyPathActionFromContext->setEnabled(false);
+                copyFolderPathFromContextAction->setEnabled(false);
             }
         }
         else if (obj == bookmarks->viewport()) {
             QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
             QModelIndex idx = bookmarks->indexAt(e->pos());
-            mouseOverFolder = idx.data(Qt::ToolTipRole).toString();
-            enableEjectUsbMenu(mouseOverFolder);
+            mouseOverFolderPath = idx.data(Qt::ToolTipRole).toString();
+            enableEjectUsbMenu(mouseOverFolderPath);
             // in folders or bookmarks but not on folder item
-            if (mouseOverFolder == "") {
+            if (mouseOverFolderPath == "") {
                 addBookmarkAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
-                copyPathActionFromContext->setEnabled(false);
+                copyFolderPathFromContextAction->setEnabled(false);
             }
         }
         else {
@@ -877,7 +882,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             if (G::currRootFolder == "") {
                 addBookmarkAction->setEnabled(false);
                 revealFileActionFromContext->setEnabled(false);
-                copyPathActionFromContext->setEnabled(false);
+                copyFolderPathFromContextAction->setEnabled(false);
             }
         }
     }
@@ -1352,8 +1357,8 @@ void MW::handleStartupArgs(const QString &args)
         QFileInfo f(argList.at(1));
         f.dir().path();
         fsTree->select(f.dir().path());
-        selectionChange();
-//        folderSelectionChange();
+//        selectionChange();
+        folderSelectionChange();
     }
     return;
 }
@@ -1371,8 +1376,8 @@ void MW::watchCurrentFolder()
     if (G::currRootFolder == "") return;
     QFileInfo info(G::currRootFolder);
     if (info.exists()) return;
-    selectionChange();
-//    folderSelectionChange();
+//    selectionChange();
+    folderSelectionChange();
 }
 
 void MW::selectionChange()
@@ -1381,44 +1386,94 @@ void MW::selectionChange()
    This is invoked when there is a folder selection change in the folder or bookmark views.
 
    - folder change triggers MW::selectionChange
-   - return if another folder selection change happens quickly
+   - return (ignore) if prior folder selection change is still being stopped
    - call MW::stop
-   - all worker threads are signalled to stop
-   - all worker threads signal MW::reset when stopped
-   - MW::reset confirms all worker threads stopped and then resets all necessary info
+   - all worker threads are stopped
+   - resets all necessary info
    - Finally, MW::folderSelectionChange is called
+
+Flow Flags:
+
+    G::isInitializing
+    G::stop
+    G::allMetadataLoaded
+    G::allIconsLoaded
+    G::isNewFolderLoaded
+    G::isNewFolderLoadedAndInfoViewUpToDate
+    dm->loadingModel
+    dm->basicFileInfoLoaded  // not used
+    G::isLinearLoading
+    G::ignoreScrollSignal
+    isCurrentFolderOkay
+    isFilterChange
+    G::isNewSelection
+
+Current model row:
+
+    currentRow
+    dm->currentRow
+    dm->currentFilePath
+    currentDmIdx
+    currentSfIdx
+
 */
+    QSignalBlocker blocker(bookmarks);
+
     if (G::isLogger || G::isFlowLogger) {
         G::log("skipline");
         G::log(CLASSFUNCTION);
     }
+    qDebug() << CLASSFUNCTION << "instance" << dm->instance;
     qDebug() << " ";
+
+    testTime.restart();
+    if (G::isInitializing) {
+        qDebug() << CLASSFUNCTION << "Ignore: G::isInitializing = true";
+        return;
+    }
+
     // ignore if very rapid selection and current folder is still at stopAndClearAll
 
-    // also checked in FSTree and Bookmarks mousePressEvent
+    if (G::stop) {
+        qDebug() << CLASSFUNCTION << "Ignore: G::stop = true";
+        return;
+    }
     if (dm->loadingModel) {
         qDebug() << CLASSFUNCTION << "Ignore: dm->loadingModel = true";
         return;
     }
 
-//    qDebug() << CLASSFUNCTION << getSelectedPath();
+    qDebug() << CLASSFUNCTION << getSelectedPath();
 
-    // Reset except initial folder selection
     if (stop("MW::selectionChange")) {
+        qDebug() << "Time to stop =" << testTime.elapsed();
         folderSelectionChange();
     }
+    else {
+        qDebug() << CLASSFUNCTION << "IGNORE - BUSY" << dm->instance;
+    }
+
+    blocker.unblock();
 }
 
 void MW::folderSelectionChange()
 {
 /*
    This is invoked when there is a folder selection change in the folder or bookmark views.
-   See PROGRAM FLOW at top of file for more information.
+
 */
+    QSignalBlocker bookmarkBlocker(bookmarks);
+    QSignalBlocker fsTreeBlocker(fsTree);
+    if (G::stop) return;
+
     if (G::isLogger || G::isFlowLogger) {
         G::log("skipline");
         G::log(CLASSFUNCTION);
     }
+
+    qDebug();
+    qDebug() << CLASSFUNCTION;
+    stop("MW::folderSelectionChange()");
 
     dm->abortLoadingModel = false;
     G::currRootFolder = getSelectedPath();
@@ -1523,6 +1578,7 @@ void MW::folderSelectionChange()
         sortColumn = G::NameColumn;
         sortFileNameAction->setChecked(true);
         sortReverseAction->setChecked(false);
+//        sortChange(CLASSFUNCTION);
     }
 
     // datamodel loaded - invalidate indexes (set in MW::fileSelectionChange)
@@ -1569,7 +1625,9 @@ void MW::folderSelectionChange()
     thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
     */
 
-//    G::stop  = false;
+//    G::stop = false;
+    bookmarkBlocker.unblock();
+    fsTreeBlocker.unblock();
 
     // start loading new folder
     G::t.restart();
@@ -1606,10 +1664,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, src + " " + current.data(G::PathRole).toString());
 
     if (G::stop) return;
+//    if (!G::isNewFolderLoaded) return;
     G::isNewSelection = false;
 
    /*
-    qDebug() << "\n" << CLASSFUNCTION
+    qDebug() << CLASSFUNCTION
              << "src =" << src
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
              << "current =" << current
@@ -1635,8 +1694,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 
     if (!currRootDir.exists()) {
         refreshFolders();
-        selectionChange();
-//        folderSelectionChange();
+//        selectionChange();
+        folderSelectionChange();
         return;
     }
 
@@ -1645,6 +1704,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         dm->select(0);
         return;
     }
+
+//    qDebug() << CLASSFUNCTION
+//             << "src =" << src
+//             << "row =" << current.row()
+//             << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
+//                ;
 
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
@@ -1744,7 +1809,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
 
         /* Do not image cache if there is an active random slide show or a modifier key
         is pressed. (turn off image caching for testing with G::useImageCache = false. set in
-        MW::MW) */
+        global.cpp) */
 
         /*
         qDebug() << CLASSFUNCTION << "IMAGECACHE"
@@ -1755,8 +1820,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
                  << "isShiftAltModifier =" << (key == (Qt::AltModifier | Qt::ShiftModifier))
                     ;
         //*/
-        if (G::isNewFolderLoaded
-            && !(G::isSlideShow && isSlideShowRandom)
+        if (!(G::isSlideShow && isSlideShowRandom)
 //            && (key == Qt::NoModifier || key == Qt::KeypadModifier)
             && (!workspaceChanged)
             && (G::mode != "Compare")
@@ -1863,47 +1927,39 @@ bool MW::stop(QString src)
 
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-
-    if (G::isInitializing) {
-        qDebug() << CLASSFUNCTION << "Ignore: G::isInitializing = true";
-        return false;
-    }
-
-    if (G::stop) {
-        qDebug() << CLASSFUNCTION << "Ignore: G::stop = true";
-        return false;
-    }
+//    if (G::isInitializing) {
+//        qDebug() << CLASSFUNCTION << "Ignore: G::isInitializing = true";
+//        return false;
+//    }
 
     dm->instance++;
     G::dmInstance = dm->instance;
 
-//    qDebug() << CLASSFUNCTION << "STOPPING instance" << dm->instance;
-
     G::stop = true;
 
-    G::t.restart();
-    dm->abortLoad();
+//    G::t.restart();
+//    dm->abortLoadingModel = true;
 //    qDebug() << CLASSFUNCTION << "Stop load datamodel       " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
+    buildFilters->stop();
+    qDebug() << CLASSFUNCTION << "Stop buildFilters:        " << G::t.nsecsElapsed() << "ns";
+
+    G::t.restart();
     metaReadThread->stop();
-//    qDebug() << CLASSFUNCTION << "Stop metaReadThread:      " << G::t.nsecsElapsed() << "ns";
+    qDebug() << CLASSFUNCTION << "Stop metaReadThread:      " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     metadataCacheThread->stop();
-//    qDebug() << CLASSFUNCTION << "Stop metadataCacheThread: " << G::t.nsecsElapsed() << "ns";
+    qDebug() << CLASSFUNCTION << "Stop metadataCacheThread: " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     imageCacheThread->stop();
-//    qDebug() << CLASSFUNCTION << "Stop imageCacheThread:    " << G::t.nsecsElapsed() << "ns";
-
-    G::t.restart();
-    buildFilters->stop();
-//    qDebug() << CLASSFUNCTION << "Stop buildFilters:        " << G::t.nsecsElapsed() << "ns";
+    qDebug() << CLASSFUNCTION << "Stop imageCacheThread:    " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     frameDecoder->clear();
-//    qDebug() << CLASSFUNCTION << "Stop frameDecoder:        " << G::t.nsecsElapsed() << "ns";
+    qDebug() << CLASSFUNCTION << "Stop frameDecoder:        " << G::t.nsecsElapsed() << "ns";
 
     /*
     dm->abortLoad();
@@ -1967,7 +2023,7 @@ void MW::reset(QString src) {
     G::allIconsLoaded = false;
     G::isNewFolderLoaded = false;
     G::isNewSelection = false;
-    G::isNewFolderLoadedAndInfoViewUpToDate = false;
+//    G::isNewFolderLoadedAndInfoViewUpToDate = false;
 
     G::isGettingVideoFrame = false;
 
@@ -1996,6 +2052,7 @@ void MW::reset(QString src) {
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
     dm->currentSfRow = 0;
+    dm->clearDataModel();
 
     // turn thread activity buttons gray
     setThreadRunStatusInactive();
@@ -2135,7 +2192,8 @@ void MW::updateIconRange(int row)
 void MW::loadConcurrentNewFolder()
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-    // reset for bestAspect calc
+    qDebug() << CLASSFUNCTION;
+                // reset for bestAspect calc
     G::iconWMax = G::minIconSize;
     G::iconHMax = G::minIconSize;
     /* The memory required for the datamodel (metadata + icons) has to be estimated since the
@@ -2181,7 +2239,13 @@ void MW::loadConcurrent(int sfRow)
 
 void MW::loadConcurrentMetaDone()
 {
+/*
+    Signalled from MetaRead::run when finished
+*/
+    QSignalBlocker blocker(bookmarks);
+
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION;
 
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
     if (G::mode == "Grid") {
@@ -2203,7 +2267,7 @@ void MW::loadConcurrentMetaDone()
     updates to InfoView by fileSelectionChange have been completed. Otherwise,
     InfoView::dataChanged would prematurely trigger Metadata::writeXMP */
 
-    G::isNewFolderLoadedAndInfoViewUpToDate = true;
+//    G::isNewFolderLoadedAndInfoViewUpToDate = true;
 //    G::isNewFolderLoaded = true;
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
@@ -2220,12 +2284,22 @@ void MW::loadConcurrentMetaDone()
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
     // clean up possible stragglers in ImageCache::addCacheItemImageMetadata
-    emit refreshImageCache();
+//    emit refreshImageCache();
+    emit setImageCachePosition(dm->currentFilePath, CLASSFUNCTION);
+
+    blocker.unblock();
 }
 
 void MW::loadConcurrentStartImageCache(QString src)
 {
+/*
+    Signalled from MetaRead after delay of MetaRead::imageCacheTriggerCount
+*/
+    QSignalBlocker blocker(bookmarks);
+
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    qDebug() << CLASSFUNCTION << "src =" << src;
+
     if (isShowCacheProgressBar) {
         cacheProgressBar->clearProgress();
     }
@@ -2268,6 +2342,8 @@ void MW::loadConcurrentStartImageCache(QString src)
     if (src == "Final") {
         emit setImageCachePosition(dm->currentFilePath, CLASSFUNCTION);
     }
+
+    blocker.unblock();
 }
 
 void MW::loadLinearNewFolder()
@@ -2300,15 +2376,13 @@ void MW::loadLinearNewFolder()
     G::iconWMax = G::minIconSize;
     G::iconHMax = G::minIconSize;
 
-//    dm->loadingModel = true;
-
     // no sorting or filtering until all metadata loaded
     filterMenu->setEnabled(false);
     sortMenu->setEnabled(false);
 
     setCentralMessage("Reading all metadata.");
-
     updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
+
     dm->addAllMetadata();
     if (!dm->isAllMetadataLoaded()) {
         qWarning() << "WARNING" << CLASSFUNCTION << "Not all metadata loaded";
@@ -2318,19 +2392,20 @@ void MW::loadLinearNewFolder()
     if (dm->abortLoadingModel || !G::allMetadataLoaded) {
         updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
         setCentralMessage("Image loading has been cancelled 2.");
+        QApplication::processEvents();
         return;
     }
 
-    // have to wait for the data before resize table columns
+    // resize table columns after data is loaded
     tableView->resizeColumnsToContents();
     tableView->setColumnWidth(G::PathColumn, 24+8);
 
     // read icons
-    updateIconBestFit();
     updateIconRange(dm->currentSfRow);
-
     setCentralMessage("Reading icons.");
+    QApplication::processEvents();
     mct->readIconChunk();
+    updateIconBestFit();
     G::allIconsLoaded = dm->allIconsLoaded();
     updateMetadataThreadRunStatus(false, true, CLASSFUNCTION);
 
@@ -2389,7 +2464,7 @@ void MW::loadImageCacheForNewFolder()
     /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
        InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
        would prematurally trigger Metadata::writeXMP */
-    G::isNewFolderLoadedAndInfoViewUpToDate = true;
+//    G::isNewFolderLoadedAndInfoViewUpToDate = true;
 }
 
 void MW::scrollChange(int sfRow, QString src)
@@ -2753,8 +2828,8 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
         fsTree->setCurrentIndex(filterIdx);
         fsTree->select(fPath);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
-        selectionChange();
-//        folderSelectionChange();
+//        selectionChange();
+        folderSelectionChange();
     }
     else {
         stop("Bookmark clicked");
@@ -3146,7 +3221,8 @@ void MW::invokeRecentFolder(QAction *recentFolderActions)
     if (G::isLogger) G::log(CLASSFUNCTION);
     QString dirPath = recentFolderActions->text();
     fsTree->select(dirPath);
-    selectionChange();
+//    selectionChange();
+    folderSelectionChange();
 }
 
 void MW::invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions)
@@ -3154,7 +3230,8 @@ void MW::invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions)
     if (G::isLogger) G::log(CLASSFUNCTION);
     QString dirPath = ingestHistoryFolderActions->text();
     fsTree->select(dirPath);
-    selectionChange();
+//    selectionChange();
+    folderSelectionChange();
 //    revealInFileBrowser(dirPath);
 }
 
@@ -5247,7 +5324,7 @@ void MW::ingest()
         // if background ingesting do not jump to the ingest destination folder
         if (gotoIngestFolder && !isBackgroundIngest) {
             fsTree->select(lastIngestLocation);
-            selectionChange();
+            folderSelectionChange();
             return;
         }
 
@@ -5319,7 +5396,7 @@ void MW::ejectUsb(QString path)
         int result = Usb::eject(driveName);
         if (result < 2) {
             G::popUp->showPopup("Ejecting drive " + driveName, 2000);
-            selectionChange();
+            folderSelectionChange();
         }
         else
             G::popUp->showPopup("Failed to eject drive " + driveName, 2000);
@@ -5340,7 +5417,7 @@ void MW::ejectUsbFromMainMenu()
 void MW::ejectUsbFromContextMenu()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    ejectUsb(mouseOverFolder);
+    ejectUsb(mouseOverFolderPath);
 }
 
 void MW::insertThumbnails()
@@ -5396,18 +5473,14 @@ void MW::metadataChanged(QStandardItem* item)
         // update data model
         QModelIndex dmIdx = dm->sf->mapToSource(dm->sf->index(row, col[tagName]));
         emit setValue(dmIdx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignLeft);
-//        QModelIndex idx = dm->sf->index(row, col[tagName]);
-//        dm->sf->setData(idx, tagValue, Qt::EditRole);
         // check if combined raw+jpg and also set the tag item for the hidden raw file
         if (combineRawJpg) {
-//            QModelIndex idx = dm->sf->index(selection.at(i).row(), 0);
             // is this part of a raw+jpg pair
             if (dmIdx.data(G::DupIsJpgRole).toBool()) {
                 // set tag item for raw file row as well
                 QModelIndex rawIdx = qvariant_cast<QModelIndex>(dmIdx.data(G::DupOtherIdxRole));
                 QModelIndex idx = dm->index(rawIdx.row(), col[tagName]);
                 emit setValue(idx, tagValue, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-//                dm->setData(idx, tagValue, Qt::EditRole);
             }
         }
     }
@@ -5480,7 +5553,7 @@ void MW::addNewBookmarkFromMenu()
 void MW::addNewBookmarkFromContextMenu()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    addBookmark(mouseOverFolder);
+    addBookmark(mouseOverFolderPath);
 }
 
 void MW::addBookmark(QString path)
@@ -5497,7 +5570,7 @@ void MW::openFolder()
          "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
     if (dirPath == "") return;
     fsTree->select(dirPath);
-    selectionChange();
+    folderSelectionChange();
 }
 
 void MW::refreshCurrentFolder()
@@ -5682,7 +5755,7 @@ void MW::deleteFiles(QStringList paths)
     // if all images in folder were deleted
     if (sldm.count() == dm->rowCount()) {
         stop("deleteFiles");
-        selectionChange();
+        folderSelectionChange();
         return;
     }
 
@@ -5821,7 +5894,7 @@ void MW::openUsbFolder()
         QModelIndex filterIdx = fsTree->fsFilter->mapFromSource(idx);
         fsTree->setCurrentIndex(filterIdx);
         fsTree->scrollTo(filterIdx, QAbstractItemView::PositionAtCenter);
-        selectionChange();
+        folderSelectionChange();
         dm->select(0);
         if (!wasSubFoldersChecked) subFoldersAction->setChecked(true);
         updateStatusBar();
@@ -5834,8 +5907,17 @@ void MW::openUsbFolder()
 void MW::copyFolderPathFromContext()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    QApplication::clipboard()->setText(mouseOverFolder);
-    QString msg = "Copied " + mouseOverFolder + " to the clipboard";
+    QApplication::clipboard()->setText(mouseOverFolderPath);
+    QString msg = "Copied " + mouseOverFolderPath + " to the clipboard";
+    G::popUp->showPopup(msg, 1500);
+}
+
+void MW::copyImagePathFromContext()
+{
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    QString path = mouseOverIdx.data(G::PathRole).toString();
+    QApplication::clipboard()->setText(path);
+    QString msg = "Copied " + path + " to the clipboard";
     G::popUp->showPopup(msg, 1500);
 }
 
@@ -5900,7 +5982,7 @@ void MW::revealFile()
 void MW::revealFileFromContext()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
-    revealInFileBrowser(mouseOverFolder);
+    revealInFileBrowser(mouseOverFolderPath);
 }
 
 void MW::revealInFileBrowser(QString path)

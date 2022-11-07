@@ -1033,7 +1033,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     }
     QString ext = fileInfo.suffix().toLower();
     bool parsed = false;
-    if (p.file.open(QIODevice::ReadWrite)) {
+    if (p.file.open(QIODevice::ReadOnly)) {
         if (jpeg == nullptr) jpeg = new Jpeg;
         if (ifd == nullptr) ifd = new IFD;
         if (exif == nullptr) exif = new Exif;
@@ -1060,7 +1060,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         }
         if (!parsed) {
             p.file.close();
-//            qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
             QString msg =  "Unable to parse metadata for " + path + ". ";
             m.err += msg;
             qWarning() << "WARNING" << "Metadata::readMetadata" << msg;
@@ -1068,7 +1067,6 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         }
     }
     else {  // not open file
-//        if (p.file.isOpen()) p.file.close();
         QString msg =  "Unable to open file " + path + ".";
         qWarning() << "WARNING" << "Metadata::readMetadata" << msg;
         G::error("Metadata::readMetadata", path, "Could not open p.file to read metadata.");
@@ -1093,15 +1091,15 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 //    }
 
     // error flags
-    thumbUnavailable = imageUnavailable = false;
-    if (m.lengthFull == 0) {
-        imageUnavailable = true;
-        G::error("Metadata::readMetadata", path, "No embedded preview found.");
-    }
-    if (m.lengthThumb == 0) {
-        thumbUnavailable = true;
-        G::error("Metadata::readMetadata", path, "No embedded thumbnail or preview found.");
-    }
+//    thumbUnavailable = imageUnavailable = false;
+//    if (m.lengthFull == 0) {
+//        imageUnavailable = true;
+//        G::error("Metadata::readMetadata", path, "No embedded preview found.");
+//    }
+//    if (m.lengthThumb == 0) {
+//        thumbUnavailable = true;
+//        G::error("Metadata::readMetadata", path, "No embedded thumbnail or preview found.");
+//    }
 
     return true;
 }
@@ -1169,16 +1167,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     // read metadata
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
-//        G::error(CLASSFUNCTION, fPath, "Failed to read metadata.");
         qWarning() << "WARNING" << "Metadata not loaded for" << fPath;
-//        #ifdef Q_OS_MAC
-//        if (ext == "heic") {
-//            clearMetadata();
-//            m.fPath = fPath;
-//            m.currRootFolder = fileInfo.absoluteDir().absolutePath();
-//            m.size = fileInfo.size();
-//        }
-//        #endif
         return false;
     }
 
@@ -1192,8 +1181,8 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     m.shootingInfo = s;
     m.loadMsecPerMp = 0;
 
-    m.thumbUnavailable = thumbUnavailable;
-    m.imageUnavailable = imageUnavailable;
+//    m.thumbUnavailable = thumbUnavailable;
+//    m.imageUnavailable = imageUnavailable;
 
     return m.metadataLoaded;
 }

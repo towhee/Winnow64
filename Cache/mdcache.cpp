@@ -2,17 +2,19 @@
 #include "Cache/mdcache.h"
 
 /*
-The metadata cache reads the relevant metadata and preview thumbnails from the image files and
-stores this information in the datamodel dm. The critical metadata is the offset and length of
-the embedded JPGs and their width and height, which is required by the ImageCache and
-ImageView to display the images and IconView to display the thumbnails. The other metadata is
-in the nice-to-know category.  The full size images are stored in the image cache, which is
-managed in another thread, imageCacheThread.
 
-Reading the metadata can become time consuming and the thumbnails or icons can consume a lot
-of memory, so the metadata is read in chunks. Each chunk size (number of image files) is the
-greater of the default value of maxChunkSize or the number of thumbs visible in the GridView
-viewport.
+The metadata cache reads the relevant metadata and preview thumbnails from the
+image files and stores this information in the datamodel dm. The critical
+metadata is the offset and length of the embedded JPGs and their width and
+height, which is required by ImageCache and ImageView to display the images and
+IconView to display the thumbnails. The other metadata is in the nice-to-know
+category. The full size images are stored in the image cache, which is managed
+in another thread, imageCacheThread.
+
+Reading the metadata can become time consuming and the thumbnails or icons can
+consume a lot of memory, so the metadata is read in chunks. Each chunk size
+(number of image files) is the greater of the default value of maxChunkSize or
+the number of thumbs visible in the GridView viewport.
 
           startRow    firstVisibleRow     lastVisibleRow
 0         |           |                   |          endRow                      dm->rowCount()
@@ -45,7 +47,7 @@ time the following order of events occurs when Winnow is started or a new folder
 
     *** The new chunk of metadata is added to the datamodel filters.
 
-When Winnow is running and a new folder is selected
+When Winnow is running and a new folder is selected (OUT OF DATE)
 
     • A new folder is selected and MW::folderSelectionChange executes, which in turn, starts
       metadataCacheThread::loadNewFolder.
@@ -348,6 +350,7 @@ bool MetadataCache::loadIcon(int sfRow)
     QModelIndex dmIdx = dm->sf->mapToSource(sfIdx);
     if (!dmIdx.isValid()) return false;
     if (!dm->isIconCaching(sfIdx, instance) && !dm->iconLoaded(sfRow, instance)) {
+//        emit setIconCaching(sfRow, true);
         dm->setIconCaching(sfRow, true);
         int dmRow = dmIdx.row();
         bool isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
@@ -361,7 +364,8 @@ bool MetadataCache::loadIcon(int sfRow)
         }
         if (thumbLoaded) {
             pm = QPixmap::fromImage(image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
-            emit setIcon(dmIdx, pm, instance, "MetadataCache::loadIcon");
+//            emit setIcon(dmIdx, pm, instance, "MetadataCache::loadIcon");
+            dm->setIcon(dmIdx, pm, instance, "MetadataCache::loadIcon");
             iconMax(pm);
             iconsCached.append(dmRow);
         }
@@ -403,7 +407,9 @@ void MetadataCache::readAllMetadata()
         QFileInfo fileInfo(fPath);
         if (metadata->loadImageMetadata(fileInfo, instance, true, true, false, true, "MetadataCache::readAllMetadata")) {
             metadata->m.row = row;
-            dm->addMetadataForItem(metadata->m, "MetadataCache::readAllMetadata");
+            // emit??
+            emit addToDatamodel(metadata->m, "MetadataCache::readAllMetadata");
+//            dm->addMetadataForItem(metadata->m, "MetadataCache::readAllMetadata");
             count++;
         }
 
@@ -464,7 +470,7 @@ void MetadataCache::readIconChunk()
         end = dm->sf->rowCount();
     }
     int count = 0;
-    /*
+//    /*
     qDebug() << "MetadataCache::readIconChunk" << "start =" << start << "end =" << end
              << "firstIconVisible =" << firstIconVisible
              << "lastIconVisible =" << lastIconVisible

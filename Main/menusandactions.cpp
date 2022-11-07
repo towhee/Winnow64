@@ -159,11 +159,17 @@ void MW::createActions()
     addAction(revealFileActionFromContext);
     connect(revealFileActionFromContext, &QAction::triggered, this, &MW::revealFileFromContext);
 
-    copyPathActionFromContext = new QAction("Copy folder path", this);
-    copyPathActionFromContext->setObjectName("copyPathFromContext");
-    copyPathActionFromContext->setShortcutVisibleInContextMenu(true);
-    addAction(copyPathActionFromContext);
-    connect(copyPathActionFromContext, &QAction::triggered, this, &MW::copyFolderPathFromContext);
+    copyFolderPathFromContextAction = new QAction("Copy folder path", this);
+    copyFolderPathFromContextAction->setObjectName("copyPathFromContext");
+    copyFolderPathFromContextAction->setShortcutVisibleInContextMenu(true);
+    addAction(copyFolderPathFromContextAction);
+    connect(copyFolderPathFromContextAction, &QAction::triggered, this, &MW::copyFolderPathFromContext);
+
+    copyImagePathFromContextAction = new QAction("Copy path", this);
+    copyImagePathFromContextAction->setObjectName("copyPathFromContext");
+    copyImagePathFromContextAction->setShortcutVisibleInContextMenu(true);
+    addAction(copyImagePathFromContextAction);
+    connect(copyImagePathFromContextAction, &QAction::triggered, this, &MW::copyImagePathFromContext);
 
     subFoldersAction = new QAction(tr("Include Sub-folders"), this);
     subFoldersAction->setObjectName("subFolders");
@@ -1765,7 +1771,7 @@ void MW::createMenus()
     fsTreeActions->append(separatorAction);
 //    fsTreeActions->append(showImageCountAction);
     fsTreeActions->append(revealFileActionFromContext);
-    fsTreeActions->append(copyPathActionFromContext);
+    fsTreeActions->append(copyFolderPathFromContextAction);
     fsTreeActions->append(deleteFSTreeFolderAction);
     fsTreeActions->append(separatorAction1);
     fsTreeActions->append(pasteAction);
@@ -1777,7 +1783,7 @@ void MW::createMenus()
     QList<QAction *> *favActions = new QList<QAction *>;
     favActions->append(refreshBookmarkAction);
     favActions->append(revealFileActionFromContext);
-    favActions->append(copyPathActionFromContext);
+    favActions->append(copyFolderPathFromContextAction);
 //    favActions->append(pasteAction);
     favActions->append(separatorAction);
     favActions->append(removeBookmarkAction);
@@ -1829,6 +1835,7 @@ void MW::createMenus()
     thumbViewActions->append(sortReverseAction);
     thumbViewActions->append(separatorAction4);
     thumbViewActions->append(copyImageAction);
+    thumbViewActions->append(copyImagePathFromContextAction);
     thumbViewActions->append(saveAsFileAction);
     thumbViewActions->append(deleteAction);
     thumbViewActions->append(separatorAction5);

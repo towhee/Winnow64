@@ -115,6 +115,8 @@ int TableView::sizeHintForColumn(int column) const
     if (column == G::NameColumn) return fm.boundingRect("2019-02-25_0001.jpg========").width();
     if (column == G::TypeColumn) return fm.boundingRect("=JPG+NEF=").width();
     if (column == G::VideoColumn) return fm.boundingRect("=Video=").width();
+    if (column == G::PermissionsColumn) return fm.boundingRect("=Permissions=").width();
+    if (column == G::ReadWriteColumn) return fm.boundingRect("=false=").width();
     if (column == G::SizeColumn) return fm.boundingRect("=999,999,999=").width();
     if (column == G::CreatedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();
     if (column == G::ModifiedColumn) return fm.boundingRect("=2019-09-09 09:09:09=").width();

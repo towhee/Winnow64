@@ -64,23 +64,15 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
 
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
-//    QFile imFile(fPath);
-//    if (imFile.isOpen()) imFile.close();
 
     QImageReader thumbReader(fPath);
     thumbReader.setAutoTransform(true);
     image = thumbReader.read();
+    QFile(fPath).setPermissions(oldPermissions);
     int w = image.width();
     int h = image.height();
     double a = w / h;
-//    qDebug() << "Thumb::loadFromEntireFile" << "setting dimensions in datamodel";
     QString src = "Thumb::loadFromEntireFile";
-
-//    dm->setData(dm->index(row, G::WidthColumn), w);
-//    dm->setData(dm->index(row, G::WidthPreviewColumn), w);
-//    dm->setData(dm->index(row, G::HeightColumn), h);
-//    dm->setData(dm->index(row, G::HeightPreviewColumn), h);
-//    dm->setData(dm->index(row, G::AspectRatioColumn), a);
 
     emit setValue(dm->index(row, G::WidthColumn), w, instance, src);
     emit setValue(dm->index(row, G::WidthPreviewColumn), w, instance, src);
@@ -157,6 +149,7 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
         else {
             G::error("Thumb::loadFromJpgData", fPath, "Could not open file for thumb.");
         }
+        QFile(fPath).setPermissions(oldPermissions);
         imFile.close();
     }
     else {
@@ -181,7 +174,9 @@ bool Thumb::loadFromTiffData(QString &fPath, QImage &image)
     ImageMetadata m = dm->imMetadata(fPath);
     Tiff tiff;
     bool getThumb = true;
-    return tiff.decode(m, fPath, image, getThumb, G::maxIconSize);
+    bool success = tiff.decode(m, fPath, image, getThumb, G::maxIconSize);
+    QFile(fPath).setPermissions(oldPermissions);
+    return success;
 }
 
 bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
@@ -200,12 +195,19 @@ bool Thumb::loadThumb(QString &fPath, QImage &image, int instance, QString src)
     this->instance = instance;
 
     QFileInfo fileInfo(fPath);
+    // check permissions
+    oldPermissions = fileInfo.permissions();
+    if (!(oldPermissions & QFileDevice::ReadUser)) {
+        QFileDevice::Permissions newPermissions = fileInfo.permissions() | QFileDevice::ReadUser;
+        QFile(fPath).setPermissions(newPermissions);
+    }
     QString ext = fileInfo.suffix().toLower();
     int dmRow = dm->fPathRow[fPath];
 
     // If video file then just show video icon
     if (metadata->videoFormats.contains(ext)) {
         loadFromVideo(fPath, dmRow);
+        QFile(fPath).setPermissions(oldPermissions);
         return true;
     }
 

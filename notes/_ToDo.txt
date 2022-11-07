@@ -1,6 +1,8 @@
 BUGS / TO DO
+- Cancel ingest
+- Show drag copy progress for big copy ops
+- Convert path to windows \ for copy path to clipboard
 - CLASSFUNCTION in Heic.cpp
-- Add clearIcon slot to DataModel and use in MetaRead::cleanupIcons
 - Extract frame from video
 - Update use of current image for video frame
 - App not closing while reading large foldeer
@@ -75,6 +77,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Copy file path to clipboard
+- Fix file permissions issue
 - Crash when change thumbView visibility while MetaRead loading metadata
 - Sorting popup stuck
 - Menu stop slideshow S is wrong

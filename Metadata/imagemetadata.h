@@ -35,13 +35,14 @@ public:
     bool metadataLoaded = false;            // all metadata except thumb
 
     bool isThumbLoaded = false;             // refers to thumb only
-    bool thumbUnavailable = false;          // no embedded thumb
-    bool imageUnavailable = false;          // no embedded preview
+//    bool thumbUnavailable = false;          // no embedded thumb
+//    bool imageUnavailable = false;          // no embedded preview
 
     bool isSearch = false;
     QString type = "";
     // end of file system info, rest requires pulling metadata from image file
     int size = 0;
+    uint permissions = 0;                   // file permissions (QFileDevice::Permissions)
     int width = 0;                          // width of raw image
     int height = 0;                         // height of raw image
     QString dimensions = "";

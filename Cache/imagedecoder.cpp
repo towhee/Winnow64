@@ -30,7 +30,7 @@ ImageDecoder::ImageDecoder(QObject *parent,
     status = Status::Ready;
     fPath = "";
     cacheKey = -1;
-    dmInstance = 0;
+    instance = 0;
     this->dm = dm;
     this->metadata = metadata;
 }
@@ -64,8 +64,8 @@ void ImageDecoder::decode(ImageCacheData::CacheItem item, int instance)
     status = Status::Busy;
     n = item;
     fPath = n.fPath;
-    dmInstance = instance;
-    cacheKey = n.key;       // not being used
+    cacheKey = n.key;       // used in ImageCache::fixOrphans
+    this->instance = instance;
 //    qDebug() << "ImageDecoder::decode" << fPath;
     start();
 }
@@ -90,8 +90,6 @@ bool ImageDecoder::load()
     ext = fileInfo.completeSuffix().toLower();
 
     if (metadata->videoFormats.contains(ext)) {
-//        qWarning() << "WARNING" << "ImageDecoder::load  Ignore video formats" << fPath;
-//        G::error("ImageDecoder::load", fPath, "Ignore video formats.");
         status = Status::Video;
         return false;
     }
@@ -101,7 +99,6 @@ bool ImageDecoder::load()
     // is metadata loaded rgh use isMeta in cacheItemList?
     if (!n.metadataLoaded && metadata->hasMetadataFormats.contains(ext)) {
         qWarning() << "WARNING" << "ImageDecoder::load  Metadata not loaded" << fPath;
-//        G::error("ImageDecoder::load", fPath, "Metadata not loaded.");
         return false;
     }
 
@@ -110,7 +107,6 @@ bool ImageDecoder::load()
     // is file already open by another process
     if (imFile.isOpen()) {
         qWarning() << "WARNING" << "ImageDecoder::load  File already open" << fPath;
-//        G::error("ImageDecoder::load", fPath, "File already open.");
         return false;
     }
 
@@ -128,7 +124,6 @@ bool ImageDecoder::load()
         if (n.lengthFull == 0) {
             imFile.close();
             qWarning() << "WARNING" << "ImageDecoder::load  Jpg length = zero" << fPath;
-//            G::error("ImageDecoder::load", fPath, "Jpg length = zero.");
             return false;
         }
 
@@ -136,14 +131,12 @@ bool ImageDecoder::load()
         if (!imFile.seek(n.offsetFull)) {
             imFile.close();
             qWarning() << "WARNING" << "ImageDecoder::load Illegal offset to image " << fPath;
-//            G::error("ImageDecoder::load", fPath, "Illegal offset to image.");
             return false;
         }
 
         QByteArray buf = imFile.read(n.lengthFull);
         if (buf.length() == 0) {
             qWarning() << "WARNING" << "ImageDecoder::load  Zero JPG buffer" << fPath;
-//            G::error("ImageDecoder::load", fPath, "Zero JPG buffer.");
             imFile.close();
             return false;
         }
@@ -152,8 +145,9 @@ bool ImageDecoder::load()
 
         // try to decode the jpg data
         if (!image.loadFromData(buf, "JPEG")) {
-            qWarning() << "WARNING" << "ImageDecoder::load  image.loadFromData failed" << fPath;
-//            G::error("ImageDecoder::load", fPath, "image.loadFromData failed.");
+            qWarning() << "WARNING" << "ImageDecoder::load  image.loadFromData failed"
+                       << "instance =" << instance
+                       << fPath;
             imFile.close();
             return false;
         }
@@ -317,6 +311,13 @@ void ImageDecoder::run()
 //        G::log("ImageDecoder::run", "Thread " + QString::number(threadId));
 //        mutex.unlock();
     }
+
+    if (instance != dm->instance) {
+        status = Status::InstanceClash;
+        if (!abort) emit done(threadId);
+        return;
+    }
+
     if (load()) {
         if (G::isLogger) G::log("ImageDecoder::run", "Image width =" + QString::number(image.width()));
         if (metadata->rotateFormats.contains(ext) && !abort) rotate();
@@ -328,7 +329,6 @@ void ImageDecoder::run()
 
         }
         else {
-//            G::error("ImageDecoder::run", fPath, "Could not load " + fPath);
             status = Status::Failed;
             fPath = "";
         }

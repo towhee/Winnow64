@@ -295,11 +295,18 @@ void MW::refine()
 
     // Are there any picks to refine?
     bool isPick = false;
+    int pickCount = 0;
     for (int row = 0; row < dm->rowCount(); ++row) {
         if (dm->index(row, G::PickColumn).data() == "true") {
             isPick = true;
-            break;
+            pickCount++;
+            if (pickCount > 1) break;
         }
+    }
+
+    if (pickCount == 1) {
+        G::popUp->showPopup("There is only one image picked, so refine cancelled", 2000);
+        return;
     }
 
     if (!isPick) {
@@ -309,8 +316,17 @@ void MW::refine()
 
     QMessageBox msgBox;
     int msgBoxWidth = 300;
+    QString txt = "<font color=\"red\">"
+                  "WARNING: all your picks will be reset"
+                  "</font><p>"
+                  "This operation will filter to show only your picks "
+                  "and then reset picks so you can refine what was initially "
+                  "picked.<p>"
+                  "When done, clear the filters (Shortcut Shift + C) to see all "
+                  "your images again.<BR>"
+                  ;
     msgBox.setWindowTitle("Refine Picks");
-    msgBox.setText("This operation will filter to show only your picks and then clear your picks.");
+    msgBox.setText(txt);
     msgBox.setInformativeText("Do you want continue?");
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
     msgBox.setDefaultButton(QMessageBox::Yes);
@@ -336,11 +352,10 @@ void MW::refine()
             // clear picks
             emit setValue(dm->index(row, G::RefineColumn), true, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
             emit setValue(dm->index(row, G::PickColumn), "false", dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-//            dm->setData(dm->index(row, G::RefineColumn), true);
-//            dm->setData(dm->index(row, G::PickColumn), "false");
         }
-        emit setValue(dm->index(row, G::RefineColumn), false, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-//        else dm->setData(dm->index(row, G::RefineColumn), false);
+        else {
+            emit setValue(dm->index(row, G::RefineColumn), false, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
+        }
     }
     pushPick("End multiple select");
 
@@ -785,7 +800,6 @@ void MW::setColorClass()
                 labelIdx = dm->index(row, G::LabelColumn);
                 QString src = "MW::setColorClass";
                 emit setValue(labelIdx, colorClass, dm->instance, src, Qt::EditRole, Qt::AlignCenter);
-//                dm->setData(labelIdx, colorClass, Qt::EditRole);
                 // update color class crash log
                 QString jpgPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
                 updateColorClassLog(jpgPath, colorClass);
