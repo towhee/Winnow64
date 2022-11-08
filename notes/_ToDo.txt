@@ -1,6 +1,5 @@
 BUGS / TO DO
 - Cancel ingest
-- Show drag copy progress for big copy ops
 - Convert path to windows \ for copy path to clipboard
 - CLASSFUNCTION in Heic.cpp
 - Extract frame from video
@@ -77,6 +76,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Show drag copy progress for big copy ops with ESC
 - Copy file path to clipboard
 - Fix file permissions issue
 - Crash when change thumbView visibility while MetaRead loading metadata

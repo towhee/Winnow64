@@ -1,3 +1,12 @@
+MacOS permissions
+
+    When developing in Qt Creator in the project mode permission setting does not work
+    if build for both x86 and arm to create a universal binary.
+    see https://forum.qt.io/topic/135773/qt-creator-7-macos-permissions
+
+    In terminal
+    codesign --force --deep -s - /Users/roryhill/Projects/buildpath/Winnow.app
+
 CLOC = Count Lines Of Code
 In terminal: cloc /Users/roryhill/Projects/Winnow64
 cmd prompt:  D:\Programs\CLOC\cloc-1.64 --exclude-dir=Lib,release,debug "D:\My Projects\Winnow Project\Winnow64"
