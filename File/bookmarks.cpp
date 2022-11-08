@@ -264,6 +264,8 @@ void BookMarks::dropEvent(QDropEvent *event)
     if (G::isLogger) G::log(CLASSFUNCTION);
 
     const QMimeData *mimeData = event->mimeData();
+    if (!mimeData->hasUrls()) return;
+
     /*
     qDebug() << CLASSFUNCTION
              << event
@@ -271,76 +273,13 @@ void BookMarks::dropEvent(QDropEvent *event)
     //*/
 
     QString dropDir = indexAt(event->pos()).data(Qt::ToolTipRole).toString();
-    if (mimeData->hasUrls()) {
-        QString dPath;      // path to folder
-        QFileInfo fInfo = QFileInfo(mimeData->urls().at(0).toLocalFile());
 
-        // if drag is a folder then add to bookmarks
-        if (fInfo.isDir()) {
-            dPath = fInfo.absoluteFilePath();
-            if (dPath.length() == 0) return;
-            // trim ending "/"
-            int endPos = dPath.length() - 1;
-            if (dPath[endPos] == '/') dPath.chop(1);
-            if (!bookmarkPaths.contains(dPath)) {
-                bookmarkPaths.insert(dPath);
-                reloadBookmarks();
-                return;
-            }
-        }
+    QString dPath;      // path to folder
+    QFileInfo fInfo = QFileInfo(mimeData->urls().at(0).toLocalFile());
 
-        /*  This code section is mirrored in FSTREE::dropEvent.  Make sure to sync any
-            changes. */
-        // drag is files: move or copy to bookmark folder
-        qDebug() << "BookMarks::dropEvent  dropDir =" << dropDir;
-        QStringList srcPaths;
-        for (int i = 0; i < event->mimeData()->urls().count(); i++) {
-            QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
-            QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
-            bool copied = QFile::copy(srcPath, destPath);
-            /*
-            qDebug() << CLASSFUNCTION
-                     << "Copy" << srcPath
-                     << "to" << destPath << "Copied:" << copied
-                     << event->dropAction();  //*/
-            if (copied) {
-                // make list of src files to delete if Qt::MoveAction
-                srcPaths << srcPath;
-                // copy any sidecars if internal drag operation
-                if (event->source()) {
-                    QStringList srcSidecarPaths = Utilities::getPossibleSidecars(srcPath);
-                    foreach (QString srcSidecarPath, srcSidecarPaths) {
-                        if (QFile(srcSidecarPath).exists()) {
-                            QString destSidecarPath = dropDir + "/" + Utilities::getFileName(srcSidecarPath);
-                            QFile::copy(srcSidecarPath, destSidecarPath);
-                        }
-                    }
-                }
-            }
-        }
-        // if Winnow source and QMoveAction
-        if (event->source() && event->dropAction() == Qt::MoveAction) {
-            setCurrentIndex(dndOrigSelection);
-            if (srcPaths.count()) {
-                // deleteFiles also deletes sidecars
-                emit deleteFiles(srcPaths);
-            }
-        }
-        count();
-        emit refreshFSTree();
-        setCurrentIndex(dndOrigSelection);
-    }
-
-    if (G::currRootFolder == dropDir) {
-        QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
-        emit folderSelection();
-    }
-    /*prev code
-    if (mimeData->hasUrls()) {
-        QString dPath;      // path to folder
-        QFileInfo fInfo = QFileInfo(mimeData->urls().at(0).toLocalFile());
-        if (fInfo.isDir()) dPath = fInfo.absoluteFilePath();
-        else dPath = fInfo.absoluteDir().absolutePath();
+    // if drag is a folder then add to bookmarks
+    if (fInfo.isDir()) {
+        dPath = fInfo.absoluteFilePath();
         if (dPath.length() == 0) return;
         // trim ending "/"
         int endPos = dPath.length() - 1;
@@ -348,8 +287,82 @@ void BookMarks::dropEvent(QDropEvent *event)
         if (!bookmarkPaths.contains(dPath)) {
             bookmarkPaths.insert(dPath);
             reloadBookmarks();
+            return;
         }
-        // no popup as focus will be on drag app
     }
-    //*/
+
+    // if drag is files: move or copy to bookmark folder
+    /* This code section is mirrored in FSTREE::dropEvent.  Make sure to sync any
+       changes. */
+    G::stopCopyingFiles = false;
+    G::isCopyingFiles = true;
+    QStringList srcPaths;
+
+    // popup
+    int count = event->mimeData()->urls().count();
+    QString operation = "Copying ";
+    if (event->source() && event->dropAction() == Qt::MoveAction) operation = "Moving ";
+    G::popUp->setProgressVisible(true);
+    G::popUp->setProgressMax(count);
+    QString txt = operation + QString::number(count) +
+                  " to " + dropDir +
+                  "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+    G::popUp->showPopup(txt, 0, true, 1);
+
+    for (int i = 0; i < count; i++) {
+        G::popUp->setProgress(i+1);
+        // processEvents is necessary
+        qApp->processEvents();
+        if (G::stopCopyingFiles) {
+            break;
+        }
+        QString srcPath = event->mimeData()->urls().at(i).toLocalFile();
+        QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
+        bool copied = QFile::copy(srcPath, destPath);
+        /*
+        qDebug() << CLASSFUNCTION
+                 << "Copy" << srcPath
+                 << "to" << destPath << "Copied:" << copied
+                 << event->dropAction();  //*/
+        if (copied) {
+            // make list of src files to delete if Qt::MoveAction
+            srcPaths << srcPath;
+            // copy any sidecars if internal drag operation
+            if (event->source()) {
+                QStringList srcSidecarPaths = Utilities::getPossibleSidecars(srcPath);
+                foreach (QString srcSidecarPath, srcSidecarPaths) {
+                    if (QFile(srcSidecarPath).exists()) {
+                        QString destSidecarPath = dropDir + "/" + Utilities::getFileName(srcSidecarPath);
+                        QFile::copy(srcSidecarPath, destSidecarPath);
+                    }
+                }
+            }
+        }
+    }
+    if (G::stopCopyingFiles) {
+        G::popUp->setProgressVisible(false);
+        G::popUp->end();
+        G::popUp->showPopup("Terminated " + operation + "operation", 2000);
+    }
+    else {
+        G::popUp->setProgressVisible(false);
+        G::popUp->end();
+    }
+    G::isCopyingFiles = false;
+    G::stopCopyingFiles = false;
+
+    // if Winnow source and QMoveAction
+    if (event->source() && event->dropAction() == Qt::MoveAction) {
+        setCurrentIndex(dndOrigSelection);
+        if (srcPaths.count()) {
+            // deleteFiles also deletes sidecars
+            emit deleteFiles(srcPaths);
+        }
+    }
+    // End mirrored code section
+
+    if (G::currRootFolder == dropDir) {
+        QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
+        emit folderSelection();
+    }
 }

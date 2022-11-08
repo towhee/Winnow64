@@ -523,7 +523,11 @@ void FSTree::dropEvent(QDropEvent *event)
     the copy operation.  If DnD is internal then also copy/move any sidecar files.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
+
     const QMimeData *mimeData = event->mimeData();
+    if (!mimeData->hasUrls()) return;
+
+    QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
     /*
     qDebug() << CLASSFUNCTION
              << "event->source() =" << event->source()
@@ -535,12 +539,12 @@ void FSTree::dropEvent(QDropEvent *event)
         changes. */
     G::stopCopyingFiles = false;
     G::isCopyingFiles = true;
-    QString dropDir = indexAt(event->pos()).data(QFileSystemModel::FilePathRole).toString();
     QStringList srcPaths;
+
+    // popup
     int count = event->mimeData()->urls().count();
     QString operation = "Copying ";
     if (event->source() && event->dropAction() == Qt::MoveAction) operation = "Moving ";
-
     G::popUp->setProgressVisible(true);
     G::popUp->setProgressMax(count);
     QString txt = operation + QString::number(count) +
@@ -598,6 +602,7 @@ void FSTree::dropEvent(QDropEvent *event)
             emit deleteFiles(srcPaths);
         }
     }
+    // End mirrored code section
 
     // if external source
     if (!event->source()) {
