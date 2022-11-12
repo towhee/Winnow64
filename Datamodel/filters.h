@@ -57,7 +57,7 @@ public:
 //    void addCategoryFromData(QMap<QString, QString> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground(const int &a, const int &b);
     void setSearchNewFolder();
-    void disableZeroCountItems(bool disable);
+    void disableColorZeroCountItems();
     void disableAllItems(bool disable);
     void setProgressBarStyle();
     bool isOnlyMostRecentDayChecked();
@@ -81,6 +81,8 @@ signals:
 public slots:
 
     bool isAnyFilter();
+    void setCatFiltering();
+    bool isCatFiltering(QTreeWidgetItem *item);
     void invertFilters();
     void clearAll();
     void uncheckAllFilters();
@@ -113,6 +115,7 @@ private:
     QFont categoryFont;
     QFont searchDefaultTextFont;
     QColor searchDefaultTextColor;
+    QColor hdrIsFilteringColor;
     int indentation;
     QModelIndex searchTrueIdx;
 };

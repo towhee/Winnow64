@@ -487,7 +487,6 @@ void MetadataCache::readIconChunk()
             emit updateIsRunning(false, true, "MetadataCache::readIconChunk");
             return;
         }
-//        qDebug() << "MetadataCache::readIconChunk 0 row =" << row << "G::dmEmpty =" << G::dmEmpty;
         loadIcon(row);
 //        updateIconLoadingProgress(count++, end);
     }
@@ -499,7 +498,6 @@ void MetadataCache::readIconChunk()
                 emit updateIsRunning(false, true, "MetadataCache::readIconChunk");
                 return;
             }
-//            qDebug() << "MetadataCache::readIconChunk 1 row =" << row << "G::dmEmpty =" << G::dmEmpty;
             loadIcon(row);
 //            updateIconLoadingProgress(count++, end);
         }
@@ -512,7 +510,6 @@ void MetadataCache::readIconChunk()
                 emit updateIsRunning(false, true, "MetadataCache::readIconChunk");
                 return;
             }
-//            qDebug() << "MetadataCache::readIconChunk 2 row =" << row << "G::dmEmpty =" << G::dmEmpty;
             loadIcon(row);
 //            updateIconLoadingProgress(count++, end);
         }

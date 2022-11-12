@@ -16,27 +16,27 @@ public:
 Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 {
 /*
-Used to define criteria for filtering the datamodel, based on which items are checked in
-the tree.
+    Used to define criteria for filtering the datamodel, based on which items are checked in
+    the tree.
 
-The tree contains top level items (Categories ie Ratings, Color Classes, File types ...).
-For each top level item the children are the filter choices to filter DataModel->Proxy
-(dm->sf). The categories are divided into predefined (Picks, Ratings and Color Classes)
-and dynamic categories based on existing metadata (File types, Camera Models, Focal
-Lengths, Titles etc).
+    The tree contains top level items (Categories ie Ratings, Color Classes, File types ...).
+    For each top level item the children are the filter choices to filter DataModel->Proxy
+    (dm->sf). The categories are divided into predefined (Picks, Ratings and Color Classes)
+    and dynamic categories based on existing metadata (File types, Camera Models, Focal
+    Lengths, Titles etc).
 
-The tree columns are:
-    0   CheckBox filter item
-    1   The value to filter (hidden)
-    2   The number of proxy rows containing the value
-    3   The number of datamodel rows containing the value combining Raw+Jpg
-    4   The number of datamodel rows containing the value
+    The tree columns are:
+        0   CheckBox filter item
+        1   The value to filter (hidden)
+        2   The number of proxy rows containing the value
+        3   The number of datamodel rows containing the value combining Raw+Jpg
+        4   The number of datamodel rows containing the value
 
-The dynamic filter options are populated by DataModel on demand when the user filters or
-the filters dock has focus.
+    The dynamic filter options are populated by DataModel on demand when the user filters or
+    the filters dock has focus.
 
-The actual filtering is executed in SortFilter subclass of QSortFilterProxy (sf) in
-datamodel.
+    The actual filtering is executed in SortFilter subclass of QSortFilterProxy (sf) in
+    DataModel.
 
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
@@ -58,6 +58,8 @@ datamodel.
 
     indentation = 10;
     setIndentation(indentation);
+
+    hdrIsFilteringColor = QColor(Qt::red);
 
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;
@@ -144,7 +146,7 @@ void Filters::createPredefinedFilters()
     search->setFont(0, categoryFont);
     search->setText(2, "Filter");
     search->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
-    search->setText(3, "JPG/RAW");
+    search->setText(3, " All");
     search->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
     search->setText(4, "All");
     search->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
@@ -424,18 +426,15 @@ void Filters::setSearchNewFolder()
     searchTrue->setCheckState(0, Qt::Checked);
 }
 
-void Filters::disableZeroCountItems(bool disable)
+void Filters::disableColorZeroCountItems()
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
-    return;
+//    return;
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if ((*it)->parent() && (*it)->parent()->text(0) != " Search") {
-            if (disable) {
-                if ((*it)->text(2) == "0") (*it)->setDisabled(true);
-                else (*it)->setDisabled(false);
-            }
-            else (*it)->setDisabled(false);
+           if ((*it)->text(2) == "0") (*it)->setForeground(0, QBrush(G::disabledColor));
+            else (*it)->setForeground(0, QBrush(G::textColor));
         }
         ++it;
     }
@@ -482,6 +481,57 @@ bool Filters::isAnyFilter()
     return false;
 }
 
+void Filters::setCatFiltering()
+{
+    /*
+    Update all categories is filtering status
+*/
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        if ((*it)->parent() && (*it)->parent() != search) {
+            if ((*it)->checkState(0) == Qt::Checked)
+                (*it)->parent()->setForeground(0, QBrush(hdrIsFilteringColor));
+        }
+        else {
+//            (*it)->setForeground(0, QBrush(G::textColor));
+        }
+        ++it;
+    }
+    if (searchTrue->text(0) != enterSearchString) {
+        if (searchTrue->checkState(0) == Qt::Checked)
+            search->setForeground(0, QBrush(hdrIsFilteringColor));
+        if (searchFalse->checkState(0) == Qt::Checked)
+            search->setForeground(0, QBrush(hdrIsFilteringColor));
+    }
+}
+
+bool Filters::isCatFiltering(QTreeWidgetItem *item)
+{
+/*
+    This is used to determine if the category (item) has any children with a checkbox
+    set true.  It is used to change the category header so the user can tell which
+    categories have filters engaged.
+
+    If there is only one child item then it does not matter whether it is set, as
+    there will be no filtering because the one item represents the entire population.
+*/
+    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (item == search) {
+        if (searchTrue->text(0) != enterSearchString) {
+          if (searchTrue->checkState(0) == Qt::Checked) return true;
+          if (searchFalse->checkState(0) == Qt::Checked) return true;
+        }
+        else return false;
+    }
+    if (item->childCount() > 1) {
+        for (int i = 0; i < item->childCount(); i++) {
+            if (item->child(i)->checkState(0) == Qt::Checked) return true;
+        }
+    }
+    return false;
+}
+
 bool Filters::isOnlyMostRecentDayChecked()
 {
 /*
@@ -505,7 +555,7 @@ void Filters::invertFilters()
     QTreeWidgetItemIterator it(this);
 
     // enable all items
-    disableZeroCountItems(false);
+    disableColorZeroCountItems();
 
     // populate catWithCheckedItems list with only categories that have one or more checked items
     while (*it) {
@@ -546,7 +596,7 @@ void Filters::invertFilters()
     }
 
     // disable items with no filter count
-    disableZeroCountItems(true);
+    disableColorZeroCountItems();
 
     // emit filterChange();  // this is done in MW::invertFilters - which calls this function
 }
@@ -592,7 +642,7 @@ void Filters::finishedBuildFilters()
     bfProgressBar->setValue(0);
     bfProgressBar->setVisible(false);
     msgFrame->setVisible(false);
-    disableZeroCountItems(true);
+    disableColorZeroCountItems();
     setEnabled(true);
     if (isSolo) collapseAll();
     else expandAll();
@@ -614,6 +664,9 @@ void Filters::clearAll()
             (*it)->setData(4, Qt::EditRole, "");
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+        }
+        else {
+            (*it)->setForeground(0, QBrush(G::textColor));
         }
         ++it;
     }
@@ -653,6 +706,9 @@ void Filters::uncheckAllFilters()
             (*it)->setData(2, Qt::EditRole, "");
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+        }
+        else {
+            (*it)->setForeground(0, QBrush(G::textColor));
         }
         ++it;
     }
@@ -792,6 +848,9 @@ void Filters::dataChanged(const QModelIndex &topLeft,
     if (roles.contains(Qt::CheckStateRole)) {
         itemCheckStateHasChanged = true;
         QTreeWidget::dataChanged(topLeft, bottomRight, roles);
+//        if (G::allMetadataLoaded) {
+//            qDebug() << "" << topLeft << topLeft.data();
+//        }
         return;
     }
 
@@ -814,6 +873,8 @@ void Filters::dataChanged(const QModelIndex &topLeft,
             // set searchString and filter
             searchString = searchTrue->text(0).toLower();
             emit searchStringChange(searchString);
+            if (isCatFiltering(search)) search->setForeground(0, QBrush(hdrIsFilteringColor));
+            else search->setForeground(0, QBrush(G::textColor));
             if (item->checkState(0) == Qt::Unchecked) return;
             emit filterChange("Filters::itemChangedSignal search text change");
             return;
@@ -885,6 +946,14 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
         }
     }
 
+    // is this category filtering after itemCheckStateHasChanged
+    if (isCatFiltering(item->parent())) {
+        item->parent()->setForeground(0, QBrush(hdrIsFilteringColor));
+    }
+    else {
+        item->parent()->setForeground(0, QBrush(G::textColor));
+    }
+
     emit filterChange("Filters::itemClickedSignal");
 }
 
@@ -920,7 +989,7 @@ void Filters::resizeColumns()
 //    font.setPointSize(G::fontSize.toInt());
     QFontMetrics fm(font);
 //    int decorationWidth = 25;       // the expand/collapse arrows
-    int countColumnWidth = fm.boundingRect("_JPG+RAW_").width();
+    int countColumnWidth = fm.boundingRect("99999").width();
     int countFilteredColumnWidth = fm.boundingRect("999999").width();
     int col0Width = viewport()->width() - countColumnWidth -
                     countFilteredColumnWidth - 5 /*- decorationWidth*/;

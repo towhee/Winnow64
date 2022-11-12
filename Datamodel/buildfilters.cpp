@@ -41,7 +41,7 @@ void BuildFilters::stop()
         filters->buildingFilters = false;
         filters->filterLabel->setVisible(false);
         filters->bfProgressBar->setVisible(false);
-        filters->disableZeroCountItems(true);
+        filters->disableColorZeroCountItems();
         filters->setEnabled(true);
         filters->collapseAll();
 //        emit updateIsRunning(false);
@@ -167,7 +167,7 @@ void BuildFilters::updateCountFiltered()
         }
         ++it;
     }
-    filters->disableZeroCountItems(true);
+    filters->disableColorZeroCountItems();
     filters->filtersBuilt = true;
     filters->buildingFilters = false;
     filters->update();
@@ -219,7 +219,7 @@ void BuildFilters::countFiltered()
         }
         ++it;
     }
-    filters->disableZeroCountItems(true);
+    filters->disableColorZeroCountItems();
     progress = 60;
 }
 

@@ -1587,10 +1587,6 @@ void MW::folderSelectionChange()
         return;
     }
 
-//    G::dmEmpty = false;
-
-//    qDebug() << CLASSFUNCTION << "datamodel loaded.  instance =" << dm->instance;
-
     // update FSTree count column for folder in case it has changed
 //    fsTree->refreshModel();
 
@@ -1636,17 +1632,18 @@ void MW::folderSelectionChange()
     setCentralMessage("Gathering metadata and thumbnails for images in folder.");
     updateStatus(false, "Collecting metadata for all images in folder(s)", CLASSFUNCTION);
 
-    /* Must load metadata first, as it contains the file offsets and lengths for the thumbnail
-    and full size embedded jpgs and the image width and height, req'd in imageCache to manage
-    cache max size. The metadataCaching thread also loads the thumbnails. It triggers the
-    loadImageCache when it is finished. The image cache is limited by the amount of memory
-    allocated.
+    /*
+    Must load metadata first, as it contains the file offsets and lengths for
+    the thumbnail and full size embedded jpgs and the image width and height,
+    req'd in imageCache to manage cache max size. The metadataCaching thread
+    also loads the thumbnails. It triggers the loadImageCache when it is
+    finished. The image cache is limited by the amount of memory allocated.
 
-    While still initializing, the window show event has not happened yet, so the
-    thumbsPerPage, used to figure out how many icons to cache, is unknown. 250 is the default.
+    While still initializing, the window show event has not happened yet, so
+    the thumbsPerPage, used to figure out how many icons to cache, is unknown.
+    250 is the default.
     */
 
-//    G::stop = false;
     bookmarkBlocker.unblock();
     fsTreeBlocker.unblock();
 
@@ -1660,16 +1657,6 @@ void MW::folderSelectionChange()
         // metadata and icons read using multiple threaded readers
         loadConcurrentNewFolder();
     }
-
-//    if (G::dmEmpty) {
-//        setCentralMessage("Image loading has been aborted");
-//    }
-
-//    // format pickMemSize as bytes, KB, MB or GB
-//    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-//    updateStatus(true, "", CLASSFUNCTION);
-
-//    G::stop = false;
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString src)

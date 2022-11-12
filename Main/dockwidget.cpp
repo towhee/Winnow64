@@ -59,6 +59,12 @@ void BarBtn::setIcon(const QIcon &icon)
 This replaces the QDockWidget titlebar, enabling the placement of tool buttons.
 */
 
+QSize DockTitleBar::sizeHint() const
+{
+    int h = style()->pixelMetric(QStyle::PM_TitleBarHeight) * 1.1;
+    return QSize(width(), h);
+}
+
 DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : QFrame()
 {
     setStyle();
@@ -69,6 +75,8 @@ DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : 
     titleLabel->setStyleSheet("border:none;");
     titleBarLayout->addWidget(titleLabel);
     titleBarLayout->addStretch();
+//    int h = style()->pixelMetric(QStyle::PM_TitleBarHeight) * 1.2;
+//    setFixedHeight(h);
 }
 
 void DockTitleBar::setTitle(QString title)
@@ -86,7 +94,7 @@ void DockTitleBar::setStyle()
                 "stop: 0 " + QColor(g1,g1,g1).name() + ", "
                 "stop: 1 " + QColor(g0,g0,g0).name() + ");"
                 "padding-left: 2px;"
-                "padding-bottom: 2px;"
+//                "padding-bottom: 2px;"
                 "border: none;"
                 "font-size:" + G::fontSize + "pt;";
     setStyleSheet(s);

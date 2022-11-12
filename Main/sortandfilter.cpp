@@ -166,6 +166,7 @@ void MW::quickFilter()
     if (!filterBlueAction->isChecked()) filters->labelsBlue->setCheckState(0, Qt::Unchecked);
     if (!filterPurpleAction->isChecked()) filters->labelsPurple->setCheckState(0, Qt::Unchecked);
 
+    filters->setCatFiltering();
     filterChange("MW::quickFilter");
 }
 

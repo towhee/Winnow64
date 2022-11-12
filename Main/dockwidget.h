@@ -36,7 +36,7 @@ public:
     DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout/*, QWidget *parent = nullptr*/);
     void setStyle();
     void setTitle(QString title);
-    //    QSize sizeHint() const;
+    QSize sizeHint() const override;
 protected:
 //    void paintEvent(QPaintEvent *) override;
 private:
