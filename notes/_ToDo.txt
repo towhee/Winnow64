@@ -1,5 +1,5 @@
 BUGS / TO DO
-- App not closing while reading large foldeer
+- Add * to filter header to indicate filtering
 - Convert path to windows \ for copy path to clipboard
 - CLASSFUNCTION in Heic.cpp
 - Extract frame from video
@@ -72,6 +72,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- App not closing while reading large foldeer
 - Cursor tall rectangle over thumbnails
 - Cancel background ingest
 - Work around for restoreGeometry not working on multi displays
