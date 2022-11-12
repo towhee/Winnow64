@@ -107,10 +107,10 @@ void ImageCache::clearImageCache(bool includeList)
 void ImageCache::stop()
 {
 /*
-    Note that initImageCache and updateImageCache both check if isRunning and stop a running
-    thread before starting again. Use this function to stop the image caching thread without a
-    new one starting when there has been a folder change. The cache status label in the status
-    bar will be hidden.
+    Note that initImageCache and updateImageCache both check if isRunning and
+    stop a running thread before starting again. Use this function to stop the
+    image caching thread without a new one starting when there has been a
+    folder change. The cache status label in the status bar will be hidden.
 */
     if (G::isLogger) G::log("ImageCache::stop");
     abort = true;
@@ -120,7 +120,7 @@ void ImageCache::stop()
 //        qDebug() << "ImageCache::stop  Stopping decoder thread" << id;
         decoder[id]->stop();
     }
-    qDebug() << "ImageCache::stop  All decoder threads are stopped";
+//    qDebug() << "ImageCache::stop  All decoder threads are stopped";
     // stop imagecache thread
     if (isRunning()) {
 //        qDebug() << "ImageCache::stop Stopping ImageCache";

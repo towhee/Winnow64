@@ -119,8 +119,6 @@ bool Thumb::loadFromJpgData(QString &fPath, QImage &image)
     uint offsetThumb = dm->index(row, G::OffsetThumbColumn).data().toUInt();
     uint lengthThumb = dm->index(row, G::LengthThumbColumn).data().toUInt();
 
-//    QString ext = info.suffix().toLower();
-
     /*
     QString s = "File size = " + QString::number(imFile.size());
     s += " Offset embedded thumb = " + QString::number(offsetThumb);

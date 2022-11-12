@@ -21,7 +21,7 @@ void BuildFilters::multiThreadTest()
     int col = G::RatingColumn;
     for (int i = 0; i < 1000; i++) {
         qDebug() << "BuildFilters::multiThreadTest" << i;
-        dm->setIconCaching(0, true);
+        dm->setIconRange(0,1);
         G::wait(1);
     }
 }

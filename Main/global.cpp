@@ -17,7 +17,17 @@ namespace G
     // Errors
     QMap<QString,QStringList> err;
 
-    bool stop = false;                  // flag to stop everything
+    // flow
+    bool isInitializing;                // flag program starting / initializing
+    bool stop = false;                  // flag to stop everything involving DM loading
+                                        // new dataset
+    bool dmEmpty;                       // DM is stopped and/or empty.  Flag to abort
+                                        // all new folder processes.
+    bool isNewFolderLoaded;
+    bool isNewSelection;
+    bool allMetadataLoaded;
+    bool allIconsLoaded;
+
     int dmInstance;
     int metadataInstance;
     int imageCacheInstance;
@@ -110,8 +120,6 @@ namespace G
     bool embedTifThumb;
     bool isLinearLoading;               // = !tryConcurrentLoading;
 
-    bool isGettingVideoFrame;           // test sequential video thumb loading
-
     // ingest
     bool isRunningBackgroundIngest;
     int ingestCount = 0;
@@ -125,14 +133,6 @@ namespace G
     bool isThreadTrackingOn;
     bool showAllTableColumns;
 
-    // flow
-    bool isNewFolderLoaded;
-    bool isNewFolderLoadedAndInfoViewUpToDate;
-    bool isInitializing;
-    bool isNewSelection;
-    bool allMetadataLoaded;
-    bool allIconsLoaded;
-
     int scrollBarThickness = 14;        // Also set in winnowstyle.css for vertical and horizontal
     int propertyWidgetMarginLeft = 5;
     int propertyWidgetMarginRight = 2;
@@ -145,7 +145,10 @@ namespace G
     bool isTimer;
     bool isTest;
 
-//    QList<int>rowsWithIcon;         // used by MetaRead and MW::deleteFiles
+//    bool empty()
+//    {
+//        return currRootFolder.isEmpty();
+//    }
 
     QString s(QVariant x)
     // helper function to convert variable values to a string for reporting

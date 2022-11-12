@@ -70,8 +70,6 @@ public:
     void clearOutOfRangeIcons(int startRow);
     bool allIconsLoaded();
     bool iconLoaded(int sfRow, int instance);
-    bool isIconCaching(QModelIndex sfIdx, int instance);
-    void setIconCaching(int sfRow, bool state);
     int rowFromPath(QString fPath);
     void refreshRowFromPath();
     void saveSelection();

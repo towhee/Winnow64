@@ -15,9 +15,10 @@
 
 #define ICON_MIN	40
 #define ICON_MAX	480  // 256 is default
-#define EXISTS if(p.file.exists())
+#define EXISTS if (p.file.exists())
 
 #define CLASSFUNCTION QString::fromUtf8(metaObject()->className()) + "::" + __func__
+//#define OK !currRootFolder.isEmpty()
 
 namespace G
 {
@@ -138,8 +139,15 @@ namespace G
         QString args;
     };
 
-    // stopping all threads
+    // flow
     extern bool stop;
+    extern bool dmEmpty;
+    extern bool isNewFolderLoaded;
+    extern bool isInitializing;
+    extern bool isNewSelection;
+    extern bool allMetadataLoaded;
+    extern bool allIconsLoaded;
+
     extern int dmInstance;
     extern int metadataInstance;
     extern int imageCacheInstance;
@@ -164,8 +172,6 @@ namespace G
     extern QFile logFile;
     extern QFile errlogFile;
     extern bool isDev;
-
-    extern bool isGettingVideoFrame;
 
     extern QPoint mousePos;
     extern bool isModifier;
@@ -252,13 +258,6 @@ namespace G
     extern bool isThreadTrackingOn;
     extern bool showAllTableColumns;
 
-    extern bool isNewFolderLoaded;
-    extern bool isNewFolderLoadedAndInfoViewUpToDate;
-    extern bool isInitializing;
-    extern bool isNewSelection;
-    extern bool allMetadataLoaded;
-    extern bool allIconsLoaded;
-
     extern int scrollBarThickness;
     extern int propertyWidgetMarginLeft;
     extern int propertyWidgetMarginRight;
@@ -274,6 +273,7 @@ namespace G
 
 //    extern QList<int>rowsWithIcon;
 
+//    extern bool empty();
     extern void track(QString functionName = "", QString comment = "", bool hideTime = false);
     extern QStringList doNotLog;
     extern void log(QString functionName = "",

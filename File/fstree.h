@@ -73,6 +73,7 @@ public:
 public slots:
     void resizeColumns();
     void expand(const QModelIndex &);
+//    void expandAll(const QModelIndex &);
     void refreshModel();
 
 private slots:

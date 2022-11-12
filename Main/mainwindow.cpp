@@ -162,7 +162,6 @@ Flow Flags:
     G::allMetadataLoaded
     G::allIconsLoaded
     G::isNewFolderLoaded
-    G::isNewFolderLoadedAndInfoViewUpToDate
     dm->loadingModel
     dm->basicFileInfoLoaded  // not used
     G::isLinearLoading
@@ -428,6 +427,8 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     qRegisterMetaType<QVector<int>>();
 
     show();
+    if (setting->contains("WindowLocation"))
+        setGeometry(setting->value("WindowLocation").toRect());
 
     if (isStartupArgs) {
         handleStartupArgs(args);
@@ -450,8 +451,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
             setCentralMessage(msg);
             prevMode = "Loupe";
         }
-
-//        show();
 
         if (setting->value("hasCrashed").toBool()) {
             int picks = pickLogCount();
@@ -493,21 +492,21 @@ bool MW::isDevelopment()
 void MW::showEvent(QShowEvent *event)
 {
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+
     QMainWindow::showEvent(event);
+
+    thisWindow = windowHandle();
+//    qDebug() << CLASSFUNCTION << thisWindow;
+//    connect(thisWindow, &QWindow::visibilityChanged, this, &MW::prevSessionWindowLocation);
 
     getDisplayProfile();
 
     if (isSettings) {
+        // resotre internal geometry (scren location,
         restoreGeometry(setting->value("Geometry").toByteArray());
         // run restoreGeometry second time if display has been scaled
         if (G::actDevicePixelRatio > 1.0)
             restoreGeometry(setting->value("Geometry").toByteArray());
-        /* correct for highdpi
-//        double dpiFactor = 1.0 / G::actDevicePixelRatio;
-//        resize(width() * dpiFactor, height() * dpiFactor);
-//        resize(width() * G::actDevicePixelRatio, height() * G::actDevicePixelRatio);
-//        #endif
-        //*/
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
         /*
@@ -527,6 +526,7 @@ void MW::showEvent(QShowEvent *event)
         defaultWorkspace();
     }
 
+    // create popup window used for messaging
     G::newPopUp(this, centralWidget);
 
     // set initial visibility
@@ -553,9 +553,7 @@ void MW::showEvent(QShowEvent *event)
 //    // size columns after show if device pixel ratio > 1
 //    embelProperties->resizeColumns();
 
-    G::isInitializing = false;
-//    thumbView->selectFirst();
-
+//    G::isInitializing = false;    // moved to MW::eventFilter  event->type() == QEvent::Expose && G::isInitializing
 }
 
 void MW::closeEvent(QCloseEvent *event)
@@ -573,9 +571,10 @@ void MW::closeEvent(QCloseEvent *event)
     }
 
     setCentralMessage("Closing Winnow ...");
-    metaReadThread->stop();
-    imageCacheThread->stop();
-    metadataCacheThread->stop();
+    stop();
+//    metaReadThread->stop();
+//    imageCacheThread->stop();
+//    metadataCacheThread->stop();
     if (filterDock->isVisible()) {
         folderDock->raise();
         folderDockVisibleAction->setChecked(true);
@@ -607,7 +606,7 @@ void MW::closeEvent(QCloseEvent *event)
 
 void MW::moveEvent(QMoveEvent *event)
 {
-/*
+    /*
     When the main winnow window is moved the zoom dialog, if it is open, must be moved as
     well. Also we need to know if the app has been dragged onto another monitor, which may
     have different dimensions and a different icc profile (win only).
@@ -661,16 +660,19 @@ void MW::keyReleaseEvent(QKeyEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
 
-    qDebug() << CLASSFUNCTION << event;
+//    qDebug() << CLASSFUNCTION << event;
 
     if (event->key() == Qt::Key_Escape) {
         /* Cancel the current operation without exiting from full screen mode.  If no current
            operation, then okay to exit full screen.  escapeFullScreen must be the last option
            tested.
         */
+        qDebug() << CLASSFUNCTION << G::isNewFolderLoaded;
         G::popUp->end();
         // stop loading a new folder
         if (!G::isNewFolderLoaded /*&& G::isLinearLoading*/) stop("Escape key");
+        // stop background ingest
+        else if (G::isRunningBackgroundIngest) backgroundIngest->stop();
         // stop file copying
         else if (G::isCopyingFiles) G::stopCopyingFiles = true;
         // end stress test
@@ -824,6 +826,24 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 //    */
+
+    /* RESTORE GEOMETRY ***********************************************************************
+
+    The geometry is initially restored in MW::showEvent.  On MacOS, if the window was not
+    located on the primary screen, then restoreGeometry does not move the window to
+    its prior screen location until after the event loop finishes all windowActivate events.
+
+    */
+
+    if (event->type() == QEvent::Expose && G::isInitializing) {
+        // second time event triggered is after event loop finishes all windowActivate events.
+        static int count = 0;
+        if (count) G::isInitializing = false;
+        count++;
+        if (isSettings) {
+            restoreGeometry(setting->value("Geometry").toByteArray());
+        }
+    }
 
     /* EMBEL DOCK TITLE ***********************************************************************
 
@@ -1399,7 +1419,6 @@ Flow Flags:
     G::allMetadataLoaded
     G::allIconsLoaded
     G::isNewFolderLoaded
-    G::isNewFolderLoadedAndInfoViewUpToDate
     dm->loadingModel
     dm->basicFileInfoLoaded  // not used
     G::isLinearLoading
@@ -1471,8 +1490,8 @@ void MW::folderSelectionChange()
         G::log(CLASSFUNCTION);
     }
 
-    qDebug();
-    qDebug() << CLASSFUNCTION;
+//    qDebug();
+//    qDebug() << CLASSFUNCTION;
     stop("MW::folderSelectionChange()");
 
     dm->abortLoadingModel = false;
@@ -1568,6 +1587,8 @@ void MW::folderSelectionChange()
         return;
     }
 
+//    G::dmEmpty = false;
+
 //    qDebug() << CLASSFUNCTION << "datamodel loaded.  instance =" << dm->instance;
 
     // update FSTree count column for folder in case it has changed
@@ -1639,6 +1660,10 @@ void MW::folderSelectionChange()
         // metadata and icons read using multiple threaded readers
         loadConcurrentNewFolder();
     }
+
+//    if (G::dmEmpty) {
+//        setCentralMessage("Image loading has been aborted");
+//    }
 
 //    // format pickMemSize as bytes, KB, MB or GB
 //    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
@@ -1920,13 +1945,17 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 bool MW::stop(QString src)
 {
 /*
-    Called when folderSelectionChange and invalid folder (no folder, no eligible images).
-    Can be triggered when the user picks a folder in the folder panel or open menu, picks
-    a bookmark or ejects a drive and the resulting folder does not have any eligible images.
+    Stops and clears all folder loading processes and data.
+
+    Trriggered when:
+    - the user picks a folder in the folder panel or open menu.
+    - picks a bookmark.
+    - ejects a drive and the resulting folder does not have any eligible images.
+    - ESC pressed while folder is loading
 
 
 */
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, G::currRootFolder);
 //    if (G::isInitializing) {
 //        qDebug() << CLASSFUNCTION << "Ignore: G::isInitializing = true";
 //        return false;
@@ -1934,32 +1963,39 @@ bool MW::stop(QString src)
 
     dm->instance++;
     G::dmInstance = dm->instance;
+    QString oldFolder = G::currRootFolder;
 
+    /*
+       Program interrupt flags used to stop all folder loading activity.  If
+       the activity is happening in another thread then it stops when the thread
+       is aborted.  However, after MW::stop has executed, exucution returns to
+       any GUI functions that were interrupted, such as MW::loadLinearNewFolder.
+       The flag "G::dmEmpty is checked to terminate these processes.
+    */
     G::stop = true;
-
-//    G::t.restart();
-//    dm->abortLoadingModel = true;
-//    qDebug() << CLASSFUNCTION << "Stop load datamodel       " << G::t.nsecsElapsed() << "ns";
+    if (dm->loadingModel) dm->abortLoadingModel = true;
+    G::dmEmpty = true;
+    qDebug() << CLASSFUNCTION << "src =" << src;
 
     G::t.restart();
     buildFilters->stop();
-    qDebug() << CLASSFUNCTION << "Stop buildFilters:        " << G::t.nsecsElapsed() << "ns";
+//    qDebug() << CLASSFUNCTION << "Stop buildFilters:        " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     metaReadThread->stop();
-    qDebug() << CLASSFUNCTION << "Stop metaReadThread:      " << G::t.nsecsElapsed() << "ns";
+//    qDebug() << CLASSFUNCTION << "Stop metaReadThread:      " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     metadataCacheThread->stop();
-    qDebug() << CLASSFUNCTION << "Stop metadataCacheThread: " << G::t.nsecsElapsed() << "ns";
+//    qDebug() << CLASSFUNCTION << "Stop metadataCacheThread: " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     imageCacheThread->stop();
-    qDebug() << CLASSFUNCTION << "Stop imageCacheThread:    " << G::t.nsecsElapsed() << "ns";
+//    qDebug() << CLASSFUNCTION << "Stop imageCacheThread:    " << G::t.nsecsElapsed() << "ns";
 
     G::t.restart();
     frameDecoder->clear();
-    qDebug() << CLASSFUNCTION << "Stop frameDecoder:        " << G::t.nsecsElapsed() << "ns";
+//    qDebug() << CLASSFUNCTION << "Stop frameDecoder:        " << G::t.nsecsElapsed() << "ns";
 
     /*
     dm->abortLoad();
@@ -2019,13 +2055,29 @@ void MW::reset(QString src) {
     G::wait(1000);
     */
 
+    reset("MW::stop");
+
+    if (src == "Escape key") {
+        setCentralMessage("Image loading has been aborted for\n" + oldFolder);
+        qApp->processEvents();
+    }
+
+    G::stop = false;
+    return true;
+}
+
+bool MW::reset(QString src)
+{
+    if (G::isLogger) G::log(CLASSFUNCTION, "Source: " + src);
+
+    if (!G::dmEmpty) return false;
+
+    G::dmEmpty = true;
     G::allMetadataLoaded = false;
     G::allIconsLoaded = false;
     G::isNewFolderLoaded = false;
     G::isNewSelection = false;
-//    G::isNewFolderLoadedAndInfoViewUpToDate = false;
-
-    G::isGettingVideoFrame = false;
+    G::currRootFolder = "";
 
     imageView->clear();
     setWindowTitle(winnowWithVersion);
@@ -2051,17 +2103,19 @@ void MW::reset(QString src) {
     gridView->setUpdatesEnabled(true);
     tableView->setUpdatesEnabled(true);
     tableView->setSortingEnabled(true);
+    imageView->isFit = true;                // req'd for initial zoom cursor condition
     dm->currentSfRow = 0;
     dm->clearDataModel();
 
     // turn thread activity buttons gray
     setThreadRunStatusInactive();
 
-    G::stop = false;
+    if (src != "MW::stop") {
+        setCentralMessage("Image loading has been aborted");
+    }
+
     return true;
 }
-
-void MW::reset(QString src) {}
 
 void MW::nullFiltration()
 {
@@ -2267,8 +2321,6 @@ void MW::loadConcurrentMetaDone()
     updates to InfoView by fileSelectionChange have been completed. Otherwise,
     InfoView::dataChanged would prematurely trigger Metadata::writeXMP */
 
-//    G::isNewFolderLoadedAndInfoViewUpToDate = true;
-//    G::isNewFolderLoaded = true;
     dm->setAllMetadataLoaded(true);                 // sets G::allMetadataLoaded = true;
     G::allIconsLoaded = dm->allIconsLoaded();
     filters->setEnabled(true);
@@ -2355,8 +2407,35 @@ void MW::loadLinearNewFolder()
 */
     if (G::isLogger || G::isFlowLogger) G::log("skipline");
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+
+    QString src = "MW::loadLinearNewFolder ";
+
+    // load all metadata except icons
+    setCentralMessage("Reading all metadata.");
+    updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
+
+    // no sorting or filtering until all metadata loaded
+    filterMenu->setEnabled(false);
+    sortMenu->setEnabled(false);
+
+    if (reset(src + "1")) return;
+    dm->addAllMetadata();
+    if (!dm->isAllMetadataLoaded()) {
+        qWarning() << "WARNING" << CLASSFUNCTION << "Not all metadata loaded";
+//        return;
+    }
+
+    if (reset(src + "2")) return;
+    if (dm->abortLoadingModel || !G::allMetadataLoaded) {
+        updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
+        setCentralMessage("Image loading has been cancelled 2.");
+        QApplication::processEvents();
+        return;
+    }
+
+    // load icons
+
     MetadataCache *mct = metadataCacheThread;
-//    G::allMetadataLoaded = false;
     mct->isRefreshFolder = isRefreshingDM;
     mct->iconsCached.clear();
     mct->foundItemsToLoad = true;
@@ -2376,35 +2455,15 @@ void MW::loadLinearNewFolder()
     G::iconWMax = G::minIconSize;
     G::iconHMax = G::minIconSize;
 
-    // no sorting or filtering until all metadata loaded
-    filterMenu->setEnabled(false);
-    sortMenu->setEnabled(false);
-
-    setCentralMessage("Reading all metadata.");
-    updateMetadataThreadRunStatus(true, true, CLASSFUNCTION);
-
-    dm->addAllMetadata();
-    if (!dm->isAllMetadataLoaded()) {
-        qWarning() << "WARNING" << CLASSFUNCTION << "Not all metadata loaded";
-//        return;
-    }
-
-    if (dm->abortLoadingModel || !G::allMetadataLoaded) {
-        updateStatus(false, "Image loading has been cancelled", CLASSFUNCTION);
-        setCentralMessage("Image loading has been cancelled 2.");
-        QApplication::processEvents();
-        return;
-    }
-
-    // resize table columns after data is loaded
-    tableView->resizeColumnsToContents();
-    tableView->setColumnWidth(G::PathColumn, 24+8);
-
     // read icons
+    if (reset(src + "3")) return;
     updateIconRange(dm->currentSfRow);
+    if (reset(src + "4")) return;
     setCentralMessage("Reading icons.");
     QApplication::processEvents();
+    if (reset(src + "5")) return;
     mct->readIconChunk();
+    if (reset(src + "6")) return;
     updateIconBestFit();
     G::allIconsLoaded = dm->allIconsLoaded();
     updateMetadataThreadRunStatus(false, true, CLASSFUNCTION);
@@ -2414,8 +2473,15 @@ void MW::loadLinearNewFolder()
     sortMenu->setEnabled(true);
 
     // start image cache
+    if (reset(src + "7")) return;
     G::metaCacheMB = mct->memRequired();
     loadImageCacheForNewFolder();
+
+    // set folder load flags
+    G::isNewFolderLoaded = true;
+
+    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, "DONE");
+    if (G::isLogger || G::isFlowLogger) G::log("skipline");
 }
 
 void MW::loadImageCacheForNewFolder()
@@ -2451,20 +2517,12 @@ void MW::loadImageCacheForNewFolder()
     folderAndFileChangePath = "";
     if (fPath != "" && dm->proxyIndexFromPath(fPath).isValid()) {
         dm->select(fPath);
-//        gridView->selectThumb(fPath);
         dm->currentSfIdx = dm->proxyIndexFromPath(fPath);
     }
     else {
         dm->selectFirst();
-//        gridView->selectFirst();
         dm->currentSfIdx = dm->sf->index(0,0);
     }
-//    fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, CLASSFUNCTION);
-
-    /* now okay to write to xmp sidecar, as metadata is loaded and initial updates to
-       InfoView by fileSelectionChange have been completed.  Otherwise, InfoView::dataChanged
-       would prematurally trigger Metadata::writeXMP */
-//    G::isNewFolderLoadedAndInfoViewUpToDate = true;
 }
 
 void MW::scrollChange(int sfRow, QString src)
@@ -2565,7 +2623,7 @@ void MW::gridHasScrolled()
 */
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     if (G::isInitializing || !G::isNewFolderLoaded) return;
-return;
+
     if (G::ignoreScrollSignal == false) {
         G::ignoreScrollSignal = true;
         updateIconRange(-1);
@@ -3620,6 +3678,13 @@ void MW::setPrefPage(int page)
     lastPrefPage = page;
 }
 
+//void MW::prevSessionWindowLocation(QWindow::Visibility visibility)
+//{
+//    if (G::isLogger) G::log(CLASSFUNCTION);
+//    qDebug() << CLASSFUNCTION << testR;
+//    window()->setGeometry(testR);
+//}
+
 void MW::updateDisplayResolution()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
@@ -3804,6 +3869,8 @@ void MW::getDisplayProfile()
     ICC::setOutProfile();
     #endif
 }
+
+
 
 double MW::macActualDevicePixelRatio(QPoint loc, QScreen *screen)
 {
@@ -4282,6 +4349,7 @@ void MW::writeSettings()
 
     // state
     setting->setValue("Geometry", saveGeometry());
+    setting->setValue("WindowLocation", geometry());
     setting->setValue("WindowState", saveState());
     setting->setValue("isFullScreen", isFullScreen());
 
@@ -5335,7 +5403,6 @@ void MW::ingest()
     }
     else QMessageBox::information(this,
          "Oops", "There are no picks to ingest.    ", QMessageBox::Ok);
-    //*/
 }
 
 void MW::ejectUsb(QString path)

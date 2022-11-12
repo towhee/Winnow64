@@ -1,146 +1,57 @@
-Crashed Thread:        0  Dispatch queue: com.apple.main-thread
+"MW::keyReleaseEvent" false
+          5 MW::keyReleaseEvent
+"MW::stop" src = "Escape key"
+STOP           0 MW::stop
+STOP           0 MetaRead::stop
+STOP           0 MetadataCache::stop
+STOP           8 ImageCache::stop
+STOP         106 MW::updateImageCachingThreadRunStatus
+STOP          28 ImageCache::clearImageCache
+STOP           6 MW::updateImageCacheStatus                         Instruction: Clear  Source: ImageCache::clearImageCache
+STOP           3 MW::metadataChanged
+STOP           1 InfoView::showOrHide
+STOP          12 ImageView::clear
+STOP           1 ImageView::clear
+STOP           3 InfoView::clearInfo
+STOP           1 MW::metadataChanged
+STOP           4 InfoView::showOrHide
+STOP           0 MW::metadataChanged
+STOP           3 InfoView::showOrHide
+STOP           3 MW::updateDisplayResolution
+STOP           0 MW::metadataChanged
+STOP          19 InfoView::showOrHide
+STOP          52 MW::updateClassification
+STOP      23,694 DataModel::clearDataModel
+STOP           2 Filters::removeChildrenDynamicFilters
+STOP          18 Filters::clearAll
+STOP         138 Filters::setSearchNewFolder
+STOP         114 MW::setThreadRunStatusInactive
 
-Exception Type:        EXC_BAD_ACCESS (SIGBUS)
-Exception Codes:       KERN_PROTECTION_FAILURE at 0x020000600004fc6b -> 0x000000600004fc6b (possible pointer authentication failure)
-Exception Codes:       0x0000000000000002, 0x020000600004fc6b
-Exception Note:        EXC_CORPSE_NOTIFY
+      3,893 MW::setCentralMessage
+WARNING Metadata::loadImageMetadata NULL FILE REQUESTED FROM  "DataModel::addAllMetadata"
+         10 Metadata::loadImageMetadata                          Source: DataModel::addAllMetadata
+         22 Filters::loadedDataModel
+      1,248 DataModel::endLoad
+          1 MW::updateIconRange                                0
+          4 IconView::calcViewportRange
+        310 MW::setCentralMessage
+         18 IconView::resizeEvent
+          0 Filters::resizeEvent
+      2,922 Filters::resizeColumns
+          0 MetadataCache::readIconChunk
+          0 MetadataCache::loadIcon
+          3 MetadataCache::updateIconLoadingProgress
+          5 MW::setCentralMessage
+          1 MW::updateIconBestFit
+          1 IconView::bestAspect
+          3 IconView::setThumbParameters
+          0 IconView::bestAspect
+          1 IconView::setThumbParameters
+          1 MW::setThumbDockHeight
+         21 MW::setThumbDockFeatures
+        361 MW::updateMetadataThreadRunStatus
 
-Termination Reason:    Namespace SIGNAL, Code 10 Bus error: 10
-Terminating Process:   exc handler [70315]
-
-VM Region Info: 0x600004fc6b is in 0x1000000000-0x7000000000;  bytes after start: 343597710443  bytes before end: 68719149972
-      REGION TYPE                    START - END         [ VSIZE] PRT/MAX SHRMOD  REGION DETAIL
-      commpage (reserved)         fc0000000-1000000000   [  1.0G] ---/--- SM=NUL  ...(unallocated)
---->  GPU Carveout (reserved)    1000000000-7000000000   [384.0G] ---/--- SM=NUL  ...(unallocated)
-      GAP OF 0x5f9000000000 BYTES
-      MALLOC_NANO              600000000000-600008000000 [128.0M] rw-/rwx SM=PRV
-
-Thread 0 Crashed::  Dispatch queue: com.apple.main-thread
-0   QtGui                         	       0x103c52304 QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> >::get() const + 0 (qscopedpointer.h:147) [inlined]
-1   QtGui                         	       0x103c52304 decltype(fp.get()) qGetPtrHelper<QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> > >(QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> >&) + 0 (qglobal.h:1321) [inlined]
-2   QtGui                         	       0x103c52304 QStandardItem::d_func() + 0 (qstandarditemmodel.h:246) [inlined]
-3   QtGui                         	       0x103c52304 QStandardItemPrivate::position() const + 0 (qstandarditemmodel.cpp:95) [inlined]
-4   QtGui                         	       0x103c52304 QStandardItemModel::indexFromItem(QStandardItem const*) const + 16 (qstandarditemmodel.cpp:2355) [inlined]
-5   QtGui                         	       0x103c52304 QStandardItemModel::parent(QModelIndex const&) const + 72 (qstandarditemmodel.cpp:3003)
-6   QtGui                         	       0x103c4bfa4 QModelIndex::parent() const + 28 (qabstractitemmodel.h:517) [inlined]
-7   QtGui                         	       0x103c4bfa4 QStandardItemModelPrivate::_q_emitItemChanged(QModelIndex const&, QModelIndex const&) + 92 (qstandarditemmodel.cpp:453)
-8   QtCore                        	       0x10534abcc QObject::event(QEvent*) + 584 (qobject.cpp:1356)
-9   QtWidgets                     	       0x10425a1c8 QApplicationPrivate::notify_helper(QObject*, QEvent*) + 272 (qapplication.cpp:3350)
-10  QtWidgets                     	       0x10425b230 QApplication::notify(QObject*, QEvent*) + 512 (qapplication.cpp:3301)
-11  QtCore                        	       0x1053096a0 QCoreApplication::notifyInternal2(QObject*, QEvent*) + 208 (qcoreapplication.cpp:1067)
-12  QtCore                        	       0x10530a8e4 QCoreApplication::sendEvent(QObject*, QEvent*) + 16 (qcoreapplication.cpp:1483) [inlined]
-13  QtCore                        	       0x10530a8e4 QCoreApplicationPrivate::sendPostedEvents(QObject*, int, QThreadData*) + 808 (qcoreapplication.cpp:1845)
-14  libqcocoa.dylib               	       0x1049acc88 QCocoaEventDispatcherPrivate::processPostedEvents() + 312 (qcocoaeventdispatcher.mm:902)
-15  libqcocoa.dylib               	       0x1049ad318 QCocoaEventDispatcherPrivate::postedEventsSourceCallback(void*) + 48 (qcocoaeventdispatcher.mm:925)
-16  CoreFoundation                	       0x1864b1044 __CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__ + 28
-17  CoreFoundation                	       0x1864b0f90 __CFRunLoopDoSource0 + 208
-18  CoreFoundation                	       0x1864b0c90 __CFRunLoopDoSources0 + 268
-19  CoreFoundation                	       0x1864af610 __CFRunLoopRun + 828
-20  CoreFoundation                	       0x1864aeb34 CFRunLoopRunSpecific + 600
-21  HIToolbox                     	       0x18f0ee338 RunCurrentEventLoopInMode + 292
-22  HIToolbox                     	       0x18f0ee0b4 ReceiveNextEventCommon + 564
-23  HIToolbox                     	       0x18f0ede68 _BlockUntilNextEventMatchingListInModeWithFilter + 72
-24  AppKit                        	       0x18901651c _DPSNextEvent + 860
-25  AppKit                        	       0x189014e14 -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] + 1328
-26  AppKit                        	       0x189006fe0 -[NSApplication run] + 596
-27  libqcocoa.dylib               	       0x1049ac200 QCocoaEventDispatcher::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 1800 (qcocoaeventdispatcher.mm:430)
-28  QtCore                        	       0x105312cfc QEventLoop::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 36 (qeventloop.cpp:136) [inlined]
-29  QtCore                        	       0x105312cfc QEventLoop::exec(QFlags<QEventLoop::ProcessEventsFlag>) + 544 (qeventloop.cpp:218)
-30  QtCore                        	       0x105309d54 QCoreApplication::exec() + 128 (qcoreapplication.cpp:1388)
-31  Winnow                        	       0x10283be94 main + 672 (main.cpp:52)
-32  dyld                          	       0x1035f508c start + 520
-
-
-
-
-Crashed Thread:        0  Dispatch queue: com.apple.main-thread
-
-Exception Type:        EXC_BAD_ACCESS (SIGSEGV)
-Exception Codes:       KERN_INVALID_ADDRESS at 0x00001d800100000a
-Exception Codes:       0x0000000000000001, 0x00001d800100000a
-Exception Note:        EXC_CORPSE_NOTIFY
-
-Termination Reason:    Namespace SIGNAL, Code 11 Segmentation fault: 11
-Terminating Process:   exc handler [3586]
-
-VM Region Info: 0x1d800100000a is not in any region.  Bytes after previous region: 31954573459467  Bytes before following region: 73117506469878
-      REGION TYPE                    START - END         [ VSIZE] PRT/MAX SHRMOD  REGION DETAIL
-      commpage (reserved)        1000000000-7000000000   [384.0G] ---/--- SM=NUL  ...(unallocated)
---->  GAP OF 0x5f9000000000 BYTES
-      MALLOC_NANO              600000000000-600008000000 [128.0M] rw-/rwx SM=PRV
-
-Thread 0 Crashed::  Dispatch queue: com.apple.main-thread
-0   QtGui                         	       0x101fb2304 QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> >::get() const + 0 (qscopedpointer.h:147) [inlined]
-1   QtGui                         	       0x101fb2304 decltype(fp.get()) qGetPtrHelper<QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> > >(QScopedPointer<QStandardItemPrivate, QScopedPointerDeleter<QStandardItemPrivate> >&) + 0 (qglobal.h:1321) [inlined]
-2   QtGui                         	       0x101fb2304 QStandardItem::d_func() + 0 (qstandarditemmodel.h:246) [inlined]
-3   QtGui                         	       0x101fb2304 QStandardItemPrivate::position() const + 0 (qstandarditemmodel.cpp:95) [inlined]
-4   QtGui                         	       0x101fb2304 QStandardItemModel::indexFromItem(QStandardItem const*) const + 16 (qstandarditemmodel.cpp:2355) [inlined]
-5   QtGui                         	       0x101fb2304 QStandardItemModel::parent(QModelIndex const&) const + 72 (qstandarditemmodel.cpp:3003)
-6   QtGui                         	       0x101fabfa4 QModelIndex::parent() const + 28 (qabstractitemmodel.h:517) [inlined]
-7   QtGui                         	       0x101fabfa4 QStandardItemModelPrivate::_q_emitItemChanged(QModelIndex const&, QModelIndex const&) + 92 (qstandarditemmodel.cpp:453)
-8   QtCore                        	       0x1036aabcc QObject::event(QEvent*) + 584 (qobject.cpp:1356)
-9   QtWidgets                     	       0x1025ba1c8 QApplicationPrivate::notify_helper(QObject*, QEvent*) + 272 (qapplication.cpp:3350)
-10  QtWidgets                     	       0x1025bb230 QApplication::notify(QObject*, QEvent*) + 512 (qapplication.cpp:3301)
-11  QtCore                        	       0x1036696a0 QCoreApplication::notifyInternal2(QObject*, QEvent*) + 208 (qcoreapplication.cpp:1067)
-12  QtCore                        	       0x10366a8e4 QCoreApplication::sendEvent(QObject*, QEvent*) + 16 (qcoreapplication.cpp:1483) [inlined]
-13  QtCore                        	       0x10366a8e4 QCoreApplicationPrivate::sendPostedEvents(QObject*, int, QThreadData*) + 808 (qcoreapplication.cpp:1845)
-14  libqcocoa.dylib               	       0x102d0cc88 QCocoaEventDispatcherPrivate::processPostedEvents() + 312 (qcocoaeventdispatcher.mm:902)
-15  libqcocoa.dylib               	       0x102d0d318 QCocoaEventDispatcherPrivate::postedEventsSourceCallback(void*) + 48 (qcocoaeventdispatcher.mm:925)
-16  CoreFoundation                	       0x1b76dd044 __CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__ + 28
-17  CoreFoundation                	       0x1b76dcf90 __CFRunLoopDoSource0 + 208
-18  CoreFoundation                	       0x1b76dcc90 __CFRunLoopDoSources0 + 268
-19  CoreFoundation                	       0x1b76db610 __CFRunLoopRun + 828
-20  CoreFoundation                	       0x1b76dab34 CFRunLoopRunSpecific + 600
-21  HIToolbox                     	       0x1c031a338 RunCurrentEventLoopInMode + 292
-22  HIToolbox                     	       0x1c031a0b4 ReceiveNextEventCommon + 564
-23  HIToolbox                     	       0x1c0319e68 _BlockUntilNextEventMatchingListInModeWithFilter + 72
-24  AppKit                        	       0x1ba24251c _DPSNextEvent + 860
-25  AppKit                        	       0x1ba240e14 -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] + 1328
-26  AppKit                        	       0x1ba232fe0 -[NSApplication run] + 596
-27  libqcocoa.dylib               	       0x102d0c200 QCocoaEventDispatcher::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 1800 (qcocoaeventdispatcher.mm:430)
-28  QtCore                        	       0x103672cfc QEventLoop::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) + 36 (qeventloop.cpp:136) [inlined]
-29  QtCore                        	       0x103672cfc QEventLoop::exec(QFlags<QEventLoop::ProcessEventsFlag>) + 544 (qeventloop.cpp:218)
-30  QtCore                        	       0x103669d54 QCoreApplication::exec() + 128 (qcoreapplication.cpp:1388)
-31  Winnow                        	       0x100b725cc main + 672 (main.cpp:52)
-32  dyld                          	       0x10185508c start + 520
-
-
-
-// rgh change to emit?
-
-INSTANCE = 0 index(0,0) = QModelIndex(0,0,0x6000039f8350,DataModel(0x13def1c60))
-INSTANCE = 1 index(0,0) = QModelIndex(0,0,0x6000039fd340,DataModel(0x13def1c60))
-
-INSTANCE = 0 index(0,0) = QModelIndex(0,0,0x6000039dfec0,DataModel(0x123f75520)) p = 0x16f1b5080
-INSTANCE = 1 index(0,0) = QModelIndex(0,0,0x6000039cf400,DataModel(0x123f75520)) p = 0x16f1b4e20
-
-INSTANCE = 0 index(0,0) = QModelIndex(0,0,0x6000022e5ad0,DataModel(0x14cbf2df0)) p = 0x16af81080
-INSTANCE = 0 index(0,0) = QModelIndex(0,1,0x6000022e5ad0,DataModel(0x14cbf2df0)) p = 0x16af81080
-
-INSTANCE = 1 index(0,0) = QModelIndex(0,0,0x6000022b6fa0,DataModel(0x14cbf2df0)) p = 0x16af80e20
-INSTANCE = 1 index(0,0) = QModelIndex(0,1,0x6000022b6fa0,DataModel(0x14cbf2df0)) p = 0x16af80e20
-
-DataModel::setIconRange             m
-DataModel::saveSelection
-DataModel::recoverSelection
-DataModel::select                   m
-DataModel::abortLoad                m
-DataModel::clearDataModel           m
-DataModel::load                     m
-DataModel::addFileData              m
-DataModel::addFileDataForRow        m
-DataModel::endLoad                  m
-DataModel::aspectRatio              m
-DataModel::addMetadataForItem       m
-DataModel::selectFirst              m
-
-DataModel::iconLoaded               c
-DataModel::isIconCaching            c
-DataModel::readMetadataForItem      c   except Pixmap::load, line 87
-DataModel::setIcon                  c
-DataModel::setIconMax               n/a
-DataModel::setAllMetadataLoaded
-DataModel::allIconsLoaded
-
-
-Filters::loadedDataModel
+         18 MW::loadImageCacheForNewFolder
+          1 ImageCache::initImageCache
+          0 DataModel::selectFirst
+  7,387,027 DataModel::select

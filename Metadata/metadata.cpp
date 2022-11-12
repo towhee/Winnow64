@@ -1110,6 +1110,9 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 {
     if (G::isLogger) G::log(CLASSFUNCTION, fileInfo.filePath() + "  Source: " + source);
 
+    // check abort
+    if (G::dmEmpty) return false;
+
     // check instance up-to-date
     if (instance != G::dmInstance) {
         qWarning() << "WARNING" << CLASSFUNCTION

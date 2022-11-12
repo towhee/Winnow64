@@ -13,7 +13,6 @@ void MW::reportState(QString title)
         << "\nG::isNewFolderLoaded                   " << G::isNewFolderLoaded
         << "\nG::allMetadataLoaded                   " << G::allMetadataLoaded
         << "\nG::allIconsLoaded                      " << G::allIconsLoaded
-        << "\nG::isNewFolderLoadedAndInfoViewUpToDate" << G::isNewFolderLoadedAndInfoViewUpToDate
         << "\nG::isNewSelection                      " << G::isNewSelection
         << "\nG::stop                                " << G::stop
         << "\ndm->forceBuildFilters                  " << dm->forceBuildFilters
@@ -146,7 +145,6 @@ QString MW::diagnostics()
     rpt << "\n" << "G::isNewSelection = " << G::s(G::isNewSelection);
     rpt << "\n" << "G::allMetadataLoaded = " << G::s(G::allMetadataLoaded);
     rpt << "\n" << "G::allIconsLoaded = " << G::s(G::allIconsLoaded);
-    rpt << "\n" << "G::isNewFolderLoadedAndInfoViewUpToDate = " << G::s(G::isNewFolderLoadedAndInfoViewUpToDate);
     rpt << "\n" << "dm->abortLoadingModel = " << G::s(dm->abortLoadingModel);
     rpt << "\n" << "dm->loadingModel = " << G::s(dm->loadingModel);
     rpt << "\n" << "dm->instance = " << G::s(dm->instance);

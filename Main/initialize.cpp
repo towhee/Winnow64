@@ -5,6 +5,7 @@ void MW::initialize()
     if (G::isLogger) G::log(CLASSFUNCTION);
     this->setWindowTitle(winnowWithVersion);
     G::stop = false;
+    G::dmEmpty = true;
     G::isProcessingExportedImages = false;
     G::isDev = isDevelopment();
     G::isInitializing = true;
@@ -54,6 +55,7 @@ void MW::initialize()
     pickStack = new QStack<Pick>;
     slideshowRandomHistoryStack = new QStack<QString>;
     scrollRow = 0;
+
 }
 
 void MW::setupPlatform()
@@ -234,14 +236,14 @@ void MW::createMDCache()
     connect(metadataCacheThread, &MetadataCache::addToDatamodel, dm, &DataModel::addMetadataForItem,
             Qt::BlockingQueuedConnection);
     // update icon in datamodel
-    connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon);
-    connect(metadataCacheThread, &MetadataCache::setIconCaching, dm, &DataModel::setIconCaching);
+    connect(metadataCacheThread, &MetadataCache::setIcon, dm, &DataModel::setIcon,
+            Qt::DirectConnection);
 
     connect(metadataCacheThread, &MetadataCache::updateIsRunning,
             this, &MW::updateMetadataThreadRunStatus);
 
     connect(metadataCacheThread, &MetadataCache::showCacheStatus,
-            this, &MW::setCentralMessage);
+            this, &MW::setCentralMessage, Qt::DirectConnection);
 
     connect(metadataCacheThread, &MetadataCache::selectFirst,
             thumbView, &IconView::selectFirst);

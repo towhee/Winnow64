@@ -1,3 +1,12 @@
+MacOS preferences editor
+
+    Use "PLIST Editor.app" - can sort keys, which makes it much easier to manage than xcode editor
+
+MacOS Winnow Settings
+
+    Location: /Users/roryhill/Library/Preferences/roryhill.zenfolio.com.winnow.plist
+    PLIST Editor.app (can sort by key, making it easier to locate keys)
+
 MacOS permissions
 
     When developing in Qt Creator in the project mode permission setting does not work

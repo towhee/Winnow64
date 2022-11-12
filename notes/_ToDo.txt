@@ -1,20 +1,16 @@
 BUGS / TO DO
-- Cancel ingest
+- App not closing while reading large foldeer
 - Convert path to windows \ for copy path to clipboard
 - CLASSFUNCTION in Heic.cpp
 - Extract frame from video
 - Update use of current image for video frame
-- App not closing while reading large foldeer
 - IPhone image/video creation date
 - PNG no image or icon (-test1)
-- Record mac display space for close/open app location
 - Add G::showWarnings
 - Rethink load Metadata flags and logic
 - Make ImageDecoder warnings context specific is hasMetadata
-- Review metadataLoaded flag meaning and use
 - Read HEIC metadata (MAC issue only?)
 - Olympus subfolders not showing for USB drive in FSTree
-- Cursor tall rectangle over thumbnails for PNG files
 - Save preview as PNG include color manage corrections
 - MW::enableSelectionDependentMenus needs updating for all situations
 
@@ -76,6 +72,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Cursor tall rectangle over thumbnails
+- Cancel background ingest
+- Work around for restoreGeometry not working on multi displays
 - Show drag copy progress for big copy ops with ESC
 - Copy file path to clipboard
 - Fix file permissions issue

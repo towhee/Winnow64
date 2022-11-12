@@ -1,29 +1,31 @@
 #include "framedecoder.h"
 
 /*
-    Generate a thumbnail from the first video frame in a video file.
+    Generates a thumbnail from the first video frame in a video file.
 
     This is accomplished by creating a QMediaPlayer that decodes and plays the video file
     to the virtual canvas QVideoSink. Each time the video frame changes QVideoSink emits
     a videoFrameChanged signal. FrameDecoder::frameChanged receives the signal, converts
     the frame into a QImage, emits setFrameIcon and stops the QMediaPlayer. The
     setFrameIcon signal is received by DataModel::setIconFromFrame, where the icon is
-    added to the datamodel and then the instance of FrameDecoder is deallocated
-    (deleted).
+    added to the datamodel.
 
     This convoluted process is required because QVideoSink does not know which file the
     video frame came from.  When processing many files, it is not guaranteed that the
-    signal/slots will be sequential.  To solve this a separate instance of FrameDecoder
-    is created for each file.  When the thumbnail (icon) has been received by the datamodel
-    the FrameDecoder instance is deleted.
+    signal/slots will be sequential.  FrameDecoder maintains a queue (queueIndex) of
+    videos to process.
 
     Summary of sequence:
-        - thumb->loadFromVideo creates FrameDecoder instance frameDecoder
-        - thumb->loadFromVideo calls frameDecoder->getFrame
-        - frameDecoder->getFrame starts mediaPlayer
+        - thumb->loadFromVideo signals to frameDecoder->addToQueue
+        - frameDecoder->addToQueue calls frameDecoder->getNextThumbNail
+        - start processing loop
+        - frameDecoder->getNextThumbNail sets media source to first in queue
+          and starts mediaPlayer
         - mediaPlayer signals frameDecoder->frameChanged
         - frameDecoder->frameChanged signals dm->setIconFromFrame
-        - dm->setIconFromFrame deletes frameDecoder
+        - frameDecoder->frameChanged calls frameDecoder->getNextThumbNail
+        - loop until queue is empty
+
 */
 
 FrameDecoder::FrameDecoder(QObject *parent)
@@ -154,15 +156,8 @@ void FrameDecoder::frameChanged(const QVideoFrame frame)
         QPixmap pm = QPixmap::fromImage(im.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio));
         qint64 duration = mediaPlayer->duration();
         emit setFrameIcon(dmIdx, pm, dmInstance, duration, thisFrameDecoder);
-//        mutex.lock();
         int i = queueIndex(dmIdx);
         if (i != -1) queue.remove(i);
-//        mutex.unlock();
-        /*
-        qDebug() << "FrameDecoder::frameChanged            "
-                 << "row =" << dmIdx.row()
-                 ;
-                 */
     }
     getNextThumbNail("frameChanged");
 }
