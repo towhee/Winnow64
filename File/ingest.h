@@ -28,6 +28,7 @@ public:
            QMap<QString, QString>&filenameTemplates,
            int &filenameTemplateSelected);
     void commence();
+    void stop();
 
 protected:
     void run() Q_DECL_OVERRIDE;

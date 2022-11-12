@@ -150,7 +150,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     The signal dataEdited is emitted, which triggers Embel to update the text fields. This
     will only work if Embel::isRemote == false.
 */
-    bool isSidecarChange = G::useSidecar /*&& G::isNewFolderLoadedAndInfoViewUpToDate*/ && !isNewImageDataChange;
+    bool isSidecarChange = G::useSidecar && !isNewImageDataChange;
     bool usedPopUp = false;
     static int count = 0;
     QString src = "InfoView::dataChanged";

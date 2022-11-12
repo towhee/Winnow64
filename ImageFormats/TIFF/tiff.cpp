@@ -948,6 +948,10 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         return false;
     }
 
+    // change p.file from QIODevice::ReadOnly to QIODevice::ReadWrite
+    p.file.close();
+    p.file.open(QIODevice::ReadWrite);
+
     // go to last main IFD offset and replace with offset to new IFD at end of file
     m.offsetThumb = p.file.size();
     p.file.seek(lastIFDOffsetPosition);

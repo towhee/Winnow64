@@ -157,7 +157,7 @@ DataModel::DataModel(QWidget *parent,
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
 
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     isDebug = false;
 
     /* Every time a new folder is selected the model instance is incremented to check for concurrency
@@ -184,7 +184,7 @@ DataModel::DataModel(QWidget *parent,
 
 void DataModel::setModelProperties()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance;
 
     setSortRole(Qt::EditRole);
@@ -268,7 +268,7 @@ void DataModel::setModelProperties()
 }
 void DataModel::clearDataModel()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     // clear the model
     if (mLock) return;
@@ -308,7 +308,7 @@ void DataModel::insert(QString fPath)
     Insert a new image into the data model.  Use when a new image is created by embel export
     or meanStack to quickly refresh the active folder with the just saved image.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance;
     QFileInfo insertFile(fPath);
@@ -337,7 +337,7 @@ void DataModel::remove(QString fPath)
     Delete a row from the data model matching the absolute path.  This is used when an image
     file has been deleted by Winnow.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << fPath;
     // remove row from datamodel
@@ -365,7 +365,7 @@ void DataModel::remove(QString fPath)
 
 void DataModel::find(QString text)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << text;
     mutex.lock();
@@ -382,21 +382,30 @@ void DataModel::find(QString text)
 
 void DataModel::abortLoad()
 {
-    lastFunction = __FUNCTION__;
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    lastFunction = "";
+    if (G::isLogger) G::log(CLASSFUNCTION, "instance = " + QString::number(instance));
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance;
-    abortLoadingModel = true;
+    if (loadingModel) abortLoadingModel = true;
 }
 
 bool DataModel::endLoad(bool success)
 {
-    lastFunction = __FUNCTION__;
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    lastFunction = "";
+    if (G::isLogger) G::log(CLASSFUNCTION, "instance = " + QString::number(instance));
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "success =" << success;
 
     loadingModel = false;
-    return (success);
+    abortLoadingModel = false;
+    if (success) {
+        G::dmEmpty = false;
+        return true;
+    }
+    else {
+        clear();
+        G::dmEmpty = true;
+        return false;
+    }
 }
 
 bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
@@ -420,7 +429,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     - Note: build QMaps of unique field values for the filters is not done here, but
       on demand when the user selects the filter panel or a menu filter command.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION, folderPath);
 //    while (mLock) {
 //        qDebug() << "waiting...";
@@ -434,7 +443,10 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
     filters->loadedDataModel(false);
     loadingModel = true;
 
-    emit centralMsg("Commencing to load folder " + folderPath);    // rghmsg
+    if (G::isLinearLoading) {
+        emit centralMsg("Commencing to load folder " + folderPath);    // rghmsg
+        qApp->processEvents();
+    }
 
     if (G::isLogger || G::isFlowLogger) G::log("DataModel::load", "continue loading");
 
@@ -506,6 +518,7 @@ bool DataModel::load(QString &folderPath, bool includeSubfoldersFlag)
                                 QString::number(folderCount) + " folders" +
                                 escapeClause;
                     emit centralMsg(s);    // rghmsg
+                    qApp->processEvents();
                 }
             }
         }
@@ -534,7 +547,7 @@ bool DataModel::addFileData()
     • SearchColumn
     • ErrColumn
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     QString logmsg = QString::number(fileInfoList.count()) + " images";
@@ -608,6 +621,7 @@ bool DataModel::addFileData()
                 QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                             " system file info loaded.";
                 emit centralMsg(s);    // rghmsg
+                qApp->processEvents();
             }
         }
     }
@@ -628,7 +642,7 @@ bool DataModel::addFileData()
 
 void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION
                           << "instance =" << instance
@@ -689,7 +703,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo)
 
 bool DataModel::updateFileData(QFileInfo fileInfo)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
 //    qDebug() << "DataModel::updateFileData" << "Instance =" << instance << currentFolderPath;
     QString fPath = fileInfo.filePath();
@@ -717,7 +731,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
 
     Used by ImageDecoder, InfoString, IngestDlg and XMP sidecars.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION, fPath);
 //    qDebug() << "DataModel::imMetadata" << "Instance =" << instance << currentFolderPath;
     ImageMetadata m;
@@ -870,7 +884,7 @@ void DataModel::addAllMetadata()
     the entire dataset. Since the program will be waiting for the update this does not need
     to run as a separate thread and can be executed directly.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "DataModel::addAllMetadata";
     if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
 //    G::t.restart();
@@ -881,8 +895,9 @@ void DataModel::addAllMetadata()
             QString s = QString::number(row) + " of " + QString::number(rowCount()) +
                         " secondary metadata loading...";
             emit centralMsg(s);    // rghmsg
+            qApp->processEvents();
         }
-        if (abortLoadingModel) {
+        if (abortLoadingModel || G::dmEmpty) {
             endLoad(false);
             setAllMetadataLoaded(false);
             return;
@@ -907,7 +922,6 @@ void DataModel::addAllMetadata()
     }
     setAllMetadataLoaded(true);
     endLoad(true);
-//    loadingModel = false;
     /*
     qint64 ms = G::t.elapsed();
     qreal msperfile = static_cast<double>(ms) / count;
@@ -922,7 +936,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
 /*
     Reads the image metadata into the datamodel for the row.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION, index(row, 0).data(G::PathRole).toString());
 //    qDebug() << "DataModel::readMetadataForItem" << "Instance =" << instance << currentFolderPath;
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
@@ -992,7 +1006,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     been loaded, but editable data, (such as rating, label, title, email, url) may have been
     edited in the jpg file of the raw+jpg pair. If so, we do not want to overwrite this data.
 */    
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     mCopy = m;
     line = 973;
     if (G::isLogger) G::log(CLASSFUNCTION);
@@ -1157,7 +1171,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
 
 bool DataModel::metadataLoaded(int dmRow)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "row =" << dmRow
@@ -1167,7 +1181,7 @@ bool DataModel::metadataLoaded(int dmRow)
 
 bool DataModel::instanceClash(QModelIndex idx, QString src)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << currentFolderPath;
     return false;
@@ -1181,7 +1195,7 @@ bool DataModel::instanceClash(QModelIndex idx, QString src)
 
 double DataModel::aspectRatio(int w, int h, int orientation)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     if (w == 0 || h == 0) return 1.0;
@@ -1194,7 +1208,7 @@ double DataModel::aspectRatio(int w, int h, int orientation)
 void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
                          QString src, int role, int align)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::stop) return;
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "row =" << dmIdx.row()
@@ -1239,7 +1253,7 @@ void DataModel::setValue(QModelIndex dmIdx, QVariant value, int instance,
 void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
                            QString src, int role, int align)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::stop) return;
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "row =" << sfIdx.row()
@@ -1274,7 +1288,7 @@ void DataModel::setValueSf(QModelIndex sfIdx, QVariant value, int instance,
 
 void DataModel::setValuePath(QString fPath, int col, QVariant value, int instance, int role)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "col =" << col
                           << currentFolderPath;
@@ -1317,7 +1331,7 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
     from the previous folder. To prevent this, the datamodel instance is incremented
     every time a new folder is loaded, and this is checked against the signal instance.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "fromInstance =" << fromInstance
@@ -1336,10 +1350,10 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
         return;
     }
 //    qDebug() << "DataModel::setIconFromVideoFrame" << "Instance =" << instance << currentFolderPath;
+
     int row = dmIdx.row();
 //    qDebug() << "DataModel::setIconFromVideoFrame       row =" << row;
     QString modelDuration = index(dmIdx.row(), G::DurationColumn).data().toString();
-    mutex.lock();
     if (modelDuration == "") {
         duration /= 1000;
         QTime durationTime((duration / 3600) % 60, (duration / 60) % 60,
@@ -1361,9 +1375,6 @@ void DataModel::setIconFromVideoFrame(QModelIndex dmIdx, QPixmap &pm, int fromIn
             setIconMax(pm);
         }
     }
-    mutex.unlock();
-//    delete frameDecoder;
-    G::isGettingVideoFrame = false;
 }
 
 void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src)
@@ -1374,12 +1385,14 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     To prevent this, the datamodel instance is incremented every time a new folder is
     loaded, and this is checked against the signal instance.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log("DataModel::setIcon");
-    if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
-                          << "fromInstance =" << fromInstance
-                          << "row =" << dmIdx.row()
-                          << currentFolderPath;
+    if (isDebug) {
+        qDebug() << CLASSFUNCTION << "instance =" << instance
+                 << "fromInstance =" << fromInstance
+                 << "row =" << dmIdx.row()
+                 << currentFolderPath;
+    }
     if (loadingModel) {
         qWarning() << "WARNING" << "DataModel::setIcon" << "loadingModel =" << loadingModel;
         return;
@@ -1405,7 +1418,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         return;
     }
 
-    mutex.lock();
+    // mutex.lock();
     QStandardItem *item = itemFromIndex(dmIdx);
     /* const QIcon icon(pm) - required to prevent occasional malloc deallocation error
        in qarraydata.h deallocate:
@@ -1419,7 +1432,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     item->setIcon(icon);
     setData(dmIdx, false, G::CachingIconRole);
     setIconMax(pm);
-    mutex.unlock();
+    // mutex.unlock();
 }
 
 void DataModel::setIconMax(const QPixmap &pm)
@@ -1427,7 +1440,7 @@ void DataModel::setIconMax(const QPixmap &pm)
 /*
     Used locally in DataModel.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     if (G::iconWMax == G::maxIconSize && G::iconHMax == G::maxIconSize) return;
@@ -1440,47 +1453,9 @@ void DataModel::setIconMax(const QPixmap &pm)
     if (h > G::iconHMax) G::iconHMax = h;
 }
 
-bool DataModel::isIconCaching(QModelIndex sfIdx, int instance)
-{
-    lastFunction = __FUNCTION__;
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << this->instance
-                          << "fromInstance =" << instance
-                          << "row =" << sfIdx.row()
-                          << currentFolderPath;
-    // might be called from previous folder during folder change
-    if (instance != this->instance) {
-        qWarning() << "WARNING" << "DataModel::isIconCaching" << sfIdx << "Instance conflict = "
-                 << "DM instance =" << this->instance
-                 << "Src instance =" << instance
-                    ;
-        return false;
-    }
-    if (!sfIdx.isValid()) {
-        qWarning() << "WARNING" << CLASSFUNCTION << "sfIdx.isValid() =" << sfIdx.isValid() << sfIdx;
-        return false;
-    }
-    return sfIdx.data(G::CachingIconRole).toBool();
-//    return sf->index(sfRow,0).data(G::CachingIconRole).toBool();
-}
-
-void DataModel::setIconCaching(int sfRow, bool state)
-{
-    lastFunction = __FUNCTION__;
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
-                          << "row =" << sfRow
-                          << currentFolderPath;
-    mutex.lock();
-    QModelIndex dmIdx = sf->mapToSource(sf->index(sfRow, 0));
-    setData(dmIdx, state, G::CachingIconRole);
-    mutex.unlock();
-
-}
-
 bool DataModel::iconLoaded(int sfRow, int instance)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << this->instance
                           << "fromInstance =" << instance
@@ -1510,7 +1485,7 @@ bool DataModel::iconLoaded(int sfRow, int instance)
 
 int DataModel::iconCount()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     int count = 0;
     for (int row = 0; row < rowCount(); ++row) {
@@ -1522,7 +1497,7 @@ int DataModel::iconCount()
 
 bool DataModel::allIconsLoaded()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     for (int row = 0; row < rowCount(); ++row) {
 //        qDebug() << "DataModel::allIconsLoaded  itemFromIndex  row =" << row;
@@ -1533,7 +1508,7 @@ bool DataModel::allIconsLoaded()
 
 void DataModel::clearAllIcons()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     mutex.lock();
     QStandardItem *item;
@@ -1549,7 +1524,7 @@ void DataModel::clearAllIcons()
 
 void DataModel::setIconRange(int first, int last)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     mutex.lock();
     startIconRange = first;
@@ -1563,7 +1538,7 @@ void DataModel::clearOutOfRangeIcons(int startRow)
     Not used.  See MetaRead::cleanupIcons
 */
 //    qDebug() << "DataModel::clearOutOfRangeIcons" << startRow;
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "startRow =" << startRow
                           << currentFolderPath;
@@ -1588,7 +1563,7 @@ void DataModel::clearOutOfRangeIcons(int startRow)
 
 void DataModel::setAllMetadataLoaded(bool isLoaded)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     G::allMetadataLoaded = isLoaded;
     filters->loadedDataModel(isLoaded);
@@ -1596,7 +1571,7 @@ void DataModel::setAllMetadataLoaded(bool isLoaded)
 
 bool DataModel::isAllMetadataLoaded()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     for (int row = 0; row < rowCount(); ++row) {
         if (!index(row, G::MetadataLoadedColumn).data().toBool()) return false;
@@ -1606,7 +1581,7 @@ bool DataModel::isAllMetadataLoaded()
 
 int DataModel::rowFromPath(QString fPath)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << fPath << currentFolderPath;
     if (G::isLogger) G::log("DataModel::rowFromPath");
     if (fPathRow.contains(fPath)) return fPathRow[fPath];
@@ -1615,7 +1590,7 @@ int DataModel::rowFromPath(QString fPath)
 
 void DataModel::refreshRowFromPath()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     fPathRow.clear();
@@ -1633,7 +1608,7 @@ bool DataModel::hasFolderChanged()
     compare the last modified datetime for each file.  If a file has been modified since the
     datamodel was loaded then it is added to the modifiedFiles list and return false.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     bool hasChanged = false;
@@ -1688,7 +1663,7 @@ void DataModel::searchStringChange(QString searchString)
     Where there is a match G::SearchColumn is set to true, otherwise false. Update the
     filtered and unfiltered counts.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "searchString =" << searchString
@@ -1716,7 +1691,7 @@ void DataModel::rebuildTypeFilter()
     When Raw+Jpg is toggled in the main program MW the file type filter must
     be rebuilt.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     filters->types->takeChildren();
@@ -1756,7 +1731,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
     The hash table fPathRow {path, row} is build when the datamodel is loaded to provide a
     quick lookup to get the datamodel row from an image path.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log("DataModel::proxyIndexFromPath");
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "fPath =" << fPath
@@ -1785,7 +1760,7 @@ QModelIndex DataModel::proxyIndexFromPath(QString fPath)
 }
 
 int DataModel::proxyRowFromModelRow(int dmRow) {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "row =" << dmRow
@@ -1795,7 +1770,7 @@ int DataModel::proxyRowFromModelRow(int dmRow) {
 
 int DataModel::modelRowFromProxyRow(int sfRow)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "row =" << sfRow
@@ -1823,7 +1798,7 @@ int DataModel::modelRowFromProxyRow(int sfRow)
 
 void DataModel::selectAll()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     QItemSelection selection;
@@ -1839,7 +1814,7 @@ void DataModel::selectAll()
 
 void DataModel::selectFirst()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     select(sf->index(0, 0));
@@ -1847,7 +1822,7 @@ void DataModel::selectFirst()
 
 void DataModel::selectLast()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     select(sf->index(sf->rowCount() - 1, 0));
@@ -1855,7 +1830,7 @@ void DataModel::selectLast()
 
 void DataModel::select(QString &fPath)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     select(proxyIndexFromPath(fPath));
@@ -1863,7 +1838,7 @@ void DataModel::select(QString &fPath)
 
 void DataModel::select(int row)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "row =" << row
@@ -1873,7 +1848,7 @@ void DataModel::select(int row)
 
 void DataModel::select(QModelIndex idx)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance
                           << "idx =" << idx
@@ -1891,7 +1866,7 @@ void DataModel::saveSelection()
     is hidden it loses the current index and selection, which has to be re-established each
     time it is made visible.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     selectedRows = selectionModel->selectedRows();
@@ -1900,7 +1875,7 @@ void DataModel::saveSelection()
 
 void DataModel::recoverSelection()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     QItemSelection selection;
@@ -1916,7 +1891,7 @@ bool DataModel::getSelection(QStringList &list)
     Adds each image that is selected or picked as a file path to list. If there are picks and
     a selection then a dialog offers the user a choice to use.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
 
@@ -1976,7 +1951,7 @@ bool DataModel::getSelection(QStringList &list)
 
 QStringList DataModel::getSelectionOrPicks()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
 
@@ -2009,7 +1984,7 @@ QStringList DataModel::getSelectionOrPicks()
 
 bool DataModel::isPick()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     for (int row = 0; row < sf->rowCount(); ++row) {
@@ -2024,7 +1999,7 @@ void DataModel::clearPicks()
 /*
     reset all the picks to false.
 */
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     mutex.lock();
@@ -2036,7 +2011,7 @@ void DataModel::clearPicks()
 
 QString DataModel::diagnosticsErrors()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     QString reportString;
@@ -2066,7 +2041,7 @@ QString DataModel::diagnosticsErrors()
 
 QString DataModel::diagnostics()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     QString reportString;
@@ -2099,7 +2074,7 @@ QString DataModel::diagnostics()
 
 QString DataModel::diagnosticsForCurrentRow()
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     QString reportString;
@@ -2122,7 +2097,7 @@ QString DataModel::diagnosticsForCurrentRow()
 
 void DataModel::getDiagnosticsForRow(int row, QTextStream& rpt)
 {
-    lastFunction = __FUNCTION__;
+    lastFunction = "";
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (isDebug) qDebug() << CLASSFUNCTION << "instance =" << instance << currentFolderPath;
     QString s = "";

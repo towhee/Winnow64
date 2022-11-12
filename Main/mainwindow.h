@@ -127,6 +127,8 @@ public:
     int copyCutCount;   // rgh req'd?
     QTextStream rpt;
 
+    QWindow *thisWindow;
+
     // QSettings
     QSettings *setting;
     QMap<QString, QAction *> actionKeys;
@@ -332,6 +334,8 @@ public:
     QString css1;               // stylesheet text
     QString cssBase;            // stylesheet text
 
+    void test();                    // for debugging
+
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
     void moveEvent(QMoveEvent *event) override;
@@ -345,6 +349,7 @@ protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
 
 public slots:
+//    void prevSessionWindowLocation(QWindow::Visibility visibility);
     void appStateChange(Qt::ApplicationState state);
     void handleStartupArgs(const QString &msg);
     void watchCurrentFolder();
@@ -352,7 +357,7 @@ public slots:
     void folderSelectionChange();
     void fileSelectionChange(QModelIndex current, QModelIndex, QString src);
     void folderAndFileSelectionChange(QString fPath, QString src = "");
-    void reset(QString src);
+    bool reset(QString src = "");
     void nullFiltration();
     void handleDrop(QString fPath);
 //    void handleDrop(QDropEvent *event);
@@ -1190,6 +1195,8 @@ private:
     void addRecentFolder(QString fPath);
     void insertThumbnails();
 
+    QRect testR;
+
     qulonglong memoryReqdForPicks();
     qulonglong memoryReqdForSelection();
     QString enquote(QString &s);
@@ -1229,7 +1236,6 @@ private:
     void bounceFoldersStressTestFromMenu();
     void bounceFoldersStressTest(int ms = 0, int duration = 0);
     void testMultiThreadDataModel();
-    void test();                    // for debugging
     template<typename T> void test2(T& io, int x);
     void testNewFileFormat();       // for debugging
     QElapsedTimer testTime;

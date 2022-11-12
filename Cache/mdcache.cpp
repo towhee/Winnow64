@@ -348,10 +348,9 @@ bool MetadataCache::loadIcon(int sfRow)
     if (G::isLogger) G::log("MetadataCache::loadIcon");
     QModelIndex sfIdx = dm->sf->index(sfRow,0);
     QModelIndex dmIdx = dm->sf->mapToSource(sfIdx);
+
     if (!dmIdx.isValid()) return false;
-    if (!dm->isIconCaching(sfIdx, instance) && !dm->iconLoaded(sfRow, instance)) {
-//        emit setIconCaching(sfRow, true);
-        dm->setIconCaching(sfRow, true);
+    if (!dm->iconLoaded(sfRow, instance)) {
         int dmRow = dmIdx.row();
         bool isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
         QImage image;
@@ -380,14 +379,18 @@ bool MetadataCache::loadIcon(int sfRow)
 void MetadataCache::updateIconLoadingProgress(int count, int end)
 {
     if (G::isLogger) G::log("MetadataCache::updateIconLoadingProgress");
+    if (G::dmEmpty) return;
     // show progress
-    if (!G::isNewFolderLoaded) {
+    if (!G::isNewFolderLoaded && !G::stop) {
         if (count % countInterval == 0) {
             QString msg = "Loading thumbnails: ";
             msg += QString::number(count) + " of " + QString::number(end);
             emit showCacheStatus(msg);
         }
     }
+//    if (G::dmEmpty) {
+//        emit showCacheStatus("Image loading has been aborted");
+//    }
 }
 
 void MetadataCache::readAllMetadata()
@@ -470,7 +473,7 @@ void MetadataCache::readIconChunk()
         end = dm->sf->rowCount();
     }
     int count = 0;
-//    /*
+    /*
     qDebug() << "MetadataCache::readIconChunk" << "start =" << start << "end =" << end
              << "firstIconVisible =" << firstIconVisible
              << "lastIconVisible =" << lastIconVisible
@@ -480,38 +483,38 @@ void MetadataCache::readIconChunk()
 
     // process visible icons first
     for (int row = firstIconVisible; row <= lastIconVisible; ++row) {
-        if (abort) {
+        if (abort || G::dmEmpty) {
             emit updateIsRunning(false, true, "MetadataCache::readIconChunk");
             return;
         }
-//        qDebug() << "MetadataCache::readIconChunk 0 row =" << row;
+//        qDebug() << "MetadataCache::readIconChunk 0 row =" << row << "G::dmEmpty =" << G::dmEmpty;
         loadIcon(row);
-        updateIconLoadingProgress(count++, end);
+//        updateIconLoadingProgress(count++, end);
     }
 
     // process icons before visible range
     if (start < firstIconVisible) {
         for (int row = start; row < firstIconVisible; ++row) {
-            if (abort) {
+            if (abort || G::dmEmpty) {
                 emit updateIsRunning(false, true, "MetadataCache::readIconChunk");
                 return;
             }
-//            qDebug() << "MetadataCache::readIconChunk 1 row =" << row;
+//            qDebug() << "MetadataCache::readIconChunk 1 row =" << row << "G::dmEmpty =" << G::dmEmpty;
             loadIcon(row);
-            updateIconLoadingProgress(count++, end);
+//            updateIconLoadingProgress(count++, end);
         }
     }
 
     // process icons after visible range
     if (end > lastIconVisible + 1) {
         for (int row = lastIconVisible = 1; row < end; ++row) {
-            if (abort) {
+            if (abort || G::dmEmpty) {
                 emit updateIsRunning(false, true, "MetadataCache::readIconChunk");
                 return;
             }
-//            qDebug() << "MetadataCache::readIconChunk 2 row =" << row;
+//            qDebug() << "MetadataCache::readIconChunk 2 row =" << row << "G::dmEmpty =" << G::dmEmpty;
             loadIcon(row);
-            updateIconLoadingProgress(count++, end);
+//            updateIconLoadingProgress(count++, end);
         }
     }
 }

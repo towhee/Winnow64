@@ -437,6 +437,15 @@ void FSTree::expand(const QModelIndex &/*idx*/)
 //    t.restart();
 }
 
+//void FSTree::expandAll(const QModelIndex &idx)
+//{
+///*
+//    .
+//*/
+//    if (G::isLogger) G::log(CLASSFUNCTION);
+//    this->expandAll(idx);
+//}
+
 void FSTree::resizeEvent(QResizeEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION);

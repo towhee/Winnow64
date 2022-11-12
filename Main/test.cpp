@@ -128,39 +128,5 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-//    int a = 2;
-//    int b = 4;
-//    int c = a | b;
-//    qDebug() << "c =" << QString::number(c, 2);
-//    return;
-
-    QString f0 = "/Users/roryhill/Pictures/_test0/IMG_5853.heic";
-    QString f1 = "/Users/roryhill/Pictures/_test0/A1_02764.ARW";
-    QFileDevice::Permissions p0 = QFile::permissions(f0);
-    QFileDevice::Permissions p1 = QFile::permissions(f1);
-    qDebug() << "p0 =" << p0;
-    qDebug() << "p1 =" << p1;
-//    bool success = QFile::setPermissions(f1, p0);
-//    p1 = QFile::permissions(f1);
-//    qDebug() << "p1 =" << p1 << success << QFile(f1).isOpen();
-    return;
-
-    bool isReadWrite;
-    bool isRead;
-    bool isWrite;
-    QString fPath = "/Users/roryhill/Pictures/_test0/A1_02764.ARW";
-    QFileDevice::Permissions pRW = QFileDevice::ReadUser | QFileDevice::WriteUser;
-    QFileDevice::Permissions pOld = QFile::permissions(fPath);
-//    int r = p & QFileDevice::ReadUser;
-//    int w = p & QFileDevice::WriteUser;
-    QFileDevice::Permissions pNew = pOld | pRW;
-    QFile(fPath).setPermissions(pNew);
-    qDebug() << fPath << pOld << pNew;
-
-    isRead = pNew & QFileDevice::ReadUser;
-    isWrite = pNew & QFileDevice::WriteUser;
-    isReadWrite = isRead & isWrite;
-//    qDebug() << fPath << QFile::permissions(fPath) << p << isRead << isWrite << isReadWrite << rw;
-    return;
 }
 

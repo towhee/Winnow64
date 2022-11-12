@@ -32,6 +32,18 @@ Ingest::Ingest(QWidget *parent,
     getPicks();
 }
 
+void Ingest::stop()
+{
+    if (isRunning()) {
+        mutex.lock();
+        abort = true;
+        condition.wakeOne();
+        mutex.unlock();
+        wait();
+    }
+    abort = false;
+}
+
 void Ingest::commence()
 {
     if (isRunning()) {
@@ -330,6 +342,7 @@ void Ingest::run()
 
     // copy picked images
     for (int i = 0; i < pickList.size(); ++i) {
+        if (abort) break;
         int progress = (i + 1) * 100 * n / (pickList.size());
         emit updateProgress(progress);
         QFileInfo fileInfo = pickList.at(i);
@@ -466,13 +479,15 @@ void Ingest::run()
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();
     G::ingestLastSeqDate = seqDate;
-    qDebug() << CLASSFUNCTION << seqDate << G::ingestCount << G::ingestLastSeqDate;
+//    qDebug() << CLASSFUNCTION << seqDate << G::ingestCount << G::ingestLastSeqDate;
 
     // show any ingest errors
     if (failedToCopy.length() || integrityFailure.length()) {
         IngestErrors ingestErrors(failedToCopy, integrityFailure);
         ingestErrors.exec();
     }
+
+    if (abort) G::popUp->showPopup("Background ingest terminated", 2000);
 
     emit updateProgress(-1);
     emit ingestFinished();

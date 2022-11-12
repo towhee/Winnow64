@@ -350,9 +350,6 @@ void MetaRead::readIcon(QModelIndex sfIdx, QString fPath)
         return;
     }
 
-//    qDebug() << "MetaRead::readIcon" << sfIdx.row() << abort;
-    // check if already caching icon (video icons)
-    if (dm->isIconCaching(sfIdx, instance)) return;
     QModelIndex dmIdx;
     dmIdx = dm->sf->mapToSource(sfIdx);
     int dmRow;
