@@ -1,5 +1,4 @@
 BUGS / TO DO
-- Add * to filter header to indicate filtering
 - Convert path to windows \ for copy path to clipboard
 - CLASSFUNCTION in Heic.cpp
 - Extract frame from video
@@ -72,6 +71,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Filter header text red if part of filterr
 - App not closing while reading large foldeer
 - Cursor tall rectangle over thumbnails
 - Cancel background ingest

@@ -109,6 +109,7 @@ void MW::createFilterView()
     if (G::isLogger) G::log(CLASSFUNCTION);
     filters = new Filters(this);
     filters->setMaximumWidth(folderMaxWidth);
+    qApp->installEventFilter(filters);
 
     /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
        for every item in Filters */
