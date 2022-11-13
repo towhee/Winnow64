@@ -1657,6 +1657,8 @@ void MW::folderSelectionChange()
         // metadata and icons read using multiple threaded readers
         loadConcurrentNewFolder();
     }
+
+//    G::stop = false;
 }
 
 void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString src)
@@ -2049,7 +2051,6 @@ void MW::reset(QString src) {
         qApp->processEvents();
     }
 
-    G::stop = false;
     return true;
 }
 
@@ -2101,6 +2102,7 @@ bool MW::reset(QString src)
         setCentralMessage("Image loading has been aborted");
     }
 
+    G::stop = false;
     return true;
 }
 

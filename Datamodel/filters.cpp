@@ -5,9 +5,8 @@ class FiltersDelegate : public QStyledItemDelegate
 public:
     explicit FiltersDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
 
-    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &index) const
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &/*index*/) const
     {
-        index.isValid();          // suppress compiler warning
         int height = qRound(G::fontSize.toInt() * 1.7 * G::ptToPx);
         return QSize(option.rect.width(), height);
     }
@@ -85,20 +84,6 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     setItemDelegate(new FiltersDelegate(this));
     setFocusPolicy(Qt::NoFocus);
 
-//    setStyleSheet(
-//        "QTreeWidget::item {"
-//            "margin-left: -4px;"  // aligns edit box with cell contents
-//        "}"
-//        "QLineEdit {"
-//            "font: italic;"
-//            "border: none;"
-//        "}"
-//        "QLineEdit:focus {"
-//            "background-color:" + G::backgroundColor.name() + ";"
-//        "}"
-//        ";"
-//    );
-
     filterCategoryToDmColumn[" Search"] = G::SearchColumn;
 
     filterCategoryToDmColumn[" Refine"] = G::RefineColumn;
@@ -129,9 +114,6 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     bfProgressBar->setTextVisible(false);
     setProgressBarStyle();
     bfProgressBar->setValue(0);
-
-//    if (isSolo) collapseAll();
-//    else expandAll();
 
     connect(this, &Filters::itemClicked, this, &Filters::itemClickedSignal);
 }
@@ -1016,7 +998,7 @@ void Filters::mousePressEvent(QMouseEvent *event)
 /*
     Single mouse click on item triggers expand/collapse same as clicking on decoration.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log(CLASSFUNCTION);
     if (buildingFilters) return;
     QPoint p = event->pos();
     QModelIndex idx = indexAt(p);
@@ -1024,8 +1006,14 @@ void Filters::mousePressEvent(QMouseEvent *event)
     bool isHdr = idx.parent() == QModelIndex();
     bool notIndentation = p.x() >= indentation;
     bool isValid = idx.isValid();
+    qDebug() << "Filters::mousePressEvent" << p
+             << "isLeftBtn =" << isLeftBtn
+             << "isHdr =" << isHdr
+             << "notIndentation =" << notIndentation
+             << "isValid =" << isValid
+                ;
     bool isCtrlModifier = event->modifiers() & Qt::ControlModifier;
-    if (isLeftBtn && isHdr && isValid && notIndentation) {
+    if (isLeftBtn && isHdr && isValid /*&& notIndentation*/) {
         if (isSolo && !isCtrlModifier) {
             if (isExpanded(idx)) {
                 bool otherHdrWasExpanded = otherHdrExpanded(idx);
@@ -1041,5 +1029,29 @@ void Filters::mousePressEvent(QMouseEvent *event)
             isExpanded(idx) ? collapse(idx) : expand(idx);
         }
     }
-    if (!isHdr) QTreeWidget::mousePressEvent(event);
+    /*if (!isHdr)*/ QTreeWidget::mousePressEvent(event);
+}
+
+bool Filters::eventFilter(QObject *obj, QEvent *event)
+{
+//    "Filters::eventFilter" QMouseEvent(MouseButtonPress LeftButton pos=83.0195,163.004 scn=83.0195,163.004 gbl=-693.98,934.004 dev=QPointingDevice("core pointer" Mouse id=1))
+    if (event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *e = static_cast<QMouseEvent *>(event);
+        if (e->button() == Qt::LeftButton) {
+            qDebug() << CLASSFUNCTION << obj << event;
+            QPoint p = e->pos();
+            QModelIndex idx = indexAt(p);
+            bool isLeftBtn = e->button() == Qt::LeftButton;
+            bool isHdr = idx.parent() == QModelIndex();
+            bool notIndentation = p.x() >= indentation;
+            bool isValid = idx.isValid();
+            qDebug() << "Filters::eventFilter" << p
+                     << "isLeftBtn =" << isLeftBtn
+                     << "isHdr =" << isHdr
+                     << "notIndentation =" << notIndentation
+                     << "isValid =" << isValid
+                        ;
+        }
+    }
+    return QWidget::eventFilter(obj, event);
 }
