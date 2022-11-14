@@ -96,6 +96,7 @@ public slots:
     void finishedBuildFilters();
     void loadedDataModel(bool isLoaded);
     void setSoloMode(bool isSolo);
+    bool otherHdrExpanded(QModelIndex thisIdx);
 
 public slots:
     void dataChanged(const QModelIndex &topLeft,
@@ -107,17 +108,18 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
-    bool eventFilter(QObject *obj, QEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+//    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
     void resizeColumns();
-    bool otherHdrExpanded(QModelIndex thisIdx);
     QLinearGradient categoryBackground;
     QFont categoryFont;
     QFont searchDefaultTextFont;
     QColor searchDefaultTextColor;
     QColor hdrIsFilteringColor;
     int indentation;
+    bool hdrJustClicked;
     QModelIndex searchTrueIdx;
 };
 

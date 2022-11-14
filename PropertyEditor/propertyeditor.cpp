@@ -176,9 +176,10 @@ associated with the correct border even when the border is resorted.
 QModelIndex PropertyEditor::getItemIndex(int itemIndex, QModelIndex /*parentIdx*/)
 {
 /*
-Returns the QModelIndex for the itemIndex. itemIndex is unique for every row in the model.
-It is assigned in addItem().  Use it to find the correct index when items have been sorted
-or deleted, and the associated settings and vectors have not been adjusted.
+    Returns the QModelIndex for the itemIndex. itemIndex is unique for every row in the
+    model. It is assigned in addItem(). Use it to find the correct index when items have
+    been sorted or deleted, and the associated settings and vectors have not been
+    adjusted.
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
     QModelIndex start = model->index(0,0,QModelIndex());
