@@ -1007,6 +1007,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
 
     if (event->type() == QEvent::MouseButtonPress) {
+        qDebug() << CLASSFUNCTION << obj << obj->objectName(); // << event;
+        if (obj->objectName() == "FiltersViewport") return false;
         QMouseEvent *e = static_cast<QMouseEvent *>(event);
         if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
     }
@@ -1044,6 +1046,47 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
     }
+
+    /*
+    if (obj->objectName() == "FiltersViewport") {
+        if (event->type() == QEvent::MouseButtonPress) {
+            QMouseEvent *e = static_cast<QMouseEvent *>(event);
+            if (e->button() == Qt::LeftButton) {
+                qDebug() << CLASSFUNCTION << obj << obj->objectName(); // << event;
+                QPoint p = e->pos();
+                QModelIndex idx = filters->indexAt(p);
+                bool isCtrlModifier = e->modifiers() & Qt::ControlModifier;
+                bool isLeftBtn = e->button() == Qt::LeftButton;
+                bool isHdr = idx.parent() == QModelIndex();
+                bool notIndentation = p.x() >= 10;
+                bool isValid = idx.isValid();
+                qDebug() << "Filters::eventFilter" << p
+                         << "isLeftBtn =" << isLeftBtn
+                         << "isHdr =" << isHdr
+                         << "notIndentation =" << notIndentation
+                         << "isValid =" << isValid
+                            ;
+                if (isHdr && isValid) {
+                    if (filters->isSolo && !isCtrlModifier) {
+                        if (filters->isExpanded(idx)) {
+                            bool otherHdrWasExpanded = filters->otherHdrExpanded(idx);
+                            filters->collapseAll();
+                            if (otherHdrWasExpanded) filters->expand(idx);
+                        }
+                        else {
+                            filters->collapseAll();
+                            filters->expand(idx);
+                        }
+                    }
+                    else {
+                        filters->isExpanded(idx) ? filters->collapse(idx) : filters->expand(idx);
+                    }
+                    return false;
+                }
+            }
+        }
+    }
+    //*/
 
     return QWidget::eventFilter(obj, event);
 }
@@ -3756,6 +3799,10 @@ void MW::setDisplayResolution()
     // Device Pixel Ratio or Monitor change has occurred (default set in initialize())
     G::dpi = screen->logicalDotsPerInch();
     G::ptToPx = G::dpi / 72;
+    qDebug() << "MW::setDisplayResolution"
+             << "G::dpi =" << G::dpi
+             << "G::ptToPx =" << G::ptToPx
+                ;
     G::displayVirtualHorizontalPixels = screen->geometry().width();
     G::displayVirtualVerticalPixels = screen->geometry().height();
     G::displayPhysicalHorizontalPixels = screen->geometry().width() * G::actDevicePixelRatio;

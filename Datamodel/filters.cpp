@@ -8,6 +8,11 @@ public:
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &/*index*/) const
     {
         int height = qRound(G::fontSize.toInt() * 1.7 * G::ptToPx);
+        qDebug() << "FiltersDelegate  sizeHint  height =" << height
+                 << "G::fontSize =" << G::fontSize
+                 << "G::ptToPx =" << G::ptToPx
+                 << "G::dpi =" << G::dpi
+                    ;
         return QSize(option.rect.width(), height);
     }
 };
@@ -39,10 +44,11 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
-    setRootIsDecorated(true);
+    viewport()->setObjectName("FiltersViewport");
+    setRootIsDecorated(false);
     setSelectionMode(QAbstractItemView::NoSelection);
     setColumnCount(5);
-    setHeaderHidden(true);
+//    setHeaderHidden(true);
     setColumnWidth(0, 250); // chkBox + description
     setColumnWidth(1, 50);  // value to filter (hidden)
     setColumnWidth(2, 50);  // number of proxy rows containing the value (filtered)
@@ -51,11 +57,15 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
     // Headerlabel set in search header: {"", "Value", "Filter", "Raw+Jpg", "All"}
     header()->setDefaultAlignment(Qt::AlignCenter);
-//    hideColumn(1); // rgh
+    QStringList hdrLabels = {"", "Value", "Filter", "All", "All"};
+    this->setHeaderLabels(hdrLabels);
+    /* add pixmap to a header
+    model()->setHeaderData(0, Qt::Horizontal, QVariant::fromValue(QIcon(":/images/branch-closed-winnow.png")), Qt::DecorationRole);
+    */
 
     // Cannot hide columns until tree fully initialized - see resizeColumns
 
-    indentation = 10;
+    indentation = 0;
     setIndentation(indentation);
 
     hdrIsFilteringColor = QColor(Qt::red);
@@ -86,19 +96,19 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
     filterCategoryToDmColumn[" Search"] = G::SearchColumn;
 
-    filterCategoryToDmColumn[" Refine"] = G::RefineColumn;
-    filterCategoryToDmColumn[" Picks"] = G::PickColumn;
-    filterCategoryToDmColumn[" Ratings"] = G::RatingColumn;
-    filterCategoryToDmColumn[" Color class"] = G::LabelColumn;
-    filterCategoryToDmColumn[" File type"] = G::TypeColumn;
-    filterCategoryToDmColumn[" Years"] = G::YearColumn;
-    filterCategoryToDmColumn[" Days"] = G::DayColumn;
-    filterCategoryToDmColumn[" Camera model"] = G::CameraModelColumn;
-    filterCategoryToDmColumn[" Lenses"] = G::LensColumn;
-    filterCategoryToDmColumn[" FocalLengths"] = G::FocalLengthColumn;
-    filterCategoryToDmColumn[" Title"] = G::TitleColumn;
-    filterCategoryToDmColumn[" Keywords"] = G::KeywordsColumn;
-    filterCategoryToDmColumn[" Creators"] = G::CreatorColumn;
+    filterCategoryToDmColumn["Refine"] = G::RefineColumn;
+    filterCategoryToDmColumn["Picks"] = G::PickColumn;
+    filterCategoryToDmColumn["Ratings"] = G::RatingColumn;
+    filterCategoryToDmColumn["Color class"] = G::LabelColumn;
+    filterCategoryToDmColumn["File type"] = G::TypeColumn;
+    filterCategoryToDmColumn["Years"] = G::YearColumn;
+    filterCategoryToDmColumn["Days"] = G::DayColumn;
+    filterCategoryToDmColumn["Camera model"] = G::CameraModelColumn;
+    filterCategoryToDmColumn["Lenses"] = G::LensColumn;
+    filterCategoryToDmColumn["FocalLengths"] = G::FocalLengthColumn;
+    filterCategoryToDmColumn["Title"] = G::TitleColumn;
+    filterCategoryToDmColumn["Keywords"] = G::KeywordsColumn;
+    filterCategoryToDmColumn["Creators"] = G::CreatorColumn;
 
     /* Sits above the filters QTreeWidget and is used to message that the filters are
        being rebuilt.  Set invisible at start and rendered visible when building filters */
@@ -124,13 +134,14 @@ void Filters::createPredefinedFilters()
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
     search = new QTreeWidgetItem(this);
-    search->setText(0, " Search");
+    search->setText(0, "Search");
     search->setFont(0, categoryFont);
-    search->setText(2, "Filter");
-    search->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
-    search->setText(3, " All");
-    search->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
-    search->setText(4, "All");
+    search->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
+//    search->setText(2, "Filter");
+//    search->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+//    search->setText(3, " All");
+//    search->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+//    search->setText(4, "All");
     search->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
     search->setData(0, G::ColumnRole, G::SearchColumn);
 
@@ -150,9 +161,10 @@ void Filters::createPredefinedFilters()
     searchFalse->setData(1, Qt::EditRole, false);
 
     refine = new QTreeWidgetItem(this);
-    refine->setText(0, " Refine");
+    refine->setText(0, "Refine");
 //    refine->setFont(0, categoryFont);
     refine->setData(0, G::ColumnRole, G::RefineColumn);
+    refine->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     refineFalse = new QTreeWidgetItem(refine);
     refineFalse->setText(0, "False");
@@ -164,9 +176,10 @@ void Filters::createPredefinedFilters()
     refineTrue->setData(1, Qt::EditRole, true);
 
     picks = new QTreeWidgetItem(this);
-    picks->setText(0, " Picks");
+    picks->setText(0, "Picks");
 //    picks->setFont(0, categoryFont);
     picks->setData(0, G::ColumnRole, G::PickColumn);
+    picks->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     picksFalse = new QTreeWidgetItem(picks);
     picksFalse->setText(0, "Not Picked");
@@ -182,9 +195,10 @@ void Filters::createPredefinedFilters()
     picksReject->setData(1, Qt::EditRole, "reject");
 
     ratings = new QTreeWidgetItem(this);
-    ratings->setText(0, " Ratings");
+    ratings->setText(0, "Ratings");
 //    ratings->setFont(0, categoryFont);
     ratings->setData(0, G::ColumnRole, G::RatingColumn);
+    ratings->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     ratingsNone = new QTreeWidgetItem(ratings);
     ratingsNone->setText(0, "No Rating");
@@ -212,9 +226,10 @@ void Filters::createPredefinedFilters()
     ratings5->setData(1, Qt::EditRole, 5);
 
     labels = new QTreeWidgetItem(this);
-    labels->setText(0, " Color class");
+    labels->setText(0, "Color class");
 //    labels->setFont(0, categoryFont);
     labels->setData(0, G::ColumnRole, G::LabelColumn);
+    labels->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     labelsNone = new QTreeWidgetItem(labels);
     labelsNone->setText(0, "No Color Class");
@@ -251,40 +266,49 @@ by addCategoryFromData.
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
     types = new QTreeWidgetItem(this);
-    types->setText(0, " File type");
+    types->setText(0, "File type");
     types->setData(0, G::ColumnRole, G::TypeColumn);
+    types->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     years = new QTreeWidgetItem(this);
-    years->setText(0, " Years");
+    years->setText(0, "Years");
     years->setData(0, G::ColumnRole, G::YearColumn);
+    years->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     days = new QTreeWidgetItem(this);
-    days->setText(0, " Days");
+    days->setText(0, "Days");
     days->setData(0, G::ColumnRole, G::DayColumn);
+    days->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     models = new QTreeWidgetItem(this);
-    models->setText(0, " Camera model");
+    models->setText(0, "Camera model");
     models->setData(0, G::ColumnRole, G::CameraModelColumn);
+    models->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     lenses = new QTreeWidgetItem(this);
-    lenses->setText(0, " Lenses");
+    lenses->setText(0, "Lenses");
     lenses->setData(0, G::ColumnRole, G::LensColumn);
+    lenses->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     focalLengths = new QTreeWidgetItem(this);
-    focalLengths->setText(0, " FocalLengths");
+    focalLengths->setText(0, "FocalLengths");
     focalLengths->setData(0, G::ColumnRole, G::FocalLengthColumn);
+    focalLengths->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     titles = new QTreeWidgetItem(this);
-    titles->setText(0, " Title");
+    titles->setText(0, "Title");
     titles->setData(0, G::ColumnRole, G::TitleColumn);
+    titles->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     keywords = new QTreeWidgetItem(this);
-    keywords->setText(0, " Keywords");
+    keywords->setText(0, "Keywords");
     keywords->setData(0, G::ColumnRole, G::KeywordsColumn);
+    keywords->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 
     creators = new QTreeWidgetItem(this);
-    creators->setText(0, " Creators");
+    creators->setText(0, "Creators");
     creators->setData(0, G::ColumnRole, G::CreatorColumn);
+    creators->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
 }
 
 void Filters::setCategoryBackground(const int &a, const int &b)
@@ -996,24 +1020,31 @@ void Filters::paintEvent(QPaintEvent *event)
 void Filters::mousePressEvent(QMouseEvent *event)
 {
 /*
-    Single mouse click on item triggers expand/collapse same as clicking on decoration.
+    Single mouse click on item triggers expand/collapse.  The decoraton
+    (arrow head) is shown but its behavior is disabled as it does not
+    support solo mode.
 */
     if (G::isLogger) G::log(CLASSFUNCTION);
     if (buildingFilters) return;
     QPoint p = event->pos();
+    // ignore mouse clicks on decoration to the header
+    if (p.x() < indentation) p.setX(indentation);
     QModelIndex idx = indexAt(p);
+    QTreeWidgetItem *item = itemFromIndex(idx);
     bool isLeftBtn = event->button() == Qt::LeftButton;
     bool isHdr = idx.parent() == QModelIndex();
-    bool notIndentation = p.x() >= indentation;
+//    bool notIndentation = p.x() >= indentation;
     bool isValid = idx.isValid();
+    /*
     qDebug() << "Filters::mousePressEvent" << p
              << "isLeftBtn =" << isLeftBtn
              << "isHdr =" << isHdr
              << "notIndentation =" << notIndentation
              << "isValid =" << isValid
-                ;
+                ; //*/
     bool isCtrlModifier = event->modifiers() & Qt::ControlModifier;
     if (isLeftBtn && isHdr && isValid /*&& notIndentation*/) {
+        hdrJustClicked = true;
         if (isSolo && !isCtrlModifier) {
             if (isExpanded(idx)) {
                 bool otherHdrWasExpanded = otherHdrExpanded(idx);
@@ -1028,30 +1059,24 @@ void Filters::mousePressEvent(QMouseEvent *event)
         else {
             isExpanded(idx) ? collapse(idx) : expand(idx);
         }
+        // set decoration
+        if (isExpanded(idx))
+            item->setIcon(0, QIcon(":/images/branch-open-winnow.png"));
+        else
+            item->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
     }
-    /*if (!isHdr)*/ QTreeWidget::mousePressEvent(event);
+    else {
+        hdrJustClicked = false;
+    }
+
+    QTreeWidget::mousePressEvent(event);
 }
 
-bool Filters::eventFilter(QObject *obj, QEvent *event)
+void Filters::mouseReleaseEvent(QMouseEvent * event)
 {
-//    "Filters::eventFilter" QMouseEvent(MouseButtonPress LeftButton pos=83.0195,163.004 scn=83.0195,163.004 gbl=-693.98,934.004 dev=QPointingDevice("core pointer" Mouse id=1))
-    if (event->type() == QEvent::MouseButtonPress) {
-        QMouseEvent *e = static_cast<QMouseEvent *>(event);
-        if (e->button() == Qt::LeftButton) {
-            qDebug() << CLASSFUNCTION << obj << event;
-            QPoint p = e->pos();
-            QModelIndex idx = indexAt(p);
-            bool isLeftBtn = e->button() == Qt::LeftButton;
-            bool isHdr = idx.parent() == QModelIndex();
-            bool notIndentation = p.x() >= indentation;
-            bool isValid = idx.isValid();
-            qDebug() << "Filters::eventFilter" << p
-                     << "isLeftBtn =" << isLeftBtn
-                     << "isHdr =" << isHdr
-                     << "notIndentation =" << notIndentation
-                     << "isValid =" << isValid
-                        ;
-        }
-    }
-    return QWidget::eventFilter(obj, event);
+/*
+    Ignore header clicks if solo mode, which can change the row under
+    the cursor point between press and release.
+*/
+    if (!hdrJustClicked) QTreeWidget::mouseReleaseEvent(event);
 }

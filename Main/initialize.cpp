@@ -10,7 +10,8 @@ void MW::initialize()
     G::isDev = isDevelopment();
     G::isInitializing = true;
     G::actDevicePixelRatio = 1;
-    G::dpi = 96;
+    G::dpi = 72;
+//    G::dpi = 96;
     G::ptToPx = G::dpi / 72;
     isNormalScreen = true;
     G::isSlideShow = false;
@@ -107,9 +108,16 @@ void MW::setupCentralWidget()
 void MW::createFilterView()
 {
     if (G::isLogger) G::log(CLASSFUNCTION);
+    // G::fontSize req'd for row heights in filter view
+//    if (setting->contains("fontSize"))
+//        G::fontSize = setting->value("fontSize").toString();
+//    else
+//        G::fontSize = "12";
+    qDebug() << "MW::createFilterView  G::fontSize =" << G::fontSize;
     filters = new Filters(this);
+    filters->setObjectName("Filters");
     filters->setMaximumWidth(folderMaxWidth);
-    qApp->installEventFilter(filters);
+//    qApp->installEventFilter(filters);
 
     /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
        for every item in Filters */
