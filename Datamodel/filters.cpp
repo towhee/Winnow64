@@ -23,11 +23,11 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     Used to define criteria for filtering the datamodel, based on which items are checked in
     the tree.
 
-    The tree contains top level items (Categories ie Ratings, Color Classes, File types ...).
-    For each top level item the children are the filter choices to filter DataModel->Proxy
-    (dm->sf). The categories are divided into predefined (Picks, Ratings and Color Classes)
-    and dynamic categories based on existing metadata (File types, Camera Models, Focal
-    Lengths, Titles etc).
+    The tree contains top level items (Categories ie Ratings, Color Classes, File types
+    ...). For each top level item the children are the filter choices to filter
+    DataModel->Proxy (dm->sf). The categories are divided into predefined (Picks, Ratings
+    and Color Classes) and dynamic categories based on existing metadata (File types,
+    Camera Models, Focal Lengths, Titles etc).
 
     The tree columns are:
         0   CheckBox filter item
@@ -36,11 +36,16 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
         3   The number of datamodel rows containing the value combining Raw+Jpg
         4   The number of datamodel rows containing the value
 
-    The dynamic filter options are populated by DataModel on demand when the user filters or
-    the filters dock has focus.
+    The dynamic filter options are populated by DataModel on demand when the user filters
+    or the filters dock has focus.
 
     The actual filtering is executed in SortFilter subclass of QSortFilterProxy (sf) in
     DataModel.
+
+    The QTreeWidget does not support solo mode, so the decoration tree expansion is
+    dissabled, and expansion/collapse is executed in the mousePressEvent.  The
+    header row labels are modified with an icon to replicate the decoration arrow
+    heads.
 
 */
     if (G::isLogger) G::log(CLASSFUNCTION); 
@@ -59,13 +64,13 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     header()->setDefaultAlignment(Qt::AlignCenter);
     QStringList hdrLabels = {"", "Value", "Filter", "All", "All"};
     this->setHeaderLabels(hdrLabels);
-    /* add pixmap to a header
+    /* how to add pixmap to a header
     model()->setHeaderData(0, Qt::Horizontal, QVariant::fromValue(QIcon(":/images/branch-closed-winnow.png")), Qt::DecorationRole);
     */
 
     // Cannot hide columns until tree fully initialized - see resizeColumns
 
-    indentation = 0;
+    indentation = 14;
     setIndentation(indentation);
 
     hdrIsFilteringColor = QColor(Qt::red);
@@ -137,11 +142,6 @@ void Filters::createPredefinedFilters()
     search->setText(0, "Search");
     search->setFont(0, categoryFont);
     search->setIcon(0, QIcon(":/images/branch-closed-winnow.png"));
-//    search->setText(2, "Filter");
-//    search->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
-//    search->setText(3, " All");
-//    search->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
-//    search->setText(4, "All");
     search->setTextAlignment(4, Qt::AlignRight | Qt::AlignVCenter);
     search->setData(0, G::ColumnRole, G::SearchColumn);
 

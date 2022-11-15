@@ -65,7 +65,7 @@ public:
     QString ISO = "";
     int ISONum = 0;
     double exposureCompensationNum = 0.0;
-    QString exposureCompensation = "0";
+    QString exposureCompensation = "";
     QString make = "";
     QString model = "";
     QString lens = "";

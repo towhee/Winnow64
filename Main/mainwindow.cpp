@@ -510,7 +510,7 @@ void MW::showEvent(QShowEvent *event)
         // restoreState sets docks which triggers setThumbDockFeatures prematurely
         restoreState(setting->value("WindowState").toByteArray());
         /*
-        /* do not start with filterDock open
+        // do not start with filterDock open
 //        if (filterDock->isVisible()) {
 //            folderDock->raise();
 //            folderDockVisibleAction->setChecked(true);

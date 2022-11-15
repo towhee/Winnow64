@@ -463,10 +463,14 @@ void InfoView::updateInfo(const int &row)
     ok->setData(ok->index(ApertureRow, 1, imageInfoIdx), s);
 
     s = dm->sf->index(row, G::ISOColumn).data().toString();
+    if (s == "0") s = "";
     ok->setData(ok->index(ISORow, 1, imageInfoIdx), s);
-    s = QString::number(dm->sf->index(row, G::ExposureCompensationColumn).data().toDouble(), 'f', 1) + " EV";
+    s = dm->sf->index(row, G::ExposureCompensationColumn).data().toString();
+//    s = QString::number(dm->sf->index(row, G::ExposureCompensationColumn).data().toDouble(), 'f', 1) + " EV";
+    if (s != "") s += " EV";
     ok->setData(ok->index(ExposureCompensationRow, 1, imageInfoIdx), s);
     s = dm->sf->index(row, G::FocalLengthColumn).data().toString() + "mm";
+    if (s == "0mm") s = "";
     ok->setData(ok->index(FocalLengthRow, 1, imageInfoIdx), s);
 
     s = dm->sf->index(row, G::TitleColumn).data().toString();

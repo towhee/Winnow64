@@ -14,18 +14,6 @@ BuildFilters::BuildFilters(QObject *parent,
     this->filters = filters;
 }
 
-void BuildFilters::multiThreadTest()
-{
-    QString path = dm->sf->index(0, G::PathColumn).data(G::PathRole).toString();
-    int tot = 0;
-    int col = G::RatingColumn;
-    for (int i = 0; i < 1000; i++) {
-        qDebug() << "BuildFilters::multiThreadTest" << i;
-        dm->setIconRange(0,1);
-        G::wait(1);
-    }
-}
-
 void BuildFilters::stop()
 {
     if (isRunning()) {
@@ -392,11 +380,6 @@ void BuildFilters::run()
 {
     if (G::isLogger || G::isFlowLogger) {mutex.lock(); G::log(CLASSFUNCTION); mutex.unlock();}
 
-//    if (testMultiThread) {
-//        multiThreadTest();
-//        return;
-//    }
-
     if (filters->filtersBuilt) return;
     if (!abort) loadAllMetadata();
     if (!abort) mapUniqueInstances();
@@ -404,21 +387,3 @@ void BuildFilters::run()
     if (!abort) countUnfiltered();
     done();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

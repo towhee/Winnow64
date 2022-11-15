@@ -26,9 +26,6 @@ public:
     void countUnfiltered();
     void unfilteredItemSearchCount();
 
-    void multiThreadTest();
-    bool testMultiThread = false;
-
 protected:
     void run() Q_DECL_OVERRIDE;
 

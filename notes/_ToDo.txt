@@ -1,4 +1,7 @@
 BUGS / TO DO
+- HEIC metadata on mac
+- Read HEIC metadata (MAC issue only?)
+- Mac version missing de265-version.h file
 - Convert path to windows \ for copy path to clipboard
 - CLASSFUNCTION in Heic.cpp
 - Extract frame from video
@@ -8,7 +11,6 @@ BUGS / TO DO
 - Add G::showWarnings
 - Rethink load Metadata flags and logic
 - Make ImageDecoder warnings context specific is hasMetadata
-- Read HEIC metadata (MAC issue only?)
 - Olympus subfolders not showing for USB drive in FSTree
 - Save preview as PNG include color manage corrections
 - MW::enableSelectionDependentMenus needs updating for all situations
@@ -71,7 +73,8 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
-- Filter header text red if part of filterr
+- Filter header text red if part of filters
+- Fixed issue with solo mode not working when decoration mouse pressed
 - App not closing while reading large foldeer
 - Cursor tall rectangle over thumbnails
 - Cancel background ingest

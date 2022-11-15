@@ -1093,7 +1093,8 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::ApertureColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::ISOColumn), m.ISONum);
     setData(index(row, G::ISOColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
-    setData(index(row, G::ExposureCompensationColumn), m.exposureCompensationNum);
+    setData(index(row, G::ExposureCompensationColumn), m.exposureCompensation);
+//    setData(index(row, G::ExposureCompensationColumn), m.exposureCompensationNum);
     setData(index(row, G::ExposureCompensationColumn), Qt::AlignCenter, Qt::TextAlignmentRole);
     setData(index(row, G::LensColumn), m.lens);
     setData(index(row, G::LensColumn), m.lens, Qt::ToolTipRole);
