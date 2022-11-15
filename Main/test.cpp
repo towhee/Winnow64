@@ -104,15 +104,6 @@ void MW::bounceFoldersStressTest(int ms, int duration)
     }
 }
 
-void MW::testMultiThreadDataModel()
-{
-    // must select folder before running test.
-    metaReadThread->testMultiThread = true;
-    buildFilters->testMultiThread = true;
-    metaReadThread->start();
-    buildFilters->start();
-}
-
 void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 {
     centralLayout->setCurrentIndex(GridTab);

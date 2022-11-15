@@ -15,18 +15,17 @@ class ZoomDlg : public QDialog
 
 public:
     explicit ZoomDlg(QWidget *parent, qreal zoom, QRect anchor, QRect c);
-    ~ZoomDlg();
+    ~ZoomDlg() override;
 
 public slots:
     void zoomChange(qreal zoom);
     void closeZoomDlg();
-
     void positionWindow(QRect a, QRect c);
 
 protected:
-    void enterEvent(QEvent *event);
-    void leaveEvent(QEvent *event);
-    void changeEvent(QEvent *event);
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
+    void changeEvent(QEvent *event) override;
 
 signals:
     void zoom(qreal zoomVal);

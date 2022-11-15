@@ -821,13 +821,13 @@ bool Metadata::parseJPG(quint32 startOffset)
 bool Metadata::parseHEIF()
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
-//#ifdef Q_OS_WIN
-//    // rgh remove heic
-//    if (heic == nullptr) heic = new Heic;
-//    bool ok = heic->parseLibHeif(p, m, ifd, exif, gps);
-//    if (ok && p.report) reportMetadata();
-//    return ok;
-//#endif
+#ifdef Q_OS_WIN
+    // rgh remove heic
+    if (heic == nullptr) heic = new Heic;
+    bool ok = heic->parseLibHeif(p, m, ifd, exif, gps);
+    if (ok && p.report) reportMetadata();
+    return ok;
+#endif
     return false;
 }
 
@@ -947,7 +947,7 @@ void Metadata::clearMetadata()
     m.ISO = "";
     m.ISONum = 0;
     m.exposureCompensation = "";
-    m.exposureCompensationNum = 0;
+    m.exposureCompensationNum = 0;  // crazy value so cane check if not found
     m.focalLength = "";
     m.focalLengthNum = 0;
     m.gpsCoord = "";

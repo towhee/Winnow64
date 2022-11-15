@@ -222,7 +222,7 @@ void TableView::resizeColumns()
 
 void TableView::paintEvent(QPaintEvent *event)
 {
-//    resizeColumns();      // prevents user changing column widths
+    resizeColumns();      // prevents user changing column widths
     int d = static_cast<int>(G::fontSize.toInt() * G::ptToPx * 1.5);
     setIconSize(QSize(d, d));
     verticalHeader()->setDefaultSectionSize(d);
@@ -459,7 +459,7 @@ ExposureCompensationItemDelegate::ExposureCompensationItemDelegate(QObject* pare
 
 QString ExposureCompensationItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
 {
-    if (value == 0)
+    if (value.toString() == "")
         return QString();
 
     return "   " + QString::number(value.toDouble(), 'f', 1) + " EV   ";

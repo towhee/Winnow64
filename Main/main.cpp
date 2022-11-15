@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
         //*/
 
 //    /* Single instance version
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+//    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
                 Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     QtSingleApplication instance("Winnow", argc, argv);

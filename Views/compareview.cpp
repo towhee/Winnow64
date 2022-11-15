@@ -640,7 +640,7 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
     QGraphicsView::mouseReleaseEvent(event);
 }
 
-void CompareView::enterEvent(QEvent *event)
+void CompareView::enterEvent(QEnterEvent *event)
 {
     if (G::isLogger) G::log(CLASSFUNCTION); 
     select();
