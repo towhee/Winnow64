@@ -68,7 +68,7 @@ CompareView::CompareView(QWidget *parent,
                          ImageCacheData *icd,
                          IconView *thumbView)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::CompareView");
 
     this->mainWindow = parent;
     this->gridCell = gridCell;
@@ -119,7 +119,7 @@ This function is called from CompareImages for each image in the comparison
 selection.  As in ImageView, each pixmap is loaded from the cache if available,
 or loads the file otherwise.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::loadImage");
 
      /* important to keep currentImagePath.  It is used to check if there isn't
      an image (when currentImagePath.isEmpty() == true) - for example when
@@ -176,7 +176,7 @@ Note that the scrollPct coordinates are relative, as a percentage of the
 slider range, because each image in the compare group might have different
 size or aspect ratios.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::slaveZoomToPct");
     this->isZoom = isZoom;
     isZoom ? zoom = zoomFit : zoom = toggleZoom;
     // false is telling the scale function not to propagate the scale change
@@ -200,7 +200,7 @@ result of a signal from the focus instance and no further propagation should
 occur.
 */
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::scrollEvent");
     // is this the focus instance?
     if (imageIndex == thumbView->currentIndex()) {
         // independent panning or do we propagate to slave instances
@@ -217,7 +217,7 @@ occur.
 // not used
 QPointF CompareView::getSceneCoordFromPct(QPointF scrollPct)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::getSceneCoordFromPct");
     return QPointF(scrollPct.x() * scene->width(),
                    scrollPct.y() * scene->height());
 }
@@ -228,7 +228,7 @@ void CompareView::slavePanToDeltaPct(QPointF delta)
 When the focus instance is panned it signals CompareImages, which in turn calls
 each slave instance to make the same pan from its previous position by delta.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::slavePanToDeltaPct");
     // update scrl struct
     getScrollBarStatus();
     // pan by updating the scrollbars
@@ -244,7 +244,7 @@ scrollbar range becasue each comparison image instance may be a different size
 and aspect ratio and we want to pan equally when the slave and focus iamges are
 locked to pan together.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::setScrollBars");
     // update the scrl struct with scrollbar parameters
     getScrollBarStatus();
     // percentage of the scrollbar range
@@ -288,7 +288,7 @@ void CompareView::getScrollBarStatus()
 This is a helper function to update the scrl struct with the scrollbar range and
 current value information in a more compact form for subsequent panning.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::getScrollBarStatus");
     scrl.hMin = horizontalScrollBar()->minimum();
     scrl.hMax = horizontalScrollBar()->maximum();
     scrl.hVal = horizontalScrollBar()->value();
@@ -301,7 +301,7 @@ current value information in a more compact form for subsequent panning.
 
 void CompareView::reportScrollBarStatus(QString info)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::reportScrollBarStatus");
     /*
     qDebug() << G::t.restart() << "\t" << "ScrollBarStatus:" << currentImagePath// << "\n"
              << "hMin" << scrl.hMin << "hMax" << scrl.hMax << "hVal" << scrl.hVal
@@ -319,7 +319,7 @@ QPointF CompareView::getScrollDeltaPct()
     Called by the focus instance from scrollEvent to calculate the delta between the
     last scroll point and the current one.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::getScrollDeltaPct");
     getScrollBarStatus();
     // difference between new and previous scroll position
     QPointF delta(scrl.hPct - scrollPosPct.x(), scrl.vPct - scrollPosPct.y());
@@ -333,7 +333,7 @@ QPointF CompareView::getScrollPct()
 /*
     Returns coordinates in percent for the current scroll position.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::getScrollPct");
     // update scrl struct with current scrollbar parameters
     getScrollBarStatus();
     return QPointF(scrl.hPct, scrl.vPct);
@@ -362,7 +362,7 @@ qreal CompareView::getZoom()
     pixels. In other words, how many viewport pixels = one image pixel. A zoom of
     100% means each viewport pixel equals an image pixel.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::getZoom");
     // use view center to make sure inside scene item
     qreal x1 = mapToScene(rect().center()).x();
     qreal x2 = mapToScene(rect().center() + QPoint(1, 0)).x();
@@ -375,7 +375,7 @@ qreal CompareView::getFitScaleFactor(QSize container, QRectF content)
 /*
     Return the scale factor (or zoom) to fit the image inside the viewport.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::getFitScaleFactor");
     qreal hScale = static_cast<qreal>(container.width() - 2) / content.width() * G::actDevicePixelRatio;
     qreal vScale = static_cast<qreal>(container.height() - 2) / content.height() * G::actDevicePixelRatio;
     return (hScale < vScale) ? hScale : vScale;
@@ -398,7 +398,7 @@ void CompareView::scale(bool okayToPropagate)
     ZoomDlg also signals changes in scale to CompareImages::zoomTo and then to the
     local zoomTo.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::scale");
     // rescale to new zoom factor
     matrix.reset();
     double highDpiZoom = zoom / G::actDevicePixelRatio;
@@ -429,7 +429,7 @@ void CompareView::placeClassificationBadge()
     The classification label (ratings / color class / pick status) is positioned in
     the bottom right corner of the image.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::placeClassificationBadge");
     QPoint sceneBottomRight = mapFromScene(sceneRect().bottomRight());
 
     int x, y = 0;                       // bottom right coordinates of visible image
@@ -465,7 +465,7 @@ void CompareView::placeClassificationBadge()
 
 void CompareView::resizeEvent(QResizeEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::resizeEvent");
     QGraphicsView::resizeEvent(event);
     zoomFit = getFitScaleFactor(event->size(), pmItem->boundingRect());
     zoom = zoomFit;
@@ -474,7 +474,7 @@ void CompareView::resizeEvent(QResizeEvent *event)
 
 void CompareView::zoomIn()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::zoomIn");
     zoom *= (1.0 + zoomInc);
     zoom = zoom > zoomMax ? zoomMax: zoom;
     scale(false);
@@ -482,7 +482,7 @@ void CompareView::zoomIn()
 
 void CompareView::zoomOut()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::zoomOut");
     zoom *= (1.0 - zoomInc);
     zoom = zoom < zoomMin ? zoomMin : zoom;
     scale(false);
@@ -493,7 +493,7 @@ void CompareView::zoomToFit()
     Called from MW menu action to CompareImages and then to each compare instance
 */
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::zoomToFit");
     zoom = zoomFit;
     // set scale without propagation to slave instances
     scale(false);
@@ -508,7 +508,7 @@ void CompareView::zoomTo(qreal zoomTo)
 
     Also called from MW::setDisplayResolution when there is a operating system scale change.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::zoomTo");
     zoom = zoomTo;
     scale(false);
 }
@@ -518,8 +518,8 @@ void CompareView::zoomToggle()
 /*
     Called from MW menu action to CompareImages and then to each compare instance
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
-//    qDebug() << CLASSFUNCTION << toggleZoom << G::actDevicePixelRatio;
+    if (G::isLogger) G::log("CompareView::zoomToggle");
+//    qDebug() << "CompareView::zoomToggle" << toggleZoom << G::actDevicePixelRatio;
     if (!isZoom) zoom = toggleZoom;
 }
 
@@ -532,7 +532,7 @@ void CompareView::wheelEvent(QWheelEvent *wheelEvent)
     QGraphicsView behavior.  The panning is not propagated to the slave instances if
     the shift modifier key is pressed.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::wheelEvent");
     propagate = true;
     if (imageIndex == thumbView->currentIndex()) {
         if(wheelEvent->modifiers() & Qt::ShiftModifier) propagate = false;
@@ -542,7 +542,7 @@ void CompareView::wheelEvent(QWheelEvent *wheelEvent)
 
 void CompareView::mousePressEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::mousePressEvent");
     // bad things happen if no image when click
     if (currentImagePath.isEmpty()) return;
 
@@ -602,7 +602,7 @@ void CompareView::mouseMoveEvent(QMouseEvent *event)
 
 void CompareView::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::mouseReleaseEvent");
     // prevent zooming when right click for context menu, or forward and back
     // buttons to toggle pick status
     if (event->button() == Qt::RightButton ||
@@ -642,7 +642,7 @@ void CompareView::mouseReleaseEvent(QMouseEvent *event)
 
 void CompareView::enterEvent(QEnterEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::enterEvent");
     select();
     // zoomToFit zoom factor can be different so do update
     emit zoomChange(zoom, /* hasFocus */ true);
@@ -651,14 +651,14 @@ void CompareView::enterEvent(QEnterEvent *event)
 
 void CompareView::leaveEvent(QEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::leaveEvent");
     deselect();
     QGraphicsView::leaveEvent(event);
 }
 
 void CompareView::select()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::select");
     emit deselectAll();
     this->setFocus();
     thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -673,7 +673,7 @@ void CompareView::select()
 
 void CompareView::deselect()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("CompareView::deselect");
     this->setStyleSheet("QGraphicsView  {"
                         "margin:1; "
                         "border-style: solid; "
@@ -686,6 +686,6 @@ void CompareView::dragEnterEvent(QDragEnterEvent *event)
 /*
     Empty function required to propagate drop event (not sure why)
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
+    if (G::isLogger) G::log("CompareView::dragEnterEvent");
+    qDebug() << "CompareView::dragEnterEvent";
 }

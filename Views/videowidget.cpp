@@ -8,7 +8,7 @@
 
 VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoWidget::VideoWidget");
     mediaPlayer = new QMediaPlayer(this);
     audioOutput = new QAudioOutput(this);
     mediaPlayer->setAudioOutput(audioOutput);
@@ -19,31 +19,31 @@ VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
 
 void VideoWidget::load(QString fPath)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoWidget::load");
     mediaPlayer->setSource(fPath);
 }
 
 void VideoWidget::play()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoWidget::play");
     mediaPlayer->play();
 }
 
 void VideoWidget::pause()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoWidget::pause");
     mediaPlayer->pause();
 }
 
 void VideoWidget::stop()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoWidget::stop");
     mediaPlayer->stop();
 }
 
 int VideoWidget::duration()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoWidget::duration");
     return static_cast<int>(mediaPlayer->duration());
 }
 
@@ -63,7 +63,7 @@ void VideoWidget::setPosition(int ms)
 
 VideoWidget::PlayState VideoWidget::playOrPause()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoWidget::PlayState VideoWidget::playOrPause");
     if (mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::LoadedMedia ||
         mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferingMedia ||
         mediaPlayer->mediaStatus() == QMediaPlayer::MediaStatus::BufferedMedia ||
@@ -82,7 +82,7 @@ VideoWidget::PlayState VideoWidget::playOrPause()
 
 void VideoWidget::mousePressEvent(QMouseEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("VideoWidget::mousePressEvent");
 
     // ignore right click
     if (event->button() == Qt::RightButton) {
@@ -94,7 +94,7 @@ void VideoWidget::mousePressEvent(QMouseEvent *event)
 bool VideoWidget::eventFilter(QObject *obj, QEvent *event)
 {
     /*
-    qDebug() << CLASSFUNCTION
+    qDebug() << "VideoWidget::eventFilter"
              << "event:" <<event << "\t"
              << "event->type:" << event->type() << "\t"
              << "obj:" << obj << "\t"

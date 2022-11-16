@@ -73,7 +73,7 @@ void PatternDlgView::debugPxArray(QImage &i, int originX, int originY, int size)
     necessary convert text to columns.  You can then analyse the pixels in the array to debug
     the tile pattern.
 */
-    qDebug() << CLASSFUNCTION << size << i.size();
+    qDebug() << "PatternDlgView::debugPxArray" << size << i.size();
     QString row;
 
     for (int y = 0; y < size; y++) {
@@ -97,7 +97,7 @@ void PatternDlgView::findPatternInSample(QPixmap &sample, QRect &sampleRect)
 
    If no repeating area is found then the entire sample is copied to the pixmap tile.
 */
-qDebug() << CLASSFUNCTION;
+qDebug() << "PatternDlgView::findPatternInSample";
     rubberBand->hide();
     QPen pen;
     pen.setColor(QColor(Qt::white));

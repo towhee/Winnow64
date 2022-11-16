@@ -2,9 +2,9 @@
 
 void MW::openLog()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::openLog");
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
-    qDebug() << CLASSFUNCTION << path;
+    qDebug() << "MW::openLog" << path;
     QDir dir(path);
     if (!dir.exists()) dir.mkdir(path);
     if (G::logFile.isOpen()) G::logFile.close();
@@ -22,26 +22,26 @@ void MW::openLog()
 
 void MW::closeLog()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::closeLog");
     if (G::logFile.isOpen()) G::logFile.close();
 }
 
 void MW::clearLog()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::clearLog");
     if (!G::logFile.isOpen()) openLog();
     G::logFile.resize(0);
 }
 
 void MW::openErrLog()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::openErrLog");
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
     QDir dir(path);
     if (!dir.exists()) dir.mkdir(path);
     if (G::errlogFile.isOpen()) G::errlogFile.close();
     QString fPath = path + "/WinnowErrorLog.txt";
-//    qDebug() << CLASSFUNCTION << fPath;
+//    qDebug() << "MW::openErrLog" << fPath;
     G::errlogFile.setFileName(fPath);
     // erase content if over one week since last modified
     QFileInfo info(G::errlogFile);
@@ -50,19 +50,19 @@ void MW::openErrLog()
     if (lastModified < oneWeekAgo) clearErrLog();
     if (G::errlogFile.open(QIODevice::ReadWrite)) {
 //        QString errString(G::errlogFile.readAll());
-//        qDebug() << CLASSFUNCTION << errString;
+//        qDebug() << "MW::openErrLog" << errString;
     }
 }
 
 void MW::closeErrLog()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::closeErrLog");
     if (G::errlogFile.isOpen()) G::errlogFile.close();
 }
 
 void MW::clearErrLog()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::clearErrLog");
     if (!G::errlogFile.isOpen()) openLog();
     G::errlogFile.resize(0);
 }

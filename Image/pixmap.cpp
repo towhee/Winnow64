@@ -205,7 +205,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         double mp = double(w * h) / 1024 / 1024;
         double pxPerMs = mp / secs;
         qDebug().noquote()
-                 << CLASSFUNCTION << fPath << "decoded full size using" << decoderUsed
+                 << "Pixmap::load" << fPath << "decoded full size using" << decoderUsed
                  << "ms =" << ms
                  << "MP =" << QString::number(mp, 'g', 2)
                  << "MP/sec ="
@@ -304,7 +304,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     QString source = "Pixmap::load";
     emit setValue(dm->index(dmRow, G::LoadMsecPerMpColumn), msecPerMp, 0, source, Qt::EditRole, Qt::AlignLeft);
     /*
-    qDebug() << CLASSFUNCTION
+    qDebug() << "Pixmap::load"
              << "Decode:" << tDecode << "ms"
              << "ICC:" << tICC << "ms"
              << "Total:" << msec << "ms"

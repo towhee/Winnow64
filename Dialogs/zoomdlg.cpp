@@ -5,7 +5,7 @@
 ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent),
     ui(new Ui::ZoomDlg)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("ZoomDlg::ZoomDlg");
     setWindowFlags(Qt::WindowStaysOnTopHint | Qt::Dialog | Qt::FramelessWindowHint);
     ui->setupUi(this);
 
@@ -41,8 +41,8 @@ ZoomDlg::~ZoomDlg()
 
 void ZoomDlg::closeZoomDlg()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION ;
+    if (G::isLogger) G::log("ZoomDlg::closeZoomDlg");
+    qDebug() << "ZoomDlg::closeZoomDlg" ;
     if (isVisible()) emit closeZoom();
 }
 
@@ -51,7 +51,7 @@ void ZoomDlg::positionWindow(QRect a, QRect c)
 /*
 This function positions the zoom dialog in the lower center of the central widget
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("ZoomDlg::positionWindow");
     // a = mainWindow->geometry()
     // c = centralWidget->geometry();
     int w = width();        // width of this dialog
@@ -77,7 +77,7 @@ This slot receives signals from either imageView or compareView when the scale
 changes and the scale dialog (this) is showing.  The zoom slider and spinbox
 controls are updated to the current scale.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("ZoomDlg::zoomChange");
 //    qDebug() << "ZoomDlg::zoomChange" << zoom << G::actDevicePixelRatio;
     // convert to percentage for persentation
     zoom *= 100;        //(100 * G::actDevicePixelRatio);
@@ -97,13 +97,13 @@ void ZoomDlg::on_zoomSB_valueChanged(int value)
     to ZoomDlg, which updated this control, and then signals back, by limiting signals
     to only changes made lacally via the isActiveWindow flag.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("ZoomDlg::on_zoomSB_valueChanged");
     if (isActiveWindow()) emit zoom((qreal)value / 100/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_toggleZoomAmountBtn_clicked()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("ZoomDlg::on_toggleZoomAmountBtn_clicked");
     QString msg = "Toggle zoom amount changed to " +
                   QString::number(ui->zoomSB->value()) + "%";
     G::popUp->showPopup(msg, 1500);
@@ -115,37 +115,37 @@ void ZoomDlg::on_toggleZoomAmountBtn_clicked()
 // radio buttons for quick zoom setting at popular scales
 void ZoomDlg::on_radio25Button_clicked()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("ZoomDlg::on_radio25Button_clicked");
     emit zoom(0.25 / G::actDevicePixelRatio);
 }
 
 void ZoomDlg::on_radio50Button_clicked()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("ZoomDlg::on_radio50Button_clicked");
     emit zoom(0.50 /*/ G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio66Button_clicked()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("ZoomDlg::on_radio66Button_clicked");
     emit zoom(0.666667/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio100Button_clicked()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("ZoomDlg::on_radio100Button_clicked");
     emit zoom(1.0/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio133Button_clicked()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("ZoomDlg::on_radio133Button_clicked");
     emit zoom(1.33333333/* / G::actDevicePixelRatio*/);
 }
 
 void ZoomDlg::on_radio200Button_clicked()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("ZoomDlg::on_radio200Button_clicked");
     emit zoom(2.0/* / G::actDevicePixelRatio*/);
 }
 
@@ -154,7 +154,7 @@ void ZoomDlg::enterEvent(QEnterEvent* /*event*/)
 /*
     For convenience, set window focus on mouseover
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("ZoomDlg::enterEvent");
     this->activateWindow();
     this->setFocus();
     this->ui->zoomSlider->setFocus();
@@ -165,7 +165,7 @@ void ZoomDlg::leaveEvent(QEvent* /*event*/)
     /*
     For convenience, set window focus on mouseover
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("ZoomDlg::leaveEvent");
     emit leaveZoom();
 }
 
@@ -174,7 +174,7 @@ void ZoomDlg::changeEvent(QEvent *event)
 /*
     Set some formatting to make it clear when the ZoomDlg has focus
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("ZoomDlg::changeEvent");
     QWidget::changeEvent(event);
     if (event->type() == QEvent::ActivationChange)
     {

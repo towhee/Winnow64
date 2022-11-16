@@ -2,7 +2,7 @@
 
 void MW::reportState(QString title)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::reportState");
     qDebug()
         << "\nWINNOW STATE" << title
         << "\nFLAGS:"
@@ -48,7 +48,7 @@ void MW::reportState(QString title)
 
 void MW::reportWorkspaceState()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::reportWorkspaceState");
     workspaceData w;
     snapshotWorkspace(w);
     qDebug() << G::t.restart()
@@ -87,7 +87,7 @@ void MW::reportWorkspaceState()
 
 void MW::reportMetadata()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::reportMetadata");
     diagnosticsMetadata();
 }
 
@@ -101,7 +101,7 @@ void MW::reportMetadata()
 
 void MW::diagnosticsAll()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::diagnosticsAll");
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -117,7 +117,7 @@ void MW::diagnosticsAll()
 
 void MW::diagnosticsCurrent()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::diagnosticsCurrent");
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -128,7 +128,7 @@ void MW::diagnosticsCurrent()
 
 QString MW::diagnostics()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::diagnostics");
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
@@ -271,7 +271,7 @@ void MW::diagnosticsZoom() {}
 
 void MW::diagnosticsReport(QString reportString)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::diagnosticsReport");
     QDialog *dlg = new QDialog;
     dlg->setStyleSheet(G::css);
     Ui::metadataReporttDlg md;
@@ -292,7 +292,7 @@ void MW::diagnosticsReport(QString reportString)
 
 void MW::errorReport()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::errorReport");
     QDialog *dlg = new QDialog;
     dlg->setStyleSheet(G::css);
     Ui::metadataReporttDlg md;
@@ -302,7 +302,7 @@ void MW::errorReport()
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
     G::errlogFile.seek(0);
     QString errString(G::errlogFile.readAll());
-//    qDebug() << CLASSFUNCTION << G::errlogFile.isOpen() << errString;
+//    qDebug() << "MW::errorReport" << G::errlogFile.isOpen() << errString;
     md.textBrowser->setText(errString);
     dlg->show();
 }

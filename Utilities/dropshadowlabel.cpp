@@ -15,7 +15,7 @@ DropShadowLabel::DropShadowLabel(QWidget *parent) : QLabel(parent)
 
 void DropShadowLabel::paintEvent(QPaintEvent* /*event*/)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("DropShadowLabel::paintEvent");
 
     QPainter painter(this);
 

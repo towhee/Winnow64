@@ -231,7 +231,7 @@ bool Olympus::parse(MetadataParameters &p,
                     Jpeg *jpeg,
                     GPS *gps)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Olympus::parse");
     //file.open in Metadata::readMetadata
     // first two bytes is the endian order (skip next 2 bytes)
     quint16 order = u.get16(p.file.read(4));

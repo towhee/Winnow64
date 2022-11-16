@@ -11,24 +11,24 @@ Stack::Stack(QStringList &selection,
              icd(icd)
 
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Stack::Stack");
 }
 
 void Stack::stop()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Stack::stop");
     abort = true;
     G::isRunningStackOperation = false;
     G::popUp->setProgressVisible(false);
     G::popUp->end();
     G::popUp->showPopup("Stack operation has been aborted.");
-    qDebug() << CLASSFUNCTION << abort;
+    qDebug() << "Stack::stop" << abort;
 //    qApp->processEvents();
 }
 
 QString Stack::mean()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Stack::mean");
     abort = false;
     G::isRunningStackOperation = true;
     QString dst = "";
@@ -105,7 +105,7 @@ QString Stack::mean()
                 m[y][x].b += (rgb.blue() * 1.0 / n);
                 /*
                 if (i==0 && y==0 && x==0) {
-                    qDebug() << CLASSFUNCTION
+                    qDebug() << "Stack::mean"
                              << "rgb =" << rgb
                              << "m[y][x].r =" << m[y][x].r
                              << "m[y][x].g =" << m[y][x].g
@@ -167,7 +167,7 @@ QString Stack::mean()
         // add thumbnail to dst
         et.addThumb(src, dst);
         QVariant ret = et.close();
-        qDebug() << CLASSFUNCTION << "et exit code =" << ret;
+        qDebug() << "Stack::mean" << "et exit code =" << ret;
 
         G::popUp->setProgressVisible(false);
         G::popUp->end();

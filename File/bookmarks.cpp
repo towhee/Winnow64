@@ -36,7 +36,7 @@ BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount,
                    : QTreeWidget(parent),
                      combineRawJpg(combineRawJpg)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("BookMarks::BookMarks");
     this->metadata = metadata;
     this->showImageCount = showImageCount;
     viewport()->setObjectName("bookmarksViewPort");
@@ -66,7 +66,7 @@ BookMarks::BookMarks(QWidget *parent, Metadata *metadata, bool showImageCount,
 
 void BookMarks::reloadBookmarks()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("BookMarks::reloadBookmarks");
 	clear();
     QSetIterator<QString> it(bookmarkPaths);
 	while (it.hasNext()) {
@@ -78,6 +78,7 @@ void BookMarks::reloadBookmarks()
 
 void BookMarks::addBookmark(QString itemPath)
 {
+    if (G::isLogger) G::log("BookMarks::addBookmark");
     QTreeWidgetItem *item = new QTreeWidgetItem(this);
     item->setText(0, QFileInfo(itemPath).fileName());
     item->setIcon(0, QIcon(":/images/bookmarks.png"));
@@ -90,13 +91,14 @@ void BookMarks::addBookmark(QString itemPath)
 
 void BookMarks::update()
 {
+    if (G::isLogger) G::log("BookMarks::update");
     count();
     /* update only changed folder (to do if required)
     // pass dPath and make FSModel::count and FSModel::combineCount public
     QTreeWidgetItemIterator it(this);
     while (*it) {
         QString path = (*it)->toolTip(0);
-        qDebug() << CLASSFUNCTION << path << dPath;
+        qDebug() << "BookMarks::update" << path << dPath;
         QString countStr;
         if (combineRawJpg)
             countStr = QString::number(fsTree->fsModel->combineCount[dPath]);
@@ -110,6 +112,7 @@ void BookMarks::update()
 
 void BookMarks::count()
 {
+    if (G::isLogger) G::log("BookMarks::count");
      QTreeWidgetItemIterator it(this);
      while (*it) {
          QString path = (*it)->toolTip(0);
@@ -141,7 +144,7 @@ void BookMarks::select(QString fPath)
     This is called from MW::folderSelectionChange to attempt to sync bookmarks with
     the FSTree folders view.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("BookMarks::select");
     if (bookmarkPaths.contains(fPath)) {
         QList <QTreeWidgetItem *> items;
         items = findItems(QFileInfo(fPath).fileName(), Qt::MatchExactly);
@@ -159,6 +162,7 @@ void BookMarks::select(QString fPath)
 
 void BookMarks::resizeColumns()
 {
+    if (G::isLogger) G::log("BookMarks::resizeColumns");
     if (showImageCount) {
         QFont font = this->font();
         font.setPointSize(G::fontSize.toInt());
@@ -177,19 +181,21 @@ void BookMarks::resizeColumns()
 
 void BookMarks::resizeEvent(QResizeEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("BookMarks::resizeEvent");
     resizeColumns();
     QTreeWidget::resizeEvent(event);
 }
 
 void BookMarks::mouseDoubleClickEvent(QMouseEvent *)
 {
+    if (G::isLogger) G::log("BookMarks::mouseDoubleClickEvent");
     // ignore double mouse clicks (edit/expand)
     return;
 }
 
 void BookMarks::mousePressEvent(QMouseEvent *event)
 {
+    if (G::isLogger) G::log("BookMarks::mousePressEvent");
     // rapid mouse press ignore if still running MW::stopAndClearAll
     if (G::stop) {
         qApp->beep();
@@ -221,9 +227,9 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
 
 void BookMarks::removeBookmark()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("BookMarks::removeBookmark");
     if (rightClickItem) {
-//        qDebug() << CLASSFUNCTION<< rightClickItem->toolTip(0);
+//        qDebug() << "BookMarks::removeBookmark"<< rightClickItem->toolTip(0);
         bookmarkPaths.remove(rightClickItem->toolTip(0));
         reloadBookmarks();
     }
@@ -241,7 +247,7 @@ void BookMarks::contextMenuEvent(QContextMenuEvent *event)
 
 void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("BookMarks::dragEnterEvent");
     QModelIndexList selectedDirs = selectionModel()->selectedRows();
 
 	if (selectedDirs.size() > 0) {
@@ -252,7 +258,7 @@ void BookMarks::dragEnterEvent(QDragEnterEvent *event)
 
 void BookMarks::dragMoveEvent(QDragMoveEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("BookMarks::dragMoveEvent");
     setCurrentIndex(indexAt(event->pos()));
 }
 
@@ -261,13 +267,13 @@ void BookMarks::dropEvent(QDropEvent *event)
 /*
     - add folder as a bookmark
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("BookMarks::dropEvent");
 
     const QMimeData *mimeData = event->mimeData();
     if (!mimeData->hasUrls()) return;
 
     /*
-    qDebug() << CLASSFUNCTION
+    qDebug() << "BookMarks::dropEvent"
              << event
              << mimeData->hasUrls() << mimeData->urls();
     //*/
@@ -320,7 +326,7 @@ void BookMarks::dropEvent(QDropEvent *event)
         QString destPath = dropDir + "/" + Utilities::getFileName(srcPath);
         bool copied = QFile::copy(srcPath, destPath);
         /*
-        qDebug() << CLASSFUNCTION
+        qDebug() << "BookMarks::dropEvent"
                  << "Copy" << srcPath
                  << "to" << destPath << "Copied:" << copied
                  << event->dropAction();  //*/

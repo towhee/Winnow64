@@ -2,14 +2,14 @@
 
 void MW::traverseFolderStressTestFromMenu()
 {
-    qDebug() << CLASSFUNCTION;
+    qDebug() << "MW::traverseFolderStressTestFromMenu";
     traverseFolderStressTest();
 }
 
 void MW::traverseFolderStressTest(int ms, int duration)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION << ms;
+    if (G::isLogger) G::log("MW::traverseFolderStressTest");
+    qDebug() << "MW::traverseFolderStressTest" << ms;
     G::popUp->end();
 
     if (!ms) {
@@ -48,14 +48,14 @@ void MW::traverseFolderStressTest(int ms, int duration)
 //                  + "<br><br>Press <font color=\"red\"><b>Esc</b></font> to cancel this popup."
                   ;
     G::popUp->showPopup(msg, 0);
-    qDebug() << CLASSFUNCTION << "Executed stress test" << slideCount << "times.  "
+    qDebug() << "MW::traverseFolderStressTest" << "Executed stress test" << slideCount << "times.  "
              << msElapsed << "ms elapsed  "
              << ms << "ms delay  "
              << imagePerSec << "images per second  "
              << msPerImage << "ms per image."
                 ;
     return;
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::traverseFolderStressTest");
     getSubfolders("/users/roryhill/pictures");
     QString fPath;
     int r = static_cast<int>(QRandomGenerator::global()->generate());
@@ -64,14 +64,14 @@ void MW::traverseFolderStressTest(int ms, int duration)
 
 void MW::bounceFoldersStressTestFromMenu()
 {
-    qDebug() << CLASSFUNCTION;
+    qDebug() << "MW::bounceFoldersStressTestFromMenu";
     bounceFoldersStressTest(0, 0);
 }
 
 void MW::bounceFoldersStressTest(int ms, int duration)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION << "ms =" << ms << "duration =" << duration;
+    if (G::isLogger) G::log("MW::bounceFoldersStressTest");
+    qDebug() << "MW::bounceFoldersStressTest" << "ms =" << ms << "duration =" << duration;
     G::popUp->end();
 
 
@@ -96,7 +96,7 @@ void MW::bounceFoldersStressTest(int ms, int duration)
     while (isStressTest) {
         uint randomIdx = QRandomGenerator::global()->generate() % static_cast<uint>(n);
         QString path = bookMarkPaths.at(randomIdx);
-        qDebug() << CLASSFUNCTION << randomIdx << path;
+        qDebug() << "MW::bounceFoldersStressTest" << randomIdx << path;
         bookmarks->select(path);
         fsTree->select(path);
         folderSelectionChange();
@@ -110,7 +110,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 //    gridView->setVisible(!gridView->isVisible());
     return;
 
-    qDebug() << CLASSFUNCTION;
+    qDebug() << "MW::testNewFileFormat";
     bounceFoldersStressTest(50, 10000);
     return;
     QString fPath = "D:/Pictures/favourites/2013-09-17_0033.jpg";   // pos = 889

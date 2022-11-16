@@ -28,7 +28,7 @@ SaveAsDlg::SaveAsDlg(QModelIndexList &selection,
 
     ui->progressBar->setVisible(false);
 
-    qDebug() << CLASSFUNCTION << ui->imageTypesCB->currentText();
+    qDebug() << "SaveAsDlg::SaveAsDlg" << ui->imageTypesCB->currentText();
 }
 
 SaveAsDlg::~SaveAsDlg()

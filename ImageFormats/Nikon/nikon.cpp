@@ -713,7 +713,7 @@ bool Nikon::parse(MetadataParameters &p,
                   Jpeg *jpeg,
                   GPS *gps)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Nikon::parse");
     // moved file.open to readMetadata
     p.file.seek(0);
 

@@ -29,7 +29,7 @@
 
 void MW::newWorkspace()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::newWorkspace");
     int n = workspaces->count();
     if (n > 9) {
         QString msg = "Only ten workspaces allowed.  Use Manage Workspaces\nto delete or reassign workspaces.";
@@ -63,7 +63,7 @@ QString MW::fixDupWorkspaceName(QString name)
     found then "_1" is appended.  The function is recursive since the original name
     with "_1" appended also might exist.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::fixDupWorkspaceName");
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == name) {
             name += "_1";
@@ -75,7 +75,7 @@ QString MW::fixDupWorkspaceName(QString name)
 
 void MW::invokeWorkspaceFromAction(QAction *workAction)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::invokeWorkspaceFromAction");
     for (int i=0; i<workspaces->count(); i++) {
         if (workspaces->at(i).name == workAction->text()) {
             invokeWorkspace(workspaces->at(i));
@@ -91,7 +91,7 @@ void MW::invokeWorkspace(const workspaceData &w)
     are a list of actions, the workspaceMenu triggered signal is captured, and the
     workspace with a matching name to the action is used.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::invokeWorkspace");
     restoreGeometry(w.geometry);
     restoreState(w.state);
     // two restoreState req'd for going from docked to floating docks
@@ -132,7 +132,7 @@ void MW::invokeWorkspace(const workspaceData &w)
     else toggleSortDirection(Tog::off);
     updateState();
     workspaceChanged = true;
-    sortChange(CLASSFUNCTION);
+    sortChange("MW::invokeWorkspace");
     // chk if a video file
     if (dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool()) {
         centralLayout->setCurrentIndex(VideoTab);
@@ -143,7 +143,7 @@ void MW::invokeWorkspace(const workspaceData &w)
 
 void MW::snapshotWorkspace(workspaceData &wsd)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::snapshotWorkspace");
     wsd.geometry = saveGeometry();
     wsd.state = saveState();
     wsd.isFullScreen = isFullScreen();
@@ -186,7 +186,7 @@ void MW::manageWorkspaces()
 /*
     Delete, rename and reassign workspaces.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::manageWorkspaces");
     // Update a list of workspace names for the manager dialog
     QList<QString> wsList;
     for (int i=0; i<workspaces->count(); i++)
@@ -206,7 +206,7 @@ void MW::manageWorkspaces()
 
 void MW::deleteWorkspace(int n)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::deleteWorkspace");
     if (workspaces->count() < 1) return;
 
     // remove workspace from list of workspaces
@@ -223,7 +223,7 @@ void MW::deleteWorkspace(int n)
 
 void MW::syncWorkspaceMenu()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::syncWorkspaceMenu");
     int count = workspaces->count();
     for (int i = 0; i < 10; i++) {
         if (i < count) {
@@ -240,7 +240,7 @@ void MW::syncWorkspaceMenu()
 
 void MW::reassignWorkspace(int n)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::reassignWorkspace");
     QString name = workspaces->at(n).name;
     populateWorkspace(n, name);
     reportWorkspace(n);
@@ -253,10 +253,10 @@ void MW::defaultWorkspace()
     there are not any QSettings to read.  It is also useful if part or all of the
     app is "stranded" on secondary monitors that are not attached.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::defaultWorkspace");
     QRect desktop = QGuiApplication::screens().first()->geometry();
 //    QRect desktop = qApp->desktop()->availableGeometry();
-//    qDebug() << CLASSFUNCTION << desktop << desktop1;
+//    qDebug() << "MW::defaultWorkspace" << desktop << desktop1;
     resize(static_cast<int>(0.75 * desktop.width()),
            static_cast<int>(0.75 * desktop.height()));
     setGeometry( QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter,
@@ -326,13 +326,13 @@ void MW::defaultWorkspace()
     infoVisibleAction->setChecked(true);
     sortReverseAction->setChecked(false);
     sortColumn = 0;
-    sortChange(CLASSFUNCTION);
+    sortChange("MW::defaultWorkspace");
     updateState();
 }
 
 void MW::renameWorkspace(int n, QString name)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::renameWorkspace");
     // do not rename if duplicate
     if (workspaces->count() > 0) {
         for (int i=1; i<workspaces->count(); i++) {
@@ -346,14 +346,14 @@ void MW::renameWorkspace(int n, QString name)
 
 void MW::populateWorkspace(int n, QString name)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::populateWorkspace");
     snapshotWorkspace((*workspaces)[n]);
     (*workspaces)[n].name = name;
 }
 
 void MW::reportWorkspace(int n)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::reportWorkspace");
     ws = workspaces->at(n);
     qDebug() << G::t.restart() << "\t" << "\n\nName" << ws.name
              << "\nGeometry" << ws.geometry
@@ -396,7 +396,7 @@ void MW::reportWorkspace(int n)
 
 void MW::loadWorkspaces()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::loadWorkspaces");
     if (!isSettings) return;
     int size = setting->beginReadArray("Workspaces");
     for (int i = 0; i < size; ++i) {
@@ -444,7 +444,7 @@ void MW::loadWorkspaces()
 
 void MW::saveWorkspaces()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::saveWorkspaces");
     setting->beginWriteArray("Workspaces");
     for (int i = 0; i < workspaces->count(); ++i) {
         ws = workspaces->at(i);

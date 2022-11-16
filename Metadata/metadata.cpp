@@ -5,7 +5,7 @@
 
 Metadata::Metadata(QObject *parent) : QObject(parent)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::Metadata");
     // some initialization
     initOrientationHash();
     initSupportedFiles();
@@ -56,14 +56,14 @@ TIF data types:
 
 void Metadata::initSupportedLabelsRatings()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::initSupportedLabelsRatings");
     ratings << "" << "1" << "2" << "3" << "4" << "5";
     labels << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
 }
 
 void Metadata::initSupportedFiles()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::initSupportedFiles");
     // add raw file types here as they are supported
     hasJpg              << "arw"
                         << "cr2"
@@ -293,7 +293,7 @@ void Metadata::initSupportedFiles()
 
 void Metadata::initOrientationHash()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::initOrientationHash");
     orientationDescription[1] = "Horizontal";
     orientationDescription[2] = "Mirrow horizontal";
     orientationDescription[3] = "Rotate 180";
@@ -317,7 +317,7 @@ void Metadata::initOrientationHash()
 void Metadata::reportMetadata()
 {
 
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::reportMetadata");
     QString createdExif = m.createdDate.toString("yyyy-MM-dd hh:mm:ss");
     MetaReport::header("Winnow datamodel", p.rpt);
 //    p.rpt << "\nDATAMODEL:\n\n";
@@ -495,7 +495,7 @@ QString Metadata::diagnostics(QString fPath)
 
 int Metadata::getNewOrientation(int orientation, int rotation)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::getNewOrientation");
     int degrees = orientationToDegrees[orientation];
     degrees += rotation;
     if (degrees > 270) degrees -= 360;
@@ -504,8 +504,8 @@ int Metadata::getNewOrientation(int orientation, int rotation)
 
 void Metadata::writeOrientation(QString fPath, QString orientationNumber)
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
-    qDebug() << __PRETTY_FUNCTION__ << fPath;
+    if (G::isLogger) G::log("Metadata::writeOrientation");
+    qDebug() << "Metadata::writeOrientation" << fPath;
     if (G::modifySourceFiles) {
         ExifTool et;
         et.setOverWrite(true);
@@ -530,7 +530,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     for existing and changed metadata is written to buffer and the original image file is
     copied unchanged.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Metadata::writeXMP");
 
     // is xmp supported for this file
     QFileInfo info(fPath);
@@ -540,7 +540,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     if (suffix != "xmp") return false;
 
 //    if (!sidecarFormats.contains(suffix)) {
-////        qDebug() << CLASSFUNCTION << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
+////        qDebug() << "Metadata::writeXMP" << "Unable to write xmp buffer."  << suffix << "not in xmpWriteFormats";
 //        return false;
 //    }
 
@@ -552,16 +552,16 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     int newOrientation = getNewOrientation(m.orientation, m.rotationDegrees);
 
     /* debug
-    qDebug() << CLASSFUNCTION << "m.rating =" << m.rating << "m._rating = " << m._rating;
-    qDebug() << CLASSFUNCTION << "m.label =" << m.label << "m._label = " << m._label;
-    qDebug() << CLASSFUNCTION << "m.title =" << m.title << "m._title = " << m._title;
-    qDebug() << CLASSFUNCTION << "m.creator =" << m.creator << "m._creator = " << m._creator;
-    qDebug() << CLASSFUNCTION << "m.copyright =" << m.copyright << "m._copyright = " << m._copyright;
-    qDebug() << CLASSFUNCTION << "m.email =" << m.email << "m._email = " << m._email;
-    qDebug() << CLASSFUNCTION << "m.url =" << m.url << "m._url = " << m._url;
+    qDebug() << "Metadata::writeXMP" << "m.rating =" << m.rating << "m._rating = " << m._rating;
+    qDebug() << "Metadata::writeXMP" << "m.label =" << m.label << "m._label = " << m._label;
+    qDebug() << "Metadata::writeXMP" << "m.title =" << m.title << "m._title = " << m._title;
+    qDebug() << "Metadata::writeXMP" << "m.creator =" << m.creator << "m._creator = " << m._creator;
+    qDebug() << "Metadata::writeXMP" << "m.copyright =" << m.copyright << "m._copyright = " << m._copyright;
+    qDebug() << "Metadata::writeXMP" << "m.email =" << m.email << "m._email = " << m._email;
+    qDebug() << "Metadata::writeXMP" << "m.url =" << m.url << "m._url = " << m._url;
 
-//    qDebug() << CLASSFUNCTION << "m.orientation =" << m.orientation << "m._orientation = " << m._orientation;
-//    qDebug() << CLASSFUNCTION << "m.rotationDegrees =" << m.rotationDegrees << "m._rotationDegrees = " << m._rotationDegrees;
+//    qDebug() << "Metadata::writeXMP" << "m.orientation =" << m.orientation << "m._orientation = " << m._orientation;
+//    qDebug() << "Metadata::writeXMP" << "m.rotationDegrees =" << m.rotationDegrees << "m._rotationDegrees = " << m._rotationDegrees;
     qDebug();
     //*/
 
@@ -598,9 +598,9 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     // rgh error trap file operation
     if (p.file.isOpen()) {
         p.file.close();
-//        qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
+//        qDebug() << "Metadata::writeXMP" << "Close" << p.file.fileName();
     }
-//    qDebug() << CLASSFUNCTION << "Open " << p.file.fileName();
+//    qDebug() << "Metadata::writeXMP" << "Open " << p.file.fileName();
     p.file.open(QIODevice::ReadWrite);
 
     // if current xmp is invalid then fix
@@ -662,7 +662,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     xmp.writeSidecar(p.file);
 
     p.file.close();
-//    qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
+//    qDebug() << "Metadata::writeXMP" << "Close" << p.file.fileName();
     return true;
 }
 
@@ -674,7 +674,7 @@ found returns 0.
 
 QFile p.file must be assigned and open.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::findInFile");
     uint firstCharCode = static_cast<unsigned int>(s[0].unicode());
     p.file.seek(offset);
     for (quint32 i = offset; i < offset + range; i++) {
@@ -702,7 +702,7 @@ checked to make sure there is valid data.
 
 ** Not being used **
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::verifyEmbeddedJpg");
     p.file.seek(offset);
     if (Utilities::get16(p.file.peek(2)) == 0xFFD8) {
         p.file.seek(offset + length - 2);
@@ -718,7 +718,7 @@ checked to make sure there is valid data.
 
 bool Metadata::parseNikon()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::parseNikon");
     if (nikon == nullptr) nikon = new Nikon;
     nikon->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
@@ -727,7 +727,7 @@ bool Metadata::parseNikon()
 
 bool Metadata::parseCanon()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::parseCanon");
     if (canon == nullptr) canon = new Canon;
     canon->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
@@ -736,7 +736,7 @@ bool Metadata::parseCanon()
 
 bool Metadata::parseCanonCR3()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Metadata::parseCanonCR3");
 //    CanonCR3 canonCR3(p, m, ifd, exif, jpeg);
 //    canonCR3.parse();
     if (canonCR3 == nullptr) canonCR3 = new CanonCR3;
@@ -747,7 +747,7 @@ bool Metadata::parseCanonCR3()
 
 bool Metadata::parseOlympus()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::parseOlympus");
     if (olympus == nullptr) olympus = new Olympus;
     olympus->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
@@ -756,7 +756,7 @@ bool Metadata::parseOlympus()
 
 bool Metadata::parseSony()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::parseSony");
     if (sony == nullptr) sony = new Sony;
     sony->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
@@ -765,7 +765,7 @@ bool Metadata::parseSony()
 
 bool Metadata::parseFuji()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::parseFuji");
     if (fuji == nullptr) fuji = new Fuji;
     fuji->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -774,7 +774,7 @@ bool Metadata::parseFuji()
 
 bool Metadata::parseDNG()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::parseDNG");
     if (dng == nullptr) dng = new DNG;
     if (iptc == nullptr) iptc = new IPTC;
     dng->parse(p, m, ifd, iptc, exif, jpeg, gps);
@@ -784,7 +784,7 @@ bool Metadata::parseDNG()
 
 bool Metadata::parseTIF()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::parseTIF");
     if (tiff == nullptr) tiff = new Tiff;
     if (irb == nullptr) irb = new IRB;
     tiff->parse(p, m, ifd, irb, iptc, exif, gps);
@@ -794,7 +794,7 @@ bool Metadata::parseTIF()
 
 bool Metadata::parsePanasonic()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::parsePanasonic");
     if (panasonic == nullptr) panasonic = new Panasonic;
     panasonic->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
@@ -803,8 +803,8 @@ bool Metadata::parsePanasonic()
 
 bool Metadata::parseJPG(quint32 startOffset)
 {
-//    qDebug() << CLASSFUNCTION << p.file.fileName();
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+//    qDebug() << "Metadata::parseJPG" << p.file.fileName();
+    if (G::isLogger) G::log("Metadata::parseJPG");
     if (!p.file.isOpen()) {
         qWarning() << "WARNING" << "Metadata::parseJPG" << p.file.fileName() << "is not open";
         return false;
@@ -821,7 +821,7 @@ bool Metadata::parseJPG(quint32 startOffset)
 
 bool Metadata::parseHEIF()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::parseHEIF");
 #ifdef Q_OS_WIN
     // rgh remove heic
     if (heic == nullptr) heic = new Heic;
@@ -834,14 +834,14 @@ bool Metadata::parseHEIF()
 
 bool Metadata::parseSidecar()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Metadata::parseSidecar");
     if (G::stop) return false;
 
     QFileInfo info(p.file);
     QString sidecarPath = info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
     QFile sidecarFile(sidecarPath);
     /*
-    qDebug() << CLASSFUNCTION
+    qDebug() << "Metadata::parseSidecar"
              << "sidecarPath" << sidecarPath
              << "sidecarFile.exists()" << sidecarFile.exists()
                 ;
@@ -907,14 +907,14 @@ QString Metadata::sidecarPath(QString fPath)
     The sidecar file has the same name as the image file, but uses the extension "xmp".
 */
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Metadata::sidecarPath");
     QFileInfo info(fPath);
     return info.absoluteDir().path() + "/" + info.baseName() + ".xmp";
 }
 
 void Metadata::clearMetadata()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Metadata::clearMetadata");
     p.fPath = "";
     m.offsetFull = 0;
     m.lengthFull = 0;
@@ -990,22 +990,22 @@ void Metadata::testNewFileFormat(const QString &path)
     p.file.setFileName(path);
     if (p.file.isOpen()) {
         p.file.close();
-//        qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
+//        qDebug() << "Metadata::testNewFileFormat" << "Close" << p.file.fileName();
     }
-//    qDebug() << CLASSFUNCTION << "Open " << p.file.fileName();
+//    qDebug() << "Metadata::testNewFileFormat" << "Open " << p.file.fileName();
     p.file.open(QIODevice::ReadOnly);
 
     // edit test format to use:
     parseDNG();
     p.file.close();
-//    qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
+//    qDebug() << "Metadata::testNewFileFormat" << "Close" << p.file.fileName();
 //    reportMetadata();
 }
 
 bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION, "Source: " + source);
-//    qDebug() << CLASSFUNCTION << source;
+    if (G::isLogger) G::log("Metadata::readMetadata", "Source: " + source);
+//    qDebug() << "Metadata::readMetadata" << source;
 
     // make sure file is available ie usb drive might have been ejected
     QFileInfo fileInfo(path);
@@ -1109,14 +1109,14 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
                                  bool essential, bool nonEssential,
                                  bool isReport, bool isLoadXmp, QString source)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION, fileInfo.filePath() + "  Source: " + source);
+    if (G::isLogger) G::log("Metadata::loadImageMetadata", fileInfo.filePath() + "  Source: " + source);
 
     // check abort
     if (G::dmEmpty) return false;
 
     // check instance up-to-date
     if (instance != G::dmInstance) {
-        qWarning() << "WARNING" << CLASSFUNCTION
+        qWarning() << "WARNING" << "Metadata::loadImageMetadata"
                    << "Instance clash"
                    << "this =" << instance
                    << "DM =" << G::dmInstance
@@ -1150,7 +1150,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
 //        m.video = videoFormats.contains(ext);
         if (G::useSidecar) {
             p.file.setFileName(fPath);
-//            qDebug() << CLASSFUNCTION << "Open " << p.file.fileName();
+//            qDebug() << "Metadata::loadImageMetadata" << "Open " << p.file.fileName();
             if (p.file.open(QIODevice::ReadWrite)) {
                 if (parseSidecar()) {
                     parsedSidcar = true;
@@ -1171,7 +1171,7 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
     // read metadata
     m.metadataLoaded = readMetadata(isReport, fPath, source);
     if (!m.metadataLoaded) {
-        qWarning() << "WARNING" << "Metadata not loaded for" << fPath;
+        qWarning() << "WARNING" << "Metadata::loadImageMetadata  Metadata not loaded for" << fPath;
         return false;
     }
 

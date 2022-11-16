@@ -89,7 +89,7 @@ QString ManageImagesDlg::templatesUsingTile(QString name)
         for (int b = 0; b < borders.length(); ++b) {
             QString tileKey = templateBorderPath + "/" + borders.at(b) + "/tile";
             QString tileName = setting->value(tileKey).toString();
-//            qDebug() << CLASSFUNCTION << tileKey << tileName << name;
+//            qDebug() << "ManageImagesDlg::templatesUsingTile" << tileKey << tileName << name;
             if (tileName == name) {
                 msg += "Warning: " + name + " is being used by template "
                        + templateName + "\n";
@@ -101,7 +101,7 @@ QString ManageImagesDlg::templatesUsingTile(QString name)
 
 QString ManageImagesDlg::templatesUsingGraphic(QString name)
 {
-//    qDebug() << CLASSFUNCTION << name;
+//    qDebug() << "ManageImagesDlg::templatesUsingTile" << name;
     QString msg = "";
     setting->beginGroup("Embel/Templates");
     QStringList templates = setting->childGroups();
@@ -109,14 +109,14 @@ QString ManageImagesDlg::templatesUsingGraphic(QString name)
     for (int i = 0; i < templates.length(); ++i) {
         QString templateName = templates.at(i);
         QString templateGraphicPath = "Embel/Templates/" + templateName + "/Graphics";
-//        qDebug() << CLASSFUNCTION << templateName << templateGraphicPath;
+//        qDebug() << "ManageImagesDlg::templatesUsingGraphic" << templateName << templateGraphicPath;
         setting->beginGroup(templateGraphicPath);
         QStringList graphics = setting->childGroups();
         setting->endGroup();
         for (int g = 0; g < graphics.length(); ++g) {
             QString graphicKey = templateGraphicPath + "/" + graphics.at(g) + "/graphic";
             QString graphicName = setting->value(graphicKey).toString();
-//            qDebug() << CLASSFUNCTION << graphicKey << graphicName << name;
+//            qDebug() << "ManageImagesDlg::templatesUsingTile" << graphicKey << graphicName << name;
             if (graphicName == name) {
                 msg += "Warning: " + name + " is being used by template "
                        + templateName + "\n";
@@ -145,7 +145,7 @@ void ManageImagesDlg::save(QPixmap *pm)
         Utilities::uniqueInList(name, list);
     setting->endGroup();
     QString key = settingPath + "/" + name;
-    qDebug() << CLASSFUNCTION << "key =" << key << "ht =" << ht;
+    qDebug() << "ManageImagesDlg::templatesUsingTile" << "key =" << key << "ht =" << ht;
     setting->setValue(key, graphicBa);
 
     // add to imageTable
@@ -173,7 +173,7 @@ void ManageImagesDlg::save(QPixmap *pm)
 //        Utilities::uniqueInList(name, list);
 //    setting->endGroup();
 //    QString key = settingPath + "/" + name;
-//    qDebug() << CLASSFUNCTION << "key =" << key << "ht =" << ht;
+//    qDebug() << "ManageImagesDlg::save" << "key =" << key << "ht =" << ht;
 //    setting->setValue(key, graphicBa);
 
     // let user know
@@ -188,7 +188,7 @@ void ManageImagesDlg::itemDoubleClicked(QTableWidgetItem *item)
 */
     if (isInitializing) return;
     prevName = item->text();
-//    qDebug() << CLASSFUNCTION << item << prevName;
+//    qDebug() << "ManageImagesDlg::itemDoubleClicked" << item << prevName;
 }
 
 void ManageImagesDlg::itemChanged(QTableWidgetItem *item)
@@ -271,7 +271,7 @@ void ManageImagesDlg::on_deleteBtn_clicked()
         QString sKey = settingPath + "/" + name;
         int row = toDeleteList.at(i)->row();
         /*
-        qDebug() << CLASSFUNCTION << i
+        qDebug() << "ManageImagesDlg::on_deleteBtn_clicked" << i
                  << name
                  << row
                  << sKey

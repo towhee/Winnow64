@@ -80,7 +80,7 @@ bool Canon::parse(MetadataParameters &p,
                   Jpeg *jpeg,
                   GPS *gps)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("Canon::parse");
     //p.file.open in Metadata::readMetadata
     quint32 startOffset = 0;
 

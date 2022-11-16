@@ -112,7 +112,7 @@ void Effects::transparentEdgeMap(QImage &img, int depth,
     int h = img.height();
     int x, y;
 #ifdef ISLOGGER
-Utilities::log(__PRETTY_FUNCTION__, "");
+Utilities::log("Effects::transparentEdgeMap", "");
 #endif
 
     // create QVector edge map (em) used to tally pixels added to QMultiMap edge
@@ -199,7 +199,7 @@ Utilities::log(__PRETTY_FUNCTION__, "");
         pts.clear();
         // get list of points for the previous distance from the edge
         pts = edge.values(d);
-//        qDebug() << __PRETTY_FUNCTION__ << "d =" << d << "pts.size() =" << pts.size() << pts;
+//        qDebug() << "Effects::transpaentEdgeMap" << "d =" << d << "pts.size() =" << pts.size() << pts;
         d++;
         if (d > depth) break;
         dMax = d;
@@ -228,7 +228,7 @@ Utilities::log(__PRETTY_FUNCTION__, "");
     }
 
     /* List pts in edge
-    qDebug() << __PRETTY_FUNCTION__ << "dMax =" << dMax;
+    qDebug() << "Effects::transparentEdgeMap" << "dMax =" << dMax;
     QDebug bug = qDebug().noquote().nospace();
     for (int d = 1; d <= dMax; d++) {
         pts.clear();
@@ -241,7 +241,7 @@ Utilities::log(__PRETTY_FUNCTION__, "");
     }
 //    */
     /* show result in shades of red
-    qDebug() << __PRETTY_FUNCTION__ << "edge.lastKey() ="  << edge.lastKey();
+    qDebug() << "Effects::transparentEdgeMap" << "edge.lastKey() ="  << edge.lastKey();
     int step = 220 / edge.lastKey();
     for (d = 1; d <= edge.lastKey(); d++) {
         pts.clear();
@@ -257,7 +257,7 @@ Utilities::log(__PRETTY_FUNCTION__, "");
     img.save("D:/Pictures/Temp/effect/edge.tif");
 //    */
     /* show result in multicolors
-    qDebug() << __PRETTY_FUNCTION__ << "edge.lastKey() ="  << edge.lastKey();
+    qDebug() << "Effects::transparentEdgeMap" << "edge.lastKey() ="  << edge.lastKey();
     QList<QRgb> colors = {0xffff0000, 0xff00ff00, 0xff0000ff};
     for (d = 1; d <= edge.lastKey(); d++) {
         if (d > 3) break;
@@ -324,7 +324,7 @@ Return the average of the pixels left, right, above and below the pixel at x,y
 */
     if (x < 0 || x > w - 1 || y < 0 || y > h - 1) {
         /*
-        qDebug() << __PRETTY_FUNCTION__ << "WARNING: OUT OF RANGE"
+        qDebug() << "Effects::averagePixel" << "WARNING: OUT OF RANGE"
                  << "x =" << x
                  << "y =" << y
                     ;
@@ -338,7 +338,7 @@ Return the average of the pixels left, right, above and below the pixel at x,y
     x + 1 > w - 1 ? x2 = w - 1 : x2 = x + 1;
     y + 1 > h - 1 ? y2 = h - 1 : y2 = y + 1;
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << "Effects::averagePixel"
              << "x =" << x
              << "y =" << y
              << "x1 =" << x1
@@ -367,7 +367,7 @@ Return the average of the pixels in the box defined by offset o centered on x,y
     // return if coordinate out of range
     if (x < 0 || x > w - 1 || y < 0 || y > h - 1) {
         /*
-        qDebug() << __PRETTY_FUNCTION__ << "WARNING: OUT OF RANGE"
+        qDebug() << "Effects::averagePixelInBox" << "WARNING: OUT OF RANGE"
                  << "x =" << x
                  << "y =" << y
                     ;
@@ -383,7 +383,7 @@ Return the average of the pixels in the box defined by offset o centered on x,y
     x + o > w - 1 ? x2 = w - 1 : x2 = x + o;
     y + o > h - 1 ? y2 = h - 1 : y2 = y + o;
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << "Effects::averagePixelInBox"
              << "x =" << x
              << "y =" << y
              << "x1 =" << x1
@@ -545,7 +545,7 @@ void Effects::vector2DToImage(QImage &img, QVector<QVector<QRgb> > &v)
 void Effects::zeroVector(QImage &img, QVector<QVector<QRgb>> &v)
 {
 #ifdef ISLOGGER
-Utilities::log(__PRETTY_FUNCTION__, "");
+Utilities::log("Effects::zeroVector", "");
 #endif
 //    QRgb zero = 0;
     for (int y = 0; y < img.height(); ++y) {
@@ -573,7 +573,7 @@ void Effects::hueCount(QImage &img, QVector<int> &hues)
             int hue = hsl.hslHue();
             if (hue >= 0 && hue < 360) hues[hue]++;
 //            if (y == 0 && x == 0) {
-//                qDebug() << __PRETTY_FUNCTION__
+//                qDebug() << "Effects::hueCount"
 //                         << "s[y][x] =" << s[y][x]
 //                         << "rgb =" << rgb
 //                         << "hsl =" << hsl
@@ -594,7 +594,7 @@ void Effects::hueCount(QImage &img, QVector<int> &hues)
 QImage Effects::convolve(QImage &img, int mDim, double *matrix)
 {
 #ifdef ISLOGGER
-Utilities::log(__PRETTY_FUNCTION__, "");
+Utilities::log("Effects::convolve", "");
 #endif
     // matrix descriptors
     int i, mX, mY;
@@ -741,7 +741,7 @@ void Effects::blurLine(QVector<QVector<QRgb> > &q, Point &p1, Point &p2,
                        const int &w, const int &h, const int &width)
 {
 #ifdef ISLOGGER
-Utilities::log(__PRETTY_FUNCTION__, "");
+Utilities::log("Effects::blurLine", "");
 #endif
     if (p1.x > p2.x) swapPoints(p1, p2);
 
@@ -762,7 +762,7 @@ Utilities::log(__PRETTY_FUNCTION__, "");
     QVector<QRgb> temp;
 
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << "Effects::blurLine"
              << "w =" << w
              << "h =" << h
              << "p1.x =" << p1.x
@@ -810,7 +810,7 @@ Utilities::log(__PRETTY_FUNCTION__, "");
         int i = 0;
         int len = temp.size();
         /*
-        qDebug() << __PRETTY_FUNCTION__
+        qDebug() << "Effects::blurLine"
                  << "width =" << width
                  << "p1.x =" << p1.x
                  << "p2.x =" << p2.x
@@ -936,11 +936,11 @@ void fastblur(BImage img,int radius){
   (0xffu << 24) | ((r & 0xffu) << 16) | ((g & 0xffu) << 8) | (b & 0xffu)
 }
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log("Effects::boxBlur");
 #ifdef ISLOGGER
-Utilities::log(__PRETTY_FUNCTION__, "");
+Utilities::log("Effects::boxBlur", "");
 #endif
-    qDebug() << __PRETTY_FUNCTION__ << QTime::currentTime();
+    qDebug() << "Effects::boxBlur" << QTime::currentTime();
 
     if (radius < 1) return;
     QElapsedTimer t;
@@ -1059,7 +1059,7 @@ Utilities::log(__PRETTY_FUNCTION__, "");
     delete[] vmin;
     delete[] vmax;
 
-//    qDebug() << __PRETTY_FUNCTION__
+//    qDebug() << "Effects::boxBlur"
 //             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 }
 
@@ -1185,8 +1185,8 @@ void fastblur(BImage img,int radius){
 }
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
-    qDebug() << __PRETTY_FUNCTION__ << QTime::currentTime();
+    if (G::isLogger) G::log("Effects::boxBlur2");
+    qDebug() << "Effects::boxBlur2" << QTime::currentTime();
 
     if (radius < 1) return;
     QElapsedTimer t;
@@ -1313,7 +1313,7 @@ void fastblur(BImage img,int radius){
     delete[] vmin;
     delete[] vmax;
 
-//    qDebug() << __PRETTY_FUNCTION__
+//    qDebug() << "Effects::boxBlur2"
 //             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 }
 
@@ -1439,7 +1439,7 @@ void fastblur(BImage img,int radius){
 }
 
 */
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log("Effects::boxBlur1");
     if (radius < 1) return;
 
     QElapsedTimer t;
@@ -1488,7 +1488,7 @@ void fastblur(BImage img,int radius){
     memset(g, 0, wh * sizeof(int));
     memset(b, 0, wh * sizeof(int));
     qint64 t1ms = t.nsecsElapsed();
-    qDebug() << __PRETTY_FUNCTION__ << "memset =" << t1ms;
+    qDebug() << "Effects::boxBlur1" << "memset =" << t1ms;
     */
     int asum, rsum, gsum, bsum, x, y, yp, n, yw;
     int yo;     // first opaque pixel in row or column as n (x + y * w)
@@ -1532,7 +1532,7 @@ void fastblur(BImage img,int radius){
             p = s[n + MIN(wm, i)];
             /*
             int red = (p & 0x00ff0000)>>16;
-            qDebug() << __PRETTY_FUNCTION__
+            qDebug() << "Effects::boxBlur1"
                      << "p =" << QString::number(p, 16)
                      << "red =" << red
                      << "rsum =" << rsum
@@ -1610,7 +1610,7 @@ void fastblur(BImage img,int radius){
         for (y = 0; y < h; y++) {
             /*
             if (x == 200 && y == 200) {
-                qDebug() << __PRETTY_FUNCTION__
+                qDebug() << "Effects::boxBlur1"
                          << "rsum =" << rsum
                          << "gsum =" << gsum
                          << "bsum =" << bsum
@@ -1620,7 +1620,7 @@ void fastblur(BImage img,int radius){
             */
             if (excludeTransparency && (n >= yo)) {
 //                d[n] = 0xff000000 | (dv[rsum]<<16) | (dv[gsum]<<8) | dv[bsum];
-//                qDebug() << __PRETTY_FUNCTION__ << x << y;
+//                qDebug() << "Effects::boxBlur1" << x << y;
 
                 if (x == 0) {
                     vmin[y] = MIN(y + radius + 1, hm) * w;
@@ -1646,7 +1646,7 @@ void fastblur(BImage img,int radius){
     delete[] r;
     delete[] g;
     delete[] b;
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << "Effects::boxBlur1"
              << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 }
 
@@ -1680,7 +1680,7 @@ void Effects::boxBlur2D(QImage &img, int radius)
         g[y].resize(w);
         b[y].resize(w);
     }
-//    qDebug() << __PRETTY_FUNCTION__
+//    qDebug() << "Effects::boxBlur2D"
 //             << "Vectors created Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 
     /*
@@ -1694,7 +1694,7 @@ void Effects::boxBlur2D(QImage &img, int radius)
     memset(g, 0, wh * sizeof(int));
     memset(b, 0, wh * sizeof(int));
     qint64 t1ms = t.nsecsElapsed();
-    qDebug() << __PRETTY_FUNCTION__ << "memset =" << t1ms;
+    qDebug() << "Effects:boxBlur2D:" << "memset =" << t1ms;
     */
     int asum, rsum, gsum, bsum;
 //    QRgb *p, *p1, *p2;
@@ -1742,7 +1742,7 @@ void Effects::boxBlur2D(QImage &img, int radius)
     // scan from top to bottom
     for (int x = 0; x < w; x++){
         asum = rsum = gsum = bsum = 0;
-//        qDebug() << __PRETTY_FUNCTION__ << bsum;
+//        qDebug() << "Effects::boxBlur2D" << bsum;
         // initial sum r,g,b for blur range at start of column
         for (int i = -radius; i <= radius; i++) {
             int y = MIN(MAX(i, 0), hm);
@@ -1767,16 +1767,16 @@ void Effects::boxBlur2D(QImage &img, int radius)
     vector2DToImage(img, d);
     delete[] dv;
 
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << "Effects::boxBlur2"
              << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 }
 
 void Effects::blurOriginal(QImage &img, int radius)
 {
 #ifdef ISLOGGER
-Utilities::log(__PRETTY_FUNCTION__, "");
+Utilities::log("Effects::blurOriginal", "");
 #endif
-    qDebug() << __PRETTY_FUNCTION__;
+    qDebug() << "Effects::blurOriginal";
     QElapsedTimer t;
     t.start();
     QRgb *p1, *p2;
@@ -1888,7 +1888,7 @@ Utilities::log(__PRETTY_FUNCTION__, "");
     delete[] bs;
 
     img = buffer;
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << "Effects::blurOriginal"
              << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 }
 
@@ -1976,7 +1976,7 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
     s[v][u] = qRgba(r, g, b, a); \
 
 
-//    qDebug() << __PRETTY_FUNCTION__ << img.format();
+//    qDebug() << "Effects::raise" << img.format();
 //    QElapsedTimer t;
 //    t.start();
 
@@ -1994,7 +1994,7 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
     int transition = static_cast<int>(m * (1 - taper));
     double blendIncrement = 1.0 / (m - transition);
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << "Effects::raise"
              << "m" << m
              << "taper" << taper
              << "transition" << transition
@@ -2002,7 +2002,7 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
 //             */
 
     if (w <= (m << 1)) {
-        qDebug() << __PRETTY_FUNCTION__ << "return";
+        qDebug() << "Effects::raise" << "return";
         return;
     }
 
@@ -2082,7 +2082,7 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
             else blend = 1;
             /*
             if (y == m)
-            qDebug() << __PRETTY_FUNCTION__
+            qDebug() << "Effects::raise"
                      << "y =" << y
                      << "x =" << x
                      << "w =" << w
@@ -2117,7 +2117,7 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
         for (int x = h - y; x < (w + y - h); x++) {
             /*
             if (y == h - m)
-            qDebug() << __PRETTY_FUNCTION__
+            qDebug() << "Effects::raise"
                      << "y =" << y
                      << "x =" << x
                      << "w =" << w
@@ -2140,7 +2140,7 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
             if (x < (w - transition)) blend += blendIncrement;
             else blend = 1;
             /*
-            qDebug() << __PRETTY_FUNCTION__
+            qDebug() << "Effects::raise"
                      << "y =" << y
                      << "x =" << x
                      << "h =" << h
@@ -2188,7 +2188,7 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
     // build destination image
     vector2DToImage(img, s);
 
-//    qDebug() << __PRETTY_FUNCTION__
+//    qDebug() << "Effects::raise"
 //             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 
 #undef CrunchRaisedPixel
@@ -2198,10 +2198,10 @@ void Effects::raise(QImage &img, int m, double taper, int blurWidth, bool raise)
 void Effects::brightness(QImage &img, qreal evDelta)
 {
 #ifdef ISLOGGER
-Utilities::log(__PRETTY_FUNCTION__, "");
+Utilities::log("Effects::brightness", "");
 #endif
-//    qDebug() << __PRETTY_FUNCTION__ << QTime::currentTime();
-//    qDebug() << __PRETTY_FUNCTION__ << "delta =" << evDelta;
+//    qDebug() << "Effects::brightness" << QTime::currentTime();
+//    qDebug() << "Effects::brightness" << "delta =" << evDelta;
     QElapsedTimer t;
     t.start();
 
@@ -2243,7 +2243,7 @@ Utilities::log(__PRETTY_FUNCTION__, "");
     */
     vector2DToImage(img, s);
 
-//    qDebug() << __PRETTY_FUNCTION__
+//    qDebug() << "Effects::brightness"
 //             << "Elapsed time =" << QString("%L1").arg(t.nsecsElapsed());
 }
 
@@ -2293,7 +2293,7 @@ double Effects::embossEV(int &m, int d, double &contrast, double exposure,
     isUmbraGradient = create a smooth gradient between startEv to midEV to endEV
     */
 #ifdef ISLOGGER
-Utilities::log(__PRETTY_FUNCTION__, "");
+Utilities::log("Effects::embossEV", "");
 #endif
 
     double ev = exposure;
@@ -2318,7 +2318,7 @@ Utilities::log(__PRETTY_FUNCTION__, "");
         if (!isUmbra && endEV < midEV) ev += umbra * slope;
     }
     /*
-    if (rpt) qDebug().noquote() << __PRETTY_FUNCTION__
+    if (rpt) qDebug().noquote() << "Effects::embossEV"
          << "d =" << QString::number(d).leftJustified(4)
          << "m =" << QString::number(m).leftJustified(3)
          << "xi =" << QString::number(xi, 'f', 2).rightJustified(6)
@@ -2361,7 +2361,7 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     For each pixel, Effects::embossEV is called.
     */
     #ifdef ISLOGGER
-    Utilities::log(__PRETTY_FUNCTION__, "");
+    Utilities::log("Effects::emboss", "");
     #endif
 
     // border or graphics object with no transparent pixels along outer border
@@ -2380,7 +2380,7 @@ void Effects::emboss(QImage &img, int azimuth, double size, double exposure, dou
     bool isUmbra;
 
     /*
-    qDebug() << __PRETTY_FUNCTION__
+    qDebug() << "Effects::emboss"
              << "w   =" << w
              << "h   =" << h
              << "ls =" << ls
@@ -2440,7 +2440,7 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
     Draws a solid boundary around an object in an image, where the boundary is transparency.
 */
     #ifdef ISLOGGER
-    Utilities::log(__PRETTY_FUNCTION__, "");
+    Utilities::log("Effects::stroke", "");
     #endif
 
     int imW = img.width();
@@ -2465,7 +2465,7 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
 
     // check for edge failure
      if (edge.size() == 0) {
-        qDebug() << __PRETTY_FUNCTION__ << "Failed to find edge";
+        qDebug() << "Effects::stroke" << "Failed to find edge";
         // timed popUps do not work here - cause crash
         return false;
     }
@@ -2506,7 +2506,7 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
             int g = static_cast<int>(green * alpha);
             int b = static_cast<int>(blue * alpha);
             /*
-            if (x==0 & y == 0) qDebug() << __PRETTY_FUNCTION__
+            if (x==0 & y == 0) qDebug() << "Effects::stroke"
                                         << "qAlpha(s[y][x]) =" << qAlpha(s[y][x])
                                         << "opacity =" << opacity
                                         << "a =" << a
@@ -2541,7 +2541,7 @@ bool Effects::stroke(QImage &img, double width, QColor color, double opacity, bo
 void Effects::glow(QImage &img, double width, QColor color, double blurRadius)
 {
 #ifdef ISLOGGER
-Utilities::log(__PRETTY_FUNCTION__, "");
+Utilities::log("Effects::glow", "");
 #endif
     // create QVector (s) of img for pixel wrangling
     QVector<QVector<QRgb>> s(img.height());
@@ -2632,7 +2632,7 @@ void Effects::slopeUnitVector(Vector &a, Vector &b, int angle)
         b[1] = cos(rads);
     }
     b[2] = -sin(rads);
-    qDebug().noquote() << __PRETTY_FUNCTION__
+    qDebug().noquote() << "Effects::slopeUnitVector"
              << "b[0] =" << QString::number(b[0], 'f', 3).rightJustified(6)
              << "b[1] =" << QString::number(b[1], 'f', 3).rightJustified(6)
              << "b[2] =" << QString::number(b[2], 'f', 3).rightJustified(6);
@@ -2641,7 +2641,7 @@ void Effects::slopeUnitVector(Vector &a, Vector &b, int angle)
 
 void Effects::test(QImage &img)
 {
-    qDebug() << __PRETTY_FUNCTION__;
+    qDebug() << "Effects::test";
 
     /*
     // vectors a and b define the plane
@@ -2659,7 +2659,7 @@ void Effects::test(QImage &img)
     lightVector(315, l);
     for (int azimuth = 0; azimuth < 360; azimuth += 15) {
         lightVector(azimuth, l);
-        qDebug().noquote() << __PRETTY_FUNCTION__
+        qDebug().noquote() << "Effects::test"
                  << "Azimuth =" << QString::number(azimuth).leftJustified(4) << "   "
                  << "n[0] =" << QString::number(n[0], 'f', 3).rightJustified(6)
                  << "n[1] =" << QString::number(n[1], 'f', 3).rightJustified(6)
@@ -2806,7 +2806,7 @@ void Effects::test(QImage &img)
         for (int x = 0; x < w; ++x) {
             s[y][x] = QColor(s[y][x]).lighter(illumination).rgba();
         }
-        qDebug().noquote() << __PRETTY_FUNCTION__
+        qDebug().noquote() << "Effects::test"
                  << "i =" << i
                  << "Azimuth =" << QString::number(azimuth).leftJustified(4) << "   "
                  << "n[0] =" << QString::number(n[0], 'f', 3).rightJustified(6)

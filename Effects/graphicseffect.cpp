@@ -3,7 +3,7 @@
 
 GraphicsEffect::GraphicsEffect(QString src, QObject */*parent*/)
 {
-//    qDebug() << CLASSFUNCTION;
+//    qDebug() << "GraphicsEffect::GraphicsEffect";
     this->objectName() = "GraphicsEffect";
     this->src = src;
 }
@@ -11,7 +11,7 @@ GraphicsEffect::GraphicsEffect(QString src, QObject */*parent*/)
 QRectF GraphicsEffect::boundingRectFor(const QRectF& rect) const
 {
     /*
-    qDebug() << CLASSFUNCTION
+    qDebug() << "GraphicsEffect::boundingRectFor"
              << "rect =" << rect
              << "offset =" << offset
              << "m.top =" << m.top
@@ -58,7 +58,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
     for (int i = 0; i < effects.length(); ++i) {
         const Effect &ef = effects.at(i);
         /*
-        qDebug() << CLASSFUNCTION
+        qDebug() << "GraphicsEffect::set"
                  << "ef.effectOrder =" << ef.effectOrder
                  << "ef.effectName =" << ef.effectName
                     ;
@@ -134,7 +134,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
                 m.bottom = r;
 
                 /*
-                qDebug() << CLASSFUNCTION
+                qDebug() << "GraphicsEffect::set"
                          << "dx =" << dx
                          << "dy =" << dy
                          << "r =" << r
@@ -153,7 +153,7 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
 
 /* void GraphicsEffect::sourceChanged(QGraphicsEffect::ChangeFlags flags)
 {
-    qDebug() << CLASSFUNCTION << flags;
+    qDebug() << "GraphicsEffect::sourceChanged" << flags;
     if (flags & QGraphicsEffect::SourceInvalidated ||
         flags & QGraphicsEffect::SourceBoundingRectChanged)
         okToDraw = true;
@@ -163,14 +163,14 @@ void GraphicsEffect::set(QList<winnow_effects::Effect> &effects,
 void GraphicsEffect::draw(QPainter* painter)
 {
 #ifdef ISLOGGER
-Utilities::log(CLASSFUNCTION, "");
+Utilities::log("GraphicsEffect::draw", "");
 #endif
     /*
-    qDebug() << CLASSFUNCTION << okToDraw << QTime::currentTime() << painter;
+    qDebug() << "GraphicsEffect::draw" << okToDraw << QTime::currentTime() << painter;
     if (!okToDraw) return;
     okToDraw = false;
 
-    qDebug() << CLASSFUNCTION << "effects->length() =" << effects->length();
+    qDebug() << "GraphicsEffect::draw" << "effects->length() =" << effects->length();
 
     if (effects->length() == 0) return;
     */
@@ -185,10 +185,10 @@ Utilities::log(CLASSFUNCTION, "");
     // unpadded image is req'd for some effects like emboss
     unpaddedSrcImage = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, NoPad).toImage();
     srcPixmap = sourcePixmap(Qt::DeviceCoordinates, &srcOffset, PadToEffectiveBoundingRect);
-//    qDebug() << CLASSFUNCTION << "srcPixmap.width() =" << srcPixmap.width();
+//    qDebug() << "GraphicsEffect::draw" << "srcPixmap.width() =" << srcPixmap.width();
     overlay = srcPixmap.toImage();
     /*
-    qDebug() << CLASSFUNCTION
+    qDebug() << "GraphicsEffect::draw"
              << "boundingRect =" << boundingRect()
              << "boundingRect.x() =" << boundingRect().x()
              << "overlay =" << overlay.rect()
@@ -211,7 +211,7 @@ Utilities::log(CLASSFUNCTION, "");
         QPointF pt;
         Margin margin;
         /*
-        qDebug() << CLASSFUNCTION
+        qDebug() << "GraphicsEffect::draw"
                  << "i =" << i
                  << "ef.effectOrder =" << ef.effectOrder
                  << "ef.effectName =" << ef.effectName
@@ -268,7 +268,7 @@ Utilities::log(CLASSFUNCTION, "");
     return;
     /*
     if (rotation != 0.0) {
-        qDebug() << CLASSFUNCTION << "rotation =" << rotation;
+        qDebug() << "GraphicsEffect::draw" << "rotation =" << rotation;
         // Rotate the overlay
         double ovrX = overlay.width() / 2;
         double ovrY = overlay.height() / 2;
@@ -315,9 +315,9 @@ QT_END_NAMESPACE
 void GraphicsEffect::blurEffect(qreal radius, QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log(CLASSFUNCTION, "");
+Utilities::log("GraphicsEffect::blurEffect", "");
 #endif
-//    qDebug() << CLASSFUNCTION << QTime::currentTime();
+//    qDebug() << "GraphicsEffect::blurEffect" << QTime::currentTime();
 
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
@@ -342,9 +342,9 @@ Utilities::log(CLASSFUNCTION, "");
 void GraphicsEffect::sharpenEffect(qreal radius, QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log(CLASSFUNCTION, "");
+Utilities::log("GraphicsEffect::sharpenEffect", "");
 #endif
-    qDebug() << CLASSFUNCTION << QTime::currentTime();
+    qDebug() << "GraphicsEffect::sharpenEffect" << QTime::currentTime();
 
     if (overlay.isNull()) return;
 
@@ -361,9 +361,9 @@ void GraphicsEffect::shadowEffect(double length, double radius, QColor color, do
                                   QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log(CLASSFUNCTION, "");
+Utilities::log("GraphicsEffect::shadowEffect", "");
 #endif
-//    qDebug() << CLASSFUNCTION << QTime::currentTime();
+//    qDebug() << "GraphicsEffect::shadowEffect" << QTime::currentTime();
 
     if (overlay.isNull()) return;
 
@@ -413,11 +413,11 @@ void GraphicsEffect::shadowEffect1(double length, double radius, QColor color, d
                                   QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log(CLASSFUNCTION, "");
+Utilities::log("GraphicsEffect::shadowEffect1", "");
 #endif
     /*
-    qDebug() << CLASSFUNCTION << QTime::currentTime();
-    qDebug() << CLASSFUNCTION
+    qDebug() << "GraphicsEffect:shadowEffect1:" << QTime::currentTime();
+    qDebug() << "GraphicsEffect::shadowEffect1"
              << "overlay.rect() =" << overlay.rect()
                 ;
 //                */
@@ -433,7 +433,7 @@ Utilities::log(CLASSFUNCTION, "");
 //    int w = boundingRect().width();
 //    int h = boundingRect().height();
     /*
-    qDebug() << CLASSFUNCTION
+    qDebug() << "GraphicsEffect::shadowEffect1"
              << "unpaddedSrcImage.rect() =" << unpaddedSrcImage.rect()
              << "overlay.rect() =" << overlay.rect()
              << "boundingRect.rect() =" << boundingRect()
@@ -471,7 +471,7 @@ Utilities::log(CLASSFUNCTION, "");
     shadPainter.setCompositionMode(QPainter::CompositionMode_SourceIn);
     shadPainter.fillRect(shadIm.rect(), color);
    /*  erase blur except revealed shadow
-    qDebug() << CLASSFUNCTION
+    qDebug() << "GraphicsEffect::shadowEffect1"
              << "x =" << x
              << "y =" << y
              << "dy =" << dy
@@ -504,7 +504,7 @@ Utilities::log(CLASSFUNCTION, "");
 
 void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::CompositionMode mode)
 {
-//    qDebug() << CLASSFUNCTION /*<< QTime::currentTime()*/
+//    qDebug() << "GraphicsEffect::highligherEffect" /*<< QTime::currentTime()*/
 //             << "boundingRect =" << boundingRect();
 
     if (overlay.isNull()) return;
@@ -517,7 +517,7 @@ void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::Com
     QImage highlighterBackgroundImage(highlighterBackgroundSize, QImage::Format_ARGB32_Premultiplied);
     highlighterBackgroundImage.fill(color);
     /*
-    qDebug() << CLASSFUNCTION
+    qDebug() << "GraphicsEffect::highligherEffect"
              << "Margin.top =" << margin.top
              << "Margin.left =" << margin.left
              << "Margin.right =" << margin.right
@@ -539,9 +539,9 @@ void GraphicsEffect::highligherEffect(QColor color, Margin margin, QPainter::Com
 
 void GraphicsEffect::raiseEffect(int margin, QPainter::CompositionMode mode)
 {
-//    qDebug() << CLASSFUNCTION << QTime::currentTime();
+//    qDebug() << "GraphicsEffect::raiseEffect" << QTime::currentTime();
 #ifdef ISLOGGER
-Utilities::log(CLASSFUNCTION, "");
+Utilities::log("GraphicsEffect::raiseEffect", "");
 #endif
     QImage temp(overlay.size(), QImage::Format_ARGB32_Premultiplied);
     temp = overlay;
@@ -556,9 +556,9 @@ Utilities::log(CLASSFUNCTION, "");
 void GraphicsEffect::brightnessEffect(qreal evDelta, QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log(CLASSFUNCTION, "");
+Utilities::log("GraphicsEffect::brightnessEffect", "");
 #endif
-//    qDebug() << CLASSFUNCTION << QTime::currentTime();
+//    qDebug() << "GraphicsEffect::brightnessEffect" << QTime::currentTime();
     if (overlay.isNull()) return;
 
 //    QImage temp(overlay.size(), QImage::Format_ARGB32/*_Premultiplied*/);
@@ -583,9 +583,9 @@ void GraphicsEffect::strokeEffect(double width,
                                   QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log(CLASSFUNCTION, "");
+Utilities::log("GraphicsEffect::strokeEffect", "");
 #endif
-//    qDebug() << CLASSFUNCTION /*<< QTime::currentTime()*/
+//    qDebug() << "GraphicsEffect::strokeEffect" /*<< QTime::currentTime()*/
 //             << "boundingRect =" << boundingRect();
 
     if (overlay.isNull() || width < 1) return;
@@ -609,9 +609,9 @@ Utilities::log(CLASSFUNCTION, "");
 void GraphicsEffect::glowEffect(double width, QColor color, double blurRadius, QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log(CLASSFUNCTION, "");
+Utilities::log("GraphicsEffect::glowEffect", "");
 #endif
-//    qDebug() << CLASSFUNCTION << QTime::currentTime();
+//    qDebug() << "GraphicsEffect::glowEffect" << QTime::currentTime();
     if (overlay.isNull()) return;
 
     // silence issue
@@ -644,9 +644,9 @@ void GraphicsEffect::embossEffect(double size,
                                   QPainter::CompositionMode mode)
 {
 #ifdef ISLOGGER
-Utilities::log(CLASSFUNCTION, "");
+Utilities::log("GraphicsEffect::embossEffect", "");
 #endif
-//    qDebug() << CLASSFUNCTION << QTime::currentTime();
+//    qDebug() << "GraphicsEffect::embossEffect" << QTime::currentTime();
     if (overlay.isNull()) return;
 
     QImage temp(overlay.size(), QImage::Format_ARGB32);
@@ -671,7 +671,7 @@ Utilities::log(CLASSFUNCTION, "");
 
 /* bool GraphicsEffect::eventFilter(QObject *obj, QEvent *event)
 {
-    qDebug() << CLASSFUNCTION
+    qDebug() << "GraphicsEffect::embossEffect"
              << event << "\t"
              << event->type() << "\t"
              << obj << "\t"
@@ -681,7 +681,7 @@ Utilities::log(CLASSFUNCTION, "");
 
 bool GraphicsEffect::event(QEvent *event)
 {
-    qDebug() << CLASSFUNCTION
+    qDebug() << "GraphicsEffect::event"
              << event << "\t"
              << event->type()
                 ;
