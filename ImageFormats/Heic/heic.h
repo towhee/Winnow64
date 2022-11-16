@@ -13,7 +13,7 @@
 #include "Metadata/exif.h"
 #include "Metadata/ifd.h"
 #include "Metadata/gps.h"
-#include "Metadata/xmp.h"
+//#include "Metadata/xmp.h"
 #include "Lib/libde265/include/de265.h"
 #include "Lib/libheif/include/heif.h"
 

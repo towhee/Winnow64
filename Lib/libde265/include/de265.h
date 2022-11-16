@@ -26,7 +26,8 @@
 extern "C" {
 #endif
 
-#include <de265-version.h>
+#include "de265-version.h"
+//#include <de265-version.h>
 //#include <libde265/de265-version.h>
 
 

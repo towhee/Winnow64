@@ -1,5 +1,6 @@
 #include "Metadata/metadata.h"
 #include <QDebug>
+#include "ImageFormats/Heic/heic.h"
 #include "Main/global.h"
 
 Metadata::Metadata(QObject *parent) : QObject(parent)
