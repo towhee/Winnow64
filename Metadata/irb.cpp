@@ -39,7 +39,7 @@ void IRB::readThumb(MetadataParameters &p,  ImageMetadata &m)
             p.rpt << "\n";
         }
         /*
-        qDebug() << CLASSFUNCTION << m.fPath
+        qDebug() << "IRB::readThumb" << m.fPath
                  << "p.offset =" << p.offset
                  << "irbID =" << irbID
                     ;
@@ -61,7 +61,7 @@ void IRB::readThumb(MetadataParameters &p,  ImageMetadata &m)
             m.thumbFormat = G::ImageFormat::Jpg;
             if (p.report) p.rpt << "Embedded IRB Jpg found.\n";
             /*
-            qDebug() << CLASSFUNCTION
+            qDebug() << "IRB::readThumb"
                      << "m.offsetThumb =" << m.offsetThumb
                      << "m.lengthThumb =" << m.lengthThumb
                         ;

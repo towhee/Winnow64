@@ -2,7 +2,7 @@
 
 void MW::setCentralView()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setCentralView");
     if (!isSettings) return;
     if (asLoupeAction->isChecked()) loupeDisplay();
     if (asGridAction->isChecked()) gridDisplay();
@@ -28,7 +28,7 @@ void MW::loupeDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log("MW::loupeDisplay");
 
     if (!G::isInitializing && !G::allMetadataLoaded) {
         G::mode = "Loupe";
@@ -40,7 +40,7 @@ void MW::loupeDisplay()
 
     G::mode = "Loupe";
     asLoupeAction->setChecked(true);
-    updateStatus(true, "", CLASSFUNCTION);
+    updateStatus(true, "", "MW::loupeDisplay");
     updateIconRange(-1);
 
     // save selection as tableView is hidden and not synced
@@ -97,11 +97,11 @@ void MW::loupeDisplay()
         else scrollRow = gridView->midVisibleCell;
     }
     if (prevMode == "Compare") {
-        qDebug() << CLASSFUNCTION << dm->currentSfRow;
+        qDebug() << "MW::loupeDisplay" << dm->currentSfRow;
         scrollRow = dm->currentSfRow;
     }
     G::ignoreScrollSignal = false;
-    thumbView->scrollToRow(scrollRow, CLASSFUNCTION);
+    thumbView->scrollToRow(scrollRow, "MW::loupeDisplay");
 
     // If the zoom dialog was active, but hidden by gridView or tableView, then show it
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(true);
@@ -120,8 +120,8 @@ void MW::gridDisplay()
     bit of a cludge to get around lack of notification when the QListView has finished
     painting itself.
 */
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION << "1";
+    if (G::isLogger || G::isFlowLogger) G::log("MW::gridDisplay");
+    qDebug() << "MW::gridDisplay" << "1";
 
     if (embelProperties->templateId > 0) {
         QString msg = "Only loupe mode is available while the Embellish Editor is active.";
@@ -131,7 +131,7 @@ void MW::gridDisplay()
 
     G::mode = "Grid";
     asGridAction->setChecked(true);
-    updateStatus(true, "", CLASSFUNCTION);
+    updateStatus(true, "", "MW::gridDisplay");
     updateIconRange(-1);
 
     // save selection as gridView is hidden and not synced
@@ -141,7 +141,7 @@ void MW::gridDisplay()
     bool interrupted = false;
     if (metaReadThread->isRunning()) {
         interruptedRow = metaReadThread->interrupt();
-        qDebug() << CLASSFUNCTION << "interruptedRow =" << interruptedRow;
+        qDebug() << "MW::gridDisplay" << "interruptedRow =" << interruptedRow;
         interrupted = true;
     }
 
@@ -150,7 +150,7 @@ void MW::gridDisplay()
 
     // hide the thumbDock in grid mode as we don't need to see thumbs twice
     if (!metaReadThread->isRunning()) {
-        qDebug() << CLASSFUNCTION << "Hide the thumbdock";
+        qDebug() << "MW::gridDisplay" << "Hide the thumbdock";
         thumbDock->setVisible(false);
         thumbDockVisibleAction->setChecked(false);
     }
@@ -189,7 +189,7 @@ void MW::gridDisplay()
     G::ignoreScrollSignal = false;
     G::wait(100);
 //    gridView->waitUntilOkToScroll();
-     gridView->scrollToRow(scrollRow, CLASSFUNCTION);
+     gridView->scrollToRow(scrollRow, "MW::gridDisplay");
     updateIconRange(-1);
 
     if (gridView->justifyMargin() > 3) gridView->rejustify();
@@ -206,7 +206,7 @@ void MW::gridDisplay()
 
 void MW::tableDisplay()
 {
-    if (G::isLogger || G::isFlowLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger || G::isFlowLogger) G::log("MW::tableDisplay");
 
     if (embelProperties->templateId > 0) {
         G::popUp->showPopup(
@@ -217,7 +217,7 @@ void MW::tableDisplay()
 
     G::mode = "Table";
     asTableAction->setChecked(true);
-    updateStatus(true, "", CLASSFUNCTION);
+    updateStatus(true, "", "MW::tableDisplay");
     updateIconRange(-1);
 
     // save selection as tableView is hidden and not synced
@@ -279,11 +279,11 @@ void MW::tableDisplay()
     }
     G::ignoreScrollSignal = false;
     G::wait(100);
-//    qDebug() << CLASSFUNCTION << "scrollRow =" << scrollRow;
-    tableView->scrollToRow(scrollRow, CLASSFUNCTION);
-    if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, CLASSFUNCTION);
+//    qDebug() << "MW::tableDisplay" << "scrollRow =" << scrollRow;
+    tableView->scrollToRow(scrollRow, "MW::tableDisplay");
+    if (thumbView->isVisible()) thumbView->scrollToRow(scrollRow, "MW::tableDisplay");
     updateIconRange(-1);
-//    qDebug() << CLASSFUNCTION << scrollRow << tableView->midVisibleRow;
+//    qDebug() << "MW::tableDisplay" << scrollRow << tableView->midVisibleRow;
 
     // if the zoom dialog was open then hide it as no image visible to zoom
     if (zoomDlg && isZoomDlgVisible) zoomDlg->setVisible(false);
@@ -294,7 +294,7 @@ void MW::tableDisplay()
 
 void MW::compareDisplay()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::compareDisplay");
 
     if (embelProperties->templateId > 0) {
         G::popUp->showPopup(
@@ -315,7 +315,7 @@ void MW::compareDisplay()
     }
 
     asCompareAction->setChecked(true);
-    updateStatus(true, "", CLASSFUNCTION);
+    updateStatus(true, "", "MW::compareDisplay");
     if (n < 2) {
         G::popUp->showPopup("Select more than one image to compare.");
         return;

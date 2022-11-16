@@ -12,12 +12,13 @@
 #include <QMutex>
 #include "popup.h"
 #include "Utilities/utilities.h"
+//#include <QMetaObject>
 
 #define ICON_MIN	40
 #define ICON_MAX	480  // 256 is default
 #define EXISTS if (p.file.exists())
 
-#define CLASSFUNCTION QString::fromUtf8(metaObject()->className()) + "::" + __func__
+//#define "CLASSFUNCTION" QString::fromUtf8(metaObject()->className()) + "::" + __func__
 //#define OK !currRootFolder.isEmpty()
 
 namespace G

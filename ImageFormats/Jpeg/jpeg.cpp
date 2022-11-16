@@ -630,9 +630,9 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
             components[i] = component;
          }
     }
-/*    qDebug() << "\n" << CLASSFUNCTION << "Marker"
+/*    qDebug() << "\n" << "Jpeg::parseFrameHeader" << "Marker"
              << "0x" + QString::number(marker, 16).toUpper().rightJustified(4, '0');
-    qDebug() << CLASSFUNCTION
+    qDebug() << "Jpeg::parseFrameHeader"
              << "marker" << QString::number(marker, 16)
              << "segment" << segCodeHash[marker]
              << "length" << len
@@ -642,7 +642,7 @@ void Jpeg::parseFrameHeader(MetadataParameters &p, uint marker, quint16 len)
              << "mcuCols =" << mcuCols << "mcuRows =" << mcuRows
              << "componentsInFrame" << componentsInFrame;
     for (int i = 0; i < componentsInFrame; i++) {
-        qDebug() << CLASSFUNCTION
+        qDebug() << "Jpeg::parseFrameHeader"
                  << componentDescription[i]
                  << i
                  << "Id" << components.at(i).Id
@@ -658,7 +658,7 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
     quint32 endOffset = pos + len - 2;
 
 //    qDebug() << "\n";
-//    qDebug() << CLASSFUNCTION << "DEBUG HUFFMAN DECODING";
+//    qDebug() << "Jpeg::parseHuffmanTable" << "DEBUG HUFFMAN DECODING";
     while (p.file.pos() < endOffset) {
         DHT dht;
         QMap<uint, uint> dhtCodeMap;  // code value, value width
@@ -680,7 +680,7 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
 //            qDebug() << "Table =" << dhtType << "Length =" << i << "Count =" << counts[i];
         }
         /*
-         qDebug() << CLASSFUNCTION
+         qDebug() << "Jpeg::parseHuffmanTable"
          << "  Table type =" << QString::number(dhtType, 16).rightJustified(2)
          << "Class =" << QString::number(dht.classID).rightJustified(2)
          << "TableID =" << QString::number(dht.tableID).rightJustified(2)
@@ -693,7 +693,7 @@ void Jpeg::parseHuffmanTable(MetadataParameters &p, quint16 len)
             for  (int j = 0; j < counts[i]; j++) {
                 dhtCodeMap[huffCode] = u.get8(p.file.read(1));
 
-                /*qDebug() << CLASSFUNCTION
+                /*qDebug() << "Jpeg::parseHuffmanTable"
                          << "HuffBitLength" << QString::number(i+1).rightJustified(2)
                          << "HuffCode =" << QString::number(huffVal).rightJustified(5)
                          << QString::number(huffVal, 2).rightJustified(16)
@@ -735,11 +735,11 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
     }
 
     // report
-//    qDebug() << "\n" << CLASSFUNCTION;
+//    qDebug() << "\n" << "Jpeg::parseQuantizationTable";
     QMapIterator<int, QVector<int>> table(dqt);
     while (table.hasNext()) {
         table.next();
-//        qDebug() << CLASSFUNCTION << "Quantization Table" << table.key()
+//        qDebug() << "Jpeg::parseQuantizationTable" << "Quantization Table" << table.key()
 //                 << dqtDescription[table.key()];
         int i = 0;
         for (int r = 0; r < 8; r++) {
@@ -748,7 +748,7 @@ void Jpeg::parseQuantizationTable(MetadataParameters &p, quint16 len)
                 rStr += QString::number(dqt[table.key()][i]).rightJustified(4);
                 i++;
             }
-//            qDebug() << CLASSFUNCTION << "  "
+//            qDebug() << "Jpeg::parseQuantizationTable" << "  "
 //                     << "Row" << r << " " << rStr;
         }
     }
@@ -765,11 +765,11 @@ void Jpeg::parseSOSHeader(MetadataParameters &p, quint16 len)
     }
 
     // report
-//    qDebug() << "\n" << CLASSFUNCTION
+//    qDebug() << "\n" << "Jpeg::parseSOSHeader"
 //             << "Scan data offset =" << scanDataOffset
 //             << "Number of components =" << sosComponentCount;
 //    for (int i = 0; i < sosComponentCount; i++) {
-//        qDebug() << CLASSFUNCTION << "  "
+//        qDebug() << "Jpeg::parseSOSHeader" << "  "
 //        << "ComponentID =" << i
 //        << componentDescription[i]
 //        << "Huffman table ID =" << huffTblToUse[i];
@@ -796,20 +796,20 @@ void Jpeg::decodeScan(MetadataParameters &p)
 
 void Jpeg::decodeScan(QFile &file, QImage &image)
 {
-//    qDebug() << CLASSFUNCTION << file.fileName();
+//    qDebug() << "Jpeg::decodeScan" << file.fileName();
     if (!file.exists()) return;                 // guard for usb drive ejection
 
     MetadataParameters p;
     p.file.setFileName(file.fileName());
     if (p.file.isOpen()) p.file.close();
-//    qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
+//    qDebug() << "Jpeg::decodeScan" << "Close" << p.file.fileName();
     if (p.file.open(QIODevice::ReadOnly)) {
-//        qDebug() << CLASSFUNCTION << "Open " << p.file.fileName();
+//        qDebug() << "Jpeg::decodeScan" << "Open " << p.file.fileName();
         bool isBigEnd = true;
         if (u.get16(p.file.read(2), isBigEnd) != 0xFFD8) {
             G::error("Jpeg::decodeScan", file.fileName(), "JPG does not start with 0xFFD8.");
             p.file.close();
-//            qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
+//            qDebug() << "Jpeg::decodeScan" << "Close" << p.file.fileName();
             return;
         }
         p.offset = static_cast<quint32>(p.file.pos());
@@ -819,7 +819,7 @@ void Jpeg::decodeScan(QFile &file, QImage &image)
         p.file.seek(0);
         QByteArray ba = p.file.readAll();
         p.file.close();
-//        qDebug() << CLASSFUNCTION << "Close" << p.file.fileName();
+//        qDebug() << "Jpeg::decodeScan" << "Close" << p.file.fileName();
         decodeScan(ba, image);
     }
 }
@@ -958,7 +958,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                             }
                             if (!eos && !isMarkerByte) {
                                 bufAppend(buf, nextByte, consumed);
-                                /*qDebug() << CLASSFUNCTION
+                                /*qDebug() << "Jpeg::decodeScan"
                                          << "Appended nextByte =" << QString::number(nextByte, 16)
                                          << "Consumed =" << consumed;*/
                             }
@@ -1136,7 +1136,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
 
             } // end components and MCU
 
-//            if (mcuCount == 10) G::log(CLASSFUNCTION, "Loaded DCU");
+//            if (mcuCount == 10) G::log("Jpeg::decodeScan", "Loaded DCU");
 
 //            if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1) {
 //                rptMCU(mcuCol, mcuRow);
@@ -1185,7 +1185,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                     }
                 }
             }*/
-//            if (mcuCount == 10) G::log(CLASSFUNCTION, "IDCT transform and level shift");
+//            if (mcuCount == 10) G::log("Jpeg::decodeScan", "IDCT transform and level shift");
 
             // RGB transform
             for (int y = 0; y != 8; ++y) {
@@ -1208,7 +1208,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                 }
             }
 
-//            if (mcuCount == 10) G::log(CLASSFUNCTION, "RGB transform");
+//            if (mcuCount == 10) G::log("Jpeg::decodeScan", "RGB transform");
 
             /* testing: add mcu rgb to QImage image using setPixel
             for (int x = 0; x < 8; x++) {
@@ -1240,7 +1240,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
                 }
             }
 
-//            if (mcuCount == 10) G::log(CLASSFUNCTION, "Add mcu pixels to image");
+//            if (mcuCount == 10) G::log("Jpeg::decodeScan", "Add mcu pixels to image");
 
             // Debug reporting
             if (mcuCount >= reportMCU0 && mcuCount <= reportMCU1 && isReport) {
@@ -1252,7 +1252,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
 
             if (mcuCount == 10) G::t.restart();
 //            QString s = QString::number(mcuCount);
-//            if (G::isLogger) G::log(CLASSFUNCTION, s);
+//            if (G::isLogger) G::log("Jpeg::decodeScan", s);
 
 //            qDebug() << "Processed MCU" << mcuCol << mcuRow;
 
@@ -1276,7 +1276,7 @@ void Jpeg::decodeScan(QByteArray &ba, QImage &image)
             std::memcpy(im.scanLine(line), data, im.bytesPerLine());
             scanLine[y].clear();
         }
-//        qDebug() << CLASSFUNCTION << mcuRow;
+//        qDebug() << "Jpeg::decodeScan" << mcuRow;
 
     } // end all rows of MCUs
 

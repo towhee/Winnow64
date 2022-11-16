@@ -1,8 +1,8 @@
 // Qt version control
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-    qDebug() << __PRETTY_FUNCTION__ << progressLabel->pixmap()->width();
+    qDebug() << "CLASSFUNCTION" << progressLabel->pixmap()->width();
 #else
-    qDebug() << __PRETTY_FUNCTION__ << progressLabel->pixmap(Qt::ReturnByValueConstant()).width();
+    qDebug() << "CLASSFUNCTION" << progressLabel->pixmap(Qt::ReturnByValueConstant()).width();
 #endif
 
 // disable QAction shortcuts

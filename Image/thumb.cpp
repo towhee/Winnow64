@@ -359,7 +359,7 @@ void Thumb::insertThumbnails(QModelIndexList &selection)
         // add this thumbPath to the list
         thumbList << thumbPath;
 
-//        qDebug() << CLASSFUNCTION << i
+//        qDebug() << "Thumb::insertThumbnails" << i
 //                 << "fPath =" << fPath
 //                 << "thumbPath =" << thumbPath
 //                 ;

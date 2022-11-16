@@ -9,7 +9,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (!G::useUpdateStatus) return;
     if (G::stop) return;
 
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::updateStatus");
 
     // check if instance clash (old folder signal)
     QString fPath = thumbView->getCurrentFilePath();
@@ -110,13 +110,13 @@ QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵�
 
 void MW::clearStatus()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::clearStatus");
     statusLabel->setText("");
 }
 
 void MW::updateStatusBar()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::updateStatusBar");
 
     if (G::colorManage) colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
     else colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
@@ -137,7 +137,7 @@ void MW::updateStatusBar()
 
 int MW::availableSpaceForProgressBar()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::availableSpaceForProgressBar");
     int w = 0;
     int s = statusBar()->layout()->spacing();
     if (colorManageToggleBtn->isVisible()) w += s + colorManageToggleBtn->width();
@@ -162,7 +162,7 @@ QString MW::getPosition()
 
     It is displayed on the status bar and in the infoView.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::getPosition");
     QString fileCount = "";
     QModelIndex idx = thumbView->currentIndex();
     if (!idx.isValid()) return "";
@@ -180,14 +180,14 @@ QString MW::getZoom()
 /*
 
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::getZoom");
     if (G::mode != "Loupe" &&
         G::mode != "Compare") return "N/A";
     qreal zoom;
     if (G::mode == "Compare") zoom = compareImages->zoomValue;
     else zoom = imageView->zoom;
     if (zoom <= 0 || zoom > 10) return "";
-//    qDebug() << CLASSFUNCTION << zoom;
+//    qDebug() << "MW::getZoom" << zoom;
     return QString::number(qRound(zoom*100)) + "%"; // + "% zoom";
 }
 
@@ -196,7 +196,7 @@ QString MW::getPicked()
 /*
     Returns a string like "16 (38MB)"
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::getPicked");
     int count = 0;
     for (int row = 0; row < dm->sf->rowCount(); row++)
         if (dm->sf->index(row, G::PickColumn).data() == "true") count++;
@@ -211,7 +211,7 @@ QString MW::getSelectedFileSize()
 /*
 Returns a string like "12 (165 MB)"
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::getSelectedFileSize");
     QString selected = QString::number(dm->selectionModel->selectedRows().count());
     QString selMemSize = Utilities::formatMemory(memoryReqdForSelection());
     return selected + " (" + selMemSize + ")";
@@ -219,7 +219,7 @@ Returns a string like "12 (165 MB)"
 
 void MW::updateProgressBarWidth()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::updateProgressBarWidth");
     if (dm->rowCount() && progressLabel->isVisible()) {
         int availableSpace = availableSpaceForProgressBar();
         if (availableSpace < progressWidth) progressWidth = availableSpace;
@@ -231,8 +231,8 @@ void MW::updateProgressBarWidth()
 void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QString calledBy)
 {
 //    return;  //rghmacdelay
-    if (G::isLogger) G::log(CLASSFUNCTION);
-//    qDebug() << CLASSFUNCTION << isRunning;
+    if (G::isLogger) G::log("MW::updateMetadataThreadRunStatus");
+//    qDebug() << "MW::updateMetadataThreadRunStatus" << isRunning;
     if (isRunning) {
         metadataThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
         #ifdef Q_OS_WIN
@@ -253,7 +253,7 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool showCacheLabel, QStr
 void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
 {
 //    return;  //rghmacdelay
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::updateImageCachingThreadRunStatus");
     if (isRunning) {
         if (G::isTest) testTime.restart();
         imageThreadRunningLabel->setStyleSheet("QLabel {color:Red;}");
@@ -266,7 +266,7 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
             int ms = testTime.elapsed();
             int n = icd->imCache.count();
             if (n)
-            qDebug() << CLASSFUNCTION
+            qDebug() << "MW::updateImageCachingThreadRunStatus"
                     << "Total time to fill cache =" << ms
                     << "   Images cached =" << n
                     << "   ms per image =" << ms / n
@@ -283,7 +283,7 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
 
 void MW::setThreadRunStatusInactive()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setThreadRunStatusInactive");
     metadataThreadRunningLabel->setStyleSheet("QLabel {color:Gray;}");
     imageThreadRunningLabel->setStyleSheet("QLabel {color:Gray;}");
     #ifdef Q_OS_WIN
@@ -296,12 +296,12 @@ void MW::setThreadRunStatusInactive()
 
 void MW::resortImageCache()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::resortImageCache");
     if (!dm->sf->rowCount()) return;
     QString currentFilePath = dm->currentDmIdx.data(G::PathRole).toString();
-    imageCacheThread->rebuildImageCacheParameters(currentFilePath, CLASSFUNCTION);
+    imageCacheThread->rebuildImageCacheParameters(currentFilePath, "MW::resortImageCache");
     // change to ImageCache
-    imageCacheThread->setCurrentPosition(dm->currentFilePath, CLASSFUNCTION);
+    imageCacheThread->setCurrentPosition(dm->currentFilePath, "MW::resortImageCache");
 //    emit setImageCachePosition(dm->currentFilePath);
 }
 
@@ -315,9 +315,9 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     actions triggers a sort, which needs to be suppressed while syncing the menu actions with
     tableView.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::sortIndicatorChanged");
 //    QString columnName = tableView->model()->headerData(column, Qt::Horizontal).toString();
-//    qDebug() << CLASSFUNCTION << column << columnName << sortOrder << sortColumn;
+//    qDebug() << "MW::sortIndicatorChanged" << column << columnName << sortOrder << sortColumn;
     if (!G::allMetadataLoaded && column > G::DimensionsColumn) loadEntireMetadataCache("SortChange");
 
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
@@ -381,7 +381,7 @@ void MW::toggleColorManageClick()
     call is redirected to toggleColorManage, which has a parameter which is not supported
     by the action and button signals.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::toggleColorManageClick");
     toggleColorManage(Tog::toggle);
 }
 
@@ -390,7 +390,7 @@ void MW::toggleColorManage(Tog n)
 /*
     The image cache is rebuilt to show the color manage option.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::toggleColorManage");
     if (n == Tog::toggle) G::colorManage = !G::colorManage;
     if (n == Tog::off) G::colorManage = false;
     if (n == Tog::on) G::colorManage = true;
@@ -404,7 +404,7 @@ void MW::toggleColorManage(Tog n)
 
     if (dm->rowCount() == 0) return;
 
-//    imageView->loadImage(dm->currentFilePath, CLASSFUNCTION, true/*refresh*/);
+//    imageView->loadImage(dm->currentFilePath, "MW::toggleColorManage", true/*refresh*/);
 
     // set the isCached indicator on thumbnails to false (shows red dot on bottom right)
     for (int row = 0; row < dm->rowCount(); ++row) {
@@ -420,7 +420,7 @@ void MW::toggleImageCacheMethod()
 /*
     Called by cacheSizeBtn press
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::toggleImageCacheMethod");
 
     if (qApp->keyboardModifiers() == Qt::ControlModifier) {
         cachePreferences();

@@ -26,7 +26,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
     The metadata is copied from the source image file to the exported image file. Finally, the
     ICC color space is updated.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("EmbelExport::EmbelExport");
     this->metadata = metadata;
     this->dm = dm;
     this->icd = icd;
@@ -42,7 +42,7 @@ EmbelExport::EmbelExport(Metadata *metadata,
 
 EmbelExport::~EmbelExport()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("EmbelExport::~EmbelExport");
 //    delete embellish;
 //    delete scene;
 //    delete pmItem;
@@ -54,7 +54,7 @@ bool EmbelExport::loadImage(QString fPath)
     Read the image file, extract metadata, apply ICC profile and convert to
     QGraphicsPixmapItem.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("EmbelExport::loadImage");
     QImage image;
     if (icd->imCache.find(fPath, image)) {
         pmItem->setPixmap(QPixmap::fromImage(image));
@@ -64,7 +64,7 @@ bool EmbelExport::loadImage(QString fPath)
     int dmRow = dm->fPathRow[fPath];
     if (!dm->index(dmRow, G::MetadataLoadedColumn).data().toBool()) {
         QFileInfo fileInfo(fPath);
-        if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, CLASSFUNCTION)) {
+        if (metadata->loadImageMetadata(fileInfo, dm->instance, true, true, false, true, "EmbelExport::")) {
             metadata->m.row = dmRow;
             metadata->m.instance = dm->instance;
             dm->addMetadataForItem(metadata->m, "EmbelExport::loadImage");
@@ -95,7 +95,7 @@ QString EmbelExport::exportSubfolderPath(QString fPath, bool allowOverride)
     fromFolderPath.  If the export folder save method == "Subfolder", then the subfolder name
     is used, otherwise, all this is ignored and embelProperties->exportSubfolder is used.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("EmbelExport::exportSubfolderPath");
     QFileInfo filedir(fPath);
     QString fromFolderPath = filedir.dir().path();
     QString exportFolder;
@@ -105,7 +105,7 @@ QString EmbelExport::exportSubfolderPath(QString fPath, bool allowOverride)
     return exportFolder;
 
     /*
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("EmbelExport::");
     QFileInfo filedir(fPath);
     QString fromFolderPath = filedir.dir().path();
     QString exportFolder;
@@ -128,7 +128,7 @@ QString EmbelExport::exportSubfolderPath(QString fPath, bool allowOverride)
 
 bool EmbelExport::isValidExportFolder()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("EmbelExport::isValidExportFolder");
     if (embelProperties->saveMethod == "Subfolder") {
         if (embelProperties->exportSubfolder == "") return false;
     }
@@ -138,7 +138,7 @@ bool EmbelExport::isValidExportFolder()
     return true;
 }
 
-QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathList)
+QString EmbelExport::(QString templateName, QStringList &pathList)
 {
 /*
     Images sent from another program, such as lightroom, are sent here from
@@ -151,7 +151,7 @@ QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathLi
     datamodel is expected to be loaded and up-to-date.  For remote situations, the data model
     may not be loaded, and Embel will call Metadata to load the image data.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("EmbelExport::exportRemoteFiles");
 
     // save current embellish template
     QString prevTemplate = embelProperties->templateName;
@@ -186,7 +186,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     copied from the source image file to the exported image file. Finally, the ICC color space
     is updated.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("EmbelExport::exportImages");
 
     G::isProcessingExportedImages = true;
     abort = false;
@@ -296,7 +296,7 @@ void EmbelExport::exportImage(const QString &fPath)
     QImage and saved to the assigned image format (jpg, png or tif).  A thumbnail is created
     and saved to ":/thumb.jpg" in the export folder.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("EmbelExport::exportImage");
     QString extension = embelProperties->exportFileType;
     QFileInfo fileInfo(fPath);
     QString baseName = fileInfo.baseName() + embelProperties->exportSuffix;
@@ -357,6 +357,6 @@ void EmbelExport::abortEmbelExport()
 //    qApp->processEvents();
     G::isProcessingExportedImages = false;
     G::popUp->showPopup("Export has been aborted", 1500);
-    qDebug() << CLASSFUNCTION << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+    qDebug() << "EmbelExport::" << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
     abort = true;
 }

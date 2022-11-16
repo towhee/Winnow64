@@ -77,7 +77,7 @@ void PopUp::keyReleaseEvent(QKeyEvent *event)
 
 void PopUp::focusOutEvent(QFocusEvent *event)
 {
-    qDebug() << __PRETTY_FUNCTION__ << event;
+    qDebug() << "PopUp::focusOutEvent" << event;
 }
 
 void PopUp::showPopup(const QString &text,

@@ -2,7 +2,7 @@
 
 void MW::setCentralMessage(QString message)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION, message);
+    if (G::isLogger) G::log("MW::setCentralMessage", message);
     msg.msgLabel->setText(message);
     centralLayout->setCurrentIndex(MessageTab);
 }
@@ -13,7 +13,7 @@ void MW::setCentralMessage(QString message)
 
 void MW::setThumbDockFloatFeatures(bool isFloat)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION, "isFloat = " + QString::number(isFloat));
+    if (G::isLogger) G::log("MW::setThumbDockFloatFeatures", "isFloat = " + QString::number(isFloat));
     if (isFloat) {
         thumbView->setMaximumHeight(100000);
         thumbDock->setFeatures(QDockWidget::DockWidgetClosable |
@@ -33,7 +33,7 @@ void MW:: setThumbDockHeight()
     the case when signalling from another class like thumbView after thumbnails have been
     resized.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setThumbDockHeight");
     setThumbDockFeatures(dockWidgetArea(thumbDock));
 }
 
@@ -51,7 +51,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
     applies to thumbView (the docked version of IconView).
 
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setThumbDockFeatures");
     if (thumbDock->isFloating()) return;
     thumbView->setMaximumHeight(100000);
 
@@ -119,7 +119,7 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
 }
 
 void MW::setRatingBadgeVisibility() {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setRatingBadgeVisibility");
     isRatingBadgeVisible = ratingBadgeVisibleAction->isChecked();
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
@@ -127,51 +127,51 @@ void MW::setRatingBadgeVisibility() {
 }
 
 void MW::setIconNumberVisibility() {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setIconNumberVisibility");
     isIconNumberVisible = iconNumberVisibleAction->isChecked();
     thumbView->refreshThumbs();
     gridView->refreshThumbs();
 }
 
 void MW::setShootingInfoVisibility() {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setShootingInfoVisibility");
     imageView->infoOverlay->setVisible(infoVisibleAction->isChecked());
 }
 
 void MW::setFolderDockVisibility()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setFolderDockVisibility");
     folderDock->setVisible(folderDockVisibleAction->isChecked());
 }
 
 void MW::setFavDockVisibility()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setFavDockVisibility");
     favDock->setVisible(favDockVisibleAction->isChecked());
 }
 
 void MW::setFilterDockVisibility()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setFilterDockVisibility");
     filterDock->setVisible(filterDockVisibleAction->isChecked());
 }
 
 void MW::setMetadataDockVisibility()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setMetadataDockVisibility");
     if (G::useInfoView) metadataDock->setVisible(metadataDockVisibleAction->isChecked());
 }
 
 void MW::setEmbelDockVisibility()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setEmbelDockVisibility");
     embelDock->setVisible(embelDockVisibleAction->isChecked());
 }
 
 void MW::setMetadataDockFixedSize()
 {
     if (!G::useInfoView) return;
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setMetadataDockFixedSize");
     if (metadataFixedSizeAction->isChecked()) {
         qDebug() << "variable size";
         metadataDock->setMinimumSize(200, 125);
@@ -185,14 +185,14 @@ void MW::setMetadataDockFixedSize()
 
 void MW::setThumbDockVisibity()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setThumbDockVisibity");
     thumbDock->setVisible(thumbDockVisibleAction->isChecked());
     dm->select(dm->currentSfRow);
 }
 
 void MW::toggleFolderDockVisibility()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::toggleFolderDockVisibility");
     if (G::isInitializing) return;
     QString dock = folderDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
@@ -216,7 +216,7 @@ void MW::toggleFolderDockVisibility()
 }
 
 void MW::toggleFavDockVisibility() {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::toggleFavDockVisibility");
     if (G::isInitializing) return;
     QString dock = favDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
@@ -240,7 +240,7 @@ void MW::toggleFavDockVisibility() {
 }
 
 void MW::toggleFilterDockVisibility() {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::toggleFilterDockVisibility");
     if (G::isInitializing) return;
     QString dock = filterDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
@@ -265,7 +265,7 @@ void MW::toggleFilterDockVisibility() {
 
 void MW::toggleMetadataDockVisibility() {
     if (!G::useInfoView) return;
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::toggleMetadataDockVisibility");
     if (G::isInitializing) return;
     QString dock = metadataDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
@@ -290,7 +290,7 @@ void MW::toggleMetadataDockVisibility() {
 
 void MW::toggleThumbDockVisibity()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::toggleThumbDockVisibity");
     if (G::isInitializing) {
         G::popUp->showPopup("Please wait until initialization is completed.", 2000);
         return;
@@ -300,7 +300,7 @@ void MW::toggleThumbDockVisibity()
 //         G::popUp->showPopup("Cannot show/hide film strip while reading metadata.", 2000);
 //         return;
 //     }
-//    qDebug() << CLASSFUNCTION;
+//    qDebug() << "MW::toggleThumbDockVisibity";
     QString dock = thumbDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
     else if (thumbDock->isVisible()) dockToggle = SetInvisible;
@@ -319,14 +319,14 @@ void MW::toggleThumbDockVisibity()
         thumbDock->setVisible(true);
         thumbDock->raise();
         thumbDockVisibleAction->setChecked(true);
-//        qDebug() << CLASSFUNCTION << dm->currentSfIdx.data() << "Calling fileSelectionChange(currentSfIdx, currentSfIdx)";
-//        fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, CLASSFUNCTION);
+//        qDebug() << "MW::toggleThumbDockVisibity" << dm->currentSfIdx.data() << "Calling fileSelectionChange(currentSfIdx, currentSfIdx)";
+//        fileSelectionChange(dm->currentSfIdx, dm->currentSfIdx, "MW::");
     }
 
     if (G::mode != "Grid" && isNormalScreen) {
         wasThumbDockVisible = thumbDock->isVisible();
     }
-/*    qDebug() << CLASSFUNCTION
+/*    qDebug() << "MW::toggleThumbDockVisibity"
              << "wasThumbDockVisible =" << wasThumbDockVisible
              << "G::mode =" << G::mode
              << "isNormalScreen =" << isNormalScreen
@@ -334,7 +334,7 @@ void MW::toggleThumbDockVisibity()
 }
 
 void MW::toggleEmbelDockVisibility() {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::toggleEmbelDockVisibility");
     if (G::isInitializing) return;
     QString dock = embelDockTabText;
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockToggle = SetFocus;
@@ -359,26 +359,26 @@ void MW::toggleEmbelDockVisibility() {
 
 void MW::setMenuBarVisibility()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setMenuBarVisibility");
     menuBar()->setVisible(menuBarVisibleAction->isChecked());
 }
 
 void MW::setStatusBarVisibility()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setStatusBarVisibility");
     statusBar()->setVisible(statusBarVisibleAction->isChecked());
 }
 
 void MW::setCacheStatusVisibility()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setCacheStatusVisibility");
     if (isShowCacheProgressBar && !G::isSlideShow)
         progressLabel->setVisible(isShowCacheProgressBar);
 }
 
 void MW::setProgress(int value)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setProgress");
     if (value < 0 || value > 100) {
         progressBar->setVisible(false);
         return;
@@ -391,13 +391,13 @@ void MW::setProgress(int value)
 // not used rgh ??
 void MW::setStatus(QString state)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setStatus");
     statusLabel->setText("    " + state + "    ");
 }
 
 void MW::setIngested()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setIngested");
     for (int row = 0; row < dm->sf->rowCount(); ++row) {
         if (dm->sf->index(row, G::PickColumn).data().toString() == "true") {
             emit setValueSf(dm->sf->index(row, G::IngestedColumn), "true",
@@ -415,7 +415,7 @@ void MW::toggleReject()
     If the entire selection was already rejected then unreject them all.
     If the entire selection is nor rejected then reject them all.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::toggleReject");
     QModelIndex idx;
     QModelIndexList idxList = dm->selectionModel->selectedRows();
     QString pickStatus;
@@ -450,7 +450,7 @@ void MW::toggleReject()
     gridView->refreshThumbs();
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
-    updateStatus(true, "", CLASSFUNCTION);
+    updateStatus(true, "", "MW::toggleReject");
 
     // update filter counts
     buildFilters->updateCountFiltered();
@@ -458,7 +458,7 @@ void MW::toggleReject()
 
 void MW::setCombineRawJpg()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::setCombineRawJpg");
     if (!G::isNewFolderLoaded) {
         QString msg = "Folder is still loading.  Try again when the folder has loaded.";
         G::popUp->showPopup(msg, 1000);
@@ -505,7 +505,7 @@ void MW::setCombineRawJpg()
     // refresh the proxy sort/filter
     dm->sf->filterChange();
     dm->rebuildTypeFilter();
-    filterChange(CLASSFUNCTION);
+    filterChange("MW::setCombineRawJpg");
     updateStatusBar();
 
     G::popUp->close();
@@ -513,6 +513,7 @@ void MW::setCombineRawJpg()
 
 void MW::imageCachePrevCentralView()
 {
+    if (G::isLogger) G::log("MW::imageCachePrevCentralView");
     centralLayout->setCurrentIndex(prevCentralView);
 }
 
@@ -534,11 +535,11 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
     if (G::isLogger) {
         int row = dm->sf->mapFromSource(dm->index(dmRow, 0)).row();
         QString msg = "Row " + QString::number(row) + " " + fPath;
-        G::log(CLASSFUNCTION, msg);
+        G::log("MW::updateCachedStatus", msg);
     }
 
     if (dmRow == -1) {
-        qWarning() << "WARNING" << CLASSFUNCTION << "dm->fPathrow does not contain" << fPath;
+        qWarning() << "WARNING" << "MW::updateCachedStatus" << "dm->fPathrow does not contain" << fPath;
         return;
     }
 
@@ -548,8 +549,8 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
         emit setValueSf(sfIdx, isCached, dm->instance, "MW::updateCachedStatus", G::CachedRole);
         if (isCached) {
             if (sfIdx.row() == dm->currentSfRow) {
-                if (G::isFlowLogger) G::log(CLASSFUNCTION, fPath);
-                imageView->loadImage(fPath, CLASSFUNCTION);
+                if (G::isFlowLogger) G::log("MW::updateCachedStatus", fPath);
+                imageView->loadImage(fPath, "MW::updateCachedStatus");
                 updateClassification();
                 centralLayout->setCurrentIndex(prevCentralView);
             }
@@ -558,7 +559,7 @@ void MW::updateCachedStatus(QString fPath, bool isCached, QString src)
         gridView->refreshThumb(sfIdx, G::CachedRole);
     }
     else {
-        qWarning() << "WARNING" << CLASSFUNCTION << "INVALID INDEX FOR" << sfIdx;
+        qWarning() << "WARNING" << "MW::updateCachedStatus" << "INVALID INDEX FOR" << sfIdx;
     }
     return;
 }
@@ -579,7 +580,7 @@ void MW::updateClassification()
     and then the user switches to a folder with no images or ejects the drive then make
     sure the classification label is not visible.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::updateClassification");
     // check if still in a folder with images
     if (dm->rowCount() < 1) {
         imageView->classificationLabel->setVisible(false);

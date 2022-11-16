@@ -4,13 +4,13 @@
 
 void MW::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::dragEnterEvent");
     event->acceptProposedAction();
 }
 
 void MW::dropEvent(QDropEvent *event)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::dropEvent");
     if (event->mimeData()->hasUrls()) {
         QString fPath = event->mimeData()->urls().at(0).toLocalFile();
         // prevent drop onto folder already active in Winnow
@@ -21,7 +21,7 @@ void MW::dropEvent(QDropEvent *event)
 
 void MW::handleDrop(QString fPath)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("MW::handleDrop");
     QFileInfo info(fPath);
     QDir incoming = info.dir();
     if (incoming == currRootDir) {
@@ -41,8 +41,8 @@ void MW::dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath)
 /*
 
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
-    qDebug() << CLASSFUNCTION;
+    if (G::isLogger) G::log("MW::dropOp");
+    qDebug() << "MW::dropOp";
     QApplication::restoreOverrideCursor();
     copyOp = (keyMods == Qt::ControlModifier);
     QMessageBox msgBox;

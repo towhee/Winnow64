@@ -5,7 +5,7 @@ EditListDlg::EditListDlg(QStringListModel *model, QString title, QWidget *parent
     QDialog(parent),
     ui(new Ui::EditListDlg)
 {
-    qDebug() << CLASSFUNCTION << title;
+    qDebug() << "EditListDlg::EditListDlg" << title;
     this->model = model;
     setStyleSheet(G::css);
     ui->setupUi(this);

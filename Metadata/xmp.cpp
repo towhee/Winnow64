@@ -259,7 +259,7 @@ Example from xmp embedded in D:/Pictures/Coaster/2005-10-11_0082.jpg
 
 Xmp::Xmp(QFile &file, int instance, QObject *parent) :  QObject(parent)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::Xmp");
     this->instance = instance;
     if (file.exists()) {
         filePath = QFileInfo(file).filePath();
@@ -271,7 +271,7 @@ Xmp::Xmp(QFile &file, int instance, QObject *parent) :  QObject(parent)
 
 Xmp::Xmp(QFile &file, uint offset, uint length, int instance, QObject *parent) :  QObject(parent)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::Xmp");
     this->instance = instance;
     xmpSegmentOffset = offset;
     if (file.exists()) {
@@ -310,7 +310,7 @@ void Xmp::initialize()
     Create a rapidXml xmlDoc from xmpBa.  If this fails then quit.  Otherwise, check that
     xmlDoc contains the node rdf:Description with the attribute rdf:about.
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::initialize");
 
     err = Err::NoErr;
     errMsg.resize(Err::Count);
@@ -560,7 +560,7 @@ void Xmp::fix()
 /*
     Deal with errors before any updates ie Xmp::setItem
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::fix");
 
     switch (err) {
     case Err::NoErr:
@@ -571,7 +571,7 @@ void Xmp::fix()
     case Err::NoRoot:
     case Err::NoRdf:
     case Err::NoRdfDescription:
-        qDebug() << CLASSFUNCTION << err << filePath;
+        qDebug() << "Xmp::fix" << err << filePath;
         xmpBa.clear();
         xmlDoc.clear();
         initialize();
@@ -607,7 +607,7 @@ bool Xmp::includeSchemaNamespace(QString item)
             ...
 */
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::includeSchemaNamespace");
 
     // ie item = modifydate, elementName = xmp:modifydate then schema = xmp
     QString schema = definedElements[item].schema;
@@ -622,7 +622,7 @@ bool Xmp::includeSchemaNamespace(QString item)
         v.append(definedElements[schema].value.toUtf8());
         int idx = a.count() - 1;
         /*
-        qDebug() << CLASSFUNCTION << "Adding schema namespace/value" << a[idx] << v[idx];
+        qDebug() << "Xmp::includeSchemaNamespace" << "Adding schema namespace/value" << a[idx] << v[idx];
         //*/
         rapidxml::xml_attribute<> *attr = xmlDoc.allocate_attribute(a[idx], v[idx]);
         rdfDescriptionNode->insert_attribute(rdfAbout, attr);
@@ -635,7 +635,7 @@ bool Xmp::writeJPG(QByteArray &buffer)
 /*
     To be completed if decide to write into source image files instead of sidecars
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::writeJPG");
     if (xmpBa.length() < xmpmetaRoom) {
         buffer.replace(xmpmetaOffset, xmpBa.length(), xmpBa);
     }
@@ -648,7 +648,7 @@ bool Xmp::writeJPG(QByteArray &buffer)
 
 bool Xmp::writeSidecar(QFile &sidecarFile)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::writeSidecar");
     sidecarFile.resize(0);
     qint64 bytesWritten = sidecarFile.write(docToQString().toUtf8());
     if (bytesWritten == 0) return false;
@@ -667,7 +667,7 @@ QString Xmp::getItem(QByteArray item)
     items: Rating, Label, title ...
     item case does not matter
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::getItem");
 
     if (G::instanceClash(instance, "Xmp::getItem")) {
         return "";
@@ -675,10 +675,10 @@ QString Xmp::getItem(QByteArray item)
 
     item = item.toLower();
     /*
-    qDebug() << "\n" << CLASSFUNCTION << item << definedElements[item].name << definedElements.contains(item);
+    qDebug() << "\n" << "Xmp::getItem" << item << definedElements[item].name << definedElements.contains(item);
     //*/
     if (!definedElements.contains(item)) {
-        qWarning() << "WARNING" << CLASSFUNCTION << item << "not found in xmpObjs";
+        qWarning() << "WARNING" << "Xmp::getItem" << item << "not found in xmpObjs";
         return "";
     }
     XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
@@ -715,15 +715,15 @@ QString Xmp::getItem(QByteArray item)
 
 QStringList Xmp::getItemList(QByteArray item)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::getItemList");
 
     item = item.toLower();
     QStringList valList;
     /*
-    qDebug() << "\n" << CLASSFUNCTION << item << definedElements[item].name << definedElements.contains(item);
+    qDebug() << "\n" << "Xmp::getItemList" << item << definedElements[item].name << definedElements.contains(item);
     //*/
     if (!definedElements.contains(item)) {
-        qWarning() << "WARNING" << CLASSFUNCTION << item << "not found in xmpObjs";
+        qWarning() << "WARNING" << "Xmp::getItemList" << item << "not found in xmpObjs";
         return valList;
     }
     XmpElement element = xmlDocElement(definedElements[item].name, xmlDoc.first_node());
@@ -781,7 +781,7 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
         Node format:        <xmp:Rating>5</xmp:Rating>
         Attribute format:   xmp:Rating = "5"
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::setItem");
 
     // confirm valid xmp. This should be checked before calling this function.
     if (err) return false;
@@ -789,7 +789,7 @@ bool Xmp::setItem(QByteArray item, QByteArray value)
     // check valid item.
     item = item.toLower();
     if (!definedElements.contains(item)) {
-        qWarning() << "WARNING" << CLASSFUNCTION << "failed for" << item;
+        qWarning() << "WARNING" << "Xmp::setItem" << "failed for" << item;
         return false;
     }
 
@@ -870,7 +870,7 @@ Xmp::XmpElement Xmp::xmlDocElement(QString name,
         parName = xmlNodeName(parNode);
     }
     /*
-    qDebug() << CLASSFUNCTION
+    qDebug() << "Xmp::xmlDocElement"
              << "Node name =     " << nodeName
              << "Node parent name =" << parName
              << "Node value =" << xmlNodeValue(node)
@@ -892,7 +892,7 @@ Xmp::XmpElement Xmp::xmlDocElement(QString name,
     for (a = node->first_attribute(); a; a = a->next_attribute()) {
         QString attrName = xmlAttributeName(a);
         /*
-        qDebug() << CLASSFUNCTION
+        qDebug() << "Xmp::xmlDocElement"
                  << "Attribute name =" << attrName
                  << "element.name =" << element.name
                     ;
@@ -978,7 +978,7 @@ QString Xmp::srcToString()
 /*
     Returns unicode string from QByteArray xmpBa
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::srcToString");
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     return QTextCodec::codecForMib(106)->toUnicode(xmpBa);  // deprecated in Qt 6
 #else
@@ -991,7 +991,7 @@ QString Xmp::docToQString()
 /*
     Returns a formatted xml text string from the DOM document rapidxml::xml_document (xmlDoc).
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Xmp::docToQString");
 
     /* format text using my walk function
     QString rptString = "";
@@ -1025,7 +1025,7 @@ void Xmp::report(XmpElement o)
 */
     QString elType;
     o.type == ElementType::Node ? elType = "node" : elType = "attribute";
-    qDebug() << CLASSFUNCTION
+    qDebug() << "Xmp::report"
              << "\n  name =" << o.name
              << "\n  parent =" << o.parentName
              << "\n  type =" << elType

@@ -5,7 +5,7 @@ TableView::TableView(DataModel *dm)
 /*
 
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);    
+    if (G::isLogger) G::log("TableView::TableView");
     this->dm = dm;
 //    int ht = G::fontSize.toInt();
 
@@ -77,7 +77,7 @@ TableView::TableView(DataModel *dm)
 
 void TableView::setViewportParameters()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);        
+    if (G::isLogger) G::log("TableView::setViewportParameters");
 		firstVisibleRow = rowAt(0);
     midVisibleRow = rowAt(height() / 2);
     lastVisibleRow = rowAt(height());
@@ -88,8 +88,8 @@ void TableView::setViewportParameters()
 
 void TableView::scrollToRow(int row, QString source)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);    
-//    qDebug() << CLASSFUNCTION << objectName() << "row =" << row
+    if (G::isLogger) G::log("TableView::scrollToRow");
+//    qDebug() << "TableView::scrollToRow" << objectName() << "row =" << row
 //             << "source =" << source;
     QModelIndex idx = dm->sf->index(row, 0);
     scrollTo(idx, QAbstractItemView::PositionAtCenter);
@@ -103,7 +103,7 @@ bool TableView::isRowVisible(int row)
 
 void TableView::scrollToCurrent()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);    		
+    if (G::isLogger) G::log("TableView::scrollToCurrent");
     QModelIndex idx = dm->sf->index(currentIndex().row(), 1);
     scrollTo(idx, ScrollHint::PositionAtCenter);
 }
@@ -191,14 +191,14 @@ int TableView::sizeHintForColumn(int column) const
 
 void TableView::selectPageUp()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("TableView::selectPageUp");
     setCurrentIndex(moveCursor(QAbstractItemView::MovePageUp, Qt::NoModifier));
 }
 
 void TableView::selectPageDown()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);       
-		qDebug() << CLASSFUNCTION;
+    if (G::isLogger) G::log("TableView::selectPageDown");
+        qDebug() << "TableView::selectPageDown";
     setCurrentIndex(moveCursor(QAbstractItemView::MovePageDown, Qt::NoModifier));
 }
 
@@ -241,13 +241,13 @@ void TableView::mousePressEvent(QMouseEvent *event)
 
 void TableView::mouseDoubleClickEvent(QMouseEvent* /*event*/)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("TableView::mouseDoubleClickEvent");
     emit displayLoupe();
 }
 
 void TableView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("TableView::selectionChanged");
     QTableView::selectionChanged(selected, deselected);
 }
 
@@ -267,7 +267,7 @@ void TableView::createOkToShow()
     Column 1 = Show/hide TableView column
     Column 2 = Geek role for the TableView column
 */
-    if (G::isLogger) G::log(CLASSFUNCTION); 
+    if (G::isLogger) G::log("TableView::createOkToShow");
     ok = new QStandardItemModel;
 
     ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
@@ -306,7 +306,7 @@ and this slot is then signalled to update which fields are visible.
         else hideColumn(i + 1);
         /*
         QString s = ok->index(i, 0).data().toString();
-        qDebug() << CLASSFUNCTION << i << s << showField;  */
+        qDebug() << "TableView::showOrHide" << i << s << showField;  */
     }
 }
 

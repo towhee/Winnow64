@@ -6,7 +6,7 @@
 
 ExifTool::ExifTool()
 {
-    Utilities::log(CLASSFUNCTION, exifToolPath);
+    Utilities::log("ExifTool::ExifTool", exifToolPath);
 #ifdef Q_OS_WIN
     exifToolPath = qApp->applicationDirPath() + "/et.exe";
 #endif
@@ -24,7 +24,7 @@ ExifTool::ExifTool()
     startArgs << "-execute";
     process.start(exifToolPath, startArgs);   // exifToolPath = path to ExifTool.exe or ExifTool.app
     process.waitForStarted(3000);
-//    qDebug() << CLASSFUNCTION << process.errorString();
+//    qDebug() << "ExifTool::ExifTool" << process.errorString();
 }
 
 int ExifTool::execute(QStringList &args)
@@ -47,7 +47,7 @@ int ExifTool::close()
     closeArgs += "False\n";
     process.write(closeArgs);
     if (!process.waitForFinished(30000))
-        /*qDebug() << CLASSFUNCTION << "ExifTool exit code =" << process.exitCode();
+        /*qDebug() << "ExifTool::close" << "ExifTool exit code =" << process.exitCode();
     else*/ qWarning("ExifTool::copyAll process.waitForFinished failed");
 
     return process.exitCode();
@@ -207,7 +207,7 @@ args << "D:/Pictures/Zenfolio/2021-02-12_0006.jpg";
 et.setArguments(args);
 et.setProgram(exifToolPath);
 bool started = et.startDetached();
-qDebug() << CLASSFUNCTION << args << started;
+qDebug() << "ExifTool::" << args << started;
 return;
 //    */
 
@@ -223,9 +223,9 @@ et->setArguments(args);
 et->setProgram(exifToolPath);
 et->setStandardOutputFile("D:/output.txt");
 et->start();
-qDebug() << CLASSFUNCTION << args;
+qDebug() << "ExifTool::" << args;
 bool success = et->waitForFinished(3000);
-qDebug() << CLASSFUNCTION << "success =" << success;
+qDebug() << "ExifTool::" << "success =" << success;
 delete et;
 return;
 //    */
@@ -253,8 +253,8 @@ stayOpen << "-";
 et.start(exifToolPath, stayOpen);
 et.waitForStarted(3000);
 et.write(args);
-if (et.waitForFinished(3000)) qDebug() << CLASSFUNCTION << "ExifTool exit code =" << et.exitCode();
-else qDebug() << CLASSFUNCTION << "et.waitForFinished failed";
+if (et.waitForFinished(3000)) qDebug() << "ExifTool::" << "ExifTool exit code =" << et.exitCode();
+else qDebug() << "ExifTool::" << "et.waitForFinished failed";
 //    */
 
     /* This works
@@ -280,6 +280,6 @@ stayOpen << "-";
 et->start(exifToolPath, stayOpen);
 et->waitForStarted(3000);
 et->write(args);
-if (et->waitForFinished(3000)) qDebug() << CLASSFUNCTION << "ExifTool exit code =" << et->exitCode();
-else qDebug() << CLASSFUNCTION << "et.waitForFinished failed";
+if (et->waitForFinished(3000)) qDebug() << "ExifTool::" << "ExifTool exit code =" << et->exitCode();
+else qDebug() << "ExifTool::" << "et.waitForFinished failed";
 //    */

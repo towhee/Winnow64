@@ -59,7 +59,7 @@ void Ingest::commence()
 
 void Ingest::initExampleMap()
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Ingest::initExampleMap");
     exampleMap["ORIGINAL FILENAME"] = "_C8I0024";
     exampleMap["YYYY"] = "2018";
     exampleMap["YY"] = "18";
@@ -97,7 +97,7 @@ void Ingest::initExampleMap()
 
 bool Ingest::isToken(QString tokenString, int pos)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Ingest::isToken");
     QChar ch = tokenString.at(pos);
     if (ch.unicode() == 8233) return false;     // Paragraph Separator
     if (ch == '{') return false;                // qt6.2 changed " to '
@@ -140,11 +140,11 @@ bool Ingest::isToken(QString tokenString, int pos)
 
 QString Ingest::parseTokenString(QFileInfo info, QString tokenString)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Ingest::parseTokenString");
     QString fPath = info.absoluteFilePath();
     ImageMetadata m = dm->imMetadata(fPath);
     QDateTime createdDate = m.createdDate;
-//    qDebug() << CLASSFUNCTION << fPath << createdDate;
+//    qDebug() << "Ingest::parseTokenString" << fPath << createdDate;
     QString s;
     int i = 0;
     while (i < tokenString.length()) {
@@ -237,7 +237,7 @@ void Ingest::getPicks()
     Row = 2 "G:/DCIM/100OLYMP/P4020002.ORF" 	DupHideRawRole = true 	DupRawIdxRole = (Invalid)
     Row = 3 "G:/DCIM/100OLYMP/P4020002.JPG" 	DupHideRawRole = false 	DupRawIdxRole = QModelIndex(2,0)
 */
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Ingest::getPicks");
     QString fPath;
     pickList.clear();
     for (int row = 0; row < dm->rowCount(); ++row) {
@@ -254,7 +254,7 @@ void Ingest::getPicks()
                         fPath = idx.data(G::PathRole).toString();
                         QFileInfo fileInfo(fPath);
                         pickList.append(fileInfo);
-//                        qDebug() << CLASSFUNCTION << "appending" << fPath;
+//                        qDebug() << "Ingest::getPicks" << "appending" << fPath;
                     }
                     // append combined raw file
                     if (idx.data(G::DupIsJpgRole).toBool()) {
@@ -264,7 +264,7 @@ void Ingest::getPicks()
                 fPath = idx.data(G::PathRole).toString();
                 QFileInfo fileInfo(fPath);
                 pickList.append(fileInfo);
-//                qDebug() << CLASSFUNCTION << "appending" << fPath;
+//                qDebug() << "Ingest::getPicks" << "appending" << fPath;
             }
         }
     }
@@ -274,7 +274,7 @@ void Ingest::renameIfExists(QString &destination,
                                QString &baseName,
                                QString dotSuffix)
 {
-    if (G::isLogger) G::log(CLASSFUNCTION);
+    if (G::isLogger) G::log("Ingest::renameIfExists");
     int count = 0;
     bool fileAlreadyExists = true;
     QString newBaseName = baseName + "_";
@@ -321,7 +321,7 @@ void Ingest::run()
     while (it.hasNext()) {
         it.next();
         if (i == filenameTemplateSelected) {
-//            qDebug() << CLASSFUNCTION << "it.value()" << it.value();
+//            qDebug() << "Ingest::run" << "it.value()" << it.value();
             tokenString = it.value();
             break;
         }
@@ -401,12 +401,12 @@ void Ingest::run()
         integrityFailure << sourcePath + " not same as " + destinationPath;
         // */
         if (!copyOk) {
-            qDebug() << CLASSFUNCTION << "Failed to copy" << sourcePath << "to" << destinationPath;
+            qDebug() << "Ingest::run" << "Failed to copy" << sourcePath << "to" << destinationPath;
             failedToCopy << sourcePath + " to " + destinationPath;
         }
         if (copyOk && integrityCheck) {
             if (!Utilities::integrityCheck(sourcePath, destinationPath)) {
-                qDebug() << CLASSFUNCTION << "Integrity failure" << sourcePath << "not same as" << destinationPath;
+                qDebug() << "Ingest::run" << "Integrity failure" << sourcePath << "not same as" << destinationPath;
                 integrityFailure << sourcePath + " not same as " + destinationPath;
             }
         }
@@ -415,12 +415,12 @@ void Ingest::run()
         if(isBackup) {
             bool backupCopyOk = QFile::copy(sourcePath, backupPath);
             if (!backupCopyOk) {
-                qDebug() << CLASSFUNCTION << "Failed to copy" << sourcePath << "to" << backupPath;
+                qDebug() << "Ingest::run" << "Failed to copy" << sourcePath << "to" << backupPath;
                 failedToCopy << sourcePath + " to " + backupPath;
             }
             if (backupCopyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(sourcePath, backupPath)) {
-                    qDebug() << CLASSFUNCTION << "Integrity failure" << sourcePath << "not same as" << backupPath;
+                    qDebug() << "Ingest::run" << "Integrity failure" << sourcePath << "not same as" << backupPath;
                     integrityFailure << sourcePath + " not same as " + backupPath;
                 }
             }
@@ -431,7 +431,7 @@ void Ingest::run()
         if (copyOk && QFile(sourceSidecarPath).exists()) {
             sidecarOk = QFile::copy(sourceSidecarPath, destSidecarPath);
             if (!sidecarOk) {
-                qWarning() << "WARNING" << CLASSFUNCTION << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
+                qWarning() << "WARNING" << "Ingest::run" << "Failed to copy" << sourceSidecarPath << "to" << destSidecarPath;
                 failedToCopy << sourceSidecarPath + " to " + destSidecarPath;
             }
 
@@ -440,7 +440,7 @@ void Ingest::run()
         // check if copied xmp = original xmp
         if (copyOk && integrityCheck) {
             if (!Utilities::integrityCheck(sourceSidecarPath, destSidecarPath)) {
-                qWarning() << "WARNING" << CLASSFUNCTION << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
+                qWarning() << "WARNING" << "Ingest::run" << "Integrity failure" << sourceSidecarPath << "not same as" << destSidecarPath;
                 integrityFailure << sourceSidecarPath + " not same as " + destSidecarPath;
             }
         }
@@ -449,12 +449,12 @@ void Ingest::run()
         if (isBackup && sidecarOk) {
             bool backupSidecarCopyOk = QFile::copy(destSidecarPath, backupSidecarPath);
             if (!backupSidecarCopyOk) {
-                qWarning() << "WARNING" << CLASSFUNCTION << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
+                qWarning() << "WARNING" << "Ingest::run" << "Failed to copy" << destSidecarPath << "to" << backupSidecarPath;
                 failedToCopy << destSidecarPath + " to " + backupSidecarPath;
             }
             if (copyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
-                    qWarning() << "WARNING" << CLASSFUNCTION << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
+                    qWarning() << "WARNING" << "Ingest::run" << "Integrity failure" << destSidecarPath << "not same as" << backupSidecarPath;
                     integrityFailure << destSidecarPath + " not same as " + backupSidecarPath;
                 }
             }
@@ -470,7 +470,7 @@ void Ingest::run()
                 fileBytesToCopy += newFile.size();
                 newFile.open(QIODevice::WriteOnly);
                 qint64 bytesWritten = newFile.write(buffer);
-                qDebug() << CLASSFUNCTION << bytesWritten << buffer.length();
+                qDebug() << "Ingest::run" << bytesWritten << buffer.length();
                 newFile.close();
             }
         }
@@ -479,7 +479,7 @@ void Ingest::run()
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();
     G::ingestLastSeqDate = seqDate;
-//    qDebug() << CLASSFUNCTION << seqDate << G::ingestCount << G::ingestLastSeqDate;
+//    qDebug() << "Ingest::run" << seqDate << G::ingestCount << G::ingestLastSeqDate;
 
     // show any ingest errors
     if (failedToCopy.length() || integrityFailure.length()) {

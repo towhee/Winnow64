@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include "Utilities/utilities.h"
+#include "Main/global.h"
 
 enum Contour {contour_flat,
               contour_ridge,

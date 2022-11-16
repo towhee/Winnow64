@@ -4,7 +4,7 @@
 
 void Mac::availableMemory()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log("Mac::availableMemory");
     vm_size_t page_size;
     mach_port_t mach_port;
     mach_msg_type_number_t count;
@@ -71,7 +71,7 @@ bool Mac::colorSyncIterateCallback(CFDictionaryRef dict, void *data)
 
 QString Mac::getDisplayProfileURL()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log("Mac::getDisplayProfileURL");
     ColorSyncIteratorData data;
     data.dispuuid = CGDisplayCreateUUIDFromDisplayID(CGMainDisplayID());
     data.url = nullptr;//NULL;
@@ -79,13 +79,13 @@ QString Mac::getDisplayProfileURL()
     CFRelease(data.dispuuid);
     CFStringRef urlstr = CFURLCopyFileSystemPath(data.url, kCFURLPOSIXPathStyle);
     CFRelease(data.url);
-//    qDebug() << __PRETTY_FUNCTION__ << QString::fromCFString(urlstr);
+//    qDebug() << "Mac::getDisplayProfileURL" << QString::fromCFString(urlstr);
     return QString::fromCFString(urlstr);
 }
 
 float Mac::getMouseCursorMagnification()
 {
-    if (G::isLogger) G::log(__PRETTY_FUNCTION__);
+    if (G::isLogger) G::log("Mac::getMouseCursorMagnification");
     NSDictionary *dict = [[NSUserDefaults standardUserDefaults] persistentDomainForName:@"com.apple.universalaccess"];
 //    float cur_scale = dict[@"mouseDriverCursorSize"]; // returns 1.0 to 4.0
     float cur_scale = [dict[@"mouseDriverCursorSize"] floatValue]; // returns 1.0 to 4.0

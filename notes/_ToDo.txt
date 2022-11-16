@@ -3,7 +3,7 @@ BUGS / TO DO
 - Read HEIC metadata (MAC issue only?)
 - Mac version missing de265-version.h file
 - Convert path to windows \ for copy path to clipboard
-- CLASSFUNCTION in Heic.cpp
+- "CLASSFUNCTION" in Heic.cpp
 - Extract frame from video
 - Update use of current image for video frame
 - IPhone image/video creation date
@@ -124,7 +124,7 @@ DONE/FIXED
 - Account for Mac Accessibility cursor scaling in IconView::zoomCursor
 - Esc does not stop folderSelectionChange with includeSubfolders
 - Right mouse click starts video
-- CLASSFUNCTION in GUI thread
+- "CLASSFUNCTION" in GUI thread
 - Apple style sliders in preferences
 - Logitech forward/Back mouse buttons
 - Added mouse wheel sensitivity preference
