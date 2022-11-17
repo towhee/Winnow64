@@ -942,7 +942,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 QModelIndex idx = thumbView->indexAt(pos);
 //                qDebug() << "MW::eventFilter" << "Modifier not pressed" << event << pos << idx;
                 if (idx.isValid()) {
-                    QString src = "MW::eventFilter" + ": " + eventName;
+                    QString src = "MW::eventFilter: " + eventName;
                     thumbView->zoomCursor(idx, src, /*forceUpdate=*/true, pos);
                 }
             }
@@ -955,7 +955,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             bool noModifiers = e->modifiers() == 0;
             const QModelIndex idx = thumbView->indexAt(e->pos());
             if (idx.isValid() && noModifiers) {
-                QString src = "MW::eventFilter" + ": " + eventName;
+                QString src = "MW::eventFilter: " + eventName;
                 thumbView->zoomCursor(idx, src, /*forceUpdate=*/false, e->pos());
             }
             else {
@@ -4134,7 +4134,7 @@ void MW::zoomIn()
     }
 }
 
-void MW::()
+void MW::zoomOut()
 {
     if (G::isLogger) G::log("MW::zoomOut");
     if (asLoupeAction) imageView->zoomOut();
@@ -6007,7 +6007,7 @@ void MW::openUsbFolder()
     }
 }
 
-void MW::()
+void MW::copyFolderPathFromContext()
 {
     if (G::isLogger) G::log("MW::copyFolderPathFromContext");
     QApplication::clipboard()->setText(mouseOverFolderPath);

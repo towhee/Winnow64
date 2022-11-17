@@ -71,6 +71,10 @@ bool Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row)
     QFile(fPath).setPermissions(oldPermissions);
     int w = image.width();
     int h = image.height();
+    if (h == 0) {
+        qWarning() << "WARNING" << "loadFromEntireFile" << "Could not read thumb using thumbReader." << fPath;
+        return false;
+    }
     double a = w / h;
     QString src = "Thumb::loadFromEntireFile";
 

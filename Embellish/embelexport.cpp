@@ -138,7 +138,7 @@ bool EmbelExport::isValidExportFolder()
     return true;
 }
 
-QString EmbelExport::(QString templateName, QStringList &pathList)
+QString EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathList)
 {
 /*
     Images sent from another program, such as lightroom, are sent here from
