@@ -126,7 +126,7 @@ DockWidget::DockWidget(const QString &title, QWidget *parent)
     ignoreResize = false;
 }
 
-bool DockWidget::DockWidget::(QEvent *event)
+bool DockWidget::event(QEvent *event)
 {
     if (event->type() == QEvent::MouseButtonDblClick) {
         if (G::isLogger) G::log("DockWidget::DockWidget::");

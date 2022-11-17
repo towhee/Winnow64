@@ -1212,7 +1212,7 @@ static inline int hslValue(double n1, double n2, double hue)
     return ROUND(value * 255.0);
 }
 
-void (int r, int g, int b, unsigned char *hue, unsigned char *sat, unsigned char *light)
+void rgbToHsl(int r, int g, int b, unsigned char *hue, unsigned char *sat, unsigned char *light)
 {
     if (G::isLogger) G::log("ImageView  rgbToHsl");
     double h, s, l;
@@ -1262,7 +1262,7 @@ void (int r, int g, int b, unsigned char *hue, unsigned char *sat, unsigned char
     *light = ROUND(l);
 }
 
-void (double h, double s, double l,
+void hslToRgb(double h, double s, double l,
                     unsigned char *red, unsigned char *green, unsigned char *blue)
 {
     if (G::isLogger) G::log("ImageView  hslToRgb");
