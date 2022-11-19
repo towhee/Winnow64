@@ -76,6 +76,7 @@ public:
     void recoverSelection();
     bool getSelection(QStringList &list);
     QStringList getSelectionOrPicks();
+    bool isSelected(int row);
 
     QMutex mutex;
 

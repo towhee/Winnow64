@@ -1396,6 +1396,14 @@ void MW::createActions()
     addAction(diagnosticsEmbellishAction);
     connect(diagnosticsEmbellishAction, &QAction::triggered, this, &MW::diagnosticsEmbellish);
 
+    // InfoView context menu
+
+    copyInfoTextToClipboardAction = new QAction(tr("Copy info field text"), this);
+    copyInfoTextToClipboardAction->setObjectName("copyInfoviewText");
+    copyInfoTextToClipboardAction->setShortcutVisibleInContextMenu(true);
+    addAction(copyInfoTextToClipboardAction);
+    connect(copyInfoTextToClipboardAction, &QAction::triggered, infoView, &InfoView::copyEntry);
+
     // Tests
     stressTestAction = new QAction(tr("Traverse folders stress test"), this);
     stressTestAction->setObjectName("traversFoldersStressTest");
@@ -1806,9 +1814,11 @@ void MW::createMenus()
     // metadata context menu
     QList<QAction *> *metadataActions = new QList<QAction *>;
 //    metadataActions->append(infoView->copyInfoAction);
+    metadataActions->append(copyInfoTextToClipboardAction);
+    metadataActions->append(separatorAction);
     metadataActions->append(reportMetadataAction);
     metadataActions->append(prefInfoAction);
-    metadataActions->append(separatorAction);
+    metadataActions->append(separatorAction1);
 //    metadataActions->append(metadataDockLockAction);
     metadataActions->append(metadataFixedSizeAction);
 

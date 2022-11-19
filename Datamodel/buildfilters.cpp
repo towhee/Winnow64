@@ -156,6 +156,7 @@ void BuildFilters::updateCountFiltered()
         ++it;
     }
     filters->disableColorZeroCountItems();
+    filters->setCatFiltering();
     filters->filtersBuilt = true;
     filters->buildingFilters = false;
     filters->update();
@@ -218,6 +219,7 @@ void BuildFilters::countUnfiltered()
     QTreeWidgetItemIterator it(filters);
     QString cat = "";    // category ie Search, Ratings, Labels, etc
     while (*it) {
+        // items
         if ((*it)->parent()) {
             if (abort) return;
             cat = (*it)->parent()->text(0);
@@ -250,6 +252,7 @@ void BuildFilters::countUnfiltered()
             (*it)->setData(4, Qt::EditRole, QString::number(tot));
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
         }
+        // categories
         if (!(*it)->parent()) {
             if (instances.contains(cat)) {
                 int itemProgress = 40 * instances[cat] / totInstances;
@@ -385,5 +388,6 @@ void BuildFilters::run()
     if (!abort) mapUniqueInstances();
     if (!abort) countFiltered();
     if (!abort) countUnfiltered();
+    filters->disableEmptyCat();
     done();
 }

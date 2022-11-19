@@ -1,57 +1,14 @@
-"MW::keyReleaseEvent" false
-          5 MW::keyReleaseEvent
-"MW::stop" src = "Escape key"
-STOP           0 MW::stop
-STOP           0 MetaRead::stop
-STOP           0 MetadataCache::stop
-STOP           8 ImageCache::stop
-STOP         106 MW::updateImageCachingThreadRunStatus
-STOP          28 ImageCache::clearImageCache
-STOP           6 MW::updateImageCacheStatus                         Instruction: Clear  Source: ImageCache::clearImageCache
-STOP           3 MW::metadataChanged
-STOP           1 InfoView::showOrHide
-STOP          12 ImageView::clear
-STOP           1 ImageView::clear
-STOP           3 InfoView::clearInfo
-STOP           1 MW::metadataChanged
-STOP           4 InfoView::showOrHide
-STOP           0 MW::metadataChanged
-STOP           3 InfoView::showOrHide
-STOP           3 MW::updateDisplayResolution
-STOP           0 MW::metadataChanged
-STOP          19 InfoView::showOrHide
-STOP          52 MW::updateClassification
-STOP      23,694 DataModel::clearDataModel
-STOP           2 Filters::removeChildrenDynamicFilters
-STOP          18 Filters::clearAll
-STOP         138 Filters::setSearchNewFolder
-STOP         114 MW::setThreadRunStatusInactive
 
-      3,893 MW::setCentralMessage
-WARNING Metadata::loadImageMetadata NULL FILE REQUESTED FROM  "DataModel::addAllMetadata"
-         10 Metadata::loadImageMetadata                          Source: DataModel::addAllMetadata
-         22 Filters::loadedDataModel
-      1,248 DataModel::endLoad
-          1 MW::updateIconRange                                0
-          4 IconView::calcViewportRange
-        310 MW::setCentralMessage
-         18 IconView::resizeEvent
-          0 Filters::resizeEvent
-      2,922 Filters::resizeColumns
-          0 MetadataCache::readIconChunk
-          0 MetadataCache::loadIcon
-          3 MetadataCache::updateIconLoadingProgress
-          5 MW::setCentralMessage
-          1 MW::updateIconBestFit
-          1 IconView::bestAspect
-          3 IconView::setThumbParameters
-          0 IconView::bestAspect
-          1 IconView::setThumbParameters
-          1 MW::setThumbDockHeight
-         21 MW::setThumbDockFeatures
-        361 MW::updateMetadataThreadRunStatus
-
-         18 MW::loadImageCacheForNewFolder
-          1 ImageCache::initImageCache
-          0 DataModel::selectFirst
-  7,387,027 DataModel::select
+FILTER
+    - MW::filterChange
+        - if src = filter panel sync menu actions (filterSyncActionsWithFilters)
+        - refresh the proxy sort/filter (dm->sf->filterChange)
+        - update filter panel image count by filter item (buildFilters->updateCountFiltered)
+        - recover sort after filtration (sortChange)
+            - sort the views (thumbView->sortThumbs)
+            - update proxy current row from the selected item
+                - confirm dm->currentSfRow is being updated correctly
+                - fileSelectionChange - ignored because isFilterChange = true
+            - update the status panel filtration status (updateStatusBar)
+            - check null filter
+            -

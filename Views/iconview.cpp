@@ -151,7 +151,9 @@ IconView::IconView(QWidget *parent, DataModel *dm, ImageCacheData *icd, QString 
     iconViewDelegate = new IconViewDelegate(this,
                                             m2->isRatingBadgeVisible,
                                             m2->isIconNumberVisible,
-                                            icd);
+                                            icd,
+                                            dm->selectionModel
+                                            );
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight,
         labelFontSize, showIconLabels, labelChoice, badgeSize);
     setItemDelegate(iconViewDelegate);
@@ -788,14 +790,11 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
     index and MW::fileSelectionChange is signalled.
 
     For some reason the selectionModel rowCount is not up-to-date and the
-    selection is updated after the MD::fileSelectionChange occurs, hence update
+    selection is updated after the MW::fileSelectionChange occurs, hence update
     the status bar from here.
 */
     if (G::isLogger) G::log("IconView::selectionChanged");
     if (!G::isInitializing) {
-//        emit fileSelectionChange(currentIndex(), QModelIndex(), "IconView::selectionChanged");
-//        return;
-
         // selection behavior
         bool anchorCurrent = true;
         // select or deselect change
@@ -806,12 +805,10 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
         int selectedRow = -1;
         if (isDeselected) deselectedRow = deselected.at(0).indexes().at(0).row();
         if (isSelected) selectedRow = selected.at(0).indexes().at(0).row();
-        // current index
-        int currentIdxRow = currentIndex().row();
         // prior current: current in datamodel before MW::fileSelectionChange called
         QModelIndex currentSfIdx = dm->currentSfIdx;
         int currentSfRow = dm->currentSfRow;
-        int selectedRowsCount = selectionModel()->selectedRows().count();
+        qint64 selectedRowsCount = selectionModel()->selectedRows().count();
         // is change row also prior current row
         bool isCurrent = false;
         if (deselectedRow == currentSfRow) isCurrent = true;
@@ -856,7 +853,7 @@ void IconView::selectionChanged(const QItemSelection &selected, const QItemSelec
 
         // UniSelection, Deselect current: reselect deselection if no selection remaining
         else if (!selectedRowsCount && isDeselected) {
-            selectionModel()->select(currentIndex(), QItemSelectionModel::Select);
+            selectionModel()->select(currentIndex(), QItemSelectionModel::Select | QItemSelectionModel::Rows);
         }
 
         // MultiSelection, Deselect current: reset current to nearest next selected row

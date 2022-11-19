@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>878</width>
-    <height>872</height>
+    <width>879</width>
+    <height>893</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -72,8 +72,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>869</width>
-        <height>863</height>
+        <width>870</width>
+        <height>884</height>
        </rect>
       </property>
       <property name="minimumSize">
@@ -161,7 +161,7 @@
        <property name="geometry">
         <rect>
          <x>310</x>
-         <y>823</y>
+         <y>845</y>
          <width>291</width>
          <height>25</height>
         </rect>
@@ -174,7 +174,7 @@
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>823</y>
+         <y>843</y>
          <width>181</width>
          <height>25</height>
         </rect>
@@ -1785,7 +1785,7 @@ margin-left =  5px</string>
        <property name="geometry">
         <rect>
          <x>310</x>
-         <y>798</y>
+         <y>820</y>
          <width>271</width>
          <height>25</height>
         </rect>
@@ -1798,7 +1798,7 @@ margin-left =  5px</string>
        <property name="geometry">
         <rect>
          <x>590</x>
-         <y>830</y>
+         <y>850</y>
          <width>251</width>
          <height>16</height>
         </rect>
@@ -1826,7 +1826,7 @@ margin-left =  5px</string>
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>798</y>
+         <y>818</y>
          <width>201</width>
          <height>25</height>
         </rect>
@@ -1848,7 +1848,7 @@ margin-left =  5px</string>
        <property name="geometry">
         <rect>
          <x>590</x>
-         <y>790</y>
+         <y>810</y>
          <width>251</width>
          <height>43</height>
         </rect>
@@ -1919,7 +1919,7 @@ margin-left =  5px</string>
        <property name="geometry">
         <rect>
          <x>200</x>
-         <y>798</y>
+         <y>820</y>
          <width>101</width>
          <height>25</height>
         </rect>
@@ -1955,6 +1955,25 @@ margin-left =  5px</string>
        </property>
        <property name="text">
         <string>Beep when background ingest finished</string>
+       </property>
+      </widget>
+      <widget class="Line" name="line">
+       <property name="geometry">
+        <rect>
+         <x>-10</x>
+         <y>799</y>
+         <width>870</width>
+         <height>3</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Plain</enum>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
        </property>
       </widget>
      </widget>

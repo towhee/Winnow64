@@ -83,6 +83,7 @@ public slots:
     bool isAnyFilter();
     void setCatFiltering();
     bool isCatFiltering(QTreeWidgetItem *item);
+    void disableEmptyCat();
     void invertFilters();
     void clearAll();
     void uncheckAllFilters();
@@ -118,6 +119,7 @@ private:
     QFont searchDefaultTextFont;
     QColor searchDefaultTextColor;
     QColor hdrIsFilteringColor;
+    QColor hdrIsEmptyColor;
     int indentation;
     bool hdrJustClicked;
     QModelIndex searchTrueIdx;

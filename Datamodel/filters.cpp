@@ -8,11 +8,6 @@ public:
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &/*index*/) const
     {
         int height = qRound(G::fontSize.toInt() * 1.7 * G::ptToPx);
-        qDebug() << "FiltersDelegate  sizeHint  height =" << height
-                 << "G::fontSize =" << G::fontSize
-                 << "G::ptToPx =" << G::ptToPx
-                 << "G::dpi =" << G::dpi
-                    ;
         return QSize(option.rect.width(), height);
     }
 };
@@ -74,6 +69,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     setIndentation(indentation);
 
     hdrIsFilteringColor = QColor(Qt::red);
+    hdrIsEmptyColor = G::disabledColor;
 
     int a = G::backgroundShade + 5;
     int b = G::backgroundShade - 15;
@@ -489,7 +485,7 @@ bool Filters::isAnyFilter()
 
 void Filters::setCatFiltering()
 {
-    /*
+/*
     Update all categories is filtering status
 */
     if (G::isLogger) G::log("Filters::setCatFiltering");
@@ -536,6 +532,24 @@ bool Filters::isCatFiltering(QTreeWidgetItem *item)
         }
     }
     return false;
+}
+
+void Filters::disableEmptyCat()
+{
+/*
+
+*/
+    if (G::isLogger) G::log("Filters::isCatEmpty");
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        // categories
+        if (!(*it)->parent()) {
+            qDebug() << (*it)->text(0) << (*it)->childCount();
+            if ((*it)->childCount() == 0)
+                (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
+        }
+        ++it;
+    }
 }
 
 bool Filters::isOnlyMostRecentDayChecked()
@@ -1034,7 +1048,8 @@ void Filters::mousePressEvent(QMouseEvent *event)
     QTreeWidgetItem *item = itemFromIndex(idx);
     bool isLeftBtn = event->button() == Qt::LeftButton;
     bool isHdr = idx.parent() == QModelIndex();
-//    bool notIndentation = p.x() >= indentation;
+    bool isEmptyHdr = isHdr && item->childCount() == 0;
+    if (isEmptyHdr) return;
     bool isValid = idx.isValid();
     /*
     qDebug() << "Filters::mousePressEvent" << p

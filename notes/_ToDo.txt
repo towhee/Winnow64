@@ -1,9 +1,10 @@
 BUGS / TO DO
+- No full size image for /Users/roryhill/Pictures/_ThumbTest/DNGDenoise.dng
+- Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - HEIC metadata on mac
 - Read HEIC metadata (MAC issue only?)
 - Mac version missing de265-version.h file
 - Convert path to windows \ for copy path to clipboard
-- "CLASSFUNCTION" in Heic.cpp
 - Extract frame from video
 - Update use of current image for video frame
 - IPhone image/video creation date
@@ -73,6 +74,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Status selected count wrong when deselect current and nothing else selected
+- Disable filter categoryif no items
+- Filtering changes current image but loupe not updating
 - Filter header text red if part of filters
 - Fixed issue with solo mode not working when decoration mouse pressed
 - App not closing while reading large foldeer
