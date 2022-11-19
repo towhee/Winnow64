@@ -31,7 +31,7 @@ public:
     QModelIndex statusInfoIdx;
 
     QAction *copyInfoAction;
-    bool isNewImageDataChange;
+    bool ignoreDataChange;
 
     enum categories {
         fileInfoCat,
@@ -113,6 +113,8 @@ private:
     IconView *thumbView;
     QString fPath;
     QStringList editFields;
+
+    QString srcFunction;
 };
 
 #endif // INFOVIEW_H

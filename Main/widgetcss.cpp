@@ -130,6 +130,7 @@ QString WidgetCSS::frame()
     "{"
         "border: none;"
         "background: " + QColor(fm,fm,fm).name() + ";"
+        // cannot assign line color here: see https://stackoverflow.com/questions/14581498/qt-stylesheet-for-hline-vline-color
     "}";
 }
 

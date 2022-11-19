@@ -90,7 +90,7 @@ QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵�
 
     // update InfoView - flag updates so itemChanged is ignored in MW::metadataChanged
     if (G::useInfoView)  {
-        infoView->isNewImageDataChange = true;
+        infoView->ignoreDataChange = true;
         QStandardItemModel *k = infoView->ok;
         if (keepBase) {
             k->setData(k->index(infoView->PositionRow, 1, infoView->statusInfoIdx), getPosition());
@@ -104,7 +104,7 @@ QString sym = "⚡🌈🌆🌸🍁🍄🎁🎹💥💭🏃🏸💻🔆🔴🔵�
             k->setData(k->index(infoView->SelectedRow, 1, infoView->statusInfoIdx), "");
             k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
         }
-        infoView->isNewImageDataChange = false;
+        infoView->ignoreDataChange = false;
     }
 }
 

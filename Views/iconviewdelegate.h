@@ -16,7 +16,9 @@ public:
     IconViewDelegate(QObject *parent,
                      bool &isRatingBadgeVisible,
                      bool &isIconNumberVisible,
-                     ImageCacheData *icd);
+                     ImageCacheData *icd,
+                     QItemSelectionModel *selectionModel
+                     );
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
                const QModelIndex &index) const override;
@@ -60,6 +62,7 @@ public slots:
 private:
     QObject parent;
     ImageCacheData *icd;
+    QItemSelectionModel *selectionModel;
     bool &isRatingBadgeVisible;
     bool &isIconNumberVisible;
     bool delegateShowThumbLabels;

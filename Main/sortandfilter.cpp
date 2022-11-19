@@ -67,6 +67,8 @@ void MW::filterChange(QString source)
 
     if (G::stop) return;
 
+    QModelIndex oldIdx = dm->currentDmIdx;
+
     // if filter chnage source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") filterSyncActionsWithFilters();
 
@@ -106,10 +108,11 @@ void MW::filterChange(QString source)
         return;
     }
 
-    // get the current selected item
-    dm->currentSfRow = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    // get the current selected item if it has not been filtered, else = 0 row
+    QModelIndex oldSfIdx = dm->sf->mapFromSource(dm->currentDmIdx);
+    if (oldSfIdx.isValid()) dm->currentSfRow = oldSfIdx.row();
+    else dm->currentSfRow = 0;
     // check if still in filtered set, if not select first item in filtered set
-    if (dm->currentSfRow == -1) dm->currentSfRow = 0;
     thumbView->iconViewDelegate->currentRow = dm->currentSfRow;
     gridView->iconViewDelegate->currentRow = dm->currentSfRow;
     dm->select(dm->currentSfRow);
@@ -446,7 +449,7 @@ void MW::sortChange(QString source)
         doNotSort = true;
     if (doNotSort) return;
 
-    // Need all metadata loaded before sorting non-core metadata
+    // Need all metadata loaded before sorting non-fileSystem metadata
     // rgh all metadata always loaded now - change this?
     if (!G::allMetadataLoaded && sortColumn > G::CreatedColumn)
         loadEntireMetadataCache("SortChange");
@@ -496,8 +499,6 @@ void MW::sortChange(QString source)
     // also update datamodel, used in MdCache and EmbelProperties
     dm->currentFilePath = fPath;
 
-//    if (!G::allMetadataLoaded) return;
-
     centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true, "", "MW::sortChange");
 
@@ -509,7 +510,6 @@ void MW::sortChange(QString source)
     /* if the previous selected image is also part of the filtered datamodel then the
        selected index does not change and fileSelectionChange will not be signalled.
        Therefore we call it here to force the update to caching and icons */
-//    qDebug() << "MW::sortChange" << idx.data() << "Calling fileSelectionChange(idx, idx)";
     qDebug() << "MW::sortChange" << "Calling fileSelectionChange";
     fileSelectionChange(idx, idx, "MW::sortChange");
 

@@ -915,14 +915,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *e = static_cast<QKeyEvent *>(event);
         eventName = "KeyPress";
-//        qDebug() << "MW::eventFilter" << event;
         G::isModifier = e->modifiers() != 0;
     }
 
     if (event->type() == QEvent::KeyRelease) {
         QKeyEvent *e = static_cast<QKeyEvent *>(event);
         G::isModifier = e->modifiers() != 0;
-//        qDebug() << "MW::eventFilter" << event;
         eventName = "KeyRelease";
     }
 
@@ -1007,7 +1005,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
     */
 
     if (event->type() == QEvent::MouseButtonPress) {
-        qDebug() << "MW::eventFilter" << obj << obj->objectName(); // << event;
+//        qDebug() << "MW::eventFilter" << obj << obj->objectName(); // << event;
         if (obj->objectName() == "FiltersViewport") return false;
         QMouseEvent *e = static_cast<QMouseEvent *>(event);
         if (e->button() == Qt::LeftButton) isLeftMouseBtnPressed = true;
@@ -1721,7 +1719,6 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
     if (G::isLogger || G::isFlowLogger) G::log("MW::fileSelectionChange", src + " " + current.data(G::PathRole).toString());
 
     if (G::stop) return;
-//    if (!G::isNewFolderLoaded) return;
     G::isNewSelection = false;
 
    /*
@@ -1730,12 +1727,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
              << "G::fileSelectionChangeSource =" << G::fileSelectionChangeSource
              << "current =" << current
              << "row =" << current.row()
-             << "G::isInitializing =" << G::isInitializing
-             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
-             << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
+             << "dm->currentDmIdx =" << dm->currentDmIdx
+//             << "G::isInitializing =" << G::isInitializing
+//             << "G::isNewFolderLoaded =" << G::isNewFolderLoaded
+//             << "isFirstImageNewFolder =" << imageView->isFirstImageNewFolder
              << "isFilterChange =" << isFilterChange
-             << "isCurrentFolderOkay =" << isCurrentFolderOkay
-             << "icon row =" << thumbView->currentIndex().row()
+//             << "isCurrentFolderOkay =" << isCurrentFolderOkay
+//             << "icon row =" << thumbView->currentIndex().row()
              << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
                 ;
                 //*/
@@ -1762,11 +1760,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         return;
     }
 
-//    qDebug() << "MW::fileSelectionChange"
-//             << "src =" << src
-//             << "row =" << current.row()
-//             << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
-//                ;
+    /*
+    qDebug() << "MW::fileSelectionChange"
+             << "src =" << src
+             << "row =" << current.row()
+             << dm->sf->index(current.row(), 0).data(G::PathRole).toString()
+                ;  //*/
 
     // Check if anything selected.  If not disable menu items dependent on selection
     enableSelectionDependentMenus();
@@ -1849,10 +1848,11 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, QString 
         }
     }
 
-    // force scroll in case not up-to-date after holding nav key down
-//    if (thumbView->isVisible()) {
-//        thumbView->scrollToRow(dm->currentRow, "MW::fileSelectionChange");
-//    }
+    /* force scroll in case not up-to-date after holding nav key down
+    if (thumbView->isVisible()) {
+        thumbView->scrollToRow(dm->currentSfRow, "MW::fileSelectionChange");
+    }
+    */
 
     // update caching if folder has been loaded
     if (G::isNewFolderLoaded) {
@@ -2007,7 +2007,7 @@ bool MW::stop(QString src)
     G::stop = true;
     if (dm->loadingModel) dm->abortLoadingModel = true;
     G::dmEmpty = true;
-    qDebug() << "MW::stop" << "src =" << src;
+//    qDebug() << "MW::stop" << "src =" << src;
 
     G::t.restart();
     buildFilters->stop();
@@ -3417,38 +3417,29 @@ QString MW::enquote(QString &s)
 void MW::runExternalApp()
 {
     if (G::isLogger) G::log("MW::runExternalApp");
-    // this works:
-//    QDesktopServices::openUrl(QUrl("file:///Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg"));
-//    return;
 
     QString appPath = "";
     QString appName = (static_cast<QAction*>(sender()))->text();
+
+    // append any app command arguments (before add file paths)
     QStringList arguments;
-    for(int i = 0; i < externalApps.length(); ++i) {
+    for (int i = 0; i < externalApps.length(); ++i) {
         if(externalApps.at(i).name == appName) {
             appPath = externalApps.at(i).path;
-            arguments << externalApps.at(i).args.split(" ");
+            if (externalApps.at(i).args.length() > 0)
+                arguments << externalApps.at(i).args.split(" ");
             break;
         }
     }
     if (appPath == "") return;      // add err handling
-//    QFileInfo appInfo = appPath;  // qt6.2
     QFileInfo appInfo;              // qt6.2
     appInfo.setFile(appPath);       // qt6.2
     QString appExecutable = appInfo.fileName();
 
-//    app = externalApps[((QAction*) sender())->text()];
-    QModelIndexList selectedIdxList = dm->selectionModel->selectedRows();
-
-    /*
-    app = "/Applications/Adobe Photoshop CC 2018/Adobe Photoshop CC 2018.app/Contents/MacOS/Adobe Photoshop CC 2018";
-    app = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app/Contents/MacOS/Adobe Photoshop CS6";
-    QString x = "/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app";
-    app = "\"/Applications/Adobe Photoshop CS6/Adobe Photoshop CS6.app\"";
-    std::cout << appPath.toStdString() << std::endl << std::flush;
-    // */
-
-    int nFiles = selectedIdxList.size();
+    // get list of selected or picked image files to send to external app
+//    if (!dm->getSelection(arguments)) return;
+    dm->getSelection(arguments);
+    int nFiles = arguments.size();
 
     if (nFiles < 1) {
         G::popUp->showPopup("No images have been selected", 2000);
@@ -3458,7 +3449,7 @@ void MW::runExternalApp()
     if (nFiles > 5) {
         QMessageBox msgBox;
         int msgBoxWidth = 300;
-        msgBox.setText(QString::number(nFiles) + " files have been selected.");
+        msgBox.setText(QString::number(nFiles) + " files will be processed.");
         msgBox.setInformativeText("Do you want continue?");
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         msgBox.setDefaultButton(QMessageBox::Yes);
@@ -3473,52 +3464,10 @@ void MW::runExternalApp()
         if (ret == QMessageBox::Cancel) return;
     }
 
-    if (!dm->getSelection(arguments)) return;
     QString folderPath;
-//    QFileInfo fInfo = arguments.at(0);    // qt6.2
     QFileInfo fInfo;                        // qt6.2
     fInfo.setFile(arguments.at(0));         // qt6.2
     folderPath = fInfo.dir().absolutePath() + "/";
-    /*
-    for (int tn = 0; tn < nFiles ; ++tn) {
-        QString fPath = selectedIdxList[tn].data(G::PathRole).toString();
-        QFileInfo fInfo = fPath;
-        folderPath = fInfo.dir().absolutePath() + "/";
-        QString fileName = fInfo.fileName();
-
-        // Update arguments
-        arguments << fPath;
-
-        // write sidecar in case external app can read the metadata
-        QString destBaseName = fInfo.baseName();
-        QString suffix = fInfo.suffix().toLower();
-        QString destinationPath = fPath;
-
-        // Sidecar being overwritten if it already exists!!  Cancel for now.
-
-        // buffer to hold file with edited xmp data
-        QByteArray buffer;
-
-        if (metadata->writeMetadata(fPath, dm->getMetadata(fPath), buffer)
-        && metadata->sidecarFormats.contains(suffix)) {
-
-            if (metadata->internalXmpFormats.contains(suffix)) {
-                // write xmp data into image file
-                QFile newFile(destinationPath);
-                newFile.open(QIODevice::WriteOnly);
-                newFile.write(buffer);
-                newFile.close();
-            }
-            else {
-                // write the sidecar xmp file
-                QFile sidecarFile(folderPath + destBaseName + ".xmp");
-                sidecarFile.open(QIODevice::WriteOnly);
-                sidecarFile.write(buffer);
-                sidecarFile.close();
-            }
-        }
-    }
-    //    */
 
     #ifdef Q_OS_WIN
     arguments.replaceInStrings("/", "\\");
@@ -3530,14 +3479,21 @@ void MW::runExternalApp()
     connect(process, SIGNAL(error(QProcess::ProcessError)),
             this, SLOT(externalAppError(QProcess::ProcessError)));
 
+    /*
+    qDebug() << "MW::runExternalApp"
+             << "\nfolderPath =" << folderPath
+             << "\nappPath =" << appPath
+             << "\narguments =" << arguments
+                ;  //*/
+
     process->setArguments(arguments);
     process->setProgram(appPath);
     process->setWorkingDirectory(folderPath);
     process->start();
     /*
-    //this works in terminal"
-    // open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
-    //*/
+        this works in terminal"
+        open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
+    */
 }
 
 void MW::allPreferences()
@@ -3799,10 +3755,11 @@ void MW::setDisplayResolution()
     // Device Pixel Ratio or Monitor change has occurred (default set in initialize())
     G::dpi = screen->logicalDotsPerInch();
     G::ptToPx = G::dpi / 72;
+    /*
     qDebug() << "MW::setDisplayResolution"
              << "G::dpi =" << G::dpi
              << "G::ptToPx =" << G::ptToPx
-                ;
+                ; //*/
     G::displayVirtualHorizontalPixels = screen->geometry().width();
     G::displayVirtualVerticalPixels = screen->geometry().height();
     G::displayPhysicalHorizontalPixels = screen->geometry().width() * G::actDevicePixelRatio;
@@ -5547,7 +5504,7 @@ void MW::metadataChanged(QStandardItem* item)
     if (G::isLogger) G::log("MW::metadataChanged");
     // if new folder is invalid no relevent data has changed
     if(!isCurrentFolderOkay) return;
-     if (G::useInfoView) if (infoView->isNewImageDataChange) return;
+     if (G::useInfoView) if (infoView->ignoreDataChange) return;
 
     QModelIndex par = item->index().parent();
      if (G::useInfoView) if (par != infoView->tagInfoIdx) return;

@@ -113,7 +113,7 @@ void MW::createFilterView()
 //        G::fontSize = setting->value("fontSize").toString();
 //    else
 //        G::fontSize = "12";
-    qDebug() << "MW::createFilterView  G::fontSize =" << G::fontSize;
+//    qDebug() << "MW::createFilterView  G::fontSize =" << G::fontSize;
     filters = new Filters(this);
     filters->setObjectName("Filters");
     filters->setMaximumWidth(folderMaxWidth);

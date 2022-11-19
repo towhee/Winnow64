@@ -84,7 +84,8 @@ IconView thumbDock Anatomy
 IconViewDelegate::IconViewDelegate(QObject *parent,
                                    bool &isRatingBadgeVisible,
                                    bool &isIconNumberVisible,
-                                   ImageCacheData *icd
+                                   ImageCacheData *icd,
+                                   QItemSelectionModel *selectionModel
                                    )
         : isRatingBadgeVisible(isRatingBadgeVisible),
           isIconNumberVisible(isIconNumberVisible)
@@ -329,6 +330,7 @@ void IconViewDelegate::paint(QPainter *painter,
 
     // get data from model
     int row = index.row();
+    QModelIndex sfIdx0 = index.model()->index(row, 0);
 //    QString fName = index.model()->index(row, G::NameColumn).data(Qt::DisplayRole).toString();
 //    QString title = index.model()->index(row, G::TitleColumn).data(Qt::DisplayRole).toString();
     QString labelText;
@@ -343,6 +345,7 @@ void IconViewDelegate::paint(QPainter *painter,
     QString pickStatus = index.model()->index(row, G::PickColumn).data(Qt::EditRole).toString();
     QString duration = index.model()->index(row, G::DurationColumn).data(Qt::DisplayRole).toString();
     bool isSelected = option.state.testFlag(QStyle::State_Selected);
+//    bool isSelected2 = selectionModel->isSelected(sfIdx0);
     bool isIngested = index.model()->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
     bool isCached = index.model()->index(row, G::PathColumn).data(G::CachedRole).toBool();
     bool metaLoaded = index.model()->index(row, G::MetadataLoadedColumn).data().toBool();

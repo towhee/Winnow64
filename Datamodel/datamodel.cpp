@@ -1859,6 +1859,12 @@ void DataModel::select(QModelIndex idx)
     }
 }
 
+bool DataModel::isSelected(int row)
+{
+    if (G::isLogger) G::log("DataModel::isSelected");
+    return selectionModel->isSelected(sf->index(row, 0));
+}
+
 void DataModel::saveSelection()
 {
 /*
@@ -1889,8 +1895,8 @@ void DataModel::recoverSelection()
 bool DataModel::getSelection(QStringList &list)
 {
 /*
-    Adds each image that is selected or picked as a file path to list. If there are picks and
-    a selection then a dialog offers the user a choice to use.
+    Adds each image that is selected or picked as a file path to list. If there
+    are picks and a selection then a dialog offers the user a choice to use.
 */
     lastFunction = "";
     if (G::isLogger) G::log("DataModel::getSelection");

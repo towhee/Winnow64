@@ -924,6 +924,9 @@ private:
     QList<QAction *> *fsTreeActions;
     QList<QAction *> *filterActions;
 
+    // InfoView context menu
+    QAction *copyInfoTextToClipboardAction;
+
     // General
     QAction *thriftyCacheAction;         // only available via shortcut key "F10"
     QAction *moderateCacheAction;        // only available via shortcut key "F11"

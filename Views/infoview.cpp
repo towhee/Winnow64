@@ -150,7 +150,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     The signal dataEdited is emitted, which triggers Embel to update the text fields. This
     will only work if Embel::isRemote == false.
 */
-    bool isSidecarChange = G::useSidecar && !isNewImageDataChange;
+    if (ignoreDataChange) return;
     bool usedPopUp = false;
     static int count = 0;
     QString src = "InfoView::dataChanged";
@@ -162,7 +162,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
             QString field = idx0.data().toString();
 
             int n = selection.count();
-            if (isSidecarChange) {
+            if (G::useSidecar) {
                 usedPopUp = true;
                 G::popUp->setProgressVisible(true);
                 G::popUp->setProgressMax(n + 1);
@@ -209,7 +209,8 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 }
 
                 // write to sidecar
-                if (isSidecarChange) {
+                if (G::useSidecar) {
+//                    qDebug() << "InfoView::dataChanged  field =" << field << "srcFuntion =" << srcFunction;
                     dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
                     metadata->writeXMP(metadata->sidecarPath(fPath), "InfoView::dataChanged");
                     G::popUp->setProgress(i+1);
@@ -243,7 +244,8 @@ void InfoView::showInfoViewMenu(QPoint pt)
 
 void InfoView::setColumn0Width()
 {
-    if (G::isLogger) G::log("InfoView::setColumn0Width");    QFont ft = this->font();
+    if (G::isLogger) G::log("InfoView::setColumn0Width");
+    QFont ft = this->font();
     ft.setPixelSize(static_cast<int>(G::fontSize.toInt() * 1.333/* * G::ptToPx*/));
     QFontMetrics fm(ft);
     #ifdef Q_OS_WIN
@@ -257,20 +259,22 @@ void InfoView::setColumn0Width()
 void InfoView::setupOk()
 {
 /*
-The datamodel called (ok) holds all metadata items shown in the InfoView
-QTableView. It contains three columns:
+    The datamodel called (ok) holds all metadata items shown in the InfoView
+    QTableView. It contains three columns:
 
-    ● (0) The name of the information item
-    ● (1) The value of the information item
-    ● (2) A boolean flag to show or hide a row of the table
+        (0) The name of the information item
+        (1) The value of the information item
+        (2) A boolean flag to show or hide a row of the table
 
-The information items are metadata about the file, such as name or path;
-information about the image, such as aperture or dimensions; and application
-status information, such as number of items picked or current item selected.
+    The information items are metadata about the file, such as name or path;
+    information about the image, such as aperture or dimensions; and application
+    status information, such as number of items picked or current item selected.
 
-If any of the editable fields change then MW::metadataChanged is triggered.
+    If any of the editable fields change then MW::metadataChanged is triggered.
 */
-    if (G::isLogger) G::log("InfoView::setupOk");    ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
+    if (G::isLogger) G::log("InfoView::setupOk");
+    srcFunction = "setupOk";
+    ok->setHorizontalHeaderItem(0, new QStandardItem(QString("Field")));
     ok->setHorizontalHeaderItem(1, new QStandardItem(QString("Value")));
     ok->setHorizontalHeaderItem(2, new QStandardItem(QString("Show")));
 
@@ -356,18 +360,19 @@ If any of the editable fields change then MW::metadataChanged is triggered.
 
     connect(ok, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
             this, SLOT(showOrHide()));
+    srcFunction = "";
 }
 
 void InfoView::showOrHide()
 {
 /*
-Shows or hides each metadata item in the metadata panel based on the boolean
-flag in the datamodel ok.  The show/hide is set in the prefdlg, which is in
-sync with ok.
+    Shows or hides each metadata item in the metadata panel based on the boolean
+    flag in the datamodel ok.  The show/hide is set in the prefdlg, which is in
+    sync with ok.
 
-When called, the function iterates through all the metadata items in ok and
-looks for the field in ok. It then shows or hides the table row based on the ok
-show flag.
+    When called, the function iterates through all the metadata items in ok and
+    looks for the field in ok. It then shows or hides the table row based on the ok
+    show flag.
 */
     if (G::isLogger) G::log("InfoView::showOrHide");    bool okToShow;
     for(int row = 0; row < ok->rowCount(); row++) {
@@ -375,7 +380,7 @@ show flag.
         okToShow = ok->index(row, 2).data().toBool();
         setRowHidden(row, QModelIndex(), !okToShow);
         for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
-           okToShow = ok->index(childRow, 2, parentIdx).data().toBool();
+            okToShow = ok->index(childRow, 2, parentIdx).data().toBool();
             setRowHidden(childRow, parentIdx, !okToShow);
         }
     }
@@ -384,28 +389,48 @@ show flag.
 void InfoView::clearInfo()
 {
 /*
-Clear all the values but leave the keys and flags alone
+    Clear all the values but leave the keys and flags alone
 */
-    if (G::isLogger) G::log("InfoView::clearInfo");    for(int row = 0; row < ok->rowCount(); row++) {
+    if (G::isLogger) G::log("InfoView::clearInfo");
+    srcFunction = "clearInfo";
+    ignoreDataChange = true;
+    for(int row = 0; row < ok->rowCount(); row++) {
         QModelIndex parentIdx = ok->index(row, 0);
         for (int childRow = 0; childRow < ok->rowCount(parentIdx); childRow++) {
             ok->setData(ok->index(childRow, 1, parentIdx), "");
         }
     }
+    ignoreDataChange = false;
+    srcFunction = "";
 }
 
 void InfoView::copyEntry()
 {
-    if (G::isLogger) G::log("InfoView::copyEntry");	if (selectedEntry.isValid())
-        QApplication::clipboard()->setText(ok->itemFromIndex(selectedEntry)->toolTip());
+    if (G::isLogger) G::log("InfoView::copyEntry");
+//    qDebug() << "InfoView::copyEntry"
+//             << "\nselectedEntry =" << selectedEntry
+//             << "\nok->itemFromIndex(selectedEntry)->toolTip() =" << ok->itemFromIndex(selectedEntry)->toolTip()
+//                ;
+    if (selectedEntry.isValid()) {
+        QModelIndex idx = ok->index(selectedEntry.row(), 1, selectedEntry.parent());
+        QString text = idx.data().toString();
+        qDebug() << "InfoView::copyEntry"
+                 << "\nselectedEntry =" << selectedEntry
+                 << "\ntext =" << text
+                    ;
+        QApplication::clipboard()->setText(text);
+//        QApplication::clipboard()->setText(ok->itemFromIndex(selectedEntry)->toolTip());
+    }
 }
 
 void InfoView::updateInfo(const int &row)
 {
-    if (G::isLogger) G::log("InfoView::updateInfo");//    qDebug() << "InfoView::" << row;
+    if (G::isLogger) G::log("InfoView::updateInfo", "row =" + QString::number(row));
+//    qDebug() << "InfoView::" << row;
+    srcFunction = "updateInfo";
 
     // flag updates so itemChanged will be ignored in MW::metadataChanged
-    isNewImageDataChange = true;
+    ignoreDataChange = true;
 
     QString fPath = dm->sf->index(row, G::PathColumn).data(G::PathRole).toString();
     QFileInfo imageInfo = QFileInfo(fPath);
@@ -508,11 +533,16 @@ void InfoView::updateInfo(const int &row)
     setColumn0Width();
     showOrHide();
 
-    isNewImageDataChange = false;
+    srcFunction = "";
+    ignoreDataChange = false;
 }
 
 void InfoView::mousePressEvent(QMouseEvent *event)
 {
+    if (event->button() == Qt::RightButton) {
+        selectedEntry = indexAt(event->pos());
+    }
+
     if (event->button() == Qt::LeftButton) {
         QModelIndex idx = indexAt(event->pos());
         // check if click on category row. If so, expand or collapse branch

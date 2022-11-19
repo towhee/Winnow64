@@ -5,11 +5,12 @@
    RenameEdit Class
 *******************************************************************************/
 
-/* RenameEdit is a subclass of QTextEdit to manage tokenized text. It tokenizes
-dragged text in insertFromMimeData and has a parse function to use the tokens
-to look up corresponding metadata.
+/*
+    RenameEdit is a subclass of QTextEdit to manage tokenized text. It
+    tokenizes dragged text in insertFromMimeData and has a parse function to
+    use the tokens to look up corresponding metadata.
 
-  */
+*/
 
 RenameEdit::RenameEdit(QDialog *parent) : QLineEdit(parent)
 {

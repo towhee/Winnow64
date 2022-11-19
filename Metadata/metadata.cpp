@@ -517,7 +517,7 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
 bool Metadata::writeXMP(const QString &fPath, QString src)
 {
 /*
-    Called from ingest (Ingestdlg).  // not anymore rgh update this
+    Called by MW::setRating, MW::setColorClass, InfoView::dataChanged
 
     fPath: the absolute path of the file to receive the xmp metadata
     buffer: byte array containing the xmp data
@@ -585,7 +585,8 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
 //        && !orientationChanged
 //        && !rotationChanged
        ) {
-        qDebug() << "Metadata::writeXMP" << "Unable to write xmp buffer. No metadata has been edited.";
+        qDebug() << "Metadata::writeXMP" << "Unable to write xmp buffer. No metadata has been edited."
+                 << "src =" << src;
         return false;
     }
 
@@ -600,7 +601,7 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         p.file.close();
 //        qDebug() << "Metadata::writeXMP" << "Close" << p.file.fileName();
     }
-//    qDebug() << "Metadata::writeXMP" << "Open " << p.file.fileName();
+    qDebug() << "Metadata::writeXMP" << "Open " << p.file.fileName();
     p.file.open(QIODevice::ReadWrite);
 
     // if current xmp is invalid then fix

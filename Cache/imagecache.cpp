@@ -344,7 +344,8 @@ bool ImageCache::nextToCache(int id)
         bool isCached = icd->cacheItemList.at(i).isCached;
         int attempts = icd->cacheItemList.at(i).attempts;
         if (attempts == maxAttemptsToCacheImage)
-            qWarning() << "WARNING" << "Exceeded maxAttemptsToCacheImage" << "Row" << i
+            qWarning() << "WARNING" << "ImageCache::nextToCache"
+                       << "Exceeded maxAttemptsToCacheImage" << "Row" << i
                        <<  icd->cacheItemList.at(i).fPath;
         int threadId = icd->cacheItemList.at(i).threadId;
         if (!isCached && attempts < maxAttemptsToCacheImage) {
@@ -1247,6 +1248,9 @@ void ImageCache::rebuildImageCacheParameters(QString &currentImageFullPath, QStr
     qDebug() << "ImageCache::rebuildImageCacheParameters" << "Source:" << source;
     std::cout << diagnostics().toStdString() << std::flush;
     //*/
+
+    // update currentPath
+    currentPath = currentImageFullPath;
 
     // build a new cacheItemList for the filtered/sorted dataset
     buildImageCacheList();
