@@ -1,6 +1,6 @@
 BUGS / TO DO
-- No full size image for /Users/roryhill/Pictures/_ThumbTest/DNGDenoise.dng
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
+- iphone heic infoview not showing GPS info, no data in metadata report
 - HEIC metadata on mac
 - Read HEIC metadata (MAC issue only?)
 - Mac version missing de265-version.h file

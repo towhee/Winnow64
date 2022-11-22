@@ -14,8 +14,10 @@
 #include "Metadata/ifd.h"
 #include "Metadata/gps.h"
 //#include "Metadata/xmp.h"
+#ifdef Q_OS_WIN
 #include "Lib/libde265/include/de265.h"
 #include "Lib/libheif/include/heif.h"
+#endif
 
 class Heic : public QObject
 {
@@ -24,6 +26,7 @@ class Heic : public QObject
 public:
     Heic();
     bool parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps);
+    bool parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps);
     bool decodePrimaryImage(QString &fPath, QImage &image);
     bool decodeThumbnail(QString &fPath, QImage &image);
 
@@ -89,10 +92,13 @@ private:
     bool irotBox(quint32 &offset, quint32 &length);  // Color Information Box
     bool pixiBox(quint32 &offset, quint32 &length);  // Color Information Box
 
-//    QFile &file;      // used in constructor before managed to compile libheif
-    QFile file;         // temp until decide what to do with constructor
+    QFile *file;        // temp until decide what to do with constructor
     QString fPath;
     qint64 eof;
+    int exifItemID;
+    quint32 exifOffset;
+    quint32 exifLength;
+    bool isDebug;
 };
 
 #endif // HEIC_H

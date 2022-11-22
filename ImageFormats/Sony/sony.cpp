@@ -321,7 +321,7 @@ bool Sony::parse(MetadataParameters &p,
 {
     //file.open in Metadata::readMetadata
     // first two bytes is the endian order (skip next 2 bytes)
-//    Utilities u;
+    Utilities u;
     quint16 order = u.get16(p.file.read(4));
     if (order != 0x4D4D && order != 0x4949) return false;
     bool isBigEnd;
