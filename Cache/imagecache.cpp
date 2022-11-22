@@ -339,7 +339,7 @@ bool ImageCache::nextToCache(int id)
     for (int p = 0; p < priorityList.size(); p++) {
         if (abort || G::stop) return false;
         int i = priorityList.at(p);
-//        if (i >= icd->cacheItemList.length()) break;    // debugging
+//        if (i >= icd->cacheItemList.length()) break;   ƒ // debugging
         bool isCaching = icd->cacheItemList.at(i).isCaching;
         bool isCached = icd->cacheItemList.at(i).isCached;
         int attempts = icd->cacheItemList.at(i).attempts;

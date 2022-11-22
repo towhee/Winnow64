@@ -1136,6 +1136,8 @@ void CanonCR3::parseExif()
         jpeg.parse(*p, *m, ifd, &iptc, exif, gps);
     }
 
+    m->isXmp = false;
+
     /*
     qDebug() << "CanonCR3::parseExif"
              << m.createdDate

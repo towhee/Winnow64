@@ -173,12 +173,11 @@ bool ImageDecoder::load()
         QImageReader imageReader(fPath);
         imageReader.setAutoTransform(true);
         image = imageReader.read();
-//        if (!image.load(fPath)) {
-//            imFile.close();
-//            qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
-////            G::error("ImageDecoder::load", fPath, "Could not decode using Qt.");
-//            return false;
-//        }
+        if (!image.load(fPath)) {
+            imFile.close();
+            qWarning() << "WARNING" << "ImageDecoder::load  Could not decode using Qt" << fPath;
+            return false;
+        }
         imFile.close();
         #endif
     }

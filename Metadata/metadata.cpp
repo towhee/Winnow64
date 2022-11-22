@@ -86,7 +86,7 @@ void Metadata::initSupportedFiles()
                         << "cr2"
                         << "cr3"
                         << "dng"
-//                        << "heic"
+                        << "heic"
                         << "hif"
                         << "nef"
                         << "orf"
@@ -823,10 +823,17 @@ bool Metadata::parseJPG(quint32 startOffset)
 bool Metadata::parseHEIF()
 {
     if (G::isLogger) G::log("Metadata::parseHEIF");
+    qDebug() << "Metadata::parseHEIF";
 #ifdef Q_OS_WIN
     // rgh remove heic
     if (heic == nullptr) heic = new Heic;
     bool ok = heic->parseLibHeif(p, m, ifd, exif, gps);
+    if (ok && p.report) reportMetadata();
+    return ok;
+#endif
+#ifdef Q_OS_MAC
+    if (heic == nullptr) heic = new Heic;
+    bool ok = heic->parseHeic(p, m, ifd, exif, gps);
     if (ok && p.report) reportMetadata();
     return ok;
 #endif
@@ -1152,7 +1159,8 @@ bool Metadata::loadImageMetadata(const QFileInfo &fileInfo, int instance,
         if (G::useSidecar) {
             p.file.setFileName(fPath);
 //            qDebug() << "Metadata::loadImageMetadata" << "Open " << p.file.fileName();
-            if (p.file.open(QIODevice::ReadWrite)) {
+//            if (p.file.open(QIODevice::ReadWrite)) {
+            if (p.file.open(QIODevice::ReadOnly)) {
                 if (parseSidecar()) {
                     parsedSidcar = true;
                 }

@@ -23,10 +23,10 @@
 
 #include "ui_metadatareport.h"
 
-#ifdef Q_OS_WIN
+//#ifdef Q_OS_WIN
 // rgh remove heic
 #include "ImageFormats/Heic/heic.h"
-#endif
+//#endif
 
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "ImageFormats/Canon/canon.h"
@@ -142,10 +142,10 @@ private:
     Panasonic *panasonic = nullptr;
     Sony *sony = nullptr;
     Tiff *tiff = nullptr;
-#ifdef Q_OS_WIN
+//#ifdef Q_OS_WIN
     // rgh remove heic
     Heic *heic = nullptr;
-#endif
+//#endif
 
     // hash
     QHash<uint, IFDData> ifdDataHash;

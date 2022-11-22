@@ -413,7 +413,7 @@ void InfoView::copyEntry()
 //                ;
     if (selectedEntry.isValid()) {
         QModelIndex idx = ok->index(selectedEntry.row(), 1, selectedEntry.parent());
-        QString text = idx.data().toString();
+        QString text = idx.data().toString().trimmed();
         qDebug() << "InfoView::copyEntry"
                  << "\nselectedEntry =" << selectedEntry
                  << "\ntext =" << text
