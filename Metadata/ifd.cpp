@@ -1,6 +1,23 @@
 #include "ifd.h"
 #include <QDebug>
 
+/*
+    Value	Type
+    1       unsigned byte
+    2       ascii strings
+    3       unsigned short
+    4       unsigned quint32
+    5       unsigned rational
+    6       signed byte
+    7       undefined
+    8       signed short
+    9       signed quint32
+    10      signed rational
+    11      single float
+    12      double float
+    13      quint32 (used for tiff IFD offsets)
+*/
+
 IFD::IFD()
 {
 
@@ -8,9 +25,12 @@ IFD::IFD()
 
 quint32 IFD::readIFD(MetadataParameters &p, bool isBigEnd)
 {
-    /* hash is the hash for the image format ie jpeg, nikon nef etc
-       the hash has a description for each tagID and is used for reporting
-    */
+/*
+    Uses p.file.
+
+    hash is the hash for the image format ie jpeg, nikon nef etc
+    the hash has a description for each tagID and is used for reporting.
+*/
 
     uint tagId, tagType = 0;
     quint32 tagCount, tagValue = 0;
@@ -23,10 +43,13 @@ quint32 IFD::readIFD(MetadataParameters &p, bool isBigEnd)
     // iterate through IFD0, looking for the subIFD tag
     if (p.report) {
         MetaReport::header(p.hdr, p.rpt);
+        QString endian;
+        isBigEnd ? endian = "Big Endian" : endian = "Little Endian";
         p.rpt << "IFDOffset  Hex: "
             << QString::number(p.offset, 16).toUpper()
             << "   Dec: " << p.offset
             << "   Tag count: " << QString::number(tags)
+            << "   " << endian
             << "\n"
             << "Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription\n";
     }
@@ -42,6 +65,10 @@ quint32 IFD::readIFD(MetadataParameters &p, bool isBigEnd)
         if (tagType == 3 && tagCount == 1 && isBigEnd) {
             tagValue = Utilities::get16(p.file.read(2), isBigEnd);
             p.file.read(2);
+        }
+        else if (tagType == 2 && tagCount == 2 && isBigEnd) {
+            tagValue = Utilities::get8(p.file.read(1));
+            p.file.read(3);
         }
         else tagValue = Utilities::get32(p.file.read(4), isBigEnd);
 
@@ -124,9 +151,12 @@ QList<quint32> IFD::getSubIfdOffsets(QFile &file, quint32 subIFDaddr, int count,
 
 quint32 IFD::readIFD_B(MetadataParameters &p, bool isBigEnd)
 {
-    /* hash is the hash for the image format ie jpeg, nikon nef etc
-       the hash has a description for each tagID and is used for reporting
-    */
+/*
+    Uses p.buf
+
+    hash is the hash for the image format ie jpeg, nikon nef etc
+    the hash has a description for each tagID and is used for reporting
+*/
 
     uint tagId, tagType = 0;
     quint32 tagCount, tagValue = 0;

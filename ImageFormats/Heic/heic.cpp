@@ -431,7 +431,7 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
         qDebug() << "Heic::parseHeic" << info.filePath() << "\n";
     }
 
-    // iterate box structures
+    // iterate box structures to find exif data offset
     while (offset < eof) {
         file->seek(offset);
         nextHeifBox(length, type);
@@ -441,13 +441,7 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
     // EXIF data found?
     if (exifItemID == -1) return false;
 
-    file->seek(exifOffset);
-    QByteArray exifData = file->read(exifLength);
-    file->close();
-    p.buf.setBuffer(&exifData);
-    p.buf.open(QIODevice::ReadOnly);
-
-//    Utilities::saveByteArrayAsFile("D:/Pictures/_HEIC/test.dat", exifData);
+    p.file.seek(exifOffset);
 
     // get endian
     bool isBigEnd = true;
@@ -455,78 +449,76 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
     quint32 startOffset = 0;
     int count = 0;
     while (!foundEndian) {
-        quint32 order = Utilities::get16(p.buf.read(2));
+        quint32 order = Utilities::get16(p.file.read(2));
         if (order == 0x4949 || order == 0x4D4D) {
             order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
             foundEndian = true;
-            startOffset = static_cast<quint32>(p.buf.pos()) - 2;
+            startOffset = static_cast<quint32>(p.file.pos()) - 2;
         }
         // add condition to check for EOF
         count++;
         if (count > 100) {
             // err endian order not found
             G::error("Heic::parseLibHeif", fPath, "Endian order not found.");
-            p.buf.close();
+            p.file.close();
             return false;
         }
     }
 
     //
-    /*quint32 magic42 = */Utilities::get16(p.buf.read(2), isBigEnd);
-    quint32 a = Utilities::get32(p.buf.read(4), isBigEnd);
+    /*quint32 magic42 = */Utilities::get16(p.file.read(2), isBigEnd);
+    quint32 a = Utilities::get32(p.file.read(4), isBigEnd);
     quint32 offsetIfd0 = a + startOffset;
 
     // read IFD0
     p.offset = offsetIfd0;
     p.hdr = "IFD0";
     p.hash = &exif->hash;
-    quint32 nextIFDOffset = ifd->readIFD_B(p, isBigEnd);
+    quint32 nextIFDOffset = ifd->readIFD(p, isBigEnd);
     if (nextIFDOffset) nextIFDOffset += startOffset;
 
-    quint32 offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
-    quint32 offsetGPS = ifd->ifdDataHash.value(34853).tagValue + startOffset;
+    // IFD0: *******************************************************************
+
+    // get the offset for EXIFIFD
+    quint32 offsetEXIF = 0;
+    if (ifd->ifdDataHash.contains(34665))
+         offsetEXIF = ifd->ifdDataHash.value(34665).tagValue + startOffset;
+
+    // get the offset for GPSIFD
+    quint32 offsetGPS = 0;
+    if (ifd->ifdDataHash.contains(34853))
+        offsetGPS = ifd->ifdDataHash.value(34853).tagValue + startOffset;
 
     m.orientation = static_cast<int>(ifd->ifdDataHash.value(274).tagValue);
-    m.make = Utilities::getString(p.buf, ifd->ifdDataHash.value(271).tagValue + startOffset,
-                     ifd->ifdDataHash.value(271).tagCount);
-    m.model = Utilities::getString(p.buf, ifd->ifdDataHash.value(272).tagValue + startOffset,
-                      ifd->ifdDataHash.value(272).tagCount);
-    m.creator = Utilities::getString(p.buf, ifd->ifdDataHash.value(315).tagValue + startOffset,
-                        ifd->ifdDataHash.value(315).tagCount);
-    m.copyright = Utilities::getString(p.buf, ifd->ifdDataHash.value(33432).tagValue + startOffset,
-                          ifd->ifdDataHash.value(33432).tagCount);
+    m.make = Utilities::getString(p.file, ifd->ifdDataHash.value(271).tagValue + startOffset,
+                                  ifd->ifdDataHash.value(271).tagCount);
+    m.model = Utilities::getString(p.file, ifd->ifdDataHash.value(272).tagValue + startOffset,
+                                   ifd->ifdDataHash.value(272).tagCount);
+    m.creator = Utilities::getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+                                     ifd->ifdDataHash.value(315).tagCount);
+    m.copyright = Utilities::getString(p.file, ifd->ifdDataHash.value(33432).tagValue + startOffset,
+                                       ifd->ifdDataHash.value(33432).tagCount);
 
-//    // read IFD1
-//    qDebug() << "Heic::parseLibHeif" << "nextIFDOffset IFD1 =" << nextIFDOffset;
-//    if (nextIFDOffset) {
-//        p.hdr = "IFD1";
-//        p.offset = nextIFDOffset + startOffset;
-//        nextIFDOffset = ifd->readIFD(p, m, isBigEnd);
-//    }
-//    // IFD1: thumbnail offset and length
-//    m.offsetThumb = ifd->ifdDataHash.value(513).tagValue + 12;
-//    m.lengthThumb = ifd->ifdDataHash.value(514).tagValue;
 
-    // read EXIF
+    // EXIF: *******************************************************************
     p.hdr = "IFD Exif";
     p.offset = offsetEXIF;
-    ifd->readIFD_B(p, isBigEnd);
+    ifd->readIFD(p, isBigEnd);
 
     m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
     m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
     p.offset = 0;
-//    if (!m.width || !m.height) getDimensions(p, m);
     m.widthPreview = m.width;
     m.heightPreview = m.height;
 
     // EXIF: created datetime
     QString createdExif;
-    createdExif = Utilities::getString(p.buf, ifd->ifdDataHash.value(36868).tagValue + startOffset,
+    createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36868).tagValue + startOffset,
         ifd->ifdDataHash.value(36868).tagCount).left(19);
     if (createdExif.length() > 0) m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
     // try DateTimeOriginal
     if (createdExif.length() == 0) {
-        createdExif = Utilities::getString(p.buf, ifd->ifdDataHash.value(36867).tagValue + startOffset,
+        createdExif = Utilities::getString(p.file, ifd->ifdDataHash.value(36867).tagValue + startOffset,
             ifd->ifdDataHash.value(36867).tagCount).left(19);
         if (createdExif.length() > 0) {
             m.createdDate = QDateTime::fromString(createdExif, "yyyy:MM:dd hh:mm:ss");
@@ -537,7 +529,7 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
 
     // EXIF: shutter speed
     if (ifd->ifdDataHash.contains(33434)) {
-        double x = Utilities::getReal(p.buf,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
         if (x < 1) {
@@ -557,7 +549,7 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
 
     // EXIF: aperture
     if (ifd->ifdDataHash.contains(33437)) {
-        double x = Utilities::getReal(p.buf,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33437).tagValue + startOffset,
                                       isBigEnd);
         m.aperture = "f/" + QString::number(x, 'f', 1);
@@ -580,7 +572,7 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
     // EXIF: Exposure compensation
     if (ifd->ifdDataHash.contains(37380)) {
         // tagType = 10 signed rational
-        double x = Utilities::getReal_s(p.buf,
+        double x = Utilities::getReal_s(p.file,
                                       ifd->ifdDataHash.value(37380).tagValue + startOffset,
                                       isBigEnd);
         m.exposureCompensation = QString::number(x, 'f', 1) + " EV";
@@ -592,7 +584,7 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
 
     // EXIF: focal length
     if (ifd->ifdDataHash.contains(37386)) {
-        double x = Utilities::getReal(p.buf,
+        double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(37386).tagValue + startOffset,
                                       isBigEnd);
         m.focalLengthNum = static_cast<int>(x);
@@ -603,58 +595,37 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
     }
 
     // EXIF: lens model
-    m.lens = Utilities::getString(p.buf, ifd->ifdDataHash.value(42036).tagValue + startOffset,
+    m.lens = Utilities::getString(p.file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
                      ifd->ifdDataHash.value(42036).tagCount);
+
+    // GPSIFD: *******************************************************************
+    if (offsetGPS) {
+        p.file.seek(offsetGPS);
+        p.hdr = "IFD GPS";
+        p.hash = &gps->hash;
+        p.offset = offsetGPS;
+        ifd->readIFD(p, isBigEnd);
+
+        if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
+            // process GPS info
+            QString gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd, startOffset);
+            m.gpsCoord = gpsCoord;
+        }
+    }
 
     /* Read embedded ICC. The default color space is sRGB. If there is an embedded icc profile
     and it is sRGB then no point in saving the byte array of the profile since we already have
     it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
 //    if (segmentHash.contains("ICC")) {
 //        if (m.iccSegmentOffset && m.iccSegmentLength) {
-//            m.iccSpace = Utilities::getString_B(p.buf, m.iccSegmentOffset + 52, 4);
+//            m.iccSpace = Utilities::getString_B(p.file, m.iccSegmentOffset + 52, 4);
 //            if (m.iccSpace != "sRGB") {
-//                p.buf.seek(m.iccSegmentOffset);
-//                m.iccBuf = p.buf.read(m.iccSegmentLength);
+//                p.file.seek(m.iccSegmentOffset);
+//                m.iccBuf = p.file.read(m.iccSegmentLength);
 //            }
 //        }
 //    }
 
-    // read GPS
-    p.hdr = "IFD GPS";
-    p.offset = offsetGPS;
-    p.hash = &gps->hash;
-    ifd->readIFD_B(p, isBigEnd);
-
-    // read XMP
-//    bool okToReadXmp = true;
-//    if (m.isXmp && okToReadXmp) {
-//        Xmp xmp(p.buf, m.xmpSegmentOffset, m.xmpNextSegmentOffset, p.instance);
-//        m.rating = xmp.getItem("Rating");     // case is important "Rating"
-//        m.label = xmp.getItem("Label");       // case is important "Label"
-//        m.title = xmp.getItem("title");       // case is important "title"
-//        m.cameraSN = xmp.getItem("SerialNumber");
-//        if (m.lens.isEmpty()) m.lens = xmp.getItem("Lens");
-//        m.lensSN = xmp.getItem("LensSerialNumber");
-//        if (m.creator.isEmpty()) m.creator = xmp.getItem("creator");
-//        m.copyright = xmp.getItem("rights");
-//        m.email = xmp.getItem("email");
-//        m.url = xmp.getItem("url");
-//        m.email = xmp.getItem("CiEmailWork");
-//        m.url = xmp.getItem("CiUrlWork");
-
-//    // save original values so can determine if edited when writing changes
-//    m._rating = m.rating;
-//    m._label = m.label;
-//    m._title = m.title;
-//    m._creator = m.creator;
-//    m._copyright = m.copyright;
-//    m._email  = m.email ;
-//    m._url = m.url;
-
-//        if (p.report) p.xmpString = xmp.metaAsString();
-//    }
-
-    p.buf.close();
     return true;
 }
 

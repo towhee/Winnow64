@@ -11,7 +11,7 @@ public:
     QString decode(QFile &file,
                    QHash<uint, IFDData> &ifdDataHash,
                    bool isBigEnd,
-                   int jpgOffset = 0);
+                   int offset = 0);
     QHash<quint32, QString> hash;
 private:
     Utilities u;

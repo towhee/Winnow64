@@ -119,6 +119,7 @@ void MW::testNewFileFormat()    // shortcut = "Shift+Ctrl+Alt+F"
 
 void MW::test() // shortcut = "Shift+Ctrl+Alt+T"
 {
-
+    int x = Utilities::swapEndian32(1308622848);
+    qDebug() << x;
 }
 

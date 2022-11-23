@@ -38,7 +38,7 @@ GPS::GPS()
 QString GPS::decode(QFile &file,
                     QHash<uint, IFDData> &ifdDataHash,
                     bool isBigEnd,
-                    int jpgOffset)
+                    int offset)
 {
     // process GPS info
     QString gpsCoord = "";
@@ -47,7 +47,8 @@ QString GPS::decode(QFile &file,
     QString secondSymbol = QChar('\"');
 
     // GPS lat ref
-    int gpsLatOffset = ifdDataHash.value(2).tagValue + jpgOffset;
+    int gpsLatOffset = ifdDataHash.value(2).tagValue + offset;
+    qDebug() << "GPS::decode" << "gpsLatOffset =" << "gpsLatOffset";
     double gpsLatHr = u.getReal(file, gpsLatOffset, isBigEnd);
     gpsCoord += (QString::number(static_cast<int>(gpsLatHr)) + degreeSymbol);
     gpsLatOffset += 8;
@@ -64,7 +65,7 @@ QString GPS::decode(QFile &file,
     gpsCoord += " " + gpsLatRef + " ";
 
     // GPS long ref
-    int gpsLongOffset = ifdDataHash.value(4).tagValue + jpgOffset;
+    int gpsLongOffset = ifdDataHash.value(4).tagValue + offset;
     double gpsLongHr = u.getReal(file, gpsLongOffset, isBigEnd);
     gpsCoord += (QString::number(static_cast<int>(gpsLongHr)) + degreeSymbol);
     gpsLongOffset += 8;
