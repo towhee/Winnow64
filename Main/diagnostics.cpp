@@ -276,16 +276,14 @@ void MW::diagnosticsReport(QString reportString)
     dlg->setStyleSheet(G::css);
     Ui::metadataReporttDlg md;
     md.setupUi(dlg);
+    dlg->setFixedWidth(1000);
     md.textBrowser->setStyleSheet(G::css);
     QFont courier("Courier", 12);
     md.textBrowser->setFont(courier);
     md.textBrowser->setText(reportString);
     md.textBrowser->setWordWrapMode(QTextOption::NoWrap);
-//    md.textBrowser->setFixedWidth(1800);
-//    md.textBrowser->setSizePolicy(1800, 800);
     QFontMetrics metrics(md.textBrowser->font());
     md.textBrowser->setTabStopDistance(3 * metrics.horizontalAdvance(' '));
-//    dlg->setBaseSize(1800, 800);
     dlg->show();
 //    std::cout << reportString.toStdString() << std::flush;
 }

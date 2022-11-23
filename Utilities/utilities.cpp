@@ -548,6 +548,20 @@ int Utilities::integer(int x)
     return x;
 }
 
+quint32 Utilities::swapEndian32(quint32 x)
+{
+    QVector<quint32> b(4);
+    b[0] = (x  & 0x000000FF) >> 0;
+    b[1] = (x  & 0x0000FF00) >> 8;
+    b[2] = (x  & 0x00FF0000) >> 16;
+    b[3] = (x  & 0xFF000000) >> 24;
+    b[0] <<= 24;
+    b[1] <<= 16;
+    b[2] <<= 8;
+    b[3] <<= 0;
+    return (b[0] | b[1] | b[2] | b[3]);
+}
+
 //void Utilities::bytes2Bitset32(QByteArray bytes, std::bitset<32> &bits)
 //{
 //    bits = get32(bytes);

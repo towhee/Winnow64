@@ -1,6 +1,9 @@
 BUGS / TO DO
+- open with exiftool - 7 files will be processed???
+- Drag copy file to another folder - folder count not incrementing in bookmarks
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
-- iphone heic infoview not showing GPS info, no data in metadata report
+- CR3 missing XMP, offset is wrong
+- iphone heic infoview not showing GPS info
 - HEIC metadata on mac
 - Read HEIC metadata (MAC issue only?)
 - Mac version missing de265-version.h file

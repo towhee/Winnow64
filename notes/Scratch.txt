@@ -1,674 +1,513 @@
-Metadata::parseHEIF
-Heic::Heic "/Users/roryhill/Pictures/_test0/HEIC.heic"
+File name = /Users/roryhill/Pictures/_ThumbTest/HEIC IPhone.heic
 
-Heic::nextHeifBox offset: 0 length: 24 type: "ftyp"
-Heic::getHeifBox type = "ftyp" offset = 0 length = 24
-Heic::nextHeifBox offset: 24 length: 3956 type: "meta"
-Heic::getHeifBox type = "meta" offset = 24 length = 3956
-Heic::metaBox offset = 36 length = 3956
-Heic::nextHeifBox offset: 36 length: 34 type: "hdlr"
-Heic::getHeifBox type = "hdlr" offset = 36 length = 34
-Heic::hdlrBox hdlrType = "pict"
-Heic::nextHeifBox offset: 70 length: 36 type: "dinf"
-Heic::getHeifBox type = "dinf" offset = 70 length = 36
-Heic::dinfBox offset = 70
-Heic::nextHeifBox offset: 78 length: 28 type: "dref"
-Heic::getHeifBox type = "dref" offset = 78 length = 28
-Heic::drefBox entry_count = 1
-Heic::nextHeifBox offset: 94 length: 12 type: "url "
-Heic::drefBox entry# 0
-Heic::getHeifBox type = "url " offset = 78 length = 12
-Heic::urlBox     location = ""
-Heic::nextHeifBox offset: 106 length: 14 type: "pitm"
-Heic::getHeifBox type = "pitm" offset = 106 length = 14
-Heic::pitmBox pitmId = 1085
-Heic::nextHeifBox offset: 120 length: 1085 type: "iinf"
-Heic::getHeifBox type = "iinf" offset = 120 length = 1085
-Heic::iinfBox iint entry count = 51 134
-Heic::nextHeifBox offset: 134 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  0
-    Heic::infeBox item_ID = 1 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 155 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  1
-    Heic::infeBox item_ID = 2 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 176 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  2
-    Heic::infeBox item_ID = 3 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 197 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  3
-    Heic::infeBox item_ID = 4 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 218 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  4
-    Heic::infeBox item_ID = 5 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 239 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  5
-    Heic::infeBox item_ID = 6 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 260 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  6
-    Heic::infeBox item_ID = 7 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 281 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  7
-    Heic::infeBox item_ID = 8 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 302 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  8
-    Heic::infeBox item_ID = 9 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 323 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  9
-    Heic::infeBox item_ID = 10 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 344 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  10
-    Heic::infeBox item_ID = 11 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 365 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  11
-    Heic::infeBox item_ID = 12 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 386 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  12
-    Heic::infeBox item_ID = 13 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 407 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  13
-    Heic::infeBox item_ID = 14 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 428 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  14
-    Heic::infeBox item_ID = 15 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 449 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  15
-    Heic::infeBox item_ID = 16 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 470 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  16
-    Heic::infeBox item_ID = 17 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 491 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  17
-    Heic::infeBox item_ID = 18 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 512 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  18
-    Heic::infeBox item_ID = 19 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 533 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  19
-    Heic::infeBox item_ID = 20 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 554 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  20
-    Heic::infeBox item_ID = 21 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 575 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  21
-    Heic::infeBox item_ID = 22 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 596 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  22
-    Heic::infeBox item_ID = 23 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 617 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  23
-    Heic::infeBox item_ID = 24 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 638 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  24
-    Heic::infeBox item_ID = 25 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 659 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  25
-    Heic::infeBox item_ID = 26 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 680 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  26
-    Heic::infeBox item_ID = 27 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 701 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  27
-    Heic::infeBox item_ID = 28 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 722 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  28
-    Heic::infeBox item_ID = 29 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 743 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  29
-    Heic::infeBox item_ID = 30 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 764 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  30
-    Heic::infeBox item_ID = 31 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 785 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  31
-    Heic::infeBox item_ID = 32 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 806 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  32
-    Heic::infeBox item_ID = 33 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 827 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  33
-    Heic::infeBox item_ID = 34 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 848 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  34
-    Heic::infeBox item_ID = 35 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 869 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  35
-    Heic::infeBox item_ID = 36 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 890 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  36
-    Heic::infeBox item_ID = 37 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 911 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  37
-    Heic::infeBox item_ID = 38 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 932 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  38
-    Heic::infeBox item_ID = 39 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 953 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  39
-    Heic::infeBox item_ID = 40 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 974 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  40
-    Heic::infeBox item_ID = 41 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 995 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  41
-    Heic::infeBox item_ID = 42 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 1016 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  42
-    Heic::infeBox item_ID = 43 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 1037 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  43
-    Heic::infeBox item_ID = 44 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 1058 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  44
-    Heic::infeBox item_ID = 45 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 1079 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  45
-    Heic::infeBox item_ID = 46 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 1100 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  46
-    Heic::infeBox item_ID = 47 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 1121 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  47
-    Heic::infeBox item_ID = 48 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 1142 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  48
-    Heic::infeBox item_ID = 49 item_protection_index = 0 item_name = "grid" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 1163 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  49
-    Heic::infeBox item_ID = 50 item_protection_index = 0 item_name = "hvc1" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 1184 length: 21 type: "infe"
-Heic::iinfBox    Item Info Entry  50
-    Heic::infeBox item_ID = 51 item_protection_index = 0 item_name = "Exif" content_type = "" content_encoding = ""
-Heic::nextHeifBox offset: 1205 length: 148 type: "iref"
-Heic::getHeifBox type = "iref" offset = 1205 length = 148
-Heic::irefBox offset = 1205 length = 148 sitrOffset 1217
-Heic::nextHeifBox offset: 1217 length: 108 type: "dimg"
-Heic::sitrBox from_item_ID = 49 reference_count = 48
-Heic::sitrBox 0 : to_item_ID = 65538
-Heic::sitrBox 1 : to_item_ID = 196612
-Heic::sitrBox 2 : to_item_ID = 327686
-Heic::sitrBox 3 : to_item_ID = 458760
-Heic::sitrBox 4 : to_item_ID = 589834
-Heic::sitrBox 5 : to_item_ID = 720908
-Heic::sitrBox 6 : to_item_ID = 851982
-Heic::sitrBox 7 : to_item_ID = 983056
-Heic::sitrBox 8 : to_item_ID = 1114130
-Heic::sitrBox 9 : to_item_ID = 1245204
-Heic::sitrBox 10 : to_item_ID = 1376278
-Heic::sitrBox 11 : to_item_ID = 1507352
-Heic::sitrBox 12 : to_item_ID = 1638426
-Heic::sitrBox 13 : to_item_ID = 1769500
-Heic::sitrBox 14 : to_item_ID = 1900574
-Heic::sitrBox 15 : to_item_ID = 2031648
-Heic::sitrBox 16 : to_item_ID = 2162722
-Heic::sitrBox 17 : to_item_ID = 2293796
-Heic::sitrBox 18 : to_item_ID = 2424870
-Heic::sitrBox 19 : to_item_ID = 2555944
-Heic::sitrBox 20 : to_item_ID = 2687018
-Heic::sitrBox 21 : to_item_ID = 2818092
-Heic::sitrBox 22 : to_item_ID = 2949166
-Heic::sitrBox 23 : to_item_ID = 3080240
-Heic::sitrBox 24 : to_item_ID = 14
-Heic::sitrBox 25 : to_item_ID = 1953000802
-Heic::sitrBox 26 : to_item_ID = 3276801
-Heic::sitrBox 27 : to_item_ID = 3211264
-Heic::sitrBox 28 : to_item_ID = 942948
-Heic::sitrBox 29 : to_item_ID = 1935867955
-Heic::sitrBox 30 : to_item_ID = 65585
-Heic::sitrBox 31 : to_item_ID = 1779
-Heic::sitrBox 32 : to_item_ID = 1768977008
-Heic::sitrBox 33 : to_item_ID = 1453
-Heic::sitrBox 34 : to_item_ID = 1768973167
-Heic::sitrBox 35 : to_item_ID = 560
-Heic::sitrBox 36 : to_item_ID = 1668246642
-Heic::sitrBox 37 : to_item_ID = 1886547814
-Heic::sitrBox 38 : to_item_ID = 548
-Heic::sitrBox 39 : to_item_ID = 1634758764
-Heic::sitrBox 40 : to_item_ID = 67108864
-Heic::sitrBox 41 : to_item_ID = 1835955314
-Heic::sitrBox 42 : to_item_ID = 1380401696
-Heic::sitrBox 43 : to_item_ID = 1482250784
-Heic::sitrBox 44 : to_item_ID = 132186119
-Heic::sitrBox 45 : to_item_ID = 458765
-Heic::sitrBox 46 : to_item_ID = 1441824
-Heic::sitrBox 47 : to_item_ID = 1633907568
-Heic::irefBox irefEndOffset = 1353 sitrOffset 1325
-Heic::nextHeifBox offset: 1325 length: 14 type: "thmb"
-Heic::sitrBox from_item_ID = 50 reference_count = 1
-Heic::sitrBox 0 : to_item_ID = 3211264
-Heic::irefBox irefEndOffset = 1353 sitrOffset 1339
-Heic::nextHeifBox offset: 1339 length: 14 type: "cdsc"
-Heic::sitrBox from_item_ID = 51 reference_count = 1
-Heic::sitrBox 0 : to_item_ID = 3211264
-Heic::irefBox irefEndOffset = 1353 sitrOffset 1353
-Heic::nextHeifBox offset: 1353 length: 1779 type: "iprp"
-Heic::getHeifBox type = "iprp" offset = 1353 length = 1779
-Heic::iprpBox offset = 1353
-Heic::nextHeifBox offset: 1361 length: 1453 type: "ipco"
-Heic::nextHeifBox offset: 1369 length: 560 type: "colr"
-Heic::getHeifBox type = "colr" offset = 1369 length = 560
-Heic::colrBox colrType = "prof"
-Heic::colrBox "\x00\x00\x02$appl\x04\x00\x00\x00mntrRGB XYZ \x07\xE1\x00\x07\x00\x07\x00\r\x00\x16\x00 acspAPPL\x00\x00\x00\x00""APPL\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xF6\xD6\x00\x01\x00\x00\x00\x00\xD3-appl\xCA\x1A\x95\x82%\x7F\x10M8\x99\x13\xD5\xD1\xEA\x15\x82\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\ndesc\x00\x00\x00\xFC\x00\x00\x00""ecprt\x00\x00\x01""d\x00\x00\x00#wtpt\x00\x00\x01\x88\x00\x00\x00\x14rXYZ\x00\x00\x01\x9C\x00\x00\x00\x14gXYZ\x00\x00\x01\xB0\x00\x00\x00\x14""bXYZ\x00\x00\x01\xC4\x00\x00\x00\x14rTRC\x00\x00\x01\xD8\x00\x00\x00 chad\x00\x00\x01\xF8\x00\x00\x00,bTRC\x00\x00\x01\xD8\x00\x00\x00 gTRC\x00\x00\x01\xD8\x00\x00\x00 desc\x00\x00\x00\x00\x00\x00\x00\x0B""Display P3\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00text\x00\x00\x00\x00""Copyright Apple Inc., 2017\x00\x00XYZ \x00\x00\x00\x00\x00\x00\xF3Q\x00\x01\x00\x00\x00\x01\x16\xCCXYZ \x00\x00\x00\x00\x00\x00\x83\xDF\x00\x00=\xBF\xFF\xFF\xFF\xBBXYZ \x00\x00\x00\x00\x00\x00J\xBF\x00\x00\xB1""7\x00\x00\n\xB9XYZ \x00\x00\x00\x00\x00\x00(8\x00\x00\x11\x0B\x00\x00\xC8\xB9para\x00\x00\x00\x00\x00\x03\x00\x00\x00\x02""ff\x00\x00\xF2\xA7\x00\x00\rY\x00\x00\x13\xD0\x00\x00\n[sf32\x00\x00\x00\x00\x00\x01\fB\x00\x00\x05\xDE\xFF\xFF\xF3&\x00\x00\x07\x93\x00\x00\xFD\x90\xFF\xFF\xFB\xA2\xFF\xFF\xFD\xA3\x00\x00\x03\xDC\x00\x00\xC0n\x00\x00\x00p"
-Heic::nextHeifBox offset: 1929 length: 112 type: "hvcC"
-Heic::getHeifBox type = "hvcC" offset = 1929 length = 112
-Heic::hvcCBox file position: 1937
-Heic::hvcCBox configurationVersion = 1
-Heic::hvcCBox general_profile_space = 0
-Heic::hvcCBox general_tier_flag = 0
-Heic::hvcCBox general_profile_idc = 3
-Heic::hvcCBox general_profile_compatibility_flags = 1879048192
-Heic::hvcCBox general_constraint_indicator_flags = 193514046488576
-Heic::hvcCBox general_level_idc = 90
-Heic::hvcCBox min_spatial_segmentation_idc = 0
-Heic::hvcCBox parallelismType = 0
-Heic::hvcCBox chroma_format_idc = 1
-Heic::hvcCBox bit_depth_luma_minus8 = 0
-Heic::hvcCBox bit_depth_chroma_minus8 = 0
-Heic::hvcCBox avgFrameRate = 0
-Heic::hvcCBox constantFrameRate = 0
-Heic::hvcCBox numTemporalLayers = 1
-Heic::hvcCBox temporalIdNested = 0
-Heic::hvcCBox lengthSizeMinusOne = 3
-Heic::hvcCBox numOfArrays = 3
-Heic::hvcCBox     array # = 0
-Heic::hvcCBox     array_completeness = 2
-Heic::hvcCBox     NAL_unit_type = 32
-Heic::hvcCBox     numNalus = 1
-Heic::hvcCBox         nalUnitLength = 23
-Heic::hvcCBox     array # = 1
-Heic::hvcCBox     array_completeness = 2
-Heic::hvcCBox     NAL_unit_type = 33
-Heic::hvcCBox     numNalus = 1
-Heic::hvcCBox         nalUnitLength = 34
-Heic::hvcCBox     array # = 2
-Heic::hvcCBox     array_completeness = 2
-Heic::hvcCBox     NAL_unit_type = 34
-Heic::hvcCBox     numNalus = 1
-Heic::hvcCBox         nalUnitLength = 9
-Heic::hvcCBox offset: 1929 length: 112 offset + length 2041 file position: 2041
-Heic::nextHeifBox offset: 2041 length: 20 type: "ispe"
-Heic::getHeifBox type = "ispe" offset = 2041 length = 20
-Heic::ispeBox image_width = 512
-Heic::ispeBox image_height = 512
+--------------------------------------------------------  IFD0  --------------------------------------------------------
+IFDOffset  Hex: 12   Dec: 18   Tag count: 12
+Num    Offset   /   hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+ 10       140        8C  34665  8769        4         1         234   ExifIFDOffset
+ 11       152        98  34853  8825        4         1        2226   GPSIFDOffset
 
-Heic::nextHeifBox offset: 2061 length: 20 type: "ispe"
-Heic::getHeifBox type = "ispe" offset = 2061 length = 20
-Heic::ispeBox image_width = 4032
-Heic::ispeBox image_height = 3024
+File name = /Users/roryhill/Pictures/_ThumbTest/CR2.CR2
 
-Heic::nextHeifBox offset: 2081 length: 9 type: "irot"
-Heic::getHeifBox type = "irot" offset = 2081 length = 9
-Heic::irotBox angle = 0 angle degrees = 0
-Heic::nextHeifBox offset: 2090 length: 16 type: "pixi"
-Heic::getHeifBox type = "pixi" offset = 2090 length = 16
-Heic::pixiBox channel# 0 bits_per_channel = 8
-Heic::pixiBox channel# 1 bits_per_channel = 8
-Heic::pixiBox channel# 2 bits_per_channel = 8
-Heic::nextHeifBox offset: 2106 length: 560 type: "colr"
-Heic::getHeifBox type = "colr" offset = 2106 length = 560
-Heic::colrBox colrType = "prof"
-Heic::colrBox "\x00\x00\x02$appl\x04\x00\x00\x00mntrRGB XYZ \x07\xE1\x00\x07\x00\x07\x00\r\x00\x16\x00 acspAPPL\x00\x00\x00\x00""APPL\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xF6\xD6\x00\x01\x00\x00\x00\x00\xD3-appl\xCA\x1A\x95\x82%\x7F\x10M8\x99\x13\xD5\xD1\xEA\x15\x82\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\ndesc\x00\x00\x00\xFC\x00\x00\x00""ecprt\x00\x00\x01""d\x00\x00\x00#wtpt\x00\x00\x01\x88\x00\x00\x00\x14rXYZ\x00\x00\x01\x9C\x00\x00\x00\x14gXYZ\x00\x00\x01\xB0\x00\x00\x00\x14""bXYZ\x00\x00\x01\xC4\x00\x00\x00\x14rTRC\x00\x00\x01\xD8\x00\x00\x00 chad\x00\x00\x01\xF8\x00\x00\x00,bTRC\x00\x00\x01\xD8\x00\x00\x00 gTRC\x00\x00\x01\xD8\x00\x00\x00 desc\x00\x00\x00\x00\x00\x00\x00\x0B""Display P3\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00text\x00\x00\x00\x00""Copyright Apple Inc., 2017\x00\x00XYZ \x00\x00\x00\x00\x00\x00\xF3Q\x00\x01\x00\x00\x00\x01\x16\xCCXYZ \x00\x00\x00\x00\x00\x00\x83\xDF\x00\x00=\xBF\xFF\xFF\xFF\xBBXYZ \x00\x00\x00\x00\x00\x00J\xBF\x00\x00\xB1""7\x00\x00\n\xB9XYZ \x00\x00\x00\x00\x00\x00(8\x00\x00\x11\x0B\x00\x00\xC8\xB9para\x00\x00\x00\x00\x00\x03\x00\x00\x00\x02""ff\x00\x00\xF2\xA7\x00\x00\rY\x00\x00\x13\xD0\x00\x00\n[sf32\x00\x00\x00\x00\x00\x01\fB\x00\x00\x05\xDE\xFF\xFF\xF3&\x00\x00\x07\x93\x00\x00\xFD\x90\xFF\xFF\xFB\xA2\xFF\xFF\xFD\xA3\x00\x00\x03\xDC\x00\x00\xC0n\x00\x00\x00p"
-Heic::nextHeifBox offset: 2666 length: 112 type: "hvcC"
-Heic::getHeifBox type = "hvcC" offset = 2666 length = 112
-Heic::hvcCBox file position: 2674
-Heic::hvcCBox configurationVersion = 1
-Heic::hvcCBox general_profile_space = 0
-Heic::hvcCBox general_tier_flag = 0
-Heic::hvcCBox general_profile_idc = 3
-Heic::hvcCBox general_profile_compatibility_flags = 1879048192
-Heic::hvcCBox general_constraint_indicator_flags = 193514046488576
-Heic::hvcCBox general_level_idc = 60
-Heic::hvcCBox min_spatial_segmentation_idc = 0
-Heic::hvcCBox parallelismType = 0
-Heic::hvcCBox chroma_format_idc = 1
-Heic::hvcCBox bit_depth_luma_minus8 = 0
-Heic::hvcCBox bit_depth_chroma_minus8 = 0
-Heic::hvcCBox avgFrameRate = 0
-Heic::hvcCBox constantFrameRate = 0
-Heic::hvcCBox numTemporalLayers = 1
-Heic::hvcCBox temporalIdNested = 0
-Heic::hvcCBox lengthSizeMinusOne = 3
-Heic::hvcCBox numOfArrays = 3
-Heic::hvcCBox     array # = 0
-Heic::hvcCBox     array_completeness = 2
-Heic::hvcCBox     NAL_unit_type = 32
-Heic::hvcCBox     numNalus = 1
-Heic::hvcCBox         nalUnitLength = 23
-Heic::hvcCBox     array # = 1
-Heic::hvcCBox     array_completeness = 2
-Heic::hvcCBox     NAL_unit_type = 33
-Heic::hvcCBox     numNalus = 1
-Heic::hvcCBox         nalUnitLength = 34
-Heic::hvcCBox     array # = 2
-Heic::hvcCBox     array_completeness = 2
-Heic::hvcCBox     NAL_unit_type = 34
-Heic::hvcCBox     numNalus = 1
-Heic::hvcCBox         nalUnitLength = 9
-Heic::hvcCBox offset: 2666 length: 112 offset + length 2778 file position: 2778
-Heic::nextHeifBox offset: 2778 length: 20 type: "ispe"
-Heic::getHeifBox type = "ispe" offset = 2778 length = 20
-Heic::ispeBox image_width = 320
-Heic::ispeBox image_height = 240
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+ 16       210        D2  34665  8769        4         1         446   ExifIFDOffset
+ 17       222        DE  34853  8825        4         1       27210   GPSIFDOffset
 
-Heic::nextHeifBox offset: 2798 length: 16 type: "pixi"
-Heic::getHeifBox type = "pixi" offset = 2798 length = 16
-Heic::pixiBox channel# 0 bits_per_channel = 8
-Heic::pixiBox channel# 1 bits_per_channel = 8
-Heic::pixiBox channel# 2 bits_per_channel = 8
-Heic::nextHeifBox offset: 2814 length: 318 type: "ipma"
-Heic::getHeifBox type = "ipma" offset = 2814 length = 318
-Heic::ipmaBox entry_count = 50
-    entry# 0 item_ID = 1 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 1 item_ID = 2 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 2 item_ID = 3 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 3 item_ID = 4 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 4 item_ID = 5 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 5 item_ID = 6 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 6 item_ID = 7 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 7 item_ID = 8 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 8 item_ID = 9 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 9 item_ID = 10 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 10 item_ID = 11 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 11 item_ID = 12 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 12 item_ID = 13 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 13 item_ID = 14 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 14 item_ID = 15 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 15 item_ID = 16 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 16 item_ID = 17 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 17 item_ID = 18 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 18 item_ID = 19 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 19 item_ID = 20 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 20 item_ID = 21 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 21 item_ID = 22 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 22 item_ID = 23 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 23 item_ID = 24 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 24 item_ID = 25 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 25 item_ID = 26 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 26 item_ID = 27 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 27 item_ID = 28 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 28 item_ID = 29 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 29 item_ID = 30 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 30 item_ID = 31 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 31 item_ID = 32 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 32 item_ID = 33 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 33 item_ID = 34 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 34 item_ID = 35 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 35 item_ID = 36 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 36 item_ID = 37 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 37 item_ID = 38 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 38 item_ID = 39 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 39 item_ID = 40 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 40 item_ID = 41 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 41 item_ID = 42 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 42 item_ID = 43 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 43 item_ID = 44 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 44 item_ID = 45 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 45 item_ID = 46 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 46 item_ID = 47 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 47 item_ID = 48 association_count = 3
-        association# 0 essential = 1 property_index = 3
-        association# 1 essential = 1 property_index = 1
-        association# 2 essential = 1 property_index = 2
-    entry# 48 item_ID = 49 association_count = 3
-        association# 0 essential = 0 property_index = 4
-        association# 1 essential = 1 property_index = 5
-        association# 2 essential = 0 property_index = 6
-    entry# 49 item_ID = 50 association_count = 5
-        association# 0 essential = 1 property_index = 7
-        association# 1 essential = 1 property_index = 8
-        association# 2 essential = 0 property_index = 9
-        association# 3 essential = 1 property_index = 5
-        association# 4 essential = 0 property_index = 10
-Heic::ipmaBox offset: 2814 length: 318 offset + length 3132 file position: 3132
-Heic::nextHeifBox offset: 3132 length: 16 type: "idat"
-Heic::getHeifBox type = "idat" offset = 3132 length = 16
-Heic::idatBox offset = 3132
-Heic::nextHeifBox offset: 3148 length: 832 type: "iloc"
-Heic::getHeifBox type = "iloc" offset = 3148 length = 832
-Heic::ilocBox ilocOffsetSize = 4 ilocLengthSize = 4 ilocBaseOffsetSize = 0 ilocItemCount = 51
-Heic::ilocBox Item: 0 itemId 1 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 0 extent_offset 18984 extent_length 72092
-Heic::ilocBox Item: 1 itemId 2 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 1 extent_offset 91076 extent_length 68102
-Heic::ilocBox Item: 2 itemId 3 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 2 extent_offset 159178 extent_length 66518
-Heic::ilocBox Item: 3 itemId 4 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 3 extent_offset 225696 extent_length 65976
-Heic::ilocBox Item: 4 itemId 5 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 4 extent_offset 291672 extent_length 62200
-Heic::ilocBox Item: 5 itemId 6 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 5 extent_offset 353872 extent_length 57606
-Heic::ilocBox Item: 6 itemId 7 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 6 extent_offset 411478 extent_length 61150
-Heic::ilocBox Item: 7 itemId 8 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 7 extent_offset 472628 extent_length 53946
-Heic::ilocBox Item: 8 itemId 9 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 8 extent_offset 526574 extent_length 66755
-Heic::ilocBox Item: 9 itemId 10 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 9 extent_offset 593329 extent_length 38160
-Heic::ilocBox Item: 10 itemId 11 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 10 extent_offset 631489 extent_length 18302
-Heic::ilocBox Item: 11 itemId 12 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 11 extent_offset 649791 extent_length 24317
-Heic::ilocBox Item: 12 itemId 13 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 12 extent_offset 674108 extent_length 19157
-Heic::ilocBox Item: 13 itemId 14 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 13 extent_offset 693265 extent_length 8659
-Heic::ilocBox Item: 14 itemId 15 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 14 extent_offset 701924 extent_length 46306
-Heic::ilocBox Item: 15 itemId 16 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 15 extent_offset 748230 extent_length 49824
-Heic::ilocBox Item: 16 itemId 17 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 16 extent_offset 798054 extent_length 68734
-Heic::ilocBox Item: 17 itemId 18 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 17 extent_offset 866788 extent_length 34165
-Heic::ilocBox Item: 18 itemId 19 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 18 extent_offset 900953 extent_length 15691
-Heic::ilocBox Item: 19 itemId 20 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 19 extent_offset 916644 extent_length 9420
-Heic::ilocBox Item: 20 itemId 21 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 20 extent_offset 926064 extent_length 7298
-Heic::ilocBox Item: 21 itemId 22 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 21 extent_offset 933362 extent_length 5562
-Heic::ilocBox Item: 22 itemId 23 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 22 extent_offset 938924 extent_length 42027
-Heic::ilocBox Item: 23 itemId 24 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 23 extent_offset 980951 extent_length 49814
-Heic::ilocBox Item: 24 itemId 25 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 24 extent_offset 1030765 extent_length 66033
-Heic::ilocBox Item: 25 itemId 26 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 25 extent_offset 1096798 extent_length 29658
-Heic::ilocBox Item: 26 itemId 27 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 26 extent_offset 1126456 extent_length 32767
-Heic::ilocBox Item: 27 itemId 28 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 27 extent_offset 1159223 extent_length 37141
-Heic::ilocBox Item: 28 itemId 29 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 28 extent_offset 1196364 extent_length 15341
-Heic::ilocBox Item: 29 itemId 30 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 29 extent_offset 1211705 extent_length 12159
-Heic::ilocBox Item: 30 itemId 31 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 30 extent_offset 1223864 extent_length 38679
-Heic::ilocBox Item: 31 itemId 32 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 31 extent_offset 1262543 extent_length 49622
-Heic::ilocBox Item: 32 itemId 33 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 32 extent_offset 1312165 extent_length 66541
-Heic::ilocBox Item: 33 itemId 34 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 33 extent_offset 1378706 extent_length 39684
-Heic::ilocBox Item: 34 itemId 35 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 34 extent_offset 1418390 extent_length 29344
-Heic::ilocBox Item: 35 itemId 36 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 35 extent_offset 1447734 extent_length 32336
-Heic::ilocBox Item: 36 itemId 37 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 36 extent_offset 1480070 extent_length 31706
-Heic::ilocBox Item: 37 itemId 38 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 37 extent_offset 1511776 extent_length 35944
-Heic::ilocBox Item: 38 itemId 39 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 38 extent_offset 1547720 extent_length 47311
-Heic::ilocBox Item: 39 itemId 40 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 39 extent_offset 1595031 extent_length 45431
-Heic::ilocBox Item: 40 itemId 41 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 40 extent_offset 1640462 extent_length 59122
-Heic::ilocBox Item: 41 itemId 42 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 41 extent_offset 1699584 extent_length 56976
-Heic::ilocBox Item: 42 itemId 43 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 42 extent_offset 1756560 extent_length 57770
-Heic::ilocBox Item: 43 itemId 44 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 43 extent_offset 1814330 extent_length 54207
-Heic::ilocBox Item: 44 itemId 45 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 44 extent_offset 1868537 extent_length 51127
-Heic::ilocBox Item: 45 itemId 46 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 45 extent_offset 1919664 extent_length 48293
-Heic::ilocBox Item: 46 itemId 47 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 46 extent_offset 1967957 extent_length 44821
-Heic::ilocBox Item: 47 itemId 48 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 47 extent_offset 2012778 extent_length 36769
-Heic::ilocBox Item: 48 itemId 49 data_reference_index 1 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 48 extent_offset 0 extent_length 8
-Heic::ilocBox Item: 49 itemId 50 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 49 extent_offset 3996 extent_length 13200
-Heic::ilocBox Item: 50 itemId 51 data_reference_index 0 base_offset 0 extent_count 1
-Heic::ilocBox     Extent: 50 extent_offset 17196 extent_length 1788
-Heic::ilocBox file.pos() 3980
-Heic::nextHeifBox offset: 3980 length: 2045567 type: "mdat"
-Heic::getHeifBox type = "mdat" offset = 3980 length = 2045567
-Heic::mdatBox offset = 3980
+File name = /Users/roryhill/Pictures/_test0/HEIC IPhone.heic
+
+--------------------------------------------------------  IFD0  --------------------------------------------------------
+IFDOffset  Hex: 157A   Dec: 5498   Tag count: 12   Big Endian
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0      5500      157C    271   10F        2         6         158   Make
+  1      5512      1588    272   110        2        14         164   Model
+  2      5524      1594    282   11A        5         1         178   XResolution
+  3      5536      15A0    283   11B        5         1         186   YResolution
+  4      5548      15AC    296   128        3         1           2   ResolutionUnit
+  5      5560      15B8    305   131        2         5         194   Software
+  6      5572      15C4    306   132        2        20         200   ModifyDate
+  7      5584      15D0    316   13C        2        14         220   HostComputer
+  8      5596      15DC    322   142        4         1         512   TileWidth
+  9      5608      15E8    323   143        4         1         512   TileLength
+ 10      5620      15F4  34665  8769        4         1         234   ExifIFDOffset
+ 11      5632      1600  34853  8825        4         1        2226   GPSIFDOffset
+         5644      160C    nextIFDOffset = 0 / 0 (+ start offset if JPG)
+
+------------------------------------------------------  IFD Exif  ------------------------------------------------------
+IFDOffset  Hex: 165C   Dec: 5724   Tag count: 37   Big Endian
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0      5726      165E  33434  829A        5         1         684   ExposureTime
+  1      5738      166A  33437  829D        5         1         692   FNumber
+  2      5750      1676  34850  8822        3         1           2   ExposureProgram
+  3      5762      1682  34855  8827        3         1         250   ISO
+  4      5774      168E  36864  9000        7         4   808596274   ExifVersion
+  5      5786      169A  36867  9003        2        20         700   DateTimeOriginal
+  6      5798      16A6  36868  9004        2        20         720   CreateDate
+  7      5810      16B2  36880  9010        2         7         740   OffsetTime
+  8      5822      16BE  36881  9011        2         7         748   OffsetTimeOriginal
+  9      5834      16CA  36882  9012        2         7         756   OffsetTimeDigitized
+ 10      5846      16D6  37121  9101        7         4    16909056   ComponentsConfiguration
+ 11      5858      16E2  37377  9201       10         1         764   ShutterSpeedValue
+ 12      5870      16EE  37378  9202        5         1         772   ApertureValue
+ 13      5882      16FA  37379  9203       10         1         780   BrightnessValue
+ 14      5894      1706  37380  9204       10         1         788   ExposureCompensation
+ 15      5906      1712  37383  9207        3         1           5   MeteringMode
+ 16      5918      171E  37385  9209        3         1          24   Flash
+ 17      5930      172A  37386  920A        5         1         796   FocalLength
+ 18      5942      1736  37396  9214        3         4         804   SubjectArea
+ 19      5954      1742  37500  927C        7      1328         812   MakerNotes
+ 20      5966      174E  37521  9291        2         4   842479872   SubSecTimeOriginal
+ 21      5978      175A  37522  9292        2         4   842479872   SubSecTimeDigitized
+ 22      5990      1766  40960  A000        7         4   808529968   FlashpixVersion
+ 23      6002      1772  40961  A001        3         1       65535   ColorSpace
+ 24      6014      177E  40962  A002        4         1        4032   ExifImageWidth
+ 25      6026      178A  40963  A003        4         1        3024   ExifImageHeight
+ 26      6038      1796  41495  A217        3         1           2   SensingMethod
+ 27      6050      17A2  41729  A301        7         1    16777216   SceneType
+ 28      6062      17AE  41985  A401        3         1           8   CustomRendered
+ 29      6074      17BA  41986  A402        3         1           0   ExposureMode
+ 30      6086      17C6  41987  A403        3         1           0   WhiteBalance
+ 31      6098      17D2  41989  A405        3         1          26   FocalLengthIn35mmFormat
+ 32      6110      17DE  41990  A406        3         1           0   SceneCaptureType
+ 33      6122      17EA  42034  A432        5         4        2140   LensInfo
+ 34      6134      17F6  42035  A433        2         6        2172   LensMake
+ 35      6146      1802  42036  A434        2        48        2178   LensModel
+ 36      6158      180E  42080  A460        3         1           2   Undefined tag
+         6170      181A    nextIFDOffset = 0 / 0 (+ start offset if JPG)
+
+------------------------------------------------------  IFD GPS  ------------------------------------------------------
+IFDOffset  Hex: 1E24   Dec: 7716   Tag count: 13   Big Endian
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0      7718      1E26      1     1        2         2          78   GPSLatitudeRef
+  1      7730      1E32      2     2        5         3        2388   GPSLatitude
+  2      7742      1E3E      3     3        2         2          87   GPSLongitudeRef
+  3      7754      1E4A      4     4        5         3        2412   GPSLongitude
+  4      7766      1E56      5     5        1         1           0   GPSAltitudeRef
+  5      7778      1E62      6     6        5         1        2436   GPSAltitude
+  6      7790      1E6E     12     C        2         2          75   GPSSpeedRef
+  7      7802      1E7A     13     D        5         1        2444   GPSSpeed
+  8      7814      1E86     16    10        2         2          84   GPSImgDirectionRef
+  9      7826      1E92     17    11        5         1        2452   GPSImgDirection
+ 10      7838      1E9E     23    17        2         2          84   GPSDestBearingRef
+ 11      7850      1EAA     24    18        5         1        2460   GPSDestBearing
+ 12      7862      1EB6     31    1F        5         1        2468   GPSHPositioningError
+GPSLatitude = 49 15 21.3 (49/1 15/1 2130/100)
+GPSLongitude = 123 4 35.45 (123/1 4/1 3545/100)
+
+file:///Users/roryhill/Pictures/_ThumbTest/CR2.CR2
+------------------------------------------------------  IFD GPS  ------------------------------------------------------
+IFDOffset  Hex: 6A4A   Dec: 27210   Tag count: 16   Little Endian
+Num    Offset       hex  tagId   hex  tagType  tagCount    tagValue   tagDescription
+  0     27212      6A4C      0     0        1         4         770   GPSVersionID
+  1     27224      6A58      1     1        2         2          78   GPSLatitudeRef
+  2     27236      6A64      2     2        5         3       27588   GPSLatitude
+  3     27248      6A70      3     3        2         2          87   GPSLongitudeRef
+  4     27260      6A7C      4     4        5         3       27612   GPSLongitude
+  5     27272      6A88      5     5        1         1           0   GPSAltitudeRef
+  6     27284      6A94      6     6        5         1       27636   GPSAltitude
+  7     27296      6AA0      7     7        5         3       27644   GPSTimeStamp
+  8     27308      6AAC      8     8        2         3       13362   GPSSatellites
+  9     27320      6AB8      9     9        2         2          65   GPSStatus
+ 10     27332      6AC4     10     A        2         2          51   GPSMeasureMode
+ 11     27344      6AD0     11     B        5         1       28128   GPSDOP
+ 12     27356      6ADC     16    10        2         2          77   GPSImgDirectionRef
+ 13     27368      6AE8     17    11        5         1       28152   GPSImgDirection
+ 14     27380      6AF4     18    12        2         7       28160   GPSMapDatum
+ 15     27392      6B00     29    1D        2        11       28992   GPSDateStamp
+        27404      6B0C    nextIFDOffset = 0 / 0 (+ start offset if JPG)
+49°21'0.414" N 124°29'44.262" W
+
+-------------------------------------
+Translated Report (Full Report Below)
+-------------------------------------
+
+Process:               Winnet [98439]
+Path:                  /Users/USER/Library/Application Support/Winnow/*/Zen2048.app/Contents/MacOS/Winnet
+Identifier:            roryhill.zenfolio.com.Winnet
+Version:               ???
+Code Type:             ARM-64 (Native)
+Parent Process:        Adobe Lightroom Classic [447]
+Responsible:           Adobe Lightroom Classic [447]
+User ID:               501
+
+Date/Time:             2022-11-22 17:37:23.3137 -0800
+OS Version:            macOS 12.5.1 (21G83)
+Report Version:        12
+Anonymous UUID:        870841C9-0A4F-F9F5-A80F-CD30AA6675B8
+
+
+Time Awake Since Boot: 620000 seconds
+
+System Integrity Protection: enabled
+
+Crashed Thread:        0
+
+Exception Type:        EXC_CRASH (SIGABRT)
+Exception Codes:       0x0000000000000000, 0x0000000000000000
+Exception Note:        EXC_CORPSE_NOTIFY
+
+Termination Reason:    Namespace DYLD, Code 1 Library missing
+Library not loaded: '@rpath/QtWidgets.framework/Versions/A/QtWidgets'
+Referenced from: '/Users/USER/Library/Application Support/Winnow/*/Zen2048.app/Contents/MacOS/Winnet'
+Reason: tried: '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file)
+(terminated at launch; ignore backtrace)
+
+Thread 0 Crashed:
+0   dyld                          	       0x102b83e98 __abort_with_payload + 8
+1   dyld                          	       0x102b8b024 abort_with_payload_wrapper_internal + 104
+2   dyld                          	       0x102b8b058 abort_with_payload + 16
+3   dyld                          	       0x102b42a28 dyld4::halt(char const*) + 580
+4   dyld                          	       0x102b3dfb8 dyld4::prepare(dyld4::APIs&, dyld3::MachOAnalyzer const*) + 3644
+5   dyld                          	       0x102b3d06c start + 488
+
+
+Thread 0 crashed with ARM Thread State (64-bit):
+    x0: 0x0000000000000006   x1: 0x0000000000000001   x2: 0x000000016d4867f8   x3: 0x00000000000000a1
+    x4: 0x000000016d4863f8   x5: 0x0000000000000000   x6: 0x0073746567646957   x7: 0x00000000000002e0
+    x8: 0x0000000000000020   x9: 0x0000000000000009  x10: 0x000000016d486452  x11: 0x00000000000000b6
+   x12: 0x0000000000000000  x13: 0x0000000000000039  x14: 0x000000023dca94f6  x15: 0x0000000000000000
+   x16: 0x0000000000000209  x17: 0x0000000102b3b14c  x18: 0x0000000000000000  x19: 0x0000000000000000
+   x20: 0x000000016d4863f8  x21: 0x00000000000000a1  x22: 0x000000016d4867f8  x23: 0x0000000000000001
+   x24: 0x0000000000000006  x25: 0x000000016d4863f8  x26: 0x0000000000000400  x27: 0x00000000000001cd
+   x28: 0x0000000000000319   fp: 0x000000016d4863c0   lr: 0x0000000102b8b024
+    sp: 0x000000016d486380   pc: 0x0000000102b83e98 cpsr: 0x00001000
+   far: 0x0000000102aa4000  esr: 0x56000080  Address size fault
+
+Binary Images:
+       0x102b38000 -        0x102b97fff dyld (*) <75627683-a780-32ad-ae34-cf86dd23a26b> /usr/lib/dyld
+
+External Modification Summary:
+  Calls made by other processes targeting this process:
+    task_for_pid: 0
+    thread_create: 0
+    thread_set_state: 0
+  Calls made by this process:
+    task_for_pid: 0
+    thread_create: 0
+    thread_set_state: 0
+  Calls made by all processes on this machine:
+    task_for_pid: 16
+    thread_create: 0
+    thread_set_state: 1209
+
+VM Region Summary:
+ReadOnly portion of Libraries: Total=736K resident=0K(0%) swapped_out_or_unallocated=736K(100%)
+Writable regions: Total=9216K written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=9216K(100%)
+
+                                VIRTUAL   REGION
+REGION TYPE                        SIZE    COUNT (non-coalesced)
+===========                     =======  =======
+STACK GUARD                       56.0M        1
+Stack                             8176K        1
+VM_ALLOCATE                         16K        1
+__DATA                              32K        2
+__DATA_CONST                       112K        2
+__LINKEDIT                         240K        2
+__TEXT                             496K        2
+dyld private memory               1024K        1
+===========                     =======  =======
+TOTAL                             65.9M       12
+
+
+
+-----------
+Full Report
+-----------
+
+{"app_name":"Winnet","timestamp":"2022-11-22 17:37:23.00 -0800","app_version":"","slice_uuid":"d079100f-ffdf-3365-beb8-448c4bde38b2","build_version":"","platform":1,"bundleID":"roryhill.zenfolio.com.Winnet","share_with_app_devs":0,"is_first_party":0,"bug_type":"309","os_version":"macOS 12.5.1 (21G83)","incident_id":"B88D1204-ADC9-49DE-A00C-DB3461EFBD25","name":"Winnet"}
+{
+  "uptime" : 620000,
+  "procLaunch" : "2022-11-22 17:37:23.3045 -0800",
+  "procRole" : "Unspecified",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "Mac13,2",
+  "procStartAbsTime" : 15076287462809,
+  "coalitionID" : 417,
+  "osVersion" : {
+    "train" : "macOS 12.5.1",
+    "build" : "21G83",
+    "releaseType" : "User"
+  },
+  "captureTime" : "2022-11-22 17:37:23.3137 -0800",
+  "incident" : "B88D1204-ADC9-49DE-A00C-DB3461EFBD25",
+  "bug_type" : "309",
+  "pid" : 98439,
+  "procExitAbsTime" : 15076287676481,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "procName" : "Winnet",
+  "procPath" : "\/Users\/USER\/Library\/Application Support\/Winnow\/*\/Zen2048.app\/Contents\/MacOS\/Winnet",
+  "bundleInfo" : {"CFBundleIdentifier":"roryhill.zenfolio.com.Winnet"},
+  "storeInfo" : {"deviceIdentifierForVendor":"F499C978-B402-5AF2-8FA4-E2BAB8F837FC","thirdParty":true},
+  "parentProc" : "Adobe Lightroom Classic",
+  "parentPid" : 447,
+  "coalitionName" : "com.adobe.LightroomClassicCC7",
+  "crashReporterKey" : "870841C9-0A4F-F9F5-A80F-CD30AA6675B8",
+  "responsiblePid" : 447,
+  "responsibleProc" : "Adobe Lightroom Classic",
+  "sip" : "enabled",
+  "isCorpse" : 1,
+  "exception" : {"codes":"0x0000000000000000, 0x0000000000000000","rawCodes":[0,0],"type":"EXC_CRASH","signal":"SIGABRT"},
+  "termination" : {"code":1,"flags":518,"namespace":"DYLD","indicator":"Library missing","details":["(terminated at launch; ignore backtrace)"],"reasons":["Library not loaded: '@rpath\/QtWidgets.framework\/Versions\/A\/QtWidgets'","Referenced from: '\/Users\/USER\/Library\/Application Support\/Winnow\/*\/Zen2048.app\/Contents\/MacOS\/Winnet'","Reason: tried: '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file)"]},
+  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":1209,"task_for_pid":16},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
+  "faultingThread" : 0,
+  "threads" : [{"triggered":true,"id":7009070,"threadState":{"x":[{"value":6},{"value":1},{"value":6128429048},{"value":161},{"value":6128428024},{"value":0},{"value":32497601196878167},{"value":736},{"value":32},{"value":9},{"value":6128428114},{"value":182},{"value":0},{"value":57},{"value":9626621174},{"value":0},{"value":521},{"value":4340298060,"symbolLocation":392,"symbol":"__simple_bprintf"},{"value":0},{"value":0},{"value":6128428024},{"value":161},{"value":6128429048},{"value":1},{"value":6},{"value":6128428024},{"value":1024},{"value":461},{"value":793}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4340625444},"cpsr":{"value":4096},"fp":{"value":6128427968},"sp":{"value":6128427904},"esr":{"value":1442840704,"description":" Address size fault"},"pc":{"value":4340596376,"matchesCrashFrame":1},"far":{"value":4339679232}},"frames":[{"imageOffset":310936,"symbol":"__abort_with_payload","symbolLocation":8,"imageIndex":0},{"imageOffset":340004,"symbol":"abort_with_payload_wrapper_internal","symbolLocation":104,"imageIndex":0},{"imageOffset":340056,"symbol":"abort_with_payload","symbolLocation":16,"imageIndex":0},{"imageOffset":43560,"symbol":"dyld4::halt(char const*)","symbolLocation":580,"imageIndex":0},{"imageOffset":24504,"symbol":"dyld4::prepare(dyld4::APIs&, dyld3::MachOAnalyzer const*)","symbolLocation":3644,"imageIndex":0},{"imageOffset":20588,"symbol":"start","symbolLocation":488,"imageIndex":0}]}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 4340285440,
+    "size" : 393216,
+    "uuid" : "75627683-a780-32ad-ae34-cf86dd23a26b",
+    "path" : "\/usr\/lib\/dyld",
+    "name" : "dyld"
+  }
+],
+  "sharedCache" : {
+  "base" : 6540640256,
+  "size" : 3144712192,
+  "uuid" : "f8ab76fb-504c-32dd-a5db-15a1f2f028f8"
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=736K resident=0K(0%) swapped_out_or_unallocated=736K(100%)\nWritable regions: Total=9216K written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=9216K(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nSTACK GUARD                       56.0M        1 \nStack                             8176K        1 \nVM_ALLOCATE                         16K        1 \n__DATA                              32K        2 \n__DATA_CONST                       112K        2 \n__LINKEDIT                         240K        2 \n__TEXT                             496K        2 \ndyld private memory               1024K        1 \n===========                     =======  ======= \nTOTAL                             65.9M       12 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+
+  }
+},
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "rolloutId" : "60da5e84ab0ca017dace9abf",
+      "factorPackIds" : {
+
+      },
+      "deploymentId" : 240000008
+    },
+    {
+      "rolloutId" : "5fb4245a1bbfe8005e33a1e1",
+      "factorPackIds" : {
+
+      },
+      "deploymentId" : 240000021
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}
+
+-------------------------------------
+Translated Report (Full Report Below)
+-------------------------------------
+
+Process:               Winnet [98439]
+Path:                  /Users/USER/Library/Application Support/Winnow/*/Zen2048.app/Contents/MacOS/Winnet
+Identifier:            roryhill.zenfolio.com.Winnet
+Version:               ???
+Code Type:             ARM-64 (Native)
+Parent Process:        Adobe Lightroom Classic [447]
+Responsible:           Adobe Lightroom Classic [447]
+User ID:               501
+
+Date/Time:             2022-11-22 17:37:23.3137 -0800
+OS Version:            macOS 12.5.1 (21G83)
+Report Version:        12
+Anonymous UUID:        870841C9-0A4F-F9F5-A80F-CD30AA6675B8
+
+
+Time Awake Since Boot: 620000 seconds
+
+System Integrity Protection: enabled
+
+Crashed Thread:        0
+
+Exception Type:        EXC_CRASH (SIGABRT)
+Exception Codes:       0x0000000000000000, 0x0000000000000000
+Exception Note:        EXC_CORPSE_NOTIFY
+
+Termination Reason:    Namespace DYLD, Code 1 Library missing
+Library not loaded: '@rpath/QtWidgets.framework/Versions/A/QtWidgets'
+Referenced from: '/Users/USER/Library/Application Support/Winnow/*/Zen2048.app/Contents/MacOS/Winnet'
+Reason: tried: '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file)
+(terminated at launch; ignore backtrace)
+
+Thread 0 Crashed:
+0   dyld                          	       0x102b83e98 __abort_with_payload + 8
+1   dyld                          	       0x102b8b024 abort_with_payload_wrapper_internal + 104
+2   dyld                          	       0x102b8b058 abort_with_payload + 16
+3   dyld                          	       0x102b42a28 dyld4::halt(char const*) + 580
+4   dyld                          	       0x102b3dfb8 dyld4::prepare(dyld4::APIs&, dyld3::MachOAnalyzer const*) + 3644
+5   dyld                          	       0x102b3d06c start + 488
+
+
+Thread 0 crashed with ARM Thread State (64-bit):
+    x0: 0x0000000000000006   x1: 0x0000000000000001   x2: 0x000000016d4867f8   x3: 0x00000000000000a1
+    x4: 0x000000016d4863f8   x5: 0x0000000000000000   x6: 0x0073746567646957   x7: 0x00000000000002e0
+    x8: 0x0000000000000020   x9: 0x0000000000000009  x10: 0x000000016d486452  x11: 0x00000000000000b6
+   x12: 0x0000000000000000  x13: 0x0000000000000039  x14: 0x000000023dca94f6  x15: 0x0000000000000000
+   x16: 0x0000000000000209  x17: 0x0000000102b3b14c  x18: 0x0000000000000000  x19: 0x0000000000000000
+   x20: 0x000000016d4863f8  x21: 0x00000000000000a1  x22: 0x000000016d4867f8  x23: 0x0000000000000001
+   x24: 0x0000000000000006  x25: 0x000000016d4863f8  x26: 0x0000000000000400  x27: 0x00000000000001cd
+   x28: 0x0000000000000319   fp: 0x000000016d4863c0   lr: 0x0000000102b8b024
+    sp: 0x000000016d486380   pc: 0x0000000102b83e98 cpsr: 0x00001000
+   far: 0x0000000102aa4000  esr: 0x56000080  Address size fault
+
+Binary Images:
+       0x102b38000 -        0x102b97fff dyld (*) <75627683-a780-32ad-ae34-cf86dd23a26b> /usr/lib/dyld
+
+External Modification Summary:
+  Calls made by other processes targeting this process:
+    task_for_pid: 0
+    thread_create: 0
+    thread_set_state: 0
+  Calls made by this process:
+    task_for_pid: 0
+    thread_create: 0
+    thread_set_state: 0
+  Calls made by all processes on this machine:
+    task_for_pid: 16
+    thread_create: 0
+    thread_set_state: 1209
+
+VM Region Summary:
+ReadOnly portion of Libraries: Total=736K resident=0K(0%) swapped_out_or_unallocated=736K(100%)
+Writable regions: Total=9216K written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=9216K(100%)
+
+                                VIRTUAL   REGION
+REGION TYPE                        SIZE    COUNT (non-coalesced)
+===========                     =======  =======
+STACK GUARD                       56.0M        1
+Stack                             8176K        1
+VM_ALLOCATE                         16K        1
+__DATA                              32K        2
+__DATA_CONST                       112K        2
+__LINKEDIT                         240K        2
+__TEXT                             496K        2
+dyld private memory               1024K        1
+===========                     =======  =======
+TOTAL                             65.9M       12
+
+
+
+-----------
+Full Report
+-----------
+
+{"app_name":"Winnet","timestamp":"2022-11-22 17:37:23.00 -0800","app_version":"","slice_uuid":"d079100f-ffdf-3365-beb8-448c4bde38b2","build_version":"","platform":1,"bundleID":"roryhill.zenfolio.com.Winnet","share_with_app_devs":0,"is_first_party":0,"bug_type":"309","os_version":"macOS 12.5.1 (21G83)","incident_id":"B88D1204-ADC9-49DE-A00C-DB3461EFBD25","name":"Winnet"}
+{
+  "uptime" : 620000,
+  "procLaunch" : "2022-11-22 17:37:23.3045 -0800",
+  "procRole" : "Unspecified",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "Mac13,2",
+  "procStartAbsTime" : 15076287462809,
+  "coalitionID" : 417,
+  "osVersion" : {
+    "train" : "macOS 12.5.1",
+    "build" : "21G83",
+    "releaseType" : "User"
+  },
+  "captureTime" : "2022-11-22 17:37:23.3137 -0800",
+  "incident" : "B88D1204-ADC9-49DE-A00C-DB3461EFBD25",
+  "bug_type" : "309",
+  "pid" : 98439,
+  "procExitAbsTime" : 15076287676481,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "procName" : "Winnet",
+  "procPath" : "\/Users\/USER\/Library\/Application Support\/Winnow\/*\/Zen2048.app\/Contents\/MacOS\/Winnet",
+  "bundleInfo" : {"CFBundleIdentifier":"roryhill.zenfolio.com.Winnet"},
+  "storeInfo" : {"deviceIdentifierForVendor":"F499C978-B402-5AF2-8FA4-E2BAB8F837FC","thirdParty":true},
+  "parentProc" : "Adobe Lightroom Classic",
+  "parentPid" : 447,
+  "coalitionName" : "com.adobe.LightroomClassicCC7",
+  "crashReporterKey" : "870841C9-0A4F-F9F5-A80F-CD30AA6675B8",
+  "responsiblePid" : 447,
+  "responsibleProc" : "Adobe Lightroom Classic",
+  "sip" : "enabled",
+  "isCorpse" : 1,
+  "exception" : {"codes":"0x0000000000000000, 0x0000000000000000","rawCodes":[0,0],"type":"EXC_CRASH","signal":"SIGABRT"},
+  "termination" : {"code":1,"flags":518,"namespace":"DYLD","indicator":"Library missing","details":["(terminated at launch; ignore backtrace)"],"reasons":["Library not loaded: '@rpath\/QtWidgets.framework\/Versions\/A\/QtWidgets'","Referenced from: '\/Users\/USER\/Library\/Application Support\/Winnow\/*\/Zen2048.app\/Contents\/MacOS\/Winnet'","Reason: tried: '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file), '' (no such file)"]},
+  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":1209,"task_for_pid":16},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
+  "faultingThread" : 0,
+  "threads" : [{"triggered":true,"id":7009070,"threadState":{"x":[{"value":6},{"value":1},{"value":6128429048},{"value":161},{"value":6128428024},{"value":0},{"value":32497601196878167},{"value":736},{"value":32},{"value":9},{"value":6128428114},{"value":182},{"value":0},{"value":57},{"value":9626621174},{"value":0},{"value":521},{"value":4340298060,"symbolLocation":392,"symbol":"__simple_bprintf"},{"value":0},{"value":0},{"value":6128428024},{"value":161},{"value":6128429048},{"value":1},{"value":6},{"value":6128428024},{"value":1024},{"value":461},{"value":793}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4340625444},"cpsr":{"value":4096},"fp":{"value":6128427968},"sp":{"value":6128427904},"esr":{"value":1442840704,"description":" Address size fault"},"pc":{"value":4340596376,"matchesCrashFrame":1},"far":{"value":4339679232}},"frames":[{"imageOffset":310936,"symbol":"__abort_with_payload","symbolLocation":8,"imageIndex":0},{"imageOffset":340004,"symbol":"abort_with_payload_wrapper_internal","symbolLocation":104,"imageIndex":0},{"imageOffset":340056,"symbol":"abort_with_payload","symbolLocation":16,"imageIndex":0},{"imageOffset":43560,"symbol":"dyld4::halt(char const*)","symbolLocation":580,"imageIndex":0},{"imageOffset":24504,"symbol":"dyld4::prepare(dyld4::APIs&, dyld3::MachOAnalyzer const*)","symbolLocation":3644,"imageIndex":0},{"imageOffset":20588,"symbol":"start","symbolLocation":488,"imageIndex":0}]}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 4340285440,
+    "size" : 393216,
+    "uuid" : "75627683-a780-32ad-ae34-cf86dd23a26b",
+    "path" : "\/usr\/lib\/dyld",
+    "name" : "dyld"
+  }
+],
+  "sharedCache" : {
+  "base" : 6540640256,
+  "size" : 3144712192,
+  "uuid" : "f8ab76fb-504c-32dd-a5db-15a1f2f028f8"
+},
+  "vmSummary" : "ReadOnly portion of Libraries: Total=736K resident=0K(0%) swapped_out_or_unallocated=736K(100%)\nWritable regions: Total=9216K written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=9216K(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nSTACK GUARD                       56.0M        1 \nStack                             8176K        1 \nVM_ALLOCATE                         16K        1 \n__DATA                              32K        2 \n__DATA_CONST                       112K        2 \n__LINKEDIT                         240K        2 \n__TEXT                             496K        2 \ndyld private memory               1024K        1 \n===========                     =======  ======= \nTOTAL                             65.9M       12 \n",
+  "legacyInfo" : {
+  "threadTriggered" : {
+
+  }
+},
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "rolloutId" : "60da5e84ab0ca017dace9abf",
+      "factorPackIds" : {
+
+      },
+      "deploymentId" : 240000008
+    },
+    {
+      "rolloutId" : "5fb4245a1bbfe8005e33a1e1",
+      "factorPackIds" : {
+
+      },
+      "deploymentId" : 240000021
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}
+
+Model: Mac13,2, BootROM 7459.141.1, proc 20:16:4 processors, 128 GB, SMC
+Graphics: Apple M1 Ultra, Apple M1 Ultra, Built-In
+Display: BenQ SW320, 3840 x 2160 (2160p/4K UHD 1 - Ultra High Definition), Main, MirrorOff, Online
+Display: DELL SE3223Q, 3840 x 2160 (2160p/4K UHD 1 - Ultra High Definition), MirrorOff, Online
+Display: DELL U3011, 2560 x 1600, MirrorOff, Online
+Memory Module: LPDDR5
+AirPort: Wi-Fi, wl0: Apr  6 2022 06:12:09 version 20.90.45.0.8.7.118 FWID 01-13a89935
+Bluetooth: Version (null), 0 services, 0 devices, 0 incoming serial ports
+Network Service: Ethernet, Ethernet, en0
+Network Service: Wi-Fi, AirPort, en1
+USB Device: USB31Bus
+USB Device: d2 Professional
+USB Device: USB31Bus
+USB Device: USB3.1 Hub
+USB Device: USB_3_0 Reader
+USB Device: ASM236X series
+USB Device: USB2.0 Hub
+USB Device: hub_device
+USB Device: hub_device
+USB Device: Ultra Fast Media Reader
+USB Device: USB31Bus
+USB Device: USB31Bus
+USB Device: USB31Bus
+USB Device: USB31Bus
+USB Device: USB31Bus
+USB Device: C460 Series
+Thunderbolt Bus: Mac Studio, Apple Inc.
+Thunderbolt Bus: Mac Studio, Apple Inc.
+Thunderbolt Bus: Mac Studio, Apple Inc.
+Thunderbolt Bus: Mac Studio, Apple Inc.
+Thunderbolt Bus: Mac Studio, Apple Inc.
+Thunderbolt Bus: Mac Studio, Apple Inc.

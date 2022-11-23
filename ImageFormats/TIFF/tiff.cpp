@@ -489,7 +489,7 @@ bool Tiff::parse(MetadataParameters &p,
         p.hdr = "IFD GPS";
         p.hash = &gps->hash;
         p.offset = offsetGPS;
-        ifd->readIFD(p);
+        ifd->readIFD(p, isBigEnd);
 
         if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
             // process GPS info
