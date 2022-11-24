@@ -223,10 +223,19 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
 //    }
 
     // read GPS
-    p.hdr = "IFD GPS";
-    p.offset = offsetGPS;
-    p.hash = &gps->hash;
-    ifd->readIFD_B(p, isBigEnd);
+    if (offsetGPS) {
+        p.file.seek(offsetGPS);
+        p.hdr = "IFD GPS";
+        p.hash = &gps->hash;
+        p.offset = offsetGPS;
+        ifd->readIFD(p, isBigEnd);
+
+        if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
+            // process GPS info
+            QString gpsCoord = gps->decode(p.file, ifd->ifdDataHash, isBigEnd, startOffset);
+            m.gpsCoord = gpsCoord;
+        }
+    }
 
     // read XMP
 //    bool okToReadXmp = true;
@@ -441,7 +450,13 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
     // EXIF data found?
     if (exifItemID == -1) return false;
 
-    p.file.seek(exifOffset);
+    p.offset = exifOffset;
+    return parseExif(p, m, ifd, exif, gps);
+}
+
+bool Heic::parseExif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps)
+{
+    p.file.seek(p.offset);
 
     // get endian
     bool isBigEnd = true;
