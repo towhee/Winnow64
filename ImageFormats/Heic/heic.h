@@ -27,6 +27,7 @@ public:
     Heic();
     bool parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps);
     bool parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps);
+    bool parseExif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *exif, GPS *gps);
     bool decodePrimaryImage(QString &fPath, QImage &image);
     bool decodeThumbnail(QString &fPath, QImage &image);
 

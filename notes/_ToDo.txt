@@ -1,6 +1,8 @@
 BUGS / TO DO
 - open with exiftool - 7 files will be processed???
 - Drag copy file to another folder - folder count not incrementing in bookmarks
+- Winnet not creating embellish export image on mac
+- Winnets crashing on mac
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
 - iphone heic infoview not showing GPS info
@@ -13,19 +15,15 @@ BUGS / TO DO
 - IPhone image/video creation date
 - PNG no image or icon (-test1)
 - Add G::showWarnings
-- Rethink load Metadata flags and logic
 - Make ImageDecoder warnings context specific is hasMetadata
 - Olympus subfolders not showing for USB drive in FSTree
 - Save preview as PNG include color manage corrections
 - MW::enableSelectionDependentMenus needs updating for all situations
 
-- Open with permissions issue
 - Painter not active, state will be reset by begin
 - Embellish not resetting properly
 - No image cached for D:/Pictures/_ThumbTest/2020-01-05_0005-denoise.dng
-- InfoView context remove "set fixed size" and add "copy field"
 - On Mac: qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family ".AppleSystemFallback" with one that exists to avoid this cost.
-- On Mac: qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family "Courier" with one that exists to avoid this cost.
 - Image metadata report does not show sidecar for PNG file
 - E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
 - Unicode path heics not rendering
@@ -36,9 +34,8 @@ BUGS / TO DO
 - When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
 - DNG without JPG preview: show TIFF?
 - DNG without jpg preview: add one similar to TIFF
-- Tiff with compression = 7, 8
+- Tiff with compression = 7, 8 not supported
 - TIFF PhotometricInterpretation <> 2 https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html
-- Not remembering grid mode at opening
 - Copy / paste files inside Winnow
 - Maintain count when switch folders during the same ingest
 - Cannot delete heic files on PC
@@ -77,6 +74,7 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- InfoView context remove "set fixed size" and add "copy field"
 - Status selected count wrong when deselect current and nothing else selected
 - Disable filter categoryif no items
 - Filtering changes current image but loupe not updating
