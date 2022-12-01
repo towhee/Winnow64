@@ -1411,12 +1411,13 @@ void ImageCache::cacheImage(int id, int cacheKey)
         QString k = QString::number(cacheKey).leftJustified((4));
         qDebug().noquote() << "ImageCache::cacheImage" << "     decoder" << id << k;
     }
+
     if (decoder[id]->status != ImageDecoder::Status::Video) {
         // Check if initial sizeMB was estimated (image without preview metadata ie PNG)
         if (icd->cacheItemList[cacheKey].estSizeMB) setSizeMB(id, cacheKey);
-//        makeRoom(id, cacheKey);
         icd->imCache.insert(decoder[id]->fPath, decoder[id]->image);
     }
+
     icd->cache.currMB = getImCacheSize();
     icd->cacheItemList[cacheKey].isCaching = false;
     icd->cacheItemList[cacheKey].isCached = true;
@@ -1545,6 +1546,12 @@ void ImageCache::fillCache(int id)
                                   ;
                 }
             }
+        }
+
+        // folder does not exist
+        if (decoder[id]->status == ImageDecoder::Status::NoDir) {
+            cacheKey = -1;
+            emit centralMsg(decoder[id]->errMsg);
         }
     }
 

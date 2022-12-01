@@ -1202,7 +1202,6 @@ private:
 
     qulonglong memoryReqdForPicks();
     qulonglong memoryReqdForSelection();
-    QString enquote(QString &s);
 
     void diagnosticsAll();
     void diagnosticsCurrent();

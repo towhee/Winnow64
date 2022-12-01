@@ -253,6 +253,7 @@ SOURCES += Main/main.cpp
 SOURCES += Main/mainwindow.cpp
 SOURCES += Main/diagnostics.cpp
 SOURCES += Main/draganddrop.cpp
+SOURCES += Main/externalapp.cpp
 SOURCES += Main/initialize.cpp
 SOURCES += Main/log.cpp
 SOURCES += Main/menusandactions.cpp

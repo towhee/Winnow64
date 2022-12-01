@@ -266,6 +266,7 @@ void BookMarks::dropEvent(QDropEvent *event)
 {
 /*
     - add folder as a bookmark
+    - copy or move image files
 */
     if (G::isLogger) G::log("BookMarks::dropEvent");
 
@@ -293,11 +294,12 @@ void BookMarks::dropEvent(QDropEvent *event)
         if (!bookmarkPaths.contains(dPath)) {
             bookmarkPaths.insert(dPath);
             reloadBookmarks();
-            return;
         }
+        return;
     }
 
     // if drag is files: move or copy to bookmark folder
+
     /* This code section is mirrored in FSTREE::dropEvent.  Make sure to sync any
        changes. */
     G::stopCopyingFiles = false;
@@ -317,8 +319,7 @@ void BookMarks::dropEvent(QDropEvent *event)
 
     for (int i = 0; i < count; i++) {
         G::popUp->setProgress(i+1);
-        // processEvents is necessary
-        qApp->processEvents();
+        qApp->processEvents();        // processEvents is necessary
         if (G::stopCopyingFiles) {
             break;
         }
@@ -371,4 +372,7 @@ void BookMarks::dropEvent(QDropEvent *event)
         QString firstPath = event->mimeData()->urls().at(0).toLocalFile();
         emit folderSelection();
     }
+
+    // update bookmarks folder count
+    this->count();
 }

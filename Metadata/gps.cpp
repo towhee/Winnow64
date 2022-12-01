@@ -48,7 +48,6 @@ QString GPS::decode(QFile &file,
 
     // GPS lat ref
     int gpsLatOffset = ifdDataHash.value(2).tagValue + offset;
-    qDebug() << "GPS::decode" << "gpsLatOffset =" << "gpsLatOffset";
     double gpsLatHr = u.getReal(file, gpsLatOffset, isBigEnd);
     gpsCoord += (QString::number(static_cast<int>(gpsLatHr)) + degreeSymbol);
     gpsLatOffset += 8;

@@ -115,6 +115,12 @@ bool ImageDecoder::load()
         imFile.close();
         qWarning() << "WARNING" << "ImageDecoder::load  Could not open file for image" << fPath;
         G::error("ImageDecoder::load", fPath, "Could not open file for image.");
+        // check if drive ejected or folder deleted by another app
+        QDir dir(fileInfo.dir());
+        if (!dir.exists()) {
+            status = Status::NoDir;
+            errMsg = "Folder is missing, deleted or in a drive that has been ejected.";
+        }
         return false;
     }
 
@@ -324,9 +330,8 @@ void ImageDecoder::run()
         status = Status::Done;
     }
     else {
-        if (status == Status::Video) {
-
-        }
+        if (status == Status::Video) {}
+        else if (status == Status::NoDir) {}
         else {
             status = Status::Failed;
             fPath = "";
