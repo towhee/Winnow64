@@ -69,11 +69,8 @@ CLASS FSModel subclassing QFileSystemModel
 FSModel::FSModel(QWidget *parent, Metadata &metadata, bool &combineRawJpg)
                  : QFileSystemModel(parent),
                    combineRawJpg(combineRawJpg),
-//                   count(count),
-//                   combineCount(combineCount),
                    metadata(metadata)
 {
-//    this->metadata = metadata;
     QStringList *fileFilters = new QStringList;
     dir = new QDir();
 

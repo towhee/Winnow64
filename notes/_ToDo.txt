@@ -1,11 +1,8 @@
 BUGS / TO DO
-- open with exiftool - 7 files will be processed???
-- Drag copy file to another folder - folder count not incrementing in bookmarks
 - Winnet not creating embellish export image on mac
 - Winnets crashing on mac
 - Metadata::writeXMP cleanup, deal with orientation, write to embedded XMP
 - CR3 missing XMP, offset is wrong
-- iphone heic infoview not showing GPS info
 - HEIC metadata on mac
 - Read HEIC metadata (MAC issue only?)
 - Mac version missing de265-version.h file
@@ -74,6 +71,9 @@ ENHANCEMENTS
 - Reset to defaults
 - Remove Windows Registry settings during uninstall
 DONE/FIXED
+- Iphone heic infoview not showing GPS info
+- Drag copy file to another folder - folder count not incrementing in bookmarks
+- Open with external app not counting number of selected files correctly
 - InfoView context remove "set fixed size" and add "copy field"
 - Status selected count wrong when deselect current and nothing else selected
 - Disable filter categoryif no items

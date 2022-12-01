@@ -1258,15 +1258,16 @@ void MW::handleStartupArgs(const QString &args)
        arg[1+] = path to each image to view in Winnow.  Only arg[1] is used to determine the
        directory to open in Winnow.
 
-    Winnets are small executables that act like photoshop droplets. They reside in
-    QStandardPaths::AppDataLocation (Windows: user/AppData/Roaming/Winnow/Winnets). They
-    send a list of files and a template name to Winnow to be embellished. For example, in
-    order for Winnow to embellish a series of files that have been exported from
-    lightroom, Winnow needs to know which embellish template to use. Instead of sending
-    the files directly to Winnow, thay are sent to an intermediary program (a Winnet)
-    that is named after the template. The Winnet (ie Zen2048) receives the list of files,
-    inserts the strings "Embellish" and the template name "Zen2048" and then resends to
-    Winnow.
+    Winnets are small executables that act like photoshop droplets. They reside
+    in QStandardPaths::AppDataLocation (Windows: user/AppData/Roaming/Winnow/Winnets
+    and Mac::/Users/user/Library/Application Support/Winnow/Winnets). They send
+    a list of files and a template name to Winnow to be embellished. For
+    example, in order for Winnow to embellish a series of files that have been
+    exported from lightroom, Winnow needs to know which embellish template to
+    use. Instead of sending the files directly to Winnow, thay are sent to an
+    intermediary program (a Winnet) that is named after the template. The
+    Winnet (ie Zen2048) receives the list of files, inserts the strings
+    "Embellish" and the template name "Zen2048" and then resends to Winnow.
 */
     if (G::isLogger) G::log("MW::handleStartupArgs", args);
 
@@ -1427,7 +1428,7 @@ void MW::handleStartupArgs(const QString &args)
 void MW::watchCurrentFolder()
 {
 /*
-   Not working.
+    Not working.
     This slot is signalled from FSTree when a folder selection changes.  We are interested
     in selection changes caused by a drive being ejected.  If the current folder being
     cached no longer exists (ejected) then make a folderSelectionChange.
@@ -1519,8 +1520,7 @@ Current model row:
 void MW::folderSelectionChange()
 {
 /*
-   This is invoked when there is a folder selection change in the folder or bookmark views.
-
+    This is invoked when there is a folder selection change in the folder or bookmark views.
 */
     QSignalBlocker bookmarkBlocker(bookmarks);
     QSignalBlocker fsTreeBlocker(fsTree);
@@ -3332,168 +3332,6 @@ void MW::about()
     qtVersion.prepend("Qt: ");
     aboutDlg = new AboutDlg(this, version, qtVersion);
     aboutDlg->exec();
-}
-
-void MW::externalAppManager()
-{
-/*
-   This function opens a dialog that allows the user to add and delete external
-   executables that can be passed image files. externalApps is a QList that holds string
-   pairs: the program name and the path to the external program executable. This list is
-   passed as a reference to the appdlg, which modifies it and then after the dialog is
-   closed the appActions are rebuilt.
-*/
-    if (G::isLogger) G::log("MW::externalAppManager");
-    Appdlg *appdlg = new Appdlg(externalApps, this);
-
-    if(appdlg->exec()) {
-        /*
-        Menus cannot be added/deleted at runtime in MacOS so 10 menu items are created
-        in the MW constructor and then edited here based on changes made in appDlg.
-        */
-        setting->beginGroup("ExternalApps");
-        setting->remove("");
-        for (int i = 0; i < 10; ++i) {
-            if (i < externalApps.length()) {
-                QString shortcut = "Alt+" + xAppShortcut[i];
-                appActions.at(i)->setShortcut(QKeySequence(shortcut));
-                appActions.at(i)->setText(externalApps.at(i).name);
-                appActions.at(i)->setVisible(true);
-                qDebug() << "MW::externalAppManager" << i
-                         << externalApps.at(i).name
-                         << externalApps.at(i).path;
-                // save to settings
-                QString sortPrefix = xAppShortcut[i];
-                if (sortPrefix == "0") sortPrefix = "X";
-                setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).path);
-            }
-            else {
-                appActions.at(i)->setVisible(false);
-                appActions.at(i)->setText("");
-            }
-        }
-        setting->endGroup();
-
-        setting->beginGroup("ExternalAppArgs");
-        setting->remove("");
-        for (int i = 0; i < 10; ++i) {
-            if (i < externalApps.length()) {
-                // save to settings
-                QString sortPrefix = xAppShortcut[i];
-                if (sortPrefix == "0") sortPrefix = "X";
-//                qDebug() << "MW::externalAppManager" << i
-//                         << externalApps.at(i).name
-//                         << externalApps.at(i).args;
-                setting->setValue(sortPrefix + externalApps.at(i).name, externalApps.at(i).args);
-            }
-        }
-        setting->endGroup();
-    }
-}
-
-void MW::cleanupSender()
-{
-/*
-   When the process responsible for running the external program is finished a signal is
-   received here to delete the process.
-*/
-    if (G::isLogger) G::log("MW::cleanupSender");
-    delete QObject::sender();
-}
-
-void MW::externalAppError(QProcess::ProcessError /*err*/)
-{
-    if (G::isLogger) G::log("MW::externalAppError");
-    QMessageBox msgBox;
-    msgBox.critical(this, tr("Error"), tr("Failed to start external application."));
-}
-
-QString MW::enquote(QString &s)
-{
-    // rgh used Utilities ??
-    return QChar('\"') + s + QChar('\"');
-}
-
-void MW::runExternalApp()
-{
-    if (G::isLogger) G::log("MW::runExternalApp");
-
-    QString appPath = "";
-    QString appName = (static_cast<QAction*>(sender()))->text();
-
-    // append any app command arguments (before add file paths)
-    QStringList arguments;
-    for (int i = 0; i < externalApps.length(); ++i) {
-        if(externalApps.at(i).name == appName) {
-            appPath = externalApps.at(i).path;
-            if (externalApps.at(i).args.length() > 0)
-                arguments << externalApps.at(i).args.split(" ");
-            break;
-        }
-    }
-    if (appPath == "") return;      // add err handling
-    QFileInfo appInfo;              // qt6.2
-    appInfo.setFile(appPath);       // qt6.2
-    QString appExecutable = appInfo.fileName();
-
-    // get list of selected or picked image files to send to external app
-//    if (!dm->getSelection(arguments)) return;
-    dm->getSelection(arguments);
-    int nFiles = arguments.size();
-
-    if (nFiles < 1) {
-        G::popUp->showPopup("No images have been selected", 2000);
-        return;
-    }
-
-    if (nFiles > 5) {
-        QMessageBox msgBox;
-        int msgBoxWidth = 300;
-        msgBox.setText(QString::number(nFiles) + " files will be processed.");
-        msgBox.setInformativeText("Do you want continue?");
-        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-        msgBox.setDefaultButton(QMessageBox::Yes);
-        msgBox.setIcon(QMessageBox::Warning);
-        QString s = "QWidget{font-size: 12px; background-color: rgb(85,85,85); color: rgb(229,229,229);}"
-                    "QPushButton:default {background-color: rgb(68,95,118);}";
-        msgBox.setStyleSheet(s);
-        QSpacerItem* horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
-        QGridLayout* layout = static_cast<QGridLayout*>(msgBox.layout());
-        layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
-        int ret = msgBox.exec();
-        if (ret == QMessageBox::Cancel) return;
-    }
-
-    QString folderPath;
-    QFileInfo fInfo;                        // qt6.2
-    fInfo.setFile(arguments.at(0));         // qt6.2
-    folderPath = fInfo.dir().absolutePath() + "/";
-
-    #ifdef Q_OS_WIN
-    arguments.replaceInStrings("/", "\\");
-    #endif
-
-    QProcess *process = new QProcess();
-    connect(process, SIGNAL(finished(int, QProcess::ExitStatus)),
-            this, SLOT(cleanupSender()));
-    connect(process, SIGNAL(error(QProcess::ProcessError)),
-            this, SLOT(externalAppError(QProcess::ProcessError)));
-
-    /*
-    qDebug() << "MW::runExternalApp"
-             << "\nfolderPath =" << folderPath
-             << "\nappPath =" << appPath
-             << "\narguments =" << arguments
-                ;  //*/
-
-    process->setArguments(arguments);
-    process->setProgram(appPath);
-    process->setWorkingDirectory(folderPath);
-    process->start();
-    /*
-        this works in terminal"
-        open "/Users/roryhill/Pictures/4K/2017-01-25_0030-Edit.jpg" -a "Adobe Photoshop CS6"
-    */
 }
 
 void MW::allPreferences()
@@ -5414,9 +5252,10 @@ void MW::ejectUsb(QString path)
 */
     if (G::isLogger) G::log("MW::ejectUsb");
 
-    // if current folder is on USB drive to be ejected then stop caching
+    // if current folder is on the USB drive to be ejected then stop caching
     QStorageInfo ejectDrive(path);
     QStorageInfo currentDrive(G::currRootFolder);
+    bool ejectDriveIsCurrent = currentDrive.rootPath() == ejectDrive.rootPath();
     /*
     qDebug() << "MW::ejectUsb"
              << "currentViewDir =" << currentViewDir
@@ -5427,7 +5266,7 @@ void MW::ejectUsb(QString path)
              << "ejectDrive.rootPath() =" << ejectDrive.rootPath()
                 ;
                 //*/
-    if (currentDrive.rootPath() == ejectDrive.rootPath()) {
+    if (ejectDriveIsCurrent) {
         /*
         qDebug() << "MW::ejectUsb"
                  << "currentDrive.rootPath() =" << currentDrive.rootPath()
@@ -5437,6 +5276,7 @@ void MW::ejectUsb(QString path)
         stop("ejectUSB");
     }
 
+    // get the drive name
     QString driveName = ejectDrive.name();      // ie WIN "D:\" or MAC "Untitled"
 #if defined(Q_OS_WIN)
     driveName = ejectDrive.rootPath();
@@ -5450,20 +5290,23 @@ void MW::ejectUsb(QString path)
     driveName = path.mid(9, pos - 9);
     //*/
 #endif
+
+    // confirm this is an ejectable drive
     if (Usb::isUsb(path)) {
-        dm->load(driveName, false);
-        refreshFolders();
+        // eject USD drive
         int result = Usb::eject(driveName);
+        // drive was ejected
         if (result < 2) {
             G::popUp->showPopup("Ejecting drive " + driveName, 2000);
-            folderSelectionChange();
+            setCentralMessage("Removable drive " + driveName + " has been ejected.");
         }
+        // drive ejection failed
         else
             G::popUp->showPopup("Failed to eject drive " + driveName, 2000);
     }
+    // drive not ejectable
     else {
-        QString d = G::currRootFolder.at(0);
-        G::popUp->showPopup("Drive " + d
+        G::popUp->showPopup("Drive " + driveName
               + " is not removable and cannot be ejected", 2000);
     }
 }

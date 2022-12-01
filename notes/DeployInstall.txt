@@ -9,6 +9,7 @@ NORMAL DEPLOYMENT
 	---------------------------------------------------------------------
 	Using an installer: (as of 2021-01-01)
         - Make sure release build qmake details x86 and arm are both checked (Universal build)
+          in Qt Creator project mode build config release > qmake > details
         - Update version in mainwindow.h
         - global.cpp: isLogger and isFlowLogger = false
         - compile release mode

@@ -35,6 +35,7 @@ public:
     QImage image;
     QString fPath;
     int cacheKey;
+    QString errMsg;
 
     enum Status {
         Ready,
@@ -42,6 +43,7 @@ public:
         Failed,
         Video,
         InstanceClash,
+        NoDir,
         Done
     } status;
 

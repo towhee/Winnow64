@@ -200,18 +200,17 @@ bool ImageView::loadImage(QString fPath, QString src)
         }
     }
 
-    /* get cached image.   Must check if image has been cached before calling
-    icd->imCache.find(fPath, image) to prevent a mismatch between the fPath index and the
-    image in icd->imCache hash table. */
+    /* Get cached image. Must check if image has been cached before calling
+    icd->imCache.find(fPath, image) to prevent a mismatch between the fPath
+    index and the image in icd->imCache hash table. Also must check in case
+    where and ejected drive has resulted in clearing icd->cacheItemList. */
+
     int dmRow = dm->rowFromPath(fPath);
     int sfRow = dm->proxyRowFromModelRow(dmRow);
-//    bool isCached = dm->index(dmRow, 0).data(G::CachedRole).toBool() || src == "ImageCache::cacheImage";
     bool isCached = false;
-    if (icd->cacheItemList.size() > 0)
+    if (icd->cacheItemList.size() >= sfRow) {
         isCached = icd->cacheItemList.at(sfRow).isCached || src == "ImageCache::cacheImage";
-//    if (G::isLogger || G::isFlowLogger) G::log("ImageView::loadImage",
-//                                               fPath + " isCached = " +
-//                                               (isCached ? "true" : "false"));
+    }
     if (isCached) {
         QImage image; // confirm the cached image is in the image cache
         bool imageAvailable = icd->imCache.find(fPath, image);

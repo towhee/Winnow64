@@ -1484,13 +1484,26 @@ void EmbelProperties::newTemplateFromImport(QString name)
 void EmbelProperties::syncWinnets()
 {
 /*
-    Winnets are small executables that act like photoshop droplets. They reside in the same
-    folder as the Winnow executable. They send a list of files and a template name to Winnow
-    to be embellished. For example, in order for Winnow to embellish a series of files that
-    have been exported from lightroom, Winnow needs to know which embellish template to use.
-    Instead of sending the files directly to Winnow, thay are sent to an intermediary program
-    (a Winnet) that is named after the template. The Winnet (ie Zen2048) receives the list of
-    files, inserts the strings Embellish" and "Zen2048" and then resends to Winnow.
+    Keeps winnets up-to-data:
+        - checks necessay libraries are present
+            - win Qt5Core.dll
+            - mac QtCore.fraemwork
+        - checks there is a winnet for every embellish template
+
+    Winnets are small executables that act like photoshop droplets. The
+    original is located in the same folder as the Winnow executable/app. A copy
+    is made for each Embellish template in the Winnets folder:
+
+        Windows: user/AppData/Roaming/Winnow/Winnets
+        Mac:: user/Library/Application Support/Winnow/Winnets
+
+    They send a list of files and a template name to Winnow to be embellished.
+    For example, in order for Winnow to embellish a series of files that have
+    been exported from lightroom, Winnow needs to know which embellish template
+    to use. Instead of sending the files directly to Winnow, thay are sent to
+    an intermediary program (a Winnet) that is named after the template. The
+    Winnet (ie Zen2048) receives the list of files, inserts the strings
+    Embellish" and "Zen2048" and then resends to Winnow.
 
     Argument options:
 
@@ -1500,50 +1513,83 @@ void EmbelProperties::syncWinnets()
        arg[2]  = templateName (also name on Winnet used to send to Winnow)
        arg[3+] = path to each image being exported to be embellished
 
-    else
-       arg[1+] = path to each image to view in Winnow.  Only arg[1] is used to determine the
-       directory to open in Winnow.
+    else arg[1+] = path to each image to view in Winnow. Only arg[1] is used to
+    determine the directory to open in Winnow.
 
-    The main Winnet is called winnet.exe and it is copied and renamed to the template name
-    when a new template is created.  The Winnets need to be synced when templates are created,
-    renamed or deleted.
+    The main Winnet is called winnet.exe or winnet.app and it is copied and
+    renamed to the template name when a new template is created. The Winnets
+    need to be synced when templates are created, renamed or deleted.
+
+    ** IMPORTANT for MacOS **
+
+    The winnet executables do not include the necessary Qt frameworks inside the
+    app bundle - they are the frameworks in a separate folder:
+
+        - user/Library/Application Support/Winnow/Winnets
+            - Frameworks
+                - QtCore
+            - Winnet1
+            - Winnet2
+            - ...
+
+    Winnet.pro adds a rpath to look for the shared Framewooks folder:
+        macx:QMAKE_LFLAGS += -Wl,-rpath,@executable_path/../../../Frameworks
+
+    The framework QtCore is req'd, but if it was updated with each release then
+    the Winnets would get out-of-sync with the library, so QtCore and Winnet.app
+    are both saved in the data part of the deployment package.
+
 */
     if (G::isLogger) G::log("EmbelProperties::syncWinnets");
-    // windows executables end in .exe and macos have no extension
+
+    // Winnow app directory
+    QString appDir = qApp->applicationDirPath();
+    // Application data location
+    QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    // Winnets subfolder
+    appDataPath += "/Winnets";
+    QDir dir(appDataPath);
+    if (!dir.exists()) dir.mkpath(appDataPath);
     QString ext = "";
-    #ifdef Q_OS_WIN
+
+#ifdef Q_OS_WIN
     ext = ".exe";
-    #endif
-    #ifdef Q_OS_MAC
+    QStringList dirFilter("*.exe");
+    // make sure Qt5Core.dll exists
+    QString dllPath = appDataPath + "/Qt5Core.dll";
+    if (!QFile(dllPath).exists()) {
+        QString dllSourcePath = appDir + "/Qt5Core.dll";
+        QFile dll(dllSourcePath);
+        dll.copy(dllPath);
+    }
+#endif
+#ifdef Q_OS_MAC
     ext = ".app";
-    #endif
+    QStringList dirFilter("*.app");
+    // make sure Frameworks folder exists
+    dir.setPath(appDataPath + "/Frameworks");
+    if (!dir.exists())
+        dir.mkdir(appDataPath + "/Frameworks");
+    // make sure QtCore.framework exists
+    QString framePath = appDataPath + "/Frameworks/QtCore.framework";
+    if (!QFile(framePath).exists()) {
+        QString frameSrcPath = appDir + "Winnow.app/Contents/MacOS/Winnets/Frameworks/QtCore.framework";
+        QFile fWork(frameSrcPath);
+        fWork.copy(framePath);
+    }
+#endif
 
     // list of executables that must not be changed
     QStringList criticalExecutables;
     criticalExecutables << "Winnow" + ext << "Winnet" + ext;
 
     // list of all executables in the Winnow folder
-    QString appDir = qApp->applicationDirPath();
-    QString dirPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    dirPath += "/Winnets";
-    QDir dir(dirPath);
-    if (!dir.exists()) dir.mkpath(dirPath);
-
-    // make sure Qt5Core.dll exists
-    QString dllPath = dirPath + "/Qt5Core.dll";
-    if (!QFile(dllPath).exists()) {
-        QString dllSourcePath = appDir + "/Qt5Core.dll";
-        QFile dll(dllSourcePath);
-        dll.copy(dllPath);
-    }
-
-    QStringList dirFilter("*.exe");
     dir.setNameFilters(dirFilter);
     dir.setFilter(QDir::Files);
     QStringList okToChange;
     okToChange << dir.entryList();
 
-    // strip ".exe"
+    // strip ".exe" or ".app"
     okToChange.replaceInStrings(ext, "");
 
     // add if missing item in templateList
@@ -1551,7 +1597,7 @@ void EmbelProperties::syncWinnets()
     QFile winnet(winnetPath);
     for (int i = 0; i < templateList.length(); i++) {
         if (!okToChange.contains(templateList.at(i))) {
-            QString newWinnet = dirPath + "/" + templateList.at(i) + ext;
+            QString newWinnet = appDataPath + "/" + templateList.at(i) + ext;
             // add a new Winnet
             winnet.copy(newWinnet);
         }
@@ -1560,7 +1606,7 @@ void EmbelProperties::syncWinnets()
     // remove if existing Winnet is not in templateList
     for (int i = okToChange.length() - 1; i >= 0; i--) {
         if (!templateList.contains(okToChange.at(i))) {
-            QString fPath = dirPath + "/" + okToChange.at(i) + ".exe";
+            QString fPath = appDataPath + "/" + okToChange.at(i) + ".exe";
             QFile::remove(fPath);
             okToChange.removeAt(i);
         }
